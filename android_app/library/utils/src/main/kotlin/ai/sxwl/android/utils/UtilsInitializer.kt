@@ -2,6 +2,7 @@ package ai.sxwl.android.utils
 
 import android.app.Application
 import android.content.Context
+import android.util.Log
 import androidx.startup.Initializer
 
 /**
@@ -12,18 +13,26 @@ import androidx.startup.Initializer
 class UtilsInitializer : Initializer<Unit> {
 
     override fun create(context: Context) {
-
         try {
+            // 安全的类型转换
+            val app = context.applicationContext as? Application
+            if (app == null) {
+                Log.e("UtilsInitializer", "Application context is null")
+                return
+            }
+            
             // 初始化Utils工具类
-            Utils.init(context.applicationContext as Application)
+            Utils.init(app)
             CrashUtils.init()
             LogUtils.getConfig()
                 .setLogSwitch(AppUtils.isAppDebug())
                 .setBorderSwitch(false)
                 .setGlobalTag("LogUtils")
+        } catch (e: ClassCastException) {
+            Log.e("UtilsInitializer", "Context is not Application", e)
         } catch (e: Exception) {
-            // 不抛出异常，避免阻塞应用启动
-            e.printStackTrace()
+            Log.e("UtilsInitializer", "Utils initialization failed", e)
+            // 可以考虑上报崩溃信息到崩溃收集服务
         }
     }
 

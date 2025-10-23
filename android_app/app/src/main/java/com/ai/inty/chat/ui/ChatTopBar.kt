@@ -1,5 +1,6 @@
 package com.ai.inty.chat.ui
 
+import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -22,7 +23,6 @@ import com.ai.inty.AgentInfoActivity
 import com.ai.inty.R
 import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.getCdnImageUrl
@@ -72,7 +72,7 @@ fun ChatTopBar(
                         scope.launch {
                             // 如果是已经删除的agent，则不可点击，并提示
                             if (agentInfo.isDeleted) {
-                                ToastUtils.showToast(R.string.str_agent_is_deleted)
+                                ToastUtils.showShort(R.string.str_agent_is_deleted)
                             } else {
                                 AgentInfoActivity.launch(context, agentInfo)
                             }

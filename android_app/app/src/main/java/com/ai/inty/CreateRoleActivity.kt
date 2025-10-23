@@ -2,11 +2,12 @@ package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -78,7 +79,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
 import com.ai.inty.base.AntiClick
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateAgentRequest
@@ -87,7 +87,6 @@ import com.ai.inty.ui.SingleLineTextInputField
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.getCdnImageUrl
 import com.ai.inty.viewmodels.MainViewModel
-import com.inty.utils.log.EasyLog
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
 import kotlinx.coroutines.Dispatchers
@@ -218,7 +217,7 @@ private fun CreateRolePage(
     LaunchedEffect(isEditMode) {
         if (!isEditMode) {
             AvatarManager.clearAllAvatarData()
-            EasyLog.log("Cleared avatar data for new character creation")
+            LogUtils.i("Cleared avatar data for new character creation")
         }
     }
 
@@ -228,13 +227,13 @@ private fun CreateRolePage(
             when (event) {
                 Lifecycle.Event.ON_STOP -> {
                     // Clear AvatarManager when activity is stopped (user navigates away)
-                    EasyLog.log("Activity stopped - clearing AvatarManager data")
+                    LogUtils.i("Activity stopped - clearing AvatarManager data")
                     AvatarManager.clearAllAvatarData()
                 }
 
                 Lifecycle.Event.ON_DESTROY -> {
                     // Also clear when activity is destroyed
-                    EasyLog.log("Activity destroyed - clearing AvatarManager data")
+                    LogUtils.i("Activity destroyed - clearing AvatarManager data")
                     AvatarManager.clearAllAvatarData()
                 }
 
@@ -254,7 +253,7 @@ private fun CreateRolePage(
                 result.data?.let { data ->
                     val resultUri = UCrop.getOutput(data)
                     if (resultUri != null) {
-                        EasyLog.log("Avatar cropped successfully: $resultUri")
+                        LogUtils.i("Avatar cropped successfully: $resultUri")
 
                         // Upload the cropped image to server
                         try {
@@ -272,70 +271,45 @@ private fun CreateRolePage(
                                     when (response) {
                                         is com.architecture.httplib.core.HttpResult.Success -> {
                                             val uploadedUrl = response.data.url
-                                            EasyLog.log(
-                                                "Avatar uploaded successfully: $uploadedUrl"
-                                            )
+                                            LogUtils.i("Avatar uploaded successfully: $uploadedUrl")
 
                                             // Update UI on main thread
                                             withContext(Dispatchers.Main) {
                                                 croppedAvatarUrl = uploadedUrl
-                                                Toast.makeText(
-                                                    context,
-                                                    "Avatar cropped and uploaded",
-                                                    Toast.LENGTH_SHORT,
-                                                )
-                                                    .show()
+                                                ToastUtils.showShort("Avatar cropped and uploaded")
                                             }
                                         }
 
                                         is com.architecture.httplib.core.HttpResult.Failure -> {
-                                            EasyLog.log(
-                                                "Upload failed: ${response.message}",
-                                                EasyLog.ERROR,
-                                            )
+                                            LogUtils.e("Upload failed: ${response.message}")
                                             withContext(Dispatchers.Main) {
-                                                Toast.makeText(
-                                                    context,
-                                                    "Upload failed: ${response.message}",
-                                                    Toast.LENGTH_LONG,
-                                                )
-                                                    .show()
+                                                ToastUtils.showShort("Upload failed: ${response.message}")
                                             }
                                         }
                                     }
                                 } catch (e: Exception) {
-                                    EasyLog.log("Upload exception: ${e.message}", EasyLog.ERROR)
+                                    LogUtils.e("Upload exception: ${e.message}")
                                     withContext(Dispatchers.Main) {
-                                        Toast.makeText(
-                                            context,
-                                            "Upload failed: ${e.message}",
-                                            Toast.LENGTH_LONG,
-                                        )
-                                            .show()
+                                        ToastUtils.showShort("Upload failed: ${e.message}")
                                     }
                                 }
                             }
                         } catch (e: Exception) {
-                            EasyLog.log("Failed to prepare upload: ${e.message}", EasyLog.ERROR)
-                            Toast.makeText(
-                                context,
-                                "Failed to prepare upload: ${e.message}",
-                                Toast.LENGTH_SHORT,
-                            )
-                                .show()
+                            LogUtils.e("Failed to prepare upload: ${e.message}")
+                            ToastUtils.showShort("Failed to prepare upload: ${e.message}")
                         }
                     }
                 }
             } else if (result.resultCode == UCrop.RESULT_ERROR) {
                 result.data?.let { data ->
                     val cropError = UCrop.getError(data)
-                    EasyLog.log("UCrop error: ${cropError?.message}", EasyLog.ERROR)
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.toast_crop_failed, cropError?.message ?: ""),
-                        Toast.LENGTH_LONG,
+                    LogUtils.e("UCrop error: ${cropError?.message}")
+                    ToastUtils.showShort(
+                        context.getString(
+                            R.string.toast_crop_failed,
+                            cropError?.message ?: ""
+                        )
                     )
-                        .show()
                 }
             }
         }
@@ -366,14 +340,14 @@ private fun CreateRolePage(
             // Check for generation errors
             val error = AvatarManager.getGenerationError()
             if (error != null) {
-                ToastUtils.showError(context, error)
+                ToastUtils.showShort(error)
                 isGeneratingAvatar = false
             }
 
             // Show current generation prompt if generating
             if (generatingStatus) {
                 val prompt = AvatarManager.getGenerationPrompt()
-                EasyLog.log("Currently generating with prompt: '$prompt'")
+                LogUtils.i("Currently generating with prompt: '$prompt'")
             }
         }
 
@@ -409,7 +383,7 @@ private fun CreateRolePage(
                 // Check for errors
                 val error = AvatarManager.getGenerationError()
                 if (error != null) {
-                    ToastUtils.showError(context, error)
+                    ToastUtils.showShort(error)
                     isGeneratingAvatar = false
                 }
             }
@@ -447,7 +421,7 @@ private fun CreateRolePage(
 
             val error = AvatarManager.getGenerationError()
             if (error != null) {
-                ToastUtils.showError(context, error)
+                ToastUtils.showShort(error)
                 isGeneratingAvatar = false
             }
         }
@@ -531,10 +505,7 @@ private fun CreateRolePage(
                                 ) {
                                     selectedImageIndex
                                 } else {
-                                    EasyLog.log(
-                                        "Face edit - Index out of bounds! selectedImageIndex: $selectedImageIndex, avatarUrls.size: ${avatarUrls.size}",
-                                        EasyLog.ERROR,
-                                    )
+                                    LogUtils.e("Face edit - Index out of bounds! selectedImageIndex: $selectedImageIndex, avatarUrls.size: ${avatarUrls.size}")
                                     0 // Fall back to first image
                                 }
 
@@ -553,10 +524,7 @@ private fun CreateRolePage(
                                     java.net.URL(imageUrl) // Test if URL is valid
                                     true
                                 } catch (e: Exception) {
-                                    EasyLog.log(
-                                        "Face edit - Invalid URL format: $imageUrl URL validation error: ${e.message}",
-                                        EasyLog.ERROR
-                                    )
+                                    LogUtils.e("Face edit - Invalid URL format: $imageUrl URL validation error: ${e.message}")
                                     false
                                 }
 
@@ -580,9 +548,7 @@ private fun CreateRolePage(
                                         val request = Request.Builder().url(imageUrl).build()
 
                                         val response = client.newCall(request).execute()
-                                        EasyLog.log(
-                                            "Face edit download - HTTP response message: ${response.message}"
-                                        )
+                                        LogUtils.d("Face edit download - HTTP response message: ${response.message}")
 
                                         if (response.isSuccessful) {
                                             response.body?.let { body ->
@@ -600,25 +566,14 @@ private fun CreateRolePage(
                                             )
                                         }
                                     } catch (e: Exception) {
-                                        EasyLog.log(
-                                            "Failed to download image for cropping: $imageUrl Error details: ${e.message}",
-                                            EasyLog.ERROR
-                                        )
+                                        LogUtils.e("Failed to download image for cropping: $imageUrl Error details: ${e.message}")
                                         withContext(Dispatchers.Main) {
-                                            Toast.makeText(
-                                                context,
-                                                "Failed to download image for editing",
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
+                                            ToastUtils.showShort("Failed to download image for editing")
                                         }
                                     }
                                 }
                             } else {
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.toast_invalid_image_url),
-                                    Toast.LENGTH_SHORT,
-                                ).show()
+                                ToastUtils.showShort(R.string.toast_invalid_image_url)
                             }
                         } else {
                             // Local file URI
@@ -631,11 +586,7 @@ private fun CreateRolePage(
                             startUCropWithLocalFile(sourceFile, context, cropLauncher)
                         }
                     } else {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.toast_no_avatar_image),
-                            Toast.LENGTH_SHORT,
-                        ).show()
+                        ToastUtils.showShort(R.string.toast_no_avatar_image)
                     }
                 },
             )
@@ -702,12 +653,7 @@ private fun CreateRolePage(
                     if (
                         name.isBlank() || intro.isBlank() || opening.isBlank() || settings.isBlank()
                     ) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.please_fill_required_fields),
-                            Toast.LENGTH_SHORT,
-                        )
-                            .show()
+                        ToastUtils.showShort(R.string.please_fill_required_fields)
                         return@CreateButton
                     }
 
@@ -762,14 +708,7 @@ private fun CreateRolePage(
                                 request = request,
                                 onSuccess = { agentInfo ->
                                     isLoading = false
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(
-                                            R.string.character_updated_successfully
-                                        ),
-                                        Toast.LENGTH_SHORT,
-                                    )
-                                        .show()
+                                    ToastUtils.showShort(R.string.character_updated_successfully)
                                     onCreateSuccess()
                                 },
                                 onError = { error ->
@@ -787,7 +726,7 @@ private fun CreateRolePage(
                                                 error,
                                             )
                                         }
-                                    ToastUtils.showError(context, errorMessage)
+                                    ToastUtils.showShort(errorMessage)
                                 },
                             )
                         } else {
@@ -795,10 +734,7 @@ private fun CreateRolePage(
                                 request = request,
                                 onSuccess = { agentInfo ->
                                     isLoading = false
-                                    ToastUtils.showSuccess(
-                                        context,
-                                        context.getString(R.string.create_ai_successfully)
-                                    )
+                                    ToastUtils.showShort(context.getString(R.string.create_ai_successfully))
                                     onCreateSuccess()
                                 },
                                 onError = { error ->
@@ -816,7 +752,7 @@ private fun CreateRolePage(
                                                 error,
                                             )
                                         }
-                                    ToastUtils.showError(context, errorMessage)
+                                    ToastUtils.showShort(errorMessage)
                                 },
                             )
                         }
@@ -831,12 +767,8 @@ private fun CreateRolePage(
                                 operation,
                                 e.message ?: context.getString(R.string.unknown_error),
                             )
-                        ToastUtils.showError(context, errorMessage)
-                        EasyLog.log(
-                            "${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}",
-                            EasyLog.ERROR,
-                        )
-                        EasyLog.log(e)
+                        ToastUtils.showShort(errorMessage)
+                        LogUtils.e("${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}")
                     }
                 },
             )
@@ -854,11 +786,7 @@ private fun startUCropWithLocalFile(
 ) {
     try {
         if (!sourceFile.exists() || sourceFile.length() == 0L) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.toast_image_file_not_found),
-                Toast.LENGTH_SHORT,
-            ).show()
+            ToastUtils.showShort(R.string.toast_image_file_not_found)
             return
         }
 
@@ -897,11 +825,7 @@ private fun startUCropWithLocalFile(
 
         cropLauncher.launch(cropIntent)
     } catch (e: Exception) {
-        Toast.makeText(
-            context,
-            context.getString(R.string.toast_failed_open_crop_editor),
-            Toast.LENGTH_SHORT,
-        ).show()
+        ToastUtils.showShort(R.string.toast_failed_open_crop_editor)
     }
 }
 
@@ -956,15 +880,10 @@ private fun AvatarUploadSection(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
-                            EasyLog.log(
-                                "AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl"
-                            )
+                            LogUtils.d("AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl")
                         },
                         onError = {
-                            EasyLog.log(
-                                "AvatarUploadSection: Failed to load selected avatar image: $displayUrl",
-                                EasyLog.ERROR,
-                            )
+                            LogUtils.e("AvatarUploadSection: Failed to load selected avatar image: $displayUrl")
                         },
                     )
                 }
@@ -976,15 +895,10 @@ private fun AvatarUploadSection(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
-                            EasyLog.log(
-                                "AvatarUploadSection: Avatar image loaded successfully: $avatarUrl"
-                            )
+                            LogUtils.d("AvatarUploadSection: Avatar image loaded successfully: $avatarUrl")
                         },
                         onError = {
-                            EasyLog.log(
-                                "AvatarUploadSection: Failed to load avatar image: $avatarUrl",
-                                EasyLog.ERROR,
-                            )
+                            LogUtils.e("AvatarUploadSection: Failed to load avatar image: $avatarUrl")
                         },
                     )
                 }

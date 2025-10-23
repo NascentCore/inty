@@ -1,14 +1,14 @@
 package com.ai.inty.netapi
 
+import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import com.ai.inty.netapi.config.NetworkConfig
 import com.inty.api.client.IntyClient
 import com.inty.api.client.okhttp.IntyOkHttpClient
-import com.inty.utils.log.EasyLog
-import com.inty.utils.storage.IntySetting
+import kotlinx.coroutines.withTimeout
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
-import kotlinx.coroutines.withTimeout
 
 /**
  * Inty网络管理器 - 企业级网络库封装 提供统一的网络管理和API服务入口
@@ -33,9 +33,7 @@ object IntyNetworkManager {
             this.applicationContextRef = WeakReference(context.applicationContext)
             NetworkStateManager.initialize(context)
             isInitialized = true
-            EasyLog.log(
-                "IntyNetworkManager initialized with environment: ${NetworkConfig.getCurrentBuildType()}"
-            )
+            LogUtils.d("IntyNetworkManager initialized with environment: ${NetworkConfig.getCurrentBuildType()}")
         }
     }
 
@@ -53,17 +51,14 @@ object IntyNetworkManager {
     /** 创建新的客户端实例 使用新的配置系统 */
     private fun createClient(apiKey: String, baseUrl: String): IntyClient {
         val environmentConfig = NetworkConfig.getCurrentEnvironmentConfig()
-        EasyLog.log(
-            "Creating new IntyClient: apiKey=${apiKey.take(8)}..., baseUrl=$baseUrl, environment=${NetworkConfig.getCurrentBuildType()}"
-        )
-
+        LogUtils.d("Creating new IntyClient: apiKey=${apiKey.take(8)}..., baseUrl=$baseUrl, environment=${NetworkConfig.getCurrentBuildType()}")
         return IntyOkHttpClient.builder().apiKey(apiKey).baseUrl(baseUrl).build()
     }
 
     /** 清除客户端缓存 当用户登录状态发生变化时调用 */
     fun clearClientCache() {
         clientCache.clear()
-        EasyLog.log("IntyNetworkManager: Cleared client cache")
+        LogUtils.i("IntyNetworkManager: Cleared client cache")
     }
 
     /** 清理资源，释放Context引用 在应用退出或需要重置时调用 */
@@ -71,7 +66,7 @@ object IntyNetworkManager {
         clientCache.clear()
         applicationContextRef = null
         isInitialized = false
-        EasyLog.log("IntyNetworkManager: Cleaned up resources")
+        LogUtils.i("IntyNetworkManager: Cleaned up resources")
     }
 
     /** 获取ApplicationContext（安全方式） 如果Context已被回收，返回null */
@@ -113,7 +108,7 @@ object IntyNetworkManager {
         NetworkStateManager.release()
         applicationContextRef = null
         isInitialized = false
-        EasyLog.log("IntyNetworkManager released")
+        LogUtils.i("IntyNetworkManager released")
     }
 
     // ==================== 业务API服务入口 ====================
@@ -161,19 +156,19 @@ object IntyNetworkManager {
 
         return try {
             if (NetworkConfig.shouldEnableDetailedLogging()) {
-                EasyLog.log("🔄 Executing $operation")
+                LogUtils.i("🔄 Executing $operation")
             }
 
             val result = withTimeout(actualConfig.timeoutMs) { apiCall() }
 
             if (NetworkConfig.shouldEnableDetailedLogging()) {
-                EasyLog.log("✅ $operation succeeded")
+                LogUtils.i("✅ $operation succeeded")
             }
 
             ApiResult.Success(result)
         } catch (e: Exception) {
             if (NetworkConfig.shouldEnableDetailedLogging()) {
-                EasyLog.log("❌ $operation failed: ${e.message}")
+                LogUtils.i("❌ $operation failed: ${e.message}")
             }
             e.toApiResult()
         }

@@ -44,67 +44,73 @@ class SignCheckTools(private val context: Context) {
      * 获取应用的签名
      */
     fun getCertificateSHA1Fingerprint(): String? {
-        // 获取包管理器
-        val pm = context.packageManager
-
-        // 获取当前要获取 SHA1 值的包名
-        val packageName = context.packageName
-
-        // 返回包括在包中的签名信息
-        val flags = PackageManager.GET_SIGNATURES
-
-        var packageInfo: PackageInfo? = null
-
         try {
-            // 获得包的所有内容信息类
-            packageInfo = pm.getPackageInfo(packageName, flags)
-        } catch (e: PackageManager.NameNotFoundException) {
-            e.printStackTrace()
-        }
+            // 获取包管理器
+            val pm = context.packageManager
+            val packageName = context.packageName
+            val flags = PackageManager.GET_SIGNATURES
 
-        // 签名信息
-        val signatures: Array<Signature> = packageInfo?.signatures ?: return null
-        val cert = signatures[0].toByteArray()
+            var packageInfo: PackageInfo? = null
+            try {
+                packageInfo = pm.getPackageInfo(packageName, flags)
+            } catch (e: PackageManager.NameNotFoundException) {
+                Log.e(TAG, "包名未找到: $packageName", e)
+                return null
+            }
 
-        // 将签名转换为字节数组流
-        val input: InputStream = ByteArrayInputStream(cert)
+            // 签名信息
+            val signatures: Array<Signature> = packageInfo?.signatures ?: return null
+            if (signatures.isEmpty()) {
+                Log.e(TAG, "未找到签名信息")
+                return null
+            }
 
-        // 证书工厂类
-        var cf: CertificateFactory? = null
+            val cert = signatures[0].toByteArray()
+            val input: InputStream = ByteArrayInputStream(cert)
 
-        try {
-            cf = CertificateFactory.getInstance("X509")
+            // 证书工厂类
+            var cf: CertificateFactory? = null
+            try {
+                cf = CertificateFactory.getInstance("X509")
+            } catch (e: Exception) {
+                Log.e(TAG, "创建证书工厂失败", e)
+                return null
+            }
+
+            // X509 证书
+            var c: X509Certificate? = null
+            try {
+                c = cf?.generateCertificate(input) as? X509Certificate
+                if (c == null) {
+                    Log.e(TAG, "证书转换失败")
+                    return null
+                }
+            } catch (e: ClassCastException) {
+                Log.e(TAG, "证书类型转换失败", e)
+                return null
+            } catch (e: Exception) {
+                Log.e(TAG, "生成证书失败", e)
+                return null
+            }
+
+            var hexString: String? = null
+            try {
+                val md = MessageDigest.getInstance("SHA1")
+                val publicKey = md.digest(c.encoded)
+                hexString = byte2HexFormatted(publicKey)
+            } catch (e1: NoSuchAlgorithmException) {
+                Log.e(TAG, "SHA1算法不支持", e1)
+                return null
+            } catch (e: CertificateEncodingException) {
+                Log.e(TAG, "证书编码失败", e)
+                return null
+            }
+
+            return hexString
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "获取SHA1签名失败", e)
+            return null
         }
-
-        // X509 证书
-        var c: X509Certificate? = null
-
-        try {
-            c = cf?.generateCertificate(input) as X509Certificate
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        var hexString: String? = null
-
-        try {
-            // 加密算法的类
-            val md = MessageDigest.getInstance("SHA1")
-
-            // 获得公钥
-            val publicKey = md.digest(c?.encoded)
-
-            // 字节到十六进制的格式转换
-            hexString = byte2HexFormatted(publicKey)
-        } catch (e1: NoSuchAlgorithmException) {
-            e1.printStackTrace()
-        } catch (e: CertificateEncodingException) {
-            e.printStackTrace()
-        }
-
-        return hexString
     }
 
     /**
@@ -143,95 +149,137 @@ class SignCheckTools(private val context: Context) {
      * 获取MD5签名
      */
     fun getCertificateMD5Fingerprint(): String? {
-        val pm = context.packageManager
-        val packageName = context.packageName
-        val flags = PackageManager.GET_SIGNATURES
-
-        var packageInfo: PackageInfo? = null
-
         try {
-            packageInfo = pm.getPackageInfo(packageName, flags)
-        } catch (e: PackageManager.NameNotFoundException) {
-            e.printStackTrace()
-        }
+            val pm = context.packageManager
+            val packageName = context.packageName
+            val flags = PackageManager.GET_SIGNATURES
 
-        val signatures: Array<Signature> = packageInfo?.signatures ?: return null
-        val cert = signatures[0].toByteArray()
-        val input: InputStream = ByteArrayInputStream(cert)
+            var packageInfo: PackageInfo? = null
+            try {
+                packageInfo = pm.getPackageInfo(packageName, flags)
+            } catch (e: PackageManager.NameNotFoundException) {
+                Log.e(TAG, "包名未找到: $packageName", e)
+                return null
+            }
 
-        var cf: CertificateFactory? = null
-        try {
-            cf = CertificateFactory.getInstance("X509")
+            val signatures: Array<Signature> = packageInfo?.signatures ?: return null
+            if (signatures.isEmpty()) {
+                Log.e(TAG, "未找到签名信息")
+                return null
+            }
+
+            val cert = signatures[0].toByteArray()
+            val input: InputStream = ByteArrayInputStream(cert)
+
+            var cf: CertificateFactory? = null
+            try {
+                cf = CertificateFactory.getInstance("X509")
+            } catch (e: Exception) {
+                Log.e(TAG, "创建证书工厂失败", e)
+                return null
+            }
+
+            var c: X509Certificate? = null
+            try {
+                c = cf?.generateCertificate(input) as? X509Certificate
+                if (c == null) {
+                    Log.e(TAG, "证书转换失败")
+                    return null
+                }
+            } catch (e: ClassCastException) {
+                Log.e(TAG, "证书类型转换失败", e)
+                return null
+            } catch (e: Exception) {
+                Log.e(TAG, "生成证书失败", e)
+                return null
+            }
+
+            var hexString: String? = null
+            try {
+                val md = MessageDigest.getInstance("MD5")
+                val publicKey = md.digest(c.encoded)
+                hexString = byte2HexFormatted(publicKey)
+            } catch (e1: NoSuchAlgorithmException) {
+                Log.e(TAG, "MD5算法不支持", e1)
+                return null
+            } catch (e: CertificateEncodingException) {
+                Log.e(TAG, "证书编码失败", e)
+                return null
+            }
+
+            return hexString
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "获取MD5签名失败", e)
+            return null
         }
-
-        var c: X509Certificate? = null
-        try {
-            c = cf?.generateCertificate(input) as X509Certificate
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        var hexString: String? = null
-        try {
-            val md = MessageDigest.getInstance("MD5")
-            val publicKey = md.digest(c?.encoded)
-            hexString = byte2HexFormatted(publicKey)
-        } catch (e1: NoSuchAlgorithmException) {
-            e1.printStackTrace()
-        } catch (e: CertificateEncodingException) {
-            e.printStackTrace()
-        }
-
-        return hexString
     }
 
     /**
      * 获取SHA256签名
      */
     fun getCertificateSHA256Fingerprint(): String? {
-        val pm = context.packageManager
-        val packageName = context.packageName
-        val flags = PackageManager.GET_SIGNATURES
-
-        var packageInfo: PackageInfo? = null
-
         try {
-            packageInfo = pm.getPackageInfo(packageName, flags)
-        } catch (e: PackageManager.NameNotFoundException) {
-            e.printStackTrace()
-        }
+            val pm = context.packageManager
+            val packageName = context.packageName
+            val flags = PackageManager.GET_SIGNATURES
 
-        val signatures: Array<Signature> = packageInfo?.signatures ?: return null
-        val cert = signatures[0].toByteArray()
-        val input: InputStream = ByteArrayInputStream(cert)
+            var packageInfo: PackageInfo? = null
+            try {
+                packageInfo = pm.getPackageInfo(packageName, flags)
+            } catch (e: PackageManager.NameNotFoundException) {
+                Log.e(TAG, "包名未找到: $packageName", e)
+                return null
+            }
 
-        var cf: CertificateFactory? = null
-        try {
-            cf = CertificateFactory.getInstance("X509")
+            val signatures: Array<Signature> = packageInfo?.signatures ?: return null
+            if (signatures.isEmpty()) {
+                Log.e(TAG, "未找到签名信息")
+                return null
+            }
+
+            val cert = signatures[0].toByteArray()
+            val input: InputStream = ByteArrayInputStream(cert)
+
+            var cf: CertificateFactory? = null
+            try {
+                cf = CertificateFactory.getInstance("X509")
+            } catch (e: Exception) {
+                Log.e(TAG, "创建证书工厂失败", e)
+                return null
+            }
+
+            var c: X509Certificate? = null
+            try {
+                c = cf?.generateCertificate(input) as? X509Certificate
+                if (c == null) {
+                    Log.e(TAG, "证书转换失败")
+                    return null
+                }
+            } catch (e: ClassCastException) {
+                Log.e(TAG, "证书类型转换失败", e)
+                return null
+            } catch (e: Exception) {
+                Log.e(TAG, "生成证书失败", e)
+                return null
+            }
+
+            var hexString: String? = null
+            try {
+                val md = MessageDigest.getInstance("SHA256")
+                val publicKey = md.digest(c.encoded)
+                hexString = byte2HexFormatted(publicKey)
+            } catch (e1: NoSuchAlgorithmException) {
+                Log.e(TAG, "SHA256算法不支持", e1)
+                return null
+            } catch (e: CertificateEncodingException) {
+                Log.e(TAG, "证书编码失败", e)
+                return null
+            }
+
+            return hexString
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "获取SHA256签名失败", e)
+            return null
         }
-
-        var c: X509Certificate? = null
-        try {
-            c = cf?.generateCertificate(input) as X509Certificate
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        var hexString: String? = null
-        try {
-            val md = MessageDigest.getInstance("SHA256")
-            val publicKey = md.digest(c?.encoded)
-            hexString = byte2HexFormatted(publicKey)
-        } catch (e1: NoSuchAlgorithmException) {
-            e1.printStackTrace()
-        } catch (e: CertificateEncodingException) {
-            e.printStackTrace()
-        }
-
-        return hexString
     }
 }

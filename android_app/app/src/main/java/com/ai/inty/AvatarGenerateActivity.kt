@@ -2,6 +2,7 @@ package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.content.Intent
 import androidx.activity.viewModels
@@ -67,7 +68,6 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.getCdnImageUrl
 import com.ai.inty.viewmodels.AvatarGenerateViewModel
-import com.inty.utils.log.EasyLog
 
 
 /** Ai 模型形象的 封面头像生成页面 */
@@ -247,8 +247,8 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
                         .fillMaxSize()
                         .padding(4.dp),
                     contentScale = ContentScale.Crop,
-                    onSuccess = { EasyLog.log("Image loaded successfully: $previewUrl") },
-                    onError = { EasyLog.log("Failed to load image: $previewUrl", EasyLog.ERROR) },
+                    onSuccess = { LogUtils.i("Image loaded successfully: $previewUrl") },
+                    onError = { LogUtils.e("Failed to load image: $previewUrl") },
                 )
             }
 

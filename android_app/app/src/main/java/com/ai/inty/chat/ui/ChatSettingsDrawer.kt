@@ -1,5 +1,6 @@
 package com.ai.inty.chat.ui
 
+import ai.sxwl.android.data.store.IntySetting
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,7 +50,6 @@ import com.ai.inty.ui.components.EditDialog
 import com.ai.inty.ui.components.EditKey
 import com.ai.inty.ui.components.MySettingItem
 import com.ai.inty.viewmodels.MySettingViewModel
-import com.inty.utils.storage.IntySetting
 
 /** 聊天设置抽屉组件 */
 @Composable

@@ -30,16 +30,30 @@ object CountryUtils {
      * 通过SIM卡获取国家
      */
     fun getCountryBySim(): String {
-        val manager =
-            Utils.getApp().getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
-        return manager?.simCountryIso?.uppercase() ?: ""
+        return try {
+            val app = Utils.getApp() ?: return ""
+            val manager = app.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+            manager?.simCountryIso?.uppercase() ?: ""
+        } catch (e: Exception) {
+            ""
+        }
     }
 
     /**
      * 通过系统语言获取国家
      */
     fun getCountryByLanguage(): String {
-        return Resources.getSystem().configuration.locales[0].country
+        return try {
+            val resources = Resources.getSystem()
+            val locales = resources.configuration.locales
+            if (locales.isEmpty.not()) {
+                locales[0].country
+            } else {
+                ""
+            }
+        } catch (e: Exception) {
+            ""
+        }
     }
 
     /**

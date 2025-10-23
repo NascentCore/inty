@@ -1,6 +1,6 @@
 package com.ai.inty.newchat.ui.components
 
-import android.widget.Toast
+import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -80,7 +80,7 @@ fun ChatPage(
     LaunchedEffect(agentId, isCurrentPage) {
         if (!isCurrentPage) return@LaunchedEffect
         chatViewModel.uiErrorEvents.collect { msg ->
-            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            ToastUtils.showShort(msg)
         }
     }
 

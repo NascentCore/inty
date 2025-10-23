@@ -1,8 +1,8 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.utils.LogUtils
 import com.ai.inty.beans.UserProfile
-import com.inty.utils.log.EasyLog
-import com.inty.utils.storage.IntySetting
+import ai.sxwl.android.data.store.IntySetting
 
 /** 用户信息的数据管理类 */
 object UserProfileManager {
@@ -31,7 +31,7 @@ object UserProfileManager {
             }
         }
 
-        EasyLog.log("Saved user profile: $userProfile")
+        LogUtils.i("Saved user profile: $userProfile")
     }
 
     fun getUserProfile(): UserProfile {

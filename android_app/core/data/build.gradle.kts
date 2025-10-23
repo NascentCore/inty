@@ -18,6 +18,7 @@ android {
 dependencies {
 
     implementation(libs.androidx.dataStore.preferences)
+    implementation(libs.mmkv)
 
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)

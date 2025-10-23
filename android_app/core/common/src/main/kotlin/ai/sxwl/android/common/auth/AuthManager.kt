@@ -1,6 +1,5 @@
 package ai.sxwl.android.common.auth
 
-import ai.sxwl.android.data.HeartDataManager
 import ai.sxwl.android.utils.LogUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -8,8 +7,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -49,54 +46,14 @@ object AuthManager {
      * 初始化认证管理器
      */
     fun initialize() {
-        // 立即读取当前用户状态，避免初始化时的状态不一致
-        scope.launch {
-            try {
-                val dataStore = HeartDataManager.getDataStore()
-                if (dataStore != null) {
-                    val isGuest = dataStore.getIsGuest().first()
-                    isGuestUser = isGuest
-                    LogUtils.d("初始化时读取用户状态: ${if (isGuest) "Guest用户" else "正式用户"}")
-                }
-            } catch (e: Exception) {
-                LogUtils.e("初始化时读取用户状态失败", e)
-                isGuestUser = true // 出错时默认为Guest用户
-            }
-        }
 
-        // 监听用户状态变化
-        scope.launch {
-            HeartDataManager.getDataStore()?.getIsGuest()?.collectLatest { isGuest ->
-                isGuestUser = isGuest
-                LogUtils.d("用户状态更新: ${if (isGuest) "Guest用户" else "正式用户"}")
-            }
-        }
-        // 感知登录状态变化
-        scope.launch {
-            //初始化登录状态
-            HeartDataManager.getDataStore()?.getCurrentUserInfo()?.collectLatest { info ->
-                val state = if (info.isNullOrBlank()) AuthState.LoggedOut else AuthState.LoggedIn
-                _authState.emit(state)
-
-                LogUtils.d("登录状态 更新: $state ,, info: $info")
-            }
-        }
     }
 
     /**
      * 强制刷新用户状态
      */
     suspend fun refreshUserState() {
-        try {
-            val dataStore = HeartDataManager.getDataStore()
-            if (dataStore != null) {
-                val isGuest = dataStore.getIsGuest().first()
-                isGuestUser = isGuest
-                LogUtils.d("强制刷新用户状态: ${if (isGuest) "Guest用户" else "正式用户"}")
-            }
-        } catch (e: Exception) {
-            LogUtils.e("刷新用户状态失败", e)
-        }
+
     }
 
     /**
@@ -138,9 +95,7 @@ object AuthManager {
     suspend fun isFormalUser(): Boolean {
         return runCatching {
             // 使用本地缓存检查
-            val dataStore = HeartDataManager.getDataStore()
-            val isGuest = dataStore?.getIsGuest()?.first() ?: true
-            !isGuest
+            false
         }.getOrElse { false }
     }
 

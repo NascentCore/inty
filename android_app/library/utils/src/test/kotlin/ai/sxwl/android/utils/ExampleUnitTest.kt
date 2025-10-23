@@ -1,6 +1,6 @@
-package com.inty.utils
+package ai.sxwl.android.utils
 
-import org.junit.Assert.*
+import org.junit.Assert
 import org.junit.Test
 
 /**
@@ -11,6 +11,6 @@ import org.junit.Test
 class ExampleUnitTest {
     @Test
     fun addition_isCorrect() {
-        assertEquals(4, 2 + 2)
+        Assert.assertEquals(4, 2 + 2)
     }
 }

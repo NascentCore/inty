@@ -1,5 +1,6 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.utils.LogUtils
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -55,7 +56,6 @@ import com.ai.inty.audio.VoicePlayer
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.utils.ChatTextFormatter
-import com.inty.utils.log.EasyLog
 
 /** 复制文本到剪贴板；这是用于测试功能。 */
 private fun debugOnlyCopyToClipboard(context: Context, text: String) {
@@ -78,14 +78,14 @@ fun ChatItem(item: MsgInfo, isCurrentPage: Boolean = true, chatViewModel: ChatVi
             }
 
             else -> {
-                EasyLog.log("unknown role: $item")
+                LogUtils.i("unknown role: $item")
                 // 未知角色的消息显示为普通文本
                 ChatItemUser(item)
             }
         }
     }
         .onFailure { e ->
-            EasyLog.log("Error rendering chat item: ${e.message}", priority = EasyLog.ERROR)
+            LogUtils.e("Error rendering chat item: ${e.message}")
             // 渲染失败时显示错误占位符
             Box(
                 modifier =
@@ -163,9 +163,7 @@ private fun ChatItemAI(
                         autoPlay = shouldAutoPlay,
                         modifier = Modifier.widthIn(38.dp),
                         onPlayStateChange = { isPlaying ->
-                            EasyLog.log(
-                                "音频LOG测试 VoicePlayer play state changed: $isPlaying for message: ${item.localMsgId}"
-                            )
+                            LogUtils.d("音频LOG测试 VoicePlayer play state changed: $isPlaying for message: ${item.localMsgId}")
                         },
                         onTtsGenerated = { audioUrl ->
                             // 使用localMsgId进行匹配，因为ChatViewModel中使用的是localMsgId

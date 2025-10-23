@@ -1,6 +1,9 @@
 package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.ToastUtils
 import android.view.GestureDetector
 import android.view.MotionEvent
 import androidx.activity.OnBackPressedCallback
@@ -25,15 +28,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.home.HomeScreen
 import com.ai.inty.utils.PageTrackingHelper
 import com.ai.inty.utils.UnifiedStartupManager
 import com.ai.inty.viewmodels.MainViewModel
-import com.inty.utils.log.EasyLog
-import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -103,10 +103,10 @@ class MainActivity : BaseActivity() {
                     // 启动订阅状态监控
                     BillingRepository.startEnhancedSubscriptionMonitoring()
                 } else {
-                    EasyLog.log("MainActivity - 游客用户，跳过需要认证的数据加载")
+                    LogUtils.i("MainActivity - 游客用户，跳过需要认证的数据加载")
                 }
             } else {
-                EasyLog.log("MainActivity - 用户未登录，跳过需要认证的数据加载", EasyLog.WARN)
+                LogUtils.w("MainActivity - 用户未登录，跳过需要认证的数据加载")
             }
         }
     }
@@ -232,7 +232,7 @@ class MainActivity : BaseActivity() {
 
     /** 显示退出提示 */
     private fun showExitHint() {
-        ToastUtils.showMessage(this, getString(R.string.edge_swipe_exit_hint))
+        ToastUtils.showShort(getString(R.string.edge_swipe_exit_hint))
     }
 
     override fun onResume() {
@@ -306,9 +306,9 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
         }
 
         if (waitTime >= maxWaitTime) {
-            EasyLog.log("SplashUI - 等待超时，强制进入主界面", EasyLog.WARN)
+            LogUtils.w("SplashUI - 等待超时，强制进入主界面")
         } else {
-            EasyLog.log("SplashUI - 启动管理器初始化完成")
+            LogUtils.i("SplashUI - 启动管理器初始化完成")
         }
 
         // 等待关键数据加载完成（只等待chat agents）
@@ -319,9 +319,7 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
             val hasChatData = UnifiedStartupManager.getCurrentChatAgents().isNotEmpty()
 
             if (hasChatData) {
-                EasyLog.log(
-                    "SplashUI - 关键数据chat agents加载完成: ${UnifiedStartupManager.getCurrentChatAgents().size}个"
-                )
+                LogUtils.d("SplashUI - 关键数据chat agents加载完成: ${UnifiedStartupManager.getCurrentChatAgents().size}个")
                 break
             }
 
@@ -330,7 +328,7 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
         }
 
         if (dataWaitTime >= maxDataWaitTime) {
-            EasyLog.log("SplashUI - chat agents数据加载超时，但继续进入主界面", EasyLog.WARN)
+            LogUtils.w("SplashUI - chat agents数据加载超时，但继续进入主界面")
         }
 
         // 标记初始化完成
@@ -341,7 +339,7 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
 
         onComplete()
     } catch (e: Exception) {
-        EasyLog.log("SplashUI - 初始化等待过程中发生异常: ${e.message}", EasyLog.ERROR)
+        LogUtils.e("SplashUI - 初始化等待过程中发生异常: ${e.message}")
         // 即使发生异常，也要确保进入主界面
         delay(500) // 给一点时间显示错误状态
         onComplete()

@@ -23,13 +23,13 @@ object Utils {
         }
         if (sApp == null) {
             sApp = app
-            UtilsBridge.init(sApp!!)
+            UtilsBridge.init(app)
             return
         }
         if (sApp == app) return
         UtilsBridge.unInit(sApp!!)
         sApp = app
-        UtilsBridge.init(sApp!!)
+        UtilsBridge.init(app)
     }
 
     /**
@@ -38,10 +38,19 @@ object Utils {
      */
     fun getApp(): Application {
         if (sApp != null) return sApp!!
-        init(UtilsBridge.getApplicationByReflect())
-        if (sApp == null) throw kotlin.NullPointerException("reflect failed.")
-        Log.i("Utils", UtilsBridge.getCurrentProcessName() + " reflect app success.")
-        return sApp!!
+
+        // 尝试反射获取Application
+        val reflectedApp = UtilsBridge.getApplicationByReflect()
+        if (reflectedApp != null) {
+            init(reflectedApp)
+            if (sApp != null) {
+                Log.i("Utils", UtilsBridge.getCurrentProcessName() + " reflect app success.")
+                return sApp!!
+            }
+        }
+
+        // 如果反射失败，抛出更明确的异常
+        throw IllegalStateException("Failed to initialize Application. Please call Utils.init() in Application.onCreate()")
     }
 
     ///////////////////////////////////////////////////////////////////////////

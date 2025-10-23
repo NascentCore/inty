@@ -421,9 +421,10 @@ object RomUtils {
 
     private fun getSystemPropertyByShell(propName: String): String {
         var input: BufferedReader? = null
+        var process: Process? = null
         return try {
-            val p = Runtime.getRuntime().exec("getprop $propName")
-            input = BufferedReader(InputStreamReader(p.inputStream), 1024)
+            process = Runtime.getRuntime().exec("getprop $propName")
+            input = BufferedReader(InputStreamReader(process.inputStream), 1024)
             val ret = input.readLine()
             ret ?: ""
         } catch (ignore: IOException) {
@@ -434,17 +435,34 @@ object RomUtils {
             } catch (ignore: IOException) {
                 // ignore
             }
+            try {
+                process?.destroy()
+            } catch (ignore: Exception) {
+                // ignore
+            }
         }
     }
 
     private fun getSystemPropertyByStream(key: String): String {
+        var inputStream: FileInputStream? = null
         return try {
             val prop = Properties()
-            val is_ = FileInputStream(File(Environment.getRootDirectory(), "build.prop"))
-            prop.load(is_)
-            prop.getProperty(key, "")
+            val rootDir: File? = Environment.getRootDirectory()
+            if (rootDir != null) {
+                inputStream = FileInputStream(File(rootDir, "build.prop"))
+                prop.load(inputStream)
+                prop.getProperty(key, "")
+            } else {
+                ""
+            }
         } catch (ignore: Exception) {
             ""
+        } finally {
+            try {
+                inputStream?.close()
+            } catch (ignore: Exception) {
+                // ignore
+            }
         }
     }
 
@@ -453,7 +471,8 @@ object RomUtils {
         return try {
             val clz = Class.forName("android.os.SystemProperties")
             val getMethod = clz.getMethod("get", String::class.java, String::class.java)
-            getMethod.invoke(clz, key, "") as String
+            val result = getMethod.invoke(clz, key, "")
+            result as? String ?: ""
         } catch (ignore: Exception) {
             ""
         }

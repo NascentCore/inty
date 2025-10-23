@@ -1,5 +1,6 @@
 package com.ai.inty.ui.screens
 
+import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,7 +28,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ai.inty.R
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.GENDER
 import com.ai.inty.ui.components.AgeItem
 import com.ai.inty.ui.components.CloseButton
@@ -47,10 +47,15 @@ internal fun RegInfoScreen(
     var selectGender by remember { mutableStateOf(GENDER.OTHER) }
     var selectAge by remember { mutableStateOf("") }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.6f))) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(0.6f))
+    ) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .background(
                         brush =
@@ -104,12 +109,16 @@ internal fun RegInfoScreen(
 
             // 年龄选择
             FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 maxItemsInEachRow = 2,
             ) {
-                val itemModifier = Modifier.weight(1f).height(48.dp)
+                val itemModifier = Modifier
+                    .weight(1f)
+                    .height(48.dp)
 
                 AgeItem(
                     itemModifier,
@@ -158,9 +167,9 @@ internal fun RegInfoScreen(
             EnterButton(
                 onEnter = {
                     if (selectAge == "<18") {
-                        coroutineScope.launch { ToastUtils.showToast(notEligibleMsg) }
+                        coroutineScope.launch { ToastUtils.showShort(notEligibleMsg) }
                     } else if (selectAge.isEmpty() || selectAge.isBlank()) {
-                        coroutineScope.launch { ToastUtils.showToast(requireMsg) }
+                        coroutineScope.launch { ToastUtils.showShort(requireMsg) }
                     } else {
                         onSave(selectGender, selectAge)
                     }

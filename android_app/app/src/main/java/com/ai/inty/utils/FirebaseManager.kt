@@ -1,11 +1,11 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.os.Bundle
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.perf.FirebasePerformance
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -55,7 +55,7 @@ object FirebaseManager {
     /** 初始化 Firebase 服务 应该在 Application.onCreate() 中调用 */
     fun initialize(context: Context) {
         if (isInitialized) {
-            EasyLog.log("FirebaseManager - 已经初始化，跳过重复初始化")
+            LogUtils.i("FirebaseManager - 已经初始化，跳过重复初始化")
             return
         }
 
@@ -73,7 +73,7 @@ object FirebaseManager {
 
             isInitialized = true
         } catch (e: Exception) {
-            EasyLog.log("FirebaseManager - 初始化失败: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("FirebaseManager - 初始化失败: ${e.message}")
             // 即使初始化失败，也不应该崩溃应用
         }
     }
@@ -297,7 +297,7 @@ object FirebaseManager {
 
         if (count < maxErrorLogs) {
             errorCounts[key] = count + 1
-            EasyLog.log("FirebaseManager - $operation failed: $message", EasyLog.ERROR)
+            LogUtils.e("FirebaseManager - $operation failed: $message")
         }
     }
 
@@ -308,6 +308,6 @@ object FirebaseManager {
         crashlytics = null
         performance = null
         errorCounts.clear()
-        EasyLog.log("FirebaseManager - 资源清理完成")
+        LogUtils.i("FirebaseManager - 资源清理完成")
     }
 }

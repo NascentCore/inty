@@ -2,6 +2,7 @@ package ai.sxwl.android.utils
 
 import android.content.Context
 import android.os.StatFs
+import android.util.Log
 import java.io.File
 
 /**
@@ -14,7 +15,12 @@ object StoreUtils {
      * 获取内部存储总大小
      */
     fun getInternalStorageTotalSize(): Long {
-        return getInternalStorageTotalSize(Utils.getApp())
+        return try {
+            getInternalStorageTotalSize(Utils.getApp())
+        } catch (e: Exception) {
+            Log.e("StoreUtils", "获取内部存储总大小失败", e)
+            0L
+        }
     }
 
     /**
@@ -23,10 +29,30 @@ object StoreUtils {
     fun getInternalStorageTotalSize(context: Context?): Long {
         if (context == null) return 0L
         try {
-            val statFs = StatFs(context.filesDir.absolutePath)
-            return statFs.blockCountLong * statFs.blockSizeLong
+            val filesDir = context.filesDir
+            if (filesDir == null || !filesDir.exists()) {
+                Log.w("StoreUtils", "filesDir不存在")
+                return 0L
+            }
+            val statFs = StatFs(filesDir.absolutePath)
+            val blockCount = statFs.blockCountLong
+            val blockSize = statFs.blockSizeLong
+
+            // 检查值是否合理
+            if (blockCount < 0 || blockSize < 0) {
+                Log.w(
+                    "StoreUtils",
+                    "StatFs返回异常值: blockCount=$blockCount, blockSize=$blockSize"
+                )
+                return 0L
+            }
+
+            return blockCount * blockSize
+        } catch (e: SecurityException) {
+            Log.e("StoreUtils", "权限不足，无法访问存储", e)
+            return 0L
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("StoreUtils", "获取内部存储总大小失败", e)
             return 0L
         }
     }
@@ -35,7 +61,12 @@ object StoreUtils {
      * 获取内部存储可用大小
      */
     fun getInternalStorageAvailableSize(): Long {
-        return getInternalStorageAvailableSize(Utils.getApp())
+        return try {
+            getInternalStorageAvailableSize(Utils.getApp())
+        } catch (e: Exception) {
+            Log.e("StoreUtils", "获取内部存储可用大小失败", e)
+            0L
+        }
     }
 
     /**
@@ -44,10 +75,30 @@ object StoreUtils {
     fun getInternalStorageAvailableSize(context: Context?): Long {
         if (context == null) return 0L
         try {
-            val statFs = StatFs(context.filesDir.absolutePath)
-            return statFs.availableBlocksLong * statFs.blockSizeLong
+            val filesDir = context.filesDir
+            if (filesDir == null || !filesDir.exists()) {
+                Log.w("StoreUtils", "filesDir不存在")
+                return 0L
+            }
+            val statFs = StatFs(filesDir.absolutePath)
+            val availableBlocks = statFs.availableBlocksLong
+            val blockSize = statFs.blockSizeLong
+
+            // 检查值是否合理
+            if (availableBlocks < 0 || blockSize < 0) {
+                Log.w(
+                    "StoreUtils",
+                    "StatFs返回异常值: availableBlocks=$availableBlocks, blockSize=$blockSize"
+                )
+                return 0L
+            }
+
+            return availableBlocks * blockSize
+        } catch (e: SecurityException) {
+            Log.e("StoreUtils", "权限不足，无法访问存储", e)
+            return 0L
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("StoreUtils", "获取内部存储可用大小失败", e)
             return 0L
         }
     }
@@ -417,15 +468,31 @@ object StoreUtils {
         if (!dir.exists() || !dir.isDirectory) return 0L
 
         var size = 0L
-        val files = dir.listFiles()
-        if (files != null) {
-            for (file in files) {
-                size += if (file.isDirectory) {
-                    getDirSize(file)
-                } else {
-                    file.length()
+        try {
+            val files = dir.listFiles()
+            if (files != null) {
+                for (file in files) {
+                    try {
+                        size += if (file.isDirectory) {
+                            getDirSize(file)
+                        } else {
+                            file.length()
+                        }
+                    } catch (e: SecurityException) {
+                        Log.w("StoreUtils", "无法访问文件: ${file.absolutePath}", e)
+                        // 继续处理其他文件，不中断整个流程
+                    } catch (e: Exception) {
+                        Log.w("StoreUtils", "处理文件失败: ${file.absolutePath}", e)
+                        // 继续处理其他文件，不中断整个流程
+                    }
                 }
             }
+        } catch (e: SecurityException) {
+            Log.e("StoreUtils", "权限不足，无法访问目录: ${dir.absolutePath}", e)
+            return 0L
+        } catch (e: Exception) {
+            Log.e("StoreUtils", "获取目录大小失败: ${dir.absolutePath}", e)
+            return 0L
         }
         return size
     }

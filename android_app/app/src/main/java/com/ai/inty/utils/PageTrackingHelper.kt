@@ -1,8 +1,8 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.utils.LogUtils
 import android.app.Activity
 import androidx.fragment.app.Fragment
-import com.inty.utils.log.EasyLog
 import java.util.concurrent.ConcurrentHashMap
 
 /** 页面追踪工具类 用于记录用户页面访问、交互流程和崩溃时的上下文信息 */
@@ -31,7 +31,7 @@ object PageTrackingHelper {
             // 记录页面结束时间（如果有上一个页面）
             if (currentPage != null) {
                 val timeSpent = System.currentTimeMillis() - pageStartTime
-                EasyLog.log("Page tracking: $currentPage spent ${timeSpent}ms")
+                LogUtils.i("Page tracking: $currentPage spent ${timeSpent}ms")
             }
 
             // 更新当前页面信息
@@ -54,7 +54,7 @@ object PageTrackingHelper {
                 additionalParams + mapOf("timestamp" to System.currentTimeMillis()),
             )
         } catch (e: Exception) {
-            EasyLog.log("Failed to track page view: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("Failed to track page view: ${e.message}")
         }
     }
 
@@ -87,7 +87,7 @@ object PageTrackingHelper {
             )
 
         } catch (e: Exception) {
-            EasyLog.log("Failed to track user interaction: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("Failed to track user interaction: ${e.message}")
         }
     }
 
@@ -128,7 +128,7 @@ object PageTrackingHelper {
             FirebaseManager.setCustomKey("last_network_success", success.toString())
 
         } catch (e: Exception) {
-            EasyLog.log("Failed to track network request: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("Failed to track network request: ${e.message}")
         }
     }
 
@@ -156,7 +156,7 @@ object PageTrackingHelper {
             FirebaseManager.setCustomKey("error_page", currentPage ?: "unknown")
 
         } catch (e: Exception) {
-            EasyLog.log("Failed to track error: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("Failed to track error: ${e.message}")
         }
     }
 
@@ -178,7 +178,7 @@ object PageTrackingHelper {
             FirebaseManager.setUserId(userId)
             FirebaseManager.setCustomKey("user_id", userId)
         } catch (e: Exception) {
-            EasyLog.log("Failed to set user ID: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("Failed to set user ID: ${e.message}")
         }
     }
 
@@ -188,7 +188,7 @@ object PageTrackingHelper {
             FirebaseManager.setUserProperty(property, value)
             FirebaseManager.setCustomKey("user_$property", value)
         } catch (e: Exception) {
-            EasyLog.log("Failed to set user property: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("Failed to set user property: ${e.message}")
         }
     }
 

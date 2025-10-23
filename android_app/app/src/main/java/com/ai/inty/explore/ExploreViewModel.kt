@@ -1,5 +1,6 @@
 package com.ai.inty.explore
 
+import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
@@ -7,7 +8,6 @@ import com.ai.inty.base.BaseViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.FirebaseManager
 import com.ai.inty.utils.UnifiedStartupManager
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -68,10 +68,7 @@ class ExploreViewModel : BaseViewModel() {
 
                 _agentsFlow.value = refreshFlow
             } catch (e: Exception) {
-                EasyLog.log(
-                    "ExploreViewModel - refreshRecommendAgents异常: ${e.message}",
-                    EasyLog.ERROR,
-                )
+                LogUtils.e("ExploreViewModel - refreshRecommendAgents异常: ${e.message}")
             }
         }
     }

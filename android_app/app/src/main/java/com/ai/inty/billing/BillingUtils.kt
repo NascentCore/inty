@@ -1,8 +1,8 @@
 package com.ai.inty.billing
 
+import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import com.google.android.gms.common.GoogleApiAvailability
-import com.inty.utils.log.EasyLog
 
 /** 计费工具类 */
 internal object BillingUtils {
@@ -12,52 +12,52 @@ internal object BillingUtils {
         val googleApiAvailability = GoogleApiAvailability.getInstance()
         val resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context)
 
-        EasyLog.log("BillingRepository BillingUtils - Google Play 服务检查结果: $resultCode")
+        LogUtils.i("BillingRepository BillingUtils - Google Play 服务检查结果: $resultCode")
 
         when (resultCode) {
             com.google.android.gms.common.ConnectionResult.SUCCESS -> {
-                EasyLog.log("BillingRepository BillingUtils - Google Play 服务可用")
+                LogUtils.i("BillingRepository BillingUtils - Google Play 服务可用")
                 return true
             }
 
             com.google.android.gms.common.ConnectionResult.SERVICE_MISSING -> {
-                EasyLog.log("BillingRepository BillingUtils - Google Play 服务缺失")
+                LogUtils.i("BillingRepository BillingUtils - Google Play 服务缺失")
             }
 
             com.google.android.gms.common.ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED -> {
-                EasyLog.log("BillingRepository BillingUtils - Google Play 服务版本过低")
+                LogUtils.i("BillingRepository BillingUtils - Google Play 服务版本过低")
             }
 
             com.google.android.gms.common.ConnectionResult.SERVICE_DISABLED -> {
-                EasyLog.log("BillingRepository BillingUtils - Google Play 服务被禁用")
+                LogUtils.i("BillingRepository BillingUtils - Google Play 服务被禁用")
             }
 
             com.google.android.gms.common.ConnectionResult.SERVICE_INVALID -> {
-                EasyLog.log("BillingRepository BillingUtils - Google Play 服务无效")
+                LogUtils.i("BillingRepository BillingUtils - Google Play 服务无效")
             }
 
             com.google.android.gms.common.ConnectionResult.SERVICE_UPDATING -> {
-                EasyLog.log("BillingRepository BillingUtils - Google Play 服务正在更新")
+                LogUtils.i("BillingRepository BillingUtils - Google Play 服务正在更新")
             }
 
             com.google.android.gms.common.ConnectionResult.TIMEOUT -> {
-                EasyLog.log("BillingRepository BillingUtils - Google Play 服务连接超时")
+                LogUtils.i("BillingRepository BillingUtils - Google Play 服务连接超时")
             }
 
             com.google.android.gms.common.ConnectionResult.INTERRUPTED -> {
-                EasyLog.log("BillingRepository BillingUtils - Google Play 服务连接被中断")
+                LogUtils.i("BillingRepository BillingUtils - Google Play 服务连接被中断")
             }
 
             com.google.android.gms.common.ConnectionResult.INVALID_ACCOUNT -> {
-                EasyLog.log("BillingRepository BillingUtils - Google Play 账户无效")
+                LogUtils.i("BillingRepository BillingUtils - Google Play 账户无效")
             }
 
             com.google.android.gms.common.ConnectionResult.RESOLUTION_REQUIRED -> {
-                EasyLog.log("BillingRepository BillingUtils - Google Play 服务需要用户操作解决")
+                LogUtils.i("BillingRepository BillingUtils - Google Play 服务需要用户操作解决")
             }
 
             else -> {
-                EasyLog.log("BillingRepository BillingUtils - Google Play 服务不可用，错误码: $resultCode")
+                LogUtils.i("BillingRepository BillingUtils - Google Play 服务不可用，错误码: $resultCode")
             }
         }
 

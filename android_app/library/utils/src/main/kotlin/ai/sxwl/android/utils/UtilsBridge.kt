@@ -65,7 +65,8 @@ internal object UtilsBridge {
             override fun onActivityDestroyed(activity: Activity) {
                 activityList.remove(activity)
                 if (topActivity == activity) {
-                    topActivity = if (activityList.isEmpty()) null else activityList.last()
+                    // 安全的获取最后一个Activity
+                    topActivity = activityList.lastOrNull()
                 }
             }
         })
@@ -88,6 +89,12 @@ internal object UtilsBridge {
             val thread = activityThreadClass.getMethod("currentActivityThread").invoke(null)
             val app = activityThreadClass.getMethod("getApplication").invoke(thread)
             app as? Application
+        } catch (e: ClassNotFoundException) {
+            Log.e("UtilsBridge", "ActivityThread class not found", e)
+            null
+        } catch (e: NoSuchMethodException) {
+            Log.e("UtilsBridge", "Method not found", e)
+            null
         } catch (e: Exception) {
             Log.e("UtilsBridge", "getApplicationByReflect failed", e)
             null
@@ -100,6 +107,12 @@ internal object UtilsBridge {
             val thread = activityThreadClass.getMethod("currentActivityThread").invoke(null)
             val processName = activityThreadClass.getMethod("getProcessName").invoke(thread)
             processName as? String ?: ""
+        } catch (e: ClassNotFoundException) {
+            Log.e("UtilsBridge", "ActivityThread class not found", e)
+            ""
+        } catch (e: NoSuchMethodException) {
+            Log.e("UtilsBridge", "Method not found", e)
+            ""
         } catch (e: Exception) {
             Log.e("UtilsBridge", "getCurrentProcessName failed", e)
             ""

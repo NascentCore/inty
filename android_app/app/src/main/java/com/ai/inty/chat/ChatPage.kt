@@ -1,5 +1,8 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -46,7 +49,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.ai.inty.LoginActivity
 import com.ai.inty.R
 import com.ai.inty.VipCenterActivity
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ui.ChatInput
@@ -60,8 +62,6 @@ import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.UnlimitChatDialog
 import com.ai.inty.ui.components.AgentBackground
 import com.ai.inty.utils.TrackScreenView
-import com.inty.utils.log.EasyLog
-import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.launch
 
 // The spacer from the bottom of the chat input to what ever that flows underneath it.
@@ -162,22 +162,6 @@ internal fun ChatPage(
     // VIP状态
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
-    // Premium model二状态设置：默认跟随全局设置，但受VIP状态限制
-    var agentPremiumModel by
-    remember(agentInfo?.id, vipStatus.isSubscribed) {
-        mutableStateOf(
-            if (!vipStatus.isSubscribed) {
-                // 如果不是VIP，强制关闭Premium model
-                false
-            } else {
-                agentInfo?.let {
-                    // 获取角色专用设置，如果不存在则使用全局设置
-                    IntySetting.getAgentPremiumModel(it.id) ?: IntySetting.isShowPremiumModel()
-                } ?: false
-            }
-        )
-    }
-
     var showMorePanel by remember { mutableStateOf(false) }
     var morePanelHeight by remember { mutableStateOf(0.dp) }
     var showPremiumDialog by remember { mutableStateOf(false) }
@@ -218,7 +202,7 @@ internal fun ChatPage(
                             scope.launch {
                                 // 如果是已经删除的agent，则不可点击，并提示
                                 if (agentInfo?.isDeleted == true) {
-                                    ToastUtils.showToast(R.string.str_agent_is_deleted)
+                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
                                 } else {
                                     if (drawerState.value == DrawerValue.Closed) {
                                         drawerState.value = DrawerValue.Open
@@ -233,15 +217,14 @@ internal fun ChatPage(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Premium model标签
+                // Premium model标签,非vip显示，vip隐藏（20251020的要求）
                 if (agentInfo != null && !vipStatus.isSubscribed) {
                     PremiumModelTag(
-                        isPremiumModel = agentPremiumModel,
                         onClick = {
                             scope.launch {
                                 // 如果是已经删除的agent，则不可点击，并提示
                                 if (agentInfo?.isDeleted == true) {
-                                    ToastUtils.showToast(R.string.str_agent_is_deleted)
+                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
                                 } else {
                                     // 如果不是VIP，显示高级模型的弹窗
                                     showPremiumDialog = true
@@ -468,7 +451,7 @@ internal fun ChatPage(
                             val shouldLoadMore = hasEnoughData && isNearTop && hasScrolled
 
                             if (shouldLoadMore && hasMoreMessages && !isLoadingMore) {
-                                EasyLog.log("Triggering smart load more messages")
+                                LogUtils.i("Triggering smart load more messages")
                                 chatViewModel.loadMoreMessages()
                             }
                         }

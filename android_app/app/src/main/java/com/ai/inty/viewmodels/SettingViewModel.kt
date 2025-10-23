@@ -1,16 +1,16 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.ToastUtils
+import ai.sxwl.android.utils.Utils
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.base.BaseViewModel
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.NetServiceMgr
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.AppEnv
-import com.inty.utils.log.EasyLog
-import com.inty.utils.storage.IntySetting
+import ai.sxwl.android.data.store.IntySetting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -94,8 +94,8 @@ class SettingViewModel : BaseViewModel() {
                             if (result.data.canDelete && !result.data.activeSubscription) {
                                 deleteUserAccount()
                             } else {
-                                ToastUtils.showToast(
-                                    AppEnv.context.getString(
+                                ToastUtils.showShort(
+                                    Utils.getApp().getString(
                                         R.string.toast_cancel_subscription_first
                                     )
                                 )
@@ -103,8 +103,8 @@ class SettingViewModel : BaseViewModel() {
                         }
 
                         is HttpResult.Failure -> {
-                            ToastUtils.showToast(
-                                AppEnv.context.getString(
+                            ToastUtils.showShort(
+                                Utils.getApp().getString(
                                     R.string.toast_check_account_deletion_error
                                 )
                             )
@@ -113,19 +113,13 @@ class SettingViewModel : BaseViewModel() {
                 }
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
-                EasyLog.log(
-                    "checkAccountSubscribe HTTP Exception: ${e.code()} - ${e.message()}",
-                    EasyLog.ERROR,
-                )
+                LogUtils.e("checkAccountSubscribe HTTP Exception: ${e.code()} - ${e.message()}")
                 val errorMessage = handleHttpException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
+                withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
             } catch (e: Exception) {
-                EasyLog.log(
-                    "检查账号需要取消订阅 exception: ${e.message}",
-                    priority = EasyLog.ERROR
-                )
+                LogUtils.e("检查账号需要取消订阅 exception: ${e.message}")
                 val errorMessage = handleGeneralException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
+                withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
             }
         }
     }
@@ -147,24 +141,21 @@ class SettingViewModel : BaseViewModel() {
                         }
 
                         is HttpResult.Failure -> {
-                            ToastUtils.showToast(
-                                AppEnv.context.getString(R.string.toast_account_deletion_error)
+                            ToastUtils.showShort(
+                                Utils.getApp().getString(R.string.toast_account_deletion_error)
                             )
                         }
                     }
                 }
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
-                EasyLog.log(
-                    "deleteUserAccount HTTP Exception: ${e.code()} - ${e.message()}",
-                    EasyLog.ERROR,
-                )
+                LogUtils.e("deleteUserAccount HTTP Exception: ${e.code()} - ${e.message()}")
                 val errorMessage = handleHttpException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
+                withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
             } catch (e: Exception) {
-                EasyLog.log("删除用户账号 exception: ${e.message}", priority = EasyLog.ERROR)
+                LogUtils.e("删除用户账号 exception: ${e.message}")
                 val errorMessage = handleGeneralException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
+                withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
             }
         }
     }

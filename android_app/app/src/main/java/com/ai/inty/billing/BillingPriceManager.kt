@@ -1,9 +1,9 @@
 package com.ai.inty.billing
 
+import ai.sxwl.android.utils.LogUtils
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.SkuDetails
 import com.android.billingclient.api.SkuDetailsParams
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,19 +30,19 @@ internal class BillingPriceManager(
     fun querySkuDetails(isConnected: Boolean) {
         // 检查BillingClient连接状态
         if (!isConnected) {
-            EasyLog.log("BillingRepository BillingPriceManager - BillingClient 未连接，无法查询商品")
+            LogUtils.w("BillingClient 未连接，无法查询商品")
             return
         }
 
         // 从 plansFlow 获取商品ID列表
         val currentPlans = plansFlow.value
         if (currentPlans.isEmpty()) {
-            EasyLog.log("BillingRepository BillingPriceManager - plansFlow 为空，跳过价格查询")
+            LogUtils.w("plansFlow 为空，跳过价格查询")
             return
         }
 
         val subscriptionIds = currentPlans.map { it.googleProductId }
-        EasyLog.log("BillingRepository BillingPriceManager - 从 plansFlow 获取商品ID: $subscriptionIds")
+        LogUtils.d("从 plansFlow 获取商品ID: $subscriptionIds")
 
         // 使用 SkuDetails API
         val params =
@@ -52,30 +52,17 @@ internal class BillingPriceManager(
                 .build()
 
         billingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
-            EasyLog.log(
-                "BillingRepository BillingPriceManager - Google Play 价格查询结果: 响应码=${billingResult.responseCode}"
-            )
-            EasyLog.log(
-                "BillingRepository BillingPriceManager - 查询结果详情: ${billingResult.debugMessage}"
-            )
+            LogUtils.d("Google Play 价格查询结果: 响应码=${billingResult.responseCode}, 详情: ${billingResult.debugMessage}")
 
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
                     skuDetailsList?.let { detailsList ->
                         if (detailsList.isNotEmpty()) {
-                            EasyLog.log(
-                                "BillingRepository BillingPriceManager - 查询成功，获取到 ${detailsList.size} 个商品信息，\n${
-                                    detailsList.joinToString(
-                                        " ,, "
-                                    )
-                                }"
-                            )
+                            LogUtils.i("查询成功，获取到 ${detailsList.size} 个商品信息")
                             // 使用 SkuDetails 更新计划价格
                             updateLocalPlans(currentPlans, detailsList)
                         } else {
-                            EasyLog.log(
-                                "BillingRepository BillingPriceManager - 查询成功但返回空商品列表，可能原因: 商品ID不存在或未在Google Play Console中激活"
-                            )
+                            LogUtils.w("查询成功但返回空商品列表，可能原因: 商品ID不存在或未在Google Play Console中激活")
                             // 发送查询失败事件
                             eventScope.launch {
                                 eventFlow.emit(
@@ -87,9 +74,7 @@ internal class BillingPriceManager(
                             }
                         }
                     } ?: run {
-                        EasyLog.log(
-                            "BillingRepository BillingPriceManager - Google Play返回的商品列表为null"
-                        )
+                        LogUtils.w("Google Play返回的商品列表为null")
                         eventScope.launch {
                             eventFlow.emit(
                                 BillingEvent.SkuDetailsQueryFailed(
@@ -170,41 +155,22 @@ internal class BillingPriceManager(
                         )
                     updatedCount++
 
-                    EasyLog.log("BillingRepository BillingPriceManager ✅ 价格有变化，更新计划: $planId")
-                    EasyLog.log(
-                        "BillingRepository BillingPriceManager    计划名称: ${currentPlan.name}"
-                    )
-                    EasyLog.log(
-                        "BillingRepository BillingPriceManager    价格变化: $oldPrice -> $correctedPrice"
-                    )
-                    EasyLog.log(
-                        "BillingRepository BillingPriceManager    货币代码: ${currentPlan.currencyCode} -> $currencyCode"
-                    )
-                    EasyLog.log(
-                        "BillingRepository BillingPriceManager    商品标题: ${skuDetails.title}"
-                    )
-                    EasyLog.log(
-                        "BillingRepository BillingPriceManager    商品描述: ${skuDetails.description}"
-                    )
+                    LogUtils.i("✅ 价格有变化，更新计划: $planId, 名称: ${currentPlan.name}, 价格: $oldPrice -> $correctedPrice, 货币: ${currentPlan.currencyCode} -> $currencyCode")
                 } else {
-                    EasyLog.log(
-                        "BillingRepository BillingPriceManager ℹ️ 价格无变化，跳过: $planId (${currentPlan.name})"
-                    )
+                    LogUtils.d("ℹ️ 价格无变化，跳过: $planId (${currentPlan.name})")
                 }
             } else {
-                EasyLog.log("BillingRepository BillingPriceManager ⚠️ 未找到匹配的计划ID: $planId")
+                LogUtils.w("⚠️ 未找到匹配的计划ID: $planId")
             }
         }
 
         // 如果有变化，更新并通知
         if (updatedCount > 0) {
-            EasyLog.log(
-                "BillingRepository BillingPriceManager ✅ 检测到 $updatedCount 个计划价格变化，更新 plansFlow"
-            )
+            LogUtils.i("✅ 检测到 $updatedCount 个计划价格变化，更新 plansFlow")
             plansFlow.value = updatedPlans
             BillingStorage.saveLocalPlans(updatedPlans) // 保存到本地缓存
         } else {
-            EasyLog.log("BillingRepository BillingPriceManager ℹ️ 所有计划价格都无变化，无需更新")
+            LogUtils.d("ℹ️ 所有计划价格都无变化，无需更新")
         }
     }
 }

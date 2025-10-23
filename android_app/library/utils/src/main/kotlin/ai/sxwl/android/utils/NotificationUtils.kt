@@ -132,7 +132,8 @@ object NotificationUtils {
 
         return try {
             val notificationManager =
-                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                    ?: return false
 
             // 检查渠道是否已存在
             if (notificationManager.getNotificationChannel(channelId) != null) {
@@ -182,7 +183,8 @@ object NotificationUtils {
 
         return try {
             val notificationManager =
-                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                    ?: return false
             notificationManager.deleteNotificationChannel(channelId)
             Log.d(TAG, "删除通知渠道成功: $channelId")
             true
@@ -251,11 +253,16 @@ object NotificationUtils {
 
         // 设置点击意图
         config.intent?.let { intent ->
-            val pendingIntent = PendingIntent.getActivity(
-                context, config.id, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            builder.setContentIntent(pendingIntent)
+            val pendingIntent = try {
+                PendingIntent.getActivity(
+                    context, config.id, intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            } catch (e: Exception) {
+                Log.e("NotificationUtils", "创建PendingIntent失败", e)
+                null
+            }
+            pendingIntent?.let { builder.setContentIntent(it) }
         }
 
         // 设置分组
@@ -311,11 +318,18 @@ object NotificationUtils {
 
         // 添加动作
         config.actions.forEach { action ->
-            val actionPendingIntent = PendingIntent.getActivity(
-                context, action.hashCode(), action.intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            builder.addAction(action.icon, action.title, actionPendingIntent)
+            val actionPendingIntent = try {
+                PendingIntent.getActivity(
+                    context, action.hashCode(), action.intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            } catch (e: Exception) {
+                Log.e("NotificationUtils", "创建动作PendingIntent失败", e)
+                null
+            }
+            actionPendingIntent?.let {
+                builder.addAction(action.icon, action.title, it)
+            }
         }
 
         return builder
@@ -490,7 +504,8 @@ object NotificationUtils {
 
         return try {
             val notificationManager =
-                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                    ?: return false
             val channel = notificationManager.getNotificationChannel(channelId)
             channel?.importance != NotificationManager.IMPORTANCE_NONE
         } catch (e: Exception) {

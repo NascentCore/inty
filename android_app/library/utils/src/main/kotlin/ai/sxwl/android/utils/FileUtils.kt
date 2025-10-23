@@ -1,6 +1,8 @@
 package ai.sxwl.android.utils
 
+import android.app.Application
 import android.os.Build
+import android.util.Log
 import androidx.core.net.toUri
 import java.io.File
 import java.io.FileFilter
@@ -48,18 +50,31 @@ object FileUtils {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 val uri = filePath?.toUri() ?: return false
-                val cr = Utils.getApp().contentResolver
+                val context: Application? = Utils.getApp()
+                if (context == null) {
+                    Log.e("FileUtils", "Context为null，无法检查文件存在性: $filePath")
+                    return false
+                }
+
+                val cr = context.contentResolver
                 val afd = cr.openAssetFileDescriptor(uri, "r")
                 if (afd == null) return false
+
                 try {
                     afd.close()
                 } catch (e: IOException) {
-                    // ignore
+                    Log.w("FileUtils", "关闭AssetFileDescriptor异常: $filePath", e)
                 }
+                return true
+            } catch (e: SecurityException) {
+                Log.e("FileUtils", "检查文件存在性权限异常: $filePath", e)
+                return false
             } catch (e: FileNotFoundException) {
                 return false
+            } catch (e: Exception) {
+                Log.e("FileUtils", "检查文件存在性异常: $filePath", e)
+                return false
             }
-            return true
         }
         return false
     }
@@ -79,8 +94,23 @@ object FileUtils {
         if (!file.exists()) return false
         if (UtilsBridge.isSpace(newName)) return false
         if (newName == file.name) return true
-        val newFile = File(file.parent + File.separator + newName)
-        return !newFile.exists() && file.renameTo(newFile)
+
+        val parentDir = file.parent
+        if (parentDir == null) {
+            Log.e("FileUtils", "文件父目录为null: ${file.absolutePath}")
+            return false
+        }
+
+        val newFile = File(parentDir + File.separator + newName)
+        return try {
+            !newFile.exists() && file.renameTo(newFile)
+        } catch (e: SecurityException) {
+            Log.e("FileUtils", "文件重命名权限异常: ${file.absolutePath}", e)
+            false
+        } catch (e: Exception) {
+            Log.e("FileUtils", "文件重命名异常: ${file.absolutePath}", e)
+            false
+        }
     }
 
     /**
@@ -304,17 +334,25 @@ object FileUtils {
         }
         if (!createOrExistsDir(destFile.parentFile)) return false
         return try {
-            val inputStream = FileInputStream(srcFile)
-            val outputStream = FileOutputStream(destFile)
-            val buffer = ByteArray(8192)
-            var len: Int
-            while (inputStream.read(buffer).also { len = it } != -1) {
-                outputStream.write(buffer, 0, len)
+            FileInputStream(srcFile).use { inputStream ->
+                FileOutputStream(destFile).use { outputStream ->
+                    val buffer = ByteArray(8192)
+                    var len: Int
+                    while (inputStream.read(buffer).also { len = it } != -1) {
+                        outputStream.write(buffer, 0, len)
+                    }
+                    outputStream.flush()
+                }
             }
-            inputStream.close()
-            outputStream.close()
             !isMove || srcFile.delete()
+        } catch (e: SecurityException) {
+            Log.e("FileUtils", "文件复制权限异常: ${srcFile.absolutePath}", e)
+            false
+        } catch (e: IOException) {
+            Log.e("FileUtils", "文件复制IO异常: ${srcFile.absolutePath}", e)
+            false
         } catch (e: Exception) {
+            Log.e("FileUtils", "文件复制异常: ${srcFile.absolutePath}", e)
             false
         }
     }
@@ -451,14 +489,14 @@ object FileUtils {
         if (file == null) return null
         return try {
             val md = MessageDigest.getInstance(algorithm)
-            val inputStream = FileInputStream(file)
-            val digestInputStream = DigestInputStream(inputStream, md)
-            val buffer = ByteArray(8192)
-            while (digestInputStream.read(buffer) != -1) {
-                // 读取文件内容，计算MD5
+            FileInputStream(file).use { inputStream ->
+                DigestInputStream(inputStream, md).use { digestInputStream ->
+                    val buffer = ByteArray(8192)
+                    while (digestInputStream.read(buffer) != -1) {
+                        // 读取文件内容，计算MD5
+                    }
+                }
             }
-            digestInputStream.close()
-            inputStream.close()
             val digest = md.digest()
             val hexString = kotlin.text.StringBuilder()
             for (b in digest) {
@@ -469,7 +507,14 @@ object FileUtils {
                 hexString.append(hex)
             }
             hexString.toString()
+        } catch (e: SecurityException) {
+            Log.e("FileUtils", "计算MD5权限异常: ${file.absolutePath}", e)
+            null
+        } catch (e: IOException) {
+            Log.e("FileUtils", "计算MD5 IO异常: ${file.absolutePath}", e)
+            null
         } catch (e: Exception) {
+            Log.e("FileUtils", "计算MD5异常: ${file.absolutePath}", e)
             null
         }
     }
@@ -565,7 +610,14 @@ object FileUtils {
                 file.writeText(content)
             }
             true
+        } catch (e: SecurityException) {
+            Log.e("FileUtils", "写入文件权限异常: ${file.absolutePath}", e)
+            false
+        } catch (e: IOException) {
+            Log.e("FileUtils", "写入文件IO异常: ${file.absolutePath}", e)
+            false
         } catch (e: Exception) {
+            Log.e("FileUtils", "写入文件异常: ${file.absolutePath}", e)
             false
         }
     }
@@ -584,7 +636,14 @@ object FileUtils {
         if (file == null || !file.exists()) return null
         return try {
             file.readText()
+        } catch (e: SecurityException) {
+            Log.e("FileUtils", "读取文件权限异常: ${file.absolutePath}", e)
+            null
+        } catch (e: IOException) {
+            Log.e("FileUtils", "读取文件IO异常: ${file.absolutePath}", e)
+            null
         } catch (e: Exception) {
+            Log.e("FileUtils", "读取文件异常: ${file.absolutePath}", e)
             null
         }
     }

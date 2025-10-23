@@ -1,5 +1,6 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.data.store.IntySetting
 import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
@@ -11,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.ai.inty.LoginActivity
 import com.ai.inty.base.AntiClick
-import com.inty.utils.storage.IntySetting
 
 @Composable
 fun AuthClickable(

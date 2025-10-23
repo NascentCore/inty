@@ -1,5 +1,6 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.utils.LogUtils
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.beans.GenerateBackgroundRequest
 import com.ai.inty.beans.GenerateBackgroundResponse
@@ -7,7 +8,6 @@ import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.NetworkManager
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,7 +56,7 @@ class AvatarGenerateViewModel : BaseViewModel() {
 
         // Store the prompt and start generation in background
         AvatarManager.setGenerationPrompt(currentPrompt)
-        EasyLog.log("Starting background generation with prompt: $currentPrompt")
+        LogUtils.i("Starting background generation with prompt: $currentPrompt")
 
         _isLoading.value = true
         clearError()
@@ -68,21 +68,21 @@ class AvatarGenerateViewModel : BaseViewModel() {
                 // Start generation in background - this will continue even after navigation
                 val response = generateBackground(request = request)
                 withContext(Dispatchers.Main) {
-                    EasyLog.log("Generated image URLs: ${response.imageUrls}")
+                    LogUtils.i("Generated image URLs: ${response.imageUrls}")
 
                     if (response.imageUrls.isNotEmpty()) {
                         // Store the generated URLs for CreateRoleActivity
                         _generatedImageUrls.value = response.imageUrls
                         _selectedImageIndex.value = 0
                         AvatarManager.setGeneratedAvatarUrls(response.imageUrls)
-                        EasyLog.log("Setting generatedImageUrls to: ${response.imageUrls}")
+                        LogUtils.i("Setting generatedImageUrls to: ${response.imageUrls}")
                     } else if (response.imageUrl.isNotBlank()) {
                         // 兼容单张图片的情况
                         _generatedImageUrl.value = response.imageUrl
                         AvatarManager.setGeneratedAvatarUrl(response.imageUrl)
-                        EasyLog.log("Setting generatedImageUrl to: ${response.imageUrl}")
+                        LogUtils.i("Setting generatedImageUrl to: ${response.imageUrl}")
                     } else {
-                        EasyLog.log("Empty image URLs received from server", EasyLog.ERROR)
+                        LogUtils.e("Empty image URLs received from server")
                         AvatarManager.setGenerationError("Generated image URLs are empty")
                     }
 
@@ -103,7 +103,7 @@ class AvatarGenerateViewModel : BaseViewModel() {
                             _errorMessage.value = errorMessage
                         },
                     )
-                    EasyLog.log("Ai头像生成异常: ${e.message}", EasyLog.ERROR)
+                    LogUtils.e("Ai头像生成异常: ${e.message}")
                     _isLoading.value = false
                     clearError()
                 }
@@ -132,22 +132,19 @@ class AvatarGenerateViewModel : BaseViewModel() {
 
                 val response = generateBackground(request = request)
                 withContext(Dispatchers.Main) {
-                    EasyLog.log("Regenerated image URLs: ${response.imageUrls}")
+                    LogUtils.i("Regenerated image URLs: ${response.imageUrls}")
                     if (response.imageUrls.isNotEmpty()) {
                         _generatedImageUrls.value = response.imageUrls
                         _selectedImageIndex.value = 0 // 默认选中第一张
                         AvatarManager.setGeneratedAvatarUrls(response.imageUrls)
-                        EasyLog.log("Setting regenerated imageUrls to: ${response.imageUrls}")
+                        LogUtils.i("Setting regenerated imageUrls to: ${response.imageUrls}")
                     } else if (response.imageUrl.isNotBlank()) {
                         // 兼容单张图片的情况
                         _generatedImageUrl.value = response.imageUrl
                         AvatarManager.setGeneratedAvatarUrl(response.imageUrl)
-                        EasyLog.log("Setting regenerated imageUrl to: ${response.imageUrl}")
+                        LogUtils.i("Setting regenerated imageUrl to: ${response.imageUrl}")
                     } else {
-                        EasyLog.log(
-                            "Empty image URLs received from server during regeneration",
-                            EasyLog.ERROR,
-                        )
+                        LogUtils.e("Empty image URLs received from server during regeneration")
                         _errorMessage.value = "Regenerated image URLs are empty"
                     }
                     _isLoading.value = false
@@ -156,7 +153,7 @@ class AvatarGenerateViewModel : BaseViewModel() {
                 withContext(Dispatchers.Main) {
                     val errorMessage = e.message?.substringBefore(':') ?: "Unknown error"
                     _errorMessage.value = errorMessage
-                    EasyLog.log("Regenerate avatar error: ${e.message}", EasyLog.ERROR)
+                    LogUtils.e("Regenerate avatar error: ${e.message}")
                     _isLoading.value = false
                 }
             }
@@ -184,16 +181,16 @@ class AvatarGenerateViewModel : BaseViewModel() {
     ): GenerateBackgroundResponse {
         try {
             val result = agentApi.generateBackground(request)
-            EasyLog.log("generateBackground = $result")
+            LogUtils.i("generateBackground = $result")
 
             when (result) {
                 is com.architecture.httplib.core.HttpResult.Success -> {
-                    EasyLog.log("generateBackground success: ${result.data}")
+                    LogUtils.i("generateBackground success: ${result.data}")
                     return result.data
                 }
 
                 is com.architecture.httplib.core.HttpResult.Failure -> {
-                    EasyLog.log("generateBackground error: $result", priority = EasyLog.ERROR)
+                    LogUtils.e("generateBackground error: $result")
                     val errorMessage =
                         result.message.ifBlank {
                             "Generation failed, please check your network connection"

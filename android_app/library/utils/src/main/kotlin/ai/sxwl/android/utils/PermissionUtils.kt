@@ -2,6 +2,7 @@ package ai.sxwl.android.utils
 
 import android.Manifest
 import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
@@ -17,7 +18,16 @@ object PermissionUtils {
      * 检查权限是否已授予
      */
     fun isGranted(permission: String?): Boolean {
-        return isGranted(Utils.getApp(), permission)
+        return try {
+            val app: Application? = Utils.getApp()
+            if (app != null) {
+                isGranted(app, permission)
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            false
+        }
     }
 
     /**
@@ -25,10 +35,14 @@ object PermissionUtils {
      */
     fun isGranted(context: Context?, permission: String?): Boolean {
         if (context == null || permission.isNullOrEmpty()) return false
-        return ContextCompat.checkSelfPermission(
-            context,
-            permission
-        ) == PackageManager.PERMISSION_GRANTED
+        return try {
+            ContextCompat.checkSelfPermission(
+                context,
+                permission
+            ) == PackageManager.PERMISSION_GRANTED
+        } catch (e: Exception) {
+            false
+        }
     }
 
     /**
@@ -55,7 +69,16 @@ object PermissionUtils {
      * 检查权限是否应该显示说明
      */
     fun shouldShowRequestPermissionRationale(permission: String?): Boolean {
-        return shouldShowRequestPermissionRationale(Utils.getApp(), permission)
+        return try {
+            val app: Application? = Utils.getApp()
+            if (app != null) {
+                shouldShowRequestPermissionRationale(app, permission)
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            false
+        }
     }
 
     /**

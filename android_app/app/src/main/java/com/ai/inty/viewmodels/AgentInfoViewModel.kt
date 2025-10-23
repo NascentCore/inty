@@ -1,11 +1,11 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.net.NetServiceMgr
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +24,7 @@ class AgentInfoViewModel : BaseViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = chatApi.getAgentInfo(agentId)
-                EasyLog.log("getAgentInfo = $result")
+                LogUtils.i("getAgentInfo = $result")
                 when (result) {
                     is HttpResult.Success -> {
                         setAgentInfo(result.data)
@@ -35,13 +35,13 @@ class AgentInfoViewModel : BaseViewModel() {
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("setAgentID exception: ${e.message}", priority = EasyLog.ERROR)
+                LogUtils.e("setAgentID exception: ${e.message}")
             }
         }
     }
 
     fun setAgentInfo(agentInfo: AgentInfo?) {
-        EasyLog.log("agent = $agentInfo")
+        LogUtils.i("agent = $agentInfo")
         _agentInfo.value = agentInfo
         // Refresh agent data to get latest follower count and follow status
         agentInfo?.let { agent -> refreshAgentData(agent.id) }
@@ -51,7 +51,7 @@ class AgentInfoViewModel : BaseViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = agentApi.getAgentDetail(agentId)
-                EasyLog.log("refreshAgentData = $result")
+                LogUtils.i("refreshAgentData = $result")
                 when (result) {
                     is HttpResult.Success -> {
                         _agentInfo.value = result.data
@@ -62,7 +62,7 @@ class AgentInfoViewModel : BaseViewModel() {
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("refreshAgentData exception: ${e.message}", priority = EasyLog.ERROR)
+                LogUtils.e("refreshAgentData exception: ${e.message}")
             }
         }
     }

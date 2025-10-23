@@ -1,10 +1,10 @@
 package com.ai.inty.explore
 
+import ai.sxwl.android.data.store.IntySetting
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import com.ai.inty.beans.AgentInfo
-import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.flow.Flow
 
 /** Explore页面的Paging数据仓库 负责管理Paging数据流、配置和传统数据请求 集成了原ExploreRepository的所有功能 */

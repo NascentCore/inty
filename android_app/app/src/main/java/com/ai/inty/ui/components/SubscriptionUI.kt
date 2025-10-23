@@ -1,8 +1,8 @@
 package com.ai.inty.ui.components
 
+import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -53,18 +53,9 @@ fun openPlayStoreSubscriptions(context: Context) {
         if (intent.resolveActivity(context.packageManager) != null) {
             context.startActivity(intent)
         } else {
-            Toast.makeText(
-                context,
-                context.getString(R.string.toast_google_play_unavailable),
-                Toast.LENGTH_LONG,
-            )
-                .show()
+            ToastUtils.showShort(R.string.toast_google_play_unavailable)
         }
     } catch (e: Exception) {
-        Toast.makeText(
-            context,
-            context.getString(R.string.toast_navigation_failed),
-            Toast.LENGTH_LONG,
-        ).show()
+        ToastUtils.showShort(R.string.toast_navigation_failed)
     }
 }

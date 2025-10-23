@@ -59,34 +59,46 @@ object ImageCompressUtils {
         config: CompressConfig = CompressConfig(),
         callback: CompressCallback
     ) {
-        if (!imageFile.exists()) {
-            callback.onError(IOException("图片文件不存在: ${imageFile.absolutePath}"))
-            return
-        }
-
-        Luban.with(context)
-            .load(imageFile)
-            .ignoreBy(config.maxSize)
-            .setTargetDir(getCompressCacheDir(context))
-            .filter { path ->
-                // 过滤条件：只处理图片文件
-                val extension = path.substringAfterLast('.', "").lowercase()
-                extension in listOf("jpg", "jpeg", "png", "webp", "bmp")
+        try {
+            if (!imageFile.exists()) {
+                callback.onError(IOException("图片文件不存在: ${imageFile.absolutePath}"))
+                return
             }
-            .setCompressListener(object : OnCompressListener {
-                override fun onStart() {
-                    // 压缩开始
-                }
 
-                override fun onSuccess(file: File) {
-                    callback.onSuccess(file)
+            Luban.with(context)
+                .load(imageFile)
+                .ignoreBy(config.maxSize)
+                .setTargetDir(getCompressCacheDir(context))
+                .filter { path ->
+                    try {
+                        // 过滤条件：只处理图片文件
+                        val extension = if (path.contains('.')) {
+                            path.substringAfterLast('.', "").lowercase()
+                        } else {
+                            ""
+                        }
+                        extension in listOf("jpg", "jpeg", "png", "webp", "bmp")
+                    } catch (e: Exception) {
+                        false
+                    }
                 }
+                .setCompressListener(object : OnCompressListener {
+                    override fun onStart() {
+                        // 压缩开始
+                    }
 
-                override fun onError(e: Throwable) {
-                    callback.onError(e)
-                }
-            })
-            .launch()
+                    override fun onSuccess(file: File) {
+                        callback.onSuccess(file)
+                    }
+
+                    override fun onError(e: Throwable) {
+                        callback.onError(e)
+                    }
+                })
+                .launch()
+        } catch (e: Exception) {
+            callback.onError(e)
+        }
     }
 
     /**
@@ -103,39 +115,51 @@ object ImageCompressUtils {
         config: CompressConfig = CompressConfig(),
         callback: CompressCallback
     ) {
-        if (imageFiles.isEmpty()) {
-            callback.onError(kotlin.IllegalArgumentException("图片文件列表不能为空"))
-            return
-        }
-
-        val validFiles = imageFiles.filter { it.exists() }
-        if (validFiles.isEmpty()) {
-            callback.onError(IOException("没有找到有效的图片文件"))
-            return
-        }
-
-        Luban.with(context)
-            .load(validFiles)
-            .ignoreBy(config.maxSize)
-            .setTargetDir(getCompressCacheDir(context))
-            .filter { path ->
-                val extension = path.substringAfterLast('.', "").lowercase()
-                extension in listOf("jpg", "jpeg", "png", "webp", "bmp")
+        try {
+            if (imageFiles.isEmpty()) {
+                callback.onError(kotlin.IllegalArgumentException("图片文件列表不能为空"))
+                return
             }
-            .setCompressListener(object : OnCompressListener {
-                override fun onStart() {
-                    // 压缩开始
-                }
 
-                override fun onSuccess(file: File) {
-                    callback.onSuccess(file)
-                }
+            val validFiles = imageFiles.filter { it.exists() }
+            if (validFiles.isEmpty()) {
+                callback.onError(IOException("没有找到有效的图片文件"))
+                return
+            }
 
-                override fun onError(e: Throwable) {
-                    callback.onError(e)
+            Luban.with(context)
+                .load(validFiles)
+                .ignoreBy(config.maxSize)
+                .setTargetDir(getCompressCacheDir(context))
+                .filter { path ->
+                    try {
+                        val extension = if (path.contains('.')) {
+                            path.substringAfterLast('.', "").lowercase()
+                        } else {
+                            ""
+                        }
+                        extension in listOf("jpg", "jpeg", "png", "webp", "bmp")
+                    } catch (e: Exception) {
+                        false
+                    }
                 }
-            })
-            .launch()
+                .setCompressListener(object : OnCompressListener {
+                    override fun onStart() {
+                        // 压缩开始
+                    }
+
+                    override fun onSuccess(file: File) {
+                        callback.onSuccess(file)
+                    }
+
+                    override fun onError(e: Throwable) {
+                        callback.onError(e)
+                    }
+                })
+                .launch()
+        } catch (e: Exception) {
+            callback.onError(e)
+        }
     }
 
     /**
@@ -215,11 +239,16 @@ object ImageCompressUtils {
      * @return 缓存目录
      */
     private fun getCompressCacheDir(context: Context): String {
-        val cacheDir = File(context.cacheDir, "luban_compress")
-        if (!cacheDir.exists()) {
-            cacheDir.mkdirs()
+        return try {
+            val cacheDir = File(context.cacheDir, "luban_compress")
+            if (!cacheDir.exists()) {
+                cacheDir.mkdirs()
+            }
+            cacheDir.absolutePath
+        } catch (e: Exception) {
+            // 如果缓存目录创建失败，使用临时目录
+            File(System.getProperty("java.io.tmpdir"), "luban_compress").absolutePath
         }
-        return cacheDir.absolutePath
     }
 
     /**
@@ -250,7 +279,13 @@ object ImageCompressUtils {
         return try {
             val cacheDir = File(context.cacheDir, "luban_compress")
             if (cacheDir.exists()) {
-                cacheDir.walkTopDown().sumOf { it.length() }
+                cacheDir.walkTopDown().sumOf {
+                    try {
+                        it.length()
+                    } catch (e: Exception) {
+                        0L
+                    }
+                }
             } else {
                 0L
             }

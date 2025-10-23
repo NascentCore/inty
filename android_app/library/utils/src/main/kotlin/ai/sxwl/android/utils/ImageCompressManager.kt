@@ -85,7 +85,17 @@ class ImageCompressManager private constructor() {
         val task = CompressTask(taskId, validFiles, config)
         activeTasks[taskId] = task
 
-        val originalSize = validFiles.sumOf { it.length() }
+        val originalSize = try {
+            validFiles.sumOf {
+                try {
+                    it.length()
+                } catch (e: Exception) {
+                    0L
+                }
+            }
+        } catch (e: Exception) {
+            0L
+        }
         var successCount = 0
         var failedCount = 0
         var compressedSize = 0L
@@ -102,7 +112,11 @@ class ImageCompressManager private constructor() {
                 val compressedFile = ImageCompressUtils.compressImageSync(context, file, config)
                 if (compressedFile != null) {
                     successCount++
-                    compressedSize += compressedFile.length()
+                    compressedSize += try {
+                        compressedFile.length()
+                    } catch (e: Exception) {
+                        0L
+                    }
                 } else {
                     failedCount++
                 }
@@ -182,7 +196,12 @@ class ImageCompressManager private constructor() {
             return
         }
 
-        val fileSizeKB = imageFile.length() / 1024
+        val fileSizeKB = try {
+            imageFile.length() / 1024
+        } catch (e: Exception) {
+            0
+        }
+        
         if (fileSizeKB <= targetSizeKB) {
             // 文件已经足够小，直接返回原文件
             callback.onSuccess(imageFile)
@@ -257,7 +276,11 @@ class ImageCompressManager private constructor() {
      * 生成任务ID
      */
     private fun generateTaskId(): String {
-        return "compress_${System.currentTimeMillis()}_${(1000..9999).random()}"
+        return try {
+            "compress_${System.currentTimeMillis()}_${(1000..9999).random()}"
+        } catch (e: Exception) {
+            "compress_${System.currentTimeMillis()}_${System.nanoTime() % 10000}"
+        }
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.ai.inty.home
 
+import ai.sxwl.android.utils.TimeUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -71,7 +72,6 @@ import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.utils.AuthClickable
 import com.ai.inty.utils.TrackScreenView
 import com.ai.inty.utils.getCdnImageUrl
-import com.inty.utils.formatTimestampToString
 
 /** “我的”页面 */
 @Composable
@@ -204,8 +204,8 @@ internal fun ProfilePage(
                 val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
                 PremiumBanner(
                     status = vipStatus.subscriptionStatus,
-                    purchaseTime = formatTimestampToString(vipStatus.purchaseTime),
-                    expireTime = formatTimestampToString(vipStatus.expiryTime),
+                    purchaseTime = TimeUtils.formatTimestampToString(vipStatus.purchaseTime),
+                    expireTime = TimeUtils.formatTimestampToString(vipStatus.expiryTime),
                     onClick = { VipCenterActivity.launch(context) },
                 )
 

@@ -1,7 +1,7 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.utils.LogUtils
 import android.content.Context
-import com.inty.utils.log.EasyLog
 import java.lang.Thread.UncaughtExceptionHandler
 
 /** 全局异常处理器 捕获未处理的异常并记录到 Firebase Crashlytics */
@@ -19,14 +19,11 @@ class GlobalExceptionHandler(
             FirebaseManager.recordException(exception)
 
             // 记录到本地日志
-            EasyLog.log(
-                "GlobalExceptionHandler: Uncaught exception in thread ${thread.name}",
-                EasyLog.ERROR,
-            )
-            EasyLog.log("Exception: ${exception.message}", EasyLog.ERROR)
+            LogUtils.e("GlobalExceptionHandler: Uncaught exception in thread ${thread.name}")
+            LogUtils.e("Exception: ${exception.message}")
             exception.printStackTrace()
         } catch (e: Exception) {
-            EasyLog.log("Failed to handle global exception: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("Failed to handle global exception: ${e.message}")
         } finally {
             // 调用默认处理器
             defaultHandler?.uncaughtException(thread, exception)
@@ -54,9 +51,9 @@ class GlobalExceptionHandler(
             FirebaseManager.setCustomKey("crash_timestamp", System.currentTimeMillis().toString())
             FirebaseManager.setCustomKey("crash_memory_usage", getMemoryUsage())
 
-            EasyLog.log("Crash context recorded successfully")
+            LogUtils.i("Crash context recorded successfully")
         } catch (e: Exception) {
-            EasyLog.log("Failed to record crash context: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("Failed to record crash context: ${e.message}")
         }
     }
 

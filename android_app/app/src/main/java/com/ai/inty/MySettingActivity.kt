@@ -1,6 +1,7 @@
 package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -18,7 +19,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.ui.components.EditDialog
@@ -121,7 +121,7 @@ class MySettingActivity : BaseActivity() {
                                     maxSizeMBStr,
                                     fileSizeMBStr,
                                 )
-                            lifecycleScope.launch { ToastUtils.showToast(msg) }
+                            lifecycleScope.launch { ToastUtils.showShort(msg) }
                             return@let
                         }
                         val intentCrop = UCropHelper.getIntent(context, uri, cropTitle)

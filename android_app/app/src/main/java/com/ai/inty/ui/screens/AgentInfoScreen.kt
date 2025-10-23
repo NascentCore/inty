@@ -1,5 +1,6 @@
 package com.ai.inty.ui.screens
 
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.theme.HeartColor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -49,7 +50,6 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.AgentBackground
 import com.ai.inty.ui.components.SmartTagsLayout
-import com.inty.utils.storage.IntySetting
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

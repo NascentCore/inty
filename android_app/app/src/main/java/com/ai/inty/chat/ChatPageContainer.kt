@@ -1,5 +1,8 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.Utils
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -39,8 +42,6 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.chat.viewmodel.ChatTabViewModel
-import com.inty.utils.log.EasyLog
-import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -67,9 +68,9 @@ fun ChatPageContainer(
                     agentsPagingItems[i]?.let { agent -> list.add(agent) }
                 }
             } catch (e: IndexOutOfBoundsException) {
-                EasyLog.log("ChatPageContainer - 构建agentList时索引越界: ${e.message}", EasyLog.WARN)
+                LogUtils.w("ChatPageContainer - 构建agentList时索引越界: ${e.message}")
             } catch (e: Exception) {
-                EasyLog.log("ChatPageContainer - 构建agentList时发生异常: ${e.message}", EasyLog.ERROR)
+                LogUtils.e("ChatPageContainer - 构建agentList时发生异常: ${e.message}")
             }
             list
         }
@@ -108,10 +109,10 @@ fun ChatPageContainer(
         if (currentAgent != null) {
             try {
                 val audioManager =
-                    com.ai.inty.audio.AudioManager.getInstance(com.inty.utils.AppEnv.context, scope)
+                    com.ai.inty.audio.AudioManager.getInstance(Utils.getApp(), scope)
                 audioManager.stopAllPlayback()
             } catch (e: Exception) {
-                EasyLog.log("ChatPageContainer - 停止音频播放失败: ${e.message}", EasyLog.ERROR)
+                LogUtils.e("ChatPageContainer - 停止音频播放失败: ${e.message}")
             }
             delay(100)
         }
@@ -124,7 +125,7 @@ fun ChatPageContainer(
             val refreshState = agentsPagingItems.loadState.refresh
             val notEnd =
                 !(appendState is androidx.paging.LoadState.NotLoading &&
-                    appendState.endOfPaginationReached)
+                        appendState.endOfPaginationReached)
             val canPrefetch = refreshState is androidx.paging.LoadState.NotLoading
             if (pageState.currentPage >= thresholdIndex && notEnd && canPrefetch) {
                 // 修复：使用更安全的预取方式
@@ -136,9 +137,9 @@ fun ChatPageContainer(
                         agentsPagingItems[lastValidIndex]
                     }
                 } catch (e: IndexOutOfBoundsException) {
-                    EasyLog.log("ChatPageContainer - 索引越界，跳过预取: ${e.message}", EasyLog.WARN)
+                    LogUtils.w("ChatPageContainer - 索引越界，跳过预取: ${e.message}")
                 } catch (e: Exception) {
-                    EasyLog.log("ChatPageContainer - 预取触发失败: ${e.message}", EasyLog.WARN)
+                    LogUtils.w("ChatPageContainer - 预取触发失败: ${e.message}")
                 }
             }
         }
@@ -153,16 +154,13 @@ fun ChatPageContainer(
         ) { currentPage ->
             // 防止数组越界
             if (currentPage < 0 || currentPage >= agentList.size) {
-                EasyLog.log(
-                    "ChatPageContainer - HorizontalPager索引越界: currentPage=$currentPage, agentList.size=${agentList.size}",
-                    EasyLog.WARN,
-                )
+                LogUtils.w("ChatPageContainer - HorizontalPager索引越界: currentPage=$currentPage, agentList.size=${agentList.size}")
                 // 如果索引无效，显示空页面或返回
                 return@HorizontalPager
             }
             val agent = agentList.getOrNull(currentPage)
             if (agent == null) {
-                EasyLog.log("ChatPageContainer - 获取agent失败: currentPage=$currentPage", EasyLog.WARN)
+                LogUtils.w("ChatPageContainer - 获取agent失败: currentPage=$currentPage")
                 return@HorizontalPager
             }
             val chatViewModel: ChatViewModel = viewModel(key = agent.id, factory = viewModelFactory)
@@ -221,31 +219,34 @@ private fun NewUserGuide(
             visible = showHand,
             enter =
                 fadeIn() +
-                    slideInHorizontally(
-                        initialOffsetX = { fullWidth -> fullWidth / 6 } // 从屏幕右侧1/6处出现
-                    ),
+                        slideInHorizontally(
+                            initialOffsetX = { fullWidth -> fullWidth / 6 } // 从屏幕右侧1/6处出现
+                        ),
             exit = fadeOut(targetAlpha = 0.01f) + slideOutHorizontally(targetOffsetX = { it }),
         ) {
             val scope = rememberCoroutineScope()
             Box(
                 modifier =
-                    Modifier.fillMaxSize().noRippleClickable {
-                        // 只有在引导期间才响应点击
-                        if (isGuideActive) {
-                            scope.launch {
-                                showHand = false
-                                pageState.animateScrollToPage(initialPageIndex)
-                                IntySetting.setShowGuested()
-                                onGuideCompleted()
-                                isGuideActive = false
+                    Modifier
+                        .fillMaxSize()
+                        .noRippleClickable {
+                            // 只有在引导期间才响应点击
+                            if (isGuideActive) {
+                                scope.launch {
+                                    showHand = false
+                                    pageState.animateScrollToPage(initialPageIndex)
+                                    IntySetting.setShowGuested()
+                                    onGuideCompleted()
+                                    isGuideActive = false
+                                }
                             }
                         }
-                    }
             ) {
                 // 背景渐变框
                 Box(
                     modifier =
-                        Modifier.align(Alignment.TopEnd)
+                        Modifier
+                            .align(Alignment.TopEnd)
                             .padding(top = 340.dp)
                             .size(210.dp, 40.dp)
                             .background(
@@ -261,7 +262,8 @@ private fun NewUserGuide(
                 // 手势图标
                 Image(
                     modifier =
-                        Modifier.align(Alignment.TopEnd)
+                        Modifier
+                            .align(Alignment.TopEnd)
                             .padding(top = 340.dp, end = 92.dp)
                             .size(112.dp),
                     painter = painterResource(R.drawable.scroll_hand),

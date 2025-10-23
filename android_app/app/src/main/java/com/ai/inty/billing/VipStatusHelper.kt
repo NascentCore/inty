@@ -1,7 +1,7 @@
 package com.ai.inty.billing
 
+import ai.sxwl.android.utils.LogUtils
 import android.app.Activity
-import com.inty.utils.log.EasyLog
 
 /** VIP状态检查工具类 统一管理VIP状态检查和购买逻辑 */
 object VipStatusHelper {
@@ -33,7 +33,7 @@ object VipStatusHelper {
 
             // 检查用户是否已经订阅
             if (isUserVip()) {
-                EasyLog.log("VipStatusHelper - 用户已经是订阅用户，无需重复购买", EasyLog.WARN)
+                LogUtils.w("VipStatusHelper - 用户已经是订阅用户，无需重复购买")
                 onError("用户已经是订阅用户")
                 return
             }
@@ -41,7 +41,7 @@ object VipStatusHelper {
             // 启动购买流程
             BillingRepository.launchBillingFlow(activity, selectedPlan.googleProductId)
         } else {
-            EasyLog.log("VipStatusHelper - 无可用会员订阅计划", EasyLog.WARN)
+            LogUtils.w("VipStatusHelper - 无可用会员订阅计划")
             onError("无可用订阅计划")
         }
     }
@@ -50,7 +50,7 @@ object VipStatusHelper {
     fun purchasePlan(activity: Activity, productId: String, onError: (String) -> Unit = {}) {
         // 检查用户是否已经订阅
         if (isUserVip()) {
-            EasyLog.log("VipStatusHelper - 用户已经是订阅用户，无需重复购买", EasyLog.WARN)
+            LogUtils.w("VipStatusHelper - 用户已经是订阅用户，无需重复购买")
             onError("用户已经是订阅用户")
             return
         }
@@ -60,7 +60,7 @@ object VipStatusHelper {
         val planExists = currentPlans.any { it.googleProductId == productId }
 
         if (!planExists) {
-            EasyLog.log("VipStatusHelper - 指定的计划不存在: $productId", EasyLog.WARN)
+            LogUtils.w("VipStatusHelper - 指定的计划不存在: $productId")
             onError("指定的计划不存在")
             return
         }

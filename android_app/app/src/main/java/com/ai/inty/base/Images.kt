@@ -1,5 +1,6 @@
 package com.ai.inty.base
 
+import ai.sxwl.android.utils.Utils
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -21,11 +22,10 @@ import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
-import com.inty.utils.AppEnv
 
 fun initImageLoader() {
     try {
-        val context = AppEnv.context
+        val context = Utils.getApp()
         ImageLoader.Builder(context)
             .memoryCache {
                 MemoryCache.Builder()
@@ -41,7 +41,7 @@ fun initImageLoader() {
             .build()
     } catch (e: Exception) {
         // 如果初始化失败，使用默认配置
-        val context = AppEnv.context
+        val context = Utils.getApp()
         ImageLoader.Builder(context).build()
     }
 }

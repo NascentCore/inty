@@ -2,6 +2,7 @@ package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
 import androidx.activity.viewModels
@@ -9,7 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.ui.screens.SettingContent
 import com.ai.inty.viewmodels.MainViewModel
 
@@ -45,7 +45,7 @@ class SettingActivity : BaseActivity() {
                 val str =
                     if (isDelete) getString(R.string.delete_account_successfully)
                     else getString(R.string.logout_successfully)
-                ToastUtils.showSuccess(this@SettingActivity, str)
+                ToastUtils.showShort(str)
                 // 返回到主页面
                 val intent = Intent(this@SettingActivity, MainActivity::class.java)
                 intent.flags =

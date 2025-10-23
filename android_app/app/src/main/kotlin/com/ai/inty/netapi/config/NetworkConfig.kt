@@ -1,7 +1,7 @@
 package com.ai.inty.netapi.config
 
+import com.ai.inty.BuildConfig
 import com.ai.inty.Constant
-import com.inty.utils.AppEnv
 
 /** 网络配置管理 提供环境相关的配置管理，替代原有的硬编码配置 */
 object NetworkConfig {
@@ -63,7 +63,7 @@ object NetworkConfig {
 
     /** 获取当前构建类型 */
     fun getCurrentBuildType(): BuildType {
-        return when (AppEnv.buildType) {
+        return when (BuildConfig.BUILD_TYPE) {
             "local" -> BuildType.LOCAL
             "debug" -> BuildType.DEBUG
             "playdebug" -> BuildType.PLAY_DEBUG

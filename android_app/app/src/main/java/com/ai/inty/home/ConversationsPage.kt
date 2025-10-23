@@ -38,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.RedDot
@@ -91,7 +90,9 @@ private fun Content(
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
     Scaffold(
-        modifier = Modifier.fillMaxSize().background(Color.Transparent),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent),
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
@@ -100,7 +101,9 @@ private fun Content(
                         painter = painterResource(R.drawable.img_message_title),
                         contentDescription = null,
                         modifier =
-                            Modifier.height(Constant.PAGE_TAB_TITLE_HEIGHT.dp).fillMaxWidth(),
+                            Modifier
+                                .height(30.dp)
+                                .fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )
@@ -110,7 +113,11 @@ private fun Content(
             )
         },
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
             MessageTabContent(
                 conversations = conversations,
                 onClickConversationItem = onClickConversationItem,
@@ -158,7 +165,9 @@ private fun MessageTabContent(
             if (isRefreshing) {
                 item {
                     Box(
-                        modifier = Modifier.fillMaxWidth().height(80.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
@@ -172,20 +181,19 @@ private fun MessageTabContent(
             // 会话列表
             if (conversations.isNotEmpty()) {
                 runCatching {
-                        itemsIndexed(
-                            items = conversations,
-                            key = { index, conversion -> "${conversion.agentId}_$index" },
-                        ) { _, conversion ->
-                            AuthClickable(onClick = { onClickConversationItem(conversion) }) {
-                                authModifier ->
-                                ChatHistoryItem(
-                                    modifier = authModifier.fillMaxWidth(),
-                                    conversation = conversion,
-                                )
-                            }
+                    itemsIndexed(
+                        items = conversations,
+                        key = { index, conversion -> "${conversion.agentId}_$index" },
+                    ) { _, conversion ->
+                        AuthClickable(onClick = { onClickConversationItem(conversion) }) { authModifier ->
+                            ChatHistoryItem(
+                                modifier = authModifier.fillMaxWidth(),
+                                conversation = conversion,
+                            )
                         }
-                        item { Spacer(Modifier.height(60.dp)) }
                     }
+                    item { Spacer(Modifier.height(60.dp)) }
+                }
                     .onFailure { it.printStackTrace() }
             }
 
@@ -193,7 +201,9 @@ private fun MessageTabContent(
             if (isLoading) {
                 item {
                     Box(
-                        modifier = Modifier.fillMaxWidth().height(80.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
@@ -225,7 +235,9 @@ private fun ChatHistoryItem(
 
         // 头像
         IntyImage(
-            modifier = Modifier.size(56.dp).clip(CircleShape),
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape),
             model = getCdnImageUrl(conversation.agentAvatar, width = 128),
             placeholder = painterResource(placeholderID),
         )
