@@ -130,15 +130,7 @@ internal fun ProfilePage(
                                 .padding(4.dp)
                     ) {
                         IntyCircleImage(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .noRippleClickable(onClick = {
-                                    val intent = android.content.Intent(
-                                        context,
-                                        com.ai.inty.newchat.NewMainActivity::class.java
-                                    )
-                                    context.startActivity(intent)
-                                }),
+                            modifier = Modifier.fillMaxSize(),
                             url = getCdnImageUrl(userProfile.avatar, width = 512),
                             placeholderResID = R.drawable.app_icon,
                         )

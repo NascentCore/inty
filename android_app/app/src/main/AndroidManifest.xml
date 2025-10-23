@@ -130,22 +130,6 @@
             android:name=".SubscriptionManagementActivity"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
-
-        <!-- 新聊天架构Activity -->
-        <activity
-            android:name=".newchat.NewMainActivity"
-            android:exported="true"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Inty"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".newchat.NewChatActivity"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Inty"
-            android:windowSoftInputMode="adjustResize" />
-
     </application>
 
 </manifest>
