@@ -1,8 +1,8 @@
-package com.ai.inty.netapi.services
+package ai.sxwl.android.data.http.services
 
 import ai.sxwl.android.data.api.model.SubscriptionPlan
-import com.ai.inty.netapi.ApiResult
-import com.ai.inty.netapi.IntyNetworkManager
+import ai.sxwl.android.data.http.ApiResult
+import ai.sxwl.android.data.http.IntyNetworkManager
 
 /** 订阅服务 封装所有订阅相关的API调用 替换原有的 ISubscriptionApi */
 object SubscriptionService {

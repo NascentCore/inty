@@ -1,9 +1,15 @@
-package com.ai.inty.netapi
+package ai.sxwl.android.data.http
 
+import ai.sxwl.android.data.http.config.NetworkConfig
+import ai.sxwl.android.data.http.services.AgentService
+import ai.sxwl.android.data.http.services.AuthService
+import ai.sxwl.android.data.http.services.ChatService
+import ai.sxwl.android.data.http.services.ReportService
+import ai.sxwl.android.data.http.services.SubscriptionService
+import ai.sxwl.android.data.http.services.UserService
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
-import com.ai.inty.netapi.config.NetworkConfig
 import com.inty.api.client.IntyClient
 import com.inty.api.client.okhttp.IntyOkHttpClient
 import kotlinx.coroutines.withTimeout
@@ -27,11 +33,12 @@ object IntyNetworkManager {
     private var applicationContextRef: WeakReference<Context>? = null
 
     /** 初始化网络管理器 使用弱引用避免内存泄露 */
-    fun initialize(context: Context) {
+    fun initialize(context: Context, buildType: String) {
         if (!isInitialized) {
             // 使用弱引用保存 ApplicationContext，避免内存泄露
             this.applicationContextRef = WeakReference(context.applicationContext)
             NetworkStateManager.initialize(context)
+            NetworkConfig.setBuildType(buildType)
             isInitialized = true
             LogUtils.d("IntyNetworkManager initialized with environment: ${NetworkConfig.getCurrentBuildType()}")
         }
@@ -114,28 +121,28 @@ object IntyNetworkManager {
     // ==================== 业务API服务入口 ====================
 
     /** 认证相关API 替换: IUserApi 的认证相关方法 */
-    val auth: com.ai.inty.netapi.services.AuthService
-        get() = com.ai.inty.netapi.services.AuthService
+    val auth: AuthService
+        get() = AuthService
 
     /** 用户相关API 替换: IUserApi 的用户相关方法 */
-    val user: com.ai.inty.netapi.services.UserService
-        get() = com.ai.inty.netapi.services.UserService
+    val user: UserService
+        get() = UserService
 
     /** 智能体相关API 替换: IAgentApi */
-    val agent: com.ai.inty.netapi.services.AgentService
-        get() = com.ai.inty.netapi.services.AgentService
+    val agent: AgentService
+        get() = AgentService
 
     /** 聊天相关API 替换: IChatApi */
-    val chat: com.ai.inty.netapi.services.ChatService
-        get() = com.ai.inty.netapi.services.ChatService
+    val chat: ChatService
+        get() = ChatService
 
     /** 订阅相关API 替换: ISubscriptionApi */
-    val subscription: com.ai.inty.netapi.services.SubscriptionService
-        get() = com.ai.inty.netapi.services.SubscriptionService
+    val subscription: SubscriptionService
+        get() = SubscriptionService
 
     /** 举报相关API 替换: IReportApi */
-    val report: com.ai.inty.netapi.services.ReportService
-        get() = com.ai.inty.netapi.services.ReportService
+    val report: ReportService
+        get() = ReportService
 
     /** 网络状态管理器 */
     val networkState: NetworkStateManager

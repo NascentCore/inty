@@ -1,8 +1,8 @@
-package com.ai.inty.netapi.services
+package ai.sxwl.android.data.http.services
 
 import ai.sxwl.android.data.api.model.MsgInfo
-import com.ai.inty.netapi.ApiResult
-import com.ai.inty.netapi.IntyNetworkManager
+import ai.sxwl.android.data.http.ApiResult
+import ai.sxwl.android.data.http.IntyNetworkManager
 
 /** 聊天服务 封装所有聊天相关的API调用 替换原有的 IChatApi */
 object ChatService {

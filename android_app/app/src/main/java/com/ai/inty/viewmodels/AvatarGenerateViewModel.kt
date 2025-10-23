@@ -1,10 +1,10 @@
 package com.ai.inty.viewmodels
 
 import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.GenerateBackgroundRequest
 import ai.sxwl.android.data.api.model.GenerateBackgroundResponse
 import ai.sxwl.android.utils.LogUtils
-import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.NetworkErrorHandler
 import kotlinx.coroutines.Dispatchers

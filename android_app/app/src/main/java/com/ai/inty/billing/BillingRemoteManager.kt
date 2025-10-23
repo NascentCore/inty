@@ -1,8 +1,8 @@
 package com.ai.inty.billing
 
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.TimeUtils
-import com.ai.inty.net.NetServiceMgr
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.flow.MutableStateFlow
 

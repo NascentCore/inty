@@ -1,6 +1,7 @@
 package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.CreateAgentRequest
@@ -83,7 +84,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
-import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.ui.SingleLineTextInputField
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.viewmodels.MainViewModel

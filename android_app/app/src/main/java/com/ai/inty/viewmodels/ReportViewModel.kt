@@ -2,6 +2,8 @@ package com.ai.inty.viewmodels
 
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.ReportItem
+import ai.sxwl.android.data.http.ApiResult
+import ai.sxwl.android.data.http.services.ReportService
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
@@ -10,8 +12,6 @@ import androidx.compose.runtime.mutableStateSetOf
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.ViewModelEvent
-import com.ai.inty.netapi.services.ReportService
-import com.inty.api.models.api.v1.report.ReportCreateParams
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -116,23 +116,18 @@ class ReportViewModel : BaseVM() {
                     ReportService.createReport(
                         reasonIds = selectIDS.map { it.toLong() },
                         targetId = targetID,
-                        targetType =
-                            if (targetType == "USER") {
-                                ReportCreateParams.TargetType.USER
-                            } else {
-                                ReportCreateParams.TargetType.AGENT
-                            },
+                        targetType = targetType,
                         description = description.value.trim(),
                         imageUrls = uploadedImageUrls + remoteImages.toList(),
                     )
 
                 when (result) {
-                    is com.ai.inty.netapi.ApiResult.Success -> {
+                    is ApiResult.Success -> {
                         ToastUtils.showShort("Submitted successfully. We'll review it soon.")
                         sendEvent(ViewModelEvent.ReportSubmitted)
                     }
 
-                    is com.ai.inty.netapi.ApiResult.Error -> {
+                    is ApiResult.Error -> {
                         LogUtils.e("Report creation failed: ${result.message}")
                         ToastUtils.showShort(result.message ?: "Report creation failed")
                     }
@@ -153,13 +148,13 @@ class ReportViewModel : BaseVM() {
         val result = ReportService.uploadImage(inputStream, "report-image.jpg")
 
         return when (result) {
-            is com.ai.inty.netapi.ApiResult.Success -> {
+            is ApiResult.Success -> {
                 val url = result.data
                 LogUtils.i("Image uploaded successfully: $url")
                 url
             }
 
-            is com.ai.inty.netapi.ApiResult.Error -> {
+            is ApiResult.Error -> {
                 LogUtils.e("Image upload failed: ${result.message}")
                 null
             }

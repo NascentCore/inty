@@ -1,7 +1,7 @@
-package com.ai.inty.netapi.services
+package ai.sxwl.android.data.http.services
 
-import com.ai.inty.netapi.ApiResult
-import com.ai.inty.netapi.IntyNetworkManager
+import ai.sxwl.android.data.http.ApiResult
+import ai.sxwl.android.data.http.IntyNetworkManager
 import com.inty.api.models.api.v1.report.ReportCreateParams
 import java.io.InputStream
 
@@ -12,16 +12,21 @@ object ReportService {
     suspend fun createReport(
         reasonIds: List<Long>,
         targetId: String,
-        targetType: ReportCreateParams.TargetType,
+        targetType: String?,
         description: String,
         imageUrls: List<String>,
     ): ApiResult<Unit> {
         return IntyNetworkManager.executeRequest("Create Report") {
+            val type = if (targetType == "USER") {
+                ReportCreateParams.TargetType.USER
+            } else {
+                ReportCreateParams.TargetType.AGENT
+            }
             val reportParams =
                 ReportCreateParams.builder()
                     .reasonIds(reasonIds)
                     .targetId(targetId)
-                    .targetType(targetType)
+                    .targetType(type)
                     .description(description.trim())
                     .imageUrls(imageUrls)
                     .build()

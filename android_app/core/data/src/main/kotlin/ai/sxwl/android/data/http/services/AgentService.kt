@@ -1,8 +1,8 @@
-package com.ai.inty.netapi.services
+package ai.sxwl.android.data.http.services
 
 import ai.sxwl.android.data.api.model.AgentInfo
-import com.ai.inty.netapi.ApiResult
-import com.ai.inty.netapi.IntyNetworkManager
+import ai.sxwl.android.data.http.ApiResult
+import ai.sxwl.android.data.http.IntyNetworkManager
 
 /** 智能体服务 封装所有智能体相关的API调用 替换原有的 IAgentApi */
 object AgentService {

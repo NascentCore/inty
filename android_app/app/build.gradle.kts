@@ -56,9 +56,6 @@ android {
 }
 
 dependencies {
-    // ===== Inty SDK（Stainless https://app.stainless.com/ 根据 app/openapi.json 生成的代码）=====
-    // 使用本地 library/inty_sdk 的版本，避免动态版本在测试时的依赖解析问题
-    implementation("com.inty.api:inty-kotlin:0.15.0")
 
     implementation(libs.androidx.appcompat)//ucropActivity需要
     implementation(libs.androidx.paging.compose)
@@ -70,15 +67,6 @@ dependencies {
     implementation(projects.core.firebase)
     implementation(projects.library.network)
     implementation(projects.library.utils)
-
-    // ===== 网络库 =====
-    implementation(libs.retrofit.core)
-    implementation(libs.retrofit2.kotlin.coroutines.adapter)
-    // ===== 调试工具 =====
-    debugImplementation(libs.chucker.library)
-    "localImplementation"(libs.chucker.library)
-    releaseImplementation(libs.chucker.no.op)
-    "playdebugImplementation"(libs.chucker.no.op)
 
     // ===== 图片加载 =====
     implementation(libs.bundles.coil.bundle)

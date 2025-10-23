@@ -1,4 +1,4 @@
-package com.ai.inty.netapi
+package ai.sxwl.android.data.http
 
 /** 业务错误码定义 与后端 app/schemas/response.py 中的 BusinessErrorCode 保持一致 */
 object BusinessErrorCodes {

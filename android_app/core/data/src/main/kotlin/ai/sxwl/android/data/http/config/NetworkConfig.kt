@@ -1,7 +1,5 @@
-package com.ai.inty.netapi.config
+package ai.sxwl.android.data.http.config
 
-import com.ai.inty.BuildConfig
-import com.ai.inty.Constant
 
 /** 网络配置管理 提供环境相关的配置管理，替代原有的硬编码配置 */
 object NetworkConfig {
@@ -61,9 +59,14 @@ object NetworkConfig {
         ERROR,
     }
 
+    private var currentBuildTypeStr = ""
+    fun setBuildType(buildType: String) {
+        currentBuildTypeStr = buildType
+    }
+
     /** 获取当前构建类型 */
     fun getCurrentBuildType(): BuildType {
-        return when (BuildConfig.BUILD_TYPE) {
+        return when (currentBuildTypeStr) {
             "local" -> BuildType.LOCAL
             "debug" -> BuildType.DEBUG
             "playdebug" -> BuildType.PLAY_DEBUG

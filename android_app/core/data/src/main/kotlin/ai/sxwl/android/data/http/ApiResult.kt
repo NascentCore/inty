@@ -1,4 +1,4 @@
-package com.ai.inty.netapi
+package ai.sxwl.android.data.http
 
 import ai.sxwl.android.utils.LogUtils
 

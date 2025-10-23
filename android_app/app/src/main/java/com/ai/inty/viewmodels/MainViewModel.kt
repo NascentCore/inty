@@ -3,6 +3,7 @@ package com.ai.inty.viewmodels
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.ICommonApi
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AppVersionRsp
 import ai.sxwl.android.data.api.model.CreateAgentRequest
@@ -17,7 +18,6 @@ import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
-import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.inty.utils.HttpErrorHandler

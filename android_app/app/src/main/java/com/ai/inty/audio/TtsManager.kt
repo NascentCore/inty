@@ -1,10 +1,10 @@
 package com.ai.inty.audio
 
+import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
-import com.ai.inty.net.NetServiceMgr
-import com.ai.inty.netapi.BusinessErrorCodes
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

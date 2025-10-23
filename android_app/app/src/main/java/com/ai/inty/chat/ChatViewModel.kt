@@ -2,6 +2,7 @@ package com.ai.inty.chat
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ChatSettingsReq
 import ai.sxwl.android.data.api.model.ChatSettingsResponse
@@ -9,6 +10,7 @@ import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
@@ -18,8 +20,6 @@ import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.audio.AudioManager
 import com.ai.inty.billing.VipStatusHelper
-import com.ai.inty.net.NetServiceMgr
-import com.ai.inty.netapi.BusinessErrorCodes
 import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult

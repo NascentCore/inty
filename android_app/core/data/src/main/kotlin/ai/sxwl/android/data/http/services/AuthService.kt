@@ -1,9 +1,9 @@
-package com.ai.inty.netapi.services
+package ai.sxwl.android.data.http.services
 
+import ai.sxwl.android.data.http.ApiResult
+import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.utils.DeviceUtils
 import ai.sxwl.android.utils.LanguageUtils
-import com.ai.inty.netapi.ApiResult
-import com.ai.inty.netapi.IntyNetworkManager
 import com.inty.api.models.api.v1.auth.AuthCreateGuestParams
 
 /** 认证服务 封装所有认证相关的API调用 替换原有的 IUserApi 认证相关方法 */

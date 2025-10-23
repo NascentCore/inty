@@ -1,11 +1,11 @@
 package com.ai.inty
 
 import ai.sxwl.android.common.analytics.GlobalExceptionHandler
+import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.app.Application
 import com.ai.inty.billing.BillingRepository
-import com.ai.inty.netapi.IntyNetworkManager
 import com.ai.inty.utils.NetworkManager
 import com.ai.inty.utils.UnifiedStartupManager
 import kotlinx.coroutines.CoroutineScope
@@ -19,7 +19,7 @@ class IntyApp : Application() {
         super.onCreate()
         // 立即初始化网络管理器（轻量级，不阻塞）
         NetworkManager.getInstance().initialize(this)
-        IntyNetworkManager.initialize(this)
+        IntyNetworkManager.initialize(this, buildType = BuildConfig.BUILD_TYPE)
 
         // 立即初始化统一启动管理器（只做必要的登录判断，不阻塞）
         UnifiedStartupManager.initializeEssential(this)

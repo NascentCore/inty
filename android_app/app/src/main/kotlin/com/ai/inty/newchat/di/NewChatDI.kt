@@ -1,6 +1,6 @@
 package com.ai.inty.newchat.di
 
-import com.ai.inty.net.NetServiceMgr
+import ai.sxwl.android.data.api.NetServiceMgr
 import com.ai.inty.newchat.data.ChatDataManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

@@ -1,23 +1,16 @@
-package com.ai.inty.net
+package ai.sxwl.android.data.api
 
-import ai.sxwl.android.common.analytics.PageTrackingHelper
-import ai.sxwl.android.data.api.IAgentApi
-import ai.sxwl.android.data.api.IChatApi
-import ai.sxwl.android.data.api.ICommonApi
-import ai.sxwl.android.data.api.ISubscriptionApi
-import ai.sxwl.android.data.api.IUserApi
+import ai.sxwl.android.data.http.config.Constant
+import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
-import com.ai.inty.BuildConfig
-import com.ai.inty.Constant
 import com.architecture.httplib.core.HttpResponseCallAdapterFactory
 import com.architecture.httplib.core.MoshiResultTypeAdapterFactory
 import com.architecture.httplib.error.GlobalErrorHandler
 import com.chuckerteam.chucker.api.ChuckerInterceptor
-import com.google.firebase.perf.metrics.HttpMetric
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
 import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
@@ -26,16 +19,18 @@ import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.Response
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.net.InetAddress
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /** 获取基础URL 根据构建类型返回对应的API基础URL */
 private fun getBaseUrl(): String {
-    return when (BuildConfig.BUILD_TYPE) {
+    return when (NetworkConfig.getCurrentBuildType().value) {
         "local" -> "http://${Constant.USER_HOST_LOCAL}/"
         "debug" -> "https://${Constant.USER_HOST_DEV}/"
         "playdebug" -> "https://${Constant.USER_HOST_DEV}/"
@@ -79,7 +74,7 @@ private class AuthInterceptor : Interceptor {
                 FirebaseManager.recordException(Exception("HTTP 401 Unauthorized: ${request.url}"))
 
                 // 追踪认证失败
-                PageTrackingHelper.trackError(
+                trackError(
                     "HTTP 401 Unauthorized",
                     "auth_failure",
                     mapOf(
@@ -100,6 +95,29 @@ private class AuthInterceptor : Interceptor {
         }
 
         return response
+    }
+}
+
+/**
+ * 记录错误和异常
+ */
+private fun trackError(
+    error: String,
+    errorType: String = "unknown",
+    additionalParams: Map<String, Any> = emptyMap(),
+) {
+    try {
+        FirebaseManager.logEvent(
+            "app_error",
+            mapOf(
+                "error" to error,
+                "error_type" to errorType,
+                "timestamp" to System.currentTimeMillis(),
+            ) + additionalParams,
+        )
+
+    } catch (e: Exception) {
+        LogUtils.e("Failed to track error: ${e.message}")
     }
 }
 
@@ -188,7 +206,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
     /**
      * 检查请求是否适合重试
      */
-    private fun shouldRetryRequest(request: okhttp3.Request): Boolean {
+    private fun shouldRetryRequest(request: Request): Boolean {
         // 只对幂等性方法进行重试
         return request.method in IDEMPOTENT_METHODS
     }
@@ -196,7 +214,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
     /**
      * 检查响应是否应该重试
      */
-    private fun shouldRetryResponse(response: okhttp3.Response, attempt: Int): Boolean {
+    private fun shouldRetryResponse(response: Response, attempt: Int): Boolean {
         return attempt < maxRetries - 1 && response.code in RETRYABLE_STATUS_CODES
     }
 
@@ -218,7 +236,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
             // 使用指数退避，但避免阻塞主线程
             val delayMs = (1000L * (attempt + 1)).coerceAtMost(5000L) // 最大5秒
 
-            if (BuildConfig.DEBUG) {
+            if (AppUtils.isAppDebug()) {
                 // 调试模式下使用Thread.sleep便于调试
                 Thread.sleep(delayMs)
             } else {
@@ -235,7 +253,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
      * 记录重试事件
      */
     private fun recordRetryEvent(
-        request: okhttp3.Request,
+        request: Request,
         attempt: Int,
         statusCode: Int?,
         exception: Exception?
@@ -261,7 +279,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
      * 记录最终失败
      */
     private fun recordFinalFailure(
-        request: okhttp3.Request,
+        request: Request,
         maxRetries: Int,
         lastException: Exception?
     ) {
@@ -295,7 +313,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
     }
 }
 
-/** 网络性能监控拦截器 监控请求耗时，帮助识别性能问题 */
+/** 网络性能监控拦截器 使用Firebase Performance监控请求性能 */
 private class PerformanceInterceptor : Interceptor {
 
     // 性能阈值常量
@@ -308,12 +326,13 @@ private class PerformanceInterceptor : Interceptor {
         val request = chain.request()
         val startTime = System.currentTimeMillis()
 
-        // 安全地创建和启动性能监控
-        val httpMetric = createHttpMetricSafely(request)
-        startHttpMetricSafely(httpMetric)
+        // 使用Firebase Performance创建HTTP监控
+        val httpMetric: Any? =
+            FirebaseManager.createHttpMetric(request.url.toString(), request.method)
+        FirebaseManager.startHttpMetric(httpMetric)
 
         // 记录请求开始（仅在调试模式下）
-        if (BuildConfig.DEBUG) {
+        if (AppUtils.isAppDebug()) {
             LogUtils.i("🌐 Starting request: ${request.method} ${request.url}")
         }
 
@@ -323,8 +342,8 @@ private class PerformanceInterceptor : Interceptor {
             val endTime = System.currentTimeMillis()
             val duration = endTime - startTime
 
-            // 安全地停止性能监控
-            stopHttpMetricSafely(httpMetric, response)
+            // 使用Firebase Performance停止监控
+            FirebaseManager.stopHttpMetric(httpMetric, response.code)
 
             // 记录性能指标（不影响请求结果）
             recordPerformanceMetrics(request, duration, response.isSuccessful)
@@ -334,8 +353,8 @@ private class PerformanceInterceptor : Interceptor {
             val endTime = System.currentTimeMillis()
             val duration = endTime - startTime
 
-            // 安全地停止性能监控（即使请求失败）
-            stopHttpMetricSafely(httpMetric, null)
+            // 使用Firebase Performance停止监控（即使请求失败）
+            FirebaseManager.stopHttpMetric(httpMetric, -1)
 
             // 记录失败的性能指标
             recordFailureMetrics(request, duration, e)
@@ -346,52 +365,12 @@ private class PerformanceInterceptor : Interceptor {
         }
     }
 
-    /**
-     * 安全地创建HTTP性能指标
-     */
-    private fun createHttpMetricSafely(request: okhttp3.Request): HttpMetric? {
-        return try {
-            FirebaseManager.createHttpMetric(request.url.toString(), request.method)
-        } catch (e: Exception) {
-            // 性能监控失败不应该影响业务请求
-            LogUtils.w("Failed to create HTTP metric: ${e.message}")
-            null
-        }
-    }
-
-    /**
-     * 安全地启动HTTP性能指标
-     */
-    private fun startHttpMetricSafely(httpMetric: HttpMetric?) {
-        if (httpMetric == null) return
-
-        try {
-            FirebaseManager.startHttpMetric(httpMetric)
-        } catch (e: Exception) {
-            // 性能监控失败不应该影响业务请求
-            LogUtils.w("Failed to start HTTP metric: ${e.message}")
-        }
-    }
-
-    /**
-     * 安全地停止HTTP性能指标
-     */
-    private fun stopHttpMetricSafely(httpMetric: HttpMetric?, response: okhttp3.Response?) {
-        if (httpMetric == null) return
-
-        try {
-            FirebaseManager.stopHttpMetric(httpMetric, response?.code ?: -1)
-        } catch (e: Exception) {
-            // 性能监控失败不应该影响业务请求
-            LogUtils.w("Failed to stop HTTP metric: ${e.message}")
-        }
-    }
 
     /**
      * 记录性能指标（异步执行，不阻塞请求）
      */
     private fun recordPerformanceMetrics(
-        request: okhttp3.Request,
+        request: Request,
         duration: Long,
         isSuccessful: Boolean
     ) {
@@ -400,7 +379,7 @@ private class PerformanceInterceptor : Interceptor {
             NetServiceMgr.performanceExecutor.execute {
                 when {
                     duration < FAST_REQUEST_THRESHOLD -> {
-                        if (BuildConfig.DEBUG) {
+                        if (AppUtils.isAppDebug()) {
                             LogUtils.i("✅ Fast request: ${request.method} ${request.url} (${duration}ms)")
                         }
                     }
@@ -408,7 +387,7 @@ private class PerformanceInterceptor : Interceptor {
                     duration < SLOW_REQUEST_THRESHOLD -> {
                         LogUtils.w("⚠️ Slow request: ${request.method} ${request.url} (${duration}ms)")
 
-                        // Firebase Analytics - 记录慢请求
+                        // 使用Firebase Analytics记录慢请求
                         FirebaseManager.logEvent(
                             "slow_request", mapOf(
                                 "duration_ms" to duration,
@@ -422,7 +401,7 @@ private class PerformanceInterceptor : Interceptor {
                     else -> {
                         LogUtils.e("🚨 Very slow request: ${request.method} ${request.url} (${duration}ms)")
 
-                        // Firebase Analytics - 记录极慢请求
+                        // 使用Firebase Analytics记录极慢请求
                         FirebaseManager.logEvent(
                             "very_slow_request", mapOf(
                                 "duration_ms" to duration,
@@ -432,7 +411,7 @@ private class PerformanceInterceptor : Interceptor {
                             )
                         )
 
-                        // Firebase Crashlytics - 记录性能问题
+                        // 使用Firebase Crashlytics记录性能问题
                         FirebaseManager.setCustomKey("slow_request_url", request.url.toString())
                         FirebaseManager.setCustomKey("slow_request_duration", duration.toString())
                     }
@@ -448,7 +427,7 @@ private class PerformanceInterceptor : Interceptor {
      * 记录失败的性能指标
      */
     private fun recordFailureMetrics(
-        request: okhttp3.Request,
+        request: Request,
         duration: Long,
         exception: Exception
     ) {
@@ -457,7 +436,7 @@ private class PerformanceInterceptor : Interceptor {
             NetServiceMgr.performanceExecutor.execute {
                 LogUtils.e("❌ Request failed: ${request.method} ${request.url} (${duration}ms): ${exception.message}")
 
-                // Firebase Analytics - 记录请求失败
+                // 使用Firebase Analytics记录请求失败
                 FirebaseManager.logEvent(
                     "request_failure", mapOf(
                         "duration_ms" to duration,
@@ -468,7 +447,7 @@ private class PerformanceInterceptor : Interceptor {
                     )
                 )
 
-                // Firebase Crashlytics - 记录网络错误
+                // 使用Firebase Crashlytics记录网络错误
                 FirebaseManager.setCustomKey("failed_request_url", request.url.toString())
                 FirebaseManager.setCustomKey("failed_request_duration", duration.toString())
                 FirebaseManager.recordException(exception)
@@ -483,10 +462,10 @@ private class PerformanceInterceptor : Interceptor {
 /** 自定义DNS解析器，支持缓存 */
 private class CachedDns : Dns {
     // 使用线程安全的ConcurrentHashMap
-    private val cache = java.util.concurrent.ConcurrentHashMap<String, List<InetAddress>>()
+    private val cache = ConcurrentHashMap<String, List<InetAddress>>()
 
     // 缓存过期时间（5分钟）
-    private val cacheExpiry = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val cacheExpiry = ConcurrentHashMap<String, Long>()
     private val CACHE_DURATION = 5 * 60 * 1000L // 5分钟
 
     override fun lookup(hostname: String): List<InetAddress> {

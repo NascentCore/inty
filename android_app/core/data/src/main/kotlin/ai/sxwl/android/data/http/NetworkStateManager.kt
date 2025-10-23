@@ -1,6 +1,7 @@
-package com.ai.inty.netapi
+package ai.sxwl.android.data.http
 
 import ai.sxwl.android.utils.LogUtils
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
@@ -45,6 +46,7 @@ object NetworkStateManager {
     }
 
     /** 注册网络回调 */
+    @SuppressLint("MissingPermission")
     private fun registerNetworkCallback() {
         val networkRequest =
             NetworkRequest.Builder()
@@ -79,6 +81,7 @@ object NetworkStateManager {
     }
 
     /** 获取指定网络的类型 */
+    @SuppressLint("MissingPermission")
     private fun getNetworkType(network: Network): NetworkType {
         val capabilities = connectivityManager?.getNetworkCapabilities(network)
         return when {
@@ -93,6 +96,7 @@ object NetworkStateManager {
     }
 
     /** 检查网络是否连接 */
+    @SuppressLint("MissingPermission")
     fun isNetworkConnected(): Boolean {
         val network = connectivityManager?.activeNetwork
         val capabilities = connectivityManager?.getNetworkCapabilities(network)
@@ -100,6 +104,7 @@ object NetworkStateManager {
     }
 
     /** 获取当前网络类型 */
+    @SuppressLint("MissingPermission")
     fun getCurrentNetworkType(): NetworkType {
         val network = connectivityManager?.activeNetwork
         return if (network != null) {

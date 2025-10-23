@@ -1,4 +1,4 @@
-package com.ai.inty.netapi.models
+package ai.sxwl.android.data.http.models
 
 import ai.sxwl.android.data.api.model.UserProfile
 import com.inty.api.models.api.v1.users.profile.User as IntyUser

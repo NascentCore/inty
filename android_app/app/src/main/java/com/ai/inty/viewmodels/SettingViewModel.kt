@@ -2,12 +2,12 @@ package com.ai.inty.viewmodels
 
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.IUserApi
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
-import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.HttpErrorHandler
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers

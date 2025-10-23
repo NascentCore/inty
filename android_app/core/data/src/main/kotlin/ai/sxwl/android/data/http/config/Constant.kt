@@ -1,4 +1,4 @@
-package com.ai.inty
+package ai.sxwl.android.data.http.config
 
 /** 项目内的常量 定义 */
 class Constant {
