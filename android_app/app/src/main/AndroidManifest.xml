@@ -131,21 +131,6 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
 
-        <!-- 新聊天架构Activity -->
-        <activity
-            android:name=".NewMainActivity"
-            android:exported="true"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Inty"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".chat.NewChatActivity"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Inty"
-            android:windowSoftInputMode="adjustResize" />
-
     </application>
 
 </manifest>

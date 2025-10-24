@@ -66,7 +66,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.ai.intellimate.NewMainActivity
 import com.ai.intellimate.R
 import com.ai.intellimate.profile.ModifyProfileActivity
 import com.ai.intellimate.settings.SettingActivity
@@ -141,14 +140,7 @@ internal fun ProfilePage(
                         AsyncImage(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .clip(CircleShape)
-                                .noRippleClickable(onClick = {
-                                    val intent = android.content.Intent(
-                                        context,
-                                        NewMainActivity::class.java
-                                    )
-                                    context.startActivity(intent)
-                                }),
+                                .clip(CircleShape),
                             model = ImageRequest.Builder(context)
                                 .data(getCdnImageUrl(userProfile.avatar, width = 512))
                                 .build(),
