@@ -1,53 +1,151 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ===========================================
+# Core Common Module R8 混淆规则配置
+# 核心通用模块专用混淆规则
+# ===========================================
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# ===========================================
+# 基础配置
+# ===========================================
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
-
-#常用配置混淆规则
--optimizationpasses 5
-# 混淆时不使用大小写混合，混淆后的类名为小写
--dontusemixedcaseclassnames
-# 指定不去忽略非公共库的类
--dontskipnonpubliclibraryclasses
-# 指定不去忽略非公共库的成员
--dontskipnonpubliclibraryclassmembers
-# 混淆时不做预校验
--dontpreverify
-# 混淆时不记录日志
--verbose
-# 代码优化
--dontshrink
-# 不优化输入的类文件
--dontoptimize
-# 保留注解不混淆
--keepattributes *Annotation*,InnerClasses
-# 避免混淆泛型
--keepattributes Signature
-# 保留代码行号，方便异常信息的追踪
+# 保留注解信息
+-keepattributes *Annotation*
 -keepattributes SourceFile,LineNumberTable
-# 混淆采用的算法
--optimizations !code/simplification/cast,!field/*,!class/merging/*
+-keepattributes Signature
+-keepattributes Exceptions
+-keepattributes InnerClasses
+-keepattributes EnclosingMethod
 
-# 保留包名，不混淆类名及子包下面的类名
--keeppackagenames ai.sxwl.android.common
--keep class ai.sxwl.android.common**
-# Please add these rules to your existing keep rules in order to suppress warnings.
-# This is generated automatically by the Android Gradle plugin.
+# ===========================================
+# 核心通用类保护
+# ===========================================
+
+# 保留所有核心通用类
+-keep class ai.sxwl.android.common.** { *; }
+
+# 保留所有基础类
+-keep class ai.sxwl.android.common.base.** { *; }
+
+# 保留所有分析类
+-keep class ai.sxwl.android.common.analytics.** { *; }
+
+# ===========================================
+# BaseActivity 保护
+# ===========================================
+
+# 保留BaseActivity
+-keep class ai.sxwl.android.common.base.BaseActivity { *; }
+
+# 保留BaseVM
+-keep class ai.sxwl.android.common.base.BaseVM { *; }
+
+# 保留BaseMVI
+-keep class ai.sxwl.android.common.base.BaseMVI { *; }
+
+# ===========================================
+# 页面追踪保护
+# ===========================================
+
+# 保留页面追踪相关类
+-keep class ai.sxwl.android.common.analytics.PageTrackingHelper { *; }
+
+# ===========================================
+# Android 系统相关保护
+# ===========================================
+
+# 保留Application相关
+-keep class * extends android.app.Application { *; }
+
+# 保留Activity相关
+-keep class * extends android.app.Activity { *; }
+-keep class * extends androidx.activity.ComponentActivity { *; }
+
+# 保留Fragment相关
+-keep class * extends androidx.fragment.app.Fragment { *; }
+
+# 保留ViewModel相关
+-keep class * extends androidx.lifecycle.ViewModel { *; }
+
+# ===========================================
+# 生命周期相关保护
+# ===========================================
+
+# 保留生命周期相关类
+-keep class androidx.lifecycle.** { *; }
+
+# ===========================================
+# 协程相关保护
+# ===========================================
+
+# 保留协程相关类
+-keep class kotlinx.coroutines.** { *; }
+-keep class kotlinx.coroutines.flow.** { *; }
+
+# ===========================================
+# 反射相关保护
+# ===========================================
+
+# 保留Kotlin反射
+-keep class kotlin.reflect.** { *; }
+-keep class kotlin.Metadata { *; }
+
+# ===========================================
+# 序列化相关保护
+# ===========================================
+
+# 保留Kotlin序列化
+-keep class kotlinx.serialization.** { *; }
+-keepclassmembers class * {
+    @kotlinx.serialization.* <methods>;
+    @kotlinx.serialization.* <fields>;
+}
+
+# ===========================================
+# 警告抑制
+# ===========================================
+
+# 抑制常见警告
 -dontwarn java.lang.invoke.StringConcatFactory
+-dontwarn java.lang.management.**
+-dontwarn javax.annotation.**
+-dontwarn javax.inject.**
+-dontwarn javax.xml.**
+
+# ===========================================
+# 性能优化
+# ===========================================
+
+# 不混淆枚举
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
+# 不混淆Serializable
+-keepclassmembers class * implements java.io.Serializable {
+    static final long serialVersionUID;
+    private static final java.io.ObjectStreamField[] serialPersistentFields;
+    private void writeObject(java.io.ObjectOutputStream);
+    private void readObject(java.io.ObjectInputStream);
+    java.lang.Object writeReplace();
+    java.lang.Object readResolve();
+}
+
+# ===========================================
+# 特殊保护
+# ===========================================
+
+# 保留所有Companion对象
+-keepclassmembers class * {
+    public static ** Companion;
+}
+
+# 保留所有伴生对象
+-keepclassmembers class * {
+    public static ** Companion;
+    public static ** INSTANCE;
+}
+
+# 保留所有内部类
+-keepclassmembers class * {
+    public static class *;
+}
