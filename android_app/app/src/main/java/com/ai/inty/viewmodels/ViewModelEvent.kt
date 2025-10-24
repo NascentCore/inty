@@ -11,6 +11,11 @@ sealed class ViewModelEvent {
     object LoginSuccess : ViewModelEvent()
 
     /**
+     * 需要完善注册信息事件
+     */
+    object NeedRegInfo : ViewModelEvent()
+
+    /**
      * 用户信息更新成功事件
      */
     object UserProfileUpdated : ViewModelEvent()

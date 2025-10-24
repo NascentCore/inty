@@ -43,7 +43,11 @@ class LoginActivity : BaseActivity() {
                     is ViewModelEvent.LoginSuccess -> {
                         finish()
                     }
-
+                    is ViewModelEvent.NeedRegInfo -> {
+                        // 跳转到注册信息页面
+                        RegInfoActivity.launch(this@LoginActivity)
+                        finish()
+                    }
                     else -> {
                         // 其他事件暂不处理
                     }

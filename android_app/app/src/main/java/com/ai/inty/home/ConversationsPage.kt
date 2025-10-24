@@ -246,6 +246,8 @@ private fun ChatHistoryItem(
             model = getCdnImageUrl(conversation.agentAvatar, width = 128),
             placeholder = painterResource(placeholderID),
             contentDescription = null,
+            alignment = Alignment.TopCenter,
+            contentScale = ContentScale.Crop
         )
 
         Spacer(Modifier.width(14.dp))

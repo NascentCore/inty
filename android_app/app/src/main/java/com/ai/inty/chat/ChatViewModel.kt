@@ -8,9 +8,9 @@ import ai.sxwl.android.data.api.model.ChatSettingsReq
 import ai.sxwl.android.data.api.model.ChatSettingsResponse
 import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.api.model.MsgInfo
-import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.VipStatusHelper
+import ai.sxwl.android.data.chat.ChatSessionManager
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
@@ -24,6 +24,7 @@ import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -92,6 +93,12 @@ class ChatViewModel : BaseVM() {
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val chatApi by lazy { NetServiceMgr.getChatApi() }
 
+    // 绑定到 ChatSessionManager 的收集任务
+    private var messagesJob: Job? = null
+    private var loadingMoreJob: Job? = null
+    private var hasMoreJob: Job? = null
+    private var boundAgentId: String? = null
+
 
     fun setAgentInfo(agentInfo: AgentInfo?) {
 
@@ -157,9 +164,41 @@ class ChatViewModel : BaseVM() {
         _isLoadingMore.value = false
 
         // 查询新 agent 的消息
-        queryMsgs()
+        bindToAgentSession(agentInfo.id)
+        // 使用增量同步，优先加载本地数据，然后同步服务器
+        syncLatestMessages(agentInfo.id)
         // 查询改聊天设置
         getChatSetting()
+    }
+
+    private fun bindToAgentSession(agentId: String) {
+        if (boundAgentId == agentId) return
+        boundAgentId = agentId
+        messagesJob?.cancel()
+        loadingMoreJob?.cancel()
+        hasMoreJob?.cancel()
+
+        kotlin.runCatching {
+            _msgs.value = ChatSessionManager.messagesFlow(agentId).value
+            _isLoadingMore.value = ChatSessionManager.isLoadingMoreFlow(agentId).value
+            _hasMoreMessages.value = ChatSessionManager.hasMoreFlow(agentId).value
+        }
+
+        messagesJob = viewModelScope.launch(Dispatchers.IO) {
+            ChatSessionManager.messagesFlow(agentId).collect { list ->
+                _msgs.value = list
+            }
+        }
+        loadingMoreJob = viewModelScope.launch(Dispatchers.IO) {
+            ChatSessionManager.isLoadingMoreFlow(agentId).collect { loading ->
+                _isLoadingMore.value = loading
+            }
+        }
+        hasMoreJob = viewModelScope.launch(Dispatchers.IO) {
+            ChatSessionManager.hasMoreFlow(agentId).collect { more ->
+                _hasMoreMessages.value = more
+            }
+        }
     }
 
     // region 语音播报相关
@@ -200,17 +239,8 @@ class ChatViewModel : BaseVM() {
 
     /** 更新消息的音频URL（供AudioManager回调使用） */
     fun updateMessageAudioUrl(messageId: String, audioUrl: String) {
-        _msgs.update { currentMsgs ->
-            val updatedMsgs =
-                currentMsgs.map { msg ->
-                    if (msg.localMsgId == messageId) {
-                        msg.copy(audio_url = audioUrl)
-                    } else {
-                        msg
-                    }
-                }
-            updatedMsgs
-        }
+        val agentId = agentInfo.value?.id ?: return
+        ChatSessionManager.updateMessageAudioUrl(agentId, messageId, audioUrl)
     }
 
     // endregion
@@ -220,103 +250,27 @@ class ChatViewModel : BaseVM() {
     }
 
     fun queryMsgs(loadMore: Boolean = false) {
-        // 防重复请求检查
-        val currentTime = System.currentTimeMillis()
-        val currentAgentId = agentInfo.value?.id
-
-        if (isQueryingMsgs) {
-            LogUtils.w("Already querying messages, skipping")
-            return
-        }
-
-        if (currentAgentId == null) {
-            LogUtils.w("No agent info available, skipping query")
-            return
-        }
-
-        // 加载更多时完全跳过防抖检查，首次加载使用完整防抖时间
-        if (
-            !loadMore &&
-            lastQueryAgentId == currentAgentId &&
-            currentTime - lastQueryTime < QUERY_DEBOUNCE_TIME
-        ) {
-            LogUtils.w("Query debounced for agent $currentAgentId (loadMore: $loadMore, debounceTime: ${QUERY_DEBOUNCE_TIME}ms)")
-            return
-        }
-
-        isQueryingMsgs = true
-        lastQueryAgentId = currentAgentId
-        lastQueryTime = currentTime
-
+        val currentAgentId = agentInfo.value?.id ?: return
         if (loadMore) {
-            _isLoadingMore.value = true
-        }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val currentAgentValue = agentInfo.value
-                currentAgentValue?.let { agent ->
-
-                    val result = chatApi.getMsgs(agent.id, PAGE_SIZE, currentOffset)
-                    LogUtils.i("queryMsgs result for ${agent.id} = $result")
-                    when (result) {
-                        is HttpResult.Success -> {
-                            val newMessages = result.data.messages ?: emptyList()
-                            val hasMore = result.data.hasMore
-
-                            LogUtils.i("Loaded ${newMessages.size} messages, hasMore: $hasMore")
-
-                            if (loadMore) {
-                                // 加载更多：旧数据应追加到列表尾部（在 reverseLayout 下显示在顶部）
-                                _msgs.update { currentMsgs ->
-                                    val combinedMessages = currentMsgs + newMessages
-                                    // 去重处理
-                                    val uniqueMessages =
-                                        combinedMessages.distinctBy { msg ->
-                                            "${msg.role}_${msg.content}_${msg.localMsgId}"
-                                        }
-                                    uniqueMessages
-                                }
-                                currentOffset += PAGE_SIZE
-                            } else {
-                                // 首次加载：替换消息列表
-                                // 修复：只有当currentOffset为0时才进行首次加载，避免错误清空数据
-                                if (currentOffset == 0) {
-                                    val uniqueMessages =
-                                        newMessages.distinctBy { msg ->
-                                            "${msg.role}_${msg.content}_${msg.localMsgId}"
-                                        }
-                                    _msgs.update { uniqueMessages }
-                                    currentOffset = PAGE_SIZE
-                                } else {
-                                    // 如果currentOffset不为0，说明这不是真正的首次加载，跳过数据替换
-                                    LogUtils.d("Skipping data replacement for non-first load: currentOffset=$currentOffset")
-                                }
-                            }
-
-                            _hasMoreMessages.value = hasMore
-                            LogUtils.i("Successfully loaded messages. Total: ${_msgs.value.size}, hasMore: $hasMore")
-                            // 标记消息查询完成
-                            _isQueryMsgsCompleted.value = true
-                        }
-
-                        is HttpResult.Failure -> {
-                            LogUtils.i("Failed to query messages: ${result.message}")
-                            NetworkErrorHandler.showNetworkAwareError(result.message)
-                            // 即使查询失败，也标记为完成，避免开场白永远不播放
-                            _isQueryMsgsCompleted.value = true
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                LogUtils.e("queryMsgs exception: ${e.message}")
-                NetworkErrorHandler.handleNetworkException(e)
-                // 即使出现异常，也标记为完成，避免开场白永远不播放
-                _isQueryMsgsCompleted.value = true
-            } finally {
-                isQueryingMsgs = false
-                _isLoadingMore.value = false
+            viewModelScope.launch(Dispatchers.IO) {
+                ChatSessionManager.loadMore(currentAgentId, PAGE_SIZE)
             }
+        } else {
+            viewModelScope.launch(Dispatchers.IO) {
+                ChatSessionManager.ensureInitialHistory(currentAgentId, PAGE_SIZE)
+                _isQueryMsgsCompleted.value = true
+            }
+        }
+    }
+
+    /**
+     * 同步最新消息：优先加载本地数据，然后检查服务器更新
+     */
+    private fun syncLatestMessages(agentId: String) {
+        LogUtils.i("ChatViewModel.syncLatestMessages called for agentId=$agentId")
+        viewModelScope.launch(Dispatchers.IO) {
+            ChatSessionManager.syncLatestMessages(agentId, PAGE_SIZE)
+            _isQueryMsgsCompleted.value = true
         }
     }
 
@@ -340,7 +294,13 @@ class ChatViewModel : BaseVM() {
         }
 
         LogUtils.i("Loading more messages, current offset: $currentOffset")
-        queryMsgs(loadMore = true)
+        val currentAgentId = agentInfo.value?.id ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            ChatSessionManager.loadMore(
+                currentAgentId,
+                PAGE_SIZE
+            )
+        }
     }
 
     val showLimitDialog = MutableStateFlow(false)
@@ -371,33 +331,7 @@ class ChatViewModel : BaseVM() {
 
                 inputData.update { "" }
 
-                val msgInfo = MsgInfo(content = inputMsg.trimEnd(), role = "user")
-
-                // 添加临时的加载消息
-                val loadingMsg =
-                    MsgInfo(
-                        content = "loading_animation", // 特殊标识符
-                        role = "assistant",
-                    )
-
-                // 使用 StateFlow 的 update 方法安全地更新列表
-                _msgs.update { currentMsgs ->
-                    try {
-                        val newMsgs = mutableListOf<MsgInfo>()
-                        newMsgs.add(loadingMsg) // 添加加载动画消息
-                        newMsgs.add(msgInfo) // 添加用户消息
-                        // 创建当前消息的副本以避免并发修改
-                        newMsgs.addAll(currentMsgs.toList())
-                        LogUtils.i("Successfully updated messages - new count: ${newMsgs.size}")
-                        newMsgs
-                    } catch (e: Exception) {
-                        LogUtils.e("Error updating messages list: ${e.message}")
-                        currentMsgs // 返回原列表，避免数据丢失
-                    }
-                }
                 _isWaitingForReply.value = true
-
-                val req = SendMsgReq(listOf(msgInfo))
                 val currentAgent = agentInfo.value
                 currentAgent?.let { agent ->
 
@@ -428,16 +362,9 @@ class ChatViewModel : BaseVM() {
                             "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                         ),
                     )
-                    val result = chatApi.sendMsg(agent.id, req)
+                    val result = ChatSessionManager.sendMessage(agent.id, inputMsg.trimEnd())
 
-                    LogUtils.i("sendMsg($agent, $req) -> $result")
-
-                    // 移除加载消息
-                    _msgs.update { currentMsgs ->
-                        currentMsgs.filterNot {
-                            it.content == "loading_animation" && it.role == "assistant"
-                        }
-                    }
+                    LogUtils.i("sendMsg to ${agent.id} -> $result")
                     _isWaitingForReply.value = false
 
                     when (result) {
@@ -473,22 +400,6 @@ class ChatViewModel : BaseVM() {
                                     )
                                     showLimitDialog.emit(true)
                                 }
-                                // 添加AI回复
-                                _msgs.update { currentMsgs ->
-                                    try {
-                                        val newMsgs = mutableListOf<MsgInfo>()
-                                        result.data.data?.choices?.forEach { choice ->
-                                            newMsgs.add(choice.message)
-                                        }
-                                        // 创建当前消息的副本以避免并发修改
-                                        newMsgs.addAll(currentMsgs.toList())
-                                        newMsgs
-                                    } catch (e: Exception) {
-                                        LogUtils.e("Error adding AI response: ${e.message}")
-                                        currentMsgs // 返回原列表，避免数据丢失
-                                    }
-                                }
-
                                 result.data.data
                                     ?.choices
                                     ?.lastOrNull()
@@ -565,39 +476,12 @@ class ChatViewModel : BaseVM() {
 
         launchBackground {
             val keepTalkingMsg = "continue"
-
-            val msgInfo = MsgInfo(content = keepTalkingMsg, role = "user")
-
-            // 添加临时的加载消息 (keep talking不显示用户消息，只显示加载动画)
-            val loadingMsg =
-                MsgInfo(
-                    content = "loading_animation", // 特殊标识符
-                    role = "assistant",
-                )
-            // 使用 StateFlow 的 update 方法安全地更新列表
-            _msgs.update { currentMsgs ->
-                val newMsgs = mutableListOf<MsgInfo>()
-                newMsgs.add(msgInfo) // 添加用户continue消息(会被过滤不显示)
-                newMsgs.add(loadingMsg) // 添加加载动画消息
-                // 创建当前消息的副本以避免并发修改
-                newMsgs.addAll(currentMsgs.toList())
-                newMsgs
-            }
             _isWaitingForReply.value = true
 
-            val req = SendMsgReq(listOf(msgInfo))
-
             agentInfo.value?.let { agent ->
-                val result = chatApi.sendMsg(agent.id, req)
+                val result = ChatSessionManager.sendMessage(agent.id, keepTalkingMsg)
 
-                LogUtils.i("sendKeepTalkingMessage($agent, $req) -> $result")
-
-                // 移除加载消息
-                _msgs.update { currentMsgs ->
-                    currentMsgs.filterNot {
-                        it.content == "loading_animation" && it.role == "assistant"
-                    }
-                }
+                LogUtils.i("sendKeepTalkingMessage to ${agent.id} -> $result")
                 _isWaitingForReply.value = false
 
                 when (result) {
@@ -614,19 +498,7 @@ class ChatViewModel : BaseVM() {
                             ) {
                                 showLimitDialog.emit(true)
                             }
-                            // 添加AI回复
-                            _msgs.update { currentMsgs ->
-                                val newMsgs = mutableListOf<MsgInfo>()
-                                result.data.data?.choices?.forEach { choice ->
-                                    newMsgs.add(choice.message)
-                                }
-                                // 创建当前消息的副本以避免并发修改
-                                newMsgs.addAll(currentMsgs.toList())
-                                newMsgs
-                            }
-
-                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { str
-                                ->
+                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { str ->
                                 IntySetting.setConversationReaded(agent.id, str)
                             }
                         }.onFailure {

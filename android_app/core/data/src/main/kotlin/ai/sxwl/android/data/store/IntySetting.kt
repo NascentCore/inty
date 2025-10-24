@@ -149,7 +149,7 @@ object IntySetting {
     private fun resetAllAgentKeepTalkingToGlobal(globalSetting: Boolean) {
         // 获取所有以"agent_keep_talking_"开头的key
         val allKeys = curUserSetting.allKeys()
-        allKeys?.forEach { key ->
+        allKeys?.forEach { key: String ->
             if (key.startsWith("agent_keep_talking_")) {
                 curUserSetting.putBoolean(key, globalSetting)
             }
@@ -281,6 +281,88 @@ object IntySetting {
     fun setShowGuested() {
         allUserSetting.putBoolean("show_guest", true)
     }
+    // endregion
+
+    // region 聊天数据持久化相关方法
+
+    /**
+     * 保存指定agent的聊天数据
+     * 使用简单的字符串存储，避免复杂的JSON序列化
+     */
+    fun saveChatMessages(agentId: String, messages: List<ai.sxwl.android.data.api.model.MsgInfo>) {
+        try {
+            // 暂时禁用数据持久化，避免序列化问题
+            // TODO: 实现更简单的数据存储方案
+            LogUtils.d("Chat messages persistence temporarily disabled for agent $agentId (${messages.size} messages)")
+        } catch (e: Exception) {
+            LogUtils.e("Failed to save chat messages for agent $agentId: ${e.message}")
+        }
+    }
+
+    /**
+     * 获取指定agent的聊天数据
+     * 暂时返回空列表，避免反序列化问题
+     */
+    fun getChatMessages(agentId: String): List<ai.sxwl.android.data.api.model.MsgInfo> {
+        // 暂时禁用数据持久化，避免反序列化问题
+        // TODO: 实现更简单的数据存储方案
+        LogUtils.d("Chat messages loading temporarily disabled for agent $agentId")
+        return emptyList()
+    }
+
+    /**
+     * 保存指定agent的分页状态
+     */
+    fun saveChatPaginationState(
+        agentId: String,
+        offset: Int,
+        hasMore: Boolean,
+        isInitialLoaded: Boolean
+    ) {
+        curUserSetting.putInt("chat_offset_$agentId", offset)
+        curUserSetting.putBoolean("chat_has_more_$agentId", hasMore)
+        curUserSetting.putBoolean("chat_initial_loaded_$agentId", isInitialLoaded)
+        LogUtils.d("Saved pagination state for agent $agentId: offset=$offset, hasMore=$hasMore, initialLoaded=$isInitialLoaded")
+    }
+
+    /**
+     * 获取指定agent的分页状态
+     */
+    fun getChatPaginationState(agentId: String): Triple<Int, Boolean, Boolean> {
+        val offset = curUserSetting.decodeInt("chat_offset_$agentId", 0)
+        val hasMore = curUserSetting.decodeBool("chat_has_more_$agentId", true)
+        val isInitialLoaded = curUserSetting.decodeBool("chat_initial_loaded_$agentId", false)
+        return Triple(offset, hasMore, isInitialLoaded)
+    }
+
+    /**
+     * 清除指定agent的聊天数据
+     */
+    fun clearChatData(agentId: String) {
+        curUserSetting.removeValueForKey("chat_messages_$agentId")
+        curUserSetting.removeValueForKey("chat_offset_$agentId")
+        curUserSetting.removeValueForKey("chat_has_more_$agentId")
+        curUserSetting.removeValueForKey("chat_initial_loaded_$agentId")
+        LogUtils.d("Cleared chat data for agent $agentId")
+    }
+
+    /**
+     * 清除所有聊天数据
+     */
+    fun clearAllChatData() {
+        val keys = curUserSetting.allKeys()
+        keys?.forEach { key: String ->
+            if (key.startsWith("chat_messages_") ||
+                key.startsWith("chat_offset_") ||
+                key.startsWith("chat_has_more_") ||
+                key.startsWith("chat_initial_loaded_")
+            ) {
+                curUserSetting.removeValueForKey(key)
+            }
+        }
+        LogUtils.d("Cleared all chat data")
+    }
+
     // endregion
 
 }
