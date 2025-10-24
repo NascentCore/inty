@@ -88,6 +88,7 @@ data class MsgInfo(
         return meta_data?.agentId
     }
 
+    @JsonClass(generateAdapter = true)
     data class MsgMetaData(val agentId: String? = null, val isOpening: Boolean = false)
 }
 

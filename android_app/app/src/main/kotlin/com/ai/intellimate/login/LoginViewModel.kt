@@ -8,9 +8,8 @@ import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Intent
-import androidx.lifecycle.viewModelScope
+import com.ai.intellimate.MainActivity
 import com.ai.intellimate.R
-import com.ai.inty.MainActivity
 import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager
 import com.ai.inty.viewmodels.ViewModelEvent
@@ -19,7 +18,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class LoginViewModel : BaseVM() {
@@ -32,7 +30,7 @@ class LoginViewModel : BaseVM() {
      * 发送事件通知
      */
     private fun sendEvent(event: ViewModelEvent) {
-        viewModelScope.launch {
+        launchUI {
             _events.emit(event)
         }
     }
@@ -56,12 +54,24 @@ class LoginViewModel : BaseVM() {
                     IntySetting.login(false, userProfile.id, token) // false 表示不是游客用户
                     UserProfileManager.saveUserProfile(userProfile)
 
+                    // 登录成功，IntySetting已经保存了登录状态
+
+                    // 检查用户信息是否完整（年龄和性别）
+                    val needsRegInfo = userProfile.gender.isNullOrEmpty() ||
+                            userProfile.ageGroup.isNullOrEmpty() ||
+                            userProfile.ageGroup == "<18"
+
                     withContext(Dispatchers.Main) {
                         // 显示登录成功提示
                         ToastUtils.showShort(R.string.login_successfully)
 
-                        // 发送登录成功事件
-                        sendEvent(ViewModelEvent.LoginSuccess)
+                        if (needsRegInfo) {
+                            // 需要完善注册信息，跳转到RegInfo页面
+                            sendEvent(ViewModelEvent.NeedRegInfo)
+                        } else {
+                            // 用户信息完整，发送登录成功事件
+                            sendEvent(ViewModelEvent.LoginSuccess)
+                        }
 
                         // 重启 MainActivity
                         val intent =

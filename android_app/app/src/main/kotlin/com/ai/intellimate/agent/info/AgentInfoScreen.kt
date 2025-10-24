@@ -48,8 +48,8 @@ import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.login.LoginActivity
-import com.ai.inty.ui.components.AgentBackground
-import com.ai.inty.ui.components.SmartTagsLayout
+import com.ai.intellimate.ui.components.AgentBackground
+import com.ai.intellimate.ui.components.SmartTagsLayout
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
