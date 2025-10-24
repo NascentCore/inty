@@ -1,6 +1,8 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
@@ -47,10 +49,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import com.ai.inty.LoginActivity
-import com.ai.inty.R
-import com.ai.inty.VipCenterActivity
-import com.ai.inty.billing.BillingRepository
+import com.ai.intellimate.R
+import com.ai.intellimate.login.LoginActivity
+import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.inty.chat.ui.ChatInput
 import com.ai.inty.chat.ui.ChatMorePanel
 import com.ai.inty.chat.ui.ChatSettingsDrawer
@@ -61,7 +62,6 @@ import com.ai.inty.home.BottomNavigationBarHeight
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.UnlimitChatDialog
 import com.ai.inty.ui.components.AgentBackground
-import com.ai.inty.utils.TrackScreenView
 import kotlinx.coroutines.launch
 
 // The spacer from the bottom of the chat input to what ever that flows underneath it.
@@ -81,17 +81,18 @@ internal fun ChatPage(
     val context = LocalContext.current
     val agentInfo by chatViewModel.agentInfo.collectAsState()
 
-    // 跟踪ChatPage页面访问
-    TrackScreenView(
-        screenName = "ChatPage",
-        screenClass = if (showBackButton) "ChatActivity" else "MainActivity",
-        additionalParams =
+    // 使用 PageTrackingHelper 进行页面跟踪
+    LaunchedEffect(Unit) {
+        PageTrackingHelper.trackPageView(
+            "ChatPage",
+            if (showBackButton) "ChatActivity" else "MainActivity",
             mapOf(
                 "agent_id" to (agentInfo?.id ?: "unknown"),
                 "agent_name" to (agentInfo?.name ?: "unknown"),
                 "show_back_button" to showBackButton,
-            ),
-    )
+            )
+        )
+    }
 
     LaunchedEffect(chatViewModel) {
         chatViewModel.queryMsgs()

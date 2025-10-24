@@ -1,10 +1,10 @@
 package com.ai.inty.audio
 
+import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
-import com.ai.inty.net.NetServiceMgr
-import com.ai.inty.netapi.BusinessErrorCodes
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -173,6 +173,14 @@ class TtsManager private constructor(private val context: Context) {
         errorMsg: String,
         directError: (String) -> Unit,
     ) {
+        // 检查是否为取消操作，如果是则不显示错误toast
+        if (errorMsg.contains("cancelled", ignoreCase = true) ||
+            errorMsg.contains("cancel", ignoreCase = true)
+        ) {
+            LogUtils.d("音频LOG测试 TTS生成被取消: $messageId")
+            return
+        }
+
         val callbacks = synchronized(inFlight) { inFlight.remove(key) ?: emptyList() }
         if (callbacks.isEmpty()) return directError(errorMsg)
         callbacks.forEach { it(Result.failure(IllegalStateException(errorMsg))) }

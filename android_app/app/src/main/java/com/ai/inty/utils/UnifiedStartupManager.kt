@@ -1,14 +1,18 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.common.startup.ImagePreloadManager
 import ai.sxwl.android.data.api.IAgentApi
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.http.ApiResult
+import ai.sxwl.android.data.http.services.AuthService
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
+import com.ai.inty.audio.AudioPreloadManager
 import com.ai.inty.chat.constants.ChatConstants
 import com.ai.inty.explore.ExploreConstants
-import com.ai.inty.net.NetServiceMgr
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -277,15 +281,15 @@ object UnifiedStartupManager {
     /** 创建游客账户 */
     private suspend fun createGuestAccount() {
         try {
-            val result = com.ai.inty.netapi.services.AuthService.createGuest()
+            val result = AuthService.createGuest()
             when (result) {
-                is com.ai.inty.netapi.ApiResult.Success -> {
+                is ApiResult.Success -> {
                     val (guestId, token) = result.data
                     IntySetting.login(true, guestId, token)
                     LogUtils.i("UnifiedStartupManager - 游客账户创建成功: $guestId")
                 }
 
-                is com.ai.inty.netapi.ApiResult.Error -> {
+                is ApiResult.Error -> {
                     LogUtils.e("UnifiedStartupManager - 游客账户创建失败: ${result.message}")
                     throw Exception("Guest account creation failed: ${result.message}")
                 }

@@ -1,8 +1,9 @@
 package com.ai.inty.utils
 
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.http.ApiResult
+import ai.sxwl.android.data.http.services.UserService
 import ai.sxwl.android.utils.LogUtils
-import com.ai.inty.netapi.services.UserService
 
 /** 使用 inty-sdk 进行用户信息操作的工具类 */
 object IntyUserProfileSDK {
@@ -13,13 +14,13 @@ object IntyUserProfileSDK {
             val result = UserService.getUserProfile()
 
             when (result) {
-                is com.ai.inty.netapi.ApiResult.Success -> {
+                is ApiResult.Success -> {
                     val userProfile = result.data
                     LogUtils.i("Updated user profile from inty-sdk: ${userProfile.nickname}")
                     userProfile
                 }
 
-                is com.ai.inty.netapi.ApiResult.Error -> {
+                is ApiResult.Error -> {
                     LogUtils.e("Failed to get user profile with inty-sdk: ${result.message}")
                     null
                 }
@@ -37,13 +38,13 @@ object IntyUserProfileSDK {
             val result = UserService.updateUserProfile(userProfile)
 
             when (result) {
-                is com.ai.inty.netapi.ApiResult.Success -> {
+                is ApiResult.Success -> {
                     val updatedUserProfile = result.data
                     LogUtils.d("Updated user profile with inty-sdk: ${updatedUserProfile.nickname}")
                     updatedUserProfile
                 }
 
-                is com.ai.inty.netapi.ApiResult.Error -> {
+                is ApiResult.Error -> {
                     LogUtils.e("Failed to update user profile with inty-sdk: ${result.message}")
                     null
                 }

@@ -19,7 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.ai.inty.R
+import com.ai.intellimate.R
 
 /** 空状态类型枚举 */
 enum class EmptyStateType {

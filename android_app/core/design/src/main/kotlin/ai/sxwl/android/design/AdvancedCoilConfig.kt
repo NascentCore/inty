@@ -48,7 +48,7 @@ object AdvancedCoilConfig {
             .components {
                 // 添加各种解码器支持
                 add(SvgDecoder.Factory())
-                if (Build.VERSION.SDK_INT >= 28) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     add(AnimatedImageDecoder.Factory())
                 } else {
                     add(GifDecoder.Factory())

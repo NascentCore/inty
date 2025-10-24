@@ -23,10 +23,10 @@ tasks.register("printVersionInfo") {
 }
 
 android {
-    namespace = "com.ai.inty"
+    namespace = "com.ai.intellimate"//这是代码命名空间，与代码package保持一致即可
 
     defaultConfig {
-        applicationId = "com.ai.intellimate"
+        applicationId = "com.ai.intellimate"//这是app的唯一标识id，不可随意修改
         // Google OAuth client ID
         // TODO: This is the same now for debug and release builds for convenience.
         // Create a new client ID for debug build, but keep the production one for backward
@@ -56,9 +56,6 @@ android {
 }
 
 dependencies {
-    // ===== Inty SDK（Stainless https://app.stainless.com/ 根据 app/openapi.json 生成的代码）=====
-    // 使用本地 library/inty_sdk 的版本，避免动态版本在测试时的依赖解析问题
-    implementation("com.inty.api:inty-kotlin:0.15.0")
 
     implementation(libs.androidx.appcompat)//ucropActivity需要
     implementation(libs.androidx.paging.compose)
@@ -71,23 +68,10 @@ dependencies {
     implementation(projects.library.network)
     implementation(projects.library.utils)
 
-    // ===== 网络库 =====
-    implementation(libs.retrofit.core)
-    implementation(libs.retrofit2.kotlin.coroutines.adapter)
-    // ===== 调试工具 =====
-    debugImplementation(libs.chucker.library)
-    "localImplementation"(libs.chucker.library)
-    releaseImplementation(libs.chucker.no.op)
-    "playdebugImplementation"(libs.chucker.no.op)
-
     // ===== 图片加载 =====
     implementation(libs.bundles.coil.bundle)
 
     // ===== Google 服务 =====
-    implementation(libs.billing.client)
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.bundles.firebase.core)
-    implementation(libs.firebase.perf)
     implementation(libs.bundles.credentials)
 
     // ===== 图片处理 =====

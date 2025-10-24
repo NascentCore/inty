@@ -27,8 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.ai.inty.AgentInfoActivity
-import com.ai.inty.R
+import com.ai.intellimate.R
+import com.ai.intellimate.agent.info.AgentInfoActivity
 import kotlinx.coroutines.launch
 
 private const val CHAT_TOP_BAR_AVATAR_SIZE = 30

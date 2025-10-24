@@ -20,7 +20,7 @@
         tools:node="remove" />
 
     <application
-        android:name=".IntyApp"
+        android:name=".IntelliMateApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -51,7 +51,7 @@
             android:value="false" />
 
         <service
-            android:name=".FCMService"
+            android:name="ai.sxwl.android.firebase.FCMService"
             android:directBootAware="true"
             android:enabled="true"
             android:exported="true">
@@ -62,7 +62,7 @@
 
         <!-- 移除旧的 SplashActivity 声明 -->
         <activity
-            android:name=".MainActivity"
+            android:name="com.ai.inty.MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:launchMode="singleTop"
@@ -75,42 +75,42 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ChatActivity"
+            android:name="com.ai.inty.ChatActivity"
             android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Inty"
             android:windowSoftInputMode="adjustResize" />
         <activity
-            android:name=".SettingActivity"
+            android:name=".settings.SettingActivity"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
         <activity
-            android:name=".MySettingActivity"
+            android:name=".profile.ModifyProfileActivity"
             android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Inty.Popup"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name=".AgentInfoActivity"
+            android:name=".agent.info.AgentInfoActivity"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
         <activity
-            android:name=".RegInfoActivity"
+            android:name=".login.RegInfoActivity"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
         <activity
-            android:name=".ReportActivity"
+            android:name=".agent.report.ReportActivity"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup"
             android:windowSoftInputMode="adjustResize" />
         <activity
-            android:name=".CreateRoleActivity"
+            android:name=".agent.generate.CreateRoleActivity"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup"
             android:windowSoftInputMode="adjustResize" />
         <activity
-            android:name=".AvatarGenerateActivity"
+            android:name=".agent.generate.AvatarGenerateActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup"
@@ -121,30 +121,15 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Inty.UCrop" />
         <activity
-            android:name=".LoginActivity"
+            android:name=".login.LoginActivity"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Login" />
 
-        <activity android:name=".VipCenterActivity" />
+        <activity android:name=".vip.VipCenterActivity" />
         <activity
-            android:name=".SubsManageActivity"
+            android:name=".vip.SubsManageActivity"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
-
-        <!-- 新聊天架构Activity -->
-        <activity
-            android:name=".newchat.NewMainActivity"
-            android:exported="true"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Inty"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".newchat.NewChatActivity"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Inty"
-            android:windowSoftInputMode="adjustResize" />
 
     </application>
 

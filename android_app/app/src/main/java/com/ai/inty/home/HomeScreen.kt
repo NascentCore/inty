@@ -1,6 +1,9 @@
 package com.ai.inty.home
 
+import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
@@ -44,13 +47,11 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import com.ai.intellimate.R
+import com.ai.intellimate.agent.generate.CreateRoleActivity
+import com.ai.intellimate.login.LoginActivity
+import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.inty.ChatActivity
-import com.ai.inty.CreateRoleActivity
-import com.ai.inty.LoginActivity
-import com.ai.inty.R
-import com.ai.inty.VipCenterActivity
-import com.ai.inty.billing.BillingRepository
-import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.chat.ChatPageContainer
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.chat.viewmodel.ChatTabViewModel
@@ -59,7 +60,6 @@ import com.ai.inty.explore.ExploreViewModel
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.ExpiredVipDialog
 import com.ai.inty.ui.components.ForceUpgradeDialog
-import com.ai.inty.utils.TrackScreenView
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
 
@@ -93,7 +93,10 @@ fun HomeScreen(
     }
 
     // 跟踪HomeScreen页面访问
-    TrackScreenView(screenName = "HomeScreen", screenClass = "MainActivity")
+    // 使用 PageTrackingHelper 进行页面跟踪
+    LaunchedEffect(Unit) {
+        PageTrackingHelper.trackPageView("HomeScreen", "MainActivity")
+    }
 
     Scaffold(
         modifier = modifier

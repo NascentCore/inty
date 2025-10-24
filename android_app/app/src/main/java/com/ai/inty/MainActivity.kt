@@ -2,6 +2,7 @@ package com.ai.inty
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
@@ -29,7 +30,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import com.ai.inty.billing.BillingRepository
+import com.ai.intellimate.R
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.home.HomeScreen
 import com.ai.inty.utils.UnifiedStartupManager
@@ -49,10 +50,7 @@ class MainActivity : BaseActivity() {
 
     // 返回拦截相关变量
     private var gestureDetector: GestureDetector? = null
-    private var isFirstBack = true
-    private var lastBackTime = 0L
-    private val backTimeout = 2000L // 2秒内需要第二次返回
-    private var exitJob: Job? = null
+    private val backPressHandler = BackPressHandler()
 
     override fun initConfigData() {
         super.initConfigData()
@@ -194,40 +192,10 @@ class MainActivity : BaseActivity() {
 
     /** 处理返回事件（按键返回或手势返回） */
     private fun handleBackPress() {
-        val currentTime = System.currentTimeMillis()
-
-        if (isFirstBack) {
-            // 第一次返回，显示提示
-            showExitHint()
-            isFirstBack = false
-            lastBackTime = currentTime
-
-            // 2秒后重置状态
-            exitJob?.cancel()
-            exitJob =
-                CoroutineScope(Dispatchers.Main).launch {
-                    delay(backTimeout)
-                    isFirstBack = true
-                }
-        } else {
-            // 第二次返回，检查时间间隔
-            if (currentTime - lastBackTime <= backTimeout) {
-                // 在2秒内，执行退出
-                finish()
-            } else {
-                // 超过2秒，重新开始
-                showExitHint()
-                isFirstBack = false
-                lastBackTime = currentTime
-
-                exitJob?.cancel()
-                exitJob =
-                    CoroutineScope(Dispatchers.Main).launch {
-                        delay(backTimeout)
-                        isFirstBack = true
-                    }
-            }
-        }
+        backPressHandler.handleBackPress(
+            onExit = { finish() },
+            onShowHint = { showExitHint() }
+        )
     }
 
     /** 显示退出提示 */
@@ -253,8 +221,8 @@ class MainActivity : BaseActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // 取消协程
-        exitJob?.cancel()
+        // 清理返回按键处理器
+        backPressHandler.cleanup()
     }
 }
 
@@ -292,44 +260,24 @@ private fun SplashUI(modifier: Modifier = Modifier, onSplashComplete: () -> Unit
 /** 等待初始化完成 处理初始化流程中的异常情况，确保即使失败也能进入主界面 */
 private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
     try {
-
         // 等待启动管理器完成必要初始化
+        val maxWaitTime = 5000L // 最多等待5秒
         var waitTime = 0L
-        val maxWaitTime = 8000L // 增加等待时间到8秒，确保数据加载完成
 
         while (
-            UnifiedStartupManager.startupState.value ==
-            UnifiedStartupManager.StartupState.Initializing && waitTime < maxWaitTime
+            UnifiedStartupManager.startupState.value == UnifiedStartupManager.StartupState.Initializing
+            && waitTime < maxWaitTime
         ) {
-            delay(50) // 50ms检查一次
+            delay(50)
             waitTime += 50
         }
 
         if (waitTime >= maxWaitTime) {
-            LogUtils.w("SplashUI - 等待超时，强制进入主界面")
-        } else {
-            LogUtils.i("SplashUI - 启动管理器初始化完成")
+            LogUtils.w("SplashUI - 启动管理器等待超时")
         }
 
         // 等待关键数据加载完成（只等待chat agents）
-        var dataWaitTime = 0L
-        val maxDataWaitTime = 5000L // 最多等待5秒数据加载
-
-        while (dataWaitTime < maxDataWaitTime) {
-            val hasChatData = UnifiedStartupManager.getCurrentChatAgents().isNotEmpty()
-
-            if (hasChatData) {
-                LogUtils.d("SplashUI - 关键数据chat agents加载完成: ${UnifiedStartupManager.getCurrentChatAgents().size}个")
-                break
-            }
-
-            delay(100) // 100ms检查一次
-            dataWaitTime += 100
-        }
-
-        if (dataWaitTime >= maxDataWaitTime) {
-            LogUtils.w("SplashUI - chat agents数据加载超时，但继续进入主界面")
-        }
+        waitForChatAgents()
 
         // 标记初始化完成
         UnifiedStartupManager.markEssentialInitializationComplete()
@@ -343,5 +291,78 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
         // 即使发生异常，也要确保进入主界面
         delay(500) // 给一点时间显示错误状态
         onComplete()
+    }
+}
+
+/** 等待聊天角色数据加载完成 */
+private suspend fun waitForChatAgents() {
+    val maxWaitTime = 5000L // 最多等待5秒
+    var waitTime = 0L
+
+    while (waitTime < maxWaitTime) {
+        val hasChatData = UnifiedStartupManager.getCurrentChatAgents().isNotEmpty()
+
+        if (hasChatData) {
+            LogUtils.d("SplashUI - 关键数据chat agents加载完成: ${UnifiedStartupManager.getCurrentChatAgents().size}个")
+            return
+        }
+
+        delay(100) // 100ms检查一次
+        waitTime += 100
+    }
+
+    LogUtils.w("SplashUI - chat agents数据加载超时，但继续进入主界面")
+}
+
+/**
+ * 返回按键处理器 - 状态机模式
+ * 提供优雅的二次确认退出功能
+ */
+private class BackPressHandler {
+    private var lastBackTime = 0L
+    private val backTimeout = 2000L // 2秒内需要第二次返回
+    private var resetJob: Job? = null
+
+    /**
+     * 处理返回按键事件
+     * @param onExit 退出回调
+     * @param onShowHint 显示提示回调
+     */
+    fun handleBackPress(
+        onExit: () -> Unit,
+        onShowHint: () -> Unit
+    ) {
+        val currentTime = System.currentTimeMillis()
+
+        when {
+            // 在2秒内第二次返回，执行退出
+            currentTime - lastBackTime <= backTimeout -> {
+                onExit()
+            }
+            // 第一次返回或超过2秒，显示提示
+            else -> {
+                onShowHint()
+                lastBackTime = currentTime
+                scheduleReset()
+            }
+        }
+    }
+
+    /**
+     * 调度重置任务
+     */
+    private fun scheduleReset() {
+        resetJob?.cancel()
+        resetJob = CoroutineScope(Dispatchers.Main).launch {
+            delay(backTimeout)
+            // 2秒后自动重置，允许下次返回
+        }
+    }
+
+    /**
+     * 清理资源
+     */
+    fun cleanup() {
+        resetJob?.cancel()
     }
 }

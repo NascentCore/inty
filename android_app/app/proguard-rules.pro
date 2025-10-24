@@ -30,9 +30,9 @@
 -keep class com.ai.inty.billing.** {
     public *;
 }
--keep class com.ai.inty.billing.VipStatus { *; }
--keep class com.ai.inty.billing.VipPlan { *; }
--keep class com.ai.inty.billing.BillingEvent { *; }
+-keep class ai.sxwl.android.data.billing.VipStatus { *; }
+-keep class ai.sxwl.android.data.billing.VipPlan { *; }
+-keep class ai.sxwl.android.data.billing.BillingEvent { *; }
 
 # 保留日志库
 -keep class com.tencent.mars.xlog.** { *; }

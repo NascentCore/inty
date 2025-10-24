@@ -3,21 +3,20 @@ package com.ai.inty.viewmodels
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.ICommonApi
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AppVersionRsp
 import ai.sxwl.android.data.api.model.CreateAgentRequest
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
-import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
-import com.ai.inty.R
-import com.ai.inty.billing.BillingRepository
+import com.ai.intellimate.R
 import com.ai.inty.chat.ChatViewModel
-import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.inty.utils.HttpErrorHandler
@@ -323,53 +322,37 @@ class MainViewModel : BaseVM() {
         onSuccess: (AgentInfo) -> Unit,
         onError: (String) -> Unit,
     ) {
-        // 开始性能追踪
+        launchBackground {
+            try {
+                val result = agentApi.createAgent(request)
 
-        FirebaseManager.trace("create_agent") { trace ->
-            FirebaseManager.putTraceAttribute(trace, "agent_name", request.name)
-            FirebaseManager.putTraceAttribute(
-                trace,
-                "has_avatar",
-                (request.avatar?.isNotEmpty() == true).toString(),
-            )
-            FirebaseManager.putTraceAttribute(
-                trace,
-                "visibility",
-                request.visibility,
-            )
+                withContext(Dispatchers.Main) {
+                    when (result) {
+                        is HttpResult.Success -> {
+                            // 刷新用户创建的角色列表
+                            refreshCreatedAgentsListIfOnTab()
+                            onSuccess(result.data)
+                        }
 
-            launchBackground {
-                try {
-                    val result = agentApi.createAgent(request)
-
-                    withContext(Dispatchers.Main) {
-                        when (result) {
-                            is HttpResult.Success -> {
-                                // 刷新用户创建的角色列表
-                                refreshCreatedAgentsListIfOnTab()
-                                onSuccess(result.data)
-                            }
-
-                            is HttpResult.Failure -> {
-                                LogUtils.e("createAgent error: $result")
-                                val errorMessage =
-                                    result.message.ifBlank {
-                                        "Creation failed, please check network connection"
-                                    }
-                                onError(errorMessage)
-                            }
+                        is HttpResult.Failure -> {
+                            LogUtils.e("createAgent error: $result")
+                            val errorMessage =
+                                result.message.ifBlank {
+                                    "Creation failed, please check network connection"
+                                }
+                            onError(errorMessage)
                         }
                     }
-                } catch (e: retrofit2.HttpException) {
-                    // 专门处理HTTP异常
-                    LogUtils.e("createAgent HTTP Exception: ${e.code()} - ${e.message()}")
-                    val errorMessage = HttpErrorHandler.handleHttpException(e, "create")
-                    withContext(Dispatchers.Main) { onError(errorMessage) }
-                } catch (e: Exception) {
-                    LogUtils.e("createAgent exception: ${e.message}")
-                    val errorMessage = HttpErrorHandler.handleGeneralException(e, "create")
-                    withContext(Dispatchers.Main) { onError(errorMessage) }
                 }
+            } catch (e: retrofit2.HttpException) {
+                // 专门处理HTTP异常
+                LogUtils.e("createAgent HTTP Exception: ${e.code()} - ${e.message()}")
+                val errorMessage = HttpErrorHandler.handleHttpException(e, "create")
+                withContext(Dispatchers.Main) { onError(errorMessage) }
+            } catch (e: Exception) {
+                LogUtils.e("createAgent exception: ${e.message}")
+                val errorMessage = HttpErrorHandler.handleGeneralException(e, "create")
+                withContext(Dispatchers.Main) { onError(errorMessage) }
             }
         }
     }

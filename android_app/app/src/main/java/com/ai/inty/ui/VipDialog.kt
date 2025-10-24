@@ -1,6 +1,7 @@
 package com.ai.inty.ui
 
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.ui.HeartMultiLineEditor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -44,7 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.ai.inty.R
+import com.ai.intellimate.R
 
 /** 解锁更多聊天的拦截弹窗 */
 @Composable

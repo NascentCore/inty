@@ -27,11 +27,8 @@ abstract class BaseVM : ViewModel() {
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
         when (throwable) {
             is CancellationException -> {
-                // 正常的取消异常，不需要处理
-                // 只在调试模式下输出详细日志
-                if (LogUtils.getConfig().logSwitch) {
-                    LogUtils.d("协程正常取消: ${throwable.message}")
-                }
+                // 正常的取消异常，只记录日志，不显示toast
+                LogUtils.d("协程正常取消: ${throwable.message}")
             }
 
             else -> {
@@ -123,7 +120,8 @@ abstract class BaseVM : ViewModel() {
             try {
                 block.invoke(this)
             } catch (e: CancellationException) {
-                // 协程被取消，执行取消回调
+                // 协程被取消，只记录日志，不显示toast
+                LogUtils.d("协程被取消: ${e.message}")
                 onCancelled()
                 throw e
             } catch (e: Exception) {
@@ -172,7 +170,8 @@ abstract class BaseVM : ViewModel() {
         try {
             block.invoke(this)
         } catch (e: CancellationException) {
-            // 正常取消，不需要处理，也不记录日志
+            // 正常取消，只记录日志，不显示toast
+            LogUtils.d("${contextName}被取消: ${e.message}")
             throw e
         } catch (e: Exception) {
             LogUtils.e("${contextName}异常: ${e.message}", e)

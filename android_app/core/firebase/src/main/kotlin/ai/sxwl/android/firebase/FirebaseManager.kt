@@ -485,7 +485,7 @@ object FirebaseManager {
     fun createHttpMetric(
         url: String,
         method: String
-    ): com.google.firebase.perf.metrics.HttpMetric? {
+    ): Any? {
         return try {
             val perf = getPerformance() ?: return null
             val httpMetric = perf.newHttpMetric(url, method)
@@ -499,9 +499,9 @@ object FirebaseManager {
     /**
      * 开始网络请求监控
      */
-    fun startHttpMetric(httpMetric: com.google.firebase.perf.metrics.HttpMetric?) {
+    fun startHttpMetric(httpMetric: Any?) {
         try {
-            httpMetric?.start()
+            (httpMetric as? com.google.firebase.perf.metrics.HttpMetric)?.start()
         } catch (e: Exception) {
             logError("startHttpMetric", "Failed to start HTTP metric: ${e.message}")
         }
@@ -511,15 +511,16 @@ object FirebaseManager {
      * 停止网络请求监控
      */
     fun stopHttpMetric(
-        httpMetric: com.google.firebase.perf.metrics.HttpMetric?,
+        httpMetric: Any?,
         responseCode: Int,
         responseSize: Long? = null
     ) {
         try {
-            if (httpMetric != null) {
-                httpMetric.setHttpResponseCode(responseCode)
-                responseSize?.let { httpMetric.setResponsePayloadSize(it) }
-                httpMetric.stop()
+            val metric = httpMetric as? com.google.firebase.perf.metrics.HttpMetric
+            if (metric != null) {
+                metric.setHttpResponseCode(responseCode)
+                responseSize?.let { metric.setResponsePayloadSize(it) }
+                metric.stop()
             }
         } catch (e: Exception) {
             logError("stopHttpMetric", "Failed to stop HTTP metric: ${e.message}")

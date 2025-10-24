@@ -1,8 +1,11 @@
 package com.ai.inty.home
 
+import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.billing.VipStatus
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.TimeUtils
@@ -63,15 +66,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.ai.inty.MySettingActivity
-import com.ai.inty.R
-import com.ai.inty.SettingActivity
-import com.ai.inty.VipCenterActivity
-import com.ai.inty.billing.BillingRepository
-import com.ai.inty.billing.VipStatus
+import com.ai.intellimate.R
+import com.ai.intellimate.profile.ModifyProfileActivity
+import com.ai.intellimate.settings.SettingActivity
+import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.utils.AuthClickable
-import com.ai.inty.utils.TrackScreenView
 
 /** “我的”页面 */
 @Composable
@@ -88,12 +88,14 @@ internal fun ProfilePage(
 ) {
     val context = LocalContext.current
 
-    // 跟踪ProfilePage页面访问
-    TrackScreenView(
-        screenName = "ProfilePage",
-        screenClass = "MainActivity",
-        additionalParams = mapOf("agent_count" to agents.size, "is_loading" to isLoading),
-    )
+    // 使用 PageTrackingHelper 进行页面跟踪
+    LaunchedEffect(Unit) {
+        PageTrackingHelper.trackPageView(
+            "ProfilePage",
+            "MainActivity",
+            mapOf("agent_count" to agents.size, "is_loading" to isLoading)
+        )
+    }
 
     Box(modifier = modifier) {
         AsyncImage(
@@ -138,14 +140,7 @@ internal fun ProfilePage(
                         AsyncImage(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .clip(CircleShape)
-                                .noRippleClickable(onClick = {
-                                    val intent = android.content.Intent(
-                                        context,
-                                        com.ai.inty.newchat.NewMainActivity::class.java
-                                    )
-                                    context.startActivity(intent)
-                                }),
+                                .clip(CircleShape),
                             model = ImageRequest.Builder(context)
                                 .data(getCdnImageUrl(userProfile.avatar, width = 512))
                                 .build(),
@@ -200,7 +195,7 @@ internal fun ProfilePage(
 
                     AuthClickable(
                         onClick = {
-                            MySettingActivity.launch(context, userProfile)
+                            ModifyProfileActivity.launch(context, userProfile)
                         }
                     ) { authModifier ->
                         AsyncImage(

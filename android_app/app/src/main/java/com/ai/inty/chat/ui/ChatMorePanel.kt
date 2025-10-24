@@ -1,9 +1,12 @@
 package com.ai.inty.chat.ui
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.design.tmp.BottomSheetDialog
+import ai.sxwl.android.design.tmp.DiaAmountLayout
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -40,13 +43,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.ai.inty.LoginActivity
-import com.ai.inty.R
-import com.ai.inty.ReportActivity
-import com.ai.inty.VipCenterActivity
-import com.ai.inty.base.BottomSheetDialog
-import com.ai.inty.base.DiaAmountLayout
-import com.ai.inty.billing.BillingRepository
+import com.ai.intellimate.R
+import com.ai.intellimate.agent.report.ReportActivity
+import com.ai.intellimate.login.LoginActivity
+import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.ui.ReplyStyleSheet
 

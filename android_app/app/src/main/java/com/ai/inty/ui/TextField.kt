@@ -1,116 +1,234 @@
 package com.ai.inty.ui
 
-import androidx.annotation.IntRange
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import ai.sxwl.android.utils.ToastUtils
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ai.intellimate.R
+import kotlinx.coroutines.launch
 
-/** 聊天输入框 */
 @Composable
-fun HeartMultiLineEditor(
+fun IntySmallTextField(
     modifier: Modifier = Modifier,
-    inputValue: String,
-    onInputChange: (String) -> Unit,
-    enableInput: Boolean = true,
-    readOnly: Boolean = false,
-    supportStr: String = "",
-    textStyle: TextStyle =
-        TextStyle(
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Normal,
-            color = Color.White,
-            textAlign = TextAlign.Start,
-            lineHeightStyle =
-                LineHeightStyle(
-                    alignment = LineHeightStyle.Alignment.Center,
-                    trim = LineHeightStyle.Trim.Both,
-                ),
-        ),
-    @IntRange(from = 0L) maxLength: Int = Int.MAX_VALUE,
+    value: String,
+    singleLine: Boolean = false,
+    enabled: Boolean = true,
+    placeholder: @Composable (() -> Unit)? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    onValueChange: (String) -> Unit,
+    onFocusChanged: ((Boolean) -> Unit)? = null,
+    onSelectionChanged: ((Int) -> Unit)? = null,
+    selection: Int = 0,
     maxLines: Int = Int.MAX_VALUE,
-    hintStr: String = "",
+    maxLength: Int = 1000, // 输入文案默认最大1000个字符
 ) {
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-            value = inputValue,
-            onValueChange = { str ->
-                if (str.length in 0..maxLength) {
-                    onInputChange(str)
-                }
-            },
-            modifier = modifier,
-            enabled = enableInput,
-            readOnly = readOnly,
-            textStyle = textStyle,
-            maxLines = maxLines,
-            placeholder = {
-                if (hintStr.isNotEmpty()) {
-                    Text(
-                        text = hintStr,
-                        fontSize = textStyle.fontSize,
-                        fontWeight = textStyle.fontWeight,
-                        color = Color(0x59FFFFFF),
-                    )
-                }
-            },
-            supportingText = {
-                if (supportStr.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                    ) {
-                        Text(
-                            text = supportStr,
-                            fontSize = 12.sp,
-                            lineHeight = 22.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = Color(0x8CFFFFFF),
-                            modifier = Modifier,
-                        )
+
+    Row(modifier = modifier.wrapContentHeight(), verticalAlignment = Alignment.CenterVertically) {
+        leadingIcon?.let { it() }
+
+        val focusManager = LocalFocusManager.current
+
+        val newActions =
+            KeyboardActions(
+                onDone = {
+                    focusManager.clearFocus()
+                    keyboardActions.onDone?.let { it() }
+                },
+                onGo = {
+                    focusManager.clearFocus()
+                    keyboardActions.onGo?.let { it() }
+                },
+                onNext = {
+                    focusManager.clearFocus()
+                    keyboardActions.onNext?.let { it() }
+                },
+                onPrevious = {
+                    focusManager.clearFocus()
+                    keyboardActions.onPrevious?.let { it() }
+                },
+                onSearch = {
+                    focusManager.clearFocus()
+                    keyboardActions.onSearch?.let { it() }
+                },
+                onSend = {
+                    focusManager.clearFocus()
+                    keyboardActions.onSend?.let { it() }
+                },
+            )
+
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
+        ) {
+            var textFieldValue by remember {
+                mutableStateOf(TextFieldValue(value, selection = TextRange(selection)))
+            }
+
+            // 使用LaunchedEffect来监听外部value和selection的变化
+            LaunchedEffect(value, selection) {
+                textFieldValue = textFieldValue.copy(text = value, selection = TextRange(selection))
+            }
+            val scope = rememberCoroutineScope()
+            TextField(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                            onFocusChanged?.invoke(focusState.isFocused)
+                        },
+                enabled = enabled,
+                singleLine = singleLine,
+                value = textFieldValue,
+                onValueChange = { newValue ->
+                    var nextText = newValue.text
+                    var nextSelection = newValue.selection
+
+                    // 限制最大字符数（含粘贴场景）
+                    if (maxLength > 0 && nextText.length > maxLength) {
+                        // 仅在首次超过时提示
+                        scope.launch { ToastUtils.showShort(R.string.str_message_is_too_long) }
+                        nextText = nextText.substring(0, maxLength)
+                        val sel = nextSelection.start.coerceAtMost(maxLength)
+                        nextSelection = TextRange(sel)
                     }
-                }
-            },
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent,
-                    disabledBorderColor = Color.Transparent,
-                ),
-        )
+
+                    textFieldValue = TextFieldValue(text = nextText, selection = nextSelection)
+                    onValueChange(nextText)
+                    onSelectionChanged?.invoke(nextSelection.start)
+                },
+                keyboardOptions = keyboardOptions,
+                keyboardActions = newActions,
+                textStyle = TextStyle.Default.copy(fontSize = 14.sp, color = Color.White),
+                colors =
+                    TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        cursorColor = Color.White,
+                    ),
+                placeholder = placeholder,
+                maxLines = maxLines,
+            )
+        }
+
+        trailingIcon?.let { it() }
     }
 }
 
-@Preview
 @Composable
-private fun PreviewChatInputUI() {
-    var inputStr by remember { mutableStateOf("Input...") }
-    HeartMultiLineEditor(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color(0x1AFFFFFF)),
-        inputValue = inputStr,
-        onInputChange = { inputStr = it },
-        maxLength = 20,
-        maxLines = 3,
-        supportStr = "${inputStr.length}/20",
-    )
+fun IntySmallTextField2(
+    modifier: Modifier = Modifier,
+    value: String,
+    singleLine: Boolean = false,
+    enabled: Boolean = true,
+    maxLength: Int = 1000, // 限制最大输入字数，-1 表示不限制
+    placeholder: @Composable (() -> Unit)? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    onValueChange: (String) -> Unit,
+) {
+
+    Row(modifier = modifier.fillMaxHeight(), verticalAlignment = Alignment.CenterVertically) {
+        leadingIcon?.let { it() }
+
+        val focusManager = LocalFocusManager.current
+
+        val newActions =
+            KeyboardActions(
+                onDone = {
+                    focusManager.clearFocus()
+                    keyboardActions.onDone?.let { it() }
+                },
+                onGo = {
+                    focusManager.clearFocus()
+                    keyboardActions.onGo?.let { it() }
+                },
+                onNext = {
+                    focusManager.clearFocus()
+                    keyboardActions.onNext?.let { it() }
+                },
+                onPrevious = {
+                    focusManager.clearFocus()
+                    keyboardActions.onPrevious?.let { it() }
+                },
+                onSearch = {
+                    focusManager.clearFocus()
+                    keyboardActions.onSearch?.let { it() }
+                },
+                onSend = {
+                    focusManager.clearFocus()
+                    keyboardActions.onSend?.let { it() }
+                },
+            )
+
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxHeight()
+                    .weight(1f)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
+        ) {
+            BasicTextField(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = enabled,
+                singleLine = singleLine,
+                value = value,
+                textStyle = TextStyle.Default.copy(fontSize = 14.sp, color = Color.White),
+                onValueChange = { str ->
+                    // 有最大输入数字限制时候
+                    if (maxLength > 0 && str.length <= maxLength) {
+                        onValueChange(str)
+                    } else {
+                        // 不作限制
+                        if (maxLength == -1) {
+                            onValueChange(str)
+                        }
+                    }
+                },
+                keyboardOptions = keyboardOptions,
+                keyboardActions = newActions,
+                cursorBrush = SolidColor(Color.White),
+            )
+            if (value.isEmpty()) {
+                placeholder?.let { it() }
+            }
+        }
+        trailingIcon?.let { it() }
+    }
 }

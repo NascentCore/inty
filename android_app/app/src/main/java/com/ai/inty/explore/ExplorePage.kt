@@ -1,5 +1,7 @@
 package com.ai.inty.explore
 
+import ai.sxwl.android.common.analytics.PageTrackingHelper
+import ai.sxwl.android.common.startup.ImagePreloadManager
 import ai.sxwl.android.data.api.model.AgentInfo
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
@@ -31,9 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
-import com.ai.inty.R
-import com.ai.inty.utils.ImagePreloadManager
-import com.ai.inty.utils.TrackScreenView
+import com.ai.intellimate.R
 
 /** Explore页面 - 推荐agents展示 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,16 +51,17 @@ fun ExplorePage(
     val agentsFlow = viewModel.getRecommendAgentsFlow()
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
 
-    // 跟踪ExplorePage页面访问
-    TrackScreenView(
-        screenName = "ExplorePage",
-        screenClass = "MainActivity",
-        additionalParams =
+    // 使用 PageTrackingHelper 进行页面跟踪
+    LaunchedEffect(Unit) {
+        PageTrackingHelper.trackPageView(
+            "ExplorePage",
+            "MainActivity",
             mapOf(
                 "agent_count" to (lazyPagingItems?.itemCount ?: 0),
                 "is_loading" to (lazyPagingItems?.loadState?.refresh is LoadState.Loading),
-            ),
-    )
+            )
+        )
+    }
 
     // 初始化图片尺寸缓存管理器和图片预加载管理器
     LaunchedEffect(Unit) { ImagePreloadManager.init(context) }
