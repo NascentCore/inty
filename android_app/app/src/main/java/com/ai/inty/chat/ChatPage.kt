@@ -80,6 +80,7 @@ internal fun ChatPage(
 
     val context = LocalContext.current
     val agentInfo by chatViewModel.agentInfo.collectAsState()
+    val isQueryMsgsCompleted by chatViewModel.isQueryMsgsCompleted.collectAsState()
 
     // 使用 PageTrackingHelper 进行页面跟踪
     LaunchedEffect(Unit) {
@@ -352,8 +353,11 @@ internal fun ChatPage(
                                 }
                             }
                         }
-                    // 2/3. Agent Intro + Opening（仅在无更多分页或完全无消息时展示，位于顶部）
-                    val showIntroOpeningTop = (!hasMoreMessages) || chatMessages.isEmpty()
+                    // 2/3. Agent Intro + Opening（等待getMsgs完成后再显示，仅在无更多分页或完全无消息时展示，位于顶部）
+                    // 优化：等待getMsgs完成，并且（没有更多消息 或 消息列表为空）时才显示
+                    val showIntroOpeningTop =
+                        isQueryMsgsCompleted && ((!hasMoreMessages) || chatMessages.isEmpty())
+                    LogUtils.d("ChatPage: showIntroOpeningTop=$showIntroOpeningTop, isQueryMsgsCompleted=$isQueryMsgsCompleted, hasMoreMessages=$hasMoreMessages, chatMessages.size=${chatMessages.size}")
                     if (showIntroOpeningTop) {
                         // Opening 消息（带音频自动播放逻辑，ChatItem 内部处理）
                         item {
