@@ -1,4 +1,4 @@
-package com.ai.inty.viewmodels
+package com.ai.intellimate
 
 /**
  * ViewModel事件类型

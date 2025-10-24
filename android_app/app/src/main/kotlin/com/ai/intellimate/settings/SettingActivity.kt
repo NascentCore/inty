@@ -12,7 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.ai.intellimate.MainActivity
 import com.ai.intellimate.R
-import com.ai.inty.viewmodels.MainViewModel
+import com.ai.intellimate.MainViewModel
 
 /** 设置页面 */
 class SettingActivity : BaseActivity() {

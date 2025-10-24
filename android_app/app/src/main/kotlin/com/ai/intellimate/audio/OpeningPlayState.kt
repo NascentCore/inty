@@ -1,4 +1,4 @@
-package com.ai.inty.audio
+package com.ai.intellimate.audio
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

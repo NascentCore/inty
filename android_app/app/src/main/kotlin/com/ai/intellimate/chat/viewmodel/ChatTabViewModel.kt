@@ -1,12 +1,12 @@
-package com.ai.inty.chat.viewmodel
+package com.ai.intellimate.chat.viewmodel
 
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.ai.inty.chat.paging.ChatPagingRepository
-import com.ai.inty.utils.UnifiedStartupManager
+import com.ai.intellimate.chat.paging.ChatPagingRepository
+import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch

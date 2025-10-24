@@ -30,10 +30,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import com.ai.inty.chat.ChatViewModel
-import com.ai.inty.home.HomeScreen
-import com.ai.inty.utils.UnifiedStartupManager
-import com.ai.inty.viewmodels.MainViewModel
+import com.ai.intellimate.chat.ChatViewModel
+import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

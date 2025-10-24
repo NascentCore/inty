@@ -1,4 +1,4 @@
-package com.ai.inty.audio
+package com.ai.intellimate.audio
 
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
@@ -28,15 +28,15 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                         // 更新Scope以确保协程能正常执行
                         instance.scope = scope
                         // 同步最新的TtsManager实例（内部使用稳定ioScope）
-                        instance.ttsManager = TtsManager.getInstance(context)
+                        instance.ttsManager = TtsManager.Companion.getInstance(context)
                     }
         }
     }
 
     // 子模块
-    private val playbackManager = AudioPlaybackManager.getInstance(context)
+    private val playbackManager = AudioPlaybackManager.Companion.getInstance(context)
     private val cacheManager = AudioCacheManager.getInstance(context)
-    private var ttsManager = TtsManager.getInstance(context)
+    private var ttsManager = TtsManager.Companion.getInstance(context)
     private val mainHandler = Handler(Looper.getMainLooper())
 
     // 业务状态管理（开场白状态管理已移至消息级别处理）

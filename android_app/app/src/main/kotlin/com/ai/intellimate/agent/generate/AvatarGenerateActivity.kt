@@ -70,8 +70,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
-import com.ai.inty.utils.AvatarManager
-import com.ai.inty.utils.NetworkErrorHandler
+import com.ai.intellimate.utils.AvatarManager
+import com.ai.intellimate.utils.NetworkErrorHandler
 
 
 /** Ai 模型形象的 封面头像生成页面 */

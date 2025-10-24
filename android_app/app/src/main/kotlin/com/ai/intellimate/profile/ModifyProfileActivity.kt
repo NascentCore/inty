@@ -24,8 +24,8 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.ui.components.MySettingScreen
-import com.ai.inty.utils.UCropHelper
-import com.ai.inty.viewmodels.ViewModelEvent
+import com.ai.intellimate.utils.UCropHelper
+import com.ai.intellimate.ViewModelEvent
 import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.launch
 import java.util.Locale

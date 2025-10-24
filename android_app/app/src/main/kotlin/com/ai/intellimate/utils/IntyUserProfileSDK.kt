@@ -1,4 +1,4 @@
-package com.ai.inty.utils
+package com.ai.intellimate.utils
 
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.http.ApiResult

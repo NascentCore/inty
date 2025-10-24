@@ -1,4 +1,4 @@
-package com.ai.inty.home
+package com.ai.intellimate
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.model.UserProfile
@@ -47,7 +47,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import com.ai.intellimate.R
 import com.ai.intellimate.agent.generate.CreateRoleActivity
 import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.login.LoginActivity
@@ -55,13 +54,13 @@ import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.ExpiredVipDialog
 import com.ai.intellimate.ui.components.ForceUpgradeDialog
 import com.ai.intellimate.vip.VipCenterActivity
-import com.ai.inty.chat.ChatPageContainer
-import com.ai.inty.chat.ChatViewModel
-import com.ai.inty.chat.viewmodel.ChatTabViewModel
-import com.ai.inty.explore.ExplorePage
-import com.ai.inty.explore.ExploreViewModel
-import com.ai.inty.viewmodels.HomeTabIndex
-import com.ai.inty.viewmodels.MainViewModel
+import com.ai.intellimate.chat.ChatPageContainer
+import com.ai.intellimate.chat.ChatViewModel
+import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
+import com.ai.intellimate.explore.ExplorePage
+import com.ai.intellimate.explore.ExploreViewModel
+import com.ai.intellimate.messages.ConversationsPage
+import com.ai.intellimate.profile.ProfilePage
 
 /** 主页面，包含五个tab */
 @Composable

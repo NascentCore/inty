@@ -8,7 +8,7 @@ import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
-import com.ai.inty.utils.HttpErrorHandler
+import com.ai.intellimate.utils.HttpErrorHandler
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

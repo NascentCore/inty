@@ -1,4 +1,4 @@
-package com.ai.inty.utils
+package com.ai.intellimate.utils
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString

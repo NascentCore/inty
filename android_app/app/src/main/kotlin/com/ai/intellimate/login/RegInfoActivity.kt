@@ -7,7 +7,7 @@ import android.content.Intent
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.lifecycleScope
-import com.ai.inty.viewmodels.ViewModelEvent
+import com.ai.intellimate.ViewModelEvent
 import kotlinx.coroutines.launch
 
 /** 注册信息完善页面，性别和年龄 */

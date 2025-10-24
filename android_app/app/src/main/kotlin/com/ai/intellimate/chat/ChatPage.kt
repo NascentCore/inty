@@ -1,4 +1,4 @@
-package com.ai.inty.chat
+package com.ai.intellimate.chat
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.model.MsgInfo
@@ -55,13 +55,14 @@ import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.vip.VipCenterActivity
-import com.ai.inty.chat.ui.ChatInput
-import com.ai.inty.chat.ui.ChatMorePanel
-import com.ai.inty.chat.ui.ChatSettingsDrawer
-import com.ai.inty.chat.ui.ChatTopBar
-import com.ai.inty.chat.ui.KeepTalkingButton
-import com.ai.inty.chat.ui.PremiumModelTag
-import com.ai.inty.home.BottomNavigationBarHeight
+import com.ai.intellimate.chat.ui.ChatInput
+import com.ai.intellimate.chat.ui.ChatMorePanel
+import com.ai.intellimate.chat.ui.ChatSettingsDrawer
+import com.ai.intellimate.chat.ui.ChatTopBar
+import com.ai.intellimate.chat.ui.KeepTalkingButton
+import com.ai.intellimate.chat.ui.PremiumModelTag
+import com.ai.intellimate.BottomNavigationBarHeight
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // The spacer from the bottom of the chat input to what ever that flows underneath it.
@@ -433,7 +434,7 @@ internal fun ChatPage(
                     }
                         .collect { (firstVisibleIndex, scrollOffset) ->
                             // 添加小延迟，确保首次加载完成后再开始监听
-                            kotlinx.coroutines.delay(100)
+                            delay(100)
                             val layoutInfo = listState.layoutInfo
                             val visibleItems = layoutInfo.visibleItemsInfo
                             val totalItemsCount = layoutInfo.totalItemsCount

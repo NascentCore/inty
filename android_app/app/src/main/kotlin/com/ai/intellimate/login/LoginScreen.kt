@@ -38,7 +38,7 @@ import com.ai.intellimate.ui.components.LogoImage
 import com.ai.intellimate.ui.components.PolicyText
 import com.ai.intellimate.ui.components.WelcomeSubtitle
 import com.ai.intellimate.ui.components.WelcomeTitle
-import com.ai.inty.utils.CredentialManagerHelper
+import com.ai.intellimate.utils.CredentialManagerHelper
 import kotlinx.coroutines.launch
 
 /** 登录屏幕 */

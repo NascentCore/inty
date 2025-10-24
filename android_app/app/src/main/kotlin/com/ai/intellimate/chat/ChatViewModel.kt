@@ -1,4 +1,4 @@
-package com.ai.inty.chat
+package com.ai.intellimate.chat
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
@@ -11,6 +11,11 @@ import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.chat.ChatSessionManager
+import ai.sxwl.android.data.di.ChatModule
+import ai.sxwl.android.data.domain.ChatRepository
+import ai.sxwl.android.data.usecase.LoadChatHistoryUseCase
+import ai.sxwl.android.data.usecase.SendMessageUseCase
+import ai.sxwl.android.data.usecase.SyncChatDataUseCase
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
@@ -19,9 +24,9 @@ import ai.sxwl.android.utils.Utils
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
-import com.ai.inty.audio.AudioManager
-import com.ai.inty.utils.NetworkErrorHandler
-import com.ai.inty.utils.UserProfileManager
+import com.ai.intellimate.audio.AudioManager
+import com.ai.intellimate.utils.NetworkErrorHandler
+import com.ai.intellimate.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -33,6 +38,12 @@ import kotlinx.coroutines.launch
 // 操作什么数据，支持什么 UI？Model 是 beans
 // View 是各类 page/activity。
 class ChatViewModel : BaseVM() {
+
+    // 依赖注入 - 使用新的架构
+    private val chatRepository: ChatRepository = ChatModule.getChatRepository()
+    private val sendMessageUseCase: SendMessageUseCase = ChatModule.sendMessageUseCase
+    private val loadChatHistoryUseCase: LoadChatHistoryUseCase = ChatModule.loadChatHistoryUseCase
+    private val syncChatDataUseCase: SyncChatDataUseCase = ChatModule.syncChatDataUseCase
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()
@@ -163,10 +174,10 @@ class ChatViewModel : BaseVM() {
         _hasMoreMessages.value = true
         _isLoadingMore.value = false
 
-        // 查询新 agent 的消息
+        // 查询新 agent 的消息 - 使用新架构
         bindToAgentSession(agentInfo.id)
-        // 使用增量同步，优先加载本地数据，然后同步服务器
-        syncLatestMessages(agentInfo.id)
+        // 使用增量同步，优先加载本地数据，然后同步服务器 - 使用UseCase
+        loadChatHistory(agentInfo.id)
         // 查询改聊天设置
         getChatSetting()
     }
@@ -178,25 +189,94 @@ class ChatViewModel : BaseVM() {
         loadingMoreJob?.cancel()
         hasMoreJob?.cancel()
 
-        kotlin.runCatching {
-            _msgs.value = ChatSessionManager.messagesFlow(agentId).value
-            _isLoadingMore.value = ChatSessionManager.isLoadingMoreFlow(agentId).value
-            _hasMoreMessages.value = ChatSessionManager.hasMoreFlow(agentId).value
+        runCatching {
+            _msgs.value = chatRepository.getMessagesFlow(agentId).value
+            _isLoadingMore.value = chatRepository.getLoadingMoreFlow(agentId).value
+            _hasMoreMessages.value = chatRepository.getHasMoreFlow(agentId).value
         }
 
         messagesJob = viewModelScope.launch(Dispatchers.IO) {
-            ChatSessionManager.messagesFlow(agentId).collect { list ->
+            chatRepository.getMessagesFlow(agentId).collect { list ->
                 _msgs.value = list
             }
         }
         loadingMoreJob = viewModelScope.launch(Dispatchers.IO) {
-            ChatSessionManager.isLoadingMoreFlow(agentId).collect { loading ->
+            chatRepository.getLoadingMoreFlow(agentId).collect { loading ->
                 _isLoadingMore.value = loading
             }
         }
         hasMoreJob = viewModelScope.launch(Dispatchers.IO) {
-            ChatSessionManager.hasMoreFlow(agentId).collect { more ->
+            chatRepository.getHasMoreFlow(agentId).collect { more ->
                 _hasMoreMessages.value = more
+            }
+        }
+    }
+
+    /**
+     * 加载聊天历史 - 使用新架构
+     */
+    private fun loadChatHistory(agentId: String) {
+        LogUtils.i("ChatViewModel.loadChatHistory called for agentId=$agentId")
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                syncChatDataUseCase(agentId)
+                _isQueryMsgsCompleted.value = true
+            } catch (e: Exception) {
+                LogUtils.e("ChatViewModel.loadChatHistory error: ${e.message}")
+                _isQueryMsgsCompleted.value = true
+            }
+        }
+    }
+
+    /**
+     * 发送消息 - 使用新架构
+     */
+    fun sendMsg() {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) {
+            LogUtils.i("Send message debounced, ignoring rapid clicks")
+            return
+        }
+        lastSendTime = currentTime
+
+        if (_isWaitingForReply.value) {
+            LogUtils.i("Already waiting for reply, ignoring new send request")
+            return
+        }
+
+        val inputMsg = inputData.value
+        if (inputMsg.isBlank()) {
+            LogUtils.i("Empty message, ignoring send request")
+            return
+        }
+
+        val agentId = _agentInfo.value?.id ?: return
+        inputData.value = ""
+        _isWaitingForReply.value = true
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = sendMessageUseCase(agentId, inputMsg.trimEnd())
+                LogUtils.i("Send message result: $result")
+                
+                // 处理发送结果
+                when (result) {
+                    is HttpResult.Success -> {
+                        // 发送成功，处理响应
+                        result.data.data?.choices?.lastOrNull()?.message?.content?.let { content ->
+                            IntySetting.setConversationReaded(agentId, content)
+                        }
+                    }
+                    is HttpResult.Failure -> {
+                        // 发送失败，显示错误
+                        LogUtils.e("Send message failed: ${result.message}")
+                        // 这里可以添加错误处理逻辑
+                    }
+                }
+            } catch (e: Exception) {
+                LogUtils.e("Send message error: ${e.message}")
+            } finally {
+                _isWaitingForReply.value = false
             }
         }
     }

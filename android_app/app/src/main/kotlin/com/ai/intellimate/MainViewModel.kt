@@ -1,4 +1,4 @@
-package com.ai.inty.viewmodels
+package com.ai.intellimate
 
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.IAgentApi
@@ -15,15 +15,16 @@ import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
-import com.ai.intellimate.R
-import com.ai.inty.chat.ChatViewModel
-import com.ai.inty.utils.AgentCacheManager
-import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
-import com.ai.inty.utils.HttpErrorHandler
-import com.ai.inty.utils.IntyUserProfileSDK
-import com.ai.inty.utils.UnifiedStartupManager
-import com.ai.inty.utils.UserProfileManager
+import com.ai.intellimate.chat.ChatViewModel
+import com.ai.intellimate.audio.AudioManager
+import com.ai.intellimate.utils.AgentCacheManager
+import com.ai.intellimate.utils.CredentialManagerHelper.clearCredentialState
+import com.ai.intellimate.utils.HttpErrorHandler
+import com.ai.intellimate.utils.IntyUserProfileSDK
+import com.ai.intellimate.utils.UnifiedStartupManager
+import com.ai.intellimate.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
 
 enum class HomeTabIndex {
     Chat,
@@ -130,7 +132,7 @@ class MainViewModel : BaseVM() {
         try {
             // 通过AudioManager单例停止所有播放
             val audioManager =
-                com.ai.inty.audio.AudioManager.getInstance(Utils.getApp(), viewModelScope)
+                AudioManager.getInstance(Utils.getApp(), viewModelScope)
             audioManager.stopAllPlayback()
         } catch (e: Exception) {
             LogUtils.e("MainViewModel - 停止音频播放失败: ${e.message}")
@@ -191,7 +193,7 @@ class MainViewModel : BaseVM() {
                 }
 
                 BillingRepository.fetchRemote()
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 LogUtils.e("BillingRepository MainViewModel Member status update cancelled: ${e.message}")
                 // 协程被取消是正常情况，不需要特殊处理
             } catch (e: Exception) {
@@ -344,7 +346,7 @@ class MainViewModel : BaseVM() {
                         }
                     }
                 }
-            } catch (e: retrofit2.HttpException) {
+            } catch (e: HttpException) {
                 // 专门处理HTTP异常
                 LogUtils.e("createAgent HTTP Exception: ${e.code()} - ${e.message()}")
                 val errorMessage = HttpErrorHandler.handleHttpException(e, "create")
@@ -455,7 +457,7 @@ class MainViewModel : BaseVM() {
                         }
                     }
                 }
-            } catch (e: retrofit2.HttpException) {
+            } catch (e: HttpException) {
                 // 专门处理HTTP异常
                 LogUtils.e("deleteAgent HTTP Exception: ${e.code()} - ${e.message()}")
                 val errorMessage = HttpErrorHandler.handleHttpException(e, "delete")
@@ -514,7 +516,7 @@ class MainViewModel : BaseVM() {
                         }
                     }
                 }
-            } catch (e: retrofit2.HttpException) {
+            } catch (e: HttpException) {
                 // 专门处理HTTP异常
                 LogUtils.e("updateAgent HTTP Exception: ${e.code()} - ${e.message()}")
                 val errorMessage = HttpErrorHandler.handleHttpException(e, "update")

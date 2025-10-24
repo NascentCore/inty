@@ -16,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import com.ai.intellimate.R
-import com.ai.inty.utils.TextStyleUtils
+import com.ai.intellimate.utils.TextStyleUtils
 
 @Composable
 fun PolicyRow(context: Context, fontSize: TextUnit) {

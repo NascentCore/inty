@@ -1,4 +1,4 @@
-package com.ai.inty.chat.ui
+package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.BillingRepository
@@ -48,7 +48,7 @@ import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.ui.ReplyStyleSheet
 import com.ai.intellimate.vip.VipCenterActivity
-import com.ai.inty.chat.ChatViewModel
+import com.ai.intellimate.chat.ChatViewModel
 
 /** 聊天更多面板组件 */
 @OptIn(ExperimentalMaterial3Api::class)

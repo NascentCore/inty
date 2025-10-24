@@ -6,10 +6,10 @@ import ai.sxwl.android.utils.Utils
 import android.content.Intent
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.MainActivity
-import com.ai.inty.utils.IntyUserProfileSDK
-import com.ai.inty.utils.NetworkErrorHandler
-import com.ai.inty.utils.UserProfileManager
-import com.ai.inty.viewmodels.ViewModelEvent
+import com.ai.intellimate.utils.IntyUserProfileSDK
+import com.ai.intellimate.utils.NetworkErrorHandler
+import com.ai.intellimate.utils.UserProfileManager
+import com.ai.intellimate.ViewModelEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow

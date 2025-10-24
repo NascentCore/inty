@@ -1,4 +1,4 @@
-package com.ai.inty.utils
+package com.ai.intellimate.utils
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -11,6 +11,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * 网络管理工具类
@@ -35,9 +36,9 @@ class NetworkManager private constructor() {
 
     private var connectivityManager: ConnectivityManager? = null
     private var applicationContext: Context? = null
-    private val networkCallbacks = java.util.concurrent.CopyOnWriteArrayList<NetworkCallback>()
+    private val networkCallbacks = CopyOnWriteArrayList<NetworkCallback>()
     private val networkStateListeners =
-        java.util.concurrent.CopyOnWriteArrayList<NetworkStateListener>()
+        CopyOnWriteArrayList<NetworkStateListener>()
 
     /** 网络状态监听器接口 */
     interface NetworkStateListener {

@@ -1,4 +1,4 @@
-package com.ai.inty.audio
+package com.ai.intellimate.audio
 
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.http.BusinessErrorCodes

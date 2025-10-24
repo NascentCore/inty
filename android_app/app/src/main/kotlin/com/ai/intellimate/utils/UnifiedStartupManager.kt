@@ -1,4 +1,4 @@
-package com.ai.inty.utils
+package com.ai.intellimate.utils
 
 import ai.sxwl.android.common.startup.ImagePreloadManager
 import ai.sxwl.android.data.api.IAgentApi
@@ -10,9 +10,9 @@ import ai.sxwl.android.data.http.services.AuthService
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
-import com.ai.inty.audio.AudioPreloadManager
-import com.ai.inty.chat.constants.ChatConstants
-import com.ai.inty.explore.ExploreConstants
+import com.ai.intellimate.audio.AudioPreloadManager
+import com.ai.intellimate.chat.constants.ChatConstants
+import com.ai.intellimate.explore.ExploreConstants
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

@@ -22,12 +22,12 @@
 }
 
 # 保留应用数据模型
--keep class com.ai.inty.beans.** {
+-keep class com.ai.intellimate.beans.** {
     public *;
 }
 
 # 保留计费相关类
--keep class com.ai.inty.billing.** {
+-keep class com.ai.intellimate.billing.** {
     public *;
 }
 -keep class ai.sxwl.android.data.billing.VipStatus { *; }

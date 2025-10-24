@@ -1,4 +1,4 @@
-package com.ai.inty.chat
+package com.ai.intellimate.chat
 
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.design.noRippleClickable
@@ -52,10 +52,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.getSystemService
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.intellimate.R
-import com.ai.inty.audio.AudioInfo
-import com.ai.inty.audio.OpeningPlayState
-import com.ai.inty.audio.VoicePlayer
-import com.ai.inty.utils.ChatTextFormatter
+import com.ai.intellimate.audio.AudioInfo
+import com.ai.intellimate.audio.OpeningPlayState
+import com.ai.intellimate.audio.VoicePlayer
+import com.ai.intellimate.utils.ChatTextFormatter
 
 /** 复制文本到剪贴板；这是用于测试功能。 */
 private fun debugOnlyCopyToClipboard(context: Context, text: String) {
