@@ -1,4 +1,4 @@
-package com.ai.inty.explore
+package com.ai.intellimate.explore
 
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.AgentInfo
@@ -7,7 +7,7 @@ import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.ai.inty.utils.UnifiedStartupManager
+import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch

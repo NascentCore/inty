@@ -6,8 +6,8 @@ import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.app.Application
-import com.ai.inty.utils.NetworkManager
-import com.ai.inty.utils.UnifiedStartupManager
+import com.ai.intellimate.utils.NetworkManager
+import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

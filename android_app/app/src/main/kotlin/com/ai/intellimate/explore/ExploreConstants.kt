@@ -1,4 +1,4 @@
-package com.ai.inty.explore
+package com.ai.intellimate.explore
 
 /** Explore页面相关常量 */
 object ExploreConstants {

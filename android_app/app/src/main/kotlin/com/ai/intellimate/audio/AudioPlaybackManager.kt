@@ -1,4 +1,4 @@
-package com.ai.inty.audio
+package com.ai.intellimate.audio
 
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
@@ -10,6 +10,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.getSystemService
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
@@ -434,7 +435,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
         }
     }
 
-    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+    override fun onPlayerError(error: PlaybackException) {
         super.onPlayerError(error)
         LogUtils.e("音频LOG测试 Player error: ${error.message}")
         _error.value = "播放错误: ${error.message}"

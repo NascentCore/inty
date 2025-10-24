@@ -1,4 +1,4 @@
-package com.ai.inty.chat
+package com.ai.intellimate.chat
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.model.MsgInfo
@@ -49,19 +49,20 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.ai.intellimate.BottomNavigationBarHeight
 import com.ai.intellimate.R
+import com.ai.intellimate.chat.ui.ChatInput
+import com.ai.intellimate.chat.ui.ChatMorePanel
+import com.ai.intellimate.chat.ui.ChatSettingsDrawer
+import com.ai.intellimate.chat.ui.ChatTopBar
+import com.ai.intellimate.chat.ui.KeepTalkingButton
+import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.vip.VipCenterActivity
-import com.ai.inty.chat.ui.ChatInput
-import com.ai.inty.chat.ui.ChatMorePanel
-import com.ai.inty.chat.ui.ChatSettingsDrawer
-import com.ai.inty.chat.ui.ChatTopBar
-import com.ai.inty.chat.ui.KeepTalkingButton
-import com.ai.inty.chat.ui.PremiumModelTag
-import com.ai.inty.home.BottomNavigationBarHeight
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // The spacer from the bottom of the chat input to what ever that flows underneath it.
@@ -103,6 +104,8 @@ internal fun ChatPage(
 
     // 统一生命周期：页面进入 onPause（包括 Activity 或应用退到后台）时停止音频
     LifecycleResumeEffect(isCurrentPage) {
+        // 应用恢复时，增量同步最新消息
+        chatViewModel.syncLatestMessages()
         onPauseOrDispose {
             chatViewModel.pauseVoicePlayback()
         }
@@ -433,7 +436,7 @@ internal fun ChatPage(
                     }
                         .collect { (firstVisibleIndex, scrollOffset) ->
                             // 添加小延迟，确保首次加载完成后再开始监听
-                            kotlinx.coroutines.delay(100)
+                            delay(100)
                             val layoutInfo = listState.layoutInfo
                             val visibleItems = layoutInfo.visibleItemsInfo
                             val totalItemsCount = layoutInfo.totalItemsCount

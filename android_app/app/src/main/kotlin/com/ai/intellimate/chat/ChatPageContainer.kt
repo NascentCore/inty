@@ -1,4 +1,4 @@
-package com.ai.inty.chat
+package com.ai.intellimate.chat
 
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.UserProfile
@@ -39,9 +39,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.ai.intellimate.R
-import com.ai.inty.chat.viewmodel.ChatTabViewModel
+import com.ai.intellimate.audio.AudioManager
+import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -109,7 +111,7 @@ fun ChatPageContainer(
         if (currentAgent != null) {
             try {
                 val audioManager =
-                    com.ai.inty.audio.AudioManager.getInstance(Utils.getApp(), scope)
+                    AudioManager.getInstance(Utils.getApp(), scope)
                 audioManager.stopAllPlayback()
             } catch (e: Exception) {
                 LogUtils.e("ChatPageContainer - 停止音频播放失败: ${e.message}")
@@ -124,9 +126,9 @@ fun ChatPageContainer(
             val appendState = agentsPagingItems.loadState.append
             val refreshState = agentsPagingItems.loadState.refresh
             val notEnd =
-                !(appendState is androidx.paging.LoadState.NotLoading &&
+                !(appendState is LoadState.NotLoading &&
                         appendState.endOfPaginationReached)
-            val canPrefetch = refreshState is androidx.paging.LoadState.NotLoading
+            val canPrefetch = refreshState is LoadState.NotLoading
             if (pageState.currentPage >= thresholdIndex && notEnd && canPrefetch) {
                 // 修复：使用更安全的预取方式
                 // 通过访问最后一个有效索引来触发Paging的append加载

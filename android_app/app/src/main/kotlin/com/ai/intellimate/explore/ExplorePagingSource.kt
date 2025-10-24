@@ -1,4 +1,4 @@
-package com.ai.inty.explore
+package com.ai.intellimate.explore
 
 import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
@@ -8,9 +8,10 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.ai.inty.utils.AgentCacheManager
-import com.ai.inty.utils.UnifiedStartupManager
+import com.ai.intellimate.utils.AgentCacheManager
+import com.ai.intellimate.utils.UnifiedStartupManager
 import com.architecture.httplib.core.HttpResult
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -149,7 +150,7 @@ class ExplorePagingSource(
     /** 异步从网络加载数据（不阻塞UI） */
     private fun loadFromNetworkAsync(page: Int, pageSize: Int) {
         // 在后台协程中执行，不阻塞当前加载
-        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 val result = loadFromNetwork(page, pageSize)
                 if (result is NetworkResult.Success) {

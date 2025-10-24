@@ -1,41 +1,119 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.kts.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ===========================================
+# Network Module R8 混淆规则配置
+# 网络模块专用混淆规则
+# ===========================================
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# ===========================================
+# 基础配置
+# ===========================================
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# 保留注解信息
+-keepattributes *Annotation*
+-keepattributes SourceFile,LineNumberTable
+-keepattributes Signature
+-keepattributes Exceptions
+-keepattributes InnerClasses
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# ===========================================
+# 网络框架保护
+# ===========================================
 
-# Moshi 混淆规则 - 确保Kotlin类型能够正确序列化
+# Retrofit 保护
+-keep class retrofit2.** { *; }
+-keepclassmembers class * {
+    @retrofit2.http.* <methods>;
+}
+-dontwarn retrofit2.**
+
+# OkHttp 保护
+-keep class okhttp3.** { *; }
+-keep class okio.** { *; }
+-dontwarn okhttp3.**
+-dontwarn okio.**
+
+# 自定义网络库保护
+-keep class com.architecture.httplib.** { *; }
+
+# ===========================================
+# 序列化框架保护
+# ===========================================
+
+# Moshi 序列化保护
 -keep class com.squareup.moshi.** { *; }
 -keep class * extends com.squareup.moshi.JsonAdapter {
     public static com.squareup.moshi.JsonAdapter create();
 }
-
-# 保留Kotlin反射相关类
--keep class kotlin.reflect.** { *; }
--keep class kotlin.Metadata { *; }
-
-# 保留数据类
 -keepclassmembers class * {
     @com.squareup.moshi.* <methods>;
+    @com.squareup.moshi.* <fields>;
 }
 
 # 保留Moshi注解
 -keep @com.squareup.moshi.JsonQualifier interface * { *; }
+
+# Jackson 序列化保护
+-keep class com.fasterxml.jackson.** { *; }
+-keep class * extends com.fasterxml.jackson.databind.ser.std.StdSerializer { *; }
+-keep class * extends com.fasterxml.jackson.databind.deser.std.StdDeserializer { *; }
+-keepclassmembers class * {
+    @com.fasterxml.jackson.annotation.* <methods>;
+    @com.fasterxml.jackson.annotation.* <fields>;
+}
+
+# ===========================================
+# Kotlin 相关保护
+# ===========================================
+
+# Kotlin反射
+-keep class kotlin.reflect.** { *; }
+-keep class kotlin.Metadata { *; }
+
+# Kotlin协程
+-keep class kotlinx.coroutines.** { *; }
+
+# ===========================================
+# 网络相关保护
+# ===========================================
+
+# HTTP 相关类
+-keep class java.net.** { *; }
+-keep class javax.net.** { *; }
+
+# SSL/TLS 相关
+-keep class javax.net.ssl.** { *; }
+-keep class java.security.** { *; }
+
+# ===========================================
+# 警告抑制
+# ===========================================
+
+# 抑制网络相关警告
+-dontwarn java.lang.management.**
+-dontwarn javax.annotation.**
+-dontwarn javax.inject.**
+-dontwarn javax.xml.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.openjsse.**
+
+# ===========================================
+# 性能优化
+# ===========================================
+
+# 不混淆枚举
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
+# 不混淆Serializable
+-keepclassmembers class * implements java.io.Serializable {
+    static final long serialVersionUID;
+    private static final java.io.ObjectStreamField[] serialPersistentFields;
+    private void writeObject(java.io.ObjectOutputStream);
+    private void readObject(java.io.ObjectInputStream);
+    java.lang.Object writeReplace();
+    java.lang.Object readResolve();
+}
 
 

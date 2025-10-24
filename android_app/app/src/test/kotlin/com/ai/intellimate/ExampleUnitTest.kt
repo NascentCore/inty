@@ -1,4 +1,4 @@
-package com.ai.inty
+package com.ai.intellimate
 
 import org.junit.Assert.*
 import org.junit.Test

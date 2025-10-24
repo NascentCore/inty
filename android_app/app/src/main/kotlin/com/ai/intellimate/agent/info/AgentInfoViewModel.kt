@@ -5,7 +5,7 @@ import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
-import com.ai.inty.utils.NetworkErrorHandler
+import com.ai.intellimate.utils.NetworkErrorHandler
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

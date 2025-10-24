@@ -1,4 +1,4 @@
-package com.ai.inty.home
+package com.ai.intellimate.messages
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.getCdnImageUrl
@@ -45,7 +45,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.EmptyDataState
-import com.ai.inty.utils.AuthClickable
+import com.ai.intellimate.utils.AuthClickable
 
 /** 主页面第二个tab，会话列表页面，包含关注和聊天列表 */
 @Composable

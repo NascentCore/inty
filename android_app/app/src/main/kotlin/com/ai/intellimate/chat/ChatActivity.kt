@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.ai.inty.chat.ChatPage
-import com.ai.inty.chat.ChatViewModel
 
 
 /** 私聊的聊天页面 */

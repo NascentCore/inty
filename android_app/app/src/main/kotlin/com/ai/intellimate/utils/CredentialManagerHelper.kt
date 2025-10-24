@@ -1,9 +1,10 @@
-package com.ai.inty.utils
+package com.ai.intellimate.utils
 
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialException
@@ -77,7 +78,7 @@ object CredentialManagerHelper {
 
             when (credential) {
                 // 自定义凭证类型 (Google ID Token)
-                is androidx.credentials.CustomCredential -> {
+                is CustomCredential -> {
                     if (
                         credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
                     ) {

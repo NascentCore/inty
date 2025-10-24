@@ -7,9 +7,9 @@ import android.content.Intent
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.lifecycleScope
-import com.ai.inty.utils.CredentialManagerHelper
-import com.ai.inty.utils.UserProfileManager
-import com.ai.inty.viewmodels.ViewModelEvent
+import com.ai.intellimate.utils.CredentialManagerHelper
+import com.ai.intellimate.utils.UserProfileManager
+import com.ai.intellimate.ViewModelEvent
 import kotlinx.coroutines.launch
 
 /**

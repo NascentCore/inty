@@ -1,54 +1,208 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ===========================================
+# Core Data Module R8 混淆规则配置
+# 核心数据模块专用混淆规则
+# ===========================================
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# ===========================================
+# 基础配置
+# ===========================================
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
-
-#常用配置混淆规则
--optimizationpasses 5
-# 混淆时不使用大小写混合，混淆后的类名为小写
--dontusemixedcaseclassnames
-# 指定不去忽略非公共库的类
--dontskipnonpubliclibraryclasses
-# 指定不去忽略非公共库的成员
--dontskipnonpubliclibraryclassmembers
-# 混淆时不做预校验
--dontpreverify
-# 混淆时不记录日志
--verbose
-# 代码优化
--dontshrink
-# 不优化输入的类文件
--dontoptimize
-# 保留注解不混淆
--keepattributes *Annotation*,InnerClasses
-# 避免混淆泛型
--keepattributes Signature
-# 保留代码行号，方便异常信息的追踪
+# 保留注解信息
+-keepattributes *Annotation*
 -keepattributes SourceFile,LineNumberTable
-# 混淆采用的算法
--optimizations !code/simplification/cast,!field/*,!class/merging/*
+-keepattributes Signature
+-keepattributes Exceptions
+-keepattributes InnerClasses
+-keepattributes EnclosingMethod
 
-# 保留包名，不混淆类名及子包下面的类名
--keeppackagenames ai.sxwl.android.data
--keep class ai.sxwl.android.data**
-# Please add these rules to your existing keep rules in order to suppress warnings.
-# This is generated automatically by the Android Gradle plugin.
+# ===========================================
+# 数据模型保护
+# ===========================================
+
+# 保留所有数据模型类
+-keep class ai.sxwl.android.data.api.model.** { *; }
+-keep class ai.sxwl.android.data.billing.** { *; }
+-keep class ai.sxwl.android.data.store.** { *; }
+-keep class ai.sxwl.android.data.http.** { *; }
+-keep class ai.sxwl.android.data.chat.** { *; }
+-keep class ai.sxwl.android.data.usecase.** { *; }
+-keep class ai.sxwl.android.data.domain.** { *; }
+-keep class ai.sxwl.android.data.di.** { *; }
+
+# ===========================================
+# API接口保护
+# ===========================================
+
+# 保留所有API接口
+-keep class ai.sxwl.android.data.api.** { *; }
+
+# 保留网络服务管理器
+-keep class ai.sxwl.android.data.api.NetServiceMgr { *; }
+
+# ===========================================
+# 序列化框架保护
+# ===========================================
+
+# Moshi 序列化保护
+-keep class com.squareup.moshi.** { *; }
+-keep class * extends com.squareup.moshi.JsonAdapter {
+    public static com.squareup.moshi.JsonAdapter create();
+}
+-keepclassmembers class * {
+    @com.squareup.moshi.* <methods>;
+    @com.squareup.moshi.* <fields>;
+}
+
+# Jackson 序列化保护
+-keep class com.fasterxml.jackson.** { *; }
+-keep class * extends com.fasterxml.jackson.databind.ser.std.StdSerializer { *; }
+-keep class * extends com.fasterxml.jackson.databind.deser.std.StdDeserializer { *; }
+-keepclassmembers class * {
+    @com.fasterxml.jackson.annotation.* <methods>;
+    @com.fasterxml.jackson.annotation.* <fields>;
+}
+
+# Kotlin序列化保护
+-keep class kotlinx.serialization.** { *; }
+-keepclassmembers class * {
+    @kotlinx.serialization.* <methods>;
+    @kotlinx.serialization.* <fields>;
+}
+
+# ===========================================
+# 网络框架保护
+# ===========================================
+
+# Retrofit 保护
+-keep class retrofit2.** { *; }
+-keepclassmembers class * {
+    @retrofit2.http.* <methods>;
+}
+-dontwarn retrofit2.**
+
+# OkHttp 保护
+-keep class okhttp3.** { *; }
+-keep class okio.** { *; }
+-dontwarn okhttp3.**
+-dontwarn okio.**
+
+# 自定义网络库保护
+-keep class com.architecture.httplib.** { *; }
+
+# ===========================================
+# 数据存储保护
+# ===========================================
+
+# MMKV 存储
+-keep class com.tencent.mmkv.** { *; }
+
+# Room 数据库
+-keep class androidx.room.** { *; }
+-keep class * extends androidx.room.RoomDatabase { *; }
+
+# ===========================================
+# 计费相关保护
+# ===========================================
+
+# 保留计费相关类
+-keep class ai.sxwl.android.data.billing.** { *; }
+
+# 保留计费状态类
+-keep class ai.sxwl.android.data.billing.VipStatus { *; }
+-keep class ai.sxwl.android.data.billing.VipPlan { *; }
+-keep class ai.sxwl.android.data.billing.BillingEvent { *; }
+
+# ===========================================
+# 聊天相关保护
+# ===========================================
+
+# 保留聊天相关类
+-keep class ai.sxwl.android.data.chat.** { *; }
+
+# 保留聊天会话管理器
+-keep class ai.sxwl.android.data.chat.ChatSessionManager { *; }
+
+# ===========================================
+# 用例相关保护
+# ===========================================
+
+# 保留用例相关类
+-keep class ai.sxwl.android.data.usecase.** { *; }
+
+# ===========================================
+# 领域相关保护
+# ===========================================
+
+# 保留领域相关类
+-keep class ai.sxwl.android.data.domain.** { *; }
+
+# ===========================================
+# 依赖注入保护
+# ===========================================
+
+# 保留依赖注入相关类
+-keep class ai.sxwl.android.data.di.** { *; }
+
+# ===========================================
+# Kotlin 相关保护
+# ===========================================
+
+# Kotlin反射
+-keep class kotlin.reflect.** { *; }
+-keep class kotlin.Metadata { *; }
+
+# Kotlin协程
+-keep class kotlinx.coroutines.** { *; }
+-keep class kotlinx.coroutines.flow.** { *; }
+
+# ===========================================
+# 警告抑制
+# ===========================================
+
+# 抑制常见警告
 -dontwarn java.lang.invoke.StringConcatFactory
 -dontwarn co.langem.androidutils.tools.LogTools
+-dontwarn java.lang.management.**
+-dontwarn javax.annotation.**
+-dontwarn javax.inject.**
+-dontwarn javax.xml.**
+
+# ===========================================
+# 性能优化
+# ===========================================
+
+# 不混淆枚举
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
+# 不混淆Serializable
+-keepclassmembers class * implements java.io.Serializable {
+    static final long serialVersionUID;
+    private static final java.io.ObjectStreamField[] serialPersistentFields;
+    private void writeObject(java.io.ObjectOutputStream);
+    private void readObject(java.io.ObjectInputStream);
+    java.lang.Object writeReplace();
+    java.lang.Object readResolve();
+}
+
+# ===========================================
+# 特殊保护
+# ===========================================
+
+# 保留所有Companion对象
+-keepclassmembers class * {
+    public static ** Companion;
+}
+
+# 保留所有伴生对象
+-keepclassmembers class * {
+    public static ** Companion;
+    public static ** INSTANCE;
+}
+
+# 保留所有内部类
+-keepclassmembers class * {
+    public static class *;
+}

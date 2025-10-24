@@ -1,4 +1,4 @@
-package com.ai.inty.audio
+package com.ai.intellimate.audio
 
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context

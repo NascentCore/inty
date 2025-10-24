@@ -1,4 +1,4 @@
-package com.ai.inty.explore
+package com.ai.intellimate.explore
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.startup.ImagePreloadManager

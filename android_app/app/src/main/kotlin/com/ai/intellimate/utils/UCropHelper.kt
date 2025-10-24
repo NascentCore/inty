@@ -1,4 +1,4 @@
-package com.ai.inty.utils
+package com.ai.intellimate.utils
 
 import ai.sxwl.android.utils.PathUtils
 import android.content.Context

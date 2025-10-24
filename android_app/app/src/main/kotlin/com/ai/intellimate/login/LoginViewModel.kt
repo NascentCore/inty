@@ -10,9 +10,9 @@ import ai.sxwl.android.utils.Utils
 import android.content.Intent
 import com.ai.intellimate.MainActivity
 import com.ai.intellimate.R
-import com.ai.inty.utils.NetworkErrorHandler
-import com.ai.inty.utils.UserProfileManager
-import com.ai.inty.viewmodels.ViewModelEvent
+import com.ai.intellimate.utils.NetworkErrorHandler
+import com.ai.intellimate.utils.UserProfileManager
+import com.ai.intellimate.ViewModelEvent
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow

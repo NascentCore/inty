@@ -7,7 +7,7 @@ import ai.sxwl.android.data.billing.VipStatus
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.utils.LogUtils
 import android.app.Activity
-import com.ai.inty.utils.NetworkErrorHandler
+import com.ai.intellimate.utils.NetworkErrorHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

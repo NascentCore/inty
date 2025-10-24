@@ -1,4 +1,4 @@
-package com.ai.inty.chat.ui
+package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.BillingRepository
@@ -49,7 +49,7 @@ import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.ui.components.MySettingItem
-import com.ai.inty.chat.ChatViewModel
+import com.ai.intellimate.chat.ChatViewModel
 
 /** 聊天设置抽屉组件 */
 @Composable

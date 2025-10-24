@@ -1,4 +1,4 @@
-package com.ai.inty.explore
+package com.ai.intellimate.explore
 
 import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.compose.foundation.layout.Arrangement

@@ -1,4 +1,4 @@
-package com.ai.inty.chat.constants
+package com.ai.intellimate.chat.constants
 
 /** 聊天页面相关常量 */
 object ChatConstants {

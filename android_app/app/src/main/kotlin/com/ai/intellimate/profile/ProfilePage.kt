@@ -1,4 +1,4 @@
-package com.ai.inty.home
+package com.ai.intellimate.profile
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.getCdnImageUrl
@@ -67,11 +67,10 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
-import com.ai.intellimate.profile.ModifyProfileActivity
 import com.ai.intellimate.settings.SettingActivity
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.vip.VipCenterActivity
-import com.ai.inty.utils.AuthClickable
+import com.ai.intellimate.utils.AuthClickable
 
 /** “我的”页面 */
 @Composable

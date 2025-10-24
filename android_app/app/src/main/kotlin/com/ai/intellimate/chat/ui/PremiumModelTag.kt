@@ -1,4 +1,4 @@
-package com.ai.inty.chat.ui
+package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.Image

@@ -91,8 +91,8 @@ import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.SingleLineTextInputField
-import com.ai.inty.utils.AvatarManager
-import com.ai.inty.viewmodels.MainViewModel
+import com.ai.intellimate.utils.AvatarManager
+import com.ai.intellimate.MainViewModel
 import com.architecture.httplib.core.HttpResult
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity

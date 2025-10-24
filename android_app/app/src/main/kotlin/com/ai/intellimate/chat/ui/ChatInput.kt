@@ -1,4 +1,4 @@
-package com.ai.inty.chat.ui
+package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
@@ -36,7 +36,7 @@ import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.login.RegInfoActivity
 import com.ai.intellimate.ui.IntySmallTextField
-import com.ai.inty.chat.ChatViewModel
+import com.ai.intellimate.chat.ChatViewModel
 
 /** 聊天输入框组件 */
 @Composable
