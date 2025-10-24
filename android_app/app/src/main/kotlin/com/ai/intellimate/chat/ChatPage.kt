@@ -49,19 +49,19 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.ai.intellimate.BottomNavigationBarHeight
 import com.ai.intellimate.R
-import com.ai.intellimate.login.LoginActivity
-import com.ai.intellimate.ui.ChatDialogData
-import com.ai.intellimate.ui.UnlimitChatDialog
-import com.ai.intellimate.ui.components.AgentBackground
-import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatMorePanel
 import com.ai.intellimate.chat.ui.ChatSettingsDrawer
 import com.ai.intellimate.chat.ui.ChatTopBar
 import com.ai.intellimate.chat.ui.KeepTalkingButton
 import com.ai.intellimate.chat.ui.PremiumModelTag
-import com.ai.intellimate.BottomNavigationBarHeight
+import com.ai.intellimate.login.LoginActivity
+import com.ai.intellimate.ui.ChatDialogData
+import com.ai.intellimate.ui.UnlimitChatDialog
+import com.ai.intellimate.ui.components.AgentBackground
+import com.ai.intellimate.vip.VipCenterActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -104,6 +104,8 @@ internal fun ChatPage(
 
     // 统一生命周期：页面进入 onPause（包括 Activity 或应用退到后台）时停止音频
     LifecycleResumeEffect(isCurrentPage) {
+        // 应用恢复时，增量同步最新消息
+        chatViewModel.syncLatestMessages()
         onPauseOrDispose {
             chatViewModel.pauseVoicePlayback()
         }
