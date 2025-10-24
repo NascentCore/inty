@@ -10,8 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.ai.intellimate.MainActivity
 import com.ai.intellimate.R
-import com.ai.inty.MainActivity
 import com.ai.inty.viewmodels.MainViewModel
 
 /** 设置页面 */

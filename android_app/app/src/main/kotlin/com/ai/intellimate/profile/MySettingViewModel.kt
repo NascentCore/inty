@@ -9,7 +9,7 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
-import com.ai.inty.ui.components.EditKey
+import com.ai.intellimate.ui.components.EditKey
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager

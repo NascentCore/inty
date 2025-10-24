@@ -8,8 +8,8 @@ import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Intent
+import com.ai.intellimate.MainActivity
 import com.ai.intellimate.R
-import com.ai.inty.MainActivity
 import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager
 import com.ai.inty.viewmodels.ViewModelEvent

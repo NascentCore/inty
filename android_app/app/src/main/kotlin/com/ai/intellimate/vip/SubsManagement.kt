@@ -22,10 +22,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
-import com.ai.inty.ui.components.SettingDivider
-import com.ai.inty.ui.components.SettingNavigationItem
-import com.ai.inty.ui.components.SubscriptionManagementContainer
-import com.ai.inty.ui.components.openPlayStoreSubscriptions
+import com.ai.intellimate.ui.components.SettingDivider
+import com.ai.intellimate.ui.components.SettingNavigationItem
+import com.ai.intellimate.ui.components.SubscriptionManagementContainer
+import com.ai.intellimate.ui.components.openPlayStoreSubscriptions
 
 /** 订阅管理屏幕 */
 @OptIn(ExperimentalMaterial3Api::class)

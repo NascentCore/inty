@@ -5,7 +5,7 @@ import ai.sxwl.android.data.api.model.GENDER
 import ai.sxwl.android.utils.Utils
 import android.content.Intent
 import androidx.lifecycle.viewModelScope
-import com.ai.inty.MainActivity
+import com.ai.intellimate.MainActivity
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager

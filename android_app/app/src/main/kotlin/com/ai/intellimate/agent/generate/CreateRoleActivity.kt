@@ -90,7 +90,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
-import com.ai.inty.ui.SingleLineTextInputField
+import com.ai.intellimate.ui.SingleLineTextInputField
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.viewmodels.MainViewModel
 import com.architecture.httplib.core.HttpResult

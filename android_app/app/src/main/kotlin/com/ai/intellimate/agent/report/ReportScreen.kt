@@ -31,11 +31,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
-import com.ai.inty.ui.components.ReportDescriptionContainer
-import com.ai.inty.ui.components.ReportImageEvidenceContainer
-import com.ai.inty.ui.components.ReportItem
-import com.ai.inty.ui.components.ReportReasonsContainer
-import com.ai.inty.ui.components.SaveBtn
+import com.ai.intellimate.ui.components.ReportDescriptionContainer
+import com.ai.intellimate.ui.components.ReportImageEvidenceContainer
+import com.ai.intellimate.ui.components.ReportItem
+import com.ai.intellimate.ui.components.ReportReasonsContainer
+import com.ai.intellimate.ui.components.SaveBtn
 
 /** 举报屏幕 */
 @OptIn(ExperimentalMaterial3Api::class)

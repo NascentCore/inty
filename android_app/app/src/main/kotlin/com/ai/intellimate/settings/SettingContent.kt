@@ -36,13 +36,13 @@ import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.login.LoginActivity
+import com.ai.intellimate.ui.components.DeleteAccountDialog
+import com.ai.intellimate.ui.components.LogoutButton
+import com.ai.intellimate.ui.components.SettingDivider
+import com.ai.intellimate.ui.components.SettingNavigationItem
+import com.ai.intellimate.ui.components.SettingSection
 import com.ai.intellimate.vip.SubsManageActivity
 import com.ai.intellimate.vip.VipCenterActivity
-import com.ai.inty.ui.components.DeleteAccountDialog
-import com.ai.inty.ui.components.LogoutButton
-import com.ai.inty.ui.components.SettingDivider
-import com.ai.inty.ui.components.SettingNavigationItem
-import com.ai.inty.ui.components.SettingSection
 import kotlinx.coroutines.flow.collectLatest
 
 /** 设置页面主内容 */

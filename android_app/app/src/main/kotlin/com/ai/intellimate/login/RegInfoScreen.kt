@@ -29,13 +29,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
-import com.ai.inty.ui.components.AgeItem
-import com.ai.inty.ui.components.CloseButton
-import com.ai.inty.ui.components.EnterButton
-import com.ai.inty.ui.components.GenderItem
-import com.ai.inty.ui.components.LabelText
-import com.ai.inty.ui.components.SubtitleText
-import com.ai.inty.ui.components.TitleText
+import com.ai.intellimate.ui.components.AgeItem
+import com.ai.intellimate.ui.components.CloseButton
+import com.ai.intellimate.ui.components.EnterButton
+import com.ai.intellimate.ui.components.GenderItem
+import com.ai.intellimate.ui.components.LabelText
+import com.ai.intellimate.ui.components.SubtitleText
+import com.ai.intellimate.ui.components.TitleText
 import kotlinx.coroutines.launch
 
 /** 注册信息屏幕 */

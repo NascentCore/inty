@@ -32,12 +32,12 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.GetCredentialInterruptedException
 import androidx.credentials.exceptions.NoCredentialException
 import com.ai.intellimate.R
-import com.ai.inty.ui.components.GoogleLoginButton
-import com.ai.inty.ui.components.LoginCloseButton
-import com.ai.inty.ui.components.LogoImage
-import com.ai.inty.ui.components.PolicyText
-import com.ai.inty.ui.components.WelcomeSubtitle
-import com.ai.inty.ui.components.WelcomeTitle
+import com.ai.intellimate.ui.components.GoogleLoginButton
+import com.ai.intellimate.ui.components.LoginCloseButton
+import com.ai.intellimate.ui.components.LogoImage
+import com.ai.intellimate.ui.components.PolicyText
+import com.ai.intellimate.ui.components.WelcomeSubtitle
+import com.ai.intellimate.ui.components.WelcomeTitle
 import com.ai.inty.utils.CredentialManagerHelper
 import kotlinx.coroutines.launch
 

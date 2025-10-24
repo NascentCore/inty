@@ -32,12 +32,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.intellimate.R
-import com.ai.inty.ui.components.AutoRenewalNotice
-import com.ai.inty.ui.components.BackgroundVideoPlayer
-import com.ai.inty.ui.components.EmptyPlanState
-import com.ai.inty.ui.components.PremiumBenefitItem
-import com.ai.inty.ui.components.PremiumPlanList
-import com.ai.inty.ui.components.PurchaseButton
+import com.ai.intellimate.ui.components.AutoRenewalNotice
+import com.ai.intellimate.ui.components.BackgroundVideoPlayer
+import com.ai.intellimate.ui.components.EmptyPlanState
+import com.ai.intellimate.ui.components.PremiumBenefitItem
+import com.ai.intellimate.ui.components.PremiumPlanList
+import com.ai.intellimate.ui.components.PurchaseButton
 
 /** 订阅描述文本组件 */
 @Composable
