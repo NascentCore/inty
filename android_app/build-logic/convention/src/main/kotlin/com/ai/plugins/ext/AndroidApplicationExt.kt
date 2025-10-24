@@ -38,7 +38,7 @@ private fun getCommitCount(project: Project): Int {
 internal fun ApplicationExtension.commonAppConfig(project: Project) {
     defaultConfig {
         versionName = ProjectConfig.versionName
-        versionCode = getCommitCount(project)
+        versionCode = 1728
         targetSdk = ProjectConfig.targetVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
