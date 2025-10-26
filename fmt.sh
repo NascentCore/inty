@@ -1,7 +1,8 @@
 #!/bin/bash -e
 
-# Check for --all flag
+# Check for --all flag and CI commit behavior
 FORMAT_ALL=false
+FMT_NO_COMMIT=${FMT_NO_COMMIT:-false}
 if [ "$1" = "--all" ]; then
     FORMAT_ALL=true
 fi
@@ -17,8 +18,16 @@ if [ "$FORMAT_ALL" = true ]; then
     echo "Formatting complete!"
     echo
     
-    git commit --all --message "fmt all code: ktfmt black prettier"
-    echo "Committing complete!"
+    if [ "$FMT_NO_COMMIT" = true ]; then
+        echo "Skipping commit in CI (FMT_NO_COMMIT=true)."
+    else
+        if git diff --quiet; then
+            echo "No formatting changes to commit."
+        else
+            git commit --all --message "fmt all code: ktfmt black prettier"
+            echo "Committing complete!"
+        fi
+    fi
     echo
     exit 0
 fi
@@ -71,6 +80,14 @@ fi
 echo "Formatting complete!"
 echo
 
-git commit --all --message "fmt changed files: ktfmt black prettier"
-echo "Committing complete!"
+if [ "$FMT_NO_COMMIT" = true ]; then
+    echo "Skipping commit in CI (FMT_NO_COMMIT=true)."
+else
+    if git diff --quiet; then
+        echo "No formatting changes to commit."
+    else
+        git commit --all --message "fmt changed files: ktfmt black prettier"
+        echo "Committing complete!"
+    fi
+fi
 echo
