@@ -258,4 +258,36 @@
     <string name="toast_please_select_reason">Please select at least one reason</string>
     <string name="toast_submitted_successfully">Submitted successfully. We will review it soon.</string>
     <string name="toast_report_creation_failed">Report creation failed</string>
+
+    <!-- Billing Error Messages -->
+    <string name="billing_error_purchases_empty">Purchases is empty</string>
+    <string name="billing_error_item_already_owned">Item already owned</string>
+    <string name="billing_error_item_not_owned">Item not owned</string>
+    <string name="billing_error_item_unavailable">Item is not available in current region</string>
+    <string name="billing_error_developer_error">Developer error</string>
+    <string name="billing_error_service_unavailable">Service unavailable</string>
+    <string name="billing_error_billing_unavailable">Device does not support Google Play billing</string>
+    <string name="billing_error_network_error">Network error</string>
+    <string name="billing_error_feature_not_supported">Feature not supported</string>
+    <string name="billing_error_general_error">General error</string>
+    <string name="billing_error_purchase_failed_format">Purchase failed: %s</string>
+    <string name="billing_error_purchase_acknowledgment_failed">Purchase acknowledgment failed</string>
+    <string name="billing_error_subscription_verification_failed_format">Subscription verification failed: %s</string>
+    <string name="billing_error_subscription_verification_exception_format">Subscription verification exception: %s</string>
+    <string name="billing_error_google_play_update_required">Google Play Service update required</string>
+    <string name="billing_error_google_play_disabled">Google Play Service disabled</string>
+    <string name="billing_error_google_play_missing">Google Play Service missing</string>
+    <string name="billing_error_google_play_invalid">Google Play Service invalid</string>
+    <string name="billing_error_google_play_unavailable">Google Play Service unavailable</string>
+    <string name="billing_error_billing_not_supported">Google Play billing isn\'t supported on this device</string>
+    <string name="billing_error_billing_feature_not_supported">Billing feature not supported on this device</string>
+    <string name="billing_error_check_billing_support_format">Error checking billing support: %s</string>
+    <string name="billing_error_purchase_preconditions_failed">Purchase preconditions check failed</string>
+    <string name="billing_error_product_details_not_found_format">Product details not found: %s</string>
+    <string name="billing_error_developer_error_detailed">Developer error: Please check product ID configuration, app signature, test user settings</string>
+    <string name="billing_error_service_unavailable_detailed">Service unavailable: Google Play services temporarily unavailable</string>
+    <string name="billing_error_billing_unavailable_detailed">Billing unavailable: Device does not support Google Play billing</string>
+    <string name="billing_error_item_unavailable_detailed">Item unavailable: Item is not available in current region</string>
+    <string name="billing_error_network_error_detailed">Network error: Network connection issue</string>
+    <string name="billing_error_query_product_details_failed_format">Query product details failed: %s</string>
 </resources>
