@@ -1,7 +1,8 @@
 package com.ai.intellimate.profile
 
 import ai.sxwl.android.common.base.BaseVM
-import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.http.services.ImageService
+import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
@@ -14,7 +15,6 @@ import com.ai.intellimate.utils.IntyUserProfileSDK
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.ai.intellimate.ViewModelEvent
-import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -87,20 +87,14 @@ class MySettingViewModel : BaseVM() {
                         return@launchBackground
                     }
 
-                    val requestBody =
-                        File(fileUri.path!!)
-                            .asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
-                    val result =
-                        userApi.uploadAvatar(
-                            MultipartBody.Part.createFormData("file", "file.png", requestBody)
-                        )
+                    val result = ImageService.uploadAvatar(fileUri.path!!)
 
                     when (result) {
-                        is HttpResult.Success -> {
+                        is ApiResult.Success -> {
                             _userProfile.value =
                                 _userProfile.value.copy(
                                     // No cropping, just use the provided url.
-                                    avatar = result.data.url
+                                    avatar = result.data
                                 )
                             // Show success toast for avatar upload
                             viewModelScope.launch(Dispatchers.Main) {
@@ -108,8 +102,8 @@ class MySettingViewModel : BaseVM() {
                             }
                         }
 
-                        is HttpResult.Failure -> {
-                            NetworkErrorHandler.showNetworkAwareError(result.message)
+                        is ApiResult.Failure -> {
+                            NetworkErrorHandler.showNetworkAwareError(result.error)
                             return@launchBackground
                         }
                     }

@@ -1,7 +1,8 @@
 package com.ai.intellimate.agent.generate
 
 import ai.sxwl.android.common.base.BaseActivity
-import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.http.services.ImageService
+import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.CreateAgentRequest
@@ -101,10 +102,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.net.URL
 import java.util.UUID
@@ -266,19 +265,15 @@ private fun CreateRolePage(
                         // Upload the cropped image to server
                         try {
                             val file = File(resultUri.path!!)
-                            val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
-                            val body =
-                                MultipartBody.Part.createFormData("file", file.name, requestFile)
 
 
-                            val agentApi = NetServiceMgr.getAgentApi()
                             // Use the mainViewModel's scope to launch the coroutine
                             mainViewModel.viewModelScope.launch(Dispatchers.IO) {
                                 try {
-                                    val response = agentApi.uploadAvatar(body)
+                                    val response = ImageService.uploadAvatar(file.absolutePath)
                                     when (response) {
-                                        is HttpResult.Success -> {
-                                            val uploadedUrl = response.data.url
+                                        is ApiResult.Success -> {
+                                            val uploadedUrl = response.data
                                             LogUtils.i("Avatar uploaded successfully: $uploadedUrl")
 
                                             // Update UI on main thread
@@ -288,10 +283,10 @@ private fun CreateRolePage(
                                             }
                                         }
 
-                                        is HttpResult.Failure -> {
-                                            LogUtils.e("Upload failed: ${response.message}")
+                                        is ApiResult.Failure -> {
+                                            LogUtils.e("Upload failed: ${response.error}")
                                             withContext(Dispatchers.Main) {
-                                                ToastUtils.showShort(context.getString(R.string.toast_upload_failed_with_message, response.message ?: "Unknown error"))
+                                                ToastUtils.showShort(context.getString(R.string.toast_upload_failed_with_message, response.error ?: "Unknown error"))
                                             }
                                         }
                                     }

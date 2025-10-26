@@ -4,6 +4,7 @@ import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.data.http.services.AuthService
 import ai.sxwl.android.data.http.services.ChatService
+import ai.sxwl.android.data.http.services.ImageService
 import ai.sxwl.android.data.http.services.ReportService
 import ai.sxwl.android.data.http.services.SubscriptionService
 import ai.sxwl.android.data.http.services.UserService

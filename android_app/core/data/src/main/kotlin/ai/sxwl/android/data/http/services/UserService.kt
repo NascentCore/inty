@@ -55,13 +55,9 @@ object UserService {
         }
     }
 
-    /** 上传头像 替换: IUserApi.uploadAvatar() 注意: 当前 IntySDK 没有直接的头像上传 API，需要通过通用图片上传实现 */
+    /** 上传头像 替换: IUserApi.uploadAvatar() 使用 IntySDK 的图片上传 API */
     suspend fun uploadAvatar(filePath: String): ApiResult<String> {
-        return IntyNetworkManager.executeRequest("Upload Avatar") {
-            // 当前 IntySDK 没有直接的头像上传 API
-            // 可以通过通用图片上传 API 实现，然后更新用户头像字段
-            throw Exception("Avatar upload not supported, use image upload API instead")
-        }
+        return ImageService.uploadAvatar(filePath)
     }
 
     /** 删除用户账户 替换: IUserApi.deleteUser() 注意: 当前 IntySDK 没有直接的 delete user API */

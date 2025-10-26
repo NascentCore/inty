@@ -6,7 +6,7 @@
 
 ### 1. Agent API (IAgentApi.kt)
 - `POST /api/v1/ai/agents/text-to-image` - 为角色生成背景图片
-- `POST /api/v1/images` - 上传头像图片
+- ~~`POST /api/v1/images` - 上传头像图片~~ ✅ **已迁移到 ImageService**
 
 ### 2. Chat API (IChatApi.kt)
 - `POST /api/v1/chat/completions/{agent_id}` - 向角色发送消息
@@ -19,7 +19,7 @@
 
 ### 3. User API (IUserApi.kt)
 - `POST /api/v1/auth/google/login` - Google 身份验证登录
-- `POST /api/v1/images` - 上传头像图片（与 IAgentApi 重复）
+- ~~`POST /api/v1/images` - 上传头像图片（与 IAgentApi 重复）~~ ✅ **已迁移到 ImageService**
 - `GET /api/v1/users/deletion/check` - 检查用户删除状态
 - `POST /api/v1/users/delete-account` - 删除用户账户
 
@@ -33,7 +33,7 @@
 ## 迁移任务
 
 ### 高优先级
-1. **图片上传端点** - `POST /api/v1/images` 在 IAgentApi 和 IUserApi 中都出现，应该合并
+1. ~~**图片上传端点** - `POST /api/v1/images` 在 IAgentApi 和 IUserApi 中都出现，应该合并~~ ✅ **已完成**
 2. **角色信息** - `GET /api/v1/ai/agents/{agent_id}` 在 IAgentApi 和 IChatApi 中重复
 3. **聊天功能** - 核心聊天端点应在可用时迁移到使用生成的 SDK
 
@@ -54,4 +54,4 @@
 - 某些端点可能是重复的，无论 SDK 使用情况如何都应该合并
 
 ## 总计
-目前有**13 个独特的 API 端点**未使用生成的 SDK。
+目前有**11 个独特的 API 端点**未使用生成的 SDK。（已迁移 2 个图片上传端点）
