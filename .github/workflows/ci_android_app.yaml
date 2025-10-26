@@ -55,13 +55,114 @@ jobs:
             android_app/.gradle
             android_app/build
             android_app/app/build
-            android_app/network/build
-            android_app/utils/build
+            android_app/core/common/build
+            android_app/core/data/build
+            android_app/core/design/build
+            android_app/core/firebase/build
+            android_app/library/network/build
+            android_app/library/utils/build
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-
 
-      - name: Run unit tests
+      - name: Compute affected test tasks
+        id: compute
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_REF="${{ github.base_ref }}"
+            git fetch --no-tags --depth=1 origin "$BASE_REF"
+            BASE="origin/$BASE_REF"
+          else
+            BASE="${{ github.event.before }}"
+            # 尝试拉取 before 提交，避免浅克隆导致缺失
+            if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ]; then
+              git fetch --no-tags --depth=1 origin "$BASE" || true
+            fi
+            # 兜底：找不到 before 时与上一个提交比较
+            if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+              BASE=$(git rev-parse HEAD^ || echo "")
+            fi
+          fi
+          echo "BASE=$BASE"
+          CHANGED_FILES=$(git diff --name-only "$BASE" "${{ github.sha }}" | tr -d '\r')
+          echo "Changed files:" && echo "$CHANGED_FILES"
+
+          run_all=false
+          TASKS=""
+          TEST_PATTERNS=""
+          ONLY_TEST_CHANGES=true
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            case "$file" in
+              android_app/settings.gradle.kts|android_app/gradle/*|android_app/gradle/*/*|android_app/build-logic/*|android_app/*/build.gradle.kts|android_app/*/*/build.gradle.kts|android_app/*/gradle.properties|android_app/*/*/gradle.properties)
+                run_all=true ;;
+              android_app/app/*|android_app/app/*/*|android_app/app/*/*/*)
+                TASKS="$TASKS :app:testDebugUnitTest" ;;
+              android_app/core/common/*|android_app/core/common/*/*|android_app/core/common/*/*/*)
+                TASKS="$TASKS :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
+              android_app/core/data/*|android_app/core/data/*/*|android_app/core/data/*/*/*)
+                TASKS="$TASKS :core:data:testDebugUnitTest :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
+              android_app/core/design/*|android_app/core/design/*/*|android_app/core/design/*/*/*)
+                TASKS="$TASKS :core:design:testDebugUnitTest :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
+              android_app/core/firebase/*|android_app/core/firebase/*/*|android_app/core/firebase/*/*/*)
+                TASKS="$TASKS :core:firebase:testDebugUnitTest :core:common:testDebugUnitTest :core:data:testDebugUnitTest :app:testDebugUnitTest" ;;
+              android_app/library/utils/*|android_app/library/utils/*/*|android_app/library/utils/*/*/*)
+                TASKS="$TASKS :library:utils:testDebugUnitTest :core:design:testDebugUnitTest :core:firebase:testDebugUnitTest :core:data:testDebugUnitTest :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
+              android_app/library/network/*|android_app/library/network/*/*|android_app/library/network/*/*/*)
+                TASKS="$TASKS :library:network:testDebugUnitTest :core:data:testDebugUnitTest :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
+              android_app/library/inty_sdk|android_app/library/inty_sdk/*|android_app/library/inty_sdk/*/*|android_app/library/inty_sdk/*/*/*)
+                TASKS="$TASKS :core:data:testDebugUnitTest :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
+            esac
+
+            # 收集测试类过滤器（仅 src/test 下的 .kt/.java，任意深度）
+            if [[ "$file" == android_app/* && "$file" == *"/src/test/"* && ( "$file" == *.kt || "$file" == *.java ) ]]; then
+              # 解析包名模式：从 src/test/{java,kotlin}/ 之后的路径转换为 FQCN
+              rel=${file#android_app/}
+              rel=${rel#*/src/test/}
+              rel=${rel#java/}
+              rel=${rel#kotlin/}
+              class=${rel%.*}
+              class=${class//\//.}
+              TEST_PATTERNS="$TEST_PATTERNS $class"
+            else
+              # 不是测试文件，标记存在业务代码改动
+              case "$file" in
+                android_app/*/src/*) # 除 test 目录以外的源码改动
+                  if [[ "$file" != *"/src/test/"* ]]; then
+                    ONLY_TEST_CHANGES=false
+                  fi
+                  ;;
+              esac
+            fi
+          done <<< "$CHANGED_FILES"
+
+          if $run_all; then
+            TASKS=":app:testDebugUnitTest :core:common:testDebugUnitTest :core:data:testDebugUnitTest :core:design:testDebugUnitTest :core:firebase:testDebugUnitTest :library:utils:testDebugUnitTest :library:network:testDebugUnitTest"
+          fi
+
+          TASKS=$(echo "$TASKS" | xargs -n1 | sort -u | xargs)
+          TEST_PATTERNS=$(echo "$TEST_PATTERNS" | xargs -n1 | sort -u | xargs)
+          echo "tasks=$TASKS" >> "$GITHUB_OUTPUT"
+          echo "tests=$TEST_PATTERNS" >> "$GITHUB_OUTPUT"
+          echo "only_test_changes=$ONLY_TEST_CHANGES" >> "$GITHUB_OUTPUT"
+          echo "Computed tasks: $TASKS"
+          echo "Computed test patterns: $TEST_PATTERNS"
+
+      - name: Run affected unit tests (filtered changed tests only)
+        if: steps.compute.outputs.tasks != '' && steps.compute.outputs.tests != '' && steps.compute.outputs.only_test_changes == 'true'
         run: |
           cd android_app
-          ./gradlew :app:testDebugUnitTest
+          # shellcheck disable=SC2086
+          ./gradlew ${{ steps.compute.outputs.tasks }} $(for t in ${{ steps.compute.outputs.tests }}; do echo --tests "$t"; done)
+
+      - name: Run affected unit tests (full for impacted modules)
+        if: steps.compute.outputs.tasks != '' && (steps.compute.outputs.tests == '' || steps.compute.outputs.only_test_changes != 'true')
+        run: |
+          cd android_app
+          ./gradlew ${{ steps.compute.outputs.tasks }}
+
+      - name: No affected test tasks
+        if: steps.compute.outputs.tasks == ''
+        run: echo "No affected Android unit tests to run."

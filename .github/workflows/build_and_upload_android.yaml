@@ -30,8 +30,12 @@ jobs:
             android_app/.gradle
             android_app/build
             android_app/app/build
-            android_app/network/build
-            android_app/utils/build
+            android_app/core/common/build
+            android_app/core/data/build
+            android_app/core/design/build
+            android_app/core/firebase/build
+            android_app/library/network/build
+            android_app/library/utils/build
           # https://github.com/actions/cache/blob/main/examples.md#java---gradle
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
           restore-keys: |
