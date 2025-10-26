@@ -16,6 +16,11 @@ Based on [AGENTS.md](https://agents.md/)
 - `devops/` Inty IntelliMate 运维相关代码
 - `docs/` 文档
 
+## 语言与输出
+
+- 所有生成的输出必须使用中文（普通话），即使用户指令为英文。
+- 该指令仅适用于可以使用中文的场景；若内容不能使用中文（如代码），则不适用。
+
 ## Coding style
 
 ### Do not repeat in comments what's already obvious in the code
