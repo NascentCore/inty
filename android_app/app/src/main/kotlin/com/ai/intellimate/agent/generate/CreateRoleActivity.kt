@@ -284,27 +284,27 @@ private fun CreateRolePage(
                                             // Update UI on main thread
                                             withContext(Dispatchers.Main) {
                                                 croppedAvatarUrl = uploadedUrl
-                                                ToastUtils.showShort("Avatar cropped and uploaded")
+                                                ToastUtils.showShort(R.string.toast_avatar_cropped_uploaded)
                                             }
                                         }
 
                                         is HttpResult.Failure -> {
                                             LogUtils.e("Upload failed: ${response.message}")
                                             withContext(Dispatchers.Main) {
-                                                ToastUtils.showShort("Upload failed: ${response.message}")
+                                                ToastUtils.showShort(getString(R.string.toast_upload_failed_with_message, response.message))
                                             }
                                         }
                                     }
                                 } catch (e: Exception) {
                                     LogUtils.e("Upload exception: ${e.message}")
                                     withContext(Dispatchers.Main) {
-                                        ToastUtils.showShort("Upload failed: ${e.message}")
+                                        ToastUtils.showShort(getString(R.string.toast_upload_failed_with_message, e.message))
                                     }
                                 }
                             }
                         } catch (e: Exception) {
                             LogUtils.e("Failed to prepare upload: ${e.message}")
-                            ToastUtils.showShort("Failed to prepare upload: ${e.message}")
+                            ToastUtils.showShort(getString(R.string.toast_failed_prepare_upload_with_message, e.message))
                         }
                     }
                 }
@@ -576,7 +576,7 @@ private fun CreateRolePage(
                                     } catch (e: Exception) {
                                         LogUtils.e("Failed to download image for cropping: $imageUrl Error details: ${e.message}")
                                         withContext(Dispatchers.Main) {
-                                            ToastUtils.showShort("Failed to download image for editing")
+                                            ToastUtils.showShort(R.string.toast_failed_download_image_editing)
                                         }
                                     }
                                 }

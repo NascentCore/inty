@@ -249,4 +249,13 @@
     <string name="str_persona">Persona Description</string>
     <string name="str_message_is_too_long">message is too long. Please send it in parts.</string>
     <string name="version_update_available">%s\n(new version available)</string>
+
+    <!-- Toast Messages - Additional -->
+    <string name="toast_avatar_cropped_uploaded">Avatar cropped and uploaded</string>
+    <string name="toast_upload_failed_with_message">Upload failed: %s</string>
+    <string name="toast_failed_prepare_upload_with_message">Failed to prepare upload: %s</string>
+    <string name="toast_failed_download_image_editing">Failed to download image for editing</string>
+    <string name="toast_please_select_reason">Please select at least one reason</string>
+    <string name="toast_submitted_successfully">Submitted successfully. We'll review it soon.</string>
+    <string name="toast_report_creation_failed">Report creation failed</string>
 </resources>
