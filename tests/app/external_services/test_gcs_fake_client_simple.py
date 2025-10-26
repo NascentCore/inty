@@ -22,17 +22,17 @@ class TestFakeGCSClientDirect:
         fake_client = FakeGCSClient()
         bucket = fake_client.bucket("test-bucket")
         blob = bucket.blob("test/file.txt")
-        
+
         test_data = b"test file content"
         blob.upload_from_string(test_data, content_type="text/plain")
-        
+
         # 验证文件存在
         assert blob.exists()
-        
+
         # 验证下载内容
         downloaded_data = blob.download_as_bytes()
         assert downloaded_data == test_data
-        
+
         # 验证公共URL
         public_url = blob.public_url
         assert public_url.startswith("https://storage.googleapis.com/")
@@ -44,16 +44,16 @@ class TestFakeGCSClientDirect:
         fake_client = FakeGCSClient()
         bucket = fake_client.bucket("test-bucket")
         blob = bucket.blob("test/file.txt")
-        
+
         test_data = b"test content"
         blob.upload_from_string(test_data)
-        
+
         # 验证文件存在
         assert blob.exists()
-        
+
         # 删除文件
         blob.delete()
-        
+
         # 验证文件不存在
         assert not blob.exists()
 
@@ -61,21 +61,21 @@ class TestFakeGCSClientDirect:
         """测试假GCS客户端复制功能"""
         fake_client = FakeGCSClient()
         bucket = fake_client.bucket("test-bucket")
-        
+
         # 创建源文件
         source_blob = bucket.blob("test/source.txt")
         test_data = b"test copy content"
         source_blob.upload_from_string(test_data)
-        
+
         # 创建目标blob
         dest_blob = bucket.blob("test/destination.txt")
-        
+
         # 复制文件
         dest_blob.rewrite(source_blob)
-        
+
         # 验证目标文件存在
         assert dest_blob.exists()
-        
+
         # 验证目标文件内容
         downloaded_data = dest_blob.download_as_bytes()
         assert downloaded_data == test_data
@@ -88,7 +88,7 @@ class TestFakeGCSClientDirect:
         mock_config.gcs.bucket = "test-bucket"
         mock_config.app.debug = True
         mock_config.app.gcp_service_account_key = ".secrets/gcp-service-account-key.json"
-        
+
         with patch("app.external_services.gcs.global_config_loaded_from_config_yaml", mock_config):
             # 重新导入GCS模块
             import importlib
@@ -97,22 +97,24 @@ class TestFakeGCSClientDirect:
 
             # 重置全局gcs_client变量
             app.external_services.gcs.gcs_client = None
+
+            # 重新加载模块以使用新的配置
             importlib.reload(app.external_services.gcs)
-            
+
             # 测试上传
             test_data = b"test integration content"
             result_url = app.external_services.gcs.upload_to_gcs(
                 test_data, "text/plain", "test-bucket", "test/integration.txt"
             )
-            
+
             # 验证返回的URL格式
             assert result_url.startswith("https://storage.googleapis.com/")
             assert "test-bucket" in result_url
             assert "test/integration.txt" in result_url
-            
+
             # 验证文件存在
             assert app.external_services.gcs.check_gcs_file_exists("test-bucket", "test/integration.txt")
-            
+
             # 验证下载
             downloaded_data = app.external_services.gcs.download_from_gcs(result_url)
             assert downloaded_data == test_data
