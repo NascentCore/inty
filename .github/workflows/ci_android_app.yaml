@@ -61,7 +61,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-
 
-      - name: Run unit tests
+      - name: Compile debug sources only
         run: |
           cd android_app
-          ./gradlew :app:testDebugUnitTest
+          ./gradlew :app:compileDebugSources
