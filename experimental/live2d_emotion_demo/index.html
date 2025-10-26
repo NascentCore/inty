@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live2D Emotion Demo (Gemini)</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Live2D Emotion Demo (Gemini)</h1>
+      <div class="hint">
+        图片目录通过环境变量 <code>EMOTION_IMAGES_DIR</code> 配置；文件名需以情绪名命名，如 <code>Happy.png</code>。
+      </div>
+    </header>
+
+    <main>
+      <section class="panel left">
+        <div id="image-wrap">
+          <img id="emotion-image" alt="emotion" />
+          <div id="emotion-label"></div>
+        </div>
+      </section>
+
+      <section class="panel right">
+        <div class="ctx">
+          <label>上下文（可选）</label>
+          <textarea id="context" rows="2" placeholder="例如：咖啡馆今天关门"></textarea>
+        </div>
+
+        <div class="state">
+          <label>角色状态（可选）</label>
+          <input id="character-state" placeholder="例如：略微焦躁" />
+        </div>
+
+        <div class="chat-box" id="chat-box"></div>
+
+        <form id="chat-form">
+          <input id="utterance" placeholder="输入你的内容..." autocomplete="off" />
+          <button type="submit">发送</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
