@@ -1,3 +1,3 @@
-# Instructions for writing markdown files
+# Markdown 文件编写说明
 
-- Do not use emojis
+- 不要使用表情符号

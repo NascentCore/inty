@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * 封装项目用的Bottom Navigation Bar
+ * 封装项目用的底部导航栏
  */
 @Composable
 fun HeartBottomAppBar(

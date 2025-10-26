@@ -9,8 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision: str = '20250715_084500'
 down_revision: Union[str, None] = '00e81036d2ba'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -18,7 +17,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add character card related columns to agents table
+# 将角色卡相关列添加到代理表中
     op.add_column('agents', sa.Column('character_card_spec', sa.String(), nullable=True))
     op.add_column('agents', sa.Column('character_card_data', sa.JSON(), nullable=True))
     op.add_column('agents', sa.Column('personality', sa.Text(), nullable=True))
@@ -35,7 +34,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Remove character card related columns from agents table
+# 从特工表中删除与角色卡相关的列
     op.drop_column('agents', 'extensions')
     op.drop_column('agents', 'character_version')
     op.drop_column('agents', 'tags')

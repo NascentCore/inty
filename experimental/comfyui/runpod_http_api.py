@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 RunPod API Client for ComfyUI
 
@@ -13,8 +13,7 @@ import time
 import requests
 from dotenv import load_dotenv
 from typing import Dict, Any
-
-# Load environment variables from .env file
+# 从 .load 加载环境变量环境文件
 load_dotenv()
 ENDPOINT_ID = "it8l4d88m9vek3"
 
@@ -47,12 +46,12 @@ class RunPodClient:
         Returns:
             API response as dictionary
         """
-        # This is the format used by the runpod endpoint.
-        # If prompt is a single string, it's meant for a normal text2image model.
-        # If prompt is a workflow, it's meant for comfyui workflows.
-        # TODO: Need to further verify runpod comfyui workflows.
-        # https://www.runpod.io/articles/guides/comfy-ui-flux
-        # https://github.com/runpod-workers/worker-comfyui/tree/main
+# 这是 runpod 端点使用的格式。
+# 如果prompt是单个字符串，则适用于普通的text2image模型。
+# 如果 prompt 是一个工作流程，则适用于 comfyui 工作流程。
+# TODO：需要进一步验证runpod comfyui工作流程。
+# https://www.runpod.io/articles/guides/comfy-ui-flux
+# https://github.com/runpod-workers/worker-comfyui/tree/main
         payload = {"input": {"prompt": prompt, **kwargs}}
 
         try:
@@ -139,14 +138,13 @@ def main():
         print(f"Error: {e}")
         print("Please make sure RUNPOD_API_KEY is set in your .env file")
         return
-
-    # Example prompt
+# 示例 prompt
     prompt = "masterpiece best quality girl, beautiful, detailed"
 
     print(f"Sending prompt: {prompt}")
 
     now = time.time()
-    # Send synchronous request (equivalent to the curl command)
+# 发送同步请求（相当于curl命令）
     print("\n1. Sending synchronous request...")
     result = client.run_sync(prompt)
     print(f"Time taken: {time.time() - now}")

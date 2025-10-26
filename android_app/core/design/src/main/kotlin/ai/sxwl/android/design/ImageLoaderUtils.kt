@@ -11,12 +11,12 @@ import java.io.File
 
 /**
  * 图片加载工具类
- * 根据Coil 3.x官方文档优化，专门处理大图片加载的优化策略
+ * 根据线圈3。x官方文档优化，专门处理大图片加载的优化策略
  */
 object ImageLoaderUtils {
 
     /**
-     * 创建设备适配的图片请求
+     * 创建设备装配的图片请求
      * 根据设备屏幕密度和尺寸自动压缩图片，提供最佳性能
      * 参考：https://coil-kt.github.io/coil/
      * @param context 上下文
@@ -38,8 +38,7 @@ object ImageLoaderUtils {
         val displayMetrics = context.resources.displayMetrics
         val screenWidth = maxWidth ?: displayMetrics.widthPixels
         val screenHeight = maxHeight ?: displayMetrics.heightPixels
-
-        // 直接使用像素单位的屏幕尺寸，避免重复乘密度
+// 直接使用像素单位的屏幕尺寸，避免重复乘密度
         val targetWidth = screenWidth
         val targetHeight = screenHeight
 
@@ -54,7 +53,7 @@ object ImageLoaderUtils {
     }
 
     /**
-     * 创建针对大图片优化的ImageRequest
+     *创建针对大图片优化的ImageRequest
      * 根据官方文档：https://coil-kt.github.io/coil/network/
      * @param context 上下文
      * @param imageUrl 图片URL
@@ -99,7 +98,7 @@ object ImageLoaderUtils {
     }
 
     /**
-     * 创建针对缩略图优化的ImageRequest
+     * 创建针对优化的ImageRequest
      * @param context 上下文
      * @param imageUrl 图片URL
      * @param width 宽度
@@ -126,7 +125,7 @@ object ImageLoaderUtils {
      * @param context 上下文
      * @param imageUrl 图片URL
      * @param placeholder 占位图
-     * @param error 错误图
+     * @param错误错误图
      * @return 优化后的ImageRequest
      */
     fun createProgressiveImageRequest(

@@ -1,4 +1,4 @@
-# Write a minimal test to show how to initialize a pydantic submodel from a basemodel object
+# 编写一个最小测试来展示如何从基本模型对象初始化 pydantic 子模型
 
 import unittest
 from pydantic import BaseModel

@@ -105,8 +105,7 @@ async def start_evaluation_session(
 
     try:
         evaluation_service = EvaluationService(db)
-
-        # 验证会话所有权
+# 验证会话
         session = await evaluation_service.get_session(session_id)
         if not session:
             raise HTTPException(status_code=404, detail="评测会话不存在")
@@ -178,8 +177,7 @@ async def get_evaluation_results(
 
     try:
         evaluation_service = EvaluationService(db)
-
-        # 验证权限
+# 验证权限
         session = await evaluation_service.get_session(session_id)
         if not session:
             raise HTTPException(status_code=404, detail="评测会话不存在")
@@ -212,8 +210,7 @@ async def cancel_evaluation_session(
 
     try:
         evaluation_service = EvaluationService(db)
-
-        # 验证权限
+# 验证权限
         session = await evaluation_service.get_session(session_id)
         if not session:
             raise HTTPException(status_code=404, detail="评测会话不存在")
@@ -246,11 +243,10 @@ async def parse_questions_file(
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        # 验证文件大小（最大10MB）
+# 验证文件大小（最大10MB）
         if file.size and file.size > 10 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="文件大小不能超过10MB")
-
-        # 验证文件类型
+# 验证文件类型
         allowed_types = [".json"]
         if not any(file.filename.lower().endswith(ext) for ext in allowed_types):
             raise HTTPException(
@@ -259,8 +255,7 @@ async def parse_questions_file(
             )
 
         questions = await QuestionParserService.parse_questions_file(file)
-
-        # 验证问题质量
+# 验证问题质量
         validation = QuestionParserService.validate_questions(questions)
 
         logger.info(
@@ -343,8 +338,8 @@ async def get_evaluation_stats(
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        # 这里可以实现统计逻辑
-        # 暂时返回模拟数据
+# 这里可以实现统计逻辑
+# 暂时返回模拟数据
         return {
             "total_sessions": 0,
             "completed_sessions": 0,
@@ -359,9 +354,7 @@ async def get_evaluation_stats(
     except Exception as e:
         logger.error(f"获取评测统计失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取统计信息失败")
-
-
-# WebSocket端点用于实时监控评测进度
+#用于实时监控数据的WebSocket端点
 @router.websocket("/sessions/{session_id}/monitor")
 async def monitor_evaluation_session(
     websocket,
@@ -381,11 +374,9 @@ async def monitor_evaluation_session(
 
     try:
         evaluation_service = EvaluationService(db)
-
-        # 添加WebSocket连接
+#添加WebSocket连接
         evaluation_service.add_websocket_connection(session_id, websocket)
-
-        # 发送初始状态
+#东南状态
         session = await evaluation_service.get_session(session_id)
         if session:
             await websocket.send_json(
@@ -402,8 +393,7 @@ async def monitor_evaluation_session(
                     },
                 }
             )
-
-        # 保持连接
+# 保持连接
         while True:
             try:
                 await websocket.receive_text()
@@ -413,14 +403,12 @@ async def monitor_evaluation_session(
     except Exception as e:
         logger.error(f"WebSocket连接错误: {str(e)}")
     finally:
-        # 移除连接
+# 删除连接
         evaluation_service = EvaluationService(db)
         evaluation_service.remove_websocket_connection(session_id, websocket)
-
-
-# =============================================================================
-# 智能体管理相关API（用于评测系统的智能体CRUD操作）
-# =============================================================================
+# ===================================================================================================
+# 智能体管理相关API（用于足球系统的智能体CRUD操作）
+# ===================================================================================================
 
 
 @router.get("/agents", response_model=List[schemas.Agent])
@@ -444,12 +432,12 @@ async def get_evaluation_agents(
         from app.services import agent_service
 
         if type == "private":
-            # 获取用户创建的私有智能体
+# 获取用户创造自己的智能体
             agents = await agent_service.get_agents_by_creator(
                 db, creator_id=current_user.id, skip=skip, limit=limit
             )
         else:
-            # 获取公开智能体
+# 获取公开智能体
             agents = await agent_service.get_public_agents(db, skip=skip, limit=limit)
 
         logger.info(
@@ -510,8 +498,7 @@ async def update_evaluation_agent(
 
     try:
         from app.services import agent_service
-
-        # 验证权限
+# 验证权限
         agent = await agent_service.get_agent(db, agent_id=agent_id)
         if not agent:
             raise HTTPException(status_code=404, detail="智能体不存在")
@@ -550,8 +537,7 @@ async def delete_evaluation_agent(
 
     try:
         from app.services import agent_service
-
-        # 验证权限
+# 验证权限
         agent = await agent_service.get_agent(db, agent_id=agent_id)
         if not agent:
             raise HTTPException(status_code=404, detail="智能体不存在")
@@ -588,8 +574,8 @@ async def deploy_agent_to_production(
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        # 这里应该实现实际的部署逻辑
-        # 暂时返回模拟响应
+# 这里应该实现实际的配置逻辑
+# 暂时返回模拟响应
         logger.info(f"用户 {current_user.id} 请求部署智能体 {agent_id} 到生产环境")
 
         return {
@@ -602,11 +588,9 @@ async def deploy_agent_to_production(
     except Exception as e:
         logger.error(f"部署智能体失败: {str(e)}")
         raise HTTPException(status_code=500, detail="部署智能体失败")
-
-
-# =============================================================================
+# ===================================================================================================
 # 模板管理API
-# =============================================================================
+# ===================================================================================================
 
 
 @router.post("/templates", response_model=schemas.EvaluationTemplateResponse)
@@ -677,8 +661,7 @@ async def get_evaluation_templates(
         from sqlalchemy import or_, select
 
         from app.models.evaluation import EvaluationTemplate
-
-        # 构建查询条件
+# 构建查询条件
         conditions = [EvaluationTemplate.creator_id == current_user.id]
         if include_public:
             conditions.append(EvaluationTemplate.is_public == True)
@@ -695,11 +678,9 @@ async def get_evaluation_templates(
     except Exception as e:
         logger.error(f"获取评测模板失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取评测模板失败")
-
-
-# =============================================================================
-# 批量评测和结果导出API
-# =============================================================================
+# ===================================================================================================
+# 批量业绩和结果如下API
+# ===================================================================================================
 
 
 @router.post("/sessions/batch", response_model=List[schemas.EvaluationSessionResponse])
@@ -758,8 +739,8 @@ async def export_evaluation_results(
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        # 这里应该实现实际的导出逻辑
-        # 暂时返回下载链接
+# 这里应该实现实际的导出逻辑
+# 暂时返回下载链接
         logger.info(
             f"用户 {current_user.id} 导出评测结果: {len(export_request.session_ids)} 个会话"
         )
@@ -791,8 +772,8 @@ async def compare_evaluation_sessions(
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        # 这里应该实现实际的对比逻辑
-        # 暂时返回模拟数据
+# 这里应该实现实际的对比逻辑
+# 暂时返回模拟数据
         logger.info(f"用户 {current_user.id} 对比评测会话: {session_ids}")
 
         return {

@@ -23,8 +23,7 @@ async def main():
         ) as conn:
             connection = conn
             connection_ready.set()
-
-            # Enable server-side voice activity detection
+# 启用服务器端语音活动检测
             await conn.session.update(
                 session={"turn_detection": {"type": "server_vad"}}
             )
@@ -78,8 +77,7 @@ async def main():
             dtype="int16",
         )
         stream.start()
-
-        # Wait for connection to be ready
+# 等待连接准备好
         await connection_ready.wait()
 
         try:
@@ -89,8 +87,7 @@ async def main():
                     continue
 
                 data, _ = stream.read(read_size)
-
-                # Send audio data to the connection
+# 向连接发送音频数据
                 if connection:
                     await connection.input_audio_buffer.append(
                         audio=base64.b64encode(cast(Any, data)).decode("utf-8")
@@ -102,13 +99,12 @@ async def main():
         finally:
             stream.stop()
             stream.close()
-
-    # Start both tasks
+# 启动两个任务
     connection_task = asyncio.create_task(handle_realtime_connection())
     audio_task = asyncio.create_task(send_mic_audio())
 
     try:
-        # Wait for both tasks to complete
+# 等待两个任务完成
         await asyncio.gather(connection_task, audio_task)
     except KeyboardInterrupt:
         print("\nShutting down...")

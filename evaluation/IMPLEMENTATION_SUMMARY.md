@@ -50,8 +50,8 @@
 ### 依赖库
 
 - `react-image-crop`: 图片截取功能核心库
-- `antd`: UI 组件库（Modal, Button, InputNumber 等）
-- `PIL (Python)`: 后端图片处理库
+- `antd`: UI组件库（Modal、Button、InputNumber等）
+-`PIL (Python)`: 后端图片处理库
 
 ### 核心功能
 

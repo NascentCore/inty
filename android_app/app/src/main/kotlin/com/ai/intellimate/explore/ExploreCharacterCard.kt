@@ -34,24 +34,21 @@ import coil3.request.ImageRequest
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.ui.components.SmartTagsLayout
 
-/** Explore页面的角色卡片组件 */
+/** 探索页面的对应角色组件 */
 @Composable
 fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, onClick: () -> Unit) {
-    // 缓存渐变画笔，避免每次重组时重新创建
+// 存储迁移画笔，避免每次重组时重新创建
     val gradientBrush = remember {
         Brush.verticalGradient(
             colors = listOf(Color.Transparent, Color.Black.copy(.6f), Color.Black.copy(.95f))
         )
     }
-
-    // 缓存过滤后的标签，避免每次重组时重新计算
+// 缓存过滤后的标签，避免每次重组时重新计算
     val filteredTags = remember(agentInfo.tags) { agentInfo.tags?.filterNotNull() ?: emptyList() }
-
-    // 获取图片URL
+// 获取图片URL
     val imageUrl =
         remember(agentInfo.id, agentInfo.background, agentInfo.avatar) { agentInfo.getAlbumImage() }
-
-    // 图片加载状态 - 使用稳定的key避免不必要的重组
+// 图片加载状态 - 使用稳定的键避免不必要的重组
     var imageLoaded by remember(agentInfo.id) { mutableStateOf(false) }
 
     Box(
@@ -63,7 +60,7 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
                     onClick()
                 }
     ) {
-        // 背景图片层
+// 背景图片层
         Box(
             modifier =
                 Modifier
@@ -77,7 +74,7 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
                         )
                     )
         ) {
-            // 使用 Shimmer 占位符
+// 使用Shimmer占符位
             if (!imageLoaded) {
                 ShimmerPlaceholder(modifier = Modifier.fillMaxSize(), cornerRadius = 8.dp)
             }
@@ -91,21 +88,20 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
                 contentScale = ContentScale.Crop,
                 alignment = Alignment.TopCenter,
                 onSuccess = {
-                    // 只在状态真正改变时才更新，避免不必要的重组
+// 只有在状态真正改变的时候才更新，避免不必要的重组
                     if (!imageLoaded) {
                         imageLoaded = true
                     }
                 },
                 onError = {
-                    // 只在状态真正改变时才更新，避免不必要的重组
+// 只有在状态真正改变的时候才更新，避免不必要的重组
                     if (imageLoaded) {
                         imageLoaded = false
                     }
                 },
             )
         }
-
-        // 文本内容层 - 立即显示，不依赖图片加载状态
+// 文本内容层 - 立即显示，不依赖图片加载状态
         Column(
             modifier =
                 Modifier

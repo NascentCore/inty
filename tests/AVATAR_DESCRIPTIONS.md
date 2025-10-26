@@ -1,6 +1,6 @@
-# Avatar generation
+# 头像生成
 
-## Common words that should not cause failure
+## 不应该导致失败的常用词
 
-- girl
-- young girl
+- 女孩
+- 年轻女孩

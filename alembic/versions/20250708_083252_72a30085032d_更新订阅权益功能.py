@@ -9,8 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision: str = '72a30085032d'
 down_revision: Union[str, None] = '20250703_130000'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -19,7 +18,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """更新订阅权益功能"""
-    # 定义权益功能
+# 定义权益功能
     premium_features = {
         "features": [
             {
@@ -80,11 +79,9 @@ def upgrade() -> None:
             "new_features_privilege"
         ]
     }
-    
-    # 更新所有现有订阅计划的features字段
+# 更新所有现有订阅计划的功能字段
     connection = op.get_bind()
-    
-    # 更新所有订阅计划
+# 更新所有订阅计划
     import json
     connection.execute(
         sa.text("""
@@ -94,14 +91,13 @@ def upgrade() -> None:
         """),
         {"features": json.dumps(premium_features)}
     )
-    
-    # 如果需要，也可以为特定的订阅计划设置不同的features
-    # 这里为所有计划设置相同的premium features
+#如果需要，也可以为特定的订阅计划设置不同的功能
+# 这里为所有计划相同设置的 premium 功能
 
 
 def downgrade() -> None:
     """回滚订阅权益功能更新"""
-    # 清空features字段
+# 清空features字段
     connection = op.get_bind()
     connection.execute(
         sa.text("UPDATE subscription_plans SET features = '{}'::json")

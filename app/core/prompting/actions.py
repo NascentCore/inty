@@ -24,11 +24,9 @@ class Action(BaseModel):
     name: str
     category: list[ActionCategory]
     description: str
-
-
-################################################################################
-# Impact-Oriented Actions
-################################################################################
+################################################################################################
+#以影响力为导向的行动
+################################################################################################
 
 SPANKING = Action(
     name="spanking",
@@ -74,10 +72,9 @@ NIPPING = Action(
     ],
     description="Applying pressure to sensitive skin.",
 )
-
-################################################################################
-# Forceful/Restraint-Oriented Actions
-################################################################################
+################################################################################################
+# 强制/克制行为
+################################################################################################
 
 HAIR_PULLING = Action(
     name="hair_pulling",
@@ -108,10 +105,9 @@ CHOKING_BREATH_PLAY = Action(
     category=ActionCategory.FORCEFUL_RESTRAINT_ORIENTED,
     description="This action carries significant risk and requires extreme caution, explicit negotiation, and understanding of safe practices. It is not recommended without significant prior experience, knowledge, and trust, as it can be genuinely dangerous if done incorrectly. This involves temporary restriction of airflow.",
 )
-
-################################################################################
-# Primal/Instinctive Actions
-################################################################################
+################################################################################################
+#Primal/本能行动
+################################################################################################
 
 GROWLING = Action(
     name="growling",
@@ -130,11 +126,9 @@ ROUGH_KISSING = Action(
     category=[ActionCategory.PRIMAL_INSTINCTIVE],
     description="Kissing with force and intensity.",
 )
-
-
-################################################################################
-# Sensory/Psychological Actions
-################################################################################
+################################################################################################
+# 感觉/心理行为
+################################################################################################
 
 BLINDFOLDING = Action(
     name="blindfolding",

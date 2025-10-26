@@ -34,7 +34,7 @@ class GeminiClient:
         self.logger.info("Initializing Gemini client...")
         
         try:
-            # genai.configure(api_key=Config.GEMINI_API_KEY)
+# 格奈。configure(api_key=配置。双子座___保留__22___配置）
             self.client = genai.Client()
             self.logger.info(f"Gemini client initialized successfully")
             self.logger.debug(f"Character model: {Config.CHARACTER_GENERATION_MODEL}")
@@ -111,25 +111,21 @@ class GeminiClient:
             api_time = time.time() - start_time
             self.logger.info(f"Gemini API response received in {api_time:.2f} seconds")
             self.logger.debug(f"Response text length: {len(response.text)} characters")
-            
-            # Log the first 200 characters of response for debugging
+# 记录响应的前200个字符以提供调试
             response_preview = response.text[:200] + "..." if len(response.text) > 200 else response.text
             self.logger.debug(f"Response preview: {response_preview}")
             
             self.logger.info("Parsing JSON response...")
             character_data = safe_json_loads(response.text, self.logger)
             self.logger.info("JSON parsing successful")
-            
-            # Validate character data structure
+# 验证字符数据结构
             if not validate_character_data(character_data, self.logger):
                 raise ValueError("Character data validation failed")
-            
-            # Log character data structure
+# 记录字符数据结构
             self.logger.debug(f"Character name: {character_data.get('name', 'Unknown')}")
             self.logger.debug(f"Character age: {character_data.get('age', 'Unknown')}")
             self.logger.debug(f"Character gender: {character_data.get('gender', 'Unknown')}")
-            
-            # Create CharacterProfile object
+#创建CharacterProfile对象
             self.logger.info("Creating CharacterProfile object...")
             background = CharacterBackground(**character_data["background"])
             encounter = CharacterEncounter(**character_data["encounter"])
@@ -164,8 +160,7 @@ class GeminiClient:
         """Generate consistent character images based on the character profile"""
         
         self.logger.info(f"Generating {num_images_per_scene} images per scene for {character.images} scenes for character: {character.name}")
-        
-        # Create a detailed physical description for image generation
+# 为图像生成创建详细的物理描述
         appearance = character.physical_appearance
         physical_desc = f"""
         {character.name} is a {character.age}-year-old {character.gender} character.
@@ -184,7 +179,7 @@ class GeminiClient:
         num_scenes = len(character.images)
         
         for i, scene in enumerate(character.images):
-            # Each scene requires a new image generation run.
+# 每个场景都需要运行新的图像生成。
             self.logger.info(f"Generating image {i+1}/{num_scenes}: {scene}")
             image_style = scene.image_style
 
@@ -200,15 +195,14 @@ class GeminiClient:
             """
 
             self.logger.debug(f"Image prompt length: {len(image_prompt)} characters")
-            
-            # Generate image using Gemini
+# 使用 Gemini 生成图像
             start_time = time.time()
 
             response = self.client.models.generate_images(
                 model=Config.IMAGE_GENERATION_MODEL,
                 prompt=image_prompt,
                 config=gemini_types.GenerateImagesConfig(
-                    # Generate only one image per scene.
+# 每个场景仅生成一张图像。
                     number_of_images=num_images_per_scene,
                     aspect_ratio="3:4",
                     safety_filter_level="block_low_and_above",
@@ -216,11 +210,9 @@ class GeminiClient:
                 ),
             )
             image_time = time.time() - start_time
-            
-            # Log response for debugging
+# 记录响应以进行调试
             self.logger.info(f"Image generation response: {response}")
-            
-            # Extract image data from the response
+# 从响应中提取图像数据
             assert response.generated_images, "No images generated"
             assert len(response.generated_images) == 1, "Expected exactly one image"
 
@@ -273,13 +265,11 @@ class GeminiClient:
             
             enhancements = safe_json_loads(response.text, self.logger)
             self.logger.info("Enhancement JSON parsed successfully")
-            
-            # Update character with enhanced details
+# 更新角色并增强细节
             original_quirks_count = len(character.background.quirks)
             character.background.quirks.extend(enhancements.get("additional_quirks", []))
             character.background.backstory = enhancements.get("enhanced_backstory", character.background.backstory)
-            
-            # Add new fields to physical_appearance
+# 向physical_appearance添加新字段
             character.physical_appearance.update({
                 "speech_patterns": enhancements.get("speech_patterns", ""),
                 "body_language": enhancements.get("body_language", ""),

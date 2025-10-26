@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 Simple audio test using sounddevice
 """
@@ -11,8 +11,7 @@ def test_audio_devices():
     """Test and list available audio devices."""
     print("🎵 Audio Device Test")
     print("=" * 40)
-
-    # List all devices
+# 上市所有设备
     devices = sd.query_devices()
     print(f"Found {len(devices)} audio devices:")
 
@@ -21,8 +20,7 @@ def test_audio_devices():
         print(f"   Inputs: {device.get('max_inputs', 0)}")
         print(f"   Outputs: {device.get('max_outputs', 0)}")
         print(f"   Default Sample Rate: {device.get('default_samplerate', 'N/A')}")
-
-    # Find default devices
+#查找默认设备
     default_input = sd.query_devices(kind="input")
     default_output = sd.query_devices(kind="output")
 
@@ -38,7 +36,7 @@ def test_microphone(duration=3):
     print("Speak now!")
 
     try:
-        # Record audio
+# 录音
         sample_rate = 24000  # OpenAI's required rate
         recording = sd.rec(
             int(duration * sample_rate),
@@ -47,8 +45,7 @@ def test_microphone(duration=3):
             dtype=np.float32,
         )
         sd.wait()
-
-        # Check if we got any audio
+#检查是否有音频
         if np.any(recording):
             print("✅ Microphone test successful!")
             print(f"   Recorded {len(recording)} samples")
@@ -68,15 +65,14 @@ def test_speakers():
     print("\n🔊 Testing speakers...")
 
     try:
-        # Generate a simple test tone
+#生成简单的测试音
         sample_rate = 24000
         duration = 1.0
         frequency = 440  # A4 note
 
         t = np.linspace(0, duration, int(sample_rate * duration), False)
         tone = 0.3 * np.sin(2 * np.pi * frequency * t)
-
-        # Play the tone
+# 播放提示音
         sd.play(tone, sample_rate)
         sd.wait()
 
@@ -92,14 +88,11 @@ def main():
     """Run all audio tests."""
     print("🧪 Audio System Test")
     print("=" * 50)
-
-    # Test devices
+# 测试设备
     input_device, output_device = test_audio_devices()
-
-    # Test microphone
+# 测试麦克风
     recording = test_microphone()
-
-    # Test speakers
+# 测试入口
     speakers_ok = test_speakers()
 
     print("\n" + "=" * 50)
@@ -110,7 +103,7 @@ def main():
     print(f"   Speakers: {'✅ OK' if speakers_ok else '❌ Failed'}")
 
     if recording is not None and speakers_ok:
-        # Play out the recording
+# 播放录音
         sample_rate = 24000
         sd.play(recording, sample_rate)
         sd.wait()

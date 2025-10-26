@@ -10,16 +10,15 @@ import androidx.core.app.NotificationManagerCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
-/** Firebase 消息推送服务 */
+/** Firebase 大众服务 */
 class FCMService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        // 1. 处理数据消息（应用前后台均触发）
+// 1.处理数据消息（应用前后台均触发）
         if (remoteMessage.data.isNotEmpty()) {
             LogUtils.i("FCMService onMessageReceived: " + remoteMessage.data)
         }
-
-        // 2. 处理通知消息（仅前台触发；后台时由系统自动显示）
+// 2.处理通知消息（仅前台触发；后台时由系统自动显示）
         if (remoteMessage.notification != null) {
             val title = remoteMessage.notification!!.title
             val body = remoteMessage.notification!!.body
@@ -32,21 +31,19 @@ class FCMService : FirebaseMessagingService() {
     }
 
     override fun onNewToken(token: String) {
-        // 将新Token发送至服务器
-
-        //        sendTokenToServer(token)
+// 将新Token发送至服务器
+// 发送令牌到服务器（令牌）
     }
 
     @SuppressLint("MissingPermission")
     private fun showNotification(title: String, body: String) {
         val builder: NotificationCompat.Builder =
             NotificationCompat.Builder(this, "channel_id")
-//                .setSmallIcon(R.drawable.app_icon)
+// .setSmallIcon(R.drawable.应用程序图标）
                 .setContentTitle(title)
                 .setContentText(body)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-
-        // Android 8.0+ 需创建通知渠道
+// Android 8.0+ 需创建通知渠道
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel =
                 NotificationChannel(

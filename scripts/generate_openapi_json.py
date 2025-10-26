@@ -14,8 +14,7 @@ with open(args.output, "w") as f:
     f.write(json_str)
 
 print(f"OpenAPI JSON saved to {args.output}")
-
-# 调用 git 来提交本地改动
+#调用git来提交本地地址
 import subprocess
 
 subprocess.run(["git", "add", args.output])

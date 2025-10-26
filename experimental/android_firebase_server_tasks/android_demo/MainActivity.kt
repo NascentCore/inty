@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
             }
             val token = task.result
             Log.i(TAG, "Token: $token")
-            // TODO: 将 token 上传到你的服务器
+// TODO: 将 token 上传到你的服务器
         }
     }
 

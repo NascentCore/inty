@@ -1,89 +1,80 @@
-# Billing Library 8.0.0 Migration Plan
+# 计费库 8.0.0 迁移计划
 
-## Overview
+＃＃ 概述
 
-Migrate from Google Play Billing Library 7.0.0 to 8.0.0, replacing all deprecated `SkuDetails` API usage with the new `ProductDetails` API.
+从 Google Play 结算库 7.0.0 迁移到 8.0。0，替换所有 deprecated`SkuDetails`API 与新的用法`ProductDetails`__保留__12__。
 
-## Risk Assessment
+## 风险评估
 
-### High Risk Areas
+### 高风险区域
 
-- **Purchase flow interruption**: Any bugs could prevent users from buying subscriptions
-- **Price display errors**: Incorrect price extraction could show wrong prices to users
-- **Backend compatibility**: Need to ensure verification flow still works with new API
+- **购买流程中断**：任何错误都可能导致 prevent 用户无法购买订阅
+- **Price 显示错误**：不正确的 price 提取可能会向用户显示错误的 price
+- **后端兼容性**：需要确保验证流程仍然适用于新的 API
 
-### Medium Risk Areas
+### 中等风险区域
 
-- **Backward compatibility**: Old purchases should still be handled correctly
-- **Error handling**: New error codes and responses need proper handling
+- **向后兼容性**：旧的购买仍应正确处理
+- **错误处理**：新的错误代码和响应需要 proper 处理
 
-### Low Risk Areas
+### 低风险区域
 
-- **Connection handling**: BillingClient connection logic remains mostly unchanged
-- **Storage layer**: Local persistence unchanged
+- **连接处理**：BillingClient 连接逻辑基本保持不变- **存储层**：本地持久化不变
 
-## Estimated Workload
+## 预计工作量
 
-| Task | Estimated Time | Complexity |
+|任务|预计时间 |复杂性 |
 
-|------|---------------|------------|
+|------|----------------|------------|
 
-| Dependency update | 5 minutes | Low |
+|依赖更新 | 5 分钟 |低|
 
-| BillingPriceManager refactor | 2-3 hours | High |
+| BillingPriceManager 重构 | 2-3小时|高|
 
-| BillingPurchaseManager refactor | 2-3 hours | High |
+| BillingPurchaseManager 重构 | 2-3小时|高|
 
-| BillingModels update | 30 minutes | Low |
+|计费模型更新 | 30 分钟 |低|
 
-| Testing & debugging | 3-4 hours | High |
+|测试与调试| 3-4小时|高|
 
-| **Total** | **8-11 hours** | **High** |
+| **总计** | **8-11 小时** | **高** |
 
-## Breaking Changes in 8.0.0
+## 8.0.0 中的重大变化
 
-### Removed APIs (Will Cause Compilation Errors)
-
-1. ✗ `SkuDetails` and `SkuDetailsParams`
+### 删除了 APIs （会导致编译错误）1.✗`SkuDetails` and `SkuDetailsParams`
 2. ✗ `querySkuDetailsAsync()`
 3. ✗ `BillingFlowParams.Builder.setSkuDetails()`
 4. ✗ `BillingClient.SkuType.SUBS`
-5. ✗ `enablePendingPurchases()` (no params version)
+5. ✗ `enablePendingPurchases()`（无参数版本）
 
-### New APIs Required
+### 需要新的 APIs
 
-1. ✓ `ProductDetails` and `QueryProductDetailsParams`
+1.✓`ProductDetails` and `QueryProductDetailsParams`
 2. ✓ `queryProductDetailsAsync()`
 3. ✓ `BillingFlowParams.Builder.setProductDetailsParamsList()`
 4. ✓ `ProductType.SUBS`
-5. ✓ `enablePendingPurchases(PendingPurchasesParams.newBuilder().build())`
+5. ✓ `enablePendingPurchases(PendingPurchasesParams.newBuilder().build())`---
 
----
+## 详细迁移步骤
 
-## Detailed Migration Steps
+### 步骤 1：更新 Gradle 依赖项（5 分钟）
 
-### Step 1: Update Gradle Dependencies (5 min)
-
-**File**: `android_app/gradle/libs.versions.toml`
+**文件**：`android_app/gradle/libs.versions.toml`
 
 ```toml
 # Line 69: Change from 7.0.0 to 8.0.0
 billingKtx = "8.0.0"
-```
+```**风险**：低 - 简单版本碰撞
 
-**Risk**: Low - Simple version bump
-
-**Testing**: Sync Gradle and check for immediate compilation errors
+**测试**：同步 Gradle 并检查是否存在即时编译错误
 
 ---
 
-### Step 2: Update BillingRepository Initialization (15 min)
+### 步骤 2：更新 BillingRepository 初始化（15 分钟）
 
-**File**: `BillingRepository.kt` (Line 92-96)
+**文件**：`BillingRepository.kt`（92-96号线）
 
-**Current**:
-
-```kotlin
+**当前的**：```kotlin
 billingClient = BillingClient.newBuilder(context.applicationContext)
     .setListener(this)
     .enablePendingPurchases()  // ❌ Deprecated
@@ -101,21 +92,17 @@ billingClient = BillingClient.newBuilder(context.applicationContext)
         PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()
     )
     .build()
-```
+```**风险**：低 - 有详细记录的变更
 
-**Risk**: Low - Well-documented change
-
-**Testing**: Ensure BillingClient connects successfully
+**测试**：确保 BillingClient 连接成功
 
 ---
 
-### Step 3: Refactor BillingPriceManager (2-3 hours)
+### 步骤 3：重构 BillingPriceManager（2-3 小时）
 
-**File**: `BillingPriceManager.kt` - Complete rewrite required
+**文件**：`BillingPriceManager.kt`- 需要完全重写
 
-#### 3.1 Update Imports
-
-```kotlin
+#### 3.1 更新导入```kotlin
 // Remove:
 import com.android.billingclient.api.SkuDetails
 import com.android.billingclient.api.SkuDetailsParams
@@ -124,31 +111,19 @@ import com.android.billingclient.api.SkuDetailsParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.ProductDetailsResponseListener
-```
+```#### 3.2 替换querySkuDetails()方法（第21-126行）
 
-#### 3.2 Replace querySkuDetails() Method (Lines 21-126)
-
-**Current Signature**:
-
-```kotlin
+**当前签名**：```kotlin
 fun querySkuDetails(isConnected: Boolean)
-```
+```**主要变化**：
 
-**Key Changes**:
-
-**Old Product List Building**:
-
-```kotlin
+**旧Pr产品清单大楼**：```kotlin
 // ❌ Old way (Lines 39-43)
 val params = SkuDetailsParams.newBuilder()
     .setSkusList(subscriptionIds)
     .setType(BillingClient.SkuType.SUBS)
     .build()
-```
-
-**New Product List Building**:
-
-```kotlin
+```**新Pr产品列表构建**：```kotlin
 // ✓ New way
 val productList = subscriptionIds.map { productId ->
     QueryProductDetailsParams.Product.newBuilder()
@@ -160,56 +135,32 @@ val productList = subscriptionIds.map { productId ->
 val params = QueryProductDetailsParams.newBuilder()
     .setProductList(productList)
     .build()
-```
-
-**Old Async Query**:
-
-```kotlin
+```**旧的异步查询**：```kotlin
 // ❌ Old callback (Line 45)
 billingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
     // ...
 }
-```
-
-**New Async Query**:
-
-```kotlin
+```**新的异步查询**：```kotlin
 // ✓ New callback
 billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
     // Handle response
 }
-```
+```#### 3.3 更新Price提取逻辑（第128-200行）
 
-#### 3.3 Update Price Extraction Logic (Lines 128-200)
-
-**Current Method Signature**:
-
-```kotlin
+**当前方法签名**：```kotlin
 private fun updateLocalPlans(currentPlans: List<VipPlan>, skuDetailsList: List<SkuDetails>)
-```
-
-**New Method Signature**:
-
-```kotlin
+```**新方法签名**：```kotlin
 private fun updateLocalPlans(currentPlans: List<VipPlan>, productDetailsList: List<ProductDetails>)
-```
+```**Pr冰提取变化**：
 
-**Price Extraction Changes**:
-
-**Old SkuDetails API** (Lines 134-143):
-
-```kotlin
+**旧 SkuDetails API** （第 134-143 行）：```kotlin
 skuDetails.forEach { skuDetails ->
     val planId = skuDetails.sku  // ❌ Deprecated
     val formattedPrice = skuDetails.price  // ❌ Deprecated
     val currencyCode = skuDetails.priceCurrencyCode  // ❌ Deprecated
     val micros = skuDetails.priceAmountMicros  // ❌ Deprecated
 }
-```
-
-**New ProductDetails API**:
-
-```kotlin
+```**新Pr产品详细信息API**：```kotlin
 productDetailsList.forEach { productDetails ->
     val planId = productDetails.productId  // ✓ New
     
@@ -221,38 +172,27 @@ productDetailsList.forEach { productDetails ->
     val currencyCode = pricingPhase?.priceCurrencyCode ?: ""
     val micros = pricingPhase?.priceAmountMicros ?: 0L
 }
-```
+```**关键复杂性**：
 
-**Key Complexity**:
+- SkuDetails 具有扁平结构
+- ProductDetails 具有嵌套结构：`subscriptionOfferDetails -> pricingPhases -> pricingPhaseList`- 需要处理多个优惠和 pricing 阶段（基本计划、promotional 优惠）
 
-- SkuDetails had flat structure
-- ProductDetails has nested structure: `subscriptionOfferDetails -> pricingPhases -> pricingPhaseList`
-- Need to handle multiple offers and pricing phases (base plans, promotional offers)
-
-**Risk**: High - Complex nested structure, critical for price display
+**风险**：高 - 复杂的嵌套结构，对于 price 显示至关重要
 
 ---
 
-### Step 4: Refactor BillingPurchaseManager (2-3 hours)
+### 步骤4：重构BillingPurchaseManager（2-3小时）
 
-**File**: `BillingPurchaseManager.kt`
+**文件**：`BillingPurchaseManager.kt`#### 4.1 更新 launchBillingFlowInternal()（第 401-500 行）
 
-#### 4.1 Update launchBillingFlowInternal() (Lines 401-500)
-
-**Old Product Query** (Lines 403-407):
-
-```kotlin
+**旧的 Product 查询**（第 403-407 行）：```kotlin
 val params = SkuDetailsParams.newBuilder()
     .setSkusList(listOf(productId))
     .setType(BillingClient.SkuType.SUBS)  // ❌ Deprecated
     .build()
 
 billingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
-```
-
-**New Product Query**:
-
-```kotlin
+```**新Pr产品查询**：```kotlin
 val product = QueryProductDetailsParams.Product.newBuilder()
     .setProductId(productId)
     .setProductType(BillingClient.ProductType.SUBS)  // ✓ New
@@ -263,22 +203,14 @@ val params = QueryProductDetailsParams.newBuilder()
     .build()
 
 billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
-```
+```#### 4.2 更新 BillingFlowParams 构造（第 434-435 行）
 
-#### 4.2 Update BillingFlowParams Construction (Lines 434-435)
-
-**Old Flow Params**:
-
-```kotlin
+**旧流量参数**：```kotlin
 // ❌ Line 434-435
 val billingFlowParams = BillingFlowParams.newBuilder()
     .setSkuDetails(skuDetails)
     .build()
-```
-
-**New Flow Params**:
-
-```kotlin
+```**新流量参数**：```kotlin
 // ✓ New way - must specify offer token
 val productDetails = productDetailsList.first()
 val offerToken = productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: ""
@@ -291,27 +223,19 @@ val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
 val billingFlowParams = BillingFlowParams.newBuilder()
     .setProductDetailsParamsList(listOf(productDetailsParams))
     .build()
-```
+```**重要**：订阅现在需要提供令牌。丢失代币将导致购买失败。
 
-**Critical**: Offer token is now required for subscriptions. Missing token will cause purchase failure.
+**风险**：高 - 对购买流程至关重要
 
-**Risk**: High - Critical for purchase flow
+#### 4.3 更新日志记录（第 417-431 行）
 
-#### 4.3 Update Logging (Lines 417-431)
-
-**Old Property Access**:
-
-```kotlin
+**旧 Property 访问权限**：```kotlin
 skuDetails.sku          // ❌ Changed
 skuDetails.title        // ✓ Still works
 skuDetails.description  // ✓ Still works
 skuDetails.price        // ❌ Changed
 skuDetails.priceCurrencyCode  // ❌ Changed
-```
-
-**New Property Access**:
-
-```kotlin
+```**新的 Property 访问权限**：```kotlin
 productDetails.productId  // ✓ New
 productDetails.title
 productDetails.description
@@ -320,40 +244,28 @@ val pricingPhase = productDetails.subscriptionOfferDetails
     ?.firstOrNull()?.pricingPhases?.pricingPhaseList?.firstOrNull()
 val price = pricingPhase?.formattedPrice
 val currencyCode = pricingPhase?.priceCurrencyCode
-```
+```---
 
----
+### 第 5 步：更新事件模型（30 分钟）
 
-### Step 5: Update Event Models (30 min)
+**文件**：`BillingModels.kt`（32号线）
 
-**File**: `BillingModels.kt` (Line 32)
-
-**Current**:
-
-```kotlin
+**当前的**：```kotlin
 data class SkuDetailsQueryFailed(val code: Int, val message: String) : BillingEvent()
-```
-
-**Suggested Rename**:
-
-```kotlin
+```**建议重命名**：```kotlin
 data class ProductDetailsQueryFailed(val code: Int, val message: String) : BillingEvent()
-```
+```**影响**：需要更新以下位置的所有引用：
 
-**Impact**: Need to update all references in:
+-`BillingPriceManager.kt`（73、86、103、112、117 号线）
+- 任何监听此事件的 UI 代码
 
-- `BillingPriceManager.kt` (Lines 73, 86, 103, 112, 117)
-- Any UI code listening to this event
-
-**Risk**: Low - Simple rename, but requires updating multiple call sites
+**风险**：低 - 简单重命名，但需要更新多个调用站点
 
 ---
 
-### Step 6: Add Null Safety Handling (1 hour)
+### 步骤 6：添加 Null 安全处理（1 小时）
 
-The new ProductDetails API has more nullable fields. Add robust null checking:
-
-```kotlin
+新的 ProductDetails API 有更多可为空的字段。添加强大的空检查：```kotlin
 // Helper extension function to add
 fun ProductDetails.getFirstOfferToken(): String? {
     return this.subscriptionOfferDetails?.firstOrNull()?.offerToken
@@ -374,154 +286,144 @@ fun ProductDetails.getBasePlanPrice(): Triple<String, String, Long>? {
         )
     }
 }
-```
-
-**Risk**: Medium - Missing null checks could cause crashes
+```**风险**：中 - 缺少空检查可能会导致崩溃
 
 ---
 
-### Step 7: Testing Strategy (3-4 hours)
+### 第 7 步：测试策略（3-4 小时）
 
-#### 7.1 Unit Testing
+#### 7.1 单元测试
 
-- [ ] Test product details query with valid product IDs
-- [ ] Test product details query with invalid product IDs
-- [ ] Test price extraction from ProductDetails
-- [ ] Test offer token extraction
-- [ ] Test null handling for missing offers
+- [ ] 使用有效的 product ID 测试 product 详细信息查询
+- [ ] 使用无效的 product ID 测试 product 详细信息查询
+- [ ] 测试从 ProductDetails 中提取 price
+- [ ] 测试报价令牌提取
+- [ ] 测试缺失报价的空处理
 
-#### 7.2 Integration Testing
+#### 7.2 集成测试
 
-- [ ] Connect to Google Play Billing in debug build
-- [ ] Verify prices display correctly in VIP Center
-- [ ] Test complete purchase flow with test subscription
-- [ ] Verify purchase acknowledgment works
-- [ ] Test backend verification still functions
-- [ ] Test error handling (network errors, service unavailable)
+- [ ] 在调试版本中连接到 Google Play Billing
+- [ ] 验证 prices 在 VIP 中心正确显示
+- [ ] 通过测试订阅测试完整的购买流程
+- [ ] 验证购买确认有效- [ ] 测试后端验证是否仍然有效
+- [ ] 测试错误处理（网络错误、服务不可用）
 
-#### 7.3 Edge Cases
+#### 7.3 边缘情况
 
-- [ ] Multiple subscription offers (promotional prices)
-- [ ] Free trial offers
-- [ ] No available offers
-- [ ] Billing client disconnection during query
-- [ ] App backgrounding during purchase
+- [ ] 多项订阅优惠 (promotional prices)
+- [ ] 免费试用优惠
+- [ ] 没有可用的优惠
+- [ ] 计费客户端查询期间断开连接
+- [ ] 购买时的应用程序后台
 
-#### 7.4 Regression Testing
+#### 7.4 回归测试
 
-- [ ] Verify existing purchases still recognized
-- [ ] Check subscription status updates correctly
-- [ ] Ensure local cache/storage still works
-- [ ] Test auto-renewal status tracking
+- [ ] 验证现有购买是否仍可识别
+- [ ] 正确检查订阅状态更新
+- [ ] 确保本地缓存/存储仍然有效
+- [ ] 测试自动续订状态跟踪
 
 ---
 
-## Files Requiring Changes
+## 需要更改的文件
 
-| File | Lines Changed | Complexity | Priority |
+|文件 |线路变更 |复杂性 | Pr优先级||------|--------------|------------|----------|
 
-|------|--------------|------------|----------|
-
-| `libs.versions.toml` | 1 | Low | P0 |
+|`libs.versions.toml` | 1 | Low | P0 |
 
 | `BillingRepository.kt` | 5 | Low | P0 |
 
-| `BillingPriceManager.kt` | ~80 | High | P0 |
+| `BillingPriceManager.kt`| 〜80 |高| P0|
 
-| `BillingPurchaseManager.kt` | ~60 | High | P0 |
+|`BillingPurchaseManager.kt`| 〜60 |高| P0|
 
-| `BillingModels.kt` | ~5 | Low | P1 |
+|`BillingModels.kt` | ~5 | Low | P1 |
 
-| `BillingRemoteManager.kt` | 2 | Low | P1 |
+| `BillingRemoteManager.kt`| 2 |低| P1 |
 
-**Total**: ~153 lines changed across 6 files
-
----
-
-## Rollback Plan
-
-If critical issues arise post-migration:
-
-1. **Immediate**: Revert `billingKtx = "7.0.0"` in version catalog
-2. **Revert code changes**: Git revert migration commits
-3. **Emergency hotfix**: Release previous version from release branch
-4. **Timeline**: Can rollback within 1 hour if caught early
+**总计**：6 个文件中更改了约 153 行
 
 ---
 
-## Migration Checklist
+## 回滚计划
 
-### Pre-Migration
+如果迁移后出现严重问题：
 
-- [ ] Create feature branch `billing-8.0-migration`
-- [ ] Back up current working code
-- [ ] Review Google's official migration guide
-- [ ] Set up test Google Play Console products
-
-### During Migration
-
-- [ ] Update Gradle dependency
-- [ ] Update BillingRepository initialization
-- [ ] Refactor BillingPriceManager
-- [ ] Refactor BillingPurchaseManager
-- [ ] Update BillingModels
-- [ ] Add null safety extensions
-- [ ] Update all import statements
-
-### Post-Migration
-
-- [ ] Run unit tests
-- [ ] Test on debug build with real billing
-- [ ] Test complete purchase flow
-- [ ] Verify backend integration
-- [ ] Test on multiple devices/Android versions
-- [ ] Check logs for any warnings
-- [ ] Performance testing (no regressions)
-
-### Release Preparation
-
-- [ ] Update CHANGELOG.md
-- [ ] Document any new error codes
-- [ ] Prepare rollback instructions
-- [ ] Stage release to internal testing track
-- [ ] Monitor crash reports closely
+1.**立即**：恢复`billingKtx = "7.0.0"`在版本目录中
+2. **恢复代码更改**：Git 恢复迁移提交
+3. **紧急修补程序**：从发布分支发布previous版本
+4.**时间线**：如果提早发现，可以在 1 小时内回滚
 
 ---
 
-## Key Success Criteria
+## 迁移清单
 
-1. ✓ All compilation errors resolved
-2. ✓ Prices display correctly in UI
-3. ✓ Purchase flow completes successfully
-4. ✓ Backend verification unchanged
-5. ✓ No new crashes in billing code
-6. ✓ Existing subscriptions still work
-7. ✓ Test purchases work in debug builds
+### Pre-迁移
+
+- [ ] 创建功能分支`billing-8.0-migration`- [ ] 备份当前工作代码
+- [ ] 查看 Google 官方迁移指南
+- [ ] 设置测试 Google Play 管理中心 products
+
+### 迁移期间
+
+- [ ] 更新 Gradle 依赖
+- [ ] 更新 BillingRepository 初始化
+- [ ] 重构计费PriceManager
+- [ ] 重构 BillingPurchaseManager
+- [ ] 更新 BillingModels
+- [ ] 添加空安全扩展
+- [ ] 更新所有导入语句
+
+### 迁移后
+
+- [ ] 运行单元测试
+- [ ] 使用真实计费进行调试构建测试
+- [ ] 测试完整的购买流程
+- [ ] 验证后端集成
+- [ ] 在多个设备/Android版本上测试
+- [ ] 检查日志中是否有任何警告- [ ] 性能测试（无回归）
+
+### 释放Preparation
+
+- [ ] 更新 CHANGELOG.md
+- [ ] 记录任何新的错误代码
+- [ ] Prepare回滚指令
+- [ ] 阶段发布至内部测试轨道
+- [ ] 密切监视崩溃报告
 
 ---
 
-## Estimated Timeline
+## 关键成功标准
 
-| Phase | Duration | Can Parallelize |
-
-|-------|----------|----------------|
-
-| Code changes | 5-6 hours | No |
-
-| Testing | 3-4 hours | Partially |
-
-| Bug fixes | 1-2 hours | No |
-
-| **Total** | **9-12 hours** | - |
-
-**Recommendation**: Allocate 2 full working days for this migration to account for unexpected issues.
+1. ✓ 所有编译错误均已解决
+2. ✓ Prices 在 UI 中正确显示
+3. ✓ 购买流程成功完成
+4. ✓ 后端验证不变
+5. ✓ 计费代码中没有新的崩溃
+6. ✓ 现有订阅仍然有效
+7. ✓ 测试购买在调试版本中工作
 
 ---
 
-## Additional Notes
+## 预计时间表
 
-- **Compatibility**: Billing Library 8.0.0 requires Android Gradle Plugin 7.0+
-- **Minimum SDK**: No change (still supports Android 4.4+)
-- **Breaking Change**: This is a major API redesign, not just a simple upgrade
-- **Google Recommendation**: All apps should migrate by Q2 2025
-- **Alternative**: Stay on 7.0.0 which is still supported but deprecated
+|相|持续时间 |可以并行化|
+
+|--------|----------|----------------||代码更改 | 5-6 小时 |没有 |
+
+|测试| 3-4小时|部分|
+
+|错误修复 | 1-2小时|没有 |
+
+| **总计** | **9-12 小时** | - |
+
+**建议**：为此迁移分配 2 个完整工作日，以解决意外问题。
+
+---
+
+## 附加说明
+
+- **兼容性**：计费库 8.0.0 需要 Android Gradle 插件 7.0+
+- **最低 SDK**：无变化（仍然支持 Android 4.4+）
+- **重大变更**：这是一个重大的 API 重新设计，而不仅仅是简单的升级
+- **Google 建议**：所有应用程序应在 2025 年第二季度之前迁移- **替代**：继续使用 7.0。0 仍然受支持，但 deprecated

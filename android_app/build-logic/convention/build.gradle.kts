@@ -8,8 +8,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins { `kotlin-dsl` }
 
 group = "com.ai.buildlogic"
-
-// 作用于build-logic，与项目构建的配置无关
+// 作用于构建逻辑，与项目构建的配置相关
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
@@ -28,10 +27,10 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        // register中 name和id都不能重复
+// 注册中文名称和id都不能重复
         register("androidApplication") {
             id = libs.plugins.ai.android.application.asProvider().get().pluginId
-            // 注意⚠️，这里要使用实现类的全名，便于找到，如果直接在src/main/kotlin下，不属于其他package，则可以直接使用类名
+// 注意⚠️，这里要使用实现类的全名，否则找到，如果直接在src/main/kotlin下，不属于其他包，则可以直接使用类名
             implementationClass = "com.ai.plugins.convention.AndroidApplicationPlugin"
         }
         register("androidApplicationCompose") {

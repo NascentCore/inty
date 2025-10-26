@@ -8,14 +8,13 @@ from typing import List, Optional
 import yaml
 from loguru import logger
 from pydantic import AnyHttpUrl
-
-# All config classes' fields should have default values.
-# These default value allow this to be used without an actual config file.
-# Since config object is used as a global singleton, most code depends on it,
-# but does not actually use the config values, so a default value is OK.
+#所有配置类的字段都应该有默认值。
+# 这些默认值允许在没有实际配置文件的情况下使用它。
+# 由于配置对象被全局使用，因此大多数代码都依赖于它，
+#但实际上并没有使用配置值，因此默认值就可以了。
 #
-# All default values should be assumed to be used in production environment.
-# config.yaml.example is a sample for development environment.
+#所有默认值均应在 prduction 环境中使用。
+# 配置。yaml。example 是开发环境的示例。
 
 GEMINI_2_5_FLASH = "google/gemini-2.5-flash"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
@@ -47,8 +46,8 @@ class LoggingConfig:
 
 @dataclass
 class SecurityConfig:
-    # This config cannot be changed after it's deployed, otherwise the existing tokens will be invalid.
-    # This is because the token is encrypted using this secret key.
+#配置配置后不能更改，否则现有的令牌将失效。
+#这是因为令牌是使用此密钥加密的。
     secret_key: str = "your-secret-key-here"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
@@ -98,11 +97,11 @@ class APIEndpointsConfig:
 @dataclass
 class AppConfig:
     name: str = "inty-backend"
-    # The app tolerates more failures, and does more logging in the debug mode.
+#应用程序可以承受更多的失败，并在调试模式下进行更多的日志记录。
     debug: bool = False
-    # DEPRECATED: Do not use.
+# DEPRECATED：不要使用。
     debug_messages: bool = True
-    # DEPRECATED: Do not use.
+# DEPRECATED：不要使用。
     api_v1_prefix: str = API_V1_PREFIX
     backend_cors_origins: List[AnyHttpUrl] = None
     version: str = "1.1.0"
@@ -113,11 +112,11 @@ class AppConfig:
 
     @dataclass
     class LimitsConfig:
-        # Maximal image size in MB, for any uploaded images.
+#对于任何上传的图片，最大图片大小（以MB为单位）。
         max_image_size_mb: int = 4
-        # DEPRECATED: Use free_user_image_gen_24h_limit instead
+# DEPRECATED：使用 free_user_image_gen_24h_limit 代替
         free_user_image_gen_daily_limit: int = 4
-        # Only used for testing purpose to allow easier integration with test client.
+#仅用于测试目的，以便更轻松地与测试客户端集成。
         local_only_guest_user_image_gen_24h_limit: int = 0
         free_user_image_gen_24h_limit: int = 4
         subscribed_user_image_gen_24h_limit: int = 8
@@ -139,8 +138,8 @@ class AppConfig:
 
     @property
     def name_for_openrouter(self) -> str:
-        # https:// is required to make it recognized by open router.
-        # Normal string will be rejected by open router.
+# 需要 https:// 才能被开放路由器识别。
+# 普通字符串将被开放路由器拒绝。
         return f"https://{self.name}-{self.environment.value}"
 
 
@@ -163,7 +162,7 @@ class AgentConfig:
     top_k: int = 50
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
-    # DEPRECATED: Do not use.
+# DEPRECATED：不要使用。
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
     vertex_image_model: str = "imagen-4.0-fast-generate-001"
     force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词
@@ -172,8 +171,8 @@ class AgentConfig:
 @dataclass
 class GCSConfig:
     bucket: str
-    # DEPRECATED: 保留作为兼容；被 app.gcp_service_account_key 取代
-    # 删除部署环境中的配置文件使用，然后删除这个代码。
+# DEPRECATED: 保留作为兼容；被应用程序。gcp_service_account_key 取代
+# 删除配置环境中的配置文件使用，然后删除该代码。
     credentials: str = "<deprecated-do-not-use>"
 
 
@@ -185,22 +184,21 @@ class FirebaseConfig:
 @dataclass
 class GooglePlayConfig:
     """Google Play配置"""
-
-    # DEPRECATED: 保留作为兼容；被 app.gcp_service_account_key 取代
-    # 删除部署环境中的配置文件使用，然后删除这个代码。
+# DEPRECATED: 保留作为兼容；被应用程序。gcp_service_account_key 取代
+# 删除配置环境中的配置文件使用，然后删除该代码。
     service_account_key: str = "inty-backend-key.json"
     package_name: str = "com.ai.intellimate"
     webhook_secret: Optional[str] = None  # Webhook密钥（可选）
-    # 版本检查相关配置
+# 版本检查相关配置
     enable_version_check: bool = True  # 是否启用版本检查
     min_supported_version: int = 1  # 最低支持版本代码
-    # DEPRECATED: 未被使用过。
-    # 删除部署环境中的配置文件使用，然后删除这个代码。
+# DEPRECATED: 芭使用过。
+# 删除配置环境中的配置文件使用，然后删除该代码。
     release_track: str = "production"  # 发布轨道：internal/closed/open/production
-    # DEPRECATED: 未被使用过。
-    # 删除部署环境中的配置文件使用，然后删除这个代码。
+# DEPRECATED: 芭使用过。
+# 删除配置环境中的配置文件使用，然后删除该代码。
     fallback_tracks: List[str] = None  # 备用轨道列表
-    # 新增版本检查配置
+#添加版本检查配置
     max_minor_version_gap: int = 10  # Minor版本号最大差距，超过则强制更新
 
     def __post_init__(self):
@@ -256,13 +254,11 @@ def load_config(path: str) -> Config:
     print(f"[CONFIG] Loading config from: {config_path.absolute()}")
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
-
-    # Handle nested app config with limits
+# 处理有限制的唤醒应用程序配置
     app_data = data.get("app", {})
     if "limits" in app_data and isinstance(app_data["limits"], dict):
         app_data["limits"] = AppConfig.LimitsConfig(**app_data["limits"])
-
-    # Convert environment string to Environment enum if present
+# 将环境字符串转换为环境枚举 if present
     if "environment" in app_data and isinstance(app_data["environment"], str):
         app_data["environment"] = Environment(app_data["environment"])
 
@@ -297,11 +293,9 @@ def _validate_config(config: Config):
         raise ValueError("firebase.service_account_path is required")
     if not config.elevenlabs.api_key:
         raise ValueError("elevenlabs.api_key is required")
-
-    # 校验并自动修正 limits 配置
+# 验证并自动修改限制配置
     limits = config.app.limits
-
-    # 规则1: 游客语音生成次数应该等于聊天次数，否则以聊天次数为准
+#规则1:游客语音生成次数对应的聊天次数，否则与聊天次数相同
     if limits.guest_user_voice_24h_limit != limits.guest_user_chat_24h_limit:
         logger.warning(
             f"Config issue: guest_user_voice_24h_limit ({limits.guest_user_voice_24h_limit}) "
@@ -309,8 +303,7 @@ def _validate_config(config: Config):
             f"Auto-correcting to {limits.guest_user_chat_24h_limit}"
         )
         limits.guest_user_voice_24h_limit = limits.guest_user_chat_24h_limit
-
-    # 规则2: 登录用户语音生成次数应该等于聊天次数，否则以聊天次数为准
+#规则2:登录用户语音生成次数应等于聊天次数，否则以聊天次数为准
     if limits.free_user_voice_24h_limit != limits.free_user_chat_24h_limit:
         logger.warning(
             f"Config issue: free_user_voice_24h_limit ({limits.free_user_voice_24h_limit}) "
@@ -318,8 +311,7 @@ def _validate_config(config: Config):
             f"Auto-correcting to {limits.free_user_chat_24h_limit}"
         )
         limits.free_user_voice_24h_limit = limits.free_user_chat_24h_limit
-
-    # 规则3: 游客聊天次数应该 <= 登录用户，否则使用默认值
+# 规则3: 游客聊天次数应<=登录用户，否则使用默认值
     if limits.guest_user_chat_24h_limit > limits.free_user_chat_24h_limit:
         default_guest = 10
         default_free = 100
@@ -330,7 +322,7 @@ def _validate_config(config: Config):
         )
         limits.guest_user_chat_24h_limit = default_guest
         limits.free_user_chat_24h_limit = default_free
-        # 同步修正语音限制
+# 同步修改语音限制
         limits.guest_user_voice_24h_limit = default_guest
         limits.free_user_voice_24h_limit = default_free
 
@@ -346,9 +338,7 @@ def _validate_config(config: Config):
 global_config_loaded_from_config_yaml = load_config("config.yaml")
 print(f"[CONFIG] Database URL: {global_config_loaded_from_config_yaml.database.url}")
 _validate_config(global_config_loaded_from_config_yaml)
-
-
-# 设置 LangSmith 环境变量用于支持 tracing，因为其只支持从环境变量读取设置，而非依赖注入。
+#设置LangSmith环境变量用于支持溯源，因为其只支持从环境变量读取设置，而不是依赖注入。
 os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGSMITH_PROJECT"] = (
     f"{global_config_loaded_from_config_yaml.app.name}-{global_config_loaded_from_config_yaml.app.environment.value}"

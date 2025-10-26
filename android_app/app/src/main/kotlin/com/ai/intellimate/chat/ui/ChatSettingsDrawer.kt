@@ -51,7 +51,7 @@ import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.ui.components.MySettingItem
 import com.ai.intellimate.chat.ChatViewModel
 
-/** 聊天设置抽屉组件 */
+/** 聊天设置组件 */
 @Composable
 fun ChatSettingsDrawer(
     chatViewModel: ChatViewModel,
@@ -61,22 +61,20 @@ fun ChatSettingsDrawer(
 ) {
     val context = LocalContext.current
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
-
-    // Keep talking二状态设置：默认跟随全局设置
+//继续说二状态设置：默认关注全局设置
     var agentKeepTalking by
     remember(agentInfo?.id) {
         mutableStateOf(
             agentInfo?.let {
-                // 获取角色专用设置，如果不存在则使用全局设置
+// 获取角色专用设置，如果不存在则使用全局设置
                 IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
             } ?: false
         )
     }
 
     val horizontalPadding = 16
-
-    // 在组件初始化时立即更新用户信息,未添加这部分触发更新userInfo的时候，会因为在chatViewModel中虽然更新了userProfile
-    //但是userProfileState并没有正确触发数据流的更新，引起UI层数据不能正确显示真实数据的问题。
+// 在组件初始化时立即更新用户信息，未添加这部分触发更新userInfo的时候，会因为在chatViewModel中同时更新了userProfile
+//但是userProfileState并没有正确触发数据流的更新，导致UI层数据无法正确显示真实数据的问题。
     LaunchedEffect(chatViewModel) {
         chatViewModel.updateUserInfo()
     }
@@ -87,17 +85,14 @@ fun ChatSettingsDrawer(
         chatViewModel.updateUserInfo()
         onPauseOrDispose {}
     }
-
-    // 本地编辑状态（与 MySettingActivity 一致）
+// 本地编辑状态（与 MySettingActivity 一致）
     var editKey by rememberSaveable { mutableStateOf(EditKey.None) }
     var editValue by rememberSaveable { mutableStateOf("") }
-
-    // 复用 MySettingViewModel 的保存逻辑
+// 复用 MySettingViewModel 的保存逻辑
     val mySettingViewModel: MySettingViewModel = viewModel()
 
     LaunchedEffect(userProfileState) { mySettingViewModel.init(userProfileState) }
-
-    // 移除TheRouter拦截器，使用其他方式处理用户信息更新
+// 删除路由器拦截器，使用其他方式处理用户信息更新
 
     MyModalNavigationDrawer(
         modifier = Modifier,
@@ -150,12 +145,12 @@ fun ChatSettingsDrawer(
                         value = userProfileState.nickname.ifEmpty { "Guest" },
                         horizontalPadding = horizontalPadding,
                         onClick = {
-                            // 检查是否正式登录（非游客且已登录）
+// 查询是否正式登录（非游客且已登录）
                             if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                                 editKey = EditKey.Name
                                 editValue = userProfileState.nickname
                             } else {
-                                // 未登录或游客时跳转到登录页面
+// 未登录或游客时跳转到登录页面
                                 LoginActivity.launch(context)
                             }
                         },
@@ -165,12 +160,12 @@ fun ChatSettingsDrawer(
                         value = userProfileState.pronouns(),
                         horizontalPadding = horizontalPadding,
                         onClick = {
-                            // 检查是否正式登录（非游客且已登录）
+// 查询是否正式登录（非游客且已登录）
                             if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                                 editKey = EditKey.Pronouns
                                 editValue = userProfileState.gender ?: ""
                             } else {
-                                // 未登录或游客时跳转到登录页面
+// 未登录或游客时跳转到登录页面
                                 LoginActivity.launch(context)
                             }
                         },
@@ -180,12 +175,12 @@ fun ChatSettingsDrawer(
                         value = userProfileState.description ?: "Edit",
                         horizontalPadding = horizontalPadding,
                         onClick = {
-                            // 检查是否正式登录（非游客且已登录）
+// 查询是否正式登录（非游客且已登录）
                             if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                                 editKey = EditKey.Persona
                                 editValue = userProfileState.description ?: ""
                             } else {
-                                // 未登录或游客时跳转到登录页面
+// 未登录或游客时跳转到登录页面
                                 LoginActivity.launch(context)
                             }
                         },
@@ -225,8 +220,7 @@ fun ChatSettingsDrawer(
                             .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
                 ) {
                     agentInfo?.let { agent ->
-
-                        // 举报入口
+// 报告入口
                         Row(
                             modifier =
                                 Modifier
@@ -234,11 +228,11 @@ fun ChatSettingsDrawer(
                                     .height(56.dp)
                                     .padding(horizontal = horizontalPadding.dp)
                                     .noRippleClickable {
-                                        // 检查是否正式登录（非游客且已登录）
+// 查询是否正式登录（非游客且已登录）
                                         if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                                             ReportActivity.launch(context, agent.id, "AGENT")
                                         } else {
-                                            // 未登录或游客时跳转到登录页面
+// 未登录或游客时跳转到登录页面
                                             LoginActivity.launch(context)
                                         }
                                     },
@@ -261,8 +255,8 @@ fun ChatSettingsDrawer(
             }
         },
     ) {
-        // 应该放主屏内容的位置
-        // 编辑弹窗（与 MySettingActivity 同样的 UI 交互）
+// 应该放主屏内容的位置
+// 编辑弹窗（与MySettingActivity相同的UI交互）
         if (editKey != EditKey.None) {
             Dialog(
                 onDismissRequest = { editKey = EditKey.None },
@@ -275,7 +269,7 @@ fun ChatSettingsDrawer(
                     onSave = { key, value ->
                         mySettingViewModel.changeUserProfile(key, value)
                         editKey = EditKey.None
-                        // 直接保存并刷新本地展示
+// 直接保存并刷新本地展示
                         mySettingViewModel.onSave()
                         chatViewModel.updateUserInfo()
                     },

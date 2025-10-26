@@ -15,7 +15,7 @@ import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-/** 扩展一些Project相关的函数定义，便于统一封装gradle的相关android配置 */
+/** 扩展一些Project相关的函数定义，统一封装gradle的相关android配置 */
 
 /** 配置一下kotlin编译Android的基本模块参数 */
 internal fun Project.configureKotlinAndroid(commonExtension: CommonExtension<*, *, *, *, *, *>) {
@@ -25,8 +25,8 @@ internal fun Project.configureKotlinAndroid(commonExtension: CommonExtension<*, 
         defaultConfig { minSdk = ProjectConfig.minSdkVersion }
 
         compileOptions {
-            // Up to Java 11 APIs are available through desugaring
-            // https://developer.android.com/studio/write/java11-minimal-support-table
+// 通过脱糖最多可使用 Java 11 API
+// https://developer.android.com/studio/write/java11-minimal-support-table
             sourceCompatibility = JavaVersion.VERSION_21
             targetCompatibility = JavaVersion.VERSION_21
             isCoreLibraryDesugaringEnabled = true
@@ -54,9 +54,9 @@ internal fun Project.configureKotlinAndroid(commonExtension: CommonExtension<*, 
 /** 配置一下kotlin的非Android项目，jvm平台的基础配置 */
 internal fun Project.configureKotlinJvm() {
     extensions.configure<JavaPluginExtension> {
-        // 通过使用desugar库，可以在高版本的jdk上编译，适配低版本jdk运行
-        // Up to Java 11 APIs are available through desugaring
-        // https://developer.android.com/studio/write/java11-minimal-support-table
+// 通过使用desugar库，可以在高版本的jdk上编译，支持低版本jdk运行
+// 通过脱糖最多可使用 Java 11 API
+// https://developer.android.com/studio/write/java11-minimal-support-table
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
@@ -76,20 +76,20 @@ internal fun Project.configureKotlinJvm() {
     }
 }
 
-/** Configure base Kotlin options 这里配置的jvmTarget只是作用域plugin的生成编译环境，而不会干涉使用plugin的项目配置的jvm编译版本 */
+/** 选项配置基本 Kotlin 这里配置的jvmTarget只是作用域插件的生成编译环境，而不会干扰使用插件的项目配置的jvm编译版本 */
 private fun Project.configureKotlin() {
-    // Use withType to workaround https://youtrack.jetbrains.com/issue/KT-55947
+// 使用 withType 解决方法 https://youtrack.jetbrains.com/issue/KT-55947
     tasks.withType<KotlinCompile>().configureEach {
         compilerOptions {
             jvmTarget.assign(JvmTarget.JVM_21)
-            // Treat all Kotlin warnings as errors (disabled by default)
-            // Override by setting warningsAsErrors=true in your ~/.gradle/gradle.properties
+// 将所有 Kotlin 警告视为错误（默认禁用）
+// 通过在 ~/.gradle/gradle 中设置 warningsAsErrors=true 进行覆盖。pr操作
             val warningsAsErrors: String? by project
             allWarningsAsErrors = warningsAsErrors.toBoolean()
             freeCompilerArgs.assign(
                 listOf(
                     "-opt-in=kotlin.RequiresOptIn",
-                    // Enable experimental coroutines APIs, including Flow
+// 实现实验工程良好APIs，包括Flow
                     "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
                     "-opt-in=kotlinx.coroutines.FlowPreview",
                 )
@@ -99,14 +99,13 @@ private fun Project.configureKotlin() {
 }
 
 /**
- * 用于优化编译，禁用一些不必要的test的构建 Disable unnecessary Android instrumented tests for the [project] if there
- * is no `androidTest` folder. Otherwise, these projects would be compiled, packaged, installed and
- * ran only to end-up with the following message:
- * > Starting 0 tests on AVD
+ *对于优化编译，禁止一些不必要的测试的构建禁止不必要的Android仪器测试[project]如果有
+ * 没有 `androidTest` 文件夹。否则，这些 projects 将被编译、压缩、安装并
+ * 只运行到最后显示以下消息：
+ * > 在 AVD 上开始 0 次测试
  *
- * Note: this could be improved by checking other potential sourceSets based on buildTypes and
- * flavors.
- */
+ *注意：这可能是 improved 通过基于 buildTypes 的其他潜在来源集并进行检查
+ *口味。*/
 internal fun LibraryAndroidComponentsExtension.disableUnnecessaryAndroidTests(project: Project) =
     beforeVariants {
         it.androidTest.enable =

@@ -96,8 +96,7 @@ async def get_current_active_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
-
-    # 检查用户是否已被删除
+#查询用户是否已被删除
     if current_user.deleted_at:
         logger.error(
             f"用户已被删除: {current_user.id}, 删除时间: {current_user.deleted_at}"

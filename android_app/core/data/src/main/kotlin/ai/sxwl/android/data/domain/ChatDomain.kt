@@ -26,7 +26,7 @@ interface ChatRepository {
     fun getHasMoreFlow(agentId: String): StateFlow<Boolean>
 
     /**
-     * 确保初始历史数据已加载
+     *确定最终历史数据已加载
      */
     suspend fun ensureInitialHistory(agentId: String, pageSize: Int = 20)
 
@@ -51,7 +51,7 @@ interface ChatRepository {
     fun updateMessageAudioUrl(agentId: String, messageId: String, audioUrl: String)
 
     /**
-     * 清理指定agent的聊天数据
+     * 清理指定代理的聊天数据
      */
     fun clearChatData(agentId: String)
 

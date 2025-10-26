@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 Google Play Service Account Verification Script
 
@@ -17,8 +17,7 @@ import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
-
-# Add the project root to the Python path
+# 将 project 根目录添加到 Python 路径中
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from google.oauth2 import service_account
@@ -26,24 +25,20 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from app.core.config import global_config_loaded_from_config_yaml
-
-# Set up logging
+#记录日志
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-# Test purchase token from the error logs
+# 从错误日志中测试购买令牌
 TEST_PURCHASE_TOKEN = "ccdjlaolioidnhfbjgknfdip.AO-J1OzF2In1NkiyhGz_uPjYqjxHUa0_jQknEb8e-b__DfSspV8xSVl5v78pkREr_Ivebve4oJ3BSDyzZlMrZLuFcPfswHQIAA"
-
-# Common subscription product IDs to test
+#共同订阅pr产品ID进行测试
 TEST_SUBSCRIPTION_PRODUCT_IDS = [
     "com.ai.inty.premium.monthly",
     "com.ai.inty.premium.yearly",
     "com.ai.inty.premium.quarterly",
 ]
-
-# Common in-app product IDs to test
+# 用于测试的常见应用内 product ID
 TEST_INAPP_PRODUCT_IDS = [
     "com.ai.inty.coins.100",
     "com.ai.inty.coins.500",
@@ -79,31 +74,25 @@ class GooglePlayVerifier:
         print("=" * 60)
 
         try:
-            # Step 1: Validate configuration
+# 第1步：验证配置
             print("\n1. 📋 Validating Configuration...")
             self._validate_configuration()
-
-            # Step 2: Test authentication
+# 第2步：测试身份验证
             print("\n2. 🔑 Testing Authentication...")
             self._test_authentication()
-
-            # Step 3: Test permissions
+# 第三步：测试权限
             print("\n3. 🛡️  Testing Permissions...")
             self._test_permissions()
-
-            # Step 4: Test subscription operations
+#第四步：测试订阅操作
             print("\n4. 📦 Testing Subscription Operations...")
             self._test_subscription_operations()
-
-            # Step 5: Test in-app product operations
+#步骤5：测试应用内pr产品操作
             print("\n5. 🛒 Testing In-App Product Operations...")
             self._test_inapp_product_operations()
-
-            # Step 6: Retrieve product catalog
+#步骤6：搜索pr产品目录
             print("\n6. 📋 Retrieving Product Catalog...")
             self._retrieve_product_catalog()
-
-            # Step 7: Generate diagnostics
+# 第7步：生成诊断信息
             print("\n7. 🔬 Generating Diagnostics...")
             self._generate_diagnostics()
 
@@ -111,8 +100,7 @@ class GooglePlayVerifier:
             logger.error(f"Verification failed: {str(e)}")
             self.results["error"] = str(e)
             self.results["traceback"] = traceback.format_exc()
-
-        # Print final report
+# Print 最终报告
         self._print_final_report()
 
         return self.results
@@ -120,16 +108,14 @@ class GooglePlayVerifier:
     def _validate_configuration(self) -> None:
         """Validate the configuration settings"""
         config_result = self.results["config_validation"]
-
-        # Check if Google Play configuration exists
+# 检查Google Play配置是否存在
         if not hasattr(global_config_loaded_from_config_yaml, "google_play"):
             config_result["google_play_config"] = {
                 "status": "❌ FAILED",
                 "error": "Google Play configuration not found in settings",
             }
             return
-
-        # Check package name
+#查看包名
         self.package_name = (
             global_config_loaded_from_config_yaml.google_play.package_name
         )
@@ -144,8 +130,7 @@ class GooglePlayVerifier:
                 "value": self.package_name,
             }
             print(f"   📱 Package Name: {self.package_name}")
-
-        # Check service account key
+#查看服务账户密钥
         service_account_key = (
             global_config_loaded_from_config_yaml.app.gcp_service_account_key
         )
@@ -155,8 +140,7 @@ class GooglePlayVerifier:
                 "error": "Service account key not configured",
             }
             return
-
-        # Check if it's a file path or JSON string
+#检查是否是文件路径或JSON字符串
         if service_account_key.endswith(".json"):
             self.service_account_key_path = service_account_key
             key_path = Path(service_account_key)
@@ -174,8 +158,7 @@ class GooglePlayVerifier:
                     "error": f"Service account key path is not a file: {service_account_key}",
                 }
                 return
-
-            # Try to read and parse the JSON file
+# 尝试读取并解析 JSON 文件
             try:
                 with open(key_path, "r") as f:
                     service_account_info = json.load(f)
@@ -204,7 +187,7 @@ class GooglePlayVerifier:
                 }
                 return
         else:
-            # It's a JSON string
+# 这是一个 JSON 字符串
             try:
                 service_account_info = json.loads(service_account_key)
                 config_result["service_account_key"] = {
@@ -236,21 +219,20 @@ class GooglePlayVerifier:
             return
 
         try:
-            # Get service account credentials
+# 获取服务账户
             service_account_key = (
                 global_config_loaded_from_config_yaml.app.gcp_service_account_key
             )
 
             if service_account_key.endswith(".json"):
-                # File path
+#文件路径
                 key_path = Path(service_account_key)
                 with open(key_path, "r") as f:
                     service_account_info = json.load(f)
             else:
-                # JSON string
+# JSON 字符串
                 service_account_info = json.loads(service_account_key)
-
-            # Create credentials
+#创建预算
             credentials = service_account.Credentials.from_service_account_info(
                 service_account_info,
                 scopes=["https://www.googleapis.com/auth/androidpublisher"],
@@ -261,8 +243,7 @@ class GooglePlayVerifier:
                 "scopes": ["https://www.googleapis.com/auth/androidpublisher"],
             }
             print(f"   🔐 Credentials created successfully")
-
-            # Build the service
+# 构建服务
             self.service = build("androidpublisher", "v3", credentials=credentials)
 
             auth_result["service"] = {"status": "✅ PASSED", "version": "v3"}
@@ -286,8 +267,7 @@ class GooglePlayVerifier:
                 "error": "Google Play service not initialized",
             }
             return
-
-        # Test different permission levels
+# 测试不同的权限级别
         self._test_basic_api_access()
         self._test_subscription_permissions()
         self._test_purchase_permissions()
@@ -295,8 +275,8 @@ class GooglePlayVerifier:
     def _test_basic_api_access(self) -> None:
         """Test basic API access"""
         try:
-            # Try to access the API with a simple call
-            # This will fail if there are basic permission issues
+# 尝试通过简单的调用来访问 API
+# 如果存在基本权限问题，这将会失败
             _ = self.service.purchases()
 
             self.results["permissions"]["basic_api_access"] = {
@@ -315,7 +295,7 @@ class GooglePlayVerifier:
     def _test_subscription_permissions(self) -> None:
         """Test subscription-specific permissions"""
         try:
-            # Test subscription API access
+# 测试订阅 API 访问权限
             _ = self.service.purchases().subscriptions()
 
             self.results["permissions"]["subscription_api"] = {
@@ -334,7 +314,7 @@ class GooglePlayVerifier:
     def _test_purchase_permissions(self) -> None:
         """Test purchase-specific permissions"""
         try:
-            # Test purchase API access
+# 购买测试 API 访问权限
             _ = self.service.purchases().products()
 
             self.results["permissions"]["purchase_api"] = {
@@ -360,11 +340,9 @@ class GooglePlayVerifier:
                 "error": "Google Play service not initialized",
             }
             return
-
-        # Test with the actual purchase token from the error logs
+# 使用错误日志中的实际购买令牌进行测试
         print(f"   🧪 Testing with purchase token: {TEST_PURCHASE_TOKEN[:20]}...")
-
-        # Test different product IDs
+# 测试不同的pr产品ID
         for product_id in TEST_SUBSCRIPTION_PRODUCT_IDS:
             print(f"   📦 Testing product ID: {product_id}")
             self._test_single_subscription(product_id, TEST_PURCHASE_TOKEN)
@@ -372,7 +350,7 @@ class GooglePlayVerifier:
     def _test_single_subscription(self, product_id: str, purchase_token: str) -> None:
         """Test a single subscription"""
         try:
-            # Try to get subscription details
+# 尝试获取订阅详细信息
             result = (
                 self.service.purchases()
                 .subscriptions()
@@ -396,8 +374,7 @@ class GooglePlayVerifier:
                 },
             }
             print(f"      ✅ {product_id}: SUCCESS")
-
-            # Print subscription details
+# Print 订阅详情
             if result.get("startTimeMillis"):
                 start_time = datetime.fromtimestamp(
                     int(result.get("startTimeMillis")) / 1000, timezone.utc
@@ -422,8 +399,7 @@ class GooglePlayVerifier:
                 "error_content": e.content.decode() if e.content else None,
             }
             print(f"      ❌ {product_id}: FAILED - {error_details['message']}")
-
-            # Print additional error details
+# Print 其他错误详细信息
             if error_details.get("reason"):
                 print(f"         🔍 Reason: {error_details['reason']}")
             if error_details.get("domain"):
@@ -447,11 +423,9 @@ class GooglePlayVerifier:
                 "error": "Google Play service not initialized",
             }
             return
-
-        # Test with the actual purchase token from the error logs
+# 使用错误日志中的实际购买令牌进行测试
         print(f"   🧪 Testing with purchase token: {TEST_PURCHASE_TOKEN[:20]}...")
-
-        # Test different in-app product IDs
+# 测试不同的应用内pr产品ID
         for product_id in TEST_INAPP_PRODUCT_IDS:
             print(f"   🛒 Testing in-app product ID: {product_id}")
             self._test_single_inapp_product(product_id, TEST_PURCHASE_TOKEN)
@@ -459,7 +433,7 @@ class GooglePlayVerifier:
     def _test_single_inapp_product(self, product_id: str, purchase_token: str) -> None:
         """Test a single in-app product"""
         try:
-            # Try to get in-app product purchase details
+#尝试获取应用内pr产品购买详细信息
             result = (
                 self.service.purchases()
                 .products()
@@ -484,8 +458,7 @@ class GooglePlayVerifier:
                 },
             }
             print(f"      ✅ {product_id}: SUCCESS")
-
-            # Print purchase details
+# Print 购买详情
             if result.get("purchaseTimeMillis"):
                 purchase_time = datetime.fromtimestamp(
                     int(result.get("purchaseTimeMillis")) / 1000, timezone.utc
@@ -519,8 +492,7 @@ class GooglePlayVerifier:
                 "error_content": e.content.decode() if e.content else None,
             }
             print(f"      ❌ {product_id}: FAILED - {error_details['message']}")
-
-            # Print additional error details
+# Print 其他错误详细信息
             if error_details.get("reason"):
                 print(f"         🔍 Reason: {error_details['reason']}")
             if error_details.get("domain"):
@@ -544,19 +516,17 @@ class GooglePlayVerifier:
                 "error": "Google Play service not initialized",
             }
             return
-
-        # Retrieve subscription products
+#搜索订阅pr产品
         print("   📦 Retrieving Subscription Products...")
         self._get_subscription_products()
-
-        # Retrieve in-app products
+#搜索应用内pr产品
         print("   🛒 Retrieving In-App Products...")
         self._get_inapp_products()
 
     def _get_subscription_products(self) -> None:
         """Get subscription products from Google Play Console"""
         try:
-            # Get subscription products using the monetization API
+# 使用货币化 API 获取订阅 products
             result = (
                 self.service.monetization()
                 .subscriptions()
@@ -573,20 +543,17 @@ class GooglePlayVerifier:
             }
 
             print(f"      ✅ Found {len(subscriptions)} subscription products")
-
-            # Display subscription details
+#显示订阅详情
             for subscription in subscriptions:
                 product_id = subscription.get("productId", "Unknown")
                 print(f"         📦 {product_id}")
-
-                # Get base plan info
+# 获取基本计划信息
                 base_plans = subscription.get("basePlans", [])
                 for base_plan in base_plans:
                     base_plan_id = base_plan.get("basePlanId", "Unknown")
                     state = base_plan.get("state", "Unknown")
                     print(f"            📋 Base Plan: {base_plan_id} (State: {state})")
-
-                    # Get pricing info
+#获取pricing信息
                     regional_configs = base_plan.get("regionalConfigs", [])
                     for config in regional_configs:
                         region = config.get("regionCode", "Unknown")
@@ -596,14 +563,12 @@ class GooglePlayVerifier:
                         nanos = price.get("nanos", 0)
                         amount = float(units) + (nanos / 1_000_000_000)
                         print(f"               💰 {region}: {amount} {currency}")
-
-                        # Only show first few regions to avoid clutter
+#只显示前几个区域混乱
                         if len(regional_configs) > 3:
                             remaining = len(regional_configs) - 3
                             print(f"               ... and {remaining} more regions")
                             break
-
-                    # Get billing period
+#获取生命周期
                     auto_renewing_plan = base_plan.get("autoRenewingBasePlanType", {})
                     billing_period = auto_renewing_plan.get("billingPeriod", "Unknown")
                     if billing_period != "Unknown":
@@ -622,8 +587,7 @@ class GooglePlayVerifier:
             print(
                 f"      ❌ Failed to retrieve subscription products: {error_details['message']}"
             )
-
-            # Print additional error details
+# Print 其他错误详细信息
             if error_details.get("reason"):
                 print(f"         🔍 Reason: {error_details['reason']}")
             if error_details.get("domain"):
@@ -640,8 +604,8 @@ class GooglePlayVerifier:
     def _get_inapp_products(self) -> None:
         """Get in-app products from Google Play Console"""
         try:
-            # Get in-app products using the legacy inappproducts API
-            # Note: The monetization API doesn't have a products() method for in-app products
+# 使用旧版本 inappproducts API 获取应用内 products
+# 注意：盈利 API 没有针对应用内 products 的 products() 方法
             result = (
                 self.service.inappproducts()
                 .list(packageName=self.package_name)
@@ -657,35 +621,30 @@ class GooglePlayVerifier:
             }
 
             print(f"      ✅ Found {len(products)} in-app products")
-
-            # Display product details
+# 显示pr产品详细信息
             for product in products:
                 product_id = product.get("sku", "Unknown")
                 status = product.get("status", "Unknown")
                 print(f"         🛒 {product_id} (Status: {status})")
-
-                # Get pricing info
+#获取pricing信息
                 prices = product.get("prices", {})
                 for currency, price_info in prices.items():
                     price_amount = price_info.get("priceMicros", 0)
                     amount = price_amount / 1_000_000
                     print(f"            💰 {currency}: {amount}")
-
-                    # Only show first few currencies to avoid clutter
+# 只显示前几种货币悉尼混乱
                     if len(prices) > 3:
                         remaining = len(prices) - 3
                         print(f"            ... and {remaining} more currencies")
                         break
-
-                # Get purchase type
+# 获取购买类型
                 purchase_type = product.get("purchaseType", "Unknown")
                 if purchase_type != "Unknown":
                     print(f"            📋 Purchase Type: {purchase_type}")
-
-                # Get listings (localized info)
+# 获取列表（本地化信息）
                 listings = product.get("listings", {})
                 if listings:
-                    # Show first listing
+# 显示第一个列表
                     first_lang = list(listings.keys())[0] if listings else None
                     if first_lang:
                         listing = listings[first_lang]
@@ -705,8 +664,7 @@ class GooglePlayVerifier:
             print(
                 f"      ❌ Failed to retrieve in-app products: {error_details['message']}"
             )
-
-            # Print additional error details
+# Print 其他错误详细信息
             if error_details.get("reason"):
                 print(f"         🔍 Reason: {error_details['reason']}")
             if error_details.get("domain"):
@@ -728,8 +686,7 @@ class GooglePlayVerifier:
             if error.content:
                 error_content = json.loads(error.content.decode())
                 error_info["full_response"] = error_content
-
-                # Extract error details
+# 提取错误详细信息
                 if "error" in error_content:
                     error_details = error_content["error"]
                     error_info["message"] = error_details.get("message", str(error))
@@ -751,8 +708,7 @@ class GooglePlayVerifier:
     def _generate_diagnostics(self) -> None:
         """Generate diagnostic information and recommendations"""
         diagnostics = self.results["diagnostics"]
-
-        # Check overall health
+#检查整体健康状况
         has_config_issues = any(
             result.get("status") == "❌ FAILED"
             for result in self.results["config_validation"].values()
@@ -795,8 +751,7 @@ class GooglePlayVerifier:
             ),
             "product_catalog": "✅ HEALTHY" if not has_catalog_issues else "❌ ISSUES",
         }
-
-        # Generate recommendations
+#生成推荐
         recommendations = []
 
         if has_config_issues:
@@ -872,8 +827,7 @@ class GooglePlayVerifier:
             )
 
         diagnostics["recommendations"] = recommendations
-
-        # Generate next steps
+# 生成后续步骤
         next_steps = []
 
         if has_permission_issues:
@@ -915,15 +869,13 @@ class GooglePlayVerifier:
         print("\n" + "=" * 60)
         print("📊 VERIFICATION REPORT")
         print("=" * 60)
-
-        # Overall status
+# 整体状态
         diagnostics = self.results["diagnostics"]
         if "overall_health" in diagnostics:
             print("\n🏥 Overall Health:")
             for component, status in diagnostics["overall_health"].items():
                 print(f"   {component.title()}: {status}")
-
-        # Recommendations
+#推荐
         if "recommendations" in diagnostics and diagnostics["recommendations"]:
             print("\n💡 Recommendations:")
             for i, rec in enumerate(diagnostics["recommendations"], 1):
@@ -933,8 +885,7 @@ class GooglePlayVerifier:
                         print(f"      {step}")
                 else:
                     print(f"      {rec['solution']}")
-
-        # Next steps
+# 后续步骤
         if "next_steps" in diagnostics and diagnostics["next_steps"]:
             print("\n🚀 Next Steps:")
             for i, step in enumerate(diagnostics["next_steps"], 1):
@@ -949,8 +900,7 @@ def main():
     """Main function"""
     verifier = GooglePlayVerifier()
     results = verifier.run_verification()
-
-    # Save results to file
+# 将结果保存到文件
     results_file = "google_play_verification_results.json"
     try:
         with open(results_file, "w") as f:
@@ -958,12 +908,10 @@ def main():
         print(f"\n💾 Results saved to: {results_file}")
     except Exception as e:
         print(f"\n❌ Failed to save results: {str(e)}")
-
-    # Return exit code based on results
+# 根据结果返回退出代码
     if "error" in results:
         return 1
-
-    # Check if there are any critical failures
+#检查是否存在严重故障
     has_critical_failures = any(
         [
             any(

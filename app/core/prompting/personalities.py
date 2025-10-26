@@ -27,32 +27,29 @@ class Personality(BaseModel):
     * Biological and Environmental Factors:
         A combination of genetic predispositions and environmental influences, including upbringing and life experiences.
     """
-
-    # A list of traits to form the basis of the personality.
-    # We expect the AI to generate content based on these traits,
-    # so that users can immediately relate to the personality,
-    # after these traits are revealed to them.
-    # As documented in description, there is a gap between descriptions and traits.
+# 构成人格基础的特征列表。
+#我们希望人工智能根据这些特征生成内容，
+#让用户能够立即联想到个性，
+# 在他们发现这些特征之后。
+# 描述与记录中相同的，描述和特征之间存在差异。
     traits: list[traits.Trait]
-
-    # TODO: Add a list of key dimensions of personality.
-    # It's a higher level regulation pattern layered on top of the traits.
-    # Like: Individuality (tendency to be unique and distinct),
-    # consistency (tendency to remain relatively stable),
-    # influence (tendency to interact with others),
-    # behavioral patterns (tendency to act in certain ways),
-    # biological and environmental factors (tendency to be influenced by genetics and environment),
-    # like feels really depressed when being sick, or very easily affected by substances.
-
-    # This description further enriches the personality.
-    # To make the personality more well-rounded.
-    # This should be a surface level description of the effects of this personality.
-    # There should be gap between descriptions and traits.
-    # That is, there is left for AI to use the traits as the basis,
-    # to enrich the experience of the people experiencing the personality,
-    # with words, scene descriptions, voices, etc.
-    #
-    # This probably should be hidden from the users.
+# TODO：添加性别关键维度的列表。
+#这是一个建立在种族之上的更高层次的监管模式。
+#喜欢：个性（独特且独特的倾向），
+# 一致性（保持相对稳定的趋势），
+# 影响力（与他人互动的吸引力），
+#行为模式（以某种方式行为的趋势），
+#生物和环境因素（受遗传和环境影响的趋势），
+#就像生病时的感觉真的很不pressed，或者很容易受到物质的影响。
+# 这个描述进一步丰富了个性。
+#让性格更全面。
+#这应该是人格影响的表面描述。
+# 描述和特征之间应该有差距。
+#其实，AI还可以使用特征作为基础，
+#丰富的人们体验个性的体验，
+# 包含文字、场景描述、声音等。
+#
+#这个pr隐藏显然应该对用户。
     descriptions: list[str]
 
     def to_prompt(self) -> str:

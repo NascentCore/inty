@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 清理chats表中的debug_messages字段
 
@@ -21,7 +21,7 @@ async def analyze_debug_messages():
 
     async for session in get_async_db():
         try:
-            # 统计debug_messages使用情况
+# 统计debug_messages使用情况
             result = await session.execute(
                 text(
                     """
@@ -41,8 +41,7 @@ async def analyze_debug_messages():
                 f"有debug_messages的记录: {stats[1]} ({stats[1]/stats[0]*100:.1f}%)"
             )
             logger.info(f"平均debug_messages大小: {stats[2]:.0f}字符")
-
-            # 查看最近的debug_messages示例
+# 查看最近的debug_messages示例
             result2 = await session.execute(
                 text(
                     """
@@ -82,7 +81,7 @@ async def cleanup_debug_messages(dry_run: bool = True):
 
     async for session in get_async_db():
         try:
-            # 查询有debug_messages的聊天记录
+# 查询有debug_messages的聊天记录
             result = await session.execute(
                 select(models.Chat).where(models.Chat.debug_messages.isnot(None))
             )
@@ -91,7 +90,7 @@ async def cleanup_debug_messages(dry_run: bool = True):
             logger.info(f"找到 {len(chats_with_debug)} 个包含debug_messages的聊天记录")
 
             if not dry_run and chats_with_debug:
-                # 批量更新，将debug_messages设为NULL
+# 批量更新，将debug_messages设为NULL
                 await session.execute(
                     update(models.Chat)
                     .where(models.Chat.debug_messages.isnot(None))
@@ -106,8 +105,7 @@ async def cleanup_debug_messages(dry_run: bool = True):
                 logger.info(
                     f"测试模式：预计清理 {len(chats_with_debug)} 个debug_messages"
                 )
-
-            # 检查清理后的状态
+#查看清理后的状态
             if not dry_run:
                 result_after = await session.execute(
                     text(
@@ -136,8 +134,7 @@ async def main():
     print("由于角色卡系统和性能优化的引入，旧的debug_messages可能包含过时信息")
     print("建议清理这些数据以提升数据库性能")
     print()
-
-    # 先分析现状
+#先分析现状
     await analyze_debug_messages()
 
     print("\n操作选项:")

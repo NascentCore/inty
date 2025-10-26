@@ -13,10 +13,9 @@ from app.api.deps import get_async_db
 from app.api.v1.router import api_router
 from app.api.v2.router import api_v2_router
 from app.core.agent.agent import agent_manager
-
-# ！！！ 这个 import 必须在所有导入其他应用代码之前。
+# ！！！这个导入必须在导入所有其他应用代码之前。
 # 因为这里设置了 LangSmith 环境变量
-# 如果不在最前面，有可能导致环境变量未注入导致 LangSmith tracing 获得空的环境变量，从而失效
+# 如果不在最前面，有可能导致环境变量未输入导致LangSmith追踪获得空的环境变量，从而导致故障
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.logging import init_logger
 from app.external_services.firebase import init_firebase
@@ -29,19 +28,18 @@ from app.middleware.error_handler import (
 from app.schemas.response import APIResponse
 
 init_logger()
-
 # 根据debug模式决定是否开启OpenAPI docs
 app = FastAPI(
     title=global_config_loaded_from_config_yaml.app.name,
     description="InTy",
     version=global_config_loaded_from_config_yaml.app.version,
-    # 只在debug模式下开启OpenAPI docs
+#调试在调试模式下开启OpenAPI docs
     openapi_url=(
         "/openapi.json" if global_config_loaded_from_config_yaml.app.debug else None
     ),
     docs_url="/docs" if global_config_loaded_from_config_yaml.app.debug else None,
     redoc_url="/redoc" if global_config_loaded_from_config_yaml.app.debug else None,
-    # Swagger UI参数配置（仅在debug模式下生效）
+# Swagger UI参数配置（仅在debug模式下生效）
     swagger_ui_parameters=(
         {
             "persistAuthorization": True,
@@ -61,8 +59,7 @@ app = FastAPI(
         "email": "dev@inty.cc",
     },
 )
-
-# Set all CORS enabled origins
+# 设置所有启用 CORS 的来源
 if global_config_loaded_from_config_yaml.app.backend_cors_origins:
     app.add_middleware(
         CORSMiddleware,
@@ -74,8 +71,7 @@ if global_config_loaded_from_config_yaml.app.backend_cors_origins:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-# Register error handlers
+# 注册错误处理程序
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(JWTError, jwt_exception_handler)
 app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
@@ -83,21 +79,19 @@ app.add_exception_handler(ValidationError, validation_error_handler)
 
 app.include_router(api_router)
 app.include_router(api_v2_router)
-
-# 配置静态文件服务 - 用于评测系统前端
+# 配置静态文件服务 - 用于游戏系统前端
 import os
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-# 添加前端应用路由
+#增加应用路由
 from fastapi.responses import FileResponse
 
 
 @app.get(
     "/evaluation",
-    # 此为内部运营使用 API，不对外展示
+#此为内部运营使用API，不对外展示
     include_in_schema=False,
 )
 async def evaluation_frontend():
@@ -107,14 +101,12 @@ async def evaluation_frontend():
 
 @app.get(
     "/evaluation/{path:path}",
-    # 此为内部运营使用 API，不对外展示
+#此为内部运营使用API，不对外展示
     include_in_schema=False,
 )
 async def evaluation_static_files(path: str):
     file_path = os.path.join(static_dir, "evaluation", path)
     return FileResponse(file_path)
-
-
 # 初始化 Firebase
 init_firebase()
 
@@ -130,19 +122,15 @@ async def startup_event():
         logger.debug(
             f"异步数据库 URL: {global_config_loaded_from_config_yaml.database.async_url}"
         )
-
-        # 0. 预初始化数据库连接池和chat_history表
+# 0。预初始化数据库连接池和chat_history表
         await _preload_database_connections()
-
-        # 获取数据库会话
+# 获取数据库会话
         async for db_session in get_async_db():
-            # 1. 预初始化数据库表结构（提升性能）
+＃1。预初始化数据库表结构（提升性能）
             await _preload_database_tables(db_session)
-
-            # 2. 预加载热门Agent数据到缓存
+#2.预加载热门代理数据到服务器
             await _preload_popular_agent_data(db_session)
-
-            # 3. 初始化常用Agent实例
+＃3。初始化使用Agent实例
             await agent_manager.initialize_popular_agents(db_session)
             break  # 只需要一次初始化
         logger.info("Agent初始化完成")
@@ -155,26 +143,21 @@ async def _preload_database_connections():
     """预初始化数据库连接池和chat_history表"""
     try:
         logger.info("开始预初始化数据库连接池...")
-
-        # 1. 预初始化Agent系统的连接池
+＃1。预初始化Agent系统的连接池
         from app.core.agent.agent import get_connection_pool, get_sync_engine
-
-        # 预初始化连接池（这会创建min_size数量的连接）
+# 预初始化连接池（这会创建min_size数量的连接）
         pool = get_connection_pool()
         logger.info(f"连接池预初始化完成: {pool.name}")
-
-        # 预初始化同步引擎
+# 预初始化同步引擎
         sync_engine = get_sync_engine()
         logger.info("同步数据库引擎预初始化完成")
-
-        # 3. 预热连接池 - 执行一些轻量级查询来预热连接
+＃3。前置连接池 - 执行一些轻量级查询来前置连接
         with pool.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
                 cur.fetchone()
         logger.info("连接池预热完成")
-
-        # 4. 启动缓存清理任务
+＃4。启动存储清理任务
         from app.services.cache_service import cache_service
 
         await cache_service.start_cleanup_task()
@@ -184,7 +167,7 @@ async def _preload_database_connections():
 
     except Exception as e:
         logger.error(f"数据库连接池初始化失败: {str(e)}")
-        # 不抛出异常，让应用继续启动
+# 不发送异常，让应用启动继续
 
 
 async def _preload_popular_agent_data(db: AsyncSession):
@@ -193,17 +176,15 @@ async def _preload_popular_agent_data(db: AsyncSession):
         logger.info("开始预加载热门Agent数据到缓存...")
 
         from app.services import agent_service
-
-        # 获取推荐的Agent作为热门Agent进行预加载
+#获取推荐的代理作为热门代理进行预加载
         popular_agents = await agent_service.get_recommended_agents(
             db, skip=0, limit=20
         )
-
-        # 为每个热门Agent预加载聊天数据到缓存
+# 为每个热门代理预加载聊天数据到服务器
         preloaded_count = 0
         for agent_db in popular_agents:
             try:
-                # 使用轻量级方法预加载数据（这会自动缓存）
+# 使用轻量级方法预加载数据（这会自动缓存）
                 agent_data = await agent_service.get_agent_for_chat(db, agent_db.id)
                 if agent_data:
                     preloaded_count += 1
@@ -215,25 +196,22 @@ async def _preload_popular_agent_data(db: AsyncSession):
 
     except Exception as e:
         logger.error(f"预加载热门Agent数据失败: {str(e)}")
-        # 不抛出异常，让应用继续启动
+# 不发送异常，让应用启动继续
 
 
 async def _preload_database_tables(db: AsyncSession):
     """预加载数据库表结构以提升查询性能"""
     try:
         logger.info("开始预初始化数据库表结构...")
-
-        # 预热聊天表查询，确保表结构已加载
+#提前聊天表查询，确保表已结构加载
         from sqlalchemy import select
 
         from app import models
-
-        # 执行一个简单的查询来预热表结构
+# 执行一个简单的查询来预先表结构
         await db.execute(select(models.Chat).limit(1))
         await db.execute(select(models.Agent).limit(1))
         await db.execute(select(models.User).limit(1))
-
-        # 预热chat_history表（PostgreSQL）
+# 前置chat_history表（PostgreSQL）
         from sqlalchemy import text
 
         await db.execute(text("SELECT 1 FROM chat_history LIMIT 1"))
@@ -251,8 +229,7 @@ async def shutdown_event():
         logger.info("正在停止Agent管理器...")
         agent_manager.stop()
         logger.info("Agent管理器已停止")
-
-        # 停止缓存服务
+# 停止服务器服务
         from app.services.cache_service import cache_service
 
         cache_service.stop_cleanup_task()
@@ -272,8 +249,7 @@ def custom_openapi():
         version=global_config_loaded_from_config_yaml.app.version,
         routes=app.routes,
     )
-
-    # 添加安全定义
+# 添加安全定义
     openapi_schema["components"]["securitySchemes"] = {
         "Bearer": {
             "type": "http",
@@ -285,27 +261,23 @@ def custom_openapi():
             """,
         }
     }
-
-    # 为所有路由添加安全要求，除了登录和注册接口
+# 为所有路由添加安全要求，除了登录和注册接口
     if "paths" in openapi_schema:
         for path in openapi_schema["paths"]:
-            # 跳过认证相关的路由
+# 跳过认证相关的路由
             if (
                 path.endswith("/auth/login")
                 or path.endswith("/auth/register")
                 or path.endswith("/auth/guest")
             ):
                 continue
-
-            # 为路径下的所有操作添加安全要求
+# 为路径下的所有操作添加安全要求
             for method in openapi_schema["paths"][path]:
                 if method.lower() in ("get", "post", "put", "delete", "patch"):
                     openapi_schema["paths"][path][method]["security"] = [{"Bearer": []}]
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema
-
-
 # 只在debug模式下设置自定义OpenAPI
 if global_config_loaded_from_config_yaml.app.debug:
     app.openapi = custom_openapi

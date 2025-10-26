@@ -35,11 +35,11 @@ fun MyModalNavigationDrawer(
     val screenWidthPx = with(LocalDensity.current) { screenWidthDp.dp.toPx() }
 
     Box(modifier.fillMaxSize()) {
-        // 是否显示遮罩层
+// 是否显示遮层罩
         val showMask = remember { mutableStateOf(false) }
-        // 抽屉宽度
+// 沙发宽度
         val drawerWidth = remember { mutableIntStateOf(0) }
-        // 抽屉的 x 位置
+// 抽屉的 x 位置
         val xOffset by
             animateFloatAsState(
                 targetValue =
@@ -47,16 +47,16 @@ fun MyModalNavigationDrawer(
                     else screenWidthPx - drawerWidth.value.toFloat(),
                 animationSpec = tween(durationMillis = 400),
             )
-        // 半透明
+// 半透明
         val maskLayerAlpha by
             animateFloatAsState(
                 targetValue = if (drawerState.value == DrawerValue.Closed) 0f else 0.6f,
                 animationSpec = tween(durationMillis = 400),
                 finishedListener = { showMask.value = it.absoluteValue > 0f },
             )
-        // 内容
+// 内容
         Box { content() }
-        // 遮罩
+// 遮光罩
         if (showMask.value || drawerState.value == DrawerValue.Open) {
             Box(
                 modifier =
@@ -66,7 +66,7 @@ fun MyModalNavigationDrawer(
                         .background(color = Color(0xff000000))
                         .clickable { drawerState.value = DrawerValue.Closed }
             ) {}
-            // 抽屉
+// 沙发
             Box(
                 modifier =
                     Modifier

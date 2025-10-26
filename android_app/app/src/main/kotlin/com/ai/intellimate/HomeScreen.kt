@@ -62,7 +62,7 @@ import com.ai.intellimate.explore.ExploreViewModel
 import com.ai.intellimate.messages.ConversationsPage
 import com.ai.intellimate.profile.ProfilePage
 
-/** 主页面，包含五个tab */
+/** 主页，包含五个选项卡 */
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
@@ -72,27 +72,22 @@ fun HomeScreen(
 ) {
     val selectedTab = mainViewModel.selectedTab.collectAsState()
     val context = LocalContext.current
-
-    // 创建ExploreViewModel实例，用于ExploreTab
+//创建ExploreViewModel实例，用于ExploreTab
     val exploreViewModel: ExploreViewModel = viewModel()
-
-    // 创建ChatTabViewModel实例，用于ChatTab
+//创建ChatTabViewModel实例，用于ChatTab
     val chatTabViewModel: ChatTabViewModel = viewModel()
-
-    // 初始化Paging数据
+//初始化分页数据
     LaunchedEffect(Unit) {
         exploreViewModel.initializePagingData()
         chatTabViewModel.initializePagingData()
     }
-
-    // 启动预加载数据监听
+// 启动预加载数据监听
     LaunchedEffect(Unit) {
         exploreViewModel.startListeningPreloadUpdates()
         chatTabViewModel.startListeningPreloadUpdates()
     }
-
-    // 跟踪HomeScreen页面访问
-    // 使用 PageTrackingHelper 进行页面跟踪
+// 跟踪主页屏幕页面访问
+// 使用PageTrackingHelper进行页面跟踪
     LaunchedEffect(Unit) {
         PageTrackingHelper.trackPageView("HomeScreen", "MainActivity")
     }
@@ -127,7 +122,6 @@ fun HomeScreen(
         AppVersionLogic(mainViewModel)
     }
 }
-
 // App检查更新的逻辑，强制更新则弹窗
 @Composable
 private fun AppVersionLogic(mainViewModel: MainViewModel) {
@@ -145,13 +139,13 @@ private fun AppVersionLogic(mainViewModel: MainViewModel) {
 
 @Composable
 private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
-    // 感知vip订阅过期的提示弹窗
+// 获取vip订阅过度的提示弹窗
     var showExpiredDialog by remember { mutableStateOf(false) }
     val vipStatue by mainViewModel.vipStatusFlow.collectAsState()
     val vipPlan by mainViewModel.vipPlanFlow.collectAsState()
     LifecycleResumeEffect(mainViewModel) {
         if (!vipStatue.isSubscribed && vipStatue.everSubscribed) {
-            // 未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
+// 未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
             if (
                 !IntySetting.hasTipsVipExpired() &&
                 IntySetting.isLogin() &&
@@ -174,31 +168,31 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
             data,
             onCancel = { showExpiredDialog = false },
             onSure = {
-                // 检查是否正式登录（非游客且已登录）
+// 查询是否正式登录（非游客且已登录）
                 if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                    // 判断如果之前订阅的档位还在，则继续原订阅。如果没有了，则跳转到订阅中心
+//判断如果之前订阅的档位还在，则继续原订阅。如果没有了，则跳到订阅中心
                     val plan =
                         vipPlan.find { plan -> plan.googleProductId == vipStatue.previous_plan_id }
                             ?: vipPlan.firstOrNull()
 
                     val googleProductId = plan?.googleProductId
                     if (googleProductId != null) {
-                        // 启动购买流程
+// 启动购买流程
                         if (context is Activity)
                             BillingRepository.launchBillingFlow(context, googleProductId)
                     } else {
-                        // 跳转到订阅中心
+// 跳转到订阅中心
                         VipCenterActivity.launch(context)
                     }
                 } else {
-                    // 如果未登录，要求先登录
+// 如果未登录，要求先登录
                     LoginActivity.launch(context)
                 }
 
                 showExpiredDialog = false
             },
         )
-        // 标记已经展示了tips的dialog
+// 标记已经显示了对话框的提示
         IntySetting.setTipsVipExpired(true)
     }
 }
@@ -216,7 +210,7 @@ private fun handleTabSelection(tabIndex: Int, context: Context, mainViewModel: M
     mainViewModel.selectTab(tabIndex)
 }
 
-/** 主页面内容 */
+/** 主页内容 */
 @Composable
 private fun HomeContent(
     selectedTab: HomeTabIndex,
@@ -242,7 +236,7 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Create -> {
-            // Create tab is handled in handleTabSelection
+// 在handleTabSelection中创建选项卡处理
         }
 
         HomeTabIndex.Explore -> {
@@ -259,7 +253,7 @@ private fun HomeContent(
     }
 }
 
-/** 聊天Tab内容 */
+/** 聊天选项卡内容 */
 @Composable
 private fun ChatTabContent(
     mainViewModel: MainViewModel,
@@ -279,7 +273,7 @@ private fun ChatTabContent(
     )
 }
 
-/** 会话Tab内容 */
+/** 会话选项卡内容 */
 @Composable
 private fun ConversationsTabContent(chatViewModel: ChatViewModel, context: Context) {
     val conversations by chatViewModel.conversations.collectAsState()
@@ -291,7 +285,7 @@ private fun ConversationsTabContent(chatViewModel: ChatViewModel, context: Conte
         conversations = conversations,
         onClickConversationItem = { conversation ->
             chatViewModel.setConversationReaded(conversation)
-            // 从会话列表 跳转到聊天页面，
+// 从会话列表幻灯片到聊天页面，
             ChatActivity.launch(context, conversation.convertToAgentInfo())
         },
         isLoadingConversations = isLoadingConversations,
@@ -300,7 +294,7 @@ private fun ConversationsTabContent(chatViewModel: ChatViewModel, context: Conte
     )
 }
 
-/** 推荐Tab内容 */
+/** 推荐标签内容 */
 @Composable
 private fun ExploreTabContent(
     exploreViewModel: ExploreViewModel,
@@ -317,15 +311,14 @@ private fun ExploreTabContent(
     )
 }
 
-/** 我的Tab内容 */
+/** 我的选项卡内容 */
 @Composable
 private fun ProfileTabContent(mainViewModel: MainViewModel, context: Context) {
     val userProfile by mainViewModel.userProfile.collectAsStateWithLifecycle()
     val userCreatedAgents = mainViewModel.userCreatedAgents
     val isLoadingUserAgents = mainViewModel.isLoadingUserAgents.collectAsState()
     val isRefreshingUserAgents = mainViewModel.isRefreshingUserAgents.collectAsState()
-
-    // 确保用户信息有效，避免崩溃
+//确保用户信息有效，避免崩溃
     val safeUserProfile =
         userProfile.let { profile ->
             if (profile.id.isEmpty()) {
@@ -342,10 +335,10 @@ private fun ProfileTabContent(mainViewModel: MainViewModel, context: Context) {
     LaunchedEffect(mainViewModel) {
         mainViewModel.updateUserInfoLocal()
     }
-    // 确保更新用户信息，处理切换账号后的信息同步
+// 务必更新用户信息，处理切换账号后的信息同步
     LifecycleResumeEffect(mainViewModel) {
         mainViewModel.getUserProfile()
-        // 刷新订阅状态
+// 刷新订阅状态
         VipStatusHelper.refreshSubscriptionStatus()
         onPauseOrDispose {}
     }
@@ -365,10 +358,10 @@ private fun ProfileTabContent(mainViewModel: MainViewModel, context: Context) {
             mainViewModel.deleteAgent(
                 agentId = agent.id,
                 onSuccess = {
-                    // 删除成功，列表会自动更新
+// 删除成功，列表会自动更新
                 },
                 onError = { _ ->
-                    // 错误处理已在ViewModel中完成
+// 错误处理已在ViewModel中完成
                 },
             )
         },
@@ -465,7 +458,7 @@ private fun BottomNavigationBarItem(modifier: Modifier, tabInfo: TabInfo, select
 @Preview(showBackground = true)
 @Composable
 fun AppBottomNavigationBarPreview() {
-    // Preview for the entire bottom navigation bar positioned in the middle
+// Preview 用于位于中间的整个底部导航栏
     Box(
         modifier =
             Modifier
@@ -476,7 +469,7 @@ fun AppBottomNavigationBarPreview() {
         AppBottomNavigationBar(
             modifier = Modifier,
             selectedTab = 0, // Home tab selected
-            onSelectTab = { /* Preview doesn't need actual functionality */ },
+            onSelectTab = { /* Preview 不需要实际功能 */ },
         )
     }
 }

@@ -1,5 +1,5 @@
 /**
- * MessageToImageIcon component for generating images from message content
+ * MessageToImageIcon组件，用于从消息内容生成图像
  */
 
 import React, { useState } from "react";
@@ -32,7 +32,7 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
 
     setLoading(true);
     try {
-      // 创建带超时的 Promise
+// 创建带超时的 Promise
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
           reject(new Error("图片生成超时，请稍后重试"));
@@ -44,8 +44,7 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
         enhance_prompt: false, // Don't enhance for message content
         count: 1, // Generate only 1 image
       });
-
-      // 使用 Promise.race 来实现超时控制
+// 使用 Promise。race 来实现超时控制
       const response = (await Promise.race([apiPromise, timeoutPromise])) as {
         urls: string[];
         count: number;
@@ -61,11 +60,11 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
       if (response && response.urls && response.urls.length > 0) {
         const imageUrl = response.urls[0]; // 取第一张图片
         if (onImageGenerated) {
-          // 如果提供了回调函数，调用它来在聊天窗口中显示图片
+// 如果提供了回调函数，调用它来在聊天窗口中显示图片
           onImageGenerated(imageUrl);
           message.success("图片生成成功！");
         } else {
-          // 否则使用模态框显示（向后兼容）
+//否则使用模式框显示（一致性兼容）
           setGeneratedImages(response.urls);
           setModalVisible(true);
           message.success("图片生成成功！");

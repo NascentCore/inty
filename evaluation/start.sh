@@ -1,12 +1,11 @@
-#!/usr/bin/env bash
+#！/usr/bin/env bash
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] $1"
 }
 
 BACKEND_URL="https://dev.inty.sxwl.ai/api/v1"
-
-# Command line flags
+# 命令行标志
 while [[ $# -gt 0 ]]; do
   case $1 in
     --backend-url)
@@ -26,14 +25,12 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
-
-# Make sure pwd is the directory of the script
+#保证pwd是脚本的目录
 cd "$(dirname "$0")"
 
 export REACT_APP_API_BASE_URL="$BACKEND_URL"
 echo "Setting REACT_APP_API_BASE_URL to $REACT_APP_API_BASE_URL"
-
-# Remove api/v1 suffix from BACKEND_URL
+# 从 BACKEND_URL 中删除 api/v1 后缀
 BACKEND_BASE_URL=${BACKEND_URL%api/v1}
 export INTY_BASE_URL=$BACKEND_BASE_URL
 export INTY_API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM"
@@ -63,7 +60,7 @@ then
 fi
 
 pushd inty_sdk
-# 由于未知原因，tsc-multi 无法被 yarn install 安装，所以手动安装
+# 由于未知原因，tsc-multi无法被yarn install安装，所以手动安装
 yarn add -D tsc-multi@https://github.com/stainless-api/tsc-multi/releases/download/v1.1.9/tsc-multi.tgz
 yarn install
 yarn build
@@ -71,8 +68,7 @@ popd
 
 log "Installing Node Modules..."
 npm i --no-audit --no-fund --loglevel=error --no-progress
-
-# Check if :3000 is already in use
+# 检查 :3000 是否已被使用
 if lsof -i :3000; then
     log "Try to kill the process using port 3000 ..."
     kill -9 $(lsof -t -i :3000)

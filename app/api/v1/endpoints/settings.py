@@ -61,7 +61,7 @@ def update_settings_endpoint(
         )
         settings = get_settings(db, user_id=current_user.id)
         if not settings:
-            # Create new settings
+#创建新设置
             settings_create = schemas.SettingsCreate(
                 language=settings_in.language or "en",
                 voice_enabled=(

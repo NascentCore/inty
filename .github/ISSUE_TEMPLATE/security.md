@@ -1,10 +1,8 @@
 ---
-name: Security
-about: Issues related to security
-title: "[security] "
-labels: security
-assignees: ''
+名称：安全
+关于：与安全相关的问题
+标题：“[安全]”
+标签： 安全
+受让人：''
 
 ---
-
-

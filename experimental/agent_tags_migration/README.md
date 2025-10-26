@@ -1,19 +1,17 @@
-# Agent Tags Migration
+# 代理标签迁移
 
-这个工具用于从智能体的 `personality` 字段中提取标签信息，并将其迁移到 `tags` 字段中。
+这个工具用于智能体的`personality` 字段中提取标签信息，并将其迁移到 `tags`字段中。
 
-## 功能特性
+## 功能特点
 
-- **智能解析**: 自动识别和解析 personality 字段中的 Character info 结构
-- **多格式支持**: 支持多种 JSON 格式和引号形式
-- **安全迁移**: 提供分析模式和备份机制
-- **批量处理**: 支持大规模数据的分批处理
-- **标签标准化**: 自动清理和标准化提取的标签
-- **详细日志**: 完整的操作日志和统计信息
+- **智能解析**：自动识别并解析个性字段中的字符信息结构
+- **多格式支持**：支持多种JSON格式和引号形式
+- **安全迁移**：提供分析模式和备份机制
+- **批量处理**：支持大规模数据的分批处理
+- **标签标准化**：自动清理和标准化提取的标签
+- **详细日志**：完整的操作日志和统计信息
 
-## 安装依赖
-
-```bash
+## 安装依赖```bash
 pip install -r requirements.txt
 ```
 
@@ -64,15 +62,11 @@ python extract_tags_from_personality.py --update --no-skip-existing
 
 # 不标准化标签
 python extract_tags_from_personality.py --update --no-normalize
-```
+```## 支持的数据格式
 
-## 支持的数据格式
+工具可以解析以下格式的字符信息：
 
-工具可以解析以下格式的 Character info：
-
-### 格式1：标准JSON格式
-
-```
+### 格式1：标准JSON格式```
 ##Charactor info:
 {'name': 'Layla', 'age': 26, 'gender': 'FEMALE', 'tags': 'Dancer, Sexy, Exotic, Singer'}
 ```
@@ -159,21 +153,15 @@ python extract_tags_from_personality.py --update --no-normalize
 
 ```
 错误: 无法连接到数据库: connection refused
-```
-
-- 检查 config.yaml 中的数据库配置
+```- 检查config.yaml中的数据库配置
 - 确认数据库服务正在运行
 - 检查网络连接和防火墙设置
 
-### 2. 没有找到可提取的标签
-
-```
+### 2.没有找到可提取的标签```
 统计信息显示成功提取为0
-```
-
-- 检查 personality 字段中是否包含 Character info 结构
-- 确认 tags 字段格式是否正确
-- 可以设置 `--log-level DEBUG` 查看详细解析过程
+```- 检查personality字段中是否包含Character info结构
+- 确认标签字段格式正确是否
+- 可以设置`--log-level DEBUG` 查看详细解析过程
 
 ### 3. 权限错误
 
@@ -200,9 +188,7 @@ agent_tags_migration/
     ├── test_tag_parser.py             # 标签解析测试
     ├── test_database.py               # 数据库操作测试
     └── sample_data.py                 # 测试数据样本
-```
-
-## 贡献
+```## 贡献
 
 如果发现问题或有改进建议，请创建 Issue 或提交 Pull Request。
 

@@ -9,13 +9,13 @@ import android.os.VibratorManager
 import androidx.annotation.RequiresPermission
 
 /**
- * 震动工具类
- * 提供震动相关的工具方法
+ * 放松工具类
+ * 提供相关的工具方法
  */
 object VibrateUtils {
 
     /**
-     * 震动
+     *震惊
      */
     @RequiresPermission(Manifest.permission.VIBRATE)
     fun vibrate(duration: Long) {
@@ -23,14 +23,13 @@ object VibrateUtils {
     }
 
     /**
-     * 震动
+     *震惊
      */
     @RequiresPermission(Manifest.permission.VIBRATE)
     fun vibrate(context: Context?, duration: Long) {
         if (context == null) return
         val vibrator = getVibrator(context) ?: return
-
-        // 参数验证
+// 参数验证
         val safeDuration = duration.coerceIn(0, 10000) // 限制震动时长在0-10秒之间
 
         try {
@@ -51,7 +50,7 @@ object VibrateUtils {
     }
 
     /**
-     * 震动
+     *震惊
      */
     @RequiresPermission(Manifest.permission.VIBRATE)
     fun vibrate(pattern: LongArray, repeat: Int) {
@@ -59,14 +58,13 @@ object VibrateUtils {
     }
 
     /**
-     * 震动
+     *震惊
      */
     @RequiresPermission(Manifest.permission.VIBRATE)
     fun vibrate(context: Context?, pattern: LongArray, repeat: Int) {
         if (context == null) return
         val vibrator = getVibrator(context) ?: return
-
-        // 参数验证
+// 参数验证
         if (pattern.isEmpty()) return
         val safeRepeat = repeat.coerceIn(-1, 10) // 限制重复次数
 
@@ -83,7 +81,7 @@ object VibrateUtils {
     }
 
     /**
-     * 取消震动
+     * 取消撤退
      */
     @RequiresPermission(Manifest.permission.VIBRATE)
     fun cancel() {
@@ -91,7 +89,7 @@ object VibrateUtils {
     }
 
     /**
-     * 取消震动
+     * 取消撤退
      */
     @RequiresPermission(Manifest.permission.VIBRATE)
     fun cancel(context: Context?) {
@@ -106,7 +104,7 @@ object VibrateUtils {
     }
 
     /**
-     * 获取Vibrator
+     * 获取振动器
      */
     private fun getVibrator(context: Context): Vibrator? {
         return try {
@@ -125,14 +123,14 @@ object VibrateUtils {
     }
 
     /**
-     * 是否有震动器
+     * 是否有开关装置
      */
     fun hasVibrator(): Boolean {
         return hasVibrator(Utils.getApp())
     }
 
     /**
-     * 是否有震动器
+     * 是否有开关装置
      */
     fun hasVibrator(context: Context?): Boolean {
         if (context == null) return false

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 Script to check agents' avatar and background URLs against resources table
 and create/update resource records with proper image metadata.
@@ -34,8 +34,7 @@ async def process_agent_urls(db: AsyncSession, agent: Agent) -> None:
     Process avatar and background URLs for a single agent
     """
     logger.info(f"Processing agent {agent.id} ({agent.name})")
-
-    # Process avatar URL
+# Process 头像网址
     if (
         agent.avatar
         and is_valid_gcs_url(agent.avatar)
@@ -43,8 +42,7 @@ async def process_agent_urls(db: AsyncSession, agent: Agent) -> None:
     ):
         await process_single_url(db, agent.avatar, agent.creator_id, agent.id, "avatar")
         _process_single_url.add(agent.avatar)
-
-    # Process background URL
+# Process 后台 URL
     if (
         agent.background
         and is_valid_gcs_url(agent.background)
@@ -54,7 +52,7 @@ async def process_agent_urls(db: AsyncSession, agent: Agent) -> None:
             db, agent.background, agent.creator_id, agent.id, "background"
         )
         _process_single_url.add(agent.background)
-    # Process background_images (JSON array)
+# Process background_images (JSON 内存)
     if agent.background_images:
         for bg_url in agent.background_images:
             if (
@@ -100,13 +98,12 @@ async def process_single_url(
     except Exception as e:
         logger.error(f"Error downloading or processing image {url}: {e}")
         return
-
-    # Check if resource already exists
+# 检查资源是否已经存在
     result = await db.execute(select(Resource).filter(Resource.url == url))
     existing_resource = result.scalar_one_or_none()
 
     if existing_resource:
-        # Resource exists, check if metadata needs updating
+# 资源存在，检查元数据是否需要更新
         metadata = existing_resource.resource_metadata or {}
         if not _check_metadata(metadata, size, byte_size):
             logger.info(f"Updating metadata for {url}")
@@ -122,10 +119,10 @@ async def process_single_url(
         else:
             logger.info(f"Metadata is correct for {url}")
     else:
-        # Resource doesn't exist, create new one
+# 资源不存在，创建新资源
         logger.info(f"Creating new resource record for {url}")
         try:
-            # Determine format from URL extension
+# 根据URL扩展名确定格式
             format = ImageFormat.JPEG  # default
             if url.lower().endswith(".png"):
                 format = ImageFormat.PNG
@@ -144,8 +141,7 @@ async def process_single_url(
                 compressed=False,  # We don't know if it was compressed
                 cropped=False,  # We don't know if it was cropped
             )
-
-            # Update agent_id for the resource
+# 更新资源的agent_id
             result = await db.execute(select(Resource).filter(Resource.url == url))
             resource = result.scalar_one_or_none()
             if resource:
@@ -164,7 +160,7 @@ async def main():
     logger.info("Starting image size update script")
 
     async with AsyncSessionLocal() as db:
-        # Get all agents with avatar or background URLs
+# 获取所有带有头像或背景 URL 的代理
         result = await db.execute(
             select(Agent).filter(
                 (Agent.avatar.isnot(None))

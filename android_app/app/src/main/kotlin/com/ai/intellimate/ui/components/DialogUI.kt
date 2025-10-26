@@ -75,8 +75,7 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             )
 
             Spacer(Modifier.height(16.dp))
-
-            // 按钮
+// 按钮
             Button(
                 onClick = onDismiss,
                 modifier = Modifier
@@ -102,7 +101,7 @@ private fun DeleteAccountDialogPreview() {
     DeleteAccountDialog(onDismiss = {}, onConfirm = {})
 }
 
-/** App强制更新的Dialog */
+/** 应用程序强制更新的对话框 */
 @Composable
 fun ForceUpgradeDialog(
     content: String = stringResource(R.string.str_upgrade_content),
@@ -136,8 +135,7 @@ fun ForceUpgradeDialog(
             Text(text = content, fontSize = 14.sp, color = Color.White)
 
             Spacer(Modifier.height(16.dp))
-
-            // 按钮
+// 按钮
             Button(
                 onClick = onConfirm,
                 modifier = Modifier

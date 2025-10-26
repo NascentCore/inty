@@ -12,17 +12,14 @@ import java.util.concurrent.ConcurrentHashMap
  * 提供业务层友好的页面追踪功能
  */
 object PageTrackingHelper {
-
-    // 当前页面信息
+// 当前页面信息
     private var currentPage: String? = null
     private var currentPageClass: String? = null
     private var pageStartTime: Long = 0L
-
-    // 用户交互历史（最近10个操作）
+// 用户交互历史（最近10个操作）
     private val userInteractionHistory = ConcurrentHashMap<String, String>()
     private val maxHistorySize = 10
-
-    // 页面访问历史
+// 页面访问历史
     private val pageHistory = mutableListOf<String>()
     private val maxPageHistorySize = 5
 
@@ -35,26 +32,22 @@ object PageTrackingHelper {
         additionalParams: Map<String, Any> = emptyMap(),
     ) {
         try {
-            // 记录页面结束时间（如果有上一个页面）
+// 记录页面结束时间（如果有上一个页面）
             if (currentPage != null) {
                 val timeSpent = System.currentTimeMillis() - pageStartTime
                 LogUtils.i("Page tracking: $currentPage spent ${timeSpent}ms")
             }
-
-            // 更新当前页面信息
+// 更新当前页面信息
             currentPage = pageName
             currentPageClass = pageClass
             pageStartTime = System.currentTimeMillis()
-
-            // 添加到页面历史
+//添加到页面历史记录
             addToPageHistory(pageName)
-
-            // 设置 Crashlytics 自定义键
+// 设置 Crashlytics 自定义键
             FirebaseManager.setCustomKey("current_page", pageName)
             FirebaseManager.setCustomKey("current_page_class", pageClass)
             FirebaseManager.setCustomKey("page_start_time", pageStartTime.toString())
-
-            // 记录 Analytics 事件
+// 记录分析事件
             FirebaseManager.logScreenView(
                 pageName,
                 pageClass,
@@ -76,15 +69,12 @@ object PageTrackingHelper {
         try {
             val timestamp = System.currentTimeMillis()
             val interactionKey = "${action}_${target}_${timestamp}"
-
-            // 添加到交互历史
+//添加到交易历史记录
             addToInteractionHistory(interactionKey, "$action on $target")
-
-            // 设置 Crashlytics 自定义键
+// 设置 Crashlytics 自定义键
             FirebaseManager.setCustomKey("last_interaction", "$action on $target")
             FirebaseManager.setCustomKey("last_interaction_time", timestamp.toString())
-
-            // 记录 Analytics 事件
+// 记录分析事件
             FirebaseManager.logEvent(
                 "user_interaction",
                 mapOf(
@@ -101,7 +91,7 @@ object PageTrackingHelper {
     }
 
     /**
-     * 记录按钮点击
+     *记录按钮点击
      */
     fun trackButtonClick(
         buttonName: String,
@@ -135,8 +125,7 @@ object PageTrackingHelper {
                     "current_page" to (currentPage ?: "unknown"),
                 ),
             )
-
-            // 设置 Crashlytics 自定义键
+// 设置 Crashlytics 自定义键
             FirebaseManager.setCustomKey("last_network_request", "$method $url")
             FirebaseManager.setCustomKey("last_network_success", success.toString())
 
@@ -164,8 +153,7 @@ object PageTrackingHelper {
                     "timestamp" to System.currentTimeMillis(),
                 ) + additionalParams,
             )
-
-            // 设置 Crashlytics 自定义键
+// 设置 Crashlytics 自定义键
             FirebaseManager.setCustomKey("last_error", error)
             FirebaseManager.setCustomKey("last_error_type", errorType)
             FirebaseManager.setCustomKey("error_page", currentPage ?: "unknown")
@@ -229,14 +217,14 @@ object PageTrackingHelper {
     }
 
     /**
-     * 为 Activity 添加生命周期追踪
+     * 为添加活动生命周期追踪
      */
     fun trackActivityLifecycle(activity: Activity, pageName: String) {
         trackPageView(pageName, activity.javaClass.simpleName)
     }
 
     /**
-     * 为 Fragment 添加生命周期追踪
+     * 为碎片添加生命周期追踪
      */
     fun trackFragmentLifecycle(fragment: Fragment, pageName: String) {
         trackPageView(pageName, fragment.javaClass.simpleName)

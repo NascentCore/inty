@@ -45,7 +45,7 @@ def _initialize_from_env() -> Optional[firebase_admin.App]:
             logger.debug("Firebase init failed from file: %s", err)
 
     try:
-        # Fall back to default app credentials
+# 放弃默认应用程序求助
         return initialize_app()
     except Exception as err:
         logger.debug("Firebase init failed using default credentials: %s", err)

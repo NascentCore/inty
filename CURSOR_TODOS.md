@@ -1,19 +1,18 @@
-### 跨端 API 与架构改进 TODO（仓库根）
+###跨端API与架构改进TODO（仓库根）
 
 #### P0（必须本期完成）
 
 - [ ] OpenAPI 单一真源与 SDK 生成
-  - [ ] 确认权威源（优先 `stainless.yml`），统一导出 `app/openapi.json`
-  - [ ] 配置 TS/Kotlin/Python 自动生成与发布流水线
+  - [ ] 确认权威来源（优先`stainless.yml`），统一导出 `app/openapi.json`- [ ] 配置 TS/Kotlin/Python 自动生成与发布模拟
   - [ ] 在 CI 中校验 API 变更需伴随 SDK 更新
 - [ ] API 版本化策略
-  - [ ] 启用 `/api/v1` 路径；预留弃用与稳定期策略
+  - [ ] 启用`/api/v1`路径；放弃用与稳定期策略
   - [ ] 加入兼容层与路由别名，记录迁移变更
-- [ ] 统一鉴权
-  - [ ] Bearer + 刷新 Token 标准；轮换/失效处理
-  - [ ] Android 侧持久化与自动刷新对齐后端策略
+- [ ]统一鉴权
+  - [ ] Bearer +刷新Token标准；轮换/故障处理
+  - [ ] Android 侧持久化与自动刷新调整策略
 - [ ] 标准错误响应
-  - [ ] 固化 `{code, message, details, request_id}` 响应模型
+  - [ ] 固化`{code, message, details, request_id}` 响应模型
   - [ ] 后端异常中间件与 HTTP 状态映射统一
   - [ ] App 侧错误适配器与提示文案
 - [ ] 统一网络栈/SDK
@@ -26,14 +25,14 @@
 #### P1（高优先）
 
 - [ ] 请求追踪与可观测性
-  - [ ] `x-request-id`/`traceparent` 贯穿 App⇄后端
-  - [ ] 接入 OpenTelemetry Trace/Metrics/Logs
+  - [ ] `x-request-id`/`traceparent`完善App⇄头部
+  - [ ] 接入 OpenTelemetry 跟踪/指标/日志
 - [ ] 重试与幂等
-  - [ ] 写操作幂等键与 `Idempotency-Key` 规范
-  - [ ] 客户端指数退避 + 抖动策略
+  - [ ] 写操作幂等键与`Idempotency-Key`规范
+  - [ ] 客户端指数退避 + 睡眠策略
 - [ ] 性能与可靠性
-  - [ ] HTTP/2 与 gzip 全面启用
-  - [ ] 分页/游标与确定性排序统一；限流/配额错误码
+  - [ ] HTTP/2 与 gzip 全面实现
+  - [ ] 分页/游标与确定性排序统一；限流/损耗错误码
 - [ ] 媒体与流式
   - [ ] 语音/图像接口稳定化
   - [ ] SSE/WebSocket 协议与心跳/重连/鉴权/限流规范
@@ -43,7 +42,7 @@
 #### P2（中优先）
 
 - [ ] 安全与合规
-  - [ ] RAI 过滤结果透传与拒绝原因
+  - [ ] RAI过滤结果透传与拒绝原因
   - [ ] 审计日志与敏感操作追踪；请求大小/速率限制
 - [ ] 发布流程
-  - [ ] 变更记录与迁移指南自动生成并随 SDK 发布
+  - [ ] 变更记录与迁移指南自动生成并随SDK发布

@@ -1,3 +1,3 @@
-# Cluade Prompts
+# 克劳德 Prompts
 
-Records of prompts used for implementing features with Claude Code.
+用于使用Claude代码实现功能的prompts记录。

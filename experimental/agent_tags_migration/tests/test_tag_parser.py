@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 标签解析器测试
 """
@@ -6,8 +6,7 @@
 import unittest
 import sys
 import os
-
-# 添加父目录到Python路径
+#添加目录父到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tag_parser import TagParser
@@ -23,7 +22,7 @@ class TestTagParser(unittest.TestCase):
     
     def test_extract_tags_basic(self):
         """测试基本的标签提取功能"""
-        # 测试标准格式
+# 测试标准格式
         result = self.parser.extract_tags_from_personality(
             SAMPLE_PERSONALITIES[0], 
             "test-agent-1", 
@@ -104,44 +103,36 @@ class TestTagParser(unittest.TestCase):
     
     def test_parse_tags_string(self):
         """测试标签字符串解析"""
-        # 测试基本分割
+# 基本测试架构
         tags = self.parser._parse_tags_string("Dancer, Sexy, Exotic, Singer")
         self.assertEqual(tags, ['Dancer', 'Sexy', 'Exotic', 'Singer'])
-        
-        # 测试去除空格
+#更大测试的空白
         tags = self.parser._parse_tags_string(" Artist , Creative , Passionate ")
         self.assertEqual(tags, ['Artist', 'Creative', 'Passionate'])
-        
-        # 测试去重
+# 测试去重
         tags = self.parser._parse_tags_string("Tag1, tag1, TAG1, Tag2")
         self.assertEqual(tags, ['Tag1', 'Tag2'])
-        
-        # 测试空字符串
+# 测试空字符串
         tags = self.parser._parse_tags_string("")
         self.assertEqual(tags, [])
-        
-        # 测试包含引号的标签
+# 测试包含引号的标签
         tags = self.parser._parse_tags_string("'Artist', \"Creative\", Passionate")
         self.assertEqual(tags, ['Artist', 'Creative', 'Passionate'])
     
     def test_clean_tag(self):
         """测试单个标签清理"""
-        # 测试正常标签
+#测试正常标签
         self.assertEqual(self.parser._clean_tag("artist"), "Artist")
         self.assertEqual(self.parser._clean_tag("CREATIVE"), "Creative")
-        
-        # 测试去除引号
+#兴趣测试
         self.assertEqual(self.parser._clean_tag("'dancer'"), "Dancer")
         self.assertEqual(self.parser._clean_tag('"singer"'), "Singer")
-        
-        # 测试去除空格
+#更大测试的空白
         self.assertEqual(self.parser._clean_tag("  performer  "), "Performer")
-        
-        # 测试长度限制
+# 长度测试限制
         self.assertIsNone(self.parser._clean_tag("a"))  # 太短
         self.assertIsNone(self.parser._clean_tag("a" * 51))  # 太长
-        
-        # 测试空标签
+# 测试空标签
         self.assertIsNone(self.parser._clean_tag(""))
         self.assertIsNone(self.parser._clean_tag(None))
     
@@ -149,8 +140,7 @@ class TestTagParser(unittest.TestCase):
         """测试标签标准化"""
         tags = ['hot', 'beautiful', 'smart', 'unique']
         normalized = self.parser.normalize_tags(tags)
-        
-        # 检查映射
+#查看地图
         self.assertIn('Sexy', normalized)  # hot -> Sexy
         self.assertIn('Beautiful', normalized)  # beautiful -> Beautiful
         self.assertIn('Intelligent', normalized)  # smart -> Intelligent
@@ -182,7 +172,7 @@ class TestTagParser(unittest.TestCase):
                 if expected:  # 如果预期有结果
                     self.assertTrue(result.extraction_success, 
                                   f"样本 {i} 应该提取成功")
-                    # 比较标签（忽略大小写和顺序）
+# 比较标签（忽略大小写和顺序）
                     result_tags_lower = [tag.lower() for tag in result.extracted_tags]
                     expected_tags_lower = [tag.lower() for tag in expected]
                     self.assertEqual(set(result_tags_lower), set(expected_tags_lower),

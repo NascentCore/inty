@@ -1,76 +1,51 @@
-# AI Character Generator
+# AI 角色生成器
 
-An intelligent AI agent that generates comprehensive fictional character profiles using the Gemini API. This system creates detailed characters with consistent physical appearances, engaging backgrounds, and meaningful encounter scenarios for role-play sessions.
-
-## Testing
-
-```bash
+一个智能 AI 代理，使用 Gemini API 生成 compr 丰富的虚构人物 pro 文件。该系统为角色扮演会话创建具有一致的物理外观、引人入胜的背景和有意义的遭遇场景的详细角色。## 测试```bash
 python -m pytest test_character_generation.py
-```
+```＃＃ 特征
 
-## Features
+### 🎭 完整角色 Profiles
 
-### 🎭 Complete Character Profiles
+- **物理外观**：所有生成图像具有一致特征的详细描述
+- **个性和背景**：丰富的背景故事、动机、恐惧、梦想和性格怪癖
+- **遭遇场景**：角色和人类用户之间富有创意的会面场景
+- **角色图像**：各种风格和场景的多个一致图像
 
-- **Physical Appearance**: Detailed descriptions with consistent features across all generated images
-- **Personality & Background**: Rich backstories, motivations, fears, dreams, and character quirks
-- **Encounter Scenarios**: Inventive meeting scenarios between the character and human users
-- **Character Images**: Multiple consistent images in various styles and scenes
+### 🎨 多种流派和风格
 
-### 🎨 Multiple Genres & Styles
+- **类型**：奇幻、科幻、悬疑、浪漫、冒险、生活片段、恐怖
+- **语气**：中性、严肃、幽默、神秘、前卫、快乐、明智- **图像风格**：现实、奇幻艺术、动漫、赛博朋克、卡通、绘画
 
-- **Genres**: Fantasy, Sci-Fi, Mystery, Romance, Adventure, Slice of Life, Horror
-- **Tones**: Neutral, Serious, Humorous, Mysterious, Edgy, Cheerful, Wise
-- **Image Styles**: Realistic, Fantasy Art, Anime, Cyberpunk, Cartoon, Painting
+### 🔧 技术特点
 
-### 🔧 Technical Features
+- **REST API**：基于 FastAPI 的 Web 服务，具有 comprehential 端点
+- **CLI 界面**：用于轻松生成角色的命令行工具
+- **导出格式**：JSON 和人类可读的文本格式
+- **验证**：Comprehense 字符验证和一致性检查
 
-- **REST API**: FastAPI-based web service with comprehensive endpoints
-- **CLI Interface**: Command-line tool for easy character generation
-- **Export Formats**: JSON and human-readable text formats
-- **Validation**: Comprehensive character validation and consistency checks
+## 快速入门
 
-## Quick Start
+### Pr必要条件
 
-### Prerequisites
+-Python 3.8+
+- 来自 Google AI Studio 的 Gemini API 密钥
 
-- Python 3.8+
-- Gemini API key from Google AI Studio
+＃＃＃ 安装
 
-### Installation
-
-1. **Clone the repository**
-
-   ```bash
+1. **克隆存储库**```bash
    git clone <repository-url>
    cd aigc
-   ```
-
-2. **Install dependencies**
-
-   ```bash
+   ```2.**安装依赖项**```bash
    pip install -r requirements.txt
-   ```
-
-3. **Set up environment variables**
-
-   ```bash
+   ```3.**设置环境变量**```bash
    export GEMINI_API_KEY="your_gemini_api_key_here"
-   ```
+   ```＃＃＃ 用法
 
-### Usage
+#### 命令行界面
 
-#### Command Line Interface
-
-Generate a character with default settings:
-
-```bash
+使用默认设置生成角色：```bash
 python cli.py "A mysterious wizard who lives in a floating tower"
-```
-
-Generate with custom parameters:
-
-```bash
+```使用自定义参数生成：```bash
 python cli.py "A cyberpunk hacker with neon hair" \
   --genre sci-fi \
   --tone edgy \
@@ -78,27 +53,15 @@ python cli.py "A cyberpunk hacker with neon hair" \
   --num-images 4 \
   --export-format text \
   --output my_character.txt
-```
-
-Show only character summary:
-
-```bash
+```只显示人物概要：```bash
 python cli.py "A wise librarian" --summary-only
-```
+```#### 网络 API
 
-#### Web API
-
-Start the API server:
-
-```bash
+启动 API 服务器：```bash
 python api.py
-```
+```API 将在“http://localhost:8000`”处可用
 
-The API will be available at `http://localhost:8000`
-
-**Generate a character:**
-
-```bash
+**生成角色：**```bash
 curl -X POST "http://localhost:8000/generate" \
   -H "Content-Type: application/json" \
   -d '{
@@ -108,144 +71,119 @@ curl -X POST "http://localhost:8000/generate" \
     "image_style": "fantasy_art",
     "num_images": 4
   }'
-```
-
-**Get example requests:**
-
-```bash
+```**获取示例请求：**```bash
 curl "http://localhost:8000/examples"
-```
+```**查看 API 文档：**
+请访问“http://localhost:8000/docs`”获取交互式 API 文档。## API 端点
 
-**View API documentation:**
-Visit `http://localhost:8000/docs` for interactive API documentation.
+|端点 |方法|描述 |
+| ----------------- | ------ | ---------------------------------------------------- |
+|`/`|获取 | API 信息和可用端点 |
+|`/health`|获取 |健康检查|
+|`/generate`|发布 |生成完整的字符profile |
+|`/generate/async`|发布 |异步生成字符 |
+|`/examples`|获取 |获取示例角色生成请求 |
+|`/docs`|获取 |交互式 API 文档 |
 
-## API Endpoints
+## 字符 Profile 结构
 
-| Endpoint          | Method | Description                               |
-| ----------------- | ------ | ----------------------------------------- |
-| `/`               | GET    | API information and available endpoints   |
-| `/health`         | GET    | Health check                              |
-| `/generate`       | POST   | Generate a complete character profile     |
-| `/generate/async` | POST   | Generate character asynchronously         |
-| `/examples`       | GET    | Get example character generation requests |
-| `/docs`           | GET    | Interactive API documentation             |
+每个生成的字符包括：
 
-## Character Profile Structure
+### 基本信息
 
-Each generated character includes:
+- **名称**：独特的角色名称
+- **年龄**：角色的年龄
+- **性别**：角色的性别认同
+- **物理外观**：详细的物理描述
 
-### Basic Information
+### 背景与个性
 
-- **Name**: Unique character name
-- **Age**: Character's age
-- **Gender**: Character's gender identity
-- **Physical Appearance**: Detailed physical description
+- **起源**：角色来自哪里
+- **职业**：他们做什么
+- **性格特征**：关键性格特征
+- **动机**：是什么驱使他们
+- **恐惧**：他们害怕什么
+- **梦想**：他们的愿望
+- **技能**：他们擅长什么
+- **怪癖**：独特的行为或习惯- **背景故事**：详细的生活史
 
-### Background & Personality
+### 遭遇场景
 
-- **Origin**: Where the character is from
-- **Occupation**: What they do
-- **Personality Traits**: Key personality characteristics
-- **Motivations**: What drives them
-- **Fears**: What they're afraid of
-- **Dreams**: Their aspirations
-- **Skills**: What they're good at
-- **Quirks**: Unique behaviors or habits
-- **Backstory**: Detailed life history
+- **场景描述**：用户在哪里以及如何遇见角色
+- **地点**：具体集合地点
+- **心情**：气氛描述
+- **初始对话**：角色说的第一句话
+- **用户角色**：用户扮演什么角色
+- **遭遇类型**：互动类型（休闲、冒险、神秘、浪漫）
 
-### Encounter Scenario
+### 生成的图像
 
-- **Scene Description**: Where and how the user meets the character
-- **Location**: Specific meeting place
-- **Mood**: Atmospheric description
-- **Initial Dialogue**: First words the character says
-- **User Role**: What role the user plays
-- **Encounter Type**: Type of interaction (casual, adventure, mystery, romance)
+- **多图像**：不同场景中角色外观一致
+- **场景上下文**：每个图像设置的描述
+- **图像风格**：使用的艺术风格
 
-### Generated Images
+＃＃ 配置
 
-- **Multiple Images**: Consistent character appearances in different scenes
-- **Scene Context**: Description of each image's setting
-- **Image Style**: Artistic style used
+系统可以通过环境变量进行配置：|变量|默认|描述 |
+| -------------------------- | ------------------------------------------ | ------------------------------------------- |
+|`GEMINI_API_KEY`|必填 |你的双子座 API 钥匙 |
+|`DEBUG`                    | `True`|启用调试模式 |
+|`HOST`                     | `0.0.0.0`| API 服务器主机 |
+|`PORT`                     | `8000`| API 服务器端口 |
+|`MAX_IMAGES_PER_CHARACTER` | `4`|每个角色的最大图像数 |
+|`IMAGE_QUALITY`            | `high`|图像生成质量 |
+|`LOG_LEVEL`                | `INFO`|日志记录级别（调试、信息、警告、错误）|
+|`LOG_TO_FILE`              | `False`|启用文件日志记录 |
+|`LOG_FILE`                 | `logs/character_generator.log`|日志文件路径|
 
-## Configuration
+## 测试
 
-The system can be configured through environment variables:
-
-| Variable                   | Default                        | Description                                 |
-| -------------------------- | ------------------------------ | ------------------------------------------- |
-| `GEMINI_API_KEY`           | Required                       | Your Gemini API key                         |
-| `DEBUG`                    | `True`                         | Enable debug mode                           |
-| `HOST`                     | `0.0.0.0`                      | API server host                             |
-| `PORT`                     | `8000`                         | API server port                             |
-| `MAX_IMAGES_PER_CHARACTER` | `4`                            | Maximum images per character                |
-| `IMAGE_QUALITY`            | `high`                         | Image generation quality                    |
-| `LOG_LEVEL`                | `INFO`                         | Logging level (DEBUG, INFO, WARNING, ERROR) |
-| `LOG_TO_FILE`              | `False`                        | Enable file logging                         |
-| `LOG_FILE`                 | `logs/character_generator.log` | Log file path                               |
-
-## Testing
-
-Run the test suite to validate the system:
-
-```bash
+运行测试套件来验证系统：```bash
 python test_character_generation.py
-```
+```这将测试：
 
-This will test:
+- 具有不同类型和语气的角色生成
+- 字符验证
+- 导出格式
+- API 功能
 
-- Character generation with different genres and tones
-- Character validation
-- Export formats
-- API functionality
+### 调试
 
-### Debugging
-
-Use the debugging tool to diagnose issues:
-
-```bash
+使用调试工具诊断问题：```bash
 python debug.py
-```
+```这个 comprehense 调试脚本将：
 
-This comprehensive debugging script will:
+- 检查环境设置和依赖关系
+- 测试配置加载
+- 验证 Gemini API 连接
+- 测试日志配置
+- 验证 Pydantic 模型
+- 运行完整的角色生成测试
 
-- Check environment setup and dependencies
-- Test configuration loading
-- Verify Gemini API connection
-- Test logging configuration
-- Validate Pydantic models
-- Run a full character generation test
+### 日志记录
 
-### Logging
+系统包括 comprehential 日志记录以供调试：
 
-The system includes comprehensive logging for debugging:
-
-**Enable verbose logging:**
-
-```bash
+**启用详细日志记录：**```bash
 export LOG_LEVEL=DEBUG
 export LOG_TO_FILE=True
 python cli.py "Your character description" --verbose
-```
+```**查看日志：**
 
-**View logs:**
+- 控制台：执行过程中的实时日志
+- 文件：`logs/character_generator.log`（启用后）
+- 错误日志：`logs/character_generator_errors.log`（启用后）
+- 详细日志：`logs/character_generator_verbose.log`（调试模式）
 
-- Console: Real-time logs during execution
-- File: `logs/character_generator.log` (when enabled)
-- Error logs: `logs/character_generator_errors.log` (when enabled)
-- Verbose logs: `logs/character_generator_verbose.log` (debug mode)
+**日志级别：**
 
-**Log Levels:**
+-`DEBUG`：详细的调试信息
+-`INFO`：一般操作信息
+-`WARNING`：潜在问题的警告消息
+-`ERROR`：操作失败的错误消息
+-`CRITICAL`：可能导致系统故障的严重错误
 
-- `DEBUG`: Detailed debugging information
-- `INFO`: General operational information
-- `WARNING`: Warning messages for potential issues
-- `ERROR`: Error messages for failed operations
-- `CRITICAL`: Critical errors that may cause system failure
-
-## Architecture
-
-```
+＃＃ 建筑学```
 aigc/
 ├── config.py              # Configuration management
 ├── models.py              # Pydantic data models
@@ -256,28 +194,25 @@ aigc/
 ├── test_character_generation.py  # Test suite
 ├── requirements.txt       # Python dependencies
 └── README.md             # This file
-```
+```## 贡献
 
-## Contributing
+1. 分叉存储库
+2. 创建功能分支
+3. 做出改变
+4.添加新功能测试
+5. 提交拉取请求
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
+＃＃ 执照
 
-## License
+此 project 根据 MIT 许可证获得许可 - 有关详细信息，请参阅许可证文件。
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+＃＃ 支持
 
-## Support
+对于问题和疑问：
 
-For issues and questions:
-
-1. Check the API documentation at `/docs`
-2. Review the test examples
-3. Open an issue on GitHub
+1.检查 API 文档：`/docs`2. 回顾测试示例
+3. 在 GitHub 上打开问题
 
 ---
 
-**Note**: This system requires a valid Gemini API key to function. The image generation currently creates placeholder URLs - in a production environment, you would integrate with actual image generation services.
+**注意**：该系统需要有效的 Gemini API 密钥才能运行。图像生成当前创建占位符 URL - 在 production 环境中，您将与实际图像生成服务集成。

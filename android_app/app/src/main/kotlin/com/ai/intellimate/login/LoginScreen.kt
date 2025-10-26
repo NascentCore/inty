@@ -51,8 +51,7 @@ internal fun LoginScreen(
     var lastClickTime by remember { mutableLongStateOf(0L) }
     var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-
-    // 使用新的 Credential Manager 登录
+// 使用新的会计管理器登录
     fun performGoogleSignIn() {
         if (isLoading) return
 
@@ -70,15 +69,15 @@ internal fun LoginScreen(
                         onGoogleLoginSuccess(idToken)
                     },
                     onFailure = { exception ->
-                        // 检查是否为用户取消操作，如果是则不显示错误提示
+// 检查是否为用户显示取消操作，如果是则不出现错误提示
                         when (exception) {
                             is GetCredentialCancellationException -> {
-                                // 用户取消登录，不显示错误提示
+// 用户取消登录，不显示错误提示
                                 LogUtils.i("User cancelled the login process")
                                 return@fold
                             }
                             is GetCredentialInterruptedException -> {
-                                // 登录过程被中断，不显示错误提示
+// 登录过程被中断，不显示错误提示
                                 LogUtils.i("Login process was interrupted")
                                 return@fold
                             }
@@ -86,19 +85,19 @@ internal fun LoginScreen(
                                 val errorMessage =
                                     context.getString(R.string.no_credentials_available)
                                 LogUtils.e("Credential Manager sign-in failed: $errorMessage")
-                                // 显示错误提示
+// 显示错误提示
                                 coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
                             is GetCredentialException -> {
                                 val errorMessage = context.getString(R.string.get_credential_failed)
                                 LogUtils.e("Credential Manager sign-in failed: $errorMessage")
-                                // 显示错误提示
+// 显示错误提示
                                 coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
                             else -> {
                                 val errorMessage = context.getString(R.string.login_failed)
                                 LogUtils.e("Credential Manager sign-in failed: $errorMessage")
-                                // 显示错误提示
+// 显示错误提示
                                 coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
                         }
@@ -129,19 +128,17 @@ internal fun LoginScreen(
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // 关闭按钮
+// 关闭按钮
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 LoginCloseButton(onClose = onClose)
             }
 
             Spacer(Modifier.height(12.dp))
-
-            // Logo 图片
+// 标志图片
             LogoImage()
 
             Spacer(modifier = Modifier.height(40.dp))
-
-            // 欢迎文本
+// 欢迎文本
             WelcomeTitle()
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -149,13 +146,11 @@ internal fun LoginScreen(
             WelcomeSubtitle()
 
             Spacer(modifier = Modifier.height(40.dp))
-
-            // Google 登录按钮
+// 谷歌登录按钮
             GoogleLoginButton(isLoading = isLoading, onLoginClick = { performGoogleSignIn() })
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            // 隐私政策文本
+// 隐私政策文本
             PolicyText()
 
             Spacer(modifier = Modifier.height(60.dp))

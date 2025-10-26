@@ -20,15 +20,13 @@ export const BackgroundWithCropOverlay: React.FC<
   if (!agent.background) {
     return <span style={{ color: "#999" }}>无</span>;
   }
-
-  // 如果没有截取信息或不需要显示覆盖层，直接显示图片
+// 如果没有截取信息或不需要显示覆盖层，直接显示图片
   if (!avatarCrop || !showCropOverlay) {
     return <img src={agent.background} alt="background" style={style} />;
   }
 
   const { x, y, width, imageWidth, imageHeight } = avatarCrop;
-
-  // 计算截取区域在显示图片中的相对位置和大小
+// 计算截取区域在显示图片中的相对位置和大小
   const cropLeft = (x / imageWidth) * 100; // 百分比
   const cropTop = (y / imageHeight) * 100; // 百分比
   const cropWidth = (width / imageWidth) * 100; // 百分比

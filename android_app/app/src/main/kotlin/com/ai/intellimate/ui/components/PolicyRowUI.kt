@@ -21,7 +21,7 @@ import com.ai.intellimate.utils.TextStyleUtils
 @Composable
 fun PolicyRow(context: Context, fontSize: TextUnit) {
     Row(
-        // 占据全部宽度，这样下面的居中显示才有意义
+// 发起人显示全部宽度，这样下面的居中才有意义
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,

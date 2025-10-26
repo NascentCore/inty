@@ -1,4 +1,4 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
+// 构建构建文件，您可以在其中添加所有子 projects/modules 通用的配置选项。
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.android) apply false

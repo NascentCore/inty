@@ -1,13 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older that API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?><！--
+   备份规则文件示例；取消注释并根据需要进行自定义。
+   请参阅https://developer.android.com/guide/topics/data/autobackup
+   了解详情。注意：对于 API 31 之前的设备，此文件将被忽略
+   请参阅https://developer.android.com/about/versions/12/backup-restore
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
+    <！--
+   <include域=“sharedpref”路径=“。”/>
+   <排除域=“共享pref”路径=“设备。xml”/>
 -->
 </full-backup-content>

@@ -9,9 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision: str = 'df2112660694'
 down_revision: Union[str, None] = '20250718_014000'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -19,16 +17,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add main_prompt column to agents table
+# 将 main_prompt 列添加到代理表中
     op.add_column('agents', sa.Column('main_prompt', sa.Text(), nullable=True))
-    
-    # Add mode_prompt column to agents table  
+# 将模式__prompt 列添加到代理表中
     op.add_column('agents', sa.Column('mode_prompt', sa.Text(), nullable=True))
 
 
 def downgrade() -> None:
-    # Remove mode_prompt column from agents table
+# 从代理表中删除模式__prompt 列
     op.drop_column('agents', 'mode_prompt')
-    
-    # Remove main_prompt column from agents table
+# 从代理表中删除 main_prompt 列
     op.drop_column('agents', 'main_prompt')

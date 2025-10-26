@@ -1,8 +1,7 @@
 package ai.sxwl.android.design.theme
 
 import androidx.compose.ui.graphics.Color
-
-//region 动态生成的主题色 https://material-foundation.github.io/material-theme-builder/
+//区域动态生成的主题色 https://material-foundation.github.io/material-theme-builder/
 val primaryLight = Color(0xFF8E12C8)
 val onPrimaryLight = Color(0xFFFFFFFF)
 val primaryContainerLight = Color(0xFFAA3BE3)
@@ -218,13 +217,10 @@ val surfaceContainerLowDarkHighContrast = Color(0xFF241D27)
 val surfaceContainerDarkHighContrast = Color(0xFF362E38)
 val surfaceContainerHighDarkHighContrast = Color(0xFF413943)
 val surfaceContainerHighestDarkHighContrast = Color(0xFF4D444F)
-//endregion
-
-
-//region 项目内 设计师的配色
+//区域结束
+//区域项目内部设计师
 
 object HeartColor {
     val primaryColor = Color(0xFF1C1523)
 }
-
-//endregion
+//区域结束

@@ -13,7 +13,7 @@ interface AvatarDisplayProps {
 
 /**
  * 头像显示组件
- * 根据坐标信息动态显示截取的头像区域
+ *根据坐标信息动态显示截取的区域头像
  */
 export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
   agent,
@@ -24,16 +24,13 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
   const avatarCrop = agent.extensions?.avatar_crop as
     | AvatarCropData
     | undefined;
-
-  // 1. 优先使用 avatar_crop + background
+// 1.优先使用 avatar_crop + 背景
   if (avatarCrop && agent.background) {
     const { x, y, width, imageWidth, imageHeight } = avatarCrop;
     const sourceImageUrl = agent.background;
-
-    // 计算缩放比例 - 让截取区域填满整个容器
+// 计算缩放比例 - 让截取区域占满整个容器
     const scale = size / width;
-
-    // 计算图片在容器中的位置
+// 计算图片在容器中的位置
     const imageDisplayWidth = imageWidth * scale;
     const imageDisplayHeight = imageHeight * scale;
     const offsetX = -x * scale;
@@ -88,8 +85,7 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
       </div>
     );
   }
-
-  // 2. 如果没有坐标信息，检查 agent.avatar
+// 2.如果没有坐标信息，请检查代理。头像
   if (agent.avatar) {
     return (
       <Avatar
@@ -100,8 +96,7 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
       />
     );
   }
-
-  // 3. 最后使用 agent.background 顶部居中对齐截取正方形
+// 3.最后使用代理。背景顶部居中厦门取厦门
   if (agent.background) {
     return (
       <div
@@ -131,8 +126,7 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
       </div>
     );
   }
-
-  // 如果都没有，显示默认图标
+// 如果都没有，显示默认图标
   return <Avatar size={size} icon={<RobotOutlined />} style={style} />;
 };
 

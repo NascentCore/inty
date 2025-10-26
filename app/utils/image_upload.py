@@ -28,13 +28,12 @@ from app.utils.image import (
 
 class ImageUploadResponse(BaseModel):
     """Image upload response"""
-
-    # Uploaded compressed image
+# 上传compressed图片
     url: str
     size: ImageSize
-    # Uploaded original image
+# 上传原图
     original_url: Optional[str] = None
-    # Uploaded avatar image
+# 上传头像图片
     avatar_url: Optional[str] = None
     avatar_size: Optional[ImageSize] = None
 
@@ -61,7 +60,7 @@ async def process_image_upload(
     Returns:
         APIResponse with success/error status and data
     """
-    # Validate file content type
+# 验证文件内容类型
     if not file.content_type:
         logger.error("File content type is required")
         return APIResponse.error(
@@ -92,8 +91,7 @@ async def process_image_upload(
                 "actual_size_bytes": file_size,
             },
         )
-
-    # Validate filename
+# 验证文件名
     if not file.filename:
         logger.error("Filename is required")
         return APIResponse.error(message="Filename is required")
@@ -101,8 +99,7 @@ async def process_image_upload(
     if "." not in file.filename:
         logger.error(f"文件名格式错误，缺少扩展名: {file.filename}")
         return APIResponse.error(message="Invalid filename")
-
-    # Validate file extension
+# 验证文件扩展名
     file_ext = file.filename.split(".")[-1].lower()
     logger.debug(f"文件扩展名: {file_ext}")
     allowed_extensions = [
@@ -123,19 +120,17 @@ async def process_image_upload(
                 "received_format": file_ext,
             },
         )
-
-    # Store original file data before compression
+# compression 存储原始文件数据之前
     original_file_data = file_data
     original_file_ext = file_ext
     original_content_type = file.content_type
-
-    # Compress PNG and large files
-    # Always compress PNG, and also compress if file is > 500KB.
-    # We might adjust the threshold value of 500KB in the future.
-    # The rationale is that on a smart phone, 500KB JPEG should be sufficient.
-    # PNG is a lossless format, so we can compress it to JPEG to save space.
-    # TODO: Explicitly add parameter compress_image in request body to control this.
-    # Not always compress png files.
+# Compress PNG 和大文件
+# 始终为 compress PNG，如果文件 > 500KB，则也为 compress。
+# 未来我们可能会调整500KB的阈值。
+#理由是在智能手机上，500KB JPEG应该足够了。
+# PNG 是无损格式，因此我们可以将其 compress 转换为 JPEG 以节省空间。
+# TODO：在请求体中显式添加参数compress_image来控制。
+# 并不总是 compress png 文件。
     compression_threshold_size_bytes = (
         global_config_loaded_from_config_yaml.app.limits.image_compression_threshold_size_kb
         * 1024
@@ -152,8 +147,7 @@ async def process_image_upload(
     img = Image.open(io.BytesIO(original_file_data))
     size = ImageSize(width=img.width, height=img.height)
     logger.debug(f"图片大小: {size}")
-
-    # Generate unique file paths
+#唯一生成的文件路径
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     unique_id = uuid.uuid4().hex[:8]
     file_gcs_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}.{file_ext}"
@@ -164,8 +158,7 @@ async def process_image_upload(
         global_config_loaded_from_config_yaml.gcs.bucket,
         file_gcs_path,
     )
-
-    # Convert GCS URL to CDN URL
+# 将 GCS URL 转换为 CDN URL
     from app.services.image_transform_service import image_transform_service
 
     try:
@@ -179,21 +172,18 @@ async def process_image_upload(
 
     result = ImageUploadResponse(url=url, size=size)
     logger.debug(f"图片 上传 GCS 成功，返回URL: {url}")
-
-    # If image was compressed and it's not an avatar, also upload uncompressed version
+# 如果图片是 compressed 并且不是头像，还上传 uncompressed 版本
     if was_compressed:
-        # Generate path for uncompressed image
+# 生成uncompressed图像的路径
         uncompressed_file_gcs_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}-original.{original_file_ext}"
-
-        # Upload uncompressed file to GCS
+# 将uncompressed文件上传到GCS
         uncompressed_gcs_url = upload_to_gcs(
             original_file_data,
             original_content_type,
             global_config_loaded_from_config_yaml.gcs.bucket,
             uncompressed_file_gcs_path,
         )
-
-        # Convert uncompressed GCS URL to CDN URL
+# 将 uncompressed GCS URL 转换为 CDN URL
         try:
             uncompressed_url = image_transform_service.transform_mobile(
                 uncompressed_gcs_url
@@ -206,8 +196,7 @@ async def process_image_upload(
             uncompressed_url = uncompressed_gcs_url  # Fallback to original GCS URL
 
         result.original_url = uncompressed_url
-
-        # Only store CDN URL, save GCS URL in metadata
+# 只存储CDN URL，将GCS URL保存在元数据中
         await async_create_image_resource(
             async_db=async_db,
             user_id=user_id,
@@ -217,9 +206,8 @@ async def process_image_upload(
             byte_size=len(original_file_data),
             gcs_url=uncompressed_gcs_url,  # Store GCS URL in metadata
         )
-
-    # Create resource record for the compressed image
-    # Only store CDN URL, save GCS URL in metadata
+# 为compressed镜像创建资源记录
+# 只存储CDN URL，将GCS URL保存在元数据中
     await async_create_image_resource(
         async_db=async_db,
         user_id=user_id,
@@ -229,14 +217,12 @@ async def process_image_upload(
         byte_size=len(file_data),
         gcs_url=gcs_url,  # Store GCS URL in metadata
     )
-
-    # Handle cropping if enabled
+# 如果启用则处理
     if cropping_avatar:
         crop_avatar_result = crop_avatar(file_data)
         cropped_avatar = crop_avatar_result.image
         result.avatar_size = crop_avatar_result.size
-
-        # Convert PIL Image to bytes for GCS upload
+# 将 PIL 图像转换为字节以供 GCS 上传
         jpg_data = get_jpg_bytes_from_pil_image(cropped_avatar)
 
         cropped_file_gcs_path = append_filename_suffix(
@@ -249,8 +235,7 @@ async def process_image_upload(
             global_config_loaded_from_config_yaml.gcs.bucket,
             cropped_file_gcs_path,
         )
-
-        # Convert cropped avatar GCS URL to CDN URL
+# 将修剪后的头像 GCS URL 转换为 CDN URL
         try:
             cropped_avatar_url = image_transform_service.transform_mobile(
                 cropped_avatar_gcs_url
@@ -263,9 +248,8 @@ async def process_image_upload(
             cropped_avatar_url = cropped_avatar_gcs_url  # Fallback to original GCS URL
 
         result.avatar_url = cropped_avatar_url
-
-        # Write the metadata of the uploaded image, which might be compressed.
-        # Only store CDN URL, save GCS URL in metadata
+# 写入上传图片的元数据，可能是compressed。
+#只存储CDN URL，在元数据中保存GCS URL
         await async_create_image_resource(
             async_db=async_db,
             user_id=user_id,

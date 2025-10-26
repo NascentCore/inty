@@ -18,8 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class RegInfoViewModel : BaseVM() {
-
-    // 事件通知机制
+// 事件通知机制
     private val _events = MutableSharedFlow<ViewModelEvent>()
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
 
@@ -35,21 +34,19 @@ class RegInfoViewModel : BaseVM() {
     fun onSave(gender: GENDER, age: String) {
         launchBackground {
             val info = UserProfileManager.getUserProfile()
-            // 调用接口，需要让服务端存储游客的性别和年龄数据
+// 调用接口，需要让服务端存储游客的性别和年龄数据
             val updatedProfile = info.copy(gender = gender.value, ageGroup = age)
 
             val result = IntyUserProfileSDK.updateUserProfile(updatedProfile)
 
             if (result != null) {
-                // 用户信息更新成功
+// 用户信息更新成功
                 withContext(Dispatchers.Main) {
-                    // 更新本地缓存
+// 更新本地服务器
                     UserProfileManager.saveUserProfile(result)
-
-                    // 发送用户信息更新成功事件
+// 发送用户信息更新成功事件
                     sendEvent(ViewModelEvent.UserProfileUpdated)
-
-                    // 重启 MainActivity 以清理所有缓存数据
+// 重启MainActivity以清理所有服务器数据
                     val intent =
                         Intent(Utils.getApp(), MainActivity::class.java).apply {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

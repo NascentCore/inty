@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 生成长期有效Token的命令行工具
 
@@ -14,8 +14,7 @@ import argparse
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-
-# 添加项目根目录到路径
+#添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.core.security import create_access_token
@@ -64,21 +63,18 @@ async def generate_long_term_token(
     """生成长期有效的token"""
 
     try:
-        # 获取数据库会话
+# 获取数据库会话
         async for db in get_async_db():
-            # 查找用户
+# 查找用户
             user = await find_user_by_criteria(
                 db, user_id=user_id, phone=phone, email=email, readable_id=readable_id
             )
-
-            # 生成长期token
+# 生成长期代币
             expire_delta = timedelta(days=days)
             token = create_access_token(subject=user.id, expires_delta=expire_delta)
-
-            # 计算过期时间
+# 计算过渡时间
             expire_time = datetime.utcnow() + expire_delta
-
-            # 输出结果
+# 输出结果
             print("=" * 60)
             print("🎉 长期Token生成成功!")
             print("=" * 60)
@@ -111,22 +107,19 @@ async def generate_long_term_token(
 
 def main():
     parser = argparse.ArgumentParser(description="生成长期有效Token")
-
-    # 用户查找参数（互斥）
+# 用户查找参数（互斥）
     user_group = parser.add_mutually_exclusive_group(required=True)
     user_group.add_argument("--user-id", help="用户ID")
     user_group.add_argument("--phone", help="手机号")
     user_group.add_argument("--email", help="邮箱")
     user_group.add_argument("--readable-id", help="用户可读ID")
-
-    # Token有效期参数
+# 代币近期参数
     parser.add_argument(
         "--days", type=int, default=365, help="Token有效期（天数），默认365天"
     )
 
     args = parser.parse_args()
-
-    # 验证参数
+# 验证参数
     if args.days <= 0:
         print("❌ 错误: 有效期必须大于0天")
         sys.exit(1)
@@ -137,8 +130,7 @@ def main():
         if confirm.lower() != "y":
             print("已取消")
             sys.exit(0)
-
-    # 生成token
+# 生成token
     print("🔄 正在生成长期Token...")
     asyncio.run(
         generate_long_term_token(

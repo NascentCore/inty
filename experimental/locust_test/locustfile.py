@@ -51,8 +51,7 @@ class ChatAPIUser(HttpUser):
         注册游客用户
         """
         device_id = f"test_device_{uuid.uuid4().hex[:8]}"
-        
-        # 根据 GuestRequest schema 构建正确的请求负载
+# 根据 GuestRequest schema 构建正确的请求负载
         payload = {
             "device_id": device_id,
             "system_language": "zh",
@@ -69,7 +68,7 @@ class ChatAPIUser(HttpUser):
                 try:
                     data = response.json()
                     if data.get("code") == 200 and "data" in data:
-                        # 根据实际API响应结构解析字段
+# 根据实际API响应结构解析字段
                         response_data = data["data"]
                         self.auth_token = response_data.get("token")
                         self.user_id = response_data.get("guest_id")  # 修正字段名
@@ -84,7 +83,7 @@ class ChatAPIUser(HttpUser):
                         response.failure(f"注册失败: {data}")
                         return False
                 except Exception as e:
-                    # 增加更详细的错误信息用于调试
+# 增加更详细的调试错误信息
                     response.failure(f"解析响应失败: {e}, 响应内容: {response.text[:200]}")
                     return False
             else:
@@ -103,7 +102,7 @@ class ChatAPIUser(HttpUser):
         与Nora Agent进行持续聊天对话
         """
         if not self.auth_token:
-            # 如果没有token，先注册
+# 如果没有token，先注册
             if not self.register_guest():
                 return
         
@@ -130,14 +129,14 @@ class ChatAPIUser(HttpUser):
                 try:
                     data = response.json()
                     if data.get("code") == 200:
-                        # 成功收到回复
+# 成功收到回复
                         response.success()
                     else:
                         response.failure(f"业务错误: {data.get('message', 'Unknown')}")
                 except Exception as e:
                     response.failure(f"解析响应失败: {e}")
             elif response.status_code == 401:
-                # token过期，重新注册
+# token过期，重新注册
                 self.register_guest()
                 response.failure("认证失败，已重新注册")
             else:
@@ -150,11 +149,10 @@ if __name__ == "__main__":
     """
     import os
     import sys
-    
-    # 设置默认测试参数
+# 设置默认测试参数
     if len(sys.argv) == 1:
-        # 基础聊天测试
+# 基础聊天测试
         os.system("locust -f locustfile.py --host=http://localhost:8000 --users=10 --spawn-rate=2 --run-time=5m --html=report.html")
     else:
-        # 使用命令行参数
+# 使用命令行参数
         pass

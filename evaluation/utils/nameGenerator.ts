@@ -1,8 +1,7 @@
 /**
  * 随机英文名字生成器
- * 用于为智能体角色生成随机的英文名字
+ *用于智能体生成随机角色的中文名字
  */
-
 // 男性英文名字列表
 const MALE_NAMES = [
   "Alexander",
@@ -122,7 +121,6 @@ const LAST_NAMES = [
   "Carter",
   "Roberts",
 ];
-
 // 女性英文名字列表
 const FEMALE_NAMES = [
   "Amelia",
@@ -192,7 +190,6 @@ const FEMALE_NAMES = [
   "Rose",
   "Sage",
 ];
-
 // 中性英文名字列表
 const NEUTRAL_NAMES = [
   "Alex",
@@ -255,8 +252,8 @@ const NEUTRAL_NAMES = [
 
 /**
  * 根据性别生成随机英文名字
- * @param gender 性别：'MALE' | 'FEMALE' | 'OTHER'
- * @returns 随机英文名字
+ * @param sex 性别：'MALE' | '女'| '其他'
+ * @returns 随机英文名
  */
 export function generateRandomName(
   gender: "MALE" | "FEMALE" | "OTHER",
@@ -284,8 +281,8 @@ export function generateRandomName(
 }
 
 /**
- * 生成随机英文名字（不指定性别）
- * @returns 随机英文名字
+ * 随机生成中文名字（不指定性别）
+ * @returns 随机英文名
  */
 export function generateRandomNameAny(): string {
   const allNames = [...MALE_NAMES, ...FEMALE_NAMES, ...NEUTRAL_NAMES];

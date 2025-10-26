@@ -22,14 +22,14 @@ async def generate_chat_stream(
     Generate streaming chat response (async version)
     """
     try:
-        # Use Agent's async chat_stream method
+# 使用Agent的异步chat_stream方法
         async for message_chunk, metadata in agent.chat_stream(
             user_id=user_id,
             session_id=session_id,
             messages=messages,
             db_session=db_session,
         ):
-            # Check message chunk type, only send AI messages
+#检查消息块类型，仅发送AI消息
             if hasattr(message_chunk, "content") and message_chunk.content:
                 chunk_data = {
                     "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
@@ -50,8 +50,7 @@ async def generate_chat_stream(
                     ],
                 }
                 yield f"data: {json.dumps(chunk_data, ensure_ascii=False)}\n\n"
-
-        # Send end marker
+# 发送结束标记
         end_chunk = {
             "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
             "object": "chat.completion.chunk",

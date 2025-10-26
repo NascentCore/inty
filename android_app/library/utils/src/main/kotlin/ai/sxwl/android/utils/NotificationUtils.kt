@@ -26,11 +26,10 @@ object NotificationUtils {
     private const val TAG = "NotificationUtils"
     private const val DEFAULT_CHANNEL_ID = "default"
     private const val DEFAULT_CHANNEL_NAME = "默认通知"
-
-    // ==================== 通知配置类 ====================
+// ==================== 通知配置类 ====================
 
     /**
-     * 通知配置类
+     * 配置通知类
      */
     data class NotificationConfig(
         val id: Int,
@@ -55,7 +54,7 @@ object NotificationUtils {
     )
 
     /**
-     * 通知动作
+     * 动作通知
      */
     data class NotificationAction(
         val icon: Int,
@@ -92,11 +91,10 @@ object NotificationUtils {
         val timestamp: Long,
         val person: Person? = null
     )
-
-    // ==================== 通知渠道管理 ====================
+// ==================== 通知渠道管理 ====================
 
     /**
-     * 创建通知渠道
+     *创建渠道通知
      */
     fun createNotificationChannel(
         channelId: String,
@@ -115,7 +113,7 @@ object NotificationUtils {
     }
 
     /**
-     * 创建通知渠道
+     *创建渠道通知
      */
     fun createNotificationChannel(
         context: Context,
@@ -134,8 +132,7 @@ object NotificationUtils {
             val notificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
                     ?: return false
-
-            // 检查渠道是否已存在
+// 检查渠道是否存在
             if (notificationManager.getNotificationChannel(channelId) != null) {
                 Log.d(TAG, "通知渠道已存在: $channelId")
                 return true
@@ -146,14 +143,12 @@ object NotificationUtils {
                 this.vibrationPattern = vibrationPattern
                 this.enableLights(lights)
                 this.lightColor = lightColor
-
-                // 设置音频属性
+// 设置音频属性
                 val audioAttributes = AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build()
-
-                // 设置声音
+//声音设置
                 val notificationSound =
                     sound ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
                 setSound(notificationSound, audioAttributes)
@@ -193,8 +188,7 @@ object NotificationUtils {
             false
         }
     }
-
-    // ==================== 通知显示 ====================
+// ==================== 通知显示 ====================
 
     /**
      * 显示通知
@@ -214,7 +208,7 @@ object NotificationUtils {
         }
 
         return try {
-            // 确保通知渠道存在
+//确保通知渠道存在
             createNotificationChannel(
                 context, config.channelId, getChannelName(config.channelId),
                 getChannelImportance(config.priority)
@@ -233,7 +227,7 @@ object NotificationUtils {
     }
 
     /**
-     * 构建通知Builder
+     * 构建通知构建器
      */
     private fun buildNotificationBuilder(
         context: Context,
@@ -247,11 +241,9 @@ object NotificationUtils {
             .setAutoCancel(config.autoCancel)
             .setOngoing(config.ongoing)
             .setShowWhen(config.showWhen)
-
-        // 设置大图标
+// 设置大图标
         config.largeIcon?.let { builder.setLargeIcon(it) }
-
-        // 设置点击意图
+// 设置点击意图
         config.intent?.let { intent ->
             val pendingIntent = try {
                 PendingIntent.getActivity(
@@ -264,21 +256,17 @@ object NotificationUtils {
             }
             pendingIntent?.let { builder.setContentIntent(it) }
         }
-
-        // 设置分组
+// 设置包
         config.groupKey?.let { builder.setGroup(it) }
         config.sortKey?.let { builder.setSortKey(it) }
-
-        // 设置声音和振动
+//设置声音和振动
         config.sound?.let { builder.setSound(it) }
         config.vibrationPattern?.let { builder.setVibrate(it) }
-
-        // 设置灯光
+// 设置灯光
         if (config.lights) {
             builder.setLights(config.lightColor, 1000, 1000)
         }
-
-        // 设置样式
+// 设置样式
         config.style?.let { style ->
             when (style) {
                 is NotificationStyle.BigTextStyle -> {
@@ -315,8 +303,7 @@ object NotificationUtils {
                 }
             }
         }
-
-        // 添加动作
+//添加动作
         config.actions.forEach { action ->
             val actionPendingIntent = try {
                 PendingIntent.getActivity(
@@ -334,8 +321,7 @@ object NotificationUtils {
 
         return builder
     }
-
-    // ==================== 便捷方法 ====================
+// ====================便捷方法====================
 
     /**
      * 显示简单通知
@@ -357,7 +343,7 @@ object NotificationUtils {
     }
 
     /**
-     * 显示进度通知
+     * 显示技术通知
      */
     fun showProgressNotification(
         id: Int,
@@ -421,8 +407,7 @@ object NotificationUtils {
             )
         )
     }
-
-    // ==================== 通知管理 ====================
+// ==================== 通知管理 ====================
 
     /**
      * 取消通知
@@ -467,8 +452,7 @@ object NotificationUtils {
             false
         }
     }
-
-    // ==================== 权限检查 ====================
+// ====================权限检查 ====================
 
     /**
      * 检查通知是否启用
@@ -513,8 +497,7 @@ object NotificationUtils {
             false
         }
     }
-
-    // ==================== 工具方法 ====================
+// ==================== 工具方法 ====================
 
     /**
      * 获取渠道名称

@@ -73,12 +73,12 @@ object FileIoUtils {
                 try {
                     inputStream.close()
                 } catch (e: Exception) {
-                    // 静默处理关闭异常
+// 静默处理关闭异常
                 }
                 try {
                     os?.close()
                 } catch (e: Exception) {
-                    // 静默处理关闭异常
+// 静默处理关闭异常
                 }
             }
         } catch (e: Exception) {
@@ -146,13 +146,13 @@ object FileIoUtils {
             try {
                 reader?.close()
             } catch (e: Exception) {
-                // 静默处理关闭异常
+// 静默处理关闭异常
             }
         }
     }
 
     /**
-     * 读取文件到字节数组
+     * 读取文件到字节存储
      */
     fun readFile2Bytes(filePath: String?): ByteArray {
         val file = FileUtils.getFileByPath(filePath)
@@ -164,7 +164,7 @@ object FileIoUtils {
     }
 
     /**
-     * 读取文件到字节数组
+     * 读取文件到字节存储
      */
     fun readFile2Bytes(file: File?): ByteArray {
         if (file == null || !file.exists()) return ByteArray(0)
@@ -180,7 +180,7 @@ object FileIoUtils {
             }
             return baos.toByteArray()
         } catch (e: OutOfMemoryError) {
-            // 内存不足，返回空数组
+// 内存不足，返回空存储
             return ByteArray(0)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -189,7 +189,7 @@ object FileIoUtils {
             try {
                 inputStream?.close()
             } catch (e: Exception) {
-                // 静默处理关闭异常
+// 静默处理关闭异常
             }
         }
     }
@@ -243,7 +243,7 @@ object FileIoUtils {
                 try {
                     writer?.close()
                 } catch (e: Exception) {
-                    // 静默处理关闭异常
+// 静默处理关闭异常
                 }
             }
         } catch (e: Exception) {
@@ -253,7 +253,7 @@ object FileIoUtils {
     }
 
     /**
-     * 写入字节数组到文件
+     * 写入字节到文件
      */
     fun writeFileFromBytes(filePath: String?, bytes: ByteArray?): Boolean {
         val file = FileUtils.getFileByPath(filePath)
@@ -265,7 +265,7 @@ object FileIoUtils {
     }
 
     /**
-     * 写入字节数组到文件
+     * 写入字节到文件
      */
     fun writeFileFromBytes(filePath: String?, bytes: ByteArray?, append: Boolean): Boolean {
         val file = FileUtils.getFileByPath(filePath)
@@ -277,14 +277,14 @@ object FileIoUtils {
     }
 
     /**
-     * 写入字节数组到文件
+     * 写入字节到文件
      */
     fun writeFileFromBytes(file: File?, bytes: ByteArray?): Boolean {
         return writeFileFromBytes(file, bytes, false)
     }
 
     /**
-     * 写入字节数组到文件
+     * 写入字节到文件
      */
     fun writeFileFromBytes(file: File?, bytes: ByteArray?, append: Boolean): Boolean {
         if (file == null || bytes == null) return false
@@ -301,7 +301,7 @@ object FileIoUtils {
                 try {
                     os?.close()
                 } catch (e: Exception) {
-                    // 静默处理关闭异常
+// 静默处理关闭异常
                 }
             }
         } catch (e: Exception) {

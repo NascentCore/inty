@@ -6,13 +6,12 @@ import com.squareup.moshi.JsonClass
 import kotlinx.parcelize.Parcelize
 
 /**
- * { "readable_id": "string", "nickname": "string", "avatar": "string", "email": "string", "phone":
- * "string", "gender": "MALE", "age_group": "string", "description": "string", "system_language":
- * "string", "id": "string", "auth_type": "string", "is_active": true, "created_at":
- * "2025-07-24T06:06:40.722Z", "updated_at": "2025-07-24T06:06:40.722Z", "is_superuser": false,
- * "public_agents_count": 0, "total_public_agents_follows": 0, "followers_count": 0,
- * "connector_count": 0 }
- */
+ * { “read_id”：“字符串”，“昵称”：“字符串”，“头像”：“字符串”，“电子邮件”：“字符串”，“电话”：
+ *“字符串”，“性别”：“男性”，“年龄组”：“字符串”，“描述”：“字符串”，“系统语言”：
+ *“字符串”，“id”：“字符串”，“auth_type”：“字符串”，“is_active”：true，“created_at”：
+ *“2025-07-24T06：06：40。722Z”，“updated_at”：“2025-07-24T06：06：40。722Z”, "is_superuser": 假,
+ *“public_agents_count”：0，“total_public_agents_follows”：0，“followers_count”：0，
+ *“连接器计数”：0}*/
 @JsonClass(generateAdapter = true)
 @Parcelize
 data class UserProfile(
@@ -20,8 +19,8 @@ data class UserProfile(
     @Json(name = "auth_type") val authType: String = "",
     val avatar: String? = null,
     @Json(name = "created_at") val createdAt: String = "",
-    // description 是早期的称为，目前其在 App 中被称作 persona
-    // Persona 指的是AI 角色看到的人类用户的“角色设定”
+//描述是早期的称呼，目前其在App中被称为persona
+// Persona 指的是AI角色看到的人类用户的“角色设定”
     val description: String? = null,
     val email: String? = null,
     val gender: String? = null,
@@ -60,7 +59,7 @@ data class GoogleLoginRequest(@Json(name = "id_token") val idToken: String)
 @JsonClass(generateAdapter = true)
 data class GoogleLoginResponse(val token: String, val user: UserProfile)
 
-/** 检查账号删除的接口返回 */
+/** 查看账号删除的接口返回 */
 @JsonClass(generateAdapter = true)
 data class UserDeletionCheckResponse(
     @Json(name = "active_subscription") val activeSubscription: Boolean,

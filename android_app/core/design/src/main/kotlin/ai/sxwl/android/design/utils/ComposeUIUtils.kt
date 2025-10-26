@@ -17,7 +17,7 @@ object ComposeUIUtils {
 
     /**
      * 获取状态栏高度
-     * @return 状态栏高度的Dp值
+     * @return 栏高度状态的Dp值
      */
     @Composable
     fun getStatusBarHeight(): Dp {
@@ -53,7 +53,7 @@ object ComposeUIUtils {
 
     /**
      * 获取状态栏高度（像素值）
-     * @return 状态栏高度的像素值
+     * @return 栏高度状态的像素值
      */
     @Composable
     fun getStatusBarHeightPx(): Int {
@@ -144,7 +144,7 @@ object ComposeUIUtils {
     }
 
     /**
-     * 获取屏幕可用高度（排除系统bar）
+     * 获取屏幕可用高度（排除系统栏）
      * @return 可用高度的Dp值
      */
     @Composable

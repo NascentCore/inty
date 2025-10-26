@@ -14,14 +14,12 @@ export const LoadingProvider: React.FC<LoadingProviderProps> = ({
   children,
 }) => {
   const [isLoading, setIsLoading] = useState(true);
-
-  // 组件挂载时初始化应用状态
+// 组件挂载时初始化应用状态
   useEffect(() => {
     const initApp = async () => {
       try {
         console.log("🚀 初始化应用...");
-
-        // 模拟一些初始化时间
+// 模拟一些初始化时间
         await new Promise((resolve) => setTimeout(resolve, 500));
 
         console.log("✅ 应用初始化完成");
@@ -34,8 +32,7 @@ export const LoadingProvider: React.FC<LoadingProviderProps> = ({
 
     initApp();
   }, []);
-
-  // 显示加载状态
+//加载显示状态
   if (isLoading) {
     return (
       <div

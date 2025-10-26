@@ -18,7 +18,7 @@ class ImageTransformService:
     def __init__(self):
         self.config = global_config_loaded_from_config_yaml.cloudflare
         self.gcs_pattern = re.compile(r"https?://storage\.googleapis\.com/([^/]+/.+)")
-        # CDN URL pattern: https://domain.com/bucket/path (简单代理模式)
+# CDN URL模式: https://domain.com/bucket/path (简单代理模式)
         self.cdn_pattern = None
         if self.config.domain:
             self.cdn_pattern = re.compile(
@@ -81,28 +81,25 @@ class ImageTransformService:
         Returns:
             CDN代理URL，如果转换失败或未启用则返回原URL
         """
-        # 检查是否启用Cloudflare转换
+# 检查是否启用Cloudflare转换
         if not self.config.enabled:
             return original_url
-
-        # 检查是否为有效的GCS URL
+# 检查GCS URL是否有效
         if not self.is_gcs_url(original_url):
             return original_url
-
-        # 检查domain配置
+# 检查域配置
         if not self.config.domain:
             logger.warning("Cloudflare domain not configured, returning original URL")
             return original_url
 
         try:
-            # 从GCS URL提取路径部分
+# 从GCS URL提取路径部分
             gcs_path = self.extract_gcs_path(original_url)
             if not gcs_path:
                 logger.warning(f"Failed to extract path from GCS URL: {original_url}")
                 return original_url
-
-            # 构建Cloudflare CDN代理URL，简单的代理模式
-            # 格式: https://domain.com/bucket/path (直接代理，无图片处理)
+# 构建Cloudflare CDN代理URL，简单的代理模式
+# 格式: https://domain.com/bucket/path (直接代理，无图片处理)
             cloudflare_url = f"https://{self.config.domain}/{gcs_path}"
 
             logger.debug(f"Transformed URL: {original_url} -> {cloudflare_url}")
@@ -139,20 +136,17 @@ class ImageTransformService:
         Returns:
             转换后的Agent数据
         """
-        # client_type参数保留用于兼容性，但不再使用
+# client_type参数保留用于兼容性，但不再使用
         if not self.config.enabled:
             return agent_data
-
-        # 图片字段列表
+#图片字段列表
         image_fields = ["avatar", "background"]
         list_image_fields = ["background_images", "photos"]
-
-        # 转换单个图片字段
+# 转换单个图片字段
         for field in image_fields:
             if field in agent_data and agent_data[field]:
                 agent_data[field] = self.transform_url(agent_data[field])
-
-        # 转换图片列表字段
+# 转换图片列表字段
         for field in list_image_fields:
             if field in agent_data and isinstance(agent_data[field], list):
                 agent_data[field] = [
@@ -165,7 +159,7 @@ class ImageTransformService:
         self, urls: List[str], client_type: str = "mobile"
     ) -> List[str]:
         """批量转换URL列表为CDN代理URL"""
-        # client_type参数保留用于兼容性，但不再使用
+# client_type参数保留用于兼容性，但不再使用
         if not self.config.enabled:
             return urls
 
@@ -195,13 +189,11 @@ class ImageTransformService:
         list_url_fields = ["background_images", "photos"]
 
         result = urls_dict.copy()
-
-        # 处理单个URL字段
+# 处理单个URL字段
         for field in url_fields:
             if field in result and result[field]:
                 result[field] = self.normalize_image_url_for_storage(result[field])
-
-        # 处理URL列表字段
+# 处理URL列表字段
         for field in list_url_fields:
             if field in result and isinstance(result[field], list):
                 result[field] = [
@@ -239,48 +231,42 @@ class ImageTransformService:
         Returns:
             带有裁切参数的CDN URL，如果转换失败则返回原始背景URL
         """
-        # 检查是否启用Cloudflare转换
+# 检查是否启用Cloudflare转换
         if not self.config.enabled:
             return background_url
-
-        # 检查是否为有效的GCS URL
+# 检查GCS URL是否有效
         if not self.is_gcs_url(background_url):
             return background_url
-
-        # 检查domain配置
+# 检查域配置
         if not self.config.domain:
             logger.warning("Cloudflare domain not configured, returning original URL")
             return background_url
 
         try:
-            # 从GCS URL提取路径部分
+# 从GCS URL提取路径部分
             gcs_path = self.extract_gcs_path(background_url)
             if not gcs_path:
                 logger.warning(f"Failed to extract path from GCS URL: {background_url}")
                 return background_url
-
-            # 构建带有裁切参数的Cloudflare CDN URL
-            # 坐标转换：extension格式(保留区域) -> Cloudflare trim格式
-            # Extension格式：{x, y, width, height, imageWidth, imageHeight} 描述要保留的区域
-            #
-            # 经过分析用户提供的工作示例，发现Cloudflare trim可能使用以下格式之一：
-            # 1. top;right;bottom;left (CSS margin顺序)
-            # 2. x;y;width;height (绝对坐标)
-            #
-            # 基于用户工作URL trim=103;34;65;134 的分析，尝试不同的转换方式
-
-            # 方案1：假设trim参数就是 x;y;width;height 格式（直接使用extension数据）
-            # 但这与文档不符，且数值与extension数据不匹配
-
-            # 方案2：假设是 top;right;bottom;left 边距格式
+# 构建带裁切参数的 Cloudflare CDN URL
+# 坐标转换：extension格式(保留区域) -> Cloudflare trim格式
+# 扩展格式：{x, y, width, height, imageWidth, imageHeight} 描述要保留的区域
+#
+#经过分析用户提供的工作示例，发现Cloudflare修剪可能使用以下格式之一：
+＃1。上；右；下；左（CSS 边距顺序）
+#2.x;y;宽度;高度 (绝对坐标)
+#
+# 基于用户工作URLtrim=103;34;65;134的分析，尝试不同的转换方式
+# 方案1：假设trim参数就是x;y;width;height格式（直接使用扩展数据）
+#但与文档不符，且数值与外延数据不匹配
+# 方案2：假设是top;right;bottom;left 边距格式
             trim_top = avatar_crop.y
             trim_right = avatar_crop.image_width - (avatar_crop.x + avatar_crop.width)
             trim_bottom = avatar_crop.image_height - (
                 avatar_crop.y + avatar_crop.height
             )
             trim_left = avatar_crop.x
-
-            # 构建Cloudflare CDN URL (format: top;right;bottom;left)
+# 构建Cloudflare CDN URL（格式：上;右;下;左）
             trim_params = f"{trim_top};{trim_right};{trim_bottom};{trim_left}"
             cropped_url = f"https://{self.config.domain}/cdn-cgi/image/trim={trim_params}/{gcs_path}"
 
@@ -296,7 +282,5 @@ class ImageTransformService:
             if self.config.fallback_to_original:
                 return background_url
             raise
-
-
-# 创建全局实例
+#创建全局实例
 image_transform_service = ImageTransformService()

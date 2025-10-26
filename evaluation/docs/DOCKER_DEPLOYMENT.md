@@ -1,10 +1,8 @@
-# 🐳 Docker 部署指南
+# 🐳 Docker 配置指南
 
 ## 🚀 快速开始
 
-### 方法1: 使用构建脚本（推荐）
-
-```bash
+### 方法1：使用构建脚本（推荐）```bash
 # 构建并运行
 ./docker-build.sh
 
@@ -24,11 +22,7 @@ docker run -d \
   -p 3000:80 \
   --restart unless-stopped \
   inty-evaluation-frontend:latest
-```
-
-### 方法3: 使用 Docker Compose
-
-```bash
+```### 方法3：使用Docker Compose```bash
 # 启动服务
 docker-compose up -d
 
@@ -77,32 +71,28 @@ resources:
   limits:
     memory: "128Mi"
     cpu: "100m"
-```
-
-## 🏗️ 构建优化
+```## 🏗️ 构建优化
 
 ### 多阶段构建
 
-1. **构建阶段**: Node.js 18 Alpine
+1. **构建阶段**：Node.js 18 Alpine
    - 安装依赖
    - 编译 TypeScript
    - 构建生产版本
 
-2. **运行阶段**: Nginx Alpine
+2. **运行阶段**：Nginx Alpine
    - 复制静态文件
-   - 配置 Nginx
+   - 配置Nginx
    - 安全优化
 
-### 镜像优化
+###镜像优化
 
-- 使用 Alpine Linux (更小的镜像)
-- 多阶段构建 (减少最终镜像大小)
+- 使用 Alpine Linux（更小的镜像）
+- 多阶段构建（减少最终镜像大小）
 - .dockerignore (排除不必要文件)
-- 非 root 用户运行 (安全性)
+- 非root用户运行（安全性）
 
-## 🔍 健康检查
-
-```bash
+## 🔍健康检查```bash
 # 容器健康状态
 docker ps
 
@@ -148,47 +138,33 @@ docker run -d \
   -p 3000:80 \
   --restart unless-stopped \
   inty-evaluation-frontend:latest
-```
-
-### 2. Docker Compose
-
-```bash
+```### 2.Docker Compose```bash
 # 启动
 docker-compose up -d
 
 # 扩容
 docker-compose up -d --scale inty-frontend=3
-```
-
-### 3. Kubernetes
-
-```bash
+```### 3.库伯内斯```bash
 # 部署到 K8s
 kubectl apply -f k8s-deployment.yaml
 
 # 查看状态
 kubectl get pods,svc,ingress
-```
-
-### 4. Docker Swarm
-
-```bash
+```### 4.码头工人群```bash
 # 初始化 Swarm
 docker swarm init
 
 # 部署服务
 docker stack deploy -c docker-compose.yml inty-stack
-```
-
-## 🔧 Nginx 配置
+```## 🔧 Nginx 配置
 
 ### 主要特性
 
-- **Gzip 压缩**: 减少传输大小
-- **静态资源缓存**: 1年缓存期
-- **SPA 路由支持**: History API 路由
-- **安全头**: XSS 保护等
-- **健康检查**: `/health` 端点
+- **Gzip压缩**: 减少传输大小
+- **静态资源存储**：1年存储期
+- **SPA 路由支持**：历史 API 路由
+- **安全头**：XSS保护等
+- **健康检查**：`/health` 端点
 
 ### 自定义配置
 
@@ -196,21 +172,17 @@ docker stack deploy -c docker-compose.yml inty-stack
 
 ```bash
 docker build -t inty-evaluation-frontend:latest .
-```
+```## 🛡️ 安全最佳实践
 
-## 🛡️ 安全最佳实践
-
-1. **非 root 用户运行**
+1. **非root用户运行**
 2. **最小权限原则**
 3. **安全头配置**
 4. **敏感文件保护**
-5. **定期更新基础镜像**
+5.**定期更新基础镜像**
 
 ## 🔄 CI/CD 集成
 
-### GitHub Actions 示例
-
-```yaml
+### GitHub Actions 示例```yaml
 name: Build and Deploy
 on:
   push:
@@ -254,12 +226,10 @@ jobs:
 
    ```bash
    docker exec -it inty-frontend curl localhost/health
-   ```
+   ```### 性能优化
 
-### 性能优化
-
-1. **启用 Gzip 压缩**
-2. **配置静态资源缓存**
+1. **启用Gzip压缩**
+2. **配置静态资源服务器**
 3. **使用 CDN**
 4. **监控资源使用**
 
@@ -268,11 +238,11 @@ jobs:
 遇到问题时请检查：
 
 1. Docker 版本兼容性
-2. 端口占用情况
+2.端口占用情况
 3. 容器日志信息
 4. 网络连接状态
-5. 资源使用情况
+5.资源利用情况
 
 ---
 
-**🎉 现在你可以使用 Docker 轻松部署 InTy 评测系统前端了！**
+**🎉 现在你可以使用 Docker 轻松部署InTy 学业系统前端了！**

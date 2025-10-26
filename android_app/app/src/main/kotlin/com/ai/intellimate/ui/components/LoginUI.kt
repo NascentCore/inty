@@ -49,7 +49,7 @@ internal fun LoginCloseButton(onClose: () -> Unit) {
     )
 }
 
-/** Logo 图片组件 */
+/** 标志图片组件 */
 @Composable
 internal fun LogoImage() {
     Image(

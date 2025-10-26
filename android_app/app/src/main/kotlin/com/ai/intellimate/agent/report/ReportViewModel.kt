@@ -21,8 +21,7 @@ import kotlinx.coroutines.launch
 import java.io.InputStream
 
 class ReportViewModel : BaseVM() {
-
-    // 事件通知机制
+// 事件通知机制
     private val _events = MutableSharedFlow<ViewModelEvent>()
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
 
@@ -37,8 +36,7 @@ class ReportViewModel : BaseVM() {
 
     var targetID: String = ""
     var targetType: String = "USER"
-
-    // Hard-coded list of report reasons
+// 硬编码的报告原因列表
     private val _reasons =
         MutableStateFlow(
             listOf(
@@ -76,8 +74,7 @@ class ReportViewModel : BaseVM() {
 
     var localImages = mutableStateSetOf<String>()
     var remoteImages = mutableStateSetOf<String>()
-
-    // 提交状态
+// 提交状态
     private val _isSubmitting = MutableStateFlow(false)
     val isSubmitting = _isSubmitting.asStateFlow()
 
@@ -90,8 +87,7 @@ class ReportViewModel : BaseVM() {
             ToastUtils.showShort("Please select at least one reason")
             return
         }
-
-        // 如果正在提交，直接返回
+// 如果正在提交，直接返回
         if (_isSubmitting.value) {
             return
         }
@@ -133,7 +129,7 @@ class ReportViewModel : BaseVM() {
                     }
                 }
             } finally {
-                // 无论成功还是失败，都要重置提交状态
+//无论成功还是失败，都要重置状态
                 _isSubmitting.value = false
             }
         }

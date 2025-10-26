@@ -43,23 +43,19 @@ class SystemSettings(Base):
     )
     description = Column(Text, comment="配置描述")
     default_value = Column(Text, comment="默认值")
-
-    # 元数据
+# 元数据
     is_system = Column(sa.Boolean, default=False, comment="是否为系统内置配置")
     is_readonly = Column(sa.Boolean, default=False, comment="是否只读")
-
-    # 操作记录
+# 操作记录
     updated_by = Column(String, comment="最后更新者ID")
-
-    # 时间戳
+#计时
     created_at = Column(
         DateTime(timezone=True), server_default=sa.text("now()"), comment="创建时间"
     )
     updated_at = Column(
         DateTime(timezone=True), onupdate=sa.text("now()"), comment="更新时间"
     )
-
-    # 索引
+# 索引
     __table_args__ = (
         Index("ix_system_settings_category", "category"),
         Index("ix_system_settings_updated_at", "updated_at"),

@@ -45,7 +45,7 @@ class SignCheckTools(private val context: Context) {
      */
     fun getCertificateSHA1Fingerprint(): String? {
         try {
-            // 获取包管理器
+// 获取包管理器
             val pm = context.packageManager
             val packageName = context.packageName
             val flags = PackageManager.GET_SIGNATURES
@@ -57,8 +57,7 @@ class SignCheckTools(private val context: Context) {
                 Log.e(TAG, "包名未找到: $packageName", e)
                 return null
             }
-
-            // 签名信息
+// 签名信息
             val signatures: Array<Signature> = packageInfo?.signatures ?: return null
             if (signatures.isEmpty()) {
                 Log.e(TAG, "未找到签名信息")
@@ -67,8 +66,7 @@ class SignCheckTools(private val context: Context) {
 
             val cert = signatures[0].toByteArray()
             val input: InputStream = ByteArrayInputStream(cert)
-
-            // 证书工厂类
+// 工厂证书类
             var cf: CertificateFactory? = null
             try {
                 cf = CertificateFactory.getInstance("X509")
@@ -76,8 +74,7 @@ class SignCheckTools(private val context: Context) {
                 Log.e(TAG, "创建证书工厂失败", e)
                 return null
             }
-
-            // X509 证书
+// X509 证书
             var c: X509Certificate? = null
             try {
                 c = cf?.generateCertificate(input) as? X509Certificate
@@ -114,7 +111,7 @@ class SignCheckTools(private val context: Context) {
     }
 
     /**
-     * 将字节数组转换为16进制字符串
+     * 将字节传输转换为16字节字符串
      */
     private fun byte2HexFormatted(arr: ByteArray): String {
         val str = kotlin.text.StringBuilder(arr.size * 2)

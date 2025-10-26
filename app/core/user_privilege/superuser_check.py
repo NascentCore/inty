@@ -22,18 +22,14 @@ def is_superuser(user: schemas.User) -> bool:
     as the email list is hardcoded in the utils.admin module.
     """
     return user.is_superuser or is_superuser_based_on_email(user.email)
-
-
-# This is a constant to mean there is no limit.
+#这是一个常量，表示没有限制。
 _SUPERUSER_DAILY_LIMIT = -1
-
-# This is a constant to mean the server does not count usage for superusers.
+# 这是一个常量，表示服务器不计算超级用户的使用情况。
 _SUPERUSER_USAGE = -1
-
-# This is a constant to mean the server does not apply any limit for superusers.
-# One should call the above is_superuser() to check if a user is a superuser.
-# If so, return this constant.
-# Example:
-# if is_superuser(user):
-#     return SUPERUSER_LIMIT_CHECK_RESULT
+#限制一个常量，表示服务器超级用户不施加任何限制。
+# 应调用上面的is_superuser()来检查用户是否是超级用户。
+# 如果是，则返回该常量。
+＃ 例子：
+# 如果 is_superuser(用户):
+# 返回 SUPERUSER_LIMIT_CHECK_RESULT
 SUPERUSER_LIMIT_CHECK_RESULT = [True, _SUPERUSER_USAGE, _SUPERUSER_DAILY_LIMIT]

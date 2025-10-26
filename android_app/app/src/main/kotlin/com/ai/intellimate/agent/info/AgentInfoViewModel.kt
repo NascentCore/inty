@@ -16,8 +16,7 @@ class AgentInfoViewModel : BaseVM() {
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()
-
-    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+// 延迟获取依赖，避免在构造函数中立即导致获取空指针异常
     val chatApi by lazy { NetServiceMgr.getChatApi() }
     val agentApi by lazy { NetServiceMgr.getAgentApi() }
 
@@ -44,7 +43,7 @@ class AgentInfoViewModel : BaseVM() {
     fun setAgentInfo(agentInfo: AgentInfo?) {
         LogUtils.i("agent = $agentInfo")
         _agentInfo.value = agentInfo
-        // Refresh agent data to get latest follower count and follow status
+// 刷新代理数据以获取最新的关注者数量和关注状态
         agentInfo?.let { agent -> refreshAgentData(agent.id) }
     }
 

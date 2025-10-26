@@ -37,15 +37,13 @@ def get_agent_model_config(agent_data: dict) -> dict:
         模型配置字典
     """
     model_config = {}
-
-    # 首先尝试从settings.llm_config获取
+#首先尝试从设置。llm_config获取
     if agent_data.get("settings"):
         model_config = agent_data["settings"].get("llm_config", {})
-        # 向后兼容：也检查旧的model_config字段
+# 兼容：也检查旧的model_config字段
         if not model_config and "model_config" in agent_data["settings"]:
             model_config = agent_data["settings"]["model_config"]
-
-    # 如果没有自定义配置，使用默认配置
+# 如果没有自定义配置，使用默认配置
     if not model_config:
         model_config = {
             "model": global_config_loaded_from_config_yaml.agent.model,
@@ -66,7 +64,7 @@ def get_agent_model_config(agent_data: dict) -> dict:
             ),
         }
     else:
-        # 如果有自定义配置，但某些字段为空，则使用默认配置补充
+# 如果有自定义配置，但某些字段为空，则使用默认配置补充
         if not model_config.get("base_url"):
             model_config["base_url"] = (
                 global_config_loaded_from_config_yaml.agent.base_url
@@ -79,8 +77,6 @@ def get_agent_model_config(agent_data: dict) -> dict:
             model_config["model"] = global_config_loaded_from_config_yaml.agent.model
 
     return model_config
-
-
 # 全局连接池
 _connection_pool = None
 _sync_engine = None
@@ -128,9 +124,7 @@ def get_connection_pool():
             f"初始化数据库连接池: min_size={global_config_loaded_from_config_yaml.database.pool_size // 4}, max_size={global_config_loaded_from_config_yaml.database.pool_size}"
         )
     return _connection_pool
-
-
-# chat_history表现在由Alembic迁移管理，不需要手动初始化
+# chat_history 表现由Alembic迁移管理，不需要手动初始化
 
 
 class Agent:
@@ -145,13 +139,13 @@ class Agent:
         agent_id: str,
         name: str,
         model_config: dict,
-        # TODO: description seems not used anywhere.
+# TODO：描述似乎没有在任何地方使用。
         description: str = "",
-        # 主提示词和模式提示词参数
+# 主提示词和模式提示词参数
         main_prompt: str = "",
         mode_prompt: str = "",
         output_format_prompt: str = "",
-        # 角色卡相关参数
+#角色卡相关参数
         personality: str = "",
         scenario: str = "",
         message_example: str = "",
@@ -161,8 +155,7 @@ class Agent:
         extensions: Dict[str, Any] = None,
         intro: str = "",
     ):
-
-        # 基础属性
+# 基础属性
         self.agent_id = agent_id
         self.name = name
         self.model_config = model_config
@@ -170,16 +163,14 @@ class Agent:
         self.description = description
         self._last_used_lock = RLock()
         self._user_info_cache = {}
-
-        # 主提示词和模式提示词属性
+# 主提示词和模式提示词属性
         self.main_prompt = main_prompt
-        # mode_prompt has 2 versions: free and premium.
-        # free is the default and is for free users.
-        # premium is for users with premium subscription.
+# mode__prompt 有 2 个版本：免费和 premium。
+# free 是默认值，适用于免费用户。
+# premium 适用于订阅 premium 的用户。
         self.mode_prompt = mode_prompt
         self.output_format_prompt = output_format_prompt
-
-        # 角色卡相关属性
+# 角色卡相关属性
         self.personality = personality
         self.scenario = scenario
         self.message_example = message_example
@@ -188,8 +179,7 @@ class Agent:
         self.character_version = character_version
         self.extensions = extensions or {}
         self.intro = intro
-
-        # 更新agent数据以包含所有信息
+# 更新代理数据包含所有信息
         self._agent_data = {
             "id": agent_id,
             "name": name,
@@ -206,8 +196,7 @@ class Agent:
             "extensions": extensions,
             "intro": intro,
         }
-
-        # 线程池用于异步执行聊天任务
+# 线程池用于异步执行聊天任务
         self._executor = ThreadPoolExecutor(
             max_workers=min(
                 32,
@@ -215,12 +204,10 @@ class Agent:
             ),
             thread_name_prefix=f"agent-{agent_id}",
         )
-
-        # OpenAI客户端缓存（用于性能优化）
+# OpenAI客户端服务器（用于性能优化）
         self._wrapped_client: Optional[OpenAI] = None
         self._client_lock = Lock()
-
-        # 使用配置中的模型设置
+# 使用配置中的模型设置
         model_name = model_config.get(
             "model", global_config_loaded_from_config_yaml.agent.model
         )
@@ -230,8 +217,7 @@ class Agent:
         base_url = model_config.get(
             "base_url", global_config_loaded_from_config_yaml.agent.base_url
         )
-
-        # 提取模型参数
+# 提取模型参数
         temperature = model_config.get(
             "temperature",
             getattr(global_config_loaded_from_config_yaml.agent, "temperature", 0.5),
@@ -243,8 +229,7 @@ class Agent:
         top_p = model_config.get("top_p")
         frequency_penalty = model_config.get("frequency_penalty")
         presence_penalty = model_config.get("presence_penalty")
-
-        # 构建ChatOpenAI参数
+# 构建ChatOpenAI参数
         chat_params = {
             "model": model_name,
             "openai_api_key": api_key,
@@ -252,8 +237,7 @@ class Agent:
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
-
-        # 只有当参数不为None时才添加
+# 只有当参数不为None时才添加
         if top_p is not None:
             chat_params["top_p"] = top_p
         if frequency_penalty is not None:
@@ -262,17 +246,17 @@ class Agent:
             chat_params["presence_penalty"] = presence_penalty
 
     def _get_effective_main_prompt(self) -> str:
-        # 如果配置为强制使用默认提示词，则直接返回默认值
+# 如果配置为强制使用默认提示词，则直接返回默认值
         if global_config_loaded_from_config_yaml.agent.force_default_prompts:
             return prompts.PURITY_ROLEPLAY_PROMPT.main_prompt
-        # 否则使用原有逻辑：优先使用Agent配置，如果没有则使用默认值
+#否则使用原有逻辑：优先使用Agent配置，如果没有则使用默认值
         return prompts.ROMANTIC_ROLEPLAY_PROMPT.main_prompt
 
     def _get_effective_mode_prompt(self) -> str:
-        # 如果配置为强制使用默认提示词，则直接返回默认值
+# 如果配置为强制使用默认提示词，则直接返回默认值
         if global_config_loaded_from_config_yaml.agent.force_default_prompts:
             return prompts.PURITY_ROLEPLAY_PROMPT.mode_prompt
-        # 否则使用原有逻辑：优先使用Agent配置，如果没有则使用默认值
+#否则使用原有逻辑：优先使用Agent配置，如果没有则使用默认值
         return prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
 
     def _get_effective_output_format_prompt(self) -> str:
@@ -288,14 +272,13 @@ class Agent:
         user_name = self._extract_user_name_from_profile(user_profile)
 
         system_messages = []
-
-        # 过往逻辑：如缺少任一默认提示词，则认为是用户创建的角色。
-        # 此为短期解决方案，未来任何对提示词组装机制的改造，都需要重新考虑这个判定的正确性。
-        # 目前不考虑这个区分，未来可能要做一些变化，目前的重点是预置角色而非用户自创角色，
-        # 因此不做更深的考虑。由于预置角色也可能没有 mode_prompt，因此无法精确判断。
-        # 而应该检查角色的 creator 字段是否是普通用户。
-        # is_char_user_created = not self.main_prompt or not self.mode_prompt
-        # logger.debug(f"角色是否用户创建: {is_char_user_created}")
+# 过往逻辑：如缺少任一默认提示词，则认为是用户创建的角色。
+#此为短期解决方案，未来任何对提示词制定机制的改造，都需要重新考虑这个决策的正确性。
+# 目前不考虑这个区别，未来可能会做一些变化，目前的重点是预置角色或者用户自创角色，
+#不做布局的考虑。由于预角色设定也可能没有模式_prompt，因此无法准确判断。
+# 而应该检查角色的创建者字段是否是普通用户。
+# is_char_user_created = not self.main_prompt 或不是 self.模式__prompt
+# 记录器。debug(f"是否用户角色创建：{is_char_user_created}")
 
         main_prompt = self._get_effective_main_prompt()
         rendered_main_prompt = prompt_template.render_prompt_jinja2_template(
@@ -368,14 +351,13 @@ class Agent:
             return None
 
         try:
-            # 尝试从用户profile中提取Name字段
+# 尝试从用户profile中提取Name字段
             import re
 
             name_match = re.search(r"Name:\s*([^\n]+)", user_profile)
             if name_match:
                 return name_match.group(1).strip()
-
-            # 如果没找到，尝试查找中文的"名字"或"姓名"
+# 如果没找到，尝试查找中文的“名字”或“姓名”
             chinese_name_match = re.search(
                 r"[名字|姓名]\s*[:=：]\s*([^\n]+)", user_profile
             )
@@ -421,25 +403,24 @@ class Agent:
         """
         同步获取用户profile信息（优化版本 - 使用全局缓存）
         """
-        # 先检查全局缓存
+#首先检查全局服务器
         cached_user_info = cache_service.get_user_info(user_id)
         if cached_user_info is not None:
             logger.debug(f"从全局缓存获取用户信息: {user_id}")
             return cached_user_info
-
-        # 然后检查本地缓存（保留兼容性）
+#然后检查本地服务器（保留兼容性）
         if user_id in self._user_info_cache:
             user_info = self._user_info_cache[user_id]
-            # 同时更新到全局缓存
+#同时更新到全局存储
             cache_service.set_user_info(user_id, user_info)
             return user_info
 
         try:
-            # 使用全局同步数据库引擎（避免重复创建）
+# 使用全局同步数据库引擎（避免重复创建）
             sync_engine = get_sync_engine()
 
             with sync_engine.connect() as conn:
-                # 查询用户基本信息
+#查询用户基本信息
                 query = text(
                     """
                     SELECT nickname, gender, age_group, description, system_language 
@@ -453,14 +434,13 @@ class Agent:
                 if not row:
                     logger.debug(f"用户 {user_id} 不存在")
                     user_info_text = ""
-                    # 缓存空结果，避免重复查询
+# 存储空结果，避免重复查询
                     self._user_info_cache[user_id] = user_info_text
                     cache_service.set_user_info(
                         user_id, user_info_text, ttl=60
                     )  # 空结果缓存时间短
                     return user_info_text
-
-                # 构建用户信息字符串
+# 构建用户信息字符串
                 user_info_parts = []
                 nickname, gender, age_group, description, system_language = row
 
@@ -473,15 +453,14 @@ class Agent:
                     user_info_parts.append(f"Age: {age_group}")
                 if description:
                     user_info_parts.append(f"Description: {description}")
-                # if system_language:
-                #     user_info_parts.append(f"Language: {system_language}")
+# 如果系统语言：
+# 用户信息部分。附加（f“语言：{system_language}”）
 
                 if user_info_parts:
                     user_info_text = "##User Information\n" + "\n".join(user_info_parts)
                 else:
                     user_info_text = ""
-
-                # 同时更新本地和全局缓存
+#同时更新本地和全局存储
                 self._user_info_cache[user_id] = user_info_text
                 cache_service.set_user_info(user_id, user_info_text)
 
@@ -500,8 +479,7 @@ class Agent:
                 user_id, user_info_text, ttl=30
             )  # 失败结果缓存时间很短
             return user_info_text
-
-    # 特殊值，表示返回全部消息
+#特殊值，表示返回全部消息
     MAX_MESSAGES_ALL = 0
 
     def _get_relevant_history(
@@ -519,26 +497,22 @@ class Agent:
         """
         if not history_messages:
             return []
-
-        # 如果max_messages为0，返回所有消息
+# 如果max_messages为0，返回所有消息
         if max_messages == self.MAX_MESSAGES_ALL:
             return history_messages
-
-        # 如果消息数量不超过限制，直接返回
+#如果消息数量不超过限制，直接返回
         if len(history_messages) <= max_messages:
             return history_messages
-
-        # 取最近的消息
+#获取最近的消息
         recent_messages = history_messages[-max_messages:]
-
-        # 确保对话完整性：如果第一条是AI消息，尝试包含前一条用户消息
+#确定对话缺陷：如果第一条是AI消息，尝试包含前一条用户消息
         if recent_messages and isinstance(recent_messages[0], AIMessage):
-            # 查找前面是否有用户消息
+#查找前面是否有用户消息
             start_index = len(history_messages) - max_messages - 1
             if start_index >= 0 and isinstance(
                 history_messages[start_index], HumanMessage
             ):
-                # 包含这条用户消息，但移除最后一条消息以保持总数
+# 包含一条用户消息，但删除最后一条消息以保持总数
                 recent_messages = [history_messages[start_index]] + recent_messages[:-1]
 
         return recent_messages
@@ -556,7 +530,7 @@ class Agent:
 
         跳过用户信息获取，使用传入的预计算值
         """
-        # 从连接池获取连接
+# 从连接池获取连接
         pool_start = time.time()
         pool = get_connection_pool()
         pool_time = time.time() - pool_start
@@ -564,7 +538,7 @@ class Agent:
 
         with pool.connection() as conn_local:
             try:
-                # 创建历史记录对象
+#创建历史记录对象
                 history_start = time.time()
                 history = PostgresChatMessageHistory(
                     chat_history.TABLE_NAME, session_id, sync_connection=conn_local
@@ -573,11 +547,10 @@ class Agent:
                 logger.debug(
                     f"历史记录初始化耗时: {history_init_time:.3f}秒 - Agent: {self.agent_id}"
                 )
-
-                # 获取相关的历史消息
+#获取相关的历史消息
                 get_history_start = time.time()
-                # TODO: 建议取消截取，因为：目前原型产品状态的截取无明确价值；引入额外复杂性无意义。
-                # 待聊天记录过长才需要截取、记忆等复杂机制。
+# TODO：建议取消截取，因为：目前原型产品状态的截取无明确价值；引入额外的复杂性无意义。
+#待聊天记录过长才需要截取、记忆等复杂的机制。
                 recent_history = self._get_relevant_history(history.messages)
                 get_history_time = time.time() - get_history_start
                 logger.debug(
@@ -586,8 +559,7 @@ class Agent:
 
                 all_messages = recent_history + messages["messages"]
                 logger.debug(f"all_messages: {all_messages}")
-
-                # 保存原始用户消息到历史记录
+# 保存原始用户消息历史到记录
                 save_msg_start = time.time()
                 history.add_messages(messages["messages"])
                 save_msg_time = time.time() - save_msg_start
@@ -621,8 +593,7 @@ class Agent:
                 logger.debug(
                     f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}"
                 )
-
-                # 调用agent进行对话
+# 调用agent进行对话
                 agent_invoke_start = time.time()
                 logger.debug(f"开始Agent推理 - Agent: {self.agent_id}")
 
@@ -635,16 +606,14 @@ class Agent:
                     global_config_loaded_from_config_yaml.agent.max_tokens
                 )
                 default_top_p = global_config_loaded_from_config_yaml.agent.top_p
-
-                # 获取或创建wrapped client（性能优化：复用客户端）
+# 获取或创建包装客户端（性能优化：复用客户端）
                 client_start = time.time()
                 client = self._get_wrapped_client(chat_name, labels)
                 client_time = time.time() - client_start
                 logger.debug(
                     f"客户端获取耗时: {client_time:.3f}秒 - Agent: {self.agent_id}"
                 )
-
-                # API调用
+# API调用
                 api_start = time.time()
                 response = client.chat.completions.create(
                     messages=openai_messages,
@@ -655,12 +624,12 @@ class Agent:
                     max_tokens=self.model_config.get("max_tokens", default_max_tokens),
                     top_p=self.model_config.get("top_p", default_top_p),
                     extra_body={
-                        # This only works for Gemini models.
+# 仅适用于 Gemini 型号。
                         "generation_config": {
                             "thinking_budget": 0,
                         },
-                        # This appears on Open Router Client User ID field.
-                        # can be used to track end user's usage.
+# 这出现在开放路由器客户端用户 ID 字段上。
+# 可用于跟踪最终用户的使用情况。
                         "user": user_id,
                     },
                 )
@@ -671,16 +640,14 @@ class Agent:
                 logger.debug(
                     f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
                 )
-
-                # 处理响应
+# 处理响应
                 response_process_start = time.time()
                 response_text = response.choices[0].message.content
                 response_process_time = time.time() - response_process_start
                 logger.debug(
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
                 )
-
-                # 保存AI响应到历史记录
+# 保存AI响应历史到记录
                 save_response_start = time.time()
                 history.add_messages([AIMessage(content=response_text)])
                 save_response_time = time.time() - save_response_start
@@ -712,8 +679,7 @@ class Agent:
         user_profile = self._get_user_profile_sync(user_id)
         profile_time = time.time() - profile_start
         logger.debug(f"用户信息获取耗时: {profile_time:.3f}秒 - Agent: {self.agent_id}")
-
-        # 在线程池中执行同步聊天逻辑
+# 在线程池中执行同步聊天逻辑
         loop = asyncio.get_event_loop()
         try:
             result = await loop.run_in_executor(
@@ -737,7 +703,7 @@ class Agent:
         Returns:
             渲染后的完整提示词
         """
-        # 构建示例输入来展示完整提示词
+# 构建示例输入显示完整提示词
         example_input = {
             "messages": [HumanMessage(content="示例消息")],
             "user_profile": "Name: 示例用户\nGender: Other\n[示例用户信息]",
@@ -745,7 +711,7 @@ class Agent:
         }
 
         try:
-            # 通过Runnable生成示例提示词
+# 通过Runnable生成示例提示词
             formatted_prompt = self.prompt_runnable.invoke(example_input)
             if hasattr(formatted_prompt, "messages"):
                 return "\n\n".join(
@@ -759,7 +725,7 @@ class Agent:
                 return str(formatted_prompt)
         except Exception as e:
             logger.error(f"生成提示词示例失败: {str(e)}")
-            # 回退到简单的组合提示词
+# 回退到简单的组合提示词
             fallback_parts = []
             main_prompt = self._get_effective_main_prompt()
             if main_prompt:
@@ -796,8 +762,7 @@ class AgentManager:
         self.max_agents = max_agents
         self.cleanup_interval = cleanup_interval
         self.max_idle_time = max_idle_time
-
-        # 使用读写锁提升并发性能
+# 使用读写锁提升并发性能
         self._read_lock = Lock()
         self._write_lock = Lock()
         self._agent_locks: Dict[str, Lock] = {}  # 每个Agent一个锁
@@ -829,28 +794,26 @@ class AgentManager:
             self._cleanup_started = True
             logger.info("Agent清理任务已启动")
         except RuntimeError:
-            # 没有运行的事件循环，延迟启动
+# 没有运行的事件循环，延迟启动
             logger.info("暂时无法启动清理任务，将在首次使用时启动")
 
     def _cleanup_idle_agents(self):
         """清理长时间空闲的Agent实例"""
         current_time = time.time()
         idle_agents = []
-
-        # 使用读锁检查空闲Agent
+# 使用读锁检查休闲代理
         with self._read_lock:
             for agent_id, agent in self.agents.items():
                 with agent._last_used_lock:
                     if current_time - agent.last_used > self.max_idle_time:
                         idle_agents.append(agent_id)
-
-        # 如果有空闲Agent，使用写锁删除
+#如果有闲置代理，使用写锁删除
         if idle_agents:
             with self._write_lock:
                 for agent_id in idle_agents:
                     if agent_id in self.agents:
                         agent = self.agents[agent_id]
-                        # 清理Agent资源
+#清理代理资源
                         try:
                             agent.cleanup()
                         except Exception as e:
@@ -858,8 +821,7 @@ class AgentManager:
 
                         del self.agents[agent_id]
                         logger.debug(f"清理空闲Agent: {agent_id}")
-
-                        # 清理对应的锁
+# 清理对应的锁
                         with self._locks_lock:
                             self._agent_locks.pop(agent_id, None)
 
@@ -870,7 +832,7 @@ class AgentManager:
         Args:
             agent_data: Agent配置数据，包含id, name, prompt, settings等
         """
-        # 尝试启动清理任务（如果还没启动）
+# 尝试启动清理任务（如果尚未启动）
         if not self._cleanup_started:
             self._start_cleanup_task()
 
@@ -878,33 +840,29 @@ class AgentManager:
         if not agent_id:
             raise ValueError("agent_data必须包含'id'字段")
         logger.debug(f"请求获取Agent实例 - Agent ID: {agent_id}")
-
-        # 首先尝试读取现有Agent（使用读锁）
+#首先尝试读取现有代理（使用读锁）
         with self._read_lock:
             if agent_id in self.agents:
                 existing_agent = self.agents[agent_id]
-
-                # 验证实例中的agent_id是否与请求的一致
+# 验证实例中的agent_id是否与请求的一致
                 if existing_agent.agent_id == agent_id:
-                    # 更新最后使用时间（线程安全）
+# 更新最后使用时间（线程安全）
                     existing_agent._update_last_used()
                     logger.debug(f"从缓存返回Agent实例 - Agent ID: {agent_id}")
                     return existing_agent
-
-        # 需要创建或替换Agent实例，使用Agent专用锁
+# 需要创建或替换Agent实例，使用Agent专用锁
         agent_lock = self._get_agent_lock(agent_id)
         with agent_lock:
-            # 双重检查，防止其他线程已经创建
+# 双重检查，防止其他线程已经创建
             with self._read_lock:
                 if agent_id in self.agents:
                     existing_agent = self.agents[agent_id]
                     if existing_agent.agent_id == agent_id:
                         existing_agent._update_last_used()
                         return existing_agent
-
-            # 使用写锁进行创建或替换
+# 使用写锁进行创建或替换
             with self._write_lock:
-                # 如果达到最大数量，清理最久未使用的Agent
+#如果达到最大数量，清理最久未使用的代理
                 if len(self.agents) >= self.max_agents:
                     oldest_agent_id = min(
                         self.agents.keys(), key=lambda x: self.agents[x].last_used
@@ -919,12 +877,10 @@ class AgentManager:
                     logger.info(
                         f"达到最大Agent数量，清理最旧的Agent: {oldest_agent_id}"
                     )
-
-                    # 清理对应的锁
+# 清理对应的锁
                     with self._locks_lock:
                         self._agent_locks.pop(oldest_agent_id, None)
-
-                # 创建新的Agent实例
+#创建新的代理实例
                 model_config = get_agent_model_config(agent_data)
                 logger.debug(f"model_config: {model_config}")
 
@@ -941,10 +897,10 @@ class AgentManager:
                         name=agent_name,
                         model_config=model_config,
                         description=description,
-                        # 主提示词和模式提示词参数
+# 主提示词和模式提示词参数
                         main_prompt=agent_data.get("main_prompt", ""),
                         mode_prompt=agent_data.get("mode_prompt", ""),
-                        # 角色卡相关参数
+#角色卡相关参数
                         personality=agent_data.get("personality", ""),
                         scenario=agent_data.get("scenario", ""),
                         message_example=agent_data.get("message_example", ""),
@@ -954,8 +910,7 @@ class AgentManager:
                         extensions=agent_data.get("extensions", {}),
                         intro=agent_data.get("intro", ""),
                     )
-
-                    # 验证创建的Agent实例的agent_id
+# 验证创建Agent实例的agent_id
                     if agent.agent_id != agent_id:
                         logger.error(
                             f"错误：创建的Agent实例ID不匹配！期望: {agent_id}, 实际: {agent.agent_id}"
@@ -970,7 +925,7 @@ class AgentManager:
                     logger.error(
                         f"创建Agent实例失败 - Agent ID: {agent_id}, 错误: {str(e)}"
                     )
-                    # 确保失败的实例不会留在缓存中
+#确保失败的实例不会保留在服务器中
                     self.agents.pop(agent_id, None)
                     raise
 
@@ -981,7 +936,7 @@ class AgentManager:
         from app.services import agent_service
 
         try:
-            # 获取推荐的Agent列表作为常用Agent
+#获取推荐的代理列表作为常用代理
             popular_agents = await agent_service.get_recommended_agents(
                 db_session, skip=0, limit=10
             )
@@ -991,10 +946,10 @@ class AgentManager:
                     "id": agent_db.id,
                     "name": agent_db.name,
                     "settings": agent_db.settings,
-                    # 主提示词和模式提示词字段
+# 主提示词和模式提示词字段
                     "main_prompt": getattr(agent_db, "main_prompt", ""),
                     "mode_prompt": getattr(agent_db, "mode_prompt", ""),
-                    # 角色卡相关字段
+# 角色卡相关字段
                     "personality": getattr(agent_db, "personality", ""),
                     "scenario": getattr(agent_db, "scenario", ""),
                     "message_example": getattr(agent_db, "message_example", ""),
@@ -1065,8 +1020,7 @@ class AgentManager:
 
                     del self.agents[agent_id]
                     logger.info(f"强制清理Agent: {agent_id}")
-
-                    # 清理对应的锁
+# 清理对应的锁
                     with self._locks_lock:
                         self._agent_locks.pop(agent_id, None)
 
@@ -1087,7 +1041,7 @@ class AgentManager:
         agent_lock = self._get_agent_lock(agent_id)
         with agent_lock:
             with self._write_lock:
-                # 如果Agent存在，先清理旧实例
+#如果Agent存在，先清理旧实例
                 if agent_id in self.agents:
                     old_agent = self.agents[agent_id]
                     try:
@@ -1099,7 +1053,7 @@ class AgentManager:
                     del self.agents[agent_id]
 
                 try:
-                    # 创建新的Agent实例
+#创建新的代理实例
                     model_config = get_agent_model_config(agent_data)
 
                     description = agent_data.get("description", "")
@@ -1110,10 +1064,10 @@ class AgentManager:
                         name=agent_name,
                         model_config=model_config,
                         description=description,
-                        # 主提示词和模式提示词参数
+# 主提示词和模式提示词参数
                         main_prompt=agent_data.get("main_prompt", ""),
                         mode_prompt=agent_data.get("mode_prompt", ""),
-                        # 角色卡相关参数
+#角色卡相关参数
                         personality=agent_data.get("personality", ""),
                         scenario=agent_data.get("scenario", ""),
                         message_example=agent_data.get("message_example", ""),
@@ -1151,12 +1105,10 @@ class AgentManager:
     def stop(self):
         """停止Agent管理器并清理所有资源"""
         logger.info("正在停止Agent管理器...")
-
-        # 停止清理任务
+#停止清理任务
         if self._cleanup_task:
             self._cleanup_task.cancel()
-
-        # 清理所有Agent实例
+# 清理所有Agent实例
         with self._write_lock:
             for agent_id, agent in list(self.agents.items()):
                 try:
@@ -1165,12 +1117,10 @@ class AgentManager:
                     logger.error(f"清理Agent资源失败 {agent_id}: {str(e)}")
 
             self.agents.clear()
-
-        # 清理锁
+#清理锁
         with self._locks_lock:
             self._agent_locks.clear()
-
-        # 关闭连接池
+# 关闭连接池
         global _connection_pool
         if _connection_pool:
             try:
@@ -1181,7 +1131,5 @@ class AgentManager:
                 logger.error(f"关闭连接池失败: {str(e)}")
 
         logger.info("Agent管理器已停止")
-
-
 # 创建全局Agent管理器实例
 agent_manager = AgentManager()

@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>InTy 评测</title>
 
-    <!-- Favicon -->
+    <！-- 网站图标 -->
     <link
       rel="icon"
       type="image/svg+xml"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'><circle cx='512' cy='512' r='512' fill='%231890ff'/><path d='M512 256c141.385 0 256 114.615 256 256s-114.615 256-256 256-256-114.615-256-256 114.615-256 256-256z' fill='white'/><circle cx='512' cy='512' r='64' fill='%231890ff'/></svg>"
     />
 
-    <!-- Meta tags -->
+    <！-- 元标记 -->
     <meta
       name="description"
       content="InTy 智能体评测系统 - 全面评测智能体的对话质量、角色一致性和表达能力"
@@ -20,7 +20,7 @@
     <meta name="keywords" content="智能体,AI,评测,聊天,对话" />
     <meta name="author" content="InTy Team" />
 
-    <!-- Open Graph -->
+    <！-- 打开图 -->
     <meta property="og:title" content="InTy 智能体评测系统" />
     <meta
       property="og:description"
@@ -28,7 +28,7 @@
     />
     <meta property="og:type" content="website" />
 
-    <!-- CSS -->
+    <！-- CSS -->
     <style>
       /* 加载动画样式 */
       #loading {
@@ -217,16 +217,16 @@
   </head>
 
   <body>
-    <!-- 加载动画 -->
+    <！-- 加载动画 -->
     <div id="loading">
       <div class="loading-spinner"></div>
       <div class="loading-text">正在加载智能体评测系统...</div>
     </div>
 
-    <!-- 应用容器 -->
+    <！-- 应用容器 -->
     <div id="evaluation-root"></div>
 
-    <!-- 错误处理脚本 -->
+    <！-- 错误处理脚本 -->
     <script>
       // 全局错误处理
       window.addEventListener("error", function (event) {
@@ -280,10 +280,10 @@
       };
     </script>
 
-    <!-- Vite 开发服务器会自动注入这个脚本 -->
+    <！-- Vite 开发服务器会自动注入脚本 -->
     <script type="module" src="/index.tsx"></script>
 
-    <!-- 开发模式提示 -->
+    <！-- 开发模式提示 -->
     <script>
       // 检查是否在开发环境
       if (

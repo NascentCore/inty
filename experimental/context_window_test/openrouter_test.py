@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 OpenRouter Long Context Performance Test
 
@@ -123,12 +123,10 @@ async def test_openrouter_performance_with_retry(
 
 async def test_openrouter_performance(book_text: str, model: str, question: str = None) -> dict:
     """Test OpenRouter model performance with long context."""
-
-    # Default question if none provided
+# 如果没有则默认问题 provided
     if not question:
         question = "Please provide a brief summary of this book in 3-4 sentences."
-
-    # Initialize OpenAI client with OpenRouter endpoint
+# 使用 OpenRouter 端点初始化 OpenAI 客户端
     try:
         client = AsyncOpenAI(
             base_url="https://openrouter.ai/api/v1",
@@ -138,8 +136,7 @@ async def test_openrouter_performance(book_text: str, model: str, question: str 
         raise Exception(
             f"Failed to initialize OpenRouter client: {e}\nMake sure OPENROUTER_API_KEY is set"
         )
-
-    # Prepare the full prompt
+# Prepare 完整的 prompt
     full_prompt = f"""Here is the complete text of a book:
 
 {book_text}
@@ -147,19 +144,17 @@ async def test_openrouter_performance(book_text: str, model: str, question: str 
 ---
 
 Question: {question}"""
-
-    # Count tokens
+# 计算代币数
     token_count = safe_count_tokens(full_prompt, "input")
     print(f"Input tokens: ~{token_count:,}")
-
-    # Performance tracker
+# 绩效跟踪器
     tracker = PerformanceTracker()
     tracker.token_count = token_count
 
     tracker.start()
 
     try:
-        # Generate content with streaming to capture first token
+# 使用流式传输生成内容以捕获第一个令牌
         stream = await client.chat.completions.create(
             model=model,
             messages=[
@@ -176,13 +171,12 @@ Question: {question}"""
         response_text = ""
         async for chunk in stream:
             if chunk.choices and chunk.choices[0].delta.content:
-                # Mark first token on first chunk with content
+# 在第一个标记上使用内容标记第一个块
                 if not response_text:
                     tracker.mark_first_token()
                 
                 response_text += chunk.choices[0].delta.content
-
-        # Count response tokens
+# 计算请求令牌
         tracker.response_tokens = safe_count_tokens(response_text, "response")
         tracker.end()
 
@@ -204,7 +198,7 @@ def safe_count_tokens(text: str, context: str = "") -> int:
         encoding = tiktoken.get_encoding("cl100k_base")
         return len(encoding.encode(text))
     except Exception:
-        # Fallback: rough estimation (1 token ≈ 4 characters for English text)
+# Fallback：粗略估计（对于英文文本，1个标记 ≈ 4个字符）
         estimated = len(text) // 4
         if context:
             print(f"Using fallback token estimation for {context}: ~{estimated:,}")
@@ -214,25 +208,22 @@ def safe_count_tokens(text: str, context: str = "") -> int:
 def get_model_pricing(model: str) -> tuple[float, float]:
     """Get approximate pricing for different models (per 1M tokens)."""
     pricing_map = {
-        # Claude models
+#克劳德模型
         "claude-3.5-sonnet": (3.0, 15.0),
         "claude-3-sonnet": (3.0, 15.0), 
         "claude-3-haiku": (0.25, 1.25),
         "claude-3-opus": (15.0, 75.0),
-        
-        # GPT models
+# GPT 模型
         "gpt-4o": (2.5, 10.0),
         "gpt-4-turbo": (10.0, 30.0),
         "gpt-4": (30.0, 60.0),
         "gpt-3.5-turbo": (0.5, 1.5),
-        
-        # Other models
+# 其他型号
         "mistral-large": (2.0, 6.0),
         "llama-3.1-405b": (2.7, 2.7),
         "llama-3.1-70b": (0.59, 0.79),
     }
-    
-    # Default pricing if model not found
+# 如果未找到模型，则默认pricing
     return pricing_map.get(model, (1.0, 3.0))
 
 
@@ -252,8 +243,7 @@ def print_results(metrics: dict, model: str):
     print(
         f"Processing speed:       {metrics.get('tokens_per_second', 0):.2f} tokens/sec"
     )
-
-    # Calculate cost estimate
+# 计算成本提示
     input_tokens = metrics.get("input_tokens", 0)
     output_tokens = metrics.get("response_tokens", 0)
     input_price, output_price = get_model_pricing(model)
@@ -320,32 +310,27 @@ Download from Project Gutenberg: https://www.gutenberg.org/
 
 async def main():
     """Main test function."""
-
-    # Parse command line arguments
+# 解析命令行参数
     args = parse_arguments()
-
-    # Check for API key
+#检查API键
     if not os.getenv("OPENROUTER_API_KEY"):
         print("ERROR: OPENROUTER_API_KEY environment variable not set")
         print("Please set your OpenRouter API key:")
         print("export OPENROUTER_API_KEY='your-api-key-here'")
         print("\nGet your API key from: https://openrouter.ai/keys")
         return
-
-    # Load book text
+# 加载书籍文本
     try:
         book_text = load_book_text(args.book_path)
     except Exception as e:
         print(f"ERROR: {e}")
         return
-
-    # Run the test
+# 运行测试
     try:
         print(f"Starting OpenRouter long context performance test...")
         print(f"Model: {args.model}")
         print(f"Book file: {args.book_path}")
-
-        # Test performance with retry
+#通过重试测试性能
         first_question = (
             args.question
             or "Please provide a brief summary of this book in 3-4 sentences."

@@ -26,13 +26,13 @@ object AppStoreUtils {
     )
 
     /**
-     * 获取跳转到应用商店的 Intent
+     * 获取跳转到应用商店的意图
      * @param config 应用商店配置
-     * @return Intent 对象，如果无法获取则返回 null
+     * @return Intent对象，如果无法获取则返回 null
      */
     fun getAppStoreIntent(config: AppStoreConfig = AppStoreConfig()): Intent? {
         return try {
-            // 检查packageName是否有效
+// 检查packageName是否有效
             if (config.packageName.isBlank()) {
                 Log.w(TAG, "packageName为空，无法获取应用商店Intent")
                 return null
@@ -63,7 +63,7 @@ object AppStoreUtils {
     }
 
     /**
-     * 获取通用应用商店Intent
+     * 获取通用应用商店意图
      */
     private fun getGenericAppStoreIntent(config: AppStoreConfig): Intent? {
         val intent = Intent().apply {
@@ -85,8 +85,7 @@ object AppStoreUtils {
             Log.w(TAG, "未找到可用的应用商店")
             return null
         }
-
-        // 优先选择系统应用商店
+// 优先选择系统应用商店
         for (resolveInfo in resolveInfos) {
             val activityInfo = resolveInfo.activityInfo ?: continue
             val pkgName = activityInfo.packageName ?: continue
@@ -101,8 +100,7 @@ object AppStoreUtils {
                 continue
             }
         }
-
-        // 如果包含Google Play且找到Google Play
+// 如果包含Google Play找到且Google Play
         if (config.includeGooglePlay) {
             val googlePlayInfo = resolveInfos.find {
                 it.activityInfo?.packageName == GOOGLE_PLAY_PACKAGE
@@ -112,8 +110,7 @@ object AppStoreUtils {
                 return intent
             }
         }
-
-        // 使用第一个可用的应用商店
+// 使用第一个可用的应用商店
         val firstResolveInfo = resolveInfos.firstOrNull()
         val firstActivityInfo = firstResolveInfo?.activityInfo
         val firstPackageName = firstActivityInfo?.packageName
@@ -128,7 +125,7 @@ object AppStoreUtils {
     }
 
     /**
-     * 获取三星应用商店Intent
+     * 获取三星应用商店了解
      */
     private fun getSamsungAppStoreIntent(packageName: String): Intent? {
         if (packageName.isBlank()) {

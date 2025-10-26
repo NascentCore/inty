@@ -1,13 +1,13 @@
-# AGENTS.md · app/（后端服务）
+# 代理。md·app/（主持人服务）
 
-本文件覆盖并补充仓库根 `AGENTS.md`，仅适用于 `app/`。
+本文件覆盖并补充仓库根`AGENTS.md`，仅适用于 `app/`。
 
 ## 范围与目标
 - 负责 FastAPI HTTP 服务与业务逻辑。
-- 变更必须做到可测试、可回滚、可观测。
+- 变更必须实现可测试、可回滚、可安装。
 
 ## 代码与结构
-- 遵循根文件的 Python 风格要求：避免捕获笼统异常、优先早返回、避免魔法常量、日志使用 `logger.debug()`。
+- 遵循根文件的Python风格要求：避免捕获笼统异常、优先早返回、避免魔法常量、日志使用`logger.debug()`。
 - API 入口在 `app/api/`（按版本与路由拆分）；核心逻辑放在 `app/services/` 与 `app/core/`；数据模型在 `app/models/` 与 `app/schemas/`。
 - 配置读取走 `app/core/config.py`，不要在代码中硬编码环境变量名或路径。
 

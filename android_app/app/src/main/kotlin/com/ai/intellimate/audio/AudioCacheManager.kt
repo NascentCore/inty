@@ -14,7 +14,7 @@ import java.io.IOException
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 
-/** 音频缓存管理器 提供内存缓存和本地文件缓存功能 */
+/** 音频缓存管理器提供内存缓存和本地文件缓存功能 */
 class AudioCacheManager private constructor(private val context: Context) {
 
     companion object {
@@ -40,11 +40,9 @@ class AudioCacheManager private constructor(private val context: Context) {
             .writeTimeout(30, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build()
-
-    // 内存缓存
+// 内存存储
     private val memoryCache = LruCache<String, ByteArray>(MAX_MEMORY_CACHE_SIZE)
-
-    // 缓存目录
+// 缓存目录
     private val cacheDir: File by lazy {
         File(context.cacheDir, CACHE_DIR_NAME).apply {
             if (!exists()) {
@@ -58,13 +56,11 @@ class AudioCacheManager private constructor(private val context: Context) {
         withContext(Dispatchers.IO) {
             try {
                 val cacheKey = generateCacheKey(url)
-
-                // 如果已经缓存，直接返回
+// 如果已经缓存，直接返回
                 if (memoryCache.get(cacheKey) != null || getCachedFile(cacheKey).exists()) {
                     return@withContext
                 }
-
-                // 下载并缓存
+// 下载并缓存
                 val data = downloadAudio(url)
                 if (data != null) {
                     memoryCache.put(cacheKey, data)
@@ -75,7 +71,7 @@ class AudioCacheManager private constructor(private val context: Context) {
             }
         }
 
-    /** 检查音频是否已缓存 */
+    /** 检查音频是否已存储 */
     fun isCached(url: String): Boolean {
         val cacheKey = generateCacheKey(url)
         return memoryCache.get(cacheKey) != null || getCachedFile(cacheKey).exists()
@@ -91,10 +87,9 @@ class AudioCacheManager private constructor(private val context: Context) {
     /** 清理缓存 */
     fun clearCache() {
         try {
-            // 清理内存缓存
+// 清理内存缓存
             memoryCache.evictAll()
-
-            // 清理文件缓存
+//清理文件存储
             cacheDir.listFiles()?.forEach { file ->
                 if (file.isFile) {
                     file.delete()
@@ -106,7 +101,7 @@ class AudioCacheManager private constructor(private val context: Context) {
         }
     }
 
-    /** 清理过期缓存 */
+    /** 清理缓存 */
     fun cleanExpiredCache() {
         try {
             val currentTime = System.currentTimeMillis()
@@ -123,7 +118,7 @@ class AudioCacheManager private constructor(private val context: Context) {
         }
     }
 
-    /** 获取缓存大小 */
+    /** 获取服务器大小 */
     fun getCacheSize(): Long {
         return try {
             cacheDir.listFiles()?.sumOf { file -> if (file.isFile) file.length() else 0L } ?: 0L
@@ -132,7 +127,7 @@ class AudioCacheManager private constructor(private val context: Context) {
         }
     }
 
-    /** 生成缓存键 */
+    /** 生成存储键 */
     private fun generateCacheKey(url: String): String {
         val digest = MessageDigest.getInstance("MD5")
         val hash = digest.digest(url.toByteArray())
@@ -173,8 +168,7 @@ class AudioCacheManager private constructor(private val context: Context) {
                                     else -> "HTTP错误: ${response.code}"
                                 }
                             LogUtils.e("音频LOG测试 Failed to download audio: $errorMsg (${response.code})")
-
-                            // 对于4xx错误，不重试
+// 对于4xx错误，不重试
                             if (response.code in 400..499) {
                                 return@withContext null
                             }
@@ -192,9 +186,7 @@ class AudioCacheManager private constructor(private val context: Context) {
                         }
 
                     LogUtils.e("音频LOG测试 Failed to download audio (attempt ${retryCount + 1}): $errorMsg")
-
-
-                    // 如果是最后一次重试，返回null
+// 如果是最后一次重试，返回null
                     if (retryCount == maxRetries) {
                         return@withContext null
                     }
@@ -202,7 +194,7 @@ class AudioCacheManager private constructor(private val context: Context) {
 
                 retryCount++
                 if (retryCount <= maxRetries) {
-                    // 指数退避重试
+// 指数退避重试
                     val delayMs = 1000L * (1 shl (retryCount - 1))
                     delay(delayMs)
                 }
@@ -211,7 +203,7 @@ class AudioCacheManager private constructor(private val context: Context) {
             null
         }
 
-    /** 保存数据到文件 */
+    /** 将数据保存到文件 */
     private fun saveToFile(file: File, data: ByteArray) {
         try {
             FileOutputStream(file).use { fos -> fos.write(data) }

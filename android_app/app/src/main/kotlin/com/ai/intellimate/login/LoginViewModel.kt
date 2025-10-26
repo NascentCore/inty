@@ -21,8 +21,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
 
 class LoginViewModel : BaseVM() {
-
-    // 事件通知机制
+// 事件通知机制
     private val _events = MutableSharedFlow<ViewModelEvent>()
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
 
@@ -34,8 +33,7 @@ class LoginViewModel : BaseVM() {
             _events.emit(event)
         }
     }
-
-    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+// 延迟获取依赖，避免在构造函数中立即导致获取空指针异常
     private val userApi by lazy { NetServiceMgr.getUserApi() }
 
 
@@ -45,35 +43,31 @@ class LoginViewModel : BaseVM() {
             LogUtils.i("loginByGoogle($idToken) result:")
             when (result) {
                 is HttpResult.Success -> {
-                    // 现在我们可以同时获取到 token 和 userProfile
+// 现在我们可以同时获取token和userProfile
                     val token = result.data.token
                     val userProfile = result.data.user
                     LogUtils.i("Token: $token ,, UserProfile: $userProfile")
-
-                    // 保存用户信息和 token
+// 保存用户信息和token
                     IntySetting.login(false, userProfile.id, token) // false 表示不是游客用户
                     UserProfileManager.saveUserProfile(userProfile)
-
-                    // 登录成功，IntySetting已经保存了登录状态
-
-                    // 检查用户信息是否完整（年龄和性别）
+// 登录成功，IntySetting已经保存了登录状态
+// 查询用户信息是否完整（年龄和性别）
                     val needsRegInfo = userProfile.gender.isNullOrEmpty() ||
                             userProfile.ageGroup.isNullOrEmpty() ||
                             userProfile.ageGroup == "<18"
 
                     withContext(Dispatchers.Main) {
-                        // 显示登录成功提示
+//登录显示成功提示
                         ToastUtils.showShort(R.string.login_successfully)
 
                         if (needsRegInfo) {
-                            // 需要完善注册信息，跳转到RegInfo页面
+// 需要完善注册信息，跳转到RegInfo页面
                             sendEvent(ViewModelEvent.NeedRegInfo)
                         } else {
-                            // 用户信息完整，发送登录成功事件
+// 用户信息完整，发送登录成功事件
                             sendEvent(ViewModelEvent.LoginSuccess)
                         }
-
-                        // 重启 MainActivity
+// 重新启动MainActivity
                         val intent =
                             Intent(Utils.getApp(), MainActivity::class.java).apply {
                                 flags =

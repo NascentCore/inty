@@ -48,13 +48,12 @@ class VoiceCacheService:
         """
         try:
             content_hash = self._generate_content_hash(text, voice_id, model, language)
-
-            # 查询缓存，使用 COALESCE 将 NULL duration 转换为 0.0
+# 查询服务器，使用COALESCE将NULL持续时间转换为0。0
             result = await db.execute(
                 select(
                     VoiceCache.audio_url,
-                    # 保持兼容性；coalesce 返回参数列表中第一个非 NULL 的值。
-                    # TODO：清除掉 func.coalesce，填充 duration 值到数据库
+# 保持兼容性；coalesce 返回参数列表中第一个非 NULL 的值。
+# TODO：清除功能。合并，填充持续时间值到数据库
                     func.coalesce(VoiceCache.duration, 0.0).label("duration"),
                 ).where(
                     VoiceCache.content_hash == content_hash,
@@ -64,13 +63,12 @@ class VoiceCacheService:
             cache_entry = result.scalar_one_or_none()
 
             if cache_entry:
-                # 检查文件是否还存在
+#检查文件是否还存在
                 if self.gcs_service.check_voice_file_exists(cache_entry.audio_url):
                     logger.debug(
                         f"语音缓存命中: {content_hash}, 命中次数: {cache_entry.hit_count}"
                     )
-
-                    # 异步更新访问统计，不阻塞主流程
+# 异步更新访问统计，不阻塞主流程
                     import asyncio
 
                     asyncio.create_task(
@@ -81,7 +79,7 @@ class VoiceCacheService:
 
                     return (cache_entry.audio_url, cache_entry.duration)
                 else:
-                    # 文件不存在，标记为无效（使用独立事务）
+#文件不存在，标记为无效（使用独立事务）
                     try:
                         await self._mark_cache_invalid_async(content_hash)
                         logger.warning(
@@ -123,7 +121,7 @@ class VoiceCacheService:
         Returns:
             是否保存成功
         """
-        # 如果没有提供数据库会话，创建新的会话
+# 如果没有提供数据库会话，创建新的会话
         if db is None:
             from app.db.session import AsyncSessionLocal
 
@@ -161,15 +159,14 @@ class VoiceCacheService:
             import uuid
 
             content_hash = self._generate_content_hash(text, voice_id, model, language)
-
-            # 检查是否已存在
+#检查是否已存在
             result = await db.execute(
                 select(VoiceCache).where(VoiceCache.content_hash == content_hash)
             )
             existing_cache = result.scalar_one_or_none()
 
             if existing_cache:
-                # 更新现有缓存
+# 更新现有服务器
                 existing_cache.audio_url = audio_url
                 existing_cache.duration = duration
                 existing_cache.file_size = file_size
@@ -177,7 +174,7 @@ class VoiceCacheService:
                 existing_cache.last_accessed = datetime.now()
                 logger.debug(f"更新语音缓存: {content_hash}")
             else:
-                # 创建新缓存
+#创建新的存储
                 cache_entry = VoiceCache(
                     id=str(uuid.uuid4()),
                     content_hash=content_hash,
@@ -215,7 +212,7 @@ class VoiceCacheService:
         """
         异步更新缓存访问统计，不阻塞主流程
         """
-        # 如果没有提供数据库会话，创建新的会话
+# 如果没有提供数据库会话，创建新的会话
         if db is None:
             from app.db.session import AsyncSessionLocal
 
@@ -232,8 +229,7 @@ class VoiceCacheService:
         """实际的更新访问统计实现"""
         try:
             content_hash = self._generate_content_hash(text, voice_id, model, language)
-
-            # 更新访问统计
+# 更新访问统计
             stmt = (
                 update(VoiceCache)
                 .where(VoiceCache.content_hash == content_hash)
@@ -260,11 +256,10 @@ class VoiceCacheService:
         """异步更新缓存命中统计，使用独立的数据库会话"""
         try:
             from app.db.session import AsyncSessionLocal
-
-            # 创建独立的数据库会话
+# 创建独立的数据库会话
             async with AsyncSessionLocal() as db_session:
                 try:
-                    # 更新访问统计
+# 更新访问统计
                     stmt = (
                         update(VoiceCache)
                         .where(VoiceCache.content_hash == content_hash)
@@ -290,11 +285,10 @@ class VoiceCacheService:
         """异步标记缓存为无效，使用独立的数据库会话"""
         try:
             from app.db.session import AsyncSessionLocal
-
-            # 创建独立的数据库会话
+# 创建独立的数据库会话
             async with AsyncSessionLocal() as db_session:
                 try:
-                    # 标记为无效
+# 标记为无效
                     stmt = (
                         update(VoiceCache)
                         .where(VoiceCache.content_hash == content_hash)
@@ -324,13 +318,12 @@ class VoiceCacheService:
             缓存统计信息
         """
         try:
-            # 总缓存数
+# 总存储数据
             total_result = await db.execute(
                 select(func.count(VoiceCache.id)).where(VoiceCache.is_active == True)
             )
             total_count = total_result.scalar()
-
-            # 今日命中次数
+# 今日预约价格
             today_start = datetime.now().replace(
                 hour=0, minute=0, second=0, microsecond=0
             )
@@ -341,16 +334,14 @@ class VoiceCacheService:
                 )
             )
             today_hits = today_hits_result.scalar() or 0
-
-            # 总文件大小
+# 总文件大小
             size_result = await db.execute(
                 select(func.sum(VoiceCache.file_size)).where(
                     VoiceCache.is_active == True
                 )
             )
             total_size = size_result.scalar() or 0
-
-            # 热门语音
+# 热门语音
             popular_result = await db.execute(
                 select(VoiceCache.text_content, VoiceCache.hit_count)
                 .where(VoiceCache.is_active == True)
@@ -390,10 +381,9 @@ class VoiceCacheService:
             清理的缓存数量
         """
         try:
-            # 计算过期时间
+# 计算过渡时间
             expire_time = datetime.now() - timedelta(days=self.cache_ttl_days)
-
-            # 查询要删除的缓存
+# 查询要删除的服务器
             result = await db.execute(
                 select(VoiceCache).where(
                     VoiceCache.last_accessed < expire_time, VoiceCache.is_active == True
@@ -404,10 +394,9 @@ class VoiceCacheService:
             deleted_count = 0
             for cache in old_caches:
                 try:
-                    # 删除GCS文件
+#删除GCS文件
                     await self.gcs_service.delete_voice_file(cache.audio_url)
-
-                    # 标记为无效
+# 标记为无效
                     cache.is_active = False
                     deleted_count += 1
 
@@ -438,7 +427,7 @@ class VoiceCacheService:
             清理的缓存数量
         """
         try:
-            # 查询活跃的缓存
+# 查询活跃的服务器
             result = await db.execute(
                 select(VoiceCache).where(VoiceCache.is_active == True)
             )
@@ -447,7 +436,7 @@ class VoiceCacheService:
             invalid_count = 0
             for cache in active_caches:
                 try:
-                    # 检查文件是否存在
+#检查文件是否存在
                     if not self.gcs_service.check_voice_file_exists(cache.audio_url):
                         cache.is_active = False
                         invalid_count += 1
@@ -468,7 +457,5 @@ class VoiceCacheService:
             logger.error(f"清理无效缓存失败: {str(e)}")
             await db.rollback()
             return 0
-
-
-# 创建全局实例
+#创建全局实例
 voice_cache_service = VoiceCacheService()

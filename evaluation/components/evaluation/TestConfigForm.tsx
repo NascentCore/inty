@@ -1,6 +1,6 @@
 /**
- * 评测配置表单组件
- * 负责评测会话的基本配置（测试名称、用户身份、评分标准等）
+ * 表格配置组件
+ * 负责体育会话的基本配置（测试名称、用户身份、评分标准等）
  */
 
 import React, { useState, useEffect } from "react";
@@ -61,11 +61,10 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
   onValuesChange,
   onValidationChange,
 }) => {
-  // 状态管理
+// 状态管理
   const [scoringModels, setScoringModels] = useState<OpenRouterModel[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
-
-  // 表单验证
+// 表单验证
   const validateForm = (values: FormValues): ValidationError[] => {
     const errors: ValidationError[] = [];
 
@@ -90,8 +89,7 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
 
     return errors;
   };
-
-  // 表单Hook
+// 表单表格
   const form = useForm<FormValues>({
     initialValues: {
       name: `智能体评测 - ${new Date().toLocaleString()}`,
@@ -105,16 +103,14 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
     },
     validate: validateForm,
   });
-
-  // 加载评分模型 - 使用OpenRouter模型
+// 加载评分模型 - 使用OpenRouter模型
   const loadScoringModels = async () => {
     try {
       setModelsLoading(true);
       const models = await modelCacheService.getOpenRouterModels();
 
       setScoringModels(models);
-
-      // 设置默认模型 - 优先选择 google/gemini-2.5-flash-lite
+// 设置默认模型 - 优先选择 google/gemini-2.5-未知专业版
       if (models.length > 0 && !form.values.scoring_model) {
         const preferredModel = models.find(
           (model) => model.id === "google/gemini-2.5-flash-lite",
@@ -128,27 +124,24 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
       setModelsLoading(false);
     }
   };
-
-  // 刷新模型列表
+// 刷新模型列表
   const handleRefreshModels = () => {
     loadScoringModels();
   };
 
   useEffect(() => {
-    // 防止重复调用
+// 防止重复调用
     if (scoringModels.length > 0) {
       return;
     }
 
     loadScoringModels();
   }, []); // 保持空依赖数组，只在组件挂载时运行一次
-
-  // 通知父组件表单值变化
+// 通知父组件表单值变化
   useEffect(() => {
     onValuesChange?.(form.values);
   }, [form.values, onValuesChange]);
-
-  // 通知父组件验证状态变化
+// 通知父组件验证状态变化
   useEffect(() => {
     onValidationChange?.(form.isValid);
   }, [form.isValid, onValidationChange]);
@@ -229,7 +222,7 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
           />
         </Form.Item>
 
-        {/* 评分标准 */}
+        {/*评分标准*/}
         <Form.Item
           label={
             <Space>

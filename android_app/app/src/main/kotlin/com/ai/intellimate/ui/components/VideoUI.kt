@@ -16,7 +16,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 
-/** 自定义全屏视频播放器。 继承VideoView并重写onMeasure方法确保全屏显示。 */
+/** 自定义全屏视频播放器。继承VideoView并重写onMeasure方法保证全屏显示。 */
 private class FullScreenVideoView(context: Context) : VideoView(context) {
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -26,7 +26,7 @@ private class FullScreenVideoView(context: Context) : VideoView(context) {
     }
 }
 
-/** 背景视频播放器组件。 使用AndroidView包装自定义VideoView，实现循环播放和性能优化。 */
+/** 使用背景视频播放器组件。AndroidView包装自定义VideoView，实现循环播放和性能优化。 */
 @Composable
 fun BackgroundVideoPlayer(modifier: Modifier = Modifier) {
     var videoView by remember { mutableStateOf<VideoView?>(null) }
@@ -49,19 +49,16 @@ fun BackgroundVideoPlayer(modifier: Modifier = Modifier) {
                                 FrameLayout.LayoutParams.MATCH_PARENT,
                                 Gravity.CENTER,
                             )
-
-                        // 设置视频路径
+// 设置视频路径
                         val videoPath = "android.resource://${ctx.packageName}/raw/subscribe_bg"
                         setVideoURI(videoPath.toUri())
-
-                        // 设置循环播放
+//循环设置播放
                         setOnPreparedListener { mediaPlayer ->
                             mediaPlayer.isLooping = true
-                            // 静音播放，避免干扰用户体验
+// 静音播放，避免干扰用户体验
                             mediaPlayer.setVolume(0f, 0f)
                         }
-
-                        // 开始播放
+// 开始播放
                         start()
                     }
 

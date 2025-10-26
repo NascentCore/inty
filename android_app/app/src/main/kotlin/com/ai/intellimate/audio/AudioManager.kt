@@ -8,7 +8,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-/** 统一音频管理器 协调各个音频子模块，提供统一的音频服务接口 */
+/** 统一音频管理器协调各个音频子模块，提供统一的音频服务接口 */
 class AudioManager
 private constructor(private val context: Context, private var scope: CoroutineScope) {
 
@@ -25,30 +25,27 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                         }
                 }
                     .also { instance ->
-                        // 更新Scope以确保协程能正常执行
+// 更新范围以确保协程能正常执行
                         instance.scope = scope
-                        // 同步最新的TtsManager实例（内部使用稳定ioScope）
+// 同步最新的TtsManager实例（内部使用StationalioScope）
                         instance.ttsManager = TtsManager.Companion.getInstance(context)
                     }
         }
     }
-
-    // 子模块
+// 子模块
     private val playbackManager = AudioPlaybackManager.Companion.getInstance(context)
     private val cacheManager = AudioCacheManager.getInstance(context)
     private var ttsManager = TtsManager.Companion.getInstance(context)
     private val mainHandler = Handler(Looper.getMainLooper())
-
-    // 业务状态管理（开场白状态管理已移至消息级别处理）
-
-    // 播放状态代理
+// 业务状态管理（开场白状态管理已下移至消息级别处理）
+// 播放状态代理
     val playbackState: StateFlow<PlaybackState> = playbackManager.playbackState
     val currentPosition: StateFlow<Long> = playbackManager.currentPosition
     val duration: StateFlow<Long> = playbackManager.duration
     val isLoading: StateFlow<Boolean> = playbackManager.isLoading
     val error: StateFlow<String?> = playbackManager.error
 
-    /** 播放消息语音 如果audioUrl为空，会自动生成TTS */
+    /** 播放消息语音如果audioUrl为空，会自动生成TTS */
     fun playMessageVoice(
         messageId: String,
         audioUrl: String?,
@@ -61,7 +58,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
         agentName: String? = null, // Agent名称，用于日志分析
         forceRegenerateTts: Boolean = false, // 是否强制重新生成TTS
     ) {
-        // 参数验证
+// 参数验证
         if (messageId.isEmpty()) {
             LogUtils.e("音频LOG测试 playMessageVoice failed: messageId is empty")
             onTtsFailed?.invoke("MessageId Can't be null")
@@ -73,13 +70,12 @@ private constructor(private val context: Context, private var scope: CoroutineSc
             onTtsFailed?.invoke("Agent ID Can't be null")
             return
         }
-
-        // 检查是否启用自动播放
-        // 手动点击时不受自动播放设置影响
-        // 开场白消息的自动播放不受用户设置影响（业务逻辑必需）
+// 检查是否启用自动播放
+// 手动点击时不受自动播放设置影响
+// 开场白消息的自动播放不受用户设置影响（业务逻辑简单）
         if (autoPlay && !isManualClick) {
-            // 检查是否是开场白消息，如果是则允许播放
-            // 开场白消息的localMsgId通常包含_assistant_标识
+//检查是否是开场白消息，如果是则允许播放
+// 开场白消息的localMsgId通常包含_assistant_标识
             val isOpeningMessage = messageId.contains("_assistant_")
             if (!isOpeningMessage) {
                 LogUtils.i("音频LOG测试 Auto play audio is disabled, skipping message voice playback")
@@ -88,10 +84,8 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                 LogUtils.d("音频LOG测试 Opening message detected (messageId contains '_assistant_'), allowing auto play despite user setting")
             }
         }
-
-        // 开场白状态管理已移至消息级别，不再需要特殊处理
-
-        // 如果audioUrl为空，生成TTS
+// 开场白状态管理已移至消息级别，不再需要特殊处理
+// 如果audioUrl为空，生成TTS
         if (audioUrl.isNullOrEmpty()) {
             val ttsMessageId = serverMessageId ?: messageId
 
@@ -100,7 +94,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                 agentId = agentId,
                 onSuccess = { generatedUrl ->
                     onTtsGenerated?.invoke(generatedUrl)
-                    // 使用生成的URL播放
+// 使用生成的URL播放
                     playMessageWithUrl(messageId, generatedUrl, agentId, autoPlay, agentName)
                 },
                 onError = { error ->
@@ -110,7 +104,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                 forceRegenerate = forceRegenerateTts,
             )
         } else {
-            // 直接播放
+// 直接播放
             playMessageWithUrl(messageId, audioUrl, agentId, autoPlay, agentName)
         }
     }
@@ -132,8 +126,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                 agentId = agentId,
                 agentName = agentName
             )
-
-        // 始终在主线程调用ExoPlayer相关API
+// 始终在主线程调用ExoPlayer相关API
         mainHandler.post {
             try {
                 playbackManager.playAudio(audioInfo, autoPlay = autoPlay)
@@ -146,7 +139,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
 
     /** 停止所有语音播放 */
     fun stopAllPlayback() {
-        // 在主线程执行
+// 在主线程执行
         mainHandler.post { playbackManager.stopPlayback() }
     }
 
@@ -175,13 +168,13 @@ private constructor(private val context: Context, private var scope: CoroutineSc
         mainHandler.post { playbackManager.resetForPageChange() }
     }
 
-    /** 检查是否正在播放指定Agent的语音 */
+    /** 检查是否正在播放指定座席的语音 */
     fun isPlayingAgentVoice(agentId: String): Boolean {
         val currentAudioInfo = playbackManager.getCurrentAudioInfo()
         return currentAudioInfo?.agentId == agentId && playbackManager.isPlaying()
     }
 
-    /** 停止非当前Agent的音频播放 用于页面切换时确保只播放当前Agent的音频 */
+    /** 停止非当前Agent的音频播放用于页面切换时确保只播放当前Agent的音频 */
     fun stopNonCurrentAgentPlayback(currentAgentId: String) {
         val currentAudioInfo = playbackManager.getCurrentAudioInfo()
         if (currentAudioInfo?.agentId != currentAgentId && playbackManager.isPlaying()) {
@@ -195,7 +188,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
     /** 是否正在播放 */
     fun isPlaying(): Boolean = playbackManager.isPlaying()
 
-    /** 获取播放进度百分比 */
+    /** 获取播放详细数据 */
     fun getProgress(): Float = playbackManager.getProgress()
 
     /** 跳转到指定位置 */

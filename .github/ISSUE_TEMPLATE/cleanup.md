@@ -1,10 +1,8 @@
 ---
-name: Cleanup
-about: Cleanup existing code
-title: "[Cleanup] "
-labels: cleanup, p2
-assignees: ''
+名称：清理
+关于：清理现有代码
+标题：“[清理]”
+标签: 清理, p2
+受让人：''
 
 ---
-
-

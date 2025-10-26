@@ -27,7 +27,7 @@ async def upload_image(
     file: UploadFile = File(...),
     cropping_avatar: bool = Form(False),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    # 更新图片元数据
+#更新图片元数据
     async_db: AsyncSession = Depends(deps.get_async_db),
 ) -> APIResponse[dict]:
     """
@@ -43,8 +43,8 @@ async def upload_image(
         APIResponse with success/error status and image data
     """
     try:
-        # Use helper function to process image upload
-        # Use avatars directory for unified storage, similar to backgrounds
+# 使用辅助函数 process 图片上传
+# 使用头像目录统一存储，与背景类似
         base_path = (
             f"avatars/{current_user.id}" if cropping_avatar else "images/uploads"
         )

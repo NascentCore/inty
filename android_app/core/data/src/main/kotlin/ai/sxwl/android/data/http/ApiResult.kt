@@ -2,7 +2,7 @@ package ai.sxwl.android.data.http
 
 import ai.sxwl.android.utils.LogUtils
 
-/** 统一的API响应结果包装器 提供统一的成功/失败状态和错误处理 */
+/** 统一的API响应结果装置提供统一的成功/失败状态和错误处理 */
 sealed class ApiResult<out T> {
     data class Success<T>(val data: T) : ApiResult<T>()
 

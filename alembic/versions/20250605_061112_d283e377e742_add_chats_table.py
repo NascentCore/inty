@@ -10,9 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision: str = 'd283e377e742'
 down_revision: Union[str, None] = '959ca996a9d7'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -20,7 +18,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 创建 chats 表
+# 创建聊天表
     op.create_table(
         'chats',
         sa.Column('id', sa.VARCHAR(), nullable=False),
@@ -37,6 +35,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # 删除 chats 表
+#删除聊天记录表
     op.drop_index('ix_chats_id', table_name='chats')
     op.drop_table('chats')

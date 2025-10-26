@@ -24,8 +24,7 @@ from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
 from app.services.voice_service import voice_service
-
-# TODO: Prefix should be /chat instead of /chats.
+# TODO: Prefix 应该是 /chat 而不是 /chats。
 router = APIRouter(prefix="/chats", route_class=LoggerRoute)
 
 
@@ -37,9 +36,9 @@ router = APIRouter(prefix="/chats", route_class=LoggerRoute)
 )
 async def list_chats(
     db: AsyncSession = Depends(deps.get_async_db),
-    # Start index of the query, 0-based
+# 查询的起始索引，从0开始
     skip: int = 0,
-    # Upper limit of the number of chats to return
+# 返回的聊天数量上限
     limit: int = 100,
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -184,25 +183,22 @@ async def get_chat_detail(
     Get chat details with paginated message records
     Support scrolling to load earlier conversations
     """
-    # Verify if chat exists
+# 验证聊天是否存在
     chat = await chat_service.get_chat(db, chat_id=chat_id)
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
-
-    # Verify if chat belongs to current user
+# 验证聊天是否属于当前用户
     if chat.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
     try:
-        # Use unified session_id generation rule
+# 使用统一的session_id生成规则
         session_id = generate_session_id(chat_id)
-
-        # Get paginated messages
+#获取分页消息
         messages_data = chat_history_service.get_messages_paginated(
             session_id=session_id, limit=limit, offset=offset
         )
-
-        # Assemble return data
+# 组成返回数据
         return {
             "chat_info": {
                 "id": chat.id,
@@ -255,29 +251,24 @@ async def get_agent_chat_detail(
     """
     try:
         logger.debug(f"Getting Agent chat details - Agent ID: {agent_id}")
-
-        # Get or create unique session with this Agent
+# 获取或创建与此代理的唯一会话
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db, user_id=current_user.id, agent_id=agent_id
         )
-
-        # Verify if the agent_id in returned chat matches the input
+# 验证返回的聊天记录中的agent_id是否与输入匹配
         if chat.agent_id != agent_id:
             logger.error(f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}",
             )
-
-        # Use unified session_id generation rule
+# 使用统一的session_id生成规则
         session_id = generate_session_id(chat.id)
-
-        # Get paginated messages
+#获取分页消息
         messages_data = chat_history_service.get_messages_paginated(
             session_id=session_id, limit=limit, offset=offset
         )
-
-        # Assemble return data
+# 组成返回数据
         data = {
             "chat_info": {
                 "id": chat.id,
@@ -334,30 +325,25 @@ async def get_agent_chat_messages(
     """
     try:
         logger.debug(f"Getting Agent chat messages - Agent ID: {agent_id}")
-
-        # Get or create unique session with this Agent
+# 获取或创建与此代理的唯一会话
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db, user_id=current_user.id, agent_id=agent_id
         )
-
-        # Verify if the agent_id in returned chat matches the input
+# 验证返回的聊天记录中的agent_id是否与输入匹配
         if chat.agent_id != agent_id:
             logger.error(f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}",
             )
-
-        # Use unified session_id generation rule
+# 使用统一的session_id生成规则
         session_id = generate_session_id(chat.id)
-
-        # 获取分页消息
+#获取分页消息
         messages_data = chat_history_service.get_messages_paginated(
             session_id=session_id, limit=limit, offset=offset
         )
-
-        # 如果要求升序（旧消息在前），则不反转
-        # 如果要求降序（新消息在前），则反转消息列表
+#如果要求升序（旧货在前），则不进口
+#如果要求降序（新消息在前），则烧烤消息列表
         if order == "desc":
             messages_data["messages"].reverse()
 
@@ -400,28 +386,24 @@ async def agent_chat_completions(
         logger.debug(
             f"request.messages数量: {len(request.messages) if request.messages else 0}"
         )
-
-        # 检查用户聊天次数限制
-        # is_allowed, used_count, daily_limit = await subscription_service.check_chat_limit(
-        #     db, current_user.id
-        # )
-
-        # if not is_allowed:
-        #     raise HTTPException(
-        #         status_code=429,  # Too Many Requests
-        #         detail={
-        #             "message": "今日聊天次数已达上限",
-        #             "used_count": used_count,
-        #             "daily_limit": daily_limit,
-        #             "error_code": "CHAT_LIMIT_EXCEEDED"
-        #         }
-        #     )
-
-        # 优化：简化Agent验证，在创建Agent实例时验证
+# 检查用户聊天次数限制
+# is_allowed、used_count、daily_limit = 等待订阅服务。检查聊天限制（
+# 数据库，当前用户。ID
+＃）
+# 如果不是 is_allowed:
+# 引发 HTTPException(
+# status_code=429, # 请求过多
+# 详细信息={
+# "message": "今日聊天次数已达到上限",
+#“已使用计数”：已使用计数，
+#“每日限制”：每日限制，
+#“error_code”：“CHAT_LIMIT_EXCEEDED”
+# }
+＃）
+# 优化：简化Agent验证，在创建Agent实例时验证
         agent_query_start = time.time()
         logger.debug(f"简化Agent验证: {agent_id}")
-
-        # 简化查询，只获取基本字段
+# 简化查询，只获取基本字段
         from sqlalchemy import select
 
         result = await db.execute(
@@ -436,10 +418,9 @@ async def agent_chat_completions(
 
         agent_query_time = time.time() - agent_query_start
         logger.info(f"Agent验证成功: {agent_basic[1]}, 耗时: {agent_query_time:.3f}秒")
-        # 添加日志记录传入的agent_id
+#添加日志记录标记的agent_id
         logger.info(f"请求的Agent ID: {agent_id}")
-
-        # 获取或创建与该Agent的唯一会话
+# 获取或创建与该代理的唯一会话
         chat_session_start = time.time()
         logger.debug(
             f"获取或创建聊天会话: user_id={current_user.id}, agent_id={agent_id}"
@@ -451,19 +432,16 @@ async def agent_chat_completions(
         logger.info(
             f"聊天会话获取成功: chat_id={chat.id}, agent_id={chat.agent_id}, 耗时: {chat_session_time:.3f}秒"
         )
-
-        # 验证返回的chat中的agent_id是否与传入的一致
+# 验证返回的聊天中的agent_id是否与确定的一致
         if chat.agent_id != agent_id:
             logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Agent ID mismatch: expected={agent_id}, actual={chat.agent_id}",
             )
-
-        # 记录实际使用的agent_id
+# 记录agent_id的实际使用
         logger.info(f"实际聊天的Agent ID: {chat.agent_id}")
-
-        # 获取最后一条用户消息
+# 获取最后一条用户消息
         msg_process_start = time.time()
         logger.debug(
             f"处理messages: {[f'{msg.role}: {msg.content[:50]}...' for msg in request.messages]}"
@@ -477,30 +455,25 @@ async def agent_chat_completions(
 
         last_user_message = user_messages[-1].content
         logger.debug(f"用户消息: {last_user_message[:100]}...")
-
-        # 构建LangChain消息格式
+# 构建LangChain消息格式
         messages = {"messages": [HumanMessage(content=last_user_message)]}
         msg_process_time = time.time() - msg_process_start
         logger.info(f"消息处理耗时: {msg_process_time:.3f}秒")
-
-        # 获取或创建Agent实例 - 需要加载完整数据
+# 获取或创建代理实例 - 需要加载完整数据
         agent_get_start = time.time()
         logger.debug(f"准备获取Agent实例: {chat.agent_id}")
-
-        # 使用高性能的聊天专用Agent获取方法
+# 使用高性能的聊天专用Agent获取方法
         agent_data = await agent_service.get_agent_for_chat(db, agent_id=chat.agent_id)
         if not agent_data:
             logger.error(f"Agent数据未找到: {chat.agent_id}")
             raise HTTPException(status_code=404, detail="Agent not found")
-
-        # 从AgentManager缓存获取Agent实例
+# 从AgentManager服务器获取Agent实例
         agent = await agent_manager.get_agent(agent_data)
         agent_get_time = time.time() - agent_get_start
         logger.info(
             f"Agent实例获取成功: {agent_data['name']}, 耗时: {agent_get_time:.3f}秒"
         )
-
-        # 使用统一的session_id生成规则
+# 使用统一的session_id生成规则
         session_id_start = time.time()
         session_id = generate_session_id(chat.id)
         session_id_time = time.time() - session_id_start
@@ -526,19 +499,16 @@ async def agent_chat_completions(
                 },
             )
         else:
-            # 非流式聊天（异步）
+#非流式聊天（异步）
             chat_processing_start = time.time()
             logger.debug(f"开始Agent聊天处理: session_id={session_id}")
-
-            # 先获取聊天设置，再处理AI回复
+#先获取聊天设置，再处理AI回复
             try:
-
-                # 先获取或创建聊天设置
+# 先获取或创建聊天设置
                 chat_settings = await chat_service.get_or_create_chat_settings(
                     db, chat.id, current_user.id, agent_id
                 )
-
-                # 然后处理AI回复
+#然后处理AI回复
                 response_content = await agent.chat(
                     user_id=current_user.id,
                     session_id=session_id,
@@ -555,13 +525,12 @@ async def agent_chat_completions(
             except Exception as e:
                 logger.error(f"Agent聊天处理失败: {str(e)}")
                 raise
-
-            # 语音生成逻辑 - 根据chat_settings.voice_enabled决定是否自动播放
+# 语音生成逻辑 - 根据chat_settings。voice_enabled决定是否自动播放
             audio_url = None
             try:
-                # 语音自动播放逻辑：chat_settings.voice_enabled = true 时自动生成语音
+# 语音自动播放逻辑：chat_settings.voice_enabled = true时自动生成语音
                 if chat_settings.voice_enabled:
-                    # 使用Agent的voice_id字段
+# 使用Agent的voice_id字段
                     agent_voice_id = agent_data.get("voice_id")
                     logger.info(
                         f"开始语音生成: voice_id={agent_voice_id}, text_length={len(response_content)}, language={request.language}"
@@ -588,9 +557,8 @@ async def agent_chat_completions(
             except Exception as e:
                 logger.error(f"语音生成失败: {str(e)}")
                 logger.exception("语音生成异常详细信息:")
-                # 语音生成失败不影响聊天功能
-
-            # 记录聊天使用情况
+#语音生成失败不影响聊天功能
+# 记录聊天使用情况
             try:
                 logger.debug(f"记录聊天使用情况: user_id={current_user.id}")
                 await subscription_service.record_usage(
@@ -606,16 +574,13 @@ async def agent_chat_completions(
                 logger.debug("聊天使用情况记录成功")
             except Exception as e:
                 logger.warning(f"记录聊天使用情况失败: {str(e)}")
-
-            # 构建响应消息
+# 构建响应消息
             message = {"role": "assistant", "content": response_content}
-
-            # 如果生成了语音，添加到响应中
+# 如果生成了语音，添加到响应中
             if audio_url:
                 message["audio_url"] = audio_url
                 logger.info(f"响应包含语音URL: {audio_url}")
-
-            # 获取最新AI消息的完整信息
+#获取最新AI消息的完整信息
             try:
                 latest_message_info = (
                     await chat_history_service.get_latest_ai_message_info(
@@ -625,19 +590,17 @@ async def agent_chat_completions(
             except Exception as e:
                 logger.warning(f"获取最新消息信息失败: {str(e)}")
                 latest_message_info = None
-
-            # 添加消息的完整信息（id, meta_data, timestamp等）
+#添加消息的完整信息（id,meta_data,timestamp等）
             if latest_message_info:
                 message["id"] = latest_message_info["id"]
                 message["meta_data"] = latest_message_info["meta_data"]
                 message["timestamp"] = latest_message_info["timestamp"]
-                # 如果数据库中有audio_url，使用数据库的，否则使用新生成的
+# 如果数据库中有audio_url，使用数据库的，否则使用新生成的
                 if latest_message_info["audio_url"]:
                     message["audio_url"] = latest_message_info["audio_url"]
 
             total_request_time = time.time() - request_start_time
-
-            # 构建符合客户端期望的响应格式 (HttpResult<SendMsgResponse>)
+# 构建符合客户端期望的响应格式 (HttpResult<SendMsgResponse>)
             response_data = {
                 "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",  # 保持随机生成的外层ID
                 "object": "chat.completion",
@@ -683,19 +646,17 @@ async def generate_message_voice(
     用于用户点击播放按钮时的按需语音生成
     """
     try:
-        # 使用高性能的聊天专用Agent获取方法
+# 使用高性能的聊天专用Agent获取方法
         agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
         if not agent_data:
             raise HTTPException(status_code=404, detail="Agent not found")
-
-        # 获取用户与该Agent的会话
+# 获取用户与该代理的会话
         chat = await chat_service.get_chat_by_user_and_agent(
             db=db, user_id=current_user.id, agent_id=agent_id
         )
         if not chat:
             raise HTTPException(status_code=404, detail="Chat not found")
-
-        # 从聊天历史中获取消息内容
+#从聊天历史中获取消息内容
         session_id = generate_session_id(chat.id)
         message_content = await chat_history_service.get_message_content(
             db=db, session_id=session_id, message_id=message_id
@@ -703,8 +664,7 @@ async def generate_message_voice(
 
         if not message_content:
             raise HTTPException(status_code=404, detail="Message not found")
-
-        # 使用Agent的voice_id生成语音
+# 使用Agent的voice_id生成语音
         agent_voice_id = agent_data.get("voice_id")
         voice_result = await voice_service.generate_voice(
             text=message_content,
@@ -716,7 +676,7 @@ async def generate_message_voice(
         )
 
         if not voice_result:
-            # 检查是否是因为达到限制
+# 检查是否是因为达到限制
             from app.services.global_services import subscription_service
 
             (
@@ -730,13 +690,13 @@ async def generate_message_voice(
                 from app.models.user import AuthType
 
                 if current_user.auth_type == AuthType.GUEST:
-                    # 游客用户：提示登录
+#游客用户：提示登录
                     return create_business_error_response(
                         error_info=BusinessErrorCode.GUEST_LOGIN_REQUIRED,
                         extra_data={"used_count": used_count, "limit": limit},
                     )
                 else:
-                    # 已登录用户：提示达到限制
+# 已登录用户：提示达到限制
                     return create_business_error_response(
                         error_info=BusinessErrorCode.VOICE_GENERATION_LIMIT_REACHED,
                         extra_data={"used_count": used_count, "limit": limit},
@@ -745,9 +705,8 @@ async def generate_message_voice(
 
         audio_url, audio_duration = voice_result
         logger.debug(f"按需语音生成成功: {audio_url}, 时长: {audio_duration:.2f}秒")
-
-        # 更新chat_history中对应消息的audio_url
-        # 使用try-except确保更新失败不影响API响应
+# 更新chat_history中对应消息的audio_url
+# 使用try- except确保更新失败不影响API响应
         try:
             update_success = await chat_history_service.update_message_audio_url(
                 db=db,
@@ -762,7 +721,7 @@ async def generate_message_voice(
                 logger.warning(f"更新消息{message_id}的audio_url到chat_history失败")
         except Exception as e:
             logger.error(f"更新chat_history的audio_url时发生异常: {str(e)}")
-            # 继续执行，不影响API响应
+# 继续执行，不影响API响应
 
         return APIResponse.success(
             data={
@@ -819,7 +778,7 @@ async def get_voice_info(
         "TODO: We should switch to /chats/{chat_id}/settings"
     ),
     response_model=Union[
-        # TODO: Why do we use union here?
+# TODO：为什么我们在这里使用 union？
         schemas.APIResponse[schemas.ChatSettings],
         schemas.APIResponse[dict],
     ],
@@ -840,24 +799,20 @@ async def update_agent_chat_settings(
         logger.info(
             f"Updating Agent chat settings - Agent ID: {agent_id}, User ID: {current_user.id}"
         )
-
-        # First verify if Agent exists
+#首先验证Agent是否存在
         agent_db = await agent_service.get_agent(db, agent_id=agent_id)
         if not agent_db:
             raise HTTPException(status_code=404, detail="Agent not found")
-
-        # Get or create unique session with this Agent
+# 获取或创建与此代理的唯一会话
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db, user_id=current_user.id, agent_id=agent_id
         )
-
-        # Verify if the agent_id in returned chat matches the input
+# 验证返回的聊天记录中的agent_id是否与输入匹配
         if chat.agent_id != agent_id:
             logger.error(f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}")
             raise HTTPException(status_code=500, detail=f"Agent ID mismatch")
-
-        # Get or create chat settings, then update
-        # First ensure settings exist
+# 获取或创建聊天设置，然后更新
+#首先确保设置存在
         settings = await chat_service.get_or_create_chat_settings(
             db=db, chat_id=chat.id, user_id=current_user.id, agent_id=agent_id
         )
@@ -865,25 +820,22 @@ async def update_agent_chat_settings(
         subscription_status = await subscription_service.get_user_subscription_status(
             db, current_user.id
         )
-
-        # Check if trying to update style_prompt and if user has subscription
-        # style_prompt is only available for subscribed users or superusers
+# 检查是否尝试更新样式_prompt 以及用户是否有订阅
+# style_prompt 仅适用于订阅用户或超级用户
         if settings_update.style_prompt and not is_eligible_for_premium(
             current_user, subscription_status
         ):
             return create_business_error_response(
                 error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
             )
-
-        # Check if trying to update premium_mode and if user has subscription
+# 检查是否尝试更新 premium_mode 以及用户是否有订阅
         if settings_update.premium_mode and not is_eligible_for_premium(
             current_user, subscription_status
         ):
             return create_business_error_response(
                 error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
             )
-
-        # Then update settings
+# 然后更新设置
         settings = await chat_service.update_chat_settings(
             db=db, chat_id=chat.id, settings_update=settings_update
         )
@@ -903,9 +855,7 @@ async def update_agent_chat_settings(
         raise HTTPException(
             status_code=500, detail=f"Failed to update chat settings: {str(e)}"
         )
-
-
-# TODO: Should we switch to /chats/{chat_id}/settings?
+# TODO：我们应该切换到/chats/{chat_id}/settings吗？
 @router.get(
     "/agents/{agent_id}/settings",
     response_model=schemas.ChatSettings,
@@ -930,18 +880,15 @@ async def get_agent_chat_settings(
         logger.info(
             f"Getting Agent chat settings - Agent ID: {agent_id}, User ID: {current_user.id}"
         )
-
-        # First verify if Agent exists
+#首先验证Agent是否存在
         agent_db = await agent_service.get_agent(db, agent_id=agent_id)
         if not agent_db:
             raise HTTPException(status_code=404, detail="Agent not found")
-
-        # Get or create unique session with this Agent
+# 获取或创建与此代理的唯一会话
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db, user_id=current_user.id, agent_id=agent_id
         )
-
-        # Get or create chat settings
+# 获取或创建聊天设置
         settings = await chat_service.get_or_create_chat_settings(
             db=db, chat_id=chat.id, user_id=current_user.id, agent_id=agent_id
         )
@@ -961,9 +908,7 @@ async def get_agent_chat_settings(
         raise HTTPException(
             status_code=500, detail=f"Failed to get chat settings: {str(e)}"
         )
-
-
-# TODO: Should we switch to /chats/{chat_id}?
+# TODO：我们应该切换到/chats/{chat_id}吗？
 @router.delete(
     "/agents/{agent_id}/chats",
     response_model=schemas.ChatDeletionResponse,
@@ -987,13 +932,11 @@ async def delete_agent_chats(
         logger.info(
             f"删除Agent聊天记录 - Agent ID: {agent_id}, User ID: {current_user.id}"
         )
-
-        # 首先验证Agent是否存在
+#首先验证Agent是否存在
         agent_db = await agent_service.get_agent(db, agent_id=agent_id)
         if not agent_db:
             raise HTTPException(status_code=404, detail="Agent not found")
-
-        # 调用service层删除聊天记录
+#调用服务层删除聊天记录
         result = await chat_service.delete_chats_by_agent_id(
             db=db, agent_id=agent_id, user_id=current_user.id
         )
@@ -1038,19 +981,17 @@ async def get_agent_debug_messages(
         logger.debug(
             f"获取Agent调试信息 - Agent ID: {agent_id}, User ID: {current_user.id}"
         )
-
-        # 首先验证Agent是否存在
+#首先验证Agent是否存在
         agent_db = await agent_service.get_agent(db, agent_id=agent_id)
         if not agent_db:
             raise HTTPException(status_code=404, detail="Agent not found")
-
-        # 获取用户与该Agent的聊天会话
+# 获取用户与该代理的聊天会话
         chat = await chat_service.get_chat_by_agent_and_user(
             db=db, agent_id=agent_id, user_id=current_user.id
         )
 
         if not chat:
-            # 如果没有聊天会话，返回空的调试信息
+# 如果没有聊天会话，返回空的调试信息
             return {
                 "chat_id": None,
                 "agent_id": agent_id,
@@ -1058,8 +999,7 @@ async def get_agent_debug_messages(
                 "debug_messages": None,
                 "message": "No chat session found with this agent",
             }
-
-        # 返回调试信息
+# 返回调试信息
         return {
             "chat_id": chat.id,
             "agent_id": chat.agent_id,
@@ -1107,8 +1047,7 @@ async def clear_agent_chat_messages(
         logger.info(
             f"清除Agent聊天消息 - Agent ID: {agent_id}, User ID: {current_user.id}"
         )
-
-        # 验证请求参数
+# 验证请求参数
         if not request.message_id and not request.timestamp:
             raise HTTPException(
                 status_code=400, detail="必须提供 message_id 或 timestamp 中的一个参数"
@@ -1119,36 +1058,31 @@ async def clear_agent_chat_messages(
                 status_code=400,
                 detail="只能提供 message_id 或 timestamp 中的一个参数，不能同时提供",
             )
-
-        # 验证Agent是否存在
+# 验证Agent是否存在
         agent_db = await agent_service.get_agent(db, agent_id=agent_id)
         if not agent_db:
             raise HTTPException(status_code=404, detail="Agent not found")
-
-        # 获取用户与该Agent的聊天会话
+# 获取用户与该代理的聊天会话
         chat = await chat_service.get_chat_by_user_and_agent(
             db=db, user_id=current_user.id, agent_id=agent_id
         )
 
         if not chat:
             raise HTTPException(status_code=404, detail="未找到与该Agent的聊天会话")
-
-        # 生成session_id
+# 生成session_id
         session_id = generate_session_id(chat.id)
-
-        # 执行清除操作
+# 执行清除操作
         if request.message_id is not None:
-            # 按消息ID清除
+#按消息ID清除
             result = chat_history_service.clear_messages_after_id(
                 session_id=session_id, message_id=request.message_id
             )
         else:
-            # 按时间戳清除
+#楼梯响声
             result = chat_history_service.clear_messages_after_timestamp(
                 session_id=session_id, timestamp=request.timestamp
             )
-
-        # 如果清除操作成功，同时清空 debug_messages 字段
+# 如果清除操作成功，同时清空 debug_messages 字段
         if result.get("success", False):
             chat.debug_messages = None
             await db.commit()

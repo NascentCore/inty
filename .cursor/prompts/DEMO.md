@@ -1,3 +1,3 @@
-# Demo
+# 演示
 
-- Insert parse_args() function to parse command line arguments
+- 插入parse_args()函数来解析命令行参数

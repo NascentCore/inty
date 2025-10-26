@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 Debugging script for the AI Character Generator
 Helps diagnose and troubleshoot issues
@@ -15,11 +15,9 @@ def check_environment():
     """Check environment setup"""
     print("🔍 Checking Environment Setup")
     print("=" * 50)
-    
-    # Check Python version
+#检查Python版本
     print(f"Python version: {sys.version}")
-    
-    # Check environment variables
+#检查指标环境
     print("\n📋 Environment Variables:")
     required_vars = ["GEMINI_API_KEY"]
     optional_vars = ["DEBUG", "LOG_LEVEL", "LOG_TO_FILE", "LOG_FILE"]
@@ -37,11 +35,9 @@ def check_environment():
             print(f"  📝 {var}: {value}")
         else:
             print(f"  ⚪ {var}: Not set (using default)")
-    
-    # Check current working directory
+#查看当前工作目录
     print(f"\n📁 Current working directory: {os.getcwd()}")
-    
-    # Check if logs directory exists
+#检查logs目录是否存在
     logs_dir = Path("logs")
     if logs_dir.exists():
         print(f"  ✅ Logs directory exists: {logs_dir}")
@@ -83,11 +79,10 @@ def test_configuration():
     print("=" * 50)
     
     try:
-        # Test config validation
+# 配置测试验证
         Config.validate()
         print("  ✅ Configuration validation passed")
-        
-        # Show config values
+# 显示配置值
         print(f"  📝 Debug mode: {Config.DEBUG}")
         print(f"  📝 Host: {Config.HOST}")
         print(f"  📝 Port: {Config.PORT}")
@@ -109,11 +104,9 @@ def test_gemini_connection():
     
     try:
         import google.generativeai as genai
-        
-        # Configure Gemini
+# 配置双子座
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        
-        # Test with a simple request
+# 使用一个简单的请求进行测试
         model = genai.GenerativeModel("gemini-1.5-pro")
         response = model.generate_content("Hello, this is a test.")
         
@@ -132,7 +125,7 @@ def check_logging():
     print("=" * 50)
     
     try:
-        # Setup verbose logging for testing
+# 设置详细日志记录并进行测试
         setup_verbose_logging()
         
         logger = logging.getLogger(__name__)
@@ -154,16 +147,14 @@ def test_models():
     
     try:
         from models import CharacterGenerationRequest
-        
-        # Test request model
+# 测试请求模型
         request = CharacterGenerationRequest(
             brief_description="Test character",
             genre="fantasy",
             tone="neutral"
         )
         print("  ✅ CharacterGenerationRequest model works")
-        
-        # Test that we can serialize/deserialize
+# 测试我们是否可以序列化/反序列化
         request_json = request.model_dump_json()
         print(f"  ✅ Request serialization works ({len(request_json)} chars)")
         
@@ -182,8 +173,7 @@ def generate_test_character():
     try:
         from character_agent import CharacterAgent
         from models import CharacterGenerationRequest
-        
-        # Create a simple test request
+#创建一个简单的测试请求
         request = CharacterGenerationRequest(
             brief_description="A test character for debugging",
             genre="fantasy",
@@ -214,8 +204,7 @@ def main():
     """Run all debugging checks"""
     print("🐛 AI Character Generator - Debugging Tool")
     print("=" * 60)
-    
-    # Run all checks
+# 运行所有检查
     check_environment()
     check_dependencies()
     test_configuration()

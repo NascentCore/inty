@@ -242,7 +242,7 @@ private val highContrastDarkColorScheme = darkColorScheme(
 @Composable
 fun IntelliMateTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
+// 动态颜色在 Android 12+ 上可用
     dynamicColor: Boolean = true,
     content: @Composable() () -> Unit,
 ) {

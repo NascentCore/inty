@@ -1,3 +1,3 @@
-# Graphql demo
+# Graphql 演示
 
-This shows how to use Graphql with python backend and kotlin frontned
+本次展示了如何将 Graphql 与 python 和 kotlin 前端结合使用

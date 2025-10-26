@@ -8,12 +8,12 @@ import androidx.compose.ui.text.withStyle
 
 /**
  * 文案解析工具类
- * 用于解析opening文案中的括号内容，将括号内的文案设置为斜体和浅色
+ * 用于解析开头文案中的逗号内容，将逗号内的文案设置为斜体和浅色
  */
 object TextParser {
 
     /**
-     * 解析opening文案，将()内的内容设置为斜体和浅色
+     * 解析开头文案，将()内的内容设置为斜体和浅色
      * @param text 原始文案
      * @return 解析后的AnnotatedString
      */
@@ -28,10 +28,10 @@ object TextParser {
 
                 when {
                     char == '(' && !inParentheses -> {
-                        // 开始括号
+// 开始逗号
                         inParentheses = true
                         parenthesesStart = currentIndex
-                        // 使用斜体和浅色样式渲染开始括号
+// 使用斜体和浅色样式渲染开始
                         withStyle(
                             style = SpanStyle(
                                 fontStyle = FontStyle.Companion.Italic,
@@ -43,10 +43,10 @@ object TextParser {
                     }
 
                     char == ')' && inParentheses -> {
-                        // 结束括号
+// 结束
                         inParentheses = false
                         parenthesesStart = -1
-                        // 使用斜体和浅色样式渲染结束括号
+// 使用斜体和浅色样式渲染结束端点
                         withStyle(
                             style = SpanStyle(
                                 fontStyle = FontStyle.Companion.Italic,
@@ -58,7 +58,7 @@ object TextParser {
                     }
 
                     inParentheses -> {
-                        // 在括号内，使用斜体和浅色样式
+// 在中间，使用斜体和浅色风格
                         withStyle(
                             style = SpanStyle(
                                 fontStyle = FontStyle.Companion.Italic,
@@ -70,7 +70,7 @@ object TextParser {
                     }
 
                     else -> {
-                        // 正常文本
+// 正常文本
                         append(char.toString())
                     }
                 }
@@ -89,9 +89,9 @@ object TextParser {
     }
 
     /**
-     * 提取括号内的内容
+     * 呈现内部的内容
      * @param text 文本内容
-     * @return 括号内的内容列表
+     * @return 中部内的内容列表
      */
     fun extractParenthesesContent(text: String): List<String> {
         val result = mutableListOf<String>()

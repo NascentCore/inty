@@ -79,8 +79,7 @@ internal fun RegInfoScreen(
 
             LabelText(label = stringResource(R.string.which_pronoun_use))
             Spacer(Modifier.height(12.dp))
-
-            // 性别选择
+// 性别选择
             Row(modifier = Modifier.fillMaxWidth()) {
                 Spacer(Modifier.width(40.dp))
                 GenderItem(
@@ -106,8 +105,7 @@ internal fun RegInfoScreen(
             Spacer(Modifier.height(16.dp))
             LabelText(label = stringResource(R.string.what_is_your_age))
             Spacer(Modifier.height(12.dp))
-
-            // 年龄选择
+// 年龄选择
             FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()

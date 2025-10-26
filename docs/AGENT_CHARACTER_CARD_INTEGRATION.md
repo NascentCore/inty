@@ -2,33 +2,30 @@
 
 ## 概述
 
-本文档描述如何改造现有的Agent聊天系统以支持角色卡功能，重点关注personality、scenario、first_message、message_example等字段的集成。
+本文档描述了如何改造现有的坐席聊天系统以支持角色卡功能，重点关注personality、scenario、first_message、message_example等字段的集成。
 
 名词定义：
 
-- user/用户：app 使用者，使用 app 各项功能，此处指使用 app 与角色聊天
-- character/角色：指用户对谈的对象，LLM 驱动的对话智能体（conversational agent）
-- character card/角色卡：指酒馆定义的角色信息描述存储格式，JSON 格式，同时内嵌在 PNG 图片内，因此得名角色卡
-- prompt/提示词：统称，泛指所有作为输入提供给大语言模型，并让大模型接续生成内容的数据；
-  常被滥用，使用时应区分具体所指的提示词；提示词常分为 3 类：system prompt/系统提示词、
-  character prompt/角色提示词、chats prompt/聊天提示词，以下详述：
-  - system prompt/系统提示词：指影响模型、对用户不可见的提示词；比如酒馆中用于说明沟通方式的主提示词（main prompt）：
-    <img width="400" alt="image" src="https://github.com/user-attachments/assets/31d8f25e-25a6-4ba2-a773-9f2ae5301961" />
-  - character prompt/角色提示词：指描述角色信息的提示词；是角色卡中的主要内容，比如：
-    - Persona/角色画像：性别、年龄、性别、外貌、职业、等等
-    - Personality/角色性格：？？？
-    - Description/角色描述：？？？
-  - chats prompt/聊天提示词：一般叫消息历史、指聊天的过程一来一回用户与角色之间的消息记录；
-    过于久远的消息历史会经过处理、以记忆（memory）的形式呈现到历史记录中
-  - memory/记忆：chats prompt 经过处理，缩小数据量，可以以记忆的方式动态加载到提示词中
-- dynamic prompting/提示词动态调整：指在上述提示词内容框架中，通过动态调整提示词内容，
-  来达到某种更高级、复杂、更有价值的聊天体验的技术手段
+- user/用户：app用户，使用app各项功能，此处指使用app与角色聊天
+- 角色/角色：指用户对谈的对象，LLM驱动的对话智能体（conversational agent）
+- 角色卡/角色卡：指酒馆定义的角色信息描述存储格式，JSON 格式，同时内嵌在PNG图片内，因此得名角色卡
+- prompt/提示词：作为统称，泛指所有输入提供给大语言模型，并让大模型接续生成内容的数据；
+  常被骗，使用时应区分所具体指的提示词；提示词常分为3类：system prompt/系统提示词、
+  角色prompt/角色提示词、聊天prompt/聊天提示词，以下详述：
+  - 系统prompt/系统提示词：指影响模型、对用户不可见的提示词；比如酒馆中用于说明沟通方式的主要提示词（main prompt）：
+    <img width="400" alt="image" src="https://github.com/user-attachments/assets/31d8f25e-25a6-4ba2-a773-9f2ae5301961" />- character prompt/角色提示词：指描述角色信息的提示词；是角色卡中的主要内容，比如：
+    - 角色/等等肖像：性别、年龄、性别、外貌、职业、角色
+    - 性格/角色性格：？？？
+    - 描述/角色描述：？？？
+  - 聊天prompt/聊天提示词：一般叫消息历史、指聊天的过程逐渐回用户与角色之间的消息记录；
+    丰富的久远的消息历史会经过处理、以记忆（记忆）的形式传送到历史记录中
+  - 记忆/记忆：聊天prompt经过处理，缩小数据量，可以以记忆的方式动态加载到提示词中
+- 动态prompting/提示词动态调整：指在上述提示词内容框架中，通过动态调整提示词内容，
+  达到某种更高级、更复杂、更有价值的聊天体验的技术手段
 
 ## 当前架构分析
 
-### 现有Agent类结构
-
-```python
+### 现有Agent类结构```python
 class Agent:
     def __init__(self, agent_id, name, model_config, system_prompt, description, template_name):
         # 基础属性
@@ -46,20 +43,16 @@ class Agent:
             store=postgres_store,
             checkpointer=self.checkpointer
         )
-```
+```###当前提示词生成流程
 
-### 当前提示词生成流程
-
-1. 从数据库加载Agent配置
-2. 通过`prompt_template_manager`渲染模板
-3. 注入用户信息上下文
-4. 传递给LangGraph agent
+1.从数据库加载Agent配置
+2.通过`prompt_template_manager`渲染模板
+3.注入用户信息上下文
+4. 提交给LangGraph代理
 
 ## 改造方案
 
-### 1. Agent构造函数扩展
-
-```python
+### 1.Agent构造函数扩展```python
 class Agent:
     def __init__(self,
                  agent_id: str,
@@ -250,11 +243,7 @@ def _is_first_message_in_session(self, session_id: str) -> bool:
     except Exception as e:
         logger.error(f"检查首次消息失败: {str(e)}")
         return False
-```
-
-### 4. AgentManager改造
-
-```python
+```### 4.代理经理改造```python
 async def get_agent(self, agent_data: dict) -> Agent:
     """
     获取或创建Agent实例（支持角色卡）
@@ -346,21 +335,19 @@ async def chat_stream(self, user_id: str, session_id: str, messages: dict[str, A
                 raise
 
     # ... 其余异步处理逻辑 ...
-```
+```## 实现细节
 
-## 实现细节
-
-### 1. 提示词优先级
+### 1.提示词优先级
 
 1. **系统提示词** (最高优先级)
-2. **角色卡上下文** (personality, scenario, message_example)
+2. **卡上下文角色** (个性、场景、message_example)
 3. **用户信息上下文**
 4. **对话历史**
 
-### 2. 开场白处理
+### 2.开场白处理
 
-- 检测会话是否为首次对话
-- 如果是首次且有`first_message`，注入为系统消息
+- 检测会话是否为第一次对话
+- 如果是首先且有`first_message`，注入为系统消息
 - 不直接作为AI回复，而是指导AI的第一次回应
 
 ### 3. 对话风格指导

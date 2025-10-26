@@ -14,37 +14,35 @@ import {
 import { chatApi } from "../../services/api";
 
 interface VoicePlayerProps {
-  // 智能体ID
+// 智能体ID
   agentId: string;
-  // 消息ID
+// 消息ID
   messageId: string;
-  // 消息文本内容
+// 消息文本内容
   messageText: string;
-  // 语言设置
+// 语言设置
   language?: string;
-  // 样式控制
+// 样式控制
   size?: "small" | "middle" | "large";
-  // 是否显示文字
+// 是否显示文字
   showText?: boolean;
-  // 自定义样式
+// 自定义样式
   style?: React.CSSProperties;
-  // 播放状态变化回调
+// 播放状态变化回调
   onPlayStateChange?: (isPlaying: boolean) => void;
 }
-
-// 全局音频管理器 - 确保同时只有一个音频在播放
+// 同时全局音频管理器 - 确保只有一个音频在播放
 class GlobalAudioManager {
   private currentAudio: HTMLAudioElement | null = null;
   private currentPlayerId: string | null = null;
   private listeners: Map<string, (isPlaying: boolean) => void> = new Map();
 
   play(audio: HTMLAudioElement, playerId: string): void {
-    // 停止当前播放的音频
+// 停止当前播放的音频
     if (this.currentAudio && this.currentAudio !== audio) {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
-
-      // 通知之前的播放器状态变化
+// 通知之前的播放器状态变化
       if (this.currentPlayerId) {
         const prevListener = this.listeners.get(this.currentPlayerId);
         if (prevListener) {
@@ -64,7 +62,7 @@ class GlobalAudioManager {
         this.currentAudio.pause();
         this.currentAudio.currentTime = 0;
       } catch (e) {
-        // 忽略停止时的错误，可能是组件已卸载
+// 忽略停止时的错误，可能是组件已卸载
       }
       this.currentAudio = null;
       this.currentPlayerId = null;
@@ -106,8 +104,7 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playerId = useRef(`${agentId}-${messageId}`).current;
   const isUnmountedRef = useRef(false);
-
-  // 注册全局音频管理器监听
+// 注册全局音频管理器监听
   useEffect(() => {
     const handleGlobalPlayStateChange = (playing: boolean) => {
       if (!playing && isPlaying) {
@@ -122,8 +119,7 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
       globalAudioManager.unregisterListener(playerId);
     };
   }, [playerId, isPlaying, onPlayStateChange]);
-
-  // 生成语音
+// 生成语音
   const generateVoice = async (): Promise<string> => {
     try {
       setIsLoading(true);
@@ -150,22 +146,18 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
       setIsLoading(false);
     }
   };
-
-  // 播放语音
+// 播放语音
   const playVoice = async () => {
     try {
       let urlToPlay = audioUrl;
-
-      // 如果没有缓存的音频URL，先生成
+// 如果没有缓存的音频URL，先生成
       if (!urlToPlay) {
         urlToPlay = await generateVoice();
       }
-
-      // 创建或重用音频元素
+//创建或重用音频元素
       if (!audioRef.current) {
         audioRef.current = new Audio();
-
-        // 音频事件监听
+// 音频事件监听
         audioRef.current.addEventListener("ended", () => {
           if (!isUnmountedRef.current) {
             setIsPlaying(false);
@@ -178,7 +170,7 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
             setHasError(true);
             setIsPlaying(false);
             onPlayStateChange?.(false);
-            // 只有在非组件卸载状态下才显示错误提示
+// 只有在非组件卸载状态下才显示错误提示
             message.error("音频播放失败");
           }
         });
@@ -188,8 +180,7 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
             setHasError(false);
           }
         });
-
-        // 监听音频被中断的事件（页面切换、组件卸载等）
+// 音频监听被中断的事件（页面切换、组件卸载等）
         audioRef.current.addEventListener("pause", () => {
           if (!isUnmountedRef.current) {
             setIsPlaying(false);
@@ -204,29 +195,25 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
           }
         });
       }
-
-      // 设置音频源
+// 设置音频源
       if (audioRef.current.src !== urlToPlay) {
         audioRef.current.src = urlToPlay;
       }
-
-      // 通过全局管理器播放
+// 通过全局管理器播放
       globalAudioManager.play(audioRef.current, playerId);
       setIsPlaying(true);
       onPlayStateChange?.(true);
     } catch (error) {
-      // 错误已经在generateVoice中处理
+// 错误已经在generateVoice中处理
     }
   };
-
-  // 停止播放
+// 停止播放
   const stopVoice = () => {
     globalAudioManager.stop(playerId);
     setIsPlaying(false);
     onPlayStateChange?.(false);
   };
-
-  // 点击处理
+// 点击处理
   const handleClick = () => {
     if (isLoading) return;
 
@@ -236,15 +223,14 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
       playVoice();
     }
   };
-
-  // 清理资源
+// 清理资源
   useEffect(() => {
     return () => {
-      // 标记组件即将卸载
+// 标记即将卸载的组件
       isUnmountedRef.current = true;
 
       if (audioRef.current) {
-        // 静默停止音频，避免触发错误事件
+// 静默停止声音，避免触发错误事件
         audioRef.current.removeEventListener("error", () => {});
         audioRef.current.removeEventListener("abort", () => {});
         audioRef.current.removeEventListener("pause", () => {});
@@ -255,15 +241,14 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
           audioRef.current.pause();
           audioRef.current.src = "";
         } catch (e) {
-          // 忽略清理过程中的错误
+// 忽略清理过程中的错误
         }
         audioRef.current = null;
       }
       globalAudioManager.stop(playerId);
     };
   }, [playerId]);
-
-  // 获取按钮图标
+// 获取按钮图标
   const getIcon = () => {
     if (isLoading) {
       return <LoadingOutlined spin />;
@@ -276,8 +261,7 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
     }
     return <SoundOutlined />;
   };
-
-  // 获取提示文本
+// 获取提示文本
   const getTooltip = () => {
     if (isLoading) {
       return "正在生成语音...";

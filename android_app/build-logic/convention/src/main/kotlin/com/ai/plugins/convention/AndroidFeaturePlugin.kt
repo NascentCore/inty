@@ -11,7 +11,7 @@ import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.project
 
-/** 用于Android 动态模块的plugin定义 */
+/** 用于Android动态模块的插件定义 */
 class AndroidFeaturePlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {

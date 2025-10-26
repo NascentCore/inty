@@ -15,5 +15,5 @@ def test_default_expiration_when_none():
     token = security.create_access_token("user")
     exp = jwt.get_unverified_claims(token)['exp']
     diff = exp - datetime.utcnow().timestamp()
-    # approximately 10080 minutes (7 days) from config.py
+# approximately 10080分钟（7天）来自配置。py
     assert 604790 <= diff <= 604810

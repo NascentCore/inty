@@ -32,7 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 /**
- * 骨架屏基础组件
+ * 网格屏基础组件
  */
 @Composable
 fun ShimmerBox(
@@ -70,7 +70,7 @@ fun ShimmerBox(
 }
 
 /**
- * Agent卡片骨架屏
+ * 代理调整网格图
  */
 @Composable
 fun AgentCardShimmer(
@@ -81,13 +81,12 @@ fun AgentCardShimmer(
             .clip(RoundedCornerShape(12.dp))
             .background(Color(0xFF2A2A2A))
     ) {
-        // 模拟背景图片的骨架屏
+// 芯片屏的模拟背景图片
         ShimmerBox(
             modifier = Modifier.matchParentSize(),
             shape = RoundedCornerShape(12.dp)
         )
-
-        // 模拟渐变遮罩
+// 模拟渐变遮罩
         Box(
             modifier = Modifier
                 .matchParentSize()
@@ -101,20 +100,19 @@ fun AgentCardShimmer(
                     )
                 )
         )
-
-        // 内容区域 - 底部对齐
+// 区域内容 - 底部底部
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp)
                 .align(Alignment.BottomStart)
         ) {
-            // Agent名称和关注按钮
+// 代理名称和关注按钮
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 名称
+// 名称
                 ShimmerBox(
                     modifier = Modifier
                         .weight(1f)
@@ -122,8 +120,7 @@ fun AgentCardShimmer(
                 )
 
                 Spacer(modifier = Modifier.width(8.dp))
-
-                // 关注按钮
+// 关注按钮
                 ShimmerBox(
                     modifier = Modifier.size(32.dp),
                     shape = CircleShape
@@ -131,8 +128,7 @@ fun AgentCardShimmer(
             }
 
             Spacer(modifier = Modifier.height(4.dp))
-
-            // Agent描述
+// 代理描述
             ShimmerBox(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -146,8 +142,7 @@ fun AgentCardShimmer(
             )
 
             Spacer(modifier = Modifier.height(8.dp))
-
-            // 统计信息
+// 统计信息
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -171,7 +166,7 @@ fun AgentCardShimmer(
 }
 
 /**
- * Agent头像卡片骨架屏
+ *特工头像详图
  */
 @Composable
 fun AgentAvatarCardShimmer(
@@ -184,7 +179,7 @@ fun AgentAvatarCardShimmer(
 }
 
 /**
- * Agents页面骨架屏
+ * 代理页面网格屏
  */
 @Composable
 fun AgentsScreenShimmer(
@@ -194,16 +189,14 @@ fun AgentsScreenShimmer(
         modifier = modifier
             .fillMaxWidth()
     ) {
-
-        // 主卡片区域 - 使用weight(1f)占满剩余空间
+// 主区域联动 - 使用weight(1f)占满剩余空间
         AgentCardShimmer(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .padding(horizontal = 24.dp, vertical = 16.dp)
         )
-
-        // 头像轮播区域
+// 头像轮播区域
         Box(
             modifier = Modifier
                 .fillMaxWidth()

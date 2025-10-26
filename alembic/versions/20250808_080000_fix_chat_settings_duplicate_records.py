@@ -6,9 +6,7 @@ Create Date: 2025-08-08 08:00:00.000000
 
 """
 from alembic import op
-
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision = '20250808_080000'
 down_revision = ['20250806_120000', 'f7f85747dd24']
 branch_labels = None
@@ -17,8 +15,7 @@ depends_on = None
 
 def upgrade() -> None:
     """Fix chat_settings duplicate records by cleaning duplicates and adding unique constraint"""
-    
-    # 检查并创建唯一约束（幂等操作）
+#查询并创建唯一合同（权力等操作）
     op.execute("""
         DO $$
         BEGIN

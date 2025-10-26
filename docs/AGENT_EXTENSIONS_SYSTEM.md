@@ -1,23 +1,20 @@
-# Agent Extensions 系统文档
+# 代理扩展系统文档
 
 ## 概述
 
-Agent Extensions 系统是 InTy 后端的一个灵活扩展机制，允许在 Agent 模型中存储自定义的 JSON 数据。这个系统主要用于存储非核心的、可选的 Agent 属性，如头像截取坐标、自定义配置等。
+Agent Extensions 系统是 InTy 悬浮的一个灵活的扩展机制，允许在 Agent 模型中存储自定义的 JSON 数据。该系统主要用于存储非核心的、可选的 Agent 属性，如头像截取坐标、自定义配置等。
 
 ## 核心概念
 
-### Extensions 字段
+### 扩展字段
 
-- **数据库字段**: `agents.extensions` (JSON 类型)
-- **Schema 支持**: `AgentBase` 和 `AgentUpdate` 都包含 `extensions: Optional[Dict[str, Any]] = None`
-- **存储方式**: 以 JSON 对象形式存储在 PostgreSQL 数据库中
-- **持久化**: 数据永久保存，重启服务不会丢失
+- **数据库字段**：`agents.extensions`(JSON 类型)
+- **架构支持**：`AgentBase` 和 `AgentUpdate` 都包含 `extensions: Optional[Dict[str, Any]] = None`- **存储方式**: 以 JSON 对象形式存储在 PostgreSQL 数据库中
+- **持久化**：数据永久保存，重启服务不会丢失
 
-## 数据流程
+## 流程数据
 
-### 1. 前端数据准备
-
-```typescript
+### 1.前端数据准备```typescript
 // 定义扩展数据类型
 interface AvatarCropData {
   x: number; // 截取区域左上角 X 坐标
@@ -52,11 +49,7 @@ await api.inty.api.v1.ai.agents.update(agentId, updateData);
 class Agent(Base):
     # ... 其他字段
     extensions = Column(JSON, nullable=True)  # 扩展数据
-```
-
-#### Schema 定义
-
-```python
+```#### 模式定义```python
 # app/schemas/agent.py
 class AgentBase(BaseModel):
     # ... 其他字段
@@ -166,29 +159,23 @@ if (editAvatarFile) {
 
 ### 1. 数据库层面
 
-- **字段类型**: `JSON` (PostgreSQL)
-- **索引**: 可以创建 GIN 索引支持 JSON 查询
-- **约束**: 无特殊约束，支持任意 JSON 结构
+- **字段类型**: `JSON`（PostgreSQL）
+- **索引**：可以创建GIN索引，支持JSON查询
+- **约束**：无特殊约束，支持各方 JSON 结构
 
-### 2. 缓存机制
-
-```python
+### 2.存储机制```python
 # app/services/agent_service.py
 # Agent 数据会被缓存，包括 extensions 字段
 cache_service.set_agent_config(agent_id, agent_data, ttl=1800)
-```
+```### 3. API 兼容性
 
-### 3. API 兼容性
-
-- **向后兼容**: 现有 Agent 不受影响
-- **可选字段**: extensions 为可选，不影响现有功能
-- **类型安全**: 前端使用 TypeScript 类型定义确保类型安全
+- **流畅兼容**：现有代理不出行
+- **可选字段**：扩展为可选，不影响现有功能
+- **类型安全**：前端使用 TypeScript 类型定义确保类型安全
 
 ## 最佳实践
 
-### 1. 数据结构设计
-
-```typescript
+### 1.数据结构设计```typescript
 // 为每个扩展功能定义明确的接口
 interface AvatarCropData {
   x: number;
@@ -229,15 +216,11 @@ const updateData = {
     avatar_crop: null, // 清理特定扩展
   },
 };
-```
+```## 扩展性考虑
 
-## 扩展性考虑
+### 1.未来的扩展
 
-### 1. 未来扩展
-
-extensions 字段可以轻松支持新的功能扩展：
-
-```json
+扩展字段可以轻松支持新的功能扩展：```json
 {
   "extensions": {
     "avatar_crop": {
@@ -277,32 +260,28 @@ def validate_extensions(extensions: Dict[str, Any]) -> bool:
         required_fields = ["x", "y", "width", "height", "imageWidth", "imageHeight", "sourceImageUrl"]
         return all(field in crop_data for field in required_fields)
     return True
-```
-
-## 性能考虑
+```## 性能考虑
 
 ### 1. 数据库性能
 
-- **JSON 查询**: 可以使用 PostgreSQL 的 JSON 操作符进行查询
-- **索引**: 对常用查询字段创建 GIN 索引
-- **大小限制**: 避免在 extensions 中存储过大的数据
+- **JSON 查询**：可以使用 PostgreSQL 的 JSON 操作符进行查询
+- **索引**：对常用查询字段创建GIN索引
+- **大小限制**：避免扩展中存储过大的数据
 
-### 2. 缓存策略
+### 2. 策略服务器
 
-- **缓存包含**: extensions 数据包含在 Agent 缓存中
-- **缓存失效**: 更新 extensions 时会刷新缓存
-- **内存使用**: 注意缓存大小，避免内存泄漏
+- **服务器包含**: 扩展数据包含在Agent服务器中
+- **服务器刷新**：更新扩展时会刷新服务器
+- **内存使用**：注意存储大小，避免内存泄漏
 
-### 3. 网络传输
+### 3.网络传输
 
-- **数据大小**: 控制 extensions 数据大小，避免影响 API 响应时间
+- **数据大小**：控制扩展数据大小，避免影响API响应时间
 - **压缩**: 使用 gzip 压缩减少传输大小
 
 ## 错误处理
 
-### 1. 数据格式错误
-
-```typescript
+### 1.数据格式错误```typescript
 try {
   const avatarCrop = agent.extensions?.avatar_crop as AvatarCropData;
   // 使用数据
@@ -346,8 +325,6 @@ const validateAvatarCrop = (data: any): data is AvatarCropData => {
     typeof data.imageHeight === "number"
   );
 };
-```
+```## 总结
 
-## 总结
-
-Agent Extensions 系统提供了一个灵活、可扩展的机制来存储 Agent 的自定义数据。通过 JSON 字段和类型安全的接口，系统可以轻松支持新功能而不会影响现有代码。这种设计既保证了向后兼容性，又为未来的功能扩展提供了良好的基础。
+Agent Extensions系统为存储Agent的自定义数据提供了一个灵活、可扩展的机制。通过JSON字段和类型安全的接口，系统可以轻松支持新功能而不影响现有代码。这种设计既保证了结构兼容，又为未来的功能扩展提供了良好的基础。

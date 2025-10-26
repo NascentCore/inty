@@ -53,12 +53,11 @@ class CivitaiParser:
 
     def _extract_model_name(self, soup: BeautifulSoup) -> str:
         """Extract the model name from the page title or heading."""
-        # Try to find the main heading
+#尝试找到主标题
         heading = soup.find("h1") or soup.find("h2")
         if heading:
             return heading.get_text().strip()
-
-        # Fallback to title tag
+#回到标题标签
         title = soup.find("title")
         if title:
             return title.get_text().strip()
@@ -68,8 +67,7 @@ class CivitaiParser:
     def _extract_tags(self, soup: BeautifulSoup) -> List[str]:
         """Extract model tags/categories."""
         tags = []
-
-        # Look for tag elements with specific classes
+# 具有新增特定类别的标签元素
         tag_elements = soup.find_all(
             ["a", "span"], class_=re.compile(r"tag|category|label")
         )
@@ -79,8 +77,7 @@ class CivitaiParser:
                 tag_text and len(tag_text) > 1 and len(tag_text) < 50
             ):  # Reasonable tag length
                 tags.append(tag_text)
-
-        # Look for tags in the details section specifically
+#专门在详情部分寻找标签
         details_section = soup.find("div", class_=re.compile(r"details|info"))
         if details_section:
             detail_tags = details_section.find_all(
@@ -90,8 +87,7 @@ class CivitaiParser:
                 tag_text = element.get_text().strip()
                 if tag_text and len(tag_text) > 1 and len(tag_text) < 50:
                     tags.append(tag_text)
-
-        # Also look for common AI model tags
+#同时寻找常见的AI模型标签
         tag_patterns = soup.find_all(
             string=re.compile(
                 r"\b(anime|woman|girls|styles|base models|checkpoint|merge|illustrious)\b",
@@ -103,8 +99,7 @@ class CivitaiParser:
                 tag_text = pattern.strip()
                 if tag_text and tag_text not in tags and len(tag_text) < 50:
                     tags.append(tag_text)
-
-        # Filter out navigation elements and common page elements
+# 过滤掉导航元素和常见页面元素
         filtered_tags = []
         exclude_words = [
             "home",
@@ -144,20 +139,17 @@ class CivitaiParser:
     def _extract_download_links(self, soup: BeautifulSoup) -> List[Dict]:
         """Extract download links and their metadata."""
         download_links = []
-
-        # Look for download buttons and links
+# 寻找下载按钮和链接
         download_elements = soup.find_all(
             ["a", "button"],
             href=re.compile(r"download|\.safetensors|\.ckpt|\.pt"),
             recursive=True,
         )
-
-        # Also look for elements with download text
+#同时找到带下载内容的元素
         download_text_elements = soup.find_all(
             ["a", "button"], string=re.compile(r"download", re.IGNORECASE)
         )
-
-        # Combine both approaches
+# 结合 approache
         all_elements = download_elements + download_text_elements
 
         for element in all_elements:
@@ -167,12 +159,10 @@ class CivitaiParser:
                 "file_size": self._extract_file_size(element),
                 "file_type": self._extract_file_type(element),
             }
-
-            # Clean up the URL
+#清理网址
             if link_info["url"] and not link_info["url"].startswith("http"):
                 link_info["url"] = urljoin("https://civitai.com", link_info["url"])
-
-            # If no href, try to find a download link in the element or its children
+#如果没有href，尝试在元素或子元素中查找下载链接
             if not link_info["url"]:
                 download_link = element.find(
                     "a", href=re.compile(r"download|\.safetensors|\.ckpt|\.pt")
@@ -193,7 +183,7 @@ class CivitaiParser:
 
     def _extract_file_size(self, element) -> str:
         """Extract file size from element or its siblings."""
-        # Look for file size in the element or nearby text
+# 在元素或附近文本中查找文件大小
         size_pattern = re.search(
             r"(\d+(?:\.\d+)?\s*(?:GB|MB|KB))", element.get_text(), re.IGNORECASE
         )
@@ -215,8 +205,7 @@ class CivitaiParser:
     def _extract_details(self, soup: BeautifulSoup) -> Dict:
         """Extract details section information."""
         details = {}
-
-        # Look for details table or structured information
+# 替换明细表或构造信息
         detail_tables = soup.find_all("table")
         for table in detail_tables:
             rows = table.find_all("tr")
@@ -227,8 +216,7 @@ class CivitaiParser:
                     value = cells[1].get_text().strip()
                     if key and value:
                         details[key] = value
-
-        # Also look for any structured data
+# 还要替换任何格式数据
         structured_data = soup.find_all("script", type="application/ld+json")
         for script in structured_data:
             try:
@@ -243,8 +231,7 @@ class CivitaiParser:
     def _extract_about(self, soup: BeautifulSoup) -> str:
         """Extract about/description information."""
         about_text = ""
-
-        # Look for about section
+#找到关于部分
         about_sections = soup.find_all(
             ["div", "section"], class_=re.compile(r"about|description|content")
         )
@@ -253,8 +240,7 @@ class CivitaiParser:
             text = section.get_text().strip()
             if len(text) > len(about_text):
                 about_text = text
-
-        # Also look for any paragraph with substantial content
+# 还要查找内容丰富的任何段落
         paragraphs = soup.find_all("p")
         for p in paragraphs:
             text = p.get_text().strip()
@@ -266,13 +252,12 @@ class CivitaiParser:
     def _extract_stats(self, soup: BeautifulSoup) -> Dict:
         """Extract model statistics."""
         stats = {}
-
-        # Look for stats in various formats
+# 找到各种格式的统计数据
         stat_elements = soup.find_all(string=re.compile(r"\d+[km]?", re.IGNORECASE))
         for element in stat_elements:
             if element.parent:
                 parent_text = element.parent.get_text()
-                # Try to identify what the stat represents
+# 尝试确定统计数据 represents
                 if "download" in parent_text.lower():
                     stats["downloads"] = element.strip()
                 elif "like" in parent_text.lower():
@@ -285,8 +270,7 @@ class CivitaiParser:
     def _extract_creator(self, soup: BeautifulSoup) -> str:
         """Extract creator information."""
         creator = ""
-
-        # Look for creator links or mentions
+# 寻找创作者链接或提及
         creator_elements = soup.find_all(
             ["a", "span"], class_=re.compile(r"creator|author|artist")
         )
@@ -302,8 +286,7 @@ class CivitaiParser:
     def _extract_license(self, soup: BeautifulSoup) -> str:
         """Extract license information."""
         license_text = ""
-
-        # Look for license information
+# 许可证信息
         license_elements = soup.find_all(string=re.compile(r"license", re.IGNORECASE))
         for element in license_elements:
             if element.parent:
@@ -317,8 +300,7 @@ class CivitaiParser:
     def _extract_suggested_settings(self, soup: BeautifulSoup) -> Dict:
         """Extract suggested settings information."""
         settings = {}
-
-        # Look for settings information
+# 查找设置信息
         settings_sections = soup.find_all(
             string=re.compile(r"suggested|settings|cfg|sampler", re.IGNORECASE)
         )
@@ -335,8 +317,7 @@ class CivitaiParser:
     def _extract_version_info(self, soup: BeautifulSoup) -> Dict:
         """Extract version information."""
         version_info = {}
-
-        # Look for version information
+# 查找版本信息
         version_elements = soup.find_all(string=re.compile(r"v\d+\.\d+", re.IGNORECASE))
         for element in version_elements:
             version_match = re.search(r"v(\d+\.\d+)", element, re.IGNORECASE)
@@ -350,14 +331,12 @@ class CivitaiParser:
 def main():
     """Example usage of the CivitaiParser."""
     parser = CivitaiParser()
-
-    # Example URL
+# 示例网址
     url = "https://civitai.com/models/1224788/prefect-illustrious-xl"
 
     print("Parsing Civitai model page...")
     result = parser.parse_model_page(url)
-
-    # Print the result in a formatted way
+# 以格式化方式 Print 结果
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 

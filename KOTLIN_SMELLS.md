@@ -1,8 +1,8 @@
 # Kotlin 代码异味报告
 
-下列为在本仓库 Android 工程中检出的具有代表性的 Kotlin code smell 与改进建议。
+以下为在本仓库 Android 工程中检出的具有典型的 Kotlin 代码气味和改进建议。
 
-## 1. 非空强断言 `!!`
+## 1.非空强断言`!!`
 - 代表位置：
   - `core/firebase/FCMService.kt:24-25`、`app/*` 多处（如 `AgentInfoActivity.kt`, `ChatActivity.kt`）
   - `library/utils/*`、`core/data/*` 有多处 `!!`
@@ -39,23 +39,22 @@
 
 ## 6. 资源/上下文强制非空与路径 `!!`
 - 代表位置：
-  - `CreateRoleActivity.kt`、`MySettingViewModel.kt` 等对 `Uri.path!!`、`agentId!!`
-- 风险：设备碎片化场景下易崩溃。
+  - `CreateRoleActivity.kt`、`MySettingViewModel.kt` 等对 `Uri.path!!`、`agentId!!`- 风险：设备碎片化场景容易崩溃。
 - 建议：判空与失败分支回退，或统一包装为安全解析函数。
 
-## 7. 过度 try-catch 包裹
-- 现象：工具类与 ViewModel 广泛包裹 `try { ... } catch (Exception)`
+## 7.过度 try-catch 包裹
+- 现象：工具类与 ViewModel 广泛覆盖`try { ... } catch (Exception)`
 - 风险：失去失败信号通道，复杂度上升。
-- 建议：在数据/网络层用 `Either/Result`，UI 层消费状态驱动 UI，减少异常控制流。
+- 建议：在数据/网络层用 `Either/Result`，UI层消费状态驱动UI，减少异常控制流。
 
-## 8. TODO/FIXME 留存
-- 代表位置：`ModifyProfileActivity.kt`、`ReportUI.kt`、`IntySetting.kt`、`ChatSessionManager.kt`、`ReportService.kt` 等
-- 建议：同 Python 部分，立项/关闭。
+## 8.TODO/FIXME留存
+- 代表位置：`ModifyProfileActivity.kt`、`ReportUI.kt`、`IntySetting.kt`、`ChatSessionManager.kt`、`ReportService.kt`等
+- 建议：同Python部分，立项/关闭。
 
 ---
 
 ### 工程治理建议
-- 启用 `ktlint`/`detekt` 并在 CI 中开启严格模式（禁 `!!`、限制 `catch (Exception)`、阻塞 API 检测）；
+- 启用`ktlint`/`detekt` 并在 CI 中开启严格模式（禁 `!!`、限制 `catch (Exception)`、阻止API检测）；
 - 统一网络层（Retrofit/Moshi 与 Inty SDK 复用问题），收敛客户端与鉴权策略；
 - 建立协程调度规范（IO/Main/Default），禁止主线程阻塞；
-- 引入统一错误模型与 UI 状态（Loading/Success/Error）。
+- 导入统一错误模型与UI状态（Loading/Success/Error）。

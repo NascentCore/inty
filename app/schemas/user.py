@@ -8,8 +8,7 @@ from app.models.user import AuthType, Gender
 
 class UserBase(BaseModel):
     """用户基础信息"""
-
-    # DEPRECATED: app 显示 ID 而非 readable_id
+# DEPRECATED：应用程序显示ID而不是区别_id
     readable_id: Optional[str] = None
     nickname: Optional[str] = None
     avatar: Optional[str] = None
@@ -25,10 +24,10 @@ class UserBase(BaseModel):
         """宽松的邮箱验证，允许特殊域名如.local"""
         if v is None or v == "":
             return v
-        # 如果包含@且格式基本正确就通过，不做严格验证
+#如果包含@且格式基本正确就通过，不做严格验证
         if "@" in v and "." in v.split("@")[1]:
             return v
-        # 对于特殊的已删除用户邮箱，直接通过
+#对于特殊的已删除用户邮箱，直接通过
         if "deleted_user_" in v and "@anonymized.local" in v:
             return v
         return v
@@ -71,7 +70,7 @@ class UserInDBBase(UserBase):
     """数据库中的用户信息"""
 
     id: str
-    # DEPRECATED: app 显示 ID 而非 readable_id
+# DEPRECATED：应用程序显示ID而不是区别_id
     readable_id: str
     auth_type: str
     is_active: bool

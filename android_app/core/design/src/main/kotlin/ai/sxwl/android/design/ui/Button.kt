@@ -102,8 +102,8 @@ fun HeartFollowButton(
 }
 
 /**
- * 简单的声音播放气泡，
- * 后续再设计优化成带尾巴的自定义背景
+ *简单的声音播放气泡，
+ * 后续再设计优化，形成反馈的反馈背景
  */
 @Composable
 fun VoiceBubble(modifier: Modifier = Modifier, seconds: Int = 0) {

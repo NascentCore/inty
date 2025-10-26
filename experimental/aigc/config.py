@@ -1,37 +1,30 @@
 import os
 from dotenv import load_dotenv
 from logging_config import setup_logging
-
-# Load environment variables
+# 加载环境变量
 load_dotenv()
 
 class Config:
     """Configuration class for the AI Character Generator"""
-    
-    # Initialize logging
+# 初始化日志记录
     logger = setup_logging(
         log_level=os.getenv("LOG_LEVEL", "INFO"),
         log_to_file=os.getenv("LOG_TO_FILE", "False").lower() == "true",
         log_file=os.getenv("LOG_FILE", "logs/character_generator.log")
     )
-    
-    # Gemini API Configuration
+# Gemini API 配置
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-    
-    # Application Configuration
+#应用程序配置
     DEBUG = os.getenv("DEBUG", "True").lower() == "true"
     HOST = os.getenv("HOST", "0.0.0.0")
     PORT = int(os.getenv("PORT", "8000"))
-    
-    # Image Generation Settings
+#图像生成设置
     MAX_IMAGES_PER_CHARACTER = int(os.getenv("MAX_IMAGES_PER_CHARACTER", "4"))
     IMAGE_QUALITY = os.getenv("IMAGE_QUALITY", "high")
-    
-    # Character Generation Settings
+#角色生成设置
     CHARACTER_GENERATION_MODEL = "gemini-1.5-pro"
     IMAGE_GENERATION_MODEL = "imagen-4.0-generate-preview-06-06"
-    
-    # Logging Configuration
+# 日志配置
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     LOG_TO_FILE = os.getenv("LOG_TO_FILE", "False").lower() == "true"
     

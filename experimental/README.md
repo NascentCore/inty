@@ -1,8 +1,8 @@
-# Experimental
+# 实验性的
 
-Experimental code for demo and other purposes.
+用于演示和其他目的的实验代码。
 
-All sub folders should be self-contained:
+所有子文件夹都应该是独立的：
 
-1. Do not use code outside their own folder.
-2. Document completely.
+1. 不要使用自己文件夹之外的代码。
+2. 完整记录。

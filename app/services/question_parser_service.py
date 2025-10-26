@@ -27,22 +27,21 @@ class QuestionParserService:
     def _parse_json(content: bytes) -> List[str]:
         """解析JSON文件"""
         try:
-            # 解码JSON
+# 解码JSON
             text = content.decode("utf-8")
             data = json.loads(text)
 
             questions = []
-
-            # 处理不同的JSON结构
+# 处理不同的JSON结构
             if isinstance(data, list):
-                # 数组格式: ["question1", "question2", ...]
+# 货物格式: ["问题1", "问题2", ...]
                 for item in data:
                     if isinstance(item, str):
                         question = item.strip()
                         if question:  # 只要不是空字符串就保留
                             questions.append(question)
                     elif isinstance(item, dict):
-                        # 对象数组格式: [{"question": "...", "other": "..."}, ...]
+# 对象数组格式: [{"question": "...", "other": "..."}, ...]
                         question = QuestionParserService._extract_question_from_dict(
                             item
                         )
@@ -50,9 +49,9 @@ class QuestionParserService:
                             questions.append(question)
 
             elif isinstance(data, dict):
-                # 对象格式
+# 对象格式
                 if "questions" in data and isinstance(data["questions"], list):
-                    # {"questions": ["q1", "q2", ...]}
+# {“问题”：[“q1”，“q2”，...]}
                     for item in data["questions"]:
                         if isinstance(item, str):
                             question = item.strip()
@@ -65,7 +64,7 @@ class QuestionParserService:
                             if question:
                                 questions.append(question)
                 else:
-                    # 可能是单个问题对象
+# 可能是单个问题对象
                     question = QuestionParserService._extract_question_from_dict(data)
                     if question:
                         questions.append(question)
@@ -84,26 +83,24 @@ class QuestionParserService:
     def _remove_line_number(line: str) -> str:
         """移除行号前缀，如 '1. 问题内容' -> '问题内容'"""
         import re
-
-        # 匹配行号模式: 数字 + 点/括号/空格
+# 匹配行号模式: 数字 + 点/逗号/空格
         pattern = r"^\s*\d+[\.\)]\s*"
         return re.sub(pattern, "", line).strip()
 
     @staticmethod
     def _extract_question_from_row(row: List[str]) -> str:
         """从CSV行中提取问题"""
-        # 寻找最可能是问题的列（通常是最长的列）
+# 查找最可能出现问题的列（通常是最后的列）
         candidates = [col.strip() for col in row if col.strip()]
         if not candidates:
             return ""
-
-        # 返回最长的列作为问题
+# 返回最后的列作为问题
         return max(candidates, key=len)
 
     @staticmethod
     def _extract_question_from_dict(obj: Dict[str, Any]) -> str:
         """从字典对象中提取问题"""
-        # 常见的问题字段名
+# 常见的问题字段名
         question_fields = [
             "question",
             "q",
@@ -122,8 +119,7 @@ class QuestionParserService:
                 question = obj[field].strip()
                 if question:  # 只要不是空字符串就保留
                     return question
-
-        # 如果没有找到明确的问题字段，尝试取第一个字符串值
+# 如果没有找到明确的问题字段，尝试获取第一个字符串值
         for value in obj.values():
             if isinstance(value, str):
                 question = value.strip()
@@ -145,8 +141,7 @@ class QuestionParserService:
 
         issues = []
         warnings = []
-
-        # 检查重复问题
+#检查重复问题
         unique_questions = set()
         duplicates = []
         for i, q in enumerate(questions):
@@ -159,12 +154,10 @@ class QuestionParserService:
             issues.extend(duplicates[:5])  # 只显示前5个重复
             if len(duplicates) > 5:
                 issues.append(f"...还有{len(duplicates)-5}个重复问题")
-
-        # 检查问题质量
+#检查问题质量
         short_questions = [i + 1 for i, q in enumerate(questions) if len(q) < 10]
         long_questions = [i + 1 for i, q in enumerate(questions) if len(q) > 500]
-
-        # 检查编码问题
+#检查编码问题
         encoding_issues = []
         for i, q in enumerate(questions):
             if "?" in q.replace("？", "").replace("?", ""):  # 排除正常的问号

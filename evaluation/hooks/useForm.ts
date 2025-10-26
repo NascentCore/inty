@@ -13,14 +13,13 @@ interface UseFormOptions<T> {
 }
 
 interface UseFormReturn<T> {
-  // 状态
+// 状态
   values: T;
   errors: ValidationError[];
   touched: Record<keyof T, boolean>;
   isSubmitting: boolean;
   isValid: boolean;
-
-  // 操作
+// 操作
   setValue: (field: keyof T, value: any) => void;
   setValues: (values: Partial<T>) => void;
   setError: (field: keyof T, message: string) => void;
@@ -29,8 +28,7 @@ interface UseFormReturn<T> {
   setTouched: (field: keyof T, touched?: boolean) => void;
   handleSubmit: (e?: FormEvent) => Promise<void>;
   reset: (newValues?: Partial<T>) => void;
-
-  // 辅助方法
+// 辅助方法
   getFieldError: (field: keyof T) => string | undefined;
   hasFieldError: (field: keyof T) => boolean;
   isFieldTouched: (field: keyof T) => boolean;
@@ -40,43 +38,36 @@ export function useForm<T extends Record<string, any>>(
   options: UseFormOptions<T> = {},
 ): UseFormReturn<T> {
   const { initialValues = {} as T, validate, onSubmit } = options;
-
-  // 状态管理
+// 状态管理
   const [values, setFormValues] = useState<T>({ ...initialValues } as T);
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [touched, setTouchedFields] = useState<Record<keyof T, boolean>>(
     {} as Record<keyof T, boolean>,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // 计算属性
+// 计算属性
   const isValid = useMemo(() => errors.length === 0, [errors]);
-
-  // 设置单个字段值
+// 设置单个字段值
   const setValue = useCallback((field: keyof T, value: any) => {
     setFormValues((prev) => ({
       ...prev,
       [field]: value,
     }));
-
-    // 标记字段为已触摸
+// 标记字段为已触摸
     setTouchedFields((prev) => ({
       ...prev,
       [field]: true,
     }));
-
-    // 清除该字段的错误
+// 清除该字段的错误
     setErrors((prev) => prev.filter((error) => error.field !== field));
   }, []);
-
-  // 设置多个字段值
+// 设置多个字段值
   const setValues = useCallback((newValues: Partial<T>) => {
     setFormValues((prev) => ({
       ...prev,
       ...newValues,
     }));
-
-    // 标记字段为已触摸
+// 标记字段为已触摸
     const touchedFields = Object.keys(newValues).reduce(
       (acc, key) => ({
         ...acc,
@@ -90,28 +81,24 @@ export function useForm<T extends Record<string, any>>(
       ...touchedFields,
     }));
   }, []);
-
-  // 设置字段错误
+// 设置字段错误
   const setError = useCallback((field: keyof T, message: string) => {
     setErrors((prev) => {
-      // 移除该字段的现有错误
+// 删除该字段的现有错误
       const filtered = prev.filter((error) => error.field !== field);
-      // 添加新错误
+//添加新错误
       return [...filtered, { field: field as string, message }];
     });
   }, []);
-
-  // 清除字段错误
+// 清除字段错误
   const clearError = useCallback((field: keyof T) => {
     setErrors((prev) => prev.filter((error) => error.field !== field));
   }, []);
-
-  // 清除所有错误
+// 清除所有错误
   const clearAllErrors = useCallback(() => {
     setErrors([]);
   }, []);
-
-  // 设置字段触摸状态
+// 设置字段触摸状态
   const setTouched = useCallback(
     (field: keyof T, isTouched: boolean = true) => {
       setTouchedFields((prev) => ({
@@ -121,8 +108,7 @@ export function useForm<T extends Record<string, any>>(
     },
     [],
   );
-
-  // 表单提交
+// 表单提交
   const handleSubmit = useCallback(
     async (e?) => {
       if (e) {
@@ -132,8 +118,7 @@ export function useForm<T extends Record<string, any>>(
       try {
         setIsSubmitting(true);
         clearAllErrors();
-
-        // 标记所有字段为已触摸
+// 将所有字段标记为已触摸
         const allTouched = Object.keys(values).reduce(
           (acc, key) => ({
             ...acc,
@@ -142,8 +127,7 @@ export function useForm<T extends Record<string, any>>(
           {},
         );
         setTouchedFields(allTouched as Record<keyof T, boolean>);
-
-        // 验证表单
+// 验证表单
         if (validate) {
           const validationErrors = validate(values);
           if (validationErrors.length > 0) {
@@ -151,15 +135,13 @@ export function useForm<T extends Record<string, any>>(
             return;
           }
         }
-
-        // 提交表单
+// 提交表单
         if (onSubmit) {
           await onSubmit(values);
         }
       } catch (error) {
         console.error("表单提交失败:", error);
-
-        // 如果是验证错误，设置到errors中
+// 如果是验证错误，设置到errors中
         if (error && typeof error === "object" && "field" in error) {
           setError(error.field, error.message || "未知错误");
         }
@@ -169,8 +151,7 @@ export function useForm<T extends Record<string, any>>(
     },
     [values, validate, onSubmit, clearAllErrors, setError],
   );
-
-  // 重置表单
+// 重置表单
   const reset = useCallback(
     (newValues?: Partial<T>) => {
       const resetValues = newValues
@@ -183,8 +164,7 @@ export function useForm<T extends Record<string, any>>(
     },
     [initialValues],
   );
-
-  // 辅助方法
+// 辅助方法
   const getFieldError = useCallback(
     (field: keyof T): string | undefined => {
       const error = errors.find((err) => err.field === field);
@@ -208,14 +188,13 @@ export function useForm<T extends Record<string, any>>(
   );
 
   return {
-    // 状态
+// 状态
     values,
     errors,
     touched,
     isSubmitting,
     isValid,
-
-    // 操作
+// 操作
     setValue,
     setValues,
     setError,
@@ -224,8 +203,7 @@ export function useForm<T extends Record<string, any>>(
     setTouched,
     handleSubmit,
     reset,
-
-    // 辅助方法
+// 辅助方法
     getFieldError,
     hasFieldError,
     isFieldTouched,

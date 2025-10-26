@@ -1,18 +1,15 @@
 // 智能体管理系统类型定义
-
 // 从 SDK 导入 Agent 类型
 import type {
   Agent as BaseAgent,
   AgentVisibility,
 } from "inty_sdk/src/resources/api/v1/ai/agents";
-
-// 扩展 Agent 类型以包含 meta_data 字段
+// 扩展Agent类型要包含meta_data字段
 export interface Agent extends BaseAgent {
   meta_data?: AgentMetaData;
 }
 
 export type { AgentVisibility };
-
 // 头像截取坐标信息类型
 export interface AvatarCropData {
   x: number;
@@ -22,13 +19,11 @@ export interface AvatarCropData {
   imageWidth: number;
   imageHeight: number;
 }
-
-// Agent 元数据
+// 代理元数据
 export interface AgentMetaData {
   score?: number; // 1-5 的整数评分
   comment?: string; // 备注信息
 }
-
 // LLM 配置
 export interface LLMConfig {
   model: string;
@@ -38,7 +33,6 @@ export interface LLMConfig {
   frequency_penalty: number;
   presence_penalty: number;
 }
-
 // 创建智能体请求
 export interface AgentCreateRequest {
   name: string;
@@ -57,7 +51,6 @@ export interface AgentCreateRequest {
   meta_data?: AgentMetaData;
   tags?: string[];
 }
-
 // 更新智能体请求
 export interface AgentUpdateRequest {
   name?: string;
@@ -77,7 +70,6 @@ export interface AgentUpdateRequest {
   extensions?: { [key: string]: unknown } | null;
   tags?: string[];
 }
-
 // 聊天消息
 export interface ChatMessage {
   id: string;
@@ -86,7 +78,6 @@ export interface ChatMessage {
   timestamp: string;
   remoteId?: string;
 }
-
 // 聊天会话
 export interface ChatSession {
   id: string;
@@ -97,8 +88,7 @@ export interface ChatSession {
   updated_at?: string;
   messages: ChatMessage[];
 }
-
-// 评测会话
+// 足球会话
 export interface EvaluationSession {
   id: string;
   name: string;
@@ -111,8 +101,7 @@ export interface EvaluationSession {
   progress?: EvaluationProgress;
   results?: EvaluationResult[];
 }
-
-// 评测配置
+// 体育配置
 export interface EvaluationConfig {
   agents: Agent[];
   questions: string[];
@@ -121,8 +110,7 @@ export interface EvaluationConfig {
   parallel_limit: number;
   timeout: number;
 }
-
-// 评测进度
+// 体育详情
 export interface EvaluationProgress {
   total: number;
   completed: number;
@@ -131,8 +119,7 @@ export interface EvaluationProgress {
   current_question?: string;
   estimated_remaining?: number;
 }
-
-// 评测结果
+// 比赛结果
 export interface EvaluationResult {
   id: string;
   session_id: string;
@@ -145,15 +132,13 @@ export interface EvaluationResult {
   duration: number;
   created_at: string;
 }
-
-// 评测会话创建请求
+// 足球会话创建请求
 export interface EvaluationSessionCreateRequest {
   name: string;
   description?: string;
   config: EvaluationConfig;
 }
-
-// 评测模板
+// 运动模板
 export interface EvaluationTemplate {
   id: string;
   name: string;
@@ -164,8 +149,7 @@ export interface EvaluationTemplate {
   created_at: string;
   updated_at?: string;
 }
-
-// 评测模板创建请求
+// 体育模板创建请求
 export interface EvaluationTemplateCreateRequest {
   name: string;
   description?: string;
@@ -173,7 +157,6 @@ export interface EvaluationTemplateCreateRequest {
   scoring_criteria: string;
   is_public: boolean;
 }
-
 // 评分模型
 export interface ScoringModel {
   id: string;
@@ -182,14 +165,12 @@ export interface ScoringModel {
   context_length: number;
   provider: string;
 }
-
 // OpenRouter模型
 export interface OpenRouterModel {
   id: string;
   name: string;
   description?: string;
 }
-
 // 问题文件上传
 export interface QuestionFileUpload {
   questions: string[];
@@ -198,14 +179,12 @@ export interface QuestionFileUpload {
   duplicates_removed: number;
   warnings: string[];
 }
-
 // 表单验证错误
 export interface ValidationError {
   field: string;
   message: string;
 }
-
-// 评测统计
+// 体育统计
 export interface EvaluationStats {
   total_sessions: number;
   completed_sessions: number;
@@ -220,14 +199,12 @@ export interface EvaluationStats {
     evaluation_count: number;
   }>;
 }
-
 // 导出请求
 export interface ExportRequest {
   session_ids: string[];
   format: "json" | "csv" | "xlsx";
   include_details: boolean;
 }
-
 // 对比结果
 export interface ComparisonResult {
   sessions: EvaluationSession[];
@@ -252,14 +229,12 @@ export interface ComparisonResult {
     };
   };
 }
-
 // API 响应通用格式
 export interface ApiResponse<T = any> {
   code: number;
   message: string;
   data: T;
 }
-
 // 分页响应
 export interface PaginatedResponse<T = any> {
   items: T[];
@@ -268,8 +243,7 @@ export interface PaginatedResponse<T = any> {
   size: number;
   has_more: boolean;
 }
-
-// 音色接口
+// 语音接口
 export interface Voice {
   voice_id: string;
   name: string;

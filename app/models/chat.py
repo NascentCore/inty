@@ -22,25 +22,21 @@ class Chat(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
     is_active = Column(Boolean, default=True)
-
-    # 调试功能字段（通过全局配置控制是否启用）
+# 调试功能字段（通过全局配置控制是否启用）
     debug_messages = Column(
         JSON,
         nullable=True,
         comment="最新一次发送给大模型的完整messages列表（JSON格式）",
     )
-
-    # 关系
+# 关系
     user = relationship("User", back_populates="chats")
     agent = relationship("Agent", back_populates="chats")
     settings = relationship("ChatSettings", back_populates="chat", uselist=False)
-
-    # 时间戳
+#计时
     created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
-
-    # 唯一约束：每个用户与每个Agent只能有一个活跃的聊天会话
-    # 注意：这里先添加普通索引，实际的唯一约束将通过迁移文件添加
+# 唯一约束：每个用户与每个代理只能有一个活跃的聊天会话
+# 注意：这里先添加普通索引，实际的唯一约束将通过迁移文件添加
     __table_args__ = (
         Index("ix_chats_user_agent_active", "user_id", "agent_id", "is_active"),
         Index(
@@ -51,8 +47,7 @@ class Chat(Base):
             postgresql_where="is_active = true",
         ),
     )
-
-    # 非数据库字段，用于存储最近消息和agent名称
+#非数据库字段，用于存储最新消息和代理名称
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._last_message = None

@@ -1,29 +1,25 @@
 <?xml version="1.0"?>
-<!-- lbpcascade animeface
+<!-- lbpcascade Animeface
  http://anime.udp.jp/data/lbpcascade_animeface.xml
 
-The MIT License (MIT)
+麻省理工学院许可证 (MIT)
 
-Copyright (C) 2011 by nagadomi@nurs.or.jp
+版权所有(C)2011 nagadomi@nurs.or.日本人
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+在此向任何获得副本的人免费授予
+本软件和相关文档文件（“软件”）的，以处理
+不受限制地使用软件，包括但不限于权利
+使用、复制、修改、合并、发布、分发、再许可和/或出售
+该软件的副本，并允许该软件的用户
+这样做，但需满足以下条件：
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
--->
+其他版权声明和本许可声明应包含在
+软件的所有副本或主要部分。该软件“按原样”PR 提供，不提供任何形式的保证，除了 PRESS 或
+默示的保证，包括但不限于适销性保证，
+适用于特定目的且不针对。在任何情况下都不得
+作者或版权所有者对任何损害、损害或其他责任承担责任
+责任，无论是合同诉讼、专题诉讼还是其他诉讼，均由以下原因引起：
+与本软件无关或相关，或者与本软件的使用或其他交易相关软件。-->
 <opencv_storage>
 <cascade>
   <stageType>BOOST</stageType>
@@ -41,7 +37,7 @@ THE SOFTWARE.
     <maxCatCount>256</maxCatCount></featureParams>
   <stageNum>20</stageNum>
   <stages>
-    <!-- stage 0 -->
+    <！-- 阶段 0 -->
     <_>
       <maxWeakCount>3</maxWeakCount>
       <stageThreshold>-1.2636742591857910e+000</stageThreshold>
@@ -63,7 +59,7 @@ THE SOFTWARE.
             -14680065 -536870913 -577</internalNodes>
           <leafValues>
             -6.8020063638687134e-001 4.2932784557342529e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 1 -->
+    <！-- 第一阶段 -->
     <_>
       <maxWeakCount>6</maxWeakCount>
       <stageThreshold>-1.6361999511718750e+000</stageThreshold>
@@ -103,7 +99,7 @@ THE SOFTWARE.
             1365708031 -386200322 -419477761 -1110321</internalNodes>
           <leafValues>
             -4.2613434791564941e-001 3.8135424256324768e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 2 -->
+    <！-- 第二阶段 -->
     <_>
       <maxWeakCount>8</maxWeakCount>
       <stageThreshold>-1.6592464447021484e+000</stageThreshold>
@@ -155,7 +151,7 @@ THE SOFTWARE.
             -1109396681 -8408880 -1073744225</internalNodes>
           <leafValues>
             -4.3008872866630554e-001 2.9400870203971863e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 3 -->
+    <！-- 第三阶段 -->
     <_>
       <maxWeakCount>11</maxWeakCount>
       <stageThreshold>-1.5440381765365601e+000</stageThreshold>
@@ -225,7 +221,7 @@ THE SOFTWARE.
             -1224726752 -13357430 -215989504</internalNodes>
           <leafValues>
             -3.3786505460739136e-001 3.3100384473800659e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 4 -->
+    <！-- 第四阶段 -->
     <_>
       <maxWeakCount>14</maxWeakCount>
       <stageThreshold>-1.5968077182769775e+000</stageThreshold>
@@ -314,7 +310,7 @@ THE SOFTWARE.
             2135919867 267332795 -620820929 1006580307</internalNodes>
           <leafValues>
             -3.3670711517333984e-001 2.5498929619789124e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 5 -->
+    <！-- 第五阶段 -->
     <_>
       <maxWeakCount>18</maxWeakCount>
       <stageThreshold>-1.5330305099487305e+000</stageThreshold>
@@ -427,7 +423,7 @@ THE SOFTWARE.
             805293739 -134222129 -1330</internalNodes>
           <leafValues>
             -5.1818227767944336e-001 1.4062055945396423e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 6 -->
+    <！-- 第六阶段 -->
     <_>
       <maxWeakCount>22</maxWeakCount>
       <stageThreshold>-1.6179658174514771e+000</stageThreshold>
@@ -564,7 +560,7 @@ THE SOFTWARE.
             894436372 -1619636227 1608012104 -1414922213</internalNodes>
           <leafValues>
             -2.6527458429336548e-001 2.2207336127758026e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 7 -->
+    <！-- 第 7 阶段 -->
     <_>
       <maxWeakCount>22</maxWeakCount>
       <stageThreshold>-1.5240784883499146e+000</stageThreshold>
@@ -701,7 +697,7 @@ THE SOFTWARE.
             1912588527 955645951 -150999109 551549951</internalNodes>
           <leafValues>
             -2.8712141513824463e-001 2.1096032857894897e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 8 -->
+    <！-- 第 8 阶段 -->
     <_>
       <maxWeakCount>29</maxWeakCount>
       <stageThreshold>-1.6037335395812988e+000</stageThreshold>
@@ -880,7 +876,7 @@ THE SOFTWARE.
             -681448807 -826009773 -993984833 -74230701</internalNodes>
           <leafValues>
             -1.7290616035461426e-001 2.7669343352317810e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 9 -->
+    <！-- 第 9 阶段 -->
     <_>
       <maxWeakCount>33</maxWeakCount>
       <stageThreshold>-1.5635454654693604e+000</stageThreshold>
@@ -1083,7 +1079,7 @@ THE SOFTWARE.
             -1896108289 -1476658180 -352868111 267886847</internalNodes>
           <leafValues>
             -4.3268245458602905e-001 9.9339962005615234e-002</leafValues></_></weakClassifiers></_>
-    <!-- stage 10 -->
+    <！-- 第 10 阶段 -->
     <_>
       <maxWeakCount>38</maxWeakCount>
       <stageThreshold>-1.4806630611419678e+000</stageThreshold>
@@ -1316,7 +1312,7 @@ THE SOFTWARE.
             96431507 1146418932 903034192 -2143824025</internalNodes>
           <leafValues>
             -2.4089863896369934e-001 1.4685575664043427e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 11 -->
+    <！-- 第 11 阶段 -->
     <_>
       <maxWeakCount>44</maxWeakCount>
       <stageThreshold>-1.5313227176666260e+000</stageThreshold>
@@ -1585,7 +1581,7 @@ THE SOFTWARE.
             -42108166 -554199719 -544738 -84412445</internalNodes>
           <leafValues>
             -3.7590476870536804e-001 8.6856558918952942e-002</leafValues></_></weakClassifiers></_>
-    <!-- stage 12 -->
+    <！-- 第 12 阶段 -->
     <_>
       <maxWeakCount>49</maxWeakCount>
       <stageThreshold>-1.4961476325988770e+000</stageThreshold>
@@ -1884,7 +1880,7 @@ THE SOFTWARE.
             1052753397 -1476979457 233637266</internalNodes>
           <leafValues>
             -4.0834245085716248e-001 7.4413642287254333e-002</leafValues></_></weakClassifiers></_>
-    <!-- stage 13 -->
+    <！-- 第 13 阶段 -->
     <_>
       <maxWeakCount>53</maxWeakCount>
       <stageThreshold>-1.3947604894638062e+000</stageThreshold>
@@ -2207,7 +2203,7 @@ THE SOFTWARE.
             1727284535 788489447 -84560439 -34605257</internalNodes>
           <leafValues>
             -1.9972075521945953e-001 1.3768124580383301e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 14 -->
+    <！-- 第 14 阶段 -->
     <_>
       <maxWeakCount>60</maxWeakCount>
       <stageThreshold>-1.4742519855499268e+000</stageThreshold>
@@ -2572,7 +2568,7 @@ THE SOFTWARE.
             1249883404 -1321181114 -924458918 1096148570</internalNodes>
           <leafValues>
             -1.3877889513969421e-001 1.8350048363208771e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 15 -->
+    <！-- 第 15 阶段 -->
     <_>
       <maxWeakCount>66</maxWeakCount>
       <stageThreshold>-1.4156285524368286e+000</stageThreshold>
@@ -2973,7 +2969,7 @@ THE SOFTWARE.
             1488507776 -1334981997 -395001942 -1827697397</internalNodes>
           <leafValues>
             -1.3864666223526001e-001 1.6718882322311401e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 16 -->
+    <！-- 第 16 阶段 -->
     <_>
       <maxWeakCount>66</maxWeakCount>
       <stageThreshold>-1.3544789552688599e+000</stageThreshold>
@@ -3374,7 +3370,7 @@ THE SOFTWARE.
             1953330597 1588556119 1323654868 -59937033</internalNodes>
           <leafValues>
             -1.2764546275138855e-001 1.7045098543167114e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 17 -->
+    <！-- 第 17 阶段 -->
     <_>
       <maxWeakCount>71</maxWeakCount>
       <stageThreshold>-1.3531562089920044e+000</stageThreshold>
@@ -3805,7 +3801,7 @@ THE SOFTWARE.
             -1612249423 -2037227788 -1350786837 -1091042443</internalNodes>
           <leafValues>
             -1.2180531024932861e-001 1.6849491000175476e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 18 -->
+    <！-- 第 18 阶段 -->
     <_>
       <maxWeakCount>78</maxWeakCount>
       <stageThreshold>-1.3695704936981201e+000</stageThreshold>
@@ -4278,7 +4274,7 @@ THE SOFTWARE.
             -171378486 -37738304 -206180609 -107261665</internalNodes>
           <leafValues>
             -1.0720640420913696e-001 1.8341147899627686e-001</leafValues></_></weakClassifiers></_>
-    <!-- stage 19 -->
+    <！-- 第 19 阶段 -->
     <_>
       <maxWeakCount>80</maxWeakCount>
       <stageThreshold>-1.3276469707489014e+000</stageThreshold>

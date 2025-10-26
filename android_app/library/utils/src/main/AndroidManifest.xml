@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application>
-        <!-- 配置Utils模块初始化器 -->
+        <！-- 配置Utils模块初始化器 -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"

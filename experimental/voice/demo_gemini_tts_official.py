@@ -1,6 +1,6 @@
-# To run this code you need to install the following dependencies:
-# pip install google-genai
-# 来自 https://aistudio.google.com/generate-speech，然后 选择右上角的 get code
+# 要运行此代码，您需要安装以下依赖项：
+# pip 安装 google-genai
+#来自https://aistudio.google.com/generate-speech，然后右上角选择的获取码
 
 import mimetypes
 import os
@@ -88,8 +88,7 @@ def convert_to_wav(audio_data: bytes, mime_type: str) -> bytes:
     block_align = num_channels * bytes_per_sample
     byte_rate = sample_rate * block_align
     chunk_size = 36 + data_size  # 36 bytes for header fields before data chunk size
-
-    # http://soundfile.sapp.org/doc/WaveFormat/
+# http://soundfile.sapp.org/doc/WaveFormat/
 
     header = struct.pack(
         "<4sI4s4sIHHIIHH4sI",
@@ -123,8 +122,7 @@ def parse_audio_mime_type(mime_type: str) -> dict[str, int | None]:
     """
     bits_per_sample = 16
     rate = 24000
-
-    # Extract rate from parameters
+# 从参数中提取速率
     parts = mime_type.split(";")
     for param in parts: # Skip the main type part
         param = param.strip()
@@ -133,7 +131,7 @@ def parse_audio_mime_type(mime_type: str) -> dict[str, int | None]:
                 rate_str = param.split("=", 1)[1]
                 rate = int(rate_str)
             except (ValueError, IndexError):
-                # Handle cases like "rate=" with no value or non-integer value
+# 处理类似“rate=”没有值或非整数值的情况
                 pass # Keep rate as default
         elif param.startswith("audio/L"):
             try:

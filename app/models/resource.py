@@ -28,12 +28,10 @@ class Resource(Base):
     resource_metadata = Column(JSON)  # 存储资源的元数据，如尺寸、格式等
     created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
-
-    # 外键
+# 外键
     user_id = Column(String, ForeignKey("users.id"))
     agent_id = Column(String, ForeignKey("agents.id"))
-
-    # 关系
+# 关系
     user = relationship("User", back_populates="resources")
     agent = relationship("Agent", back_populates="resources")
 

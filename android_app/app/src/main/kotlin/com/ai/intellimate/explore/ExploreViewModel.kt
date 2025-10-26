@@ -12,34 +12,29 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
-/** Explore页面ViewModel 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑 */
+/** ExplorePagesViewModel负责管理推荐代理的分页数据流、刷新、缓存等逻辑 */
 class ExploreViewModel : BaseVM() {
 
     private val pagingRepository = ExplorePagingRepository()
-
-    // Paging数据流
+// 分页数据流
     private val _agentsFlow = MutableStateFlow<Flow<PagingData<AgentInfo>>?>(null)
-
-    // 是否已初始化
+// 是否已初始化
     private var isInitialized = false
-
-    // 保存滚动位置
+// 保存滚动位置
     private val _savedFirstVisibleIndex = MutableStateFlow(0)
     val savedFirstVisibleIndex = _savedFirstVisibleIndex
     private val _savedFirstVisibleOffset = MutableStateFlow(0)
     val savedFirstVisibleOffset = _savedFirstVisibleOffset
 
-    /** 初始化Paging数据流 */
+    /** 初始化分页数据流 */
     fun initializePagingData() {
         if (isInitialized) return
-
-        // Firebase Analytics - 记录探索页面访问
+// Firebase Analytics - 记录探索页面访问
         FirebaseManager.logEvent(
             "explore_page_view",
             mapOf("page_type" to "recommendations", "is_initial_load" to true),
         )
-
-        // 创建初始数据流（优先使用缓存）
+//创建初始数据流（优先使用服务器）
         val initialFlow =
             pagingRepository
                 .getInitialRecommendAgents()
@@ -50,7 +45,7 @@ class ExploreViewModel : BaseVM() {
 
     }
 
-    /** 获取推荐agents的Paging数据流 */
+    /** 获取推荐座席的寻呼数据流 */
     fun getRecommendAgentsFlow(): Flow<PagingData<AgentInfo>>? {
         if (!isInitialized) {
             initializePagingData()
@@ -58,12 +53,12 @@ class ExploreViewModel : BaseVM() {
         return _agentsFlow.value
     }
 
-    /** 强制刷新推荐agents 简化策略：直接使用Paging的刷新机制，让Paging处理状态 */
+    /** 强制刷新推荐代理状态简化策略：直接使用Paging的刷新机制，让Paging处理 */
     fun refreshRecommendAgents() {
 
         viewModelScope.launch {
             try {
-                // 直接创建新的刷新数据流，让Paging处理状态
+// 直接创建新的刷新数据流，让分页处理状态
                 val refreshFlow = pagingRepository.refreshRecommendAgents().cachedIn(viewModelScope)
 
                 _agentsFlow.value = refreshFlow
@@ -78,16 +73,16 @@ class ExploreViewModel : BaseVM() {
         _savedFirstVisibleOffset.value = offset
     }
 
-    /** 监听预加载数据更新 */
+    /** 预监听加载数据更新 */
     fun startListeningPreloadUpdates() {
         viewModelScope.launch {
-            // 监听统一启动管理器的预加载数据更新
+// 监听统一启动管理器的预加载数据更新
             UnifiedStartupManager.recommendedAgents.collect { preloadedAgents ->
                 if (preloadedAgents.isEmpty()) {
-                    // 监听数据清理（如用户登出）
+// 清理监听数据（如用户登出）
                     clearData()
                 } else if (!isInitialized) {
-                    // 如果还未初始化且有预加载数据，则初始化
+// 如果初始化且有预加载数据，则初始化
                     initializePagingData()
                 }
             }

@@ -163,20 +163,19 @@ object LanguageUtils {
             null
         }
     }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // private methods
-    ///////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////
+// private 方法
+//////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun applyLanguageReal(locale: Locale?, isRelaunchApp: Boolean) {
-        // 简化实现，实际应用中需要保存到SharedPreferences
+// 简化实现，实际应用中需要保存到SharedPreferences
         val destLocal = locale ?: getSystemLanguage()
         updateAppContextLanguage(destLocal, object : Utils.Consumer<Boolean> {
             override fun accept(success: Boolean) {
                 if (success) {
                     restart(isRelaunchApp)
                 } else {
-                    // 使用重启应用
+// 使用重启应用
                     AppUtils.relaunchApp()
                 }
             }
@@ -223,7 +222,7 @@ object LanguageUtils {
                 }
             } catch (e: Exception) {
                 Log.e("LanguageUtils", "Failed to get activity list", e)
-                // 如果获取Activity列表失败，使用重启应用作为备选方案
+// 如果获取活动列表失败，使用重启应用作为创业方案
                 AppUtils.relaunchApp()
             }
         }

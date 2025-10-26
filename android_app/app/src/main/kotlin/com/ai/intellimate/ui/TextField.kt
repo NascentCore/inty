@@ -93,8 +93,7 @@ fun IntySmallTextField(
             var textFieldValue by remember {
                 mutableStateOf(TextFieldValue(value, selection = TextRange(selection)))
             }
-
-            // 使用LaunchedEffect来监听外部value和selection的变化
+// 使用LaunchedEffect来监听外部值和选择的变化
             LaunchedEffect(value, selection) {
                 textFieldValue = textFieldValue.copy(text = value, selection = TextRange(selection))
             }
@@ -112,10 +111,9 @@ fun IntySmallTextField(
                 onValueChange = { newValue ->
                     var nextText = newValue.text
                     var nextSelection = newValue.selection
-
-                    // 限制最大字符数（含粘贴场景）
+// 限制最大字符数（含粘贴场景）
                     if (maxLength > 0 && nextText.length > maxLength) {
-                        // 仅在首次超过时提示
+// 仅在第一次超过时提示
                         scope.launch { ToastUtils.showShort(R.string.str_message_is_too_long) }
                         nextText = nextText.substring(0, maxLength)
                         val sel = nextSelection.start.coerceAtMost(maxLength)
@@ -211,11 +209,11 @@ fun IntySmallTextField2(
                 value = value,
                 textStyle = TextStyle.Default.copy(fontSize = 14.sp, color = Color.White),
                 onValueChange = { str ->
-                    // 有最大输入数字限制时候
+// 有最大输入数字限制时
                     if (maxLength > 0 && str.length <= maxLength) {
                         onValueChange(str)
                     } else {
-                        // 不作限制
+// 不作限制
                         if (maxLength == -1) {
                             onValueChange(str)
                         }

@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * 聊天Repository实现
- * 作为Domain层和Data层之间的桥梁
+ * 作为领域层和数据层之间的桥梁
  */
 class ChatRepositoryImpl : ChatRepository {
 

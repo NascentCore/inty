@@ -10,7 +10,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
 
-/** 自定义的gradle插件，适配application级别，用于复用一些通用可配置 */
+/** 自定义的 gradle 插件，自定义应用程序级别配置，用于复用一些通用可 */
 class AndroidApplicationPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
@@ -22,12 +22,12 @@ class AndroidApplicationPlugin : Plugin<Project> {
             extensions.configure<ApplicationExtension> {
                 configureKotlinAndroid(this)
                 commonAppConfig(target)
-                //                configureGradleManagedDevices(this)
+// 配置GradleManagedDevices(this)
             }
             extensions.configure<ApplicationAndroidComponentsExtension> {
-                //                configurePrintApksTask(this)
+// 配置PrintApksTask(this)
             }
-            // App build.gradle需要的其他配置
+//应用程序构建。gradle需要的其他配置
             otherConfiguration()
             testDependencies()
         }

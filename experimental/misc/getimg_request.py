@@ -2,10 +2,10 @@
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-# 问亚雄找 API key
+#问亚雄找API键
 export GETIMG_API_KEY="your-getimg-api-key"
 python getimg_request.py
-# 会打开 preview 图片预览
+#会打开preview图片预览
 
 Based on https://docs.getimg.ai/reference/poststablediffusionxltexttoimage
 """

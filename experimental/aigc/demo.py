@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 Demo script for the AI Character Generator
 Shows how to use the system with a simple example
@@ -17,8 +17,7 @@ def main():
     
     print("🎭 AI Character Generator Demo")
     print("=" * 50)
-    
-    # Check if API key is set
+#检查是否设置了API键
     if not os.getenv("GEMINI_API_KEY"):
         logger.error("GEMINI_API_KEY environment variable not set")
         print("❌ GEMINI_API_KEY environment variable not set!")
@@ -27,8 +26,7 @@ def main():
         return
     
     logger.info("GEMINI_API_KEY environment variable found")
-    
-    # Create a demo character request
+#创建一个角色脚本
     demo_request = CharacterGenerationRequest(
         brief_description="A mysterious wizard who lives in a floating tower",
         genre="fantasy",
@@ -51,12 +49,11 @@ def main():
     print("-" * 50)
     
     try:
-        # Initialize the character agent
+# 初始化角色代理
         logger.info("Initializing Character Agent for demo...")
         agent = CharacterAgent()
         logger.info("Character Agent initialized successfully")
-        
-        # Generate the character
+#角色生成
         print("🔄 Generating character profile...")
         logger.info("Starting character generation process...")
         response = agent.generate_character(demo_request)
@@ -68,8 +65,7 @@ def main():
             print(f"✅ Character generated successfully!")
             print(f"⏱️  Generation time: {response.generation_time:.2f} seconds")
             print("-" * 50)
-            
-            # Display character summary
+# 显示字符摘要
             logger.info("Generating character summary for display...")
             summary = agent.get_character_summary(character)
             print("📋 Character Summary:")
@@ -86,8 +82,7 @@ def main():
             
             logger.info("Character summary displayed successfully")
             print("-" * 50)
-            
-            # Show encounter scenario
+#展示遭遇的场景
             logger.info("Displaying encounter scenario...")
             print("🎬 Encounter Scenario:")
             print(f"   Location: {character.encounter.location}")
@@ -103,8 +98,7 @@ def main():
             
             logger.info("Encounter scenario displayed successfully")
             print("-" * 50)
-            
-            # Show background highlights
+#显示背景亮点
             logger.info("Displaying background highlights...")
             print("📖 Background Highlights:")
             print(f"   Origin: {character.background.origin}")
@@ -115,12 +109,10 @@ def main():
             
             logger.info("Background highlights displayed successfully")
             print("-" * 50)
-            
-            # Export character to file
+# 将字符导出到文件
             logger.info("Exporting character to files...")
             print("💾 Exporting character...")
-            
-            # JSON export
+# JSON 导出
             try:
                 logger.info("Creating JSON export...")
                 json_export = agent.export_character(character, format="json")
@@ -131,8 +123,7 @@ def main():
             except Exception as e:
                 logger.error(f"Failed to create JSON export: {e}")
                 print(f"   ❌ JSON export failed: {e}")
-            
-            # Text export
+# 文本导出
             try:
                 logger.info("Creating text export...")
                 text_export = agent.export_character(character, format="text")

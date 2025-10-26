@@ -48,7 +48,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   disabled = false,
   placeholder = "请选择音色",
 }) => {
-  // 状态管理
+// 状态管理
   const [voices, setVoices] = useState<Voice[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -57,23 +57,21 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   const [selectedVoiceInfo, setSelectedVoiceInfo] = useState<Voice | null>(
     null,
   );
-
-  // 加载音色列表
+// 加载音色列表
   const loadVoices = useCallback(
     async (forceRefresh = false, search = "", source = "all") => {
       setLoading(true);
       try {
         const params: any = {
-          // 移除page_size限制，让后端返回所有音色
+// 删除page_size限制，让设备返回所有音色
         };
         if (search) params.search = search;
-        // 注意：这里不传递source参数到后端，因为后端API不支持source筛选
-        // 我们在前端进行source筛选
+//注意：这里不将源参数传递到实验室，因为教室API不支持源筛选
+// 我们在前端进行源码筛选
 
         const voiceList = await api.voices.listVoices(params);
         let filteredVoices = voiceList || [];
-
-        // 前端source筛选 - 使用后端返回的voice_type字段
+// 初步筛选 - 使用返回的voice_type字段
         if (source !== "all") {
           filteredVoices = filteredVoices.filter((voice) => {
             if (source === "personal") {
@@ -100,14 +98,13 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     },
     [],
   );
-
-  // 根据 voice_id 加载单个音色详情
+// 根据voice_id加载单个音色详情
   const loadVoiceById = useCallback(
     async (voiceId: string) => {
       if (!voiceId) return null;
 
       try {
-        // 首先尝试从当前列表中查找
+//首先尝试从当前列表中查找
         const existingVoice = voices.find(
           (voice) => voice.voice_id === voiceId,
         );
@@ -115,8 +112,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
           setSelectedVoiceInfo(existingVoice);
           return existingVoice;
         }
-
-        // 尝试加载完整的音色列表来查找目标音色
+// 尝试加载完整的音色列表来查找目标音色
         const allVoices = await api.voices.listVoices({});
         const foundVoice = allVoices?.find(
           (voice) => voice.voice_id === voiceId,
@@ -125,8 +121,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
           setSelectedVoiceInfo(foundVoice);
           return foundVoice;
         }
-
-        // 如果还是找不到，更新为最终的基本音色信息
+// 如果还缺，更新最终的基本音色信息
         const finalVoiceInfo = {
           voice_id: voiceId,
           name: voiceId, // 使用 voice_id 作为显示名称
@@ -137,8 +132,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         return finalVoiceInfo;
       } catch (error) {
         console.error("获取音色详情失败:", error);
-
-        // 出错时更新为错误状态的音色信息
+// 错误时更新为错误状态的音色信息
         const errorVoiceInfo = {
           voice_id: voiceId,
           name: voiceId,
@@ -151,8 +145,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     },
     [voices],
   );
-
-  // 搜索防抖处理
+// 搜索防抖处理
   const debouncedLoadVoices = useMemo(() => {
     const debounce = (func: Function, delay: number) => {
       let timeoutId: NodeJS.Timeout;
@@ -165,16 +158,14 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       loadVoices(false, search, source);
     }, 500);
   }, [loadVoices]);
-
-  // 初始加载
+// 初始加载
   useEffect(() => {
     loadVoices(false, searchText, sourceFilter);
   }, []); // 只在组件挂载时加载一次
-
-  // 当 value 变化时，立即显示基本信息并异步加载详细信息
+// 当值变化时，立即显示基本信息并异步加载详细信息
   useEffect(() => {
     if (value) {
-      // 立即设置基本音色信息用于显示
+// 立即设置用于显示的基本音色信息
       const basicInfo = {
         voice_id: value,
         name: value,
@@ -182,30 +173,26 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         description: "正在加载音色信息...",
       };
       setSelectedVoiceInfo(basicInfo);
-
-      // 异步加载完整音色信息
+// 异步加载完整音色信息
       loadVoiceById(value);
     } else {
       setSelectedVoiceInfo(null);
     }
   }, [value, loadVoiceById]);
-
-  // 搜索和筛选变化时的防抖处理
+// 搜索和筛选变化时的防抖处理
   useEffect(() => {
     debouncedLoadVoices(searchText, sourceFilter);
   }, [searchText, sourceFilter, debouncedLoadVoices]);
-
-  // 获取当前选中的音色
+// 获取当前选中的音色
   const selectedVoice = useMemo(() => {
-    // 优先使用专门加载的选中音色信息
+// 优先使用专门加载的选中音色信息
     if (selectedVoiceInfo && selectedVoiceInfo.voice_id === value) {
       return selectedVoiceInfo;
     }
-    // 否则从音色列表中查找
+//否则从音色列表中查找
     return voices.find((voice) => voice.voice_id === value);
   }, [voices, value, selectedVoiceInfo]);
-
-  // 获取音色来源统计 - 使用后端返回的voice_type字段
+// 获取音色来源统计 - 使用返回的voice_type字段
   const sourceStats = useMemo(() => {
     const stats = { personal: 0, preset: 0, total: voices.length };
     voices.forEach((voice) => {
@@ -217,14 +204,13 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     });
     return stats;
   }, [voices]);
-
-  // 选择音色
+// 选择音色
   const handleSelectVoice = useCallback(
     (voiceId: string) => {
       if (disabled) return;
 
       if (value === voiceId) {
-        // 如果点击已选中的音色，则取消选择
+// 如果点击已选中的音色，则取消选择
         onChange?.(undefined);
       } else {
         onChange?.(voiceId);
@@ -232,14 +218,12 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     },
     [value, onChange, disabled],
   );
-
-  // 清除选择
+// 清除选择
   const handleClearSelection = useCallback(() => {
     if (disabled) return;
     onChange?.(undefined);
   }, [onChange, disabled]);
-
-  // 音色卡片组件
+// 音色组件
   const VoiceCard: React.FC<{ voice: Voice }> = ({ voice }) => {
     const isSelected = value === voice.voice_id;
 
@@ -354,7 +338,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
               }}
               onClick={(e) => {
                 e.stopPropagation();
-                // TODO: 实现音色试听功能
+// TODO: 实现音色试听功能
                 message.info("音色试听功能开发中");
               }}
             >

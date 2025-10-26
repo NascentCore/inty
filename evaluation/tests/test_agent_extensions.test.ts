@@ -1,10 +1,9 @@
 /**
- * Agent Extensions 测试
- * 验证头像截取数据在 extensions 字段中的存储和读取
+ * 代理扩展测试
+ * 验证头像截取扩展字段中的存储和读取中的数据
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
-
 // 直接定义类型，避免模块导入问题
 interface AvatarCropData {
   x: number;
@@ -32,7 +31,6 @@ interface ApiResponse<T> {
   message: string;
   data: T | null;
 }
-
 // 模拟 API 调用
 const API_BASE_URL = "http://localhost:8000";
 
@@ -45,8 +43,8 @@ async function getAgents(): Promise<Agent[]> {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        // 注意：实际使用时需要添加 Authorization header
-        // 'Authorization': 'Bearer YOUR_TOKEN'
+//注意：实际使用时需要添加授权头
+// '授权': '持有者 YOUR_TOKEN'
       },
     });
 
@@ -73,8 +71,8 @@ async function getAgent(agentId: string): Promise<Agent | null> {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          // 注意：实际使用时需要添加 Authorization header
-          // 'Authorization': 'Bearer YOUR_TOKEN'
+//注意：实际使用时需要添加授权头
+// '授权': '持有者 YOUR_TOKEN'
         },
       },
     );
@@ -270,18 +268,17 @@ describe("Agent Extensions", () => {
 
   describe("API 集成测试", () => {
     it.skip("应该能够获取智能体列表", async () => {
-      // 跳过真实 API 测试，除非有有效的认证
+// 跳过真实的 API 测试，除非有有效的认证
       const agents = await getAgents();
       expect(Array.isArray(agents)).toBe(true);
     });
 
     it.skip("应该能够获取单个智能体详情", async () => {
-      // 跳过真实 API 测试，除非有有效的认证
+// 跳过真实的 API 测试，除非有有效的认证
       const agent = await getAgent("test-agent-id");
       expect(agent).toBeDefined();
     });
   });
 });
-
 // 导出测试函数供其他用途
 export { createMockAgents, getAgents, getAgent };

@@ -7,7 +7,7 @@ import com.android.build.api.dsl.LibraryExtension
 import java.io.File
 import org.gradle.api.Project
 
-/** 获取git commit信息的函数 使用Provider来避免配置缓存问题 */
+/** 获取git提交信息的函数使用Provider来避免缓存配置问题 */
 private fun getGitCommitInfo(project: Project): String {
     return project.providers
         .exec {
@@ -20,7 +20,7 @@ private fun getGitCommitInfo(project: Project): String {
         .trim()
 }
 
-/** 获取git的提交次数，作为versionCode 使用Provider来避免配置缓存问题 */
+/** 获取git的提交次数，作为versionCode 使用Provider来避免配置服务器问题 */
 private fun getCommitCount(project: Project): Int {
     return project.providers
         .exec {
@@ -34,7 +34,7 @@ private fun getCommitCount(project: Project): Int {
         .toInt()
 }
 
-/** android application 的gradle相关配置 扩展函数 */
+/** android 应用gradle相关配置扩展函数 */
 internal fun ApplicationExtension.commonAppConfig(project: Project) {
     defaultConfig {
         versionName = ProjectConfig.versionName
@@ -44,8 +44,8 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
         ndk {
-            // 设置支持的SO库架构（开发者可以根据需要，选择一个或多个平台的so） "armeabi", "armeabi-v7a", "arm64-v8a", "x86",
-            // "x86_64"
+// 设置支持的SO库架构选择（开发者可以根据需要，一个或多个平台的所以） "armeabi", "armeabi-v7a", "arm64-v8a", "x86",
+//“x86_64”
             abiFilters.add("arm64-v8a")
         }
     }
@@ -82,8 +82,8 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
         }
 
         create("playdebug") {
-            // This build is meant to be pushed to Google Play for debugging.
-            // It talks to the dev backend, but app is built as release.
+// 此版本旨在到 Google Play 进行调试。
+// 它与开发框架对话，但应用程序是作为发布版本构建的。
             initWith(getByName("release"))
             isMinifyEnabled = false
             isShrinkResources = false

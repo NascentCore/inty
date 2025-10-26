@@ -43,11 +43,9 @@ class CharacterCardMapper:
             Agent创建数据字典
         """
         data = card_data.data
-
-        # 生成Agent ID
+# 生成Agent ID
         agent_id = str(uuid.uuid4())
-
-        # 构建基础Agent数据
+# 构建基础代理数据
         agent_data = {
             "id": agent_id,
             "name": data.name[:30],  # 限制名称长度
@@ -63,7 +61,7 @@ class CharacterCardMapper:
             "status": AgentStatus.PENDING,
             "creator_id": user_id,
             "category": self._extract_category_from_tags(data.tags),
-            # 角色卡特定字段
+# 角色卡特定字段
             "character_card_spec": card_data.spec.value,
             "character_card_data": card_data.dict(),
             "personality": data.personality,
@@ -94,14 +92,13 @@ class CharacterCardMapper:
         Returns:
             角色卡数据
         """
-        # 如果Agent有原始角色卡数据，优先使用
+# 如果Agent有原始角色卡数据，优先使用
         if agent_data.get("character_card_data"):
             try:
                 return CharacterCardV2(**agent_data["character_card_data"])
             except Exception as e:
                 logger.warning(f"解析原始角色卡数据失败: {e}")
-
-        # 从Agent字段构建角色卡数据
+# 从Agent字段构建角色卡数据
         card_data = CharacterCardDataV2(
             name=agent_data.get("name", ""),
             description=agent_data.get("intro", ""),
@@ -123,8 +120,7 @@ class CharacterCardMapper:
             character_version=agent_data.get("character_version", "1.0"),
             extensions=agent_data.get("extensions", {}),
         )
-
-        # 处理角色书
+#角色处理书
         if agent_data.get("character_book"):
             try:
                 from app.schemas.character_card import CharacterBook
@@ -147,31 +143,24 @@ class CharacterCardMapper:
         """
         if data.system_prompt:
             return data.system_prompt
-
-        # 从角色卡字段构建提示词
+# 从角色卡字段构建提示词
         prompt_parts = []
-
-        # 角色基本信息
+#角色基本信息
         if data.name:
             prompt_parts.append(f"你是{data.name}。")
-
-        # 角色描述
+# 角色描述
         if data.description:
             prompt_parts.append(f"角色描述：{data.description}")
-
-        # 性格特征
+# 性格特征
         if data.personality:
             prompt_parts.append(f"性格特征：{data.personality}")
-
-        # 场景设定
+#场景设置
         if data.scenario:
             prompt_parts.append(f"场景设定：{data.scenario}")
-
-        # 对话示例
+# 对话示例
         if data.mes_example:
             prompt_parts.append(f"对话风格参考：\n{data.mes_example}")
-
-        # 历史后指令
+# 后续历史指令
         if data.post_history_instructions:
             prompt_parts.append(f"重要指示：{data.post_history_instructions}")
 
@@ -191,7 +180,7 @@ class CharacterCardMapper:
         Returns:
             推断的性别
         """
-        # 合并所有文本用于性别推断
+# 合并所有文本用于性别推断
         text_to_analyze = " ".join(
             [
                 data.name,
@@ -201,8 +190,7 @@ class CharacterCardMapper:
                 " ".join(data.tags),
             ]
         ).lower()
-
-        # 统计关键词出现次数
+# 统计关键词出现次数
         gender_scores = {"male": 0, "female": 0, "other": 0}
 
         for gender, keywords in self.gender_keywords.items():
@@ -210,8 +198,7 @@ class CharacterCardMapper:
                 gender_scores[gender] += len(
                     re.findall(r"\b" + keyword + r"\b", text_to_analyze)
                 )
-
-        # 返回得分最高的性别
+#返回得分最高的性别
         max_gender = max(gender_scores, key=gender_scores.get)
 
         if gender_scores[max_gender] == 0:
@@ -233,8 +220,7 @@ class CharacterCardMapper:
         """
         if not tags:
             return None
-
-        # 定义分类映射
+# 定义分类地图
         category_map = {
             "assistant": "助手",
             "helper": "助手",
@@ -256,14 +242,12 @@ class CharacterCardMapper:
             "comedy": "喜剧",
             "drama": "戏剧",
         }
-
-        # 查找匹配的分类
+# 找到匹配的分类
         for tag in tags:
             tag_lower = tag.lower()
             if tag_lower in category_map:
                 return category_map[tag_lower]
-
-        # 如果没有匹配的分类，返回第一个标签
+# 如果没有匹配的分类，返回第一个标签
         return tags[0] if tags else None
 
     def validate_character_card(self, card_data: Dict[str, Any]) -> List[str]:
@@ -277,33 +261,27 @@ class CharacterCardMapper:
             验证错误列表
         """
         errors = []
-
-        # 检查基本结构
+#检查基本结构
         if not isinstance(card_data, dict):
             errors.append("角色卡数据必须是字典格式")
             return errors
-
-        # 检查规范版本
+#检查规范版本
         if card_data.get("spec") != "chara_card_v2":
             errors.append("只支持chara_card_v2格式")
-
-        # 检查数据字段
+#查询数据字段
         data = card_data.get("data", {})
         if not isinstance(data, dict):
             errors.append("角色卡数据缺少data字段")
             return errors
-
-        # 检查必需字段
+# 检查必需字段
         required_fields = ["name"]
         for field in required_fields:
             if not data.get(field):
                 errors.append(f"缺少必需字段: {field}")
-
-        # 检查字段长度
+#检查字段长度
         if data.get("name") and len(data["name"]) > 30:
             errors.append("角色名称不能超过30个字符")
-
-        # 检查数组字段
+# 查看索引字段
         array_fields = ["alternate_greetings", "tags"]
         for field in array_fields:
             if field in data and not isinstance(data[field], list):

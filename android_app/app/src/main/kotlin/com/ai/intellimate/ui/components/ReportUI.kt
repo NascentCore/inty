@@ -33,7 +33,7 @@ import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.IntySmallTextField2
 
-/** 举报项组件 */
+/** 报告项组件 */
 @Composable
 fun ReportItem(text: String, selected: Boolean, onClick: () -> Unit = {}) {
     Row(
@@ -53,7 +53,7 @@ fun ReportItem(text: String, selected: Boolean, onClick: () -> Unit = {}) {
     }
 }
 
-/** 举报原因容器组件 */
+/** 报告原因容器组件 */
 @Composable
 fun ReportReasonsContainer(title: String, content: @Composable () -> Unit) {
     Column(
@@ -89,7 +89,7 @@ fun ReportReasonsContainer(title: String, content: @Composable () -> Unit) {
     }
 }
 
-/** 举报描述容器组件 */
+/** 描述报告容器组件 */
 @Composable
 fun ReportDescriptionContainer(
     title: String,
@@ -166,7 +166,7 @@ fun ReportDescriptionContainer(
     }
 }
 
-/** 举报图片证据容器组件 */
+/** 图片说明报告容器组件 */
 @Composable
 fun ReportImageEvidenceContainer(title: String, images: List<String>, onClickAddImage: () -> Unit) {
     Column(
@@ -245,8 +245,8 @@ fun SaveBtn(onSave: () -> Unit, isSubmitting: Boolean = false) {
                         Brush.linearGradient(
                             colors =
                                 if (isSubmitting) {
-                                    // TODO：需要优化视觉设计
-                                    // https://github.com/NascentCore/inty/issues/436
+// TODO：需要优化视觉设计
+// https://github.com/NascentCore/inty/issues/436
                                     listOf(Color(0xFF666666), Color(0xFF888888))
                                 } else {
                                     listOf(Color(0xFFC122FF), Color(0xFFFF905D))
@@ -261,7 +261,7 @@ fun SaveBtn(onSave: () -> Unit, isSubmitting: Boolean = false) {
                 }
     ) {
         if (isSubmitting) {
-            // 显示加载动画
+//加载显示动画
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center),
                 color = Color.White,

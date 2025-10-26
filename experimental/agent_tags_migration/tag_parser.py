@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 标签解析器
 从personality字段中提取和解析标签信息
@@ -19,7 +19,7 @@ class TagParser:
     """标签解析器类"""
     
     def __init__(self):
-        # 匹配Character info的正则表达式
+# 匹配字符信息的正则表达式
         self.character_info_patterns = [
             r'##\s*Charactor\s+info:\s*(\{.*?\})',  # 原始格式（拼写错误）
             r'##\s*Character\s+info:\s*(\{.*?\})',  # 正确拼写
@@ -27,8 +27,7 @@ class TagParser:
             r'Character\s+Info:\s*(\{.*?\})',       # 大小写变体
             r'character\s+info:\s*(\{.*?\})',       # 小写
         ]
-        
-        # 匹配tags的正则表达式
+# 匹配标签的正则表达式
         self.tag_patterns = [
             r"'tags':\s*'([^']+)'",                # 'tags': 'value'
             r'"tags":\s*"([^"]+)"',                # "tags": "value"
@@ -58,14 +57,13 @@ class TagParser:
             return result
         
         try:
-            # 尝试提取Character info
+#尝试角色提取信息
             character_info, extraction_method = self._extract_character_info(personality)
             
             if character_info:
                 result.character_info = character_info
                 result.extraction_method = extraction_method
-                
-                # 从Character info中提取tags
+#从角色信息中提取标签
                 if character_info.tags:
                     tags = self._parse_tags_string(character_info.tags)
                     if tags:
@@ -90,7 +88,7 @@ class TagParser:
         Returns:
             Tuple[CharacterInfo, str]: (角色信息对象, 提取方法)
         """
-        # 尝试各种正则表达式模式
+# 尝试各种正则表达式模式
         for i, pattern in enumerate(self.character_info_patterns):
             matches = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
             if matches:
@@ -111,10 +109,9 @@ class TagParser:
         Returns:
             CharacterInfo对象或None
         """
-        # 清理JSON字符串
+#清理JSON字符串
         json_str = json_str.strip()
-        
-        # 尝试多种解析方法
+# 尝试多种解析方法
         parsing_methods = [
             self._parse_with_json,
             self._parse_with_ast,
@@ -153,7 +150,7 @@ class TagParser:
     def _parse_with_eval(self, json_str: str) -> Optional[CharacterInfo]:
         """使用eval解析（限制性）"""
         try:
-            # 仅允许安全的字符
+#只允许安全的角色
             if any(unsafe in json_str for unsafe in ['import', '__', 'exec', 'eval', 'open', 'file']):
                 return None
             
@@ -188,18 +185,15 @@ class TagParser:
         """
         if not tags_str:
             return []
-        
-        # 按逗号分割
+# 按空格分割
         tags = [tag.strip() for tag in tags_str.split(',')]
-        
-        # 过滤和清理
+# 过滤和清理
         cleaned_tags = []
         for tag in tags:
             cleaned_tag = self._clean_tag(tag)
             if cleaned_tag:
                 cleaned_tags.append(cleaned_tag)
-        
-        # 去重并保持顺序
+# 去重并保持顺序
         unique_tags = []
         seen = set()
         for tag in cleaned_tags:
@@ -222,15 +216,12 @@ class TagParser:
         """
         if not tag:
             return None
-        
-        # 去除空格和引号
+# 增加空格和引号
         tag = tag.strip().strip('\'"')
-        
-        # 长度检查
+#长度检查
         if len(tag) < 2 or len(tag) > 50:
             return None
-        
-        # 首字母大写
+#首字母大写
         tag = tag.capitalize()
         
         return tag
@@ -246,8 +237,7 @@ class TagParser:
             标准化后的标签列表
         """
         normalized = []
-        
-        # 标签映射（统一相似标签）
+#标签地图（统一相似标签）
         tag_mappings = {
             'hot': 'Sexy',
             'beautiful': 'Beautiful',
@@ -259,14 +249,13 @@ class TagParser:
         }
         
         for tag in tags:
-            # 转换为小写进行映射查找
+# 转换为小写进行映射查找
             tag_lower = tag.lower()
             if tag_lower in tag_mappings:
                 normalized_tag = tag_mappings[tag_lower]
             else:
                 normalized_tag = tag.capitalize()
-            
-            # 避免重复
+# 避免重复
             if normalized_tag not in normalized:
                 normalized.append(normalized_tag)
         
@@ -305,16 +294,13 @@ class TagParser:
         """
         if not tag or not isinstance(tag, str):
             return False
-        
-        # 长度检查
+#长度检查
         if len(tag) < 2 or len(tag) > 50:
             return False
-        
-        # 字符检查（允许字母、数字、空格、连字符）
+# 字符检查（允许字母、数字、空格、连字符）
         if not re.match(r'^[a-zA-Z0-9\s\-]+$', tag):
             return False
-        
-        # 不能全是数字
+# 不能全是数字
         if tag.isdigit():
             return False
         
@@ -339,22 +325,19 @@ class TagParser:
             'extraction_methods': {},
             'error_types': {},
         }
-        
-        # 统计标签
+# 统计标签
         all_tags = []
         for result in results:
             if result.extraction_success:
                 all_tags.extend(result.extracted_tags)
-                
-                # 统计提取方法
+# 统计提取方法
                 method = result.extraction_method or 'unknown'
                 stats['extraction_methods'][method] = stats['extraction_methods'].get(method, 0) + 1
             else:
-                # 统计错误类型
+# 统计错误类型
                 error = result.error_message or 'unknown_error'
                 stats['error_types'][error] = stats['error_types'].get(error, 0) + 1
-        
-        # 标签频率统计
+#标签频率统计
         from collections import Counter
         tag_counter = Counter(all_tags)
         stats['most_common_tags'] = dict(tag_counter.most_common(20))

@@ -342,7 +342,7 @@ object CountryUtils {
     }
 
     /**
-     * 检查是否为有效的国家代码
+     * 检查是否有效的国家代码
      */
     fun isValidCountryCode(countryCode: String): Boolean {
         return getCountryCodeFromMap().containsKey(countryCode.uppercase())

@@ -16,8 +16,8 @@ class VoiceCache(Base):
     model = Column(String, nullable=False)  # 模型名称
     language = Column(String, nullable=False)  # 语言
     audio_url = Column(String, nullable=False)  # 音频文件URL
-    # nullable=True 保持兼容性
-    # TODO：填充 duration 数值到数据库，并设置 nullable=False
+# nullable=True 保持兼容性
+# TODO：填充持续时间数值到数据库，并设置nullable=False
     duration = Column(Float, nullable=True, default=0.0)  # 音频时长（秒）
     file_size = Column(Integer, default=0)  # 文件大小（字节）
     hit_count = Column(Integer, default=0)  # 缓存命中次数

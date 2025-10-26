@@ -27,11 +27,11 @@ android {
 
     defaultConfig {
         applicationId = "com.ai.intellimate"//这是app的唯一标识id，不可随意修改
-        // Google OAuth client ID
-        // TODO: This is the same now for debug and release builds for convenience.
-        // Create a new client ID for debug build, but keep the production one for backward
-        // compatibility.
-        // https://github.com/NascentCore/inty-backend/issues/171
+// Google OAuth 客户端 ID
+// TODO：为了方便起见，这对于调试和发布版本来说是相同的。
+// 为调试构建创建一个新的客户端ID，但保留prduction以便刚性使用
+// 兼容性。
+// https://github.com/NascentCore/inty-backend/issues/171
         buildConfigField(
             "String",
             "WEB_CLIENT_ID",
@@ -43,8 +43,8 @@ android {
 
     packaging {
         resources {
-            // 解决 META-INF 文件冲突问题
-            // inty-sdk 包含了多个同名文件
+// 解决 META-INF 文件冲突问题
+// inty-sdk 包含了多个同名文件
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "/META-INF/DEPENDENCIES"
             excludes += "/META-INF/LICENSE"
@@ -59,25 +59,20 @@ dependencies {
 
     implementation(libs.androidx.appcompat)//ucropActivity需要
     implementation(libs.androidx.paging.compose)
-
-    // ===== 项目模块 =====
+// ===== 项目模块 =====
     implementation(projects.core.common)
     implementation(projects.core.data)
     implementation(projects.core.design)
     implementation(projects.core.firebase)
     implementation(projects.library.network)
     implementation(projects.library.utils)
-
-    // ===== 图片加载 =====
+// ===== 图片加载 =====
     implementation(libs.bundles.coil.bundle)
-
-    // ===== Google 服务 =====
+// ===== 谷歌服务 =====
     implementation(libs.bundles.credentials)
-
-    // ===== 图片处理 =====
+// ===== 图片处理 =====
     implementation(libs.ucrop)
-
-    // ===== Media3 音频播放 =====
+// ===== Media3 音频播放 =====
     implementation(libs.bundles.androidx.media3.bundle)
     implementation(libs.androidx.media3.datasource.okhttp)
 

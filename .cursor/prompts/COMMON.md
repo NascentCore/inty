@@ -1,6 +1,5 @@
-# Common
+＃ 常见的
 
-- Prefer dependency injection style functions
-- Prefer simplicity, always start from simple assumption of the requirements,
-  and leave expansion to later iteration of requests.
-- use black and isort format python code
+- Prefer 依赖注入风格函数
+- Prefer simple，总是从简单的需求想象开始，
+  将扩展扩展以后的请求迭代。-使用black和isort格式的python代码

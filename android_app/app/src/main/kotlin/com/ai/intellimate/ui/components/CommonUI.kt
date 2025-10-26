@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
 
-/** 通用渐变按钮组件 */
+/** 通用变形按钮组件 */
 @Composable
 fun GradientButton(text: String, onSave: () -> Unit, modifier: Modifier = Modifier) {
     Box(
@@ -57,7 +57,6 @@ fun SubmitButton(onSubmit: () -> Unit) {
 fun EnterButton(onEnter: () -> Unit) {
     GradientButton(text = stringResource(R.string.enter), onSave = onEnter)
 }
-
 // Preview 函数
 @Preview(showBackground = true)
 @Composable

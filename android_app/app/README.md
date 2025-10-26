@@ -1,10 +1,10 @@
-# app
+＃ 应用程序
 
-## Cursor Summary
+## 光标摘要
 
-- 目录用途: Android 应用主模块，包含应用入口、主要页面与业务视图层。
-- 关键区域:
-  - 入口与全局: `IntelliMateApp`（Application）、`MainActivity`、`MainViewModel`、`HomeScreen`。
+- 目录用途：Android应用主模块，包含应用入口、主要页面与业务视图层。
+- 区域关键：
+  - 入口与全局：`IntelliMateApp`（应用），`MainActivity`、`MainViewModel`、`HomeScreen`。
   - 功能页面: 聊天（`chat/*`）、探索（`explore/*`）、角色（`agent/*`）、资料/设置（`profile/*`、`settings/*`）、VIP/订阅（`vip/*`）。
   - UI 组件: `ui/components/*` 与常用 `ui/*` 控件。
   - 音频/TTS: `audio/*`（播放、缓存、预加载、TTS 管理）。

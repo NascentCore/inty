@@ -57,39 +57,33 @@ def resize_to_512_if_needed(image_path):
     Returns:
         PIL.Image: Resized image
     """
-    # Open the image
+#图片打开
     with Image.open(image_path) as img:
-        # Get original dimensions
+# 获取原始尺寸
         width, height = img.size
-
-        # Convert to RGB if necessary
+# 如果需要的话转换为RGB
         if img.mode != 'RGB':
             img = img.convert('RGB')
 
         if width <= 512 and height <= 512:
-            # Create a copy to avoid file handle issues
+#创建一个分区文件句柄问题
             return img.copy()
-        
-        # Calculate scaling factor to fit within 512x512
+# 计算缩放因子以适合512x512
         scale = 512 / max(width, height)
-        
-        # Calculate new dimensions
+# 计算新的维度
         new_width = int(width * scale)
         new_height = int(height * scale)
-        
-        # Resize the image
+# 调整图像大小
         resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
         return resized_img.copy()
-
-
-# Example usage:
+#最后示例：
 if __name__ == "__main__":
-    # Show the input image
+# 显示输入图像
     input_img = Image.open(args.image_path)
     input_img.show()
 
     resized_img = resize_to_512_if_needed(args.image_path)
-    # Display the resized image
+# 显示调整大小后的图像
     resized_img.show()
 
     bytesio = io.BytesIO()

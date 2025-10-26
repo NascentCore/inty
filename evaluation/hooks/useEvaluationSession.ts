@@ -1,6 +1,6 @@
 /**
- * 评测会话管理Hook
- * 提供评测会话的创建、监控、管理功能
+ * 断层会话管理Hook
+ * 提供足球会话的创建、监控、管理功能
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -15,13 +15,12 @@ import type {
 } from "../types";
 
 interface UseEvaluationSessionReturn {
-  // 状态
+// 状态
   session: EvaluationSession | null;
   results: EvaluationResult[];
   loading: boolean;
   error: string | null;
-
-  // 操作
+// 操作
   createSession: (
     data: EvaluationSessionCreateRequest,
   ) => Promise<EvaluationSession | null>;
@@ -29,8 +28,7 @@ interface UseEvaluationSessionReturn {
   cancelSession: (sessionId: string) => Promise<boolean>;
   refreshSession: (sessionId: string) => Promise<void>;
   refreshResults: (sessionId: string) => Promise<void>;
-
-  // WebSocket
+// WebSocket
   connectWebSocket: (sessionId: string) => Promise<void>;
   disconnectWebSocket: () => void;
   isWebSocketConnected: boolean;
@@ -40,19 +38,16 @@ export const useEvaluationSession = (
   options: UseEvaluationSessionOptions = {},
 ): UseEvaluationSessionReturn => {
   const { autoRefresh = false, refreshInterval = 10000 } = options;
-
-  // 状态管理
+// 状态管理
   const [session, setSession] = useState<EvaluationSession | null>(null);
   const [results, setResults] = useState<EvaluationResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
-
-  // Refs
+// 参考文献
   const wsManager = useRef<WebSocketManager | null>(null);
   const refreshTimer = useRef<Timeout | null>(null);
-
-  // 清理函数
+// 清理函数
   useEffect(() => {
     return () => {
       if (refreshTimer.current) {
@@ -61,16 +56,14 @@ export const useEvaluationSession = (
       disconnectWebSocket();
     };
   }, []);
-
-  // 错误处理
+// 错误处理
   const handleError = useCallback((error: any, defaultMessage: string) => {
     const errorMessage = error?.message || defaultMessage;
     setError(errorMessage);
     message.error(errorMessage);
     console.error(defaultMessage, error);
   }, []);
-
-  // 创建评测会话
+// 创建足球会话
   const createSession = useCallback(
     async (
       data: EvaluationSessionCreateRequest,
@@ -93,8 +86,7 @@ export const useEvaluationSession = (
     },
     [handleError],
   );
-
-  // 启动评测会话
+// 启动足球会话
   const startSession = useCallback(
     async (sessionId: string): Promise<boolean> => {
       try {
@@ -104,7 +96,7 @@ export const useEvaluationSession = (
         const response = await api.sessions.start(sessionId);
 
         if (response.success) {
-          // 更新会话状态
+// 更新会话状态
           if (session && session.id === sessionId) {
             setSession((prev) =>
               prev ? { ...prev, status: "RUNNING" } : null,
@@ -125,8 +117,7 @@ export const useEvaluationSession = (
     },
     [session, handleError],
   );
-
-  // 取消评测会话
+// 取消房产会话
   const cancelSession = useCallback(
     async (sessionId: string): Promise<boolean> => {
       try {
@@ -136,7 +127,7 @@ export const useEvaluationSession = (
         const response = await api.sessions.cancel(sessionId);
 
         if (response.success) {
-          // 更新会话状态
+// 更新会话状态
           if (session && session.id === sessionId) {
             setSession((prev) =>
               prev ? { ...prev, status: "CANCELLED" } : null,
@@ -157,8 +148,7 @@ export const useEvaluationSession = (
     },
     [session, handleError],
   );
-
-  // 刷新会话信息
+// 刷新会话信息
   const refreshSession = useCallback(
     async (sessionId: string) => {
       try {
@@ -170,8 +160,7 @@ export const useEvaluationSession = (
     },
     [handleError],
   );
-
-  // 刷新评测结果
+// 最新体育结果
   const refreshResults = useCallback(
     async (sessionId: string) => {
       try {
@@ -183,17 +172,15 @@ export const useEvaluationSession = (
     },
     [handleError],
   );
-
-  // 连接WebSocket
+// 连接WebSocket
   const connectWebSocket = useCallback(
     async (sessionId: string) => {
       try {
-        // 断开之前的连接
+// 断开之前的连接
         disconnectWebSocket();
 
         wsManager.current = new WebSocketManager(sessionId);
-
-        // 设置消息监听器
+// 设置消息监听器
         wsManager.current.on("session_started", (message: WebSocketMessage) => {
           console.log("评测会话已启动:", message);
           refreshSession(sessionId);
@@ -201,12 +188,12 @@ export const useEvaluationSession = (
 
         wsManager.current.on("test_started", (message: WebSocketMessage) => {
           console.log("测试开始:", message);
-          // 可以更新UI显示当前测试进度
+// 可以更新UI显示当前测试文档
         });
 
         wsManager.current.on("test_completed", (message: WebSocketMessage) => {
           console.log("测试完成:", message);
-          // 更新结果列表
+// 更新结果列表
           refreshResults(sessionId);
           refreshSession(sessionId);
         });
@@ -235,8 +222,7 @@ export const useEvaluationSession = (
             refreshSession(sessionId);
           },
         );
-
-        // 连接WebSocket
+// 连接WebSocket
         await wsManager.current.connect();
         setIsWebSocketConnected(true);
       } catch (error) {
@@ -246,8 +232,7 @@ export const useEvaluationSession = (
     },
     [refreshSession, refreshResults],
   );
-
-  // 断开WebSocket
+// 断开WebSocket
   const disconnectWebSocket = useCallback(() => {
     if (wsManager.current) {
       wsManager.current.disconnect();
@@ -255,15 +240,14 @@ export const useEvaluationSession = (
     }
     setIsWebSocketConnected(false);
   }, []);
-
-  // 自动刷新 - 扩展到所有非最终状态，增强频率
+// 自动刷新 - 划分所有非最终状态，增强频率
   useEffect(() => {
     if (
       autoRefresh &&
       session &&
       ["PENDING", "RUNNING"].includes(session.status)
     ) {
-      // 运行中的会话更频繁刷新
+// 运行中的会话更间隔刷新
       const interval = session.status === "RUNNING" ? 3000 : refreshInterval;
 
       refreshTimer.current = setInterval(() => {
@@ -283,20 +267,18 @@ export const useEvaluationSession = (
   }, [autoRefresh, session, refreshInterval, refreshSession, refreshResults]);
 
   return {
-    // 状态
+// 状态
     session,
     results,
     loading,
     error,
-
-    // 操作
+// 操作
     createSession,
     startSession,
     cancelSession,
     refreshSession,
     refreshResults,
-
-    // WebSocket
+// WebSocket
     connectWebSocket,
     disconnectWebSocket,
     isWebSocketConnected,

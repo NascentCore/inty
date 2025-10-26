@@ -16,10 +16,10 @@ import java.util.concurrent.CopyOnWriteArrayList
 /**
  * 网络管理工具类
  *
- * 主要功能：
+ *主要功能：
  * 1. 判断网络连接状态
  * 2. 监控网络状态变化
- * 3. 提供网络恢复后的回调机制
+ * 3.提供网络恢复后的回调机制
  */
 class NetworkManager private constructor() {
 
@@ -50,7 +50,7 @@ class NetworkManager private constructor() {
          */
         fun onNetworkStateChanged(isConnected: Boolean, networkType: NetworkType)
 
-        /** 网络恢复回调 当网络从断开状态恢复到连接状态时触发 */
+        /** 网络恢复回调，当网络从断开状态恢复到连接状态时触发 */
         fun onNetworkRestored() {}
     }
 
@@ -70,8 +70,7 @@ class NetworkManager private constructor() {
             super.onAvailable(network)
             val networkType = getNetworkType(network)
             val isConnected = networkType != NetworkType.NONE
-
-            // 通知所有监听器
+// 通知所有监听器
             networkStateListeners.forEach { listener ->
                 listener.onNetworkStateChanged(isConnected, networkType)
                 if (isConnected) {
@@ -82,8 +81,7 @@ class NetworkManager private constructor() {
 
         override fun onLost(network: Network) {
             super.onLost(network)
-
-            // 通知所有监听器
+// 通知所有监听器
             networkStateListeners.forEach { listener ->
                 listener.onNetworkStateChanged(false, NetworkType.NONE)
             }
@@ -127,14 +125,14 @@ class NetworkManager private constructor() {
     /**
      * 判断当前是否有网络连接
      *
-     * @return true 表示有网络连接，false 表示无网络连接
+     * @return true表示有网络连接，false表示无网络连接
      */
     fun isNetworkConnected(): Boolean {
         return isNetworkActuallyAvailable()
     }
 
     /**
-     * 判断网络是否真正可用（排除飞行模式下的VPN连接等虚假连接） 通过检查网络传输类型来判断是否为真实网络连接
+     * 判断网络是否真正可用（排除飞行模式下的VPN连接等相似连接）通过检查网络传输类型来判断是否为真实网络连接
      *
      * @return true 表示网络真正可用，false 表示网络不可用
      */
@@ -145,19 +143,16 @@ class NetworkManager private constructor() {
         if (capabilities == null) {
             return false
         }
-
-        // 检查是否有互联网能力
+// 检查是否有互联网能力
         if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
             return false
         }
-
-        // 检查是否有有效的传输类型（排除仅VPN连接的情况）
+// 检查是否有有效的传输类型（排除仅VPN连接的情况）
         val hasValidTransport =
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
                 capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
                 capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
-
-        // 如果只有VPN传输，检查是否在飞行模式下
+// 如果只有VPN传输，检查是否在飞行模式下
         val hasOnlyVpn =
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
                 !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
@@ -165,8 +160,8 @@ class NetworkManager private constructor() {
                 !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
 
         if (hasOnlyVpn) {
-            // 如果只有VPN连接，检查是否在飞行模式下
-            // 在飞行模式下，即使VPN显示连接，实际上也无法访问互联网
+// 如果只有VPN连接，检查是否在飞行模式下
+// 在飞行模式下，即使VPN显示连接，实际上也无法访问互联网
             return false
         }
 
@@ -210,12 +205,12 @@ class NetworkManager private constructor() {
     /**
      * 添加网络状态监听器
      *
-     * @param listener 网络状态监听器
+     * @param Listener 网络监听状态器
      */
     fun addNetworkStateListener(listener: NetworkStateListener) {
         if (!networkStateListeners.contains(listener)) {
             networkStateListeners.add(listener)
-            // 立即通知当前网络状态
+// 立即通知当前网络状态
             val isConnected = isNetworkConnected()
             val networkType = getCurrentNetworkType()
             listener.onNetworkStateChanged(isConnected, networkType)
@@ -225,7 +220,7 @@ class NetworkManager private constructor() {
     /**
      * 移除网络状态监听器
      *
-     * @param listener 网络状态监听器
+     * @param Listener 网络监听状态器
      */
     fun removeNetworkStateListener(listener: NetworkStateListener) {
         networkStateListeners.remove(listener)
@@ -258,7 +253,7 @@ class NetworkManager private constructor() {
     data class NetworkState(val isConnected: Boolean, val networkType: NetworkType)
 
     /**
-     * 检查是否应该显示网络错误提示 当网络未连接时，不显示网络相关的错误提示
+     * 检查网络未连接时是否显示网络错误提示，不显示网络相关的错误提示
      *
      * @return true 表示应该显示错误提示，false 表示不应该显示
      */
@@ -269,16 +264,14 @@ class NetworkManager private constructor() {
     /** 释放资源 */
     fun release() {
         try {
-            // 注销网络回调
+// 注销网络回调
             networkCallbacks.forEach { callback ->
                 connectivityManager?.unregisterNetworkCallback(callback)
             }
             networkCallbacks.clear()
-
-            // 清空监听器列表
+// 清空监听器列表
             networkStateListeners.clear()
-
-            // 清空引用
+// 清空引用
             connectivityManager = null
             applicationContext = null
             INSTANCE = null

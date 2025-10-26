@@ -22,9 +22,9 @@ class ReportActivity : BaseActivity() {
 
         /**
          * 启动单独的聊天界面
-         * @param context 上下文context
-         * @param targetType
-         * @param targetId
+         * @param context 上下文
+         * @参数目标类型
+         * @参数目标Id
          */
         fun launch(context: Context, targetType: String = "USER", targetId: String? = null) {
             context.startActivity(Intent(context, ReportActivity::class.java).also { intent ->
@@ -40,8 +40,7 @@ class ReportActivity : BaseActivity() {
         super.initConfigData()
         viewModel.targetID = intent.getStringExtra(INTENT_KEY_TARGET_ID) ?: ""
         viewModel.targetType = intent.getStringExtra(INTENT_KEY_TARGET_TYPE) ?: "USER"
-
-        // 监听ViewModel事件
+// 监听ViewModel事件
         lifecycleScope.launch {
             viewModel.events.collect { event ->
                 when (event) {
@@ -50,7 +49,7 @@ class ReportActivity : BaseActivity() {
                     }
 
                     else -> {
-                        // 其他事件暂不处理
+//其他事件暂不处理
                     }
                 }
             }
@@ -66,7 +65,7 @@ class ReportActivity : BaseActivity() {
     }
 }
 
-/** 举报内容组件 */
+/** 报告内容组件 */
 @Composable
 private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit) {
     val reasons = viewModel.reasons.collectAsState()

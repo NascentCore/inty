@@ -9,9 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision: str = '20250703_120000'
 down_revision: Union[str, None] = '20250130_140000'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -19,7 +17,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create subscription_plans table
+#创建subscription_plans表
     op.create_table(
         'subscription_plans',
         sa.Column('id', sa.String(), nullable=False, comment='计划ID'),
@@ -41,8 +39,7 @@ def upgrade() -> None:
         comment='订阅计划表'
     )
     op.create_index(op.f('ix_subscription_plans_id'), 'subscription_plans', ['id'], unique=False)
-
-    # Create user_subscriptions table
+#创建user_subscriptions表
     op.create_table(
         'user_subscriptions',
         sa.Column('id', sa.String(), nullable=False, comment='订阅记录ID'),
@@ -66,8 +63,7 @@ def upgrade() -> None:
         comment='用户订阅记录表'
     )
     op.create_index(op.f('ix_user_subscriptions_id'), 'user_subscriptions', ['id'], unique=False)
-
-    # Create subscription_transactions table
+#创建subscription_transactions表
     op.create_table(
         'subscription_transactions',
         sa.Column('id', sa.String(), nullable=False, comment='交易记录ID'),
@@ -90,8 +86,7 @@ def upgrade() -> None:
         comment='订阅交易记录表'
     )
     op.create_index(op.f('ix_subscription_transactions_id'), 'subscription_transactions', ['id'], unique=False)
-
-    # Create subscription_usage table
+#创建subscription_usage表
     op.create_table(
         'subscription_usage',
         sa.Column('id', sa.String(), nullable=False, comment='使用记录ID'),
@@ -108,8 +103,7 @@ def upgrade() -> None:
         comment='订阅使用记录表'
     )
     op.create_index(op.f('ix_subscription_usage_id'), 'subscription_usage', ['id'], unique=False)
-
-    # Insert default subscription plans
+# 插入默认订阅计划
     op.execute("""
         INSERT INTO subscription_plans (id, name, description, plan_type, price, currency, google_play_product_id, features, chat_limit_per_day, agent_creation_limit, is_active, sort_order)
         VALUES 
@@ -119,7 +113,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Drop tables in reverse order
+# 以简单的顺序删除表
     op.drop_index(op.f('ix_subscription_usage_id'), table_name='subscription_usage')
     op.drop_table('subscription_usage')
     
@@ -131,8 +125,7 @@ def downgrade() -> None:
     
     op.drop_index(op.f('ix_subscription_plans_id'), table_name='subscription_plans')
     op.drop_table('subscription_plans')
-    
-    # Drop enums
+# 删除枚举
     op.execute('DROP TYPE IF EXISTS subscriptionplantype')
     op.execute('DROP TYPE IF EXISTS subscriptionstatus')
     op.execute('DROP TYPE IF EXISTS transactiontype') 

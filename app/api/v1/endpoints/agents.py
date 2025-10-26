@@ -153,25 +153,23 @@ async def get_following_agents(
         db, user_id=current_user.id, page=page, page_size=page_size
     )
     return schemas.APIResponse.success(data=pagination_data)
-
-
-########################################################
-# To test create agent API:
-# curl -X POST "http://localhost:8000/api/v1/ai/agents" \
-#   -H "Content-Type: application/json" \
-#   -H "Authorization: Bearer TOKEN" \
-#   -d '{
-#     "name": "Test Agent",
-#     "gender": "FEMALE",
-#     "visibility": "PRIVATE",
-#     "intro": "This is a test AI agent",
-#     "opening": "Hello! I am your AI assistant.",
-#     "main_prompt": "main_prompt",
-#     "personality": "personality",
-#     "mode_prompt": "mode_prompt",
-#     "background": "<background_image_url>"
-#   }'
-########################################################
+##################################################################
+#创建测试代理API：
+#curl -X POST "http://localhost:8000/api/v1/ai/agents" \
+# -H“内容类型：应用程序/json”\
+# -H“授权：不记名令牌”\
+#-d'{
+# "name": "测试代理",
+#“性别”：“女”，
+#“可见性”：“PRIVATE”，
+# "intro": "这是一个测试人工智能代理",
+# "opening": "您好！我是您的AI助手。“，
+# "main_prompt": "main_prompt",
+#“个性”：“个性”，
+# "模式_prompt": "模式_prompt",
+#“背景”：“<background_image_url>”
+# }'
+##################################################################
 @router.post(
     "/",
     response_model=schemas.APIResponse[Union[schemas.Agent, Dict[str, Any]]],
@@ -207,7 +205,7 @@ async def create_agent(
     - 如果同时提供prompt和角色卡字段，将优先使用角色卡字段
     - 建议新创建的角色使用角色卡字段以获得更好的效果
     """
-    # 检查数量限制：系统管理员不限制，普通用户限制6个
+#检查数量限制：系统管理员不限制，普通用户6个
     is_allowed, agent_count, limit = (
         await subscription_service.check_agent_creation_limit(db, current_user)
     )
@@ -333,8 +331,7 @@ async def delete_agent(
     agent = await agent_service.get_agent(db, agent_id=agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-
-    # Check permission: only creator can delete
+#查询权限：只有创建者才可以删除
     if agent.creator_id != current_user.id:
         raise HTTPException(status_code=403, detail="Permission denied")
 
@@ -401,7 +398,7 @@ async def generate_background(
     Generate background images based on prompt, save directly to GCS, return image URLs
     """
     try:
-        # Validate count parameter
+# 验证计数参数
         if request.count < 1 or request.count > 4:
             return APIResponse.error(message="Count must be between 1 and 4")
 
@@ -418,17 +415,15 @@ async def generate_background(
                     "feature": "background_generation",
                 },
             )
-
-        # Construct GCS base path - use unified directory instead of tmp
+# 构造 GCS 基本路径 - 使用统一目录而不是 tmp
         gcs_base_path = f"backgrounds/{current_user.id}/{uuid.uuid4().hex}"
         gcs_uri_base = (
             f"gs://{global_config_loaded_from_config_yaml.gcs.bucket}/{gcs_base_path}"
         )
-
-        # 获取用户性别信息并转换为相应格式
+# 获取用户性别信息并转换为相应格式
         user_gender = None
         if current_user.gender:
-            # 将数据库中的Gender枚举转换为字符串格式
+# 将数据库中的性别枚举转换为字符串格式
             gender_mapping = {"MALE": "male", "FEMALE": "female", "OTHER": "non-binary"}
             user_gender = gender_mapping.get(current_user.gender.value, "non-binary")
 
@@ -437,8 +432,7 @@ async def generate_background(
         )
 
         opposite_gender = get_opposite_gender(user_gender)
-
-        # Generate images and get actual GCS URLs with RAI reason support
+# 使用 RAI 生成图像并获取原因支持的实际 GCS URL
         generated_images = text_to_image(
             request.prompt,
             request.negative_prompt,
@@ -458,8 +452,7 @@ async def generate_background(
 
         gcs_urls = result["image_uris"]
         rai_reasons = result["rai_reasons"]
-
-        # Convert GCS URLs to CDN URLs
+# 将 GCS URL 转换为 CDN URL
         from app.services.image_transform_service import image_transform_service
 
         cdn_urls = []
@@ -476,14 +469,12 @@ async def generate_background(
                 )
                 cdn_urls.append(gcs_url)  # Fallback to original URL
                 cdn_url_to_img_dict[gcs_url] = gcs_url_to_img_dict[gcs_url]
-
-        # Create image resource records for each generated image
-        # Only create CDN URL records, store GCS URL in metadata to avoid duplicates
+# 为每个人生成的图片创建图片资源记录
+#创建 CDN URL 记录，将 GCS URL 存储在元数据中重复
         for i, cdn_url in enumerate(cdn_urls):
-            # Get corresponding GCS URL for this CDN URL
+# 获取此CDN URL 对应的GCS URL
             gcs_url = gcs_urls[i] if i < len(gcs_urls) else None
-
-            # Get image info from CDN URL dict
+#从CDN URL字典中获取图像信息
             img_info = cdn_url_to_img_dict[cdn_url]
 
             await async_create_image_resource(
@@ -500,8 +491,7 @@ async def generate_background(
             logger.debug(
                 f"Created image resource record for CDN URL: {cdn_url}, GCS URL: {gcs_url}"
             )
-
-        # 记录背景图生成使用次数
+# 记录背景图生成使用次数
         try:
             await subscription_service.record_usage(
                 db, current_user.id, "background_generation", request.count
@@ -511,7 +501,7 @@ async def generate_background(
             )
         except Exception as usage_error:
             logger.error(f"Failed to record usage: {str(usage_error)}")
-            # 使用记录失败不影响主要功能，继续返回结果
+# 使用记录失败不影响主要功能，继续返回结果
 
         response_data = {
             "urls": cdn_urls,
@@ -522,8 +512,7 @@ async def generate_background(
                 "limit": check_result[2],
             },
         }
-
-        # Include RAI information if available (for debugging/transparency)
+# 包含RAI信息（如果可用）（用于调试/透明性）
         if rai_reasons:
             response_data["rai_filtered_count"] = len(rai_reasons)
             response_data["rai_reasons"] = rai_reasons
@@ -533,14 +522,13 @@ async def generate_background(
     except Exception as e:
         logger.error(f"Background image generation failed: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
-
-        # Check if the error message contains RAI filtering information
+#检查错误信息中是否包含RAI过滤信息
         error_message = str(e)
         if (
             "RAI filtering reasons:" in error_message
             or "prohibited content" in error_message
         ):
-            # Extract RAI-specific error information for better user experience
+# 提取 RAI 特定的错误信息以改善用户体验
             return APIResponse.error(
                 message="Image generation was blocked due to content policy restrictions. Please modify your prompt and try again.",
                 data={
@@ -550,7 +538,7 @@ async def generate_background(
                 },
             )
         else:
-            # Generic error handling for other types of failures
+# 其他类型故障的通用错误处理
             return APIResponse.error(
                 message=f"Background image generation failed: {error_message}"
             )
@@ -558,7 +546,7 @@ async def generate_background(
 
 @router.get(
     "/creator/{creator_id}/stats",
-    # Not used by anyone
+# 没有被任何人使用过
     deprecated=True,
     include_in_schema=False,
     response_model=schemas.APIResponse[schemas.CreatorAgentStats],
@@ -581,8 +569,6 @@ async def get_creator_agent_stats(
     except Exception as e:
         logger.error(f"获取创建者角色统计失败: {str(e)}")
         return schemas.APIResponse.error(message="Failed to get statistics")
-
-
 # ==================== 角色卡相关API端点 ====================
 
 
@@ -633,7 +619,7 @@ async def import_character_card_file(
     从文件导入角色卡（支持JSON和PNG文件）
     """
     try:
-        # 验证文件大小 (最大10MB)
+# 验证文件大小 (最大10MB)
         if file.size and file.size > 10 * 1024 * 1024:
             return APIResponse.error(message="File size cannot exceed 10MB")
 
@@ -805,7 +791,7 @@ async def get_openrouter_models(
         models = await scoring_service._fetch_openrouter_models()
 
         if models is None:
-            # 如果获取失败，返回默认模型列表
+#如果获取失败，返回默认模型列表
             models = [
                 {
                     "id": "openai/gpt-4o",

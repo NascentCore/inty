@@ -1,15 +1,13 @@
 import sys
 import os
-# Add the parent directory to the Python path
+# 将目录父添加到Python路径中
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# A simple sample of using imagen to generate images with Vertex AI
+# 使用 imagen 通过 Vertex AI 生成的简单图像示例
 from gemini_client import GeminiClient
 from models import CharacterProfile, CharacterBackground, CharacterEncounter
 
 client = GeminiClient()
-
-# Create a complete character profile with all required fields
+# 创建一个包含所有必填字段的完整字符 profile
 character = CharacterProfile(
     name="John Doe",
     age=25,

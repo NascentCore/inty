@@ -63,7 +63,7 @@ class ChatSettingsBase(BaseModel):
 
     language: str = "en"
     voice_enabled: bool = True  # 个性化语音自动播放开关
-    # keep_talking 字段已弃用，不再在 API 中暴露
+# keep_talking 字段已被废弃，不再在 API 中暴露
     style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
     premium_mode: bool = False  # 高级模式开关，仅订阅用户可设置
 
@@ -79,7 +79,7 @@ class ChatSettingsUpdate(ChatSettingsBase):
 
     language: Optional[str] = None
     voice_enabled: Optional[bool] = None  # 个性化语音自动播放开关
-    # keep_talking 字段已弃用，不再在 API 中暴露
+# keep_talking 字段已被废弃，不再在 API 中暴露
     style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
     premium_mode: Optional[bool] = None  # 高级模式开关，仅订阅用户可设置
     request_id: Optional[str] = None
@@ -98,23 +98,23 @@ class ChatSettingsInDB(ChatSettingsBase):
     updated_at: Optional[datetime] = None
 
     class Config:
-        # 当设置为 True 时，Pydantic 可以从具有属性的对象（如 SQLAlchemy 模型实例）创建模型实例
-        # 允许从 ORM 对象直接转换为 Pydantic 模型，而不需要手动映射每个字段
-        # 在 FastAPI 中，通常需要将数据库模型转换为 API 响应模型
-        # 例如，从 SQLAlchemy 模型创建 Pydantic 模型
-        # class UserModel(Base):
-        #     __tablename__ = "users"
-        #     id = Column(Integer, primary_key=True)
-        #     name = Column(String)
-        #     email = Column(String)
-        # class UserSchema(BaseModel):
-        #     model_config = ConfigDict(from_attributes=True)
-        #     id: int
-        #     name: str
-        #     email: str
-        # # 可以直接从 SQLAlchemy 对象创建 Pydantic 模型
-        # user_obj = session.query(UserModel).first()
-        # user_schema = UserSchema.model_validate(user_obj)  # 自动映射属性
+# 当设置为 True 时，Pydantic 可以从具有属性的对象（如 SQLAlchemy 模型实例）创建模型实例
+# 允许从 ORM 对象直接转换为 Pydantic 模型，而不需要手动映射每个字段
+# 在 FastAPI 中，通常需要将数据库模型转换为 API 响应模型
+# 例如，从 SQLAlchemy 模型创建 Pydantic 模型
+# 用户模型类（基础）：
+# __表名__ = "用户"
+# id = 列(整数, primary_key=True)
+# 名称 = 列（字符串）
+# 电子邮件 = 列（字符串）
+# 用户模型类（BaseModel）：
+# model_config = ConfigDict(from_attributes=True)
+# ID：整数
+# 名称：str
+# 电子邮件：str
+# # 可以直接从 SQLAlchemy 对象创建 Pydantic 模型
+# user_obj = session.query(UserModel).第一个的（）
+# user_schema = UserSchema.model_validate(user_obj) # 自动映射属性
         from_attributes = True
 
 
@@ -195,9 +195,7 @@ class Chat(ChatInDB):
             return image_transform_service.transform_desktop(agent_background)
         except Exception:
             return agent_background
-
-
-# OpenAI style message model
+# OpenAI风格的消息模型
 class ChatMessage(BaseModel):
     role: str  # "user" or "assistant"
     content: str
@@ -205,11 +203,11 @@ class ChatMessage(BaseModel):
 
 class ChatCompletionRequest(BaseModel):
     messages: List[ChatMessage]
-    # DEPRECATED: Currently this parameter has no effect.
+# DEPRECATED：目前该参数没有作用。
     stream: bool = False
-    # DEPRECATED: Currently this parameter has no use.
+# DEPRECATED：目前该参数还没有用处。
     model: str = "chatbot"
-    # DEPRECATED: Currently this parameter has no use.
+# DEPRECATED：目前该参数还没有用处。
     language: str = "zh"  # 添加语言字段，默认中文
     request_id: Optional[str] = None
 
@@ -261,7 +259,7 @@ class ClearMessagesRequest(BaseModel):
     request_id: Optional[str] = None
 
     class Config:
-        # 确保至少有一个字段被提供
+# 至少保证有一个字段被提供
         json_schema_extra = {
             "example": {"message_id": 123, "timestamp": "2024-01-01T10:00:00Z"}
         }

@@ -24,7 +24,7 @@ class InMemoryCache:
                     logger.debug(f"缓存命中: {key}")
                     return entry["value"]
                 else:
-                    # 过期删除
+#期末删除
                     del self._cache[key]
                     logger.debug(f"缓存过期删除: {key}")
 
@@ -99,11 +99,11 @@ class CacheService:
     """缓存服务管理器"""
 
     def __init__(self):
-        # 用户信息缓存（较长过期时间）
+#用户信息记录（持续时间）
         self.user_cache = InMemoryCache(default_ttl=600)  # 10分钟
-        # 会话信息缓存（较短过期时间）
+# 会话信息存储（等待过渡时间）
         self.session_cache = InMemoryCache(default_ttl=300)  # 5分钟
-        # Agent配置缓存
+#代理配置服务器
         self.agent_cache = InMemoryCache(default_ttl=1800)  # 30分钟
 
         self._cleanup_task = None
@@ -119,7 +119,7 @@ class CacheService:
         async def cleanup_loop():
             while self._cleanup_running:
                 try:
-                    # 每2分钟清理一次过期缓存
+# 每2分钟清理一次过渡服务器
                     await asyncio.sleep(120)
 
                     total_cleaned = 0
@@ -202,7 +202,5 @@ class CacheService:
         self.session_cache.clear()
         self.agent_cache.clear()
         logger.info("所有缓存已清空")
-
-
-# 全局缓存服务实例
+# 存储全局实例服务
 cache_service = CacheService()

@@ -3,17 +3,17 @@ package com.ai.intellimate.utils
 import retrofit2.HttpException
 
 /**
- * HTTP 错误处理器
- * 负责处理 HTTP 异常并返回用户友好的错误消息
+ * HTTP错误处理器
+ * 负责处理HTTP异常并返回用户界面的错误消息
  */
 object HttpErrorHandler {
 
     /**
-     * 处理 HTTP 异常并返回用户友好的错误消息
+     * 处理HTTP异常并返回用户界面的错误消息
      *
      * @param e HTTP 异常
-     * @param operation 操作名称，用于自定义错误消息
-     * @return 用户友好的错误消息
+     * @param操作操作名称，用于自定义错误消息
+     * @return 用户界面的错误消息
      */
     fun handleHttpException(
         e: HttpException,
@@ -42,11 +42,11 @@ object HttpErrorHandler {
     }
 
     /**
-     * 处理一般异常并返回用户友好的错误消息
+     * 处理一般异常并返回用户界面的错误消息
      *
      * @param e 异常
-     * @param operation 操作名称，用于自定义错误消息
-     * @return 用户友好的错误消息
+     * @param操作操作名称，用于自定义错误消息
+     * @return 用户界面的错误消息
      */
     fun handleGeneralException(e: Exception, operation: String = "operation"): String {
         return when {

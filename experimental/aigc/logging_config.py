@@ -15,38 +15,31 @@ def setup_logging(log_level: str = "INFO", log_to_file: bool = False, log_file: 
         log_to_file: Whether to log to file
         log_file: Log file path
     """
-    
-    # Create logs directory if it doesn't exist
+# 如果logs目录不存在则创建
     if log_to_file:
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Create formatter with detailed information
+# 创建包含详细信息的清理程序
     detailed_formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
     )
-    
-    # Create simpler formatter for console
+# 为控制台创建更简单的整理程序
     console_formatter = logging.Formatter(
         '%(asctime)s - %(levelname)s - %(name)s - %(message)s'
     )
-    
-    # Setup root logger
+# 设置根记录器
     root_logger = logging.getLogger()
     root_logger.setLevel(getattr(logging, log_level.upper()))
-    
-    # Clear existing handlers
+# 清除现有的处理程序
     root_logger.handlers.clear()
-    
-    # Console handler
+# 控制台处理程序
     console_handler = logging.StreamHandler()
     console_handler.setLevel(getattr(logging, log_level.upper()))
     console_handler.setFormatter(console_formatter)
     root_logger.addHandler(console_handler)
-    
-    # File handler for detailed logs
+# 详细日志的文件处理程序
     if log_to_file:
-        # Rotating file handler to prevent huge log files
+# 将文件处理程序轮换为 prevent 大型日志文件
         file_handler = logging.handlers.RotatingFileHandler(
             log_file,
             maxBytes=10*1024*1024,  # 10MB
@@ -55,8 +48,7 @@ def setup_logging(log_level: str = "INFO", log_to_file: bool = False, log_file: 
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(detailed_formatter)
         root_logger.addHandler(file_handler)
-        
-        # Also create a separate error log
+# 还创建一个单独的错误日志
         error_handler = logging.handlers.RotatingFileHandler(
             log_file.replace('.log', '_errors.log'),
             maxBytes=5*1024*1024,  # 5MB
@@ -65,8 +57,7 @@ def setup_logging(log_level: str = "INFO", log_to_file: bool = False, log_file: 
         error_handler.setLevel(logging.ERROR)
         error_handler.setFormatter(detailed_formatter)
         root_logger.addHandler(error_handler)
-    
-    # Set specific logger levels
+# 设置特定的专用设备级别
     logging.getLogger('urllib3').setLevel(logging.WARNING)
     logging.getLogger('requests').setLevel(logging.WARNING)
     
@@ -129,8 +120,7 @@ def log_file_operation(operation: str, file_path: str, success: bool, logger: lo
         logger.error(f"File operation failed: {operation} - {file_path}")
         if error:
             logger.error(f"  Error: {error}")
-
-# Logging profiles for different environments
+#记录不同环境的profiles
 def setup_development_logging():
     """Setup logging for development environment"""
     return setup_logging(

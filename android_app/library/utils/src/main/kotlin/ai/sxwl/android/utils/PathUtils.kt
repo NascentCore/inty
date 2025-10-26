@@ -34,7 +34,7 @@ object PathUtils {
     }
 
     /**
-     * 获取内部缓存路径
+     * 获取内部服务器路径
      */
     fun getInternalAppCachePath(): String {
         return try {
@@ -50,7 +50,7 @@ object PathUtils {
     }
 
     /**
-     * 获取内部缓存路径
+     * 获取内部服务器路径
      */
     fun getInternalAppCachePath(context: Context?): String {
         return context?.cacheDir?.absolutePath ?: ""
@@ -103,14 +103,14 @@ object PathUtils {
     }
 
     /**
-     * 获取外部应用缓存路径
+     * 获取外部应用服务器路径
      */
     fun getExternalAppCachePath(): String {
         return Utils.getApp().externalCacheDir?.absolutePath ?: ""
     }
 
     /**
-     * 获取外部应用缓存路径
+     * 获取外部应用服务器路径
      */
     fun getExternalAppCachePath(context: Context?): String {
         return context?.externalCacheDir?.absolutePath ?: ""
@@ -145,7 +145,7 @@ object PathUtils {
     }
 
     /**
-     * 获取外部铃声路径
+     * 获取外部响路径
      */
     fun getExternalRingtonesPath(): String {
         return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RINGTONES).absolutePath
@@ -222,7 +222,7 @@ object PathUtils {
     }
 
     /**
-     * 获取下载缓存路径
+     * 获取下载存储路径
      */
     fun getDownloadCachePath(): String {
         return Environment.getDownloadCacheDirectory().absolutePath
@@ -327,14 +327,14 @@ object PathUtils {
     }
 
     /**
-     * 获取应用缓存路径
+     * 获取应用服务器路径
      */
     fun getAppCachePath(): String {
         return Utils.getApp().cacheDir.absolutePath
     }
 
     /**
-     * 获取应用缓存路径
+     * 获取应用服务器路径
      */
     fun getAppCachePath(context: Context?): String {
         return context?.cacheDir?.absolutePath ?: ""

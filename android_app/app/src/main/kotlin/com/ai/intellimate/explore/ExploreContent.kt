@@ -43,7 +43,7 @@ import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
-/** Explore页面的主要内容组件 */
+/** 探索页面的主要内容组件 */
 @Composable
 fun ExploreContent(
     modifier: Modifier = Modifier,
@@ -61,66 +61,59 @@ fun ExploreContent(
             initialFirstVisibleItemIndex = vm.savedFirstVisibleIndex.collectAsState().value,
             initialFirstVisibleItemScrollOffset = vm.savedFirstVisibleOffset.collectAsState().value,
         )
-
-    // 检测用户是否主动滚动到底部触发加载更多
+// 检测用户是否主动滚动到底部触发加载更多
     var showLoadMoreLoading by remember { mutableStateOf(false) }
     var lastScrollTime by remember { mutableLongStateOf(0L) }
-
-    // 检测滚动状态
+// 检测滚动状态
     val isScrolledToBottom by remember {
         derivedStateOf {
             val layoutInfo = gridState.layoutInfo
             val totalItemsCount = layoutInfo.totalItemsCount
             val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-
-            // 检测是否滚动到底部
+//检测滚动是否到底部
             totalItemsCount > 0 && lastVisibleItemIndex >= totalItemsCount - 1
         }
     }
-
-    // 监听滚动到底部事件
+// 监听滚动到底部事件
     LaunchedEffect(isScrolledToBottom, lazyPagingItems?.loadState?.append) {
         if (isScrolledToBottom && lazyPagingItems?.loadState?.append is LoadState.Loading) {
             val currentTime = System.currentTimeMillis()
-            // 关键修复：只有在用户主动滚动且不是首次加载时才显示loading
-            // 首次进入时使用缓存数据，不应该显示加载更多loading
+// 关键修复：只有在用户主动滚动且不是首次加载时才显示loading
+// 首次进入时使用服务器数据，不应该加载更多loading
             if (
                 currentTime - lastScrollTime < 1000 &&
                     lazyPagingItems.itemCount > 0 &&
                     lazyPagingItems.loadState.refresh is LoadState.NotLoading
             ) {
                 showLoadMoreLoading = true
-                // 延迟隐藏loading
+// 隐藏延迟加载
                 delay(2000)
                 showLoadMoreLoading = false
             }
         }
     }
-
-    // 更新滚动时间与保存滚动位置
+// 更新滚动时间与保存滚动位置
     LaunchedEffect(gridState.isScrollInProgress) {
         if (gridState.isScrollInProgress) {
             lastScrollTime = System.currentTimeMillis()
         } else {
-            // 滚动停止时保存位置
+// 停止滚动时间保存位置
             vm.saveScrollPosition(
                 gridState.firstVisibleItemIndex,
                 gridState.firstVisibleItemScrollOffset,
             )
         }
     }
-
-    // 检查加载状态
+//查询加载状态
     val loadState = lazyPagingItems?.loadState?.refresh
-
-    // 如果是错误状态且没有数据，显示错误状态
+// 如果是错误状态且没有数据，则显示错误状态
     if (loadState is LoadState.Error && lazyPagingItems.itemCount == 0) {
         NetworkErrorState(
             onRetry = onRetry ?: { lazyPagingItems.retry() },
             modifier = modifier.fillMaxSize(),
         )
     } else if (loadState is LoadState.NotLoading && lazyPagingItems.itemCount == 0) {
-        // 如果没有数据且加载完成，显示空数据状态
+// 如果没有数据且加载完成，显示空数据状态
         EmptyDataState(
             subtitle = stringResource(R.string.empty_explore_data),
             modifier = modifier.fillMaxSize(),
@@ -134,18 +127,18 @@ fun ExploreContent(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // 如果没有Paging数据，显示加载状态
+// 如果没有分页数据，则显示加载状态
             if (lazyPagingItems == null) {
                 item(span = { GridItemSpan(maxLineSpan) }) { EmptyStateIndicator() }
             } else {
-                // 使用Paging的items
+// 使用分页的项目
                 items(
                     count = lazyPagingItems.itemCount,
                     key =
                         lazyPagingItems.itemKey { agent ->
-                            // 确保key的唯一性，避免空id导致的重复key问题
+//保证key的唯一性，避免空id导致的重复key问题
                             agent.id.ifEmpty {
-                                // 如果id为空，使用其他字段组合生成唯一key
+// 如果id为空，使用其他字段组合唯一生成key
                                 "${agent.name}_${agent.avatar}_${agent.createdAt}"
                             }
                         },
@@ -158,7 +151,7 @@ fun ExploreContent(
                             onClick = { onClickAgent(agent) },
                         )
                     } else {
-                        // 显示加载占位符
+//加载显示占位符
                         ShimmerPlaceholder(
                             modifier =
                                 Modifier
@@ -168,8 +161,7 @@ fun ExploreContent(
                         )
                     }
                 }
-
-                // 加载状态指示器
+// 加载状态同时
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     ExploreLoadingStates(lazyPagingItems, showLoadMoreLoading, isRefreshing)
                 }
@@ -180,7 +172,7 @@ fun ExploreContent(
     }
 }
 
-/** 空状态指示器 */
+/** 空状态迅速 */
 @Composable
 private fun EmptyStateIndicator() {
     Box(modifier = Modifier

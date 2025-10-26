@@ -43,22 +43,20 @@ fun HeartModalNavigationDrawer(
     val screenWidthPx = LocalWindowInfo.current.containerSize.width.toFloat()
 
     Box(modifier.fillMaxSize()) {
-        // 状态管理 - 使用by语法优化
+// 状态管理 - 通过语法优化使用
         var showMask by remember { mutableStateOf(false) }
         var drawerWidth by remember { mutableIntStateOf(0) }
         var accumulatedDragOffset by remember { mutableFloatStateOf(0f) }
         var isDragging by remember { mutableStateOf(false) }
         var dragStartState by remember { mutableStateOf(DrawerValue.Closed) }
-
-        // 计算位置
+// 计算位置
         val targetOffset = if (drawerState == DrawerValue.Closed) {
             screenWidthPx
         } else {
             screenWidthPx - drawerWidth
         }
         val currentOffset = if (isDragging) targetOffset + accumulatedDragOffset else targetOffset
-
-        // 动画
+// 动画
         val xOffset by animateFloatAsState(
             targetValue = currentOffset,
             animationSpec = tween(durationMillis = if (isDragging) 0 else 400)
@@ -73,12 +71,10 @@ fun HeartModalNavigationDrawer(
                 }
             }
         )
-
-        // 内容区域
+// 区域内容
         Box {
             content()
-
-            // 边缘拖拽支持
+// 边缘拖拽支撑
             if (drawerState == DrawerValue.Closed && enableGesture) {
                 EdgeDragArea(
                     onDragStart = {
@@ -103,11 +99,10 @@ fun HeartModalNavigationDrawer(
                 )
             }
         }
-
-        // 遮罩和抽屉
+// 遮阳罩和枕头
         val shouldShowDrawer = showMask || drawerState == DrawerValue.Open || isDragging
         if (shouldShowDrawer) {
-            // 遮罩层
+// 遮罩层
             MaskLayer(
                 isDragging = isDragging,
                 dragStartState = dragStartState,
@@ -116,8 +111,7 @@ fun HeartModalNavigationDrawer(
                 maskLayerAlpha = maskLayerAlpha,
                 onMaskClick = { onDrawerStateChange(DrawerValue.Closed) }
             )
-
-            // 抽屉
+// 沙发
             DrawerContent(
                 drawerContent = drawerContent,
                 isDragging = isDragging,

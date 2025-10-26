@@ -5,15 +5,13 @@ import pytest
 @pytest.mark.noci
 def test_chat_completions_endpoint():
     """Test the chat completions endpoint with a valid request"""
-
-    # Headers (you'll need to provide a valid token)
+# 标头（您需要 provid 一个有效的令牌）
     BEARER_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjA5MjMyOTAsInN1YiI6InVzZXItdGVzdGluZyJ9.TS3IaZ8UKeC9sbGn513m66aDXdLLrFsHYYNW9X0vCcA"
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {BEARER_TOKEN}",
     }
-
-    # First, create an agent
+#首先创建一个代理
     create_agent_url = "http://localhost:8000/api/v1/ai/agents"
     agent_payload = {
         "name": "Test Agent",
@@ -26,7 +24,7 @@ def test_chat_completions_endpoint():
     }
 
     with httpx.Client(timeout=30.0) as client:
-        # Create agent
+#创建代理
         create_response = client.post(
             create_agent_url, json=agent_payload, headers=headers
         )
@@ -39,8 +37,7 @@ def test_chat_completions_endpoint():
             create_data["code"] == 200
         ), f"Agent creation returned error: {create_data}"
         agent_id = create_data["data"]["id"]
-
-        # Now test chat completions with the created agent
+# 现在完成使用创建的代理测试聊天情况
         chat_url = f"http://localhost:8000/api/v2/chat/completions/{agent_id}"
         chat_payload = {
             "messages": [{"role": "user", "content": "Hello, how are you?"}],
@@ -50,30 +47,24 @@ def test_chat_completions_endpoint():
         }
 
         response = client.post(chat_url, json=chat_payload, headers=headers)
-
-    # Assertions
+#断言
     assert response.status_code == 200, f"Chat completion failed: {response.text}"
-
-    # Parse response
+# 解析响应
     response_data = response.json()
-
-    # Check response structure
+#检查响应结构
     assert "code" in response_data
     assert "message" in response_data
     assert "data" in response_data
-
-    # Check that code is 200 (success)
+#检查代码是否为200（成功）
     assert response_data["code"] == 200
-
-    # Check data structure matches ChatCompletionResponse
+# 检查数据结构是否匹配ChatCompletionResponse
     data = response_data["data"]
     assert "id" in data
     assert "created" in data
     assert "model" in data
     assert "choices" in data
     assert "usage" in data
-
-    # Check choices structure
+#检查选择结构
     assert isinstance(data["choices"], list)
     assert len(data["choices"]) == 1
 
@@ -81,18 +72,16 @@ def test_chat_completions_endpoint():
     assert "index" in choice
     assert "message" in choice
     assert "finish_reason" in choice
-
-    # Check message structure
+#检查消息结构
     message = choice["message"]
     assert "role" in message
     assert "content" in message
     assert message["role"] == "assistant"
     assert isinstance(message["content"], str)
     assert len(message["content"]) > 0
-    # assert message["content"] == "I'm wonderful now that you're here, admin."
-    # Content keeps changing, so we don't check it.
-
-    # Check usage structure
+#断言消息[“内容”] ==“管理员，你现在在这里我真是太棒了。”
+# 内容不断变化，所以我们不检查。
+# 检查使用结构
     usage = data["usage"]
     assert "prompt_tokens" in usage
     assert "completion_tokens" in usage
@@ -100,6 +89,5 @@ def test_chat_completions_endpoint():
     assert isinstance(usage["prompt_tokens"], int)
     assert isinstance(usage["completion_tokens"], int)
     assert isinstance(usage["total_tokens"], int)
-
-    # Check that total_tokens equals sum of prompt and completion tokens
+# 检查total_tokens是否足够prompt并完成标记的总和
     assert usage["total_tokens"] == usage["prompt_tokens"] + usage["completion_tokens"]

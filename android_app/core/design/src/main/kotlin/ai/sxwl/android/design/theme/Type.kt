@@ -1,31 +1,28 @@
 package ai.sxwl.android.design.theme
 
 import androidx.compose.material3.Typography
-
-
-// Set of Material typography styles to start with
+// 一组开始使用的 Material 排版样式
 val HeartTypography = Typography(
-//    bodyLarge = TextStyle(
-//        fontFamily = FontFamily.Default,
-//        fontWeight = FontWeight.Normal,
-//        fontSize = 16.sp,
-//        lineHeight = 24.sp,
-//        letterSpacing = 0.5.sp
-//    )
-    /* Other default text styles to override
-    titleLarge = TextStyle(
+// bodyLarge = TextStyle(
+// fontFamily = FontFamily.默认，
+// 字体粗细 = 字体细粗。普通的，
+// 字体大小 = 16。斯普,
+// 行高 = 24。斯普,
+// 字母位数 = 0.5.sp
+// )
+    /* 要覆盖的其他默认文本样式
+    标题大=文本样式(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp
+        字体大小 = 22.sp,
+        行高 = 28.sp,
+        字母位数 = 0.sp
     ),
-    labelSmall = TextStyle(
+    标签小 = 文本样式(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
-    )
-    */
+        字体大小 = 11.sp,
+        行高 = 16.sp,
+        字母位数 = 0。5.sp
+    ）*/
 )

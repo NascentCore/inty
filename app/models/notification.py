@@ -27,8 +27,6 @@ class NotificationTemplateType(str, enum.Enum):
     TEXT_ONLY = "TEXT_ONLY"  # 文本
     IMAGE_ONLY = "IMAGE_ONLY"  # 图片
     IMAGE_TEXT_LINK = "IMAGE_TEXT_LINK"  # 图片+文本+链接
-
-
 # 类型映射字典
 TEMPLATE_TYPE_MAP = {
     NotificationTemplateType.TEXT_WITH_LINK: 1,
@@ -37,13 +35,10 @@ TEMPLATE_TYPE_MAP = {
     NotificationTemplateType.IMAGE_ONLY: 4,
     NotificationTemplateType.IMAGE_TEXT_LINK: 5,
 }
-
-# 反向映射字典
+#逆向地图字典
 TEMPLATE_TYPE_REVERSE_MAP = {v: k for k, v in TEMPLATE_TYPE_MAP.items()}
-
-
-# DEPRECATED: 系统通知的功能并为投入使用，这个表从来没有被使用过，
-# 如果做通知，在其他系统实现，不会在服务后端来实现
+#DEPRECATED:系统通知的功能并为投入使用，这个表从来没有被使用过，
+# 如果做通知，在其他系统实现，不会在服务端来实现
 class NotificationTemplate(Base):
     __tablename__ = "notification_templates"
 
@@ -60,18 +55,14 @@ class NotificationTemplate(Base):
     updated_at = Column(
         DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
     )
-
-    # 索引
+# 索引
     __table_args__ = (Index("ix_notification_templates_is_active", "is_active"),)
-
-    # 关联关系
+# 关联关系
     notifications = relationship("UserNotification", back_populates="template")
 
     def __repr__(self):
         return f"<NotificationTemplate(id={self.id}, type={self.type}, title={self.title})>"
-
-
-# DEPRECATED: 系统推送设计不明，是否需要此表格不清楚，默认不应该在没有计划之前就开始做实施；计划删除
+# DEPRECATED: 系统全民分散设计，是否需要此表格舞蹈，默认不在没有计划就开始做实施；计划删除之前
 class UserNotification(Base):
     __tablename__ = "user_notifications"
 
@@ -92,25 +83,23 @@ class UserNotification(Base):
     read_at = Column(DateTime)
     created_at = Column(DateTime, default=lambda: datetime.now())  # 使用 naive datetime
     deleted_at = Column(DateTime)
-
-    # 索引
+# 索引
     __table_args__ = (
         Index("ix_user_notifications_user_id", "user_id"),
         Index("ix_user_notifications_template_id", "template_id"),
         Index("ix_user_notifications_is_read", "is_read"),
-        # 部分索引：只索引已删除的记录
+# 部分索引：只索引已删除的记录
         Index(
             "ix_user_notifications_deleted_at",
             "deleted_at",
             postgresql_where=text("deleted_at IS NOT NULL"),
         ),
-        # 复合索引：用户未读通知查询优化
+# 复合索引：用户未读通知查询优化
         Index("ix_user_notifications_user_read", "user_id", "is_read"),
-        # 复合索引：用户通知时间排序优化
+# 复合索引：用户通知时间排序优化
         Index("ix_user_notifications_user_created", "user_id", "created_at"),
     )
-
-    # 关联关系
+# 关联关系
     template = relationship("NotificationTemplate", back_populates="notifications")
     user = relationship("User", back_populates="notifications")
 

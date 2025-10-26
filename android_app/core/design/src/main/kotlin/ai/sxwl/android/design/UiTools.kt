@@ -16,7 +16,6 @@ import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import coil3.video.VideoFrameDecoder
-
 //用于标记，当前代码适用于IDE预览，还是实际代码环境
 @Stable
 val isInPreview @Composable get() = LocalInspectionMode.current
@@ -26,7 +25,7 @@ val isInEditMode: Boolean @Composable get() = LocalView.current.isInEditMode
 
 /**
  * 初始化配置coil的imageLoader
- * 根据Coil 3.x官方文档优化配置，支持设备适配的图片压缩
+ * 跟踪线圈3。x官方文档优化配置，支持设备零售的图片压缩
  * 参考：https://coil-kt.github.io/coil/
  */
 fun initCoilImageLoader() {

@@ -62,26 +62,22 @@ async def list_notifications(
     分页查询用户的消息列表；返回用户收到的通知。
     """
     try:
-        # 创建查询参数
+# 创建查询参数
         query = NotificationQuery(
             user_id=current_user.id,
             is_read=is_read,
             skip=(page - 1) * page_size,
             limit=page_size,
         )
-
-        # 查询数据
+# 查询数据
         items, total = await notification_service.query_notifications(db, query)
-
-        # 转换为响应格式
+# 转换为响应格式
         items = [
             NotificationItem.model_validate(obj, from_attributes=True) for obj in items
         ]
-
-        # 计算总页数
+# 计算总页数
         total_pages = (total + page_size - 1) // page_size if page_size else 1
-
-        # 构建分页响应
+# 构建分页响应
         pagination = NotificationList(
             list=items,
             total=total,
@@ -178,21 +174,18 @@ async def list_templates(
             message="Only superusers can query notification template list"
         )
     try:
-        # 查询数据
+# 查询数据
         items, total = await notification_service.query_templates(
             db, skip=(page - 1) * page_size, limit=page_size, is_active=is_active
         )
-
-        # 转换为响应格式
+# 转换为响应格式
         items = [
             NotificationTemplateItem.model_validate(obj, from_attributes=True)
             for obj in items
         ]
-
-        # 计算总页数
+# 计算总页数
         total_pages = (total + page_size - 1) // page_size if page_size else 1
-
-        # 构建分页响应
+# 构建分页响应
         pagination = PaginationData[NotificationTemplateItem](
             list=items,
             total=total,

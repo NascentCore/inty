@@ -8,13 +8,11 @@ from openai import BaseModel
 from pydantic import Field
 from vertexai.preview.vision_models import ImageGenerationModel
 import vertexai
-
-
-# See https://developers.googleblog.com/en/experiment-with-gemini-20-flash-native-image-generation/
-# https://ai.google.dev/gemini-api/docs/image-generation claims 'gemini-2.0-flash-preview-image-generation'
-# which is wrong.
-# Turns out that gemini image generation is only available with genai api endpoint.
-# Note on the vertex ai api.
+# 参见 https://developers.googleblog.com/en/experiment-with-gemini-20-flash-native-image-generation/
+# https://ai.google.dev/gemini-api/docs/image-generation声明“gemini-2”。0-flash-preview-图像-生成'
+# 这是错误的。
+# 事实证明，gemini 图片生成仅适用于 genai api 端点。
+#注意边缘ai api。
 GEMINI_MODEL = "gemini-2.0-flash-exp"
 IMAGEN_MODEL = "imagen-4.0-generate-preview-06-06"
 
@@ -26,11 +24,11 @@ def display_image(
 ) -> None:
     pil_image = typing.cast(PIL_Image.Image, image._pil_image)
     if pil_image.mode != "RGB":
-        # RGB is supported by all Jupyter environments (e.g. RGBA is not yet)
+# 所有 Jupyter 环境都支持 RGB（例如 RGBA 还没有）
         pil_image = pil_image.convert("RGB")
     image_width, image_height = pil_image.size
     if max_width < image_width or max_height < image_height:
-        # Resize to display a smaller notebook image
+# 调整大小以显示较小的笔记本图像
         pil_image = PIL_ImageOps.contain(pil_image, (max_width, max_height))
     pil_image.show()
 
@@ -38,8 +36,8 @@ def display_image(
 vertexai.init(project="cosmic-gizmo-424300-t1", location="us-central1")
 
 generation_model = ImageGenerationModel.from_pretrained(
-    # This is by far the best model for this task, all other models are not good.
-    # IMAGEN_MODEL
+# 这是迄今为止该任务的最佳模型，所有其他模型都不好。
+# IMAGEN_MODEL
     GEMINI_MODEL
 )
 
@@ -49,7 +47,7 @@ HAIR_COLORS = ["blonde", "brown", "black", "red", "gray", "white"]
 EYE_COLORS = ["blue", "green", "brown", "gray", "hazel"]
 FACE_SHAPES = ["oval", "round", "square", "heart", "triangle"]
 SKIN_TONES = ["white", "brown", "black", "yellow", "red"]
-# STYLES = ["realistic", "cartoon", "anime", "digital art", "watercolor", "oil painting"]
+# STYLES = [“写实”、“卡通”、“动漫”、“数字艺术”、“水彩”、“油画”]
 STYLES = ["realistic"]
 
 

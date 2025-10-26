@@ -29,7 +29,7 @@ import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 import androidx.media3.common.AudioAttributes as Media3AudioAttributes
 
-/** 企业级音频播放管理器 基于Media3实现，支持Opus格式，提供完整的音频焦点管理和播放控制 */
+/** 基于Media3实现的企业级音频播放管理器，支持Opus格式，提供完整的焦点音频管理和播放控制 */
 class AudioPlaybackManager private constructor(private val context: Context) : Player.Listener {
 
     companion object {
@@ -44,13 +44,11 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
                 }
         }
     }
-
-    // 播放器相关
+// 播放器相关
     private var exoPlayer: ExoPlayer? = null
     private val audioManager = context.getSystemService<AudioManager>()
     private var audioFocusRequest: AudioFocusRequest? = null
-
-    // 状态管理
+// 状态管理
     private val _playbackState = MutableStateFlow(PlaybackState.IDLE)
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
@@ -65,15 +63,12 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
-
-    // 协程管理
+// 协程管理
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var positionUpdateJob: Job? = null
-
-    // 当前播放的音频信息
+// 当前播放的音频信息
     private var currentAudioInfo: AudioInfo? = null
-
-    // 缓存管理器
+// 服务器管理器
     private val cacheManager = AudioCacheManager.getInstance(context)
 
     init {
@@ -83,8 +78,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
     /** 初始化ExoPlayer */
     private fun initializePlayer() {
         try {
-
-            // 创建OkHttp数据源工厂，支持缓存
+//创建OkHttp数据源工厂，支持服务器
             val okHttpClient =
                 OkHttpClient.Builder()
                     .connectTimeout(10, TimeUnit.SECONDS)
@@ -96,13 +90,12 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
                 DefaultDataSource.Factory(context, OkHttpDataSource.Factory(okHttpClient))
 
             val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
-
-            // 创建ExoPlayer实例 - 使用更简单的配置
+//创建ExoPlayer实例 - 使用更简单的配置
             exoPlayer =
                 ExoPlayer.Builder(context).setMediaSourceFactory(mediaSourceFactory).build().apply {
                     addListener(this@AudioPlaybackManager)
                     playWhenReady = false
-                    // 设置音频属性
+// 设置音频属性
                     setAudioAttributes(
                         Media3AudioAttributes.Builder()
                             .setUsage(C.USAGE_MEDIA)
@@ -118,28 +111,26 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
     }
 
     /**
-     * 播放音频
+     * 音频播放
      *
      * @param audioInfo 音频信息
      * @param autoPlay 是否自动播放
      */
     fun playAudio(audioInfo: AudioInfo, autoPlay: Boolean = true) {
         try {
-            // 检查是否是同一个音频（优先使用messageId判断）
+// 检查是否是同一个音频（优先使用messageId判断）
             val isSameAudio = currentAudioInfo?.messageId == audioInfo.messageId
 
             if (isSameAudio && isPlaying()) {
-                // 如果是同一个音频且正在播放，则暂停
+// 如果是同一个音频且正在播放，则暂停
                 pausePlayback()
                 return
             }
-
-            // 停止当前播放（如果不是同一个音频）
+// 停止当前播放（如果不是同一个音频）
             if (!isSameAudio) {
                 stopPlayback()
             }
-
-            // 请求音频焦点
+// 音频请求焦点
             if (!requestAudioFocus()) {
                 LogUtils.e("音频LOG测试 Failed to request audio focus")
                 _error.value = "无法获取音频焦点"
@@ -149,8 +140,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             currentAudioInfo = audioInfo
             _isLoading.value = true
             _error.value = null
-
-            // 设置媒体项 - 优先使用缓存文件
+// 设置媒体项 - 优先使用缓存文件
             val mediaItem =
                 if (cacheManager.isCached(audioInfo.url)) {
                     val cachedPath = cacheManager.getCachedFilePath(audioInfo.url)
@@ -160,7 +150,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
                         MediaItem.fromUri(audioInfo.url)
                     }
                 } else {
-                    // 异步预加载音频到缓存
+// 异步预加载音频到服务器
                     scope.launch {
                         try {
                             cacheManager.preloadAudio(audioInfo.url)
@@ -188,7 +178,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
     fun pausePlayback() {
         try {
             exoPlayer?.pause()
-            // 立即更新状态
+// 立即更新状态
             _playbackState.value = PlaybackState.PAUSED
             stopPositionUpdate()
         } catch (e: Exception) {
@@ -199,17 +189,15 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
     /** 恢复播放 */
     fun resumePlayback() {
         try {
-            // 检查当前状态是否允许恢复
+//查询当前状态是否允许恢复
             if (_playbackState.value != PlaybackState.PAUSED) {
                 LogUtils.w("音频LOG测试 Cannot resume: current state is ${_playbackState.value}, expected PAUSED")
                 return
             }
-
-            // 直接恢复播放，不重新请求音频焦点
-            // 因为音频焦点在初始播放时已经获得，暂停时不会释放
+// 直接恢复播放，不重新请求音频焦点
+// 因为音频焦点在播放时间已经获得，暂停时间不会释放
             exoPlayer?.play()
-
-            // 立即更新状态
+// 立即更新状态
             _playbackState.value = PlaybackState.PLAYING
             startPositionUpdate()
         } catch (e: Exception) {
@@ -233,7 +221,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
         }
     }
 
-    /** 重置播放器状态（播放完成后调用） */
+    /** 完成重置播放器状态（播放后调用） */
     private fun resetPlayerState() {
         try {
             currentAudioInfo = null
@@ -307,26 +295,26 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
     private fun handleAudioFocusChange(focusChange: Int) {
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN -> {
-                // 恢复音量
+// 恢复音量
                 exoPlayer?.volume = 1.0f
-                // 如果当前状态是暂停的，则恢复播放
+// 如果当前状态是暂停的，则恢复播放
                 if (_playbackState.value == PlaybackState.PAUSED) {
                     exoPlayer?.play()
                 }
             }
 
             AudioManager.AUDIOFOCUS_LOSS -> {
-                // 永久丢失焦点，暂停播放但不改变状态
+//永久丢失焦点，暂停播放但不改变状态
                 exoPlayer?.pause()
             }
 
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                // 临时丢失焦点，暂停播放但不改变状态
+// 暂时失去焦点，暂停播放但不改变状态
                 exoPlayer?.pause()
             }
 
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                // 降低音量而不是暂停
+// 降低音量而不是暂停
                 exoPlayer?.volume = 0.3f
             }
         }
@@ -368,8 +356,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
     private fun stopPositionUpdate() {
         positionUpdateJob?.cancel()
     }
-
-    // Player.Listener 实现
+// 玩家。监听器实现
     override fun onPlaybackStateChanged(playbackState: Int) {
         super.onPlaybackStateChanged(playbackState)
 
@@ -398,8 +385,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
                 _isLoading.value = false
                 stopPositionUpdate()
                 abandonAudioFocus()
-
-                // 播放完成后延迟释放资源，给UI更多时间更新状态
+// 播放完成后延迟释放资源，给UI更多时间更新状态
                 scope.launch {
                     delay(500) // 增加延迟时间，确保UI状态正确更新
                     resetPlayerState()
@@ -415,20 +401,20 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             _playbackState.value = PlaybackState.PLAYING
             startPositionUpdate()
         } else {
-            // 只有在不是缓冲状态时才设置为暂停状态
-            // 如果当前状态是 PLAYING，则设置为 PAUSED
-            // 如果当前状态是其他状态，则保持原状态
+// 只有在不是缓冲状态时才设置为暂停状态
+// 如果当前状态为PLAYING，则设置为PAUSED
+// 如果当前状态是其他状态，则保持原状态
             when (_playbackState.value) {
                 PlaybackState.PLAYING -> {
                     _playbackState.value = PlaybackState.PAUSED
                 }
 
                 PlaybackState.BUFFERING -> {
-                    // 保持缓冲状态，不改变
+// 保持缓冲状态，不改变
                 }
 
                 else -> {
-                    // 其他状态保持不变
+// 其他状态保持不变
                 }
             }
             stopPositionUpdate()
@@ -462,7 +448,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
     /** 是否正在播放 */
     fun isPlaying(): Boolean = exoPlayer?.isPlaying ?: false
 
-    /** 获取播放进度百分比 */
+    /** 获取播放详细数据 */
     fun getProgress(): Float {
         val duration = _duration.value
         val position = _currentPosition.value

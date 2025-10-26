@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 简化版订阅计划初始化脚本
 直接操作数据库，不依赖Google Play服务
@@ -8,8 +8,7 @@ import asyncio
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-
-# 添加项目根目录到Python路径
+#添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -24,12 +23,11 @@ async def create_subscription_plan_direct(db: AsyncSession, plan_data: dict):
     existing_plan = await db.get(SubscriptionPlan, plan_data["id"])
     if existing_plan:
         print(f"订阅计划 {plan_data['name']} 已存在，更新字段...")
-        # 自动化更新现有计划的字段
+# 自动化更新现有计划的字段
         for key, value in plan_data.items():
             if key != "id" and hasattr(existing_plan, key):
                 setattr(existing_plan, key, value)
-
-        # 设置默认值
+# 设置默认值
         if (
             not hasattr(existing_plan, "discount_rate")
             or existing_plan.discount_rate is None
@@ -48,9 +46,8 @@ async def create_subscription_plan_direct(db: AsyncSession, plan_data: dict):
         await db.commit()
         await db.refresh(existing_plan)
         return existing_plan
-
-    # 创建新的订阅计划
-    # 准备创建数据，设置默认值
+#制定新的订阅计划
+# 准备创建数据，设置默认值
     create_data = plan_data.copy()
     create_data.setdefault("discount_rate", 1.0)
     create_data.setdefault("background_generation_limit_per_day", 3)

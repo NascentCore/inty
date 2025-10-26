@@ -16,14 +16,12 @@ import kotlinx.coroutines.flow.asStateFlow
 class VipCenterViewModel : BaseVM() {
     private val _selectedPlanIndex = MutableStateFlow(0)
     val selectedPlanIndex: StateFlow<Int> = _selectedPlanIndex.asStateFlow()
-
-    // 会员状态Flow，从BillingRepository订阅
+// 会员状态Flow，从BillingRepository订阅
     val vipStatusFlow: StateFlow<VipStatus> = BillingRepository.vipStatusFlow
-
-    // 订阅计划Flow，从BillingRepository订阅
+// 订阅计划流程，来自 BillingRepository 订阅
     val plansFlow: StateFlow<List<VipPlan>> = BillingRepository.plansFlow
 
-    /** 选择订阅计划 */
+    /**选择订阅计划*/
     fun selectPlan(index: Int) {
         val currentPlans = plansFlow.value
         if (index >= 0 && index < currentPlans.size) {

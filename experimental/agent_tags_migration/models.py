@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 数据模型定义
 定义Agent、CharacterInfo等数据结构

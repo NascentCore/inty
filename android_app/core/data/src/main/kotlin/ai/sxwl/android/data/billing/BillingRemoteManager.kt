@@ -7,7 +7,7 @@ import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 
-/* 从后端获取订阅计划：
+/* 从桌面获取订阅计划：
  * 获取订阅计划列表
  * 更新本地订阅状态
  * 更新本地订阅计划列表
@@ -29,8 +29,7 @@ internal class BillingRemoteManager(
                     is HttpResult.Success -> {
                         val response = result.data
                         val currentSubscription = response.currentSubscription
-
-                        // 更新会员状态
+// 更新会员状态
                         val isSubscribed = currentSubscription != null
                         val subscriptionId = currentSubscription?.planId
                         val purchaseTime =
@@ -46,10 +45,10 @@ internal class BillingRemoteManager(
                                 expiryTime = expiryTime,
                                 everSubscribed = response.has_ever_subscribed,
                                 previous_plan_id = response.previous_plan_id,
-                                // ACTIVE + auto_renew=true 是 "subscribed"；正常订阅，自动续费
-                                // ACTIVE + auto_renew=false 是"subscribed_expiring"；正常订阅，不自动续费
-                                // CANCELLED是"subscribed_expiring" 已取消但未到期
-                                // null 认为是未订阅
+// ACTIVE + auto_renew=true 为“已订阅”；正常订阅，自动续费
+// ACTIVE + auto_renew=false 是"subscribed_expiring"；正常订阅，不自动续费
+// CANCELLED是"subscribed_expiring" 已取消但未取消
+// null 认为未订阅
                                 subscriptionStatus =
                                     when {
                                         currentSubscription?.status == "ACTIVE" &&
@@ -66,12 +65,10 @@ internal class BillingRemoteManager(
                                         else -> VipStatus.UI_UNSUBSCRIBED
                                     },
                             )
-
-                        // 保存到本地并更新Flow
+// 保存到本地并更新Flow
                         BillingStorage.saveLocalVipStatus(vipStatus)
                         vipStatusFlow.value = vipStatus
-
-                        // 更新订阅计划列表
+// 更新订阅计划列表
                         val vipPlans =
                             response.plans.mapNotNull { plan ->
                                 plan.googlePlayProductId?.let { productId ->
@@ -84,12 +81,10 @@ internal class BillingRemoteManager(
                                     )
                                 }
                             }
-
-                        // 直接更新plansFlow，不进行复杂的变化检测
+// 直接更新plansFlow，不进行复杂的变化检测
                         BillingStorage.saveLocalPlans(vipPlans)
                         plansFlow.value = vipPlans
-
-                        // 如果 BillingClient 已连接，立即查询价格
+// 如果BillingClient已连接，立即查询价格
                         if (isConnected) {
                             priceManager.querySkuDetails(isConnected)
                         } else {

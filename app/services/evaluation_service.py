@@ -43,8 +43,7 @@ class EvaluationService:
         config: Optional[Dict[str, Any]] = None,
     ) -> EvaluationSession:
         """创建评测会话"""
-
-        # 验证智能体是否存在
+# 验证智能体是否存在
         stmt = select(Agent).where(Agent.id.in_(selected_agents))
         result = await self.db.execute(stmt)
         agents = result.scalars().all()
@@ -52,8 +51,7 @@ class EvaluationService:
         if len(agents) != len(selected_agents):
             missing_agents = set(selected_agents) - {agent.id for agent in agents}
             raise ValueError(f"智能体不存在: {missing_agents}")
-
-        # 创建会话
+# 创建会话
         session = EvaluationSession(
             id=str(uuid.uuid4()),
             name=name,
@@ -84,8 +82,7 @@ class EvaluationService:
 
     async def start_session(self, session_id: str) -> bool:
         """启动评测会话"""
-
-        # 获取会话信息
+# 获取会话信息
         stmt = select(EvaluationSession).where(EvaluationSession.id == session_id)
         result = await self.db.execute(stmt)
         session = result.scalar_one_or_none()
@@ -95,8 +92,7 @@ class EvaluationService:
 
         if session.status != EvaluationStatus.PENDING:
             raise ValueError(f"评测会话状态错误: {session.status}")
-
-        # 更新会话状态
+# 更新会话状态
         await self.db.execute(
             update(EvaluationSession)
             .where(EvaluationSession.id == session_id)
@@ -108,8 +104,7 @@ class EvaluationService:
             await self.db.rollback()
             logger.error(f"数据库操作失败: {str(e)}")
             raise
-
-        # 初始化会话状态
+# 初始化会话状态
         self._active_sessions[session_id] = {
             "status": "running",
             "progress": 0,
@@ -117,8 +112,7 @@ class EvaluationService:
             "results": [],
             "websocket_connections": [],
         }
-
-        # 异步启动测试任务，传递会话ID而不是会话对象
+# 异步启动测试任务，传递会话ID而不是会话对象
         asyncio.create_task(self._execute_session(session.id))
 
         logger.info(f"启动评测会话: {session_id}")
@@ -126,17 +120,17 @@ class EvaluationService:
 
     async def _execute_session(self, session_id: str):
         """执行评测会话 - 异步任务"""
-        # 创建新的数据库会话用于后台任务
+#创建新的数据库会话用于后台任务
         from app.db.session import AsyncSessionLocal
 
         async with AsyncSessionLocal() as db_session:
-            # 创建新的EvaluationService实例用于后台任务
+#创建新的EvaluationService实例用于后台任务
             bg_service = EvaluationService(db_session)
-            # 共享内存状态
+# 共享内存状态
             bg_service._active_sessions = self._active_sessions
 
             try:
-                # 重新获取会话对象
+# 重新获取会话对象
                 stmt = select(EvaluationSession).where(
                     EvaluationSession.id == session_id
                 )
@@ -151,8 +145,7 @@ class EvaluationService:
                 if not session_state:
                     logger.error(f"内存中的会话状态不存在: {session_id}")
                     return
-
-                # 广播开始消息
+#开始广播消息
                 await bg_service._broadcast_update(
                     session.id,
                     {
@@ -161,21 +154,18 @@ class EvaluationService:
                         "total_tests": session.total_tests,
                     },
                 )
-
-                # 执行每个测试 - 并行优化
+# 执行每个测试 - 工具优化
                 test_index = 0
-
-                # 为每个问题创建并行任务
+# 为每个问题创建任务
                 for question_index, question in enumerate(session.questions):
-                    # 创建当前问题的所有智能体测试任务
+#创建当前问题的所有智能体测试任务
                     agent_tasks = []
                     question_test_indices = []
 
                     for agent_id in session.selected_agents:
                         test_index += 1
                         question_test_indices.append(test_index)
-
-                        # 广播进度更新
+#广播详情更新
                         await bg_service._broadcast_update(
                             session.id,
                             {
@@ -190,20 +180,17 @@ class EvaluationService:
                                 ),
                             },
                         )
-
-                        # 创建异步任务 - 传递会话ID而不是会话对象，避免数据库连接冲突
+#创建异步任务 - 传递会话ID而不是会话对象，数据库避免连接冲突
                         task = bg_service._execute_single_test_with_new_session(
                             session.id, question, question_index, agent_id
                         )
                         agent_tasks.append(task)
-
-                    # 并行执行当前问题的所有智能体测试
+# 工具执行当前问题的所有智能体测试
                     logger.debug(
                         f"并行执行问题 {question_index + 1} 的 {len(agent_tasks)} 个智能体测试"
                     )
                     results = await asyncio.gather(*agent_tasks, return_exceptions=True)
-
-                    # 处理并行执行的结果
+# 处理CPU执行的结果
                     for i, result in enumerate(results):
                         current_test_index = question_test_indices[i]
 
@@ -219,8 +206,7 @@ class EvaluationService:
                             session_state["progress"] = int(
                                 (current_test_index / session.total_tests) * 100
                             )
-
-                            # 广播测试完成
+# 广播测试完成
                             await bg_service._broadcast_update(
                                 session.id,
                                 {
@@ -233,8 +219,7 @@ class EvaluationService:
                     logger.debug(
                         f"问题 {question_index + 1} 的并行测试完成，成功 {len([r for r in results if not isinstance(r, Exception) and r])} 个"
                     )
-
-                # 完成会话
+# 完成会话
                 await bg_service._complete_session(session.id)
 
             except Exception as e:
@@ -246,14 +231,12 @@ class EvaluationService:
     ) -> Optional[EvaluationResult]:
         """为并行执行创建独立数据库会话的单个测试方法"""
         from app.db.session import AsyncSessionLocal
-
-        # 为每个并行任务创建独立的数据库会话
+# 为每个任务创建独立的数据库会话
         async with AsyncSessionLocal() as test_db_session:
             try:
-                # 创建独立的EvaluationService实例
+#创建独立的EvaluationService实例
                 test_service = EvaluationService(test_db_session)
-
-                # 重新获取会话信息
+# 重新获取会话信息
                 stmt = select(EvaluationSession).where(
                     EvaluationSession.id == session_id
                 )
@@ -263,8 +246,7 @@ class EvaluationService:
                 if not session:
                     logger.error(f"评测会话不存在: {session_id}")
                     return None
-
-                # 执行测试
+# 执行测试
                 return await test_service._execute_single_test(
                     session, question, question_index, agent_id
                 )
@@ -292,7 +274,7 @@ class EvaluationService:
         )
 
         try:
-            # 获取智能体信息
+# 获取智能体信息
             stmt = select(Agent).where(Agent.id == agent_id)
             db_result = await self.db.execute(stmt)
             agent = db_result.scalar_one_or_none()
@@ -301,11 +283,9 @@ class EvaluationService:
                 result.error_message = f"智能体不存在: {agent_id}"
                 await self._save_result(result)
                 return result
-
-            # 准备用户身份
+# 准备用户身份
             user_identity = await self._prepare_user_identity(session)
-
-            # 发起对话
+#发起对话
             start_time = datetime.utcnow()
             chat_response = await self._send_evaluation_message(
                 agent_id=agent_id, question=question, user_identity=user_identity
@@ -319,8 +299,7 @@ class EvaluationService:
 
             agent_response = chat_response["response"]
             response_time = (end_time - start_time).total_seconds()
-
-            # 记录交互
+# 记录交互
             interaction = EvaluationInteraction(
                 id=str(uuid.uuid4()),
                 session_id=session.id,
@@ -332,8 +311,7 @@ class EvaluationService:
                 user_identity=user_identity,
                 response_metadata=chat_response.get("metadata", {}),
             )
-
-            # 评分
+# 评分
             if session.scoring_criteria:
                 scoring_result = await self.scoring_service.score_response(
                     question=question,
@@ -352,14 +330,12 @@ class EvaluationService:
                     result.detailed_scores = scoring_result.get("detailed_scores")
                     result.scoring_reason = scoring_result.get("reason")
                     result.scoring_model_used = session.scoring_model
-
-            # 更新结果
+# 更新结果
             result.agent_response = agent_response
             result.agent_name = agent.name  # 保存智能体名称
             result.response_time = response_time
             result.is_success = True
-
-            # 保存到数据库
+# 保存到数据库
             await self._save_result(result)
             await self._save_interaction(interaction)
 
@@ -376,11 +352,11 @@ class EvaluationService:
     ) -> Dict[str, Any]:
         """准备用户身份信息"""
         if session.use_new_user_identity:
-            # 创建临时游客身份
+# 创建临时游客身份
             device_id = f"eval_{session.id}_{uuid.uuid4().hex[:8]}"
             return {"type": "guest", "device_id": device_id, "session_id": session.id}
         else:
-            # 使用创建者身份
+# 使用创建者身份
             return {
                 "type": "user",
                 "user_id": session.creator_id,
@@ -392,20 +368,18 @@ class EvaluationService:
     ) -> Optional[Dict[str, Any]]:
         """发送评测消息 - 完全使用现有聊天系统的chat_completions接口"""
         try:
-            # 获取或创建聊天会话
+# 获取或创建聊天会话
             if user_identity["type"] == "guest":
-                # 对于游客身份，创建临时用户ID
+# 对于游客身份，创建临时用户ID
                 temp_user_id = f"eval_user_{uuid.uuid4().hex[:8]}"
             else:
                 temp_user_id = user_identity["user_id"]
-
-            # 使用现有聊天服务获取或创建聊天
+# 使用现有聊天服务获取或创建聊天
             chat = await chat_service.get_or_create_chat_by_agent(
                 db=self.db, user_id=temp_user_id, agent_id=agent_id
             )
-
-            # 直接使用现有的智能体管理器和完全相同的聊天逻辑
-            # 这确保评测使用的是与正常聊天完全相同的代码路径
+# 直接使用现有的智能体管理器和几个聊天逻辑
+#确保体育使用和正常聊天的代码路径
             from app.core.agent.agent import agent_manager
 
             agent_instance = await agent_manager.get_agent(agent_id)
@@ -413,17 +387,15 @@ class EvaluationService:
             if not agent_instance:
                 logger.error(f"智能体实例不存在: {agent_id}")
                 return None
-
-            # 构造OpenAI格式的消息 - 与现有聊天API完全一致
+# 构建 OpenAI 格式的消息 - 与现有聊天API 完全一致
             messages = [{"role": "user", "content": question}]
-
-            # 调用智能体的chat_completions方法 - 这与 /chats/agents/{agent_id}/chat/completions 使用完全相同的逻辑
+# 智能体的chat_completions方法 - 这与/chats/agents/{agent_id}/chat/completions调用使用的逻辑
             response = await agent_instance.chat_completions(
                 messages=messages,
                 max_tokens=1000,
                 temperature=0.7,
                 stream=False,
-                # 传递聊天会话信息，确保记忆系统正常工作
+# 传递聊天会话信息，确保记忆系统正常工作
                 session_id=chat.id if chat else None,
             )
 
@@ -432,8 +404,7 @@ class EvaluationService:
                 return None
 
             agent_response = response["choices"][0]["message"]["content"]
-
-            # 返回与现有聊天API一致的格式
+# 返回与现有聊天API一致的格式
             return {
                 "response": agent_response,
                 "chat_id": chat.id if chat else None,
@@ -454,10 +425,9 @@ class EvaluationService:
     async def _save_result(self, result: EvaluationResult):
         """保存测试结果"""
         try:
-            # 在一个事务中保存结果和更新统计
+# 在一个事务中保存结果和更新统计
             self.db.add(result)
-
-            # 更新会话统计
+# 更新会话统计
             await self.db.execute(
                 update(EvaluationSession)
                 .where(EvaluationSession.id == result.session_id)
@@ -482,10 +452,9 @@ class EvaluationService:
 
     async def _complete_session(self, session_id: str):
         """完成评测会话"""
-        # 计算统计信息
+# 计算统计信息
         stats = await self._calculate_session_stats(session_id)
-
-        # 更新会话状态
+# 更新会话状态
         await self.db.execute(
             update(EvaluationSession)
             .where(EvaluationSession.id == session_id)
@@ -502,14 +471,12 @@ class EvaluationService:
             await self.db.rollback()
             logger.error(f"数据库操作失败: {str(e)}")
             raise
-
-        # 广播完成消息
+#广播完成消息
         await self._broadcast_update(
             session_id,
             {"type": "session_completed", "session_id": session_id, "stats": stats},
         )
-
-        # 清理内存状态
+# 清理内存状态
         self._active_sessions.pop(session_id, None)
 
         logger.info(f"评测会话完成: {session_id}")
@@ -572,9 +539,8 @@ class EvaluationService:
         connections = session_state.get("websocket_connections", [])
         if not connections:
             return
-
-        # 这里应该实现WebSocket广播逻辑
-        # 暂时只记录日志
+# 这里应该实现WebSocket广播逻辑
+#暂时只记录日志
         logger.debug(f"广播消息到 {len(connections)} 个连接: {message['type']}")
 
     def _serialize_result(self, result: EvaluationResult) -> Dict[str, Any]:
@@ -633,7 +599,7 @@ class EvaluationService:
                 status_enum = EvaluationStatus(status)
                 stmt = stmt.where(EvaluationSession.status == status_enum)
             except ValueError:
-                # 忽略无效的状态值
+# 忽略无效的状态值
                 pass
 
         stmt = (
@@ -710,41 +676,34 @@ class EvaluationService:
         """
         try:
             from langchain_core.messages import HumanMessage
-
-            # 获取智能体数据（用于创建Agent实例）
+# 获取智能体数据（用于创建Agent实例）
             agent_data = await agent_service.get_agent_for_chat(
                 self.db, agent_id=agent_id
             )
             if not agent_data:
                 raise ValueError(f"无法获取智能体数据: {agent_id}")
-
-            # 从AgentManager获取Agent实例
+# 从AgentManager获取Agent实例
             from app.core.agent.agent import agent_manager
 
             agent = await agent_manager.get_agent(agent_data)
-
-            # 构建消息格式
+# 构建消息格式
             messages = {"messages": [HumanMessage(content=question)]}
-
-            # 为评测创建临时会话ID - 使用完整UUID格式
+# 使用足球创建临时会话ID - 完整UUID格式
             eval_session_id = str(uuid.uuid4())
-
-            # 确定用户ID
+# 确定用户ID
             if user_identity["type"] == "user":
                 user_id = user_identity["user_id"]
             else:
-                # 对于游客身份，使用设备ID作为用户标识
+#对于游客身份，使用设备ID作为用户标识
                 user_id = f"guest_{user_identity['device_id']}"
-
-            # 调用智能体进行对话
+#调用智能体进行对话
             response_content = await agent.chat(
                 user_id=user_id,
                 session_id=eval_session_id,
                 messages=messages,
                 db_session=self.db,
             )
-
-            # 如果需要，可以获取或创建聊天会话记录
+# 如果需要，可以获取或创建聊天会话记录
             chat = None
             if user_identity["type"] == "user":
                 try:

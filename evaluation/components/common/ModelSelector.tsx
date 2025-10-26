@@ -38,7 +38,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   disabled = false,
   initialValue,
 }) => {
-  // 获取表单实例
+// 获取表单实例
   const form = Form.useFormInstance();
 
   return (
@@ -56,11 +56,11 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
           showSearch
           value={value}
           onChange={(val) => {
-            // 确保表单字段值被正确更新
+//确保表单字段值被正确更新
             if (onChange) {
               onChange(val);
             }
-            // 如果是在Form内部使用，还需要手动更新表单字段
+// 如果是在Form内部使用，还需要手动更新表单字段
             if (!onChange && name && form) {
               form.setFieldValue(name, val);
             }

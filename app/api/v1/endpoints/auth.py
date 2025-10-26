@@ -60,7 +60,7 @@ async def google_login(
 ) -> Any:
     """Google登录"""
     try:
-        # 验证 Google ID Token
+# 验证 Google ID 令牌
         idinfo = id_token.verify_oauth2_token(
             login_in.id_token,
             google_requests.Request(),
@@ -68,13 +68,11 @@ async def google_login(
         )
 
         logger.info(f"Google login idinfo: {idinfo}")
-
-        # 验证发行者
+#验证发行者
         if idinfo["iss"] not in ["accounts.google.com", "https://accounts.google.com"]:
             logger.error(f"invalid google token issuer: {idinfo['iss']}")
             return APIResponse.error(message="invalid google token issuer")
-
-        # 检查用户是否已存在
+#查询用户是否已存在
         stmt = select(User).where(
             and_(User.google_id == idinfo["sub"], User.deleted_at == None)
         )
@@ -83,8 +81,7 @@ async def google_login(
 
         if existing_user and not existing_user.deleted_at:
             logger.debug(f"Google login user already exists: {existing_user.id}")
-
-            # 尝试恢复孤立的订阅记录
+#尝试恢复孤立的订阅记录
             try:
                 recovered_count = (
                     await subscription_service.recover_orphaned_subscriptions(
@@ -97,9 +94,8 @@ async def google_login(
                     )
             except Exception as e:
                 logger.error(f"用户 {existing_user.id} 恢复订阅失败: {str(e)}")
-                # 订阅恢复失败不影响登录流程
-
-            # 如果用户已存在且未被删除，直接返回 token
+# 订阅恢复失败不影响登录流程
+# 如果用户已存在且同时删除，则直接返回代币
             access_token = create_access_token(existing_user.id)
             return APIResponse.success(
                 data=LoginResponse(
@@ -119,8 +115,7 @@ async def google_login(
                     ),
                 )
             )
-
-        # 检查是否已有用户使用相同的邮箱，由于没有 email unique 限制，因此需要检查 email 是否被另一个活跃账户使用
+#限制是否已有用户使用相同的邮箱，由于没有唯一邮箱，需要检查相应邮箱是否被其他活跃账户使用
         if idinfo.get("email"):
             logger.debug(
                 f"Checking if email is used by another active account: {idinfo['email']}"
@@ -132,15 +127,13 @@ async def google_login(
             existing_email_users = email_result.scalars().all()
 
             if existing_email_users:
-                # 如果邮箱已被使用，返回错误
+#如果邮箱已被使用，返回错误
                 return APIResponse.error(
                     message="Email already used by another account"
                 )
-
-        # 如果用户不存在或者已被删除，创建新用户
-        # 删除的用户重新登录时会创建新的账户
-
-        # 创建新用户
+# 如果用户不存在或者已被删除，创建新用户
+#删除的用户重新登录时会创建新的账户
+# 创建新用户
         user_id = get_new_user_id()
         readable_id = await generate_next_readable_id(db)
         new_user = User(
@@ -164,8 +157,7 @@ async def google_login(
         db.add(new_user)
         await db.commit()
         await db.refresh(new_user)
-
-        # 尝试恢复孤立的订阅记录（新用户也可能需要恢复之前的订阅）
+# 尝试恢复单独的订阅记录（新用户也可能需要恢复之前的订阅）
         try:
             recovered_count = await subscription_service.recover_orphaned_subscriptions(
                 db, new_user.id, idinfo.get("email"), idinfo["sub"]
@@ -174,9 +166,8 @@ async def google_login(
                 logger.info(f"新用户 {new_user.id} 恢复了 {recovered_count} 个历史订阅")
         except Exception as e:
             logger.error(f"新用户 {new_user.id} 恢复订阅失败: {str(e)}")
-            # 订阅恢复失败不影响注册流程
-
-        # 生成 token
+# 订阅恢复失败影响不注册流程
+# 生成代币
         access_token = create_access_token(new_user.id)
         return APIResponse.success(
             data=LoginResponse(

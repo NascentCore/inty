@@ -37,7 +37,7 @@ import com.ai.intellimate.ui.components.ReportItem
 import com.ai.intellimate.ui.components.ReportReasonsContainer
 import com.ai.intellimate.ui.components.SaveBtn
 
-/** 举报屏幕 */
+/**报告屏幕*/
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportScreen(
@@ -74,14 +74,13 @@ fun ReportScreen(
                     .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // 布局占位用
+// 布局占位用
             CenterAlignedTopAppBar(
                 title = {},
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
             Spacer(Modifier.height(16.dp))
-
-            // 举报原因
+// 举报原因
             ReportReasonsContainer(title = stringResource(R.string.npc_asterisk_full)) {
                 reasons.forEach { reason ->
                     val isSelected = selectIDs.contains(reason.id)
@@ -94,8 +93,7 @@ fun ReportScreen(
             }
 
             Spacer(Modifier.height(24.dp))
-
-            // 举报描述
+// 描述报告
             ReportDescriptionContainer(
                 title = stringResource(R.string.report_description),
                 description = description,
@@ -104,8 +102,7 @@ fun ReportScreen(
             )
 
             Spacer(Modifier.height(24.dp))
-
-            // 图片证据
+// 图片证据
             ReportImageEvidenceContainer(
                 title = stringResource(R.string.image_evidence_full),
                 images = images,
@@ -117,8 +114,7 @@ fun ReportScreen(
             SaveBtn(onSave = onSave, isSubmitting = isSubmitting)
             Spacer(Modifier.height(60.dp))
         }
-
-        // 顶部导航栏
+// 顶部导航栏
         CenterAlignedTopAppBar(
             colors =
                 TopAppBarDefaults.centerAlignedTopAppBarColors()

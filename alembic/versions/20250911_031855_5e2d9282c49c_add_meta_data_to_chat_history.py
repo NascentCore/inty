@@ -10,9 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision: str = '5e2d9282c49c'
 down_revision: Union[str, None] = 'ab7f71ad458d'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -20,10 +18,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add meta_data column to chat_history table
+# 将meta_data列添加到chat_history表中
     op.add_column('chat_history', sa.Column('meta_data', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
 
 
 def downgrade() -> None:
-    # Remove meta_data column from chat_history table
+# 从chat_history表中删除meta_data列
     op.drop_column('chat_history', 'meta_data')

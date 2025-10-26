@@ -189,8 +189,6 @@ class SubscriptionUsage(SubscriptionUsageBase):
 
     class Config:
         from_attributes = True
-
-
 # Google Play相关的请求模型
 class GooglePlayPurchaseRequest(BaseModel):
     """Google Play购买请求"""
@@ -216,9 +214,7 @@ class GooglePlayWebhookRequest(BaseModel):
     )
     testNotification: Optional[Dict[str, Any]] = Field(None, description="测试通知")
     request_id: Optional[str] = None
-
-
-# 订阅状态查询相关
+#订阅状态​​查询相关
 class FeatureInfo(BaseModel):
     """权益功能信息"""
 
@@ -295,8 +291,6 @@ class UsageStatisticsResponse(BaseModel):
     usage_history: List[SubscriptionUsage] = Field(
         default_factory=list, description="使用历史"
     )
-
-
 # 订阅计划列表响应
 class SubscriptionPlansResponse(BaseModel):
     """订阅计划列表响应"""
@@ -307,8 +301,6 @@ class SubscriptionPlansResponse(BaseModel):
     )
     has_ever_subscribed: bool = Field(False, description="是否曾经有过订阅记录")
     previous_plan_id: Optional[str] = Field(None, description="最新的订阅计划ID")
-
-
 # 购买验证相关
 class PurchaseVerificationRequest(BaseModel):
     """购买验证请求"""
@@ -321,9 +313,8 @@ class PurchaseVerificationRequest(BaseModel):
 
 class PurchaseVerificationResponse(BaseModel):
     """购买验证响应"""
-
-    # is_valid 这个名字不能用，因为 kotlin sdk 生成的 sdk 包含了这个预置名字
-    # 使用 is_valid 会与其冲突。
+# is_valid 这个名字不能用，因为 kotlin sdk 生成的 sdk 包含了这个预置名字
+# 使用 is_valid 会产生冲突。
     is_verified: bool = Field(..., description="是否有效")
     subscription: Optional[UserSubscription] = Field(None, description="订阅信息")
     message: str = Field(..., description="验证消息")

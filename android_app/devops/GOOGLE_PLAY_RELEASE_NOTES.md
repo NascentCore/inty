@@ -1,7 +1,7 @@
-# Google Play release notes
+# Google Play 发行说明
 
-## v1.0.3
+## v1。0。3
 
-- Chat with preinstalled AI characters (created and optimized by IntelliMate team)
-- Create AI characters guided by your own imagination
-- Other features
+- 与pre安装的AI角色聊天（由IntelliMate团队创建和优化）
+- 根据你自己的想象力创建人工智能角色
+- 其他功能

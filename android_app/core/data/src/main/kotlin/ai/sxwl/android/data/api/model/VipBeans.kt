@@ -41,10 +41,10 @@ data class CurrentSubscription(
     @Json(name = "google_play_purchase_token") val googlePlayPurchaseToken: String? = null,
     @Json(name = "google_play_order_id") val googlePlayOrderId: String? = null,
     @Json(name = "google_play_subscription_id") val googlePlaySubscriptionId: String? = null,
-    // ACTIVE + auto_renew=true 是 "subscribed"；正常订阅，自动续费
-    // ACTIVE + auto_renew=false 是"subscribed_expiring"；正常订阅，不自动续费
-    // CANCELLED是"subscribed_expiring" 已取消但未到期
-    // null 认为是未订阅
+// ACTIVE + auto_renew=true 为“已订阅”；正常订阅，自动续费
+// ACTIVE + auto_renew=false 是"subscribed_expiring"；正常订阅，不自动续费
+// CANCELLED是"subscribed_expiring" 已取消但未取消
+// null 认为未订阅
     val status: String? = null,
     @Json(name = "start_date") val startDate: String? = null,
     @Json(name = "end_date") val endDate: String? = null, // 时间格式是服务端数据样式2025-09-01T06:03:15.383000Z

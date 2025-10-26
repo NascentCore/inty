@@ -13,7 +13,7 @@ import com.ai.intellimate.ViewModelEvent
 import kotlinx.coroutines.launch
 
 /**
- * 登录页面 使用最新的 Credential Manager API 进行 Google 登录 参考:
+ * 登录页面使用最新的 Credential Manager API 进行 Google 登录 参考：
  * https://developer.android.com/identity/sign-in/credential-manager-siwg
  */
 class LoginActivity : BaseActivity() {
@@ -22,7 +22,7 @@ class LoginActivity : BaseActivity() {
 
         /**
          * 启动登录界面
-         * @param context 上下文context
+         * @param context 上下文
          */
         fun launch(context: Context) {
             context.startActivity(Intent(context, LoginActivity::class.java))
@@ -33,10 +33,9 @@ class LoginActivity : BaseActivity() {
 
     override fun initConfigData() {
         super.initConfigData()
-        // 跟踪LoginActivity页面访问
+// 跟踪登录活动页面访问
         FirebaseManager.logScreenView(screenName = "LoginScreen", screenClass = "LoginActivity")
-
-        // 监听ViewModel事件
+// 监听ViewModel事件
         lifecycleScope.launch {
             viewModel.events.collect { event ->
                 when (event) {
@@ -44,12 +43,12 @@ class LoginActivity : BaseActivity() {
                         finish()
                     }
                     is ViewModelEvent.NeedRegInfo -> {
-                        // 跳转到注册信息页面
+// 跳转到注册信息页面
                         RegInfoActivity.launch(this@LoginActivity)
                         finish()
                     }
                     else -> {
-                        // 其他事件暂不处理
+//其他事件暂不处理
                     }
                 }
             }
@@ -67,10 +66,10 @@ class LoginActivity : BaseActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // 1. **避免误清理**：如果用户已经登录成功，不应该清除凭证
-        // 2. **区分退出方式**：正常退出不需要清理，异常退出需要清理
-        // 3. **安全考虑**：确保在用户未成功认证的情况下清理敏感信息
-        // 用户没有用户档案（未登录成功） // Activity 不是正常结束状态
+// 1.**避免误清理**：如果用户已经登录成功，应该不清除凭证
+// 2.**区分退出方式**：正常退出不需要清理，异常退出需要清理
+// 3.**安全考虑**：确保在用户未成功认证的情况下清理敏感信息
+// 用户没有用户档案（未登录成功） // 活动未正常结束状态
         if (!UserProfileManager.hasUserProfile() && !isFinishing) {
             lifecycleScope.launch {
                 CredentialManagerHelper.clearCredentialState(this@LoginActivity)

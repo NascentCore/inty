@@ -1,3 +1,3 @@
-# Misc experiments
+# 其他实验
 
-Random experiments that do not have much content
+内容不多的随机实验

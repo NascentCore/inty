@@ -27,13 +27,13 @@ async def generate_next_readable_id(db: AsyncSession) -> str:
     Generate next readable ID for user using database sequence for thread safety
     """
     try:
-        # Use database sequence to generate next readable_id atomically
+# 使用数据库序列自动生成下一个Read_id
         result = await db.execute(text("SELECT nextval('user_readable_id_seq')"))
         next_id = result.scalar()
         return str(next_id).zfill(8)
     except Exception as e:
         logger.error(f"Error generating readable ID from sequence: {str(e)}")
-        # Fallback to a random 8-digit number starting from 10000000
+# 回退到从 10000000 开始的随机 8 个数字位
         import random
 
         return str(random.randint(10000000, 99999999))
@@ -44,13 +44,13 @@ def generate_next_readable_id_sync(db: Session) -> str:
     Generate next readable ID for user using database sequence for thread safety (sync version)
     """
     try:
-        # Use database sequence to generate next readable_id atomically
+# 使用数据库序列自动生成下一个Read_id
         result = db.execute(text("SELECT nextval('user_readable_id_seq')"))
         next_id = result.scalar()
         return str(next_id).zfill(8)
     except Exception as e:
         logger.error(f"Error generating readable ID from sequence: {str(e)}")
-        # Fallback to a random 8-digit number starting from 10000000
+# 回退到从 10000000 开始的随机 8 个数字位
         import random
 
         return str(random.randint(10000000, 99999999))
@@ -100,7 +100,7 @@ async def create_guest_user(
     except IntegrityError as e:
         await db.rollback()
         logger.error(f"Integrity error creating guest user: {str(e)}")
-        # If readable_id conflicts, try again with a new one
+# 如果Read_id冲突，请使用新的重试
         if "readable_id" in str(e):
             return await create_guest_user(db, device_id, system_language, age_group)
         raise e
@@ -122,8 +122,7 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
             raise ValueError(f"User does not exist: {user_id}")
 
         update_data = user_in.model_dump(exclude_unset=True)
-
-        # 处理头像URL：如果是CDN URL则转换为GCS URL用于存储
+# 处理头像URL：如果是CDN URL则转换为GCS URL用于存储
         if "avatar" in update_data and update_data["avatar"]:
             from app.services.image_transform_service import image_transform_service
 
@@ -132,8 +131,7 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
                     update_data["avatar"]
                 )
             )
-
-        # 过滤掉不应该被用户更新的字段
+# 过滤掉不应该被用户更新的字段
         excluded_fields = {
             "readable_id",
             "id",
@@ -144,9 +142,8 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
             "updated_at",
         }
         update_data = {k: v for k, v in update_data.items() if k not in excluded_fields}
-
-        # 过滤掉值为 None 或空字符串的字段，防止误清空数据库中的有效数据
-        # 这样可以保护已有数据不被客户端误传的 None 值覆盖
+# 过滤掉值为None或空字符串的字段，防止误清空数据库中的有效数据
+# 这样可以保护现有数据不被客户端误传的无覆盖价值
         update_data = {
             k: v for k, v in update_data.items() if v is not None and v != ""
         }
@@ -156,8 +153,7 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
 
         await db.commit()
         await db.refresh(user)
-
-        # 清除用户信息缓存，确保Agent系统能获取到最新信息
+#清理用户信息缓存，确保Agent系统能够获取到最新信息
         cache_service.invalidate_user_info(user_id)
         logger.debug(f"已清除用户 {user_id} 的缓存信息")
 
@@ -185,16 +181,16 @@ async def register_device_token(
     Register or update device token
     """
     try:
-        # Check if token already exists
+# 检查token是否已经存在
         stmt = select(DeviceToken).where(DeviceToken.token == token)
         result = await db.execute(stmt)
         device_token = result.scalars().first()
 
         if device_token:
-            # If exists, update user_id
+# 如果存在则更新user_id
             device_token.user_id = user_id
         else:
-            # If not exists, create new record
+# 如果不存在则创建新记录
             device_token = DeviceToken(token=token, user_id=user_id)
             db.add(device_token)
 
@@ -237,7 +233,7 @@ async def check_user_can_delete_account(
         tuple[bool, str]: (是否可以删除, 错误信息)
     """
     try:
-        # 检查用户是否存在
+#检查用户是否存在
         stmt = select(User).where(User.id == user_id)
         result = await db.execute(stmt)
         user = result.scalars().first()
@@ -247,8 +243,7 @@ async def check_user_can_delete_account(
 
         if user.deleted_at:
             return False, "账户已被删除"
-
-        # 检查是否有活跃订阅
+# 检查是否有活跃订阅
         active_subscription_stmt = select(UserSubscription).where(
             and_(
                 UserSubscription.user_id == user_id,
@@ -288,12 +283,11 @@ async def delete_user_account(
         dict: 删除结果信息
     """
     try:
-        # 检查用户是否可以删除
+# 查询用户是否可以删除
         can_delete, error_msg = await check_user_can_delete_account(db, user_id)
         if not can_delete:
             return {"success": False, "message": error_msg, "user_id": user_id}
-
-        # 获取用户信息
+# 获取用户信息
         stmt = select(User).where(User.id == user_id)
         result = await db.execute(stmt)
         user = result.scalars().first()
@@ -304,8 +298,7 @@ async def delete_user_account(
         subscription_status_response = (
             await subscription_service.get_user_subscription_status(db, user_id)
         )
-
-        # 如果用户有活跃订阅，先取消订阅
+#如果用户有活跃订阅，请先取消订阅
         cancellation_stats = None
         if subscription_status_response.is_subscribed:
             try:
@@ -317,13 +310,11 @@ async def delete_user_account(
                 logger.debug(f"用户 {user_id} 订阅取消统计: {cancellation_stats}")
             except Exception as e:
                 logger.warning(f"取消用户订阅失败，继续删除流程: {str(e)}")
-
-        # 设置删除时间戳
+#设立基金会
         user.deleted_at = datetime.now(UTC)
         user.deletion_reason = deletion_reason
         user.is_active = False
-
-        # 提交用户数据更改
+# 提交用户数据更改
         await db.commit()
         await db.refresh(user)
 
@@ -359,12 +350,10 @@ async def get_all_users(
     """
     try:
         from sqlalchemy import func, or_
-
-        # 构建基础查询
+# 构建基础查询
         base_query = select(User)
         count_query = select(func.count()).select_from(User)
-
-        # 如果有搜索关键字，添加搜索条件
+# 如果有搜索关键字，添加搜索条件
         if search:
             search_condition = or_(
                 User.nickname.ilike(f"%{search}%"),
@@ -372,18 +361,15 @@ async def get_all_users(
             )
             base_query = base_query.where(search_condition)
             count_query = count_query.where(search_condition)
-
-        # 获取总数
+# 获取总数
         count_result = await db.execute(count_query)
         total = count_result.scalar()
-
-        # 获取分页数据
+# 获取分页数据
         result = await db.execute(
             base_query.order_by(User.created_at.desc()).offset(skip).limit(limit)
         )
         users = result.scalars().all()
-
-        # 转换为字典格式
+# 转换为字典格式
         items = []
         for user in users:
             items.append(
@@ -439,8 +425,7 @@ async def get_user_connector_count(db: AsyncSession, user_id: str) -> int:
     """
     try:
         from sqlalchemy import distinct, func
-
-        # 查询用户与多少个不同的agent有过聊天
+# 查询用户与多少个不同的代理有过聊天
         stmt = select(func.count(distinct(Chat.agent_id))).where(
             Chat.user_id == user_id
         )

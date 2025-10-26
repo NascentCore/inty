@@ -12,7 +12,7 @@ class FCMService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.i(TAG, "FCM token: $token")
-        // TODO: 上报 token 到你的服务器，以便服务端能向该设备推送
+// TODO: 上报令牌到您的服务器，以便服务端能够向该设备自适应
     }
 
     override fun onMessageReceived(message: RemoteMessage) {

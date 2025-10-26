@@ -26,8 +26,7 @@ from app.schemas.subscription import (
     UsageStatisticsResponse,
     UserSubscription,
 )
-
-# SQLAlchemy 模型需要用不同的别名
+# SQLAlchemy 模型需要使用不同的别名
 from app.models.subscription import UserSubscription as UserSubscriptionModel
 from app.services.global_services import subscription_service
 
@@ -47,29 +46,25 @@ async def get_subscription_plans(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     try:
-        # 获取所有激活的订阅计划
+# 获取所有激活的订阅计划
         plans = await subscription_service.get_subscription_plans(
             db, include_inactive=False
         )
-
-        # 获取用户当前订阅
+# 获取用户当前订阅
         current_subscription = await subscription_service.get_user_current_subscription(
             db, current_user.id
         )
-
-        # 获取用户历史订阅记录
+#获取用户历史订阅记录
         has_ever_subscribed = await subscription_service.has_ever_subscribed(
             db, current_user.id
         )
-
-        # 获取用户最新的订阅计划ID（仅当曾经订阅过时）
+#获取最新用户的订阅计划ID（仅限当曾经订阅过时）
         previous_plan_id = None
         if has_ever_subscribed:
             previous_plan_id = await subscription_service.get_user_latest_plan_id(
                 db, current_user.id
             )
-
-        # 将 SQLAlchemy 模型转换为 Pydantic 模型
+# 将 SQLAlchemy 模型转换为 Pydantic 模型
         current_subscription_schema = None
         if current_subscription:
             current_subscription_schema = UserSubscription.model_validate(
@@ -88,9 +83,7 @@ async def get_subscription_plans(
     except Exception as e:
         logger.error(f"获取订阅计划列表失败: {str(e)}")
         return APIResponse.error(message="Failed to get subscription plans")
-
-
-# TODO: Can this be removed? /plans already returns the users's subscription status.
+# TODO：这个可以删除吗？ /plans 已返回用户的订阅状态。
 @router.get("/status", response_model=APIResponse[SubscriptionStatusResponse])
 async def get_subscription_status(
     *,
@@ -109,10 +102,8 @@ async def get_subscription_status(
     except Exception as e:
         logger.error(f"获取用户订阅状态失败: {str(e)}")
         return APIResponse.error(message="Failed to get subscription status")
-
-
-# TODO: Can be removed, as usage is only used for checking limits, and limits checking now is done
-# on server side.
+# TODO：可以删除，因为仅用于检查限制，现在限制检查已完成
+# 在服务器端。
 @router.get("/usage", response_model=APIResponse[UsageStatisticsResponse])
 async def get_usage_statistics(
     *,
@@ -131,10 +122,8 @@ async def get_usage_statistics(
     except Exception as e:
         logger.error(f"获取用户使用统计失败: {str(e)}")
         return APIResponse.error(message="Failed to get usage statistics")
-
-
-# This is only used for verifying the purchase on client side.
-# TODO: Can it verify the restoration and cancellation?
+# 这仅用于验证客户端的购买。
+# TODO：能否验证和取消恢复？
 @router.post(
     "/verify",
     response_model=APIResponse[PurchaseVerificationResponse],
@@ -173,9 +162,7 @@ async def verify_purchase(
     except Exception as e:
         logger.error(f"验证购买失败: {str(e)}")
         return APIResponse.error(message="Purchase verification failed")
-
-
-# Handles restoration and cancellation from Google Play.
+# 处理 Google Play 的恢复和取消。
 @router.post("/webhook")
 async def google_play_webhook(
     request: Request,
@@ -187,25 +174,21 @@ async def google_play_webhook(
     处理订阅状态变化通知
     """
     try:
-        # 获取请求体
+# 获取请求体
         body = await request.body()
-
-        # 验证webhook签名（如果配置了webhook密钥）
+# 验证webhook签名（如果配置了webhook密钥）
         if global_config_loaded_from_config_yaml.google_play.webhook_secret:
             signature = request.headers.get("X-Goog-Message-Signature")
             if not signature or not _verify_webhook_signature(body, signature):
                 raise HTTPException(status_code=400, detail="Invalid webhook signature")
-
-        # 解析请求数据
+# 解析请求数据
         try:
             data = json.loads(body.decode("utf-8"))
         except json.JSONDecodeError:
             raise HTTPException(status_code=400, detail="Invalid JSON data")
-
-        # 日志记录 data 数据
+# 日志记录数据
         logger.info(f"Google Play Webhook收到数据: {data}")
-
-        # 在后台处理通知
+# 在后台处理通知
         background_tasks.add_task(_process_google_play_notification, db, data)
 
         return {"status": "success"}
@@ -226,7 +209,7 @@ async def _process_google_play_notification(
 
     for attempt in range(max_retries):
         try:
-            # 解码base64数据
+# 解码base64数据
             if (
                 "message" in notification_data
                 and "data" in notification_data["message"]
@@ -235,8 +218,7 @@ async def _process_google_play_notification(
 
                 decoded_data = base64.b64decode(notification_data["message"]["data"])
                 notification_json = json.loads(decoded_data.decode("utf-8"))
-
-                # 记录详细的通知信息
+# 记录详细的通知信息
                 subscription_notification = notification_json.get(
                     "subscriptionNotification", {}
                 )
@@ -251,8 +233,7 @@ async def _process_google_play_notification(
                     f"处理Google Play通知 - 尝试 {attempt + 1}/{max_retries}, "
                     f"令牌: {purchase_token[:10]}..., 类型: {notification_type}"
                 )
-
-                # 处理订阅通知
+# 处理订阅通知
                 success = await subscription_service.handle_subscription_notification(
                     db, notification_json
                 )
@@ -269,7 +250,7 @@ async def _process_google_play_notification(
                     )
 
                     if attempt < max_retries - 1:
-                        # 等待后重试
+#等待后重试
                         import asyncio
 
                         await asyncio.sleep(retry_delay)
@@ -310,8 +291,6 @@ def _verify_webhook_signature(body: bytes, signature: str) -> bool:
     except Exception as e:
         logger.error(f"验证webhook签名失败: {str(e)}")
         return False
-
-
 # 管理员接口
 @router.post("/admin/plans", response_model=APIResponse[SubscriptionPlan])
 async def create_subscription_plan(
@@ -328,7 +307,7 @@ async def create_subscription_plan(
 
     try:
         plan = await subscription_service.create_subscription_plan(db, plan_data)
-        # 将 SQLAlchemy 模型转换为 Pydantic 模型
+# 将 SQLAlchemy 模型转换为 Pydantic 模型
         plan_schema = SubscriptionPlan.model_validate(plan)
         return APIResponse.success(
             data=plan_schema, message="Subscription plan created successfully"
@@ -432,7 +411,7 @@ async def process_manual_refund(
         )
 
         if success:
-            # 获取更新后的订阅信息
+# 获取更新后的订阅信息
             result = await db.execute(
                 select(UserSubscriptionModel).where(
                     UserSubscriptionModel.id == refund_request.subscription_id

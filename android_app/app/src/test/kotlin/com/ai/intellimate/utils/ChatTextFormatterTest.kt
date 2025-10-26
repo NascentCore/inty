@@ -20,11 +20,9 @@ class ChatTextFormatterTest {
                 normalColor = Color.Black,
                 italicColor = Color.Red,
             )
-
-        // Text remains unchanged
+// 文本保持不变
         assertEquals(input, result.text)
-
-        // Find span for the bracket content
+// 替换中间内容的跨度
         val italicSpan =
             result.spanStyles.find { span ->
                 result.text.substring(span.start, span.end) == "world"

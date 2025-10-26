@@ -21,23 +21,21 @@ fun AuthClickable(
 ) {
     val context = LocalContext.current
     var lastClickTime by remember { mutableLongStateOf(0L) }
-
-    // 创建带有认证检查和防连击的 modifier
+// 创建带有认证检查和防连击的修饰符
     val authModifier =
         modifier.clickable {
             val currentTime = System.currentTimeMillis()
             if (AntiClick.isValidClick(lastClickTime)) {
                 lastClickTime = currentTime
-                // 检查是否正式登录（非游客且已登录）
+// 查询是否正式登录（非游客且已登录）
                 if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                     onClick()
                 } else {
-                    // 未登录或游客时跳转到登录页面
+// 未登录或游客时跳转到登录页面
                     context.startActivity(Intent(context, LoginActivity::class.java))
                 }
             }
         }
-
-    // 将 modifier 传递给内容
+// 将赋值符提交给内容
     content(authModifier)
 }

@@ -18,7 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Chat页面的Paging数据源 负责处理聊天agents的分页加载、缓存管理 使用chatAgents API，与exploreAgents区分开 */
+/** 聊天页面的分页数据源负责处理聊天代理的分页加载、服务器管理 使用chatAgents API，与exploreAgents区分开 */
 class ChatPagingSource(
     private val useCache: Boolean = true,
     private val sortSeed: Int = IntySetting.randomSortSeed(),
@@ -29,7 +29,7 @@ class ChatPagingSource(
     }
 
     companion object {
-        // 使用统一的常量
+// 使用统一的常量
         private const val PAGE_SIZE = ChatConstants.PAGE_SIZE
         private const val INITIAL_PAGE = ChatConstants.INITIAL_PAGE
     }
@@ -41,18 +41,16 @@ class ChatPagingSource(
                 val pageSize = params.loadSize.coerceAtMost(PAGE_SIZE)
 
                 LogUtils.i("ChatPagingSource - 加载第${page}页，页面大小: $pageSize")
-
-                // 第一页特殊处理：优先使用缓存数据
+//第一页特殊处理：优先使用服务器数据
                 if (page == INITIAL_PAGE && useCache) {
                     val cachedAgents = UnifiedStartupManager.getCurrentChatAgents()
                     if (cachedAgents.isNotEmpty()) {
-                        // 如果有缓存数据，返回缓存数据，同时后台加载网络数据
+// 如果有缓存数据，返回缓存数据，同时后台加载网络数据
                         if (shouldUpdateFromNetwork()) {
-                            // 后台静默刷新，不阻塞UI
+// 后台安静默刷新，不阻塞UI
                             loadFromNetworkAsync(page, pageSize)
                         }
-
-                        // 返回缓存数据，假设有更多数据以支持分页
+// 返回存储数据，假设有更多数据支持分页
                         return@withContext LoadResult.Page(
                             data = cachedAgents,
                             prevKey = null,
@@ -60,12 +58,10 @@ class ChatPagingSource(
                         )
                     }
                 }
-
-                // 检查用户账户是否已就绪，如果未就绪则等待或返回空数据
+// 检查用户账户是否已就绪，如果未就绪则等待或返回空数据
                 if (!UnifiedStartupManager.isUserAccountReady()) {
                     LogUtils.i("ChatPagingSource - 用户账户未就绪，等待账户就绪")
-
-                    // 等待用户账户就绪，最多等待5秒
+// 等待用户账户就绪，最多等待5秒
                     var waitTime = 0
                     while (!UnifiedStartupManager.isUserAccountReady() && waitTime < 5000) {
                         delay(100)
@@ -81,16 +77,14 @@ class ChatPagingSource(
                         )
                     }
                 }
-
-                // 从网络加载数据
+// 来自网络加载数据
                 val result = loadFromNetwork(page, pageSize)
 
                 when (result) {
                     is NetworkResult.Success -> {
                         val agents = result.data.list ?: emptyList()
                         val hasMore = agents.isNotEmpty() && agents.size >= pageSize
-
-                        // 缓存第一页数据
+// 存储第一页数据
                         if (page == INITIAL_PAGE && agents.isNotEmpty()) {
                             AgentCacheManager.cacheChatAgents(agents)
                             UnifiedStartupManager.refreshChatAgents()
@@ -117,14 +111,14 @@ class ChatPagingSource(
     }
 
     override fun getRefreshKey(state: PagingState<Int, AgentInfo>): Int? {
-        // 返回最近访问的页面，用于刷新时定位
+// 返回最近访问的页面，用于刷新时间定位
         return state.anchorPosition?.let { anchorPosition ->
             state.closestPageToPosition(anchorPosition)?.prevKey?.plus(1)
                 ?: state.closestPageToPosition(anchorPosition)?.nextKey?.minus(1)
         }
     }
 
-    /** 从网络加载数据 */
+    /** 来自网络加载数据 */
     private suspend fun loadFromNetwork(page: Int, pageSize: Int): NetworkResult {
         return try {
             val result =
@@ -150,7 +144,7 @@ class ChatPagingSource(
 
     /** 异步从网络加载数据（不阻塞UI） */
     private fun loadFromNetworkAsync(page: Int, pageSize: Int) {
-        // 在后台协程中执行，不阻塞当前加载
+// 在后台协程中执行，不阻止当前加载
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val result = loadFromNetwork(page, pageSize)
@@ -170,7 +164,7 @@ class ChatPagingSource(
 
     /** 检查是否需要从网络更新数据 */
     private fun shouldUpdateFromNetwork(): Boolean {
-        // 确保用户账户已就绪（包括游客账户）且token有效
+//确保用户账户已就绪（包括游客账户）且token有效
         return UnifiedStartupManager.isUserAccountReady() &&
                 IntySetting.isLogin() &&
                 IntySetting.getCurToken().isNotEmpty()

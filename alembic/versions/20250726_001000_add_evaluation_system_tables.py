@@ -8,8 +8,7 @@ Create Date: 2025-07-26 00:10:00.000000
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision = '20250726_001000'
 down_revision = '41ce4e778dd4'
 branch_labels = None
@@ -17,7 +16,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create evaluation_sessions table
+#创建evaluation_sessions表
     op.create_table('evaluation_sessions',
         sa.Column('id', sa.String(), nullable=False, comment='评测会话ID'),
         sa.Column('name', sa.String(length=255), nullable=False, comment='评测会话名称'),
@@ -41,8 +40,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_evaluation_sessions_id'), 'evaluation_sessions', ['id'], unique=False)
-
-    # Create evaluation_results table
+#创建evaluation_results表
     op.create_table('evaluation_results',
         sa.Column('id', sa.String(), nullable=False),
         sa.Column('session_id', sa.String(), nullable=False),
@@ -65,8 +63,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_evaluation_results_id'), 'evaluation_results', ['id'], unique=False)
-
-    # Create evaluation_interactions table
+#创建evaluation_interactions表
     op.create_table('evaluation_interactions',
         sa.Column('id', sa.String(), nullable=False),
         sa.Column('session_id', sa.String(), nullable=False),
@@ -84,8 +81,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_evaluation_interactions_id'), 'evaluation_interactions', ['id'], unique=False)
-
-    # Create evaluation_templates table
+#创建evaluation_templates表
     op.create_table('evaluation_templates',
         sa.Column('id', sa.String(), nullable=False),
         sa.Column('name', sa.String(length=255), nullable=False, comment='模板名称'),
@@ -105,8 +101,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_evaluation_templates_id'), 'evaluation_templates', ['id'], unique=False)
-
-    # Add default values
+#添加默认值
     op.execute("ALTER TABLE evaluation_sessions ALTER COLUMN status SET DEFAULT 'PENDING'")
     op.execute("ALTER TABLE evaluation_sessions ALTER COLUMN use_new_user_identity SET DEFAULT false")
     op.execute("ALTER TABLE evaluation_sessions ALTER COLUMN total_tests SET DEFAULT 0")

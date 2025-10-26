@@ -9,7 +9,7 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import java.util.concurrent.CopyOnWriteArrayList
 
-/** 网络状态管理器 提供统一的网络状态监控和管理 */
+/** 网络状态管理器提供统一的网络状态监控和管理 */
 object NetworkStateManager {
 
     private var connectivityManager: ConnectivityManager? = null

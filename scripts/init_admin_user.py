@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 Script to initialize an admin user in the database.
 This script creates a superuser with admin privileges.
@@ -7,8 +7,7 @@ import argparse
 import random
 import sys
 from pathlib import Path
-
-# Add the parent directory to Python path so we can import app modules
+# 将目录父添加到Python路径中，方便我们可以导入应用程序
 script_dir = Path(__file__).parent
 parent_dir = script_dir.parent
 sys.path.insert(0, str(parent_dir))
@@ -34,17 +33,16 @@ def create_user(
 ):
     """Create an admin user in the database."""
     logger.info("Starting admin user creation...")
-
-    # Create database session
+# 创建数据库会话
     db: Session = SessionLocal()
-    # Check if admin user already exists
+# 检查admin用户是否已经存在
     existing_user = db.query(User).filter(User.id == user_id).first()
 
     if existing_user:
         logger.warning(f"Admin user already exists with ID: {user_id}")
         created_user = existing_user
     else:
-        # Create new admin user
+# 创建新的管理员用户
         created_user = User(
             id=user_id,
             nickname="admin",
@@ -57,12 +55,10 @@ def create_user(
             auth_type=AuthType.GOOGLE,
             readable_id=generate_readable_id(),
         )
-
-        # Add to database
+#添加到数据库
         db.add(created_user)
         db.commit()
-
-    # Generate bearer token for the created user
+# 为创建的用户生成不记名令牌
     access_token = create_access_token(created_user.id)
 
     logger.info("Admin user created successfully!")

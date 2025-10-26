@@ -112,7 +112,7 @@ object RomUtils {
     }
 
     /**
-     * 是否是中兴设备
+     * 是否是中兴设​​置​​置​​​​备
      */
     fun isZte(): Boolean {
         return ROM_ZTE[0] == getRomInfo().name
@@ -126,7 +126,7 @@ object RomUtils {
     }
 
     /**
-     * 是否是努比亚设备
+     * 是否是nubia设备
      */
     fun isNubia(): Boolean {
         return ROM_NUBIA[0] == getRomInfo().name
@@ -401,7 +401,7 @@ object RomUtils {
                     ret = display.lowercase()
                 }
             } catch (ignore: Throwable) {
-                // ignore
+// 忽略
             }
         }
         return if (TextUtils.isEmpty(ret)) UNKNOWN else ret
@@ -433,12 +433,12 @@ object RomUtils {
             try {
                 input?.close()
             } catch (ignore: IOException) {
-                // ignore
+// 忽略
             }
             try {
                 process?.destroy()
             } catch (ignore: Exception) {
-                // ignore
+// 忽略
             }
         }
     }
@@ -461,7 +461,7 @@ object RomUtils {
             try {
                 inputStream?.close()
             } catch (ignore: Exception) {
-                // ignore
+// 忽略
             }
         }
     }
@@ -489,8 +489,7 @@ object RomUtils {
             return "RomInfo{name=$name, version=$version}"
         }
     }
-
-    // 保留原有的便捷方法，保持向后兼容
+// 保留原有的便捷方式，保持灵活兼容
     /**
      * 获取ROM名称
      */

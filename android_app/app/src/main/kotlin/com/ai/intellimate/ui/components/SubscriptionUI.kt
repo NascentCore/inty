@@ -44,7 +44,7 @@ fun SubscriptionManagementContainer(content: @Composable () -> Unit) {
     }
 }
 
-/** 实际执行跳转逻辑的辅助函数，放置在Composable外部。 它需要 Context 参数来启动 Intent。 */
+/**实际执行跳转逻辑的辅助函数，放置在Composable外部。它需要Context参数来启动Intent。 */
 fun openPlayStoreSubscriptions(context: Context) {
     try {
         val uri = "https://play.google.com/store/account/subscriptions".toUri()

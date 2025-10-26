@@ -101,16 +101,15 @@ object CrashUtils {
             val time = SimpleDateFormat("yyyy_MM_dd-HH_mm_ss", Locale.getDefault()).format(Date())
             val info = CrashInfo(time, e)
             val crashFile = "$dirPath$time.txt"
-            // 简化实现，不实际写入文件
+// 简化实现，不实际写入文件
 
             DEFAULT_UNCAUGHT_EXCEPTION_HANDLER?.uncaughtException(t, e)
             onCrashListener?.onCrash(info)
         }
     }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // interface
-    ///////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////
+// 界面
+//////////////////////////////////////////////////////////////////////////////////////////////
 
     interface OnCrashListener {
         fun onCrash(crashInfo: CrashInfo)
@@ -138,8 +137,7 @@ object CrashUtils {
             return fileHeadProvider.toString() + getFullStackTrace(throwable)
         }
     }
-
-    // 简化的FileHead类
+// 简化的FileHead类
     private class FileHead(head: String) {
         private val headInfo = kotlin.text.StringBuilder()
 
@@ -163,8 +161,7 @@ object CrashUtils {
 
         override fun toString(): String = headInfo.toString()
     }
-
-    // 获取完整堆栈信息
+// 获取完整的堆栈信息
     private fun getFullStackTrace(throwable: Throwable): String {
         val sw = StringWriter()
         val pw = PrintWriter(sw)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 Script to compress PNG avatar images to JPEG format and update database records.
 TODO: 添加补充开场白语音的功能
@@ -21,8 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.utils.crop_avatar import crop_avatar
 from app.utils.image import ImageFormat
-
-# Add the project root to Python path
+# 将 project 根添加到Python路径
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
@@ -55,12 +54,11 @@ def _get_jpeg_bytes_from_pil_image(pil_image: Image.Image, quality: int) -> byte
 
 def compress_to_jpeg(image_data: bytes, quality: int = 80) -> bytes:
     """Compress PNG image to JPEG format"""
-    # Open image with PIL
+# 使用PIL打开图像
     image = Image.open(io.BytesIO(image_data))
-
-    # Convert RGBA to RGB if necessary (JPEG doesn't support alpha channel)
+# 如果需要的话将RGBA转换为RGB（JPEG不支持alpha通道）
     if image.mode in ("RGBA", "LA", "P"):
-        # Create white background
+#创造背景
         background = Image.new("RGB", image.size, (255, 255, 255))
         if image.mode == "P":
             image = image.convert("RGBA")
@@ -70,8 +68,7 @@ def compress_to_jpeg(image_data: bytes, quality: int = 80) -> bytes:
         image = background
     elif image.mode != "RGB":
         image = image.convert("RGB")
-
-    # Save as JPEG to bytes
+# 保存为JPEG到字节
     jpeg_data = _get_jpeg_bytes_from_pil_image(image, quality)
 
     logger.debug(f"Compressed PNG to JPEG: {len(image_data)} -> {len(jpeg_data)} bytes")
@@ -89,8 +86,7 @@ def upload_jpeg_to_gcs(jpeg_data: bytes, gcs_path: str) -> Optional[str]:
     """Upload JPEG image to Google Cloud Storage"""
     bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
     logger.debug(f"Uploading JPEG to GCS: {bucket_name}/{gcs_path}")
-
-    # Upload to GCS
+# 上传至GCS
     public_url = upload_to_gcs(
         file_data=jpeg_data,
         content_type="image/jpeg",
@@ -234,8 +230,7 @@ def main():
     logger.info("Starting avatar compression process")
     logger.info(f"Database URL: {args.pg_url}")
     logger.info(f"JPEG quality: {args.quality}")
-
-    # Ask for user confirmation to proceed
+# 请求用户确认proceed
     user_input = input(f"Are you sure you want to proceed with {args.pg_url}? (y/n): ")
     if user_input.lower() != "y":
         logger.info("User did not confirm, exiting...")

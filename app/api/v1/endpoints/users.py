@@ -40,13 +40,12 @@ async def get_profile(
     """
     Get current user profile.
     """
-    # 计算connector_count
+# 计算connector_count
     connector_count = await user_service.get_user_connector_count(db, current_user.id)
-
-    # 创建用户响应对象，包含connector_count
+#创建用户响应对象，包含connector_count
     user_dict = {
         "id": current_user.id,
-        # DEPRECATED: app 显示 ID 而非 readable_id
+# DEPRECATED：应用程序显示ID而不是区别_id
         "readable_id": current_user.readable_id,
         "nickname": current_user.nickname,
         "avatar": current_user.avatar,
@@ -78,13 +77,12 @@ async def get_me(
     """
     Get current user profile.
     """
-    # 计算connector_count
+# 计算connector_count
     connector_count = await user_service.get_user_connector_count(db, current_user.id)
-
-    # 创建用户响应对象，包含connector_count
+#创建用户响应对象，包含connector_count
     user_dict = {
         "id": current_user.id,
-        # DEPRECATED: app 显示 ID 而非 readable_id
+# DEPRECATED：应用程序显示ID而不是区别_id
         "readable_id": current_user.readable_id,
         "nickname": current_user.nickname,
         "avatar": current_user.avatar,
@@ -106,10 +104,8 @@ async def get_me(
     }
 
     return APIResponse.success(data=User(**user_dict))
-
-
-# TODO: 考虑路径更改为 /me 这样与 GET /me 一致。GET /me 最早改动是为了兼容 v1.0.3 的 API。
-# 可能这个 api 也有同样的问题。需要考虑 1.0.3 tag inty-app 里是否与这个 API 兼容。
+# TODO: 考虑路径更改为 /me 这样与 GET /me 一致。GET /me 首先是为了兼容 v1。0。3 的 API。
+# 可能这个 api 也有同样的问题。需要考虑 1.0。3标签inty-app里是否与这个API兼容。
 @router.put(
     "/profile",
     response_model=APIResponse[User],
@@ -132,12 +128,10 @@ async def update_profile(
         logger.error(f"更新用户信息失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
         return APIResponse.error(message=str(e))
-
-
 # TODO: https://github.com/NascentCore/inty/issues/771
-# 基于设备推送实现主动发消息
-# TODO：考虑将改 API 合并到另一个已有的 API，比如用户登录 API，直接注册对应的 device ID，
-# 以此来减少 endpoint 数量
+#基于设备主动性 实际主动发消息
+# TODO：考虑将修改 API 合并到另一个已有的 API，比如用户登录 API，直接注册对应的设备 ID，
+# 目前来减少终点数量
 @router.post(
     "/device/register",
     response_model=APIResponse,
@@ -201,7 +195,7 @@ async def delete_user_account(
     删除用户账户
     """
     try:
-        # 执行账户删除
+# 执行账户删除
         deletion_reason = "用户主动删除"
         if request and request.reason:
             deletion_reason = request.reason
@@ -230,9 +224,7 @@ async def delete_user_account(
         return APIResponse.error(
             message="Account deletion failed, please try again later"
         )
-
-
-# TODO: Move this to admin router, and do not include the router in production.
+# TODO：将其移至管理路由器，并且不要将路由器包含在 prduction 中。
 @router.get("", response_model=UserList, include_in_schema=False)
 async def get_all_users(
     *,
@@ -248,8 +240,7 @@ async def get_all_users(
     """
     try:
         logger.debug(f"获取所有用户 - skip: {skip}, limit: {limit}, search: {search}")
-
-        # 调用service层方法获取所有用户
+# 调用服务层方法获取所有用户
         result = await user_service.get_all_users(
             db=db, skip=skip, limit=limit, search=search
         )

@@ -15,7 +15,7 @@ import android.app.Activity
  */
 object VipStatusHelper {
 
-    /** 检查用户是否为VIP */
+    /** 查询用户是否为VIP */
     fun isUserVip(): Boolean {
         return BillingRepository.vipStatusFlow.value.isSubscribed
     }
@@ -39,15 +39,13 @@ object VipStatusHelper {
         val currentPlans = BillingRepository.plansFlow.value
         if (currentPlans.isNotEmpty()) {
             val selectedPlan = currentPlans[0]
-
-            // 检查用户是否已经订阅
+// 检查用户是否已经订阅
             if (isUserVip()) {
                 LogUtils.w("VipStatusHelper - 用户已经是订阅用户，无需重复购买")
                 onError("用户已经是订阅用户")
                 return
             }
-
-            // 启动购买流程
+// 启动购买流程
             BillingRepository.launchBillingFlow(activity, selectedPlan.googleProductId)
         } else {
             LogUtils.w("VipStatusHelper - 无可用会员订阅计划")
@@ -57,14 +55,13 @@ object VipStatusHelper {
 
     /** 购买指定计划 */
     fun purchasePlan(activity: Activity, productId: String, onError: (String) -> Unit = {}) {
-        // 检查用户是否已经订阅
+// 检查用户是否已经订阅
         if (isUserVip()) {
             LogUtils.w("VipStatusHelper - 用户已经是订阅用户，无需重复购买")
             onError("用户已经是订阅用户")
             return
         }
-
-        // 检查计划是否存在
+// 检查计划是否存在
         val currentPlans = BillingRepository.plansFlow.value
         val planExists = currentPlans.any { it.googleProductId == productId }
 
@@ -73,8 +70,7 @@ object VipStatusHelper {
             onError("指定的计划不存在")
             return
         }
-
-        // 启动购买流程
+// 启动购买流程
         BillingRepository.launchBillingFlow(activity, productId)
     }
 

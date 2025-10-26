@@ -7,7 +7,7 @@ import com.architecture.httplib.core.HttpResult
 import javax.inject.Inject
 
 /**
- * 发送消息用例
+ * 发送消息示例
  * 封装发送消息的业务逻辑
  */
 class SendMessageUseCase @Inject constructor(

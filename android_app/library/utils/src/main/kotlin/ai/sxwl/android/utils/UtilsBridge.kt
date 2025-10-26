@@ -65,7 +65,7 @@ internal object UtilsBridge {
             override fun onActivityDestroyed(activity: Activity) {
                 activityList.remove(activity)
                 if (topActivity == activity) {
-                    // 安全的获取最后一个Activity
+// 安全的获取最后一个Activity
                     topActivity = activityList.lastOrNull()
                 }
             }
@@ -129,7 +129,7 @@ internal object UtilsBridge {
     }
 
     /**
-     * 移除应用状态变化监听器
+     * 删除应用状态变化监听器
      */
     fun removeOnAppStatusChangedListener(listener: Utils.OnAppStatusChangedListener) {
         appStatusListeners.remove(listener)
@@ -166,7 +166,7 @@ internal object UtilsBridge {
     }
 
     /**
-     * 判断应用是否在前台
+     * 判断申请是否在前台
      */
     fun isAppForeground(): Boolean {
         val foregroundProcessName = getForegroundProcessName()
@@ -200,7 +200,7 @@ internal object UtilsBridge {
                     ""
                 }
             } else {
-                // 对于低版本Android，使用ActivityManager
+// 对于低版本Android，使用ActivityManager
                 val activityManager =
                     sApplication?.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
                 val runningTasks = activityManager?.getRunningTasks(1)
@@ -213,7 +213,7 @@ internal object UtilsBridge {
     }
 
     /**
-     * 结束所有Activity
+     * 结束所有活动
      */
     fun finishAllActivities() {
         activityList.forEach { activity ->
@@ -269,13 +269,12 @@ internal object UtilsBridge {
                 val weakRef = field.get(context) as? WeakReference<Activity>
                 return weakRef?.get()
             } catch (e: Exception) {
-                // ignore
+// 忽略
             }
         }
         return null
     }
-
-    // 文件操作相关方法
+// 文件操作相关方法
     fun createOrExistsDir(dir: File?): Boolean {
         return dir?.let {
             if (it.exists()) it.isDirectory else it.mkdirs()
@@ -301,8 +300,7 @@ internal object UtilsBridge {
             false
         }
     }
-
-    // 异常处理相关方法
+// 异常处理相关方法
     fun getFullStackTrace(throwable: Throwable): String {
         return buildString {
             append(throwable.toString()).append('\n')
@@ -314,8 +312,7 @@ internal object UtilsBridge {
             }
         }
     }
-
-    // Json相关方法
+// Json相关方法
     fun getJson4LogUtils(): Json {
         return jsonCache.getOrPut("LogUtils") {
             Json {
@@ -325,13 +322,11 @@ internal object UtilsBridge {
             }
         }
     }
-
-    // 存储卡相关方法
+// 存储卡相关方法
     fun isSDCardEnableByEnvironment(): Boolean {
         return Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
     }
-
-    // 编码解码相关方法
+// 编码解码相关方法
     fun bytes2HexString(bytes: ByteArray?): String {
         if (bytes == null || bytes.isEmpty()) return ""
         val sb = StringBuilder()
@@ -369,8 +364,7 @@ internal object UtilsBridge {
     fun base64Decode(input: String?): ByteArray? {
         return if (input.isNullOrEmpty()) null else Base64.decode(input, Base64.DEFAULT)
     }
-
-    // 哈希加密模板方法
+// 哈希加密模板方法
     fun hashTemplate(data: ByteArray?, algorithm: String): ByteArray? {
         if (data == null || data.isEmpty()) return null
         return try {

@@ -1,12 +1,11 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 import psycopg2
 from app.core.config import global_config_loaded_from_config_yaml
 
 
 def analyze_agent_data():
     """分析Agent数据库中的字段使用情况"""
-
-    # 建立数据库连接
+# 建立数据库连接
     conn = psycopg2.connect(
         host=global_config_loaded_from_config_yaml.database.host,
         port=global_config_loaded_from_config_yaml.database.port,
@@ -18,7 +17,7 @@ def analyze_agent_data():
     cursor = conn.cursor()
 
     try:
-        # 1. 基础统计
+＃1。基础统计
         cursor.execute(
             """
             SELECT 
@@ -41,8 +40,7 @@ def analyze_agent_data():
             print(f"有personality字段: {stats[2]} ({stats[2]/stats[0]*100:.1f}%)")
             print(f"有scenario字段: {stats[3]} ({stats[3]/stats[0]*100:.1f}%)")
             print(f"有first_message字段: {stats[4]} ({stats[4]/stats[0]*100:.1f}%)")
-
-            # 2. 长度分析
+#2.长度分析
             cursor.execute(
                 """
                 SELECT 
@@ -61,8 +59,7 @@ def analyze_agent_data():
             print(f"平均personality长度: {lengths[1] or 0}字符")
             print(f"长prompt(>100字符): {lengths[2]}个")
             print(f"同时有prompt和personality: {lengths[3]}个")
-
-            # 3. 示例数据
+＃3。样本数据
             cursor.execute(
                 """
                 SELECT name, 

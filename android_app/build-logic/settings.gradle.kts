@@ -1,18 +1,17 @@
 /*
- * Copyright 2022 The Android Open Source Project
+ * 版权所有2022 Android 开源Project
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * 根据 Apache License 2.0 版（“许可证”）获得许可；
+ * 放弃许可证，否则您无法使用此文件。
+ *您可以在以下位置获取许可证副本：
  *
- *     https://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+ * 除非适用法律要求或书面同意，否则软件
+ * 根据许可证发放是在“按原样”基础上发放的，
+ * 不提供任何类型的保证或条件，无论是 express 或暗示的。
+ * 请参阅许可证以了解特定语言的管理权限和
+ * 许可证的下限制。*/
 
 dependencyResolutionManagement {
     repositories {
@@ -20,7 +19,7 @@ dependencyResolutionManagement {
         mavenCentral()
         maven(url = "https://maven.aliyun.com/repository/public/")
     }
-    // 这里暂时创建引用的tom还是外部工程的目录，build-logic内的，暂时bak使用，后续尝试开发IDE plugin创建模版工程project
+// 这里暂时引用的tom或者外部工程的目录，build-logic内的，暂时bak使用，后续尝试开发IDE插件创建模版工程project
     versionCatalogs { create("libs") { from(files("../gradle/libs.versions.toml")) } }
 }
 

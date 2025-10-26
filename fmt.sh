@@ -1,6 +1,5 @@
-#!/bin/bash -e
-
-# Check for --all flag
+#！/bin/bash -e
+#检查--全部标志
 FORMAT_ALL=false
 if [ "$1" = "--all" ]; then
     FORMAT_ALL=true
@@ -8,11 +7,11 @@ fi
 
 if [ "$FORMAT_ALL" = true ]; then
     echo "Formatting all files..."
-    # Format all Kotlin files
+# 格式化所有 Kotlin 文件
     ktfmt --kotlinlang-style android_app/
-    # Format all Python files
+# 格式化所有Python文件
     black app/ scripts/ experimental/
-    # Format all other files
+# 格式化所有其他文件
     npx prettier --write evaluation/
     echo "Formatting complete!"
     echo
@@ -22,16 +21,14 @@ if [ "$FORMAT_ALL" = true ]; then
     echo
     exit 0
 fi
-
-# Get list of files changed compared to main branch
+# 获取与主分支相比已更改的文件列表
 CHANGED_FILES=$(git diff --name-only main)
 
 if [ -z "$CHANGED_FILES" ]; then
     echo "No files changed compared to main branch"
     exit 0
 fi
-
-# Collect files by type
+# 按类型收集文件
 KOTLIN_FILES=""
 PYTHON_FILES=""
 OTHER_FILES=""
@@ -49,20 +46,17 @@ for file in $CHANGED_FILES; do
             ;;
     esac
 done
-
-# Format Kotlin files
+# 设置 Kotlin 文件格式
 if [ -n "$KOTLIN_FILES" ]; then
     echo "Formatting Kotlin files with ktfmt..."
     ktfmt --kotlinlang-style $KOTLIN_FILES
 fi
-
-# Format Python files
+# 格式化Python文件
 if [ -n "$PYTHON_FILES" ]; then
     echo "Formatting Python files with black..."
     black $PYTHON_FILES
 fi
-
-# Format other files with prettier
+# 使用 prettier 格式化其他文件
 if [ -n "$OTHER_FILES" ]; then
     echo "Formatting other files with prettier..."
     npx prettier --write $OTHER_FILES

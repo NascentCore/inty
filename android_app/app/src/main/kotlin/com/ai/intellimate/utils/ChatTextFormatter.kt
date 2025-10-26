@@ -10,7 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 
-/** 聊天文本格式化工具类 将括号内容转换为斜体，支持嵌套括号 */
+/** 聊天文本构建工具类将语法内容转换为斜体，支持表示语法 */
 object ChatTextFormatter {
 
     /**
@@ -18,7 +18,7 @@ object ChatTextFormatter {
      *
      * @param text 原始文本
      * @param fontSize 字体大小
-     * @param fontWeight 字体粗细
+     * @param fontWeight 字体细粗
      * @param normalColor 正常文本颜色
      * @param italicColor 斜体文本颜色
      * @return 格式化后的AnnotatedString
@@ -36,7 +36,7 @@ object ChatTextFormatter {
 
         while (currentIndex < text.length) {
             if (pairIndex < bracketPairs.size && currentIndex == bracketPairs[pairIndex].first) {
-                // 开始括号 - 斜体样式
+// 开始注释 - 斜体样式
                 withStyle(
                     SpanStyle(
                         color = italicColor,
@@ -49,8 +49,7 @@ object ChatTextFormatter {
                     append(text[currentIndex])
                 }
                 currentIndex++
-
-                // 括号内容为斜体
+// 中间内容为斜体
                 val endIndex = bracketPairs[pairIndex].second
                 withStyle(
                     SpanStyle(
@@ -63,8 +62,7 @@ object ChatTextFormatter {
                 ) {
                     append(text.substring(currentIndex, endIndex))
                 }
-
-                // 结束括号 - 斜体样式
+// 结尾 - 斜体风格
                 withStyle(
                     SpanStyle(
                         color = italicColor,
@@ -79,7 +77,7 @@ object ChatTextFormatter {
                 currentIndex = endIndex + 1
                 pairIndex++
             } else {
-                // 普通文本 - 按字符串片段添加而不是逐字符，避免破坏emoji
+// 普通文本 - 按字符串添加而不是逐字符，避免破坏表情符号
                 val nextBracketIndex =
                     if (pairIndex < bracketPairs.size) {
                         bracketPairs[pairIndex].first
@@ -102,7 +100,7 @@ object ChatTextFormatter {
         }
     }
 
-    /** 查找匹配的括号对 */
+    /** 匹配的逗号对 */
     private fun findBracketPairs(text: String): List<Pair<Int, Int>> {
         val bracketPairs = mutableListOf<Pair<Int, Int>>()
         val stack = mutableListOf<Pair<Char, Int>>()

@@ -48,12 +48,12 @@ private fun SubscriptionDescriptionText(text: String) {
         fontSize = 14.sp,
         fontWeight = FontWeight.Normal,
         textAlign = TextAlign.Center,
-        // 保证文字居中
+// 保证文字居中
         modifier = Modifier.fillMaxWidth(),
     )
 }
 
-/** 会员中心页面主内容 */
+/** 会员中心页面主要内容 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VipCenterContent(
@@ -66,10 +66,9 @@ fun VipCenterContent(
     val vipStatus by viewModel.vipStatusFlow.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // 全屏视频播放器
+// 全屏视频播放器
         BackgroundVideoPlayer()
-
-        // 半透明遮罩层，确保内容可读性
+// 半透明遮光罩层，保证内容的独特性
         Box(
             modifier =
                 Modifier
@@ -100,8 +99,7 @@ fun VipCenterContent(
             VipCenterBenefits()
 
             Spacer(Modifier.height(32.dp))
-
-            // 动态显示订阅计划列表
+// 动态显示订阅计划列表
             if (plans.isNotEmpty()) {
                 PremiumPlanList(
                     plans = plans,
@@ -111,8 +109,7 @@ fun VipCenterContent(
                 )
 
                 Spacer(Modifier.height(8.dp))
-
-                // 动态显示选中计划的计费信息
+// 动态显示选中的计划的运营商信息
                 val selectedPlan =
                     if (selectedPlanIndex >= 0 && selectedPlanIndex < plans.size) {
                         plans[selectedPlanIndex]

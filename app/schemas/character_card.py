@@ -54,8 +54,7 @@ class CharacterCardDataV2(BaseModel):
     scenario: str = Field("", description="场景设定")
     first_mes: str = Field("", description="第一条消息")
     mes_example: str = Field("", description="对话示例")
-
-    # V2新增字段
+# V2 新增字段
     creator_notes: str = Field("", description="创建者备注")
     system_prompt: str = Field("", description="系统提示词")
     post_history_instructions: str = Field("", description="历史后指令")

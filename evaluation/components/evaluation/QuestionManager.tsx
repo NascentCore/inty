@@ -52,15 +52,13 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
   onChange,
   maxQuestions = 50,
 }) => {
-  // 状态管理
+// 状态管理
   const [newQuestion, setNewQuestion] = useState("");
   const [savedQuestionSets, setSavedQuestionSets] = useState<QuestionSet[]>([]);
   const [uploading, setUploading] = useState(false);
-
-  // JSON显示功能
+// JSON 显示功能
   const { jsonModalVisible, jsonData, showJson, hideJson } = useJsonDisplay();
-
-  // 加载保存的问题集
+// 加载保存的问题集
   React.useEffect(() => {
     try {
       const saved = localStorage.getItem("questionSets");
@@ -71,8 +69,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
       console.error("加载问题集失败:", error);
     }
   }, []);
-
-  // 添加问题
+//添加问题
   const addQuestion = useCallback(() => {
     const trimmedQuestion = newQuestion.trim();
 
@@ -95,8 +92,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     setNewQuestion("");
     message.success("问题添加成功");
   }, [newQuestion, questions, onChange, maxQuestions]);
-
-  // 删除问题
+// 删除问题
   const removeQuestion = useCallback(
     (index: number) => {
       const newQuestions = questions.filter((_, i) => i !== index);
@@ -105,14 +101,12 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     },
     [questions, onChange],
   );
-
-  // 清空问题列表
+// 清空问题列表
   const clearQuestions = useCallback(() => {
     onChange([]);
     message.success("问题列表已清空");
   }, [onChange]);
-
-  // 加载问题集
+// 加载问题集
   const loadQuestionSet = useCallback(
     (questionSet: QuestionSet) => {
       onChange(questionSet.questions);
@@ -120,8 +114,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     },
     [onChange],
   );
-
-  // 删除问题集
+// 删除问题集
   const deleteQuestionSet = useCallback(
     (name: string) => {
       const updatedSets = savedQuestionSets.filter((set) => set.name !== name);
@@ -131,27 +124,24 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     },
     [savedQuestionSets],
   );
-
-  // 查看问题集JSON
+//查看问题集JSON
   const viewQuestionSetJson = useCallback(
     (questionSet: QuestionSet) => {
       showJson(questionSet);
     },
     [showJson],
   );
-
-  // 通用导出JSON函数
+// 通用导出JSON函数
   const exportToJson = useCallback(
     (data: any, filename: string, successMessage: string) => {
       try {
-        // 生成文件名
+// 生成文件名
         const timestamp = new Date()
           .toISOString()
           .slice(0, 19)
           .replace(/:/g, "-");
         const finalFilename = `${filename}_${timestamp}.json`;
-
-        // 创建并下载文件
+// 创建并下载文件
         const blob = new Blob([JSON.stringify(data, null, 2)], {
           type: "application/json",
         });
@@ -173,8 +163,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     },
     [],
   );
-
-  // 导出当前问题列表为JSON
+// 导出当前问题列表为JSON
   const exportCurrentQuestions = useCallback(() => {
     if (questions.length === 0) {
       message.warning("当前没有问题可导出");
@@ -191,8 +180,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
 
     exportToJson(exportData, "current_questions", "当前问题已导出");
   }, [questions, exportToJson]);
-
-  // 导出问题集为JSON
+// 导出问题集为JSON
   const exportQuestionSet = useCallback(
     (questionSet: QuestionSet) => {
       exportToJson(
@@ -203,8 +191,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     },
     [exportToJson],
   );
-
-  // 文件上传处理
+// 文件上传处理
   const handleFileUpload = useCallback(
     async (file: UploadFile) => {
       try {
@@ -213,8 +200,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
         const uploadResult: QuestionFileUpload = await api.questions.parseFile(
           file as any,
         );
-
-        // 合并问题，避免重复
+// 合并问题，避免重复
         const existingQuestions = new Set(questions);
         const newQuestions = uploadResult.questions.filter(
           (q) => !existingQuestions.has(q),
@@ -229,8 +215,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
               : ""
           }`,
         );
-
-        // 显示警告信息
+// 显示警告信息
         if (uploadResult.warnings.length > 0) {
           Modal.warning({
             title: "导入警告",
@@ -478,7 +463,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
         </div>
       )}
 
-      {/* JSON显示模态框 */}
+      {/* JSON 显示模态框 */}
       <JsonDisplayModal
         open={jsonModalVisible}
         onClose={hideJson}

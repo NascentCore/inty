@@ -14,7 +14,7 @@ object Utils {
 
     /**
      * 初始化工具类
-     * @param app Application实例
+     * @param app实例应用程序
      */
     fun init(app: Application?) {
         if (app == null) {
@@ -33,13 +33,12 @@ object Utils {
     }
 
     /**
-     * 获取Application实例
-     * @return Application实例
+     * 获取申请实例
+     * @return 应用实例
      */
     fun getApp(): Application {
         if (sApp != null) return sApp!!
-
-        // 尝试反射获取Application
+// 尝试反射获取Application
         val reflectedApp = UtilsBridge.getApplicationByReflect()
         if (reflectedApp != null) {
             init(reflectedApp)
@@ -48,14 +47,12 @@ object Utils {
                 return sApp!!
             }
         }
-
-        // 如果反射失败，抛出更明确的异常
+// 如果引用失败，则抛出更明确的异常
         throw IllegalStateException("Failed to initialize Application. Please call Utils.init() in Application.onCreate()")
     }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // interface
-    ///////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////
+// 界面
+//////////////////////////////////////////////////////////////////////////////////////////////
 
     abstract class Task<Result> {
         private var mConsumer: Consumer<Result>? = null

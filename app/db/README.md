@@ -1,14 +1,10 @@
-# db
+# 数据库
 
-These are for accessing database, it's different from models, which defines tables.
-Tables are critical for alembic to work correctly.
+这些用于访问数据库，它与定义表的模型不同。
+表对于 alembic 正常工作至关重要。`models`用于更新数据库模式。## 光标摘要
 
-`models` are used for updating database schema.
-
-## Cursor Summary
-
-- 目录用途: 提供数据库基础设施，包括会话工厂、引擎与 ORM 基类。
-- 关键文件:
-  - `session.py`: 创建数据库会话与依赖注入入口。
-  - `base.py`: ORM 基类导入聚合，供 Alembic 发现与迁移使用。
-- 关联: `app/models` 定义表结构；`alembic/` 管理迁移；业务服务通过依赖获得 `Session` 进行 CRUD。
+- 目录用途: 提供数据库基础设施，包括会话工厂、引擎和 ORM 基类。
+- 关键文件：
+  -`session.py`: 创建数据库会话与依赖注入入口。
+  - `base.py`: ORM基础类导入聚合，供Alembic发现与迁移使用。
+- 关联：`app/models` 定义表结构；`alembic/` 管理迁移；业务服务通过依赖获得 `Session` 进行 CRUD。

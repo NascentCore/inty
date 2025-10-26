@@ -1,7 +1,6 @@
 """
 Real-time audio/voice chat demo using Gemini Live API.
-
-## Setup
+＃＃ 设置
 
 To install the dependencies for this script, run:
 
@@ -98,11 +97,10 @@ class AudioLoop:
                     continue
                 if text := response.text:
                     print(text, end="")
-
-            # If you interrupt the model, it sends a turn_complete.
-            # For interruptions to work, we need to stop playback.
-            # So empty out the audio queue because it may have loaded
-            # much more audio than has played yet.
+# 如果你打断模型，它会发送一个turn_complete。
+# 为了中断工作，我们需要停止播放。
+# 因此清空音频队列，因为它可能已加载
+# 比已播放的音频多脱皮。
             while not self.audio_in_queue.empty():
                 self.audio_in_queue.get_nowait()
 

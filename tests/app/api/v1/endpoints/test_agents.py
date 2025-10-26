@@ -6,7 +6,7 @@ from tests.app.api.test_client import TestClient
 @pytest.mark.noci
 def test_create_and_delete_user():
     """Test the simplest create user and delete user process."""
-    # Create test client with localhost server
+# 使用本地主机服务器创建测试客户端
     test_client = TestClient("http://localhost:8000")
 
     token = test_client.create_user()
@@ -14,8 +14,7 @@ def test_create_and_delete_user():
     assert len(token) > 0
 
     test_client.delete_user()
-
-    # Close the HTTP client
+# 关闭HTTP客户端
     test_client.close()
 
 

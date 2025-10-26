@@ -1,5 +1,5 @@
 /**
- * 评测记录页面 - 查看历史评测会话和结果
+ * 足球记录页面 - 查看历史足球会话和结果
  */
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -63,7 +63,7 @@ interface EvaluationHistoryPageProps {
 export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
   onNavigateToEvaluation,
 }) => {
-  // 状态管理
+// 状态管理
   const [sessions, setSessions] = useState<EvaluationSessionWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] =
@@ -71,12 +71,10 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [sessionResults, setSessionResults] = useState<EvaluationResult[]>([]);
   const [resultsLoading, setResultsLoading] = useState(false);
-
-  // 批量操作状态
+// 批量操作状态
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [batchLoading, setBatchLoading] = useState(false);
-
-  // 筛选和搜索状态
+// 筛选和搜索状态
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
@@ -85,11 +83,9 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
     pageSize: 10,
     total: 0,
   });
-
-  // JSON显示功能
+// JSON 显示功能
   const { jsonModalVisible, jsonData, showJson, hideJson } = useJsonDisplay();
-
-  // 加载评测会话列表
+// 加载断层会话列表
   const loadSessions = useCallback(async () => {
     try {
       setLoading(true);
@@ -116,8 +112,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       const sessionsData = Array.isArray(response)
         ? response
         : response.items || [];
-
-      // 为每个会话加载统计信息
+// 为每个会话加载统计信息
       const sessionsWithStats = await Promise.all(
         sessionsData.map(async (session: EvaluationSession) => {
           try {
@@ -143,8 +138,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       );
 
       setSessions(sessionsWithStats);
-
-      // 更新分页信息
+// 更新分页信息
       if (response.total !== undefined) {
         setPagination((prev) => ({ ...prev, total: response.total }));
       }
@@ -161,13 +155,11 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
     searchText,
     dateRange,
   ]);
-
-  // 初始加载
+// 初始加载
   useEffect(() => {
     loadSessions();
   }, [loadSessions]);
-
-  // 查看详情
+// 查看详情
   const handleViewDetail = async (session: EvaluationSession) => {
     setSelectedSession(session);
     setDetailModalVisible(true);
@@ -184,8 +176,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       setResultsLoading(false);
     }
   };
-
-  // 查看JSON
+// 查看JSON
   const handleShowJson = async (session: EvaluationSession) => {
     try {
       const results = await api.sessions.getResults(session.id);
@@ -199,27 +190,24 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       message.error("加载会话结果失败");
     }
   };
-
-  // 继续评测
+// 继续体育
   const handleContinueEvaluation = (sessionId: string) => {
-    // TODO: 实现跳转到评测页面并加载指定会话
+// TODO:实际动画到足球页面并加载指定会话
     if (onNavigateToEvaluation) {
       onNavigateToEvaluation();
     }
     message.info("跳转到评测页面功能开发中");
   };
-
-  // 创建新评测
+//创建新足球
   const handleCreateNew = () => {
     if (onNavigateToEvaluation) {
       onNavigateToEvaluation();
     }
   };
-
-  // 导出结果
+// 导出结果
   const handleExport = async (sessionId: string) => {
     try {
-      // 获取会话信息和结果
+// 获取会话信息和结果
       const session = sessions.find((s) => s.id === sessionId);
       if (!session) {
         message.error("会话不存在");
@@ -227,8 +215,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       }
 
       const results = await api.sessions.getResults(sessionId);
-
-      // 直接导出原始数据，保持完整结构
+// 直接导出原始数据，保持完整结构
       const exportData = {
         session: session,
         results: results,
@@ -237,20 +224,17 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
           total_results: results.length,
         },
       };
-
-      // 生成文件名
+// 生成文件名
       const timestamp = new Date()
         .toISOString()
         .slice(0, 19)
         .replace(/:/g, "-");
       const filename = `evaluation_${session.name}_${timestamp}.json`;
-
-      // 创建JSON blob
+//创建JSON blob
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {
         type: "application/json",
       });
-
-      // 创建并下载文件
+// 创建并下载文件
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -266,8 +250,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       message.error("导出失败，请重试");
     }
   };
-
-  // 批量删除
+// 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
       message.warning("请先选择要删除的评测会话");
@@ -283,7 +266,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       onOk: async () => {
         setBatchLoading(true);
         try {
-          // 并行删除所有选中的会话
+// 工具删除所有选中的会话
           await Promise.all(
             selectedRowKeys.map((sessionId) => api.sessions.delete(sessionId)),
           );
@@ -298,8 +281,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       },
     });
   };
-
-  // 批量导出
+// 批量导出
   const handleBatchExport = async () => {
     if (selectedRowKeys.length === 0) {
       message.warning("请先选择要导出的评测会话");
@@ -308,7 +290,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
 
     setBatchLoading(true);
     try {
-      // TODO: 实现批量导出功能
+// TODO：实现批量导出功能
       message.info(`批量导出 ${selectedRowKeys.length} 个会话的功能开发中`);
     } catch (error) {
       message.error("批量导出失败");
@@ -316,8 +298,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       setBatchLoading(false);
     }
   };
-
-  // 获取状态标签
+// 获取状态标签
   const getStatusTag = (status: string) => {
     const statusConfig = {
       PENDING: {
@@ -352,8 +333,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       </Tag>
     );
   };
-
-  // 表格列定义
+// 表格列定义
   const columns: ColumnsType<EvaluationSessionWithStats> = [
     {
       title: "评测名称",
@@ -545,7 +525,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
           </Row>
         </div>
 
-        {/* 统计卡片 */}
+        {/* 统计对应 */}
         <Row gutter={16} style={{ marginBottom: 24 }}>
           <Col span={6}>
             <Card>
@@ -679,7 +659,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
           </Card>
         )}
 
-        {/* 评测会话表格 */}
+        {/* 足球会话表格 */}
         <Card>
           <Table
             columns={columns}
@@ -767,7 +747,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
                 loading={resultsLoading}
                 showControls={true}
                 onViewDetail={(result) => {
-                  // 在这里可以进一步处理单个结果的详情查看
+// 这里可以进一步处理单个结果的详情查看
                   message.info("详细评分查看功能开发中");
                 }}
               />
@@ -775,7 +755,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
           )}
         </Modal>
 
-        {/* JSON数据展示模态框 */}
+        {/* JSON数据展示模式框 */}
         <JsonDisplayModal
           open={jsonModalVisible}
           onClose={hideJson}

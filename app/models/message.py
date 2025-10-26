@@ -20,9 +20,7 @@ class SenderType(str, enum.Enum):
 
     USER = "USER"
     AI = "AI"
-
-
-# DEPRECATED: 这个表从来没有被使用过
+# DEPRECATED：这个表从未被使用过
 class Message(Base):
     """消息模型"""
 
@@ -33,15 +31,12 @@ class Message(Base):
     type = Column(Enum(MessageType), default=MessageType.TEXT)
     sender_type = Column(Enum(SenderType))
     created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
-
-    # 外键
+# 外键
     sender_id = Column(String, ForeignKey("users.id"))
     agent_id = Column(String, ForeignKey("agents.id"))
-
-    # 关系
+# 关系
     sender = relationship("User", back_populates="messages")
     agent = relationship("Agent", back_populates="messages")
-
-    # 聊天关联
+# 聊天关联
     chat_id = Column(String, ForeignKey("chats.id"))
     chat = relationship("Chat")

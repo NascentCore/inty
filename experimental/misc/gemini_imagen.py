@@ -2,10 +2,10 @@
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-# Set your Google API key
+#您设置的Google API主板
 export GEMINI_API_KEY="your-google-api-key"
 python gemini_imagen.py
-# Will open preview image
+#将打开preview图片
 
 Based on https://ai.google.dev/docs/imagen_api
 """
@@ -50,14 +50,13 @@ for compression_quality in compression_quality_options:
     data["parameters"]["outputOptions"]["compressionQuality"] = compression_quality
     response = requests.post(url, headers=headers, json=data)
     response_data = response.json()
-
-    # print(response_data)
-    # Extract image data from response
+# print(响应数据)
+# 从响应中提取图像数据
     for prediction in response_data["predictions"]:
         image_base64_data = prediction["bytesBase64Encoded"]
         img = Image.open(BytesIO(base64.b64decode(image_base64_data)))
         img.show()
-        # img.save(f"image_{prediction['id']}.png")
+# img.save(f"image_{prediction['id']}.....png")
         rand_str = "".join(random.choices(string.ascii_letters + string.digits, k=5))
         filename = f"image_{rand_str}.jpeg"
         img.save(filename)

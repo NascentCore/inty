@@ -6,10 +6,7 @@ Create Date: 2025-08-06 01:16:44.935017+00:00
 
 """
 from typing import Sequence, Union
-
-
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision: str = 'a1935acfeee0'
 down_revision: Union[str, None] = ('20250804_150000', '43b18ddc9846')
 branch_labels: Union[str, Sequence[str], None] = None

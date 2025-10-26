@@ -20,12 +20,10 @@ def clean_json_response(response_text: str, logger: logging.Logger = None) -> st
     """
     if logger:
         logger.debug(f"Cleaning response text of length: {len(response_text)}")
-    
-    # Strip whitespace
+# 清晰的除空格
     cleaned = response_text.strip()
-    
-    # Remove markdown code blocks
-    # Handle ```json ... ``` pattern
+# 删除markdown代码块
+# 处理 ```json ...```` 模式
     if cleaned.startswith("```json"):
         cleaned = cleaned[7:]  # Remove ```json
     elif cleaned.startswith("```"):
@@ -33,12 +31,10 @@ def clean_json_response(response_text: str, logger: logging.Logger = None) -> st
     
     if cleaned.endswith("```"):
         cleaned = cleaned[:-3]  # Remove trailing ```
-    
-    # Remove any remaining markdown formatting
+# 删除所有剩余的 Markdown 格式
     cleaned = re.sub(r'^```\w*\n?', '', cleaned)  # Remove opening code blocks
     cleaned = re.sub(r'\n?```$', '', cleaned)     # Remove closing code blocks
-    
-    # Strip whitespace again
+# 再次强调空格
     cleaned = cleaned.strip()
     
     if logger:
@@ -62,14 +58,13 @@ def safe_json_loads(json_string: str, logger: logging.Logger = None) -> Dict[str
         json.JSONDecodeError: If JSON parsing fails
     """
     try:
-        # First try to parse as-is
+#首先尝试按原样解析
         return json.loads(json_string)
     except json.JSONDecodeError as e:
         if logger:
             logger.warning(f"Initial JSON parsing failed: {e}")
             logger.debug(f"Attempting to clean JSON string...")
-        
-        # Try cleaning the response
+# 尝试清理响应
         cleaned_json = clean_json_response(json_string, logger)
         
         try:
@@ -106,8 +101,7 @@ def validate_character_data(data: Dict[str, Any], logger: logging.Logger = None)
         if logger:
             logger.error(f"Missing required fields: {missing_fields}")
         return False
-    
-    # Check nested structures
+#检查询问结构
     if "background" in data:
         required_background_fields = [
             "origin", "occupation", "personality_traits", 
@@ -175,11 +169,11 @@ def sanitize_filename(filename: str) -> str:
     Returns:
         Sanitized filename
     """
-    # Remove or replace invalid characters
+# 删除或替换无效字符
     sanitized = re.sub(r'[<>:"/\\|?*]', '_', filename)
-    # Remove leading/trailing spaces and dots
+#删除前导/尾随空格和点
     sanitized = sanitized.strip('. ')
-    # Limit length
+# 限制长度
     if len(sanitized) > 200:
         sanitized = sanitized[:200]
     return sanitized 

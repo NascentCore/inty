@@ -46,23 +46,21 @@ def test_crop_top_square_for_landscape_image():
 
 
 def _draw_setup(img_shape, face_coords, avatar_square):
-    # Draw img_shape and avatar_square with edges in black, fill the image with white
+# 左右img_shape和avatar_square，边缘为黑色，用白色填充图像
     from PIL import ImageDraw
-
-    # Create a white image with the specified dimensions
+#创建指定尺寸的白色图像
     img = Image.new("RGB", img_shape, (255, 255, 255))
     draw = ImageDraw.Draw(img)
 
     x, y, w, h = face_coords
-    # Draw the face rectangle with light blue fill and black outline
+# 使用浅蓝色填充和黑色视觉视觉
     draw.rectangle(
         (x, y, x + w, y + h),
         outline=(0, 0, 0),
         fill=(173, 216, 230),
         width=1,
     )
-
-    # Draw the image boundary (full image) with black edges
+# 替换带有黑边的图像边界（完整图像）
     draw.rectangle(
         [0, 0, img_shape[0] - 1, img_shape[1] - 1], outline=(0, 0, 0), width=1
     )
@@ -81,12 +79,10 @@ def _draw_setup(img_shape, face_coords, avatar_square):
 def test_calculate_crop_square_boundaries():
     img_shape = (100, 100)
     face_coords = (10, 10, 20, 30)
-
-    # assert raise assertion error
+# 断言引发断言错误
     with pytest.raises(AssertionError):
         _calculate_crop_square_boundaries(face_coords, 0.9, img_shape)
-
-    # In certain bounary, expansion ration in [3.9, 4/3)
+# 在一定的边界内，膨胀率在[3.9, 4/3)
     avatar_square = _calculate_crop_square_boundaries(face_coords, 3.9 / 3, img_shape)
     assert avatar_square == (1, 6, 39, 39)
     avatar_square = _calculate_crop_square_boundaries(face_coords, 3.99 / 3, img_shape)
@@ -98,8 +94,7 @@ def test_calculate_crop_square_boundaries():
 
     avatar_square = _calculate_crop_square_boundaries(face_coords, 4 / 3, img_shape)
     assert avatar_square == (0, 5, 40, 40)
-
-    # The avatar square is limited by the image boundary for max_expansion_ratio >= 2.
+# 看一下边界图像的限制 max_expansion_ratio >= 2。
     avatar_square = _calculate_crop_square_boundaries(face_coords, 2, img_shape)
     assert avatar_square == (0, 5, 40, 40)
 
@@ -108,12 +103,10 @@ def test_calculate_crop_square_boundaries():
 
     avatar_square = _calculate_crop_square_boundaries(face_coords, 3, img_shape)
     assert avatar_square == (0, 5, 40, 40)
-
-    # Odd sizes, to check off by 1 error.
+#奇数尺寸，检查1个错误。
     img_shape = (100, 100)
     face_coords = (10, 10, 21, 31)
-
-    # The avatar square is limited by the image boundary for max_expansion_ratio >= 2.
+# 看一下边界图像的限制 max_expansion_ratio >= 2。
     avatar_square = _calculate_crop_square_boundaries(face_coords, 2, img_shape)
     assert avatar_square == (0, 5, 40, 40)
 
@@ -124,12 +117,11 @@ def test_calculate_crop_square_boundaries():
     assert avatar_square == (0, 5, 40, 40)
 
     img_shape = (100, 100)
-    # Now limit by the left boundary of the image.
+# 现在由图像边界的边界限制。
     face_coords = (10, 10, 30, 20)
-
-    # In certain bounary, expansion ration in [3.9, 4/3)
+# 在一定的边界内，膨胀率在[3.9, 4/3)
     avatar_square = _calculate_crop_square_boundaries(face_coords, 3.9 / 3, img_shape)
-    # _draw_setup(img_shape, face_coords, avatar_square)
+# _draw_setup（img_shape，face_coords，avatar_square）
     assert avatar_square == (6, 1, 39, 39)
     avatar_square = _calculate_crop_square_boundaries(face_coords, 3.99 / 3, img_shape)
     assert avatar_square == (6, 1, 39, 39)
@@ -140,8 +132,7 @@ def test_calculate_crop_square_boundaries():
 
     avatar_square = _calculate_crop_square_boundaries(face_coords, 4 / 3, img_shape)
     assert avatar_square == (5, 0, 40, 40)
-
-    # The avatar square is limited by the image boundary for max_expansion_ratio >= 2.
+# 看一下边界图像的限制 max_expansion_ratio >= 2。
     avatar_square = _calculate_crop_square_boundaries(face_coords, 2, img_shape)
     assert avatar_square == (5, 0, 40, 40)
 
@@ -150,12 +141,10 @@ def test_calculate_crop_square_boundaries():
 
     avatar_square = _calculate_crop_square_boundaries(face_coords, 3, img_shape)
     assert avatar_square == (5, 0, 40, 40)
-
-    # Odd sizes, to check off by 1 error.
+#奇数尺寸，检查1个错误。
     img_shape = (100, 100)
     face_coords = (10, 10, 31, 21)
-
-    # The avatar square is limited by the image boundary for max_expansion_ratio >= 2.
+# 看一下边界图像的限制 max_expansion_ratio >= 2。
     avatar_square = _calculate_crop_square_boundaries(face_coords, 2, img_shape)
     assert avatar_square == (5, 0, 40, 40)
 

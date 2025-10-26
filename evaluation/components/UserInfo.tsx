@@ -28,8 +28,7 @@ export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
   const [userInfo, setUserInfo] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const { isApiKeyValid } = useApiKeyContext();
-
-  // 获取用户信息
+// 获取用户信息
   const fetchUserInfo = useCallback(async () => {
     if (!isApiKeyValid) {
       setUserInfo(null);
@@ -49,18 +48,15 @@ export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
       setLoading(false);
     }
   }, [isApiKeyValid]);
-
-  // 当 API Key 状态变化时重新获取用户信息
+// 当API Key状态变化时重新获取用户信息
   useEffect(() => {
     fetchUserInfo();
   }, [fetchUserInfo]);
-
-  // 如果没有 API Key 或正在加载，不显示组件
+// 如果没有 API 键或正在加载，则不显示组件
   if (!isApiKeyValid || loading) {
     return null;
   }
-
-  // 如果没有用户信息，显示默认状态
+// 如果没有用户信息，则显示状态默认
   if (!userInfo) {
     return (
       <div style={{ padding: "0 16px" }}>

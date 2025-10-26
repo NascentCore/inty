@@ -15,7 +15,7 @@ class SystemSettingsService:
     """系统配置服务"""
 
     def __init__(self):
-        # 使用较长的缓存时间 (30分钟)
+# 使用的存储时间（30分钟）
         self._cache = InMemoryCache(default_ttl=1800)
         self._cache_prefix = "system_setting:"
 
@@ -38,24 +38,23 @@ class SystemSettingsService:
             解析后的配置值
         """
         try:
-            # 先从缓存获取
+#先从服务器获取
             cache_key = self._get_cache_key(key)
             cached_value = self._cache.get(cache_key)
             if cached_value is not None:
                 return cached_value
-
-            # 从数据库获取
+# 从数据库获取
             stmt = select(SystemSettings).where(SystemSettings.key == key)
             result = await db.execute(stmt)
             setting = result.scalar_one_or_none()
 
             if setting:
                 parsed_value = setting.parsed_value
-                # 缓存结果
+# 存储结果
                 self._cache.set(cache_key, parsed_value)
                 return parsed_value
             else:
-                # 配置不存在，返回默认值
+#配置不存在，返回默认值
                 if default_value is not None:
                     self._cache.set(cache_key, default_value)
                     return default_value
@@ -83,18 +82,17 @@ class SystemSettingsService:
             是否成功
         """
         try:
-            # 查找现有配置
+# 替换现有配置
             stmt = select(SystemSettings).where(SystemSettings.key == key)
             result = await db.execute(stmt)
             setting = result.scalar_one_or_none()
 
             if setting:
-                # 检查是否只读
+#检查是否有偏见
                 if setting.is_readonly:
                     logger.warning(f"尝试修改只读配置: {key}")
                     return False
-
-                # 更新配置
+# 更新配置
                 setting.value = str(value)
                 setting.updated_by = updated_by
             else:
@@ -102,8 +100,7 @@ class SystemSettingsService:
                 return False
 
             await db.commit()
-
-            # 清除缓存
+# 清除缓存
             cache_key = self._get_cache_key(key)
             self._cache.delete(cache_key)
 
@@ -225,7 +222,5 @@ class SystemSettingsService:
                 db, "free_user_agent_creation_limit", 6
             ),
         }
-
-
-# 创建全局实例
+#创建全局实例
 system_settings_service = SystemSettingsService()

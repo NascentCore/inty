@@ -1,7 +1,6 @@
 import Inty from "inty";
 import dotenv from "dotenv";
-
-// Load .env file
+// 加载 。环境文件
 dotenv.config();
 
 const client = new Inty({

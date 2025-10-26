@@ -30,7 +30,7 @@ class Agent(Base):
     __tablename__ = "agents"
 
     id = Column(String, primary_key=True, index=True)
-    # DEPRECATED: app 显示 ID 而非 readable_id
+# DEPRECATED：应用程序显示ID而不是区别_id
     readable_id = Column(String(8), unique=True, index=True, nullable=False)
     name = Column(String(30), index=True, nullable=False)
     gender = Column(Enum(Gender, name="gender"), nullable=False)
@@ -51,12 +51,10 @@ class Agent(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     prompt = Column(String)
-
-    # 主提示词和模式提示词字段
+# 主提示词和模式提示词字段
     main_prompt = Column(Text, nullable=True)  # 主提示词 - 作为第一个system message
     mode_prompt = Column(Text, nullable=True)  # 模式提示词 - 放在角色卡提示词后面
-
-    # 角色卡相关字段
+# 角色卡相关字段
     character_card_spec = Column(String, nullable=True)  # 角色卡规范版本
     character_card_data = Column(JSON, nullable=True)  # 原始角色卡数据
     personality = Column(Text, nullable=True)  # 性格特征
@@ -70,14 +68,11 @@ class Agent(Base):
     character_version = Column(String, nullable=True)  # 版本号
     extensions = Column(JSON, nullable=True)  # 扩展数据
     meta_data = Column(JSON, nullable=True)  # 灵活的元数据
-
-    # 语音相关字段
+# 语音相关字段
     opening_audio_url = Column(String, nullable=True)  # 预生成的开场白语音URL
-
-    # 外键
+# 外键
     creator_id = Column(String, ForeignKey("users.id"), nullable=False)
-
-    # 关系
+# 关系
     creator = relationship("User", back_populates="agents")
     followers = relationship(
         "User", secondary=agent_followers, back_populates="following_agents"

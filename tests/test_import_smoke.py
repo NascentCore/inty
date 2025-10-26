@@ -6,7 +6,7 @@ from typing import Iterable
 
 
 EXCLUDES: tuple[str, ...] = (
-    # known side-effectful modules on import
+# 导入时已知的副作用模块
     "app.main",
 )
 

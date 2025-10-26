@@ -1,6 +1,6 @@
 /**
- * Premium Mode Toggle Component
- * Shows the current premium mode status from chat settings
+ * Premium 模式切换组件
+ * 从聊天设置中显示当前 premium 模式状态
  */
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -21,8 +21,7 @@ export const PremiumModeToggle: React.FC<PremiumModeToggleProps> = ({
   const [premiumMode, setPremiumMode] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Load premium mode status
+// 加载 premium 模式状态
   const loadPremiumMode = useCallback(async () => {
     if (!agentId) return;
 
@@ -41,8 +40,7 @@ export const PremiumModeToggle: React.FC<PremiumModeToggleProps> = ({
       setLoading(false);
     }
   }, [agentId]);
-
-  // Handle toggle
+// 处理切换
   const handleToggle = async (checked: boolean) => {
     if (!agentId) return;
 
@@ -51,13 +49,11 @@ export const PremiumModeToggle: React.FC<PremiumModeToggleProps> = ({
 
     try {
       console.log("Premium mode toggle requested:", checked);
-
-      // Call the actual API to update chat settings
+//调用实际的API来更新聊天设置
       await api.chat.updateAgentSettings(agentId, {
         premium_mode: checked,
       });
-
-      // Update local state only after successful API call
+//调用在成功调用API后才更新本地状态
       setPremiumMode(checked);
 
       if (onToggle) {
@@ -66,14 +62,13 @@ export const PremiumModeToggle: React.FC<PremiumModeToggleProps> = ({
     } catch (err) {
       console.error("Failed to update premium mode:", err);
       setError("Failed to update premium mode");
-      // Don't update local state if API call failed
-      // Button remains clickable for retry
+// 如果 API 调用失败，则不更新本地状态
+// 按钮仍可点击以重试
     } finally {
       setLoading(false);
     }
   };
-
-  // Load settings on mount or when agentId changes
+// 在挂载时或agentId更改时加载设置
   useEffect(() => {
     if (agentId) {
       loadPremiumMode();

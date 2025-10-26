@@ -15,12 +15,10 @@ android {
 dependencies {
 
     implementation(libs.androidx.startup)
-
-    // Firebase dependencies
+// Firebase 依赖项
     implementation(platform(libs.firebase.bom))
     implementation(libs.bundles.firebase)
-
-    // Core dependencies
+// 核心依赖
     implementation(projects.library.utils)
 
 }

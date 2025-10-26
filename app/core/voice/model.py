@@ -10,14 +10,14 @@ from enum import StrEnum
 
 
 class Provider(StrEnum):
-    # https://cloud.google.com/text-to-speech
+# https://cloud.google.com/text-to-speech
     Google = "google"
-    # https://elevenlabs.io/docs/api-reference/text-to-speech
+# https://elevenlabs.io/docs/api-reference/text-to-speech
     ElevenLabs = "eleven"
-    # 以下是待调研的服务商
-    # http://hume.ai/
+# 以下是待调研的服务商
+# http://hume.ai/
     HUMEAI = "humeai"
-    # https://fal.ai/
+# https://fal.ai/
     FALAI = "falai"
 
 
@@ -38,7 +38,7 @@ class Config:
 
     provider: Provider = Provider.ElevenLabs
     model: str = ElevenLabsModels.V3
-    # 在供应商服务内的 ID，如 elevenlabs 的 voice_id，
+# 在供应商服务内的ID，如elevenlabs的voice_id，
     voice_id: str
 
 

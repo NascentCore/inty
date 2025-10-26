@@ -13,7 +13,7 @@ class AndroidApplicationComposePlugin : Plugin<Project> {
         with(target) {
             pluginManager.apply("com.android.application")
             pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
-            // 配置compose
+// 配置compose
             val extension = extensions.getByType<ApplicationExtension>()
             configureAndroidCompose(extension)
         }

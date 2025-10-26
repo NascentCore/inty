@@ -15,15 +15,14 @@ import java.util.concurrent.ConcurrentHashMap
  * 时间工具类
  * 提供统一的时间处理API，整合了原DateUtils的功能
  *
- * 主要功能：
- * - 时间格式化
+ *主要功能：
+ * - 时间整理
  * - 时间判断
  * - 时间计算
  * - 相对时间显示
  */
 object TimeUtils {
-
-    // ==================== 常量定义 ====================
+// ==================== 常量定义 ====================
 
     const val FULL_PATTERN = "yyyy-MM-dd EE HH:mm:ss"
     const val FULL_CN_PATTERN = "yyyy-MM-dd EEEE HH:mm:ss"
@@ -34,8 +33,7 @@ object TimeUtils {
     const val DATE_PATTERN = "yyyy-MM-dd"
     const val WEEK_PATTERN = "EE"
     const val ONE_DAY_MILLIS = 24 * 60 * 60 * 1000L
-
-    // ==================== 缓存机制 ====================
+// ====================服务====================
 
     private val formatterCache = ConcurrentHashMap<String, SimpleDateFormat>()
 
@@ -48,8 +46,7 @@ object TimeUtils {
             SimpleDateFormat(pattern, locale)
         }
     }
-
-    // ==================== 当前时间相关 ====================
+// ==================== 当前时间相关 ====================
 
     /**
      * 当前时间毫秒值
@@ -75,24 +72,23 @@ object TimeUtils {
      * 当前星期
      */
     val nowWeek: String get() = format(nowMillis, WEEK_PATTERN)
-
-    // ==================== 时间格式化 ====================
+// ==================== 时间整理 ====================
 
     /**
-     * 格式化时间戳
-     * @param timestamp 时间戳（毫秒）
+     * 时间表
+     * @param timestamp 时间（毫秒）
      * @param pattern 格式模式
-     * @return 格式化后的时间字符串
+     * @return 删除后的时间字符串
      */
     fun format(timestamp: Long, pattern: String = DATE_TIME_PATTERN): String {
         return getFormatter(pattern).format(timestamp)
     }
 
     /**
-     * 格式化时间戳（秒）
-     * @param timestamp 时间戳（秒）
+     * 计时（秒）
+     * @param timestamp 时间（秒）
      * @param pattern 格式模式
-     * @return 格式化后的时间字符串
+     * @return 删除后的时间字符串
      */
     fun formatFromSeconds(timestamp: Long?, pattern: String = DATE_TIME_PATTERN): String {
         if (timestamp == null || timestamp <= 0) return "Unknown"
@@ -100,17 +96,16 @@ object TimeUtils {
     }
 
     /**
-     * 解析时间字符串为时间戳
+     * 解析时间字符串为时间
      * @param timeString 时间字符串
      * @param pattern 格式模式
-     * @return 时间戳（毫秒）
+     * @返回时间（毫秒）
      */
     @Throws(ParseException::class)
     fun parse(timeString: String, pattern: String = DATE_TIME_PATTERN): Long {
         return getFormatter(pattern).parse(timeString)?.time ?: 0L
     }
-
-    // ==================== 时间判断 ====================
+// ==================== 时间判断 ====================
 
     /**
      * 判断是否是今天
@@ -124,7 +119,7 @@ object TimeUtils {
      */
     fun isYesterday(timestamp: Long): Boolean {
         return try {
-            // 检查溢出风险
+//检查风险溢出
             if (timestamp > Long.MAX_VALUE - ONE_DAY_MILLIS) {
                 false
             } else {
@@ -140,7 +135,7 @@ object TimeUtils {
      */
     fun isTomorrow(timestamp: Long): Boolean {
         return try {
-            // 检查溢出风险
+//检查风险溢出
             if (timestamp < Long.MIN_VALUE + ONE_DAY_MILLIS) {
                 false
             } else {
@@ -156,7 +151,7 @@ object TimeUtils {
      */
     fun isBeforeYesterday(timestamp: Long): Boolean {
         return try {
-            // 检查溢出风险
+//检查风险溢出
             if (timestamp > Long.MAX_VALUE - 2 * ONE_DAY_MILLIS) {
                 false
             } else {
@@ -172,7 +167,7 @@ object TimeUtils {
      */
     fun isAfterTomorrow(timestamp: Long): Boolean {
         return try {
-            // 检查溢出风险
+//检查风险溢出
             if (timestamp < Long.MIN_VALUE + 2 * ONE_DAY_MILLIS) {
                 false
             } else {
@@ -182,8 +177,7 @@ object TimeUtils {
             false
         }
     }
-
-    // ==================== 时间计算 ====================
+// ==================== 时间计算 ====================
 
     /**
      * 计算两个时间的天数差
@@ -208,12 +202,11 @@ object TimeUtils {
         val endMillis = parse(end, pattern)
         return daysBetween(startMillis, endMillis)
     }
-
-    // ==================== 相对时间显示 ====================
+// ==================== 相对时间显示 ====================
 
     /**
      * 获取相对时间描述
-     * @param timestamp 时间戳（毫秒）
+     * @param timestamp 时间（毫秒）
      * @return 相对时间字符串，如：刚刚、2小时前、3天前等
      */
     fun getRelativeTime(timestamp: Long): String {
@@ -231,19 +224,18 @@ object TimeUtils {
     }
 
     /**
-     * 获取相对时间描述（秒时间戳）
-     * @param timestamp 时间戳（秒）
+     * 获取相对时间描述（秒）
+     * @param timestamp 时间（秒）
      * @return 相对时间字符串
      */
     fun getRelativeTimeFromSeconds(timestamp: Long?): String {
         if (timestamp == null || timestamp <= 0) return "Unknown"
         return getRelativeTime(timestamp * 1000)
     }
-
-    // ==================== 星期相关 ====================
+// ==================== 星期相关 ====================
 
     /**
-     * 获取星期（英文）
+     * 获取星期（中文）
      */
     fun getWeekEn(timestamp: Long): String {
         return format(timestamp, WEEK_PATTERN, Locale.US)
@@ -262,8 +254,7 @@ object TimeUtils {
     fun getWeek(timestamp: Long): String {
         return format(timestamp, WEEK_PATTERN)
     }
-
-    // ==================== 便捷方法 ====================
+// ====================便捷方法====================
 
     /**
      * 获取昨天日期字符串
@@ -284,33 +275,31 @@ object TimeUtils {
      * 获取前天日期字符串
      */
     val beforeYesterdayDate: String get() = format(nowMillis - 2 * ONE_DAY_MILLIS, DATE_PATTERN)
-
-    // ==================== 扩展方法 ====================
+// ==================== 扩展方法 ====================
 
     /**
-     * 时间戳转Date对象
+     * 时间转Date对象
      */
     fun Long.toDate(): Date = Date(this)
 
     /**
-     * Date对象转时间戳
+     * Date对象转时间
      */
     fun Date.toMillis(): Long = this.time
 
     /**
-     * 时间戳转日期字符串
+     * 时间转日期字符串
      */
     fun Long.toDateStr(): String = format(this, DATE_PATTERN)
 
     /**
-     * 时间戳转日期时间字符串
+     * 时间转日期时间字符串
      */
     fun Long.toDateTimeStr(): String = format(this, DATE_TIME_PATTERN)
-
-    // ==================== 内部方法 ====================
+// ==================== 内部方法 ====================
 
     /**
-     * 格式化时间戳（支持自定义Locale）
+     * 春节（支持自定义Locale）
      */
     private fun format(timestamp: Long, pattern: String, locale: Locale): String {
         return getFormatter(pattern, locale).format(timestamp)
@@ -323,12 +312,12 @@ object TimeUtils {
         if (isoTimeString.isNullOrEmpty()) return null
 
         return try {
-            // 尝试解析ISO 8601格式
+// 尝试解析ISO 8601格式
             val instant = java.time.Instant.parse(isoTimeString)
             instant.toEpochMilli()
         } catch (e: Exception) {
             try {
-                // 尝试其他常见格式
+// 尝试其他常见格式
                 val patterns = listOf(
                     "yyyy-MM-dd'T'HH:mm:ss'Z'",
                     "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
@@ -339,13 +328,13 @@ object TimeUtils {
 
                 for (pattern in patterns) {
                     try {
-                        // 创建新的 SimpleDateFormat 实例，避免修改缓存的实例
+//创建新的SimpleDateFormat实例，避免修改服务器的实例
                         val formatter = SimpleDateFormat(pattern, Locale.getDefault()).apply {
                             timeZone = java.util.TimeZone.getTimeZone("UTC")
                         }
                         return formatter.parse(isoTimeString)?.time
                     } catch (e: ParseException) {
-                        // 继续尝试下一个格式
+// 继续尝试下一个格式
                     }
                 }
                 null
@@ -354,8 +343,7 @@ object TimeUtils {
             }
         }
     }
-
-    // ==================== UTC时间转换 ====================
+// ==================== UTC 时间转换 ====================
 
     /**
      * 判断是否是今天（ZonedDateTime版本）
@@ -403,15 +391,15 @@ object TimeUtils {
     }
 
     /**
-     * 格式化秒级时间戳为年月日时分格式
-     * 如果是今年，则不显示年份
+     * 计时级计时器秒为年月日时分格式
+     * 如果是年份，则不显示年份
      * @param timestampSeconds 秒级时间戳字符串
      * @return 格式化后的时间字符串，格式为：MM/dd或yyyy/MM/dd
      */
     fun formatTimestampToDateTime(timestampSeconds: String): String {
         return try {
             val seconds = timestampSeconds.toLong()
-            // 检查溢出风险：Long.MAX_VALUE / 1000 避免溢出
+// 检查溢出风险：长。MAX_VALUE / 1000 避免故障
             if (seconds > Long.MAX_VALUE / 1000) {
                 return timestampSeconds
             }
@@ -432,18 +420,18 @@ object TimeUtils {
 
             localDateTime.format(DateTimeFormatter.ofPattern(pattern))
         } catch (e: NumberFormatException) {
-            // 数字格式错误，返回原始字符串
+// 数字格式错误，返回原始字符串
             timestampSeconds
         } catch (e: Exception) {
-            // 其他异常，返回原始字符串
+//其他异常，返回原始字符串
             timestampSeconds
         }
     }
 
     /**
-     * 将ISO 8601格式的时间字符串转换为毫秒时间戳
+     * 将ISO 8601格式的时间字符串转换为时钟脉冲
      * @param isoTimeString ISO 8601格式的时间字符串
-     * @return 毫秒时间戳，如果解析失败返回null
+     * @return每秒一个时间，如果解析失败返回null
      */
     fun parseIsoTimeToTimestamp(isoTimeString: String?): Long? {
         return try {
@@ -456,7 +444,7 @@ object TimeUtils {
     }
 
     /**
-     * 将ISO 8601格式的时间字符串根据指定pattern格式化为时间字符串
+     * 将ISO 8601格式的时间字符串根据指定模式筛选为时间字符串
      * @param isoTimeString ISO 8601格式的时间字符串
      * @param pattern 时间格式pattern，默认为"yyyy-MM-dd"
      * @return 格式化后的时间字符串，如果解析失败返回null
@@ -474,8 +462,8 @@ object TimeUtils {
     }
 
     /**
-     * 将毫秒时间戳转换为标准pattern时间字符串
-     * @param timestampMillis 毫秒时间戳
+     * 将几十个转换为标准模式时间字符串
+     * @param timestampMillis 毫秒计时器
      * @param pattern 时间格式pattern，默认为"yyyy-MM-dd"
      * @return 格式化后的时间字符串，如果解析失败返回null
      */

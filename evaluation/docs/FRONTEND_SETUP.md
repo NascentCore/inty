@@ -1,16 +1,14 @@
 # 🎨 前端构建和运行指南
 
-## 📋 环境要求
+## 📋环境要求
 
-- **Node.js**: 16.0+ (推荐 18.x 或 20.x)
-- **npm**: 8.0+ (或 yarn/pnpm)
-- **后端服务**: InTy 后端运行在 http://localhost:8000
+- **Node.js**：16.0+（推荐18.x或20.x）
+- **npm**：8。0+ (或纱线/pnpm)
+- **卧室服务**：InTy 卧室运行在 http://localhost:8000
 
 ## 🚀 快速开始
 
-### 方法1: 使用构建脚本 (推荐)
-
-```bash
+### 方法1：使用构建脚本（推荐）```bash
 # 进入评测系统目录
 cd app/static/evaluation
 
@@ -50,21 +48,19 @@ npm run dev
 **特性**:
 
 - ✅ 热重载 - 代码修改实时生效
-- ✅ API代理 - `/api` 请求自动代理到后端
+- ✅ API代理 - `/api`请求自动代理到前端
 - ✅ TypeScript 支持
 - ✅ ESLint 代码检查
-- ✅ 源码映射 (Source Maps)
+- ✅ 源码地图（源地图）
 
-**访问地址**:
+**访问地址**：
 
 - 前端: http://localhost:3000
 - API代理: http://localhost:3000/api → http://localhost:8000/api
 
 ### 🏗️ 生产构建
 
-生产构建生成优化后的静态文件：
-
-```bash
+生产构建生成优化后的静态文件：```bash
 npm run build
 ```
 
@@ -72,26 +68,18 @@ npm run build
 
 - 构建文件: `./dist/` 目录
 - 入口文件: `./dist/index.html`
-- 静态资源: `./dist/assets/`
-
-**优化特性**:
+- 静态资源: `./dist/assets/`**优化特性**：
 
 - ✅ 代码分割
 - ✅ 资源压缩
-- ✅ Tree Shaking
+- ✅ 摇树
 - ✅ 缓存优化
 
-### 🔍 预览构建结果
-
-```bash
+### 🔍 预览构建结果```bash
 npm run preview
-```
+```在 http://localhost:4173 预览构建后的应用程序
 
-在 http://localhost:4173 预览构建后的应用
-
-## 🗂️ 项目结构
-
-```
+## 🗂️ 项目结构```
 app/static/evaluation/
 ├── components/           # React 组件
 │   └── evaluation/      # 评测相关组件
@@ -126,22 +114,18 @@ export default defineConfig({
     sourcemap: true, // 生成源码映射
   },
 });
-```
-
-### TypeScript 配置 (`tsconfig.json`)
+```### TypeScript 配置 (`tsconfig.json`）
 
 - 严格模式
 - 路径别名支持
 - JSX 支持
-- ES2020 目标
+- ES2020目标
 
 ## 🚨 常见问题
 
-### Q1: `npm install` 失败
+### Q1：`npm install`失败
 
-**A**: 检查 Node.js 版本，确保是 16+
-
-```bash
+**A**：检查节点。js版本，确保是16+```bash
 node --version  # 应该是 v16+ 或 v18+
 ```
 
@@ -151,13 +135,9 @@ node --version  # 应该是 v16+ 或 v18+
 
 ```bash
 lsof -i :3000  # 检查 3000 端口
-```
+```### Q3: API 请求失败
 
-### Q3: API 请求失败
-
-**A**: 确保后端服务运行正常
-
-```bash
+**A**：确保临时服务运行正常```bash
 curl http://localhost:8000/  # 测试后端
 ```
 
@@ -167,39 +147,31 @@ curl http://localhost:8000/  # 测试后端
 
 ```bash
 ls -la dist/  # 检查构建文件
-```
+```### Q5：TypeScript 错误
 
-### Q5: TypeScript 错误
-
-**A**: 运行类型检查
-
-```bash
+**A**：运行类型检查```bash
 npm run type-check
-```
-
-## 📊 性能优化
+```## 📊 性能优化
 
 ### 1. 代码分割
 
-Vite 自动进行代码分割，将 vendor 库和应用代码分离
+Vite自动进行代码分割，将供应商库和应用程序代码分离
 
-### 2. 资源压缩
+### 2.资源压缩
 
-生产构建自动压缩 JS、CSS、HTML
+生产构建自动压缩JS、CSS、HTML
 
-### 3. 缓存策略
+### 3. 策略服务器
 
-静态资源使用内容哈希命名，支持长期缓存
+静态资源使用内容存储配置，支持长期存储
 
-### 4. Tree Shaking
+### 4.摇树
 
-未使用的代码自动移除
+未使用的代码自动删除
 
-## 🎯 部署选项
+## 🎯 配置选项
 
-### 选项1: 集成到后端 (推荐)
-
-```bash
+### 选项1: 集成到劳动力 (推荐)```bash
 # 构建前端
 npm run build
 
@@ -224,19 +196,19 @@ python -m http.server 8080 -d dist/
 
 1. **使用开发模式进行调试**
 2. **定期运行 `npm run lint` 检查代码**
-3. **提交前运行 `npm run build` 确保构建成功**
-4. **使用 TypeScript 严格模式**
-5. **遵循 React Hooks 最佳实践**
+3. **提交前运行 `npm run build`确定构建成功**
+4. **使用TypeScript严格模式**
+5. **遵循React Hooks最佳实践**
 
 ## 📞 技术支持
 
 遇到问题时请检查：
 
 1. Node.js 和 npm 版本
-2. 后端服务状态
-3. 浏览器控制台错误
-4. 终端错误输出
+2. 座位服务状态
+3.浏览器控制台错误
+4.终端错误输出
 
 ---
 
-**🎉 开始开发吧！** 评测系统前端已配置完成，支持现代化的开发体验。
+**🎉开始开发吧！** 足球系统扩展已配置完成，支持现代化的开发体验。

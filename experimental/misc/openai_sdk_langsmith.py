@@ -17,15 +17,14 @@ print("LANGSMITH_PROJECT", os.getenv("LANGSMITH_PROJECT"))
 
 
 def main():
-    # Create OpenAI client and wrap it with LangSmith
+# 创建 OpenAI 客户端并用 LangSmith 包装它
     client = wrappers.wrap_openai(
         OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=os.getenv("OPENROUTER_API_KEY"),
         )
     )
-
-    # Chat API example
+# 聊天 API 示例
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is the capital of France?"},

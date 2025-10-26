@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 Gemini 2.5 Pro Long Context Performance Test
 
@@ -123,21 +123,18 @@ async def test_gemini_context_performance_with_retry(
 
 async def test_gemini_context_performance(book_text: str, question: str = None) -> dict:
     """Test Gemini 2.5 Pro performance with long context."""
-
-    # Default question if none provided
+# 如果没有则默认问题 provided
     if not question:
         question = "Please provide a brief summary of this book in 3-4 sentences."
-
-    # Initialize client with timeout configuration
+# 使用超时配置初始化客户端
     try:
-        # Configure client with longer timeout for large context
+#针对大上下文，为客户端配置更长的超时时间
         client = genai.Client()
     except Exception as e:
         raise Exception(
             f"Failed to initialize Gemini client: {e}\nMake sure GOOGLE_API_KEY is set"
         )
-
-    # Prepare the full prompt
+# Prepare 完整的 prompt
     full_prompt = f"""Here is the complete text of a book:
 
 {book_text}
@@ -145,19 +142,17 @@ async def test_gemini_context_performance(book_text: str, question: str = None) 
 ---
 
 Question: {question}"""
-
-    # Count tokens
+# 计算代币数
     token_count = safe_count_tokens(full_prompt, "input")
     print(f"Input tokens: ~{token_count:,}")
-
-    # Performance tracker
+# 绩效跟踪器
     tracker = PerformanceTracker()
     tracker.token_count = token_count
 
     tracker.start()
 
     try:
-        # Generate content with streaming to capture first token
+# 使用流式传输生成内容以捕获第一个令牌
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=full_prompt,
@@ -166,28 +161,24 @@ Question: {question}"""
                 max_output_tokens=2048,
             ),
         )
-
-        # Since we're not using streaming, mark first token immediately when response starts
+#由于我们不使用流式传输，因此当响应开始时立即标记第一个令牌
         tracker.mark_first_token()
-
-        # Get the response text
+# 获取响应文本
         response_text = ""
         if response.candidates and response.candidates[0].content.parts:
             response_text = response.candidates[0].content.parts[0].text
-
-        # Get actual token usage from API response
+# 从API响应中获取实际代币使用情况
         actual_input_tokens = None
         actual_output_tokens = None
 
         if hasattr(response, "usage_metadata") and response.usage_metadata:
-            # Check available attributes in usage_metadata
+# 检查usage_metadata中的可用属性
             usage = response.usage_metadata
             print(f"Usage metadata type: {type(usage)}")
             print(
                 f"Available usage attributes: {[attr for attr in dir(usage) if not attr.startswith('_')]}"
             )
-
-            # Try different possible attribute names
+# 尝试不同的可能的属性名称
             actual_input_tokens = (
                 getattr(usage, "prompt_token_count", None)
                 or getattr(usage, "input_tokens", None)
@@ -209,8 +200,7 @@ Question: {question}"""
                 )
         else:
             print("No usage_metadata found in response")
-
-        # Use API token counts if available, otherwise fall back to estimation
+# 如果可用，请使用 API 令牌计数，否则回退到估计
         tracker.token_count = (
             actual_input_tokens if actual_input_tokens else tracker.token_count
         )
@@ -239,7 +229,7 @@ def safe_count_tokens(text: str, context: str = "") -> int:
         encoding = tiktoken.get_encoding("cl100k_base")
         return len(encoding.encode(text))
     except Exception:
-        # Fallback: rough estimation (1 token ≈ 4 characters for English text)
+# Fallback：粗略估计（对于英文文本，1个标记 ≈ 4个字符）
         estimated = len(text) // 4
         if context:
             print(f"Using fallback token estimation for {context}: ~{estimated:,}")
@@ -261,11 +251,10 @@ def print_results(metrics: dict):
     print(
         f"Processing speed:       {metrics.get('tokens_per_second', 0):.2f} tokens/sec"
     )
-
-    # Calculate cost estimate (approximate pricing)
+# 计算成本说明 (approximate pricing)
     input_tokens = metrics.get("input_tokens", 0)
     output_tokens = metrics.get("response_tokens", 0)
-    # Gemini 2.0 Flash pricing (approximate): $0.075/1M input tokens, $0.30/1M output tokens
+# Gemini 2.0 Flash pricing (approximate)：$0.075/1M 输入代币，$0。30/1M 输出令牌
     input_cost = (input_tokens / 1_000_000) * 0.075
     output_cost = (output_tokens / 1_000_000) * 0.30
     total_cost = input_cost + output_cost
@@ -311,30 +300,25 @@ Download from Project Gutenberg: https://www.gutenberg.org/
 
 async def main():
     """Main test function."""
-
-    # Parse command line arguments
+# 解析命令行参数
     args = parse_arguments()
-
-    # Check for API key
+#检查API键
     if not os.getenv("GOOGLE_API_KEY"):
         print("ERROR: GOOGLE_API_KEY environment variable not set")
         print("Please set your Google API key:")
         print("export GOOGLE_API_KEY='your-api-key-here'")
         return
-
-    # Load book text
+# 加载书籍文本
     try:
         book_text = load_book_text(args.book_path)
     except Exception as e:
         print(f"ERROR: {e}")
         return
-
-    # Run the test
+# 运行测试
     try:
         print(f"Starting Gemini long context performance test...")
         print(f"Book file: {args.book_path}")
-
-        # Test basic performance with retry
+#通过重试测试基本性能
         first_question = (
             args.question
             or "Please provide a brief summary of this book in 3-4 sentences."
@@ -343,18 +327,16 @@ async def main():
             book_text, first_question
         )
         print_results(metrics)
-
-        # Optional: Test with a different question if not provided custom question
-        # if not args.question:
-        #     print("\n" + "-" * 60)
-        #     print("Testing with a different question...")
-        #     time.sleep(60)
-
-        #     custom_question = "Who are the main characters in this book and what are their relationships?"
-        #     metrics2 = await test_gemini_context_performance_with_retry(
-        #         book_text, custom_question
-        #     )
-        #     print_results(metrics2)
+# 任选：如果不是 provided 自定义问题，则使用不同的问题进行测试
+# 如果没有参数。问题：
+# print("\n" + "-" * 60)
+# print("用不同的问题进行测试...”）
+＃     时间。睡眠(60)
+# custom_question = "这本书的主要人物是谁，他们是什么关系？"
+# 指标2 =等待test_gemini_context_performance_with_retry(
+# 书本文本、自定义问题
+＃）
+# print_results(metrics2)
 
     except Exception as e:
         print(f"Test failed: {e}")

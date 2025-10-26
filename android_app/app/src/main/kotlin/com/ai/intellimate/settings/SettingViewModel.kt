@@ -18,13 +18,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 
-/** 设置页面 ViewModel */
+/** 设置PagesViewModel */
 class SettingViewModel : BaseVM() {
 
     private val userApi: IUserApi by lazy { NetServiceMgr.getUserApi() }
-
-
-    // 对话框状态
+// 对话框状态
     private val _dialogState = MutableStateFlow(DialogState())
     val dialogState: StateFlow<DialogState> = _dialogState.asStateFlow()
 
@@ -38,7 +36,7 @@ class SettingViewModel : BaseVM() {
         _dialogState.value = _dialogState.value.copy(showDeleteAccountDialog = false)
     }
 
-    /** 检查账号是否有订阅需要取消，才能用来删除账号 */
+    /** 检查账号是否有订阅需要取消，才能用于删除账号 */
     fun checkAccountSubscribe() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -69,7 +67,7 @@ class SettingViewModel : BaseVM() {
                     }
                 }
             } catch (e: HttpException) {
-                // 专门处理HTTP异常
+// 专门处理HTTP异常
                 LogUtils.e("checkAccountSubscribe HTTP Exception: ${e.code()} - ${e.message()}")
                 val errorMessage = HttpErrorHandler.handleHttpException(e, "account")
                 withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
@@ -80,8 +78,7 @@ class SettingViewModel : BaseVM() {
             }
         }
     }
-
-    // 删除账号的结果
+// 删除账号的结果
     val deleteAccountResultFlow = MutableStateFlow(false)
 
     /** 删除账号的接口 */
@@ -105,7 +102,7 @@ class SettingViewModel : BaseVM() {
                     }
                 }
             } catch (e: HttpException) {
-                // 专门处理HTTP异常
+// 专门处理HTTP异常
                 LogUtils.e("deleteUserAccount HTTP Exception: ${e.code()} - ${e.message()}")
                 val errorMessage = HttpErrorHandler.handleHttpException(e, "account")
                 withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }

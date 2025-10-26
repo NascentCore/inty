@@ -8,7 +8,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 
-/** 音频预加载管理器 负责在启动时预加载agents的开场白音频资源，优化聊天页面音频播放体验 */
+/** 音频预加载管理器负责在启动时预加载代理的开场音频资源，优化聊天音频页面播放体验 */
 object AudioPreloadManager {
 
     private var isInitialized = false
@@ -23,9 +23,9 @@ object AudioPreloadManager {
     }
 
     /**
-     * 预加载agents的开场白音频资源
+     * 预加载代理的开场白色音频资源
      *
-     * @param agents 需要预加载的agents列表
+     * @param Agents 需要预加载的代理列表
      * @param maxConcurrent 最大并发预加载数量
      */
     suspend fun preloadAgentsOpeningAudios(agents: List<AgentInfo>, maxConcurrent: Int = 3) {
@@ -41,11 +41,11 @@ object AudioPreloadManager {
 
         try {
             withContext(Dispatchers.IO) {
-                // 收集所有需要预加载的音频URL
+// 收集所有需要预加载的音频URL
                 val audioUrls = collectOpeningAudioUrls(agents)
 
                 if (audioUrls.isNotEmpty()) {
-                    // 使用并发预加载，提高效率
+// 使用预付款，提高效率
                     preloadAudioUrls(audioUrls, maxConcurrent)
                     LogUtils.i("AudioPreloadManager - 批量预加载${audioUrls.size}个音频完成")
                 }
@@ -56,9 +56,9 @@ object AudioPreloadManager {
     }
 
     /**
-     * 预加载关键音频（前几个agents的开场白音频）
+     * 预加载关键音频（前几个特工的开场白色音频）
      *
-     * @param agents 需要预加载的agents列表
+     * @param Agents 需要预加载的代理列表
      * @param criticalCount 关键音频数量（前几个）
      */
     suspend fun preloadCriticalOpeningAudios(agents: List<AgentInfo>, criticalCount: Int = 5) {
@@ -78,7 +78,7 @@ object AudioPreloadManager {
                 val audioUrls = collectOpeningAudioUrls(criticalAgents)
 
                 if (audioUrls.isNotEmpty()) {
-                    // 优先预加载关键音频，使用更高的并发数
+// 优先预加载关键音频，使用更高的并发数
                     preloadAudioUrls(audioUrls, 5)
                 }
             }
@@ -87,12 +87,12 @@ object AudioPreloadManager {
         }
     }
 
-    /** 收集agents中的所有开场白音频URL */
+    /** 收集代理中的所有开场白色音频 URL */
     private fun collectOpeningAudioUrls(agents: List<AgentInfo>): List<String> {
         val audioUrls = mutableSetOf<String>()
 
         agents.forEach { agent ->
-            // 获取开场白音频URL
+// 获取开场白音频URL
             val audioUrl = agent.opening_audio_url
             if (audioUrl.isNotBlank()) {
                 audioUrls.add(audioUrl)
@@ -103,23 +103,23 @@ object AudioPreloadManager {
     }
 
     /**
-     * 并发预加载音频URL列表
+     * 预付款音频URL列表
      *
      * @param audioUrls 音频URL列表
      * @param maxConcurrent 最大并发数
      */
     private suspend fun preloadAudioUrls(audioUrls: List<String>, maxConcurrent: Int) =
         coroutineScope {
-            // 将URL列表分组，每组最多maxConcurrent个
+// 将URL列表分组，每组最多maxConcurrent个
             val chunks = audioUrls.chunked(maxConcurrent)
 
             chunks.forEach { chunk ->
-                // 并发预加载当前组的所有音频
+// 预加载当前组的所有音频
                 val jobs =
                     chunk.map { url ->
                         async {
                             try {
-                                // 检查是否已经缓存
+// 检查是否已经缓存
                                 if (!audioCacheManager.isCached(url)) {
                                     audioCacheManager.preloadAudio(url)
                                     LogUtils.i("AudioPreloadManager - 预加载音频成功: $url")
@@ -131,8 +131,7 @@ object AudioPreloadManager {
                             }
                         }
                     }
-
-                // 等待当前组的所有任务完成
+// 等待当前组的所有任务完成
                 jobs.forEach { it.await() }
             }
         }
@@ -141,7 +140,7 @@ object AudioPreloadManager {
      * 检查音频是否已预加载
      *
      * @param audioUrl 音频URL
-     * @return 是否已缓存
+     * @return 是否已服务器
      */
     fun isAudioPreloaded(audioUrl: String): Boolean {
         return if (isInitialized) {
@@ -164,7 +163,7 @@ object AudioPreloadManager {
         }
     }
 
-    /** 清理过期缓存 */
+    /** 清理缓存 */
     fun cleanExpiredCache() {
         if (isInitialized) {
             audioCacheManager.cleanExpiredCache()
@@ -172,7 +171,7 @@ object AudioPreloadManager {
         }
     }
 
-    /** 获取缓存大小 */
+    /** 获取服务器大小 */
     fun getCacheSize(): Long {
         return if (isInitialized) {
             audioCacheManager.getCacheSize()

@@ -15,11 +15,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
 class AvatarGenerateViewModel : BaseVM() {
-
-    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+// 延迟获取依赖，避免在构造函数中立即导致获取空指针异常
     private val agentApi by lazy { NetServiceMgr.getAgentApi() }
-
-    // UI States
+// 用户界面状态
     private val _prompt = MutableStateFlow("")
     val prompt: StateFlow<String> = _prompt.asStateFlow()
 
@@ -53,8 +51,7 @@ class AvatarGenerateViewModel : BaseVM() {
             _errorMessage.value = "Please enter a prompt"
             return
         }
-
-        // Store the prompt and start generation in background
+// 存储 prompt 并在后台开始生成
         AvatarManager.setGenerationPrompt(currentPrompt)
         LogUtils.i("Starting background generation with prompt: $currentPrompt")
 
@@ -64,20 +61,19 @@ class AvatarGenerateViewModel : BaseVM() {
         launchBackground {
             try {
                 val request = GenerateBackgroundRequest(prompt = currentPrompt)
-
-                // Start generation in background - this will continue even after navigation
+// 在后台开始生成 - 即使在导航后基因继续
                 val response = generateBackground(request = request)
                 withContext(Dispatchers.Main) {
                     LogUtils.i("Generated image URLs: ${response.imageUrls}")
 
                     if (response.imageUrls.isNotEmpty()) {
-                        // Store the generated URLs for CreateRoleActivity
+// 存储为CreateRoleActivity生成的URL
                         _generatedImageUrls.value = response.imageUrls
                         _selectedImageIndex.value = 0
                         AvatarManager.setGeneratedAvatarUrls(response.imageUrls)
                         LogUtils.i("Setting generatedImageUrls to: ${response.imageUrls}")
                     } else if (response.imageUrl.isNotBlank()) {
-                        // 兼容单张图片的情况
+// 兼容单张图片的情况
                         _generatedImageUrl.value = response.imageUrl
                         AvatarManager.setGeneratedAvatarUrl(response.imageUrl)
                         LogUtils.i("Setting generatedImageUrl to: ${response.imageUrl}")
@@ -88,8 +84,7 @@ class AvatarGenerateViewModel : BaseVM() {
 
                     _isLoading.value = false
                 }
-
-                // 生成成功后，返回到Ai形象创建页面 Immediately navigate back to CreateRoleActivity
+// 生成成功后，返回Ai形象创建页面立即导航回CreateRoleActivity
                 withContext(Dispatchers.Main) {
                     onNavigateBack()
                 }
@@ -115,8 +110,7 @@ class AvatarGenerateViewModel : BaseVM() {
             _errorMessage.value = "Please enter a prompt"
             return
         }
-
-        // Clear current images and regenerate
+// 清除当前图像并重新生成
         _generatedImageUrls.value = emptyList()
         _generatedImageUrl.value = null
         _selectedImageIndex.value = 0
@@ -137,7 +131,7 @@ class AvatarGenerateViewModel : BaseVM() {
                         AvatarManager.setGeneratedAvatarUrls(response.imageUrls)
                         LogUtils.i("Setting regenerated imageUrls to: ${response.imageUrls}")
                     } else if (response.imageUrl.isNotBlank()) {
-                        // 兼容单张图片的情况
+// 兼容单张图片的情况
                         _generatedImageUrl.value = response.imageUrl
                         AvatarManager.setGeneratedAvatarUrl(response.imageUrl)
                         LogUtils.i("Setting regenerated imageUrl to: ${response.imageUrl}")
@@ -197,7 +191,7 @@ class AvatarGenerateViewModel : BaseVM() {
                 }
             }
         } catch (e: Exception) {
-            // Exception handling with detailed error messages
+// 异常处理以及详细的错误消息
             val errorMessage =
                 when {
                     e.message?.contains("timeout", ignoreCase = true) == true ->

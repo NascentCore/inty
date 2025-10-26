@@ -42,13 +42,12 @@ class CharacterCardService:
             导入响应
         """
         try:
-            # 验证角色卡数据
+#角色验证卡数据
             if isinstance(request.card_data, dict):
                 card_data = CharacterCardV2(**request.card_data)
             else:
                 card_data = request.card_data
-
-            # 验证角色卡格式
+#验证角色卡格式
             validation_result = await self.validate_character_card(card_data.dict())
             if not validation_result.is_valid:
                 return CharacterCardImportResponse(
@@ -56,8 +55,7 @@ class CharacterCardService:
                     message="角色卡验证失败",
                     warnings=[error.message for error in validation_result.errors],
                 )
-
-            # 检查是否存在同名角色
+#检查是否存在同名角色
             if not request.override_existing:
                 existing_agent = await self._check_existing_agent(
                     card_data.data.name, user_id, db
@@ -67,11 +65,9 @@ class CharacterCardService:
                         success=False,
                         message=f"已存在同名角色: {card_data.data.name}，请启用覆盖模式或更改角色名称",
                     )
-
-            # 映射角色卡到Agent数据
+# 将角色卡映射到代理数据
             agent_data = self.mapper.map_card_to_agent(card_data, user_id)
-
-            # 处理可选功能
+# 处理可选功能
             imported_features = [
                 "basic_info",
                 "personality",
@@ -93,22 +89,18 @@ class CharacterCardService:
                 warnings.append("替代问候语未导入")
             else:
                 imported_features.append("alternate_greetings")
-
-            # 处理 llm_config 字段
+# 处理 llm_config 字段
             if "llm_config" in agent_data:
-                # 将 llm_config 移动到 settings 中
+# 将 llm_config 移动到设置中
                 if "settings" not in agent_data:
                     agent_data["settings"] = {}
                 agent_data["settings"]["llm_config"] = agent_data.pop("llm_config")
-
-            # 创建Agent
+#创建代理
             agent = Agent(**agent_data)
-
-            # 如果是覆盖模式，先删除现有Agent
+# 如果是覆盖模式，先删除现有Agent
             if request.override_existing:
                 await self._delete_existing_agent(card_data.data.name, user_id, db)
-
-            # 保存到数据库
+# 保存到数据库
             db.add(agent)
             await db.commit()
             await db.refresh(agent)
@@ -156,17 +148,16 @@ class CharacterCardService:
             导入响应
         """
         try:
-            # 读取文件内容
+#读取文件内容
             file_content = await file.read()
-
-            # 尝试解析角色卡数据
+# 尝试解析角色卡数据
             card_data = None
 
             if file.filename.lower().endswith(".json"):
-                # JSON文件
+# JSON文件
                 card_data = await self._parse_json_file(file_content)
             elif file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
-                # 图片文件（角色卡可能嵌入在PNG metadata中）
+# 图片文件（角色卡可能嵌入在PNG元数据中）
                 card_data = await self._parse_image_file(file_content)
             else:
                 return CharacterCardImportResponse(
@@ -177,16 +168,14 @@ class CharacterCardService:
                 return CharacterCardImportResponse(
                     success=False, message="无法从文件中解析角色卡数据"
                 )
-
-            # 创建导入请求
+#创建导入请求
             request = CharacterCardImportRequest(
                 card_data=card_data,
                 override_existing=override_existing,
                 import_character_book=import_character_book,
                 import_alternate_greetings=import_alternate_greetings,
             )
-
-            # 导入角色卡
+# 导入角色卡
             return await self.import_character_card(request, user_id, db)
 
         except Exception as e:
@@ -218,12 +207,11 @@ class CharacterCardService:
         Returns:
             角色卡数据
         """
-        # 获取Agent
+# 获取Agent
         agent = await agent_service.get_agent_by_id(agent_id, user_id, db)
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
-
-        # 构建Agent数据字典
+# 构建Agent数据字典
         agent_data = {
             "id": agent.id,
             "name": agent.name,
@@ -246,8 +234,7 @@ class CharacterCardService:
             "character_card_data": agent.character_card_data,
             "creator": {"nickname": agent.creator.nickname if agent.creator else ""},
         }
-
-        # 映射到角色卡
+# 映射到角色卡
         return self.mapper.map_agent_to_card(agent_data)
 
     async def validate_character_card(
@@ -266,7 +253,7 @@ class CharacterCardService:
         warnings = []
 
         try:
-            # 使用mapper验证
+# 使用mapper验证
             validation_errors = self.mapper.validate_character_card(card_data)
             errors.extend(
                 [
@@ -276,8 +263,7 @@ class CharacterCardService:
                     for error in validation_errors
                 ]
             )
-
-            # 使用Pydantic验证
+# 使用_​​​​​​​_KEEP__2__验证
             try:
                 CharacterCardV2(**card_data)
             except Exception as e:
@@ -288,8 +274,7 @@ class CharacterCardService:
                         code="SCHEMA_ERROR",
                     )
                 )
-
-            # 检查警告项
+#检查警告项
             data = card_data.get("data", {})
             if not data.get("personality"):
                 warnings.append("建议添加角色性格描述")
@@ -344,31 +329,30 @@ class CharacterCardService:
             解析后的角色卡数据
         """
         try:
-            # 尝试导入PIL
+# 尝试导入PIL
             try:
                 from PIL import Image
             except ImportError:
                 logger.warning("PIL未安装，无法解析图片文件中的角色卡数据")
                 return None
-
-            # 尝试从PNG的tEXt chunk中提取数据
+# 尝试从 PNG 的文本块中提取数据
             with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
                 tmp_file.write(file_content)
                 tmp_file.flush()
 
                 try:
                     with Image.open(tmp_file.name) as img:
-                        # 检查PNG text数据
+#检查PNG文本数据
                         if hasattr(img, "text"):
                             for key, value in img.text.items():
                                 if key.lower() in ["chara", "character", "card"]:
                                     try:
-                                        # 尝试base64解码
+# 尝试base64解码
                                         decoded = base64.b64decode(value)
                                         return json.loads(decoded.decode("utf-8"))
                                     except:
                                         try:
-                                            # 直接解析JSON
+# 直接解析JSON
                                             return json.loads(value)
                                         except:
                                             continue
@@ -418,7 +402,5 @@ class CharacterCardService:
         if existing_agent:
             await agent_service.delete_agent(existing_agent.id, user_id, db)
             logger.info(f"删除现有Agent: {existing_agent.id}")
-
-
 # 创建服务实例
 character_card_service = CharacterCardService()

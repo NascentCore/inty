@@ -74,14 +74,14 @@ import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.utils.NetworkErrorHandler
 
 
-/** Ai 模型形象的 封面头像生成页面 */
+/** Ai模特头像的封面头像生成页面 */
 class AvatarGenerateActivity : BaseActivity() {
 
     companion object {
 
         /**
          * 启动单独的聊天界面
-         * @param context 上下文context
+         * @param context 上下文
          */
         fun launch(context: Context) {
             context.startActivity(Intent(context, AvatarGenerateActivity::class.java))
@@ -116,8 +116,7 @@ private fun AvatarGeneratePage(
     val errorMessage by viewModel.errorMessage.collectAsState()
 
     val focusManager = LocalFocusManager.current
-
-    // Handle error messages
+// 处理错误消息
     LaunchedEffect(errorMessage) {
         errorMessage?.let { error ->
             NetworkErrorHandler.showNetworkAwareError(error)
@@ -172,8 +171,7 @@ private fun AvatarGeneratePage(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Image Preview Section
+// 图片 Preview 部分
             if (generatedImageUrls.isEmpty()) {
                 AvatarPreviewSection(imageUrl = generatedImageUrl, isLoading = isLoading)
             } else {
@@ -188,13 +186,11 @@ private fun AvatarGeneratePage(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
-
-            // Prompt Input Field
+// Prompt 输入字段
             PromptInputField(value = prompt, onValueChange = viewModel::updatePrompt)
 
             Spacer(modifier = Modifier.height(32.dp))
-
-            // Generate Button
+// 生成按钮
             GenerateButton(
                 isLoading = isLoading,
                 enabled = prompt.isNotBlank(),
@@ -202,8 +198,7 @@ private fun AvatarGeneratePage(
             )
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Use Generated Avatar Button
+// 使用生成的头像按钮
             if (generatedImageUrls.isNotEmpty() || generatedImageUrl != null) {
                 UseAvatarButton(
                     onClick = {
@@ -237,7 +232,7 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
             }
 
             imageUrl != null -> {
-                // 使用 CDN 裁切获取预览图，使用配置的宽度和质量
+// 使用CDN裁切获取预览图，使用配置的宽度和质量
                 val previewUrl =
                     getCdnImageUrl(
                         imageUrl,
@@ -273,8 +268,7 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
                 }
             }
         }
-
-        // Dashed border for empty state (matching CreateRoleActivity style)
+// 空状态的虚线未知（匹配CreateRoleActivity风格）
         if (imageUrl == null && !isLoading) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val strokeWidth = 1.dp.toPx()
@@ -447,18 +441,17 @@ private fun AvatarGridSection(
     onRegenerate: (String) -> Unit,
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        // Regen 按钮
+// 再生按钮
         RegenButton(onClick = { onRegenerate(prompt) }, enabled = !isLoading)
 
         Spacer(modifier = Modifier.height(16.dp))
-
-        // 4张图片的网格布局
+// 4张图片的网格布局
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             imageUrls.take(4).forEachIndexed { index, imageUrl ->
-                // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
+// 使用CDN裁切获取点，使用配置的宽度和质量
                 val thumbnailUrl =
                     getCdnImageUrl(
                         imageUrl,

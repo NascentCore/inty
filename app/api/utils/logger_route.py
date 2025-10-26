@@ -37,15 +37,12 @@ class LoggerRoute(APIRoute):
 
         async def custom_route_handler(request: Request) -> Response:
             request_id = str(uuid.uuid4())[:8]
-
-            # Use contextualize to add request_id to all logs in this request context
+# 使用 contextualize 将 request_id 添加到该请求上下文中的所有日志中
             with logger.contextualize(request_id=request_id):
                 request_body = None
-
-                # Determine log format based on debug mode
+#根据调试确定模式日志格式
                 use_json_format = not global_config_loaded_from_config_yaml.app.debug
-
-                # Log request body for POST/PUT requests
+# 记录 POST/PUT 请求的请求正文
                 if request.method in ["POST", "PUT", "PATCH"]:
                     try:
                         body = await request.body()
@@ -56,8 +53,7 @@ class LoggerRoute(APIRoute):
                                 request_body = body.decode()
                     except Exception:
                         pass
-
-                # Log request
+# 记录请求
                 client = request.client.host if request.client else "unknown"
                 if use_json_format:
                     self._log_request_json(
@@ -85,8 +81,7 @@ class LoggerRoute(APIRoute):
                     start_time = time.time()
                     response: Response = await original_route_handler(request)
                     duration = time.time() - start_time
-
-                    # Extract response body
+# 提取响应体
                     try:
                         if hasattr(response, "body"):
                             body_bytes = response.body
@@ -98,8 +93,7 @@ class LoggerRoute(APIRoute):
                                     response_body = body_str
                     except Exception:
                         pass
-
-                    # Log response
+# 记录响应
                     if use_json_format:
                         self._log_response_json(
                             request_id=request_id,

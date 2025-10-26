@@ -1,6 +1,6 @@
 /**
  * 智能体管理Hook
- * 提供智能体的CRUD操作和缓存管理
+ * 提供智能体的 CRUD 操作和服务器管理
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -18,12 +18,11 @@ interface UseAgentsOptions {
 }
 
 interface UseAgentsReturn {
-  // 状态
+// 状态
   agents: Agent[];
   loading: boolean;
   error: string | null;
-
-  // 操作
+// 操作
   loadAgents: (forceRefresh?: boolean) => Promise<void>;
   createAgent: (
     data: AgentCreateRequest & { avatar?: File },
@@ -33,8 +32,7 @@ interface UseAgentsReturn {
     data: Partial<AgentUpdateRequest> & { avatar?: File },
   ) => Promise<Agent | null>;
   deleteAgent: (agentId: string) => Promise<boolean>;
-
-  // 辅助方法
+// 辅助方法
   getAgentById: (id: string) => Agent | undefined;
   getAgentsByVisibility: (visibility: AgentVisibility) => Agent[];
   clearCache: () => void;
@@ -47,13 +45,11 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     enableCache = true,
     cacheKey = `agents_cache_${type}`,
   } = options;
-
-  // 状态管理
+// 状态管理
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // 缓存管理
+// 存储管理
   const CACHE_EXPIRY = 30 * 60 * 1000; // 30分钟过期
 
   const getCachedData = useCallback((): Agent[] | null => {
@@ -94,24 +90,21 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     localStorage.removeItem(cacheKey);
     localStorage.removeItem(`${cacheKey}_time`);
   }, [cacheKey]);
-
-  // 错误处理
+// 错误处理
   const handleError = useCallback((error: unknown, defaultMessage: string) => {
     const errorMessage = (error as Error)?.message || defaultMessage;
     setError(errorMessage);
     message.error(errorMessage);
     console.error(defaultMessage, error);
   }, []);
-
-  // 加载智能体列表
+// 加载智能体列表
   const loadAgents = useCallback(
     async (forceRefresh: boolean = false) => {
       console.log("loadAgents called with forceRefresh:", forceRefresh);
       try {
         setLoading(true);
         setError(null);
-
-        // 检查缓存
+//检查缓存
         if (!forceRefresh) {
           const cachedData = getCachedData();
           if (cachedData) {
@@ -123,7 +116,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         }
 
         let response = await api.getIntyClient().api.v1.ai.agents.list({
-          // 增加限制以获取更多智能体；后端限制最多 1000 个，这是分页设计；以后需要调整
+//限制限制更多的智能体；笔记本最多1000个，这是分页设计；以后需要调整
           limit: 1000,
           skip: 0,
         });
@@ -140,8 +133,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         console.log("agent data after filtering:", data);
 
         setAgents((data || []) as unknown as Agent[]);
-
-        // 更新缓存
+// 更新缓存
         setCachedData((data || []) as unknown as Agent[]);
 
         if (forceRefresh) {
@@ -155,8 +147,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     },
     [type, getCachedData, setCachedData, handleError],
   );
-
-  // 创建智能体
+// 创建智能体
   const createAgent = useCallback(
     async (
       data: AgentCreateRequest & { avatar?: File },
@@ -166,8 +157,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setError(null);
 
         let agentData = { ...data };
-
-        // 如果有头像文件，先上传头像
+// 如果有头像文件，请先上传头像
         if (data.avatar) {
           try {
             const uploadResponse = await api
@@ -184,12 +174,11 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           } catch (error) {
             console.error("头像上传失败:", error);
             message.error("头像上传失败，但智能体创建将继续");
-            // 移除avatar字段，避免发送File对象
+// 删除avatar字段，避免发送File对象
             delete agentData.avatar;
           }
         }
-
-        // 确保voice_id字段被正确处理
+//确保voice_id字段被正确处理
         if (data.voice_id) {
           agentData.voice_id = data.voice_id;
         }
@@ -198,8 +187,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           .getIntyClient()
           .api.v1.ai.agents.create(agentData);
         const newAgent = response.data as unknown as Agent;
-
-        // 清理缓存并重新加载 agents 列表以确保获取完整数据（包括 avatar_size 和 background_size）
+// 清理服务器并重新加载代理列表以确保获取完整数据（包括avatar_size和background_size）
         clearCache();
         await loadAgents(true); // 强制刷新
 
@@ -214,8 +202,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     },
     [clearCache, handleError, loadAgents],
   );
-
-  // 更新智能体
+// 更新智能体
   const updateAgent = useCallback(
     async (
       agentId: string,
@@ -226,8 +213,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setError(null);
 
         let updateData = { ...data };
-
-        // 如果有头像文件，先上传头像
+// 如果有头像文件，请先上传头像
         if (data.avatar) {
           try {
             const uploadResponse = await api
@@ -258,12 +244,11 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           } catch (error) {
             console.error("头像上传失败:", error);
             message.error("头像上传失败，但智能体更新将继续");
-            // 移除avatar字段，避免发送File对象
+// 删除avatar字段，避免发送File对象
             delete updateData.avatar;
           }
         }
-
-        // 确保voice_id字段被正确处理
+//确保voice_id字段被正确处理
         if (data.voice_id !== undefined) {
           updateData.voice_id = data.voice_id;
         }
@@ -271,8 +256,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         const updatedAgent = (await api
           .getIntyClient()
           .api.v1.ai.agents.update(agentId, updateData)) as unknown as Agent;
-
-        // 清理缓存并重新加载 agents 列表以确保获取完整数据（包括 avatar_size 和 background_size）
+// 清理服务器并重新加载代理列表以确保获取完整数据（包括avatar_size和background_size）
         clearCache();
         await loadAgents(true); // 强制刷新
 
@@ -287,8 +271,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     },
     [clearCache, handleError, loadAgents],
   );
-
-  // 删除智能体
+//删除智能体
   const deleteAgent = useCallback(
     async (agentId: string): Promise<boolean> => {
       try {
@@ -296,11 +279,9 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setError(null);
 
         await api.getIntyClient().api.v1.ai.agents.delete(agentId);
-
-        // 更新本地状态
+// 更新本地状态
         setAgents((prev) => prev.filter((agent) => agent.id !== agentId));
-
-        // 清理缓存
+// 清理缓存
         clearCache();
 
         message.success("智能体已删除");
@@ -314,8 +295,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     },
     [clearCache, handleError],
   );
-
-  // 辅助方法
+// 辅助方法
   const getAgentById = useCallback(
     (id: string): Agent | undefined => {
       return agents.find((agent) => agent.id === id);
@@ -329,15 +309,13 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     },
     [agents],
   );
-
-  // 自动加载
+// 自动加载
   useEffect(() => {
     if (autoLoad) {
       loadAgents();
     }
   }, [autoLoad, loadAgents]);
-
-  // 类型变化时重新加载
+// 类型变化时重新加载
   useEffect(() => {
     if (autoLoad) {
       loadAgents();
@@ -345,18 +323,16 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
   }, [type, autoLoad, loadAgents]);
 
   return {
-    // 状态
+// 状态
     agents,
     loading,
     error,
-
-    // 操作
+// 操作
     loadAgents,
     createAgent,
     updateAgent,
     deleteAgent,
-
-    // 辅助方法
+// 辅助方法
     getAgentById,
     getAgentsByVisibility,
     clearCache,

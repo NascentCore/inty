@@ -116,8 +116,7 @@ fun MySettingScreen(
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             Spacer(Modifier.height(16.dp))
-
-            // 头像区域
+// 区域头像
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 AvatarSection(avatar = userProfile.avatar ?: "", onSelectAvatar = onSelectAvatar)
             }
@@ -125,8 +124,7 @@ fun MySettingScreen(
             Spacer(Modifier.height(46.dp))
 
             val horizontalPadding = 16
-
-            // 设置项区域
+//区域设置项
             SettingSection {
                 MySettingItem(
                     key = stringResource(R.string.str_name),
@@ -258,7 +256,7 @@ fun SaveButton(onSave: () -> Unit, isSaving: Boolean = false) {
                 }
     ) {
         if (isSaving) {
-            // 显示加载动画
+//加载显示动画
             CircularProgressIndicator(
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -306,7 +304,7 @@ fun EditDialog(
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // 关闭按钮
+// 关闭按钮
             Image(
                 painter = painterResource(R.drawable.close),
                 contentDescription = null,
@@ -316,8 +314,7 @@ fun EditDialog(
                         .align(Alignment.End)
                         .noRippleClickable { onDismiss() },
             )
-
-            // 标题
+// 标题
             val displayName = editKey.toDisplayName()
             Text(
                 text = displayName,
@@ -327,13 +324,11 @@ fun EditDialog(
             )
 
             Spacer(Modifier.height(22.dp))
-
-            // 编辑内容
+// 编辑内容
             EditContent(editKey = editKey, editValue = editValue, onValueChange = onValueChange)
 
             Spacer(Modifier.height(40.dp))
-
-            // 保存按钮
+// 保存按钮
             SaveButton(onSave = { onSave(editKey, editValue) })
 
             Spacer(Modifier.height(60.dp))
@@ -358,7 +353,7 @@ private fun EditContent(editKey: EditKey, editValue: String, onValueChange: (Str
         }
 
         EditKey.None -> {
-            // 空内容
+// 空内容
         }
     }
 }

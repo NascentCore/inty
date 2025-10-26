@@ -1,3 +1,3 @@
-# Test files
+# 测试文件
 
-Images are same conent different format, in order for consistent testing.
+图像内容相同，格式不同，以便测试一致。

@@ -5,8 +5,8 @@ import ai.sxwl.android.utils.LogUtils
 import javax.inject.Inject
 
 /**
- * 加载聊天历史用例
- * 封装加载聊天历史的业务逻辑
+ * 加载聊天历史示例
+ * 封装加载聊天历史业务逻辑
  */
 class LoadChatHistoryUseCase @Inject constructor(
     private val chatRepository: ChatRepository

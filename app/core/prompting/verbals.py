@@ -45,29 +45,21 @@ from pydantic import BaseModel
 
 class VerbalCategory(StrEnum):
     """Verbal category"""
-
-    # For expressing arousal.
+# 用于前pressing唤醒。
     AROUSAL = "arousal"
-
-    # For expressing affirmation.
+# 对于 expressing 肯定。
     AFFIRMATION = "affirmation"
-
-    # For expressing compliment.
+#为前pressing赞美。
     COMPLIMENT = "compliment"
-
-    # For expressing degradation.
+#用于前pressing降级。
     DEGRADATION = "degradation"
-
-    # For guiding the actions.
+#用于指导行动。
     DIRECTIVE = "directive"
-
-    # For establishing consent.
+#用于建立一致。
     CONSENT = "consent"
-
-    # For establishing connection.
+#用于建立连接。
     CONNECTION = "connection"
-
-    # For providing feedback, like "I like that" or "I don't like that".
+#为pr提供反馈，例如“我喜欢那个”或“我不喜欢那个”。
     FEEDBACK = "feedback"
 
 
@@ -77,6 +69,4 @@ class Verbal(BaseModel):
     name: str
     category: list[VerbalCategory]
     description: str
-
-
-# TODO: Add words and ways to assemble prompts.
+# TODO：添加单词和方法来组成prompts。

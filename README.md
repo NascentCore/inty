@@ -6,59 +6,39 @@ IntelliMate: Ultimate companionship, reimagined with AI
 Role-play with AI characters.
 Create your own IntelliMate, powered by carefully tuned AI agents,
 experience your own imagination.
-```
-
-[![Python Tests](https://github.com/NascentCore/inty-backend/actions/workflows/ci.yaml/badge.svg)](https://github.com/NascentCore/inty-backend/actions/workflows/ci.yaml)
+```[![Python 测试](https://github.com/NascentCore/inty-backend/actions/workflows/ci.yaml/badge.svg)](https://github.com/NascentCore/inty-backend/actions/workflows/ci.yaml)
 
 ![](https://api.checklyhq.com/v1/badges/checks/6c7437a4-e239-473b-b08d-8285fc16ce4e?style=for-the-badge&theme=default&responseTime=true)
-![](https://api.checklyhq.com/v1/badges/checks/1e149f71-dcad-49cc-a7bb-e0aecc429e6c?style=for-the-badge&theme=default&responseTime=true)
+！[](https://api.checklyhq.com/v1/badges/checks/1e149f71-dcad-49cc-a7bb-e0aecc429e6c?style=for-the-badge&theme=default&responseTime=true)
 
-InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成了 LangChain 和 LangGraph 技术栈，支持多种 AI 模型和智能体管理。项目采用现代化的异步编程架构，提供完整的 AI 对话解决方案和商业化订阅服务。
+InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用程序，集成了 LangChain 和 LangGraph 技术栈，支持多种 AI 模型和智能体管理。项目采用现代化的异步编程架构，提供完整的 AI 对话解决方案和商业化订阅服务。
 
-## 快速开始
-
-```bash
+## 快速开始```bash
 git clone ...
 cd ...
 git submodule update --init --recursive
-```
+```如果搞坏了 git submodule，比如下面这样的 submodule 里出现了，可以重置 git submodule：
 
-如果搞坏了 git submodule，比如下面这样 submodule 里有了改动，可以重置 git submodule：
-
-<img width="480" height="436" alt="image" src="https://github.com/user-attachments/assets/23852e45-cfe6-4686-9282-c138d40bf96f" />
-
-```bash
+<img width="480" height="436" alt="image" src="https://github.com/user-attachments/assets/23852e45-cfe6-4686-9282-c138d40bf96f" />```bash
 # 删除已有的 submodule
 git submodule deinit -f .
 
 # 重新拉取 submodule 代码
 git submodule update --init --recursive
-```
+```### Git 子模块回滚
 
-### Git Submodule 回滚
+找到修改的commit，然后在子模块目录内checkout commit
 
-找到修改的 commit，然后在 submodule 目录内 checkout 该 commit
-
-<img width="960" height="236" alt="image" src="https://github.com/user-attachments/assets/a3b34dad-45f4-43d0-b1fb-c066f8397bd2" />
-
-```
+<img width="960" height="236" alt="image" src="https://github.com/user-attachments/assets/a3b34dad-45f4-43d0-b1fb-c066f8397bd2" />```
 
 [Git Module 使用指南](https://www.atlassian.com/git/articles/core-concept-workflows-and-tips)
 
 ### 更新 Git submodule 到最新的代码分支
 
-```
+```### 同步 git 子模块`git submodule sync`## 使用 Docker 容器本地运行服务和 Android app（适用于 app 开发者）
 
-### 同步 git submodules
-
-`git submodule sync`
-
-## 使用 Docker 容器本地运行后端服务和 Android app（适用于 app 开发者）
-
-1. 访问 <https://docs.docker.com/desktop/setup/install/mac-install/> 安装 Docker Desktop。
-1. 拷贝配置文件（config.yaml）及密钥文件到 inty-backend 代码库顶层目录。
-
-   ```bash
+1.访问<https://docs.docker.com/desktop/setup/install/mac-install/>安装Docker Desktop。
+1. 复制配置文件（config.yaml）及密钥文件到inty-backend代码库仓库目录。```bash
    git clone git@github.com:NascentCore/inty-backend.git
    cd inty-backend
 
@@ -72,42 +52,26 @@ git submodule update --init --recursive
    # 数据库存储卷如果不删除，则会使用旧的景象，如果修改了数据库默认数据库，
    # 老得存储卷会导致数据库启动失败
    docker compose down --volume
-   ```
-
-1. 然后在按照下面的步骤创建端口映射，然后选择 local build type 构建 Android app
-
-   ```bash
+   ```1.然后按照下面的步骤创建端口映射，然后选择本地构建类型构建 Android app```bash
    adb devices
    adb -s emulator-5554 reverse tcp:8000 tcp:8000
-   ```
+   ```<img width="600" height="1850" alt="image" src="https://github.com/user-attachments/assets/9dc4e50d-91b5-4fbf-b04c-2c154db42b29" />
 
-   <img width="600" height="1850" alt="image" src="https://github.com/user-attachments/assets/9dc4e50d-91b5-4fbf-b04c-2c154db42b29" />
-
-## 使用 uvicorn 运行后端服务（面向后端开发者）
-
-```bash
+## 使用 uvicorn 运行服务（面向前端开发者）```bash
 # 使用脚本启动，提供代码文件热加载
 ./start.sh --dev
-```
-
-## 更新 openapi.json
-
-```bash
+```## 更新openapi。__保留__45__```bash
 # 调用脚本更新 app/openapi.json
 export PYTHONPATH=.
 python scripts/generate_openapi_json.py
 
 # 根据 app/openapi.json 更新 app/stainless.yml
 # 包括增加新的 API endpoint、删除 openapi.json 中被删除的 API endpoint 等等
-```
-
-然后，创建 Pull Request，等待 app.stainless.com 启动更新
+```然后，创建 Pull Request，等待 app.stainless。com 启动更新
 
 <img width="480" height="932" alt="image" src="https://github.com/user-attachments/assets/5ba171a1-c387-404d-9ab2-c81c1c85ef74" />
 
-## 系统架构
-
-```ascii
+## 系统架构```ascii
                                HTTP Clients
                                       │
                                       ▼
@@ -160,19 +124,15 @@ python scripts/generate_openapi_json.py
 │ OpenAI/LLM APIs, Google Search API, Google Cloud Storage, Firebase │
 │ Google OAuth & Google Play, ElevenLabs voice, SMS/Notification svc │
 └────────────────────────────────────────────────────────────────────┘
-```
-
-GCS public access
+```GCS 公共访问
 
 <img width="800" alt="image" src="https://github.com/user-attachments/assets/9230dc1f-1430-467b-b12e-bfba1def3922" />
 
-Get your GCP credential key json file to allow backend access to your GCS buckets:
+获取您的 GCP 凭证密钥 json 文件，以允许后端访问您的 GCS 存储桶：
 
 <img width="3018" height="1218" alt="image" src="https://github.com/user-attachments/assets/df5c7bfb-b4ad-4d0a-b4cb-65b25c7d4560" />
 
-## 在本地开发环境启动 App
-
-```bash
+## 在本地开发环境启动App```bash
 git clone https://github.com/NascentCore/inty-backend.git
 cd inty-backend
 
@@ -185,25 +145,21 @@ pip install -r requirements.txt
 # And edit config.yaml to set the correct settings.
 # You only need to do this once to have a working config.yaml file.
 cp config.yaml.example config.yaml
-```
+```### 环境要求
 
-### 环境要求
+配置。yaml 指示依赖服务的配置选项
 
-config.yaml 指明依赖服务的配置选项
-
-- PostgreSQL 12+ (需要 pgvector 扩展)
-- Redis（可选，用于缓存）
-- Google Cloud Storage 账户
-- Google Play
-- Google OAuth
-- JWT 密钥
-- 相关 AI 模型 API 密钥 (OpenRouter ElevenLabs API Key)
+- PostgreSQL 12+（需要 pgvector 扩展）
+- Redis（可选，用于服务器）
+- 谷歌云存储账户
+- 谷歌播放
+- 谷歌OAuth
+- 智威汤逊
+- 相关AI模型API键（OpenRouter ElevenLabs API键）
 
 ### 初始化数据库
 
-数据库结构见 [app/models](app/models) 下各个 python 代码文件中表结构定义数据结构
-
-```bash
+数据库结构见 [app/models](app/models) 下各个 python 代码文件中表结构定义数据结构```bash
 # Install createdb cli, used below
 brew install postgresql
 
@@ -224,18 +180,14 @@ python scripts/init_subscription_plans.py
 
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
+```服务器将在 <http://localhost:8000> 运行
+启动服务器后，可以访问以下地址查看API文档：
 
-服务器将在 <http://localhost:8000> 运行
-启动服务器后，可以访问以下地址查看 API 文档：
+- **Swagger UI**：<http://localhost:8000/docs>
+- **ReDoc**：<http://localhost:8000/redoc>
+- **OpenAPI JSON**：<http://localhost:8000/api/v1/openapi.json>
 
-- **Swagger UI**: <http://localhost:8000/docs>
-- **ReDoc**: <http://localhost:8000/redoc>
-- **OpenAPI JSON**: <http://localhost:8000/api/v1/openapi.json>
-
-### 开发
-
-```bash
+### 开发```bash
 # 启动开发服务器
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
@@ -259,41 +211,35 @@ TODO: 只保留一种就够了！
 ```bash
 # 设置生产配置；编辑生产环境配置
 cp config.yaml.example config.yaml
-```
-
-1. **使用 Docker 部署**
-
-```bash
+```1.**使用 Docker 部署**```bash
 # 构建镜像
 docker build -t inty-backend .
 
 # 运行容器
 docker run -p 8000:8000 -v $(pwd)/config.yaml:/app/config.yaml inty-backend
-```
-
-## 服务帐号密钥生成
+```## 服务账号生成
 
 配置文件中需要配置 GCS 和 FireBase 的服务帐号密钥
 
 ### Firebase 服务账号密钥生成
 
-1. 进入 Firebase Console：
-   - 访问 <https://console.firebase.google.com/>
+1.进入Firebase控制台：
+   - 访问<https://console.firebase.google.com/>
    - 选择项目（Inty）
 
-2. 生成服务账号密钥：
+2.生成服务账号密钥：
    - 在项目设置 -> 服务账号 -> 生成新的私钥
    - 下载的文件重命名为：inty-firebase-key.json
 
 ### Google Cloud Storage 服务账号密钥生成
 
-1. 进入 Google Cloud Console：
-   - 访问 <https://console.cloud.google.com/>
+1.进入谷歌云控制台：
+   - 访问<https://console.cloud.google.com/>
    - 选择项目（Inty）
 
-2. 创建服务账号（service account）：
-   - 设置 “roles/storage.admin” 角色
-   - 点击创建的服务帐号 -> 密钥 -> 创建新密钥
+2.创建服务账号（service account）：
+   - 设置“roles/storage.admin”角色
+   - 点击创建的服务账号 -> 密钥 -> 创建新密钥
    - 下载的文件重命名为：inty-backend-key.json
 
 ## 技术栈
@@ -301,35 +247,33 @@ docker run -p 8000:8000 -v $(pwd)/config.yaml:/app/config.yaml inty-backend
 ### 🚀 核心框架
 
 - **Python 3.8+** - 编程语言
-- **FastAPI** - 高性能异步 Web 框架
+- **FastAPI** - 高性能 Web 框架
 - **PostgreSQL** - 关系型数据库
 - **SQLAlchemy** - 异步 ORM 框架
 - **Alembic** - 数据库迁移工具
-- **Uvicorn** - ASGI 服务器
+- **Uvicorn** - ASGI 服务器### 🤖 AI 技术栈
 
-### 🤖 AI 技术栈
-
-- **LangChain** - AI 应用开发框架
-- **LangGraph** - 智能体状态管理和工作流
+- **LangChain** - AI应用开发框架
+- **LangGraph** - 智能体状态管理和工作流程
 - **OpenRouter API** - GPT 模型集成
 - **Google Gemini API** - Gemini 模型集成
 - **LangMem** - 记忆管理系统
-- **向量数据库** - pgvector 扩展
+- **支持数据库** - pgvector 扩展
 
-### 🔐 身份认证
+### 🔐身份认证
 
 - **JWT** - 令牌认证
 - **Google OAuth** - 第三方登录
 - **Firebase** - 身份验证服务
 - **bcrypt** - 密码哈希
 
-### ☁️ 云服务
+### ☁️云服务
 
 - **Google Cloud Storage** - 文件存储和语音文件管理
-- **Google Search API** - 搜索功能
-- **Google Play Developer API** - 订阅管理
-- **Firebase Cloud Messaging** - 消息推送
+- **Google 搜索 API** - 搜索功能
+- **Google Play 开发者 API** - 订阅管理
+- **Firebase Cloud Messaging** - 消息个体
 - **ElevenLabs API** - 高质量语音合成服务
-  - Gemini TTS: [pricing](https://cloud.google.com/text-to-speech/pricing?hl=en)
-    - 同类型的版本和层级 2.5-flash 语音价格按 1M token 计算是 $10（语音）$2.50（文字）
-    - [简单的预估语音生成成本是文字 40 倍](https://g.co/gemini/share/261be14cc60b)
+  - 双子座 TTS：[pricing](https://cloud.google.com/text-to-speech/pricing?hl=en)
+    - 同类型的版本和体系 2.5-flash 语音价格按 1M token 计算为 $10（语音）$2.50（文字）
+    - [简单的外汇语音生成成本是文字40倍](https://g.co/gemini/share/261be14cc60b)

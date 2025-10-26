@@ -1,6 +1,6 @@
-# AGENTS.md · alembic/（数据库迁移）
+# 代理。md·alembic/（数据库迁移）
 
-本文件覆盖并补充根 `AGENTS.md`，仅适用于 `alembic/`。
+本文件覆盖并补充根`AGENTS.md`，仅适用于 `alembic/`。
 
 ## 原则
 - 一切数据库模式变更必须通过迁移完成；禁止绕过迁移直接改表。

@@ -1,5 +1,5 @@
-# TODO: This probably should be removed. Most admin entries can be included in py source files.
-# And update by redeploying the app.
+# TODO：这个 pr 显然应该被删除。大多数管理边界可以包含在 py 源文件中。
+#并通过重新部署应用程序进行更新。
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from loguru import logger
@@ -49,8 +49,7 @@ async def get_all_system_settings(
     """
     try:
         settings = await system_settings_service.get_all_settings(db)
-
-        # 转换为响应模型
+# 转换为响应模型
         items = []
         for setting in settings:
             items.append(
@@ -95,8 +94,7 @@ async def get_settings_by_category(
     """
     try:
         settings = await system_settings_service.get_settings_by_category(db, category)
-
-        # 转换为响应模型
+# 转换为响应模型
         items = []
         for setting in settings:
             items.append(
@@ -141,15 +139,14 @@ async def update_system_setting(
     更新系统配置
     """
     try:
-        # 更新配置
+# 更新配置
         success = await system_settings_service.set_setting(
             db=db, key=key, value=request.value, updated_by=current_user.id
         )
 
         if not success:
             return APIResponse.error(message=f"Failed to update setting: {key}")
-
-        # 获取更新后的配置
+# 获取更新后的配置
         from sqlalchemy import select
 
         from app.models.system_settings import SystemSettings

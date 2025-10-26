@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
 
-/** Keep Talking按钮组件 */
+/** 继续说话按钮组件 */
 @Composable
 fun KeepTalkingButton(visible: Boolean, onClick: () -> Unit) {
     if (!visible) return
@@ -41,7 +41,7 @@ fun KeepTalkingButton(visible: Boolean, onClick: () -> Unit) {
                     .noRippleClickable { onClick() },
             contentAlignment = Alignment.Center,
         ) {
-            // 播放按钮图标 (>>)
+// 播放按钮图标 (>>)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(R.string.play_button_symbol),

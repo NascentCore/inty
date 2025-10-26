@@ -88,7 +88,7 @@ async def stream(request: Request) -> StreamingResponse:
 
     async def event_generator() -> AsyncGenerator[str, None]:
         try:
-            # Optional greeting so clients see something immediately
+#任何问候语，以便客户立即看到一些内容
             yield "event: open\ndata: connected\n\n"
             while True:
                 if await request.is_disconnected():
@@ -99,7 +99,7 @@ async def stream(request: Request) -> StreamingResponse:
                     )
                     yield payload
                 except asyncio.TimeoutError:
-                    # Keep-alive ping so intermediaries don't close idle connection
+#保持ping活动状态，届时将不会关闭休闲连接
                     yield "event: ping\ndata: keepalive\n\n"
         finally:
             await broker.unsubscribe(client_id, subscriber_queue)
@@ -109,7 +109,7 @@ async def stream(request: Request) -> StreamingResponse:
 
 @app.post("/publish")
 async def publish(req: PublishRequest) -> JSONResponse:
-    # Broadcast utility kept for completeness
+#为了少数而保留广播实用节目
     await broker.publish_broadcast(req.message, req.event)
     return JSONResponse({"status": "ok"})
 

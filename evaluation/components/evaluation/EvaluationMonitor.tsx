@@ -1,6 +1,6 @@
 /**
- * 评测监控组件
- * 负责实时监控评测进度、显示结果、管理评测状态
+ * 运动监控组件
+ * 负责实时监控成绩详情、显示结果、管理成绩状态
  */
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -51,13 +51,12 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
   showControls = true,
   autoRefresh = true,
 }) => {
-  // 状态管理
+// 状态管理
   const [results, setResults] = useState<EvaluationResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { jsonModalVisible, jsonData, showJson, hideJson } = useJsonDisplay();
-
-  // 如果没有传入session，则使用hook管理
+// 如果确定没有会话，则使用hook管理
   const {
     session: hookSession,
     results: hookResults,
@@ -74,14 +73,12 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
     autoRefresh: !propSession && autoRefresh, // 只有没有传入session时才使用hook的autoRefresh
     refreshInterval: 5000,
   });
-
-  // 使用传入的session或hook的session
+// 使用构造的会话或者钩子的会话
   const session = propSession || hookSession;
-
-  // 当有传入session时，管理自己的结果数据和刷新逻辑
+// 当确定会话时，管理自己的结果数据和刷新逻辑
   useEffect(() => {
     if (propSession?.id) {
-      // 使用传入的session时，加载结果
+// 使用确定的会话时，加载结果
       const loadResults = async () => {
         setLoading(true);
         setError(null);
@@ -97,7 +94,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
 
       loadResults();
     } else if (!propSession) {
-      // 没有传入session时，使用hook的数据
+// 确定没有会话时，使用hook的数据
       setResults(hookResults);
       setLoading(hookLoading);
       setError(hookError);
@@ -109,8 +106,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
     hookLoading,
     hookError,
   ]);
-
-  // 自动刷新逻辑 - 当传入session且需要自动刷新时
+// 自动刷新逻辑 - 当确定会话且需要自动刷新时
   useEffect(() => {
     if (
       propSession &&
@@ -126,8 +122,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
           );
           const sessionResults = await api.sessions.getResults(propSession.id);
           setResults(sessionResults);
-
-          // 通知父组件刷新session状态
+// 通知父组件刷新会话状态
           if (onSessionChange) {
             const updatedSession = await api.sessions.get(propSession.id);
             onSessionChange(updatedSession);
@@ -140,15 +135,13 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
       return () => clearInterval(timer);
     }
   }, [propSession, autoRefresh, onSessionChange]);
-
-  // 状态变化通知
+// 状态变化通知
   useEffect(() => {
     if (onSessionChange && session !== propSession && !propSession) {
       onSessionChange(session);
     }
   }, [session, propSession, onSessionChange]);
-
-  // WebSocket连接管理
+// WebSocket连接管理
   useEffect(() => {
     if (
       session &&
@@ -163,8 +156,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
       disconnectWebSocket();
     };
   }, [session, connectWebSocket, disconnectWebSocket]);
-
-  // 计算统计数据
+// 计算统计数据
   const statistics = useMemo(() => {
     if (!session || !results) {
       return {
@@ -197,8 +189,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
       completionRate,
     };
   }, [session, results]);
-
-  // 操作处理
+// 操作处理
   const handleStart = async () => {
     if (!session) return;
     await startSession(session.id);
@@ -219,8 +210,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
     if (!session) return;
     await Promise.all([refreshSession(session.id), refreshResults(session.id)]);
   };
-
-  // 移除handleViewResult方法，直接展示结果
+// 移除handleViewResult方法，直接显示结果
 
   const handleExportResults = () => {
     if (!results || results.length === 0) {
@@ -229,7 +219,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
     }
 
     try {
-      // 直接导出原始数据，保持完整结构
+// 直接导出原始数据，保持完整结构
       const exportData = {
         session: session,
         results: results,
@@ -238,15 +228,13 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
           total_results: results.length,
         },
       };
-
-      // 生成文件名
+// 生成文件名
       const timestamp = new Date()
         .toISOString()
         .slice(0, 19)
         .replace(/:/g, "-");
       const filename = `evaluation_results_${session?.name || "unknown"}_${timestamp}.json`;
-
-      // 创建并下载文件
+// 创建并下载文件
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {
         type: "application/json",
       });
@@ -272,8 +260,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
       message.warning("暂无可显示的结果");
       return;
     }
-
-    // 准备导出数据 - 直接使用原始数据，不进行字段映射
+// 准备导出数据 - 直接使用原始数据，不进行字段映射
     const exportData = {
       session: session,
       results: results,
@@ -281,8 +268,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
 
     showJson(exportData);
   };
-
-  // 状态颜色映射
+// 状态颜色映射
   const getStatusColor = (status: EvaluationStatus) => {
     switch (status) {
       case "PENDING":
@@ -299,8 +285,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
         return "default";
     }
   };
-
-  // 状态图标映射
+// 状态图标映射
   const getStatusIcon = (status: EvaluationStatus) => {
     switch (status) {
       case "PENDING":
@@ -331,7 +316,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
 
   return (
     <div className="evaluation-monitor">
-      {/* 会话状态卡片 */}
+      {/* 会话状态关系 */}
       <Card
         title={
           <Space>
@@ -422,7 +407,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
           />
         )}
 
-        {/* 进度统计 */}
+        {/* 详细统计 */}
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={6}>
             <Statistic
@@ -466,7 +451,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
         </Row>
       </Card>
 
-      {/* 评测结果展示 */}
+      {/* 成绩结果展示 */}
       {results.length > 0 && (
         <div style={{ marginTop: 16 }}>
           <MultiAgentChatDisplay
@@ -478,7 +463,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
         </div>
       )}
 
-      {/* JSON数据展示模态框 */}
+      {/* JSON数据展示模式框 */}
       <JsonDisplayModal
         open={jsonModalVisible}
         onClose={hideJson}

@@ -70,15 +70,14 @@ Probability:"""
                         'max_output_tokens': 10,
                     }
                 )
-                
-                # Extract probability from response
+# 从响应中获取probability
                 probability_text = response.text.strip()
                 try:
                     probability = float(probability_text)
-                    # Ensure probability is between 0 and 1
+#确保 probability 加密货币 0 和 1 之间
                     probability = max(0.0, min(1.0, probability))
                 except ValueError:
-                    # If parsing fails, try to extract number from text
+# 如果解析失败，尝试从文本中提取数字
                     import re
                     numbers = re.findall(r'\d+\.?\d*', probability_text)
                     probability = float(numbers[0]) / 100.0 if numbers else 0.5
@@ -95,8 +94,7 @@ Probability:"""
         """Analyze image content against all defined labels."""
         if not self.content_definitions:
             raise ValueError("No content definitions loaded. Use add_content_definition() or load_content_definitions_from_file() first.")
-        
-        # Load and resize image if needed
+# 如果需要加载图像并调整图像大小
         image_bytes = self._prepare_image(image_path)
         
         results = {}
@@ -128,15 +126,14 @@ Probability:"""
                         'max_output_tokens': 10,
                     }
                 )
-                
-                # Extract probability from response
+# 从响应中提取 probability
                 probability_text = response.text.strip()
                 try:
                     probability = float(probability_text)
-                    # Ensure probability is between 0 and 1
+#确保 probability 加密货币 0 和 1 之间
                     probability = max(0.0, min(1.0, probability))
                 except ValueError:
-                    # If parsing fails, try to extract number from text
+# 如果解析失败，尝试从文本中提取数字
                     import re
                     numbers = re.findall(r'\d+\.?\d*', probability_text)
                     probability = float(numbers[0]) / 100.0 if numbers else 0.5
@@ -152,19 +149,17 @@ Probability:"""
     def _prepare_image(self, image_path: str) -> bytes:
         """Prepare image for analysis by resizing if needed and converting to bytes."""
         with Image.open(image_path) as img:
-            # Convert to RGB if necessary
+# 如果需要的话转换为RGB
             if img.mode != 'RGB':
                 img = img.convert('RGB')
-            
-            # Resize if larger than 512x512
+# 如果大于512x512则调整大小
             width, height = img.size
             if width > 512 or height > 512:
                 scale = 512 / max(width, height)
                 new_width = int(width * scale)
                 new_height = int(height * scale)
                 img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            
-            # Convert to bytes
+# 转换为字节
             bytesio = io.BytesIO()
             img.save(bytesio, format='JPEG', quality=85)
             bytesio.seek(0)
@@ -205,32 +200,27 @@ def main():
                        help='Probability threshold for flagging content (default: 0.5)')
     
     args = parser.parse_args()
-    
-    # Initialize analyzer
+# 初始化分析器
     analyzer = ContentAnalyzer()
-    
-    # Load or create definitions
+# 加载或创建定义
     if args.definitions:
         analyzer.load_content_definitions_from_file(args.definitions)
     elif args.add_definition:
         label, definition = args.add_definition
         analyzer.add_content_definition(label, definition)
     else:
-        # Use sample definitions
+# 使用示例定义
         sample_defs = create_sample_definitions()
         for label, definition in sample_defs.items():
             analyzer.add_content_definition(label, definition)
         print("Using sample content definitions. Use --definitions to load custom ones.")
-    
-    # Save definitions if requested
+# 如果需要的话保存定义
     if args.save_definitions:
         analyzer.save_content_definitions_to_file(args.save_definitions)
         print(f"Definitions saved to {args.save_definitions}")
-    
-    # Determine content type
+# 确定内容类型
     content_type = ContentType.TEXT if args.type == 'text' else ContentType.IMAGE
-    
-    # Analyze content
+# 分析内容
     print(f"Analyzing {args.type} content...")
     print(f"Content: {args.content}")
     print("-" * 50)
@@ -238,8 +228,7 @@ def main():
     start_time = time.time()
     results = analyzer.analyze_content(args.content, content_type)
     end_time = time.time()
-    
-    # Display results
+# 显示结果
     print(f"Analysis completed in {end_time - start_time:.2f} seconds")
     print("\nResults:")
     print("-" * 50)

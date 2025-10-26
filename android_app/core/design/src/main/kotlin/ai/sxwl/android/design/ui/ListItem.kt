@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * 应用项目封装的items
+ * 应用项目 封装的项目
  */
 @Composable
 fun SettingsCheckBoxItem(
@@ -88,13 +88,13 @@ fun SettingsCheckBoxItem(
             modifier = Modifier
                 .size(20.dp)
                 .clip(CircleShape)
-            // 移除checkbox的单独点击，因为整个item已经可点击了
+// 删除中间的单独点击，因为整个项目已经可以点击了
         )
     }
 }
 
 /**
- * 只有标题和开关的item
+ * 唯一标题和切换的项目
  */
 @Composable
 fun SettingsSwitchItem(
@@ -153,7 +153,7 @@ fun SettingsSwitchItem(
 
 
 /**
- * 设置item的数据类
+ *设置项目的数据类别
  */
 sealed class SettingsItemData {
 
@@ -166,7 +166,7 @@ sealed class SettingsItemData {
     ) : SettingsItemData()
 
     /**
-     * 普通item数据
+     * 普通项目数据
      */
     data class CommonItemData(
         val title: String = "",
@@ -175,7 +175,7 @@ sealed class SettingsItemData {
     ) : SettingsItemData()
 
     /**
-     * icon item数据
+     * 图标项目数据
      */
     data class IconItemData(
         @param:DrawableRes val icon: Int,
@@ -204,7 +204,7 @@ private fun 预览设置开关() {
 
 
 /**
- * 有标题和描述以及箭头的item
+ * 有标题和描述以及箭头的项目
  */
 @Composable
 fun SettingsArrowItem(
@@ -291,7 +291,7 @@ private fun 预览普通设置条目() {
 
 
 /**
- * 有图标、标题以及箭头的item
+ * 有图标、标题以及箭头的项目
  */
 @Composable
 fun SettingsIconArrowItem(
@@ -368,7 +368,7 @@ private fun 预览ICON设置条目() {
 }
 
 /**
- * 设置分组的背景容器
+ *收拾好背景容器
  */
 @Composable
 fun SettingsItemGroup(

@@ -35,10 +35,9 @@ def create_resource(
     """
     Create new resource
     """
-    # 排除数据库模型中不存在的字段
+# 修复数据库模型中不存在的字段
     resource_data = resource_in.model_dump(exclude=EXCLUDE_FIELDS)
-
-    # 创建资源记录，如果发生冲突则抛出异常
+#创建资源记录，如果发生冲突则引发异常
     db_resource = models.Resource(**resource_data, user_id=user_id)
     db.add(db_resource)
     db.commit()
@@ -71,7 +70,7 @@ def delete_resource(db: Session, *, db_resource: models.Resource) -> models.Reso
 
 
 def create_image_resource(
-    # TODO: 使用 AsyncSession 替换 Session
+# TODO: 使用 AsyncSession 替换会话
     db: Session,
     user_id: str,
     url: str,
@@ -90,7 +89,7 @@ def create_image_resource(
     另一个记录存储 GCS URL（如 https://storage.googleapis.com/bucket/image.jpg）
     GCS URL 用于内部存储，CDN URL 用于外部 app 访问，其会做压缩裁切等功能。
     """
-    # Create image resource metadata using the new Pydantic model
+# 使用新的 Pydantic 模型创建图像资源元数据
     image_metadata = ImageResourceMetadata(
         creator=user_id,
         size=size,
@@ -102,8 +101,7 @@ def create_image_resource(
         uncropped_image_url=uncropped_image_url,
         gcs_url=gcs_url,
     )
-
-    # Convert to dict for database storage
+# 将字典转换为数据库存储
     resource_metadata = image_metadata.model_dump()
     resource = create_resource(
         db=db,
@@ -122,10 +120,9 @@ async def async_create_resource(
     resource_in: schemas.ResourceCreate,
     user_id: str,
 ) -> models.Resource:
-    # 排除数据库模型中不存在的字段
+# 修复数据库模型中不存在的字段
     resource_data = resource_in.model_dump(exclude=EXCLUDE_FIELDS)
-
-    # 创建资源记录，如果发生冲突则抛出异常
+#创建资源记录，如果发生冲突则引发异常
     db_resource = models.Resource(**resource_data, user_id=user_id)
     async_db.add(db_resource)
     await async_db.commit()
@@ -152,7 +149,7 @@ async def async_create_image_resource(
     另一个记录存储 GCS URL（如 https://storage.googleapis.com/bucket/image.jpg）
     GCS URL 用于内部存储，CDN URL 用于外部 app 访问，其会做压缩裁切等功能。
     """
-    # Create image resource metadata using the new Pydantic model
+# 使用新的 Pydantic 模型创建图像资源元数据
     image_metadata = ImageResourceMetadata(
         creator=user_id,
         size=size,
@@ -164,8 +161,7 @@ async def async_create_image_resource(
         uncropped_image_url=uncropped_image_url,
         gcs_url=gcs_url,
     )
-
-    # Convert to dict for database storage
+# 将字典转换为数据库存储
     resource_metadata = image_metadata.model_dump()
     resource = await async_create_resource(
         async_db=async_db,

@@ -20,9 +20,7 @@ class Trait(BaseModel):
 
     def __str__(self):
         return f"{self.category}: {self.name}: {self.description}"
-
-
-## General Positive
+## 一般积极
 KIND = Trait(
     name="kind",
     description="gentle, friendly, and considerate.",
@@ -328,8 +326,7 @@ REFLECTIVE = Trait(
     description="relating to or characterized by deep thought; thoughtful.",
     category=[TraitCategory.POSITIVE],
 )
-
-# Negative Traits
+#巴特
 ARROGANT = Trait(
     name="arrogant",
     description="having or revealing an exaggerated sense of one's own importance or abilities.",
@@ -606,8 +603,7 @@ VAIN = Trait(
     description="having or showing an excessively high opinion of one's appearance, abilities, or worth.",
     category=[TraitCategory.NEGATIVE],
 )
-
-# Neutral/Situational Traits
+#中性/无障碍特征
 INTROVERTED = Trait(
     name="introverted",
     description="tends to be reserved and gains energy from solitude.",

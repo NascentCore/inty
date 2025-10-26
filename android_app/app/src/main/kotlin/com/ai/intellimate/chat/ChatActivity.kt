@@ -25,9 +25,9 @@ class ChatActivity : BaseActivity() {
 
         /**
          * 启动单独的聊天界面
-         * @param context 上下文context
+         * @param context 上下文
          * @param agentInfo Agent的Info对象
-         * @param agentId agent的id 两个参数选一即可，也必须只要有一个
+         * @param agentId 代理的id 两个参数选一即可，也必须只要有一个
          */
         fun launch(context: Context, agentInfo: AgentInfo? = null, agentId: String? = null) {
             context.startActivity(Intent(context, ChatActivity::class.java).also { intent ->
@@ -59,7 +59,7 @@ class ChatActivity : BaseActivity() {
             }
 
             else -> {
-                // 既没有agent对象也没有agent_id，说明参数传递有问题
+// 既没有agent对象也没有agent_id，说明参数提交有问题
                 finish()
                 return
             }
@@ -81,7 +81,7 @@ class ChatActivity : BaseActivity() {
             showBackButton = true,
             onBack = { finish() },
         )
-        // 跟踪ChatActivity页面访问
+// 跟踪ChatActivity页面访问
         val agentId = agent?.id ?: agentId ?: "unknown"
         FirebaseManager.logScreenView(
             screenName = "ChatScreen",
@@ -93,13 +93,13 @@ class ChatActivity : BaseActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // 清理 ChatViewModel 资源
+// 清理 ChatViewModel 资源
         chatViewModel.clearAllData()
     }
 
     override fun onPause() {
         super.onPause()
-        // 统一生命周期：Activity 页面进入后台即停止音频
+// 统一生命周期：活动页面进入后台即停止音频
         chatViewModel.pauseVoicePlayback()
     }
 }

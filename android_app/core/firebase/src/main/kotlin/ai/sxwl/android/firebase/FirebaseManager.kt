@@ -24,15 +24,13 @@ import java.util.concurrent.atomic.AtomicBoolean
  * - 线程安全的单例模式
  * - 完善的错误处理和日志记录
  * - 支持采样和限频机制
- * - 异步操作避免阻塞主线程
+ * - 操作避免阻止主线程
  * - 资源管理和内存优化
  */
 object FirebaseManager {
-
-    // 使用AtomicBoolean确保线程安全
+// 使用AtomicBoolean确保线程安全
     private val isInitialized = AtomicBoolean(false)
-
-    // 缓存 Firebase 实例，避免重复获取
+// 存储Fire实例库，避免重复
     @Volatile
     private var analytics: FirebaseAnalytics? = null
 
@@ -41,8 +39,7 @@ object FirebaseManager {
 
     @Volatile
     private var performance: FirebasePerformance? = null
-
-    // 使用SupervisorJob确保子协程异常不影响其他协程
+// 使用SupervisorJob确保子协程异常不影响其他协程
     private val firebaseScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private data class Config(
@@ -59,16 +56,15 @@ object FirebaseManager {
         analyticsEnabled = true,
         crashlyticsEnabled = true,
         performanceEnabled = true,
-        // 低价值事件默认加入采样
+// 低值默认事件加入采样
         samplingRates = mapOf(
             "user_interaction" to 0.1,
             "message_sent" to 0.5,
-            // 保留高价值 100%：失败/401/最终失败/页面
+// 保留高价值100%：失败/401/最终失败/页面
         ),
         minIntervalMsPerEvent = mapOf("user_interaction" to 5_000L, "message_sent" to 1_000L),
     )
-
-    // 错误统计，避免重复错误日志
+// 错误统计，避免重复错误日志
     private val errorCounts = ConcurrentHashMap<String, Int>()
     private val maxErrorLogs = 5 // 每种错误最多记录5次
     private val lastEventTimes = ConcurrentHashMap<String, Long>()
@@ -85,22 +81,19 @@ object FirebaseManager {
 
         try {
             val appContext = context.applicationContext
-
-            // 初始化 Firebase Analytics
+// 初始化 Firebase Analytics
             analytics = FirebaseAnalytics.getInstance(appContext)
-
-            // 初始化 Firebase Crashlytics
+// 初始化 Firebase Crashlytics
             crashlytics = FirebaseCrashlytics.getInstance()
-
-            // 初始化 Firebase Performance
+// 初始化 Firebase 性能
             performance = FirebasePerformance.getInstance()
 
             isInitialized.set(true)
             LogUtils.i("FirebaseManager - 初始化成功")
         } catch (e: Exception) {
             LogUtils.e("FirebaseManager - 初始化失败: ${e.message}")
-            // 即使初始化失败，也不应该崩溃应用
-            // 重置状态，允许重试
+//即使初始化失败，也不应该崩溃应用
+// 重置状态，允许重试
             isInitialized.set(false)
         }
     }
@@ -128,7 +121,7 @@ object FirebaseManager {
         return crashlytics
     }
 
-    /** 安全地获取 Performance 实例 */
+    /** 安全地获取性能实例 */
     fun getPerformance(): FirebasePerformance? {
         if (!isInitialized.get()) {
             logError("getPerformance", "FirebaseManager not initialized")
@@ -139,7 +132,7 @@ object FirebaseManager {
     }
 
     /**
-     * 安全地记录事件到 Analytics
+     * 安全地记录事件到分析
      * 使用SupervisorJob确保异常不会影响其他操作
      */
     fun logEvent(eventName: String, parameters: Map<String, Any> = emptyMap()) {
@@ -147,8 +140,7 @@ object FirebaseManager {
 
         try {
             val analytics = getAnalytics() ?: return
-
-            // 使用firebaseScope确保异常隔离
+// 使用firebaseScope确保异常隔离
             firebaseScope.launch {
                 try {
                     val bundle = createBundle(parameters)
@@ -351,7 +343,7 @@ object FirebaseManager {
     }
 
     /**
-     * 记录自定义日志
+     * 记录习惯
      */
     fun log(message: String) {
         try {
@@ -369,7 +361,7 @@ object FirebaseManager {
     }
 
     /**
-     * 更新日志开关与采样配置
+     *更新日志开关与采样配置
      */
     fun updateSwitches(
         enableAnalytics: Boolean? = null,
@@ -414,14 +406,13 @@ object FirebaseManager {
     }
 
     /**
-     * Firebase 推送消息注册
+     * Firebase大众消息注册
      */
     suspend fun registerFCM(): String {
         val token = FirebaseMessaging.getInstance().token.await()
         return token
     }
-
-    //region Performance Monitoring 相关方法
+//区域性能监控相关方法
 
     /**
      * 开始一个自定义追踪
@@ -541,27 +532,23 @@ object FirebaseManager {
             stopTrace(trace)
         }
     }
-
-    //endregion
+//区域结束
 
     /**
      * 清理资源
-     * 在应用退出时调用，避免内存泄漏
+     * 在应用程序退出时调用，避免内存溢出
      */
     fun cleanup() {
         try {
-            // 取消所有协程
+// 取消所有协程
             firebaseScope.coroutineContext.cancel()
-
-            // 清理缓存
+// 清理缓存
             analytics = null
             crashlytics = null
             performance = null
-
-            // 重置状态
+// 状态重置
             isInitialized.set(false)
-
-            // 清理统计信息
+// 清理统计信息
             errorCounts.clear()
             lastEventTimes.clear()
 
@@ -570,17 +557,14 @@ object FirebaseManager {
             LogUtils.e("FirebaseManager - 资源清理失败: ${e.message}")
         }
     }
-
-    // 私有辅助方法
+// 辅助方法
     private fun shouldLogEvent(eventName: String): Boolean {
         if (!isInitialized.get() || !config.analyticsEnabled) return false
         if (eventName in config.disabledEvents) return false
-
-        // 检查采样率
+//检查采样率
         val samplingRate = config.samplingRates[eventName] ?: 1.0
         if (Math.random() > samplingRate) return false
-
-        // 检查限频
+//查询限频
         val minInterval = config.minIntervalMsPerEvent[eventName] ?: 0L
         if (minInterval > 0) {
             val lastTime = lastEventTimes[eventName] ?: 0L

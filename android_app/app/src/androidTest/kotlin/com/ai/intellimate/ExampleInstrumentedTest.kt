@@ -7,15 +7,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Instrumented test, which will execute on an Android device.
+ * 仪器测试，将在 Android 设备上执行。
  *
- * See [testing documentation](http://d.android.com/tools/testing).
- */
+ * 请参见[测试文档](http://d.android.com/tools/testing)。*/
 @RunWith(AndroidJUnit4::class)
 class ExampleInstrumentedTest {
     @Test
     fun useAppContext() {
-        // Context of the app under test.
+// 被测应用程序的上下文。
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
         assertEquals("com.ai.intellimate", appContext.packageName)
     }

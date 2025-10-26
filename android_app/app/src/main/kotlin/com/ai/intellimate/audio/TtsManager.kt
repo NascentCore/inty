@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
-/** TTS管理器 专门处理文本转语音的生成和管理 */
+/** TTS管理器专门处理文本转语音的生成和管理 */
 class TtsManager private constructor(private val context: Context) {
 
     companion object {
@@ -29,18 +29,14 @@ class TtsManager private constructor(private val context: Context) {
                 }
         }
     }
-
-    // TTS生成状态
+// TTS生成状态
     private val _isGeneratingTts = MutableStateFlow<Set<String>>(emptySet())
     val isGeneratingTts: StateFlow<Set<String>> = _isGeneratingTts.asStateFlow()
-
-    // 内部稳定作用域（应用级别，避免外部scope失活）
+// 内部稳定作用范围（应用级别，避免外部范围失活）
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    // 去重与并发控制：同一个( agentId, messageId ) 在同一时刻只能有一个in-flight
+// 去重与时刻控制：同一个(agentId, messageId) 相同只能有一个在飞行中
     private val inFlight = mutableMapOf<String, MutableList<(Result<String>) -> Unit>>()
-
-    // 延迟获取API依赖
+// 延迟获取API依赖
     private val chatApi by lazy {
         NetServiceMgr.getChatApi()
     }
@@ -49,7 +45,7 @@ class TtsManager private constructor(private val context: Context) {
      * 生成消息语音
      *
      * @param messageId 消息ID
-     * @param agentId Agent ID
+     * @param agentId 代理ID
      * @param onSuccess 成功回调，返回生成的音频URL
      * @param onError 失败回调
      * @param forceRegenerate 是否强制重新生成（用于失败后重试）
@@ -61,7 +57,7 @@ class TtsManager private constructor(private val context: Context) {
         onError: (String) -> Unit,
         forceRegenerate: Boolean = false,
     ) {
-        // 检查是否正在生成（除非强制重新生成）
+// 检查是否正在生成（除非强制重新生成）
         if (!forceRegenerate && _isGeneratingTts.value.contains(messageId)) {
             LogUtils.i("音频LOG测试 TTS already generating for message: $messageId")
             return
@@ -74,8 +70,7 @@ class TtsManager private constructor(private val context: Context) {
                 onFailure = { e -> onError(e.message ?: "TTS Failed") },
             )
         }
-
-        // 去重：合并相同请求的回调
+// 去重：相同同步请求的回调
         synchronized(inFlight) {
             val list = inFlight.getOrPut(dedupKey) { mutableListOf() }
             list.add(callback)
@@ -84,8 +79,7 @@ class TtsManager private constructor(private val context: Context) {
                 return
             }
         }
-
-        // 添加到生成队列（用于UI状态）
+//添加到生成队列（用于UI状态）
         _isGeneratingTts.value = _isGeneratingTts.value + messageId
 
         ioScope.launch {
@@ -100,8 +94,7 @@ class TtsManager private constructor(private val context: Context) {
                     )
                     return@launch
                 }
-
-                // 验证agentId和messageId格式
+// 验证agentId和messageId格式
                 if (agentId.length < 3 || messageId.length < 3) {
                     LogUtils.e("音频LOG测试 TTS generation failed: Invalid ID format - agentId='$agentId', messageId='$messageId'")
                     completeWithError(dedupKey, messageId, "TTS生成失败：ID格式无效", onError)
@@ -112,7 +105,7 @@ class TtsManager private constructor(private val context: Context) {
                 when (response) {
                     is HttpResult.Success -> {
                         if (response.data.code == BusinessErrorCodes.VOICE_TTS_LIMIT_CODE) {
-                            // 音频生成到达次数限制，需要给用户toast提示文案
+// 音频生成到达次数限制，需要给用户toast提示文案
                             ToastUtils.showShort("${response.data.message}")
                             LogUtils.e("音频LOG测试 TTS 生成次数到达限制 (Agent: $agentId)")
                             completeWithError(
@@ -150,7 +143,7 @@ class TtsManager private constructor(private val context: Context) {
                 LogUtils.e("音频LOG测试 TTS generation exception: ${e.message} (Agent: $agentId)")
                 completeWithError(dedupKey, messageId, "TTS生成异常：${e.message}", onError)
             } finally {
-                // UI状态标记移除
+// UI状态标记删除
                 _isGeneratingTts.value = _isGeneratingTts.value - messageId
             }
         }
@@ -173,7 +166,7 @@ class TtsManager private constructor(private val context: Context) {
         errorMsg: String,
         directError: (String) -> Unit,
     ) {
-        // 检查是否为取消操作，如果是则不显示错误toast
+// 检查是否为取消操作，如果是则不显示错误toast
         if (errorMsg.contains("cancelled", ignoreCase = true) ||
             errorMsg.contains("cancel", ignoreCase = true)
         ) {

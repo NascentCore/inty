@@ -104,20 +104,18 @@ private fun WebViewer(
 ) {
     var webView: WebView? = null
     var isBackEnabled by rememberSaveable { mutableStateOf(false) }
-
-    // Override back navigation to load WebView's previous webpage
+// 覆盖后退导航以加载WebView的previous网页
     BackHandler(enabled = isBackEnabled) {
         webView?.goBack()
     }
     AndroidView(modifier = modifier.fillMaxSize(), factory = { context ->
         WebView(context).apply {
             webViewClient = object : WebViewClient() {
-
-                // Enable BackHandler if WebView can go back
+// 如果WebView可以返回，则启用BackHandler
                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                     super.onPageStarted(view, url, favicon)
                     isBackEnabled = view?.canGoBack() == true
-                    //web的title
+//网页标题
                     titleInvoke(view?.title)
                 }
 
@@ -128,8 +126,7 @@ private fun WebViewer(
 
             }
             webChromeClient = object : WebChromeClient() {
-
-                // Pass up current loading progress to be used by ProgressIndicator function
+// 将当前加载的 progress 提交给 ProgressIndicator 函数使用
                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
                     super.onProgressChanged(view, newProgress)
                     updateProgress(newProgress)
@@ -140,7 +137,7 @@ private fun WebViewer(
                     titleInvoke(title)
                 }
             }
-            // Configure WebView client
+// 配置WebView客户端
             with(this.settings) {
                 domStorageEnabled = true
                 javaScriptEnabled = true
@@ -161,11 +158,8 @@ private fun WebViewer(
     })
 
 }
-
-
-//region 对外提供路由
-
-//使用data class 定义对象，作为路由,内部就是参数
+//区域对外提供路由
+//使用数据类定义对象，作为路由，内部就是参数
 // https://developer.android.google.cn/guide/navigation/design/type-safety?hl=zh_cn
 /**
  * 这里是跳转到webView的路由，带有参数url
@@ -174,13 +168,13 @@ private fun WebViewer(
 data class RouteWeb(val url: String)
 
 /**
- * 扩展navController导航到Web页面
+ * 扩展navController导航到网页
  */
 fun NavController.navigateToWeb(url: String, options: NavOptions? = null) =
     navigate(route = RouteWeb(url), options)
 
 /**
- * 添加页面到navHost
+ *添加页面到navHost
  */
 fun NavGraphBuilder.webScreen(controller: NavController) {
     composable<RouteWeb> { backStackEntry ->
@@ -188,5 +182,4 @@ fun NavGraphBuilder.webScreen(controller: NavController) {
         IntelliWebView(web.url, { controller.navigateUp() })
     }
 }
-
-//endregion
+//区域结束

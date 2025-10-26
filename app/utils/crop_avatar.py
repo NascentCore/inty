@@ -13,42 +13,38 @@ from pydantic import BaseModel
 from app.utils.image import ImageSize
 
 CROPPED_AVATAR_FILENAME_SUFFIX = "-cropped-avatar"
-
-# Face detector (default): haarcascade_frontalface_default.xml
-# Face detector (fast Harr): haarcascade_frontalface_alt2.xml
-# Face detector (side view): haarcascade_profileface.xml
-# Eye detector (left eye): haarcascade_lefteye_2splits.xml
-# Eye detector (right eye): haarcascade_righteye_2splits.xml
-# Mouth detector: haarcascade_mcs_mouth.xml
-# Nose detector: haarcascade_mcs_nose.xml
-# Body detector: haarcascade_fullbody.xml
-# Face detector (fast LBP): lbpcascade_frontalface.xml
-# Only open eyes can be detected:
-# haarcascade_eye.xml
-# haarcascade_eye_tree_eyeglasses.xml [Only when the person being tested is wearing glasses]
-
-# Face detection algorithms often work by scanning an image at multiple scales (sizes)
-# to find faces of varying sizes. scaleFactor determines the step size for creating this "scale pyramid".
-# A smaller scaleFactor means more detailed scanning, but also more computational cost.
+# 人脸检测器（默认）：haarcascade_frontalface_default。XML
+# 人脸检测器（快速Harr）：haarcascade_frontalface_alt2。XML
+# 人脸检测器（侧视图）：haarcascade_profileface.XML
+# 眼睛检测器（左眼）：haarcascade_lefteye_2splits。XML
+# 眼睛检测器（右眼）：haarcascade_righteye_2splits。XML
+# 嘴巴检测器：haarcascade_mcs_mouth。XML
+# 鼻子：haarcascade_mcs_nose。XML
+# 人体检测器：haarcascade_fullbody。XML
+# 人脸检测器（快速LBP）：lbpcascade_frontalface。XML
+#只睁开眼睛才能被检测到：
+# haarcascade_eye。XML
+# haarcascade_eye_tree_eyeglasses。xml [仅当被测试者戴眼镜时]
+# 人脸检测算法通常通过扫描几何尺寸（尺寸）的图像来工作
+# 找到不同大小的托架。scaleFactor确定创建此“比例金字塔”的步长。
+# 较小的scaleFactor意味着更详细的扫描，但也意味着更多的计算成本。
 FACE_DETECTION_SCALE_FACTOR = (
     1.1  # Scale factor for face detection (smaller = more accurate but slower)
 )
-
-# This is used to filter out false-positive rectangles.
-# An image at multiple scales using a sliding window.
-# This process can result in many false-positive rectangles,
-# with a single face potentially being identified by several overlapping rectangles.
+# 这用于过滤掉统计报告。
+# 使用滑动窗口的重复测量的图像。
+#这个process可能会导致许多错误报告，
+# 一张脸可能被几个重叠的单一识别。
 FACE_DETECTION_MIN_NEIGHBORS = (
     6  # Minimum overlapping detections required to confirm a face
 )
-
 # https://forum.opencv.org/t/face-detection-for-static-image-find-top-of-head-and-chin/3009/9
-# See full list at:
+#查看完整列表：
 # https://github.com/opencv/opencv/tree/master/data/haarcascades
-# NOTE: This usally cannot detect any faces.
-# Internet claims (https://stackoverflow.com/q/59466015/31283770)
-# it detecst left facing faces, but not working as expected, see left-facing.png.
-# Media pipe etc.
+# 注意：这通常无法检测到任何皮肤。
+# 互联网声明 (https://stackoverflow.com/q/59466015/31283770)
+# 它检测到左脸，但未按预期工作，请参见左脸。PNG。
+#媒体管道等
 HAAR_CASCADE_PROFILE_FACE = "haarcascade_profileface.xml"
 HAAR_CASCADE_FRONTAL_FACE_DEFAULT = "haarcascade_frontalface_default.xml"
 ANIME_FACE = "lbpcascade_animeface.xml"
@@ -87,21 +83,21 @@ class AvatarCroppingConfig(BaseModel):
 
 PROFILE_FACE = AvatarCroppingConfig(
     max_expansion_ratio=1.0,
-    # This is more effective for non-frontal faces.
-    # 45-degree-side-small.jpg
+# 这对于非正面更有效。
+#45度边小....jpg
     face_detection_profile=HAAR_CASCADE_PROFILE_FACE,
 )
 FRONTAL_FACE_DEFAULT = AvatarCroppingConfig(
     max_expansion_ratio=1.8,
-    # For a frontal face, this is more effective.
-    # As profile face will try to center eyes in the middle.
-    # See half-body-frontal.jpg for such an example.
+# 对于正面，这更有效。
+#由于profile 脸会尝试将眼睛居中。
+#类似类似，请参阅半身额。....jpg。
     face_detection_profile=HAAR_CASCADE_FRONTAL_FACE_DEFAULT,
 )
 
 ANIME_FACE = AvatarCroppingConfig(
-    # Anime face is generally surrounded by larger hairs and other facial features.
-    # So we need to expand the face more.
+# 动漫通常会越来越多的头部和其他引人注目的特征被包围。
+#因此我们需要进一步扩大预算。
     max_expansion_ratio=2.0,
     face_detection_profile=ANIME_FACE,
 )
@@ -184,21 +180,18 @@ class CropAvatarResult:
     """
     Cropped avatar image and its size. Used as a container for return value for easy extension.
     """
-
-    # 不使用 Basemodel, 因为 Image.Image 无法序列化。
+# 不使用Basemodel，因为Image。无法进行图像序列化。
     image: Image.Image
     size: ImageSize
-
-
-# TODO: We tried to combine profile face and frontal face detection,
-# but profile face detection always returns empty list.
-# Many ideas can be tried:
-# 1. Detect eyes first, then calculate face direction, to detect profile face.
-# 2. Media pipe: https://colab.research.google.com/github/googlesamples/mediapipe/blob/main/examples/object_detection/python/object_detector.ipynb
+# TODO：我们尝试将profile人脸和正面人脸检测结合起来，
+#但profile人脸始终检测到返回空列表。
+# 可以尝试很多想法：
+＃1。先检测眼睛，再计算人脸方向，检测profile人脸。
+#2.媒体管道：https://colab.research.google.com/github/googlesamples/mediapipe/blob/main/examples/object_detection/python/object_detector.ipynb
 #
-# The existing approach is fast, but far from perfect.
+# 现有的 approach 速度很快，但远非完美。
 def crop_avatar(img_data: bytes) -> CropAvatarResult:
-    # Haar cascade classifier only works with grayscale images.
+# Haar 级联分类器仅适用于灰度图像。
     img = cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_COLOR)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -207,7 +200,7 @@ def crop_avatar(img_data: bytes) -> CropAvatarResult:
     avatar_cropping_config = ANIME_FACE
     faces = animeface.detect(pil_img)
     faces = [
-        # Needs to do data format conversion.
+# 需要进行数据格式转换。
         (face.face.pos.x, face.face.pos.y, face.face.pos.width, face.face.pos.height)
         for face in faces
     ]
@@ -221,10 +214,9 @@ def crop_avatar(img_data: bytes) -> CropAvatarResult:
         logger.debug("Detecting faces with frontal face default (realistic style) ...")
         avatar_cropping_config = FRONTAL_FACE_DEFAULT
         faces = _detect_faces(gray, avatar_cropping_config)
-
-    ############################################################################
-    # Add new face detection passes here.
-    ############################################################################
+########################################################################################
+# 在此处添加新的人脸检测通道。
+########################################################################################
 
     if len(faces) == 0:
         logger.warning("No faces detected, using top square boundaries")
@@ -241,16 +233,14 @@ def crop_avatar(img_data: bytes) -> CropAvatarResult:
         avatar_cropping_config.max_expansion_ratio,
         (img.shape[1], img.shape[0]),
     )
-
-    # Draw the largest face on the image for debugging.
-    # x, y, w, h = largest_face
-    # cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
+#Image 上日益严重的以供调试。
+# x, y, w, h = 最大面
+# 简历2。形状(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
     x, y, w, h = avatar_square
-    # Crop the image to a square
+#Image将作为礼物
     cropped_face = img[y : y + h, x : x + w]
-
-    # OpenCV uses BGR color order (Blue, Green, Red), needs to convert to RGB.
+# OpenCV使用BGR颜色顺序（蓝、绿、红），需要转换为RGB。
     return CropAvatarResult(
         image=Image.fromarray(cv2.cvtColor(cropped_face, cv2.COLOR_BGR2RGB)),
         size=ImageSize(width=w, height=h),
@@ -264,7 +254,7 @@ def parse_args():
 
 
 def main():
-    # Example usage:
+#最后示例：
     args = parse_args()
     original_image = Image.open(args.image_path)
     original_image.show()

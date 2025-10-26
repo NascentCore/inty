@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 Minimal example of using RunPod SDK to call runsync on a serverless ComfyUI worker endpoint
 """

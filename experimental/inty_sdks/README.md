@@ -1,13 +1,9 @@
-# Inty SDK examples
+# Inty SDK 示例
 
-## Typescript
-
-```bash
+## 赞美稿```bash
 cd experimental/inty_sdks
 npm install git+https://github.com/NascentCore/inty-typescript.git
 npx ts-node example.ts
-```
+```## 科特林
 
-## Kotlin
-
-TODO: Add details
+TODO：添加详细信息

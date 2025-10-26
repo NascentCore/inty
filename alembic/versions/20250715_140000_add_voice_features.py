@@ -9,8 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision: str = '20250715_140000'
 down_revision: Union[str, None] = '20250715_084500'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -18,7 +17,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create voice_cache table (no changes to chat_settings as voice_enabled already exists)
+#创建voice_cache表（需要更改chat_settings，因为voice_enabled已存在）
     op.create_table('voice_cache',
         sa.Column('id', sa.String(), nullable=False),
         sa.Column('content_hash', sa.String(), nullable=False),
@@ -35,14 +34,13 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('content_hash')
     )
-    
-    # Create indexes for voice_cache table
+# 为voice_cache表创建索引
     op.create_index('ix_voice_cache_content_hash', 'voice_cache', ['content_hash'])
     op.create_index('ix_voice_cache_id', 'voice_cache', ['id'])
 
 
 def downgrade() -> None:
-    # Drop voice_cache table
+# 删除voice_cache表
     op.drop_index('ix_voice_cache_id', table_name='voice_cache')
     op.drop_index('ix_voice_cache_content_hash', table_name='voice_cache')
     op.drop_table('voice_cache')

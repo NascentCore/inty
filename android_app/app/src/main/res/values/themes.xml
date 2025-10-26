@@ -8,13 +8,13 @@
         <item name="android:windowDisablePreview">true</item>
     </style>
 
-    <!-- 启动主题-->
+    <！-- 启动主题-->
     <style name="Theme.Inty.Launcher" parent="android:Theme.Material.Light.NoActionBar">
-        <!-- 这个属性配置，必须是引用形式，直接写#ff0000 颜色格式，不生效-->
+        <！-- 该属性配置，必须是引用形式，直接写#ff0000 颜色格式，不生效-->
         <item name="android:windowBackground">@color/app_background</item>
     </style>
 
-    <!-- Dark theme for popup activities -->
+    <！-- 弹出活动的深色主题 -->
     <style name="Theme.Inty.Popup" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowBackground">#1C1523</item>
@@ -25,7 +25,7 @@
         <item name="android:windowTranslucentStatus">false</item>
     </style>
 
-    <!-- Login theme with translucent effect and proper status bar -->
+    <！-- 带有半透明效果和proper状态栏的登录主题 -->
     <style name="Theme.Inty.Login" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowNoTitle">true</item>
@@ -37,7 +37,7 @@
         <item name="android:windowTranslucentStatus">true</item>
     </style>
 
-    <!-- 图片裁剪界面的主题配置 不侵入状态栏 UCrop theme with proper status bar handling -->
+    <！-- 图片界面界面的主题配置不侵入状态栏 UCrop 主题与 proper 状态栏处理 -->
     <style name="Theme.Inty.UCrop" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowBackground">#1C1523</item>

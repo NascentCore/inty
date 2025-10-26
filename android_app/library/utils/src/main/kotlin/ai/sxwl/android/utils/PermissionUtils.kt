@@ -15,7 +15,7 @@ import androidx.core.content.ContextCompat
 object PermissionUtils {
 
     /**
-     * 检查权限是否已授予
+     * 查询权限是否已授予
      */
     fun isGranted(permission: String?): Boolean {
         return try {
@@ -31,7 +31,7 @@ object PermissionUtils {
     }
 
     /**
-     * 检查权限是否已授予
+     * 查询权限是否已授予
      */
     fun isGranted(context: Context?, permission: String?): Boolean {
         if (context == null || permission.isNullOrEmpty()) return false
@@ -46,14 +46,14 @@ object PermissionUtils {
     }
 
     /**
-     * 检查多个权限是否已授予
+     * 查询多个权限是否已授予
      */
     fun isGranted(vararg permissions: String?): Boolean {
         return isGranted(Utils.getApp(), *permissions)
     }
 
     /**
-     * 检查多个权限是否已授予
+     * 查询多个权限是否已授予
      */
     fun isGranted(context: Context?, vararg permissions: String?): Boolean {
         if (context == null) return false
@@ -66,7 +66,7 @@ object PermissionUtils {
     }
 
     /**
-     * 检查权限是否应该显示说明
+     * 检查权限是否应显示说明
      */
     fun shouldShowRequestPermissionRationale(permission: String?): Boolean {
         return try {
@@ -82,7 +82,7 @@ object PermissionUtils {
     }
 
     /**
-     * 检查权限是否应该显示说明
+     * 检查权限是否应显示说明
      */
     fun shouldShowRequestPermissionRationale(context: Context?, permission: String?): Boolean {
         if (context == null || permission.isNullOrEmpty()) return false
@@ -116,14 +116,14 @@ object PermissionUtils {
     }
 
     /**
-     * 获取未授予的权限列表
+     * 获取未拥有的权限列表
      */
     fun getDeniedPermissions(vararg permissions: String?): List<String> {
         return getDeniedPermissions(Utils.getApp(), *permissions)
     }
 
     /**
-     * 获取未授予的权限列表
+     * 获取未拥有的权限列表
      */
     fun getDeniedPermissions(context: Context?, vararg permissions: String?): List<String> {
         if (context == null) return emptyList()
@@ -137,14 +137,14 @@ object PermissionUtils {
     }
 
     /**
-     * 获取已授予的权限列表
+     * 获取已拥有的权限列表
      */
     fun getGrantedPermissions(vararg permissions: String?): List<String> {
         return getGrantedPermissions(Utils.getApp(), *permissions)
     }
 
     /**
-     * 获取已授予的权限列表
+     * 获取已拥有的权限列表
      */
     fun getGrantedPermissions(context: Context?, vararg permissions: String?): List<String> {
         if (context == null) return emptyList()
@@ -158,14 +158,14 @@ object PermissionUtils {
     }
 
     /**
-     * 检查相机权限
+     * 查看照片权限
      */
     fun hasCameraPermission(): Boolean {
         return isGranted(Manifest.permission.CAMERA)
     }
 
     /**
-     * 检查相机权限
+     * 查看照片权限
      */
     fun hasCameraPermission(context: Context?): Boolean {
         return isGranted(context, Manifest.permission.CAMERA)
@@ -193,7 +193,7 @@ object PermissionUtils {
     }
 
     /**
-     * 检查位置权限
+     *查看位置权限
      */
     fun hasLocationPermission(): Boolean {
         return isGranted(
@@ -203,7 +203,7 @@ object PermissionUtils {
     }
 
     /**
-     * 检查位置权限
+     *查看位置权限
      */
     fun hasLocationPermission(context: Context?): Boolean {
         return isGranted(
@@ -214,14 +214,14 @@ object PermissionUtils {
     }
 
     /**
-     * 检查电话权限
+     *查询电话权限
      */
     fun hasPhonePermission(): Boolean {
         return isGranted(Manifest.permission.READ_PHONE_STATE, Manifest.permission.CALL_PHONE)
     }
 
     /**
-     * 检查电话权限
+     *查询电话权限
      */
     fun hasPhonePermission(context: Context?): Boolean {
         return isGranted(
@@ -232,42 +232,42 @@ object PermissionUtils {
     }
 
     /**
-     * 检查短信权限
+     *查询短信权限
      */
     fun hasSmsPermission(): Boolean {
         return isGranted(Manifest.permission.SEND_SMS, Manifest.permission.READ_SMS)
     }
 
     /**
-     * 检查短信权限
+     *查询短信权限
      */
     fun hasSmsPermission(context: Context?): Boolean {
         return isGranted(context, Manifest.permission.SEND_SMS, Manifest.permission.READ_SMS)
     }
 
     /**
-     * 检查麦克风权限
+     *查询麦克风权限
      */
     fun hasMicrophonePermission(): Boolean {
         return isGranted(Manifest.permission.RECORD_AUDIO)
     }
 
     /**
-     * 检查麦克风权限
+     *查询麦克风权限
      */
     fun hasMicrophonePermission(context: Context?): Boolean {
         return isGranted(context, Manifest.permission.RECORD_AUDIO)
     }
 
     /**
-     * 检查联系人权限
+     *查询干燥机权限
      */
     fun hasContactsPermission(): Boolean {
         return isGranted(Manifest.permission.READ_CONTACTS, Manifest.permission.WRITE_CONTACTS)
     }
 
     /**
-     * 检查联系人权限
+     *查询干燥机权限
      */
     fun hasContactsPermission(context: Context?): Boolean {
         return isGranted(
@@ -278,14 +278,14 @@ object PermissionUtils {
     }
 
     /**
-     * 检查日历权限
+     *查看日历权限
      */
     fun hasCalendarPermission(): Boolean {
         return isGranted(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
     }
 
     /**
-     * 检查日历权限
+     *查看日历权限
      */
     fun hasCalendarPermission(context: Context?): Boolean {
         return isGranted(
@@ -310,42 +310,42 @@ object PermissionUtils {
     }
 
     /**
-     * 检查网络状态权限
+     * 查看网络状态权限
      */
     fun hasNetworkStatePermission(): Boolean {
         return isGranted(Manifest.permission.ACCESS_NETWORK_STATE)
     }
 
     /**
-     * 检查网络状态权限
+     * 查看网络状态权限
      */
     fun hasNetworkStatePermission(context: Context?): Boolean {
         return isGranted(context, Manifest.permission.ACCESS_NETWORK_STATE)
     }
 
     /**
-     * 检查WiFi状态权限
+     *查询WiFi状态权限
      */
     fun hasWifiStatePermission(): Boolean {
         return isGranted(Manifest.permission.ACCESS_WIFI_STATE)
     }
 
     /**
-     * 检查WiFi状态权限
+     *查询WiFi状态权限
      */
     fun hasWifiStatePermission(context: Context?): Boolean {
         return isGranted(context, Manifest.permission.ACCESS_WIFI_STATE)
     }
 
     /**
-     * 检查蓝牙权限
+     *查询蓝牙权限
      */
     fun hasBluetoothPermission(): Boolean {
         return isGranted(Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN)
     }
 
     /**
-     * 检查蓝牙权限
+     *查询蓝牙权限
      */
     fun hasBluetoothPermission(context: Context?): Boolean {
         return isGranted(
@@ -356,14 +356,14 @@ object PermissionUtils {
     }
 
     /**
-     * 检查通知权限
+     *查询通知权限
      */
     fun hasNotificationPermission(): Boolean {
         return isGranted(Manifest.permission.POST_NOTIFICATIONS)
     }
 
     /**
-     * 检查通知权限
+     *查询通知权限
      */
     fun hasNotificationPermission(context: Context?): Boolean {
         return isGranted(context, Manifest.permission.POST_NOTIFICATIONS)

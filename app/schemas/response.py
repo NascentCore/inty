@@ -47,8 +47,6 @@ class PaginationResponse(APIResponse[PaginationData]):
     """分页响应"""
 
     pass
-
-
 # 业务错误码定义
 class BusinessErrorCode:
     SUBSCRIPTION_REQUIRED = {
@@ -76,8 +74,6 @@ class BusinessErrorCode:
         "error_code": "GUEST_LOGIN_REQUIRED",
         "message": "Guest login required - Please sign in with Google",
     }
-
-
 # 业务错误消息定义
 BUSINESS_ERROR_MESSAGES = {
     BusinessErrorCode.SUBSCRIPTION_REQUIRED[
@@ -99,13 +95,12 @@ def create_business_error_response(
     Returns:
         APIResponse
     """
-    # 构建错误数据
+# 构建错误数据
     error_data = {
         "error_code": error_info["error_code"],
         "description": error_info["message"],
     }
-
-    # 添加额外数据
+# 添加额外数据
     if extra_data:
         error_data.update(extra_data)
 

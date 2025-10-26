@@ -13,33 +13,31 @@ import {
 } from "@ant-design/icons";
 
 interface VoicePreviewPlayerProps {
-  // 预览音频URL
+// 预览音频URL
   previewUrl?: string;
-  // 音色名称（用于提示）
+// 音色名称（用于提示）
   voiceName?: string;
-  // 样式控制
+// 样式控制
   size?: "small" | "middle" | "large";
-  // 是否显示文字
+// 是否显示文字
   showText?: boolean;
-  // 自定义样式
+// 自定义样式
   style?: React.CSSProperties;
-  // 播放状态变化回调
+// 播放状态变化回调
   onPlayStateChange?: (isPlaying: boolean) => void;
 }
-
-// 全局音频管理器 - 确保同时只有一个预览音频在播放
+// 同时全局音频管理器 - 确保只有一个预览音频在播放
 class GlobalPreviewAudioManager {
   private currentAudio: HTMLAudioElement | null = null;
   private currentPlayerId: string | null = null;
   private listeners: Map<string, (isPlaying: boolean) => void> = new Map();
 
   play(audio: HTMLAudioElement, playerId: string): void {
-    // 停止当前播放的音频
+// 停止当前播放的音频
     if (this.currentAudio && this.currentAudio !== audio) {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
-
-      // 通知之前的播放器状态变化
+// 通知之前的播放器状态变化
       if (this.currentPlayerId) {
         const prevListener = this.listeners.get(this.currentPlayerId);
         if (prevListener) {
@@ -59,7 +57,7 @@ class GlobalPreviewAudioManager {
         this.currentAudio.pause();
         this.currentAudio.currentTime = 0;
       } catch (e) {
-        // 忽略停止时的错误，可能是组件已卸载
+// 忽略停止时的错误，可能是组件已卸载
       }
       this.currentAudio = null;
       this.currentPlayerId = null;
@@ -99,8 +97,7 @@ export const VoicePreviewPlayer: React.FC<VoicePreviewPlayerProps> = ({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playerId = useRef(`preview-${Date.now()}-${Math.random()}`).current;
   const isUnmountedRef = useRef(false);
-
-  // 注册全局音频管理器监听
+// 注册全局音频管理器监听
   useEffect(() => {
     const handleGlobalPlayStateChange = (playing: boolean) => {
       if (!playing && isPlaying) {
@@ -118,8 +115,7 @@ export const VoicePreviewPlayer: React.FC<VoicePreviewPlayerProps> = ({
       globalPreviewAudioManager.unregisterListener(playerId);
     };
   }, [playerId, isPlaying, onPlayStateChange]);
-
-  // 播放预览音频
+// 播放预览音频
   const playPreview = async () => {
     if (!previewUrl) {
       message.warning("该音色暂无预览音频");
@@ -129,12 +125,10 @@ export const VoicePreviewPlayer: React.FC<VoicePreviewPlayerProps> = ({
     try {
       setIsLoading(true);
       setHasError(false);
-
-      // 创建或重用音频元素
+//创建或重用音频元素
       if (!audioRef.current) {
         audioRef.current = new Audio();
-
-        // 音频事件监听
+// 音频事件监听
         audioRef.current.addEventListener("ended", () => {
           if (!isUnmountedRef.current) {
             setIsPlaying(false);
@@ -156,8 +150,7 @@ export const VoicePreviewPlayer: React.FC<VoicePreviewPlayerProps> = ({
             setHasError(false);
           }
         });
-
-        // 监听音频被中断的事件
+// 音频监听被中断的事件
         audioRef.current.addEventListener("pause", () => {
           if (!isUnmountedRef.current) {
             setIsPlaying(false);
@@ -172,13 +165,11 @@ export const VoicePreviewPlayer: React.FC<VoicePreviewPlayerProps> = ({
           }
         });
       }
-
-      // 设置音频源
+// 设置音频源
       if (audioRef.current.src !== previewUrl) {
         audioRef.current.src = previewUrl;
       }
-
-      // 通过全局管理器播放
+// 通过全局管理器播放
       globalPreviewAudioManager.play(audioRef.current, playerId);
       setIsPlaying(true);
       onPlayStateChange?.(true);
@@ -190,15 +181,13 @@ export const VoicePreviewPlayer: React.FC<VoicePreviewPlayerProps> = ({
       setIsLoading(false);
     }
   };
-
-  // 停止播放
+// 停止播放
   const stopPreview = () => {
     globalPreviewAudioManager.stop(playerId);
     setIsPlaying(false);
     onPlayStateChange?.(false);
   };
-
-  // 点击处理
+// 点击处理
   const handleClick = () => {
     if (isLoading || !previewUrl) return;
 
@@ -208,15 +197,14 @@ export const VoicePreviewPlayer: React.FC<VoicePreviewPlayerProps> = ({
       playPreview();
     }
   };
-
-  // 清理资源
+// 清理资源
   useEffect(() => {
     return () => {
-      // 标记组件即将卸载
+// 标记即将卸载的组件
       isUnmountedRef.current = true;
 
       if (audioRef.current) {
-        // 静默停止音频，避免触发错误事件
+// 静默停止声音，避免触发错误事件
         audioRef.current.removeEventListener("error", () => {});
         audioRef.current.removeEventListener("abort", () => {});
         audioRef.current.removeEventListener("pause", () => {});
@@ -227,15 +215,14 @@ export const VoicePreviewPlayer: React.FC<VoicePreviewPlayerProps> = ({
           audioRef.current.pause();
           audioRef.current.src = "";
         } catch (e) {
-          // 忽略清理过程中的错误
+// 忽略清理过程中的错误
         }
         audioRef.current = null;
       }
       globalPreviewAudioManager.stop(playerId);
     };
   }, [playerId]);
-
-  // 获取按钮图标
+// 获取按钮图标
   const getIcon = () => {
     if (isLoading) {
       return <LoadingOutlined spin />;
@@ -248,8 +235,7 @@ export const VoicePreviewPlayer: React.FC<VoicePreviewPlayerProps> = ({
     }
     return <PlayCircleOutlined />;
   };
-
-  // 获取提示文本
+// 获取提示文本
   const getTooltip = () => {
     if (!previewUrl) {
       return "该音色暂无预览音频";

@@ -40,21 +40,20 @@ print(f"Using base url: {base_url}")
 print(f"Using model: {args.model}")
 
 client = OpenAI(
-    # You can set api_key directly here, where you can read from different env vars.
-    # api_key=os.getenv("GEMINI_API_KEY"),
-    # If you want to OpenAI to read env var directly, you need to set OPENAI_API_KEY in your env
-    # As OPENAI_API_KEY is the env var read by OpenAI SDK.
-
-    # Gemini base URL
-    # base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+#您可以直接在此处设置api_key，您可以在其中读取不同的环境变量。
+# api_key=os.getenv("GEMINI_API_KEY"),
+# 如果您想让OpenAI直接读取环境变量，您需要在您的环境中设置OPENAI_API_KEY
+# 由于 OPENAI_API_KEY 是 OpenAI SDK 读取的环境变量。
+# Gemini 基本 URL
+＃base_url =“https://generativelanguage.googleapis.com/v1beta/openai/"
     api_key=api_key,
     base_url=base_url
 )
 
 response: ChatCompletion = client.chat.completions.create(
     model=args.model,
-    # This is the only way to control reasoning for gemini-2.5-flash.
-    # Remove this parameter to disable reasoning when calling gemini-2.5-flash.
+# 这是控制gemini-2。5-flash推理的唯一方法。
+# 此删除参数以调用gemini-2。5闪时消除推理。
     reasoning_effort="low",
     max_completion_tokens=4096,
     messages=[
@@ -64,21 +63,20 @@ response: ChatCompletion = client.chat.completions.create(
             "content": "Write a plot summary of a novel on AI causing human extinction"
         }
     ],
-    # extra_body={
-    #   'extra_body': {
-    #     "google": {
-    #       "thinking_config": {
-    #         # This does not seem to work, setting >0 value does not make it do reasoning or thinking.
-    #         "thinking_budget": 1024,
-    #         # This also does not seem to work, turn it to False will not make it not include reasoning details
-    #         # (if reasoning_effort is set to one of "low", "medium", "high").
-    #         "include_thoughts": True
-    #       }
-    #     }
-    #   }
-    # }
+＃额外的身体={
+# '额外身材': {
+＃     “谷歌”： {
+#“思考配置”：{
+# # 这似乎不起作用，设置 >0 值并不能引发进行推理或思考。
+#“思考预算”：1024，
+# # 这似乎也不起作用，将其转为False不会产生不包含推理细节
+# #（如果 Reasoning_effort 设置为“低”、“中”、“高”其中之一）。
+#“include_thoughts”：正确
+# }
+# }
+# }
+# }
 )
-
-# Pretty print response
+# Pretty print 响应
 response_dict = response.model_dump()
 print(json.dumps(response_dict, indent=4))

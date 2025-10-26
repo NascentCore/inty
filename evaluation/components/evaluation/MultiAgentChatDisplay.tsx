@@ -58,11 +58,10 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
   loading = false,
   showControls = true,
 }) => {
-  // 展开/收起状态
+// 展开/收起状态
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const [isAllExpanded, setIsAllExpanded] = useState(false);
-
-  // 按智能体分组结果
+// 按智能体分组结果
   const agentGroups = useMemo(() => {
     if (!results || results.length === 0) return [];
 
@@ -93,8 +92,7 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
       },
       {} as Record<string, AgentResultGroup>,
     );
-
-    // 计算统计信息
+// 计算统计信息
     Object.values(groups).forEach((group) => {
       const validScores = group.results
         .filter((r) => r.overall_score != null)
@@ -107,8 +105,7 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
         group.bestScore = Math.max(...validScores);
         group.worstScore = Math.min(...validScores);
       }
-
-      // 按问题索引排序
+// 按问题索引排序
       group.results.sort((a, b) => a.question_index - b.question_index);
     });
 
@@ -116,8 +113,7 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
       a.agentName.localeCompare(b.agentName),
     );
   }, [results]);
-
-  // 处理全部展开/收起
+// 处理全部展开/收起
   const handleExpandAll = () => {
     if (isAllExpanded) {
       setExpandedKeys([]);
@@ -128,8 +124,7 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
       setIsAllExpanded(true);
     }
   };
-
-  // 处理单个面板的展开/收起
+// 处理单个面板的展开/收起
   const handleCollapseChange = (keys: string | string[]) => {
     const keyArray = Array.isArray(keys) ? keys : [keys];
     setExpandedKeys(keyArray);
@@ -137,8 +132,7 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
       keyArray.length === agentGroups.length && agentGroups.length > 0,
     );
   };
-
-  // 获取状态图标
+// 获取状态图标
   const getStatusIcon = (result: EvaluationResult) => {
     if (result.is_success) {
       return <CheckCircleOutlined style={{ color: "#52c41a" }} />;
@@ -146,8 +140,7 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
       return <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />;
     }
   };
-
-  // 显示评分详情模态框
+// 显示评分详情模式框
   const showScoringDetail = (result: EvaluationResult) => {
     Modal.info({
       title: `评分详情 - ${result.agent_name || "角色"}`,
@@ -279,8 +272,7 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
       okText: "关闭",
     });
   };
-
-  // 渲染对话气泡
+// 渲染对话气泡
   const renderChatBubbles = (result: EvaluationResult) => {
     return (
       <div style={{ marginBottom: "24px" }}>
@@ -628,12 +620,12 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
                   let newExpandedKeys = [...expandedKeys];
 
                   if (keyArray.includes(group.agentId)) {
-                    // 展开当前面板
+// 展开当前面板
                     if (!newExpandedKeys.includes(group.agentId)) {
                       newExpandedKeys.push(group.agentId);
                     }
                   } else {
-                    // 收起当前面板
+//启动当前面板
                     newExpandedKeys = newExpandedKeys.filter(
                       (key) => key !== group.agentId,
                     );

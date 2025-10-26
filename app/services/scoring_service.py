@@ -17,7 +17,7 @@ class ScoringService:
     """评分服务 - 使用外部LLM对智能体回复进行评分"""
 
     def __init__(self):
-        # 从配置文件读取OpenRouter配置
+# 从配置文件读取OpenRouter配置
         self.openrouter_base_url = global_config_loaded_from_config_yaml.agent.base_url
         self.openrouter_api_key = global_config_loaded_from_config_yaml.agent.api_key
 
@@ -32,23 +32,21 @@ class ScoringService:
         """对智能体回复进行评分"""
 
         try:
-            # 构建评分提示词
+# 构建评分提示词
             scoring_prompt = self._build_scoring_prompt(
                 question=question,
                 agent_response=agent_response,
                 agent_info=agent_info,
                 scoring_criteria=scoring_criteria,
             )
-
-            # 调用评分模型
+# 评分模型
             llm_response = await self._call_scoring_model(
                 model=scoring_model, prompt=scoring_prompt
             )
 
             if not llm_response:
                 return {"success": False, "error": "评分模型调用失败"}
-
-            # 解析评分结果
+# 解析评分结果
             scoring_result = self._parse_scoring_response(llm_response)
 
             return {
@@ -77,22 +75,17 @@ class ScoringService:
         agent_personality = agent_info.get("personality", "")
 
         prompt = f"""你是一个专业的AI智能体评测专家，请根据以下标准对智能体的回复进行客观评分。
-
-# 智能体信息
+#智能体信息
 **名称**: {agent_name}
 **简介**: {agent_intro}
 **角色设定**: {agent_personality}
-
 # 测试问题
 {question}
-
-# 智能体回复
+#智能体回复
 {agent_response}
-
 # 评分标准
 {scoring_criteria}
-
-# 评分要求
+#评分要求
 请严格按照以下JSON格式输出评分结果，不要添加任何其他内容：
 
 ```json
@@ -114,9 +107,8 @@ class ScoringService:
 
     async def _call_scoring_model(self, model: str, prompt: str) -> Optional[str]:
         """调用评分模型"""
-
-        # 这里应该根据model参数选择不同的API
-        # 暂时实现OpenRouter调用逻辑
+# 这里应该根据模型参数选择不同的API
+# 暂时实现OpenRouter调用逻辑
 
         if not self.openrouter_api_key:
             logger.warning("OpenRouter API Key未配置，使用模拟评分")
@@ -163,8 +155,7 @@ class ScoringService:
 
     async def _mock_scoring_response(self, prompt: str) -> str:
         """模拟评分响应 - 用于开发测试"""
-
-        # 简单的模拟逻辑，实际应该移除
+# 简单的模拟逻辑，实际应该移除
         await asyncio.sleep(1)  # 模拟API调用延迟
 
         mock_response = {
@@ -186,28 +177,24 @@ class ScoringService:
         """解析评分响应"""
 
         try:
-            # 提取JSON部分
+# 提取JSON部分
             json_match = re.search(r"```json\s*(.*?)\s*```", response, re.DOTALL)
             if json_match:
                 json_str = json_match.group(1)
             else:
-                # 尝试直接解析整个响应
+# 尝试直接解析整个响应
                 json_str = response.strip()
-
-            # 解析JSON
+# 解析JSON
             result = json.loads(json_str)
-
-            # 验证必要字段
+# 验证必要字段
             if "overall_score" not in result:
                 raise ValueError("缺少overall_score字段")
-
-            # 确保分数在有效范围内
+#保证捐款在有效范围内
             overall_score = float(result["overall_score"])
             if not (0 <= overall_score <= 10):
                 overall_score = max(0, min(10, overall_score))
                 result["overall_score"] = overall_score
-
-            # 处理详细评分
+#处理详细评分
             detailed_scores = result.get("detailed_scores", {})
             for dimension, score in detailed_scores.items():
                 if isinstance(score, (int, float)):
@@ -225,8 +212,7 @@ class ScoringService:
 
     def _fallback_scoring(self, response: str) -> Dict[str, Any]:
         """备用评分解析 - 当JSON解析失败时"""
-
-        # 尝试提取数字分数
+#尝试获取数字分数
         scores = re.findall(r"(\d+(?:\.\d+)?)", response)
         if scores:
             try:
@@ -240,8 +226,7 @@ class ScoringService:
                 }
             except:
                 pass
-
-        # 完全失败时的默认分数
+# 完全失败时的默认分数
         return {
             "overall_score": 5.0,
             "detailed_scores": {},
@@ -250,9 +235,8 @@ class ScoringService:
 
     async def get_available_models(self) -> List[Dict[str, Any]]:
         """获取可用的评分模型列表"""
-
-        # 直接返回默认模型列表，避免网络请求延迟
-        # 如果需要实时获取OpenRouter模型，可以在后台异步更新
+# 直接返回默认模型列表，避免网络请求延迟
+# 如果需要实时获取OpenRouter模型，可以在后台异步更新
         logger.debug("返回默认评分模型列表")
 
         return [
@@ -326,13 +310,11 @@ class ScoringService:
                 models_data = result.get("data", [])
 
                 logger.debug(f"OpenRouter API返回了 {len(models_data)} 个模型")
-
-                # 转换为我们需要的格式，显示所有模型供用户选择
+# 转换为我们选择的格式，显示所有模型供用户需要
                 all_models = []
                 for model in models_data:
                     model_id = model.get("id", "")
-
-                    # 不过滤，显示所有模型
+# 不过滤，显示所有模型
                     all_models.append(
                         {
                             "id": model_id,
@@ -342,8 +324,7 @@ class ScoringService:
                             "provider": self._extract_provider(model_id),
                         }
                     )
-
-                # 按质量和受欢迎程度排序，优先显示高质量模型
+#关注质量和受欢迎的排序程度，优先显示高质量模型
                 all_models.sort(key=lambda m: self._model_priority(m["id"]))
 
                 logger.debug(f"成功处理 {len(all_models)} 个OpenRouter模型")
@@ -448,8 +429,7 @@ class ScoringService:
         """判断模型是否适合用于评测"""
 
         model_id = model.get("id", "").lower()
-
-        # 包含这些关键词的模型通常适合评测
+# 包含这些关键词的模型通常适合足球
         suitable_keywords = [
             "gpt-4",
             "claude",
@@ -461,8 +441,7 @@ class ScoringService:
             "qwen",
             "deepseek",
         ]
-
-        # 排除这些类型的模型
+# 排除这些类型的模型
         excluded_keywords = [
             "vision",
             "embedding",
@@ -474,11 +453,9 @@ class ScoringService:
             "beta",
             "preview",
         ]
-
-        # 检查是否包含适合的关键词
+#检查是否包含适合的关键词
         has_suitable = any(keyword in model_id for keyword in suitable_keywords)
-
-        # 检查是否包含排除的关键词
+#检查是否需要修复的关键词
         has_excluded = any(keyword in model_id for keyword in excluded_keywords)
 
         return has_suitable and not has_excluded
@@ -507,8 +484,7 @@ class ScoringService:
 
     def _model_priority(self, model_id: str) -> int:
         """模型优先级排序（越小越优先）"""
-
-        # 定义优先级模型
+# 定义优先级模型
         priority_models = [
             "anthropic/claude-3.5-sonnet",
             "openai/gpt-4o",

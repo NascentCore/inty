@@ -9,9 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision: str = '20250804_120000'
 down_revision: Union[str, None] = '20250726_001000'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -20,7 +18,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Add background_generation_limit_per_day column to subscription_plans table"""
-    # 检查列是否已存在，如果不存在则添加
+#检查列是否已存在，如果不存在则添加
     connection = op.get_bind()
     result = connection.execute(sa.text("""
         SELECT column_name 
@@ -30,16 +28,15 @@ def upgrade() -> None:
     """))
     
     if not result.fetchone():
-        # 添加 background_generation_limit_per_day 列
+#添加background_ Generation_limit_per_day列
         op.add_column('subscription_plans', 
             sa.Column('background_generation_limit_per_day', 
                       sa.Integer(), 
                       nullable=False, 
                       server_default='3',
                       comment='每日背景图生成次数限制，-1为无限制'))
-        
-        # 更新现有订阅计划的背景图生成限制
-        # 付费用户设置为无限制(-1)
+# 更新现有订阅计划的背景图生成限制
+# 付费用户设置为无限制(-1)
         connection.execute(sa.text("""
             UPDATE subscription_plans 
             SET background_generation_limit_per_day = -1 
@@ -49,7 +46,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Remove background_generation_limit_per_day column from subscription_plans table"""
-    # 检查列是否存在，如果存在则删除
+#检查列是否存在，如果存在则删除
     connection = op.get_bind()
     result = connection.execute(sa.text("""
         SELECT column_name 

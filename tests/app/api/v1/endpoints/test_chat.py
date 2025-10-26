@@ -7,8 +7,7 @@ import uuid
 
 import pytest
 from loguru import logger
-
-# Optional dependency: skip tests if Python SDK is not available
+# 可选依赖项：如果Python SDK不可用，则跳过测试
 inty_module = pytest.importorskip("inty")
 Inty = getattr(inty_module, "Inty")
 
@@ -16,7 +15,7 @@ Inty = getattr(inty_module, "Inty")
 @pytest.fixture
 def inty_client():
     """Create Inty client for testing."""
-    # Use local development server
+# 使用本地开发服务器
     client = Inty(
         base_url="http://localhost:8000",
         api_key="test-api-key",
@@ -27,16 +26,14 @@ def inty_client():
         system_language="en",
     )
     logger.info(f"Guest registration response: {response}")
-
-    # Create authenticated client
+#创建经过身份验证的客户端
     auth_client = Inty(
         base_url="http://localhost:8000",
         api_key=response.data.token,
     )
 
     yield auth_client
-
-    # Cleanup: Delete guest user
+#清理：删除来宾用户
     logger.info(f"Cleaning up guest user: {response.data.guest_id}")
     auth_client.api.v1.users.delete_account()
     logger.info("Guest user deleted successfully")
@@ -66,22 +63,19 @@ def test_agent_chat_completions_with_sdk(inty_client, agent_ids_to_cleanup):
 
     logger.info(f"create_agent_response: {str(create_agent_response)}")
     test_agent_id = create_agent_response.data.id
-
-    # Prepare request data
+# Prepare 请求数据
     request_data = {
         "messages": [{"role": "user", "content": "Hello, how are you?"}],
         "stream": False,
         "model": "chatbot",
         "language": "en",
     }
-
-    # Make request using the SDK
+# 使用 SDK 发布请求
     response = inty_client.api.v1.chats.create_completion(
         agent_id=test_agent_id, **request_data
     )
 
     logger.info(f"Chat completion response: {response}")
-
-    # Test that we got a response
+# 测试我们是否收到响应
     assert response is not None
     assert response.data is not None

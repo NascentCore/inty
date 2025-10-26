@@ -1,3 +1,3 @@
-# PromptLayer integration
+# PromptLayer 集成
 
-Shows how to retrieve prompt from prompt layer.
+演示如何从 prompt 搜索层 prompt。

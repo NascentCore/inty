@@ -1,21 +1,19 @@
 package ai.sxwl.android.data.http.config
 
-/** 项目内的常量 定义 */
+/** 项目内部的常量定义 */
 class Constant {
     companion object {
-        // This refers to the production backend endpoint.
-        // The domain & DNS is on namecheap, pointing to the public IP of the dev instance.
-        // Nginx is running on the dev instance to proxy to different backend instances on different
-        // ports.
+// 这是指 prduction 端点。
+// 域名和DNS位于namecheap上，指向开发实例的公共IP。
+// Nginx 在 dev 实例上运行以 proxy 到不同的云端实例
+// 端口。
         const val USER_HOST = "app.inty.cc"
-
-        // This refers to the shared development backend endpoint.
-        // This is the backend endpoint for the debug build (default build type).
+// 这是指共享开发端点。
+// 这是调试构建（默认构建类型）的端点。
         const val USER_HOST_DEV = "dev.inty.sxwl.ai"
-
-        // This refers to the local backend endpoint that can be accessed
-        // an Android emulator. Used for local development.
-        // https://stackoverflow.com/a/6310592
+// 这是指可以访问的本地端点
+// 一个 Android 模拟器。用于本地开发。
+// https://stackoverflow.com/a/6310592
         const val USER_HOST_LOCAL = "localhost:8000"
 
         const val SYS_NOTIFICATION_ID = "SYS_NOTIFICATION_ID_888"

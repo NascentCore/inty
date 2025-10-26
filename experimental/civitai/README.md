@@ -1,35 +1,28 @@
-# Civitai Model Parser
+# Civitai 模型解析器
 
-A minimal Python parser to extract key information from Civitai model pages.
+一个最小的 Python 解析器，用于从 Civita 模型页面中提取关键信息。
 
-## Features
+＃＃ 特征
 
-Extracts the following information from Civitai model pages:
+从 Civita 模型页面中提取以下信息：
 
-- **Model Name**: The name of the AI model
-- **Tags**: Categories and tags associated with the model
-- **Download Links**: Direct download links with file size and type information
-- **Details**: Technical details like model type, stats, reviews, etc.
-- **About**: Description and information about the model
-- **Stats**: Download counts, likes, comments, etc.
-- **Creator**: Model creator information
-- **License**: License information
-- **Suggested Settings**: Recommended generation settings
-- **Version Info**: Model version information
+- **模型名称**：AI模型的名称
+- **标签**：与模型关联的类别和标签
+- **下载链接**：包含文件大小和类型信息的直接下载链接
+- **详细信息**：技术详细信息，例如模型类型、统计数据、评论等。
+- **关于**：有关模型的描述和信息
+- **统计**：下载计数、点赞、评论等。
+- **创建者**：模型创建者信息
+- **许可证**：许可证信息
+- **建议设置**：建议的生成设置- **版本信息**：型号版本信息
 
-## Installation
+＃＃ 安装
 
-1. Install the required dependencies:
-
-```bash
+1.安装所需的依赖项：```bash
 pip install -r requirements_parser.txt
-```
+```＃＃ 用法
 
-## Usage
-
-### Basic Usage
-
-```python
+### 基本用法```python
 from civitai_parser import CivitaiParser
 
 # Initialize the parser
@@ -41,27 +34,19 @@ result = parser.parse_model_page(url)
 
 # Print results
 print(json.dumps(result, indent=2))
-```
+```### 示例脚本
 
-### Example Script
-
-Run the example script to test the parser:
-
-```bash
+运行示例脚本来测试解析器：```bash
 python example_usage.py
-```
+```这将：
 
-This will:
+1.解析示例Civita模型页面
+2. 将结果保存到JSON文件中
+3.在控制台显示关键信息
 
-1. Parse the example Civitai model page
-2. Save the results to a JSON file
-3. Display key information in the console
+## 输出格式
 
-## Output Format
-
-The parser returns a JSON object with the following structure:
-
-```json
+解析器返回一个具有以下结构的 JSON 对象：```json
 {
   "url": "https://civitai.com/models/1224788/prefect-illustrious-xl",
   "model_name": "Prefect illustrious XL",
@@ -95,35 +80,31 @@ The parser returns a JSON object with the following structure:
     "version": "3.0"
   }
 }
-```
+```## 错误处理
 
-## Error Handling
+解析器包括以下错误处理：
 
-The parser includes error handling for:
+- 网络连接问题
+- 无效的网址
+- 解析错误
+- 缺少内容
 
-- Network connection issues
-- Invalid URLs
-- Parsing errors
-- Missing content
+如果发生错误，结果将包含`error`包含错误消息的字段。## 依赖关系
 
-If an error occurs, the result will contain an `error` field with the error message.
+-`requests`：对于HTTP请求
+-`beautifulsoup4`: 用于HTML解析
+-`lxml`: XML/HTML 解析器
 
-## Dependencies
+## 注释
 
-- `requests`: For HTTP requests
-- `beautifulsoup4`: For HTML parsing
-- `lxml`: XML/HTML parser backend
+- 解析器使用真实的用户代理来避免被阻止
+- 它可以处理相对和绝对URL
+- 重复的标签会自动删除
+- 从下载链接中提取文件大小和类型
+- 解析器被设计为强大的并且可以处理各种页面布局
 
-## Notes
+## 限制
 
-- The parser uses a realistic User-Agent to avoid being blocked
-- It handles both relative and absolute URLs
-- Duplicate tags are automatically removed
-- File sizes and types are extracted from download links
-- The parser is designed to be robust and handle various page layouts
-
-## Limitations
-
-- The parser relies on HTML structure and may need updates if Civitai changes their website layout
-- Some information might not be available for all models
-- The parser is designed for public model pages and may not work with private/restricted content
+- 解析器依赖于 HTML 结构，如果 Civita 更改其网站布局，则可能需要更新
+- 某些信息可能不适用于所有型号
+- 解析器是为公共模型页面设计的，可能不一致用于private/设定内容

@@ -10,9 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision: str = 'add_meta_data_to_agents'
 down_revision: Union[str, None] = '31cde68a9b0a'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -20,7 +18,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Check if meta_data column already exists
+# 检查meta_data列是否已经存在
     conn = op.get_bind()
     inspector = sa.inspect(conn)
     columns = [col['name'] for col in inspector.get_columns('agents')]
@@ -33,7 +31,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Check if meta_data column exists before dropping
+#删除前检查meta_data列是否存在
     conn = op.get_bind()
     inspector = sa.inspect(conn)
     columns = [col['name'] for col in inspector.get_columns('agents')]

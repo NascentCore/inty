@@ -7,9 +7,7 @@ from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.models import Base
-
-
-# DEPRECATED: 该表格内的数据会转为代码中的静态数据，不会在数据库中存储
+# DEPRECATED：表格内的数据会转为代码中的静态数据，不会在数据库中存储
 class ReportReason(Base):
     """
     目前举报原因如下，会转为代码中的静态数据，不会在数据库中存储
@@ -23,12 +21,11 @@ class ReportReason(Base):
       5 | HARMFUL_TO_MINORS                  | Harmful to minors                      | t         | 2025-06-05 11:47:00.713535+00 |
       6 | VIOLATION_OF_INTELLECTUAL_PROPERTY | Violations of my intellectual property | t         | 2025-06-05 11:47:00.713535+00 |
     """
-
-    # TODO: Remove this table.
-    # Reasons are hardcoded in the app.
-    # When reporting, use the actual reason code instead of reason ID.
-    # App currenctly uses reason ID to report issue, we need to change it to reason code.
-    # Only after that, this table can be removed.
+# TODO：删除该表。
+# 原因被硬编码在应用程序中。
+# 报告时，使用实际原因代码而不是原因ID。
+# 应用程序目前使用原因ID来报告问题，我们需要将其更改为原因代码。
+# 只有在此之后，才能删除该表。
     __tablename__ = "report_reason"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -41,9 +38,8 @@ class ReportReason(Base):
     updated_at = Column(
         DateTime(timezone=True), onupdate=sa.text("now()"), comment="更新时间"
     )
-
-    # 关系
-    # reports = relationship("Report", back_populates="reasons")
+# 关系
+# 报告 = 关系("报告", back_populates="原因")
 
 
 class ReportStatus(str, enum.Enum):
@@ -76,7 +72,6 @@ class Report(Base):
     created_at = Column(
         DateTime(timezone=True), server_default=sa.text("now()"), comment="创建时间"
     )
-
-    # 关系
+# 关系
     reporter = relationship("User", back_populates="reports")
-    # reasons = relationship("ReportReason", secondary="report_reason_association", back_populates="reports")
+# 原因 = 关系("ReportReason", secondary="report_reason_association", back_populates="reports")

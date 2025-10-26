@@ -1,21 +1,15 @@
-# Eval
+# 评估
 
-- This is a thin wrapper on top of inty backend
-- JWT token is hardcoded in api.ts
-- The inty backend is configured through env var REACT_APP_API_BASE_URL
+- 这是 inty 后端顶部的薄包装
+- JWT 令牌硬编码在 api 中。ts
+- inty 后端通过环境变量 REACT_APP_API_BASE_URL 配置
 
-Nginx is installed on the server to do login:
+服务器上安装Nginx来进行登录：
 
-- `test.inty.cc` `new.test.inty.cc` share the same password files; there are 2 users:
-
-  ```password
+-`test.inty.cc` `new.test.inty.cc`共享相同的密码文件；有2个用户：```password
   wzy:sxwl6662025!
   heartmate:heartmate.inty.cc
-  ```
-
-Deployment process:
-
-```bash
+  ```部署process：```bash
 # 构建镜像
 git clone git@github.com:NascentCore/inty-backend.git
 cd inty-backend

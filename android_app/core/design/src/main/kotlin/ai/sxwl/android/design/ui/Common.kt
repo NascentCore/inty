@@ -42,7 +42,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.random.Random
-
 //存放一些普通的ui相关的函数
 
 /**
@@ -58,8 +57,8 @@ fun randomColor(): Color {
 }
 
 /**
- * 简单的扩展函数，用于对数值标记为0 和 1 的时候;如果是null，则默认为0
- * 数值取反 作为类似boolean的效果
+ * 简单的扩展函数，用于对数值标记为0和1的时候;如果为null，则默认为0
+ * 数值取反作为类似布尔值的效果
  */
 fun Int.not(): Int {
 
@@ -72,24 +71,21 @@ fun Int.not(): Int {
         else -> error("")
     }
 }
-
-//主题按钮 渐变色
+//主题按钮更改颜色
 val primaryBtnBrush = Brush.horizontalGradient(
     colors = listOf(
         Color(0xFFC122FF),
         Color(0xFFFF905D),
     )
 )
-
-//常规按钮 渐变色
+// 静止按钮 渐变色
 val commonBtnBrush = Brush.horizontalGradient(
     colors = listOf(
         Color(0XFF2D213A),
         Color(0XFF2D213A),
     )
 )
-
-//分隔符渐变色
+// 分隔符颜色
 val heartDivBrush = Brush.horizontalGradient(
     colors = listOf(
         Color.White.copy(0f),
@@ -161,7 +157,7 @@ private fun PreviewPoundText() {
 
 /**
  * 可滑动删除的列表容器
- * 要求itemContent不能透明
+ * 要求项目内容不能透明
  */
 @Composable
 fun SwipeableListItem(
@@ -177,7 +173,7 @@ fun SwipeableListItem(
         ) {
             isDeleting = true
             onDelete()
-            // 重置状态，确保位置恢复
+// 状态重置，确保位置恢复
             swipeToDismissBoxState.reset()
         }
     }

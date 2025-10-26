@@ -1,31 +1,27 @@
-# 多System Message测试脚本使用说明
+# 多系统消息测试脚本使用说明
 
-## 概述
+## 概述`test_multi_system_messages.py`是一个正确的测试脚本，用于验证OpenAI兼容的聊天接口是否支持多个系统消息。
 
-`test_multi_system_messages.py` 是一个测试脚本，用于验证OpenAI兼容的chat接口是否正确支持多个system message。
+## 功能特点
 
-## 功能特性
-
-- ✅ 测试单个vs多个system message的效果对比
-- ✅ 验证不同顺序的system message是否影响响应
-- ✅ 测试包含空system message的容错处理
+- ✅ 测试单个与多个系统消息的效果对比
+- ✅ 验证不同顺序的系统消息是否影响响应
+- ✅ 测试包含空系统消息的内容错误处理
 - ✅ 详细的结果分析和报告
 - ✅ 自动保存测试结果到JSON文件
 
 ## 测试场景
 
-脚本包含以下4个测试用例：
+脚本包含以下4个测试示例：
 
-1. **单个System Message** - 将所有指令合并为一个system message（对照组）
-2. **多个System Message** - 分别设置主提示词、角色信息、用户信息
-3. **不同顺序** - 测试system message顺序对效果的影响
-4. **包含空消息** - 测试系统对空system message的处理
+1. **单个系统消息** - 将所有指令命令为一个系统消息（沙特阿拉伯）
+2. **多个系统消息** - 分别设置主提示词、角色信息、用户信息
+3. **不同的顺序** - 测试系统消息顺序对效果的影响
+4. **包含空消息** - 测试系统对空系统消息的处理
 
 ## 使用方法
 
-### 基本使用
-
-```bash
+### 基本使用```bash
 # 使用默认配置文件
 python scripts/test_multi_system_messages.py
 
@@ -56,9 +52,7 @@ pip install openai pyyaml
 
 ## 配置文件
 
-脚本会自动读取项目根目录的 `config.yaml` 文件中的agent配置：
-
-```yaml
+脚本会自动读取项目根目录的 `config.yaml`文件中的代理配置：```yaml
 agent:
   api_key: your_api_key
   base_url: https://your-api-endpoint/v1
@@ -111,13 +105,11 @@ agent:
 🎯 测试结论
 ✅ 单个System Message测试成功
 ✅ 多个System Message测试成功
-```
+```## 故障排除
 
-## 故障排除
-
-1. **API调用失败** - 检查API密钥和网络连接
-2. **配置文件错误** - 确保config.yaml格式正确
-3. **依赖缺失** - 运行 `pip install openai pyyaml`
+1. **API调用失败** - 检查API按键和网络连接
+2. **配置文件错误** -确保config.yaml格式正确
+3.**依赖债务** - 运行`pip install openai pyyaml`
 4. **权限问题** - 确保脚本有执行权限
 
 ## 注意事项

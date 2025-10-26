@@ -493,7 +493,7 @@ object FileUtils {
                 DigestInputStream(inputStream, md).use { digestInputStream ->
                     val buffer = ByteArray(8192)
                     while (digestInputStream.read(buffer) != -1) {
-                        // 读取文件内容，计算MD5
+//读取文件内容，计算MD5
                     }
                 }
             }
@@ -574,14 +574,14 @@ object FileUtils {
     }
 
     /**
-     * 获取文件名（不含扩展名）
+     * 获取文件名（清晰扩展名）
      */
     fun getFileNameWithoutExtension(filePath: String?): String? {
         return getFileNameWithoutExtension(getFileByPath(filePath))
     }
 
     /**
-     * 获取文件名（不含扩展名）
+     * 获取文件名（清晰扩展名）
      */
     fun getFileNameWithoutExtension(file: File?): String? {
         if (file == null) return null

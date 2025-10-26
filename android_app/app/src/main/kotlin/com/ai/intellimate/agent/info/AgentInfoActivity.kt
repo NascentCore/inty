@@ -18,9 +18,9 @@ class AgentInfoActivity : BaseActivity() {
 
         /**
          * 启动单独的聊天界面
-         * @param context 上下文context
+         * @param context 上下文
          * @param agentInfo Agent的Info对象
-         * @param agentId agent的id 两个参数选一即可，也必须只要有一个
+         * @param agentId 代理的id 两个参数选一即可，也必须只要有一个
          */
         fun launch(context: Context, agentInfo: AgentInfo? = null, agentId: String? = null) {
             context.startActivity(Intent(context, AgentInfoActivity::class.java).also { intent ->
@@ -46,7 +46,7 @@ class AgentInfoActivity : BaseActivity() {
             if (agentId != null) {
                 viewModel.setAgentID(agentId!!)
             } else {
-                // 既没有 agent 对象也没有 agent_id，说明参数传递有问题
+// 既没有agent对象也没有agent_id，说明参数提交有问题
                 finish()
                 return
             }

@@ -45,7 +45,7 @@ import com.ai.intellimate.vip.SubsManageActivity
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlinx.coroutines.flow.collectLatest
 
-/** 设置页面主内容 */
+/** 设置页面主要内容 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingContent(
@@ -56,12 +56,11 @@ fun SettingContent(
 ) {
     val context = LocalContext.current
     val dialogState by viewModel.dialogState.collectAsState()
-
-    // 监听删除账号结果
+// 监听删除账号结果
     LaunchedEffect(viewModel) {
         viewModel.deleteAccountResultFlow.collectLatest { deleted ->
             if (deleted) {
-                // 账号删除成功
+// 账号删除成功
                 onLogout(true)
             }
         }
@@ -69,19 +68,16 @@ fun SettingContent(
 
     Scaffold(modifier = modifier, topBar = { SettingTopBar(onBack = onBack) }) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-
-            // 支持与帮助区域
+// 支持与帮助区域
             SupportAndHelpSection(
                 context = context,
                 onShowDeleteDialog = { viewModel.showDeleteAccountDialog() },
             )
 
             Spacer(Modifier.height(16.dp))
-
-            // 退出登录按钮
+// 退出登录按钮
             LogoutButton(onLogout = { onLogout(false) })
-
-            // 对话框
+// 对话框
             SettingDialogs(
                 dialogState = dialogState,
                 onHideDeleteDialog = { viewModel.hideDeleteAccountDialog() },
@@ -120,7 +116,7 @@ private fun SettingTopBar(onBack: () -> Unit) {
 @Composable
 private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Unit) {
     SettingSection {
-        // 邮件联系
+// 邮件联系
         val email = stringResource(R.string.settings_email_inty)
         SettingNavigationItem(
             title = stringResource(R.string.settings_email_support),
@@ -129,16 +125,14 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
         )
 
         SettingDivider()
-
-        // 举报
+// 举报
         SettingNavigationItem(
             title = stringResource(R.string.str_report),
             onClick = { ReportActivity.launch(context) },
         )
 
         SettingDivider()
-
-        // 用户协议
+// 用户协议
         SettingNavigationItem(
             title = stringResource(R.string.terms_of_use),
             onClick = {
@@ -152,8 +146,7 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
         )
 
         SettingDivider()
-
-        // 隐私政策
+// 隐私政策
         SettingNavigationItem(
             title = stringResource(R.string.privacy_policy),
             onClick = {
@@ -167,17 +160,15 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
         )
 
         SettingDivider()
-
-        // 删除账号
+// 删除账号
         SettingNavigationItem(
             title = stringResource(R.string.settings_str_delete_account),
             onClick = onShowDeleteDialog,
         )
 
         SettingDivider()
-
-        // 订阅管理
-        // VIP状态
+// 订阅管理
+// VIP状态
         val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
         val str =
             if (vipStatus.isSubscribed) {
@@ -197,8 +188,7 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
         )
 
         SettingDivider()
-
-        // 版本号
+// 版本号
         val uriHandler = LocalUriHandler.current
         SettingNavigationItem(
             title = stringResource(R.string.settings_about),
@@ -224,20 +214,19 @@ private fun SettingDialogs(
     onHideDeleteDialog: () -> Unit,
     onConfirmDelete: () -> Unit,
 ) {
-    // 删除账号对话框
+// 删除账号对话框
     if (dialogState.showDeleteAccountDialog) {
         DeleteAccountDialog(onDismiss = onHideDeleteDialog, onConfirm = onConfirmDelete)
     }
-
-    // 高级模型对话框
+// 高级模型对话框
     if (dialogState.showPremiumDialog) {
         val context = LocalContext.current
-        // 检查是否正式登录（非游客且已登录）
+// 查询是否正式登录（非游客且已登录）
         if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-            // 去会员中心
+// 去会员中心
             VipCenterActivity.launch(context)
         } else {
-            // 如果未登录，要求先登录
+// 如果未登录，要求先登录
             LoginActivity.launch(context)
         }
     }

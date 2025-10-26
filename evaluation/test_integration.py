@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 快速集成测试脚本
 验证评测系统调用现有API的正确性
@@ -9,8 +9,7 @@ from typing import Any, Dict
 
 import aiohttp
 import pytest
-
-# 测试配置
+# 配置测试
 BASE_URL = "http://localhost:8000/api/v1"
 TEST_USER_ID = "test_user_123"
 
@@ -44,7 +43,7 @@ class APITester:
         async with self.session.post(url, json=data) as response:
             if response.status in [200, 201]:
                 result = await response.json()
-                # 仅对聊天接口处理 APIResponse 格式
+# 仅对聊天接口处理 APIResponse 格式
                 if "chat/completions" in endpoint and isinstance(result, dict) and "data" in result and result.get("code") == 200:
                     return result["data"]
                 return result
@@ -61,8 +60,7 @@ async def test_existing_apis():
     print("🔍 测试现有API端点...")
 
     async with APITester(BASE_URL) as tester:
-
-        # 1. 测试智能体API
+＃1。测试智能体API
         print("\n📋 测试智能体API:")
         agents = await tester.get("/agents/me")
         print(
@@ -72,11 +70,10 @@ async def test_existing_apis():
         if agents and isinstance(agents, list) and len(agents) > 0:
             agent_id = agents[0].get("id")
             if agent_id:
-                # 测试获取智能体详情
+#获取智能测试体详情
                 agent_detail = await tester.get(f"/agents/{agent_id}")
                 print(f"  ✓ 获取智能体详情: {agent_detail.get('name', 'Error')}")
-
-        # 2. 测试聊天API
+#2.测试聊天API
         print("\n💬 测试聊天API:")
         chats = await tester.get("/chats/")
         print(f"  ✓ 获取聊天列表: {len(chats) if isinstance(chats, list) else 'Error'}")
@@ -84,11 +81,10 @@ async def test_existing_apis():
         if agents and isinstance(agents, list) and len(agents) > 0:
             agent_id = agents[0].get("id")
             if agent_id:
-                # 测试获取聊天详情
+#获取测试聊天详情
                 chat_detail = await tester.get(f"/chats/agents/{agent_id}/detail")
                 print(f"  ✓ 获取聊天详情: {'Success' if chat_detail else 'Error'}")
-
-                # 测试发送消息 (OpenAI格式)
+# 测试发送消息 (OpenAI格式)
                 message_data = {
                     "messages": [{"role": "user", "content": "你好，这是一个测试消息"}],
                     "max_tokens": 100,
@@ -116,8 +112,7 @@ async def test_evaluation_apis():
     print("\n🧪 测试评测系统API:")
 
     async with APITester(BASE_URL) as tester:
-
-        # 测试创建评测会话
+#创建足球测试会话
         session_data = {
             "name": "API集成测试",
             "questions": ["你好", "你是谁？"],
@@ -127,23 +122,19 @@ async def test_evaluation_apis():
             "use_new_user_identity": True,
             "config": {},
         }
-
-        # 先获取一些智能体ID
+#先获取一些智能体ID
         agents = await tester.get("/agents/me")
         if agents and isinstance(agents, list) and len(agents) > 0:
             session_data["selected_agents"] = [agents[0]["id"]]
-
-            # 创建评测会话
+#创建足球会话
             session = await tester.post("/evaluation/sessions", session_data)
             if session and session.get("id"):
                 session_id = session["id"]
                 print(f"  ✓ 创建评测会话: {session_id}")
-
-                # 获取会话详情
+# 获取会话详情
                 session_detail = await tester.get(f"/evaluation/sessions/{session_id}")
                 print(f"  ✓ 获取会话详情: {session_detail.get('name', 'Error')}")
-
-                # 启动评测
+#启动体育
                 start_result = await tester.post(
                     f"/evaluation/sessions/{session_id}/start"
                 )

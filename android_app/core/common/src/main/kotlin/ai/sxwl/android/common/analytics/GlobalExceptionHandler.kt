@@ -4,7 +4,7 @@ import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 
-/** 全局异常处理器 捕获未处理的异常并记录到 Firebase Crashlytics */
+/** 全局异常处理器捕获未处理的异常并记录到 Firebase Crashlytics */
 class GlobalExceptionHandler(
     private val context: Context,
     private val defaultHandler: Thread.UncaughtExceptionHandler?,
@@ -12,42 +12,37 @@ class GlobalExceptionHandler(
 
     override fun uncaughtException(thread: Thread, exception: Throwable) {
         try {
-            // 记录异常发生时的上下文信息
+// 记录异常发生时的上下文信息
             recordCrashContext(thread, exception)
-
-            // 记录到 Firebase Crashlytics
+// 记录到 Firebase Crashlytics
             FirebaseManager.recordException(exception)
-
-            // 记录到本地日志
+// 记录到本地日志
             LogUtils.e("GlobalExceptionHandler: Uncaught exception in thread ${thread.name}")
             LogUtils.e("Exception: ${exception.message}")
             exception.printStackTrace()
         } catch (e: Exception) {
             LogUtils.e("Failed to handle global exception: ${e.message}")
         } finally {
-            // 调用默认处理器
+// 调用默认处理器
             defaultHandler?.uncaughtException(thread, exception)
         }
     }
 
     private fun recordCrashContext(thread: Thread, exception: Throwable) {
         try {
-            // 记录线程信息
+// 记录线程信息
             FirebaseManager.setCustomKey("crash_thread_name", thread.name)
             FirebaseManager.setCustomKey("crash_thread_id", thread.id.toString())
             FirebaseManager.setCustomKey("crash_thread_priority", thread.priority.toString())
-
-            // 记录异常信息
+// 记录异常信息
             FirebaseManager.setCustomKey("crash_exception_type", exception.javaClass.simpleName)
             FirebaseManager.setCustomKey("crash_exception_message", exception.message ?: "unknown")
-
-            // 记录当前页面信息
+//记录当前页面信息
             val pageInfo = PageTrackingHelper.getCurrentPageInfo()
             pageInfo.forEach { (key, value) ->
                 FirebaseManager.setCustomKey("crash_$key", value.toString())
             }
-
-            // 记录应用状态
+// 记录应用状态
             FirebaseManager.setCustomKey("crash_timestamp", System.currentTimeMillis().toString())
             FirebaseManager.setCustomKey("crash_memory_usage", getMemoryUsage())
 

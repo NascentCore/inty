@@ -23,7 +23,6 @@ from app.schemas.notification import (
     NotificationTemplateCreate,
 )
 from app.services import user_service
-
 # 类型映射字典
 TEMPLATE_TYPE_MAP = {
     NotificationTemplateType.TEXT_WITH_LINK: 1,
@@ -32,8 +31,7 @@ TEMPLATE_TYPE_MAP = {
     NotificationTemplateType.IMAGE_ONLY: 4,
     NotificationTemplateType.IMAGE_TEXT_LINK: 5,
 }
-
-# 反向映射字典
+#逆向地图字典
 TEMPLATE_TYPE_REVERSE_MAP = {v: k for k, v in TEMPLATE_TYPE_MAP.items()}
 
 
@@ -63,24 +61,19 @@ async def query_templates(
     """
     分页查询通知模板列表
     """
-    # 构建基础查询
+# 构建基础查询
     stmt = select(NotificationTemplate)
-
-    # 添加过滤条件
+#添加过滤条件
     if is_active is not None:
         stmt = stmt.where(NotificationTemplate.is_active == is_active)
-
-    # 按创建时间倒序排序
+# 按创建时间倒序排序
     stmt = stmt.order_by(NotificationTemplate.created_at.desc())
-
-    # 获取总数
+# 获取总数
     count_stmt = select(func.count()).select_from(stmt.subquery())
     total = await db.scalar(count_stmt)
-
-    # 添加分页
+#添加分页
     stmt = stmt.offset(skip).limit(limit)
-
-    # 执行查询
+# 执行查询
     result = await db.execute(stmt)
     items = result.scalars().all()
 
@@ -93,26 +86,21 @@ async def query_notifications(
     """
     查询用户通知列表
     """
-    # 构建基础查询
+# 构建基础查询
     stmt = select(UserNotification).filter(
         UserNotification.user_id == query.user_id, UserNotification.deleted_at.is_(None)
     )
-
-    # 添加过滤条件
+#添加过滤条件
     if query.is_read is not None:
         stmt = stmt.where(UserNotification.is_read == query.is_read)
-
-    # 按创建时间倒序排序
+# 按创建时间倒序排序
     stmt = stmt.order_by(UserNotification.created_at.desc())
-
-    # 获取总数
+# 获取总数
     count_stmt = select(func.count()).select_from(stmt.subquery())
     total = await db.scalar(count_stmt)
-
-    # 添加分页
+#添加分页
     stmt = stmt.offset(query.skip).limit(query.limit)
-
-    # 执行查询
+# 执行查询
     result = await db.execute(stmt)
     items = result.scalars().all()
 
@@ -125,7 +113,7 @@ async def send_notification(
     request: NotificationSendRequest,
 ) -> None:
     try:
-        # 1. Get template
+＃1。获取模板
         template = await db.get(NotificationTemplate, request.template_id)
         if not template:
             raise ValueError(
@@ -135,37 +123,32 @@ async def send_notification(
             raise ValueError(
                 f"Notification template is disabled: {request.template_id}"
             )
-
-        # 2. Get recipient user list
+#2.获取美味用户列表
         if request.all_users:
-            # Send to all users, need to query all users based on actual situation
+# 发送给所有用户，需要根据实际情况查询所有用户
             stmt = select(User.id).where(User.is_active == True)
             result = await db.execute(stmt)
             user_ids = [row[0] for row in result.all()]
         else:
             if not request.user_ids:
                 raise ValueError("Recipient user list is empty")
-            # Send to specified users
+# 发送给用户指定
             user_ids = request.user_ids
-
-        # 3. Render template content
+＃3。渲染模板内容
         try:
-            # Render title
+# 渲染标题
             title_template = Template(template.title)
             rendered_title = title_template.render(**request.params)
-
-            # Render content
+# 渲染内容
             content_template = Template(template.content)
             rendered_content = content_template.render(**request.params)
-
-            # Render image URLs
+# 渲染图像 URL
             rendered_image_urls = []
             if template.image_urls:
                 for image_url in template.image_urls:
                     rendered_image_url = Template(image_url).render(**request.params)
                     rendered_image_urls.append(rendered_image_url)
-
-            # Render link URLs
+# 渲染链接 URL
             rendered_link_urls = []
             if template.link_urls:
                 for link_url in template.link_urls:
@@ -175,16 +158,14 @@ async def send_notification(
         except Exception as e:
             logger.error(f"Template rendering failed: {str(e)}")
             raise ValueError(f"Template rendering failed: {str(e)}")
-
-        # 4. Generate notifications
+＃4。生成通知
         notifications = []
 
         for user_id in user_ids:
             try:
-                # Generate notification ID
+# 生成通知ID
                 notification_id = uid("notify")
-
-                # Create notification record
+# 创建通知记录
                 notification = UserNotification(
                     id=notification_id,
                     user_id=user_id,
@@ -203,13 +184,11 @@ async def send_notification(
                 logger.error(
                     f"Failed to create notification for user {user_id}: {str(e)}"
                 )
-
-        # 5. Batch save notifications
+＃5。批量保存通知
         if notifications:
             db.add_all(notifications)
             await db.commit()
-
-        # 6. Send FCM messages asynchronously (background task)
+＃6。异步发送 FCM 消息（后台任务）
         background_tasks.add_task(
             send_fcm_multicast,
             db,
@@ -256,14 +235,13 @@ async def send_fcm_multicast(
         bool: Whether sending was successful
     """
     try:
-        # 1. Get all device tokens for multiple users
+＃1。获取多个用户的所有设备令牌
         tokens = await user_service.get_users_device_tokens(db, user_ids)
 
         if not tokens:
             logger.warning(f"Users {user_ids} have no registered device tokens")
             return False
-
-        # 2. Send messages
+#2.发送消息
         success_count = 0
         fail_count = 0
         invalid_tokens = []
@@ -285,12 +263,10 @@ async def send_fcm_multicast(
             except Exception as e:
                 logger.error(f"Failed to send to device {token}: {str(e)}")
                 fail_count += 1
-
-        # 3. Process results
+＃3。Pr获得结果
         if fail_count > 0:
             logger.error(f"FCM message sending failed: {fail_count} devices failed")
-
-        # 4. Clean up invalid tokens
+＃4。清理无效令牌
         if invalid_tokens:
             try:
                 await db.execute(

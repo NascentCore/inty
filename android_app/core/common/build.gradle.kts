@@ -24,11 +24,9 @@ dependencies {
     implementation(projects.core.design)
     implementation(projects.core.firebase)
     implementation(projects.library.utils)
-
-    // Google认证相关依赖
+// Google认证相关依赖
     implementation(libs.bundles.google.auth)
-
-    // Coil图片加载
+// 图片加载
     implementation(libs.coil.kt)
 
 }

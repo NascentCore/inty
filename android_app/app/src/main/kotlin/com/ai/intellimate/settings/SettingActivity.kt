@@ -21,7 +21,7 @@ class SettingActivity : BaseActivity() {
 
         /**
          * 启动设置界面
-         * @param context 上下文context
+         * @param context 上下文
          */
         fun launch(context: Context) {
             context.startActivity(Intent(context, SettingActivity::class.java))
@@ -39,14 +39,14 @@ class SettingActivity : BaseActivity() {
                 .background(HeartColor.primaryColor),
             onBack = { finish() },
             onLogout = { isDelete ->
-                // 使用MainViewModel的logout方法，不重启应用
+// 使用MainViewModel的注销方法，不重启应用
                 mainViewModel.logout()
-                // 显示退出成功提示
+// 显示退出成功提示
                 val str =
                     if (isDelete) getString(R.string.delete_account_successfully)
                     else getString(R.string.logout_successfully)
                 ToastUtils.showShort(str)
-                // 返回到主页面
+// 返回主页
                 val intent = Intent(this@SettingActivity, MainActivity::class.java)
                 intent.flags =
                     Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

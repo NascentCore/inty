@@ -17,8 +17,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     logger.error(f"请求URL: {request.url}")
     logger.error(f"请求路径: {request.url.path}")
     logger.error(f"请求头: {dict(request.headers)}")
-
-    # 记录请求体信息（如果可能）
+# 记录请求体信息（如果可能）
     try:
         body = await request.body()
         logger.error(f"请求体大小: {len(body)} bytes")
@@ -26,8 +25,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             logger.error(f"请求体内容: {body.decode('utf-8', errors='ignore')}")
     except Exception as e:
         logger.error(f"无法读取请求体: {str(e)}")
-
-    # 记录详细的验证错误
+# 记录详细的验证错误
     logger.error(f"验证错误数量: {len(exc.errors())}")
     for i, error in enumerate(exc.errors()):
         logger.error(f"错误 {i+1}:")
@@ -93,8 +91,7 @@ async def validation_error_handler(request: Request, exc: ValidationError):
     logger.error(f"请求URL: {request.url}")
     logger.error(f"Pydantic错误: {str(exc)}")
     logger.error(f"Pydantic错误类型: {type(exc).__name__}")
-
-    # 记录详细的验证错误
+# 记录详细的验证错误
     if hasattr(exc, "errors"):
         logger.error(f"验证错误数量: {len(exc.errors())}")
         for i, error in enumerate(exc.errors()):

@@ -36,7 +36,6 @@ include(":core:design")
 include(":core:firebase")
 include(":library:utils")
 include(":library:network")
-
 // 将 inty_sdk 作为复合构建（composite build）
-// library/inty_sdk 是由 stainless 生成的独立 Gradle 项目
+// Library/intyKEEP__7__ 是由不锈钢生成的独立Gradle项目
 includeBuild("library/inty_sdk")

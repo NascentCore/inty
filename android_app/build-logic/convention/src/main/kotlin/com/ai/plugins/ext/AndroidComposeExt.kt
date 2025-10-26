@@ -6,16 +6,16 @@ import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-/** 定义一些可用于Android端 compose项目的配置gradle的扩展函数 */
+/** 定义一些可用于Android端 compose 项目的配置gradle的扩展函数 */
 
-/** Configure Compose-specific options */
+/** 配置 Compose 特定选项 */
 internal fun Project.configureAndroidCompose(commonExtension: CommonExtension<*, *, *, *, *, *>) {
     commonExtension.apply {
         buildFeatures { compose = true }
 
         dependencies {
             val bom = libs.findLibrary("androidx.compose-bom").get()
-            // 注意⚠️，这里的findLibrary要在libs.version.toml中有的才可以,最好名称中-或_要替换为. 如activity-compose 使用如下。
+//注意⚠️，这里的findLibrary要在libs.版本。toml 有的可以，最好的名称中-或_要替换为。如activity-compose 使用如下。
             add("implementation", libs.findLibrary("androidx.activity.compose").get())
             add("implementation", platform(bom))
             add("implementation", libs.findLibrary("androidx.compose-ui").get())
@@ -30,13 +30,13 @@ internal fun Project.configureAndroidCompose(commonExtension: CommonExtension<*,
                 libs.findLibrary("androidx.compose-ui.test.junit4").get(),
             )
             add("debugImplementation", libs.findLibrary("androidx.compose-ui.tooling").get())
-            // Add ComponentActivity to debug manifest
+// 将 ComponentActivity 添加到调试清单
             add("debugImplementation", libs.findLibrary("androidx.compose-ui-test-manifest").get())
         }
 
         testOptions {
             unitTests {
-                // For Robolectric
+//对于Robolectric
                 isIncludeAndroidResources = true
             }
         }

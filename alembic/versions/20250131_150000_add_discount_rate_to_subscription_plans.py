@@ -9,8 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision: str = 'a1b2c3d4e5f6'
 down_revision: Union[str, None] = '72a30085032d'
 branch_labels: Union[str, Sequence[str], None] = None

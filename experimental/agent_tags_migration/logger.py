@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 日志配置和管理
 提供统一的日志输出格式和配置
@@ -60,11 +60,9 @@ def setup_logger(
     """
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, level.upper()))
-    
-    # 清除现有的处理器
+# 清除现有的处理器
     logger.handlers.clear()
-    
-    # 日志格式
+# 日志格式
     formatter = logging.Formatter(
         fmt='%(asctime)s | %(levelname)-8s | %(name)s | %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
@@ -74,15 +72,13 @@ def setup_logger(
         fmt='%(asctime)s | %(levelname)-8s | %(name)s | %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
-    
-    # 控制台处理器
+#控制台处理器
     if console_output:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(getattr(logging, level.upper()))
         console_handler.setFormatter(colored_formatter)
         logger.addHandler(console_handler)
-    
-    # 文件处理器
+#文件内存
     if log_file:
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)

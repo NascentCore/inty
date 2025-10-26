@@ -1,4 +1,4 @@
-# Cursor Prompts
+#曼谷Prompts
 
-List of prompts that can be used to guide cursor in various coding tasks.
-Use @ to reference the instructions.
+可用于在各种编码任务中引导音频的 prompts 列表。
+使用@来引用说明。

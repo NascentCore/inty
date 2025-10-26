@@ -1,17 +1,15 @@
-#!/bin/bash -e
-
-# Function to log with timestamp
+#！/bin/bash -e
+# 记录计时器的函数
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] $1"
 }
 
 INTY_SERVER_IMAGE_NAME="ghcr.io/nascentcore/inty-backend/inty-server"
-# Use short commit hash as image tag
+# 使用短提交作为图片标签
 IMAGE_TAG=$(git rev-parse HEAD | cut -c 1-7)
 DEPLOY_ENV="dev"
 REMOTE_HOST="inty"
-
-# Parse command line arguments
+# 解析命令行参数
 while [[ $# -gt 0 ]]; do
   case $1 in
     --environment)
@@ -33,11 +31,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ "$DEPLOY_ENV" == "dev" ]; then
-  # 对应 github dev deployment environment 里的环境变量
+# 回复github dev部署环境里的环境变量
   SERVICE_PORT_ON_HOST="8000"
   SERVICE_PUBLIC_URL="https://dev.inty.sxwl.ai"
 elif [ "$DEPLOY_ENV" == "prod" ]; then
-  # 对应 github prod deployment environment 里的环境变量
+# 对应 github prod 配置环境里的环境变量
   SERVICE_PORT_ON_HOST="8100"
   SERVICE_PUBLIC_URL="https://app.inty.cc"
 else
@@ -55,11 +53,10 @@ log "Service Port on Host: ${SERVICE_PORT_ON_HOST}"
 
 log "Building Docker image: ${FULL_IMAGE_TAG}..."
 docker build --push --platform linux/amd64 --tag "${FULL_IMAGE_TAG}" .
-
-# 3. Deploy to remote GCP instance via SSH
+＃3。通过 SSH 部署到远程 GCP 实例
 log "Deploying to remote host ${REMOTE_HOST}..."
 ssh "${REMOTE_HOST}" << EOF
-  # Function to log with timestamp on remote host
+# 在远程主机上记录时间的函数
   log() {
       echo "[\$(date '+%Y-%m-%d %H:%M:%S %Z')] \$1"
   }
@@ -85,8 +82,8 @@ ssh "${REMOTE_HOST}" << EOF
     "${FULL_IMAGE_TAG}" || { log "Docker run failed."; exit 1; }
 
   log "Waiting for application startup..."
-  # GEMINI: The original workflow waits for "Application startup complete".
-  # Ensure your application logs this message upon successful startup.
+# GEMINI：原始工作流程等待“应用程序启动完成”。
+#确保您的应用程序在成功启动时记录此消息。
   STARTUP_TIMEOUT_SECONDS=120
   ELAPSED_TIME=0
   while ! docker logs "${CONTAINER_NAME}" 2>&1 | grep -q "Application startup complete"

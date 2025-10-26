@@ -53,7 +53,7 @@ fun ChatTopBar(
     val scope = rememberCoroutineScope()
 
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        // 返回按钮
+// 返回按钮
         if (showBackButton) {
             AsyncImage(
                 modifier =
@@ -75,7 +75,7 @@ fun ChatTopBar(
                     )
                     .noRippleClickable {
                         scope.launch {
-                            // 如果是已经删除的agent，则不可点击，并提示
+// 如果是已经删除的代理，则不可点击，并提示
                             if (agentInfo.isDeleted) {
                                 ToastUtils.showShort(R.string.str_agent_is_deleted)
                             } else {

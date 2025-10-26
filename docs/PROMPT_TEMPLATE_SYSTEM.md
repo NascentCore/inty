@@ -8,21 +8,19 @@
 
 ### 1. 模版化处理
 
-- 使用 `string.Template` 进行模版化处理
+- 使用 `string.Template`进行模版化处理
 - 支持变量替换和默认值
 - 提供模版验证功能
 
-### 2. 系统架构
+### 2.系统架构
 
 #### 核心组件
 
 1. **PromptTemplate** - 单个提示词模版类
 2. **PromptTemplateManager** - 模版管理器
-3. **Agent** - 修改后的 Agent 类，使用模版系统
+3.**Agent** - 修改后面的Agent类，使用模版系统
 
-#### 文件结构
-
-```
+#### 文件结构```
 app/core/agent/
 ├── prompt_template.py  # 新增：提示词模版系统
 ├── agent.py            # 修改：使用模版系统
@@ -44,11 +42,7 @@ agent_data = {
 }
 
 final_prompt = prompt_template_manager.render_prompt(agent_data)
-```
-
-### 2. 创建 Agent 实例
-
-```python
+```### 2.创建Agent实例```python
 from app.core.agent.agent import Agent
 
 agent = Agent(
@@ -69,13 +63,9 @@ final_prompt = agent.get_final_prompt()
 
 # 获取模版信息
 template_info = agent.get_template_info()
-```
+```## API 接口
 
-## API 接口
-
-### 1. 获取 Agent 提示词
-
-```
+### 1.获取代理提示词```
 GET /api/v1/agents/{agent_id}/prompt
 ```
 
@@ -95,11 +85,7 @@ GET /api/v1/agents/{agent_id}/prompt
     }
   }
 }
-```
-
-### 2. 预览 Agent 提示词
-
-```
+```### 2.预约代理提示词```
 GET /api/v1/agents/{agent_id}/prompt/preview?template_name=default
 ```
 

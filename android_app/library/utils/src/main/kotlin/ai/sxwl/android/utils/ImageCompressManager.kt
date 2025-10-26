@@ -15,7 +15,7 @@ import java.io.IOException
 
 /**
  * 图片压缩管理器
- * 提供更高级的图片压缩功能，包括批量压缩、进度监控、结果统计等
+ * 提供更高级的图片压缩功能，包括批量压缩、细节监控、结果统计等
  */
 class ImageCompressManager private constructor() {
 
@@ -61,13 +61,13 @@ class ImageCompressManager private constructor() {
     private val taskStats = mutableMapOf<String, CompressStats>()
 
     /**
-     * 批量压缩图片（带进度监控）
+     * 批量压缩图片（带详细监控）
      *
      * @param context 上下文
      * @param imageFiles 要压缩的图片文件列表
      * @param config 压缩配置
-     * @param taskId 任务ID，用于跟踪进度
-     * @return 压缩进度Flow
+     * @param taskId 任务ID，用于跟踪细节
+     * @return 压缩详细Flow
      */
     fun compressImagesWithProgress(
         context: Context,
@@ -143,12 +143,12 @@ class ImageCompressManager private constructor() {
     }.flowOn(Dispatchers.IO)
 
     /**
-     * 压缩单个图片（带回调）
+     *压缩单个图片（带回调）
      *
      * @param context 上下文
      * @param imageFile 要压缩的图片文件
      * @param config 压缩配置
-     * @param callback 压缩结果回调
+     * @paramcallback 压缩结果回调
      */
     fun compressImageAsync(
         context: Context,
@@ -183,7 +183,7 @@ class ImageCompressManager private constructor() {
      * @param context 上下文
      * @param imageFile 要压缩的图片文件
      * @param targetSizeKB 目标文件大小（KB）
-     * @param callback 压缩结果回调
+     * @paramcallback 压缩结果回调
      */
     fun smartCompress(
         context: Context,
@@ -203,12 +203,11 @@ class ImageCompressManager private constructor() {
         }
 
         if (fileSizeKB <= targetSizeKB) {
-            // 文件已经足够小，直接返回原文件
+// 文件已经足够小，直接返回原文件
             callback.onSuccess(imageFile)
             return
         }
-
-        // 根据文件大小动态调整压缩参数
+// 根据文件大小动态调整压缩参数
         val config = when {
             fileSizeKB > 5000 -> ImageCompressUtils.CompressConfig(
                 quality = 60,
@@ -246,7 +245,7 @@ class ImageCompressManager private constructor() {
     }
 
     /**
-     * 获取所有活跃任务
+     * 获取所有主动任务
      *
      * @return 活跃任务列表
      */
@@ -315,7 +314,7 @@ fun File.compressImage(
             }
 
             override fun onError(throwable: Throwable) {
-                // 忽略错误，或者可以添加日志
+// 忽略错误，或者可以添加日志
             }
         }
     )
@@ -339,7 +338,7 @@ fun File.smartCompress(
             }
 
             override fun onError(throwable: Throwable) {
-                // 忽略错误，或者可以添加日志
+// 忽略错误，或者可以添加日志
             }
         }
     )

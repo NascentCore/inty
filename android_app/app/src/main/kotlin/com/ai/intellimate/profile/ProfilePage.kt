@@ -86,8 +86,7 @@ internal fun ProfilePage(
     onLoadMore: () -> Unit = {},
 ) {
     val context = LocalContext.current
-
-    // 使用 PageTrackingHelper 进行页面跟踪
+// 使用PageTrackingHelper进行页面跟踪
     LaunchedEffect(Unit) {
         PageTrackingHelper.trackPageView(
             "ProfilePage",
@@ -206,9 +205,8 @@ internal fun ProfilePage(
                 }
 
                 Spacer(Modifier.height(24.dp))
-
-                // IntelliMate Premium 会员入口按钮
-                // VIP状态
+// IntelliMate Premium 会员入口按钮
+// VIP状态
                 val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
                 PremiumBanner(
                     status = vipStatus.subscriptionStatus,
@@ -246,8 +244,7 @@ internal fun ProfilePage(
                     Spacer(Modifier.height(10.dp))
 
                     val listState = rememberLazyGridState()
-
-                    // Detect when user scrolls to bottom
+// 检测用户何时滚动到底部
                     LaunchedEffect(listState) {
                         snapshotFlow { listState.layoutInfo.visibleItemsInfo }
                             .collect { visibleItems ->
@@ -287,13 +284,12 @@ internal fun ProfilePage(
                                         onDeleteAgent = onDeleteAgent,
                                     )
                                 }
-                                // 添加一个底部空白，便于更好操作交互
+// 添加一个底部空白，从而更好的操作交互
                                 item { Spacer(Modifier.height(80.dp)) }
                             }
                         }
                             .onFailure { it.printStackTrace() }
-
-                        // Loading indicator when loading more (only show when there's no data)
+// 加载更多时的加载缓慢（仅在没有数据时显示）
                         if (isLoading && agents.isEmpty()) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 Box(
@@ -326,11 +322,9 @@ private fun MyAgentCard(
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
-
-    // 判断是否有头像需要加载
+//判断是否有头像需要加载
     val hasAvatarToLoad = agentInfo.avatar.isNotEmpty()
-
-    // 图片加载状态
+// 图片加载状态
     var imageLoaded by remember { mutableStateOf(false) }
 
     Box(
@@ -339,7 +333,7 @@ private fun MyAgentCard(
             .clip(RoundedCornerShape(12.dp))
     ) {
         if (hasAvatarToLoad) {
-            // 有头像需要加载时，使用 Shimmer 占位符
+// 有头像需要加载时，使用Shimmer占位符
             if (!imageLoaded) {
                 ShimmerPlaceholder(modifier = Modifier.fillMaxSize(), cornerRadius = 12.dp)
             }
@@ -356,7 +350,7 @@ private fun MyAgentCard(
                 onError = { imageLoaded = false },
             )
         } else {
-            // 没有头像需要加载时，直接显示默认头像
+// 消耗加载头像时，直接显示默认头像
             Image(
                 modifier = Modifier.fillMaxSize(),
                 painter = painterResource(R.drawable.img_default_avatar),
@@ -364,8 +358,7 @@ private fun MyAgentCard(
                 contentScale = ContentScale.Crop,
             )
         }
-
-        // 缓存渐变画笔，避免每次重组时重新创建
+// 存储迁移画笔，避免每次重组时重新创建
         val gradientBrush = remember {
             Brush.verticalGradient(
                 colors = listOf(Color.Transparent, Color.Black.copy(.5f), Color.Black.copy(.9f))
@@ -397,8 +390,7 @@ private fun MyAgentCard(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-
-        // 右下角的菜单按钮
+// 右下角的菜单按钮
         if (onEditAgent != null || onDeleteAgent != null) {
             Box(
                 modifier = Modifier
@@ -463,8 +455,7 @@ private fun MyAgentCard(
                 }
             }
         }
-
-        // Delete confirmation dialog
+//删除确认对话框
         if (showDeleteDialog) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
@@ -519,7 +510,7 @@ private fun MyAgentCard(
     }
 }
 
-/** Premium Banner 组件 */
+/** Premium 组件横幅 */
 @Preview
 @Composable
 private fun PremiumBanner(
@@ -556,7 +547,7 @@ private fun PremiumBanner(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
-                // 三种UI状态显示，1. 无有效订阅 显示Activate Now；2. 有效订阅 显示Since 日期；3. 有订阅快过期 显示Expires ON 日期
+// 清晰的UI显示状态，1. 无有效订阅显示立即激活；2. 自日期开始有效的订阅显示；3.有订阅快过期显示过期日期
                 val str =
                     when (status) {
                         VipStatus.UI_SUBSCRIBED -> "Since $purchaseTime"

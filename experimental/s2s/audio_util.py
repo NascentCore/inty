@@ -17,17 +17,16 @@ CHUNK_LENGTH_S = 0.05  # 100ms
 SAMPLE_RATE = 24000
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
-
-# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
+＃pyright：reportUnknownMemberType = false，reportUnknownVariableType = false，reportUnknownArgumentType = false
 
 
 def audio_to_pcm16_base64(audio_bytes: bytes) -> bytes:
-    # load the audio file from the byte stream
+# 从字节流加载音频文件
     audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
     print(
         f"Loaded audio: {audio.frame_rate=} {audio.channels=} {audio.sample_width=} {audio.frame_width=}"
     )
-    # resample to 24kHz mono pcm16
+# 重新采样为24kHz单声道pcm16
     pcm_audio = (
         audio.set_frame_rate(SAMPLE_RATE)
         .set_channels(CHANNELS)
@@ -54,8 +53,7 @@ class AudioPlayerAsync:
     def callback(self, outdata, frames, time, status):  # noqa
         with self.lock:
             data = np.empty(0, dtype=np.int16)
-
-            # get next item from queue if there is still space in the buffer
+#如果中心空间，则从队列中获取下一个项目
             while len(data) < frames and len(self.queue) > 0:
                 item = self.queue.pop(0)
                 frames_needed = frames - len(data)
@@ -64,8 +62,7 @@ class AudioPlayerAsync:
                     self.queue.insert(0, item[frames_needed:])
 
             self._frame_count += len(data)
-
-            # fill the rest of the frames with zeros if there is no more data
+# 如果没有更多数据，则用零填充其余帧
             if len(data) < frames:
                 data = np.concatenate(
                     (data, np.zeros(frames - len(data), dtype=np.int16))
@@ -81,7 +78,7 @@ class AudioPlayerAsync:
 
     def add_data(self, data: bytes):
         with self.lock:
-            # bytes is pcm16 single channel audio data, convert to numpy array
+# bytes为pcm16单通道音频数据，转换为numpy负载
             np_data = np.frombuffer(data, dtype=np.int16)
             self.queue.append(np_data)
             if not self.playing:

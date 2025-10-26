@@ -22,7 +22,7 @@ const ScoreSelector: React.FC<ScoreSelectorProps> = ({
   mode = "star",
 }) => {
   const handleChange = (newValue: number | null) => {
-    // 确保值在 1-5 范围内，null 表示清空
+//保证值在1-5范围内，null表示清空
     if (newValue === null || newValue === 0) {
       onChange?.(undefined);
     } else if (newValue >= 1 && newValue <= 5) {
@@ -65,8 +65,7 @@ const ScoreSelector: React.FC<ScoreSelectorProps> = ({
       </Space>
     );
   }
-
-  // 数字模式
+// 数字模式
   return (
     <Space direction="vertical" size="small">
       <InputNumber

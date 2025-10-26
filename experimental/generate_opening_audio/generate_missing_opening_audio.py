@@ -1,18 +1,15 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 批量为 opening_audio_url 为空的 agents 生成开场白语音
 
 使用示例：
-    # 查看有多少 agents 需要生成语音（dry-run）
+#查看有多少代理生成需要语音（dry-run）
     python generate_missing_opening_audio.py --dry-run
-
-    # 生成所有缺失的开场白语音
+#生成所有欠缺的开场白语音
     python generate_missing_opening_audio.py
-
-    # 只处理前 5 个 agents（测试用）
+# 只处理前5个代理（测试用）
     python generate_missing_opening_audio.py --limit 5
-
-    # 为指定 agent 生成语音
+# 为指定代理生成语音
     python generate_missing_opening_audio.py --agent-id <agent-id>
 """
 
@@ -28,8 +25,7 @@ from loguru import logger
 from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-
-# 添加项目根目录到 Python 路径
+#添加项目根目录到Python路径
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -49,8 +45,7 @@ class OpeningAudioGenerator:
         self.engine = None
         self.async_session = None
         self.voice_service = None
-
-        # 统计信息
+# 统计信息
         self.stats = {
             'total': 0,
             'processed': 0,
@@ -92,12 +87,11 @@ class OpeningAudioGenerator:
 
     async def setup_voice_service(self):
         """设置语音服务"""
-        # 由于 VoiceService 需要从 global_config 读取配置
-        # 我们需要在这里临时设置环境变量或直接初始化
-        # 这里直接创建实例，它会从 global_config 读取
+# 由于 VoiceService 需要从 global_config 读取配置
+# 我们需要在这里临时设置环境变量或直接初始化
+# 这里直接创建实例，它会从global_config读取
         from app.core.config import global_config_loaded_from_config_yaml
-
-        # 验证 ElevenLabs 配置是否可用
+# 验证ElevenLabs配置是否可用
         if not global_config_loaded_from_config_yaml.elevenlabs.enabled:
             logger.warning("ElevenLabs 语音生成未启用")
         else:
@@ -120,12 +114,10 @@ class OpeningAudioGenerator:
                     Agent.opening_audio_url.is_(None)  # 没有语音 URL
                 )
             ).order_by(Agent.created_at.desc())
-
-            # 如果指定了 agent_id，只查询该 agent
+# 如果指定了agent_id，则只查询该agent
             if agent_id:
                 query = query.where(Agent.id == agent_id)
-
-            # 如果指定了 limit，限制查询数量
+# 如果指定了限制，限制查询数量
             if limit:
                 query = query.limit(limit)
 
@@ -161,8 +153,7 @@ class OpeningAudioGenerator:
                 return False
 
             opening = agent.opening
-
-            # 处理模板变量
+# 处理模板变量
             if has_template_variable(opening):
                 opening = render_prompt_jinja2_template(
                     opening,
@@ -170,8 +161,7 @@ class OpeningAudioGenerator:
                     user="you"
                 )
                 logger.debug(f"Agent {agent.id} 开场白包含模板变量，渲染后: {opening[:50]}...")
-
-            # 确定使用的 voice_id
+# 确定使用的voice_id
             voice_id_to_use = agent.voice_id
             if not voice_id_to_use:
                 voice_id_to_use = GENDER_VOICE_MAPPING.get(agent.gender.value)
@@ -186,8 +176,7 @@ class OpeningAudioGenerator:
                 f"开始为 Agent {agent.id} ({agent.name}) 生成语音 "
                 f"[voice_id: {voice_id_to_use}, text_length: {len(opening)}]"
             )
-
-            # 生成语音
+#生成语音
             voice_result = await self.voice_service.generate_voice(
                 text=opening,
                 voice_id=voice_id_to_use,
@@ -200,8 +189,7 @@ class OpeningAudioGenerator:
                 return False
 
             audio_url, audio_duration = voice_result
-
-            # 如果不是 dry-run，更新数据库
+# 如果不是试运行，更新数据库
             if not self.dry_run:
                 agent.opening_audio_url = audio_url
                 session.add(agent)
@@ -247,17 +235,13 @@ class OpeningAudioGenerator:
 
         if self.dry_run:
             logger.warning("⚠️  DRY-RUN 模式：只查询和生成语音，不更新数据库")
-
-        # 加载配置
+# 加载配置
         self.load_config()
-
-        # 设置数据库连接
+# 设置数据库连接
         await self.setup_database()
-
-        # 设置语音服务
+#设置语音服务
         await self.setup_voice_service()
-
-        # 统计需要处理的 agents 数量
+# 统计需要处理的代理数量
         if agent_id:
             logger.info(f"指定 Agent ID: {agent_id}")
         else:
@@ -271,8 +255,7 @@ class OpeningAudioGenerator:
 
             if limit:
                 logger.info(f"限制处理数量: {limit}")
-
-        # 查询需要处理的 agents
+# 查询需要处理的代理
         agents = await self.get_agents_without_audio(limit=limit, agent_id=agent_id)
 
         if not agents:
@@ -281,8 +264,7 @@ class OpeningAudioGenerator:
 
         logger.info(f"本次将处理 {len(agents)} 个 Agents")
         logger.info("-" * 60)
-
-        # 批量处理
+# 批量处理
         batch_count = (len(agents) + self.batch_size - 1) // self.batch_size
 
         for batch_idx in range(batch_count):
@@ -294,8 +276,7 @@ class OpeningAudioGenerator:
             logger.info("-" * 60)
 
             await self.process_batch(batch)
-
-        # 输出统计信息
+# 概览统计信息
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
 
@@ -308,8 +289,7 @@ class OpeningAudioGenerator:
         logger.info(f"  跳过: {self.stats['skipped']}")
         logger.info(f"  耗时: {duration:.2f} 秒")
         logger.info("=" * 60)
-
-        # 关闭数据库连接
+# 关闭数据库连接
         if self.engine:
             await self.engine.dispose()
 
@@ -321,19 +301,15 @@ async def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
-  # 查看有多少 agents 需要生成语音（dry-run）
+#查看有多少代理生成需要语音（dry-run）
   python generate_missing_opening_audio.py --dry-run
-
-  # 生成所有缺失的开场白语音
+#生成所有欠缺的开场白语音
   python generate_missing_opening_audio.py
-
-  # 只处理前 5 个 agents（测试用）
+# 只处理前5个代理（测试用）
   python generate_missing_opening_audio.py --limit 5
-
-  # 为指定 agent 生成语音
+# 为指定代理生成语音
   python generate_missing_opening_audio.py --agent-id <agent-id>
-
-  # 使用自定义配置文件
+# 使用自定义配置文件
   python generate_missing_opening_audio.py --config /path/to/config.yaml
         """
     )
@@ -371,16 +347,14 @@ async def main():
     )
 
     args = parser.parse_args()
-
-    # 配置日志
+#配置日志
     logger.remove()  # 移除默认处理器
     logger.add(
         sys.stderr,
         format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
         level="INFO"
     )
-
-    # 解析配置文件路径
+# 解析配置文件路径
     config_path = Path(args.config)
     if not config_path.is_absolute():
         config_path = Path(__file__).parent / config_path
@@ -388,8 +362,7 @@ async def main():
     if not config_path.exists():
         logger.error(f"配置文件不存在: {config_path}")
         sys.exit(1)
-
-    # 创建生成器并运行
+#创建生成器并运行
     generator = OpeningAudioGenerator(
         config_path=str(config_path),
         dry_run=args.dry_run,

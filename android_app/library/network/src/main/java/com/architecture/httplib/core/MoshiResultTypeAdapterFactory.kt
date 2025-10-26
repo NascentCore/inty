@@ -11,14 +11,13 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
 /**
- * : JsonAdapter.Factory 要把数据能适配到T上面来。比如 NewsChannelsBean
+ *：Json闹钟。工厂决定将数据容量外包到T上面来。比如NewsChannelsBean
  *
- * Converts Java values to JSON, and JSON values to Java.
+ * 将 Java 值转换为 JSON，将 JSON 值转换为 Java。*
+ * @GET("release/channel") 暂停 getNewsChannelsWithoutEnvelope() 的乐趣：
+ * HttpResponse<NewsChannelsBean>
  *
- * @GET("release/channel") suspend fun getNewsChannelsWithoutEnvelope():
- *   HttpResponse<NewsChannelsBean>
- *
- * 视频 1：30 about 90min
+ * 视频1：30约90分钟
  */
 class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : JsonAdapter.Factory {
 
@@ -26,9 +25,9 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
      * HttpResultWrapper
      *
      * 假设公司各个业务服务器返回的Http Json数据格式都差不多三个大字段（名称允许自定义不同）code[int] + msg[str] +data[T]
-     * 这里我们统一约定称含有三个类似字段为包装数据wrapper data,每个Http请求正常都会含有这三个字段，不同的是data 中的数据， 很自然的我们使用范型T 来表示。
+     * 这里我们统一约定含有三个类似的字段来包装数据包装数据，每个Http请求正常都会含有这三个字段，不同数据中的数据，很自然的我们使用范式T来表示。
      *
-     * 根据项目自身的情况再次拓展一下让其更具有包容性
+     * 根据项目自身的情况再次拓展以增强支撑性
      */
     interface HttpWrapper {
         fun getStatusCodeKey(): String
@@ -36,9 +35,8 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
         fun getErrorMsgKey(): String
 
         fun getDataKey(): String // 一般会命名为result data
-
-        // 有些服务器是0代表成功，有些是200 代表成功，我司的java 和Python 后台就没有统一过
-        // 这里的成功是指业务请求的成功，请和Http response Code 区分
+// 有些服务器是0代表成功，有些是200代表成功，我司的java和Python后台就没有统一过
+// 这里的成功是指业务请求的成功，请和Http响应码区分
         fun isRequestSuccess(statusCode: Int): Boolean
     }
 
@@ -56,8 +54,7 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
             (type as? ParameterizedType)?.actualTypeArguments?.firstOrNull() ?: return null
 
         val dataTypeAdapter = moshi.nextAdapter<Any>(this, dataType, annotations)
-
-        // Result<T> 范型解析出来
+// Result<T> 范型解析出来
         return ResultTypeAdapter(dataTypeAdapter, httpWrapper)
     }
 
@@ -67,7 +64,7 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
         val httpWrapper: HttpWrapper?,
     ) : JsonAdapter<T>() {
 
-        /** Decodes a nullable instance of type T from the given reader. */
+        /** 从给定的读取器中解码类型T的辅助空实例。*/
         override fun fromJson(reader: JsonReader): T? {
             if (httpWrapper != null) {
                 var errcode: Int? = null
@@ -87,7 +84,7 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
                 peeked.close()
 
                 if (!errcodeFound) {
-                    // "err code" not found, assume raw data object
+// 未找到“错误代码”，原始数据对象
                     return dataTypeAdapter.fromJson(reader)
                 }
 
@@ -95,7 +92,7 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
                 while (reader.hasNext()) {
                     val nextName = reader.nextName()
                     when (nextName) {
-                        // 根据不同服务器后台HTTP 报文字段 解析映射出code +msg + data
+// 根据不同服务器后台HTTP报文字段 解析映射出码 +msg + data
                         httpWrapper.getStatusCodeKey() -> {
                             val errorNum = reader.readJsonValue()
                             errcode =
@@ -108,8 +105,8 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
 
                         httpWrapper.getErrorMsgKey() -> msg = reader.nextString()
                         httpWrapper.getDataKey() -> {
-                            // 处理返回 data = "" 的问题
-                            // https://juejin.cn/post/6969841959082917901
+// 处理返回 data = "" 的问题
+// https://juejin.cn/post/6969841959082917901
 
                             try {
                                 data = dataTypeAdapter.fromJson(reader)
@@ -118,13 +115,13 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
                                 data = reader.nextString()
                                 reader.skipValue()
                             }
-                            //                            val readData = reader.readJsonValue()
-                            //                            if (readData is String) {
-                            //                                data = readData
-                            //                            } else {
-                            //                                data =
-                            // dataTypeAdapter.fromJson(com.ata.utils.toJson(readData))
-                            //                            }
+// val readData = reader.读取JsonValue()
+// if (readData 是字符串) {
+// 数据 = 读取数据
+// }另外{
+// 数据 =
+// dataTypeAdapter.fromJson(com.ata.utils.toJson(readData))
+// }
 
                         }
 
@@ -133,11 +130,10 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
                 }
 
                 reader.endObject()
-
-                // 这个字段要看看是否服务器是否是必传字段
-                // 否则没有必要抛异常
+//该字段要查看是否是服务器是否是必传字段
+//否则请抛出异常
                 if (errcode == null) {
-                    // throw JsonDataException("Expected field [err code] not present.")
+// 抛出 JsonDataException("预期字段 [错误代码] 不是 present.”）
                     errcode = -1 // Assign a default error code if not present
                 }
 
@@ -147,12 +143,12 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
                     throw BusinessException(errcode, msg)
                 }
             } else {
-                // envelope == null 不是标准的Code + msg +data 也没关系
+// 信封 == null 不是标准的Code + msg +data 也没关系
                 return dataTypeAdapter.fromJson(reader) as T
             }
         }
 
-        /** Encodes the given value with the given writer. 后面再说吧 */
+        /** 使用给定的编写器对给定的值进行编码。后面吧*/
         override fun toJson(writer: JsonWriter, value: T?) {}
     }
 }

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 Copy an agent from one PostgreSQL database to another.
 
@@ -16,8 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.operators import and_
-
-# Add the app directory to the Python path so we can import models
+# 将app目录添加到Python路径中，以便我们可以导入模型
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from app.models.agent import Agent
@@ -50,8 +49,8 @@ async def copy_agent(
 ) -> bool:
     """Copy agent data from source to destination database."""
     try:
-        # Detach the source agent from its session and add to destination session
-        # This is much simpler than manually copying all fields
+# 将源代理一起会话分离并添加到目标会话
+# 这比手动复制所有字段要简单删除
         source_session.expunge(source_agent)
         dest_session.add(source_agent)
         await dest_session.commit()
@@ -89,21 +88,18 @@ def parse_args():
 
 async def main():
     args = parse_args()
-
-    # Parse database URLs
+# 解析数据库URL
     try:
         source_url = parse_pg_url(args.source_pg)
         dest_url = parse_pg_url(args.dest_pg)
     except Exception as e:
         logger.error(f"Invalid database URL: {e}")
         sys.exit(1)
-
-    # Create async engines
+#创建异步引擎
     try:
         source_engine = create_async_engine(source_url)
         dest_engine = create_async_engine(dest_url)
-
-        # Create session makers
+#创建会话创建者
         SourceSession = sessionmaker(
             bind=source_engine, class_=AsyncSession, expire_on_commit=False
         )
@@ -118,13 +114,12 @@ async def main():
 
     try:
         async with SourceSession() as source_session, DestSession() as dest_session:
-            # Get all agents from source by name
+# 单击名称从来源获取所有代理
             source_agents = await get_agents_by_name(source_session, args.name)
             logger.info(
                 f"Found {len(source_agents)} agent(s) with name '{args.name}' in source database"
             )
-
-            # Copy all agents
+# 复制所有代理
             success_count = 0
             for i, source_agent in enumerate(source_agents, 1):
                 logger.info(

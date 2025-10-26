@@ -1,6 +1,6 @@
 /**
- * API Key 输入模态框组件
- * 用于用户输入和验证 API Key
+ * API 键输入模态框组件
+ * 用于输入用户和验证 API 键
  */
 
 import React, { useState } from "react";
@@ -34,7 +34,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   };
 
   const handleCancel = () => {
-    // 只有在允许关闭且不在提交状态时才能关闭
+// 只有在允许关闭且不在提交状态时才能关闭
     if (allowClose && !isSubmitting && !isLoading) {
       form.resetFields();
       onClose();

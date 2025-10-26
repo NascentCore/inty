@@ -103,7 +103,7 @@ fun PremiumBenefitItem(text: String) {
     Spacer(Modifier.height(4.dp))
 }
 
-/** 订阅计划卡片组件 */
+/** 订阅计划配套组件 */
 @Composable
 fun PremiumPlanCard(
     plan: VipPlan,
@@ -160,8 +160,7 @@ fun PremiumPlanCard(
                 modifier = subModifier,
             )
         }
-
-        // 折扣标签
+// 折扣标签
         if (plan.discountRate < 1) {
             DiscountTag(
                 discountRate = plan.discountRate,

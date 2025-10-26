@@ -1,0 +1,74 @@
+# 翻译器配置
+provider: google
+model: gtx
+# 模式：dry-run 仅生成预览报告；write 就地改写文件
+# 模式：dry-run、write
+mode: write
+# 并发度（每文件一次请求），视 API 限额调整
+concurrency: 2
+max_chars_per_chunk: 3500
+
+# 保护词：保持原样不翻译（大小写不敏感按原样保留）
+protected_terms:
+  - inty
+  - FastAPI
+  - Alembic
+  - OpenAPI
+  - Android
+  - Jetpack
+  - Compose
+  - Retrofit
+  - Moshi
+  - OkHttp
+  - SDK
+  - API
+  - JSON
+  - SQLAlchemy
+  - Pydantic
+  - LangSmith
+  - OpenRouter
+  - CloudFlare
+  - GCS
+  - CDN
+  - ElevenLabs
+  - Voice ID
+  - PR
+  - README
+  - TODO
+  - LLM
+  - GPU
+
+# 处理范围
+include_extensions:
+  # Markdown
+  - .md
+  # Python/TS/JS/Kotlin/Shell
+  - .py
+  - .ts
+  - .tsx
+  - .js
+  - .jsx
+  - .kt
+  - .kts
+  - .sh
+  - .xml
+  - .html
+
+# 排除目录（通配子路径）
+exclude_dirs:
+  - .git
+  - node_modules
+  - dist
+  - build
+  - .venv
+  - venv
+  - __pycache__
+  - evaluation/inty_sdk
+  - android_app/gradle
+  - android_app/.gradle
+  - android_app/build
+
+# 控制是否处理
+process_markdown: true
+process_comments: true
+process_docstrings: false

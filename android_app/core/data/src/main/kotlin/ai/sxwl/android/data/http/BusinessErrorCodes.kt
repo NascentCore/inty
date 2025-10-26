@@ -1,14 +1,14 @@
 package ai.sxwl.android.data.http
 
-/** 业务错误码定义 与后端 app/schemas/response.py 中的 BusinessErrorCode 保持一致 */
+/** 业务错误码定义与 app/schemas/response.py 中的 BusinessErrorCode 保持一致 */
 object BusinessErrorCodes {
 
-    /** Guest用户聊天受限，需要登录 */
+    /** 访客用户聊天设置，需要登录 */
     const val GUEST_NEED_LOGIN_CODE = 10001005
     const val GUEST_NEED_LOGIN_ERROR_CODE = "Guest Login Required"
     const val GUEST_NEED_LOGIN_ERROR_MESSAGE = "Guest Login Required, Please sign in with Google"
 
-    /** 音频tts生成，次数超限制 */
+    /** 音频限制tts生成，次数超*/
     const val VOICE_TTS_LIMIT_CODE = 10001004
     const val VOICE_TTS_LIMIT_ERROR_CODE = "VOICE_GENERATION_LIMIT_REACHED"
     const val VOICE_TTS_LIMIT_ERROR_MESSAGE = "voice generation limit reached"

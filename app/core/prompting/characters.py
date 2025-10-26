@@ -10,9 +10,7 @@ from pydantic import BaseModel, Field
 class Gender(StrEnum):
     MALE = "male"
     FEMALE = "female"
-
-
-# Define the base model for a character's profile
+# 定义角色的 profile 的基本模型
 class Profile(BaseModel):
     """
     A model representing a commonly-seen profile.
@@ -25,8 +23,7 @@ class Profile(BaseModel):
         ...,
         description="A single sentence description of the profile type (less than 50 words).",
     )
-
-    # Intro can be anything, like a short story, a poem, a song, a quote, etc.
+# 简介可以是任何内容，例如短篇故事、诗歌、歌曲、引言等。
     intro: Optional[str] = Field(
         default=None,
         description="A subset of settings that are public and are revealed to the users. "
@@ -53,9 +50,7 @@ class Profile(BaseModel):
         ...,
         description="A model representing the profile's typical avatar.",
     )
-
-
-# Create the pydantic model objects for each of the 20 profiles
+# 为 20 个 pro 文件中的每一个创建 pydantic 模型对象
 
 CAREER_FOCUSED = Profile(
     nickname="Go-Getter",
@@ -451,8 +446,7 @@ CRAFTY_HOBBYIST = Profile(
         ],
     ),
 )
-
-# You can collect all the profiles into a list for easy access
+# 您可以将所有 pro 文件收集到一个列表中以便于访问
 all_profiles: List[Profile] = [
     CAREER_FOCUSED,
     FREE_SPIRITED,
@@ -480,10 +474,8 @@ all_profiles: List[Profile] = [
 def output_all_profiles_to_markdown() -> str:
     """
     Output all profiles to markdown formate as follows.
-
-    # Profiles
-
-    ## Profile nickname
+# Profiles
+## Pro文件昵称
     - Description
     - Intro
     - Opening

@@ -20,7 +20,7 @@ import retrofit2.http.Query
 
 interface IAgentApi {
 
-    /** 用于explore页面的列表数据 */
+    /**用于探索页面的列表数据*/
     @GET("api/v1/ai/agents/recommend")
     suspend fun exploreAgents(
         @Query("page") page: Int,
@@ -32,7 +32,7 @@ interface IAgentApi {
             "score_based_random", // 四种排序 created_asc, created_desc, random, score_based_random
     ): HttpResult<AgentInfoResponse>
 
-    /** 用于首页chat列表的agents数据 */
+    /**用于首页聊天列表的座席数据*/
     @GET("api/v1/ai/agents/recommend")
     suspend fun chatAgents(
         @Query("page") page: Int,

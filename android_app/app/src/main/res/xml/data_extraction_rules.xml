@@ -1,19 +1,18 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
--->
+<?xml version="1.0" encoding="utf-8"?><！--
+   样本数据提取规则文件；取消注释并根据需要进行自定义。
+   请参阅https://developer.android.com/about/versions/12/backup-restore#xml-changes
+   了解详情。-->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
+        <!-- TODO：使用<include>和<exclude>来控制备份的内容。
+        <包括.../>
+        <排除.../>
         -->
     </cloud-backup>
     <!--
-    <device-transfer>
-        <include .../>
-        <exclude .../>
-    </device-transfer>
+    <设备传输>
+        <包括.../>
+        <排除.../>
+    </设备传输>
     -->
 </data-extraction-rules>

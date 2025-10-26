@@ -119,7 +119,7 @@ class CreateRoleActivity : BaseActivity() {
 
         /**
          * 启动单独的聊天界面
-         * @param context 上下文context
+         * @param context 上下文
          * @param agentInfo Agent的Info对象
          */
         fun launch(context: Context, agentInfo: AgentInfo? = null) {
@@ -180,11 +180,11 @@ private fun CreateRolePage(
     var opening by remember { mutableStateOf(editAgent?.opening ?: "") }
     var visibility by remember { mutableStateOf(editAgent?.visibility ?: "PRIVATE") }
     var isLoading by remember { mutableStateOf(false) }
-    // Initialize image states based on edit mode
+// 根据编辑模式初始化图像状态
     var avatarUrl by remember {
         mutableStateOf<String?>(
             if (isEditMode && editAgent.backgroundImages.isEmpty()) {
-                // If no background images array, use single background field
+// 如果没有背景图像，则使用单个背景字段
                 editAgent.background.takeIf { it.isNotBlank() }
             } else null
         )
@@ -195,7 +195,7 @@ private fun CreateRolePage(
     var selectedImageIndex by remember {
         mutableIntStateOf(
             if (isEditMode && editAgent.backgroundImages.isNotEmpty()) {
-                // Find the index of the background image in the background_images list
+// 查找background_images列表中背景图片的索引
                 val backgroundUrl = editAgent.background.takeIf { it.isNotBlank() }
                 if (backgroundUrl != null) {
                     val index = editAgent.backgroundImages.indexOf(backgroundUrl)
@@ -220,27 +220,25 @@ private fun CreateRolePage(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val focusManager = LocalFocusManager.current
-
-    // Clear avatar data when creating new character
+//创建新角色时清除头像数据
     LaunchedEffect(isEditMode) {
         if (!isEditMode) {
             AvatarManager.clearAllAvatarData()
             LogUtils.i("Cleared avatar data for new character creation")
         }
     }
-
-    // Clean up AvatarManager when leaving the activity
+// 离开activity时清理AvatarManager
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_STOP -> {
-                    // Clear AvatarManager when activity is stopped (user navigates away)
+// 当活动停止时清除 AvatarManager（用户导航离开）
                     LogUtils.i("Activity stopped - clearing AvatarManager data")
                     AvatarManager.clearAllAvatarData()
                 }
 
                 Lifecycle.Event.ON_DESTROY -> {
-                    // Also clear when activity is destroyed
+// 当活动被召回时也清除
                     LogUtils.i("Activity destroyed - clearing AvatarManager data")
                     AvatarManager.clearAllAvatarData()
                 }
@@ -251,8 +249,7 @@ private fun CreateRolePage(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-
-    // UCrop launcher for avatar cropping
+// 用于头像的 UCrop 启动器
     val cropLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult()
@@ -262,8 +259,7 @@ private fun CreateRolePage(
                     val resultUri = UCrop.getOutput(data)
                     if (resultUri != null) {
                         LogUtils.i("Avatar cropped successfully: $resultUri")
-
-                        // Upload the cropped image to server
+// 将最后的图片上传到服务器
                         try {
                             val file = File(resultUri.path!!)
                             val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
@@ -272,7 +268,7 @@ private fun CreateRolePage(
 
 
                             val agentApi = NetServiceMgr.getAgentApi()
-                            // Use the mainViewModel's scope to launch the coroutine
+// 使用 mainViewModel 的范围来启动协程
                             mainViewModel.viewModelScope.launch(Dispatchers.IO) {
                                 try {
                                     val response = agentApi.uploadAvatar(body)
@@ -280,8 +276,7 @@ private fun CreateRolePage(
                                         is HttpResult.Success -> {
                                             val uploadedUrl = response.data.url
                                             LogUtils.i("Avatar uploaded successfully: $uploadedUrl")
-
-                                            // Update UI on main thread
+// 在主线程更新UI
                                             withContext(Dispatchers.Main) {
                                                 croppedAvatarUrl = uploadedUrl
                                                 ToastUtils.showShort("Avatar cropped and uploaded")
@@ -321,74 +316,64 @@ private fun CreateRolePage(
                 }
             }
         }
-
-    // 检查是否有生成的头像URL - 使用DisposableEffect来监听生命周期
+// 检查是否有生成的头像URL -DisposableEffect来监听生命周期
     DisposableEffect(Unit) {
         val checkAvatarStatus = {
-
-            // Check if generation is in progress
+// 检查生成是否在 progress 中
             val generatingStatus = AvatarManager.isGenerating()
             isGeneratingAvatar = generatingStatus
-
-            // Check for multiple generated URLs
+// 检查是否有多个生成的URL
             val currentUrls = AvatarManager.getCurrentAvatarUrls()
             if (currentUrls.isNotEmpty()) {
                 avatarUrls = currentUrls
                 selectedImageIndex = AvatarManager.getSelectedImageIndex()
                 avatarUrl = null // Clear single URL when we have multiple
             } else {
-                // Check for single generated URL
+//检查单个生成的URL
                 val generatedUrl = AvatarManager.getCurrentAvatarUrl()
                 if (generatedUrl != null && generatedUrl.isNotBlank()) {
                     avatarUrl = generatedUrl
                     avatarUrls = emptyList()
                 }
             }
-
-            // Check for generation errors
+//检查生成错误
             val error = AvatarManager.getGenerationError()
             if (error != null) {
                 ToastUtils.showShort(error)
                 isGeneratingAvatar = false
             }
-
-            // Show current generation prompt if generating
+// 如果正在生成，则显示当前生成 prompt
             if (generatingStatus) {
                 val prompt = AvatarManager.getGenerationPrompt()
                 LogUtils.i("Currently generating with prompt: '$prompt'")
             }
         }
-
-        // 初始检查
+// 初始检查
         checkAvatarStatus()
 
         onDispose {}
     }
-
-    // 监听Activity生命周期，特别是onResume事件
+// 监听Activity生命周期，特别是onResume事件
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-
-                // Check generation status
+//查看生成状态
                 isGeneratingAvatar = AvatarManager.isGenerating()
-
-                // Check for multiple URLs
+// 检查是否存在多个URL
                 val currentUrls = AvatarManager.getCurrentAvatarUrls()
                 if (currentUrls.isNotEmpty() && currentUrls != avatarUrls) {
                     avatarUrls = currentUrls
                     selectedImageIndex = AvatarManager.getSelectedImageIndex()
                     avatarUrl = null
                 } else {
-                    // Check for single URL
+// 检查单个 URL
                     val currentUrl = AvatarManager.getCurrentAvatarUrl()
                     if (currentUrl != null && currentUrl != avatarUrl) {
                         avatarUrl = currentUrl
                         avatarUrls = emptyList()
                     }
                 }
-
-                // Check for errors
+//检查是否有错误
                 val error = AvatarManager.getGenerationError()
                 if (error != null) {
                     ToastUtils.showShort(error)
@@ -401,10 +386,9 @@ private fun CreateRolePage(
 
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-
-    // 添加LaunchedEffect来监听avatar生成状态
+//添加LaunchedEffect来监听avatar生成状态
     LaunchedEffect(Unit) {
-        // 定期检查生成状态 (作为备用机制)
+// 定期检查生成状态（作为备用机制）
         while (true) {
             delay(2000) // 每2秒检查一次
 
@@ -412,8 +396,7 @@ private fun CreateRolePage(
             if (currentGenerationStatus != isGeneratingAvatar) {
                 isGeneratingAvatar = currentGenerationStatus
             }
-
-            // 只在状态发生变化时记录，减少日志噪音
+// 只在状态发生变化时记录，减少日志噪音
             val currentUrls = AvatarManager.getCurrentAvatarUrls()
             if (currentUrls.isNotEmpty() && currentUrls != avatarUrls) {
                 avatarUrls = currentUrls
@@ -482,8 +465,7 @@ private fun CreateRolePage(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Avatar Upload Section
+// 头像上传部分
             AvatarUploadSection(
                 avatarUrl = avatarUrl,
                 avatarUrls = avatarUrls,
@@ -492,21 +474,21 @@ private fun CreateRolePage(
                 croppedAvatarUrl = croppedAvatarUrl,
                 onGenerateClick = {
                     onAvatarGenerateClick()
-                    // 当点击生成头像时，不清除当前URL，让用户返回时检查新的URL
+// 当点击生成头像时，不清除当前URL，用户让返回时检查新的URL
                 },
                 onImageSelected = { index ->
                     selectedImageIndex = index
                     AvatarManager.setSelectedImageIndex(index)
                 },
                 onRegenerate = { prompt ->
-                    // Navigate to avatar generation page with existing prompt
+// 导航到已有 prompt 的头像生成页面
                     onAvatarGenerateClick()
                 },
                 onFaceEdit = {
-                    // Get the current avatar URL to crop
+// 获取当前要截的头像URL
                     val imageUrl =
                         if (avatarUrls.isNotEmpty()) {
-                            // Defensive bounds checking
+// 防守边界检查
                             val safeIndex =
                                 if (
                                     selectedImageIndex >= 0 && selectedImageIndex < avatarUrls.size
@@ -524,9 +506,9 @@ private fun CreateRolePage(
                         }
 
                     if (imageUrl != null) {
-                        // Check if it's a web URL or local file
+// 检查它是网址还是本地文件
                         if (imageUrl.startsWith("http")) {
-                            // Validate URL format
+// 验证网址格式
                             val isValidUrl =
                                 try {
                                     URL(imageUrl) // Test if URL is valid
@@ -537,10 +519,10 @@ private fun CreateRolePage(
                                 }
 
                             if (isValidUrl) {
-                                // Download image from web URL first using OkHttp
+//首先使用OkHttp从网址下载图片
                                 mainViewModel.viewModelScope.launch(Dispatchers.IO) {
                                     try {
-                                        // Download image to local cache using OkHttp
+// 使用 OkHttp 下载图像到本地服务器
                                         val tempFile =
                                             File(
                                                 context.cacheDir,
@@ -584,7 +566,7 @@ private fun CreateRolePage(
                                 ToastUtils.showShort(R.string.toast_invalid_image_url)
                             }
                         } else {
-                            // Local file URI
+// 本地文件URI
                             val sourceFile =
                                 if (imageUrl.startsWith("file://")) {
                                     File(imageUrl.toUri().path!!)
@@ -600,8 +582,7 @@ private fun CreateRolePage(
             )
 
             Spacer(modifier = Modifier.height(32.dp))
-
-            // Name Field
+// 名称字段
             SingleLineTextInputField(
                 label = "Name *",
                 labelFontSize = 16.sp,
@@ -610,16 +591,14 @@ private fun CreateRolePage(
                 inputFontSize = 16.sp,
                 placeholder = "Name your IntelliMate",
             )
-
-            // Gender Selection已经创建后的，也就是在修改模式下，性别选项则不显示
+// 性别选择已经创建后的，在修改睡眠模式下，性别选项则不显示
             if (!isEditMode) {
                 Spacer(modifier = Modifier.height(24.dp))
                 GenderSelectionSection(selectedGender = gender, onGenderChange = { gender = it })
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Settings Field
+// 设置字段
             CustomTextField(
                 label = "Settings (Determines dialogue effect) *",
                 value = settings,
@@ -629,8 +608,7 @@ private fun CreateRolePage(
             )
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Intro Field
+// 介绍字段
             CustomTextField(
                 label = "Intro (No impact on dialogue effect) *",
                 value = intro,
@@ -640,8 +618,7 @@ private fun CreateRolePage(
             )
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Opening Field
+// 打开字段
             CustomTextField(
                 label = "Opening *",
                 value = opening,
@@ -651,35 +628,32 @@ private fun CreateRolePage(
             )
 
             Spacer(modifier = Modifier.height(40.dp))
-
-            // Create Button
+// 创建按钮
             CreateButton(
                 isLoading = isLoading,
                 isEditMode = isEditMode,
                 onClick = {
-                    // Validate required fields
+// 验证必填字段
                     if (
                         name.isBlank() || intro.isBlank() || opening.isBlank() || settings.isBlank()
                     ) {
                         ToastUtils.showShort(R.string.please_fill_required_fields)
                         return@CreateButton
                     }
-
-                    // Prepare avatar and background fields according to new logic
+// Pr 根据新逻辑清理头像和背景字段
                     val backgroundUrl =
                         if (avatarUrls.isNotEmpty()) {
-                            // Use selected image from generated grid as background
+// 使用生成的网格中选择图像作为背景
                             avatarUrls.getOrNull(selectedImageIndex) ?: avatarUrls.first()
                         } else {
-                            // Use single generated image as background
+// 使用单个生成的图像作为背景
                             avatarUrl
                         }
-
-                    // 头像数据更新
+// 头像数据更新
                     if (isEditMode) {
-                        // 更新ai 形象的背景选择
+// 更新人工智能信息的背景选择
                         if (backgroundUrl != editAgent.background) {
-                            // 此时如果头像数据还是旧的，则手动更新为最新背景的
+//此时如果头像数据还是旧的，则手动更新为最新背景的
                             if (croppedAvatarUrl == editAgent.avatar) {
                                 croppedAvatarUrl = backgroundUrl
                             }
@@ -687,8 +661,7 @@ private fun CreateRolePage(
                     }
                     val finalAvatarUrl = croppedAvatarUrl ?: backgroundUrl
                     val backgroundImagesList = avatarUrls.ifEmpty { listOfNotNull(avatarUrl) }
-
-                    // Save background for chat usage
+// 保存背景供聊天使用
                     if (backgroundUrl != null) {
                         AvatarManager.setChatBackgroundUrl(backgroundUrl)
                     }
@@ -709,7 +682,7 @@ private fun CreateRolePage(
                                 visibility = visibility,
                                 prompt = settings,
                             )
-                        // Call API through ViewModel
+// 通过ViewModel调用API
                         if (isEditMode) {
                             mainViewModel.updateAgent(
                                 agentId = editAgent.id,
@@ -785,8 +758,7 @@ private fun CreateRolePage(
         }
     }
 }
-
-// Helper function to start UCrop with a local file
+// 使用本地文件启动 UCrop 的辅助函数
 private fun startUCropWithLocalFile(
     sourceFile: File,
     context: Context,
@@ -801,8 +773,7 @@ private fun startUCropWithLocalFile(
         val sourceUri = Uri.fromFile(sourceFile)
         val destinationFile = File(context.cacheDir, "cropped_avatar_${UUID.randomUUID()}.jpg")
         val destinationUri = Uri.fromFile(destinationFile)
-
-        // Configure UCrop
+// 配置UCrop
         val cropIntent =
             UCrop.of(sourceUri, destinationUri)
                 .withAspectRatio(1f, 1f) // Square aspect ratio for avatar
@@ -928,8 +899,7 @@ private fun AvatarUploadSection(
                     }
                 }
             }
-
-            // Dashed border for empty state
+// 空状态的虚线未知
             if (avatarUrls.isEmpty() && avatarUrl == null) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val strokeWidth = 1.dp.toPx()
@@ -956,8 +926,7 @@ private fun AvatarUploadSection(
                     )
                 }
             }
-
-            // Face edit button - show only when there's an avatar
+// 立即编辑显示按钮 - 仅当有头像时
             if (avatarUrls.isNotEmpty() || avatarUrl != null) {
                 Box(
                     modifier =
@@ -991,7 +960,7 @@ private fun AvatarUploadSection(
             }
         }
         Spacer(Modifier.height(8.dp))
-        // 底部一行，生成的ai模型的照片图像 Floating thumbnail row at the bottom of preview
+// 底部一天，生成ai模型的照片图像preview底部浮动浮动行
         if (avatarUrls.isNotEmpty()) {
             Row(
                 modifier =
@@ -1005,7 +974,7 @@ private fun AvatarUploadSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Fixed Regen button on the left
+// 修复了中部的再生按钮
                 Box(
                     modifier = Modifier
                         .width(88.dp)
@@ -1016,8 +985,7 @@ private fun AvatarUploadSection(
                         enabled = !isGenerating,
                     )
                 }
-
-                // Scrollable thumbnail row
+// 可滚动的行
                 LazyRow(
                     modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1027,7 +995,7 @@ private fun AvatarUploadSection(
                         if (avatarUrls.isNotEmpty()) {
                             items(items = avatarUrls.indices.toList()) { index ->
                                 val imageUrl = avatarUrls[index]
-                                // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
+// 使用CDN裁切获取一点，使用配置的宽度和质量
                                 val thumbnailUrl =
                                     getCdnImageUrl(
                                         imageUrl,

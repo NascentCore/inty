@@ -1,11 +1,11 @@
-# 普通对话模式下的常规消息
+#普通对话模式下的常规消息
 
-- What's your name?
-- Who are you?
-- What are you?
-- What's your gender?
-- Are you an AI?
-- Who am I?
-- What's my name?
-- What's my gender?
-- What's my pronoun?
+- 你叫什么名字？
+- 你是谁？
+- 你是做什么的？
+- 你的性别是什么？
+- 你是人工智能吗？
+- 我是谁？
+- 我叫什么名字？
+- 我的性别是什么？
+- 我的 pronoun 是什么？

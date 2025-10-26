@@ -11,7 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 object HeartAppUtils {
 
     /**
-     * 判断app是否debug的包
+     * 判断app是否是debug的包
      */
     @Composable
     fun isAppDebugMode(): Boolean {
@@ -20,7 +20,7 @@ object HeartAppUtils {
     }
 
     /**
-     * 判断app是否debug的包
+     * 判断app是否是debug的包
      */
     fun isAppDebugMode(context: Context): Boolean {
         return (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0

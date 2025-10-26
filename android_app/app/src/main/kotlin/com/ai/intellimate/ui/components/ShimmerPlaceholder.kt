@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** Shimmer 占位符组件 用于图片加载时的占位效果 */
+/** Shimmer占符位组件用于图片加载时的占位效果 */
 @Composable
 fun ShimmerPlaceholder(
     modifier: Modifier = Modifier,

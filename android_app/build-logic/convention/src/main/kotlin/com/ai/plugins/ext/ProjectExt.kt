@@ -13,16 +13,16 @@ import org.gradle.kotlin.dsl.kotlin
 
 /** 扩展一些Project相关配置的函数 */
 
-/** 定义libs扩展属性，类似于在build-logic之外，项目使用catalog的toml配置， 在build-logic的对应代码内操作libs方便 */
+/** 定义libs扩展属性，类似于在build-logic之外，项目使用catalog的toml配置，在build-logic的对应代码内部操作libs方便 */
 val Project.libs
     get(): VersionCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
 internal fun Project.otherConfiguration() {
-    // 依赖冲突的处理
+// 依赖冲突的处理
     configurations {
         getByName<Configuration>("implementation") {
-            // room 2.6.1中compiler依赖了老旧的com.intellij的annotations 12的包，与 org.jetbrains.annotations
-            // 23的包冲突了
+// room 2.6.1中编译器依赖了旧旧的com.intellij的annotations 12的包，与org.jetbrains.注释
+// 23个包冲突了
             exclude(group = "com.intellij", module = "annotations")
         }
     }

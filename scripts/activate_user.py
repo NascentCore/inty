@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 激活用户账户的脚本
 
@@ -11,8 +11,7 @@ import asyncio
 import argparse
 import sys
 from pathlib import Path
-
-# 添加项目根目录到路径
+#添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.db.session import get_async_db
@@ -25,7 +24,7 @@ async def activate_user(user_id: str = None, readable_id: str = None):
 
     try:
         async for db in get_async_db():
-            # 查找用户
+# 查找用户
             if user_id:
                 stmt = select(User).where(User.id == user_id)
             elif readable_id:
@@ -39,8 +38,7 @@ async def activate_user(user_id: str = None, readable_id: str = None):
             if not user:
                 print("❌ 未找到用户")
                 sys.exit(1)
-
-            # 显示用户信息
+# 显示用户信息
             print("=== 用户信息 ===")
             print(f"用户ID: {user.id}")
             print(f"昵称: {user.nickname}")
@@ -58,8 +56,7 @@ async def activate_user(user_id: str = None, readable_id: str = None):
                 if confirm.lower() != "y":
                     print("已取消操作")
                     return
-
-            # 激活用户
+# 激活用户
             await db.execute(
                 update(User).where(User.id == user.id).values(is_active=True)
             )
@@ -75,15 +72,13 @@ async def activate_user(user_id: str = None, readable_id: str = None):
 
 def main():
     parser = argparse.ArgumentParser(description="激活用户账户")
-
-    # 用户查找参数（互斥）
+# 用户查找参数（互斥）
     user_group = parser.add_mutually_exclusive_group(required=True)
     user_group.add_argument("--user-id", help="用户ID")
     user_group.add_argument("--readable-id", help="用户可读ID")
 
     args = parser.parse_args()
-
-    # 激活用户
+# 激活用户
     print("🔄 正在激活用户...")
     asyncio.run(activate_user(user_id=args.user_id, readable_id=args.readable_id))
 

@@ -143,7 +143,7 @@ private fun OpenChatDialog(
     }
 }
 
-/** 弹窗内容信息 */
+/** 窗弹内容信息 */
 internal data class ChatDialogData(val imageRes: Int, val content: String, val btnText: String)
 
 @Composable
@@ -224,7 +224,7 @@ internal fun BePremiumDialog(onDismiss: () -> Unit = {}) {
     }
 }
 
-/** 会员过期的弹窗提醒 */
+/** 会员页面期的弹窗提醒窗口 */
 @Composable
 internal fun ExpiredVipDialog(
     dialogData: ChatDialogData,

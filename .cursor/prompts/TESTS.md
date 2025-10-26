@@ -1,11 +1,10 @@
-# Instructions for writing tests
+# 编写测试的说明
 
-- Use `pytest` framework
-- PYTHONPATH is set to the root of the git repo, import module accordingly
-- Whenever possible, do not use mocks
-- Write easy-to-understand assertions
-- Write as few assertions as possible
-- Unless specifically asked, write tests only for important methods/classes;
-  do not write tests for everything.
-- Unless specifically asked otherwise, generate 1 happy case test for each test target
-- Do not write `main()` function, assume test will be executed by `pytest`, which can discover test targets
+- 使用`pytest`框架
+- PYTHONPATH 设置为 git repo 的根目录，相应地导入模块
+- 问题不要使用模拟
+- 编写易于理解的断言
+- 写需求少的断言
+- 除非有特殊要求，否则只为重要的方法/类编写的测试；
+  不要为所有事情编写测试。- 除非有特别要求，否则为每个测试目标生成 1 个快乐案例测试
+- 不要写`main()`函数，假设测试将由`pytest`，可以发现测试目标

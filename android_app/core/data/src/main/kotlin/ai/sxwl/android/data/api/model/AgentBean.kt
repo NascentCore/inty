@@ -33,16 +33,15 @@ data class AgentInfo(
     @Json(name = "connector_count") val connectorCount: Int = 0,
     @Json(name = "deleted_at") val deletedAt: Long? = null,
 ) : Parcelable {
-    // 本地使用的属性数据，非接口字段
+// 本地使用的属性数据，非接口字段
     var isDeleted: Boolean = false // 标记该agent是否被服务端已经删除
 
     fun imageAspectRatio(): Float {
-        // TODO: Gemini text-to-image 返回尺寸为 6/11（768/1408），
-        // 这是在指定 9/16 下的结果。
+// TODO: Gemini文字转图像返回尺寸为6/11（768/1408），
+// 这是在指定 9/16 下的结果。
         return .75f
     }
-
-    // 头像的url获取，根据尺寸比例 和quality
+// 头像的url获取，根据尺寸比例和质量
     fun getSmallAvatar(): String? {
         return getCdnImageUrl(avatar, width = 128)
     }
@@ -54,8 +53,7 @@ data class AgentInfo(
     fun getLargeAvatar(): String? {
         return getCdnImageUrl(avatar, width = 512)
     }
-
-    // 背景图的获取
+// 背景图的获取
     fun getMediumBackground(): String? {
         return getCdnImageUrl(background, width = 540)
     }
@@ -63,8 +61,7 @@ data class AgentInfo(
     fun getLargeBackground(): String? {
         return getCdnImageUrl(background, width = 720)
     }
-
-    // 用于显示的图
+// 用于显示的图
     fun getAlbumImage(): String? {
         return getLargeBackground()?.ifEmpty { getLargeAvatar() }
     }

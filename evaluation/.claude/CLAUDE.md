@@ -1,3 +1,3 @@
-# Cloude Code Instructions
+# Cloude代码说明
 
-- Do not adding caching to places where you might think it helps, unless being explicitly asked
+- 不要在您认为有帮助的位置添加服务器，除非被明确要求

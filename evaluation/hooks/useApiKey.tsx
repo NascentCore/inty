@@ -1,5 +1,5 @@
 /**
- * API Key 管理 Hook
+ * API 钥匙管理挂钩
  * 提供 API key 的存储、验证和管理功能
  */
 
@@ -22,7 +22,6 @@ interface ApiKeyContextType {
 }
 
 const ApiKeyContext = createContext<ApiKeyContextType | null>(null);
-
 // Cookie 管理工具
 const COOKIE_NAME = "inty_api_key";
 const COOKIE_EXPIRY_DAYS = 30;
@@ -52,15 +51,14 @@ export const useApiKey = () => {
   const [apiKey, setApiKeyState] = useState<string | null>(null);
   const [isApiKeyValid, setIsApiKeyValid] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
-  // 验证 API key
+// 验证 API 钥匙
   const validateApiKey = useCallback(async (key: string): Promise<boolean> => {
     if (!key || key.trim() === "") {
       return false;
     }
 
     try {
-      // 使用一个简单的 API 调用来验证 key
+// 使用一个简单的 API 调用来验证密钥
       const response = await fetch("/api/v1/ai/agents/me?limit=1", {
         method: "GET",
         headers: {
@@ -83,17 +81,15 @@ export const useApiKey = () => {
       return false;
     }
   }, []);
-
-  // 从 cookie 加载 API key
+// 从 cookie 加载 API key
   useEffect(() => {
     const savedApiKey = getCookie(COOKIE_NAME);
     if (savedApiKey) {
       setApiKeyState(savedApiKey);
-      // 设置全局 API Key 和更新 Inty 客户端
+// 设置全局 API Key 并更新 Inty 客户端
       setGlobalApiKey(savedApiKey);
       updateIntyClient(savedApiKey);
-
-      // 验证保存的 API key
+// 验证保存的 API 密钥
       validateApiKey(savedApiKey).then((isValid) => {
         setIsApiKeyValid(isValid);
         setIsLoading(false);
@@ -102,8 +98,7 @@ export const useApiKey = () => {
       setIsLoading(false);
     }
   }, [validateApiKey]);
-
-  // 设置 API key
+// API 键
   const setApiKey = useCallback(
     async (key: string): Promise<boolean> => {
       const trimmedKey = key.trim();
@@ -119,8 +114,7 @@ export const useApiKey = () => {
         setApiKeyState(trimmedKey);
         setIsApiKeyValid(true);
         setCookie(COOKIE_NAME, trimmedKey, COOKIE_EXPIRY_DAYS);
-
-        // 更新全局 API Key 和 Inty 客户端
+// 更新全局 API Key 和 Inty 客户端
         setGlobalApiKey(trimmedKey);
         updateIntyClient(trimmedKey);
 
@@ -135,17 +129,14 @@ export const useApiKey = () => {
     },
     [validateApiKey],
   );
-
-  // 清除 API key
+//清除API键
   const clearApiKey = useCallback(() => {
-    // 清除本地状态
+// 清除本地状态
     setApiKeyState(null);
     setIsApiKeyValid(false);
-
-    // 清除 cookie 中的 API key
+// 清除cookie中的API key
     deleteCookie(COOKIE_NAME);
-
-    // 清除全局 API Key 并重置 Inty 客户端
+// 清除全局 API 按键并重置 Inty 客户端
     setGlobalApiKey(null);
     updateIntyClient(null);
 
@@ -160,8 +151,7 @@ export const useApiKey = () => {
     clearApiKey,
   };
 };
-
-// Context Provider 组件
+// 上下文 Provider 组件
 export const ApiKeyProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -173,7 +163,6 @@ export const ApiKeyProvider: React.FC<{ children: React.ReactNode }> = ({
     </ApiKeyContext.Provider>
   );
 };
-
 // 使用 Context 的 Hook
 export const useApiKeyContext = () => {
   const context = useContext(ApiKeyContext);

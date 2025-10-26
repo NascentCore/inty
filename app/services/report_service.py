@@ -46,17 +46,14 @@ async def query_reports(db: AsyncSession, query: ReportQuery):
         filters.append(Report.status == query.status)
     if query.reporter_id:
         filters.append(Report.reporter_id == query.reporter_id)
-
-    # 查询总数
+# 查询总数
     count_stmt = select(func.count()).select_from(Report).where(and_(*filters))
     total = (await db.execute(count_stmt)).scalar_one()
-
-    # 查询分页数据
+# 查询分页数据
     stmt = select(Report).where(and_(*filters)).offset(query.skip).limit(query.limit)
     result = await db.execute(stmt)
     items = result.scalars().all()
-
-    # reason_ids 转 reason_codes
+# Reason_ids 转 Reason_codes
     all_reason_ids = set()
     for item in items:
         all_reason_ids.update(item.reason_ids)

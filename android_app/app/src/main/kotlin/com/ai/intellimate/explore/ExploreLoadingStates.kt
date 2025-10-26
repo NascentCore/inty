@@ -17,18 +17,18 @@ import androidx.compose.ui.unit.sp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 
-/** Explore页面的加载状态组件 */
+/** 探索页面的加载状态组件 */
 @Composable
 fun ExploreLoadingStates(
     lazyPagingItems: LazyPagingItems<AgentInfo>,
     showLoadMoreLoading: Boolean = false,
     isRefreshing: Boolean = false,
 ) {
-    // 加载更多状态指示器
+// 加载更多状态第一
     when (lazyPagingItems.loadState.append) {
         is LoadState.Loading -> {
-            // 只在用户主动滚动触发加载更多时显示loading
-            // 关键修复：下拉刷新时不应该显示加载更多loading
+// 只在显示用户主动滚动触发加载更多时loading
+// 关键修复：下拉刷新时不应该显示加载更多loading
             if (showLoadMoreLoading && lazyPagingItems.itemCount > 0 && !isRefreshing) {
                 LoadingMoreIndicator()
             }
@@ -39,8 +39,8 @@ fun ExploreLoadingStates(
         }
 
         is LoadState.NotLoading -> {
-            // 只有在真正没有更多数据且不是初始状态时才显示
-            // 增加更严格的条件：确保不是首次加载，且确实没有更多数据
+// 只有在真正没有更多数据且不是初始状态时才显示
+// 增加更严格的条件：确保不是首次加载，且确实没有更多数据
             if (
                 lazyPagingItems.loadState.append.endOfPaginationReached &&
                     lazyPagingItems.itemCount > 0 &&
@@ -53,7 +53,7 @@ fun ExploreLoadingStates(
     }
 }
 
-/** 加载更多指示器 */
+/** 加载更多一个月 */
 @Composable
 private fun LoadingMoreIndicator() {
     Box(
@@ -66,7 +66,7 @@ private fun LoadingMoreIndicator() {
     }
 }
 
-/** 加载更多错误指示器 */
+/** 加载更多错误第一个 */
 @Composable
 private fun LoadMoreErrorIndicator() {
     Box(modifier = Modifier
@@ -81,7 +81,7 @@ private fun LoadMoreErrorIndicator() {
     }
 }
 
-/** 没有更多数据指示器 - 跨两列显示 */
+/** 没有更多数据显示 - 跨两列 */
 @Composable
 private fun NoMoreDataIndicator() {
     Box(modifier = Modifier

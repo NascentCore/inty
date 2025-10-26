@@ -17,7 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Explore页面的Paging数据源 负责处理推荐agents的分页加载、缓存管理 */
+/** 探索页面的分页数据源负责处理推荐代理的分页加载、服务器管理 */
 class ExplorePagingSource(
     private val useCache: Boolean = true,
     private val sortSeed: Int = IntySetting.sortSeed(),
@@ -26,7 +26,7 @@ class ExplorePagingSource(
     private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
 
     companion object {
-        // 使用统一的常量
+// 使用统一的常量
         private const val PAGE_SIZE = ExploreConstants.PAGE_SIZE
         private const val INITIAL_PAGE = ExploreConstants.INITIAL_PAGE
     }
@@ -36,23 +36,20 @@ class ExplorePagingSource(
             try {
                 val page = params.key ?: INITIAL_PAGE
                 val pageSize = params.loadSize.coerceAtMost(PAGE_SIZE)
-
-                // 第一页特殊处理：优先使用缓存数据
+//第一页特殊处理：优先使用服务器数据
                 if (page == INITIAL_PAGE && useCache) {
                     val cachedAgents = UnifiedStartupManager.getCurrentRecommendedAgents()
                     if (cachedAgents.isNotEmpty()) {
-                        // 过滤掉id为空的agent，避免key重复问题
+// 过滤掉id为空的agent，避免key重复问题
                         val validCachedAgents = cachedAgents.filter { it.id.isNotEmpty() }
-
-                        // 如果有缓存数据，返回缓存数据，同时后台加载网络数据
+// 如果有缓存数据，返回缓存数据，同时后台加载网络数据
                         if (shouldUpdateFromNetwork()) {
-                            // 后台静默刷新，不阻塞UI
+// 后台安静默刷新，不阻塞UI
                             loadFromNetworkAsync(page, pageSize)
                         }
-
-                        // 关键修复：即使缓存数据不足一页，也假设有更多数据
-                        // 这样Paging会继续尝试加载下一页，确保分页功能正常
-                        // 但是要确保缓存数据不为空，避免无限循环
+// 关键修复：即使数据存储不足一页，也假设有更多数据
+//这样分页会继续尝试加载下一页，确保分页功能正常
+//但要保证存储数据不为空，避免无限循环
                         return@withContext LoadResult.Page(
                             data = validCachedAgents,
                             prevKey = null,
@@ -60,11 +57,9 @@ class ExplorePagingSource(
                         )
                     }
                 }
-
-                // 检查用户账户是否已就绪，如果未就绪则等待或返回空数据
+// 检查用户账户是否已就绪，如果未就绪则等待或返回空数据
                 if (!UnifiedStartupManager.isUserAccountReady()) {
-
-                    // 等待用户账户就绪，最多等待3秒
+// 等待用户账户就绪，最多等待3秒
                     var waitTime = 0
                     while (!UnifiedStartupManager.isUserAccountReady() && waitTime < 3000) {
                         delay(100)
@@ -79,18 +74,16 @@ class ExplorePagingSource(
                         )
                     }
                 }
-
-                // 从网络加载数据
+// 来自网络加载数据
                 val result = loadFromNetwork(page, pageSize)
 
                 when (result) {
                     is NetworkResult.Success -> {
                         val agents = result.data.list ?: emptyList()
-                        // 过滤掉id为空的agent，避免key重复问题
+// 过滤掉id为空的agent，避免key重复问题
                         val validAgents = agents.filter { it.id.isNotEmpty() }
                         val hasMore = validAgents.isNotEmpty() && validAgents.size >= pageSize
-
-                        // 缓存第一页数据
+// 存储第一页数据
                         if (page == INITIAL_PAGE && validAgents.isNotEmpty()) {
                             AgentCacheManager.cacheAgents(validAgents)
                             UnifiedStartupManager.refreshRecommendedAgents()
@@ -116,14 +109,14 @@ class ExplorePagingSource(
     }
 
     override fun getRefreshKey(state: PagingState<Int, AgentInfo>): Int? {
-        // 返回最近访问的页面，用于刷新时定位
+// 返回最近访问的页面，用于刷新时间定位
         return state.anchorPosition?.let { anchorPosition ->
             state.closestPageToPosition(anchorPosition)?.prevKey?.plus(1)
                 ?: state.closestPageToPosition(anchorPosition)?.nextKey?.minus(1)
         }
     }
 
-    /** 从网络加载数据 */
+    /** 来自网络加载数据 */
     private suspend fun loadFromNetwork(page: Int, pageSize: Int): NetworkResult {
         return try {
             val result =
@@ -149,13 +142,13 @@ class ExplorePagingSource(
 
     /** 异步从网络加载数据（不阻塞UI） */
     private fun loadFromNetworkAsync(page: Int, pageSize: Int) {
-        // 在后台协程中执行，不阻塞当前加载
+// 在后台协程中执行，不阻止当前加载
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val result = loadFromNetwork(page, pageSize)
                 if (result is NetworkResult.Success) {
                     val agents = result.data.list ?: emptyList()
-                    // 过滤掉id为空的agent，避免key重复问题
+// 过滤掉id为空的agent，避免key重复问题
                     val validAgents = agents.filter { it.id.isNotEmpty() }
                     if (validAgents.isNotEmpty()) {
                         AgentCacheManager.cacheAgents(validAgents)
@@ -170,7 +163,7 @@ class ExplorePagingSource(
 
     /** 检查是否需要从网络更新数据 */
     private fun shouldUpdateFromNetwork(): Boolean {
-        // 确保用户账户已就绪（包括游客账户）且token有效
+//确保用户账户已就绪（包括游客账户）且token有效
         return UnifiedStartupManager.isUserAccountReady() &&
                 IntySetting.isLogin() &&
                 IntySetting.getCurToken().isNotEmpty()

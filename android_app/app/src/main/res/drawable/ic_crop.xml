@@ -5,7 +5,7 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
     
-    <!-- Crop tool icon with corner frames -->
+    <！-- 带角框的裁剪工具图标 -->
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M 3 3 L 3 7 L 5 7 L 5 5 L 7 5 L 7 3 Z" />
@@ -22,12 +22,12 @@
         android:fillColor="#FFFFFF"
         android:pathData="M 19 17 L 19 19 L 17 19 L 17 21 L 21 21 L 21 17 Z" />
         
-    <!-- Center crosshairs -->
+    <！-- 中心十字线 -->
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M 11 11 L 11 13 L 13 13 L 13 11 Z" />
     
-    <!-- Dashed lines -->
+    <！-- 虚线 -->
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M 9 12 L 10 12 L 10 12.5 L 9 12.5 Z" />

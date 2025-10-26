@@ -23,21 +23,18 @@ class TestUserDeletion:
     @pytest.mark.asyncio
     async def test_delete_user_account_real_function(self):
         """Test the real delete_user_account function with async database"""
-
-        # Create async database engine
+#创建异步数据库引擎
         engine = create_async_engine(global_config_loaded_from_config_yaml.database.async_url)
-
-        # Create all tables
+# 创建所有表
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-
-        # Create async session
+#创建异步会话
         async_session = sessionmaker(
             engine, class_=AsyncSession, expire_on_commit=False
         )
 
         async with async_session() as session:
-            # Step 1: Create a test user in the database with unique IDs
+# 第1步：在数据库中创建具有唯一ID的测试用户
             user_id = f"user_test_real_function_{uuid.uuid4().hex[:8]}"
             readable_id = str(uuid.uuid4().int)[:8]
             test_user = User(
@@ -53,8 +50,7 @@ class TestUserDeletion:
             session.add(test_user)
             await session.commit()
             await session.refresh(test_user)
-
-            # Verify user was created successfully
+# 验证用户创建成功
             user_query = select(User).where(User.id == user_id)
             result = await session.execute(user_query)
             created_user = result.scalar_one()
@@ -66,20 +62,18 @@ class TestUserDeletion:
             assert created_user.deletion_reason is None
 
             mock_subscription_service = AsyncMock(spec=SubscriptionService)
-            # Step 2: Call the real delete_user_account function
+# 第二步：调用真正的delete_user_account函数
             deletion_result = await delete_user_account(
                 db=session,
                 user_id=user_id,
                 subscription_service=mock_subscription_service,
                 deletion_reason="Test deletion with real function",
             )
-
-            # Step 3: Verify deletion result
+# 第三步：验证删除结果
             assert deletion_result["success"] is True
             assert deletion_result["message"] == "账户删除成功"
             assert deletion_result["user_id"] == user_id
-
-            # Step 4: Verify user record in database
+#步骤4：验证数据库中的用户记录
             user_query = select(User).where(User.id == user_id)
             result = await session.execute(user_query)
             deleted_user = result.scalar_one()
@@ -97,8 +91,7 @@ class TestUserDeletion:
                 mock_subscription_service.cancel_user_subscriptions_for_deletion.call_count
                 == 1
             )
-
-            # Clean up - delete the test user
+# Clean up - 删除测试用户
             await session.delete(deleted_user)
             await session.commit()
 

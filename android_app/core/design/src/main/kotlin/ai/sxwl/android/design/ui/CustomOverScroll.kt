@@ -28,8 +28,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Velocity
 import kotlinx.coroutines.launch
 import kotlin.math.sign
-
-// Overrides to handle fetching the orientation from LazyListState or PagerState
+// 重写以处理从 LazyListState 或 PagerState 获取方向
 @Composable
 fun Modifier.customOverscroll(
     listState: LazyListState,
@@ -65,7 +64,7 @@ private fun Modifier.customOverscroll(
     LaunchedEffect(Unit) {
         snapshotFlow { overscrollAmountAnimatable.value }.collect {
             onNewOverscrollAmount(
-                // Change the multiplier to increase or decrease the strength of the value
+// 更改乘数以增加或减少值的强度
                 CustomEasing.transform(it / (length * 1.5f)) * length
             )
         }
@@ -156,8 +155,8 @@ private fun Modifier.customOverscroll(
                                 }
                             }
                         } catch (e: Exception) {
-                            // e will probably always be a MutationInterruptedException
-                            // You could throw e if it isn't just to be absolutely sure
+// e 显然总是 pr 是一个 MutationInterruptedException
+// 如果不是为了绝对确定，你可以转让
                         }
                     }
 

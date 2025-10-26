@@ -65,7 +65,7 @@ interface ChatMessage {
 }
 
 export const ChatPage: React.FC = () => {
-  // 状态管理
+// 状态管理
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(
     null,
@@ -79,12 +79,10 @@ export const ChatPage: React.FC = () => {
   const [generatedImages, setGeneratedImages] = useState<Map<string, string>>(
     new Map(),
   );
-
-  // Refs
+// 参考文献
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  // 智能体数据
+// 智能体数据
   const {
     agents,
     loading: agentsLoading,
@@ -94,8 +92,7 @@ export const ChatPage: React.FC = () => {
     type: "all", // 获取所有角色（包括公开和私有）
     autoLoad: true,
   });
-
-  // 从localStorage加载已生成的图片
+// 从localStorage加载已生成的图片
   useEffect(() => {
     const savedImages = localStorage.getItem("generatedImages");
     if (savedImages) {
@@ -107,13 +104,12 @@ export const ChatPage: React.FC = () => {
       }
     }
   }, []);
-
-  // 处理图片生成 - 使用消息内容作为键，因为消息ID会变化
+// 处理图片生成 - 使用消息内容作为按钮，因为消息ID会变化
   const handleImageGenerated = useCallback(
     (messageContent: string, imageUrl: string) => {
       setGeneratedImages((prev) => {
         const newMap = new Map(prev.set(messageContent, imageUrl));
-        // 保存到localStorage
+// 保存到localStorage
         const imagesObj = Object.fromEntries(newMap);
         localStorage.setItem("generatedImages", JSON.stringify(imagesObj));
         return newMap;
@@ -121,29 +117,24 @@ export const ChatPage: React.FC = () => {
     },
     [],
   );
-
-  // 重新发送和删除消息相关状态
+// 重新发送并删除消息相关状态
   const [resending, setResending] = useState<string | null>(null);
   const [clearing, setClearing] = useState<string | null>(null);
-
-  // 滚动到底部
+// 滚动到底部
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
-
-  // 滚动到底部当消息更新时
+// 当消息更新时滚动到底部
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
-
-  // GEMINI: 消息发送完毕后，自动聚焦输入框
+// GEMINI: 消息发送完毕后，自动聚焦输入框
   useEffect(() => {
     if (!sending && inputRef.current) {
       inputRef.current.focus();
     }
   }, [sending]);
-
-  // 加载聊天历史
+// 加载聊天历史记录
   const loadChatHistory = useCallback(async () => {
     try {
       const history = localStorage.getItem("chat_history");
@@ -154,8 +145,7 @@ export const ChatPage: React.FC = () => {
       console.error("加载聊天历史失败:", error);
     }
   }, []);
-
-  // 保存聊天历史
+// 保存聊天记录
   const saveChatHistory = useCallback((sessions: ChatSession[]) => {
     try {
       localStorage.setItem("chat_history", JSON.stringify(sessions));
@@ -163,8 +153,7 @@ export const ChatPage: React.FC = () => {
       console.error("保存聊天历史失败:", error);
     }
   }, []);
-
-  // 显示聊天历史 - 拉取最新的聊天记录
+// 显示聊天历史 - 拉取最新的聊天记录
   const handleShowChatHistory = useCallback(async () => {
     if (!selectedAgent?.id) {
       message.warning("请先选择一个智能体");
@@ -173,14 +162,14 @@ export const ChatPage: React.FC = () => {
 
     setHistoryLoading(true);
     try {
-      // 调用 chatApi.getMessages() 拉取全部的聊天记录
+//调用chatApi。getMessages() 获取全部聊天记录
       const messagesData = await api.chat.getMessages(selectedAgent.id, {
         page: 1,
         size: 1000, // 设置较大的size来获取更多消息
       });
 
       if (messagesData.messages && messagesData.messages.length > 0) {
-        // 转换消息格式
+// 转换消息格式
         const convertedMessages: ChatMessage[] = messagesData.messages.map(
           (msg, index) => ({
             id: `msg_history_${index}_${Date.now()}`,
@@ -190,19 +179,16 @@ export const ChatPage: React.FC = () => {
             remoteId: msg.id.toString(),
           }),
         );
-
-        // 更新当前会话的消息
+// 更新当前会话的消息
         setMessages(convertedMessages);
-
-        // 更新当前会话
+// 更新当前会话
         if (currentSession) {
           const updatedSession = {
             ...currentSession,
             messages: convertedMessages,
           };
           setCurrentSession(updatedSession);
-
-          // 更新本地历史记录
+// 更新本地历史记录
           const updatedHistory = chatHistory.map((session) =>
             session.id === currentSession.id ? updatedSession : session,
           );
@@ -214,8 +200,7 @@ export const ChatPage: React.FC = () => {
       } else {
         message.info("暂无聊天记录");
       }
-
-      // 显示聊天历史模态框
+// 显示聊天历史模态框
       setShowHistory(true);
     } catch (error) {
       console.error("获取聊天记录失败:", error);
@@ -224,13 +209,11 @@ export const ChatPage: React.FC = () => {
       setHistoryLoading(false);
     }
   }, [selectedAgent?.id, currentSession, chatHistory, saveChatHistory]);
-
-  // 初始化加载历史
+// 初始化加载历史记录
   useEffect(() => {
     loadChatHistory();
   }, [loadChatHistory]);
-
-  // 选择智能体 - 从后端获取真实会话记录
+// 选择智能体 - 从远程获取真实会话记录
   const handleSelectAgent = useCallback(
     async (agent: Agent) => {
       setSelectedAgent(agent);
@@ -241,13 +224,12 @@ export const ChatPage: React.FC = () => {
           .getIntyClient()
           .api.v1.chats.agents.getSettings(agent.id);
         console.log(`智能体 ${agent.name} 的当前聊天设置:`, currentSettings);
-        // 先尝试获取现有的聊天详情和消息历史
+//首先尝试获取现有的聊天详情和消息历史记录
         const chatData = await api.chat.getChatDetail(agent.id, {
           page: 1,
           size: 100,
         });
-
-        // 转换消息格式
+// 转换消息格式
         const convertedMessages: ChatMessage[] = chatData.messages.map(
           (msg, index) => ({
             id: `msg_${chatData.chat.id}_${index}_${Date.now()}`,
@@ -258,8 +240,7 @@ export const ChatPage: React.FC = () => {
             remoteId: `remote_${index}`, // 添加远程消息ID
           }),
         );
-
-        // 创建会话对象
+// 创建会话对象
         const session: ChatSession = {
           id: chatData.chat.id,
           agent_id: agent.id,
@@ -270,18 +251,17 @@ export const ChatPage: React.FC = () => {
 
         setCurrentSession(session);
         setMessages(convertedMessages);
-
-        // 更新本地历史记录缓存
+// 更新本地历史记录服务器
         const existingHistoryIndex = chatHistory.findIndex(
           (s) => s.agent_id === agent.id,
         );
         let updatedHistory;
         if (existingHistoryIndex >= 0) {
-          // 更新现有记录
+// 更新现有记录
           updatedHistory = [...chatHistory];
           updatedHistory[existingHistoryIndex] = session;
         } else {
-          // 添加新记录到开头
+// 添加新记录到开头
           updatedHistory = [session, ...chatHistory];
         }
         setChatHistory(updatedHistory);
@@ -292,9 +272,8 @@ export const ChatPage: React.FC = () => {
         );
       } catch (error) {
         console.error("加载聊天会话失败:", error);
-
-        // 如果获取失败，不要创建新会话，直接使用本地临时会话
-        // 避免因为已存在会话导致的唯一约束错误
+// 如果获取失败，不要创建新会话，直接使用本地临时会话
+// 避免因为已存在会话导致的唯一约束问题
         const tempSession: ChatSession = {
           id: `temp_${Date.now()}`,
           agent_id: agent.id,
@@ -307,8 +286,7 @@ export const ChatPage: React.FC = () => {
         setMessages([]);
 
         console.log(`为智能体 ${agent.name} 创建了本地临时会话`);
-
-        // 后台尝试获取历史消息，但不影响当前操作
+// 后台尝试获取历史消息，但不影响当前操作
         try {
           const historyData = await api.chat.getMessages(agent.id, {
             page: 1,
@@ -339,8 +317,7 @@ export const ChatPage: React.FC = () => {
     },
     [chatHistory, saveChatHistory],
   );
-
-  // 发送消息 - 使用现有聊天API
+// 发送消息 - 使用现有聊天API
   const handleSendMessage = useCallback(async () => {
     if (!inputValue.trim() || !selectedAgent || !currentSession || sending) {
       return;
@@ -353,27 +330,24 @@ export const ChatPage: React.FC = () => {
       timestamp: new Date().toISOString(),
       remoteId: `user_${Date.now()}`, // 为用户消息添加临时 remoteId
     };
-
-    // 添加用户消息到UI
+//添加用户消息到UI
     const messagesWithUser = [...messages, userMessage];
     setMessages(messagesWithUser);
     setInputValue("");
     setSending(true);
 
     try {
-      // 构造OpenAI格式的消息历史
+//构造OpenAI格式的消息历史
       const messageHistory = messagesWithUser.map((msg) => ({
         role: msg.role,
         content: msg.content,
       }));
-
-      // 调用现有的OpenAI兼容聊天API
+//调用现有的OpenAI兼容聊天API
       const response = await api.chat.sendMessage(
         selectedAgent.id,
         messageHistory,
       );
-
-      // 提取助手回复
+// 提取助手回复
       const assistantContent =
         response.choices[0]?.message?.content || "抱歉，我现在无法回复。";
 
@@ -383,19 +357,17 @@ export const ChatPage: React.FC = () => {
         content: assistantContent,
         timestamp: new Date().toISOString(),
         remoteId: `assistant_${Date.now() + 1}`, // 为AI消息添加临时 remoteId
-        // 注意：由于当前的sendMessage API不返回消息ID，暂时使用本地ID
-        // 如果需要真正的远程ID，需要调用getChatDetail获取最新的消息
+// 注意：由于当前的sendMessage API不返回消息ID，暂时使用本地ID
+// 如果需要真正的远程ID，需要调用getChatDetail获取最新的消息
       };
 
       const finalMessages = [...messagesWithUser, assistantMessage];
       setMessages(finalMessages);
-
-      // 发送成功后，刷新聊天记录以获取真实的消息ID
+// 发送成功后，刷新聊天记录以获取真实的消息ID
       try {
-        // 等待一小段时间确保后端处理完成
+// 完成等待一段时间确保队列处理
         await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // 重新获取最新的聊天记录
+// 重新获取最新的聊天记录
         const refreshedData = await api.chat.getMessages(selectedAgent.id, {
           page: 1,
           size: 100,
@@ -411,18 +383,15 @@ export const ChatPage: React.FC = () => {
               remoteId: msg.id ? String(msg.id) : `remote_${index}`,
             }),
           );
-
-          // 更新消息列表（最新的在底部）
+// 更新消息列表（最新的在底部）
           setMessages(refreshedMessages.reverse());
-
-          // 更新会话
+// 更新会话
           const updatedSession = {
             ...currentSession,
             messages: refreshedMessages,
           };
           setCurrentSession(updatedSession);
-
-          // 更新历史记录
+// 更新历史记录
           const updatedHistory = chatHistory.map((session) =>
             session.id === currentSession.id ? updatedSession : session,
           );
@@ -433,8 +402,7 @@ export const ChatPage: React.FC = () => {
         }
       } catch (refreshError) {
         console.warn("刷新聊天记录失败，但消息发送成功:", refreshError);
-
-        // 如果刷新失败，仍然保留原来的逻辑
+// 如果刷新失败，仍然保留原来的逻辑
         const updatedSession = {
           ...currentSession,
           messages: finalMessages,
@@ -449,8 +417,7 @@ export const ChatPage: React.FC = () => {
       }
     } catch (error) {
       console.error("发送消息失败:", error);
-
-      // 添加错误消息
+//添加错误消息
       const errorMessage: ChatMessage = {
         id: `msg_${Date.now() + 1}`,
         role: "assistant",
@@ -473,8 +440,7 @@ export const ChatPage: React.FC = () => {
     chatHistory,
     saveChatHistory,
   ]);
-
-  // 清空聊天记录 - 使用现有聊天API
+// 清空聊天记录 - 使用现有聊天API
   const handleClearChat = useCallback(() => {
     if (!currentSession || !selectedAgent) return;
 
@@ -485,7 +451,7 @@ export const ChatPage: React.FC = () => {
       cancelText: "取消",
       onOk: async () => {
         try {
-          // 先获取当前消息列表，找到第一个可用的消息ID
+// 先获取当前消息列表，找到第一个可用的消息ID
           const currentMessages = await api.chat.getMessages(selectedAgent.id, {
             page: 1,
             size: 10,
@@ -496,7 +462,7 @@ export const ChatPage: React.FC = () => {
             currentMessages.messages &&
             currentMessages.messages.length >= 2
           ) {
-            // 消息顺序是最新到最旧，找出目前消息列表中倒数第 2 个用户消息的 ID
+// 消息顺序是最新到最旧，查找当前消息列表中倒数第2个用户消息的ID
             const firstUserMsgId =
               currentMessages.messages[currentMessages.messages.length - 2].id;
             console.log(`firstUserMsgId: ${firstUserMsgId}`);
@@ -540,10 +506,9 @@ export const ChatPage: React.FC = () => {
           console.error("清空聊天记录失败:", error);
           let errorMessage = "清空聊天记录失败，请重试。";
           let errorDetail: unknown = null;
-
-          // Check if it's our custom ApiError
+// 检查是否是我们自定义的 ApiError
           if (error instanceof Error && "errorData" in error) {
-            // Use 'in' operator for type narrowing
+// 使用 'in' 来缩小类型
             const apiError = error as { errorData: unknown; message: string }; // Cast to access errorData
             errorMessage = apiError.message;
             errorDetail = apiError.errorData;
@@ -587,8 +552,7 @@ export const ChatPage: React.FC = () => {
       },
     });
   }, [currentSession, selectedAgent, chatHistory, saveChatHistory]);
-
-  // 导出聊天记录
+// 导出聊天记录
   const handleExportChat = useCallback(() => {
     if (!currentSession || messages.length === 0) {
       return;
@@ -616,8 +580,7 @@ export const ChatPage: React.FC = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }, [currentSession, messages]);
-
-  // 键盘事件处理
+// 键盘事件处理
   const handleKeyPress = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && !e.shiftKey) {
@@ -627,11 +590,10 @@ export const ChatPage: React.FC = () => {
     },
     [handleSendMessage],
   );
-
-  // 重新发送消息
+// 重新发送消息
   const handleResendMessage = useCallback(
     async (msg: ChatMessage) => {
-      // 检查是否是历史消息（具有真正的数据库ID）
+// 检查是否是历史消息（具有真正的数据库ID）
       if (
         !msg.remoteId ||
         !selectedAgent?.id ||
@@ -647,7 +609,7 @@ export const ChatPage: React.FC = () => {
       setResending(msg.id);
 
       try {
-        // 调用清理消息接口，删除包含该消息在内的后续对话记录
+//调用清理消息接口，删除包含该消息消耗的后续对话记录
         const clearResult = await api.chat.clearMessages(
           selectedAgent.id,
           msg.remoteId,
@@ -655,8 +617,7 @@ export const ChatPage: React.FC = () => {
 
         if (clearResult) {
           message.success(`已删除相关消息记录`);
-
-          // 从本地状态中移除被删除的消息（从该消息开始的所有后续消息）
+// 从本地状态中删除被删除的消息（从该消息开始的所有后续消息）
           setMessages((prev) => {
             const targetIndex = prev.findIndex((m) => m.id === msg.id);
             if (targetIndex !== -1) {
@@ -664,21 +625,19 @@ export const ChatPage: React.FC = () => {
             }
             return prev;
           });
-
-          // 重新发送该条消息
+// 重新发送该条消息
           const userMessage: ChatMessage = {
             id: `msg_${Date.now()}`,
             role: "user",
             content: msg.content,
             timestamp: new Date().toISOString(),
           };
-
-          // 添加用户消息
+//添加用户消息
           setMessages((prev) => [...prev, userMessage]);
           setSending(true);
 
           try {
-            // 构造OpenAI格式的消息历史
+//构造OpenAI格式的消息历史
             const messageHistory = [
               ...messages.slice(
                 0,
@@ -686,8 +645,7 @@ export const ChatPage: React.FC = () => {
               ),
               { role: "user" as const, content: msg.content },
             ];
-
-            // 调用聊天API重新发送
+//调用聊天API重新发送
             const response = await api.chat.sendMessage(
               selectedAgent.id,
               messageHistory,
@@ -722,11 +680,10 @@ export const ChatPage: React.FC = () => {
     },
     [selectedAgent?.id, resending, messages],
   );
-
-  // 删除消息
+// 删除消息
   const handleDeleteMessage = useCallback(
     async (msg: ChatMessage) => {
-      // 检查是否是历史消息（具有真正的数据库ID）
+// 检查是否是历史消息（具有真正的数据库ID）
       if (
         !msg.remoteId ||
         !selectedAgent?.id ||
@@ -742,7 +699,7 @@ export const ChatPage: React.FC = () => {
       setClearing(msg.id);
 
       try {
-        // 调用清理消息接口，删除包含该消息在内的后续对话记录
+//调用清理消息接口，删除包含该消息消耗的后续对话记录
         const clearResult = await api.chat.clearMessages(
           selectedAgent.id,
           msg.remoteId,
@@ -750,8 +707,7 @@ export const ChatPage: React.FC = () => {
 
         if (clearResult) {
           message.success(`已删除相关消息记录`);
-
-          // 从本地状态中移除被删除的消息（从该消息开始的所有后续消息）
+// 从本地状态中删除被删除的消息（从该消息开始的所有后续消息）
           setMessages((prev) => {
             const targetIndex = prev.findIndex((m) => m.id === msg.id);
             if (targetIndex !== -1) {
@@ -771,17 +727,16 @@ export const ChatPage: React.FC = () => {
     },
     [selectedAgent?.id, clearing],
   );
-
-  // 处理括号内容的样式 - 复刻inty-test的formatMessageContent功能
+// 处理重复内容的样式 - 复刻inty-test的formatMessageContent功能
   const formatMessageContent = (content: string) => {
-    // 匹配中文括号和英文括号内的内容
+// 匹配中文括号和英文括号内的内容
     const regex = /([（(].*?[）)])/g;
 
     const parts = content.split(regex);
 
     return parts.map((part, index) => {
       if (regex.test(part)) {
-        // 括号内容，使用淡色斜体
+// 中间内容，使用淡色斜体
         return (
           <span
             key={index}
@@ -975,8 +930,8 @@ export const ChatPage: React.FC = () => {
                       agentId={selectedAgent.id}
                       onToggle={(enabled) => {
                         console.log("Premium mode toggled:", enabled);
-                        // Premium mode has been successfully updated via API
-                        // The component handles the API call internally
+// Premium 模式已通过 API 成功更新
+// 组件在内部处理 API 调用
                       }}
                     />
                     <Tooltip title="打开 LangSmith 监控">
@@ -1061,7 +1016,7 @@ export const ChatPage: React.FC = () => {
                     backgroundBlendMode: "multiply", // Blend mode for better visibility
                   }}
                 >
-                  {/* 角色介绍卡片 - 只在聊天开始时显示 */}
+                  {/* 角色介绍对应 - 只在聊天开始时显示 */}
                   {selectedAgent?.intro && messages.length === 0 && (
                     <Card
                       size="small"
@@ -1492,7 +1447,7 @@ export const ChatPage: React.FC = () => {
                 )}
               />
 
-              {/* 原始JSON数据显示 */}
+              {/* 原始JSON数据 */}
               <div
                 style={{
                   marginTop: 24,

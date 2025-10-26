@@ -28,8 +28,7 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 
 class MySettingViewModel : BaseVM() {
-
-    // 事件通知机制
+// 事件通知机制
     private val _events = MutableSharedFlow<ViewModelEvent>()
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
 
@@ -49,8 +48,7 @@ class MySettingViewModel : BaseVM() {
             _events.emit(event)
         }
     }
-
-    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+// 延迟获取依赖，避免在构造函数中立即导致获取空指针异常
     private val userApi by lazy { NetServiceMgr.getUserApi() }
 
     fun init(userProfile: UserProfile?) {
@@ -99,10 +97,10 @@ class MySettingViewModel : BaseVM() {
                         is HttpResult.Success -> {
                             _userProfile.value =
                                 _userProfile.value.copy(
-                                    // No cropping, just use the provided url.
+// 不需要，只需使用 provided url。
                                     avatar = result.data.url
                                 )
-                            // Show success toast for avatar upload
+// 显示头像上传成功的提示信息
                             viewModelScope.launch(Dispatchers.Main) {
                                 ToastUtils.showShort(R.string.saved_successfully)
                             }
@@ -117,12 +115,12 @@ class MySettingViewModel : BaseVM() {
 
                 val updatedProfile = IntyUserProfileSDK.updateUserProfile(_userProfile.value)
                 if (updatedProfile != null) {
-                    // Show success toast for profile update
+// 显示 profile 更新成功 toast
                     viewModelScope.launch(Dispatchers.Main) {
                         ToastUtils.showShort(Utils.getApp().getString(R.string.saved_successfully))
                         UserProfileManager.saveUserProfile(updatedProfile)
                     }
-                    // 发送用户信息更新成功事件
+// 发送用户信息更新成功事件
                     sendEvent(ViewModelEvent.UserProfileUpdated)
                 } else {
                     NetworkErrorHandler.showNetworkAwareError("Failed to update user profile")
@@ -134,7 +132,7 @@ class MySettingViewModel : BaseVM() {
     }
 
     fun setAvatar(uri: Uri?) {
-        //        LogUtils.i("avatar= $uri")
+// 日志实用程序。我（“头像= $uri”）
         _avatarChanged.value = true
         _userProfile.value = _userProfile.value.copy(avatar = uri.toString())
     }

@@ -1,14 +1,14 @@
 ---
-name: Firebase Crash
-about: Record a firebase crash to follow up
-title: "[Firebase Crash] "
-labels: bug, p1, s0
-assignees: gzw-sxwl
+名称：Firebase 崩溃
+about：记录 Firebase 崩溃以进行跟进
+标题：“[Firebase 崩溃]”
+标签： bug、p1、s0
+受让人：gzw-sxwl
 
 ---
 
-## Link
-> The link to the crash report on Firebase
+＃＃关联
+> Firebase 崩溃报告的链接
 
-## Stack trace
-> Download the detailed stack trace txt file from Firebase
+## 堆栈跟踪
+> 从 Firebase 下载详细的堆栈跟踪 txt 文件

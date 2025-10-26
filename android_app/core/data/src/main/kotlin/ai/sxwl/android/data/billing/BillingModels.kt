@@ -2,7 +2,7 @@ package ai.sxwl.android.data.billing
 
 import com.android.billingclient.api.Purchase
 
-/** 订阅状态数据类 */
+/** 订阅状态​​​​​​​数据类 */
 data class VipStatus(
     val isSubscribed: Boolean, // 是否订阅中的状态
     val subscriptionId: String? = null, // 订阅的id
@@ -19,7 +19,7 @@ data class VipStatus(
     }
 }
 
-/** 计费事件 */
+/** 华为事件 */
 sealed class BillingEvent {
     object Connected : BillingEvent()
 

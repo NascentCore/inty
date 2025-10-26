@@ -13,26 +13,22 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 abstract class BaseVM : ViewModel() {
-
-    // 后台任务作用域（独立于UI生命周期）
+// 后台任务作用域（独立于UI生命周期）
     private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    // UI相关任务列表
+// UI相关任务列表
     private val uiJobs: MutableList<Job> = mutableListOf()
-
-    // 后台任务列表
+// 后台任务列表
     private val backgroundJobs: MutableList<Job> = mutableListOf()
-
-    // 异常处理器
+// 异常处理器
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
         when (throwable) {
             is CancellationException -> {
-                // 正常的取消异常，只记录日志，不显示toast
+// 正常的取消异常，只记录日志，不显示toast
                 LogUtils.d("协程正常取消: ${throwable.message}")
             }
 
             else -> {
-                // 其他异常需要记录
+// 其他异常需要记录
                 LogUtils.e("协程异常: ${throwable.message}", throwable)
             }
         }
@@ -41,7 +37,7 @@ abstract class BaseVM : ViewModel() {
     /**
      * 启动UI相关协程（随ViewModel生命周期）
      * 适用于：状态更新、事件处理、UI交互
-     * 默认上下文：Main线程，适合UI操作
+     * 默认上下文：主线程，适合UI操作
      */
     protected fun launchUI(
         context: CoroutineContext = Dispatchers.Main,
@@ -57,8 +53,8 @@ abstract class BaseVM : ViewModel() {
 
     /**
      * 启动后台协程（独立于UI生命周期）
-     * 适用于：数据同步、缓存清理、日志上传等
-     * 默认上下文：IO线程，适合后台任务
+     * 适用于：数据同步、存储清理、日志上传等
+     * 默认上下文任务：IO线程，适合后台
      */
     protected fun launchBackground(
         context: CoroutineContext = Dispatchers.IO,
@@ -73,7 +69,7 @@ abstract class BaseVM : ViewModel() {
     }
 
     /**
-     * 启动持久化协程（即使ViewModel销毁也继续执行）
+     * 启动持久化协程（即使ViewModel认为也继续执行）
      * 适用于：重要的数据同步、上传任务等
      * 默认上下文：IO线程，适合长时间运行的任务
      */
@@ -120,7 +116,7 @@ abstract class BaseVM : ViewModel() {
             try {
                 block.invoke(this)
             } catch (e: CancellationException) {
-                // 协程被取消，只记录日志，不显示toast
+// 协程被显示取消，只记录日志，不吐司
                 LogUtils.d("协程被取消: ${e.message}")
                 onCancelled()
                 throw e
@@ -135,9 +131,7 @@ abstract class BaseVM : ViewModel() {
             }
         }
     }
-
-
-    //region 私有辅助方法
+//区域辅助方法
 
     /**
      * 统一的协程启动方法
@@ -170,7 +164,7 @@ abstract class BaseVM : ViewModel() {
         try {
             block.invoke(this)
         } catch (e: CancellationException) {
-            // 正常取消，只记录日志，不显示toast
+// 正常取消，只记录日志，不显示toast
             LogUtils.d("${contextName}被取消: ${e.message}")
             throw e
         } catch (e: Exception) {
@@ -178,8 +172,7 @@ abstract class BaseVM : ViewModel() {
             onError(e)
         }
     }
-
-    //endregion
+//区域结束
 
     /**
      * 清理所有UI相关协程
@@ -206,7 +199,7 @@ abstract class BaseVM : ViewModel() {
     }
 
     /**
-     * 清理所有协程
+     *清理所有协程
      */
     fun clearAllJobs() {
         clearUIJobs()
@@ -244,7 +237,7 @@ abstract class BaseVM : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-        // 只清理UI相关协程，后台协程继续执行
+// 只清理UI相关协程，后台协程继续执行
         clearUIJobs()
         LogUtils.d("ViewModel已清理，活跃协程数: ${getActiveJobsCount()}")
     }

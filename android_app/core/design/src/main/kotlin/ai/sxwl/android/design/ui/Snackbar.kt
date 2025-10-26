@@ -82,8 +82,7 @@ fun HeartSnackbar(
     modifier: Modifier = Modifier
 ) {
     var visible by remember { mutableStateOf(true) }
-
-    // 自动隐藏
+// 隐藏自动
     LaunchedEffect(data) {
         delay(data.duration)
         visible = false
@@ -168,15 +167,14 @@ private fun HeartSnackbarContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 图标
+// 图标
             Icon(
                 painter = snackbarColors.icon,
                 contentDescription = null,
                 tint = snackbarColors.iconColor,
                 modifier = Modifier.size(24.dp)
             )
-
-            // 消息文本
+// 消息文本
             Text(
                 text = data.message,
                 color = snackbarColors.textColor,
@@ -185,8 +183,7 @@ private fun HeartSnackbarContent(
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Start
             )
-
-            // 操作按钮（如果有）
+// 操作按钮（如果有）
             data.actionLabel?.let { label ->
                 Text(
                     text = label,
@@ -215,7 +212,7 @@ fun HeartSnackbarHost(
         hostState = hostState,
         modifier = modifier,
         snackbar = { snackbarData ->
-            // 将Material3的SnackbarData转换为自定义的HeartSnackbarData
+// 将Material3的SnackbarData转换为自定义的HeartSnackbarData
             val heartData = HeartSnackbarData(
                 message = snackbarData.visuals.message,
                 type = HeartSnackbarType.INFO, // 默认类型
@@ -224,7 +221,7 @@ fun HeartSnackbarHost(
             )
 
             snackbar(heartData) {
-                // 这里可以添加自定义的dismiss逻辑
+// 这里可以添加自定义的关闭逻辑
             }
         }
     )
@@ -289,8 +286,7 @@ suspend fun SnackbarHostState.showInfoSnackbar(
         duration = SnackbarDuration.Short
     )
 }
-
-//region Preview
+//区域Preview
 
 @Preview(showBackground = true)
 @Composable
@@ -353,5 +349,4 @@ private fun HeartSnackbarWithActionPreview() {
         onDismiss = {}
     )
 }
-
-//endregion
+//区域结束

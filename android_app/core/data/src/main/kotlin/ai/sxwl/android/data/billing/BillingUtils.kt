@@ -5,7 +5,7 @@ import android.content.Context
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 
-/** 计费工具类 */
+/** 空调工具类 */
 internal object BillingUtils {
 
     /** 检查Google Play服务是否可用 */
@@ -65,11 +65,10 @@ internal object BillingUtils {
         return false
     }
 
-    /** 根据货币代码修正货币符号 */
+    /** 根据货币代码修改货币符号 */
     fun correctCurrencySymbol(price: String, currencyCode: String): String {
         val numberPart = price.filter { it.isDigit() || it == '.' }
-
-        // 删除小数点后的 .00
+//删除后面的小数字点。00
         val formattedNumberPart =
             if (numberPart.endsWith(".00")) {
                 numberPart.dropLast(3)

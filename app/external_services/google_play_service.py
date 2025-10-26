@@ -33,7 +33,7 @@ class GooglePlayService:
             Tuple[bool, Dict]: (是否有效, 购买信息)
         """
         try:
-            # 调用Google Play API验证订阅
+#调用Google Play API验证订阅
             result = (
                 self.service.purchases()
                 .subscriptions()
@@ -48,11 +48,9 @@ class GooglePlayService:
             logger.info(
                 f"订阅验证成功 - 产品ID: {product_id}, 令牌: {purchase_token[:10]}..."
             )
-
-            # 解析响应
+# 解析响应
             purchase_info = self._parse_subscription_purchase(result)
-
-            # 判断订阅是否有效
+#判断订阅是否有效
             is_valid = self._is_subscription_valid(purchase_info)
 
             return is_valid, purchase_info
@@ -80,7 +78,7 @@ class GooglePlayService:
             Tuple[bool, Dict]: (是否有效, 购买信息)
         """
         try:
-            # 调用Google Play API验证一次性产品购买
+#调用Google Play API即时产品购买
             result = (
                 self.service.purchases()
                 .products()
@@ -95,11 +93,9 @@ class GooglePlayService:
             logger.info(
                 f"产品购买验证成功 - 产品ID: {product_id}, 令牌: {purchase_token[:10]}..."
             )
-
-            # 解析响应
+# 解析响应
             purchase_info = self._parse_product_purchase(result)
-
-            # 判断购买是否有效
+# 判断购买是否有效
             is_valid = self._is_product_purchase_valid(purchase_info)
 
             return is_valid, purchase_info
@@ -270,27 +266,24 @@ class GooglePlayService:
     def _is_subscription_valid(self, purchase_info: Dict[str, Any]) -> bool:
         """判断订阅是否有效"""
         try:
-            # 检查是否有错误
+#检查是否有错误
             if "error" in purchase_info:
                 return False
-
-            # 检查支付状态 (0: 待支付, 1: 已支付, 2: 免费试用, 3: 待延期升级)
+# 检查支付状态 (0: 待支付, 1: 已支付, 2: 免费试用, 3: 待延期升级)
             payment_state = purchase_info.get("payment_state", 0)
             if payment_state not in [1, 2, 3]:
                 return False
-
-            # 检查是否过期
+# 检查是否过期
             expiry_time = purchase_info.get("expiry_time")
             if expiry_time and expiry_time < datetime.now(timezone.utc):
                 return False
-
-            # 检查是否已取消且不在宽限期内
+#检查是否已取消且不在宽限响应
             cancel_reason = purchase_info.get("cancel_reason")
             if cancel_reason is not None:
-                # 如果有取消原因，检查是否在宽限期内
+# 如果有取消原因，检查是否在宽限控制器
                 user_cancellation_time = purchase_info.get("user_cancellation_time")
                 if user_cancellation_time and expiry_time:
-                    # 如果当前时间超过了取消时间但还在到期时间内，说明在宽限期
+#如果当前时间超过了取消时间但仍超过期限，说明在宽限期
                     now = datetime.now(timezone.utc)
                     if now > user_cancellation_time and now < expiry_time:
                         return True
@@ -305,21 +298,18 @@ class GooglePlayService:
     def _is_product_purchase_valid(self, purchase_info: Dict[str, Any]) -> bool:
         """判断一次性产品购买是否有效"""
         try:
-            # 检查是否有错误
+#检查是否有错误
             if "error" in purchase_info:
                 return False
-
-            # 检查购买状态 (0: 已购买, 1: 已取消, 2: 待支付)
+#查看购买状态(0:已购买,1:已取消,2:支付待)
             purchase_state = purchase_info.get("purchase_state", 0)
             if purchase_state != 0:
                 return False
-
-            # 检查消费状态 (0: 未消费, 1: 已消费)
+# 查看消费状态 (0: 未消费, 1: 已消费)
             consumption_state = purchase_info.get("consumption_state", 0)
             if consumption_state != 0:
                 return False
-
-            # 检查确认状态 (0: 未确认, 1: 已确认)
+#检查确认状态 (0: 未确认, 1: 已确认)
             acknowledgement_state = purchase_info.get("acknowledgement_state", 0)
             if acknowledgement_state != 1:
                 return False
@@ -380,7 +370,7 @@ class GooglePlayService:
             Dict: 包含最新版本信息的字典
         """
         try:
-            # 获取应用的编辑信息
+# 获取应用程序的编辑信息
             edit_request = self.service.edits().insert(
                 body={}, packageName=self.package_name
             )
@@ -388,15 +378,14 @@ class GooglePlayService:
             edit_id = edit_result["id"]
 
             try:
-                # 尝试从配置的轨道获取版本信息
+# 尝试从配置的轨道获取版本信息
                 primary_track = (
                     global_config_loaded_from_config_yaml.google_play.release_track
                 )
                 fallback_tracks = (
                     global_config_loaded_from_config_yaml.google_play.fallback_tracks
                 )
-
-                # 构建要尝试的轨道列表
+# 构建要尝试的轨道列表
                 tracks_to_try = [primary_track]
                 if fallback_tracks:
                     tracks_to_try.extend(
@@ -420,7 +409,7 @@ class GooglePlayService:
                         )
 
                         if track_result.get("releases"):
-                            # 获取最新版本（releases列表按时间倒序排列）
+# 获取最新版本（发布列表按时间倒序排列）
                             latest_release = track_result["releases"][0]
 
                             version_info = {
@@ -450,13 +439,12 @@ class GooglePlayService:
                     except HttpError as track_error:
                         logger.warning(f"查询轨道 {track_name} 失败: {track_error}")
                         continue
-
-                # 所有轨道都没有找到版本信息
+#所有轨道都没有找到版本信息
                 logger.warning(f"所有轨道都未找到版本信息: {tracks_to_try}")
                 return {"error": "No releases found in any track"}
 
             finally:
-                # 删除编辑会话
+#删除编辑会话
                 try:
                     self.service.edits().delete(
                         packageName=self.package_name, editId=edit_id
@@ -476,12 +464,11 @@ class GooglePlayService:
         try:
             release_notes = release.get("releaseNotes", [])
             if release_notes:
-                # 优先返回中文版本，如果没有则返回第一个可用版本
+# 优先返回中文版本，如果没有则返回第一个可用版本
                 for note in release_notes:
                     if note.get("language") in ["zh-CN", "zh"]:
                         return note.get("text", "")
-
-                # 如果没有中文版本，返回第一个
+# 如果没有中文版本，返回第一个
                 return release_notes[0].get("text", "")
 
             return None
@@ -503,7 +490,7 @@ class GooglePlayService:
             Dict: 版本检查结果
         """
         try:
-            # 如果版本检查被禁用
+# 如果版本检查被禁止
             if (
                 not global_config_loaded_from_config_yaml.google_play.enable_version_check
             ):
@@ -512,8 +499,7 @@ class GooglePlayService:
                     "force_update": False,
                     "message": "Version check disabled",
                 }
-
-            # 获取最新版本信息
+# 获取最新版本信息
             version_info = self.get_app_version_info()
 
             if "error" in version_info:
@@ -529,16 +515,13 @@ class GooglePlayService:
 
             latest_version_name = version_info.get("version_name", "")
             latest_version_code = version_info.get("version_code", 0)
-
-            # 版本比较
+# 版本比较
             update_required = self._compare_versions(
                 client_version_code, latest_version_code
             )
-
-            # 强制更新检查：扩展多种检查条件
+# 强制更新检查：扩展多种检查条件
             force_update_reasons = []
-
-            # 1. 检查是否低于最低支持版本
+＃1。检查是否低于最低支持版本
             try:
                 min_supported_version_code = int(
                     global_config_loaded_from_config_yaml.google_play.min_supported_version
@@ -553,8 +536,7 @@ class GooglePlayService:
                 reason = f"Version code below minimum supported version: {client_version_code} < {min_supported_version_code}"
                 force_update_reasons.append(reason)
                 logger.info(f"最低版本检查触发强制更新: {reason}")
-
-            # 2. 检查Major版本号差距
+#2.检查主要版本号差异
             if client_version_name and latest_version_name:
                 major_force_update, major_reason = (
                     self._check_major_version_gap_requirement(
@@ -576,8 +558,7 @@ class GooglePlayService:
                 "changelog": version_info.get("release_notes"),
                 "download_url": f"https://play.google.com/store/apps/details?id={self.package_name}",
             }
-
-            # 添加详细的更新原因
+#添加详细的更新原因
             if force_update:
                 result["force_update_reasons"] = force_update_reasons
                 result["message"] = (
@@ -587,8 +568,7 @@ class GooglePlayService:
                 result["message"] = "New version available"
             else:
                 result["message"] = "App is up to date"
-
-            # 详细日志记录
+# 详细日志记录
             log_msg = (
                 f"版本检查完成: 客户端={client_version_code}, 最新={latest_version_code}, "
                 f"最低支持={min_supported_version_code}, "
@@ -622,7 +602,7 @@ class GooglePlayService:
             bool: version_code1 < version_code2 时返回True
         """
         try:
-            # 直接比较版本代码
+# 直接比较版本代码
             client_code = int(version_code1)
             server_code = int(version_code2)
 
@@ -654,19 +634,17 @@ class GooglePlayService:
                 return None
 
             version_to_parse = version_name.strip()
-
-            # 检测是否为 Google Play 格式：versionCode (versionName)
+# 检测是否为Google Play格式：versionCode (versionName)
             new_format_pattern = r"^\d+\s+\((.+)\)$"
             new_format_match = re.match(new_format_pattern, version_to_parse)
 
             if new_format_match:
-                # 提取括号内的版本名称
+# 表示内部的版本名称
                 version_to_parse = new_format_match.group(1).strip()
                 logger.debug(
                     f"检测到 Google Play 格式，提取版本名称: {version_to_parse}"
                 )
-
-            # 使用正则表达式匹配 major.minor.patch 格式（支持后面带额外信息）
+# 使用正则表达式匹配major.minor.patch格式（支持后面带附加信息）
             semantic_pattern = r"^(\d+)\.(\d+)\.(\d+)"
             match = re.match(semantic_pattern, version_to_parse)
 
@@ -707,8 +685,7 @@ class GooglePlayService:
         try:
             config = global_config_loaded_from_config_yaml.google_play
             max_minor_gap = config.max_minor_version_gap
-
-            # 解析客户端版本
+# 解析客户端版本
             client_version = self._parse_semantic_version(client_version_name)
             if not client_version:
                 logger.debug(f"无法解析客户端版本名称: {client_version_name}")
@@ -716,8 +693,7 @@ class GooglePlayService:
                     False,
                     "Invalid client version name format, skipping version check",
                 )
-
-            # 解析最新版本
+# 解析最新版本
             latest_version = self._parse_semantic_version(latest_version_name)
             if not latest_version:
                 logger.debug(f"无法解析最新版本名称: {latest_version_name}")
@@ -728,14 +704,12 @@ class GooglePlayService:
 
             client_major, client_minor, _ = client_version
             latest_major, latest_minor, _ = latest_version
-
-            # 检查Major版本是否小于最新版本
+#检查主要版本是否低于最新版本
             if client_major < latest_major:
                 reason = f"Major version below latest: {client_major} < {latest_major}"
                 logger.info(f"Major版本检查触发强制更新: {reason}")
                 return True, reason
-
-            # 检查Minor版本差距（只在Major版本相同时检查）
+#检查次要版本差异（仅在主要版本相同时检查）
             if client_major == latest_major:
                 minor_gap = latest_minor - client_minor
                 if minor_gap > max_minor_gap:

@@ -1,16 +1,16 @@
-# AI 语音系统文档
+# AI语音系统文档
 
 ## 概述
 
-InTy 后端集成了先进的 AI 语音回复系统，使用 ElevenLabs API 为用户提供高质量的语音体验。系统支持自动语音生成、智能缓存、成本优化等功能。
+InTy 劳动力集成了先进的AI语音回复系统，使用ElevenLabs API为用户提供高质量的语音体验。系统支持自动语音生成、智能存储、成本优化等功能。
 
 ## 核心特性
 
 ### 🎵 高质量语音合成
 
-- **ElevenLabs Flash v2.5 模型**：75ms 超低延迟，专为实时应用优化
-- **多语音支持**：支持多种语音角色，可为不同 Agent 配置专属语音
-- **移动端优化**：使用 `mp3_22050_32` 格式，文件小传输快
+- **ElevenLabs Flash v2。5模型**：75ms超低延迟，专为实时应用优化
+- **多语音支持**：支持多种语音角色，配置不同代理配置专属语音
+- **移动端优化**：使用`mp3_22050_32` 格式，文件小传输快
 - **32种语言支持**：包含中文、英文等主流语言
 
 ### ⚡ 智能播放控制
@@ -48,13 +48,9 @@ InTy 后端集成了先进的 AI 语音回复系统，使用 ElevenLabs API 为�
 │ Chat Settings   │    │ Voice Cache      │    │    GCS Storage  │
 │ (voice_enabled) │    │ Service          │    │   (Audio Files) │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-```
+```### 数据库设计
 
-### 数据库设计
-
-#### voice_cache 表
-
-```sql
+#### voice_cache 表```sql
 CREATE TABLE voice_cache (
     id SERIAL PRIMARY KEY,
     content_hash VARCHAR(64) UNIQUE NOT NULL,  -- 内容哈希 (text + voice_id + model)
@@ -64,28 +60,16 @@ CREATE TABLE voice_cache (
     last_accessed TIMESTAMP DEFAULT NOW(),    -- 最后访问时间
     access_count INTEGER DEFAULT 1            -- 访问次数
 );
-```
-
-#### chat_settings 表 (语音相关字段)
-
-```sql
+```#### chat_settings 表（语音相关字段）```sql
 -- voice_enabled: 是否启用语音自动播放
 -- 优先级高于用户全局设置
 ALTER TABLE chat_settings ADD COLUMN voice_enabled BOOLEAN DEFAULT false;
-```
-
-#### agents 表 (语音相关字段)
-
-```sql
+```#### 代理表（语音相关字段）```sql
 -- voice_id: Agent 专属语音 ID，为空时使用默认语音
 ALTER TABLE agents ADD COLUMN voice_id VARCHAR(255);
-```
+```## 配置说明
 
-## 配置说明
-
-### config.yaml 配置
-
-```yaml
+### 配置。yaml 配置```yaml
 elevenlabs:
   api_key: "sk_your_api_key_here" # ElevenLabs API 密钥
   model: "eleven_flash_v2_5" # 推荐模型 (75ms 延迟)
@@ -99,27 +83,25 @@ elevenlabs:
 
 #### 女声选项
 
-- `EXAVITQu4vr4xnSDxMaL` - Sarah (温柔女声) ✅ 推荐
-- `VR6AewLTigWG4xSOukaG` - Jessica (专业女声)
-- `AZnzlk1XvdvUeBnXmlld` - Domi (活泼女声)
-- `ThT5KcBeYPX3keUQqHPh` - Dorothy (成熟女声)
+- `EXAVITQu4vr4xnSDxMaL`- Sarah (温柔女声) ✅推荐
+-`VR6AewLTigWG4xSOukaG`- Jessica (专业女声)
+-`AZnzlk1XvdvUeBnXmlld` - Domi (活泼女声)
+- `ThT5KcBeYPX3keUQqHPh`- Dorothy (成熟女声)
 
 #### 男声选项
 
-- `pNInz6obpgDQGcFmaJgB` - Adam (标准男声)
-- `JBFqnCBsd6RMkjVDRZzb` - George (深沉男声)
+-`pNInz6obpgDQGcFmaJgB` - Adam (标准男声)
+- `JBFqnCBsd6RMkjVDRZzb`- 乔治 (深沉男声)
 
 ### 输出格式选择
 
-- `mp3_44100_128` - 高质量，文件较大
+-`mp3_44100_128` - 高质量，文件较大
 - `mp3_22050_32` - **移动端推荐**，小文件快传输
-- `pcm_44100` - 无压缩格式，需要 Pro 套餐
+- `pcm_44100`- 无压缩格式，需要Pro套餐
 
 ## API 接口
 
-### 标准聊天接口 (带语音)
-
-```http
+### 标准聊天接口（带语音）```http
 POST /api/v1/chats/agents/{agent_id}/chat/completions
 Content-Type: application/json
 
@@ -278,15 +260,11 @@ logger.info(f"缓存命中: {cache_hit}, URL={audio_url}")
 logger.info(f"ElevenLabs API调用成功，音频大小: {len(audio_data)} bytes")
 logger.info(f"GCS上传成功: {gcs_url}")
 logger.error(f"语音生成失败: {error_message}")
-```
-
-## 故障排除
+```## 故障排除
 
 ### 常见问题
 
-#### 1. ElevenLabs API 错误
-
-```bash
+#### 1.ElevenLabs API 错误```bash
 # 400 Bad Request: 模型不支持语言参数
 ERROR: Model 'eleven_multilingual_v2' does not support language_code parameter
 解决: 使用 eleven_flash_v2_5 或移除 language_code 参数
@@ -306,20 +284,16 @@ ERROR: 403 Forbidden - Caller does not have storage.objects.get access
 # 缓存表不存在
 ERROR: relation "voice_cache" does not exist
 解决: 运行数据库迁移 alembic upgrade head
-```
+```### 性能优化建议
 
-### 性能优化建议
-
-1. **启用 CDN**：为 GCS 存储配置 CDN 加速
-2. **监控缓存命中率**：低于 70% 时优化缓存策略
+1. **启用CDN**：为 GCS 存储配置 CDN 加速
+2. **监控缓存命中率**：低于70% 时优化服务器策略
 3. **定期清理**：避免存储空间无限增长
-4. **API 限流**：避免超出 ElevenLabs API 限额
+4.**API限流**：避免超出ElevenLabs API侵犯
 
 ## 开发指南
 
-### 添加新语音角色
-
-```python
+### 添加新语音角色```python
 # 1. 在 config.yaml 中配置新语音
 # 2. 在 Agent 模型中设置 voice_id
 # 3. 测试语音生成效果

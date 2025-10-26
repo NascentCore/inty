@@ -38,7 +38,7 @@ class ModifyProfileActivity : BaseActivity() {
 
         /**
          * 启动单独的聊天界面
-         * @param context 上下文context
+         * @param context 上下文
          * @param userInfo UserProfile对象
          */
         fun launch(context: Context, userInfo: UserProfile? = null) {
@@ -58,8 +58,7 @@ class ModifyProfileActivity : BaseActivity() {
         super.initConfigData()
         val userProfile: UserProfile? = intent.getParcelableExtra(INTENT_KEY_USER_INFO)
         viewModel.init(userProfile)
-
-        // 监听ViewModel事件
+// 监听ViewModel事件
         lifecycleScope.launch {
             viewModel.events.collect { event ->
                 when (event) {
@@ -68,7 +67,7 @@ class ModifyProfileActivity : BaseActivity() {
                     }
 
                     else -> {
-                        // 其他事件暂不处理
+//其他事件暂不处理
                     }
                 }
             }
@@ -102,10 +101,10 @@ class ModifyProfileActivity : BaseActivity() {
             rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
                 imageUri?.let { uri ->
                     runCatching {
-                        // Check file size before cropping - limit to 10MB
+// 手术前检查文件大小 - 限制为 10MB
                         val fileSize = getFileSize(context, uri)
-                        // TODO: 使用 firebase remote config 配置应集中管理
-                        // https://firebase.google.com/docs/remote-config
+// TODO: 使用 firebase 远程配置配置应用集中管理
+// https://firebase.google.com/docs/remote-config
                         val maxSizeMB = 10
                         val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
                         if (fileSize > maxSizeBytes) {

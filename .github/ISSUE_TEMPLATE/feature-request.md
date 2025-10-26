@@ -1,10 +1,8 @@
 ---
-name: Feature request
-about: Suggest an idea for this project
+名称： 功能请求
+关于：为此 project 提出了一个想法
 title: "【功能需求】"
-labels: enhancement
-assignees: yxzhao6
+标签： 增强
+受让人： yxzhao6
 
 ---
-
-

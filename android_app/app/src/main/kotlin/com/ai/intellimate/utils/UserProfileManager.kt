@@ -21,8 +21,7 @@ object UserProfileManager {
         IntySetting.setUserProfileBoolean("is_active", userProfile.isActive)
         IntySetting.setUserProfileBoolean("is_superuser", userProfile.isSuperuser)
         IntySetting.setUserProfileData("phone", userProfile.phone ?: "")
-
-        // 处理 ageGroup（可能是字符串或其他类型）
+// 处理ageGroup（可能是字符串或其他类型）
         userProfile.ageGroup?.let { ageGroup ->
             when (ageGroup) {
                 is String -> IntySetting.setUserProfileData("age_group", ageGroup)

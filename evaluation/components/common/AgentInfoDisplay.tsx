@@ -25,7 +25,7 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
   showLLMConfig = true,
   compact = false,
 }) => {
-  // 统一的图片样式
+// 统一的图片风格
   const imageStyle = {
     width: "100%",
     maxWidth: 120,

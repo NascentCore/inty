@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 调试空响应问题 - 针对Google Gemini 2.5 Pro模型
 """
@@ -7,8 +7,7 @@ import asyncio
 import sys
 from pathlib import Path
 import yaml
-
-# 添加项目根目录到Python路径
+#添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -17,8 +16,7 @@ from openai import AsyncOpenAI
 
 async def test_different_prompts():
     """测试不同的提示词格式"""
-
-    # 加载配置
+# 加载配置
     config_path = project_root / "config.yaml"
     with open(config_path, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
@@ -66,7 +64,7 @@ async def test_different_prompts():
         print(f"\n🧪 测试 {i}: {test['name']}")
 
         try:
-            # 测试不同参数组合
+# 测试不同参数组合
             for temp in [0.1, 0.7, 1.0]:
                 for max_tok in [10, 50, 100]:
                     print(f"   参数: temp={temp}, max_tokens={max_tok}")

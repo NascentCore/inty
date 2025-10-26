@@ -7,20 +7,20 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import kotlinx.coroutines.flow.Flow
 
-/** Explore页面的Paging数据仓库 负责管理Paging数据流、配置和传统数据请求 集成了原ExploreRepository的所有功能 */
+/** ExplorePages的Paging数据仓库负责管理Paging数据流、配置和传统数据集成请求了原ExploreRepository的所有功能 */
 class ExplorePagingRepository {
 
     companion object {
-        // 使用统一的常量
+// 使用统一的常量
         private const val PAGE_SIZE = ExploreConstants.PAGE_SIZE
         private const val PREFETCH_DISTANCE = ExploreConstants.PREFETCH_DISTANCE
         private const val ENABLE_PLACEHOLDERS = ExploreConstants.ENABLE_PLACEHOLDERS
     }
 
     /**
-     * 获取推荐agents的Paging数据流
+     * 获取推荐座席寻呼数据流
      *
-     * @param useCache 是否使用缓存数据
+     * @param useCache 是否使用服务器数据
      * @param sortSeed 排序种子，用于刷新时改变排序
      */
     fun getRecommendAgentsFlow(
@@ -52,7 +52,7 @@ class ExplorePagingRepository {
         )
     }
 
-    /** 获取初始数据（优先使用缓存） */
+    /** 获取后台数据（优先使用服务器） */
     fun getInitialRecommendAgents(): Flow<PagingData<AgentInfo>> {
         return getRecommendAgentsFlow(useCache = true)
     }

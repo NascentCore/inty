@@ -5,7 +5,7 @@ import ai.sxwl.android.utils.LogUtils
 import javax.inject.Inject
 
 /**
- * 同步聊天数据用例
+ * 同步聊天数据示例
  * 封装同步聊天数据的业务逻辑
  */
 class SyncChatDataUseCase @Inject constructor(

@@ -33,12 +33,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-// 操作什么数据，支持什么 UI？Model 是 beans
-// View 是各类 page/activity。
+// 操作什么数据，支持什么UI？Model 是 beans
+// 查看的是主流页面/活动。
 class ChatViewModel : BaseVM() {
-
-    // 依赖注入 - 使用新的架构
+// 依赖注入 - 使用新的架构
     private val chatRepository: ChatRepository = ChatModule.getChatRepository()
     private val sendMessageUseCase: SendMessageUseCase = ChatModule.sendMessageUseCase
     private val loadChatHistoryUseCase: LoadChatHistoryUseCase = ChatModule.loadChatHistoryUseCase
@@ -46,12 +44,10 @@ class ChatViewModel : BaseVM() {
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()
-
-    // 使用 StateFlow 替代 mutableStateListOf 来解决并发问题
+// 使用 StateFlow 替代 mutableStateListOf 来解决并发问题
     private val _msgs = MutableStateFlow<List<MsgInfo>>(emptyList())
     val msgs = _msgs.asStateFlow()
-
-    // 分页相关状态
+// 分页相关状态
     private val _isLoadingMore = MutableStateFlow(false)
     val isLoadingMore = _isLoadingMore.asStateFlow()
 
@@ -65,44 +61,35 @@ class ChatViewModel : BaseVM() {
 
     val inputData = MutableStateFlow<String>("")
     val inputSelection = MutableStateFlow<Int>(0)
-
-    // 用于标识当前是否在等待AI回复
+// 用于当前标识是否在等待AI回复
     private val _isWaitingForReply = MutableStateFlow<Boolean>(false)
     val isWaitingForReply = _isWaitingForReply.asStateFlow()
 
     private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
     val userProfile = _userProfile.asStateFlow()
-
-    // 防抖机制：避免快速点击发送按钮
+// 反馈防机制：避免快速点击发送按钮
     private var lastSendTime = 0L
     private val SEND_DEBOUNCE_TIME = 1000L // 1秒防抖
-
-    // 音频管理器
+// 音频管理器
     private var audioManager: AudioManager? = null
-
-    // 防重复请求机制
+// 防重复请求机制
     private var isQueryingMsgs = false
     private var lastQueryAgentId: String? = null
     private var lastQueryTime = 0L
-
-    // 消息查询完成状态，用于控制开场白自动播放时机
+// 消息查询完成状态，用于控制开场白自动播放时机
     private val _isQueryMsgsCompleted = MutableStateFlow<Boolean>(false)
     val isQueryMsgsCompleted = _isQueryMsgsCompleted.asStateFlow()
-
-    // 对话列表分页状态
+// 对话列表分页状态
     private var currentConversationsPage = 0
     private var _isLoadingConversations = MutableStateFlow(false)
     val isLoadingConversations = _isLoadingConversations.asStateFlow()
     private var hasMoreConversations = true
-
-    // 刷新状态，用于区分首次加载和刷新操作
+// 刷新状态，用于区分首次加载和刷新操作
     private var _isRefreshingConversations = MutableStateFlow(false)
     val isRefreshingConversations = _isRefreshingConversations.asStateFlow()
-
-    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+// 延迟获取依赖，避免在构造函数中立即导致获取空指针异常
     private val chatApi by lazy { NetServiceMgr.getChatApi() }
-
-    // 绑定到 ChatSessionManager 的收集任务
+// 绑定到 ChatSessionManager 的收集任务
     private var messagesJob: Job? = null
     private var loadingMoreJob: Job? = null
     private var hasMoreJob: Job? = null
@@ -110,8 +97,7 @@ class ChatViewModel : BaseVM() {
 
 
     fun setAgentInfo(agentInfo: AgentInfo?) {
-
-        // Firebase Analytics - 记录聊天会话开始
+// Firebase Analytics - 聊天会话开始
         agentInfo?.let { agent ->
             FirebaseManager.logEvent(
                 "chat_session_start",
@@ -123,12 +109,10 @@ class ChatViewModel : BaseVM() {
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                 ),
             )
-
-            // Firebase Crashlytics - 设置自定义键
+// Firebase Crashlytics - 设置自定义键
             FirebaseManager.setCustomKey("current_agent_id", agent.id)
             FirebaseManager.setCustomKey("current_agent_name", agent.name)
-
-            // 追踪聊天会话开始
+// 追踪聊天会话开始
             PageTrackingHelper.trackUserInteraction(
                 "chat_session_start",
                 agent.name,
@@ -139,23 +123,20 @@ class ChatViewModel : BaseVM() {
                 ),
             )
         }
-
-        // 如果 agent 为空，清理所有状态
+// 如果代理为空，清理所有状态
         if (agentInfo == null) {
             _agentInfo.value = null
             _msgs.update { emptyList() }
             lastQueryAgentId = null
             isQueryingMsgs = false
             _isQueryMsgsCompleted.value = false
-            // 停止语音播放
+// 停止语音播放
             audioManager?.stopAllPlayback()
-
-            // Firebase Analytics - 记录聊天会话结束
+// Firebase Analytics - 记录聊天会话结束
             FirebaseManager.logEvent("chat_session_end", mapOf("reason" to "agent_cleared"))
             return
         }
-
-        // 如果是同一个 agent，只更新信息，不重新查询消息
+// 如果是同一个代理，只更新信息，不重新查询消息
         if (_agentInfo.value?.id == agentInfo.id) {
             _agentInfo.value = agentInfo
             return
@@ -166,17 +147,15 @@ class ChatViewModel : BaseVM() {
         lastQueryAgentId = agentInfo.id
         isQueryingMsgs = false
         _isQueryMsgsCompleted.value = false
-
-        // 重置分页状态
+// 重置分页状态
         currentOffset = 0
         _hasMoreMessages.value = true
         _isLoadingMore.value = false
-
-        // 查询新 agent 的消息 - 使用新架构
+// 使用查询新代理的消息 - 新架构
         bindToAgentSession(agentInfo.id)
-        // 使用增量同步，优先加载本地数据，然后同步服务器 - 使用UseCase
+// 使用增量同步，优先加载本地数据，然后同步服务器 - 使用UseCase
         loadChatHistory(agentInfo.id)
-        // 查询改聊天设置
+// 查询改聊天设置
         getChatSetting()
     }
 
@@ -217,7 +196,7 @@ class ChatViewModel : BaseVM() {
         LogUtils.i("ChatViewModel.loadChatHistory called for agentId=$agentId")
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // 使用增量同步，优先显示本地数据，然后检查服务器更新
+// 使用增量同步，优先显示本地数据，然后检查服务器更新
                 syncChatDataUseCase(agentId)
                 _isQueryMsgsCompleted.value = true
             } catch (e: Exception) {
@@ -229,7 +208,7 @@ class ChatViewModel : BaseVM() {
 
     /**
      * 同步最新消息 - 用于应用恢复、页面切换等场景
-     * 优先显示本地数据，后台检查服务器更新
+     * 优先显示本地数据，后台查看服务器更新
      */
     fun syncLatestMessages() {
         val agentId = _agentInfo.value?.id ?: return
@@ -247,15 +226,14 @@ class ChatViewModel : BaseVM() {
      * 发送消息 - 使用新架构
      */
     fun sendMsg() {
-        // 防抖检查
+// 防抖检查
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) {
             LogUtils.i("Send message debounced, ignoring rapid clicks")
             return
         }
         lastSendTime = currentTime
-
-        // 确保状态正确
+//保证状态正确
         if (_isWaitingForReply.value) {
             LogUtils.i("Already waiting for reply, ignoring new send request")
             return
@@ -270,8 +248,7 @@ class ChatViewModel : BaseVM() {
         val agentId = _agentInfo.value?.id ?: return
         inputData.value = ""
         _isWaitingForReply.value = true
-
-        // Firebase Analytics - 记录消息发送
+// Firebase Analytics - 记录消息发送
         _agentInfo.value?.let { agent ->
             FirebaseManager.logEvent(
                 "message_sent",
@@ -281,12 +258,10 @@ class ChatViewModel : BaseVM() {
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                 ),
             )
-
-            // Firebase Crashlytics - 记录消息发送上下文
+// Firebase Crashlytics - 记录消息传输上下文
             FirebaseManager.setCustomKey("last_message_length", inputMsg.length.toString())
             FirebaseManager.setCustomKey("last_message_preview", inputMsg.take(50))
-
-            // 追踪消息发送
+// 追踪消息发送
             PageTrackingHelper.trackUserInteraction(
                 "message_send",
                 "chat_input",
@@ -302,11 +277,10 @@ class ChatViewModel : BaseVM() {
             try {
                 val result = sendMessageUseCase(agentId, inputMsg.trimEnd())
                 LogUtils.i("Send message result: $result")
-
-                // 处理发送结果
+// 处理发送结果
                 when (result) {
                     is HttpResult.Success -> {
-                        // Firebase Analytics - 记录消息发送成功
+// Firebase Analytics - 记录消息发送成功
                         FirebaseManager.logEvent(
                             "message_send_success",
                             mapOf(
@@ -321,9 +295,9 @@ class ChatViewModel : BaseVM() {
                                 requestLogin.emit(true)
                                 return@runCatching
                             }
-                            // 有免费次数限制，需要vip订阅
+// 有免费次数限制，需要vip订阅
                             if (result.data.code == BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE) {
-                                // Firebase Analytics - 记录免费次数限制
+// Firebase Analytics - 记录免费次数限制
                                 FirebaseManager.logEvent(
                                     "free_limit_reached",
                                     mapOf("agent_id" to agentId, "user_type" to "free"),
@@ -340,7 +314,7 @@ class ChatViewModel : BaseVM() {
                         }
                     }
                     is HttpResult.Failure -> {
-                        // Firebase Analytics - 记录消息发送失败
+// Firebase Analytics - 记录消息发送失败
                         FirebaseManager.logEvent(
                             "message_send_failure",
                             mapOf(
@@ -349,11 +323,9 @@ class ChatViewModel : BaseVM() {
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                             ),
                         )
-
-                        // Firebase Crashlytics - 记录非致命错误
+// Firebase Crashlytics - 记录非致命错误
                         FirebaseManager.recordException(Exception("Message send failed: ${result.message}"))
-
-                        // 显示网络错误
+// 显示网络错误
                         NetworkErrorHandler.showNetworkAwareError("Something went wrong. Please try again later.")
                         _isWaitingForReply.value = false
                     }
@@ -363,7 +335,7 @@ class ChatViewModel : BaseVM() {
                 NetworkErrorHandler.showNetworkAwareError("An unexpected error occurred while sending message")
                 _isWaitingForReply.value = false
             } finally {
-                // 确保状态在最后被正确重置
+//确保状态在最后被正确重置
                 if (_isWaitingForReply.value) {
                     LogUtils.i("Force reset waiting state due to completion")
                     _isWaitingForReply.value = false
@@ -371,8 +343,7 @@ class ChatViewModel : BaseVM() {
             }
         }
     }
-
-    // region 语音播报相关
+// 地区语音播报相关
 
     /** 初始化音频管理器 */
     fun initVoiceService(context: Context) {
@@ -403,18 +374,15 @@ class ChatViewModel : BaseVM() {
             audioManager?.stopNonCurrentAgentPlayback(currentAgentId)
         }
     }
-
-    // endregion
-
-    // region TTS相关功能
+// 区域结束
+// 区域TTS相关功能
 
     /** 更新消息的音频URL（供AudioManager回调使用） */
     fun updateMessageAudioUrl(messageId: String, audioUrl: String) {
         val agentId = agentInfo.value?.id ?: return
         chatRepository.updateMessageAudioUrl(agentId, messageId, audioUrl)
     }
-
-    // endregion
+// 区域结束
 
     fun queryMsgs(loadMore: Boolean = false) {
         val currentAgentId = agentInfo.value?.id ?: return
@@ -469,15 +437,13 @@ class ChatViewModel : BaseVM() {
 
     val showLimitDialog = MutableStateFlow(false)
     val requestLogin = MutableStateFlow(false)
-
-
-    // 关闭limit次数 拦截消息的弹窗
+// 关闭限制次数拦截消息的弹窗
     fun dismissDialog() = viewModelScope.launch { showLimitDialog.emit(false) }
 
     fun dismissLoginRequest() = viewModelScope.launch { requestLogin.emit(false) }
 
     fun sendKeepTalkingMessage() {
-        // 防抖检查
+// 防抖检查
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) {
             LogUtils.i("Send keep talking message debounced, ignoring rapid clicks")
@@ -502,7 +468,7 @@ class ChatViewModel : BaseVM() {
                                 requestLogin.emit(true)
                                 return@runCatching
                             }
-                            // 有免费次数限制，需要vip订阅
+// 有免费次数限制，需要vip订阅
                             if (
                                 result.data.code ==
                                 BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
@@ -515,60 +481,58 @@ class ChatViewModel : BaseVM() {
                         }.onFailure {
                             LogUtils.e("Error processing keep talking AI response: ${it.message}")
                             it.printStackTrace()
-                            // 错误恢复：确保状态正确
+// 错误恢复：确保正确状态
                             _isWaitingForReply.value = false
                         }
                     }
 
                     is HttpResult.Failure -> {
                         NetworkErrorHandler.showNetworkAwareError(result.message)
-                        // 错误恢复：确保状态正确
+// 错误恢复：确保正确状态
                         _isWaitingForReply.value = false
                     }
                 }
             }
                 ?: run {
-                    // 如果没有 agent 信息，恢复状态
+// 如果没有代理信息，恢复状态
                     _isWaitingForReply.value = false
                     LogUtils.e("No agent info available for keep talking")
                 }
         }
     }
-
-    // 获取聊天消息设置 - 按agentId存储，确保每个agent的设置独立
+// 获取聊天消息设置 - 按agentId存储，确保每个agent的设置独立
     private val _chatSettings =
         MutableStateFlow<Map<String, ChatSettingsResponse.ChatSettingRspData>>(emptyMap())
     val chatSettings = _chatSettings.asStateFlow()
 
-    /** 获取指定agent的聊天设置 */
+    /** 获取指定代理的聊天设置 */
     fun getChatSettingForAgent(agentId: String): ChatSettingsResponse.ChatSettingRspData? {
         return _chatSettings.value[agentId]
     }
 
     private fun getChatSetting() = launchBackground {
         val agentId = agentInfo.value?.id ?: return@launchBackground
-        // 有agent信息，才请求
+// 有代理信息，才请求
         val result = chatApi.getChatSettings(agentId)
         when (result) {
             is HttpResult.Failure -> {
-                // 此设置，暂时不用toast显示
+// 此设置，暂时不用toast显示
                 LogUtils.e(result.message)
-                //                showNetworkAwareError(result.message)
+// 显示NetworkAwareError(结果。信息）
             }
 
             is HttpResult.Success -> {
-                // 更新指定agent的设置，保持其他agent的设置不变
+// 更新指定agent的设置，保持其他agent的设置不变
                 _chatSettings.update { currentSettings ->
                     currentSettings + (agentId to result.data)
                 }
             }
         }
     }
-
-    // 高级模型定制化回复的接口调用
+// 高级模型定制化回复的接口调用
     fun updateChatReplySettings(prompt: String) = launchBackground {
         val agentId = agentInfo.value?.id ?: return@launchBackground
-        // 有agent信息，才请求
+// 有代理信息，才请求
         val req = ChatSettingsReq(style_prompt = prompt)
         val result = chatApi.updateChatSettings(agentId, req)
         when (result) {
@@ -577,7 +541,7 @@ class ChatViewModel : BaseVM() {
                 NetworkErrorHandler.showNetworkAwareError(
                     Utils.getApp().getString(R.string.custom_reply_successful)
                 )
-                // 要更新指定agent的chatsetting
+// 要更新指定代理的聊天设置
                 result.data.data?.let { chatSettingData ->
                     _chatSettings.update { currentSettings ->
                         currentSettings + (agentId to chatSettingData)
@@ -590,12 +554,11 @@ class ChatViewModel : BaseVM() {
     fun getConversations() {
         currentConversationsPage = 0
         hasMoreConversations = true
-
-        // 如果已经有数据，则不显示loading，直接后台刷新
+// 如果已经有数据，则不显示加载中，直接后台刷新
         if (_conversations.value.isNotEmpty()) {
             loadConversationsSilently()
         } else {
-            // 没有数据时才显示loading
+// 没有数据时才显示loading
             loadConversations()
         }
     }
@@ -624,7 +587,7 @@ class ChatViewModel : BaseVM() {
                         if (userInitiatedConversations.isEmpty()) {
                             hasMoreConversations = false
                         } else {
-                            // 静默更新数据，不显示loading
+// 静默更新数据，不显示loading
                             _conversations.value = userInitiatedConversations
                         }
                     }
@@ -641,16 +604,14 @@ class ChatViewModel : BaseVM() {
 
     private fun loadConversations() {
         if (_isLoadingConversations.value || _isRefreshingConversations.value) return
-
-        // 记录当前页码，用于后续状态重置
+// 记录当前页码，用于后续状态重置
         val isFirstPage = currentConversationsPage == 0
-
-        // 根据当前页码决定使用哪个loading状态
+// 根据当前页码决定使用哪个加载状态
         if (isFirstPage) {
-            // 第一页，使用刷新状态
+// 第一页，使用刷新状态
             _isRefreshingConversations.value = true
         } else {
-            // 后续页，使用加载更多状态
+// 后续页面，使用加载更多状态
             _isLoadingConversations.value = true
         }
         viewModelScope.launch(Dispatchers.IO) {
@@ -666,10 +627,10 @@ class ChatViewModel : BaseVM() {
                             hasMoreConversations = false
                         } else {
                             if (currentConversationsPage == 0) {
-                                // 第一页，直接替换（这里才清空并替换数据）
+//第一页，直接替换（这里才清空并替换数据）
                                 _conversations.value = userInitiatedConversations
                             } else {
-                                // 后续页，追加到现有列表
+// 后续页面，追加到现有列表
                                 _conversations.value =
                                     _conversations.value + userInitiatedConversations
                             }
@@ -678,7 +639,7 @@ class ChatViewModel : BaseVM() {
 
                     is HttpResult.Failure -> {
                         LogUtils.e("loadConversations - 第${currentConversationsPage + 1}页加载失败: ${result.message}")
-                        // 如果加载失败，回退页码
+// 如果加载失败，返回退页码
                         if (currentConversationsPage > 0) {
                             currentConversationsPage--
                             LogUtils.i("loadConversations - 页码回退到: $currentConversationsPage")
@@ -687,14 +648,13 @@ class ChatViewModel : BaseVM() {
                 }
             } catch (e: Exception) {
                 LogUtils.e("loadConversations - 第${currentConversationsPage + 1}页加载异常: ${e.message}")
-                // 如果加载失败，回退页码
+// 如果加载失败，返回退页码
                 if (currentConversationsPage > 0) {
                     currentConversationsPage--
                     LogUtils.i("loadConversations - 页码回退到: $currentConversationsPage")
                 }
             }
-
-            // 重置对应的loading状态
+// 重置的加载状态
             if (isFirstPage) {
                 _isRefreshingConversations.value = false
             } else {
@@ -723,8 +683,7 @@ class ChatViewModel : BaseVM() {
             }
         }
     }
-
-    // 标记会话消息 已读
+// 标记会话消息已读
     fun setConversationReaded(conversationItem: ConversationItem) {
         IntySetting.setConversationReaded(conversationItem.agentId, conversationItem.lastMessage)
 
@@ -741,8 +700,7 @@ class ChatViewModel : BaseVM() {
             }
         }
     }
-
-    // 新增：清理所有数据的方法
+// 新增：清理所有数据的方法
     fun clearAllData() {
         _msgs.update { emptyList() }
         _conversations.value = emptyList()
@@ -755,24 +713,20 @@ class ChatViewModel : BaseVM() {
         lastQueryAgentId = null
         lastQueryTime = 0L
         lastSendTime = 0L
-
-        // 清理分页状态
+// 清理分页状态
         currentConversationsPage = 0
         hasMoreConversations = true
         _isLoadingConversations.value = false
-
-        // 清理chatSettings
+//清理聊天设置
         _chatSettings.value = emptyMap()
-
-        // 清理消息查询完成状态
+// 清理消息完成查询状态
         _isQueryMsgsCompleted.value = false
     }
 
     fun setUserProfile(userProfile: UserProfile) {
         _userProfile.value = userProfile
     }
-
-    // 本地userInfo的更新，而非接口
+// 本地userInfo的更新，接口
     fun updateUserInfo() {
         if (UserProfileManager.hasUserProfile()) {
             _userProfile.value = UserProfileManager.getUserProfile()

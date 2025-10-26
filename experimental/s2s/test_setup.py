@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 Test script to verify setup for OpenAI Speech-to-Speech Demo
 """
@@ -44,12 +44,10 @@ def test_audio_devices():
 
     try:
         import sounddevice as sd
-
-        # List available devices
+# 可用的上市设备
         devices = sd.query_devices()
         print(f"Found {len(devices)} audio devices")
-
-        # Get default devices (this is more reliable)
+# 获取默认设备（这样更可靠）
         try:
             default_input = sd.query_devices(kind="input")
             default_output = sd.query_devices(kind="output")
@@ -83,14 +81,12 @@ def test_openai_api():
         return False
 
     print(f"✅ API key found (length: {len(api_key)})")
-
-    # Test basic API connectivity
+# 基本测试API连接
     try:
         from openai import OpenAI
 
         client = OpenAI(api_key=api_key)
-
-        # Try a simple API call to test connectivity
+# 尝试一个简单的 API 调用来测试连接
         response = client.models.list()
         print("✅ OpenAI API connectivity - OK")
         return True
@@ -106,16 +102,13 @@ def main():
     print("=" * 50)
 
     all_tests_passed = True
-
-    # Test imports
+# 测试导入
     if not test_imports():
         all_tests_passed = False
-
-    # Test audio devices
+#音频测试设备
     if not test_audio_devices():
         all_tests_passed = False
-
-    # Test OpenAI API
+# 测试 OpenAI API
     if not test_openai_api():
         all_tests_passed = False
 

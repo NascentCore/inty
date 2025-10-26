@@ -1,18 +1,15 @@
-#!/bin/bash
-
+#！/bin/bash
 # Inty Backend Locust 负载测试启动脚本
-# 作者: Claude
-# 日期: 2025-08-14
+#作者：克劳德
+# 日期：2025-08-14
 
 set -e
-
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
-
 # 日志函数
 log_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -29,7 +26,6 @@ log_error() {
 log_debug() {
     echo -e "${BLUE}[DEBUG]${NC} $1"
 }
-
 # 显示帮助信息
 show_help() {
     echo "Inty Backend Locust 负载测试启动脚本"
@@ -63,8 +59,7 @@ show_help() {
     echo "  $0 --setup"
     echo "  $0 --cleanup"
 }
-
-# 检查依赖
+#检查依赖关系
 check_dependencies() {
     log_info "检查依赖..."
     
@@ -72,8 +67,7 @@ check_dependencies() {
         log_error "Docker 未安装或不在PATH中"
         exit 1
     fi
-    
-    # 检查Docker Compose (优先使用新的插件语法)
+#检查Docker Compose （优先使用新的插件语法）
     if docker compose version &> /dev/null; then
         export DOCKER_COMPOSE="docker compose"
         log_info "使用 Docker Compose 插件"
@@ -98,30 +92,24 @@ check_dependencies() {
     
     log_info "依赖检查通过"
 }
-
 # 启动测试环境
 setup_environment() {
     log_info "启动测试环境..."
-    
-    # 创建必要的目录
+#创建必要的目录
     mkdir -p test-data config monitoring/grafana/{dashboards,datasources}
-    
-    # 拉取生产镜像
+# 拉取生产镜像
     log_info "拉取生产镜像..."
     docker pull ghcr.io/nascentcore/inty-backend/inty-server@sha256:e0bbf5278b78326e9ec096b03f94f64 || {
         log_error "镜像拉取失败，请检查网络连接和权限"
         exit 1
     }
-    
-    # 启动基础服务
+# 启动基础服务
     log_info "启动数据库服务..."
     $DOCKER_COMPOSE -f docker-compose.test.yml up -d postgres
-    
-    # 等待数据库启动
+# 等待数据库启动
     log_info "等待数据库启动..."
     sleep 20
-    
-    # 检查数据库状态
+# 查看数据库状态
     for i in {1..30}; do
         if $DOCKER_COMPOSE -f docker-compose.test.yml exec -T postgres pg_isready -U postgres > /dev/null 2>&1; then
             log_info "数据库已就绪"
@@ -130,16 +118,13 @@ setup_environment() {
         log_debug "等待数据库启动... ($i/30)"
         sleep 2
     done
-    
-    # 启动应用服务
+# 启动应用服务
     log_info "启动应用服务..."
     $DOCKER_COMPOSE -f docker-compose.test.yml up -d inty-backend
-    
-    # 等待应用启动
+# 等待应用启动
     log_info "等待应用服务启动..."
     sleep 15
-    
-    # 健康检查
+# 健康检查
     for i in {1..30}; do
         if curl -f http://localhost:8000/health > /dev/null 2>&1; then
             log_info "应用服务已就绪"
@@ -148,14 +133,12 @@ setup_environment() {
         log_debug "等待应用服务启动... ($i/30)"
         sleep 2
     done
-    
-    # 验证服务状态
+# 验证服务状态
     log_info "验证服务状态..."
     $DOCKER_COMPOSE -f docker-compose.test.yml ps
     
     log_info "测试环境启动完成!"
 }
-
 # 启动监控服务
 setup_monitoring() {
     log_info "启动监控服务..."
@@ -165,22 +148,18 @@ setup_monitoring() {
     log_info "  Grafana: http://localhost:3000 (admin/admin123)"
     log_info "  Prometheus: http://localhost:9090"
 }
-
-# 清理环境
+#清理环境
 cleanup_environment() {
     log_info "清理测试环境..."
-    
-    # 停止所有服务
+#停止所有服务
     $DOCKER_COMPOSE -f docker-compose.test.yml down -v
-    
-    # 清理Docker资源
+#清理Docker资源
     log_info "清理Docker资源..."
     docker system prune -f
     
     log_info "环境清理完成"
 }
-
-# 执行负载测试
+# 负载负载测试
 run_load_test() {
     local test_type=$1
     local users=$2
@@ -197,12 +176,10 @@ run_load_test() {
     log_info "  生成速率: $spawn_rate"
     log_info "  持续时间: $duration"
     log_info "  目标主机: $host"
-    
-    # 生成时间戳
+#生成计时器
     local timestamp=$(date +%Y%m%d_%H%M%S)
     local output_prefix="test-data/${test_type}_${timestamp}"
-    
-    # 构建命令参数
+# 构建命令参数
     local cmd_args="-f locustfile.py --host=$host --users=$users --spawn-rate=$spawn_rate"
     
     if [ "$duration" != "" ]; then
@@ -220,8 +197,7 @@ run_load_test() {
     if [ "$csv" = "true" ]; then
         cmd_args="$cmd_args --csv=${output_prefix}"
     fi
-    
-    # 启动Locust测试
+# 启动Locust测试
     if [ "$headless" = "true" ]; then
         log_info "运行无界面测试..."
         locust $cmd_args
@@ -231,15 +207,13 @@ run_load_test() {
         log_info "Locust Web界面: http://localhost:8089"
         log_info "请在Web界面中配置测试参数并启动测试"
         log_info "按Ctrl+C停止Locust服务"
-        
-        # 等待用户中断
+# 等待用户中断
         trap '$DOCKER_COMPOSE -f docker-compose.test.yml stop locust-master locust-worker' INT
         while true; do
             sleep 5
         done
     fi
 }
-
 # 获取预定义测试配置
 get_test_config() {
     local test_type=$1
@@ -262,10 +236,9 @@ get_test_config() {
             ;;
     esac
 }
-
 # 主函数
 main() {
-    # 默认参数
+# 默认参数
     local test_type="basic"
     local users="20"
     local spawn_rate="2"
@@ -277,8 +250,7 @@ main() {
     local setup_only="false"
     local cleanup_only="false"
     local monitor="false"
-    
-    # 解析命令行参数
+# 解析命令行参数
     while [[ $# -gt 0 ]]; do
         case $1 in
             -h|--help)
@@ -336,11 +308,9 @@ main() {
                 ;;
         esac
     done
-    
-    # 检查依赖
+#检查依赖关系
     check_dependencies
-    
-    # 处理特殊操作
+# 处理特殊操作
     if [ "$cleanup_only" = "true" ]; then
         cleanup_environment
         exit 0
@@ -353,25 +323,21 @@ main() {
         fi
         exit 0
     fi
-    
-    # 获取预定义配置
+# 获取预配置定义
     if [ "$test_type" != "custom" ]; then
         local config=$(get_test_config "$test_type")
         if [ "$config" != "" ]; then
             read -r users spawn_rate duration <<< "$config"
         fi
     fi
-    
-    # 启动环境
+# 启动环境
     setup_environment
     
     if [ "$monitor" = "true" ]; then
         setup_monitoring
     fi
-    
-    # 执行测试
+# 执行测试
     run_load_test "$test_type" "$users" "$spawn_rate" "$duration" "$host" "$headless" "$html" "$csv"
 }
-
 # 运行主函数
 main "$@"

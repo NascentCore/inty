@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 数据库操作模块
 提供安全的数据库连接和操作功能
@@ -215,30 +215,26 @@ class DatabaseManager:
         stats = {}
         
         async with self.get_connection() as conn:
-            # 总智能体数量
+# 总智能体数量
             stats['total_agents'] = await conn.fetchval(
                 "SELECT COUNT(*) FROM agents WHERE deleted_at IS NULL"
             )
-            
-            # 有personality的智能体数量
+# 有个性的智能体数量
             stats['agents_with_personality'] = await conn.fetchval(
                 "SELECT COUNT(*) FROM agents WHERE personality IS NOT NULL AND personality != '' AND deleted_at IS NULL"
             )
-            
-            # 有tags的智能体数量
+# 有标签的智能体数量
             stats['agents_with_tags'] = await conn.fetchval(
                 "SELECT COUNT(*) FROM agents WHERE tags IS NOT NULL AND tags::text != '[]' AND deleted_at IS NULL"
             )
-            
-            # 既有personality又有tags的智能体数量
+#个性支持和标签的智能体数量
             stats['agents_with_both'] = await conn.fetchval(
                 """SELECT COUNT(*) FROM agents 
                    WHERE personality IS NOT NULL AND personality != '' 
                    AND tags IS NOT NULL AND tags::text != '[]' 
                    AND deleted_at IS NULL"""
             )
-            
-            # 最近创建的智能体数量（过去30天）
+#最近创建的智能体数量（过去30天）
             stats['recent_agents'] = await conn.fetchval(
                 """SELECT COUNT(*) FROM agents 
                    WHERE created_at > NOW() - INTERVAL '30 days' 
@@ -284,8 +280,7 @@ def load_config_from_yaml(config_path: str) -> AppConfig:
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config_data = yaml.safe_load(f)
-        
-        # 提取数据库配置
+# 提取数据库配置
         db_config = DatabaseConfig(**config_data['database'])
         
         return AppConfig(

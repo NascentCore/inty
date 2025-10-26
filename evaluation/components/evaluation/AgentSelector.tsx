@@ -46,24 +46,21 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   onChange,
   maxSelection = 10,
 }) => {
-  // 状态管理
+// 状态管理
   const [searchText, setSearchText] = useState("");
   const [visibilityFilter, setVisibilityFilter] = useState<string>("all");
-
-  // 智能体数据 - 使用现有的agents API
+// 智能体数据 - 使用现有的代理 API
   const { agents, loading, error, loadAgents } = useAgents({
     type: "all", // 获取所有智能体，然后前端过滤
     autoLoad: true,
     enableCache: true,
     useRecommended: false, // 不使用推荐API，使用完整列表
   });
-
-  // 过滤智能体
+// 过滤智能体
   const filteredAgents = useMemo(() => {
-    // 确保agents是数组，处理可能的API响应格式问题
+//保证agents是货物，处理可能的API响应格式问题
     let agentsArray = agents;
-
-    // 如果agents是{code, message, data}格式，提取data
+// 如果agents是{code, message, data}格式，提取数据
     if (
       agents &&
       typeof agents === "object" &&
@@ -80,13 +77,12 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
     }
 
     return agentsArray.filter((agent) => {
-      // 搜索过滤
+// 搜索过滤
       const matchesSearch =
         !searchText ||
         agent.name.toLowerCase().includes(searchText.toLowerCase()) ||
         agent.description?.toLowerCase().includes(searchText.toLowerCase());
-
-      // 可见性过滤 - 处理大小写差异
+// 可见性过滤 - 处理大小写差异
       const matchesVisibility =
         visibilityFilter === "all" ||
         agent.visibility?.toLowerCase() === visibilityFilter.toLowerCase();
@@ -94,17 +90,16 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
       return matchesSearch && matchesVisibility;
     });
   }, [agents, searchText, visibilityFilter]);
-
-  // 选择/取消选择智能体
+// 选择/取消智能选择体
   const toggleAgent = useCallback(
     (agentId: string) => {
       const isSelected = selectedAgents.includes(agentId);
 
       if (isSelected) {
-        // 取消选择
+// 取消选择
         onChange(selectedAgents.filter((id) => id !== agentId));
       } else {
-        // 选择智能体
+// 选择智能体
         if (selectedAgents.length >= maxSelection) {
           message.warning(`最多只能选择${maxSelection}个智能体`);
           return;
@@ -114,14 +109,13 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
     },
     [selectedAgents, onChange, maxSelection],
   );
-
-  // 全选/取消全选
+// 全选/取消全选
   const handleSelectAll = useCallback(() => {
     if (selectedAgents.length === filteredAgents.length) {
-      // 取消全选
+// 取消全选
       onChange([]);
     } else {
-      // 全选（限制数量）
+// 全选（限制数量）
       const allIds = filteredAgents
         .slice(0, maxSelection)
         .map((agent) => agent.id);
@@ -208,7 +202,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
         </Row>
       </div>
 
-      {/* 选择统计 */}
+      {/*统计选择*/}
       {selectedAgents.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <Tag color="blue">

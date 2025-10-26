@@ -20,13 +20,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 /* 处理购买更新：
- * 处理完整的购买生命周期，购买流程:
- * - 前置检查: 验证 Google Play 服务可用性
- * - 查询商品: 从 Google Play 获取商品详情
+ * 处理完整的购买生命周期，购买流程：
+ * - 前置检查：验证Google Play服务可用性
+ * - 查询商品：从Google Play 获取商品详情
  * - 启动流程: 打开 Google Play 购买对话框
- * - 回调处理: 接收 onPurchasesUpdated() 回调
+ * - 回调处理：接收onPurchasesUpdated()回调
  * - 确认购买: 向 Google 确认购买
- * - 服务器验证: 将购买凭证发送到后端验证
+ * - 服务器验证：将购买资源发送到照明验证
  * - 更新状态: 更新本地订阅状态
 */
 internal class BillingPurchaseManager(
@@ -48,7 +48,7 @@ internal class BillingPurchaseManager(
                     LogUtils.i("购买成功，处理 ${purchases.size} 个购买")
                     for (purchase in purchases) {
                         handlePurchase(purchase)
-                        // 发送购买成功事件
+// 发送购买成功事件
                         eventScope.launch { eventFlow.emit(BillingEvent.PurchaseSuccess(purchase)) }
                     }
                 } else {
@@ -59,7 +59,7 @@ internal class BillingPurchaseManager(
 
             BillingClient.BillingResponseCode.USER_CANCELED -> {
                 LogUtils.i("用户取消购买")
-                // 用户取消不发送失败事件
+// 用户取消不发送失败事件
             }
 
             BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> {
@@ -188,8 +188,7 @@ internal class BillingPurchaseManager(
             if (!purchase.isAcknowledged) {
                 acknowledgePurchase(purchase)
             }
-
-            // 调用后端验证订阅信息，验证成功后再更新状态
+// 调用验证订阅信息，验证成功后再更新状态
             verifySubscriptionWithServer(purchase)
         }
     }
@@ -201,13 +200,12 @@ internal class BillingPurchaseManager(
         billingClient.acknowledgePurchase(acknowledgePurchaseParams) { billingResult ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 LogUtils.i("购买确认成功")
-                // 确认成功，通知购买成功事件
+// 确认成功，通知购买成功事件
                 eventScope.launch { eventFlow.emit(BillingEvent.PurchaseSuccess(purchase)) }
             } else {
                 LogUtils.e("购买确认失败: ${billingResult.debugMessage}")
                 showError("Purchase acknowledgment failed")
-
-                // 购买确认失败，回滚订阅状态
+// 购买确认失败，回滚订阅状态
                 val oldStatus = VipStatus(isSubscribed = false)
                 vipStatusFlow.value = oldStatus
                 BillingStorage.saveLocalVipStatus(oldStatus)
@@ -225,11 +223,11 @@ internal class BillingPurchaseManager(
         }
     }
 
-    /** 调用后端验证订阅信息 */
+    /** 调用验证订阅信息 */
     private fun verifySubscriptionWithServer(purchase: Purchase) {
         eventScope.launch {
             try {
-                // 构建验证请求
+// 构建验证请求
                 val verifyRequest =
                     SubscriptionVerifyRequest(
                         productId = purchase.products.firstOrNull() ?: "",
@@ -238,8 +236,7 @@ internal class BillingPurchaseManager(
                     )
 
                 LogUtils.d("验证订阅: productId=${verifyRequest.productId}, purchaseToken=${verifyRequest.purchaseToken}, orderId=${verifyRequest.orderId}")
-
-                // 调用验证接口
+// 调用验证接口
                 val result = api.verifySubscription(verifyRequest)
 
                 when (result) {
@@ -247,7 +244,7 @@ internal class BillingPurchaseManager(
                         val response = result.data
                         if (response.isVerified) {
                             LogUtils.i("✅ 订阅验证成功")
-                            // 验证成功后更新状态
+// 验证成功后更新状态
                             val newStatus =
                                 VipStatus(
                                     isSubscribed = true,
@@ -274,9 +271,9 @@ internal class BillingPurchaseManager(
         }
     }
 
-    /** 检查购买前的状态 */
+    /** 查看购买前的状态 */
     fun checkPurchasePreconditions(activity: Activity): Boolean {
-        // 检查 Google Play 服务是否可用
+// 检查Google Play服务是否可用
         val googleApiAvailability = GoogleApiAvailability.getInstance()
         val context = activity.applicationContext
         val resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context)
@@ -290,7 +287,7 @@ internal class BillingPurchaseManager(
 
             ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED -> {
                 LogUtils.w("⚠️ Google Play 服务需要更新")
-                // 尝试更新 Google Play 服务
+// 尝试更新 Google Play 服务
                 googleApiAvailability.getErrorDialog(activity, resultCode, 1001)?.show()
                 showError("Google Play Service update required")
                 return false
@@ -320,8 +317,7 @@ internal class BillingPurchaseManager(
                 return false
             }
         }
-
-        // 检查设备是否支持计费
+// 查询设备是否支持设备
         if (!isBillingSupported()) {
             LogUtils.e("❌ 设备不支持 Google Play 计费")
             showError("Google Play billing isn't supported on this device")
@@ -331,7 +327,7 @@ internal class BillingPurchaseManager(
         return true
     }
 
-    /** 检查设备是否支持计费 */
+    /**查询设备是否支持电信*/
     private fun isBillingSupported(): Boolean {
         return try {
             val billingResult =
@@ -351,21 +347,20 @@ internal class BillingPurchaseManager(
 
     /** 启动购买流程 */
     fun launchBillingFlow(activity: Activity, productId: String) {
-        // 检查购买前条件
+//查询购买前条件
         if (!checkPurchasePreconditions(activity)) {
             showError("Purchase preconditions check failed")
             return
         }
 
         LogUtils.i("开始启动购买流程，商品ID: $productId")
-
-        // 执行购买流程
+// 执行购买流程
         launchBillingFlowInternal(activity, productId)
     }
 
     /** 内部购买流程实现 */
     private fun launchBillingFlowInternal(activity: Activity, productId: String) {
-        // 查询商品详情（使用 SkuDetails API）
+// 查询商品详情（使用SkuDetails API）
         val params =
             SkuDetailsParams.newBuilder()
                 .setSkusList(listOf(productId))
@@ -379,8 +374,7 @@ internal class BillingPurchaseManager(
                 BillingClient.BillingResponseCode.OK -> {
                     skuDetailsList?.firstOrNull()?.let { skuDetails ->
                         LogUtils.i("✅ 找到商品详情: ${skuDetails.sku}, 标题: ${skuDetails.title}, 价格: ${skuDetails.price} ${skuDetails.priceCurrencyCode}")
-
-                        // 使用 SkuDetails 启动购买流程
+// 使用 SkuDetails 启动购买流程
                         val billingFlowParams =
                             BillingFlowParams.newBuilder().setSkuDetails(skuDetails).build()
                         val launchResult =

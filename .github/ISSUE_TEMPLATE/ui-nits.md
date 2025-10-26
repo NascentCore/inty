@@ -1,10 +1,10 @@
 ---
-name: UI nits
-about: Nitpicking UI details
-title: "[UI nits] "
-labels: UI
-assignees: ''
+名称：UI尼特
+关于：挑剔 UI 细节
+标题：“[UI 尼特]”
+标签： 用户界面
+受让人：''
 
 ---
 
-> Screenshots of the existing issues
+> 现有问题截图

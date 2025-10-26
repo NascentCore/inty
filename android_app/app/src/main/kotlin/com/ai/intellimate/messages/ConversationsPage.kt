@@ -47,7 +47,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.EmptyDataState
 import com.ai.intellimate.utils.AuthClickable
 
-/** 主页面第二个tab，会话列表页面，包含关注和聊天列表 */
+/** 主页面第二个选项卡，会话列表页面，包含关注和聊天列表 */
 @Composable
 fun ConversationsPage(
     modifier: Modifier,
@@ -57,7 +57,7 @@ fun ConversationsPage(
     isRefreshingConversations: Boolean = false,
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
-    // 使用 PageTrackingHelper 进行页面跟踪
+// 使用PageTrackingHelper进行页面跟踪
     LaunchedEffect(Unit) {
         PageTrackingHelper.trackPageView(
             "ConversationsPage",
@@ -134,7 +134,7 @@ private fun Content(
     }
 }
 
-/** 消息Tab内容 */
+/** 消息选项卡内容 */
 @Composable
 private fun MessageTabContent(
     conversations: List<ConversationItem>,
@@ -144,20 +144,17 @@ private fun MessageTabContent(
     onLoadMore: (() -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
-
-    // 检测滚动到底部
+// 检测滚动到底部
     val shouldLoadMore by remember {
         derivedStateOf {
             val layoutInfo = listState.layoutInfo
             val totalItems = layoutInfo.totalItemsCount
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-
-            // 当滚动到倒数第3项时触发加载更多
+// 当滚动到倒数第3项时触发加载更多
             totalItems > 0 && lastVisibleItem >= totalItems - 3 && !isLoading
         }
     }
-
-    // 监听滚动状态，触发加载更多
+// 监听滚动状态，触发加载更多
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore) {
             onLoadMore?.invoke()
@@ -166,7 +163,7 @@ private fun MessageTabContent(
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(state = listState, modifier = Modifier.matchParentSize()) {
-            // 刷新指示器
+// 刷新格式
             if (isRefreshing) {
                 item {
                     Box(
@@ -182,8 +179,7 @@ private fun MessageTabContent(
                     }
                 }
             }
-
-            // 会话列表
+// 会话列表
             if (conversations.isNotEmpty()) {
                 runCatching {
                     itemsIndexed(
@@ -201,8 +197,7 @@ private fun MessageTabContent(
                 }
                     .onFailure { it.printStackTrace() }
             }
-
-            // 加载更多指示器
+// 加载更多一个月
             if (isLoading) {
                 item {
                     Box(
@@ -237,8 +232,7 @@ private fun ChatHistoryItem(
 ) {
     Row(modifier = modifier.height(88.dp), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(16.dp))
-
-        // 头像
+//头像
         AsyncImage(
             modifier = Modifier
                 .size(56.dp)
@@ -251,8 +245,7 @@ private fun ChatHistoryItem(
         )
 
         Spacer(Modifier.width(14.dp))
-
-        // 内容区域
+// 区域内容
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -281,8 +274,7 @@ private fun ChatHistoryItem(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-
-        // 右侧信息
+// 右侧信息
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = conversation.getShowTime(), fontSize = 12.sp, color = Color(0x8CFFFFFF))
             Spacer(Modifier.height(4.dp))

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 AI角色迁移脚本
 
@@ -177,23 +177,20 @@ class AgentMigrator:
         conn = await self._get_db_connection(from_env)
 
         try:
-            # 构建查询条件
+# 构建查询条件
             where_conditions = []
             params = []
             param_count = 0
-
-            # 过滤已删除的角色
+# 过滤已删除的角色
             if not export_config.get("include_deleted", False):
                 where_conditions.append("a.deleted_at IS NULL")
-
-            # 状态过滤
+# 状态过滤
             status_filter = export_config.get("status_filter")
             if status_filter:
                 param_count += 1
                 where_conditions.append(f"a.status = ${param_count}")
                 params.append(status_filter)
-
-            # 可见性过滤
+#可见性过滤
             visibility_filter = export_config.get("visibility_filter")
             if visibility_filter:
                 param_count += 1
@@ -203,8 +200,7 @@ class AgentMigrator:
             where_clause = (
                 " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
             )
-
-            # 基础查询
+# 基础查询
             query = f"""
                 SELECT 
                     a.*,
@@ -219,13 +215,11 @@ class AgentMigrator:
 
             rows = await conn.fetch(query, *params)
             self.logger.info(f"查询到 {len(rows)} 个AI角色")
-
-            # 转换数据
+# 转换数据
             agents_data = []
             for row in rows:
                 agent_dict = dict(row)
-
-                # 处理创建者信息
+# 处理创建者信息
                 creator_info = None
                 if export_config.get("include_creator_info", True):
                     creator_info = {
@@ -233,14 +227,13 @@ class AgentMigrator:
                         "nickname": agent_dict.pop("creator_nickname", None),
                         "phone": agent_dict.pop("creator_phone", None),
                     }
-                    # 移除None值
+#删除无价值
                     creator_info = {
                         k: v for k, v in creator_info.items() if v is not None
                     }
 
                 agent_dict["creator_info"] = creator_info if creator_info else None
-
-                # 处理JSON字段
+# 处理JSON字段
                 self._parse_json_fields(agent_dict)
 
                 try:
@@ -251,8 +244,7 @@ class AgentMigrator:
                         f"跳过无效角色数据 {agent_dict.get('id', 'unknown')}: {e}"
                     )
                     continue
-
-            # 保存到文件
+# 保存到文件
             export_data = {
                 "export_info": {
                     "source_environment": from_env,
@@ -279,8 +271,7 @@ class AgentMigrator:
         self.logger.info(f"开始向 {to_env} 环境导入AI角色")
 
         import_config = self.config.migration.get("import", {})
-
-        # 读取导入文件
+# 读取导入文件
         try:
             with open(import_file, "r", encoding="utf-8") as f:
                 import_data = json.load(f)
@@ -333,14 +324,13 @@ class AgentMigrator:
         import_config: Dict[str, Any],
     ):
         """导入单个AI角色"""
-        # 处理ID
+# 处理ID
         original_id = agent_data["id"]
         if import_config.get("keep_original_ids", False):
             new_id = original_id
         else:
             new_id = str(uuid.uuid4())
-
-        # 检查是否已存在
+#检查是否已存在
         existing = await conn.fetchrow(
             "SELECT id FROM agents WHERE id = $1 OR readable_id = $2",
             new_id,
@@ -369,15 +359,13 @@ class AgentMigrator:
                 f"角色 {agent_data.get('name', 'unknown')} 没有创建者ID，将设置为NULL"
             )
             return None
-
-        # 检查创建者是否存在
+#检查注册者是否存在
         existing_user = await conn.fetchrow(
             "SELECT id FROM users WHERE id = $1", creator_id
         )
         if existing_user:
             return creator_id
-
-        # 创建者不存在，尝试创建
+#创建者不存在，尝试创建
         creator_info = agent_data.get("creator_info", {})
         if creator_info and import_config.get("create_missing_users", True):
             try:
@@ -386,11 +374,10 @@ class AgentMigrator:
                 return creator_id
             except Exception as e:
                 self.logger.error(f"创建用户失败 {creator_id}: {e}")
-
-        # 使用默认创建者ID或设为NULL
+# 使用默认创建者ID或设为NULL
         default_creator = import_config.get("default_creator_id")
         if default_creator:
-            # 检查默认创建者是否存在
+#检查默认创建者是否存在
             default_exists = await conn.fetchrow(
                 "SELECT id FROM users WHERE id = $1", default_creator
             )
@@ -410,8 +397,7 @@ class AgentMigrator:
         email = creator_info.get("email")
         nickname = creator_info.get("nickname", "Imported User")
         phone = creator_info.get("phone")
-
-        # 基本用户信息
+# 基本用户信息
         user_data = {
             "id": user_id,
             "email": email,
@@ -421,11 +407,9 @@ class AgentMigrator:
             "created_at": datetime.now(),
             "auth_method": "IMPORTED",
         }
-
-        # 移除None值
+#删除无价值
         user_data = {k: v for k, v in user_data.items() if v is not None}
-
-        # 构建插入语句
+# 构建插入语句
         columns = list(user_data.keys())
         placeholders = [f"${i+1}" for i in range(len(columns))]
         values = [user_data[col] for col in columns]
@@ -445,39 +429,33 @@ class AgentMigrator:
         new_id: str,
     ):
         """插入新的AI角色"""
-        # 处理创建者ID
+# 处理创建者ID
         creator_id = agent_data.get("creator_id")
         if not creator_id:
             creator_id = import_config.get("default_creator_id")
-
-        # 确保创建者存在
+#确保创建者存在
         creator_id = await self._ensure_creator_exists(
             conn, agent_data, creator_id, import_config
         )
-
-        # 如果指定了强制状态
+#如果指定了强制状态
         status = import_config.get("force_status") or agent_data["status"]
-
-        # 移除不需要的字段
+# 删除不需要的字段
         agent_data_clean = {
             k: v
             for k, v in agent_data.items()
             if k not in ["creator_info"] and v is not None
         }
-
-        # 更新字段
+# 更新字段
         agent_data_clean["id"] = new_id
         agent_data_clean["creator_id"] = creator_id
         agent_data_clean["status"] = status
         agent_data_clean["created_at"] = datetime.now()
         agent_data_clean["updated_at"] = None
-
-        # 构建插入语句
+# 构建插入语句
         columns = list(agent_data_clean.keys())
         placeholders = [f"${i+1}" for i in range(len(columns))]
         values = [agent_data_clean[col] for col in columns]
-
-        # 处理JSON字段
+# 处理JSON字段
         for i, (col, val) in enumerate(zip(columns, values)):
             if (
                 col
@@ -510,12 +488,11 @@ class AgentMigrator:
         agent_id: str,
     ):
         """更新现有AI角色"""
-        # 构建更新语句
+# 构建更新语句
         update_fields = []
         values = []
         param_count = 0
-
-        # 要更新的字段（排除ID和时间戳）
+#需要更新的字段（修复ID和计时器）
         exclude_fields = {"id", "readable_id", "created_at", "creator_info"}
 
         for key, value in agent_data.items():
@@ -524,8 +501,7 @@ class AgentMigrator:
 
             param_count += 1
             update_fields.append(f"{key} = ${param_count}")
-
-            # 处理JSON字段
+# 处理JSON字段
             if key in [
                 "background_images",
                 "settings",
@@ -539,13 +515,11 @@ class AgentMigrator:
                 value = json.dumps(value) if not isinstance(value, str) else value
 
             values.append(value)
-
-        # 添加更新时间
+#添加更新时间
         param_count += 1
         update_fields.append(f"updated_at = ${param_count}")
         values.append(datetime.now())
-
-        # 添加WHERE条件
+#添加WHERE条件
         param_count += 1
         values.append(agent_id)
 

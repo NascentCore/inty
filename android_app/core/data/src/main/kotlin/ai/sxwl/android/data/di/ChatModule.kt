@@ -11,11 +11,9 @@ import ai.sxwl.android.data.usecase.SyncChatDataUseCase
  * 提供聊天相关的依赖
  */
 object ChatModule {
-
-    // Repository
+// 存储库
     private val _chatRepository: ChatRepository by lazy { ChatRepositoryImpl() }
-
-    // UseCases
+// 例子
     val sendMessageUseCase: SendMessageUseCase by lazy {
         SendMessageUseCase(_chatRepository)
     }
@@ -27,7 +25,6 @@ object ChatModule {
     val syncChatDataUseCase: SyncChatDataUseCase by lazy {
         SyncChatDataUseCase(_chatRepository)
     }
-
-    // Repository for external access
+// 提供外部访问的存储库
     fun getChatRepository(): ChatRepository = _chatRepository
 }

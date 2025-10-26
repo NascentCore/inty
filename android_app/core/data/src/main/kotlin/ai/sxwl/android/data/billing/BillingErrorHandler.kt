@@ -5,7 +5,7 @@ import android.content.Context
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingResult
 
-/** Billing错误处理工具类 统一处理各种billing错误情况 */
+/** 控制器错误处理工具类统一处理各种控制器错误情况 */
 object BillingErrorHandler {
 
     /** 错误类型枚举 */
@@ -29,12 +29,10 @@ object BillingErrorHandler {
     ) {
         val errorMessage = getErrorMessage(billingResult, errorType)
         LogUtils.e("BillingErrorHandler - $errorMessage")
-
-        // 记录详细错误信息
+// 记录详细错误信息
         LogUtils.i("BillingErrorHandler - 详细错误信息: ${billingResult.debugMessage}")
         LogUtils.i("BillingErrorHandler - 错误响应码: ${billingResult.responseCode}")
-
-        // 提供解决建议
+// 提供解决建议
         provideSolutionSuggestions(billingResult, context)
     }
 

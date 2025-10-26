@@ -72,8 +72,7 @@ def test_guest_voice_auto_correction():
     )
 
     _validate_config(config)
-
-    # 应该自动修正为聊天限制
+# 应该自动修改聊天限制
     assert config.app.limits.guest_user_voice_24h_limit == 5
 
 
@@ -135,8 +134,7 @@ def test_guest_greater_than_free_auto_correction():
     )
 
     _validate_config(config)
-
-    # 应该使用默认值
+# 应该使用默认值
     assert config.app.limits.guest_user_chat_24h_limit == 10
     assert config.app.limits.free_user_chat_24h_limit == 100
     assert config.app.limits.guest_user_voice_24h_limit == 10
@@ -170,8 +168,7 @@ def test_valid_config_no_changes():
     )
 
     _validate_config(config)
-
-    # 所有值保持不变
+#所有价值保持不变
     assert config.app.limits.guest_user_chat_24h_limit == 5
     assert config.app.limits.free_user_chat_24h_limit == 10
     assert config.app.limits.guest_user_voice_24h_limit == 5
@@ -205,8 +202,7 @@ def test_guest_equals_free_is_valid():
     )
 
     _validate_config(config)
-
-    # 允许相等，不应该被修改
+# 修改允许，不应该被
     assert config.app.limits.guest_user_chat_24h_limit == 10
     assert config.app.limits.free_user_chat_24h_limit == 10
     assert config.app.limits.guest_user_voice_24h_limit == 10
@@ -227,8 +223,7 @@ def test_local_only_guest_user_image_gen_limit_in_non_local_environment(config):
 def test_local_only_guest_user_image_gen_limit_in_local_environment(config):
     config.app.environment = Environment.LOCAL
     config.app.limits.local_only_guest_user_image_gen_24h_limit = 5
-
-    # 应该不抛出异常
+# 不应该发送异常
     _validate_config(config)
     assert config.app.limits.local_only_guest_user_image_gen_24h_limit == 5
 
@@ -236,8 +231,7 @@ def test_local_only_guest_user_image_gen_limit_in_local_environment(config):
 def test_local_only_guest_user_image_gen_limit_zero_in_non_local_environment(config):
     config.app.environment = Environment.PROD
     config.app.limits.local_only_guest_user_image_gen_24h_limit = 0
-
-    # 应该不抛出异常
+# 不应该发送异常
     _validate_config(config)
     assert config.app.limits.local_only_guest_user_image_gen_24h_limit == 0
 

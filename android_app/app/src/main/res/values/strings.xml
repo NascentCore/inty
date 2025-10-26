@@ -1,15 +1,14 @@
 <!--
-    TODO: Use the following prompt to revise the strings.xml, dont do it now,
-    as we are preparing for the release, which uses screenshots and we want to avoid churns.
-    Revise the wording of these messages according to general rules about similar situations in android app, additionally, following these following rules:
-    1. Be consistent
-    2. Be precise
-    3. Be kind and inclusive
-    4. Be concise
-    5. Be clear
-    6. Be natural
-    7. Be positive
--->
+    TODO：使用下面的prompt修改strings.xml，现在不要这样做，
+    因为我们正在preparing发布，它使用屏幕截图，我们希望避免流失。
+    根据android应用程序中类似情况的一般规则修改这些消息的措辞，另外，请遵循以下规则：
+    1. 保持一致
+    2.precise
+    3. 友善和包容
+    4. 简洁
+    5. 明确
+    6. 保持自然
+    7.保持积极态度-->
 <resources>
     <string name="app_name">IntelliMate</string>
     <string name="ID">ID:%s</string>
@@ -29,37 +28,37 @@
     <string name="logout_successfully">Logout successfully</string>
     <string name="delete_account_successfully">Your account has been deleted.</string>
 
-    <!-- Form validation messages -->
+    <！-- 表单验证消息 -->
     <string name="please_fill_required_fields">Please fill in all required fields</string>
 
-    <!-- Success messages -->
+    <！-- 成功消息 -->
     <string name="character_updated_successfully">Updated</string>
     <string name="character_deleted_successfully">Deleted</string>
     <string name="saved_successfully">Saved</string>
 
-    <!-- Error messages -->
+    <！-- 错误信息 -->
     <string name="update_failed">Update failed</string>
     <string name="delete_failed">Delete failed</string>
     <string name="creation_failed">Creation failed</string>
     <string name="user_avatar_size_too_large_with_size_format">File must be smaller than %s, got %s</string>
 
-    <!-- Network error messages -->
+    <！-- 网络错误信息 -->
     <string name="unknown_error">Unknown error</string>
     <string name="check_network_connection">please check network connection</string>
     <string name="please_try_again_later">please try again later</string>
 
 
-    <!-- Error message formats -->
+    <！-- 错误信息格式 -->
     <string name="update_failed_with_reason">Update failed: %s</string>
     <string name="delete_failed_with_reason">Delete failed: %s</string>
     <string name="creation_failed_with_reason">Creation failed: %s</string>
 
-    <!-- Generic error patterns -->
+    <！-- 通用错误模式 -->
     <string name="operation_error_with_reason" formatted="false">%s error: %s</string>
     <string name="operation_failed_check_network" formatted="false">%s failed, %s</string>
     <string name="operation_failed_try_later" formatted="false">%s failed, %s</string>
 
-    <!-- Edge swipe exit -->
+    <！-- 边缘滑动退出 -->
     <string name="edge_swipe_exit_hint">Swipe again to exit</string>
 
     <string name="premium_title">IntelliMate Premium</string>
@@ -90,7 +89,7 @@
     <string name="str_unlimit_dialog_content">You have reached free chat limit, subscribe to Premium to enjoy unlmited chat and other premium features!</string>
     <string name="str_unlimit_btn_text">Unlimited Chat</string>
 
-    <!-- Login and Registration -->
+    <！-- 登录并注册 -->
     <string name="welcome_to_intellimate">Welcome to IntelliMate</string>
     <string name="create_account_or_login">Create an account or log in to continue</string>
     <string name="continue_with_google">Continue with Google</string>
@@ -106,31 +105,31 @@
     <string name="age_above_36">Above 36</string>
     <string name="enter">Enter</string>
 
-    <!-- Credential Manager Error Messages -->
+    <！-- 凭证管理器错误消息 -->
     <string name="no_credentials_available">No credentials available</string>
     <string name="get_credential_failed">Failed to get credential</string>
     <string name="login_failed">Login failed</string>
 
-    <!-- Avatar Generation -->
+    <！-- 头像生成 -->
     <string name="generate_avatar">Generate Avatar</string>
     <string name="preview_generated_avatar">Preview Generated Avatar</string>
     <string name="describe_desired_avatar">Describe your desired avatar *</string>
     <string name="avatar_creation_hint_full">e.g.: A cute anime girl with long hair, big eyes, wearing a white dress…</string>
 
-    <!-- Character Creation -->
+    <！-- 角色创建 -->
     <string name="face_edit">Crop</string>
 
-    <!-- Report -->
+    <！-- 报告 -->
     <string name="report_description">Report description</string>
 
-    <!-- Settings -->
+    <！-- 设置 -->
     <string name="he_him">He/Him</string>
     <string name="she_her">She/Her</string>
     <string name="they_them">They/Them</string>
     <string name="save">Save</string>
     <string name="persona_placeholder">Your persona shows up here…</string>
 
-    <!-- Dialog Components -->
+    <！-- 对话框组件 -->
     <string name="are_you_sure">Are you sure?</string>
     <string name="delete_account_warning">All your data including chats history and created AI characters will be lost, and cannot be restored.</string>
     <string name="please_read_warning">Please read the warning carefully and proceed with caution.</string>
@@ -138,25 +137,25 @@
     <string name="delete">Delete</string>
 
 
-    <!-- Subscription popup title -->
+    <！-- 订阅弹出标题 -->
     <string name="premium_subscription_title">IntelliMate Premium</string>
     <string name="auto_renews_cancel">Auto-renew, cancel at any time</string>
     <string name="subscription_consent">By subscribing you agree to our</string>
     <string name="subscription_description_placeholder">Will be charged at the next billing date</string>
     <string name="subscription_description_fmt_str">%s will be charged %s, cancel at any time</string>
 
-    <!-- Chat -->
+    <！-- 聊天 -->
     <string name="chat_settings_my_persona_title">My Persona</string>
     <string name="chat_settings_settings_title">Settings</string>
 
-    <!-- VIP Components -->
+    <！-- VIP 组件 -->
     <string name="discount_save">OFF</string>
     <string name="no_subscription_plans">No subscription plans</string>
 
-    <!-- Agent Info -->
+    <！-- 代理信息 -->
     <string name="gender_tag_format">#%s</string>
 
-    <!-- Toast Messages -->
+    <！-- 祝酒消息 -->
     <string name="toast_google_play_unavailable">Failed to open Google Play Store.</string>
     <string name="toast_navigation_failed">Navigation failed, please try again later.</string>
     <string name="toast_crop_failed">Crop failed: %s</string>
@@ -171,7 +170,7 @@
     <string name="toast_check_account_deletion_error">Check Account Deletion Server Error !</string>
     <string name="toast_account_deletion_error">Account Deletion Server Error !</string>
 
-    <!-- Content Descriptions -->
+    <！-- 内容说明 -->
     <string name="content_desc_google_login">Google Login</string>
     <string name="content_desc_generated_avatar">Generated Avatar</string>
     <string name="content_desc_generated_avatar_index">Generated Avatar %d</string>
@@ -179,7 +178,7 @@
     <string name="content_desc_selected_avatar">Selected Avatar</string>
     <string name="content_desc_back">back</string>
 
-    <!-- Additional UI Text -->
+    <！-- 附加用户界面文本 -->
     <string name="generate_avatar_button">Generate</string>
     <string name="use_this_avatar_button">Use This Avatar</string>
     <string name="regen_button">Regen.</string>
@@ -215,7 +214,7 @@
     <string name="delete_button">Delete</string>
     <string name="cancel_button_full">Cancel</string>
 
-    <!-- Additional UI Text -->
+    <！-- 附加用户界面文本 -->
     <string name="keep_talking">Keep Talking</string>
     <string name="email_support">Email Support</string>
     <string name="support_email">support@inty.com</string>
@@ -230,13 +229,13 @@
     <string name="str_chat_disabled">Chat unavailable</string>
     <string name="str_agent_is_deleted">Character is no longer available</string>
 
-    <!-- Empty State Messages -->
+    <！-- 空状态消息 -->
     <string name="empty_conversations">No conversations yet\nStart chatting with your favorite characters!</string>
     <string name="empty_explore_data">No characters available\nTry refreshing or check your connection</string>
     <string name="empty_explore_error">Failed to load characters\nCheck your connection and try again</string>
     <string name="retry_button">Retry</string>
 
-    <!-- Bottom Navigation Tab Labels -->
+    <！-- 底部导航选项卡标签 -->
     <string name="tab_home">Chats</string>
     <string name="tab_messages">Messages</string>
     <string name="tab_create">Create</string>

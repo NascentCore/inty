@@ -31,8 +31,7 @@ object SignKeyConfig {
 
     /** 获取签名配置 */
     private val signingConfig: SigningConfig by lazy { loadSigningConfig() }
-
-    // Debug 签名配置常量
+// 调试签名配置常量
     val DEBUG_STORE_FILE: String
         get() = signingConfig.debug.storeFile
 
@@ -44,8 +43,7 @@ object SignKeyConfig {
 
     val DEBUG_KEY_PASSWORD: String
         get() = signingConfig.debug.keyPassword
-
-    // Release 签名配置常量
+// 释放签名配置常量
     val RELEASE_STORE_FILE: String
         get() = signingConfig.release.storeFile
 

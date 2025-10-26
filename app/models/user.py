@@ -40,16 +40,14 @@ class User(Base):
     """用户模型"""
 
     __tablename__ = "users"
-
-    # TODO: This should be a UUID, but we use string to allow prepend
-    # category prefixes like user-<uuid> for better readability.
+# TODO：这应该是一个UUID，但我们使用字符串来允许prepend
+# 类别 prefixes 像 user-<uuid> 考虑更好的判断性。
     id = Column(String, primary_key=True, comment="用户唯一标识符")
-
-    # DEPRECATED: app 显示 ID 而非 readable_id
+# DEPRECATED：应用程序显示ID而不是read_id
     readable_id = Column(
         String(8), unique=True, index=True, nullable=False, comment="用户可读ID"
     )
-    # TODO: Use SERIAL instead of string.
+# TODO：使用SERIAL而不是字符串。
     nickname = Column(String, index=True, comment="用户昵称，可搜索")
     avatar = Column(String, comment="用户头像URL")
     email = Column(String, comment="邮箱地址")
@@ -80,14 +78,12 @@ class User(Base):
     updated_at = Column(
         DateTime(timezone=True), onupdate=sa.text("now()"), comment="更新时间"
     )
-
-    # 账户删除相关字段
+# 账户删除相关字段
     deleted_at = Column(DateTime(timezone=True), comment="账户删除时间")
-    # DEPRECATED: This field is not needed anymore.
+# DEPRECATED：不再需要此字段。
     anonymized_at = Column(DateTime(timezone=True), comment="数据匿名化时间")
     deletion_reason = Column(String(255), comment="删除原因")
-
-    # 关系
+# 关系
     agents = relationship("Agent", back_populates="creator")
     following_agents = relationship(
         "Agent", secondary=agent_followers, back_populates="followers"
@@ -100,15 +96,13 @@ class User(Base):
     reports = relationship("Report", back_populates="reporter")
     notifications = relationship("UserNotification", back_populates="user")
     device_tokens = relationship("DeviceToken", back_populates="user")
-
-    # 订阅相关关系
+# 订阅相关关系
     subscriptions = relationship("UserSubscription", back_populates="user")
     subscription_transactions = relationship(
         "SubscriptionTransaction", back_populates="user"
     )
     subscription_usage = relationship("SubscriptionUsage", back_populates="user")
-
-    # 评测相关关系
+#体育相关关系
     evaluation_sessions = relationship("EvaluationSession", back_populates="creator")
 
 
@@ -124,14 +118,12 @@ class DeviceToken(Base):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
-
-    # 索引
+# 索引
     __table_args__ = (
         Index("ix_device_tokens_user_id", "user_id"),
         Index("ix_device_tokens_token", "token", unique=True),
     )
-
-    # 关联关系
+# 关联关系
     user = relationship("User", back_populates="device_tokens")
 
     def __repr__(self):

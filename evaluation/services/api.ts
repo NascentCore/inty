@@ -1,5 +1,5 @@
 /**
- * 此处代码是评测系统调用 Inty 后端 API
+ * 此处代码是体育系统调用 Inty 监听 API
  */
 
 import type {
@@ -20,18 +20,15 @@ import type {
 } from "../types";
 import { message } from "antd";
 import { Inty } from "inty";
-
-// =============================================================================
+// ===================================================================================================
 // 基础API配置
-// =============================================================================
-
-// Error logging API that show messages on the page and console
+// ===================================================================================================
+// 错误记录在页面和控制台上显示消息的 API
 export const logError = (msg: string) => {
   console.error(msg);
   message.error(msg);
 };
-
-// 全局 API Key 管理
+// 全局API 密钥管理
 let globalApiKey: string | null = null;
 
 export const setGlobalApiKey = (apiKey: string | null) => {
@@ -49,18 +46,18 @@ class ApiClient {
 
   constructor(baseURL: string, apiPrefix: string = "/api/v1") {
     this.baseURL = baseURL;
-    // 如果baseURL已经包含api/v1，则不使用apiPrefix
+// 如果baseURL已经包含api/v1，则不使用apiPrefix
     this.apiPrefix = baseURL.includes("/api/v1") ? "" : apiPrefix;
-    // This is the default headers for all requests.
-    // Some API endpoints needs different content header, like upload avatar,
-    // needs multipart/form-data.
+// 这是所有请求的默认标头。
+// 一些 API 端点需要不同的内容标头，例如上传头像，
+// 需要多部分/表单数据。
     this.headers = {
       "Content-Type": "application/json",
     };
   }
 
   private async request<T>(endpoint: string, options: any = {}): Promise<T> {
-    // 自动添加API前缀，如果endpoint已经包含/api/则不添加
+// 自动添加API出口，如果endpoint已经包含/api/则不添加
     const fullEndpoint = endpoint.startsWith("/api/")
       ? endpoint
       : `${this.apiPrefix}${endpoint}`;
@@ -74,21 +71,19 @@ class ApiClient {
         ...options.headers,
       },
     };
-
-    // 如果是上传请求（FormData），不要覆盖Content-Type
+// 如果是上传请求（FormData），不要覆盖Content-Type
     if (options.body instanceof FormData) {
       config.headers = {
         ...options.headers, // 优先使用传入的headers
         ...this.headers, // 然后合并默认headers（除了Content-Type）
       };
-      // 删除Content-Type，让浏览器自动设置；覆盖默认的 Content-Type: application/json
-      // TODO: 是否仅支持浏览器使用，代码中使用该 API 是否会有问题
+// 删除Content-Type，让浏览器自动设置；覆盖默认的Content-Type: application/json
+// TODO: 是否仅支持浏览器使用，代码中使用该 API 是否存在问题
       if (config.headers && typeof config.headers === "object") {
         delete (config.headers as any)["Content-Type"];
       }
     }
-
-    // 使用动态 API Key，如果没有则抛出错误
+// 使用动态API键，如果没有则自动出错
     const currentApiKey = getGlobalApiKey();
     if (!currentApiKey) {
       throw new Error("API Key 未设置，请先设置 API Key");
@@ -118,7 +113,7 @@ class ApiClient {
           this.status = status;
           this.statusText = statusText;
           this.errorData = errorData;
-          // Set the prototype explicitly.
+// 显式设置 prototype。
           Object.setPrototypeOf(this, ApiError.prototype);
         }
       }
@@ -138,8 +133,7 @@ class ApiClient {
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
         const result = await response.json();
-
-        // Check if it's APIResponse format
+// 检查是否为 APIResponse 格式
         if (result && typeof result === "object" && "code" in result) {
           if (result.code === 200) {
             return result.data;
@@ -162,8 +156,7 @@ class ApiClient {
       throw error;
     }
   }
-
-  // GET请求
+// GET请求
   async get<T>(
     endpoint: string,
     params?: Record<string, any>,
@@ -186,31 +179,27 @@ class ApiClient {
 
     return this.request<T>(finalEndpoint, { method: "GET", ...options });
   }
-
-  // POST请求
+// POST 请求
   async post<T>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: "POST",
       body: data ? JSON.stringify(data) : undefined,
     });
   }
-
-  // PUT请求
+// PUT 请求
   async put<T>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: "PUT",
       body: data ? JSON.stringify(data) : undefined,
     });
   }
-
-  // DELETE请求
+// 删除请求
   async delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, {
       method: "DELETE",
     });
   }
-
-  // 文件上传
+// 文件上传
   async upload<T>(
     endpoint: string,
     file: File,
@@ -232,13 +221,10 @@ class ApiClient {
     });
   }
 }
-
-// 创建API客户端实例
+//创建API客户端实例
 const apiClient = new ApiClient(window.location.origin);
-
 // 创建一个自定义的 Inty 客户端，支持相对路径
 let intyClient: Inty | null = null;
-
 // 初始化 Inty 客户端
 const initializeIntyClient = () => {
   const apiKey = getGlobalApiKey();
@@ -249,11 +235,9 @@ const initializeIntyClient = () => {
     });
   }
 };
-
 // 初始化客户端
 initializeIntyClient();
-
-// 更新 Inty 客户端的 API Key
+// 更新 Inty 客户端的 API 按键
 export const updateIntyClient = (apiKey: string | null) => {
   if (apiKey) {
     intyClient = new Inty({
@@ -264,93 +248,76 @@ export const updateIntyClient = (apiKey: string | null) => {
     intyClient = null;
   }
 };
-
-// =============================================================================
-// 评测会话API
-// =============================================================================
+// ===================================================================================================
+// 足球会话API
+// ===================================================================================================
 
 export const evaluationSessionApi = {
-  // 创建评测会话
+// 创建足球会话
   create: (data: EvaluationSessionCreateRequest): Promise<EvaluationSession> =>
     apiClient.post("/evaluation/sessions", data),
-
-  // 获取评测会话列表
+// 获取断层会话列表
   list: (params?: {
     skip?: number;
     limit?: number;
     status?: string;
   }): Promise<EvaluationSession[]> =>
     apiClient.get("/evaluation/sessions", params),
-
-  // 获取评测会话详情
+// 获取学期会话详情
   get: (sessionId: string): Promise<EvaluationSession> =>
     apiClient.get(`/evaluation/sessions/${sessionId}`),
-
-  // 启动评测会话
+// 启动足球会话
   start: (sessionId: string): Promise<{ success: boolean; message: string }> =>
     apiClient.post(`/evaluation/sessions/${sessionId}/start`),
-
-  // 取消评测会话
+// 取消房产会话
   cancel: (sessionId: string): Promise<{ success: boolean; message: string }> =>
     apiClient.post(`/evaluation/sessions/${sessionId}/cancel`),
-
-  // 获取评测结果
+// 获取比赛结果
   getResults: (sessionId: string): Promise<EvaluationResult[]> =>
     apiClient.get(`/evaluation/sessions/${sessionId}/results`),
-
-  // 删除评测会话
+// 出售物业会话
   delete: (sessionId: string): Promise<{ success: boolean; message: string }> =>
     apiClient.delete(`/evaluation/sessions/${sessionId}`),
-
-  // 批量创建评测会话
+// 批量创建房地产会话
   createBatch: (
     sessions: EvaluationSessionCreateRequest[],
   ): Promise<EvaluationSession[]> =>
     apiClient.post("/evaluation/sessions/batch", { sessions }),
-
-  // 对比评测会话
+// 对比比赛会话
   compare: (sessionIds: string[]): Promise<ComparisonResult> =>
     apiClient.post("/evaluation/sessions/compare", sessionIds),
 };
-
-// =============================================================================
+// ===================================================================================================
 // 智能体管理API
-// =============================================================================
+// ===================================================================================================
 
 export const agentApi = {
-  // 获取智能体列表 - API前缀由ApiClient自动处理
+// 获取智能体列表 - API海外由ApiClient自动处理
   list: (params?: {
     type?: "public" | "private";
     skip?: number;
     limit?: number;
   }): Promise<Agent[]> => apiClient.get("/ai/agents/me", params),
-
-  // 获取推荐智能体 - 使用现有API
+// 获取推荐智能体 - 使用现有API
   getRecommended: (): Promise<Agent[]> => apiClient.get("/ai/agents/recommend"),
-
-  // 搜索智能体 - 使用现有API
+// 搜索智能体 - 使用现有API
   search: (query: string): Promise<Agent[]> =>
     apiClient.get("/ai/agents/search", { q: query }),
-
-  // 获取智能体详情 - 使用现有API
+// 获取智能体详情 - 使用现有API
   get: (agentId: string): Promise<Agent> =>
     apiClient.get(`/ai/agents/${agentId}`),
-
-  // 创建智能体 - 使用现有API
+// 创建智能体 - 使用现有API
   create: (data: AgentCreateRequest): Promise<Agent> =>
     apiClient.post("/ai/agents", data),
-
-  // 更新智能体 - 使用现有API
+// 更新智能体 - 使用现有API
   update: (
     agentId: string,
     data: Partial<AgentUpdateRequest>,
   ): Promise<Agent> => apiClient.put(`/ai/agents/${agentId}`, data),
-
-  // 删除智能体 - 使用现有API
+// 删除智能体 - 使用现有API
   delete: (agentId: string): Promise<{ message: string }> =>
     apiClient.delete(`/ai/agents/${agentId}`),
-
-  // 部署智能体到生产环境 - 如果存在的话
+// 智能部署体到生产环境 - 如果存在的话
   deploy: (
     agentId: string,
     adminPassword: string,
@@ -363,57 +330,49 @@ export const agentApi = {
     apiClient.post(`/ai/agents/${agentId}/deploy`, {
       admin_password: adminPassword,
     }),
-
-  // 上传头像
+// 上传头像
   uploadAvatar: (file: File, croppingAvatar: boolean = true): Promise<any> =>
     apiClient.upload("/images", file, { cropping_avatar: croppingAvatar }),
 };
-
-// =============================================================================
-// 评测模板API
-// =============================================================================
+// ===================================================================================================
+// 体育模板API
+// ===================================================================================================
 
 export const templateApi = {
-  // 获取模板列表
+// 获取模板列表
   list: (params?: {
     include_public?: boolean;
     skip?: number;
     limit?: number;
   }): Promise<EvaluationTemplate[]> =>
     apiClient.get("/evaluation/templates", params),
-
-  // 创建模板
+// 创建模板
   create: (
     data: EvaluationTemplateCreateRequest,
   ): Promise<EvaluationTemplate> =>
     apiClient.post("/evaluation/templates", data),
-
-  // 获取模板详情
+// 获取模板详情
   get: (templateId: string): Promise<EvaluationTemplate> =>
     apiClient.get(`/evaluation/templates/${templateId}`),
-
-  // 更新模板
+// 更新模板
   update: (
     templateId: string,
     data: Partial<EvaluationTemplateCreateRequest>,
   ): Promise<EvaluationTemplate> =>
     apiClient.put(`/evaluation/templates/${templateId}`, data),
-
-  // 删除模板
+//删除模板
   delete: (templateId: string): Promise<{ message: string }> =>
     apiClient.delete(`/evaluation/templates/${templateId}`),
 };
-
-// =============================================================================
+// ===================================================================================================
 // 问题解析API
-// =============================================================================
+// ===================================================================================================
 
 export const questionApi = {
-  // 解析问题文件
+// 解析问题文件
   parseFile: (file: File): Promise<QuestionFileUpload> =>
     apiClient.upload("/evaluation/questions/parse", file),
-
-  // 验证问题列表
+// 验证问题列表
   validate: (
     questions: string[],
   ): Promise<{
@@ -423,16 +382,15 @@ export const questionApi = {
     stats: Record<string, number>;
   }> => apiClient.post("/evaluation/questions/validate", { questions }),
 };
-
-// =============================================================================
+// ===================================================================================================
 // 评分模型API
-// =============================================================================
+// ===================================================================================================
 
 export const scoringApi = {
-  // 获取可用模型 - 添加超时和错误处理
+// 获取可用模型 - 添加超时和错误处理
   getModels: async (): Promise<ScoringModel[]> => {
     try {
-      // 设置较短的超时时间
+// 设置唤醒的超时时间
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
 
@@ -444,8 +402,7 @@ export const scoringApi = {
       return models as ScoringModel[];
     } catch (error) {
       console.warn("获取评分模型失败，使用默认模型列表:", error);
-
-      // 返回默认模型列表
+// 返回默认模型列表
       return [
         {
           id: "meta-llama/llama-3.1-405b-instruct",
@@ -492,8 +449,7 @@ export const scoringApi = {
       ];
     }
   },
-
-  // 验证评分标准
+// 验证评分标准
   validateCriteria: (
     criteria: string,
   ): Promise<{
@@ -501,8 +457,7 @@ export const scoringApi = {
     issues: string[];
     suggestions: string[];
   }> => apiClient.post("/evaluation/scoring-criteria/validate", { criteria }),
-
-  // 获取OpenRouter完整模型列表
+// 获取OpenRouter完整模型列表
   getOpenRouterModels: (): Promise<
     {
       id: string;
@@ -511,13 +466,12 @@ export const scoringApi = {
     }[]
   > => apiClient.get("/ai/agents/models/openrouter"),
 };
-
-// =============================================================================
+// ===================================================================================================
 // 音色管理API
-// =============================================================================
+// ===================================================================================================
 
 export const voiceApi = {
-  // 获取音色列表
+// 获取音色列表
   listVoices: (params?: {
     search?: string;
     page_size?: number;
@@ -525,17 +479,15 @@ export const voiceApi = {
     category?: string;
   }): Promise<Voice[]> => apiClient.get("/text-to-speech/list-voices", params),
 };
-
-// =============================================================================
+// ===================================================================================================
 // 统计和导出API
-// =============================================================================
+// ===================================================================================================
 
 export const statsApi = {
-  // 获取统计信息
+// 获取统计信息
   get: (days?: number): Promise<EvaluationStats> =>
     apiClient.get("/evaluation/stats", { days }),
-
-  // 导出评测结果
+// 导出物业结果
   export: (
     data: ExportRequest,
   ): Promise<{
@@ -544,10 +496,9 @@ export const statsApi = {
     session_count: number;
   }> => apiClient.post("/evaluation/results/export", data),
 };
-
-// =============================================================================
+// ===================================================================================================
 // WebSocket连接管理
-// =============================================================================
+// ===================================================================================================
 
 export class WebSocketManager {
   private ws: WebSocket | null = null;
@@ -611,8 +562,7 @@ export class WebSocketManager {
         }
       });
     }
-
-    // 广播给所有监听器
+// 广播给所有监听器
     const allListeners = this.listeners.get("*");
     if (allListeners) {
       allListeners.forEach((callback) => {
@@ -668,13 +618,12 @@ export class WebSocketManager {
     return this.ws?.readyState ?? WebSocket.CLOSED;
   }
 }
-
-// =============================================================================
+// ===================================================================================================
 // 聊天API - 调用现有的聊天系统
-// =============================================================================
+// ===================================================================================================
 
 export const chatApi = {
-  // 获取用户聊天列表
+// 获取用户聊天列表
   getChats: (): Promise<
     Array<{
       id: string;
@@ -685,8 +634,7 @@ export const chatApi = {
       updated_at: string;
     }>
   > => apiClient.get("/chats/"),
-
-  // 创建新聊天会话
+// 创建新的聊天会话
   createChat: (data: {
     agent_id: string;
   }): Promise<{
@@ -696,8 +644,7 @@ export const chatApi = {
     is_active: boolean;
     created_at: string;
   }> => apiClient.post("/chats/", data),
-
-  // 使用现有的OpenAI兼容API发送消息 - 这是核心聊天接口
+// 使用现有的OpenAI兼容API发送消息 - 这是核心聊天接口
   sendMessage: (
     agentId: string,
     messages: Array<{
@@ -730,8 +677,7 @@ export const chatApi = {
       model: "chatbot",
       language: "zh",
     }),
-
-  // 获取Agent聊天详情和消息历史
+// 获取代理聊天详情和消息历史记录
   getChatDetail: (
     agentId: string,
     params?: {
@@ -763,8 +709,7 @@ export const chatApi = {
     size: number;
     has_more: boolean;
   }> => apiClient.get(`/chats/agents/${agentId}/detail`, params),
-
-  // 获取轻量级消息列表
+// 获取轻量级消息列表
   getMessages: (
     agentId: string,
     params?: {
@@ -784,8 +729,7 @@ export const chatApi = {
     has_more: boolean;
     page: number;
   }> => apiClient.get(`/chats/agents/${agentId}/messages`, params),
-
-  // 清除聊天消息 - 注意：API 期望单个 message_id 而不是数组
+// 清除聊天消息 - 注意：API 期望单个 message_id 而不是内存
   clearMessages: (
     agentId: string,
     messageId: string,
@@ -797,16 +741,13 @@ export const chatApi = {
       message_id: parseInt(messageId),
       timestamp: undefined, // Always use message_id approach
     }),
-
-  // 删除聊天会话
+// 删除聊天会话
   deleteChat: (chatId: string): Promise<{ message: string }> =>
     apiClient.delete(`/chats/${chatId}`),
-
-  // 获取智能体调试消息
+// 获取智能体调试消息
   getAgentDebugMessages: (agentId: string): Promise<any> =>
     apiClient.get(`/chats/agents/${agentId}/debug-messages`),
-
-  // 生成消息语音
+// 生成消息语音
   generateVoice: (
     agentId: string,
     messageId: string,
@@ -823,8 +764,7 @@ export const chatApi = {
       `/chats/agents/${agentId}/messages/${messageId}/voice?language=${language}`,
       {},
     ),
-
-  // 更新智能体聊天设置
+// 更新智能体聊天设置
   updateAgentSettings: (
     agentId: string,
     settings: {
@@ -836,13 +776,12 @@ export const chatApi = {
   ): Promise<any> =>
     apiClient.put(`/chats/agents/${agentId}/settings`, settings),
 };
-
-// =============================================================================
+// ===================================================================================================
 // 用户管理API - 用于提示词查询功能
-// =============================================================================
+// ===================================================================================================
 
 export const userApi = {
-  // 搜索用户列表
+// 搜索用户列表
   searchUsers: (params?: {
     search?: string;
     skip?: number;
@@ -859,8 +798,7 @@ export const userApi = {
     }>;
     total: number;
   }> => apiClient.get("/users", params),
-
-  // 获取用户列表
+// 获取用户列表
   getUsers: (params?: {
     skip?: number;
     limit?: number;
@@ -877,13 +815,12 @@ export const userApi = {
     }>
   > => apiClient.get("/users", params),
 };
-
-// =============================================================================
+// ===================================================================================================
 // 图片生成API
-// =============================================================================
+// ===================================================================================================
 
 export const imageApi = {
-  // 文本生成图片 - 使用与 Inty SDK 相同的认证方式
+// 文本生成图片 - 使用与 Inty SDK 相同的认证方式
   textToImage: (data: {
     prompt: string;
     negative_prompt?: string;
@@ -901,10 +838,9 @@ export const imageApi = {
     rai_reasons?: string[];
   }> => apiClient.post("/ai/agents/text-to-image", data),
 };
-
-// =============================================================================
+// ===================================================================================================
 // 导出默认API实例
-// =============================================================================
+// ===================================================================================================
 
 export default {
   sessions: evaluationSessionApi,
@@ -919,7 +855,7 @@ export default {
   images: imageApi,
   inty: intyClient,
   WebSocketManager,
-  // 获取 Inty 客户端的函数，确保只有在有 API Key 时才返回客户端
+// 获取 Inty 客户端的函数，确保只有在有 API Key 时才返回客户端
   getIntyClient: () => {
     if (!intyClient) {
       throw new Error("API Key 未设置，请先设置 API Key");

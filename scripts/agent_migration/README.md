@@ -6,8 +6,8 @@
 
 - `agent_migration.py` - 主脚本文件
 - `agent_migration_config.yaml` - 配置文件
-- `requirements.txt` - Python依赖
-- `MIGRATION_README.md` - 使用说明
+- `requirements.txt`- Python依赖
+-`MIGRATION_README.md` - 使用说明
 
 ## 安装依赖
 
@@ -90,8 +90,7 @@ python agent_migration.py import --to production --file agents_export.json --con
 1. **数据库权限**: 确保配置的数据库用户有足够权限读写agents和users表
 2. **备份数据**: 在导入生产环境前，建议先备份数据库
 3. **测试验证**: 先在测试环境之间互相迁移测试脚本功能
-4. **创建者处理**: 如果生产环境不存在对应的创建者用户，需要配置`default_creator_id`
-5. **ID冲突**: 默认会生成新的UUID，如需保持原ID需设置`keep_original_ids: true`
+4. **创建者处理**: 如果生产环境不存在对应的创建者用户，需要配置`default_creator_id`5.**ID冲突**：默认会生成新的UUID，如需保持原ID需设置`keep_original_ids: true`
 
 ## 日志文件
 

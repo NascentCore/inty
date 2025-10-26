@@ -38,7 +38,7 @@ class CharacterProfile(BaseModel):
     gender: str
     physical_appearance: Dict[str, Any]
     personality_summary: str
-    # Not the scene background, but the character background
+# 不是场景背景，而是人物背景
     background: CharacterBackground
     encounter: CharacterEncounter
     images: List[CharacterImage]

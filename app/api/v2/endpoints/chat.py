@@ -57,7 +57,7 @@ class ChatCompletionResponse(BaseModel):
     id: str
     created: int
     model: str
-    # 当前只会返回 1 个 choice，但是保留列表，以便未来实现其他功能，比如 ai 帮答。
+# 当前仅返回1个选择，但保留列表，以便未来实现其他功能，比如ai帮答。
     choices: List[ChatChoice]
     usage: ChatUsage
 
@@ -95,9 +95,8 @@ async def agent_chat_completions(
         logger.debug(
             f"request.messages数量: {len(request.messages) if request.messages else 0}"
         )
-
-        # 优化：简化Agent验证，在创建Agent实例时验证
-        # 简化查询，只获取基本字段
+# 优化：简化Agent验证，在创建Agent实例时验证
+# 简化查询，只获取基本字段
         with log_time(f"简化Agent验证: {agent_id}"):
             result = await db.execute(
                 select(models.Agent.id, models.Agent.name).where(
@@ -108,24 +107,21 @@ async def agent_chat_completions(
         if not agent_basic:
             logger.error(f"Agent未找到: {agent_id}")
             raise HTTPException(status_code=404, detail="Agent not found")
-
-        # 获取或创建与该Agent的唯一会话
+# 获取或创建与该代理的唯一会话
         with log_time(
             f"获取或创建聊天会话: user_id={current_user.id}, agent_id={agent_id}"
         ):
             chat = await chat_service.get_or_create_chat_by_agent(
                 db=db, user_id=current_user.id, agent_id=agent_id
             )
-
-        # 验证返回的chat中的agent_id是否与传入的一致
+# 验证返回的聊天中的agent_id是否与确定的一致
         if chat.agent_id != agent_id:
             logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Agent ID mismatch: expected={agent_id}, actual={chat.agent_id}",
             )
-
-        # 获取最后一条用户消息
+# 获取最后一条用户消息
         user_messages = [msg for msg in request.messages if msg.role == "user"]
         if not user_messages:
             logger.error("请求中没有用户消息")
@@ -134,8 +130,7 @@ async def agent_chat_completions(
 
         last_user_message = user_messages[-1].content
         messages = {"messages": [HumanMessage(content=last_user_message)]}
-
-        # 使用高性能的聊天专用Agent获取方法
+# 使用高性能的聊天专用Agent获取方法
         with log_time(f"查询 Agent 数据: {chat.agent_id}"):
             agent_data = await agent_service.get_agent_for_chat(
                 db, agent_id=chat.agent_id
@@ -155,25 +150,24 @@ async def agent_chat_completions(
         )
 
         if not is_allowed:
-            # 在返回错误前，先保存用户消息到聊天历史
-            # TODO: 考虑直接丢弃比较合适？但是会影响前后端一致性，需要跟 @zhiwei 讨论。
+# 在返回错误前，先保存用户消息到聊天记录
+# TODO: 考虑直接丢弃比较合适？但是会影响前面的一致性，需要跟@zhiwei 讨论。
             try:
                 chat_history_service.add_user_message(session_id, last_user_message)
                 logger.debug(f"用户消息已保存到历史记录: {session_id}")
             except Exception as e:
                 logger.warning(f"保存用户消息失败: {str(e)}")
-
-            # 根据用户类型返回不同错误码
+# 根据用户类型返回不同的错误码
             from app.models.user import AuthType
 
             if current_user.auth_type == AuthType.GUEST:
-                # 游客用户：提示登录
+#游客用户：提示登录
                 return create_business_error_response(
                     error_info=BusinessErrorCode.GUEST_LOGIN_REQUIRED,
                     extra_data={"used_count": used_count, "daily_limit": daily_limit},
                 )
             else:
-                # 已登录用户：提示订阅
+# 已登录用户：提示订阅
                 return create_business_error_response(
                     error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
                     extra_data={"used_count": used_count, "daily_limit": daily_limit},
@@ -181,16 +175,14 @@ async def agent_chat_completions(
 
         logger.debug(f"开始非流式聊天处理: session_id={session_id}")
         chat_processing_start = time.time()
-
-        # 并行获取聊天设置和AI回复
+# 获取聊天设置和AI回复
         try:
             settings_task = asyncio.create_task(
                 chat_service.get_or_create_chat_settings(
                     db, chat.id, current_user.id, agent_id
                 )
             )
-
-            # 先获取设置，然后传递给AI任务
+#先获取设置，然后提交给AI任务
             chat_settings = await settings_task
             logger.debug(f"chat_settings: {chat_settings.__dict__}")
 
@@ -202,8 +194,7 @@ async def agent_chat_completions(
                     chat_settings=chat_settings,
                 )
             )
-
-            # 等待任务完成
+# 等待任务完成
             response_content = await ai_task
             chat_processing_time = time.time() - chat_processing_start
             logger.debug(
@@ -216,14 +207,13 @@ async def agent_chat_completions(
         except Exception as e:
             logger.error(f"Agent聊天处理失败: {str(e)}")
             raise
-
-        # 语音生成逻辑 - 根据chat_settings.voice_enabled决定是否自动播放
+# 语音生成逻辑 - 根据chat_settings。voice_enabled决定是否自动播放
         audio_url = None
         audio_duration = None
         try:
-            # 语音自动播放逻辑：chat_settings.voice_enabled = true 时自动生成语音
+# 语音自动播放逻辑：chat_settings.voice_enabled = true时自动生成语音
             if chat_settings.voice_enabled:
-                # TODO: 添加一个默认语音 ID
+# TODO:添加一个默认语音ID
                 agent_voice_id = agent_data.get("voice_id")
 
                 with log_time(
@@ -249,9 +239,8 @@ async def agent_chat_completions(
         except Exception as e:
             logger.error(f"语音生成失败: {str(e)}")
             logger.exception("语音生成异常详细信息:")
-            # 语音生成失败不影响聊天功能
-
-        # 记录聊天使用情况
+#语音生成失败不影响聊天功能
+# 记录聊天使用情况
         try:
             logger.debug(f"记录聊天使用情况: user_id={current_user.id}")
             await subscription_service.record_usage(
@@ -267,8 +256,7 @@ async def agent_chat_completions(
             logger.debug("聊天使用情况记录成功")
         except Exception as e:
             logger.warning(f"记录聊天使用情况失败: {str(e)}")
-
-        # 获取最新AI消息的完整信息
+#获取最新AI消息的完整信息
         try:
             latest_message_info = await chat_history_service.get_latest_ai_message_info(
                 db, session_id
@@ -276,23 +264,21 @@ async def agent_chat_completions(
         except Exception as e:
             logger.warning(f"获取最新消息信息失败: {str(e)}")
             latest_message_info = None
-
-        # 构建响应消息
+# 构建响应消息
         logger.debug("构建聊天响应消息")
         message = {"role": "assistant", "content": response_content}
-
-        # 添加消息的完整信息（id, meta_data, timestamp等）
+#添加消息的完整信息（id,meta_data,timestamp等）
         if latest_message_info:
             message["id"] = latest_message_info["id"]
             message["meta_data"] = latest_message_info["meta_data"]
             message["timestamp"] = latest_message_info["timestamp"]
-            # 如果数据库中有audio_url，使用数据库的，否则使用新生成的
+# 如果数据库中有audio_url，使用数据库的，否则使用新生成的
             if latest_message_info["audio_url"]:
                 message["audio_url"] = latest_message_info["audio_url"]
             elif audio_url:
                 message["audio_url"] = audio_url
         else:
-            # 如果获取失败，至少添加生成的语音URL
+#如果获取失败，至少添加生成的语音URL
             if audio_url:
                 message["audio_url"] = audio_url
 
@@ -303,7 +289,7 @@ async def agent_chat_completions(
         logger.debug(
             f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, {timing_message}"
         )
-        # Create ChatMessage object
+#创建ChatMessage对象
         chat_message = ChatMessage(
             role=message["role"],
             content=message["content"],
@@ -312,18 +298,15 @@ async def agent_chat_completions(
             timestamp=message.get("timestamp"),
             audio_url=message.get("audio_url"),
         )
-
-        # Create ChatChoice object
+#创建ChatChoice对象
         chat_choice = ChatChoice(index=0, message=chat_message, finish_reason="stop")
-
-        # Create ChatUsage object
+#创建ChatUsage对象
         chat_usage = ChatUsage(
             prompt_tokens=len(last_user_message.split()),
             completion_tokens=len(response_content.split()),
             total_tokens=len(last_user_message.split()) + len(response_content.split()),
         )
-
-        # Create ChatCompletionResponse object
+# 创建 ChatCompletionResponse 对象
         response_data = ChatCompletionResponse(
             id=f"chatcmpl-{uuid.uuid4().hex[:12]}",  # 保持随机生成的外层ID
             created=int(time.time()),

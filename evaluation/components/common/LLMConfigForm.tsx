@@ -25,7 +25,7 @@ export const LLMConfigForm: React.FC<LLMConfigFormProps> = ({
   disabled = false,
   onValuesChange,
 }) => {
-  // 在组件顶层获取表单实例
+// 在组件中获取表单实例
   const form = Form.useFormInstance();
 
   return (
@@ -55,18 +55,17 @@ export const LLMConfigForm: React.FC<LLMConfigFormProps> = ({
         }
       >
         {({ getFieldValue, setFieldValue }) => {
-          // 当 modelType 变为 "custom" 时，自动设置默认模型
+// 当modelType等于“custom”时，自动设置默认模型
           const currentModelType = getFieldValue("modelType");
           const currentModel = getFieldValue("model");
-
-          // 只在真正需要时才自动设置默认模型
-          // 避免覆盖用户已经选择的值
+// 只有在真正需要的时候才自动设置默认模型
+// 避免覆盖用户已经选择的值
           if (
             currentModelType === "custom" &&
             !currentModel &&
             models.length > 0
           ) {
-            // 检查是否已经有用户选择的值（可能是从后端加载的）
+// 检查是否已经有用户选择的值（可能是来自后台加载的）
             const hasUserSelection = currentModel && currentModel !== "";
 
             if (!hasUserSelection) {
@@ -87,7 +86,7 @@ export const LLMConfigForm: React.FC<LLMConfigFormProps> = ({
                 value={currentModel} // 显式传递当前值
                 onChange={(value) => {
                   setFieldValue("model", value);
-                  // 手动触发表单的 onValuesChange 事件
+// 手动触发表单的 onValuesChange 事件
                   if (onValuesChange) {
                     const allValues = form.getFieldsValue();
                     onValuesChange({ model: value }, allValues);

@@ -1,10 +1,10 @@
 # FastAPI 最佳实践
 
-这是我在初创公司使用的一系列最佳实践和约定。
+这是我在一小部分公司使用的一系列最佳实践和规定。
 
 ## 目录
 
-- [Fast Api最佳实践指南](#fast-api最佳实践指南)
+- [快速Api最佳实践指南](#fast-api最佳实践指南)
   - [目录](#目录)
   - [项目结构](#项目结构)
   - [异步路由](#异步路由)
@@ -13,14 +13,13 @@
   - [Pydantic](#pydantic)
     - [大量使用Pydantic](#大量使用pydantic)
     - [自定义基础模型](#自定义基础模型)
-    - [拆分Pydantic BaseSettings](#拆分pydantic-basesettings)
+    - [分割Pydantic BaseSettings](#分割pydantic-basesettings)
   - [依赖项](#依赖项)
     - [超越依赖注入](#超越依赖注入)
     - [链式依赖](#链式依赖)
-    - [拆分并复用依赖项。依赖调用会被缓存](#拆分并复用依赖项依赖调用会被缓存)
-    - [优先使用`async`依赖项](#优先使用async依赖项)
+    - [拆分并复用依赖项。依赖调用会被缓存](#拆分并复用依赖项依赖项会被缓存)- [优先使用`async`依赖项](#优先使用async依赖项)
   - [其他](#其他)
-    - [遵循REST规范](#遵循rest规范)
+    - [遵循REST规范](#遵循REST规范)
     - [FastAPI响应序列化](#fastapi响应序列化)
     - [如果必须使用同步SDK，请在线程池中运行它。](#如果必须使用同步sdk请在线程池中运行它)
     - [ValueErrors可能会变成Pydantic ValidationError](#valueerrors可能会变成pydantic-validationerror)
@@ -29,18 +28,14 @@
     - [设置数据库键命名约定](#设置数据库键命名约定)
     - [SQL优先，Pydantic次之](#sql优先pydantic次之)
     - [从一开始就设置异步测试客户端](#从一开始就设置异步测试客户端)
-    - [使用ruff](#使用ruff)
+    - [用户ruff](#用户ruff)
   - [额外部分](#额外部分)
 
 ## 项目结构
 
-项目结构有很多种，但最好的结构是一致、直观且没有意外的。
+项目结构有很多种，但最好的结构是一致的、且欣赏没有意外的。
 
-许多示例项目和教程按文件类型（如crud、routers、models）划分项目，这种方式对于微服务或范围较小的项目很有效。但是，这种方法并不适合我们这个包含许多领域和模块的单体应用。
-
-我发现对于这类情况，更具可扩展性和可演进性的结构是受Netflix的[Dispatch](https://github.com/Netflix/dispatch)启发，并做了一些小修改。
-
-```bash
+许多示例项目和教程按文件类型（如crud、路由器、模型）划分项目，这种方式对于微服务或范围较小的项目非常有效。但是，这种方法并不适合我们这个包含许多领域和模块的单体应用。我发现对于这类情况，增加可扩展性和可演进性的结构是受Netflix的[Dispatch](https://github.com/Netflix/dispatch)启发，并做了一些小修改。```bash
 fastapi-project
 ├── alembic/
 ├── src
@@ -113,13 +108,11 @@ fastapi-project
 from src.auth import constants as auth_constants
 from src.notifications import service as notification_service
 from src.posts.constants import ErrorCode as PostsErrorCode  # 以防每个包的constants模块中都有标准的ErrorCode
-```
+```## 策略路由
 
-## 异步路由
+FastAPI 首先是一个异步框架。它设计用于处理异步I/O操作，这也是它如此快速的原因。
 
-FastAPI首先是一个异步框架。它设计用于处理异步I/O操作，这也是它如此快速的原因。
-
-然而，FastAPI并不限制你只能使用`async`路由，开发者也可以使用同步路由。这可能会让初学者误以为它们是一样的，但实际上并非如此。
+然而，FastAPI限制并不是你可以使用的`async`路由，开发者也可以使用同步路由。这可能会让初学者误以为它们是一样的，但实际上并非如此。
 
 ### I/O密集型任务
 
@@ -166,31 +159,29 @@ async def perfect_ping():
       2. 等待期间，服务器不会接受任何新请求
    3. 服务器返回响应。
       1. 响应之后，服务器开始接受新请求
-2. `GET /good-ping`
-   1. FastAPI服务器接收请求并开始处理
-   2. FastAPI将整个路由`good_ping`发送到线程池，工作线程将在那里运行该函数
+2. `GET /good-ping`1. FastAPI服务器接收请求并开始处理
+   2.FastAPI将整个路线`good_ping`发送到线程池，工作线程将在那里运行该函数
    3. 在`good_ping`执行期间，事件循环从队列中选择下一个任务并处理它们（例如接受新请求、调用数据库）
       - 独立于主线程（即我们的FastAPI应用），工作线程将等待`time.sleep`完成。
       - 同步操作只阻塞子线程，而不是主线程。
    4. 当`good_ping`完成工作后，服务器向客户端返回响应
-3. `GET /perfect-ping`
-   1. FastAPI服务器接收请求并开始处理
-   2. FastAPI等待`asyncio.sleep(10)`
+3. `GET /perfect-ping`1. FastAPI服务器接收请求并开始处理
+   2.FastAPI等待`asyncio.sleep(10)`
    3. 事件循环从队列中选择下一个任务并处理它们（例如接受新请求、调用数据库）
-   4. 当`asyncio.sleep(10)`完成后，服务器完成路由的执行并向客户端返回响应
+   4. 当`asyncio.sleep(10)`完成后，服务器完成路由的执行客户端返回响应
 
-> [!WARNING]
+> [!警告]
 > 关于线程池的注意事项：
 >
-> - 线程比协程需要更多资源，因此它们不像异步I/O操作那样轻量。
-> - 线程池的线程数量是有限的，也就是说，你可能会耗尽线程，导致应用变慢。[了解更多](https://github.com/Kludex/fastapi-tips?tab=readme-ov-file#2-be-careful-with-non-async-functions)（外部链接）
+> - 线程比协程需要更多资源，因此它们不像异步 I/O 操作那样轻量。
+> - 线程池的线程数量是有限的，相反，你可能会疲惫线程，导致应用变慢。[了解更多](https://github.com/Kludex/fastapi-tips?tab=readme-ov-file#2-be-careful-with-non-async-functions)（外部链接）
 
 ### CPU密集型任务
 
-第二个需要注意的是，非阻塞的可等待对象或发送到线程池的操作必须是I/O密集型任务（例如打开文件、数据库调用、外部API调用）。
+第二个需要注意的是，非阻塞的可等待对象或发送到线程池的操作是I/O密集型任务（例如打开文件、数据库调用、外部API调用）。
 
-- 等待CPU密集型任务（例如繁重的计算、数据处理、视频转码）是没有意义的，因为CPU必须工作才能完成这些任务，而I/O操作是外部的，服务器在等待这些操作完成时什么也不做，因此它可以处理下一个任务。
-- 在其他线程中运行CPU密集型任务也不是有效的，因为[GIL（全局解释器锁）](https://realpython.com/python-gil/)的存在。简而言之，GIL只允许一个线程同时工作，这使得它对CPU任务毫无用处。
+- 等待CPU密集型任务（例如繁重的计算、数据处理、视频转码）是没有意义的，因为CPU必须工作才能完成这些任务，而I/O操作是外部的，服务器在等待这些操作完成时也不做，因此它可以处理下一个任务。
+- 在其他线程中运行CPU密集型任务也不是有效的，因为[GIL（全局解释器锁）](https://realpython.com/python-gil/)的存在。简单来说，GIL只允许一个线程同时工作，这使得它对CPU任务毫无用处。
 - 如果你想优化CPU密集型任务，你应该将它们发送到另一个进程中的工作节点。
 
 **困惑用户的相关 StackOverflow 问题**
@@ -200,15 +191,11 @@ async def perfect_ping():
 2. [https://stackoverflow.com/questions/65342833/fastapi-uploadfile-is-slow-compared-to-flask](https://stackoverflow.com/questions/65342833/fastapi-uploadfile-is-slow-compared-to-flask)
 3. [https://stackoverflow.com/questions/71516140/fastapi-runs-api-calls-in-serial-instead-of-parallel-fashion](https://stackoverflow.com/questions/71516140/fastapi-runs-api-calls-in-serial-instead-of-parallel-fashion)
 
-## Pydantic
+## __保留__16__
 
-### 大量使用Pydantic
+### 大量使用PydanticPydantic有丰富的数据验证和转换功能。
 
-Pydantic有丰富的功能来验证和转换数据。
-
-除了常规功能（如带有默认值的必填和非必填字段），Pydantic还有内置的综合数据处理工具，如正则表达式、枚举、字符串操作、电子邮件验证等。
-
-```python
+除了常规功能（如标注默认值的必填和非必填字段），Pydantic还内置了综合数据处理工具，如正则表达式、枚举、字符串操作、电子邮件验证等。```python
 from enum import Enum
 from pydantic import AnyUrl, BaseModel, EmailStr, Field
 
@@ -254,18 +241,14 @@ class CustomModel(BaseModel):
         default_dict = self.model_dump()
 
         return jsonable_encoder(default_dict)
-```
+```在上面的例子中，我们决定创建一个全局基础模型，它：
 
-在上面的例子中，我们决定创建一个全局基础模型，它：
+- 将所有日期时间字段序列化为具有显式时区的标准格式
+- 提供一个方法返回仅包含可序列化字段的字典
 
-- 将所有datetime字段序列化为具有显式时区的标准格式
-- 提供一个方法来返回仅包含可序列化字段的字典
+### 分割Pydantic BaseSettings
 
-### 拆分Pydantic BaseSettings
-
-BaseSettings是读取环境变量的一项伟大创新，但为整个应用使用单个BaseSettings随着时间的推移可能会变得混乱。为了提高可维护性和组织性，我们将BaseSettings拆分到不同的模块和领域中。
-
-```python
+BaseSettings 是读取环境变量的一项重大创新，但对于整个应用使用单个 BaseSettings 随着时间的推移可能会变得混乱。为了提高可维护性和组织性，将 BaseSettings 拆分到我们不同的模块和领域中。```python
 # src.auth.config
 from datetime import timedelta
 
@@ -462,19 +445,19 @@ async def get_user_post(
 
 ### 优先使用`async`依赖项
 
-FastAPI同时支持同步和异步依赖项，当你不需要等待任何东西时，很容易会想使用同步依赖项，但这可能不是最佳选择。
+FastAPI同时支持同步和异步依赖项，当你不需要等待任何东西时，很容易会想使用最佳同步依赖项，但可能不是选择。
 
-与路由一样，同步依赖项在线程池中运行。这里的线程也有代价和限制，如果只是进行小的非I/O操作，这些代价和限制是多余的。
+与路由一样，同步依赖项在线程池中。这里的线程运行也有代价和限制，如果只是进行小型非 I/O 操作，这些代价和限制是多余的。
 
 [了解更多](https://github.com/Kludex/fastapi-tips?tab=readme-ov-file#9-your-dependencies-may-be-running-on-threads)（外部链接）
 
 ## 其他
 
-### 遵循REST规范
+###遵循REST规范
 
 开发RESTful API可以更轻松地在如下路由中复用依赖项：
 
-1. `GET /courses/:course_id`
+1.`GET /courses/:course_id`
 2. `GET /courses/:course_id/chapters/:chapter_id/lessons`
 3. `GET /chapters/:chapter_id`
 
@@ -517,14 +500,12 @@ async def get_user_profile_by_id(
 
 你可能认为可以返回与路由的`response_model`匹配的Pydantic对象来进行一些优化，但你错了。
 
-FastAPI首先使用其`jsonable_encoder`将该pydantic对象转换为字典，然后使用你的`response_model`验证数据，最后才将你的对象序列化为JSON。
+FastAPI 首先使用其`jsonable_encoder`将该pydantic对象转换为字典，然后使用你的`response_model`验证数据，最后才将你的对象序列化为JSON。
 
-这意味着你的Pydantic模型对象会被创建两次：
+这意味着你的 Pydantic 模型对象会被创建两次：
 
-- 第一次，当你显式创建它以从路由返回时。
-- 第二次，FastAPI隐式创建它以根据response_model验证响应数据。
-
-```python
+- 第一次，当您显式地根据路由返回时创建它时。
+- 第二次，FastAPI隐式根据response_model验证响应数据创建它。```python
 from fastapi import FastAPI
 from pydantic import BaseModel, root_validator
 
@@ -549,9 +530,7 @@ async def root():
 [INFO] [2022-08-28 12:00:00.000000] created pydantic model
 [INFO] [2022-08-28 12:00:00.000020] created pydantic model
 
-```
-
-### 如果必须使用同步SDK，请在线程池中运行它
+```### 如果必须使用同步SDK，请在线程池中运行它
 
 如果你必须使用一个库与外部服务交互，并且它不是异步的，那么在外部工作线程中进行HTTP调用。
 
@@ -570,11 +549,9 @@ async def call_my_sync_library():
 
     client = SyncAPIClient()
     await run_in_threadpool(client.make_request, data=my_data)
-```
+```### ValueErrors 可能会变成Pydantic ValidationError
 
-### ValueErrors可能会变成Pydantic ValidationError
-
-如果你在直接面向客户端的Pydantic模式中引发`ValueError`，它将向用户返回一个详细的响应。
+如果您在面向直接客户端的Pydantic模式中引发`ValueError`，它将向用户返回一个详细的响应。
 
 ```python
 # src.profiles.schemas
@@ -605,17 +582,13 @@ router = APIRouter()
 @router.post("/profiles")
 async def get_creator_posts(profile_data: ProfileCreate):
    pass
-```
+```**响应示例：**
 
-**响应示例：**
-
-<img src="images/value_error_response.png" width="400" height="auto">
+<img src =“images/value_error_response.png”宽度=“400”高度=“自动”>
 
 ### 文档
 
-1. 除非你的API是公共的，否则默认隐藏文档。只在选定的环境中显式显示它。
-
-```python
+1.除非您的 API 是公共的，否则默认隐藏文档。仅在选定的环境中显式显示它。```python
 from fastapi import FastAPI
 from starlette.config import Config
 
@@ -664,17 +637,13 @@ router = APIRouter()
 )
 async def documented_route():
     pass
-```
+```将生成如下文档：
 
-将生成如下文档：
-
-<img src="images/custom_responses.png" width="400" height="auto">
+<img src="images/custom_responses.png" 宽度 = "400" 高度 = "自动">
 
 **设置数据库键命名约定**
 
-根据数据库的约定显式设置索引命名比使用sqlalchemy的默认命名方式更好。
-
-```jsx
+根据数据库的约定显式设置索引命名比使用sqlalchemy的默认命名方式更好。```jsx
 from sqlalchemy import MetaData
 
 POSTGRES_INDEXES_NAMING_CONVENTION = {
@@ -696,28 +665,23 @@ metadata = MetaData(naming_convention=POSTGRES_INDEXES_NAMING_CONVENTION)
 ```bash
 # alembic.ini
 file_template = %%(year)d-%%(month).2d-%%(day).2d_%%(slug)s
-```
+```### 设置数据库键命名约定
 
-### 设置数据库键命名约定
-
-保持名称的一致性很重要。我们遵循的一些规则：
+保持名称的一致性非常重要。我们遵循一些规则：
 
 1. 小写蛇形命名（lower_case_snake）
-2. 单数形式（例如`post`、`post_like`、`user_playlist`）
+2.单数形式（例如`post`、`post_like`、`user_playlist`）
 3. 用模块前缀对类似的表进行分组，例如`payment_account`、`payment_bill`、`post`、`post_like`
 4. 在表之间保持一致，但具体命名也可以，例如
    1. 在所有表中使用`profile_id`，但如果其中一些表只需要作为创作者的个人资料，则使用`creator_id`
-   2. 在`post_like`、`post_view`等抽象表中使用`post_id`，但在相关模块中使用具体命名，如`chapters.course_id`中的`course_id`
-5. datetime类型字段使用`_at`后缀
+   2. 在`post_like`、`post_view`等抽象表中使用`post_id`，但在相关模块中使用具体命名，如`chapters.course_id`中的`course_id`5.日期时间类型字段使用`_at`后缀
 6. date类型字段使用`_date`后缀
 
 ### SQL优先，Pydantic次之
 
-- 通常，数据库处理数据的速度比CPython快得多，也更简洁。
+- 通常，数据库处理数据的速度比CPython快，也更简洁。
 - 最好使用SQL进行所有复杂的连接和简单的数据操作。
-- 最好在数据库中为具有嵌套对象的响应聚合JSON。
-
-```python
+- 最好在数据库中为具有请求对象的响应聚合JSON。```python
 # src.posts.service
 from typing import Any
 
@@ -795,13 +759,9 @@ async def get_creator_posts(creator: dict[str, Any] = Depends(valid_creator_id))
    posts = await service.get_posts(creator["id"])
 
    return posts
-```
+```###从一开始就设置异步测试客户端
 
-### 从一开始就设置异步测试客户端
-
-使用数据库编写集成测试很可能在将来导致混乱的事件循环错误。立即设置异步测试客户端，例如[httpx](https://github.com/encode/starlette/issues/652)
-
-```python
+使用数据库编写集成测试很可能会导致混乱的事件循环错误。立即设置异步测试客户端，例如[httpx](https://github.com/encode/starlette/issues/652)```python
 import pytest
 from async_asgi_testclient import TestClient
 

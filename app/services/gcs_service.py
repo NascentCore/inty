@@ -37,20 +37,19 @@ class GCSService:
             文件的公共URL
         """
         try:
-            # 构建语音文件路径：voice/{年月}/{文件名}
+# 构建语音文件路径：voice/{年月}/{文件名}
             date_path = datetime.now().strftime("%Y%m")
             file_path = f"voice/{date_path}/{file_name}"
 
             logger.debug(f"GCS上传路径: {file_path}, 文件大小: {len(file_data)} bytes")
-
-            # 检查文件是否已存在（缓存机制）
+#检查文件是否已存在（服务器服务器）
             logger.debug(f"检查GCS文件是否存在: {file_path}")
             if check_gcs_file_exists(self.bucket_name, file_path):
                 logger.debug(f"语音文件已存在，直接返回缓存: {file_path}")
                 return f"https://storage.googleapis.com/{self.bucket_name}/{file_path}"
 
             logger.debug("文件不存在，开始上传到GCS")
-            # 上传到GCS
+# 上传到GCS
             public_url = upload_to_gcs(
                 file_data=file_data,
                 content_type=content_type,
@@ -81,7 +80,7 @@ class GCSService:
             是否删除成功
         """
         try:
-            # 如果是完整URL，提取路径
+# 如果是完整URL，提取路径
             if file_path.startswith("https://storage.googleapis.com/"):
                 file_path = file_path.split(f"{self.bucket_name}/", 1)[1]
 
@@ -104,7 +103,7 @@ class GCSService:
             文件是否存在
         """
         try:
-            # 如果是完整URL，提取路径
+# 如果是完整URL，提取路径
             if file_path.startswith("https://storage.googleapis.com/"):
                 file_path = file_path.split(f"{self.bucket_name}/", 1)[1]
 

@@ -15,8 +15,7 @@ class FeatureType(str, Enum):
 
 class SubscriptionFeatures:
     """订阅权益常量定义"""
-
-    # 权益功能定义
+# 权益功能定义
     FEATURES = {
         "unlimited_messages": {
             "key": "unlimited_messages",

@@ -17,14 +17,14 @@ import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Inty网络管理器 - 企业级网络库封装 提供统一的网络管理和API服务入口
+ * Inty网络管理器 - 企业级网络库封装提供统一的网络管理和API服务入口
  *
  * 核心功能：
- * 1. 统一的客户端管理和缓存
+ * 1.统一的客户端管理和存储
  * 2. 网络状态管理
- * 3. 统一的日志记录
- * 4. 环境配置管理
- * 5. 业务API服务入口
+ * 3.统一的日志记录
+ * 4.环境配置管理
+ * 5.业务API服务入口
  */
 object IntyNetworkManager {
 
@@ -32,10 +32,10 @@ object IntyNetworkManager {
     private var isInitialized = false
     private var applicationContextRef: WeakReference<Context>? = null
 
-    /** 初始化网络管理器 使用弱引用避免内存泄露 */
+    /** 初始化网络管理器使用弱引用避免内存丢失 */
     fun initialize(context: Context, buildType: String) {
         if (!isInitialized) {
-            // 使用弱引用保存 ApplicationContext，避免内存泄露
+// 使用弱引用保存ApplicationContext，避免内存泄漏
             this.applicationContextRef = WeakReference(context.applicationContext)
             NetworkStateManager.initialize(context)
             NetworkConfig.setBuildType(buildType)
@@ -44,7 +44,7 @@ object IntyNetworkManager {
         }
     }
 
-    /** 获取Inty客户端实例 支持客户端缓存和自动重新创建 */
+    /** 获取Inty客户端实例支持客户端缓存并自动重新创建 */
     fun getClient(): IntyClient {
         checkInitialized()
 
@@ -55,20 +55,20 @@ object IntyNetworkManager {
         return clientCache.getOrPut(cacheKey) { createClient(currentApiKey, currentBaseUrl) }
     }
 
-    /** 创建新的客户端实例 使用新的配置系统 */
+    /** 使用新的配置系统创建新的客户端实例 */
     private fun createClient(apiKey: String, baseUrl: String): IntyClient {
         val environmentConfig = NetworkConfig.getCurrentEnvironmentConfig()
         LogUtils.d("Creating new IntyClient: apiKey=${apiKey.take(8)}..., baseUrl=$baseUrl, environment=${NetworkConfig.getCurrentBuildType()}")
         return IntyOkHttpClient.builder().apiKey(apiKey).baseUrl(baseUrl).build()
     }
 
-    /** 清除客户端缓存 当用户登录状态发生变化时调用 */
+    /**当用户登录状态发生变化时调用清除客户端存储 */
     fun clearClientCache() {
         clientCache.clear()
         LogUtils.i("IntyNetworkManager: Cleared client cache")
     }
 
-    /** 清理资源，释放Context引用 在应用退出或需要重置时调用 */
+    /** 清理资源，释放上下文引用在应用退出或需要重置时调用 */
     fun cleanup() {
         clientCache.clear()
         applicationContextRef = null
@@ -76,7 +76,7 @@ object IntyNetworkManager {
         LogUtils.i("IntyNetworkManager: Cleaned up resources")
     }
 
-    /** 获取ApplicationContext（安全方式） 如果Context已被回收，返回null */
+    /** 获取ApplicationContext（安全方式）如果Context已被恢复，返回null */
     private fun getApplicationContext(): Context? {
         return applicationContextRef?.get()
     }
@@ -117,8 +117,7 @@ object IntyNetworkManager {
         isInitialized = false
         LogUtils.i("IntyNetworkManager released")
     }
-
-    // ==================== 业务API服务入口 ====================
+// ==================== 业务API服务入口 ====================
 
     /** 认证相关API 替换: IUserApi 的认证相关方法 */
     val auth: AuthService
@@ -140,20 +139,19 @@ object IntyNetworkManager {
     val subscription: SubscriptionService
         get() = SubscriptionService
 
-    /** 举报相关API 替换: IReportApi */
+    /** 报告相关API 替换: IReportApi */
     val report: ReportService
         get() = ReportService
 
     /** 网络状态管理器 */
     val networkState: NetworkStateManager
         get() = getNetworkStateManager()
-
-    // ==================== 请求执行功能 ====================
+// ==================== 请求执行功能 ====================
 
     /** 请求配置 */
     data class RequestConfig(val timeoutMs: Long = 30000)
 
-    /** 执行API请求 提供统一的请求执行和错误处理 */
+    /** 执行API请求提供统一的执行请求和错误处理 */
     suspend fun <T> executeRequest(
         operation: String,
         config: RequestConfig? = null,

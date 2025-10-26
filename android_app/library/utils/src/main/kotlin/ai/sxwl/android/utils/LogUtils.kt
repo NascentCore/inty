@@ -73,20 +73,17 @@ object LogUtils {
     private val CONFIG = Config()
     private val EXECUTOR: ExecutorService = Executors.newSingleThreadExecutor()
     private val I_FORMATTER_MAP = SimpleArrayMap<Class<*>, IFormatter<*>>()
-
-    // 使用 ThreadLocal 确保 SimpleDateFormat 的线程安全
+// 使用ThreadLocal保证SimpleDateFormat的线程安全
     private val simpleDateFormat = ThreadLocal.withInitial {
         SimpleDateFormat("yyyy_MM_dd HH:mm:ss.SSS ", Locale.getDefault())
     }
-
-    // 专门用于日期解析的 ThreadLocal SimpleDateFormat
+// 专门用于日期解析的ThreadLocal SimpleDateFormat
     private val dateFormat = ThreadLocal.withInitial {
         SimpleDateFormat("yyyy_MM_dd", Locale.getDefault())
     }
 
     fun getConfig(): Config = CONFIG
-
-    // 基础日志方法
+// 基础日志方法
     fun v(vararg contents: Any?) = log(V, CONFIG.globalTag, *contents)
     fun vTag(tag: String, vararg contents: Any?) = log(V, tag, *contents)
     fun d(vararg contents: Any?) = log(D, CONFIG.globalTag, *contents)
@@ -99,20 +96,17 @@ object LogUtils {
     fun eTag(tag: String, vararg contents: Any?) = log(E, tag, *contents)
     fun a(vararg contents: Any?) = log(A, CONFIG.globalTag, *contents)
     fun aTag(tag: String, vararg contents: Any?) = log(A, tag, *contents)
-
-    // 文件日志方法
+// 文件日志方法
     fun file(content: Any?) = log(FILE or D, CONFIG.globalTag, content)
     fun file(@TYPE type: Int, content: Any?) = log(FILE or type, CONFIG.globalTag, content)
     fun file(tag: String, content: Any?) = log(FILE or D, tag, content)
     fun file(@TYPE type: Int, tag: String, content: Any?) = log(FILE or type, tag, content)
-
-    // JSON日志方法
+// JSON日志方法
     fun json(content: Any?) = log(JSON or D, CONFIG.globalTag, content)
     fun json(@TYPE type: Int, content: Any?) = log(JSON or type, CONFIG.globalTag, content)
     fun json(tag: String, content: Any?) = log(JSON or D, tag, content)
     fun json(@TYPE type: Int, tag: String, content: Any?) = log(JSON or type, tag, content)
-
-    // XML日志方法
+// XML日志方法
     fun xml(content: String) = log(XML or D, CONFIG.globalTag, content)
     fun xml(@TYPE type: Int, content: String) = log(XML or type, CONFIG.globalTag, content)
     fun xml(tag: String, content: String) = log(XML or D, tag, content)
@@ -557,7 +551,7 @@ object LogUtils {
     }
 
     private fun printDeviceInfo(filePath: String, date: String) {
-        // 创建临时的 FileHead 避免多线程冲突
+// 创建临时的 FileHead 避免多线程冲突
         synchronized(CONFIG.fileHead) {
             CONFIG.fileHead.addFirst("Date of Log", date)
             input2File(filePath, CONFIG.fileHead.toString())
@@ -910,14 +904,12 @@ object LogUtils {
             val sb = kotlin.text.StringBuilder(128)
             sb.append("Intent { ")
             var first = true
-
-            // Action
+// 行动
             intent.action?.let { action ->
                 sb.append("act=").append(action)
                 first = false
             }
-
-            // Categories
+// 类别
             intent.categories?.let { categories ->
                 if (!first) sb.append(' ')
                 first = false
@@ -925,51 +917,44 @@ object LogUtils {
                 sb.append(categories.joinToString(","))
                 sb.append("]")
             }
-
-            // Data
+// 数据
             intent.data?.let { data ->
                 if (!first) sb.append(' ')
                 first = false
                 sb.append("dat=").append(data)
             }
-
-            // Type
+// 类型
             intent.type?.let { type ->
                 if (!first) sb.append(' ')
                 first = false
                 sb.append("typ=").append(type)
             }
-
-            // Flags
+// 标志
             val flags = intent.flags
             if (flags != 0) {
                 if (!first) sb.append(' ')
                 first = false
                 sb.append("flg=0x").append(Integer.toHexString(flags))
             }
-
-            // Package
+// 包裹
             intent.`package`?.let { pkg ->
                 if (!first) sb.append(' ')
                 first = false
                 sb.append("pkg=").append(pkg)
             }
-
-            // Component
+// 成分
             intent.component?.let { component ->
                 if (!first) sb.append(' ')
                 first = false
                 sb.append("cmp=").append(component.flattenToShortString())
             }
-
-            // Source Bounds
+// 源边界
             intent.sourceBounds?.let { bounds ->
                 if (!first) sb.append(' ')
                 first = false
                 sb.append("bnds=").append(bounds.toShortString())
             }
-
-            // Clip Data
+// 剪辑数据
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
                 intent.clipData?.let { clipData ->
                     if (!first) sb.append(' ')
@@ -977,8 +962,7 @@ object LogUtils {
                     clipData2String(clipData, sb)
                 }
             }
-
-            // Extras
+// 附加功能
             intent.extras?.let { extras ->
                 if (!first) sb.append(' ')
                 first = false
@@ -986,8 +970,7 @@ object LogUtils {
                 sb.append(bundle2String(extras))
                 sb.append('}')
             }
-
-            // Selector
+// 选择器
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
                 intent.selector?.let { selector ->
                     if (!first) sb.append(' ')
@@ -1040,7 +1023,7 @@ object LogUtils {
             }
 
             return try {
-                // 简单地将对象转换为字符串，然后格式化为JSON
+// 简单地转换对象为字符串，然后格式化为JSON
                 formatJson(obj.toString())
             } catch (t: Throwable) {
                 obj.toString()
@@ -1133,14 +1116,14 @@ object LogUtils {
         if (objClass.isAnonymousClass || objClass.isSynthetic) {
             val genericInterfaces = objClass.genericInterfaces
             val className = if (genericInterfaces.size == 1) {
-                // interface
+// 界面
                 var type = genericInterfaces[0]
                 while (type is ParameterizedType) {
                     type = type.rawType
                 }
                 type.toString()
             } else {
-                // abstract class or lambda
+// 抽象类或 lambda
                 var type = objClass.genericSuperclass
                 while (type is ParameterizedType) {
                     type = type.rawType

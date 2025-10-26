@@ -1,5 +1,5 @@
 /**
- * 评测系统主应用组件
+ * 体育系统主要应用组件
  * 包含路由管理、导航菜单、全局状态管理
  */
 
@@ -32,28 +32,24 @@ interface NavigationItem {
   label: string;
   description: string;
 }
-
 // 主应用内容组件
 const AppContent: React.FC = () => {
-  // 状态管理
+// 状态管理
   const [currentPage, setCurrentPage] = useState<PageKey>(() => {
-    // GEMINI: 从 localStorage 读取上次访问的页面，如果不存在则默认为 "evaluation"
+// GEMINI: 从 localStorage 读取上次访问的页面，如果不存在则默认为 "evaluation"
     const savedPage = localStorage.getItem("lastVisitedPage");
     return (savedPage as PageKey) || "chat";
   });
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
-
-  // API Key 管理
+// API 密钥管理
   const { apiKey, isApiKeyValid, isLoading, clearApiKey } = useApiKeyContext();
-
-  // GEMINI: 将当前页面保存到 localStorage
+// GEMINI: 将当前页面保存到localStorage
   useEffect(() => {
     localStorage.setItem("lastVisitedPage", currentPage);
   }, [currentPage]);
-
-  // 响应式检测
+// 响应式检测
   useEffect(() => {
     const checkScreenSize = () => {
       const mobile = window.innerWidth < 768;
@@ -70,10 +66,9 @@ const AppContent: React.FC = () => {
       window.removeEventListener("resize", checkScreenSize);
     };
   }, [collapsed]);
-
-  // 应用加载完成后隐藏加载动画
+//应用加载完成后隐藏加载动画
   useEffect(() => {
-    // 延迟一小段时间确保应用完全加载
+// 延迟时间确保应用完全加载
     const timer = setTimeout(() => {
       if (typeof window !== "undefined" && window.hideLoading) {
         window.hideLoading();
@@ -83,15 +78,13 @@ const AppContent: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, []);
-
-  // 检查是否需要显示 API Key 模态框
+//检查是否需要显示API键模式框
   useEffect(() => {
     if (!isLoading && !isApiKeyValid) {
       setShowApiKeyModal(true);
     }
   }, [isLoading, isApiKeyValid]);
-
-  // 如果正在加载，显示加载状态
+// 如果正在加载，则显示加载状态
   if (isLoading) {
     return (
       <div
@@ -109,13 +102,11 @@ const AppContent: React.FC = () => {
       </div>
     );
   }
-
-  // 处理侧边栏折叠/展开
+// 处理侧边栏折叠/展开
   const handleCollapse = (collapsed: boolean) => {
     setCollapsed(collapsed);
   };
-
-  // 导航菜单配置
+// 导航菜单配置
   const navigationItems: NavigationItem[] = [
     {
       key: "chat",
@@ -143,8 +134,7 @@ const AppContent: React.FC = () => {
       description: "查看历史评测会话和结果",
     },
   ];
-
-  // 获取页面标题
+// 获取页面标题
   const getPageTitle = () => {
     switch (currentPage) {
       case "evaluation":
@@ -159,8 +149,7 @@ const AppContent: React.FC = () => {
         return "智能体评测系统";
     }
   };
-
-  // 渲染页面内容
+// 渲染页面内容
   const renderPageContent = () => {
     switch (currentPage) {
       case "evaluation":
@@ -210,7 +199,7 @@ const AppContent: React.FC = () => {
             }
           }}
         >
-          {/* Logo区域 - 添加汉堡按钮 */}
+          {/* 补充区域添加 - 汉堡按钮 */}
           <div
             style={{
               padding: collapsed ? "16px 12px" : "16px 24px",
@@ -364,7 +353,7 @@ const AppContent: React.FC = () => {
           ></div>
         </Sider>
 
-        {/* 主内容区域 */}
+        {/* 主要内容区域 */}
         <Layout
           style={{
             marginLeft: isMobile ? 0 : collapsed ? 80 : 220,
@@ -405,7 +394,7 @@ const AppContent: React.FC = () => {
         </Layout>
       </Layout>
 
-      {/* API Key 模态框 */}
+      {/* API 关键模式框 */}
       <ApiKeyModal
         visible={showApiKeyModal}
         onClose={() => setShowApiKeyModal(false)}
@@ -414,8 +403,7 @@ const AppContent: React.FC = () => {
     </>
   );
 };
-
-// 主应用组件，包装 API Key Provider
+// 主应用组件，封装 API Key Provider
 export const App: React.FC = () => {
   return (
     <ApiKeyProvider>

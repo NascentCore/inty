@@ -50,14 +50,12 @@ class MainViewModel : BaseVM() {
 
     val followingAgents = mutableStateListOf<AgentInfo>() // 关注的agents列表数据
     val userCreatedAgents = mutableStateListOf<AgentInfo>() // 用户自创建的agents数据
-
-    // Pagination state for user created agents
+// 用户创建代理的分页状态
     private var currentUserAgentsPage = 0
     private var _isLoadingUserAgents = MutableStateFlow(false)
     val isLoadingUserAgents = _isLoadingUserAgents.asStateFlow()
     private var hasMoreUserAgents = true
-
-    // 刷新状态，用于区分首次加载和刷新操作
+// 刷新状态，用于区分首次加载和刷新操作
     private var _isRefreshingUserAgents = MutableStateFlow(false)
     val isRefreshingUserAgents = _isRefreshingUserAgents.asStateFlow()
 
@@ -68,20 +66,19 @@ class MainViewModel : BaseVM() {
     val currentChatPageIndex = _currentChatPageIndex.asStateFlow()
 
     private var chatViewModel: ChatViewModel? = null
-
-    // 使用flow数据流的形式，感知用户数据
+// 使用flowdata流的形式，获取用户数据
     private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile = _userProfile.asStateFlow()
 
 
     init {
-        // 使用统一启动管理器的数据快速初始化UI
+// 使用统一启动管理器的数据快速初始化UI
         loadStartupData()
     }
 
-    /** 加载启动数据（快速展示） 从统一启动管理器获取预加载的数据 */
+    /** 加载启动数据（快速显示）从统一启动管理器获取预加载的数据 */
     private fun loadStartupData() {
-        // 从统一启动管理器获取用户信息
+// 从统一启动管理器获取用户信息
         val startupUserProfile = UnifiedStartupManager.getCurrentUserProfile()
         if (startupUserProfile != null) {
             _userProfile.value = startupUserProfile
@@ -96,19 +93,18 @@ class MainViewModel : BaseVM() {
     }
 
     fun loadBusinessData() {
-        // 检查app版本更新
+// 检查应用程序版本更新
         checkAppVersion()
     }
 
     fun selectTab(tab: Int) {
-        // 防止数组越界，确保tab索引在有效范围内
+// 防止仓库越界，确保tab索引在有效范围内
         val tabEntries = HomeTabIndex.entries.toTypedArray()
         if (tab < 0 || tab >= tabEntries.size) {
             LogUtils.e("selectTab - 无效的tab索引: $tab, 有效范围: 0-${tabEntries.size - 1}")
             return
         }
-
-        // 切换tab时停止所有音频播放
+// 切换选项卡时停止所有音频播放
         stopAllAudioPlayback()
 
         _selectedTab.value = tabEntries[tab]
@@ -118,8 +114,8 @@ class MainViewModel : BaseVM() {
             }
 
             HomeTabIndex.Profile -> {
-                // 使用refreshCreatedAgentsListIfOnTab()来避免重复请求
-                // 这样可以在一个地方统一管理Profile tab的数据刷新逻辑
+// 使用refreshCreatedAgentsListIfOnTab()来避免重复请求
+//这样可以在一个地方统一管理Profile选项卡的数据刷新逻辑
                 refreshCreatedAgentsListIfOnTab()
             }
 
@@ -127,10 +123,10 @@ class MainViewModel : BaseVM() {
         }
     }
 
-    /** 停止所有音频播放 用于tab切换时确保音频停止 */
+    /** 停止所有音频播放用于选项卡切换时确保音频停止 */
     private fun stopAllAudioPlayback() {
         try {
-            // 通过AudioManager单例停止所有播放
+// 通过AudioManager单例停止所有播放
             val audioManager =
                 AudioManager.getInstance(Utils.getApp(), viewModelScope)
             audioManager.stopAllPlayback()
@@ -154,7 +150,7 @@ class MainViewModel : BaseVM() {
                 val userProfile = IntyUserProfileSDK.getUserProfile()
                 if (userProfile != null) {
                     _userProfile.value = userProfile
-                    // 更新本地缓存
+// 更新本地服务器
                     UserProfileManager.saveUserProfile(userProfile)
                     LogUtils.i("Updated user profile from server: $userProfile")
                 } else {
@@ -165,8 +161,7 @@ class MainViewModel : BaseVM() {
             }
         }
     }
-
-    // 感知接口获取到的用户订阅状态
+// 获取接口获取到的用户订阅状态
     val vipStatusFlow = BillingRepository.vipStatusFlow
     val vipPlanFlow = BillingRepository.plansFlow
 
@@ -174,7 +169,7 @@ class MainViewModel : BaseVM() {
     fun updatePlans() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // 等待BillingRepository初始化完成
+// 等待BillingRepository初始化完成
                 var retryCount = 0
                 while (!BillingRepository.isInitialized() && retryCount < 10) {
                     delay(500) // 等待500ms
@@ -185,8 +180,7 @@ class MainViewModel : BaseVM() {
                     LogUtils.i("BillingRepository MainViewModel BillingRepository 初始化超时，跳过更新")
                     return@launch
                 }
-
-                // 检查BillingRepository是否已连接
+//检查BillingRepository是否已连接
                 if (!BillingRepository.isConnected()) {
                     LogUtils.i("BillingRepository MainViewModel BillingRepository 未连接，跳过更新")
                     return@launch
@@ -195,10 +189,10 @@ class MainViewModel : BaseVM() {
                 BillingRepository.fetchRemote()
             } catch (e: CancellationException) {
                 LogUtils.e("BillingRepository MainViewModel Member status update cancelled: ${e.message}")
-                // 协程被取消是正常情况，不需要特殊处理
+// 协程被取消是正常情况，需要特殊处理
             } catch (e: Exception) {
                 LogUtils.e("BillingRepository MainViewModel Member status update failed: ${e.message}")
-                // 不影响主流程，静默处理
+// 不影响主流程，静默处理
             }
         }
     }
@@ -206,12 +200,11 @@ class MainViewModel : BaseVM() {
     fun getUserCreatedAgents() {
         currentUserAgentsPage = 0
         hasMoreUserAgents = true
-
-        // 如果已经有数据，则使用静默刷新，不显示loading
+// 如果已经有数据，则使用静默刷新，不显示加载中
         if (userCreatedAgents.isNotEmpty()) {
             loadUserCreatedAgentsSilently()
         } else {
-            // 没有数据时才清空并显示loading
+// 没有数据时才清空并显示loading
             userCreatedAgents.clear()
             loadUserCreatedAgents()
         }
@@ -240,7 +233,7 @@ class MainViewModel : BaseVM() {
                             hasMoreUserAgents = false
                             LogUtils.d("loadUserCreatedAgentsSilently - No more user created agents to load")
                         } else {
-                            // 静默更新数据，直接替换
+// 静默更新数据，直接替换
                             userCreatedAgents.clear()
                             userCreatedAgents.addAll(result.data)
                             LogUtils.d("loadUserCreatedAgentsSilently - 静默更新数据: ${result.data.size}个")
@@ -275,12 +268,12 @@ class MainViewModel : BaseVM() {
                             hasMoreUserAgents = false
                         } else {
                             if (currentUserAgentsPage == 0) {
-                                // 第一页，直接替换（这里才清空并替换数据）
+//第一页，直接替换（这里才清空并替换数据）
                                 userCreatedAgents.clear()
                                 userCreatedAgents.addAll(result.data)
                                 LogUtils.i("loadUserCreatedAgents - 替换第一页数据: ${result.data.size}个")
                             } else {
-                                // 后续页，追加到现有列表
+// 后续页面，追加到现有列表
                                 userCreatedAgents.addAll(result.data)
                                 LogUtils.d("loadUserCreatedAgents - 追加第${currentUserAgentsPage + 1}页数据: ${result.data.size}个，总计: ${userCreatedAgents.size}个")
                             }
@@ -289,8 +282,8 @@ class MainViewModel : BaseVM() {
 
                     is HttpResult.Failure -> {
                         LogUtils.e("loadUserCreatedAgents - API failure: ${result.message}")
-                        //                        showNetworkAwareError(result.message)
-                        // If loading failed, rollback page counter
+// 显示NetworkAwareError(结果。信息）
+// 如果加载失败，则回滚页面总数
                         if (currentUserAgentsPage > 0) {
                             currentUserAgentsPage--
                         }
@@ -298,7 +291,7 @@ class MainViewModel : BaseVM() {
                 }
             } catch (e: Exception) {
                 LogUtils.e("loadUserCreatedAgents exception: ${e.message}")
-                // If loading failed, rollback page counter
+// 如果加载失败，则回滚页面总数
                 if (currentUserAgentsPage > 0) {
                     currentUserAgentsPage--
                 }
@@ -309,7 +302,7 @@ class MainViewModel : BaseVM() {
 
     fun refreshCreatedAgentsListIfOnTab() {
         if (_selectedTab.value == HomeTabIndex.Profile) {
-            // 如果已经在加载中，避免重复请求
+// 如果已经在加载中，避免重复请求
             if (!_isLoadingUserAgents.value && !_isRefreshingUserAgents.value) {
                 getUserCreatedAgents()
             } else {
@@ -318,7 +311,7 @@ class MainViewModel : BaseVM() {
         }
     }
 
-    /** 创建Ai Agent的接口 */
+    /**创建Ai Agent的接口 */
     fun createAgent(
         request: CreateAgentRequest,
         onSuccess: (AgentInfo) -> Unit,
@@ -331,7 +324,7 @@ class MainViewModel : BaseVM() {
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
-                            // 刷新用户创建的角色列表
+// 刷新用户创建的角色列表
                             refreshCreatedAgentsListIfOnTab()
                             onSuccess(result.data)
                         }
@@ -347,7 +340,7 @@ class MainViewModel : BaseVM() {
                     }
                 }
             } catch (e: HttpException) {
-                // 专门处理HTTP异常
+// 专门处理HTTP异常
                 LogUtils.e("createAgent HTTP Exception: ${e.code()} - ${e.message()}")
                 val errorMessage = HttpErrorHandler.handleHttpException(e, "create")
                 withContext(Dispatchers.Main) { onError(errorMessage) }
@@ -358,25 +351,21 @@ class MainViewModel : BaseVM() {
             }
         }
     }
-
-    // 新增：用户登出方法
+// 新增：用户登出方法
     fun logout() {
-        // 清理内存数据
+// 清理内存数据
         followingAgents.clear()
         userCreatedAgents.clear()
         _userProfile.value = UserProfile()
         chatViewModel?.clearAllData()
-
-        // 清理统一启动管理器的数据（清空正式用户的数据）
+// 清理统一启动管理器的数据（清空正式用户的数据）
         UnifiedStartupManager.clearAllData()
-
-        // 清理本地存储（这会切换到游客模式）
+// 清理本地存储（这会切换到游客模式）
         IntySetting.logout()
         UserProfileManager.clearUserProfile()
-
-        // 清除凭证状态 - 通知所有凭证提供者清除存储的凭证会话
-        // 参考:
-        // https://developer.android.com/identity/sign-in/credential-manager-siwg#handle-sign-out
+// 清除令牌状态 - 通知所有令牌状态提供者清除令牌的令牌
+// 参考：
+// https://developer.android.com/identity/sign-in/credential-manager-siwg#handle-sign-out
         viewModelScope.launch {
             try {
                 clearCredentialState(Utils.getApp())
@@ -384,32 +373,27 @@ class MainViewModel : BaseVM() {
                 LogUtils.e("Failed to clear credential state during logout: ${e.message}")
             }
         }
-
-        // 切换到游客模式后，重新加载数据
+// 切换到游客模式后，重新加载数据
         loadGuestModeData()
     }
-
-    // 游客模式数据加载，游客用户仍然可以访问推荐数据
+// 游客模式数据加载，游客用户仍然可以访问推荐数据
     private fun loadGuestModeData() {
 
         viewModelScope.launch {
             try {
-                // 更新UI状态
+// 更新UI状态
                 _userProfile.value = UserProfile()
-
-                // 关键修复：确保用户账户状态正确恢复
-                // 游客用户切换后，需要重新设置账户就绪状态
+// 关键修复：确保用户账户状态正确恢复
+// 游客用户切换后，需要重新设置账户状态
                 UnifiedStartupManager.markUserAccountReady()
-
-                // 等待用户账户就绪（游客用户切换需要时间）
+// 等待用户账户就绪（游客切换用户需要时间）
                 var waitTime = 0
                 while (!UnifiedStartupManager.isUserAccountReady() && waitTime < 3000) {
                     delay(100)
                     waitTime += 100
                 }
-
-                // 游客用户仍然有有效的token，可以重新加载数据
-                // 重新加载agents数据（游客模式也应该有推荐数据）
+// 游客用户仍然有有效的token，可以重新加载数据
+// 重新加载链接数据（游客模式也应该有推荐数据）
                 UnifiedStartupManager.refreshRecommendedAgents()
                 UnifiedStartupManager.refreshChatAgents()
             } catch (e: Exception) {
@@ -426,12 +410,11 @@ class MainViewModel : BaseVM() {
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
-                            // 从用户创建的角色列表中移除
+// 从创建用户的列表中删除角色
                             userCreatedAgents.removeAll { it.id == agentId }
-                            // 从关注列表中移除（如果存在）
+// 从关注列表中移除（如果存在）
                             followingAgents.removeAll { it.id == agentId }
-
-                            // 同步更新缓存
+// 同步更新服务器
                             AgentCacheManager.removeAgent(agentId)
 
                             ToastUtils.showShort(R.string.character_deleted_successfully)
@@ -458,7 +441,7 @@ class MainViewModel : BaseVM() {
                     }
                 }
             } catch (e: HttpException) {
-                // 专门处理HTTP异常
+// 专门处理HTTP异常
                 LogUtils.e("deleteAgent HTTP Exception: ${e.code()} - ${e.message()}")
                 val errorMessage = HttpErrorHandler.handleHttpException(e, "delete")
                 withContext(Dispatchers.Main) {
@@ -490,9 +473,9 @@ class MainViewModel : BaseVM() {
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
-                            // 刷新用户创建的角色列表
+// 刷新用户创建的角色列表
                             refreshCreatedAgentsListIfOnTab()
-                            // Toast removed to avoid duplicate - handled by calling activity
+// 删除 Toast 重复 - 通过调用 Activity 处理
                             onSuccess(result.data)
                         }
 
@@ -517,7 +500,7 @@ class MainViewModel : BaseVM() {
                     }
                 }
             } catch (e: HttpException) {
-                // 专门处理HTTP异常
+// 专门处理HTTP异常
                 LogUtils.e("updateAgent HTTP Exception: ${e.code()} - ${e.message()}")
                 val errorMessage = HttpErrorHandler.handleHttpException(e, "update")
                 withContext(Dispatchers.Main) {
@@ -535,7 +518,7 @@ class MainViewModel : BaseVM() {
         }
     }
 
-    /** 检查app版本更新 */
+    /** 检查应用程序版本更新 */
     val needForceUpgrade = MutableStateFlow<AppVersionRsp.AppVersionData?>(null)
 
     private fun checkAppVersion() = launchBackground {
@@ -544,7 +527,7 @@ class MainViewModel : BaseVM() {
             is HttpResult.Success -> {
                 val rsp = result.data
                 if (rsp.update_required && rsp.force_update) {
-                    // 有更新，且需要强制更新
+// 有更新，且需要强制更新
                     needForceUpgrade.emit(rsp)
                 }
                 IntySetting.setAppUpdateTips(rsp.update_required)

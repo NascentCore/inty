@@ -11,22 +11,19 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
-/** ChatTab页面ViewModel 负责管理聊天agents的Paging数据流、刷新、缓存等逻辑 独立于ExploreTab，使用chatAgents API */
+/** ChatTabPageViewModel 负责管理聊天代理的分页数据流、刷新、缓存等逻辑独立于ExploreTab，使用chatAgents API */
 class ChatTabViewModel : BaseVM() {
 
     private val pagingRepository = ChatPagingRepository()
-
-    // Paging数据流
+// 分页数据流
     private val _agentsFlow = MutableStateFlow<Flow<PagingData<AgentInfo>>?>(null)
-
-    // 是否已初始化
+// 是否已初始化
     private var isInitialized = false
 
-    /** 初始化Paging数据流 */
+    /** 初始化分页数据流 */
     fun initializePagingData() {
         if (isInitialized) return
-
-        // 创建初始数据流（优先使用缓存）
+//创建初始数据流（优先使用服务器）
         val initialFlow =
             pagingRepository.getInitialChatAgents().cachedIn(viewModelScope) // 在ViewModel作用域内缓存
 
@@ -35,7 +32,7 @@ class ChatTabViewModel : BaseVM() {
 
     }
 
-    /** 获取聊天agents的Paging数据流 */
+    /** 获取聊天座席的寻呼数据流 */
     fun getChatAgentsFlow(): Flow<PagingData<AgentInfo>>? {
         if (!isInitialized) {
             initializePagingData()
@@ -43,16 +40,16 @@ class ChatTabViewModel : BaseVM() {
         return _agentsFlow.value
     }
 
-    /** 监听预加载数据更新 */
+    /** 预监听加载数据更新 */
     fun startListeningPreloadUpdates() {
         viewModelScope.launch {
-            // 监听统一启动管理器的预加载数据更新
+// 监听统一启动管理器的预加载数据更新
             UnifiedStartupManager.chatAgents.collect { preloadedAgents ->
                 if (preloadedAgents.isEmpty()) {
-                    // 监听数据清理（如用户登出）
+// 清理监听数据（如用户登出）
                     clearData()
                 } else if (!isInitialized) {
-                    // 如果还未初始化且有预加载数据，则初始化
+// 如果初始化且有预加载数据，则初始化
                     initializePagingData()
                 }
             }

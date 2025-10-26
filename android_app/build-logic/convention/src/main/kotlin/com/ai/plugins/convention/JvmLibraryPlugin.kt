@@ -4,7 +4,7 @@ import com.ai.plugins.ext.configureKotlinJvm
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
-/** 用于jvm编译module的plugin定义 */
+/** 用于jvm编译模块的插件定义 */
 class JvmLibraryPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {

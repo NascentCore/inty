@@ -5,7 +5,7 @@ import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import java.lang.reflect.Type
 
-/**  */
+/** */
 object MoshiUtils {
     val moshiBuild: Moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 

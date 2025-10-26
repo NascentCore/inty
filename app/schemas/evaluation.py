@@ -27,8 +27,7 @@ class EvaluationSessionCreate(BaseModel):
         """验证问题列表"""
         if not v:
             raise ValueError("问题列表不能为空")
-
-        # 去重
+#去重
         unique_questions = []
         seen = set()
         for q in v:

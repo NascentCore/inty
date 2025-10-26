@@ -31,7 +31,7 @@ def create_settings(
     创建新的用户设置
     """
     try:
-        # 排除数据库模型中不存在的字段
+# 修复数据库模型中不存在的字段
         settings_data = settings_in.model_dump(exclude=EXCLUDE_FIELDS)
         db_settings = models.Settings(
             id=str(uuid.uuid4()), **settings_data, user_id=user_id

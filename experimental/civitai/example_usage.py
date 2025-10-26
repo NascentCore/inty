@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 Example usage of the CivitaiParser to extract information from Civitai model pages.
 """
@@ -8,31 +8,27 @@ import json
 
 
 def main():
-    # Initialize the parser
+# 初始化解析器
     parser = CivitaiParser()
-
-    # Example URLs to test
+# 要测试的示例 URL
     urls = [
         "https://civitai.com/models/1224788/prefect-illustrious-xl",
-        # Add more URLs here for testing
+# 在此添加更多URL进行测试
     ]
 
     for url in urls:
         print(f"\n{'='*60}")
         print(f"Parsing: {url}")
         print(f"{'='*60}")
-
-        # Parse the model page
+# 解析模型页面
         result = parser.parse_model_page(url)
-
-        # Save to JSON file
+# 保存到 JSON 文件
         filename = f"civitai_model_{url.split('/')[-1]}.json"
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
 
         print(f"Results saved to: {filename}")
-
-        # Print key information
+# Print 关键信息
         if "error" not in result:
             print(f"\nModel Name: {result.get('model_name', 'N/A')}")
             print(f"Creator: {result.get('creator', 'N/A')}")
@@ -40,8 +36,7 @@ def main():
             print(f"Download Links: {len(result.get('download_links', []))}")
             print(f"Stats: {result.get('stats', {})}")
             print(f"Version: {result.get('version_info', {}).get('version', 'N/A')}")
-
-            # Print about section (truncated)
+# Print 关于部分（已截断）
             about = result.get("about", "")
             if about:
                 print(f"\nAbout (first 200 chars): {about[:200]}...")

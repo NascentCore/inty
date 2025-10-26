@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 Command-line interface for the AI Character Generator
 """
@@ -85,8 +85,7 @@ Examples:
     )
     
     args = parser.parse_args()
-    
-    # Set up verbose logging if requested
+# 如果需要，设置详细日志记录
     if args.verbose:
         Config.logger.setLevel(logging.DEBUG)
         logger.info("Verbose logging enabled")
@@ -102,12 +101,11 @@ Examples:
     logger.debug(f"Summary only: {args.summary_only}")
     
     try:
-        # Validate configuration
+# 验证配置
         logger.info("Validating configuration...")
         Config.validate()
         logger.info("Configuration validation successful")
-        
-        # Create character generation request
+#创建角色生成请求
         logger.info("Creating character generation request...")
         request = CharacterGenerationRequest(
             brief_description=args.description,
@@ -126,13 +124,11 @@ Examples:
         print(f"Image Style: {args.image_style}")
         print(f"Number of Images: {args.num_images}")
         print("-" * 50)
-        
-        # Initialize character agent
+# 初始化角色代理
         logger.info("Initializing Character Agent...")
         agent = CharacterAgent()
         logger.info("Character Agent initialized successfully")
-        
-        # Generate character
+#角色生成
         print("🔄 Generating character profile...")
         logger.info("Starting character generation process...")
         response = agent.generate_character(request)
@@ -148,8 +144,7 @@ Examples:
         print(f"✅ Character generated successfully!")
         print(f"📊 Generation time: {response.generation_time:.2f} seconds")
         print("-" * 50)
-        
-        # Display results
+# 显示结果
         if args.summary_only:
             logger.info("Generating character summary...")
             summary = agent.get_character_summary(character)
@@ -166,7 +161,7 @@ Examples:
             print(f"Images Generated: {summary['image_count']}")
             logger.info("Character summary displayed successfully")
         else:
-            # Export character
+#角色消失
             logger.info(f"Exporting character in {args.export_format} format...")
             
             if args.export_format == "json":
@@ -175,8 +170,7 @@ Examples:
             else:  # text format
                 output_data = agent.export_character(character, format="text")
                 logger.debug(f"Text export size: {len(output_data)} characters")
-            
-            # Write to file or print to stdout
+# 写入文件或 print 到标准输出
             if args.output:
                 output_path = Path(args.output)
                 logger.info(f"Writing output to file: {output_path}")

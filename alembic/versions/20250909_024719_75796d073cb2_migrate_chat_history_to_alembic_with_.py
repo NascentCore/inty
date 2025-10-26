@@ -10,9 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision: str = '75796d073cb2'
 down_revision: Union[str, None] = '31a4fbff90e7'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -20,19 +18,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Check if table exists and handle accordingly
+#检查表是否存在并进行相应处理
     connection = op.get_bind()
-    
-    # Check if chat_history table exists
+#检查chat_history表是否存在
     table_exists = connection.execute(
         sa.text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'chat_history')")
     ).scalar()
     
     if table_exists:
-        # Table exists (created by langchain_postgres), add audio_url column
+# 表存在（由langchain_postgres创建），添加audio_url列
         op.add_column('chat_history', sa.Column('audio_url', sa.String(), nullable=True))
-        
-        # Check if index exists before creating it
+#创建索引前检查索引是否存在
         index_exists = connection.execute(
             sa.text("""
             SELECT EXISTS (
@@ -45,7 +41,7 @@ def upgrade() -> None:
         if not index_exists:
             op.create_index('idx_chat_history_session_id', 'chat_history', ['session_id'])
     else:
-        # Table doesn't exist, create it with all columns including audio_url
+# 表不存在，使用包括audio_url 的所有列创建它
         op.create_table('chat_history',
             sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
             sa.Column('session_id', postgresql.UUID(as_uuid=True), nullable=False),
@@ -58,11 +54,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Only remove the audio_url column, don't drop the entire table
-    # since it might have been created by langchain_postgres
+# 只删除audio_url列，不要删除整个表
+# 因为它可能是由 langchain_postgres 创建的
     connection = op.get_bind()
-    
-    # Check if audio_url column exists
+#检查audio_url列是否存在
     column_exists = connection.execute(
         sa.text("""
         SELECT EXISTS (

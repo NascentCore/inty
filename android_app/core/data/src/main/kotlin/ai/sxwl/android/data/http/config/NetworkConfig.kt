@@ -1,7 +1,7 @@
 package ai.sxwl.android.data.http.config
 
 
-/** 网络配置管理 提供环境相关的配置管理，替代原有的硬编码配置 */
+/** 网络管理提供环境相关的配置管理，替代原有的硬编码 */
 object NetworkConfig {
 
     /** 构建类型枚举 */
@@ -28,7 +28,7 @@ object NetworkConfig {
         val readTimeoutMs: Long = 30000,
     )
 
-    /** 重试配置 */
+    /** 重新试配置 */
     data class RetryConfig(
         val maxRetries: Int = 3,
         val retryDelayMs: Long = 1000,
@@ -137,7 +137,7 @@ object NetworkConfig {
         )
     }
 
-    /** Play调试环境配置 */
+    /** 播放调试环境配置 */
     private fun getPlayDebugConfig(): EnvironmentConfig {
         return EnvironmentConfig(
             baseUrl = "https://${Constant.USER_HOST_DEV}/",

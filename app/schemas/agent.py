@@ -30,14 +30,13 @@ class AgentMetaData(BaseModel):
 
 class AgentSortOption(str, Enum):
     """Agent sorting options"""
-
-    # Ascending order of the creation time, oldest to the newest
+#创建时间升序，从最旧到最新
     CREATED_ASC = "created_asc"
-    # Descending order of the creation time, newest to the oldest
+# 创建时间从新到旧的降序排列
     CREATED_DESC = "created_desc"
-    # Random order, use sort_seed to ensure consistent order
+# 随机顺序，使用sort_seed保证顺序一致
     RANDOM = "random"
-    # Score-based random recommendation: 6 high-score agents + 4 random agents
+#基于分配的随机推荐：6个高级智能体+4个随机智能体
     SCORE_BASED_RANDOM = "score_based_random"
 
 
@@ -107,21 +106,18 @@ class AgentBase(BaseModel):
     visibility: AgentVisibility = AgentVisibility.PUBLIC
     photos: Optional[List[str]] = None
     category: Optional[str] = None
-
-    # Legacy字段 (已废弃)
+# 遗产田（已废弃）
     prompt: Optional[str] = Field(
         None, description="已废弃 - 请使用personality字段代替", deprecated=True
     )
-
-    # 主提示词和模式提示词字段
+# 主提示词和模式提示词字段
     main_prompt: Optional[str] = Field(
         None, description="主提示词 - 作为第一个system message，覆盖全局默认主提示词"
     )
     mode_prompt: Optional[str] = Field(
         None, description="模式提示词 - 放在角色卡提示词后面，覆盖全局默认模式提示词"
     )
-
-    # 角色卡相关字段 (推荐使用)
+#角色卡相关字段（推荐使用）
     character_card_spec: Optional[str] = None
     personality: Optional[str] = Field(None, description="角色性格特点 (推荐)")
     scenario: Optional[str] = Field(None, description="背景设定 (推荐)")
@@ -133,11 +129,9 @@ class AgentBase(BaseModel):
     tags: Optional[List[str]] = None
     character_version: Optional[str] = None
     extensions: Optional[Dict[str, Any]] = None
-
-    # 模型配置
+# 模型配置
     llm_config: Optional[ModelConfig] = None
-
-    # 元数据
+# 元数据
     meta_data: Optional[AgentMetaData] = Field(
         None, description="Agent 元数据，包含评分等信息"
     )
@@ -168,12 +162,10 @@ class AgentUpdate(AgentBase):
     prompt: Optional[str] = Field(
         None, description="已废弃 - 请使用personality字段代替", deprecated=True
     )
-
-    # 主提示词和模式提示词字段
+# 主提示词和模式提示词字段
     main_prompt: Optional[str] = None
     mode_prompt: Optional[str] = None
-
-    # 角色卡相关字段
+# 角色卡相关字段
     personality: Optional[str] = None
     scenario: Optional[str] = None
     message_example: Optional[str] = None
@@ -185,11 +177,9 @@ class AgentUpdate(AgentBase):
     character_version: Optional[str] = None
     extensions: Optional[Dict[str, Any]] = None
     voice_id: Optional[str] = None
-
-    # 模型配置
+# 模型配置
     llm_config: Optional[ModelConfig] = None
-
-    # 元数据
+# 元数据
     meta_data: Optional[AgentMetaData] = None
 
     request_id: Optional[str] = None
@@ -199,7 +189,7 @@ class AgentInDB(AgentBase):
     """数据库中的AI角色，与 sqlalchemy 模型一一对应"""
 
     id: str
-    # DEPRECATED: app 显示 ID 而非 readable_id
+# DEPRECATED：应用程序显示ID而不是区别_id
     readable_id: str
     status: AgentStatus
     creator_id: Optional[str] = None
@@ -237,15 +227,14 @@ class Agent(AgentInDB):
     follower_count: int = 0
     connector_count: int = 0
     creator: Optional[User] = None
-    # 从 resources 表中读取对应的图片尺寸；注意区分图片的字节大小，指的是文件本身的大小。
+# 从资源表中读取对应的图片大小；注意区分图片的字节大小，是指文件本身的大小。
     avatar_size: Optional[ImageSize] = None
-    # 从 resources 表中读取对应的图片尺寸；注意区分图片的字节大小，指的是文件本身的大小。
+# 从资源表中读取对应的图片大小；注意区分图片的字节大小，是指文件本身的大小。
     background_size: Optional[ImageSize] = None
-    # 当前与该 agent 对话的用户名字，用于替换 opening 和 intro 中的 {{ user }} 变量。
-    # 如未制定，则使用默认的代词 "you"。
+# 当前与该代理对话的用户名称，用于替换起始和介绍中的 {{ user }} 标记。
+# 如未制定，则使用默认的代词“you”。
     user: Optional[str] = "you"
-
-    # TODO: 考虑如何使用 intro 从而避免重复使用手动变量替换
+# TODO: 考虑如何使用介绍从而避免重复使用手动标签替换
     @field_serializer("intro")
     def serialize_intro(self, intro: Optional[str]) -> Optional[str]:
         """
@@ -276,16 +265,15 @@ class Agent(AgentInDB):
         """
         if llm_config is not None:
             return llm_config
-
-        # 如果llm_config为空，尝试从settings中获取
+# 如果llm_config为空，尝试从设置中获取
         if self.settings and isinstance(self.settings, dict):
             settings_llm_config = self.settings.get("llm_config")
             if settings_llm_config:
-                # 将settings中的llm_config转换为ModelConfig对象
+# 将settings中的llm_config转换为ModelConfig对象
                 try:
                     return ModelConfig(**settings_llm_config)
                 except Exception:
-                    # 如果转换失败，返回None
+# 如果转换失败，返回无
                     return None
 
         return None
@@ -295,8 +283,7 @@ class Agent(AgentInDB):
         """转换avatar URL为CDN URL，支持基于extension裁切数据的avatar生成"""
         try:
             from app.services.image_transform_service import image_transform_service
-
-            # 优先检查是否存在裁切数据，如果存在则使用裁切数据而不是独立的avatar
+# 优先检查是否存在裁切数据，如果存在则使用裁切数据而不是独立的分身
             if (
                 self.background
                 and self.extensions
@@ -305,8 +292,7 @@ class Agent(AgentInDB):
             ):
 
                 avatar_crop_data = self.extensions["avatar_crop"]
-
-                # 验证裁切数据的完整性
+# 验证裁切数据的局限性
                 if (
                     isinstance(avatar_crop_data, dict)
                     and all(
@@ -334,8 +320,7 @@ class Agent(AgentInDB):
                     and avatar_crop_data["width"] > 0
                     and avatar_crop_data["height"] > 0
                 ):
-
-                    # 创建 CroppedArea 对象
+# 创建 CroppedArea 对象
                     from app.services.image_transform_service import (
                         ImageTransformService,
                     )
@@ -348,20 +333,18 @@ class Agent(AgentInDB):
                         image_width=int(avatar_crop_data["imageWidth"]),
                         image_height=int(avatar_crop_data["imageHeight"]),
                     )
-
-                    # 使用裁切功能生成avatar URL
+# 使用裁切功能生成头像URL
                     return image_transform_service.transform_cropped_avatar_url(
                         self.background, cropped_area
                     )
-
-            # 如果没有裁切数据但有独立的avatar，使用常规转换
+# 如果没有裁切数据但有独立的化身，使用转换转换
             if avatar:
                 return image_transform_service.transform_mobile(avatar)
 
             return avatar
 
         except Exception as e:
-            # 记录错误但不抛出异常，返回原始avatar
+# 记录错误但不抛出异常，返回原始头像
             from loguru import logger
 
             logger.warning(
@@ -418,8 +401,7 @@ class Agent(AgentInDB):
         """
         if meta_data is not None:
             return meta_data
-
-        # 如果meta_data为空，尝试从数据库的meta_data字段获取
+# 如果meta_data为空，尝试从数据库的meta_data字段获取
         if (
             hasattr(self, "meta_data")
             and self.meta_data
@@ -428,7 +410,7 @@ class Agent(AgentInDB):
             try:
                 return AgentMetaData(**self.meta_data)
             except Exception:
-                # 如果转换失败，返回None
+# 如果转换失败，返回无
                 return None
 
         return None
@@ -461,8 +443,8 @@ class TextToImageRequest(BaseModel):
         ),
     )
     enhance_prompt: Optional[bool] = Field(
-        # 默认打开提示词增强，以兼容旧版本。
-        # 此为方便用户生成角色形象时针对角色性别和人物进行增强，让文生图模型能生成更合规和符合 app 设定的异性恋对象角色。
+# 默认打开提示词增强，以兼容旧版本。
+#此为方便用户生成形象角色时角色针对性别并进行增强，让文生图模型能够生成更合规且符合app设定的异性恋对象。
         True,
         description=(
             "Whether to enhance the prompt to improve the quality of the image. "

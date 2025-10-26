@@ -8,20 +8,20 @@ import androidx.paging.PagingData
 import com.ai.intellimate.chat.constants.ChatConstants
 import kotlinx.coroutines.flow.Flow
 
-/** Chat页面的Paging数据仓库 负责管理聊天agents的Paging数据流、配置和传统数据请求 */
+/** 聊天页面的分页数据仓库负责管理聊天配置代理的分页数据流、和传统数据请求 */
 class ChatPagingRepository {
 
     companion object {
-        // 使用统一的常量
+// 使用统一的常量
         private const val PAGE_SIZE = ChatConstants.PAGE_SIZE
         private const val PREFETCH_DISTANCE = ChatConstants.PREFETCH_DISTANCE
         private const val ENABLE_PLACEHOLDERS = ChatConstants.ENABLE_PLACEHOLDERS
     }
 
     /**
-     * 获取聊天agents的Paging数据流
+     * 获取聊天寻座呼数据流
      *
-     * @param useCache 是否使用缓存数据
+     * @param useCache 是否使用服务器数据
      * @param sortSeed 排序种子，用于刷新时改变排序
      */
     private fun getChatAgentsFlow(
@@ -52,7 +52,7 @@ class ChatPagingRepository {
         )
     }
 
-    /** 获取初始数据（优先使用缓存） */
+    /** 获取后台数据（优先使用服务器） */
     fun getInitialChatAgents(): Flow<PagingData<AgentInfo>> {
         return getChatAgentsFlow(useCache = true)
     }

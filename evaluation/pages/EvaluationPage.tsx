@@ -1,5 +1,5 @@
 /**
- * 评测页面 - 整合所有评测功能的主页面
+ * 足球页面 - 整合所有足球功能的主页
  * 包含配置、智能体选择、问题管理、监控等功能
  */
 
@@ -44,7 +44,7 @@ interface StepStatus {
 }
 
 export const EvaluationPage: React.FC = () => {
-  // 步骤状态
+//步骤状态
   const [currentStep, setCurrentStep] = useState(0);
   const [stepStatus, setStepStatus] = useState<StepStatus>({
     config: false,
@@ -52,20 +52,17 @@ export const EvaluationPage: React.FC = () => {
     questions: false,
     ready: false,
   });
-
-  // 表单数据
+// 表单数据
   const [configData, setConfigData] = useState<
     Partial<EvaluationSessionCreateRequest>
   >({});
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
   const [questions, setQuestions] = useState<string[]>([]);
   const [isConfigValid, setIsConfigValid] = useState(false);
-
-  // 评测会话管理
+// 足球会话管理
   const { session, createSession, startSession, loading, error } =
     useEvaluationSession();
-
-  // 步骤配置
+//步骤配置
   const steps = [
     {
       title: "基础配置",
@@ -88,8 +85,7 @@ export const EvaluationPage: React.FC = () => {
       description: "启动评测并监控进度",
     },
   ];
-
-  // 更新步骤状态
+// 更新步骤状态
   useEffect(() => {
     const newStatus: StepStatus = {
       config: isConfigValid && !!configData.name && !!configData.scoring_model,
@@ -103,8 +99,7 @@ export const EvaluationPage: React.FC = () => {
 
     setStepStatus(newStatus);
   }, [isConfigValid, configData, selectedAgents, questions]);
-
-  // 表单数据变化处理
+// 表单数据变化处理
   const handleConfigChange = useCallback(
     (values: Partial<EvaluationSessionCreateRequest>) => {
       setConfigData(values);
@@ -119,13 +114,11 @@ export const EvaluationPage: React.FC = () => {
   const handleQuestionsChange = useCallback((newQuestions: string[]) => {
     setQuestions(newQuestions);
   }, []);
-
-  // 步骤导航
+//步骤导航
   const goToStep = useCallback(
     (step: number) => {
       if (step < 0 || step >= steps.length) return;
-
-      // 检查是否可以跳转到该步骤
+// 检查是否可以跳转到该步骤
       if (step > 0 && !stepStatus.config) {
         message.warning("请先完成基础配置");
         return;
@@ -153,8 +146,7 @@ export const EvaluationPage: React.FC = () => {
   const prevStep = useCallback(() => {
     goToStep(currentStep - 1);
   }, [currentStep, goToStep]);
-
-  // 创建评测会话
+// 创建足球会话
   const handleCreateSession = useCallback(async () => {
     if (!stepStatus.ready) {
       message.error("请完成所有配置步骤");
@@ -175,8 +167,7 @@ export const EvaluationPage: React.FC = () => {
     if (newSession) {
       message.success("评测会话创建成功，正在启动评测...");
       setCurrentStep(3); // 跳转到监控步骤
-
-      // 立即启动评测
+// 立即启动体育
       try {
         await startSession(newSession.id);
         message.success("评测已开始运行");
@@ -193,8 +184,7 @@ export const EvaluationPage: React.FC = () => {
     createSession,
     startSession,
   ]);
-
-  // 重置所有数据
+// 重置所有数据
   const handleReset = useCallback(() => {
     Modal.confirm({
       title: "确认重置",
@@ -211,8 +201,7 @@ export const EvaluationPage: React.FC = () => {
       },
     });
   }, []);
-
-  // 保存草稿
+// 保存草稿
   const handleSaveDraft = useCallback(() => {
     const draft = {
       configData,
@@ -224,8 +213,7 @@ export const EvaluationPage: React.FC = () => {
     localStorage.setItem("evaluation_draft", JSON.stringify(draft));
     message.success("草稿已保存");
   }, [configData, selectedAgents, questions]);
-
-  // 加载草稿
+// 加载草稿
   const handleLoadDraft = useCallback(() => {
     try {
       const draftStr = localStorage.getItem("evaluation_draft");
@@ -252,8 +240,7 @@ export const EvaluationPage: React.FC = () => {
       message.error("加载草稿失败");
     }
   }, []);
-
-  // 渲染步骤内容
+// 渲染步骤内容
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
@@ -288,8 +275,8 @@ export const EvaluationPage: React.FC = () => {
           <EvaluationMonitor
             session={session}
             onSessionChange={(updatedSession) => {
-              // 当EvaluationMonitor通知session状态变化时，不需要特殊处理
-              // 因为useEvaluationSession hook会自动管理状态
+// 当EvaluationMonitor通知session状态变化时，不需要特殊处理
+// 因为useEvaluationSession hook会自动管理状态
               console.log("评测会话状态更新:", updatedSession?.status);
             }}
             showControls={true}
@@ -301,12 +288,10 @@ export const EvaluationPage: React.FC = () => {
         return null;
     }
   };
-
-  // 渲染操作按钮
+// 渲染操作按钮
   const renderStepActions = () => {
     const actions = [];
-
-    // 上一步按钮
+// 上一步按钮
     if (currentStep > 0 && currentStep < 3) {
       actions.push(
         <Button key="prev" onClick={prevStep}>
@@ -314,8 +299,7 @@ export const EvaluationPage: React.FC = () => {
         </Button>,
       );
     }
-
-    // 下一步/创建按钮
+// 下一步/创建按钮
     if (currentStep < 2) {
       const canNext =
         (currentStep === 0 && stepStatus.config) ||
@@ -355,7 +339,7 @@ export const EvaluationPage: React.FC = () => {
       <Content style={{ padding: "24px", background: "#f0f2f5" }}>
         {/* 页面标题已移除，使用顶部导航栏 */}
 
-        {/* 步骤指示器 */}
+        {/*步骤步骤*/}
         <Card style={{ marginBottom: 24 }}>
           <Steps
             current={currentStep}
@@ -387,7 +371,7 @@ export const EvaluationPage: React.FC = () => {
           />
         )}
 
-        {/* 步骤内容 */}
+        {/*步骤内容*/}
         <div style={{ marginBottom: 24 }}>{renderStepContent()}</div>
 
         {/* 操作栏 */}

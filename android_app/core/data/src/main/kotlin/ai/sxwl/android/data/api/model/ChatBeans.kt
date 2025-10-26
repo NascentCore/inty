@@ -56,17 +56,16 @@ data class QueryMsgsResponse(
     val page: Int = 0,
     val total: Int = 0,
 )
-
-// 该数据结构对应后端 dict 数据结构；每条消息都是对应的 key:value 字典。
-// 后端会写入数据库，格式如下：
+// 该数据结构对应 dict 数据结构；每条消息都是对应的 key:value 字典。
+//前面会读取数据库，格式如下：
 // {
-//  "id": null,
-//  "name": null,
-//  "type": "human",
-//  "content": "test",
-//  "example": false,
-//  "additional_kwargs": {},
-//  "response_metadata": {}
+//“id”：空，
+//“名称”：空，
+//“类型”：“人类”，
+//“内容”：“测试”，
+//“示例”：假，
+// "additional_kwargs": {},
+//“响应元数据”：{}
 // }
 @JsonClass(generateAdapter = true)
 data class MsgInfo(
@@ -76,7 +75,7 @@ data class MsgInfo(
     val meta_data: MsgMetaData? = null, // 附带数据
     val audio_url: String? = null, // 音频文件的url
     val timestamp: String? = null, // 消息时间戳 2025-09-11T03:58:29.077875+00:00
-    // 本地创建一个msgId，临时用于消息标记
+// 本地创建一个msgId，临时用于消息标记
     val localMsgId: String = "${System.nanoTime()}_${role}_${content.hashCode()}",
 ) {
 
@@ -127,10 +126,9 @@ data class ConversationItem(
         ).also { info -> info.isDeleted = this.isDeleted }
     }
 }
+// 聊天设置
 
-// chat settings
-
-/** 聊天相关的设置接口，注意一个接口多个使用，不需要的参数，保持null，避免覆盖 */
+/** 聊天相关的设置接口，注意一个接口多个使用，不需要的参数，保持null，覆盖避免 */
 @JsonClass(generateAdapter = true)
 data class ChatSettingsReq(
     val keep_talking: Boolean? = null,
@@ -147,9 +145,9 @@ data class ChatSettingsResponse(
     val data: ChatSettingRspData? = null,
 ) {
     /**
-     * "language": "en", "voice_enabled": true, "style_prompt": "string", "premium_mode": false,
-     * "id": "string", "user_id": "string", "agent_id": "string", "chat_id": "string", "created_at":
-     * "2025-08-28T08:02:50.203Z", "updated_at": "2025-08-28T08:02:50.203Z"
+     *“语言”：“en”，“voice_enabled”：true，“style_prompt”：“字符串”，“premium_mode”：false，
+     *“id”：“字符串”，“user_id”：“字符串”，“agent_id”：“字符串”，“chat_id”：“字符串”，“created_at”：
+     *“2025-08-28T08：02：50。203Z”，“更新时间”：“2025-08-28T08：02：50。203Z”
      */
     data class ChatSettingRspData(
         val id: String? = null,
@@ -179,7 +177,7 @@ data class MsgVoiceRsp(
         val language: String? = null,
         val cached: Boolean = false,
         val generation_time: String? = null,
-        // 出现limit次数限制时的错误字段
+// 出现limit次数限制时的错误字段
         val error_code: String? = null,
         val description: String? = null,
         val used_count: Int = 0,

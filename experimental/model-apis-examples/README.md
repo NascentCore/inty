@@ -1,19 +1,11 @@
-# model-apis-engineering
+# 模型-apis-工程
 
-How to work with each and every LLM models from major providers
+如何使用主要 pr 提供者的每个 LLM 模型
 
-## Gemini vs. OpenRounter endpoints
+##双子座VS双子座OpenRouter端点`uv run -s gemini_with_openai_lib.py --provider google --model gemini-2.5-flash`反应 无法输出推理细节，无法确定思维是否打开`uv run -s gemini_with_openai_lib.py --provider openrouter --model google/gemini-2.5-flash`响应输出`reasoning` & `reasoning_details`，当 `reasoning_effort="low"`(或低/中/高其中之一),
+删除reasoning_effort参数，则关闭reasoning
 
-`uv run -s gemini_with_openai_lib.py --provider google --model gemini-2.5-flash`
-Response 无法输出 reasoning details，无法确定 thinking 是否打开
-
-`uv run -s gemini_with_openai_lib.py --provider openrouter --model google/gemini-2.5-flash`
-Response 输出 `reasoning` & `reasoning_details`，当 `reasoning_effort="low"` (或 low/medium/high 其中之一),
-删除 reasoning_effort 参数，则关闭 reasoning
-
-# Content detection example
-
-```
+# 内容检测示例```
 Given the following definition of sexual content or profanity
 
 """
@@ -41,13 +33,9 @@ Child endangerment content (specifically prohibited for book/video titles)
 """
 
 Is the attached image considered sexual content or profanity?
-```
+```＃＃ 参考
 
-## References
-
-- OpenAI compatibility in Gemini: https://ai.google.dev/gemini-api/docs/openai
-- Gemini API reference: https://ai.google.dev/api/generate-content#v1beta.GenerationConfig
-
-```
+- Gemini 中的 OpenAI 兼容性：https://ai.google.dev/gemini-api/docs/openai
+- 双子座 API 参考：https://ai.google.dev/api/generate-content#v1beta.GenerationConfig```
 
 ```

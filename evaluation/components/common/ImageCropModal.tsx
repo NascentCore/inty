@@ -6,10 +6,10 @@ import type { AvatarCropData } from "../../types";
 
 /**
  * 将 AvatarCropData 转换为 ReactCrop 的 Crop 对象
- * @param existingCropData 现有的裁剪数据
+ * @param existingCropData 现有的现有数据
  * @param displayWidth 显示区域的宽度
  * @param displayHeight 显示区域的高度
- * @param aspect 宽高比，默认为1（正方形）
+ * @paramspect宽高比，默认为1（支架）
  * @returns ReactCrop 的 Crop 对象
  */
 const createCropFromAvatarData = (
@@ -26,12 +26,10 @@ const createCropFromAvatarData = (
     imageWidth,
     imageHeight,
   } = existingCropData;
-
-  // 计算缩放比例
+// 计算缩放比例
   const scaleX = displayWidth / imageWidth;
   const scaleY = displayHeight / imageHeight;
-
-  // 将原始坐标转换为显示坐标
+// 将原始坐标转换为显示坐标
   const displayX = x * scaleX;
   const displayY = y * scaleY;
   const scaledWidth = cropWidth * scaleX;
@@ -62,7 +60,7 @@ interface ImageCropModalProps {
 
 /**
  * 图片截取模态框组件
- * 支持正方形截取
+ * 支撑 支撑取
  */
 export const ImageCropModal: React.FC<ImageCropModalProps> = ({
   visible,
@@ -76,13 +74,11 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [aspect] = useState<number | undefined>(1); // 1:1 正方形比例
   const imgRef = useRef<HTMLImageElement>(null);
-
-  // 初始化截取区域
+// 初始化截取区域
   const onImageLoad = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
       const { width, height } = e.currentTarget;
-
-      // 如果有现有的裁剪数据，使用它来初始化裁剪区域
+// 如果有现有的所需数据，用它来初始化所需区域
       if (existingCropData) {
         const crop = createCropFromAvatarData(
           existingCropData,
@@ -92,11 +88,10 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
         );
         setCrop(crop);
       } else {
-        // 默认行为：计算截取区域的宽度（与图片等宽）
+// 默认行为：计算截取区域的宽度（与图片等宽）
         const cropWidth = width;
         const cropHeight = width; // 正方形，所以高度等于宽度
-
-        // 如果图片高度小于宽度，则使用图片高度作为截取区域大小
+// 如果图片高度小于宽度，则使用图片高度作为获取区域大小
         const finalCropSize = Math.min(cropWidth, cropHeight, height);
 
         const crop = makeAspectCrop(
@@ -116,8 +111,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     },
     [existingCropData],
   );
-
-  // 确认截取
+// 确认截取
   const handleConfirm = () => {
     if (!completedCrop || !imgRef.current) {
       message.error("请先选择截取区域");
@@ -127,8 +121,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     const image = imgRef.current;
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
-
-    // 计算在原始图片中的坐标
+// 在原始图片中计算坐标
     const cropData: AvatarCropData = {
       x: Math.round(completedCrop.x * scaleX),
       y: Math.round(completedCrop.y * scaleY),
@@ -141,13 +134,11 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     onConfirm(cropData);
     message.success("头像坐标设置成功");
   };
-
-  // 重置截取区域
+// 重置截取区域
   const handleReset = () => {
     if (imgRef.current) {
       const { width, height } = imgRef.current;
-
-      // 如果有现有的裁剪数据，重置到该位置
+// 如果有现有的特定数据，重置到该位置
       if (existingCropData) {
         const crop = createCropFromAvatarData(
           existingCropData,
@@ -157,11 +148,10 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
         );
         setCrop(crop);
       } else {
-        // 默认行为：计算截取区域的宽度（与图片等宽）
+// 默认行为：计算截取区域的宽度（与图片等宽）
         const cropWidth = width;
         const cropHeight = width; // 正方形，所以高度等于宽度
-
-        // 如果图片高度小于宽度，则使用图片高度作为截取区域大小
+// 如果图片高度小于宽度，则使用图片高度作为获取区域大小
         const finalCropSize = Math.min(cropWidth, cropHeight, height);
 
         const crop = makeAspectCrop(

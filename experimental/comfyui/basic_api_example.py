@@ -2,30 +2,25 @@ import json
 import time
 from urllib import request
 from pathlib import Path
-
-# This is the ComfyUI api prompt format.
-
-# If you want it for a specific workflow you can "enable dev mode options"
-# in the settings of the UI (gear beside the "Queue Size: ") this will enable
-# a button on the UI to save workflows in api format.
-
-# keep in mind ComfyUI is pre alpha software so this format will change a bit.
-
-# this is the one for the default workflow
-# Read from req.json to req_text
+# 这是 ComfyUI api prompt 格式。
+# 如果你想要它用于特定的工作流程，你可以“启用开发模式选项”
+# 在 UI 的设置中（“排列大小：”旁边的齿轮）这将启用
+# UI 上的一个按钮，用于以 api 格式保存工作流程。
+# 请记住 ComfyUI 是 pre alpha 软件，此格式会发生变化。
+#这是默认工作流程
+# 从请求中读取。json 到 req_text
 req_json = json.load(open("req.json"))
 
 
 def queue_prompt(prompt):
     """Queue a prompt and return the prompt_id"""
     p = {"prompt": prompt}
-
-    # If the workflow contains API nodes, you can add a Comfy API key to the `extra_data`` field of the payload.
-    # p["extra_data"] = {
-    #     "api_key_comfy_org": "comfyui-87d01e28d*******************************************************"  # replace with real key
-    # }
-    # See: https://docs.comfy.org/tutorials/api-nodes/overview
-    # Generate a key here: https://platform.comfy.org/login
+# 如果工作流包含 API 节点，您可以将 Comfy API 热点添加到负载的 `extra_data` 字段中。
+# p["extra_data"] = {
+# "api_key_comfy_org": "comfyui-87d01e28d********************************************************************" # 替换为真实密钥
+# }
+# 请参阅：https://docs.comfy.org/tutorials/api-nodes/overview
+#这里生成密钥：https://platform.comfy.org/login
 
     data = json.dumps(p).encode("utf-8")
     print("Sending data: ", data)
@@ -82,8 +77,7 @@ def save_images_from_history(history_data, output_dir="output"):
                     print("image_data: ", image_data)
                     filename = image_data["filename"]
                     image_bytes = get_image(filename)
-
-                    # Save the image
+# 保存图片
                     file_path = output_path / filename
                     with open(file_path, "wb") as f:
                         f.write(image_bytes)

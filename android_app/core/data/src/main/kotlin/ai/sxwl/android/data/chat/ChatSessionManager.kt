@@ -35,20 +35,19 @@ object ChatSessionManager {
 
     private fun getSession(agentId: String): AgentChatSession {
         return agentIdToSession.getOrPut(agentId) {
-            // 从本地存储加载数据
+// 从本地存储加载数据
             loadSessionFromStorage(agentId)
         }
     }
 
     /**
      * 从本地存储加载会话数据
-     * 暂时禁用数据持久化，避免序列化问题
+     * 暂时取消数据持久化，避免序列化问题
      */
     private fun loadSessionFromStorage(agentId: String): AgentChatSession {
         val session = AgentChatSession()
-
-        // 暂时禁用数据持久化，避免序列化问题
-        // TODO: 实现更简单的数据存储方案
+// 暂时取消数据持久化，避免序列化问题
+// TODO：实现更简单的数据存储方案
         LogUtils.i("ChatSessionManager: Data persistence temporarily disabled for $agentId")
 
         return session
@@ -56,11 +55,11 @@ object ChatSessionManager {
 
     /**
      * 保存会话数据到本地存储
-     * 暂时禁用数据持久化，避免序列化问题
+     * 暂时取消数据持久化，避免序列化问题
      */
     private fun saveSessionToStorage(agentId: String, session: AgentChatSession) {
-        // 暂时禁用数据持久化，避免序列化问题
-        // TODO: 实现更简单的数据存储方案
+// 暂时取消数据持久化，避免序列化问题
+// TODO：实现更简单的数据存储方案
         LogUtils.d("ChatSessionManager: Data persistence temporarily disabled for $agentId")
     }
 
@@ -86,8 +85,7 @@ object ChatSessionManager {
                     is HttpResult.Success -> {
                         val newMessages = result.data.messages ?: emptyList()
                         LogUtils.i("ChatSessionManager.ensureInitialHistory API returned ${newMessages.size} messages for $agentId")
-
-                        // 调试：打印每条消息的详细信息
+// 调试：打印每条消息的详细信息
                         newMessages.forEachIndexed { index, msg ->
                             LogUtils.d(
                                 "Message $index: role=${msg.role}, content=${
@@ -97,8 +95,7 @@ object ChatSessionManager {
                                 }..., id=${msg.id}, localMsgId=${msg.localMsgId}"
                             )
                         }
-
-                        // 调试：打印每个消息的key
+// 调试：打印每个消息的key
                         newMessages.forEachIndexed { index, msg ->
                             val key = keyFor(msg)
                             LogUtils.d("Message $index key: $key")
@@ -111,8 +108,7 @@ object ChatSessionManager {
                         session.hasMore.value = result.data.hasMore
                         session.offset = if (unique.isNotEmpty()) pageSize else 0
                         session.isInitialLoaded = true
-
-                        // 保存到本地存储
+// 保存到本地存储
                         saveSessionToStorage(agentId, session)
 
                         LogUtils.i("ChatSessionManager.ensureInitialHistory loaded ${unique.size} msgs for $agentId, hasMore=${session.hasMore.value}")
@@ -120,7 +116,7 @@ object ChatSessionManager {
 
                     is HttpResult.Failure -> {
                         LogUtils.e("ChatSessionManager.ensureInitialHistory failure for $agentId: ${result.message}")
-                        // 标记已尝试加载，避免重复打接口；仍允许后续手动刷新时再拉
+// 标记已尝试加载，避免重复打接口；仍允许后续手册刷新时再拉
                         session.isInitialLoaded = true
                         saveSessionToStorage(agentId, session)
                     }
@@ -152,8 +148,7 @@ object ChatSessionManager {
                             session.offset += pageSize
                         }
                         session.hasMore.value = result.data.hasMore
-
-                        // 保存到本地存储
+// 保存到本地存储
                         saveSessionToStorage(agentId, session)
 
                         LogUtils.i("ChatSessionManager.loadMore for $agentId loaded ${more.size}, hasMore=${session.hasMore.value}, offset=${session.offset}")
@@ -174,7 +169,7 @@ object ChatSessionManager {
     suspend fun sendMessage(agentId: String, content: String): HttpResult<SendMsgResponse> {
         val session = getSession(agentId)
         return session.lock.withLock {
-            // 1) 先插入用户消息与loading占位
+// 1)先行插入用户消息与loading占位
             val userMsg = MsgInfo(content = content.trimEnd(), role = "user")
             val loadingMsg = MsgInfo(content = LOADING_PLACEHOLDER_CONTENT, role = ROLE_ASSISTANT)
             session.messages.value = buildList {
@@ -182,8 +177,7 @@ object ChatSessionManager {
                 add(userMsg)
                 addAll(session.messages.value)
             }
-
-            // 立即保存用户消息到本地存储
+// 立即保存用户消息到本地存储
             saveSessionToStorage(agentId, session)
 
             val api: IChatApi = NetServiceMgr.getChatApi()
@@ -194,13 +188,11 @@ object ChatSessionManager {
                 LogUtils.e("ChatSessionManager.sendMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
-
-            // 2) 移除loading
+// 2) 移除加载
             session.messages.value = session.messages.value.filterNot {
                 it.content == LOADING_PLACEHOLDER_CONTENT && it.role == ROLE_ASSISTANT
             }
-
-            // 3) 追加AI回复
+// 3)追加AI回复
             if (result is HttpResult.Success) {
                 val choices = result.data.data?.choices ?: emptyList()
                 if (choices.isNotEmpty()) {
@@ -210,15 +202,13 @@ object ChatSessionManager {
                         addAll(session.messages.value)
                     }
                     session.messages.value = merged
-
-                    // 会话已读更新
+// 会话已读更新
                     choices.lastOrNull()?.message?.content?.let { lastContent ->
                         IntySetting.setConversationReaded(agentId, lastContent)
                     }
                 }
             }
-
-            // 保存最终的消息状态到本地存储
+// 保存最终的消息状态到本地存储
             saveSessionToStorage(agentId, session)
 
             result
@@ -230,13 +220,12 @@ object ChatSessionManager {
         session.messages.value = session.messages.value.map { msg ->
             if (msg.localMsgId == messageId) msg.copy(audio_url = audioUrl) else msg
         }
-
-        // 保存更新后的消息到本地存储
+// 保存更新后的消息到本地存储
         saveSessionToStorage(agentId, session)
     }
 
     /**
-     * 清理指定agent的聊天数据
+     * 清理指定代理的聊天数据
      */
     fun clearChatData(agentId: String) {
         agentIdToSession.remove(agentId)
@@ -255,13 +244,13 @@ object ChatSessionManager {
 
     /**
      * 增量同步：检查服务器是否有新消息
-     * 只在本地有数据且已初始化时调用，避免重复请求
+     * 仅在本地有数据且已初始化时调用，避免重复请求
      */
     suspend fun syncLatestMessages(agentId: String, pageSize: Int = DEFAULT_PAGE_SIZE) {
         val session = getSession(agentId)
         LogUtils.i("ChatSessionManager.syncLatestMessages called for $agentId, isInitialLoaded=${session.isInitialLoaded}, messagesCount=${session.messages.value.size}")
         if (!session.isInitialLoaded || session.messages.value.isEmpty()) {
-            // 如果没有初始化或没有本地数据，使用正常的初始化流程
+// 如果没有初始化或者没有本地数据，使用正常的初始化流程
             LogUtils.i("ChatSessionManager.syncLatestMessages calling ensureInitialHistory for $agentId")
             ensureInitialHistory(agentId, pageSize)
             return
@@ -270,14 +259,13 @@ object ChatSessionManager {
         session.lock.withLock {
             try {
                 val api: IChatApi = NetServiceMgr.getChatApi()
-                // 只获取最新的几条消息来检查是否有更新
+// 只获取最新的几条消息来检查是否有更新
                 val result = api.getMsgs(agentId, pageSize, 0)
                 when (result) {
                     is HttpResult.Success -> {
                         val serverMessages = result.data.messages ?: emptyList()
                         val localMessages = session.messages.value
-
-                        // 检查是否有新消息（通过比较消息ID或内容）
+// 检查是否有新消息（通过比较消息ID或内容）
                         val hasNewMessages = serverMessages.any { serverMsg ->
                             localMessages.none { localMsg ->
                                 localMsg.id == serverMsg.id ||
@@ -286,13 +274,12 @@ object ChatSessionManager {
                         }
 
                         if (hasNewMessages) {
-                            // 有新消息，重新加载完整数据
+// 有新消息，重新加载完整数据
                             val unique = serverMessages.distinctBy { keyFor(it) }
                             session.messages.value = unique
                             session.hasMore.value = result.data.hasMore
                             session.offset = if (unique.isNotEmpty()) pageSize else 0
-
-                            // 保存到本地存储
+// 保存到本地存储
                             saveSessionToStorage(agentId, session)
 
                             LogUtils.i("ChatSessionManager.syncLatestMessages found new messages for $agentId, updated ${unique.size} messages")
@@ -312,7 +299,7 @@ object ChatSessionManager {
     }
 
     private fun keyFor(msg: MsgInfo): String {
-        // 优先使用服务器ID，如果没有则使用内容+角色作为键
+// 优先使用服务器ID，如果没有则使用内容+角色键作为
         return if (msg.id.isNotEmpty()) {
             msg.id
         } else {

@@ -17,8 +17,8 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.reflect.KClass
 
 /**
- * 事件总线核心接口
- * 定义了事件总线的基本操作
+ * 事件入口核心接口
+ * 定义了活动的基本操作
  */
 interface IEventBus {
     /**
@@ -41,17 +41,17 @@ interface IEventBus {
     fun <T : Any> post(event: T)
 
     /**
-     * 发布事件到主线程
+     * 将事件发布到主线程
      */
     fun <T : Any> postOnMainThread(event: T)
 
     /**
-     * 发布事件到后台线程
+     * 将事件发布到后台线程
      */
     fun <T : Any> postOnBackgroundThread(event: T)
 
     /**
-     * 清理无效订阅者
+     *清理无效订阅者
      */
     fun cleanup()
 
@@ -61,7 +61,7 @@ interface IEventBus {
     fun <T : Any> getSubscriberCount(eventClass: KClass<T>): Int
 
     /**
-     * 检查是否有订阅者
+     * 查询是否有订阅者
      */
     fun <T : Any> hasSubscribers(eventClass: KClass<T>): Boolean
 }
@@ -84,7 +84,7 @@ data class EventWrapper(
 )
 
 /**
- * 事件总线配置
+ * 事件出口配置
  */
 data class EventBusConfig(
     val enableLogging: Boolean = false,
@@ -94,7 +94,7 @@ data class EventBusConfig(
 )
 
 /**
- * 事件总线统计信息
+ * 活动现场统计信息
  */
 data class EventBusStats(
     val totalEventsPublished: Long = 0,
@@ -104,7 +104,7 @@ data class EventBusStats(
 )
 
 /**
- * 事件总线管理器
+ * 事件入口管理器
  * 负责管理事件订阅者和发布事件
  */
 internal class EventBusManager(
@@ -255,7 +255,7 @@ internal class EventBusManager(
 
 /**
  * 弱引用事件订阅者
- * 防止内存泄漏
+ * 防止内存溢出
  */
 private class WeakEventSubscriber<T : Any>(
     subscriberRef: WeakReference<EventSubscriber<T>>,
@@ -277,8 +277,8 @@ private class WeakEventSubscriber<T : Any>(
 }
 
 /**
- * 事件总线单例实现
- * 提供全局事件总线功能
+ * 事件出口单例实现
+ * 提供全民活动步行功能
  */
 object EventBus : IEventBus {
 
@@ -332,7 +332,7 @@ object EventBus : IEventBus {
 }
 
 /**
- * EventBus扩展函数，提供更便捷的API
+ * EventBus扩展函数，提供更方便的API
  */
 object EventBusExtensions {
 
@@ -384,17 +384,16 @@ object EventBusExtensions {
         crossinline onEvent: (Any) -> Unit,
     ) {
         events.forEach { eventClass ->
-            // 为每种事件类型创建订阅者
+// 为大众事件类型创建订阅者
             val subscriber = object : EventSubscriber<Any> {
                 override fun onEvent(event: Any) {
                     onEvent(event)
                 }
             }
-
-            // 直接调用EventBus的subscribe方法
+// 直接调用EventBus的subscribe方法
             when (this) {
                 is EventBus -> {
-                    // 使用类型擦除的方式调用
+// 使用类型调用的方式
                     @Suppress("UNCHECKED_CAST")
                     subscribe(eventClass as KClass<Any>, subscriber, priority)
                 }

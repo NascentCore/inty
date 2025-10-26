@@ -2,19 +2,15 @@ import json
 import base64
 from pathlib import Path
 import re
-
-# Read response.json
+# 读取响应。__保留__1__
 with open("response.json", "r") as f:
     data = json.load(f)
-
-# Extract images from the images field
+#从图像字段中提取图像
 images = data["output"]["images"]
-
-# Create output directory
+#创建作品目录
 output_dir = Path("extracted_images")
 output_dir.mkdir(exist_ok=True)
-
-# Save each image as PNG
+# 将每个图像保存为PNG
 for idx, b64img in enumerate(images):
     b64img = re.sub("^data:image/.+;base64,", "", b64img)
     img_bytes = base64.b64decode(b64img)

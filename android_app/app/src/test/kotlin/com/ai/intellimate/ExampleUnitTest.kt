@@ -4,10 +4,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Example local unit test, which will execute on the development machine (host).
+ * 示例本地单元测试，将在开发机器（主机）上执行。
  *
- * See [testing documentation](http://d.android.com/tools/testing).
- */
+ * 请参见[测试文档](http://d.android.com/tools/testing)。*/
 class ExampleUnitTest {
     @Test
     fun addition_isCorrect() {

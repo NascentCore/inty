@@ -16,13 +16,12 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * 网络工具类
- * 提供网络相关的工具方法，支持复杂网络场景检测
+ * 提供网络相关的工具方法，支持复杂的网络场景检测
  */
 object NetworkUtils {
 
     private const val TAG = "NetworkUtils"
-
-    // ==================== 网络类型枚举 ====================
+// ==================== 网络类型枚举 ====================
 
     /**
      * 网络类型枚举
@@ -45,8 +44,7 @@ object NetworkUtils {
         val isMetered: Boolean = false,
         val isRoaming: Boolean = false
     )
-
-    // ==================== 基础网络检测 ====================
+// ==================== 基础网络检测 ====================
 
     /**
      * 检查网络是否连接
@@ -64,7 +62,7 @@ object NetworkUtils {
     }
 
     /**
-     * 检查网络是否真正可用（排除飞行模式下的VPN连接等虚假连接）
+     * 检查网络是否真正可用（排除飞行模式下的VPN连接等相似连接）
      * 通过检查网络传输类型来判断是否为真实网络连接
      */
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
@@ -75,26 +73,23 @@ object NetworkUtils {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val network = cm.activeNetwork ?: return false
             val capabilities = cm.getNetworkCapabilities(network) ?: return false
-
-            // 检查是否有互联网能力
+// 检查是否有互联网能力
             if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
                 return false
             }
-
-            // 检查是否有有效的传输类型（排除仅VPN连接的情况）
+// 检查是否有有效的传输类型（排除仅VPN连接的情况）
             val hasValidTransport = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
                     capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
                     capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
-
-            // 如果只有VPN传输，检查是否在飞行模式下
+// 如果只有VPN传输，检查是否在飞行模式下
             val hasOnlyVpn = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
                     !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
                     !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
                     !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
 
             if (hasOnlyVpn) {
-                // 如果只有VPN连接，检查是否在飞行模式下
-                // 在飞行模式下，即使VPN显示连接，实际上也无法访问互联网
+// 如果只有VPN连接，检查是否在飞行模式下
+// 在飞行模式下，即使VPN显示连接，实际上也无法访问互联网
                 return false
             }
 
@@ -104,17 +99,16 @@ object NetworkUtils {
             cm.activeNetworkInfo?.isConnected == true
         }
     }
-
-    // ==================== 网络类型检测 ====================
+// ==================== 网络类型检测 ====================
 
     /**
-     * 检查是否为WiFi连接
+     * 查询是否为WiFi连接
      */
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     fun isWifiConnected(): Boolean = isWifiConnected(Utils.getApp())
 
     /**
-     * 检查是否为WiFi连接
+     * 查询是否为WiFi连接
      */
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     fun isWifiConnected(context: Context?): Boolean {
@@ -158,7 +152,7 @@ object NetworkUtils {
     }
 
     /**
-     * 检查是否为以太网连接
+     * 查询是否为休闲连接
      */
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     fun isEthernetConnected(context: Context? = Utils.getApp()): Boolean {
@@ -192,12 +186,11 @@ object NetworkUtils {
             false // 低版本不支持VPN检测
         }
     }
-
-    // ==================== 网络状态检测 ====================
+// ==================== 网络状态检测 ====================
 
     /**
      * 检查是否为移动数据流量
-     * 用于判断网络拦截数据使用的是手机流量
+     *用于判断网络拦截数据使用或手机流量
      */
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     fun isMobileData(): Boolean = isMobileData(Utils.getApp())
@@ -214,7 +207,7 @@ object NetworkUtils {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val network = cm.activeNetwork ?: return false
             val capabilities = cm.getNetworkCapabilities(network) ?: return false
-            // 检查是否为移动网络且不是计费网络（即使用移动数据流量）
+// 检查是否为移动网络且不是设备网络（即使用移动数据流量）
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
                     !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
         } else {
@@ -225,7 +218,7 @@ object NetworkUtils {
     }
 
     /**
-     * 检查是否为计费网络
+     * 检查是否为无线网络
      */
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     fun isMeteredNetwork(context: Context? = Utils.getApp()): Boolean {
@@ -261,8 +254,7 @@ object NetworkUtils {
             cm.activeNetworkInfo?.isRoaming == true
         }
     }
-
-    // ==================== 网络类型获取 ====================
+// ==================== 网络类型获取 ====================
 
     /**
      * 获取当前网络类型
@@ -317,8 +309,7 @@ object NetworkUtils {
             NetworkType.UNKNOWN -> "未知网络"
         }
     }
-
-    // ==================== 网络状态获取 ====================
+// ==================== 网络状态获取 ====================
 
     /**
      * 获取完整的网络状态
@@ -334,8 +325,7 @@ object NetworkUtils {
 
         return NetworkState(isConnected, networkType, isMetered, isRoaming)
     }
-
-    // ==================== 网络状态监听 ====================
+// ==================== 网络状态监听 ====================
 
     /**
      * 网络状态监听器接口
@@ -370,8 +360,7 @@ object NetworkUtils {
                     }
                 }
             }
-
-            // 注册网络回调
+// 注册网络回调
             val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
             val networkRequest = NetworkRequest.Builder()
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
@@ -395,8 +384,7 @@ object NetworkUtils {
             }
 
             cm?.registerNetworkCallback(networkRequest, callback)
-
-            // 立即发送当前网络状态
+// 立即发送当前网络状态
             try {
                 trySend(getNetworkState(context))
             } catch (e: Exception) {
@@ -408,11 +396,10 @@ object NetworkUtils {
             }
         }.distinctUntilChanged()
     }
-
-    // ==================== 便捷方法 ====================
+// ====================便捷方法====================
 
     /**
-     * 检查是否应该显示网络错误提示
+     * 检查是否显示网络错误提示
      * 当网络未连接时，不显示网络相关的错误提示
      */
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
@@ -432,8 +419,7 @@ object NetworkUtils {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val network = cm.activeNetwork ?: return false
             val capabilities = cm.getNetworkCapabilities(network) ?: return false
-
-            // 检查是否有高质量网络能力
+// 检查是否有高质量的网络能力
             capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
                     (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
                             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))

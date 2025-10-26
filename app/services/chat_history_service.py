@@ -26,15 +26,14 @@ def _parse_message_content(message_raw) -> Dict[str, str]:
         包含content和role的字典
     """
     try:
-        # 处理消息数据
+# 处理消息数据
         if isinstance(message_raw, str):
             message_data = json.loads(message_raw)
         elif isinstance(message_raw, dict):
             message_data = message_raw
         else:
             message_data = json.loads(str(message_raw))
-
-        # 解析消息类型和内容
+# 解析消息类型和内容
         message_type = message_data.get("type", "human")
         content = ""
 
@@ -42,8 +41,7 @@ def _parse_message_content(message_raw) -> Dict[str, str]:
             content = message_data["data"]["content"]
         elif "content" in message_data:
             content = message_data["content"]
-
-        # 确定角色
+#确定角色
         role = "user" if message_type in ["human", "HumanMessage"] else "assistant"
 
         return {"content": content, "role": role}
@@ -51,9 +49,7 @@ def _parse_message_content(message_raw) -> Dict[str, str]:
     except Exception as e:
         logger.warning(f"解析消息内容失败: {str(e)}")
         return {"content": str(message_raw) if message_raw else "", "role": "unknown"}
-
-
-# Keep the legacy connection function for PostgresChatMessageHistory compatibility
+# 保留旧版本连接功能以实现 PostgresChatMessageHistory 兼容
 _connection = None
 
 
@@ -72,9 +68,7 @@ def get_chat_history_connection():
             logger.error(f"建立chat_history数据库连接失败: {str(e)}")
             raise
     return _connection
-
-
-# chat_history表现在由Alembic迁移管理，不需要手动初始化
+# chat_history 表现由Alembic迁移管理，不需要手动初始化
 
 
 def get_chat_history(session_id: str) -> PostgresChatMessageHistory:
@@ -99,14 +93,12 @@ async def add_agent_opening_message(
             opening_message = render_prompt_jinja2_template(
                 opening_message, char=agent_name, user=user_name
             )
-
-        # 构建AIMessage的JSON格式数据
+# 构建AIMessage的JSON格式数据
         message_data = {
             "type": "ai",
             "data": {"content": opening_message},
         }
-
-        # 构建meta_data
+# 构建meta_data
         meta_data = None
         if agent_id or audio_duration is not None:
             meta_data = {}
@@ -115,8 +107,7 @@ async def add_agent_opening_message(
                 meta_data["isOpening"] = True
             if audio_duration is not None:
                 meta_data["audioDuration"] = audio_duration
-
-        # 使用ORM创建新记录
+# 使用 ORM 创建新记录
         chat_history = ChatHistory(
             session_id=session_id,
             message=message_data,
@@ -148,7 +139,7 @@ def get_last_message(session_id: str) -> Optional[str]:
         return None
     except Exception as e:
         logger.error(f"获取最近消息失败 {session_id}: {str(e)}")
-        # 返回None而不是抛出异常，让主要功能继续工作
+#返回None而不是抛出异常，让主要功能继续工作
         return None
 
 
@@ -156,8 +147,7 @@ def get_last_message_with_timestamp(session_id: str) -> Optional[Dict[str, Any]]
     """获取最近一条消息内容和时间戳"""
     try:
         conn = get_chat_history_connection()
-
-        # 查询最近一条消息
+#查询最近一条消息
         query = """
             SELECT message, created_at
             FROM chat_history 
@@ -172,7 +162,7 @@ def get_last_message_with_timestamp(session_id: str) -> Optional[Dict[str, Any]]
 
             if row:
                 try:
-                    # 处理消息数据
+# 处理消息数据
                     message_raw = row[0]
                     if isinstance(message_raw, str):
                         message_data = json.loads(message_raw)
@@ -182,8 +172,7 @@ def get_last_message_with_timestamp(session_id: str) -> Optional[Dict[str, Any]]
                         message_data = json.loads(str(message_raw))
 
                     created_at = row[1]
-
-                    # 解析消息内容
+# 解析消息内容
                     content = ""
                     if "data" in message_data and "content" in message_data["data"]:
                         content = message_data["data"]["content"]
@@ -225,10 +214,9 @@ async def add_ai_message(
 ) -> Optional[int]:
     """添加AI消息到聊天历史，返回插入的消息ID"""
     try:
-        # 构建AIMessage的JSON格式数据
+# 构建AIMessage的JSON格式数据
         message_data = {"type": "ai", "data": {"content": message}}
-
-        # 构建meta_data
+# 构建meta_data
         meta_data = None
         if agent_id or audio_duration is not None:
             meta_data = {}
@@ -237,8 +225,7 @@ async def add_ai_message(
                 meta_data["isOpening"] = False
             if audio_duration is not None:
                 meta_data["audioDuration"] = audio_duration
-
-        # 使用ORM创建新记录
+# 使用 ORM 创建新记录
         chat_history = ChatHistory(
             session_id=session_id, message=message_data, meta_data=meta_data
         )
@@ -259,7 +246,7 @@ async def add_ai_message(
 async def get_latest_ai_message_id(db: AsyncSession, session_id: str) -> Optional[int]:
     """获取会话中最新的AI消息ID"""
     try:
-        # 使用ORM查询最新的AI消息ID
+# 使用ORM查询最新的AI消息ID
         stmt = (
             select(ChatHistory.id)
             .where(
@@ -287,7 +274,7 @@ async def get_latest_ai_message_info(
 ) -> Optional[Dict[str, Any]]:
     """获取会话中最新AI消息的完整信息"""
     try:
-        # 使用ORM查询最新的AI消息完整信息
+# 使用ORM查询最新的AI消息完整信息
         stmt = (
             select(ChatHistory)
             .where(
@@ -305,8 +292,7 @@ async def get_latest_ai_message_info(
 
         if not chat_history:
             return None
-
-        # 解析消息内容
+# 解析消息内容
         content = ""
         try:
             message_data = chat_history.message
@@ -350,8 +336,7 @@ def get_messages_paginated(
     """
     try:
         conn = get_chat_history_connection()
-
-        # 查询总消息数
+#查询总消息数
         count_query = """
             SELECT COUNT(*) 
             FROM chat_history 
@@ -361,8 +346,7 @@ def get_messages_paginated(
         with conn.cursor() as cur:
             cur.execute(count_query, (session_id,))
             total_count = cur.fetchone()[0]
-
-        # 分页查询消息（按时间倒序，最新的在前）- 包括消息ID、audio_url和meta_data
+#分页查询消息（按时间倒序，最新的在前）- 包括消息ID、audio_url和meta_data
         messages_query = """
             SELECT id, message, created_at, audio_url, meta_data
             FROM chat_history 
@@ -378,23 +362,21 @@ def get_messages_paginated(
 
             for row in rows:
                 try:
-                    # 提取消息ID、消息数据、创建时间、audio_url和meta_data
+# 提取消息ID、消息数据、创建时间、audio_url和meta_data
                     message_id = row[0]
                     message_raw = row[1]
                     created_at = row[2]
                     audio_url = row[3]
                     meta_data_raw = row[4]
-
-                    # 处理消息数据，可能是字符串或已经是字典
+# 处理消息数据，可能是字符串或已经是字典
                     if isinstance(message_raw, str):
                         message_data = json.loads(message_raw)
                     elif isinstance(message_raw, dict):
                         message_data = message_raw
                     else:
-                        # 尝试转换为字符串再解析
+# 尝试转换为字符串再解析
                         message_data = json.loads(str(message_raw))
-
-                    # 解析消息类型和内容
+# 解析消息类型和内容
                     message_type = message_data.get("type", "human")
                     content = ""
 
@@ -402,15 +384,13 @@ def get_messages_paginated(
                         content = message_data["data"]["content"]
                     elif "content" in message_data:
                         content = message_data["content"]
-
-                    # 确定角色
+#确定角色
                     role = (
                         "user"
                         if message_type in ["human", "HumanMessage"]
                         else "assistant"
                     )
-
-                    # 处理meta_data
+# 处理元数据
                     meta_data = None
                     if meta_data_raw:
                         if isinstance(meta_data_raw, str):
@@ -433,10 +413,9 @@ def get_messages_paginated(
                     logger.warning(
                         f"解析消息失败 {session_id}: {str(e)}, 原始数据: {row[0]}"
                     )
-                    # 跳过无法解析的消息，继续处理其他消息
+# 跳过无法解析的消息，继续处理其他消息
                     continue
-
-        # 因为我们是按时间倒序查询的，但返回时希望按正常时间顺序（旧消息在前）
+#因为我们是按时间倒序查询的，但返回时希望按正常时间顺序（旧消息在前面）
         messages.reverse()
 
         return {
@@ -501,8 +480,7 @@ def clear_session(session_id: str) -> None:
     """
     try:
         conn = get_chat_history_connection()
-
-        # 删除指定会话的所有消息
+#删除指定故乡的所有消息
         delete_query = """
             DELETE FROM chat_history 
             WHERE session_id = %s
@@ -534,14 +512,13 @@ async def get_message_content(
         消息内容，如果找不到则返回None
     """
     try:
-        # 尝试将message_id转换为整数
+# 尝试将message_id转换为整数
         try:
             db_message_id = int(message_id)
         except ValueError:
             logger.warning(f"无法解析消息ID为整数: {message_id}")
             return None
-
-        # 使用ORM查询消息
+# 使用ORM查询消息
         stmt = select(ChatHistory).where(
             and_(ChatHistory.session_id == session_id, ChatHistory.id == db_message_id)
         )
@@ -550,7 +527,7 @@ async def get_message_content(
         chat_history = result.scalar_one_or_none()
 
         if chat_history:
-            # 解析消息内容
+# 解析消息内容
             parsed = _parse_message_content(chat_history.message)
             return parsed["content"]
         else:
@@ -585,16 +562,15 @@ async def update_message_audio_url(
         bool: 更新是否成功
     """
     try:
-        # 尝试将message_id转换为整数
+# 尝试将message_id转换为整数
         try:
             db_message_id = int(message_id)
         except ValueError:
             logger.warning(f"无法解析消息ID为整数: {message_id}")
             return False
-
-        # 构建更新语句
+# 构建更新语句
         if audio_duration is not None:
-            # 使用SQLAlchemy的JSONB操作更新audio_url和meta_data
+# 使用_​​​​​​​_KEEP__2__的JSONB操作更新audio_url和meta_data
             stmt = (
                 update(ChatHistory)
                 .where(
@@ -612,7 +588,7 @@ async def update_message_audio_url(
                 )
             )
         else:
-            # 只更新audio_url
+# 只更新audio_url
             stmt = (
                 update(ChatHistory)
                 .where(
@@ -661,8 +637,7 @@ def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
     """
     try:
         conn = get_chat_history_connection()
-
-        # 首先验证指定的消息是否存在
+#首先验证指定的消息是否存在
         check_query = """
             SELECT id, message, created_at
             FROM chat_history 
@@ -680,8 +655,7 @@ def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
                     "deleted_count": 0,
                     "target_message": None,
                 }
-
-            # 查询将要删除的消息数量和详情（包括指定ID）
+# 查询要删除的消息数量和详情（包括指定ID）
             count_query = """
                 SELECT COUNT(*), MIN(created_at), MAX(created_at)
                 FROM chat_history 
@@ -693,7 +667,7 @@ def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
             messages_to_delete = count_result[0] if count_result else 0
 
             if messages_to_delete == 0:
-                # 解析目标消息内容
+# 解析目标消息内容
                 parsed_target = _parse_message_content(target_message[1])
                 return {
                     "success": True,
@@ -708,8 +682,7 @@ def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
                         ),
                     },
                 }
-
-            # 执行删除操作（包括指定ID）
+# 执行删除操作（包括指定ID）
             delete_query = """
                 DELETE FROM chat_history 
                 WHERE session_id = %s AND id >= %s
@@ -721,8 +694,7 @@ def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
             logger.info(
                 f"已清除会话 {session_id} 中包括消息ID {message_id} 在内的 {actual_deleted} 条记录"
             )
-
-            # 解析目标消息内容
+# 解析目标消息内容
             parsed_target = _parse_message_content(target_message[1])
             return {
                 "success": True,
@@ -774,8 +746,7 @@ def clear_messages_after_timestamp(session_id: str, timestamp: str) -> Dict[str,
     try:
         conn = get_chat_history_connection()
         from datetime import datetime
-
-        # 解析时间戳
+# 解析解析
         try:
             target_time = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
         except ValueError as e:
@@ -784,8 +755,7 @@ def clear_messages_after_timestamp(session_id: str, timestamp: str) -> Dict[str,
                 "message": f"时间戳格式错误: {str(e)}",
                 "deleted_count": 0,
             }
-
-        # 查询将要删除的消息数量
+# 查询将要删除的消息数量
         count_query = """
             SELECT COUNT(*)
             FROM chat_history 
@@ -802,8 +772,7 @@ def clear_messages_after_timestamp(session_id: str, timestamp: str) -> Dict[str,
                     "message": f"指定时间 {timestamp} 之后没有消息需要删除",
                     "deleted_count": 0,
                 }
-
-            # 执行删除操作
+# 执行删除操作
             delete_query = """
                 DELETE FROM chat_history 
                 WHERE session_id = %s AND created_at > %s

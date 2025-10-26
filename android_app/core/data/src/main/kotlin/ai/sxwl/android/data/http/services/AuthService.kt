@@ -6,10 +6,10 @@ import ai.sxwl.android.utils.DeviceUtils
 import ai.sxwl.android.utils.LanguageUtils
 import com.inty.api.models.api.v1.auth.AuthCreateGuestParams
 
-/** 认证服务 封装所有认证相关的API调用 替换原有的 IUserApi 认证相关方法 */
+/** 认证服务封装所有认证相关的API调用替换原有的IUserApi 认证相关方法 */
 object AuthService {
 
-    /** 创建游客账户 替换: IUserApi.createGuest() */
+    /**创建用户账户替换：IUserApi。创建来宾() */
     suspend fun createGuest(): ApiResult<Pair<String, String>> {
         return IntyNetworkManager.executeRequest("Create Guest") {
             val response =
@@ -32,7 +32,7 @@ object AuthService {
         }
     }
 
-    /** Google登录 替换: IUserApi.googleLogin() */
+    /** Google登录替换：IUserApi。谷歌登录() */
     suspend fun googleLogin(idToken: String): ApiResult<Pair<String, String>> {
         return IntyNetworkManager.executeRequest("Google Login") {
             val response =
@@ -55,29 +55,29 @@ object AuthService {
         }
     }
 
-    /** 刷新Token 替换: IUserApi.refreshToken() 注意: 当前 IntySDK 没有直接的 refresh API，通过重新登录实现 */
+    /** 刷新Token替换：IUserApi。freshToken()注意: 当前 IntySDK 没有直接的刷新 API，通过重新登录实现 */
     suspend fun refreshToken(): ApiResult<String> {
         return IntyNetworkManager.executeRequest("Refresh Token") {
-            // 当前 IntySDK 没有 refresh token API
-            // 可以通过重新验证用户身份来获取新 token
-            // 这里暂时抛出异常，提示需要重新登录
+// 当前 IntySDK 没有刷新令牌 API
+// 可以通过重新验证用户身份来获取新的token
+// 这里暂时提交异常，提示需要重新登录
             throw Exception("Refresh token not supported, please re-login")
         }
     }
 
-    /** 登出 替换: IUserApi.logout() 注意: IntySDK可能没有直接的logout API，需要根据实际情况实现 */
+    /** 登出替换: IUserApi.logout() 注意: IntySDK 可能没有直接的logout API，需要根据实际情况实现 */
     suspend fun logout(): ApiResult<Unit> {
         return IntyNetworkManager.executeRequest("Logout") {
-            // 这里需要根据实际的IntySDK API来实现
-            // 目前先清除客户端缓存
+// 这里需要根据实际的IntySDK API来实现
+// 目前先清除客户端服务器
             IntyNetworkManager.clearClientCache()
         }
     }
 
-    /** 验证Token有效性 替换: IUserApi.validateToken() 注意: IntySDK可能没有直接的validate API，可以通过获取用户信息来验证 */
+    /** ValidToken有效替换：IUserApi。validateToken()注意: IntySDK 可能没有直接的validate API，可以通过获取用户信息来验证 */
     suspend fun validateToken(): ApiResult<Boolean> {
         return IntyNetworkManager.executeRequest("Validate Token") {
-            // 通过获取用户信息来验证token有效性
+// 通过获取用户信息来验证token有效
             try {
                 val response = IntyNetworkManager.getClient().api().v1().users().profile().me()
                 response.code() == 200L

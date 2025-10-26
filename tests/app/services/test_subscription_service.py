@@ -19,25 +19,22 @@ class TestSubscriptionService:
     @pytest.mark.asyncio
     async def test_check_agent_creation_limit_success(self):
         """Test successful agent creation limit check for subscribed user"""
-        # Arrange
+＃ 安排
         mock_google_play_service = AsyncMock(spec=GooglePlayService)
         mock_db = AsyncMock(spec=AsyncSession)
         mock_subscription_status = MagicMock(spec=SubscriptionStatusResponse)
         mock_subscription_status.is_subscribed = True
         mock_subscription_status.agent_creation_limit = 5
-
-        # Mock the subscription status call
+# 模拟订阅状态调用
         subscription_service = SubscriptionService(mock_google_play_service)
         subscription_service.get_user_subscription_status = AsyncMock(
             return_value=mock_subscription_status
         )
-
-        # Mock the database query for agent count
+# 数据库模拟查询代理计数
         mock_result = MagicMock()
         mock_result.scalar.return_value = 3  # User has created 3 agents
         mock_db.execute.return_value = mock_result
-
-        # Create a mock user object
+# 创建模拟用户对象
         user = User(
             id="user-123",
             readable_id="user123",
@@ -47,27 +44,23 @@ class TestSubscriptionService:
             created_at=datetime.now(timezone.utc),
             is_superuser=False,
         )
-
-        # Act
+＃ 行为
         is_allowed, agent_count, limit = (
             await subscription_service.check_agent_creation_limit(mock_db, user)
         )
-
-        # Assert
+#断言
         assert is_allowed is True  # 3 < 12, so allowed
         assert agent_count == 3
         assert limit == 12  # subscribed_user_agent_creation_24h_limit from config
-
-        # Verify the subscription status was called
+# 验证订阅状态是否被调用
         subscription_service.get_user_subscription_status.assert_called_once_with(
             mock_db, "user-123"
         )
-
-        # Verify the database query was executed
+# 验证数据库查询是否已执行
         mock_db.execute.assert_called_once()
         call_args = mock_db.execute.call_args[0][0]
         assert isinstance(call_args, Select)
-        # Verify it's counting agents for the specific user
+# 验证正在特定为用户统计代理
         assert "creator_id = :creator_id_1" in str(call_args)
 
     @pytest.mark.asyncio
@@ -128,8 +121,7 @@ class TestSubscriptionService:
         subscription_service.get_user_subscription_status = AsyncMock(
             return_value=mock_subscription_status
         )
-
-        # Mock the database query for 24h image generation count
+#数据库模拟查询24小时图像生成
         mock_result = MagicMock()
         mock_result.scalar.return_value = 2  # User has generated 2 images in 24h
         mock_db.execute.return_value = mock_result
@@ -163,8 +155,7 @@ class TestSubscriptionService:
         subscription_service.get_user_subscription_status = AsyncMock(
             return_value=mock_subscription_status
         )
-
-        # Mock the database query for 24h image generation count
+#数据库模拟查询24小时图像生成
         mock_result = MagicMock()
         mock_result.scalar.return_value = 5  # User has generated 5 images in 24h
         mock_db.execute.return_value = mock_result
@@ -198,8 +189,7 @@ class TestSubscriptionService:
         subscription_service.get_user_subscription_status = AsyncMock(
             return_value=mock_subscription_status
         )
-
-        # Mock the database query for 24h agent creation count
+# 模拟24小时代理创建统计的数据库查询
         mock_result = MagicMock()
         mock_result.scalar.return_value = 3  # User has created 3 agents in 24h
         mock_db.execute.return_value = mock_result
@@ -233,8 +223,7 @@ class TestSubscriptionService:
         subscription_service.get_user_subscription_status = AsyncMock(
             return_value=mock_subscription_status
         )
-
-        # Mock the database query for 24h agent creation count
+# 模拟24小时代理创建统计的数据库查询
         mock_result = MagicMock()
         mock_result.scalar.return_value = 8  # User has created 8 agents in 24h
         mock_db.execute.return_value = mock_result
@@ -268,8 +257,7 @@ class TestSubscriptionService:
         subscription_service.get_user_subscription_status = AsyncMock(
             return_value=mock_subscription_status
         )
-
-        # Mock the database query for 24h agent creation count
+# 模拟24小时代理创建统计的数据库查询
         mock_result = MagicMock()
         mock_result.scalar.return_value = (
             7  # User has created 7 agents in 24h (over limit of 6)

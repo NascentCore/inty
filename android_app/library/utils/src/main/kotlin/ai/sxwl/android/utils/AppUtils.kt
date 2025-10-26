@@ -21,8 +21,7 @@ import kotlin.system.exitProcess
  * 提供应用相关的工具方法
  */
 object AppUtils {
-
-    // ==================== 应用状态监听 ====================
+// ==================== 应用状态监听 ====================
 
     /**
      * 注册应用状态变化监听器
@@ -37,8 +36,7 @@ object AppUtils {
     fun unregisterAppStatusChangedListener(listener: Utils.OnAppStatusChangedListener) {
         UtilsBridge.removeOnAppStatusChangedListener(listener)
     }
-
-    // ==================== 应用信息查询 ====================
+// ==================== 应用信息查询 ====================
 
     /**
      * 判断应用是否已安装
@@ -94,7 +92,7 @@ object AppUtils {
     }
 
     /**
-     * 判断应用是否在前台
+     * 判断申请是否在前台
      */
     fun isAppForeground(packageName: String = Utils.getApp()?.packageName ?: ""): Boolean {
         if (UtilsBridge.isSpace(packageName)) return false
@@ -115,16 +113,14 @@ object AppUtils {
         return try {
             val app = Utils.getApp() ?: return false
             val am = app.getSystemService<ActivityManager>() ?: return false
-
-            // 检查运行的任务（API 21+已废弃，但作为降级方案）
+// 检查运行的任务（API 21+已荒废，但作为降级方案）
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
                 val runningTasks = am.getRunningTasks(Int.MAX_VALUE)
                 if (runningTasks.any { it.baseActivity?.packageName == packageName }) {
                     return true
                 }
             }
-
-            // 检查运行的服务
+// 检查正在运行的服务
             val runningServices = am.getRunningServices(Int.MAX_VALUE)
             return runningServices?.any { it.service.packageName == packageName } ?: false
         } catch (e: Exception) {
@@ -132,8 +128,7 @@ object AppUtils {
             false
         }
     }
-
-    // ==================== 应用启动控制 ====================
+// ==================== 应用启动控制 ====================
 
     /**
      * 启动应用
@@ -179,7 +174,7 @@ object AppUtils {
             app.startActivity(intent)
 
             if (killProcess) {
-                // 警告：强制杀死进程可能导致数据丢失
+// 警告：强制杀死进程可能导致数据丢失
                 Log.w("AppUtils", "强制杀死进程，可能导致数据丢失")
                 Process.killProcess(Process.myPid())
                 exitProcess(0)
@@ -194,10 +189,9 @@ object AppUtils {
      */
     fun exitApp() {
         try {
-            // 先尝试正常退出
+// 先尝试正常退出
             UtilsBridge.finishAllActivities()
-
-            // 延迟退出，给Activity时间完成清理
+// 延迟退出，给Activity时间完成清理
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 try {
                     Log.w("AppUtils", "强制退出应用，可能导致数据丢失")
@@ -210,8 +204,7 @@ object AppUtils {
             Log.e("AppUtils", "退出应用失败", e)
         }
     }
-
-    // ==================== 应用信息获取 ====================
+// ==================== 应用信息获取 ====================
 
     /**
      * 获取应用包名
@@ -307,8 +300,7 @@ object AppUtils {
             ""
         }
     }
-
-    // ==================== 应用设置 ====================
+// ==================== 应用设置 ====================
 
     /**
      * 打开应用详情设置
@@ -349,8 +341,7 @@ object AppUtils {
             Log.e("AppUtils", "打开应用详情设置失败", e)
         }
     }
-
-    // ==================== 应用签名 ====================
+// ====================应用签名====================
 
     /**
      * 获取应用签名
@@ -400,8 +391,7 @@ object AppUtils {
             }
         }
     }
-
-    // ==================== 应用信息数据类 ====================
+// ==================== 应用信息数据类 ====================
 
     /**
      * 应用信息数据类
@@ -457,7 +447,7 @@ object AppUtils {
     }
 
     /**
-     * 获取所有已安装应用信息
+     * 获取所有已安装的应用信息
      */
     fun getAllAppInfo(): List<AppInfo> {
         return try {

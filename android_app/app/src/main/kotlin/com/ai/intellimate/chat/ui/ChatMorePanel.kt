@@ -67,9 +67,9 @@ fun ChatMorePanel(
 
     val context = LocalContext.current
     var showSheet by remember { mutableStateOf(false) }
-    // VIP状态
+// VIP状态
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
-    // reply的vip拦截弹窗标记
+//回复的vip拦截弹窗标记
     var showDialog by remember { mutableStateOf(false) }
 
     Dialog(
@@ -96,16 +96,16 @@ fun ChatMorePanel(
                             icon = R.drawable.icon_reply_chat,
                             text = stringResource(R.string.reply_style),
                             onClick = {
-                                // 检查是否正式登录（非游客且已登录）
+// 查询是否正式登录（非游客且已登录）
                                 if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                    // 已经登录，判断是否vip，是则弹出输入框sheet，否则弹拦截弹窗
+// 已经登录，判断是否vip，则弹出输入框sheet，否则弹拦截弹窗
                                     if (vipStatus.isSubscribed) {
                                         showSheet = true
                                     } else {
                                         showDialog = true
                                     }
                                 } else {
-                                    // 未登录或游客时跳转到登录页面
+// 未登录或游客时跳转到登录页面
                                     LoginActivity.launch(context)
                                 }
                             },
@@ -115,11 +115,11 @@ fun ChatMorePanel(
                             icon = R.drawable.icon_report,
                             text = stringResource(R.string.str_report),
                             onClick = {
-                                // 检查是否正式登录（非游客且已登录）
+// 查询是否正式登录（非游客且已登录）
                                 if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                                     ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
                                 } else {
-                                    // 未登录或游客时跳转到登录页面
+// 未登录或游客时跳转到登录页面
                                     LoginActivity.launch(context)
                                 }
                             },
@@ -130,16 +130,13 @@ fun ChatMorePanel(
             }
         }
     }
-
-    // reply sheet
+// 回复表
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     LaunchedEffect(showSheet) { if (showSheet) sheetState.show() else sheetState.hide() }
-
-    // 监听chatSettings的变化，确保数据同步
+// 监听chatSettings的变化，保证数据同步
     val chatSettings by chatViewModel.chatSettings.collectAsState()
-
-    // 获取当前agent的聊天设置，确保按agent隔离，并监听chatSettings变化
+// 获取当前agent的聊天设置，确保按agent隔离，并监听chatSettings变化
     val currentChatSetting by
     remember(agentInfo?.id, chatSettings) {
         derivedStateOf {
@@ -158,20 +155,20 @@ fun ChatMorePanel(
             hintStr = stringResource(R.string.reply_hint_str),
             onDismiss = { showSheet = false },
             onSave = { str ->
-                // 调用接口 save
+// 调用接口保存
                 chatViewModel.updateChatReplySettings(str.trim())
                 showSheet = false
             },
         )
     }
-    // 会员定制回复的拦截跳转到vip center
+// 会员定制回复的拦截截图到vip中心
     if (showDialog) {
-        // 检查是否正式登录（非游客且已登录）
+// 查询是否正式登录（非游客且已登录）
         if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-            // 去会员中心
+// 去会员中心
             VipCenterActivity.launch(context)
         } else {
-            // 如果未登录，要求先登录
+// 如果未登录，要求先登录
             LoginActivity.launch(context)
         }
         showDialog = false

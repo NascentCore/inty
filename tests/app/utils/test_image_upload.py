@@ -58,32 +58,28 @@ class TestUploadImage:
         """
         Test that uploading a PNG file creates resource records with correct metadata.
         """
-        # 使用本地数据库
+# 使用本地数据库
         DATABASE_URL = global_config_loaded_from_config_yaml.database.url
-
-        # 创建测试数据库引擎和会话
+#创建数据库引擎测试和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
         db = SessionLocal()
-
-        # 创建一个 async session
+#创建一个异步会话
         async_engine = create_async_engine(
             global_config_loaded_from_config_yaml.database.async_url
         )
         async_session = sessionmaker(
             bind=async_engine, class_=AsyncSession, expire_on_commit=False
         )
-
-        # 创建测试用户，使用随机后缀来区分不同测试用例
+#创建测试用户，使用随机后缀来区分不同的测试项目
         user_id = f"testuser-{uuid.uuid4().hex}"
-        # 8 位数字 ID
+#8位数字ID
         readable_id = str(random.randint(10000000, 99999999))
-
-        # 检查用户是否已存在，如果存在则删除
+#查询用户是否已存在，如果存在则删除
         existing_user = db.query(User).filter(User.id == user_id).one_or_none()
         if not existing_user:
-            # 创建新的测试用户
+# 创建新的测试用户
             test_user = User(
                 id=user_id,
                 readable_id=readable_id,
@@ -94,8 +90,7 @@ class TestUploadImage:
             db.add(test_user)
             db.commit()
             db.refresh(test_user)
-
-        # 准备测试文件
+# 准备测试文件
         test_file_path = "tests/files/test.png"
         with open(test_file_path, "rb") as f:
             file_content = f.read()
@@ -104,8 +99,7 @@ class TestUploadImage:
             file=file_obj, filename="test.png", headers={"content-type": "image/png"}
         )
         base_path = "images/uploads"
-
-        # Mock GCS 上传函数，返回对应 user_id 的 URL，这样保证多次运行测试相互无干扰。
+# Mock GCS 上传函数，返回对应user_id的URL，这样保证多次运行测试互不干扰。
         mock_gcs_url = f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg"
         mock_gcs_avatar_url = (
             f"https://storage.googleapis.com/test-bucket/{user_id}/avatar.jpg"
@@ -115,7 +109,7 @@ class TestUploadImage:
         )
 
         with patch("app.utils.image_upload.upload_to_gcs") as mock_upload:
-            # 根据不同的调用返回不同的URL
+# 根据不同的调用返回不同的URL
             def mock_upload_side_effect(file_data, content_type, bucket_name, path):
                 if "original" in path:
                     return mock_gcs_original_url
@@ -125,8 +119,7 @@ class TestUploadImage:
                     return mock_gcs_url
 
             mock_upload.side_effect = mock_upload_side_effect
-
-            # Mock CDN 转换服务
+# Mock CDN 转换服务
             with patch(
                 "app.services.image_transform_service.image_transform_service"
             ) as mock_transform:
@@ -144,8 +137,7 @@ class TestUploadImage:
                         base_path=base_path,
                         cropping_avatar=True,
                     )
-
-        # 验证上传结果
+# 验证上传结果
         assert result.code == 200
         assert result.data == ImageUploadResponse(
             url=f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg",
@@ -211,7 +203,7 @@ class TestUploadImage:
         )
         assert avatar_resource.resource_metadata == {
             "creator": user_id,
-            # 扣脸图片大小为 214x214；这个符合上面返回的信息
+# 扣脸图片大小为214x214；符合上面返回的信息
             "size": {"width": 214, "height": 214},
             "content_type": "image/jpeg",
             "byte_size": 11178,
@@ -232,28 +224,24 @@ class TestUploadImage:
         Expected behavior: Should create 3 unique resource records
         Actual behavior: Creates 6 resource records (duplicates for CDN and GCS URLs)
         """
-        # 使用本地数据库
+# 使用本地数据库
         DATABASE_URL = global_config_loaded_from_config_yaml.database.url
-
-        # 创建测试数据库引擎和会话
+#创建数据库引擎测试和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
         db = SessionLocal()
-
-        # 创建一个 async session
+#创建一个异步会话
         async_engine = create_async_engine(
             global_config_loaded_from_config_yaml.database.async_url
         )
         async_session = sessionmaker(
             bind=async_engine, class_=AsyncSession, expire_on_commit=False
         )
-
-        # 创建测试用户
+# 创建测试用户
         user_id = f"testuser-duplicate-{uuid.uuid4().hex}"
         readable_id = str(random.randint(10000000, 99999999))
-
-        # 检查用户是否已存在，如果存在则删除
+#查询用户是否已存在，如果存在则删除
         existing_user = db.query(User).filter(User.id == user_id).one_or_none()
         if not existing_user:
             test_user = User(
@@ -266,8 +254,7 @@ class TestUploadImage:
             db.add(test_user)
             db.commit()
             db.refresh(test_user)
-
-        # 准备测试文件
+# 准备测试文件
         test_file_path = "tests/files/test.png"
         with open(test_file_path, "rb") as f:
             file_content = f.read()
@@ -276,8 +263,7 @@ class TestUploadImage:
             file=file_obj, filename="test.png", headers={"content-type": "image/png"}
         )
         base_path = "images/uploads"
-
-        # Mock GCS 上传函数
+# Mock GCS 上传函数
         mock_gcs_url = f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg"
         mock_gcs_avatar_url = (
             f"https://storage.googleapis.com/test-bucket/{user_id}/avatar.jpg"
@@ -297,14 +283,13 @@ class TestUploadImage:
                     return mock_gcs_url
 
             mock_upload.side_effect = mock_upload_side_effect
-
-            # Mock CDN 转换服务
+# Mock CDN 转换服务
             with patch(
                 "app.services.image_transform_service.image_transform_service"
             ) as mock_transform:
 
                 def mock_transform_side_effect(url):
-                    # Return a different CDN URL to distinguish from GCS URL
+# 返回不同的 CDN URL 与 GCS URL 的区别
                     return url.replace("storage.googleapis.com", "cdn.example.com")
 
                 mock_transform.transform_mobile.side_effect = mock_transform_side_effect
@@ -317,11 +302,9 @@ class TestUploadImage:
                         base_path=base_path,
                         cropping_avatar=True,
                     )
-
-        # 验证上传结果成功
+# 验证上传结果成功
         assert result.code == 200
-
-        # 检查资源记录数量 - 这里应该发现重复记录的问题
+# 检查资源记录数量 - 这里应该发现重复记录的问题
         all_resources = db.query(Resource).filter(Resource.user_id == user_id).all()
 
         print(f"Total resource records created: {len(all_resources)}")
@@ -329,20 +312,17 @@ class TestUploadImage:
             print(
                 f"Resource {i+1}: URL={resource.url}, Size={resource.resource_metadata.get('size')}, Cropped={resource.resource_metadata.get('cropped')}"
             )
-
-        # 预期的资源记录数量应该是3个（压缩图片、原始图片、扣脸图片）
-        # 但实际上由于bug，会创建6个记录（每个图片的CDN和GCS版本都被记录）
+# 预期的资源记录数量应该是3个（压缩图片、原始图片、扣脸图片）
+#但实际上由于bug，会创建6个记录（每张图片的CDN和GCS版本都被记录）
         expected_unique_images = 3  # compressed, original, cropped
         actual_records = len(all_resources)
-
-        # 这个测试会失败，证明bug存在
+#这个失败测试，​​​​​​证明bug存在
         assert actual_records == expected_unique_images, (
             f"Expected {expected_unique_images} unique resource records, "
             f"but got {actual_records}. This confirms the duplicate URL bug exists. "
             f"The bug creates both CDN and GCS URL records for the same image."
         )
-
-        # 验证URL的唯一性
+# 验证URL的唯一性
         urls = [resource.url for resource in all_resources]
         unique_urls = set(urls)
 

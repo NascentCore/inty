@@ -11,7 +11,7 @@ import java.io.IOException
 
 /**
  * 图片压缩工具类
- * 基于Luban库封装，提供简洁的API供上层模块使用
+ * 基于鲁班库封装，提供简洁的API供上层模块使用
  */
 object ImageCompressUtils {
 
@@ -21,13 +21,13 @@ object ImageCompressUtils {
     data class CompressConfig(
         /** 压缩质量，范围0-100，默认80 */
         val quality: Int = 80,
-        /** 最大宽度，默认1080 */
+        /** 最大默认宽度，1080 */
         val maxWidth: Int = 1080,
         /** 最大高度，默认1920 */
         val maxHeight: Int = 1920,
         /** 最大文件大小，单位KB，默认500KB */
         val maxSize: Int = 500,
-        /** 是否保留原文件，默认false */
+        /** 是否保留原文件，默认 false */
         val keepOriginal: Boolean = false
     )
 
@@ -41,7 +41,7 @@ object ImageCompressUtils {
         /** 压缩失败 */
         fun onError(throwable: Throwable)
 
-        /** 压缩进度 */
+        /** 压缩文档 */
         fun onProgress(progress: Int) {}
     }
 
@@ -51,7 +51,7 @@ object ImageCompressUtils {
      * @param context 上下文
      * @param imageFile 要压缩的图片文件
      * @param config 压缩配置
-     * @param callback 压缩结果回调
+     * @paramcallback 压缩结果回调
      */
     fun compressImage(
         context: Context,
@@ -71,7 +71,7 @@ object ImageCompressUtils {
                 .setTargetDir(getCompressCacheDir(context))
                 .filter { path ->
                     try {
-                        // 过滤条件：只处理图片文件
+// 过滤条件：只处理图片文件
                         val extension = if (path.contains('.')) {
                             path.substringAfterLast('.', "").lowercase()
                         } else {
@@ -84,7 +84,7 @@ object ImageCompressUtils {
                 }
                 .setCompressListener(object : OnCompressListener {
                     override fun onStart() {
-                        // 压缩开始
+// 压缩开始
                     }
 
                     override fun onSuccess(file: File) {
@@ -107,7 +107,7 @@ object ImageCompressUtils {
      * @param context 上下文
      * @param imageFiles 要压缩的图片文件列表
      * @param config 压缩配置
-     * @param callback 压缩结果回调
+     * @paramcallback 压缩结果回调
      */
     fun compressImages(
         context: Context,
@@ -145,7 +145,7 @@ object ImageCompressUtils {
                 }
                 .setCompressListener(object : OnCompressListener {
                     override fun onStart() {
-                        // 压缩开始
+// 压缩开始
                     }
 
                     override fun onSuccess(file: File) {
@@ -168,7 +168,7 @@ object ImageCompressUtils {
      * @param context 上下文
      * @param imageUri 要压缩的图片URI
      * @param config 压缩配置
-     * @param callback 压缩结果回调
+     * @paramcallback 压缩结果回调
      */
     fun compressImageUri(
         context: Context,
@@ -182,7 +182,7 @@ object ImageCompressUtils {
             .setTargetDir(getCompressCacheDir(context))
             .setCompressListener(object : OnCompressListener {
                 override fun onStart() {
-                    // 压缩开始
+// 压缩开始
                 }
 
                 override fun onSuccess(file: File) {
@@ -220,8 +220,7 @@ object ImageCompressUtils {
                 .ignoreBy(config.maxSize)
                 .setTargetDir(getCompressCacheDir(context))
                 .get()
-
-            // Luban的get()方法返回List<File>，取第一个
+// 鲁班的get()方法返回List<File>，获取第一个
             if (result is List<*> && result.isNotEmpty()) {
                 result.first() as? File
             } else {
@@ -233,10 +232,10 @@ object ImageCompressUtils {
     }
 
     /**
-     * 获取压缩缓存目录
+     * 获取压缩存储目录
      *
      * @param context 上下文
-     * @return 缓存目录
+     * @return 服务器目录
      */
     private fun getCompressCacheDir(context: Context): String {
         return try {
@@ -246,13 +245,13 @@ object ImageCompressUtils {
             }
             cacheDir.absolutePath
         } catch (e: Exception) {
-            // 如果缓存目录创建失败，使用临时目录
+// 如果存储目录创建失败，使用临时目录
             File(System.getProperty("java.io.tmpdir"), "luban_compress").absolutePath
         }
     }
 
     /**
-     * 清理压缩缓存
+     * 清理压缩存储
      *
      * @param context 上下文
      * @return 是否清理成功
@@ -270,10 +269,10 @@ object ImageCompressUtils {
     }
 
     /**
-     * 获取压缩缓存大小
+     *获取压缩存储大小
      *
      * @param context 上下文
-     * @return 缓存大小（字节）
+     * @return 存储大小（字节）
      */
     fun getCompressCacheSize(context: Context): Long {
         return try {
@@ -295,10 +294,10 @@ object ImageCompressUtils {
     }
 
     /**
-     * 检查文件是否为支持的图片格式
+     * 检查文件是否支持的图片格式
      *
      * @param file 文件
-     * @return 是否为支持的图片格式
+     * @return 是否支持的图片格式
      */
     fun isSupportedImageFormat(file: File): Boolean {
         if (!file.exists() || !file.isFile) {
@@ -310,10 +309,10 @@ object ImageCompressUtils {
     }
 
     /**
-     * 检查文件是否为支持的图片格式
+     * 检查文件是否支持的图片格式
      *
      * @param filePath 文件路径
-     * @return 是否为支持的图片格式
+     * @return 是否支持的图片格式
      */
     fun isSupportedImageFormat(filePath: String): Boolean {
         return isSupportedImageFormat(File(filePath))

@@ -6,10 +6,10 @@ import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.data.http.models.toUserProfile
 import com.inty.api.models.api.v1.users.profile.ProfileUpdateParams
 
-/** 用户服务 封装所有用户相关的API调用 替换原有的 IUserApi 用户相关方法 */
+/** 用户服务封装用户所有相关的API替换原有的IUserApi用户相关方法 */
 object UserService {
 
-    /** 获取用户信息 替换: IUserApi.getUserProfile() */
+    /** 获取用户信息替换：IUserApi。getUserProfile() */
     suspend fun getUserProfile(): ApiResult<UserProfile> {
         return IntyNetworkManager.executeRequest("Get User Profile") {
             val response = IntyNetworkManager.getClient().api().v1().users().profile().me()
@@ -18,7 +18,7 @@ object UserService {
         }
     }
 
-    /** 更新用户信息 替换: IUserApi.setUserProfile() */
+    /** 更新用户信息替换：IUserApi。setUserProfile() */
     suspend fun updateUserProfile(userProfile: UserProfile): ApiResult<UserProfile> {
         return IntyNetworkManager.executeRequest("Update User Profile") {
             val builder = ProfileUpdateParams.builder()
@@ -55,25 +55,25 @@ object UserService {
         }
     }
 
-    /** 上传头像 替换: IUserApi.uploadAvatar() 注意: 当前 IntySDK 没有直接的头像上传 API，需要通过通用图片上传实现 */
+    /** 上传头像替换：IUserApi。uploadAvatar() 注意: 当前 IntySDK 没有直接的头像上传 API，需要通过通用图片上传实现 */
     suspend fun uploadAvatar(filePath: String): ApiResult<String> {
         return IntyNetworkManager.executeRequest("Upload Avatar") {
-            // 当前 IntySDK 没有直接的头像上传 API
-            // 可以通过通用图片上传 API 实现，然后更新用户头像字段
+// 当前 IntySDK 没有直接的头像上传 API
+// 可以通过通用图片上传 API 实现，然后更新用户头像字段
             throw Exception("Avatar upload not supported, use image upload API instead")
         }
     }
 
-    /** 删除用户账户 替换: IUserApi.deleteUser() 注意: 当前 IntySDK 没有直接的 delete user API */
+    /** 删除用户账户替换：IUserApi。deleteUser() 注意: 当前 IntySDK 没有直接的删除用户 API */
     suspend fun deleteUser(): ApiResult<Unit> {
         return IntyNetworkManager.executeRequest("Delete User") {
-            // 当前 IntySDK 没有直接的 delete user API
-            // 可能需要通过其他方式实现，比如联系管理员
+// 当前 IntySDK 没有直接的删除用户 API
+// 可能需要通过其他方式实现，比如联系管理员
             throw Exception("Delete user not supported, contact administrator")
         }
     }
 
-    /** 获取用户统计信息 替换: IUserApi.getUserStats() */
+    /** 获取用户统计信息替换：IUserApi。获取用户统计信息() */
     suspend fun getUserStats(): ApiResult<UserStats> {
         return IntyNetworkManager.executeRequest("Get User Stats") {
             val response = IntyNetworkManager.getClient().api().v1().users().profile().me()

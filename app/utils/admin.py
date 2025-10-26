@@ -1,22 +1,21 @@
 from loguru import logger
-
-# A list of emails whose associated Google account treated as super users.
+# 关联 Google 帐户被视为超级用户的电子邮件列表。
 SUPER_USER_EMAILS = [
-    # "anonymoussocialforreal@gmail.com",
-    # "arthurzhang0521@gmail.com",
-    # "donggangcj@gmail.com",
-    # "justicezyx@gmail.com",
-    # "zhiwei9001@gmail.com",
-    # "xheuyyuki@gmail.com",
-    # This is provided to Google Play reviewers.
-    # They require to access all features without any restrictions.
+#“anonymoussocialforreal@gmail。com”，
+#“arthurzhang0521@gmail.com”，
+#“donggangcj@gmail。com”，
+#“justicezyx@gmail。com”，
+#“zhiwei9001@gmail.com”，
+#“xheuyyuki@gmail。com”，
+# 这是 pr 提供给 Google Play 审核者的。
+# 他们要求不受任何限制地访问所有功能。
     "test.heartmate@gmail.com",
 ]
 
 SHARED_EMAILS = [
-    # Company IT email, has Google Account
+# 公司 IT 电子邮件，拥有 Google 帐户
     "it@sxwl.ai",
-    # Generic testing accounts
+# 通用测试账户
     "sxwlai001@gmail.com",
     "sxwlai002@gmail.com",
 ]

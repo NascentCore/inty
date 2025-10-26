@@ -6,9 +6,7 @@ Create Date: 2025-08-08 07:31:25.068007+00:00
 
 """
 from alembic import op
-
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision = 'f7f85747dd24'
 down_revision = '43b18ddc9846'
 branch_labels = None
@@ -17,9 +15,8 @@ depends_on = None
 
 def upgrade() -> None:
     """Bridge upgrade - checks if unique constraint exists before creating"""
-    
-    # 检查唯一索引是否已存在，如果不存在则创建
-    # 这样可以安全地从v1.0.1-dev迁移到main
+# 检查唯一索引是否存在，如果不存在则创建
+# 这样可以安全地从 v1 开始。0 开始。1-dev 迁移到 main
     op.execute("""
         DO $$
         BEGIN

@@ -100,7 +100,7 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
             },
         ) { innerPadding ->
             Column {
-                // 顶部渐变遮罩
+// 顶部渐变遮罩
                 Box(
                     modifier =
                         Modifier
@@ -208,7 +208,7 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                             )
                             Spacer(Modifier.height(12.dp))
                             Column {
-                                // 使用智能 Tags 布局
+// 使用智能标签布局
                                 val gender =
                                     runCatching {
                                         val tmpGender = agent.gender.lowercase()
@@ -221,10 +221,10 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
 
                                 val agentTags =
                                     mutableListOf(
-                                        // FEMALE/MALE转化为Female/Male
+// FEMALE/MALE 转化为Female/Male
                                         stringResource(R.string.gender_tag_format, gender)
                                     )
-                                // 取10个即可，避免太多，因为设计也只需要显示一行
+// 取10个即可，避免过多，因为设计也只需要显示一行
                                 agent.tags?.take(10)?.forEach { tag ->
                                     tag?.let { agentTags.add(tag) }
                                 }
@@ -275,8 +275,7 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
             }
         }
     }
-
-    // 底部菜单
+// 底部菜单
     if (showBottomSheet) {
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
@@ -287,11 +286,11 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
             BottomSheetContent(
                 onReportClick = {
                     showBottomSheet = false
-                    // 检查是否正式登录（非游客且已登录）
+// 查询是否正式登录（非游客且已登录）
                     if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                         ReportActivity.Companion.launch(context, agent.id, "AGENT")
                     } else {
-                        // 未登录或游客时跳转到登录页面
+// 未登录或游客时跳转到登录页面
                         LoginActivity.launch(context)
                     }
                 },
@@ -327,7 +326,7 @@ private fun BottomSheetContent(onReportClick: () -> Unit, onCancelClick: () -> U
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
-        // Report按钮
+// 报告按钮
         Button(
             onClick = onReportClick,
             modifier = Modifier
@@ -345,8 +344,7 @@ private fun BottomSheetContent(onReportClick: () -> Unit, onCancelClick: () -> U
         }
 
         Spacer(modifier = Modifier.height(20.dp))
-
-        // Cancel按钮
+// 取消按钮
         Button(
             onClick = onCancelClick,
             modifier = Modifier

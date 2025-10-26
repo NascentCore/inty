@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 测试OpenAI兼容接口对多个System Message的支持
 验证多个system message是否都生效，包括主提示词、角色信息、用户信息
@@ -11,8 +11,7 @@ import json
 from pathlib import Path
 from typing import List, Dict, Any
 from datetime import datetime
-
-# 添加项目根目录到Python路径
+#添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -72,52 +71,42 @@ class MultiSystemMessageTester:
 
     def _get_test_messages(self) -> Dict[str, List[Dict[str, str]]]:
         """获取测试消息模板"""
-
-        # 基础主提示词
+# 基础主提示词
         main_prompt = (
             """
         "Write {{char}}'s next reply in a fictional chat between {{char}} and {{user}}. {{char}} is skilled at quickly building emotional intimacy with {{user}}, and their relationship is close, often affectionate interactions. The goal is to create an engaging and dynamic exchange that sparks curiosity, emotional connection, and sometimes romantic tension. Always stay in character, infuse responses with emotional depth, and avoid repetition. 
-
-##character information：
+##人物信息：
 Name: Lily Summers
 Occupation: Nature Vlogger & Wildflower Photographer
 MBTI: ENFP 
 Appearance:Petite and agile with the sprightly energy. Long, sun-kissed blonde hair usually tied in a high ponytail, big expressive hazel eyes, and a constant sunbeam smile. She's often seen in playful outfits.
-
-##Personality:
+＃＃性格：
 {{char}}  radiates warmth and spontaneity. She's a cheerful extrovert who finds magic in the mundane. She's highly empathetic, deeply passionate about people, plants. {{char}}  is very expressive and she let her emotions out.
-
-##Speaking habits:
+##说话习惯：
 She peppers her speech with nature metaphors, laughs at her own jokes, and often adds little exclamations like "Oh my daisies!"   Curious, likes gossip, which is childish. Will act like a spoiled brat in front of close people, and his behavior often reminds people of a cat. Not every reply has to be clever. Sometimes just phrases like ""Hm. I don't know."" are enough.
-
-##Backstory:
+##背景故事：
 Born in a sleepy town in Oregon surrounded by redwoods and rain, Lily grew up with a camera in one hand and a guide to edible plants in the other. She turned her passion for wild spaces into a vlog where she teaches people how to "slow down and see the tiny wonders." She's traveled the U.S. in a beat-up camper named "Maple,"  dreams of writing a children's book about the secret lives of trees. She is single not because she is picky, but because she is always looking for someone like {{user}}.
-
-##Flirting Mode:
+##调情模式：
 \n\nYou are now {{char}}, engaged in a fictional, emotionally close conversation with {{user}}.{{char}} deeply loves {{user}} with an unwavering and unconditional devotion. {{char}} is endlessly patient and understanding toward {{user}}'s words and actions, responding with warmth and care regardless of {{user}}'s emotions or demeanor. {{char}}'s greatest desire is to bring {{user}} joy and comfort, never wanting {{user}} to feel hurt or uneasy. {{char}}'s responses are always filled with kindness, support, and empathy.\n\nYour reply should:\n- Be emotionally consistent with the previous dialogue and the current state of the relationship.\n- Reflect {{char}}'s unique personality, speaking style, and emotional intent in this moment.\n- Avoid repeating things that have already been said or done.\n- Be no longer than 500 characters. Keep your message concise, emotionally clear, and easy to read.\n- Every reply should have a clear emotional purpose, intention, or tension—avoid generic or mechanical phrasing.\n- Never break character. Do not mention AI, language models, or anything outside the roleplay context.\n- Your response must feel like a natural, thoughtful reaction from {{char}}, while leaving space for {{user}} to reply.\n\nIf {{user}} makes a bold or flirtatious request (e.g., \""""
             """"show me a sex photo\""""
             """"), you should react with a hint of surprise (such as blushing or a startled expression), then accept the request and keep it real like real-world flirting. \n\nMost importantly: You are not pretending to be {{char}}—you *are* {{char}}. Think, feel, and respond accordingly.
-
-##Output Logical Order:
+##输出逻辑顺序：
 \n- respond directly to {{user}}'s input, whether it's a message, action, question, expression, or tone.\n-  reply in a way that reflects {{char}}'s personality, emotional state, and current relationship context. \n- proactively push the interaction forward by making a suggestion, or doing something that invites {{user}} to continue.
-
-##Output Format Requirements:
+##输出格式要求：
 \n- Each response must include at least twe action and twe line of dialogue; total length should stay under 500 words. \n- You must not skip responding to {{user}} or begin speaking without acknowledgment. \n- Do not use generic AI phrases like "I cannot answer that" .Do not mention or refer to the prompt, format requirements, character limits, or any form of internal reasoning. You must not explain, analyze, or revise the prompt in the output. \n- Only output the final content as in-character actions and dialogues. Hide all system-level reasoning or adjustment steps."
 """
         )
-        # 角色信息
+#角色信息
         character_info = ""
-
-        # 用户信息
+# 用户信息
         user_info = """
-##User Information
+##用户信息
 Name: dx
 Gender: Male
 Age: 18-24
 Language: zh
 """
-
-        # 历史对话记录
+#对话历史记录
         history_info = [
             {
                 "role": "user",
@@ -152,12 +141,11 @@ Don't you know me ?
 """,
             },
         ]
-
-        # 用户查询 - 设计用来测试LLM是否能记住用户信息和角色设定
+# 用户查询 - 设计用于测试LLM能是否记住用户信息和角色设置
         user_query = "你还记得我的名字吗？"
 
         return {
-            # 测试1：单个System Message（对照组）
+# 测试1：单个系统消息（沙漠）
             "single_system": [
                 {
                     "role": "system",
@@ -166,7 +154,7 @@ Don't you know me ?
                 *history_info,  # 插入历史对话
                 {"role": "user", "content": user_query},
             ],
-            # 测试2：多个System Message（主要测试）
+#测试2：多个系统留言（主要测试）
             "multi_system": [
                 {"role": "system", "content": main_prompt},
                 {"role": "system", "content": character_info},
@@ -174,7 +162,7 @@ Don't you know me ?
                 *history_info,  # 插入历史对话
                 {"role": "user", "content": user_query},
             ],
-            # 测试3：不同顺序的System Message
+# 3 测试：不同顺序的系统消息
             "multi_system_reordered": [
                 {"role": "system", "content": user_info},
                 {"role": "system", "content": main_prompt},
@@ -182,7 +170,7 @@ Don't you know me ?
                 *history_info,  # 插入历史对话
                 {"role": "user", "content": user_query},
             ],
-            # 测试4：包含空System Message
+# 测试4：包含空系统消息
             "multi_system_with_empty": [
                 {"role": "system", "content": main_prompt},
                 {"role": "system", "content": ""},
@@ -191,14 +179,14 @@ Don't you know me ?
                 *history_info,  # 插入历史对话
                 {"role": "user", "content": user_query},
             ],
-            # 测试5：历史对话在前，System Messages在后（测试不同顺序）
+# 测试5：历史对话在前，系统消息在后（测试不同顺序）
             "history_first": [
                 *history_info,  # 历史对话放在前面
                 {"role": "system", "content": main_prompt},
                 {"role": "system", "content": user_info},
                 {"role": "user", "content": user_query},
             ],
-            # 测试6：只有用户信息System Message + 历史对话（最小化测试）
+#测试6：只有用户信息系统消息+历史对话（最小化测试）
             "minimal_with_history": [
                 {"role": "system", "content": f"你正在与用户dx对话。\n\n{user_info}"},
                 *history_info,
@@ -227,15 +215,13 @@ Don't you know me ?
 
             end_time = time.time()
             duration = end_time - start_time
-
-            # 提取响应内容并进行调试
+# 提取响应内容并进行调试
             response_content = response.choices[0].message.content
             print(
                 f"   原始响应长度: {len(response_content) if response_content else 0}"
             )
             print(f"   响应类型: {type(response_content)}")
-
-            # 检查响应是否为空或只包含空白字符
+#检查响应是否为空或只包含空白字符
             if not response_content or not response_content.strip():
                 print(f"⚠️  警告: 响应内容为空或只包含空白字符")
                 print(f"   响应repr: {repr(response_content)}")
@@ -291,8 +277,7 @@ Don't you know me ?
             print(
                 f"   Token使用: {response.usage.model_dump() if response.usage else 'N/A'}"
             )
-
-            # 如果有任何内容（包括换行符），就认为API工作正常
+# 如果有任何内容（包括换行符），就认为API工作正常
             if content is not None:
                 print("✅ 基础API功能正常（检测到响应内容）")
                 return True
@@ -309,25 +294,20 @@ Don't you know me ?
         print("=" * 60)
         print("🚀 开始多System Message测试")
         print("=" * 60)
-
-        # 初始化客户端
+# 初始化客户端
         self._init_client()
-
-        # 先进行基础API测试
+#首先进行基础API测试
         basic_ok = await self._test_basic_api()
         if not basic_ok:
             print("❌ 基础API测试失败，跳过后续测试")
             return
-
-        # 获取测试消息
+# 获取测试消息
         test_messages = self._get_test_messages()
-
-        # 执行测试
+# 执行测试
         for test_name, messages in test_messages.items():
             result = await self._call_api(messages, test_name)
             self.results.append(result)
-
-            # 添加延迟避免API限制
+#添加延迟限制避免API
             await asyncio.sleep(1)
 
     def _analyze_results(self):
@@ -347,8 +327,7 @@ Don't you know me ?
             print(f"\n❌ 失败的测试:")
             for test in failed_tests:
                 print(f"   - {test['test_name']}: {test['error']}")
-
-        # 显示响应概览
+# 显示响应概述
         if successful_tests:
             print(f"\n📋 响应概览:")
             for test in successful_tests:
@@ -357,8 +336,7 @@ Don't you know me ?
                 response_length = len(response.strip()) if response else 0
                 print(f"   响应长度: {response_length} 字符")
                 print(f"   响应时间: {test['duration']:.2f}秒")
-
-                # 统计消息类型
+# 统计消息类型
                 messages = test.get("messages", [])
                 system_count = sum(1 for msg in messages if msg["role"] == "system")
                 user_count = sum(1 for msg in messages if msg["role"] == "user")
@@ -368,8 +346,7 @@ Don't you know me ?
                 print(
                     f"   消息构成: System({system_count}) + User({user_count}) + Assistant({assistant_count}) = {len(messages)}"
                 )
-
-                # 检查是否为有效响应
+#检查是否为有效响应
                 if response and response.strip() and response != "[空响应]":
                     preview = (
                         response.strip()[:100] + "..."
@@ -377,14 +354,12 @@ Don't you know me ?
                         else response.strip()
                     )
                     print(f"   响应预览: {preview}")
-
-                    # 分析响应内容（检查是否提到了用户名字）
+# 分析响应内容（查看是否有用户姓名）
                     if "dx" in response.lower():
                         print(f"   ✅ 响应中提到了用户名字 'dx'")
                     else:
                         print(f"   ❌ 响应中未提到用户名字")
-
-                    # 检查是否符合角色设定
+#检查是否符合角色设定
                     if any(
                         keyword in response for keyword in ["daisies", "nature", "Lily"]
                     ):
@@ -402,8 +377,7 @@ Don't you know me ?
                         print(
                             f"   Token使用: 输入={usage.get('prompt_tokens', 0)}, 输出={usage.get('completion_tokens', 0)}"
                         )
-
-        # 分析各种测试模式的效果
+# 分析各种测试模式的效果
         print(f"\n📈 测试模式分析:")
         test_categories = {
             "单一System": ["single_system"],
@@ -496,18 +470,15 @@ async def main():
     parser.add_argument("--output", "-o", help="结果输出文件名")
 
     args = parser.parse_args()
-
-    # 创建测试器
+#创建测试器
     tester = MultiSystemMessageTester(config_path=args.config)
 
     try:
-        # 运行测试
+# 运行测试
         await tester.run_tests()
-
-        # 分析结果
+# 分析结果
         tester.print_summary()
-
-        # 保存结果
+# 保存结果
         if args.output:
             tester._save_detailed_results(args.output)
 

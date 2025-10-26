@@ -118,32 +118,28 @@ async def agent_chat_completions(
         logger.debug(
             f"聊天请求 - agent_id={agent_id}, user_id={current_user.id}, messages={len(request.messages)}"
         )
-
-        # 获取或创建与该Agent的唯一会话
+# 获取或创建与该代理的唯一会话
         with log_time(
             f"获取或创建聊天会话: user_id={current_user.id}, agent_id={agent_id}"
         ):
             chat = await chat_service.get_or_create_chat_by_agent(
                 db=db, user_id=current_user.id, agent_id=agent_id
             )
-
-        # 验证返回的chat中的agent_id是否与传入的一致
+# 验证返回的聊天中的agent_id是否与确定的一致
         if chat.agent_id != agent_id:
             logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Agent ID mismatch: expected={agent_id}, actual={chat.agent_id}",
             )
-
-        # 获取最后一条用户消息
+# 获取最后一条用户消息
         user_messages = [msg for msg in request.messages if msg.role == "user"]
         if not user_messages:
             raise HTTPException(status_code=400, detail="No user message found")
 
         last_user_message = user_messages[-1].content
         messages = {"messages": [HumanMessage(content=last_user_message)]}
-
-        # 使用高性能的聊天专用Agent获取方法
+# 使用高性能的聊天专用Agent获取方法
         with log_time(f"查询 Agent 数据: {chat.agent_id}"):
             agent_data = await agent_service.get_agent_for_chat(
                 db, agent_id=chat.agent_id
@@ -167,8 +163,7 @@ async def agent_chat_completions(
             return _handle_subscription_limit_error(
                 session_id, last_user_message, current_user, used_count, daily_limit
             )
-
-        # 获取聊天设置和AI回复
+# 获取聊天设置和AI回复
         try:
             with log_time(f"获取聊天设置: chat_id={chat.id}"):
                 chat_settings = await chat_service.get_or_create_chat_settings(
@@ -188,14 +183,13 @@ async def agent_chat_completions(
         except Exception as e:
             logger.error(f"Agent聊天处理失败: {str(e)}")
             raise
-
-        # 语音生成逻辑 - 根据chat_settings.voice_enabled决定是否自动播放
+# 语音生成逻辑 - 根据chat_settings。voice_enabled决定是否自动播放
         audio_url = None
         audio_duration = None
         try:
-            # 语音自动播放逻辑：chat_settings.voice_enabled = true 时自动生成语音
+# 语音自动播放逻辑：chat_settings.voice_enabled = true时自动生成语音
             if chat_settings.voice_enabled:
-                # TODO: 添加一个默认语音 ID
+# TODO:添加一个默认语音ID
                 agent_voice_id = agent_data.get("voice_id")
 
                 with log_time(
@@ -221,9 +215,8 @@ async def agent_chat_completions(
         except Exception as e:
             logger.error(f"语音生成失败: {str(e)}")
             logger.exception("语音生成异常详细信息:")
-            # 语音生成失败不影响聊天功能
-
-        # 记录聊天使用情况
+#语音生成失败不影响聊天功能
+# 记录聊天使用情况
         try:
             with log_time(f"记录使用情况: user_id={current_user.id}"):
                 await subscription_service.record_usage(
@@ -239,8 +232,7 @@ async def agent_chat_completions(
             logger.debug("聊天使用情况记录成功")
         except Exception as e:
             logger.warning(f"记录聊天使用情况失败: {str(e)}")
-
-        # 获取最新AI消息的完整信息
+#获取最新AI消息的完整信息
         try:
             with log_time(f"获取最新消息: session_id={session_id}"):
                 latest_message_info = (
@@ -251,8 +243,7 @@ async def agent_chat_completions(
         except Exception as e:
             logger.warning(f"获取最新消息信息失败: {str(e)}")
             latest_message_info = None
-
-        # 构建响应
+# 构建响应
         data = _build_chat_response(
             response_content, last_user_message, latest_message_info, audio_url, request
         )

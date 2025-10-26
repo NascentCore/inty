@@ -1,63 +1,56 @@
-# CLAUDE.md
+# 克劳德.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+此文件 pr 提供了在使用此存储库中的代码时对 Claude Code (claude.ai/code) 的指导。
 
-## Key instructions
+## 关键说明
 
-- When writing FastAPI code, use ../FASTAPI_BEST_PRACTICES_ZH.md as guidelines
-- Do not wrap everything inside try...except block, as we already have FastAPI to do that
-  - We'll try...except in FastAPI handler functions
-- When creating new folder, place an empty **init**.py file
-- Do not use magic numbers, always define variable, constants, etc.
-- When logging, prefer logger.debug(), which is turned off by default and in prod
+- 编写FastAPI代码时，使用../FASTAPI_BEST_PRACTICES_ZH.md作为指导
+- 不要将所有内容都包装在 try... except 块中，因为我们已经有 FastAPI 来做到这一点
+  - 我们会尝试...除了 FastAPI 处理函数
+- 创建新文件夹时，放置一个空的 **init**.py 文件
+- 不要使用幻数，总是定义变量、常量等。
+- 日志记录时，prefer logger.debug()，默认关闭，在prod中
 
-## Overview
+＃＃ 概述- 此存储库是 Inty 的单一存储库。 Inty 是一款针对年轻男性的人工智能驱动的亲密模拟。
+  这种模拟是通过人类用户之间的文本、音频/语音、图像交换来进行的，
+  以及用户渴望的人工智能角色，在虚构的回合制角色扮演中。
+  用户使用 Android 应用程序（另一个存储库中的代码）来访问 Inty。
+- 该仓库在app/下有Inty的主要后端，并且支持不直接运行的工具
+  在 Inty 后端内，但用于在 Inty 上生成内容。喜欢AI角色
+  移动应用程序。
+- 该代码是 pr 主要由人类工程师使用 Cursor AI IDE 编写。Claude Code 用于编写独立工具，例如
+  app/static/evaluation下的角色评估工具。
+- app/ 拥有所有后端服务代码。它们是用 Python 编写的。
+  使用 FastAPI 进行应用后端 API 调用。用于调用 LLM APIs 的 Langchain。
 
-- This repo is a monorepo of Inty. Inty is an AI-driven intimacy simulation for young male adults.
-  Such simulation is carried out through text, audio/voice, image exchanges between a human user,
-  and an AI character of the user's desire, in a fictional turn-based role-play.
-  Users use Android app (code in another repo) to access Inty.
-- This repo has main backend of Inty under app/, and supporting tools not directly running
-  inside Inty backend, but is used to generate content on Inty. Like AI character
-  mobile app.
-- The code is primarily written by human engineers using Cursor AI IDE.
-  Claude Code is used to write independent tools like
-  character evaluation tool under app/static/evaluation.
-- app/ has all of the backend service code. They are written in Python.
-  Uses FastAPI for app-backend API calling. Langchain for calling LLM APIs.
+## 理解这个仓库
 
-## Understanding this repo
+- 阅读本存储库中的 README.md 以了解概念结构。
+- 还有其他 \*.md 文件解释特殊方面。
 
-- Read README.md in this repo to understand the conceptual structure.
-- There are other \*.md files that explains special aspects.
+## 使用代码
 
-## Working with the code
+- 使用黑色、
+  不应直接调用。
+- 编写文档时，将其写入 docs/ 目录。
 
-- Focus on functionality, format and style is maitained using specialized tools like black,
-  which should not be invoked directly.
-- When writing documentation, write them into docs/ directory.
+＃＃ 哲学### 核心信念
 
-## Philosophy
+- **增量 progress 超过大爆炸** - 编译并通过测试的小更改
+- **从现有代码中学习** - 在实施之前进行研究和计划
+- **Pragmatic 胜于教条** - 适应 project 现实
+- **清晰的意图胜过聪明的代码** - 无聊而明显
 
-### Core Beliefs
+### 简单意味着
 
-- **Incremental progress over big bangs** - Small changes that compile and pass tests
-- **Learning from existing code** - Study and plan before implementing
-- **Pragmatic over dogmatic** - Adapt to project reality
-- **Clear intent over clever code** - Be boring and obvious
-
-### Simplicity Means
-
-- Single responsibility per function/class
-- Avoid premature abstractions
-- No clever tricks - choose the boring solution
-- If you need to explain it, it's too complex
+- 每个函数/类的单一职责
+- 避免pr成熟的抽象
+- 没有聪明的技巧 - 选择无聊的解决方案
+- 如果你需要解释的话，那就太复杂了
 
 ## Process
 
-### 1. Planning & Staging
-
-Break complex work into 3-5 stages. Document in `IMPLEMENTATION_PLAN.md`:
+### 1. 规划与分期将复杂的工作分成 3-5 个阶段。文档于`IMPLEMENTATION_PLAN.md`:
 
 ```markdown
 ## Stage N: [Name]
@@ -66,129 +59,123 @@ Break complex work into 3-5 stages. Document in `IMPLEMENTATION_PLAN.md`:
 **Success Criteria**: [Testable outcomes]
 **Tests**: [Specific test cases]
 **Status**: [Not Started|In Progress|Complete]
-```
+```- progress 时更新状态
 
-- Update status as you progress
+- 所有阶段完成后删除文件
 
-- Remove file when all stages are done
+### 2. 实施流程
 
-### 2. Implementation Flow
+1. **理解** - 研究代码库中的现有模式
+2. **测试** - 首先编写测试（红色）
+3. **实施** - 通过最少的代码（绿色）
+4. **重构** - 通过测试进行清理
+5. **承诺** - 明确消息链接到计划
 
-1. **Understand** - Study existing patterns in codebase
-2. **Test** - Write test first (red)
-3. **Implement** - Minimal code to pass (green)
-4. **Refactor** - Clean up with tests passing
-5. **Commit** - With clear message linking to plan
+### 3. 卡住时（尝试 3 次后）
 
-### 3. When Stuck (After 3 Attempts)
+**严重**：每个问题最多尝试 3 次，然后停止。
 
-**CRITICAL**: Maximum 3 attempts per issue, then STOP.
+1. **记录失败的原因**：
+   - 你尝试了什么
+   - 具体错误消息
+   - 为什么你认为它失败了
 
-1. **Document what failed**:
-   - What you tried
-   - Specific error messages
-   - Why you think it failed
+2. **研究替代方案**：
+   - 找到2-3个类似的实现
+   - 注意使用的不同 approache
 
-2. **Research alternatives**:
-   - Find 2-3 similar implementations
-   - Note different approaches used
+3. **问题基础**：- 这是正确的抽象级别吗？
+   - 这可以分成更小的 pr 问题吗？
+   - 有没有更简单的 approach ？
 
-3. **Question fundamentals**:
-   - Is this the right abstraction level?
-   - Can this be split into smaller problems?
-   - Is there a simpler approach entirely?
+4. **尝试不同的角度**：
+   - 不同的库/框架功能？
+   - 不同的建筑模式？
+   - 删除抽象而不是添加？
 
-4. **Try different angle**:
-   - Different library/framework feature?
-   - Different architectural pattern?
-   - Remove abstraction instead of adding?
+## 技术标准
 
-## Technical Standards
+### 架构 Principles
 
-### Architecture Principles
+- **组合优于继承** - 使用依赖注入
+- **基于单例的接口** - 支持测试和灵活性
+- **显式优于隐式** - 清晰的数据流和依赖关系
+- **尽可能进行测试驱动** - 切勿禁用测试，修复它们
 
-- **Composition over inheritance** - Use dependency injection
-- **Interfaces over singletons** - Enable testing and flexibility
-- **Explicit over implicit** - Clear data flow and dependencies
-- **Test-driven when possible** - Never disable tests, fix them
+### 代码质量
 
-### Code Quality
+- **每次提交必须**：
+  - 编译成功- 通过所有现有测试
+  - 包括新功能的测试
+  - 遵循 project 格式/检查
 
-- **Every commit must**:
-  - Compile successfully
-  - Pass all existing tests
-  - Include tests for new functionality
-  - Follow project formatting/linting
+- **提交之前**：
+  - 运行格式化程序/linter
+  - 自我审查变更
+  - 确保提交消息解释了“为什么”
 
-- **Before committing**:
-  - Run formatters/linters
-  - Self-review changes
-  - Ensure commit message explains "why"
+### 错误处理
 
-### Error Handling
+- 通过描述性消息快速失败
+- 包括调试上下文
+- 在 appropriate 级别处理错误
+- 永远不要默默地吞下异常
 
-- Fail fast with descriptive messages
-- Include context for debugging
-- Handle errors at appropriate level
-- Never silently swallow exceptions
+## 决策框架
 
-## Decision Framework
+当存在多个有效的 approache 时，根据以下条件进行选择：
 
-When multiple valid approaches exist, choose based on:
+1. **可测试性** - 我可以轻松测试吗？
+2. **可读性** - 6 个月后有人会理解吗？
+3. **一致性** - 这是否匹配 project 模式？4. **简单性** - 这是最简单的解决方案吗？
+5. **可逆性** - 以后改变有多难？
 
-1. **Testability** - Can I easily test this?
-2. **Readability** - Will someone understand this in 6 months?
-3. **Consistency** - Does this match project patterns?
-4. **Simplicity** - Is this the simplest solution that works?
-5. **Reversibility** - How hard to change later?
+## Project 集成
 
-## Project Integration
+### 学习代码库
 
-### Learning the Codebase
+- 找到 3 个相似的功能/组件
+- 识别常见模式和约定
+- 尽可能使用相同的库/实用程序
+- 遵循现有的测试模式
 
-- Find 3 similar features/components
-- Identify common patterns and conventions
-- Use same libraries/utilities when possible
-- Follow existing test patterns
+### 工具
 
-### Tooling
+- 使用project现有的构建系统
+- 使用project的测试框架
+- 使用 project 的格式化程序/linter 设置
+- 没有充分理由不要引入新工具
 
-- Use project's existing build system
-- Use project's test framework
-- Use project's formatter/linter settings
-- Don't introduce new tools without strong justification
+## 质量门
 
-## Quality Gates
+### 完成的定义
 
-### Definition of Done
+- [ ] 已编写并通过的测试
+- [ ] 代码遵循 project 约定- [ ] 没有 linter/formatter 警告
+- [ ] 提交消息清晰
+- [ ] 实施符合计划
+- [ ] 没有没有问题编号的 TODOs
 
-- [ ] Tests written and passing
-- [ ] Code follows project conventions
-- [ ] No linter/formatter warnings
-- [ ] Commit messages are clear
-- [ ] Implementation matches plan
-- [ ] No TODOs without issue numbers
+### 测试指南
 
-### Test Guidelines
+- 测试行为，而不是实现
+- 如果可能的话，每次测试一个断言
+- 清晰的测试名称描述场景
+- 使用现有的测试实用程序/帮助程序
+- 测试应该是确定性的
 
-- Test behavior, not implementation
-- One assertion per test when possible
-- Clear test names describing scenario
-- Use existing test utilities/helpers
-- Tests should be deterministic
+## 重要提醒
 
-## Important Reminders
+**绝不**：
 
-**NEVER**:
+- 使用`--no-verify`绕过提交钩子
+- 禁用测试而不是修复它们
+- 提交无法编译的代码
+- 做出假设 - 用现有代码验证
 
-- Use `--no-verify` to bypass commit hooks
-- Disable tests instead of fixing them
-- Commit code that doesn't compile
-- Make assumptions - verify with existing code
+**总是**：
 
-**ALWAYS**:
-
-- Commit working code incrementally
-- Update plan documentation as you go
-- Learn from existing implementations
-- Stop after 3 failed attempts and reassess
+- 增量提交工作代码
+- 随时更新计划文档
+- 从现有实施中学习
+- 尝试 3 次失败后停止并重新评估

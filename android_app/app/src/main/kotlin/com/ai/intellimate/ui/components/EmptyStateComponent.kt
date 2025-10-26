@@ -33,7 +33,7 @@ enum class EmptyStateType {
     LOAD_ERROR,
 }
 
-/** 统一的空状态组件 支持不同的空状态类型，包含重试按钮 */
+/** 统一的空状态组件支持不同的空状态类型，包含重试按钮 */
 @Composable
 fun EmptyStateComponent(
     type: EmptyStateType,
@@ -50,7 +50,7 @@ fun EmptyStateComponent(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // 空状态图标
+// 空状态图标
         AsyncImage(
             model = R.drawable.img_content_empty,
             contentScale = ContentScale.Crop,
@@ -58,8 +58,7 @@ fun EmptyStateComponent(
         )
 
         Spacer(Modifier.height(16.dp))
-
-        // 标题
+// 标题
         if (title != null) {
             Text(
                 text = title,
@@ -70,8 +69,7 @@ fun EmptyStateComponent(
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
-
-        // 副标题
+// 副标题
         if (subtitle != null) {
             Spacer(Modifier.height(8.dp))
             Text(
@@ -83,8 +81,7 @@ fun EmptyStateComponent(
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
-
-        // 重试按钮
+// 重试按钮
         if (showRetryButton && onRetry != null) {
             Spacer(Modifier.height(24.dp))
             GradientButton(
@@ -150,7 +147,6 @@ fun LoadErrorState(
         modifier = modifier,
     )
 }
-
 // Preview 函数
 @Preview(showBackground = true)
 @Composable

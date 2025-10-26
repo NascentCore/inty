@@ -47,7 +47,7 @@ import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** ChatPageContainer - 支持分页加载的聊天页面容器 使用Paging库实现分页加载更多agents，提供更流畅的滑动体验 */
+/** ChatPageContainer - 支持分页加载的聊天页面容器使用Paging库实现分页加载更多代理，提供更流畅的滑动体验 */
 @Composable
 fun ChatPageContainer(
     modifier: Modifier,
@@ -57,11 +57,10 @@ fun ChatPageContainer(
     currentPageIndex: Int = 0,
     onPageChanged: (Int) -> Unit = {},
 ) {
-    // 获取Paging数据流
+// 获取分页数据流
     val agentsFlow = chatTabViewModel.getChatAgentsFlow()
     val agentsPagingItems = agentsFlow?.collectAsLazyPagingItems() ?: return
-
-    // 获取当前加载的agents列表
+// 获取当前加载的代理列表
     val agentList =
         remember(agentsPagingItems.itemCount) {
             val list = mutableListOf<AgentInfo>()
@@ -76,17 +75,15 @@ fun ChatPageContainer(
             }
             list
         }
-
-    // 如果 agentList 为空，显示空状态
+// 如果agentList为空，则显示空状态
     if (agentList.isEmpty()) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            // 可以在这里显示加载中或空状态的UI
-            // 暂时显示空白，等待数据加载
+// 可以在这里显示加载中或空状态的UI
+// 暂时显示空白，等待数据加载
         }
         return
     }
-
-    // 防止初始页面索引越界
+// 防止初始页面索引越界
     val safeInitialPage =
         if (currentPageIndex >= 0 && currentPageIndex < agentList.size) {
             currentPageIndex
@@ -96,17 +93,14 @@ fun ChatPageContainer(
     val pageState = rememberPagerState(initialPage = safeInitialPage) { agentList.size }
     val prefetchThreshold = 5 // 距离本业末尾数据还有5个时，触发静默加载下一页
     val scope = rememberCoroutineScope()
-
-    // 新用户引导状态
+// 新用户引导状态
     var hasShowGuest by remember { mutableStateOf(IntySetting.hasShowGuest()) }
     val shouldShowGuide =
         remember(agentList.size, hasShowGuest) { !hasShowGuest && agentList.size > 1 }
-
-    // 监听页面变化
+// 页面监听变化
     LaunchedEffect(pageState.currentPage) {
         onPageChanged(pageState.currentPage)
-
-        // 页面切换时停止当前播放的音频，避免播放错误agent的音频
+// 页面切换时停止当前播放的音频，避免播放错误代理的音频
         val currentAgent = agentList.getOrNull(pageState.currentPage)
         if (currentAgent != null) {
             try {
@@ -118,8 +112,7 @@ fun ChatPageContainer(
             }
             delay(100)
         }
-
-        // 静默预取：当滑到倒数第5个左右时，触发下一页加载（无可见提示）
+// 静默预取：当滑到倒数第5个左右时，触发下一页加载（无可见提示）
         val total = agentList.size
         if (total > 0) {
             val thresholdIndex = (total - prefetchThreshold).coerceAtLeast(0)
@@ -130,12 +123,12 @@ fun ChatPageContainer(
                         appendState.endOfPaginationReached)
             val canPrefetch = refreshState is LoadState.NotLoading
             if (pageState.currentPage >= thresholdIndex && notEnd && canPrefetch) {
-                // 修复：使用更安全的预取方式
-                // 通过访问最后一个有效索引来触发Paging的append加载
+// 修复：使用更安全的预取方式
+// 通过访问最后一个有效的索引来触发分页的append加载
                 try {
                     val lastValidIndex = (agentsPagingItems.itemCount - 1).coerceAtLeast(0)
                     if (lastValidIndex >= 0 && lastValidIndex < agentsPagingItems.itemCount) {
-                        // 访问最后一个有效索引，这会触发Paging库自动加载下一页
+// 访问最后一个有效索引，这会触发分页库自动加载下一页
                         agentsPagingItems[lastValidIndex]
                     }
                 } catch (e: IndexOutOfBoundsException) {
@@ -154,10 +147,10 @@ fun ChatPageContainer(
             userScrollEnabled = !shouldShowGuide, // 在引导期间禁用用户滑动
             beyondViewportPageCount = 3, // 左右预先处理个page个数
         ) { currentPage ->
-            // 防止数组越界
+//防止堆栈越界
             if (currentPage < 0 || currentPage >= agentList.size) {
                 LogUtils.w("ChatPageContainer - HorizontalPager索引越界: currentPage=$currentPage, agentList.size=${agentList.size}")
-                // 如果索引无效，显示空页面或返回
+// 如果索引无效，显示空页面或返回
                 return@HorizontalPager
             }
             val agent = agentList.getOrNull(currentPage)
@@ -178,8 +171,7 @@ fun ChatPageContainer(
                 isCurrentPage = currentPage == pageState.currentPage,
             )
         }
-
-        // 新用户聊天滑动引导
+// 新用户聊天滑动引导
         NewUserGuide(
             pageState = pageState,
             shouldShowGuide = shouldShowGuide,
@@ -201,7 +193,7 @@ private fun NewUserGuide(
         val pageScrollPx = with(density) { 80.dp.toPx() }
         var showHand by remember { mutableStateOf(false) }
         var isGuideActive by remember { mutableStateOf(false) }
-        // 保存初始页面索引，确保能正确恢复
+// 保存初始页面索引，能确保正确恢复
         val initialPageIndex = remember { pageState.currentPage }
 
         LaunchedEffect(Unit) {
@@ -232,7 +224,7 @@ private fun NewUserGuide(
                     Modifier
                         .fillMaxSize()
                         .noRippleClickable {
-                            // 只有在引导期间才响应点击
+// 只有在引导期间才响应点击
                             if (isGuideActive) {
                                 scope.launch {
                                     showHand = false
@@ -244,7 +236,7 @@ private fun NewUserGuide(
                             }
                         }
             ) {
-                // 背景渐变框
+// 背景突变框
                 Box(
                     modifier =
                         Modifier
@@ -260,8 +252,7 @@ private fun NewUserGuide(
                                 shape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp),
                             )
                 )
-
-                // 手势图标
+// 重要图标
                 Image(
                     modifier =
                         Modifier

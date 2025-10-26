@@ -1,14 +1,14 @@
 # 批量生成开场白语音工具
 
-这个工具用于为数据库中 `opening_audio_url` 为空的 agents 批量生成开场白语音。
+这个工具用于为数据库中 `opening_audio_url`为空的代理商生成批量开场白语音。
 
-## 功能特性
+## 功能特点
 
-- ✅ 从根目录 `config.yaml` 读取数据库和 ElevenLabs 配置
-- ✅ 查询 `opening_audio_url` 为 NULL 且有开场白文本的 agents
-- ✅ 复用现有的 `VoiceService` 和语音生成逻辑
+- ✅ 从根目录`config.yaml` 读取数据库和 ElevenLabs 配置
+- ✅ 查询 `opening_audio_url`为 NULL 且有开场白文本的代理
+- ✅ 复用现有的`VoiceService`和语音生成逻辑
 - ✅ 自动处理 Jinja2 模板变量（`{{ char }}`, `{{ user }}`）
-- ✅ 根据 agent 的 `voice_id` 或性别选择音色
+- ✅ 根据代理的`voice_id` 或性别选择音色
 - ✅ 批量处理支持（默认 10 个/批）
 - ✅ Dry-run 模式（只查询和生成语音，不更新数据库）
 - ✅ 详细的进度显示和日志
@@ -25,9 +25,7 @@
    pip install -r requirements.txt
    ```
 
-2. 确保 `config.yaml` 中配置了正确的数据库和 ElevenLabs API 信息：
-
-   ```yaml
+2. 确保 `config.yaml`中配置了正确的数据库和 ElevenLabs API 信息：```yaml
    database:
      host: localhost
      port: 5432
@@ -38,15 +36,11 @@
    elevenlabs:
      api_key: "your_elevenlabs_api_key"
      enabled: true
-   ```
+   ```### 基本使用
 
-### 基本用法
+#### 1.查看需要处理的代理数量（试运行）
 
-#### 1. 查看需要处理的 agents 数量（Dry-run）
-
-推荐首先使用 dry-run 模式查看有多少 agents 需要生成语音：
-
-```bash
+首先推荐使用干跑模式查看有多少代理需要生成语音：```bash
 python generate_missing_opening_audio.py --dry-run
 ```
 
@@ -56,17 +50,9 @@ python generate_missing_opening_audio.py --dry-run
 
 ```bash
 python generate_missing_opening_audio.py
-```
-
-#### 3. 只处理前 N 个 agents（测试用）
-
-```bash
+```#### 3.只处理前N个代理（测试用）```bash
 python generate_missing_opening_audio.py --limit 5
-```
-
-#### 4. 为指定的 agent 生成语音
-
-```bash
+```#### 4.为指定的代理生成语音```bash
 python generate_missing_opening_audio.py --agent-id <agent-id>
 ```
 
@@ -86,48 +72,44 @@ python generate_missing_opening_audio.py --batch-size 20
 
 | 参数           | 类型   | 默认值              | 说明                           |
 | -------------- | ------ | ------------------- | ------------------------------ |
-| `--config`     | string | `../../config.yaml` | 配置文件路径                   |
+| `--config`|字符串|`../../config.yaml` | 配置文件路径                   |
 | `--batch-size` | int    | `10`                | 每批处理的数量                 |
 | `--dry-run`    | flag   | `false`             | 只查询和生成语音，不更新数据库 |
 | `--limit`      | int    | 无                  | 限制处理的数量（用于测试）     |
-| `--agent-id`   | string | 无                  | 只处理指定的 agent ID          |
+| `--agent-id`|字符串| 无 | 只处理指定的代理ID |
 
-### 查看帮助
-
-```bash
+###查看帮助```bash
 python generate_missing_opening_audio.py --help
 ```
 
 ## 工作流程
 
-1. **加载配置**：从 `config.yaml` 读取数据库和 ElevenLabs 配置
-2. **连接数据库**：使用 SQLAlchemy AsyncSession 连接数据库
-3. **查询 agents**：查找满足以下条件的 agents：
-   - `deleted_at IS NULL`（未删除）
+1. **加载配置**：从 `config.yaml`读取数据库和 ElevenLabs 配置
+2. **连接数据库**：使用SQLAlchemy AsyncSession连接数据库
+3.**查询代理商**：查找满足以下条件的代理商：
+   -`deleted_at IS NULL`（未删除）
    - `opening IS NOT NULL` 且 `opening != ''`（有开场白文本）
-   - `opening_audio_url IS NULL`（没有语音 URL）
-4. **批量处理**：按批次处理 agents（默认 10 个/批）
-   - 处理 Jinja2 模板变量（`{{ char }}` → agent.name, `{{ user }}` → "you"）
-   - 确定 voice_id（优先使用 agent.voice_id，否则根据性别选择默认值）
-   - 调用 VoiceService 生成语音
-   - 上传到 GCS 并获取 URL
-   - 更新数据库（非 dry-run 模式）
-5. **输出统计**：显示处理结果统计
+   - `opening_audio_url IS NULL`（无语音网址）
+4.**批量处理**：按批量处理代理（默认 10 个/批）
+   - 处理 Jinja2 模板变量（`{{ char }}`→ 代理。姓名，`{{ user }}`→“你”）
+   - 确定voice_id（优先使用agent.voice_id，否则根据性别选择默认值）
+   - 调用VoiceService生成语音
+   - 上传到GCS并获取URL
+   - 更新数据库（非试运行模式）
+5.**输出统计**：显示处理结果统计
 
 ## 日志和输出
 
-脚本会输出详细的日志信息，包括：
+剧本会编写详细的日志信息，包括：
 
 - 配置加载状态
 - 数据库连接状态
-- 需要处理的 agents 数量
-- 每个 agent 的处理进度
-- 生成的语音 URL 和时长
+- 需要处理的代理数量
+- 每个代理的处理详情
+- 生成的语音URL和时长
 - 成功/失败/跳过的统计
 
-示例输出：
-
-```
+输出结果：```
 ============================================================
 开场白语音批量生成工具
 ============================================================
@@ -155,27 +137,23 @@ python generate_missing_opening_audio.py --help
   跳过: 1
   耗时: 125.67 秒
 ============================================================
-```
+```## 错误处理
 
-## 错误处理
-
-- **单个 agent 失败**：不会中断整个批次，会记录错误并继续处理下一个
-- **数据库连接失败**：脚本会退出并显示错误信息
-- **ElevenLabs API 失败**：会记录错误，该 agent 标记为失败
+- **单个代理失败**：不会中断整个批次，会记录错误并继续处理下一个
+- **数据库连接显示失败**：脚本会退出并显示错误信息
+- **ElevenLabs API 失败**：会记录错误，该代理标记为失败
 - **配置文件不存在**：脚本会退出并提示配置文件路径
 
 ## 注意事项
 
-1. **API 配额**：ElevenLabs API 有调用限制，大量处理时注意配额
-2. **网络连接**：需要稳定的网络连接以访问 ElevenLabs API 和 GCS
-3. **数据库权限**：需要对 `agents` 表有 SELECT 和 UPDATE 权限
-4. **模板变量**：开场白中的 `{{ char }}` 会替换为 agent 名字，`{{ user }}` 会替换为 "you"
-5. **voice_id 选择**：
-   - 优先使用 agent 自己的 `voice_id`
+1. **API 损耗**：ElevenLabs API 有调用限制，大量处理时注意损耗
+2. **网络连接**：需要稳定的网络连接才能访问 ElevenLabs API 和 GCS
+3.**数据库权限**：需要对`agents`表有 SELECT 和 UPDATE 权限
+4.**模板变量**：开场白中的`{{ char }}`会替换为代理名称，`{{ user }}`会替换为“你”
+5.**voice_id选择**：
+   - 优先使用自己的药剂`voice_id`
    - 如果没有，根据性别使用默认值：
-     - MALE → `rHWSYoq8UlV0YIBKMryp`
-     - FEMALE → `4tRn1lSkEn13EVTuqb0g`
-     - OTHER → `O7p2vmz2iEYgMXxkbsif`
+     - MALE → `rHWSYoq8UlV0YIBKMryp`- 女 →`4tRn1lSkEn13EVTuqb0g`- 其他 →`O7p2vmz2iEYgMXxkbsif`
 6. **语音缓存**：如果相同文本和音色已生成过语音，会复用缓存
 
 ## 安全建议
@@ -193,14 +171,14 @@ python generate_missing_opening_audio.py --help
 
 ### 数据库连接失败
 
-检查 `config.yaml` 中的数据库配置，确保数据库服务正在运行。
+检查 `config.yaml`中的数据库配置，确保数据库服务正在运行。
 
 ### ElevenLabs API 错误
 
 检查：
 
-1. API key 是否正确
-2. `elevenlabs.enabled` 是否为 `true`
+1.API键是否正确
+2.`elevenlabs.enabled` 是否为 `true`
 3. 网络连接是否正常
 4. API 配额是否充足
 
@@ -217,12 +195,12 @@ python generate_missing_opening_audio.py --help
 ### 依赖模块
 
 - `sqlalchemy` - 数据库操作
-- `asyncpg` - PostgreSQL 异步驱动
-- `pyyaml` - 配置文件解析
+- `asyncpg`- PostgreSQL 异步驱动
+-`pyyaml` - 配置文件解析
 - `loguru` - 日志记录
 - 项目内部模块：
-  - `app.models.agent.Agent` - Agent 模型
-  - `app.services.voice_service.VoiceService` - 语音服务
+  - `app.models.agent.Agent`- 特工模型
+  -`app.services.voice_service.VoiceService` - 语音服务
   - `app.core.agent.prompt_template` - 模板处理
 
 ### 数据库查询
@@ -234,14 +212,12 @@ WHERE deleted_at IS NULL
   AND opening != ''
   AND opening_audio_url IS NULL
 ORDER BY created_at DESC;
-```
-
-## 相关文档
+```## 相关文档
 
 - [ElevenLabs API 文档](https://docs.elevenlabs.io/)
 - [语音服务实现](../../app/services/voice_service.py)
-- [Agent 模型定义](../../app/models/agent.py)
-- [创建 Agent 时的语音生成逻辑](../../app/services/agent_service.py)
+- [Agent模型定义](../../app/models/agent.py)
+- [创建Agent时的语音生成逻辑](../../app/services/agent_service.py）
 
 ## 贡献
 

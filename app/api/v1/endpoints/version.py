@@ -32,16 +32,14 @@ async def check_version(
     - appVersionName: 应用版本名称（可选，字符串）
     """
     try:
-        # 直接使用注入的版本参数
+# 直接使用注入的版本参数
         client_version_code = app_version_code
         version_name = app_version_name or "unknown"
-
-        # 调用Google Play服务检查版本
+#调用Google Play服务检查版本
         version_check_result = google_play_service.check_version_requirement(
             client_version_code, version_name
         )
-
-        # 转换为响应模型
+# 转换为响应模型
         response = VersionCheckResponse(**version_check_result)
 
         logger.debug(
@@ -53,12 +51,11 @@ async def check_version(
         return APIResponse.success(data=response)
 
     except HTTPException:
-        # 重新抛出HTTP异常
+# 重新发起HTTP异常
         raise
     except Exception as e:
         logger.error(f"版本检查失败: {str(e)}")
-
-        # 如果检查失败，返回保守的响应
+# 如果检查失败，返回保存的响应
         fallback_version_code = (
             str(app_version_code) if "app_version_code" in locals() else "unknown"
         )

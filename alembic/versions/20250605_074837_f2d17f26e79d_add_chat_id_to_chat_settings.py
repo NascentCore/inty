@@ -9,9 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
-
-# revision identifiers, used by Alembic.
+# 修订标识符，由 Alembic 使用。
 revision: str = 'f2d17f26e79d'
 down_revision: Union[str, None] = 'd283e377e742'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -19,10 +17,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 为 chat_settings 表添加 chat_id 字段
+# 为chat_settings表添加chat_id字段
     op.add_column('chat_settings', sa.Column('chat_id', sa.VARCHAR(), nullable=True))
-    
-    # 添加外键约束
+#添加外键约束
     op.create_foreign_key(
         'fk_chat_settings_chat_id',
         'chat_settings', 'chats',
@@ -31,8 +28,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # 删除外键约束
+# 删除外键约束
     op.drop_constraint('fk_chat_settings_chat_id', 'chat_settings', type_='foreignkey')
-    
-    # 删除 chat_id 字段
+# 删除chat_id字段
     op.drop_column('chat_settings', 'chat_id')

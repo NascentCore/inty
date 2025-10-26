@@ -21,20 +21,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
-
-// 激活状态的渐变背景
+// 激活状态的突变背景
 private val premiumActiveBrush =
     Brush.horizontalGradient(
         colors = listOf(Color(0xFF00EEFF), Color(0xFF0B50FF), Color(0xFFFF00D0))
     )
-
-// 置灰状态的渐变背景
+// 投资灰状态的变化背景
 private val premiumInactiveBrush =
     Brush.horizontalGradient(
         colors = listOf(Color(0xFF595959), Color(0xFF9E9E9E), Color(0xFF686868))
     )
 
-/** Premium Model标签组件 */
+/** Premium 模型组件标签 */
 @Composable
 fun PremiumModelTag(isPremiumModel: Boolean = false, onClick: () -> Unit) {
     Row(
@@ -51,7 +49,7 @@ fun PremiumModelTag(isPremiumModel: Boolean = false, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        // V图标
+// V 图标
         Image(
             painter =
                 painterResource(
@@ -61,8 +59,7 @@ fun PremiumModelTag(isPremiumModel: Boolean = false, onClick: () -> Unit) {
             contentDescription = "upgrade to premium icon",
             modifier = Modifier.size(20.dp),
         )
-
-        // Premium model文本
+// Premium 模型文本
         Text(
             text = stringResource(R.string.premium_tag_on_chat_page),
             color = Color.White,

@@ -1,9 +1,7 @@
 from google import genai
 from google.genai import types
 import wave
-
-
-# Set up the wave file to save the output:
+#设置波形文件来保存输出：
 def wave_file(filename, pcm, channels=1, rate=24000, sample_width=2):
     with wave.open(filename, "wb") as wf:
         wf.setnchannels(channels)

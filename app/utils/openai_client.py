@@ -24,8 +24,7 @@ class Role(StrEnum):
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
-
-    # LangSmith expects "human" and "ai" as role names.
+# LangSmith 希望“人类”和“人工智能”作为角色名称。
     HUMAN = "human"
     AI = "ai"
 
@@ -35,19 +34,15 @@ class ReasoningEffort(StrEnum):
     Used to control how much reasoning token to produces during chat completions.
     https://platform.openai.com/docs/api-reference/chat/create#chat_create-reasoning_effort
     """
-
-    # https://ai.google.dev/gemini-api/docs/openai#thinking
-    # Only meaningful for Gemini models
+# https://ai.google.dev/gemini-api/docs/openai#thinking
+# 仅对双子座模型有意义
     NONE = "none"
-
-    # Below are listed in OpenAI SDK.
+# 下面列出了 OpenAI SDK 中的内容。
     MINIMAL = "minimal"
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
-
-
-# These env vars has no arguments inputable to langchina api
+# 这些环境变量无法输入到 langchina 的参数 api
 def _warn_env_var(env_var: str):
     if not os.getenv(env_var):
         logger.warning(f"{env_var} is not set")
@@ -56,8 +51,6 @@ def _warn_env_var(env_var: str):
 _warn_env_var("LANGCHAIN_API_KEY")
 _warn_env_var("LANGSMITH_TRACING_V2")
 _warn_env_var("LANGSMITH_PROJECT")
-
-
 # 全局单例基础客户端，用于复用HTTP连接
 _base_client: Optional[OpenAI] = None
 _client_lock = threading.Lock()
@@ -68,9 +61,9 @@ def _create_openai_client():
     return OpenAI(
         base_url=global_config_loaded_from_config_yaml.agent.base_url,
         api_key=global_config_loaded_from_config_yaml.agent.api_key,
-        # Extra headers used for tracking on openrouter.ai.
+# 用于跟踪openrouter。ai 的额外标头。
         default_headers={
-            # This appears as app name on openrouter.ai's activity page.
+# 这是openrouter。ai 的活动页面上显示为应用程序名称。
             "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",  # Optional. Site URL for rankings on openrouter.ai.
             "X-Title": global_config_loaded_from_config_yaml.app.name,  # Optional. Site title for rankings on openrouter.ai.
         },

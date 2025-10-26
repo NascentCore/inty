@@ -34,13 +34,13 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlin.math.roundToInt
 
 /**
- * Modifier的扩展函数，用于捕获内部compose的UI转化为bitmap
- * val picture = remember { Picture() }
- * @param picture [Picture] 捕获的数据，存储到picture后，picture可用于转化为bitmap
- * ⚠️注意，该功能仅能捕获对应修饰控件内的compose的ui。如果是同类的modifier扩展符号（比如appWaterMarker），就需要在该函数之后才可以
+ * 修饰符的扩展函数，用于捕获内部compose的UI转化为bitmap
+ * val 图片 = 记住 { 图片() }
+ * @param picture [Picture] 提取的数据，存储到图片后，图片可用于转化为位图
+ * ⚠️注意，该功能只能捕获对应修饰控件内的compose的ui。如果是同类的修饰符扩展符号（比如appWaterMarker），就需要在该函数之后才可以
  */
 fun Modifier.captureContent(picture: Picture) = this.drawWithCache {
-    //获取内容宽高
+//获取内容宽高
     val width = this.size.width.toInt()
     val height = this.size.height.toInt()
     onDrawWithContent {
@@ -51,7 +51,7 @@ fun Modifier.captureContent(picture: Picture) = this.drawWithCache {
                     height
                 )
             )
-        // requires at least 1.6.0-alpha01+
+// 至少需要1。6。0-α01+
         draw(this, this.layoutDirection, pictureCanvas, this.size) {
             this@onDrawWithContent.drawContent()
         }
@@ -61,11 +61,11 @@ fun Modifier.captureContent(picture: Picture) = this.drawWithCache {
 }
 
 /**
- * 将picture转化为bitmap
- * @param picture 是compose的Picture，需要captureContent配合使用，picture才能有内容
+ * 将图片转化为位图
+ * @param picture 是compose的图片，需要抓取内容暴力使用，图片才能有内容
  */
 fun createBitmapFromPicture(picture: Picture): Bitmap {
-    // [START android_compose_draw_into_bitmap_convert_picture]
+// [开始android_compose_draw_into_bitmap_convert_picture]
     val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
         Bitmap.createBitmap(picture)
     } else {
@@ -75,19 +75,19 @@ fun createBitmapFromPicture(picture: Picture): Bitmap {
         canvas.drawPicture(picture)
         bitmap
     }
-    // [END android_compose_draw_into_bitmap_convert_picture]
+// [结束android_compose_draw_into_bitmap_convert_picture]
     return bitmap
 }
 
 /**
- * 通过picture来获取compose的UI添加水印后的bitmap
- * 此时compose的UI并不会显示水印，而是会后续添加水印到bitmap中去
- * @param picture 是compose的Picture，需要captureContent配合使用，picture才能有内容
+ * 通过图片来获取compose的UI添加水印后的位图
+ *此时compose的UI并不会显示水印，另外会添加水印如下前往
+ * @param图片是compose的图片，需要抓取内容暴力使用，图片一致内容
  */
 fun getBitmapWithAppWaterMarker(context: Context, @DrawableRes res: Int, picture: Picture): Bitmap {
     val bitmap = createBitmapFromPicture(picture)
     val size = Size(bitmap.width.toFloat(), bitmap.height.toFloat())
-    //处理 Immutable bitmap passed to Canvas constructor
+//处理传递给Canvas构造函数的不可变位图
     val copy = bitmap.copy(Bitmap.Config.ARGB_8888, true)
     with(Canvas(copy.asImageBitmap())) {
         appWaterMarker(context, res)?.let { bm ->
@@ -100,12 +100,10 @@ fun getBitmapWithAppWaterMarker(context: Context, @DrawableRes res: Int, picture
     }
     return copy
 }
-
-
-//region 水印相关
+//区域水印相关
 
 /**
- * 水印位置摆放
+ * 水印位置放置
  */
 private fun offsetOfWaterMarker(
     bitmap: Bitmap,
@@ -172,14 +170,14 @@ enum class WaterMarkerPosition {
 }
 
 /**
- * 项目App的图片水印,给compose的UI添加一个水印显示出来
+ * 项目App的图片水印，给compose的UI添加一个水印显示出来
  */
 fun Modifier.drawAppWaterMarker(
     context: Context, @DrawableRes res: Int,
     position: WaterMarkerPosition = WaterMarkerPosition.BOTTOM_END,
 ) = this.drawWithContent {
     drawContent()
-    //绘制水印
+// 较差水印
     appWaterMarker(context, res)?.let { bitmap ->
         drawImage(
             image = bitmap.asImageBitmap(),
@@ -194,8 +192,8 @@ private fun appWaterMarker(
     @DrawableRes res: Int,
     size: Size = Size.Zero,
 ): Bitmap? {
-    //之所以不用BitmapFactory.decodeResource 是因为该方式使用svg图片时候，就无效了。
-//  return   BitmapFactory.decodeResource(context.resources, R.drawable.icon_svg)
+//之所以使用BitmapFactory。解码资源是因为该方式使用svg图片的时候，就无效了。
+// 返回 BitmapFactory.decodeResource(context.resources, R.drawable.图标_svg)
     val waterMarker =
         ContextCompat.getDrawable(context, res)?.let { drawable ->
             if (size != Size.Zero) drawable.toBitmap(
@@ -207,12 +205,8 @@ private fun appWaterMarker(
         }
     return waterMarker
 }
-
-
-//endregion
-
-
-//去掉点击ripple效果的方式,可以设置给不需要ripple的button组件上，
+//区域结束
+//去掉点击ripple效果的方式，可以设置给不需要ripple的按钮上组件，
 val emptyInteractionSource = object : MutableInteractionSource {
 
     override val interactions: Flow<Interaction>
@@ -226,8 +220,8 @@ val emptyInteractionSource = object : MutableInteractionSource {
 }
 
 /**
- * Modifier的扩展符，没有ripple点击水波纹效果
- * ⚠️注意，给Button等添加modifier的clickable的时候，是无效的，因为内部优先调用button自身的点击回调
+ * 修改器的扩展符，无波纹点击水波纹效果
+ * ⚠️注意，给Button等添加修饰符的可点击的时候，是无效的，因为内部优先调用button自身的点击回调
  */
 fun Modifier.noRippleClickable(
     enabled: Boolean = true,

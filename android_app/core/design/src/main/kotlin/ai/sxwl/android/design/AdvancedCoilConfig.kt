@@ -17,20 +17,20 @@ import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 /**
- * 高级Coil配置类
- * 根据Coil 3.x官方文档：https://coil-kt.github.io/coil/network/
- * 提供完整的网络支持和缓存策略
+ * 高级线圈配置类
+ * 根据线圈3。x官方文档：https://coil-kt.github.io/coil/network/
+ * 提供完整的网络支持和服务器策略
  */
 object AdvancedCoilConfig {
 
     /**
-     * 创建优化的ImageLoader，支持设备适配的图片压缩
-     * 根据Coil 3.x官方文档：https://coil-kt.github.io/coil/
+     * 创建优化的ImageLoader，支持设备批发的图片压缩
+     * 根据线圈3。x官方文档：https://coil-kt.github.io/coil/
      * @param context 上下文
      * @return 配置好的ImageLoader
      */
     fun createOptimizedImageLoader(context: Context): ImageLoader {
-        // 创建专门用于图片加载的OkHttpClient
+//创建专门用于图片加载的OkHttpClient
         val imageHttpClient = createImageHttpClient()
 
         return ImageLoader.Builder(context)
@@ -46,7 +46,7 @@ object AdvancedCoilConfig {
                     .build()
             }
             .components {
-                // 添加各种解码器支持
+//添加各种解码器支持
                 add(SvgDecoder.Factory())
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     add(AnimatedImageDecoder.Factory())
@@ -69,7 +69,7 @@ object AdvancedCoilConfig {
 
 
     /**
-     * 创建专门用于图片加载的OkHttpClient
+     *创建专门用于图片加载的OkHttpClient
      * 根据官方文档优化网络配置，处理连接重置问题
      */
     private fun createImageHttpClient(): OkHttpClient {
@@ -92,9 +92,9 @@ object AdvancedCoilConfig {
     }
 
     /**
-     * 获取图片缓存大小（字节）
+     * 获取图片存储大小（字节）
      * @param context 上下文
-     * @return 缓存大小
+     * @return 存储大小
      */
     fun getImageCacheSize(context: Context): Long {
         return try {
@@ -113,7 +113,7 @@ object AdvancedCoilConfig {
     }
 
     /**
-     * 清除图片缓存
+     * 清晰图像存储
      * @param context 上下文
      */
     fun clearImageCache(context: Context) {
@@ -123,12 +123,12 @@ object AdvancedCoilConfig {
                 cacheDir.deleteRecursively()
             }
         } catch (e: Exception) {
-            // 忽略清除缓存时的错误
+// 忽略通知时的错误
         }
     }
 
     /**
-     * 格式化缓存大小
+     * 缓存大小
      * @param bytes 字节数
      * @return 格式化的字符串
      */

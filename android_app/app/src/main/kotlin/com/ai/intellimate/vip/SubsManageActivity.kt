@@ -17,7 +17,7 @@ class SubsManageActivity : BaseActivity() {
     companion object {
         /**
          * 启动订阅管理页面
-         * @param context 上下文context
+         * @param context 上下文
          */
         fun launch(context: Context) {
             context.startActivity(Intent(context, SubsManageActivity::class.java))

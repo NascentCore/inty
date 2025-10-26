@@ -48,7 +48,5 @@ def _ensure_minimal_config() -> None:
     CONFIG_PATH.write_text(
         yaml.safe_dump(minimal_cfg, sort_keys=False, allow_unicode=True), encoding="utf-8"
     )
-
-
-# Ensure config before any test collection that imports app.*
+# 在导入应用程序的任何测试之前集合确保配置。*
 _ensure_minimal_config()

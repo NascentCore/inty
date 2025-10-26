@@ -42,30 +42,27 @@ def upload_to_gcs(file_data, content_type, bucket_name, path):
 
         logger.error(f"错误堆栈: {traceback.format_exc()}")
         raise
-
-
 # 新增删除方法
 def delete_from_gcs(bucket_name, path):
     """删除GCS文件，如果文件不存在则忽略"""
     try:
         bucket = gcs_client.bucket(bucket_name)
         blob = bucket.blob(path)
-
-        # 检查文件是否存在
+#检查文件是否存在
         if blob.exists():
             blob.delete()
             return True
         else:
-            # 文件不存在，忽略删除操作
+#文件不存在，忽略删除操作
             return False
     except Exception as e:
-        # 如果是404错误或其他删除相关错误，记录但不抛出异常
+# 如果是404错误或其他删除相关错误，记录但不发送异常
         from google.api_core import exceptions
 
         if isinstance(e, exceptions.NotFound):
             return False  # 文件不存在，正常情况
         else:
-            # 其他错误重新抛出
+#其他错误重新提交
             raise e
 
 
@@ -86,20 +83,16 @@ def copy_gcs_file(source_url: str, destination_path: str, bucket_name: str) -> s
     _, source_path = get_bucket_and_path_from_gcs_url(source_url)
     if not source_path:
         raise ValueError(f"Invalid GCS URL: {source_url}")
-
-    # 获取源bucket和blob
+# 获取源bucket和blob
     source_bucket = gcs_client.bucket(bucket_name)
     source_blob = source_bucket.blob(source_path)
-
-    # 检查源文件是否存在
+#查询来源文件是否存在
     if not source_blob.exists():
         raise FileNotFoundError(f"Source file not found: {source_url}")
-
-    # 获取目标bucket和blob
+# 获取目标bucket和blob
     destination_bucket = gcs_client.bucket(bucket_name)
     destination_blob = destination_bucket.blob(destination_path)
-
-    # 复制文件
+# 复制文件
     destination_blob.rewrite(source_blob)
 
     return destination_blob.public_url
@@ -112,10 +105,9 @@ def get_bucket_and_path_from_gcs_url(url: str) -> str:
         or url.startswith(GCS_GS_PREFIX)
         or url.startswith(GCS_PRIVATE_HTTPS_PREFIX)
     )
-
-    # 处理两种URL格式：
-    # 1. https://storage.googleapis.com/bucket/path
-    # 2. gs://bucket/path
+# 处理两种URL格式：
+＃1。https://storage.googleapis.com/bucket/path
+#2.gs://仓库/路径
     if url.startswith(GCS_GS_PREFIX):
         url = url.removeprefix(GCS_GS_PREFIX)
 
@@ -132,8 +124,7 @@ def is_valid_gcs_url(url: str) -> bool:
     """验证是否为有效的GCS URL"""
     if not url:
         return False
-
-    # 检查是否为GCS URL格式
+#检查是否为GCS URL格式
     gcs_patterns = [
         r"^https://storage\.googleapis\.com/[^/]+/.+",
         r"^gs://[^/]+/.+",
@@ -158,9 +149,8 @@ def is_temp_gcs_path(url: str, user_id: str) -> bool:
     _, path = get_bucket_and_path_from_gcs_url(url)
     if not path:
         return False
-
-    # 检查是否为临时路径格式：avatars/tmp/{user_id}/... 或 tmp/{user_id}/...
-    # 注意：backgrounds/{user_id}/ 现在是统一目录，不是临时路径
+# 检查是否为临时路径格式：avatars/tmp/{user_id}/... 或 tmp/{user_id}/...
+# 注意：backgrounds/{user_id}/ 现在是统一目录，不是临时路径
     temp_patterns = [
         f"backgrounds/tmp/{user_id}/",  # 保留以防有遗留的临时路径
         f"avatars/tmp/{user_id}/",

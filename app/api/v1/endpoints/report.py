@@ -24,9 +24,7 @@ from app.schemas.response import APIResponse, PaginationData
 from app.services import report_service
 
 router = APIRouter(prefix="/report", route_class=LoggerRoute)
-
-
-# TODO: Remove this endpoint.
+# TODO：删除此端点。
 @router.post(
     "/upload-image",
     response_model=APIResponse[dict],
@@ -41,17 +39,15 @@ async def upload_report_image(
 ):
     """Upload image for report"""
     try:
-        # Validate file type
+# 验证文件类型
         if not file.content_type or not file.content_type.startswith("image/"):
             return APIResponse.error(message="Only image files are allowed")
-
-        # Validate file size (e.g., max 10MB)
+# 验证文件大小（例如，最大10MB）
         max_size = 10 * 1024 * 1024  # 10MB
         file_data = await file.read()
         if len(file_data) > max_size:
             return APIResponse.error(message="File size exceeds 10MB limit")
-
-        # Generate unique filename
+# 唯一生成的文件名
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         unique_id = uuid.uuid4().hex[:8]
         file_extension = (
@@ -59,13 +55,11 @@ async def upload_report_image(
             if file.filename and "." in file.filename
             else "jpg"
         )
-
-        # Generate storage path
+# 存储生成路径
         report_image_path = (
             f"reports/images/{current_user.id}/{timestamp}-{unique_id}.{file_extension}"
         )
-
-        # Upload to GCS
+# 上传至GCS
         url = upload_to_gcs(
             file_data,
             file.content_type,
@@ -94,9 +88,7 @@ async def create_report(
     except Exception as e:
         logger.error(f"Failed to create report: {str(e)}")
         return APIResponse.error(message=str(e))
-
-
-# TODO: Remove this endpoint.
+# TODO：删除此端点。
 @router.get(
     "/",
     response_model=APIResponse[ReportsList],

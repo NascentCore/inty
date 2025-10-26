@@ -53,7 +53,7 @@ fun SettingSection(modifier: Modifier = Modifier, content: @Composable () -> Uni
     }
 }
 
-/** 设置项开关组件 */
+/** 项开关组件 */
 @Composable
 fun SettingSwitchItem(
     title: String,
@@ -83,7 +83,7 @@ fun SettingSwitchItem(
     }
 }
 
-/** 设置项导航组件 */
+/** 项导航组件 */
 @Composable
 fun SettingNavigationItem(
     title: String,

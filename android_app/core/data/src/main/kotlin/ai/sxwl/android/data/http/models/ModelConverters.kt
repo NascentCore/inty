@@ -3,7 +3,7 @@ package ai.sxwl.android.data.http.models
 import ai.sxwl.android.data.api.model.UserProfile
 import com.inty.api.models.api.v1.users.profile.User as IntyUser
 
-/** 数据模型转换工具 将Inty SDK的模型转换为业务层模型 */
+/** 数据模型转换工具将Inty SDK的模型转换为业务层模型 */
 
 /** 将Inty SDK的User对象转换为UserProfile对象 */
 fun IntyUser.toUserProfile(): UserProfile {

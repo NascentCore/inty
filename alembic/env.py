@@ -4,14 +4,13 @@ from sqlalchemy import pool
 from alembic import context
 
 from app.core.config import global_config_loaded_from_config_yaml
-
-# 导入所有模型，app/models/__init__.py 会将所有表定义连同 base 一起导入
+# 导入所有模型，app/models/__init__.py集成所有表定义基础一起导入
 from app.models import Base
 
 target_metadata = Base.metadata
 db_url = global_config_loaded_from_config_yaml.database.url
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+# 这是 Alembic 配置对象，由 pr 提供
+# 访问正在使用的 .ini 文件中的值。
 config = context.config
 # 设置数据库URL
 config.set_main_option("sqlalchemy.url", db_url)

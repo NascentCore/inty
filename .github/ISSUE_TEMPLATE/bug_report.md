@@ -1,10 +1,8 @@
 ---
-name: Bug report
-about: Create a report to help us improve
-title: "[BUG] "
-labels: bug, p1
-assignees: ''
+名称：错误报告
+关于：创建一份报告来帮助我们 improve
+标题：“[BUG]”
+标签： 错误、 p1
+受让人：''
 
 ---
-
-

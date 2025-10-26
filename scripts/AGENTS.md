@@ -1,8 +1,8 @@
-# AGENTS.md · scripts/（脚本）
+# 代理。md · 脚本/（脚本）
 
-本文件覆盖并补充根 `AGENTS.md`，仅适用于 `scripts/`。
+本文件覆盖并补充根`AGENTS.md`，仅适用于 `scripts/`。
 
 ## 约定
 - 脚本需可重复执行（幂等），参数化（使用 `argparse`/配置），日志使用 `logger.debug()`。
-- 依赖在本目录 `requirements.txt` 中声明；禁止隐式外部依赖。
-- 修改数据的脚本需具备 Dry-Run 与明确确认机制。
+- 依赖在本目录 `requirements.txt`中国声明；禁止隐式外部依赖。
+- 修改数据的脚本需要具备试运行和明确的机制。

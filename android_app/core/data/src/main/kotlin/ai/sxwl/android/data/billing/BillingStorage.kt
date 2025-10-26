@@ -5,7 +5,7 @@ import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.utils.MoshiUtils
 import com.squareup.moshi.Types
 
-/** 计费本地存储管理类 */
+/** 设备本地存储管理类 */
 internal object BillingStorage {
 
     private const val KEY_VIP_STATUS = "vip_status"
@@ -65,8 +65,7 @@ internal object BillingStorage {
                 adapter.fromJson(plansStr) ?: emptyList()
             } catch (e: Exception) {
                 LogUtils.w("解析本地订阅计划失败: ${e.message}")
-
-                // 如果解析失败，清除损坏的缓存数据
+// 如果解析失败，请清除损坏的存储数据
                 try {
                     IntySetting.setUserProfileData(KEY_SUBSCRIPTION_PLANS, "")
                 } catch (clearException: Exception) {

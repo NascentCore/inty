@@ -110,8 +110,7 @@ private fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier = composed
         interactionSource = remember { MutableInteractionSource() },
     )
 }
-
-// 目前仅在chat page中使用
+// 目前仅在聊天页面中使用
 @Composable
 fun DiaAmountLayout(content: @Composable DiaAmountWindowScope.() -> Unit) {
     DiaAmountWindowScopeInstance.content()
@@ -125,7 +124,7 @@ private object DiaAmountWindowScopeInstance : DiaAmountWindowScope {
     @Composable
     override fun SetDiaAmount(dimAmount: Float) {
         val curView = LocalView.current
-        /* 更改dialog window的透明度 */
+        /* 更改对话框窗口的透明度 */
         LaunchedEffect(curView, dimAmount) {
             try {
                 val window = curView.findWindow() ?: return@LaunchedEffect

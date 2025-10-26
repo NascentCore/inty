@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** 智能 Tags 布局组件，支持自动换行和截断 确保不会显示被截断的 tag */
+/** 智能标签布局组件，支持自动换行和断断确保不会显示被断断的标签 */
 @Composable
 fun SmartTagsLayout(
     tags: List<String>,
@@ -36,8 +36,7 @@ fun SmartTagsLayout(
 ) {
     val density = LocalDensity.current
     var availableWidth by remember { mutableFloatStateOf(0f) }
-
-    // 优化性能，避免不必要的重组
+// 优化性能，避免不必要的重组
     val visibleTags =
         remember(tags, availableWidth, maxLines) {
             if (availableWidth > 0) {
@@ -72,7 +71,7 @@ fun SmartTagsLayout(
     }
 }
 
-/** 计算可以完全显示的 tags */
+/** 计算可以完全显示标签 */
 private fun calculateVisibleTags(
     tags: List<String>,
     availableWidth: Float,
@@ -110,7 +109,7 @@ private fun calculateVisibleTags(
     return visibleTags
 }
 
-/** 估算 tag 的宽度 */
+/** 提示标签的宽度 */
 private fun estimateTagWidth(text: String, density: Density): Float {
     val charWidth = with(density) { 7.dp.toPx() }
     val horizontalPadding = with(density) { 12.dp.toPx() }

@@ -29,7 +29,7 @@ class CharacterAgent:
         start_time = time.time()
         
         try:
-            # Step 1: Generate the base character profile
+#步骤1：生成基字符profile
             self.logger.info("Step 1: Generating base character profile...")
             character = self.gemini_client.generate_character_profile(
                 brief_description=request.brief_description,
@@ -40,8 +40,7 @@ class CharacterAgent:
             step1_time = time.time() - start_time
             self.logger.info(f"Step 1 completed in {step1_time:.2f} seconds")
             self.logger.info(f"Base character created: {character.name}")
-            
-            # Step 2: Enhance character details for consistency
+# 第2步：增强角色细节以保持一致性
             self.logger.info("Step 2: Enhancing character details...")
             enhancement_start = time.time()
             
@@ -50,8 +49,7 @@ class CharacterAgent:
             enhancement_time = time.time() - enhancement_start
             self.logger.info(f"Step 2 completed in {enhancement_time:.2f} seconds")
             self.logger.info(f"Character enhanced: {character.name}")
-            
-            # Step 3: Generate character images
+#第三步：生成角色图像
             self.logger.info("Step 3: Generating character images...")
             image_start = time.time()
             
@@ -65,8 +63,7 @@ class CharacterAgent:
             image_time = time.time() - image_start
             self.logger.info(f"Step 3 completed in {image_time:.2f} seconds")
             self.logger.info(f"Generated {len(images)} images")
-            
-            # Step 4: Validate and finalize character
+# 第4步：验证最终并确定角色
             self.logger.info("Step 4: Validating character...")
             validation_start = time.time()
             
@@ -100,8 +97,7 @@ class CharacterAgent:
         """Validate that the character profile is complete and consistent"""
         
         self.logger.info("Starting character validation...")
-        
-        # Check required fields
+#检查必填字段
         required_fields = [
             ("name", character.name),
             ("personality_summary", character.personality_summary),
@@ -116,8 +112,7 @@ class CharacterAgent:
                 raise ValueError(f"Character profile is missing required information: {field_name}")
             else:
                 self.logger.debug(f"✅ Required field present: {field_name}")
-        
-        # Check for consistency in physical appearance
+#检查外观的一致性
         self.logger.debug("Validating physical appearance...")
         appearance = character.physical_appearance
         if not appearance.get('hair_color') or not appearance.get('eye_color'):
@@ -126,16 +121,14 @@ class CharacterAgent:
             raise ValueError("Character physical appearance is incomplete")
         else:
             self.logger.debug(f"✅ Physical appearance complete: hair={appearance.get('hair_color')}, eyes={appearance.get('eye_color')}")
-        
-        # Validate encounter scenario
+#验证遭遇场景
         self.logger.debug("Validating encounter scenario...")
         if not character.encounter.initial_dialogue:
             self.logger.error("Character encounter is missing initial dialogue")
             raise ValueError("Character encounter is missing initial dialogue")
         else:
             self.logger.debug(f"✅ Encounter dialogue present: {character.encounter.initial_dialogue[:50]}...")
-        
-        # Validate background information
+#验证背景信息
         self.logger.debug("Validating background information...")
         bg = character.background
         bg_checks = [
@@ -151,8 +144,7 @@ class CharacterAgent:
                 self.logger.warning(f"Background field may be incomplete: {field_name}")
             else:
                 self.logger.debug(f"✅ Background field present: {field_name}")
-        
-        # Validate images
+# 验证图像
         self.logger.debug("Validating generated images...")
         if len(character.images) == 0:
             self.logger.warning("No images were generated for the character")
@@ -215,66 +207,51 @@ class CharacterAgent:
         self.logger.debug(f"Formatting character {character.name} as text")
         
         text = f"""
-# {character.name} - Character Profile
-
-## Basic Information
+＃ {特点。名称} - 字符 Profile
+## 基本信息
 - **Age:** {character.age}
 - **Gender:** {character.gender}
 - **Occupation:** {character.background.occupation}
 - **Origin:** {character.background.origin}
-
-## Physical Appearance
+## 外貌
 - **Height:** {character.physical_appearance.get('height', 'Not specified')}
 - **Build:** {character.physical_appearance.get('build', 'Not specified')}
 - **Hair:** {character.physical_appearance.get('hair_color', 'Not specified')}
 - **Eyes:** {character.physical_appearance.get('eye_color', 'Not specified')}
 - **Distinguishing Features:** {', '.join(character.physical_appearance.get('distinguishing_features', []))}
 - **Clothing Style:** {character.physical_appearance.get('clothing_style', 'Not specified')}
-
-## Personality
+＃＃ 性格
 {character.personality_summary}
-
-### Traits
+###种族
 {', '.join(character.background.personality_traits)}
-
-### Motivations
+### 动机
 {', '.join(character.background.motivations)}
-
-### Fears
+### 恐惧
 {', '.join(character.background.fears)}
-
-### Dreams
+###梦想
 {', '.join(character.background.dreams)}
-
-### Skills
+### 技能
 {', '.join(character.background.skills)}
-
-### Quirks
+### 怪癖
 {', '.join(character.background.quirks)}
-
-## Background Story
+## 背景故事
 {character.background.backstory}
-
-## Encounter Scenario
+## 遭遇场景
 **Location:** {character.encounter.location}
 **Type:** {character.encounter.encounter_type}
 **Mood:** {character.encounter.mood}
-
-### Scene Description
+### 场景描述
 {character.encounter.scene_description}
-
-### Initial Dialogue
+### 总理对话
 "{character.encounter.initial_dialogue}"
-
-### User's Role
+### 用户角色
 {character.encounter.user_role}
-
-## Generated Images
+## 生成的图像
 """
         
         for i, image in enumerate(character.images, 1):
             text += f"""
-### Image {i}
+### 图片 {i}
 - **Description:** {image.description}
 - **Scene:** {image.scene_context}
 - **Style:** {image.image_style}

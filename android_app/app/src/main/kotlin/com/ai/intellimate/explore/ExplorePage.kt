@@ -35,7 +35,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 
-/** Explore页面 - 推荐agents展示 */
+/** 探索页面-推荐合作伙伴展示 */
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
@@ -46,12 +46,10 @@ fun ExplorePage(
     viewModel: ExploreViewModel = viewModel(),
 ) {
     val context = LocalContext.current
-
-    // 获取Paging数据流
+// 获取分页数据流
     val agentsFlow = viewModel.getRecommendAgentsFlow()
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
-
-    // 使用 PageTrackingHelper 进行页面跟踪
+// 使用PageTrackingHelper进行页面跟踪
     LaunchedEffect(Unit) {
         PageTrackingHelper.trackPageView(
             "ExplorePage",
@@ -62,11 +60,9 @@ fun ExplorePage(
             )
         )
     }
-
-    // 初始化图片尺寸缓存管理器和图片预加载管理器
+// 初始化图片尺寸存储管理器和图片预加载管理器
     LaunchedEffect(Unit) { ImagePreloadManager.init(context) }
-
-    // 初始化Paging数据
+//初始化分页数据
     LaunchedEffect(Unit) { viewModel.initializePagingData() }
 
     Box(modifier = modifier) {
@@ -97,33 +93,31 @@ fun ExplorePage(
                 modifier = Modifier,
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
-
-            // 使用原生下拉刷新状态
+// 使用强制下拉刷新状态
             var isRefreshing by remember { mutableStateOf(false) }
-
-            // 监听Paging的刷新状态，自动控制下拉刷新指示器
+// 监听分页的刷新状态，自动控制下拉刷新
             LaunchedEffect(lazyPagingItems?.loadState?.refresh, isRefreshing) {
                 when (lazyPagingItems?.loadState?.refresh) {
                     is LoadState.Loading -> {
-                        // 正在加载，保持刷新状态
+// 正在加载，保持刷新状态
                     }
 
                     is LoadState.NotLoading -> {
                         if (isRefreshing) {
-                            // 刷新完成，隐藏指示器
+// 刷新完成，隐藏一半
                             isRefreshing = false
                         }
                     }
 
                     is LoadState.Error -> {
                         if (isRefreshing) {
-                            // 刷新失败，也要隐藏指示器
+// 刷新失败，隐藏少量
                             isRefreshing = false
                         }
                     }
 
                     null -> {
-                        // 无数据状态，如果正在刷新则停止
+// 无数据状态，如果正在刷新则停止
                         if (isRefreshing) {
                             isRefreshing = false
                         }

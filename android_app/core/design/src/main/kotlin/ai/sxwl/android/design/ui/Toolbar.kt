@@ -169,7 +169,7 @@ private fun 预览star标题的状态栏() {
 }
 
 /**
- * 与Ai聊天顶部的标题栏
+ * 与艾聊天顶部的标题栏
  */
 data class HeartChatTopAppBarData(
     val avatarUrl: String? = "",//头像的url
@@ -294,7 +294,7 @@ private fun 预览聊天顶部标题栏() {
 }
 
 /**
- * 带Tab的顶部工具栏
+ * 带选项卡的顶部工具栏
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -312,7 +312,7 @@ fun HeartTabTopAppBar(
                 modifier = Modifier.width(240.dp), // 进一步限制TabRow宽度，让tab更紧凑
                 containerColor = Color.Transparent,
                 indicator = { tabPositions ->
-                    // 使用自定义的indicator，跟随tab移动
+//同时使用自定义，然后tab移动
                     if (tabPositions.isNotEmpty()) {
                         Box(
                             modifier = Modifier
@@ -339,7 +339,7 @@ fun HeartTabTopAppBar(
                         interactionSource = remember { emptyInteractionSource },
                         text = {
                             if (selectedTabIndex == index) {
-                                // 选中状态使用渐变色文字
+// 选中状态使用渐变颜色文字
                                 Text(
                                     text = buildAnnotatedString {
                                         withStyle(
@@ -354,7 +354,7 @@ fun HeartTabTopAppBar(
                                     textAlign = TextAlign.Center,
                                 )
                             } else {
-                                // 未选中状态使用白色
+// 未选中状态使用白色
                                 Text(
                                     text = tabTitle,
                                     fontSize = 20.sp,
@@ -386,8 +386,7 @@ private fun 预览TabLayout() {
         )
 
         Spacer(modifier = Modifier.height(16.dp))
-
-        // 展示自定义tabs的使用
+// 展示自定义选项卡的使用
         var customCheckedIndex by remember { mutableIntStateOf(0) }
         HeartTabTopAppBar(
             tabs = listOf("推荐", "关注", "最新"),
@@ -401,7 +400,7 @@ private fun 预览TabLayout() {
 @Preview
 @Composable
 fun HeartTopAppBarBackground(modifier: Modifier = Modifier) {
-    //背景图
+//背景图
     Image(
         painter = painterResource(R.drawable.img_profile_bg_top),
         contentDescription = "",

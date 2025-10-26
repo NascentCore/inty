@@ -1,35 +1,29 @@
-# 🚀 InTy 评测系统快速启动指南
+# 🚀 InTy 足球系统快速入门指南
 
 ## 当前状态
 
-✅ **后端集成完成** - 评测系统已完全集成到 InTy 后端  
-✅ **API 端点就绪** - 所有评测API已实现并注册  
+✅ **搅拌机集成完成** - 体育系统已完全集成到 InTy 搅拌机  
+✅ **API 端点已** - 所有体育API已实现并注册  
 ✅ **数据模型完整** - 数据库模型和迁移文件已创建  
 ✅ **现有API集成** - 复用现有的聊天和智能体API  
-⚠️ **前端需构建** - React/TypeScript代码需要构建才能运行
+⚠️ **前端需构建** - React/TypeScript代码需要构建脚本运行
 
-## 🔧 立即开始
+## 🔧立即开始
 
-### 1. 启动后端服务
-
-```bash
+### 1.启动服务```bash
 # 在项目根目录执行
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
+```### 2.访问测试页面
 
-### 2. 访问测试页面
+浏览器访问：**http://localhost:8000/static/evaluation/simple.html**
 
-打开浏览器访问：**http://localhost:8000/static/evaluation/simple.html**
+该页面提供：
 
-这个页面提供：
-
-- ✅ API 连通性测试
+- ✅ API 改变性测试
 - ✅ 完整的 API 文档链接
 - ✅ 开发指导信息
 
-### 3. 测试 API 功能
-
-```bash
+### 3.测试API功能```bash
 # 测试智能体API
 curl http://localhost:8000/api/v1/ai/agents/
 
@@ -38,30 +32,25 @@ curl http://localhost:8000/api/v1/evaluation/sessions
 
 # 完整API测试
 python app/static/evaluation/test_integration.py
-```
+```## 📖 重要链接
 
-## 📖 重要链接
+- **🎮测试页面**：http://localhost:8000/static/evaluation/simple.html
+- **📖 API 文档**：http://localhost:8000/docs
+- **❤️健康检查**：http://localhost:8000/
+- **📚完整文档**：[README.md](./README.md)
 
-- **🎮 测试页面**: http://localhost:8000/static/evaluation/simple.html
-- **📖 API 文档**: http://localhost:8000/docs
-- **❤️ 健康检查**: http://localhost:8000/
-- **📚 完整文档**: [README.md](./README.md)
+## 🎯核心特性验证
 
-## 🎯 核心特性验证
+1.**✅ 使用现有聊天API** - 体育系统调用`/api/v1/chats/agents/{id}/chat/completions`
+2. **✅ 使用现有智能体API** - 调用 `/api/v1/ai/agents/`3. **✅ 完整足球流程** -创建会话 → 选择智能体 → 执行足球 → 查看结果
+4. **✅ 实时监控** - WebSocket 监控气压详细资料
+5.**✅自动评分** - LLM 自动评分系统
 
-1. **✅ 使用现有聊天API** - 评测系统调用 `/api/v1/chats/agents/{id}/chat/completions`
-2. **✅ 使用现有智能体API** - 调用 `/api/v1/ai/agents/`
-3. **✅ 完整评测流程** - 创建会话 → 选择智能体 → 执行评测 → 查看结果
-4. **✅ 实时监控** - WebSocket 监控评测进度
-5. **✅ 自动评分** - LLM 自动评分系统
+## 🎨 前端部署和运行
 
-## 🎨 前端构建和运行
+当前前端是完整的React + TypeScript代码，支持现代化开发：
 
-当前前端是完整的 React + TypeScript 代码，支持现代化开发：
-
-### 快速启动 (推荐)
-
-```bash
+### 快速启动 (推荐)```bash
 cd app/static/evaluation
 
 # 交互式演示脚本
@@ -69,24 +58,20 @@ cd app/static/evaluation
 
 # 或直接启动开发模式
 ./dev.sh
-```
+```**⚡立即访问**：http://localhost:3000
 
-**⚡ 立即访问**: http://localhost:3000
-
-**🔧 当前状态**:
+**🔧当前状态**：
 
 - ✅ API路径重复问题已彻底修复
-- ✅ 前端开发服务器运行正常 (http://localhost:3000)
+- ✅前端开发服务器运行正常(http://localhost:3000)
 - ✅ 前端API代理连接正常 (/api → http://localhost:8000/api)
-- ✅ 所有评测API端点工作正常
-- ✅ 前端热重载功能正常
+- ✅所有体育API端点工作正常
+- ✅前端热重载功能正常
 - ✅ 自动游客认证系统集成完毕
 - ✅ 防重复API调用机制已实现
-- ✅ 所有功能现在完全可用并稳定
+- ✅ 所有功能现已完全可用且稳定
 
-### 手动构建
-
-```bash
+### 手动构建```bash
 cd app/static/evaluation
 
 # 安装依赖
@@ -100,28 +85,24 @@ npm run build  # 输出到 dist/
 
 # 预览构建结果
 npm run preview  # http://localhost:4173
-```
-
-### 环境要求
+```### 环境要求
 
 - Node.js 16+ (当前: $(node --version))
 - npm 8+ (当前: $(npm --version))
 
-详细说明请查看: [FRONTEND_SETUP.md](./FRONTEND_SETUP.md)
+详细说明请查看：[FRONTEND_SETUP.md](./FRONTEND_SETUP.md)
 
 ## 🔐 认证配置
 
-评测系统使用**自动游客认证**，无需手动配置token：
+赌场系统使用**自动游客认证**，消耗手动配置令牌：
 
-### 自动认证流程
+###自动认证流程
 
-1. **首次访问**: 前端自动创建游客用户并获取token
-2. **后续使用**: token自动保存在localStorage中，持续使用
-3. **侧边栏显示**: 可查看当前认证状态和用户ID
+1. **首次访问**：接口自动创建游客用户并获取token
+2. **后续使用**：token自动保存在localStorage中，持续使用
+3.**侧边栏显示**：可查看当前认证状态和用户ID
 
-### 手动测试认证
-
-```bash
+### 手动测试认证```bash
 # 测试游客认证API
 curl -X POST http://localhost:8000/api/v1/auth/guest \
   -H "Content-Type: application/json" \

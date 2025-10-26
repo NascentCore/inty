@@ -8,15 +8,13 @@ import time
 from config import Config
 from models import CharacterGenerationRequest, CharacterGenerationResponse
 from character_agent import CharacterAgent
-
-# Initialize FastAPI app
+# 初始化FastAPI应用程序
 app = FastAPI(
     title="AI Character Generator",
     description="Generate comprehensive fictional character profiles with images and encounter scenarios",
     version="1.0.0"
 )
-
-# Add CORS middleware
+#添加CORS中间件
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,8 +22,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize character agent
+# 初始化角色代理
 character_agent = None
 logger = logging.getLogger(__name__)
 
@@ -39,8 +36,7 @@ async def startup_event():
     try:
         Config.validate()
         logger.info("✅ Configuration validated successfully")
-        
-        # Initialize character agent
+# 初始化角色代理
         logger.info("Initializing Character Agent...")
         character_agent = CharacterAgent()
         logger.info("✅ Character Agent initialized successfully")
@@ -58,22 +54,17 @@ async def startup_event():
 async def log_requests(request: Request, call_next):
     """Log all incoming requests and their processing time"""
     start_time = time.time()
-    
-    # Log request details
+# 记录请求详细信息
     logger.info(f"📥 {request.method} {request.url.path}")
     logger.debug(f"Request headers: {dict(request.headers)}")
     logger.debug(f"Client IP: {request.client.host if request.client else 'Unknown'}")
-    
-    # Process request
+# Pr访问请求
     response = await call_next(request)
-    
-    # Calculate processing time
+#计算pr结束时间
     process_time = time.time() - start_time
-    
-    # Log response details
+# 记录响应详细信息
     logger.info(f"📤 {request.method} {request.url.path} - Status: {response.status_code} - Time: {process_time:.3f}s")
-    
-    # Add processing time to response headers
+# 将processing 时间添加到响应标头中
     response.headers["X-Process-Time"] = str(process_time)
     
     return response
@@ -112,7 +103,7 @@ async def generate_character(request: CharacterGenerationRequest):
         raise HTTPException(status_code=500, detail="Character agent not initialized")
     
     try:
-        # Generate character using the agent
+# 使用代理生成角色
         logger.info("Starting character generation process...")
         response = character_agent.generate_character(request)
         
@@ -125,7 +116,7 @@ async def generate_character(request: CharacterGenerationRequest):
             raise HTTPException(status_code=500, detail=response.error)
             
     except HTTPException:
-        # Re-raise HTTP exceptions as-is
+# 按原样重新引发HTTP异常
         raise
     except Exception as e:
         logger.error(f"❌ Unexpected error in character generation: {str(e)}")
@@ -145,9 +136,8 @@ async def generate_character_async(
     if character_agent is None:
         logger.error("Character agent not initialized")
         raise HTTPException(status_code=500, detail="Character agent not initialized")
-    
-    # For now, we'll return a simple response
-    # In a full implementation, you'd use a task queue like Celery
+# 现在，我们将返回一个简单的响应
+# 在完整的实现中，您将使用像 Celery 这样的任务队列
     background_tasks.add_task(character_agent.generate_character, request)
     
     request_id = f"char_{hash(request.brief_description)}"
@@ -164,7 +154,7 @@ async def get_character(character_id: str):
     """Get a previously generated character (placeholder)"""
     logger.info(f"📝 Character retrieval request for ID: {character_id}")
     logger.warning("Character retrieval not implemented yet")
-    # This would typically fetch from a database
+# 这通常会从数据库中获取
     raise HTTPException(status_code=404, detail="Character not found")
 
 @app.get("/export/{character_id}")
@@ -175,7 +165,7 @@ async def export_character(
     """Export character in specified format"""
     logger.info(f"📝 Character export request for ID: {character_id}, format: {format}")
     logger.warning("Character export not implemented yet")
-    # This would typically fetch from a database and export
+# 这通常会从数据库中获取和导出
     raise HTTPException(status_code=404, detail="Character not found")
 
 @app.get("/examples")

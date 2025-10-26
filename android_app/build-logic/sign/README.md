@@ -1,18 +1,18 @@
-# sign
+＃ 符号
 
 ## 概述
 
-本项目使用JSON格式的配置文件来管理Android应用的签名密钥信息，通过`SignKeyConfig`类读取配置并提供给Gradle插件使用。
+本项目使用JSON格式的配置文件来管理Android应用的签名密钥信息，通过`SignKeyConfig`类读取配置并提供给 Gradle 插件使用。
 
 ## 修复说明
 
-已修复kotlinx-serialization版本兼容性问题，现在使用Gson进行JSON解析，确保与Kotlin 2.2.0兼容。
+已修复kotlinx-serialization版本兼容问题，现在使用Gson进行JSON解析，确保与Kotlin 2.2.0兼容。
 
 ## 配置文件
 
-### signing-config.json
+### 签名配置。__保留__8__
 
-签名配置文件位于 `build-logic/sign/signing-config.json`，包含以下结构(示例)：
+签名配置文件位于`build-logic/sign/signing-config.json`，包含以下结构(示例)：
 
 ```json
 {
@@ -29,13 +29,9 @@
     "keyPassword": "heartmate.inty.cc"
   }
 }
-```
+```## 使用方法
 
-## 使用方法
-
-### 在Gradle脚本中使用
-
-```kotlin
+### 在 Gradle 脚本中使用```kotlin
 // 在build.gradle.kts中
 import com.ai.plugins.SignKeyConfig
 
@@ -65,20 +61,18 @@ android {
         }
     }
 }
-```
+```## 可用的常量
 
-## 可用的常量
+### 调试签名配置
 
-### Debug 签名配置
-
-- `SignKeyConfig.DEBUG_STORE_FILE` - 密钥库文件路径
+-`SignKeyConfig.DEBUG_STORE_FILE` - 密钥库文件路径
 - `SignKeyConfig.DEBUG_STORE_PASSWORD` - 密钥库密码
 - `SignKeyConfig.DEBUG_KEY_ALIAS` - 密钥别名
-- `SignKeyConfig.DEBUG_KEY_PASSWORD` - 密钥密码
+- `SignKeyConfig.DEBUG_KEY_PASSWORD`- 密钥密码
 
-### Release 签名配置
+### 发布签名配置
 
-- `SignKeyConfig.RELEASE_STORE_FILE` - 密钥库文件路径
+-`SignKeyConfig.RELEASE_STORE_FILE` - 密钥库文件路径
 - `SignKeyConfig.RELEASE_STORE_PASSWORD` - 密钥库密码
 - `SignKeyConfig.RELEASE_KEY_ALIAS` - 密钥别名
 - `SignKeyConfig.RELEASE_KEY_PASSWORD` - 密钥密码
@@ -110,10 +104,10 @@ android {
 系统使用以下依赖：
 
 - `gson:2.13.1` - JSON解析
-- `kotlin-stdlib` - Kotlin标准库
+- `kotlin-stdlib`- Kotlin标准库
 
-## Cursor Summary
+## 光标摘要
 
-- 目录用途: 约定式构建中的签名配置支持（读取 `signing-config.json`），为模块提供 `debug/release` 签名参数。
-- 关键能力: `SignKeyConfig` 使用 Gson 解析 JSON，暴露常量以供 Gradle 脚本引用；支持懒加载与错误处理。
-- 安全建议: 不将签名文件与配置提交到版本库，敏感信息通过环境变量或安全存储管理。
+- 目录用途：约定方式构建中的签名配置支持（读取`signing-config.json`），为模块提供 `debug/release` 签名参数。
+- 关键能力: `SignKeyConfig`使用 Gson 解析 JSON，提供常量以提供 Gradle 脚本引用；支持惰性加载与错误处理。
+- 安全建议：不要将签名文件与配置提交到版本库，敏感信息通过环境变量或安全存储管理。

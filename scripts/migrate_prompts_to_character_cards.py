@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#！/usr/bin/env python3
 """
 Agent prompt字段迁移到角色卡字段的脚本
 
@@ -37,11 +37,9 @@ def analyze_prompt_content(prompt: str) -> Dict[str, str]:
         "message_example": "",
         "creator_notes": "",
     }
-
-    # 清理文本
+# 清理文本
     clean_prompt = prompt.strip()
-
-    # 1. 提取角色性格信息
+＃1。角色提取性格信息
     personality_patterns = [
         r"##\s*personality[:\s]*([^#]+)",
         r"性格[：:]\s*([^。\n]+)",
@@ -57,8 +55,7 @@ def analyze_prompt_content(prompt: str) -> Dict[str, str]:
             if len(personality_text) > 10:  # 确保提取的内容有意义
                 result["personality"] = personality_text[:500]  # 限制长度
                 break
-
-    # 2. 提取场景背景信息
+#2.提供场景背景信息
     scenario_patterns = [
         r"##\s*scenario[:\s]*([^#]+)",
         r"背景[：:]\s*([^。\n]+)",
@@ -75,8 +72,7 @@ def analyze_prompt_content(prompt: str) -> Dict[str, str]:
             if len(scenario_text) > 10:
                 result["scenario"] = scenario_text[:500]
                 break
-
-    # 3. 提取对话示例
+＃3。摘录谈话内容
     example_patterns = [
         r"对话示例[：:]([^#]+)",
         r"例子[：:]([^#]+)",
@@ -90,24 +86,22 @@ def analyze_prompt_content(prompt: str) -> Dict[str, str]:
             if len(example_text) > 10:
                 result["message_example"] = example_text[:1000]
                 break
-
-    # 4. 如果没有明确分类，将整个prompt作为personality
+＃4。如果没有明确分类，将整个prompt作为个性
     if not result["personality"] and not result["scenario"]:
-        # 简化处理：如果prompt较短且有明确的角色描述，放入personality
+# 简化处理：如果prompt引起并且有明确的角色描述，则全民个性
         if len(clean_prompt) < 300 and (
             "你是" in clean_prompt or "扮演" in clean_prompt
         ):
             result["personality"] = clean_prompt
         else:
-            # 较长的prompt分成personality和scenario
+#丰富的prompt个性和场景
             lines = clean_prompt.split("\n")
             if len(lines) > 1:
                 result["personality"] = lines[0][:500]
                 result["scenario"] = "\n".join(lines[1:])[:500]
             else:
                 result["personality"] = clean_prompt[:500]
-
-    # 5. 生成创建者备注
+＃5。创建生成者备注
     result["creator_notes"] = f"从原始prompt字段迁移而来，原长度: {len(prompt)}字符"
 
     return result
@@ -130,13 +124,11 @@ async def migrate_single_agent(
     if not agent.prompt:
         logger.info(f"Agent {agent.name} 没有prompt，跳过")
         return False
-
-    # 检查是否已有角色卡信息
+#检查是否已有角色卡信息
     if agent.personality or agent.scenario:
         logger.info(f"Agent {agent.name} 已有角色卡信息，跳过")
         return False
-
-    # 分析prompt内容
+# 分析prompt内容
     character_data = analyze_prompt_content(agent.prompt)
 
     logger.info(f"\n=== Agent: {agent.name} ===")
@@ -145,13 +137,12 @@ async def migrate_single_agent(
     logger.info(f"提取的scenario: {character_data['scenario'][:100]}...")
 
     if not dry_run:
-        # 更新数据库
+# 更新数据库
         agent.personality = character_data["personality"]
         agent.scenario = character_data["scenario"]
         agent.message_example = character_data["message_example"]
         agent.creator_notes = character_data["creator_notes"]
-
-        # 保留原prompt在creator_notes中作为备份
+# 保留原prompt在creator_notes中作为备份
         if character_data["creator_notes"]:
             agent.creator_notes += f"\n\n原始prompt:\n{agent.prompt[:200]}..."
 
@@ -169,11 +160,10 @@ async def migrate_all_agents(dry_run: bool = True):
         dry_run: 是否只是测试模式，不实际修改数据库
     """
     logger.info(f"开始迁移Agent prompt到角色卡字段 (dry_run={dry_run})")
-
-    # 获取数据库会话
+# 获取数据库会话
     async for session in get_async_db():
         try:
-            # 查询所有有prompt但没有角色卡信息的Agent
+# 查询所有有prompt但没有角色卡信息的特工
             from sqlalchemy import select
 
             result = await session.execute(
@@ -181,7 +171,7 @@ async def migrate_all_agents(dry_run: bool = True):
                     models.Agent.deleted_at.is_(None),
                     models.Agent.prompt.isnot(None),
                     models.Agent.prompt != "",
-                    # 至少一个角色卡字段为空
+# 至少一个角色卡字段为空
                     (
                         models.Agent.personality.is_(None)
                         | (models.Agent.personality == "")

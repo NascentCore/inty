@@ -8,15 +8,15 @@ import ai.sxwl.android.firebase.FirebaseManager
  *
  * 设计原则：
  * - 单一职责：只负责Analytics功能
- * - 开闭原则：易于扩展新的Analytics功能
+ * - 开闭原则：易于扩展新的分析功能
  * - 接口隔离：提供细粒度的Analytics接口
  */
 interface AnalyticsMixin {
 
-    /** 页面名称，实现类需要提供 */
+    /** 页面名称，需要提供实现类 */
     val screenName: String
 
-    /** 页面类名，实现类需要提供 */
+    /** 页面类名，需要提供实现类 */
     val screenClass: String
 
     /** 额外的页面参数，实现类可以重写 */
@@ -37,7 +37,7 @@ interface AnalyticsMixin {
                 screenClass = screenClass,
                 additionalParams = additionalParams,
             )
-            // 使用PageTrackingHelper进行更详细的页面追踪
+// 使用PageTrackingHelper进行更详细的页面追踪
             PageTrackingHelper.trackPageView(screenName, screenClass, additionalParams)
             hasTrackedScreenView = true
         }
@@ -51,7 +51,7 @@ interface AnalyticsMixin {
     }
 
     /**
-     * 跟踪页面内的特定操作
+     *跟踪页面内的特定操作
      */
     fun trackPageAction(action: String, params: Map<String, Any> = emptyMap()) {
         val eventName = "${screenName}_$action"

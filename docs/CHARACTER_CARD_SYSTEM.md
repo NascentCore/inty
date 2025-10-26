@@ -1,14 +1,12 @@
-# 角色卡系统文档
+#角色卡系统文档
 
 ## 概述
 
-InTy后端支持SillyTavern角色卡V2规范，允许用户导入和导出标准化的AI角色配置。角色卡系统提供了一种标准化的方式来定义AI角色的人格、背景、对话风格等特征。
+InTy头像支持SillyTavern角色卡V2规范，允许用户导入和导出标准化的AI角色配置。角色卡系统提供了一种标准化的方式来定义AI角色的个性、背景、对话风格等特征。
 
 ## 角色卡V2规范
 
-### 基本结构
-
-```json
+### 基本结构```json
 {
   "spec": "chara_card_v2",
   "spec_version": "2.0",
@@ -38,35 +36,33 @@ InTy后端支持SillyTavern角色卡V2规范，允许用户导入和导出标准
 - **`tags`**: 标签数组，用于分类和搜索
 - **`creator`**: 创作者名称
 - **`character_version`**: 角色版本号
-- **`extensions`**: 扩展数据，用于存储自定义信息
+- **`extensions`**：扩展数据，用于存储自定义信息
 
-## 功能特性
+## 功能特点
 
-### 支持的功能
+###支持的功能
 
-1. **基础信息导入**: name, description, personality, scenario
-2. **对话风格**: first_mes, mes_example
-3. **元数据**: creator_notes, tags, creator, character_version
-4. **扩展数据**: extensions字段支持自定义数据
+1. **基础信息导入**：名称、描述、个性、场景
+2. **对话风格**：first_mes，mes_example
+3. **元数据**：creator_notes、tags、creator、character_version
+4. **扩展数据**：扩展字段支持自定义数据
 
-### 暂不支持的功能
+### 暂时不支持的功能
 
-1. **system_prompt**: 系统提示词（计划在后续版本支持）
-2. **character_book**: 角色书/世界书（计划在后续版本支持）
-3. **alternate_greetings**: 替代问候语（计划在后续版本支持）
+1. **system_prompt**：系统提示词（计划在后续版本支持）
+2. **character_book**：角色书/世界书（计划在后续版本支持）
+3. **alternate_greetings**：替代问候语（计划在后续版本支持）
 
-### 导入格式支持
+###导入格式支持
 
-- **JSON文件**: 直接的角色卡JSON数据
-- **PNG图片**: 从PNG图片的metadata中提取角色卡数据（需要PIL库）
+- **JSON文件**：直接的角色卡JSON数据
+- **PNG图片**: 从PNG图片的元数据中提取角色卡数据（需要PIL库）
 
 ## API接口
 
 ### 导入角色卡
 
-#### 从JSON数据导入
-
-```http
+####从JSON数据导入```http
 POST /api/v1/agents/import-character-card
 Content-Type: application/json
 
@@ -135,13 +131,9 @@ Content-Type: application/json
 
 ```http
 GET /api/v1/agents/character-card/features
-```
+```## 数据库映射
 
-## 数据库映射
-
-### Agent模型扩展字段
-
-```sql
+### 代理模型扩展字段```sql
 -- 角色卡相关字段
 character_card_spec VARCHAR,           -- 角色卡规范版本
 character_card_data JSON,              -- 原始角色卡数据
@@ -156,28 +148,24 @@ character_book JSON,                   -- 角色书
 tags JSON,                             -- 标签
 character_version VARCHAR,             -- 版本号
 extensions JSON                        -- 扩展数据
-```
+```### 字段映射关系
 
-### 字段映射关系
-
-| 角色卡字段        | Agent字段         | 说明       |
+| 角色卡字段 |代理领域 | 说明 |
 | ----------------- | ----------------- | ---------- |
-| name              | name              | 角色名称   |
-| description       | intro             | 角色描述   |
-| personality       | personality       | 性格特征   |
-| scenario          | scenario          | 场景设定   |
-| first_mes         | first_message     | 第一条消息 |
-| mes_example       | message_example   | 对话示例   |
-| creator_notes     | creator_notes     | 创作者备注 |
-| tags              | tags              | 标签数组   |
-| character_version | character_version | 版本号     |
-| extensions        | extensions        | 扩展数据   |
+|名称 |名称 | 角色名称 |
+|描述 |简介 | 角色描述 |
+|个性|个性| 性格特征 |
+|场景|场景| 场景设定 |
+|第一个消息 |第一条消息 | 第一条消息 |
+|消息示例 |消息示例 | 对话示例 |
+|创建者笔记 |创建者笔记 | 创作者备注 |
+|标签 |标签 | 标签 储备 |
+|字符版本 |字符版本 | 版本号 |
+|扩展 |扩展 | 扩展数据|
 
 ## 使用示例
 
-### 创建角色卡
-
-```python
+###创建角色卡```python
 from app.schemas.character_card import CharacterCardV2, CharacterCardDataV2
 
 # 创建角色卡数据
@@ -247,34 +235,32 @@ result = await character_card_service.import_character_card(
     "warnings": ["建议添加角色性格描述"]
   }
 }
-```
-
-## 性能考虑
+```## 性能考虑
 
 1. **文件大小限制**: 上传文件最大10MB
-2. **批量导入**: 暂不支持批量导入，建议逐个导入
-3. **缓存**: 解析后的角色卡数据会缓存在数据库中
-4. **兼容性**: 保持与现有Agent系统的完全兼容
+2. **批量导入建议**：暂时不支持批量导入，逐个导入
+3. **缓存**：解析后的角色卡数据会缓存在数据库中
+4. **兼容**：保持与现有Agent系统的完全兼容
 
 ## 最佳实践
 
-1. **命名规范**: 使用有意义的角色名称，避免特殊字符
-2. **内容质量**: 提供详细的personality和scenario描述
-3. **标签管理**: 使用合适的标签便于分类和搜索
-4. **版本控制**: 为角色更新设置合适的版本号
-5. **测试验证**: 导入前使用验证接口检查数据格式
+1. **命名规范名称**：使用有意义的角色，避免特殊字符
+2. **内容质量**：提供详细的个性和场景描述
+3. **标签管理**：使用合适的标签进行分类和搜索
+4. **版本控制**：为角色更新设置合适的版本号
+5. **测试验证**：导入前使用验证接口检查数据格式
 
 ## 兼容性说明
 
-- **向后兼容**: 现有Agent不受影响，可以正常使用
-- **向前兼容**: 通过extensions字段支持未来的扩展
-- **标准兼容**: 严格遵循SillyTavern V2规范
-- **跨平台**: 导出的角色卡可在其他支持V2规范的平台使用
+- **兼容**：现有Agent不出行，可以正常使用
+- **向前兼容**：通过扩展字段支持未来的扩展
+- **标准兼容**：严格遵循SillyTavern V2规范
+- **跨平台**：导出的角色卡可在其他支持V2规范的平台使用
 
-## 后续规划
+##后续规划
 
 1. **system_prompt支持**: 允许角色卡覆盖系统提示词
-2. **character_book支持**: 实现角色书/世界书功能
-3. **alternate_greetings支持**: 支持多种开场白
-4. **批量操作**: 支持批量导入/导出角色卡
-5. **社区分享**: 角色卡市场和分享功能
+2. **character_book支持**：现实角色书/世界书功能
+3. **alternate_greetingsSupport**: 支持多种开场白
+4. **批量操作**：支持批量导入/导出角色卡
+5. **社区分享**：角色卡市场和分享功能

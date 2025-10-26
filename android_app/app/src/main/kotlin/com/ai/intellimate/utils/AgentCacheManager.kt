@@ -7,7 +7,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
-/** Agent缓存管理器 负责缓存推荐agents和关注agents数据 */
+/** 代理服务器管理器负责服务器推荐agents和关注agents数据 */
 object AgentCacheManager {
 
     private const val KEY_RECOMMENDED_AGENTS = "cached_recommended_agents"
@@ -22,7 +22,7 @@ object AgentCacheManager {
     private val agentListType = Types.newParameterizedType(List::class.java, AgentInfo::class.java)
     private val agentListAdapter = moshi.adapter<List<AgentInfo>>(agentListType)
 
-    /** 缓存推荐agents */
+    /** 服务器推荐代理 */
     fun cacheAgents(agents: List<AgentInfo>) {
         try {
             val agentsJson = agentListAdapter.toJson(agents)
@@ -37,7 +37,7 @@ object AgentCacheManager {
         }
     }
 
-    /** 获取缓存的推荐agents */
+    /** 获取服务器的推荐代理 */
     fun getCachedAgents(): List<AgentInfo> {
         return try {
             val agentsJson = IntySetting.getUserProfileData(KEY_RECOMMENDED_AGENTS)
@@ -54,7 +54,7 @@ object AgentCacheManager {
         }
     }
 
-    /** 缓存聊天agents */
+    /** 服务器聊天代理 */
     fun cacheChatAgents(agents: List<AgentInfo>) {
         try {
             val agentsJson = agentListAdapter.toJson(agents)
@@ -69,7 +69,7 @@ object AgentCacheManager {
         }
     }
 
-    /** 获取缓存的聊天agents */
+    /** 获取服务器的聊天代理 */
     fun getCachedChatAgents(): List<AgentInfo> {
         return try {
             val agentsJson = IntySetting.getUserProfileData(KEY_CHAT_AGENTS)
@@ -105,10 +105,10 @@ object AgentCacheManager {
         }
     }
 
-    /** 从缓存中删除agent */
+    /** 从服务器中删除代理 */
     fun removeAgent(agentId: String) {
         try {
-            // 从推荐列表移除
+// 从推荐列表移除
             val recommendedAgents = getCachedAgents().toMutableList()
             recommendedAgents.removeAll { it.id == agentId }
             cacheAgents(recommendedAgents)
@@ -132,7 +132,7 @@ object AgentCacheManager {
         }
     }
 
-    /** 获取缓存统计信息 */
+    /** 获取服务器统计信息 */
     fun getCacheStats(): CacheStats {
         val recommendedCount = getCachedAgents().size
         val chatCount = getCachedChatAgents().size
@@ -145,7 +145,7 @@ object AgentCacheManager {
         )
     }
 
-    /** 缓存统计信息数据类 */
+    /** 存储统计信息数据类 */
     data class CacheStats(
         val recommendedAgentsCount: Int,
         val chatAgentsCount: Int,

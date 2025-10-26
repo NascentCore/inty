@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/** 获取基础URL 根据构建类型返回对应的API基础URL */
+/** 根据构建类型获取基础URL返回对应的API基础URL */
 private fun getBaseUrl(): String {
     return when (NetworkConfig.getCurrentBuildType().value) {
         "local" -> "http://${Constant.USER_HOST_LOCAL}/"
@@ -58,8 +58,7 @@ private class AuthInterceptor : Interceptor {
         when (response.code) {
             401 -> {
                 LogUtils.e("http 401 for ${request.url}")
-
-                // Firebase Analytics - 记录认证失败
+// Firebase Analytics - 记录认证失败
                 FirebaseManager.logEvent(
                     "auth_failure",
                     mapOf(
@@ -68,12 +67,10 @@ private class AuthInterceptor : Interceptor {
                         "user_logged_out" to IntySetting.isLoggingOut(),
                     ),
                 )
-
-                // Firebase Crashlytics - 记录认证失败
+// Firebase Crashlytics - 记录认证失败
                 FirebaseManager.setCustomKey("last_401_url", request.url.toString())
                 FirebaseManager.recordException(Exception("HTTP 401 Unauthorized: ${request.url}"))
-
-                // 追踪认证失败
+// 追踪认证失败
                 trackError(
                     "HTTP 401 Unauthorized",
                     "auth_failure",
@@ -82,8 +79,7 @@ private class AuthInterceptor : Interceptor {
                         "user_logged_out" to IntySetting.isLoggingOut(),
                     ),
                 )
-
-                // 检查是否正在退出登录过程中，避免重复重启
+// 检查是否正在退出登录过程中，避免重新启动
                 if (IntySetting.isLoggingOut()) {
                     LogUtils.i("Ignoring 401 during logout process")
                 } else {
@@ -121,22 +117,20 @@ private fun trackError(
     }
 }
 
-/** 重试拦截器 对网络错误进行重试，提高请求成功率 */
+/** 重试拦截器对网络错误进行重试，提高请求成功率 */
 private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
 
     companion object {
-        // 可重试的HTTP状态码
+// 可重试的HTTP状态码
         private val RETRYABLE_STATUS_CODES = setOf(500, 502, 503, 504, 429)
-
-        // 可重试的异常类型
+// 可重试的异常类型
         private val RETRYABLE_EXCEPTIONS = setOf(
             "java.net.SocketTimeoutException",
             "java.net.ConnectException",
             "java.net.UnknownHostException",
             "java.io.IOException"
         )
-
-        // 幂等性HTTP方法（可以安全重试）
+// 权力等性HTTP方法（可以安全重试）
         private val IDEMPOTENT_METHODS = setOf("GET", "HEAD", "PUT", "DELETE")
     }
 
@@ -144,61 +138,50 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
         val request = chain.request()
         var lastException: Exception? = null
         var lastResponse: Response? = null
-
-        // 检查请求是否适合重试
+// 检查请求是否适合重试
         if (!shouldRetryRequest(request)) {
             return chain.proceed(request)
         }
-
-        // 重试逻辑
+// 重试逻辑
         for (attempt in 0 until maxRetries) {
             try {
                 val currentResponse = chain.proceed(request)
                 lastResponse = currentResponse
-
-                // 检查响应是否应该重试
+//检查响应是否应该重试
                 if (shouldRetryResponse(currentResponse, attempt)) {
                     LogUtils.d("Retry attempt ${attempt + 1} for ${request.url} due to status ${currentResponse.code}")
-
-                    // 记录重试事件
+// 记录重试事件
                     recordRetryEvent(request, attempt + 1, currentResponse.code, null)
-
-                    // 安全关闭响应
+// 安全关闭响应
                     currentResponse.close()
-
-                    // 非阻塞延迟
+// 非阻塞延迟
                     if (attempt < maxRetries - 1) {
                         delayRetry(attempt)
                     }
                 } else {
-                    // 不需要重试，直接返回
+// 不需要重试，直接返回
                     return currentResponse
                 }
             } catch (e: Exception) {
                 lastException = e
-
-                // 检查异常是否应该重试
+//检查异常是否应该重试
                 if (shouldRetryException(e, attempt)) {
                     LogUtils.i("Retry attempt ${attempt + 1} failed for ${request.url}: ${e.message}")
-
-                    // 记录重试事件
+// 记录重试事件
                     recordRetryEvent(request, attempt + 1, null, e)
-
-                    // 非阻塞延迟
+// 非阻塞延迟
                     if (attempt < maxRetries - 1) {
                         delayRetry(attempt)
                     }
                 } else {
-                    // 不应该重试的异常，直接抛出
+// 不应该重试的异常，直接发送
                     throw e
                 }
             }
         }
-
-        // 所有重试都失败了
+// 所有重试都失败了
         recordFinalFailure(request, maxRetries, lastException)
-
-        // 如果有最后的响应，返回它；否则抛出最后的异常
+// 如果有最后的响应，则返回；否则发送最后的异常
         return lastResponse ?: throw (lastException
             ?: Exception("Network request failed after $maxRetries attempts"))
     }
@@ -207,7 +190,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
      * 检查请求是否适合重试
      */
     private fun shouldRetryRequest(request: Request): Boolean {
-        // 只对幂等性方法进行重试
+// 只对幂等性方法进行重试
         return request.method in IDEMPOTENT_METHODS
     }
 
@@ -229,18 +212,18 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
     }
 
     /**
-     * 非阻塞延迟重试
+     * 非阻止延迟重试
      */
     private fun delayRetry(attempt: Int) {
         try {
-            // 使用指数退避，但避免阻塞主线程
+// 使用指数退避，但避免阻塞主线程
             val delayMs = (1000L * (attempt + 1)).coerceAtMost(5000L) // 最大5秒
 
             if (AppUtils.isAppDebug()) {
-                // 调试模式下使用Thread.sleep便于调试
+// 调试模式下使用Thread.睡眠无法调试
                 Thread.sleep(delayMs)
             } else {
-                // 生产环境使用更轻量的延迟
+// 生产环境使用更轻量的延迟
                 Thread.sleep(delayMs.coerceAtMost(2000L)) // 生产环境最大2秒
             }
         } catch (e: InterruptedException) {
@@ -270,13 +253,13 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
                 )
             )
         } catch (e: Exception) {
-            // Firebase记录失败不应该影响重试逻辑
+// Firebase 记录失败不应该重影响试逻辑
             LogUtils.w("Failed to record retry event: ${e.message}")
         }
     }
 
     /**
-     * 记录最终失败
+     *记录最终失败
      */
     private fun recordFinalFailure(
         request: Request,
@@ -286,7 +269,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
         LogUtils.e("All retry attempts failed for ${request.url} after $maxRetries attempts")
 
         try {
-            // Firebase Analytics - 记录网络请求最终失败
+// Firebase Analytics - 记录网络请求最终失败
             FirebaseManager.logEvent(
                 "network_final_failure",
                 mapOf(
@@ -297,8 +280,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
                     "last_error_type" to (lastException?.javaClass?.simpleName ?: "unknown")
                 )
             )
-
-            // Firebase Crashlytics - 记录网络失败
+// Firebase Crashlytics - 记录网络失败
             FirebaseManager.setCustomKey("network_failure_url", request.url.toString())
             FirebaseManager.setCustomKey("network_failure_retries", maxRetries.toString())
             FirebaseManager.setCustomKey("network_failure_method", request.method)
@@ -307,7 +289,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
                 FirebaseManager.recordException(lastException)
             }
         } catch (e: Exception) {
-            // Firebase记录失败不应该影响重试逻辑
+// Firebase 记录失败不应该重影响试逻辑
             LogUtils.w("Failed to record final failure: ${e.message}")
         }
     }
@@ -315,8 +297,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
 
 /** 网络性能监控拦截器 使用Firebase Performance监控请求性能 */
 private class PerformanceInterceptor : Interceptor {
-
-    // 性能阈值常量
+// 性能阈值常量
     private companion object {
         const val FAST_REQUEST_THRESHOLD = 1000L
         const val SLOW_REQUEST_THRESHOLD = 3000L
@@ -325,42 +306,35 @@ private class PerformanceInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         val startTime = System.currentTimeMillis()
-
-        // 使用Firebase Performance创建HTTP监控
+// 使用 Firebase Performance 创建 HTTP 监控
         val httpMetric: Any? =
             FirebaseManager.createHttpMetric(request.url.toString(), request.method)
         FirebaseManager.startHttpMetric(httpMetric)
-
-        // 记录请求开始（仅在调试模式下）
+// 记录请求开始（仅在调试模式下）
         if (AppUtils.isAppDebug()) {
             LogUtils.i("🌐 Starting request: ${request.method} ${request.url}")
         }
 
         return try {
-            // 执行实际请求
+// 执行实际请求
             val response = chain.proceed(request)
             val endTime = System.currentTimeMillis()
             val duration = endTime - startTime
-
-            // 使用Firebase Performance停止监控
+// 使用Firebase性能停止监控
             FirebaseManager.stopHttpMetric(httpMetric, response.code)
-
-            // 记录性能指标（不影响请求结果）
+// 记录性能指标（不影响请求结果）
             recordPerformanceMetrics(request, duration, response.isSuccessful)
 
             response
         } catch (e: Exception) {
             val endTime = System.currentTimeMillis()
             val duration = endTime - startTime
-
-            // 使用Firebase Performance停止监控（即使请求失败）
+//使用Firebase Performance停止监控（即使请求失败）
             FirebaseManager.stopHttpMetric(httpMetric, -1)
-
-            // 记录失败的性能指标
+// 记录失败的性能指标
             recordFailureMetrics(request, duration, e)
-
-            // 重要：不重新抛出异常，让其他拦截器或业务逻辑处理
-            // 性能监控不应该影响正常的错误处理流程
+// 重要：不要重新发送异常，让其他拦截器或业务逻辑处理
+// 性能监控不应该影响正常的错误处理流程
             throw e
         }
     }
@@ -375,7 +349,7 @@ private class PerformanceInterceptor : Interceptor {
         isSuccessful: Boolean
     ) {
         try {
-            // 使用线程池异步记录性能指标，避免阻塞主线程
+// 使用线程池异步记录性能指标，避免阻塞主线程
             NetServiceMgr.performanceExecutor.execute {
                 when {
                     duration < FAST_REQUEST_THRESHOLD -> {
@@ -386,8 +360,7 @@ private class PerformanceInterceptor : Interceptor {
 
                     duration < SLOW_REQUEST_THRESHOLD -> {
                         LogUtils.w("⚠️ Slow request: ${request.method} ${request.url} (${duration}ms)")
-
-                        // 使用Firebase Analytics记录慢请求
+// 使用Firebase Analytics记录慢请求
                         FirebaseManager.logEvent(
                             "slow_request", mapOf(
                                 "duration_ms" to duration,
@@ -400,8 +373,7 @@ private class PerformanceInterceptor : Interceptor {
 
                     else -> {
                         LogUtils.e("🚨 Very slow request: ${request.method} ${request.url} (${duration}ms)")
-
-                        // 使用Firebase Analytics记录极慢请求
+// 使用Firebase Analytics记录极慢请求
                         FirebaseManager.logEvent(
                             "very_slow_request", mapOf(
                                 "duration_ms" to duration,
@@ -410,15 +382,14 @@ private class PerformanceInterceptor : Interceptor {
                                 "successful" to isSuccessful
                             )
                         )
-
-                        // 使用Firebase Crashlytics记录性能问题
+// 使用Firebase Crashlytics记录性能问题
                         FirebaseManager.setCustomKey("slow_request_url", request.url.toString())
                         FirebaseManager.setCustomKey("slow_request_duration", duration.toString())
                     }
                 }
             }
         } catch (e: Exception) {
-            // 性能记录失败不应该影响业务请求
+// 性能记录失败不应该影响业务请求
             LogUtils.w("Failed to record performance metrics: ${e.message}")
         }
     }
@@ -432,11 +403,10 @@ private class PerformanceInterceptor : Interceptor {
         exception: Exception
     ) {
         try {
-            // 使用线程池异步记录失败指标
+// 使用线程池平均失败指标
             NetServiceMgr.performanceExecutor.execute {
                 LogUtils.e("❌ Request failed: ${request.method} ${request.url} (${duration}ms): ${exception.message}")
-
-                // 使用Firebase Analytics记录请求失败
+// 使用Firebase Analytics记录请求失败
                 FirebaseManager.logEvent(
                     "request_failure", mapOf(
                         "duration_ms" to duration,
@@ -446,33 +416,30 @@ private class PerformanceInterceptor : Interceptor {
                         "error_message" to (exception.message ?: "unknown")
                     )
                 )
-
-                // 使用Firebase Crashlytics记录网络错误
+// 使用Firebase Crashlytics记录网络错误
                 FirebaseManager.setCustomKey("failed_request_url", request.url.toString())
                 FirebaseManager.setCustomKey("failed_request_duration", duration.toString())
                 FirebaseManager.recordException(exception)
             }
         } catch (e: Exception) {
-            // 性能记录失败不应该影响业务请求
+// 性能记录失败不应该影响业务请求
             LogUtils.w("Failed to record failure metrics: ${e.message}")
         }
     }
 }
 
-/** 自定义DNS解析器，支持缓存 */
+/** 自定义DNS解析器，支持服务器 */
 private class CachedDns : Dns {
-    // 使用线程安全的ConcurrentHashMap
+// 使用线程安全的ConcurrentHashMap
     private val cache = ConcurrentHashMap<String, List<InetAddress>>()
-
-    // 缓存过期时间（5分钟）
+// 保存超时时间（5分钟）
     private val cacheExpiry = ConcurrentHashMap<String, Long>()
     private val CACHE_DURATION = 5 * 60 * 1000L // 5分钟
 
     override fun lookup(hostname: String): List<InetAddress> {
         val now = System.currentTimeMillis()
         val expiry = cacheExpiry[hostname] ?: 0L
-
-        // 检查缓存是否过期
+//检查缓存是否过期
         if (now > expiry) {
             cache.remove(hostname)
             cacheExpiry.remove(hostname)
@@ -487,8 +454,7 @@ private class CachedDns : Dns {
 }
 
 object NetServiceMgr {
-
-    // 性能监控专用线程池
+// 性能监控专用线程池
     internal val performanceExecutor = Executors.newFixedThreadPool(2) { r ->
         Thread(r, "PerformanceMonitor").apply {
             isDaemon = true
@@ -499,21 +465,21 @@ object NetServiceMgr {
         get() {
             val authInterceptor = AuthInterceptor()
             val performanceInterceptor = PerformanceInterceptor()
-            //            val retryInterceptor = RetryInterceptor(maxRetries = 3)
+// val retryInterceptor = RetryInterceptor(maxRetries = 3)
 
             val builder: OkHttpClient.Builder =
                 OkHttpClient.Builder()
-                    // 根据构建类型优化超时配置
+// 根据构建类型优化超时配置
                     .connectTimeout(15, TimeUnit.SECONDS)
                     .writeTimeout(15, TimeUnit.SECONDS)
                     .readTimeout(30, TimeUnit.SECONDS)
-                    // 连接池配置
+// 连接池配置
                     .connectionPool(ConnectionPool(5, 5, TimeUnit.MINUTES))
-                    // DNS缓存
+// DNS服务器
                     .dns(CachedDns())
-                    // 拦截器（注意顺序：性能监控 -> 重试 -> 认证 -> 调试）
+// 拦截器（注意顺序：性能监控 -> 重试 -> 认证 -> 调试）
                     .addInterceptor(performanceInterceptor)
-                    //                    .addInterceptor(retryInterceptor)
+// .添加拦截器（重拦截器）
                     .addInterceptor(authInterceptor)
                     .addInterceptor(ChuckerInterceptor(Utils.getApp()))
             return builder.build()
@@ -522,7 +488,7 @@ object NetServiceMgr {
     private val moshi: Moshi
         get() {
             return Moshi.Builder()
-                // 添加返回的json 数据自定义解析器
+//添加返回的json数据自定义解析器
                 .add(DefaultIfNullFactory())
                 .add(MoshiResultTypeAdapterFactory(getHttpWrapperHandler()))
                 .addLast(KotlinJsonAdapterFactory()) //
@@ -532,7 +498,7 @@ object NetServiceMgr {
     private val moshiNoWrapper: Moshi
         get() {
             return Moshi.Builder()
-                // 添加返回的json 数据自定义解析器
+//添加返回的json数据自定义解析器
                 .add(DefaultIfNullFactory())
                 .add(MoshiResultTypeAdapterFactory(null))
                 .addLast(KotlinJsonAdapterFactory()) //
@@ -540,8 +506,7 @@ object NetServiceMgr {
         }
 
     private val globalErrorHandler = GlobalErrorHandler()
-
-    // todo 这里使用wrapper来区分 是否带有外部code，message，data格式的响应数据体
+// todo 这里使用wrapper来区分是否标记外部code，message，data格式的响应数据体
     private fun getHttpWrapperHandler(): MoshiResultTypeAdapterFactory.HttpWrapper {
 
         return object : MoshiResultTypeAdapterFactory.HttpWrapper {

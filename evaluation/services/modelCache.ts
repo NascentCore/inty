@@ -1,11 +1,10 @@
 /**
- * 模型缓存服务
- * 提供评分模型列表的缓存功能，OpenRouter模型列表不缓存
+ * 模型存储服务
+ * 提供评分模型列表的服务器功能，OpenRouter模型列表不服务器
  */
 
 import api from "./api";
 import type { OpenRouterModel, ScoringModel } from "../types";
-
 // 缓存配置
 const CACHE_KEYS = {
   SCORING_MODELS: "inty_scoring_models_cache",
@@ -16,7 +15,7 @@ const CACHE_EXPIRY = 60 * 60 * 1000; // 1小时过期
 
 class ModelCacheService {
   /**
-   * 获取OpenRouter模型列表（无缓存）
+   * 获取OpenRouter模型列表（无服务器）
    */
   async getOpenRouterModels(): Promise<OpenRouterModel[]> {
     try {
@@ -31,11 +30,11 @@ class ModelCacheService {
   }
 
   /**
-   * 获取评分模型列表（带缓存）
+   * 获取评分模型列表（带服务器）
    */
   async getScoringModels(forceRefresh = false): Promise<ScoringModel[]> {
     try {
-      // 检查缓存
+//检查缓存
       if (!forceRefresh) {
         const cached = this.getCachedModels(
           CACHE_KEYS.SCORING_MODELS,
@@ -48,11 +47,9 @@ class ModelCacheService {
       }
 
       console.log("从API获取评分模型列表");
-
-      // 从API获取
+// 从API获取
       const models = await api.scoring.getModels();
-
-      // 缓存结果
+// 存储结果
       this.cacheModels(
         models,
         CACHE_KEYS.SCORING_MODELS,
@@ -62,8 +59,7 @@ class ModelCacheService {
       return models;
     } catch (error) {
       console.error("获取评分模型列表失败:", error);
-
-      // 尝试返回缓存的数据
+// 尝试返回存储的数据
       const cached = this.getCachedModels(
         CACHE_KEYS.SCORING_MODELS,
         CACHE_KEYS.SCORING_MODELS_TIME,
@@ -73,14 +69,13 @@ class ModelCacheService {
         console.warn("API请求失败，使用过期的缓存数据");
         return cached;
       }
-
-      // 返回默认模型列表
+// 返回默认模型列表
       return this.getDefaultScoringModels();
     }
   }
 
   /**
-   * 清除所有模型缓存
+   * 清除所有模型服务器
    */
   clearAllCache(): void {
     Object.values(CACHE_KEYS).forEach((key) => {
@@ -90,7 +85,7 @@ class ModelCacheService {
   }
 
   /**
-   * 清除评分模型缓存
+   * 明确评分模型服务器
    */
   clearScoringCache(): void {
     localStorage.removeItem(CACHE_KEYS.SCORING_MODELS);
@@ -99,7 +94,7 @@ class ModelCacheService {
   }
 
   /**
-   * 获取缓存状态信息
+   * 获取存储状态信息
    */
   getCacheStatus() {
     const scoringCacheTime = localStorage.getItem(
@@ -118,11 +113,10 @@ class ModelCacheService {
       },
     };
   }
-
-  // 私有方法
+// 方法
 
   /**
-   * 从缓存获取模型列表
+   * 从存储获取模型列表
    */
   private getCachedModels(
     cacheKey: string,
@@ -136,8 +130,7 @@ class ModelCacheService {
       if (!cacheTime || !cachedData) {
         return null;
       }
-
-      // 检查是否过期
+// 检查是否过期
       if (!ignoreExpiry && Date.now() - parseInt(cacheTime) > CACHE_EXPIRY) {
         return null;
       }
@@ -150,7 +143,7 @@ class ModelCacheService {
   }
 
   /**
-   * 缓存模型列表
+   * 存储模型列表
    */
   private cacheModels(models: any[], cacheKey: string, timeKey: string): void {
     try {
@@ -211,7 +204,6 @@ class ModelCacheService {
     ];
   }
 }
-
-// 导出单例实例
+// 导出单个实例
 export const modelCacheService = new ModelCacheService();
 export default modelCacheService;

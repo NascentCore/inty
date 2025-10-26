@@ -51,11 +51,10 @@ import AvatarDisplay from "../components/common/AvatarDisplay";
 const { TextArea } = Input;
 const { Search } = Input;
 const { Option } = Select;
-
 // 类型已在 types.ts 中定义
 
 export const AgentManagePage: React.FC = () => {
-  // 使用 useAgents hook
+// 使用 useAgents 钩子
   const {
     agents,
     loading,
@@ -67,52 +66,44 @@ export const AgentManagePage: React.FC = () => {
     type: "all",
     autoLoad: false, // 手动控制加载
   });
-
-  // 状态管理
+// 状态管理
   const [localAgents, setLocalAgents] = useState<Agent[]>([]);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [currentAgent, setCurrentAgent] = useState<Agent | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
-
-  // 搜索和筛选
+// 搜索和筛选
   const [searchText, setSearchText] = useState("");
   const [visibilityFilter, setVisibilityFilter] = useState<string>("all");
   const [genderFilter, setGenderFilter] = useState<string>("all");
-
-  // 分页
+// 分页
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 12,
     total: 0,
   });
-
-  // 表单和文件上传
+// 表单和文件上传
   const [createForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
   const [agentCopy, setAgentCopy] = useState<Agent | null>(null);
-
-  // 检查是否有变化
+// 检查是否有变化
   const hasChanges = hasAgentChanged(currentAgent, agentCopy);
-
-  // 监听表单变化，更新 agent_copy
+// 监听表单变化，更新agent_copy
   const handleFormChange = (
     changedValues: Record<string, unknown>,
     allValues: Record<string, unknown>,
   ) => {
     if (!agentCopy) return;
-
-    // 构建新的 agent_copy
+// 构建新的agent_copy
     const newAgentCopy = {
       ...agentCopy,
       ...changedValues,
     };
-
-    // 处理 LLM 配置
+// 处理 LLM 配置
     if (allValues.modelType === "custom") {
       newAgentCopy.llm_config = {
         model: (allValues.model as string) || "gpt-4o",
@@ -128,33 +119,28 @@ export const AgentManagePage: React.FC = () => {
 
     setAgentCopy(newAgentCopy);
   };
-
-  // 修改头像弹窗状态
+// 修改头像弹窗状态
   const [avatarCropModalVisible, setAvatarCropModalVisible] = useState(false);
   const [avatarCropImageSrc, setAvatarCropImageSrc] = useState<string>("");
   const [currentAgentForAvatar, setCurrentAgentForAvatar] =
     useState<Agent | null>(null);
-
-  // 模型相关状态
+// 模型相关状态
   const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>(
     [],
   );
   const [modelsLoading, setModelsLoading] = useState(false);
-
-  // 加载智能体列表
+// 加载智能体列表
   const loadAgents = useCallback(
     async (reset = false) => {
       if (reset) {
         setPagination((prev) => ({ ...prev, current: 1 }));
       }
-
-      // 使用 useAgents hook 的 loadAgents
+// 使用 useAgents 钩子的 loadAgents
       await loadAgentsFromHook(true);
     },
     [loadAgentsFromHook],
   );
-
-  // 加载模型列表
+// 加载模型列表
   const loadModels = useCallback(async () => {
     setModelsLoading(true);
     try {
@@ -167,18 +153,15 @@ export const AgentManagePage: React.FC = () => {
       setModelsLoading(false);
     }
   }, []);
-
-  // 刷新模型列表
+// 刷新模型列表
   const handleRefreshModels = useCallback(() => {
     loadModels();
     message.success("正在刷新模型列表...");
   }, [loadModels]);
-
-  // 监听 agents 变化，应用筛选
+// 监听代理变化，应用筛选
   useEffect(() => {
     let filteredAgents = agents || [];
-
-    // 搜索筛选
+// 搜索筛选
     if (searchText) {
       filteredAgents = filteredAgents.filter(
         (agent) =>
@@ -186,15 +169,13 @@ export const AgentManagePage: React.FC = () => {
           agent.intro?.toLowerCase().includes(searchText.toLowerCase()),
       );
     }
-
-    // 可见性筛选
+// 可见性筛选
     if (visibilityFilter !== "all") {
       filteredAgents = filteredAgents.filter(
         (agent) => agent.visibility === visibilityFilter.toUpperCase(),
       );
     }
-
-    // 性别筛选
+// 性别筛选
     if (genderFilter !== "all") {
       filteredAgents = filteredAgents.filter(
         (agent) => agent.gender === genderFilter.toUpperCase(),
@@ -212,8 +193,7 @@ export const AgentManagePage: React.FC = () => {
     loadAgents();
     loadModels(); // 加载模型列表
   }, [loadAgents, loadModels]);
-
-  // 处理头像上传（创建模式，不截取）
+// 处理头像上传（创建模式，不截取）
   const handleAvatarChange: UploadProps["beforeUpload"] = (file) => {
     const isImage = file.type.startsWith("image/");
     if (!isImage) {
@@ -230,8 +210,7 @@ export const AgentManagePage: React.FC = () => {
     reader.readAsDataURL(file);
     return false;
   };
-
-  // 处理编辑头像上传（编辑模式，直接上传）
+// 处理编辑头像上传（编辑模式，直接上传）
   const handleEditAvatarChange: UploadProps["beforeUpload"] = (file) => {
     const isImage = file.type.startsWith("image/");
     if (!isImage) {
@@ -243,8 +222,7 @@ export const AgentManagePage: React.FC = () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const imageUrl = e.target?.result as string;
-
-      // 更新 agent_copy：清空 avatar 和 avatar_crop，设置 background 为新图片
+// 更新agent_copy：清空头像和avatar_crop，设置背景为新图片
       if (agentCopy) {
         setAgentCopy({
           ...agentCopy,
@@ -260,28 +238,25 @@ export const AgentManagePage: React.FC = () => {
     reader.readAsDataURL(file);
     return false;
   };
-
-  // 处理修改头像截取
+// 处理修改头像截取
   const handleAvatarCrop = (agent: Agent) => {
-    // 检查是否有背景图
+// 检查是否有背景图
     if (!agent.background) {
       message.warning("该角色没有背景图，无法修改头像");
       return;
     }
-
-    // 使用背景图作为截取源头
+// 使用背景图作为截取源头
     const backgroundImage = agent.background;
     setCurrentAgentForAvatar(agent);
     setAvatarCropImageSrc(backgroundImage);
     setAvatarCropModalVisible(true);
   };
-
-  // 处理头像截取确认
+// 处理头像截取确认
   const handleAvatarCropConfirm = async (cropData: AvatarCropData) => {
     if (!currentAgentForAvatar) return;
 
     try {
-      // 更新智能体头像坐标信息
+// 更新智能体头像坐标信息
       const updateData = {
         extensions: {
           avatar_crop: cropData,
@@ -296,7 +271,7 @@ export const AgentManagePage: React.FC = () => {
         )) as unknown as Agent;
       if (updatedAgent) {
         message.success("头像坐标设置成功");
-        // 刷新智能体列表
+// 刷新智能体列表
         loadAgents();
       } else {
         message.error("头像坐标设置失败");
@@ -306,28 +281,25 @@ export const AgentManagePage: React.FC = () => {
       console.error("设置头像坐标失败:", error);
       message.error("设置头像坐标失败，请重试");
     } finally {
-      // 关闭弹窗并重置状态
+// 关闭弹窗并重置状态
       setAvatarCropModalVisible(false);
       setAvatarCropImageSrc("");
       setCurrentAgentForAvatar(null);
     }
   };
-
-  // 处理头像截取取消
+// 处理头像截取取消
   const handleAvatarCropCancel = () => {
     setAvatarCropModalVisible(false);
     setAvatarCropImageSrc("");
     setCurrentAgentForAvatar(null);
   };
-
-  // 创建智能体
+// 创建智能体
   const handleCreateAgent = async () => {
     try {
       const values = await createForm.validateFields();
 
       setSaveLoading(true);
-
-      // 从 values 中排除 score 和 comment，因为它们需要放到 meta_data 中
+// 从values中排除score和comment，因为它们需要放到meta_data中
       const { score, comment, ...otherValues } = values;
 
       const agentData: AgentCreateRequest = {
@@ -335,16 +307,14 @@ export const AgentManagePage: React.FC = () => {
         voice_id: values.voice_id,
         tags: values.tags || [],
       };
-
-      // 如果有评分或备注，添加到 meta_data 中
+// 如果有评分或备注，添加到meta_data中
       if (score || comment) {
         agentData.meta_data = {
           score: score,
           comment: comment,
         };
       }
-
-      // 如果选择了自定义模型，添加LLM配置
+// 如果选择了自定义模型，添加LLM配置
       if (values.modelType === "custom") {
         agentData.llm_config = {
           model: values.model,
@@ -355,24 +325,22 @@ export const AgentManagePage: React.FC = () => {
           presence_penalty: values.presence_penalty,
         };
       }
-
-      // 处理头像文件
+// 处理头像文件
       if (avatarFile) {
         agentData.avatar = avatarFile;
       }
-
-      // 使用 useAgents hook 的 createAgent 进行优化创建
+// 使用 useAgents hook 的 createAgent 进行优化创建
       const newAgent = await createAgentFromHook(agentData);
 
       if (newAgent) {
-        // 成功创建，关闭弹窗并重置状态
+// 成功创建，关闭弹窗并重置状态
         setCreateModalVisible(false);
         createForm.resetFields();
         setAvatarFile(null);
         setAvatarPreview("");
-        // 不需要调用 loadAgents()，因为 createAgentFromHook 已经优化更新了本地状态
+// 不需要调用 loadAgents()，因为 createAgentFromHook 已经优化更新了本地状态
       } else {
-        // 创建失败，保持弹窗打开让用户重试
+//创建失败，保持弹窗打开让用户重试
         message.error("创建智能体失败，请检查网络连接后重试");
       }
     } catch (error) {
@@ -382,16 +350,14 @@ export const AgentManagePage: React.FC = () => {
       setSaveLoading(false);
     }
   };
-
-  // 编辑智能体
+// 编辑智能体
   const handleEditAgent = async () => {
     if (!currentAgent) return;
 
     try {
       const values = await editForm.validateFields();
       setSaveLoading(true);
-
-      // 从 values 中排除 score 和 comment，因为它们需要放到 meta_data 中
+// 从values中排除score和comment，因为它们需要放到meta_data中
       const { score, comment, ...otherValues } = values;
 
       const updateData = {
@@ -399,19 +365,17 @@ export const AgentManagePage: React.FC = () => {
         voice_id: values.voice_id,
         tags: values.tags || [],
       };
-
-      // 处理评分和备注更新
+// 处理评分和备注更新
       if (score !== undefined || comment !== undefined) {
         updateData.meta_data = {
           score: score,
           comment: comment,
         };
       } else {
-        // 如果没有评分和备注，确保清空 meta_data
+// 如果没有评分和备注，确保清空meta_data
         updateData.meta_data = undefined;
       }
-
-      // 如果选择了自定义模型，添加LLM配置
+// 如果选择了自定义模型，添加LLM配置
       if (values.modelType === "custom") {
         updateData.llm_config = {
           model: values.model,
@@ -424,31 +388,29 @@ export const AgentManagePage: React.FC = () => {
       }
 
       if (values.modelType === "default") {
-        // 选择默认模型时，显式设置为null
+// 选择默认模型时，显式设置为null
         updateData.llm_config = null;
       }
-
-      // 处理头像文件
+// 处理头像文件
       if (editAvatarFile) {
         updateData.avatar = editAvatarFile;
       }
-
-      // 使用 useAgents hook 的 updateAgent 进行优化更新
+// 使用 useAgents hook 的 updateAgent 进行优化更新
       const updatedAgent = await updateAgentFromHook(
         currentAgent.id,
         updateData,
       );
 
       if (updatedAgent) {
-        // 成功更新，关闭弹窗并重置状态
+// 成功更新，关闭弹窗并重置状态
         setEditModalVisible(false);
         setCurrentAgent(null);
         setAgentCopy(null);
         editForm.resetFields();
         setEditAvatarFile(null);
-        // 不需要调用 loadAgents()，因为 updateAgentFromHook 已经优化更新了本地状态
+// 不需要调用 loadAgents()，因为 updateAgentFromHook 已经优化更新了本地状态
       } else {
-        // 更新失败，保持弹窗打开让用户重试
+// 更新失败，保持弹窗打开让用户重试
         message.error("更新智能体失败，请检查网络连接后重试");
       }
     } catch (error) {
@@ -458,13 +420,12 @@ export const AgentManagePage: React.FC = () => {
       setSaveLoading(false);
     }
   };
-
-  // 删除智能体
+//删除智能体
   const handleDeleteAgent = async (agent: Agent) => {
     try {
       const success = await deleteAgentFromHook(agent.id);
       if (success) {
-        // 删除成功后，重新加载列表以确保数据同步
+// 删除成功后，重新加载列表以确保数据同步
         loadAgents();
       }
     } catch (error) {
@@ -472,8 +433,7 @@ export const AgentManagePage: React.FC = () => {
       message.error("删除智能体失败，请重试");
     }
   };
-
-  // 设置创建表单的默认值
+//创建表单的默认值
   const setCreateFormDefaults = () => {
     setTimeout(() => {
       const gender = "FEMALE";
@@ -490,8 +450,7 @@ export const AgentManagePage: React.FC = () => {
       createForm.setFieldsValue(defaultValues);
     }, 100);
   };
-
-  // 随机生成角色名字
+// 随机生成角色名称
   const generateRandomNameForForm = () => {
     const currentGender = createForm.getFieldValue("gender") || "FEMALE";
     const randomName = generateRandomName(
@@ -499,8 +458,7 @@ export const AgentManagePage: React.FC = () => {
     );
     createForm.setFieldValue("name", randomName);
   };
-
-  // 随机生成角色名字（编辑表单）
+// 随机生成角色名称（编辑表单）
   const generateRandomNameForEditForm = () => {
     const currentGender = editForm.getFieldValue("gender") || "FEMALE";
     const randomName = generateRandomName(
@@ -508,17 +466,15 @@ export const AgentManagePage: React.FC = () => {
     );
     editForm.setFieldValue("name", randomName);
   };
-
-  // 显示编辑模态框
+// 显示编辑模式框
   const showEditModal = (agent: Agent) => {
     setCurrentAgent(agent);
-    // 深拷贝 agent 数据到 agent_copy
+// 将代理数据复制到agent_copy
     setAgentCopy({
       ...agent,
       extensions: agent.extensions ? { ...agent.extensions } : undefined,
     });
-
-    // 预填表单 - 使用 setTimeout 确保 Modal 完全渲染后再设置表单值
+// 预填表单-使用setTimeout保证Modal完全渲染后再设置表单值
     setTimeout(() => {
       const formValues = {
         name: agent.name,
@@ -535,10 +491,10 @@ export const AgentManagePage: React.FC = () => {
         tags: agent.tags || [],
 
         modelType: agent.llm_config ? "custom" : "default",
-        // 明确设置LLM配置字段，避免字段名不匹配问题
+//显式设置LLM配置字段，避免字段名不匹配问题
         ...(agent.llm_config
           ? {
-              // 如果 model 为空，设置一个默认值
+// 如果 model 为空，设置一个默认值
               model: agent.llm_config.model || "gpt-4o",
               temperature: agent.llm_config.temperature || 0.7,
               max_tokens: agent.llm_config.max_tokens || 2048,
@@ -554,22 +510,19 @@ export const AgentManagePage: React.FC = () => {
 
     setEditModalVisible(true);
   };
-
-  // 显示详情模态框
+// 显示详细模式框
   const showDetailModal = (agent: Agent) => {
     setCurrentAgent(agent);
     setDetailModalVisible(true);
   };
-
-  // 获取当前页面的智能体
+// 获取当前页面的智能体
   const getCurrentPageAgents = () => {
     const { current, pageSize } = pagination;
     const startIndex = (current - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return localAgents.slice(startIndex, endIndex);
   };
-
-  // 渲染表单字段
+// 渲染表单字段
   const renderAgentForm = (form: typeof createForm, isEdit = false) => {
     const generateRandomName = isEdit
       ? generateRandomNameForEditForm
@@ -585,33 +538,29 @@ export const AgentManagePage: React.FC = () => {
             accept="image/*"
           >
             <div
-              style={{
-                width: 80,
-                height: 80,
-                border: "1px dashed #d9d9d9",
-                borderRadius: 8,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                overflow: "hidden",
+              风格={{
+                宽度：80，
+                身高：80，
+                未知：“1px虚线#d9d9d9”，
+                未知半径：8，
+                显示：“弯曲”，
+                对齐项目：“居中”，
+                证明内容：“中心”，
+                地点：“指针”，
+                溢出：“隐藏”，
               }}
             >
-              {(isEdit ? agentCopy : avatarPreview) ? (
-                <AvatarDisplay
-                  agent={
-                    isEdit
-                      ? agentCopy!
-                      : ({
-                          ...currentAgent,
-                          avatar: avatarPreview,
-                          background: avatarPreview,
-                        } as Agent)
+              {（isEdit？agentCopy：avatarPreview）？ （
+                <头像显示
+                  代理={
+                    是编辑
+                      ？代理复制！
+                      :({
+                          ...当前代理，头像：头像Preview，
+                          背景：头像Preview，
+                        }作为代理）
                   }
-                  size={80}
-                />
-              ) : (
-                <div style={{ textAlign: "center" }}>
+                  尺寸={80}/>) : (<div style={{ textAlign: "center" }}>
                   <CameraOutlined style={{ fontSize: 20, color: "#999" }} />
                   <div style={{ marginTop: 4, fontSize: 12, color: "#999" }}>
                     上传形象图
@@ -619,13 +568,9 @@ export const AgentManagePage: React.FC = () => {
                 </div>
               )}
             </div>
-          </Upload>
+          </上传>
           <div style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
-            头像将在后端从上传的形象图片截取
-          </div>
-        </Form.Item>
-
-        {/* 基本信息 */}
+            头像论坛上传的头像图片截取</div></表格。项目>{/* 基本信息 */}
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item

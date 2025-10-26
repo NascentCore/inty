@@ -16,7 +16,7 @@ class RegInfoActivity : BaseActivity() {
     companion object {
         /**
          * 启动注册信息页面
-         * @param context 上下文context
+         * @param context 上下文
          */
         fun launch(context: Context) {
             context.startActivity(Intent(context, RegInfoActivity::class.java))
@@ -27,7 +27,7 @@ class RegInfoActivity : BaseActivity() {
 
     override fun initConfigData() {
         super.initConfigData()
-        // 监听ViewModel事件
+// 监听ViewModel事件
         lifecycleScope.launch {
             viewModel.events.collect { event ->
                 when (event) {
@@ -36,7 +36,7 @@ class RegInfoActivity : BaseActivity() {
                     }
 
                     else -> {
-                        // 其他事件暂不处理
+//其他事件暂不处理
                     }
                 }
             }

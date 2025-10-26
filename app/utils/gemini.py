@@ -30,9 +30,8 @@ from pydantic import BaseModel, Field
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import download_from_gcs
 from app.utils.image import ImageFormat, ImageSize
-
-# Initialize Google Gen AI client with Vertex AI
-# The client will use the same credentials as configured for GCS
+# 使用 Vertex AI 初始化 Google Gen AI 客户端
+# 客户端将使用与 GCS 配置的变更
 client = None  # Will be initialized when needed
 
 
@@ -41,16 +40,14 @@ def get_genai_client():
     global client
     if client is None:
         try:
-            # Initialize with Vertex AI configuration
-            # This will use the same service account credentials as GCS
-
-            # Set environment variable for proper authentication
+# 使用 Vertex AI 配置进行初始化
+# 这将使用与GCS相同的服务账户账号
+#设置环境变量以进行proper身份验证
             credentials_path = (
                 global_config_loaded_from_config_yaml.app.gcp_service_account_key
             )
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
-
-            # Try to get project ID from credentials file
+# 尝试从凭证文件中获取project ID
             project_id = None
             location = "us-central1"  # Default location for Imagen
 
@@ -60,10 +57,9 @@ def get_genai_client():
                     project_id = creds.get("project_id")
 
             if not project_id:
-                # Fallback: try to get from environment or use default
+# Fallback：尝试从环境中获取或使用默认值
                 project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "inty-backend")
-
-            # Clear any cached client to ensure fresh authentication
+# 清除所有服务器的客户端以确保新的身份验证
             if hasattr(genai, "_client_cache"):
                 genai._client_cache.clear()
 
@@ -73,7 +69,7 @@ def get_genai_client():
             )
         except Exception as e:
             logger.error(f"Error initializing Google Gen AI client: {e}")
-            # Fallback to basic initialization with environment variable set
+# 使用环境变量集返回到基本初始化
             client = genai.Client(vertexai=True)
 
     return client
@@ -83,9 +79,8 @@ def enhance_prompt(prompt: str, gender: str) -> str:
     """
     增强提示词
     """
-    # 获取反向性别
-
-    # 构建增强提示词
+#获取逆向性别
+# 构建增强提示词
     enhanced_prompt = f"""
     A person who is welcoming, friendly.
     age: 22 - 35
@@ -172,20 +167,19 @@ def text_to_image(
             f"count: {count}, "
             f"aspect_ratio: {aspect_ratio}"
         )
-
-        # 使用新的Google Gen AI SDK生成图片
+# 使用新的Google Gen AI SDK生成图片
         config = types.GenerateImagesConfig(
             negative_prompt=negative_prompt,
             number_of_images=count,
             aspect_ratio=aspect_ratio,
-            # TODO: 上架期间仅生成低风险图片，选择屏蔽低风险和以上风险图片。
+# TODO: 上架期间仅生成低风险图片，选择计低风险和以上风险图片。
             safety_filter_level=types.SafetyFilterLevel.BLOCK_LOW_AND_ABOVE,
             person_generation=types.PersonGeneration.ALLOW_ADULT,
             output_gcs_uri=gcs_uri_base,
             include_rai_reason=True,
-            # This reduces the size significantly.
+# 这显着减小了尺寸。
             output_mime_type=MimeType.JPEG,
-            # This is imagen's own enhancement, not the one from inty-backend's own enhancement.
+#这是imagen自己的增强，而不是inty-backend自己的增强。
             enhance_prompt=enhanced_prompt,
         )
 
@@ -201,9 +195,9 @@ def text_to_image(
         logger.debug(f"Image generation response: {response}")
 
         generated_images = []
-        # 处理每个生成的图片
+# 处理每个生成的图片
         for i, image in enumerate(response.generated_images):
-            # 获取GCS URI并转换为HTTPS URL
+# 获取GCS URI并转换为HTTPS URL
             gcs_uri = image.image.gcs_uri
             if gcs_uri and gcs_uri.startswith("gs://"):
                 gcs_path = gcs_uri[5:]  # 移除"gs://"前缀
@@ -211,12 +205,11 @@ def text_to_image(
                 logger.debug(f"Image {i}: {gcs_uri}")
             elif gcs_uri is None:
                 logger.debug(f"Image {i}: Filtered by RAI - no GCS URI available")
-
-            # Try to get size from image.image.image_bytes if available
+# 尝试从图像。image获取大小。image_bytes（如果可用）
             size = None
             byte_size = 0
             if gcs_uri:
-                # TODO: 考虑取消自动 gcs 上传，本地处理上传，这样就不用下载了。
+# TODO: 考虑取消自动 gcs 上传，本地处理上传，这样就不用下载了。
                 image_bytes = download_from_gcs(gcs_uri)
                 byte_size = len(image_bytes)
                 pil_image = PIL.Image.open(io.BytesIO(image_bytes))

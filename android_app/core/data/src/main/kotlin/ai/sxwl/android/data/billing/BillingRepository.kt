@@ -22,18 +22,18 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/* 计费系统的中央枢纽，协调所有计费操作：
- * 初始化: 创建 BillingClient 并连接到 Google Play Billing
- * 状态管理: 维护多个 StateFlow:
- * - vipStatusFlow - 当前订阅状态
- * - plansFlow - 可用的订阅计划
+/* 控制器系统的中央枢纽，协调所有控制器操作：
+ * 初始化：创建 BillingClient 并连接到 Google Play Billing
+ * 状态管理: 维护多个StateFlow:
+ * - vipStatusFlow - 当前状态订阅
+ * - planFlow - 可用的订阅计划
  * - initStateFlow - 连接状态
- * - eventFlow - 计费事件流（购买、错误等）
+ * - eventFlow - 迭代事件流（购买、错误等）
  * 连接处理:
  * - 智能重连机制，根据错误类型使用不同延迟（5秒-30秒）
  * - Google Play 服务可用性检查
- * - 服务不可用时的优雅降级
- * 生命周期: 在 MainActivity 中集成，用户登录后初始化
+ * - 服务不可用时的速率降级
+ * 生命周期：在MainActivity中集成，用户登录后初始化
  */
 object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener {
 
@@ -42,8 +42,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
     private lateinit var billingClient: BillingClient
     private var isConnected = false
-
-    // 协程作用域，用于发送事件
+// 协程作用域，用于发送事件
     private val eventScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val _vipStatusFlow = MutableStateFlow<VipStatus>(VipStatus(isSubscribed = false))
@@ -51,22 +50,19 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
     private val _plansFlow = MutableStateFlow<List<VipPlan>>(emptyList())
     val plansFlow: StateFlow<List<VipPlan>> = _plansFlow.asStateFlow()
-
-    // 初始化状态Flow
+// 初始化状态Flow
     private val _initStateFlow = MutableStateFlow(BillingInitState())
     val initStateFlow: StateFlow<BillingInitState> = _initStateFlow.asStateFlow()
-
-    // 事件流，用于通知 UI 层计费状态变化
+// 事件流，用于通知UI层设备状态变化
     private val _eventFlow = MutableSharedFlow<BillingEvent>()
     val eventFlow: SharedFlow<BillingEvent> = _eventFlow.asSharedFlow()
-
-    // 子管理器
+// 子管理器
     private lateinit var priceManager: BillingPriceManager
     private lateinit var purchaseManager: BillingPurchaseManager
     private lateinit var remoteManager: BillingRemoteManager
 
     init {
-        // 应用启动先读本地
+//应用启动先读本地
         _vipStatusFlow.value = BillingStorage.getLocalVipStatus()
         _plansFlow.value = BillingStorage.getLocalPlans()
     }
@@ -74,8 +70,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     /** 初始化 BillingClient */
     fun initialize(context: Context) {
         if (::billingClient.isInitialized) return
-
-        // 预检查Google Play服务
+// 预检查Google Play服务
         val hasGooglePlayServices = BillingUtils.isGooglePlayServicesAvailable(context)
         updateInitState(hasGooglePlayServices = hasGooglePlayServices)
 
@@ -152,7 +147,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
             isConnected = false
             log("BillingClient 资源已释放")
         }
-        // 取消协程作用域
+// 取消协程作用域
         eventScope.cancel()
     }
 
@@ -182,14 +177,11 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     private fun handleBillingSetupSuccess() {
         isConnected = true
         log("BillingClient 连接成功 isReady:${billingClient.isReady}, connectState: ${billingClient.connectionState}")
-
-        // 更新初始化状态
+// 更新初始化状态
         updateInitState(isInitialized = true, isConnected = true, errorMessage = null)
-
-        // 发送连接成功事件
+// 发送连接成功事件
         emitEvent(BillingEvent.Connected)
-
-        // 连接成功后，立即获取远程数据
+// 连接成功后，立即获取远程数据
         eventScope.launch { fetchRemote() }
     }
 
@@ -199,26 +191,22 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
             "BillingClient 连接失败: ${billingResult.debugMessage}, 响应码: ${billingResult.responseCode}",
             LogUtils.E
         )
-
-        // 更新初始化状态
+// 更新初始化状态
         updateInitState(
             isInitialized = true,
             isConnected = false,
             errorMessage = "连接失败: ${billingResult.debugMessage}",
         )
-
-        // 连接失败时，尝试重新连接（自动重连机制）
+//连接失败时，尝试重新连接（自动重连机制）
         smartReconnect(billingResult)
     }
 
     override fun onBillingServiceDisconnected() {
         isConnected = false
         log("BillingClient 断开连接", LogUtils.W)
-
-        // 发送断开连接事件
+// 发送断开连接事件
         emitEvent(BillingEvent.Disconnected)
-
-        // 自动重连机制
+// 自动重连机制
         scheduleReconnect(DISCONNECT_RECONNECT_DELAY_MS)
     }
 
@@ -228,15 +216,14 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
             delay(delayMs)
             if (!isConnected) {
                 log("尝试重新连接 BillingClient")
-
-                // 重新检查Google Play服务状态
+// 重新检查Google Play服务状态
                 val context: Context? = Utils.getApp()
                 if (context != null && BillingUtils.isGooglePlayServicesAvailable(context)) {
                     log("Google Play 服务可用，尝试重新连接")
                     connectToPlayBilling()
                 } else {
                     log("Google Play 服务仍不可用，跳过重连")
-                    // 如果Google Play服务不可用，尝试强制重新检查
+// 如果Google Play服务不可用，尝试强制重新检查
                     if (context != null) {
                         forceCheckGooglePlayServices(context)
                     }
@@ -279,7 +266,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
     /** 检查是否已连接 */
     fun isConnected(): Boolean {
-        // 双重检查：既检查内部状态，也检查BillingClient实际状态
+// 双重检查：既检查内部状态，也检查BillingClient实际状态
         val internalConnected = isConnected
         val clientConnected =
             if (::billingClient.isInitialized) {
@@ -287,8 +274,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
             } else {
                 false
             }
-
-        // 如果状态不一致，同步状态
+// 如果状态不一致，则状态同步
         if (internalConnected != clientConnected) {
             log(
                 "状态不一致检测到: internalConnected=$internalConnected, clientConnected=$clientConnected",
@@ -355,8 +341,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                 log("开始刷新订阅状态", LogUtils.D)
                 val oldStatus = _vipStatusFlow.value
                 fetchRemote()
-
-                // 检查状态是否发生变化
+//查询状态是否发生变化
                 val newStatus = _vipStatusFlow.value
                 if (oldStatus.isSubscribed != newStatus.isSubscribed) {
                     log(

@@ -36,13 +36,12 @@ fun SubscriptionManagementScreen(
     viewModel: SubsManageViewModel,
 ) {
     val context = LocalContext.current
-
-    // 观察来自 ViewModel 的 UI 事件
+// 观察ViewModel的UI事件
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {
                 SubscriptionUiEvent.NavigateToPlayStoreSubscriptions -> {
-                    // 在View层执行实际的Intent启动
+// 在View层执行实际的Intent启动
                     openPlayStoreSubscriptions(context)
                 }
 
@@ -98,7 +97,7 @@ fun SubscriptionManagementScreen(
 @Preview
 @Composable
 private fun SubscriptionManagementScreenPreview() {
-    // 这里需要模拟 ViewModel，实际使用时会在 Activity 中传入
+// 这里需要模拟ViewModel，实际使用时会在Activity中确定
     SubscriptionManagementScreen(
         modifier = Modifier,
         onBack = {},
