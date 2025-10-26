@@ -21,6 +21,10 @@ Based on [AGENTS.md](https://agents.md/)
 - 所有生成的输出必须使用中文（普通话），即使用户指令为英文。
 - 该指令仅适用于可以使用中文的场景；若内容不能使用中文（如代码），则不适用。
 
+## 文档维护
+
+- 当进行改动时，如变更足够重要且会影响相应目录的 `AGENTS.md` 指南，请同步更新该目录下的 `AGENTS.md`。
+
 ## Coding style
 
 ### Do not repeat in comments what's already obvious in the code
