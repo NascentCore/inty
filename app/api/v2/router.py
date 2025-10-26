@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v2.endpoints import chat
-from app.core.config import API_V2_PREFIX
+from app.api.constants import API_V2_PREFIX
 
 api_v2_router = APIRouter(prefix=API_V2_PREFIX)
 
