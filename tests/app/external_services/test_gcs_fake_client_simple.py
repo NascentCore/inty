@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tests.fakes.gcs import FakeGCSClient
+from app.external_services.gcs_fake import FakeGCSClient
 
 
 class TestFakeGCSClientDirect:

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.fakes.gcs import FakeGCSClient
+from app.external_services.gcs_fake import FakeGCSClient
 
 
 @pytest.fixture()

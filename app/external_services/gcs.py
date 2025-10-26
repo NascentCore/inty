@@ -5,7 +5,7 @@ import loguru
 from google.cloud import storage
 
 from app.core.config import global_config_loaded_from_config_yaml
-from tests.fakes.gcs import FakeGCSClient
+from app.external_services.gcs_fake import FakeGCSClient
 
 logger = loguru.logger
 
