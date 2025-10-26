@@ -60,9 +60,8 @@ def mock_config_for_tests():
     with patch("app.core.config.global_config_loaded_from_config_yaml") as mock_config:
         mock_config.gcs.use_fake_gcs = True
         mock_config.gcs.bucket = "test-bucket"
-        mock_config.cloudflare.domain = "cdn.example.com"
+        # Cloudflare配置现在在config.yaml中，无需mock
         return mock_config
-
 
 def register_user(db: Session, user_in) -> User:
     """Register user (phone number etc.)"""
@@ -91,7 +90,6 @@ class TestUploadImage:
     """Test cases for upload_image function."""
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_upload_png_file_creates_resource_records_with_correct_metadata(self):
         """
         Test that uploading a PNG file creates resource records with correct metadata.
@@ -185,7 +183,6 @@ class TestUploadImage:
         await async_engine.dispose()
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_image_upload_creates_duplicate_resource_records(self):
         """
         Test that confirms the bug: image upload creates duplicate resource records
@@ -300,7 +297,6 @@ class TestImageUploadValidation:
     """Test cases for image upload validation."""
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_file_size_exceeds_limit(self):
         """Test that files exceeding size limit are rejected."""
         # 使用本地数据库
@@ -345,7 +341,6 @@ class TestImageUploadValidation:
         await async_engine.dispose()
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_missing_filename(self):
         """Test that files without filename are rejected."""
         # 使用本地数据库
@@ -385,7 +380,6 @@ class TestImageUploadValidation:
         await async_engine.dispose()
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_invalid_filename_no_extension(self):
         """Test that files without extension are rejected."""
         # 使用本地数据库
@@ -427,7 +421,6 @@ class TestImageUploadValidation:
         await async_engine.dispose()
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_unsupported_file_format(self):
         """Test that unsupported file formats are rejected."""
         # 使用本地数据库
@@ -471,7 +464,6 @@ class TestImageUploadCompression:
     """Test cases for image compression functionality."""
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_png_compression_to_jpeg(self):
         """Test that PNG files are compressed to JPEG."""
         # 使用本地数据库
@@ -535,7 +527,6 @@ class TestImageUploadCompression:
         await async_engine.dispose()
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_large_file_compression(self):
         """Test that large files are compressed regardless of format."""
         # 使用本地数据库
@@ -609,7 +600,6 @@ class TestImageUploadDifferentFormats:
     """Test cases for different image formats."""
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_jpg_upload(self):
         """Test JPG file upload."""
         # 使用本地数据库
@@ -665,7 +655,6 @@ class TestImageUploadDifferentFormats:
         await async_engine.dispose()
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_webp_upload(self):
         """Test WEBP file upload."""
         # 使用本地数据库
@@ -725,7 +714,6 @@ class TestImageUploadCropping:
     """Test cases for avatar cropping functionality."""
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_avatar_cropping_success(self):
         """Test successful avatar cropping."""
         # 使用本地数据库
@@ -799,7 +787,6 @@ class TestImageUploadCropping:
         await async_engine.dispose()
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_avatar_cropping_no_face_detected(self):
         """Test avatar cropping when no face is detected."""
         # 使用本地数据库
@@ -879,7 +866,6 @@ class TestImageUploadErrorHandling:
     """Test cases for error handling."""
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_gcs_upload_failure(self):
         """Test handling of GCS upload failure."""
         # 使用本地数据库
@@ -929,7 +915,6 @@ class TestImageUploadErrorHandling:
         await async_engine.dispose()
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_cdn_transform_failure_fallback(self):
         """Test fallback to GCS URL when CDN transform fails."""
         # 使用本地数据库
@@ -995,7 +980,6 @@ class TestImageUploadResourceRecords:
     """Test cases for resource record creation."""
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_resource_record_creation_with_metadata(self):
         """Test that resource records are created with correct metadata."""
         # 使用本地数据库
@@ -1066,7 +1050,6 @@ class TestImageUploadResourceRecords:
         await async_engine.dispose()
 
     @pytest.mark.asyncio
-    @pytest.mark.noci
     async def test_original_and_compressed_resource_records(self):
         """Test that both original and compressed resource records are created when compression occurs."""
         # 使用本地数据库
@@ -1101,21 +1084,12 @@ class TestImageUploadResourceRecords:
         )
 
         # 使用fake GCS，不需要mock upload_to_gcs
-        with patch(
-            "app.services.image_transform_service.image_transform_service"
-        ) as mock_transform:
-
-            def mock_transform_side_effect(url):
-                return url.replace("storage.googleapis.com", "cdn.example.com")
-
-            mock_transform.transform_mobile.side_effect = mock_transform_side_effect
-
-            async with async_session() as async_db:
-                result = await process_image_upload(
-                    file=upload_file,
-                    user_id=user_id,
-                    async_db=async_db,
-                )
+        async with async_session() as async_db:
+            result = await process_image_upload(
+                file=upload_file,
+                user_id=user_id,
+                async_db=async_db,
+            )
 
         assert result.code == 200
 

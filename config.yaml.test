@@ -34,3 +34,7 @@ google_play:
 
 elevenlabs:
   api_key: "<your-elevenlabs-api-key>"
+
+cloudflare:
+  enabled = True
+  domain = "cdn.example.com"
