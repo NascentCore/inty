@@ -89,7 +89,9 @@ fun VoicePlayer(
             if (isGeneratingTts && ttsGenerationStartTime > 0) {
                 val elapsedTime = System.currentTimeMillis() - ttsGenerationStartTime
                 if (elapsedTime > 30000) { // 30秒超时
-                    LogUtils.e("音频LOG测试 TTS generation timeout: trackingId=$ttsTrackingId (localMsgId=$messageId), elapsed: ${elapsedTime}ms")
+                    LogUtils.e(
+                        "音频LOG测试 TTS generation timeout: trackingId=$ttsTrackingId (localMsgId=$messageId), elapsed: ${elapsedTime}ms"
+                    )
                     isGeneratingTts = false
                     ttsGenerationFailed = true
                     userClickedRecently = false
@@ -131,14 +133,12 @@ fun VoicePlayer(
                     PlaybackState.BUFFERING -> {
                         isLoading = true
                     }
-
                     PlaybackState.PLAYING,
                     PlaybackState.READY,
                     PlaybackState.ENDED,
                     PlaybackState.ERROR -> {
                         isLoading = false
                     }
-
                     else -> {
                         // 保持当前loading状态
                     }
@@ -193,7 +193,6 @@ fun VoicePlayer(
 
     // 自动播放（仅开场白消息）
     LaunchedEffect(autoPlay, messageId) {
-
         if (autoPlay && !isPlaying && !hasError && !(audioInfo.agentId.isNullOrEmpty())) {
             // 增加延迟，确保组件完全初始化和UI渲染稳定
             // 开场白消息需要等待queryMsgs完成，所以延迟时间稍长一些
@@ -209,7 +208,9 @@ fun VoicePlayer(
                     isManualClick = false, // 自动播放
                     onTtsGenerated = onTtsGenerated,
                     onTtsFailed = { error ->
-                        LogUtils.e("音频LOG测试 Auto play TTS generation failed: $error (Agent: ${audioInfo.agentName})")
+                        LogUtils.e(
+                            "音频LOG测试 Auto play TTS generation failed: $error (Agent: ${audioInfo.agentName})"
+                        )
                         ttsGenerationFailed = true
                         isLoading = false
                     },
@@ -217,10 +218,14 @@ fun VoicePlayer(
                     agentName = audioInfo.agentName, // 传递Agent名称用于日志分析
                 )
             } else {
-                LogUtils.d("音频LOG测试 VoicePlayer auto play conditions no longer met after delay: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError")
+                LogUtils.d(
+                    "音频LOG测试 VoicePlayer auto play conditions no longer met after delay: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError"
+                )
             }
         } else {
-            LogUtils.w("音频LOG测试 VoicePlayer auto play conditions not met: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError, agentId='${audioInfo.agentId}'")
+            LogUtils.w(
+                "音频LOG测试 VoicePlayer auto play conditions not met: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError, agentId='${audioInfo.agentId}'"
+            )
         }
     }
 

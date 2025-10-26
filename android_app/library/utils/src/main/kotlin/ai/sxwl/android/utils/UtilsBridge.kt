@@ -13,17 +13,15 @@ import android.os.Bundle
 import android.os.Environment
 import android.util.Base64
 import android.util.Log
-import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
 import java.lang.ref.WeakReference
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.serialization.json.Json
 
-/**
- * 工具类桥接器，提供各种工具类的核心功能
- */
+/** 工具类桥接器，提供各种工具类的核心功能 */
 @SuppressLint("StaticFieldLeak")
 internal object UtilsBridge {
 
@@ -35,41 +33,36 @@ internal object UtilsBridge {
 
     fun init(app: Application) {
         sApplication = app
-        app.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
-            override fun onActivityCreated(
-                activity: Activity,
-                savedInstanceState: Bundle?
-            ) {
-                activityList.add(activity)
-                topActivity = activity
-            }
+        app.registerActivityLifecycleCallbacks(
+            object : Application.ActivityLifecycleCallbacks {
+                override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+                    activityList.add(activity)
+                    topActivity = activity
+                }
 
-            override fun onActivityStarted(activity: Activity) {
-                topActivity = activity
-            }
+                override fun onActivityStarted(activity: Activity) {
+                    topActivity = activity
+                }
 
-            override fun onActivityResumed(activity: Activity) {
-                topActivity = activity
-            }
+                override fun onActivityResumed(activity: Activity) {
+                    topActivity = activity
+                }
 
-            override fun onActivityPaused(activity: Activity) {}
+                override fun onActivityPaused(activity: Activity) {}
 
-            override fun onActivityStopped(activity: Activity) {}
+                override fun onActivityStopped(activity: Activity) {}
 
-            override fun onActivitySaveInstanceState(
-                activity: Activity,
-                outState: Bundle
-            ) {
-            }
+                override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
 
-            override fun onActivityDestroyed(activity: Activity) {
-                activityList.remove(activity)
-                if (topActivity == activity) {
-                    // 安全的获取最后一个Activity
-                    topActivity = activityList.lastOrNull()
+                override fun onActivityDestroyed(activity: Activity) {
+                    activityList.remove(activity)
+                    if (topActivity == activity) {
+                        // 安全的获取最后一个Activity
+                        topActivity = activityList.lastOrNull()
+                    }
                 }
             }
-        })
+        )
     }
 
     fun unInit(app: Application) {
@@ -119,32 +112,27 @@ internal object UtilsBridge {
         }
     }
 
-    /**
-     * 添加应用状态变化监听器
-     */
+    /** 添加应用状态变化监听器 */
     fun addOnAppStatusChangedListener(listener: Utils.OnAppStatusChangedListener) {
         if (!appStatusListeners.contains(listener)) {
             appStatusListeners.add(listener)
         }
     }
 
-    /**
-     * 移除应用状态变化监听器
-     */
+    /** 移除应用状态变化监听器 */
     fun removeOnAppStatusChangedListener(listener: Utils.OnAppStatusChangedListener) {
         appStatusListeners.remove(listener)
     }
 
-    /**
-     * 执行命令
-     */
+    /** 执行命令 */
     fun execCmd(command: String, isRoot: Boolean): ExecResult {
         return try {
-            val process = if (isRoot) {
-                Runtime.getRuntime().exec("su")
-            } else {
-                Runtime.getRuntime().exec(command)
-            }
+            val process =
+                if (isRoot) {
+                    Runtime.getRuntime().exec("su")
+                } else {
+                    Runtime.getRuntime().exec(command)
+                }
 
             if (isRoot) {
                 val outputStream = process.outputStream
@@ -165,22 +153,19 @@ internal object UtilsBridge {
         }
     }
 
-    /**
-     * 判断应用是否在前台
-     */
+    /** 判断应用是否在前台 */
     fun isAppForeground(): Boolean {
         val foregroundProcessName = getForegroundProcessName()
         return foregroundProcessName == sApplication?.packageName
     }
 
-    /**
-     * 获取前台进程名称
-     */
+    /** 获取前台进程名称 */
     fun getForegroundProcessName(): String {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
                 val usageStatsManager =
-                    sApplication?.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+                    sApplication?.getSystemService(Context.USAGE_STATS_SERVICE)
+                        as? UsageStatsManager
                 if (usageStatsManager != null) {
                     val endTime = System.currentTimeMillis()
                     val beginTime = endTime - 1000 * 60 * 60 * 24 // 24小时前
@@ -212,9 +197,7 @@ internal object UtilsBridge {
         }
     }
 
-    /**
-     * 结束所有Activity
-     */
+    /** 结束所有Activity */
     fun finishAllActivities() {
         activityList.forEach { activity ->
             if (!activity.isFinishing) {
@@ -224,18 +207,13 @@ internal object UtilsBridge {
         activityList.clear()
     }
 
-    /**
-     * 命令执行结果
-     */
-    data class ExecResult(
-        val result: Int,
-        val successMsg: String,
-        val errorMsg: String
-    )
+    /** 命令执行结果 */
+    data class ExecResult(val result: Int, val successMsg: String, val errorMsg: String)
 
     fun isActivityAlive(activity: Activity?): Boolean {
-        return activity != null && !activity.isFinishing &&
-                (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1 || !activity.isDestroyed)
+        return activity != null &&
+            !activity.isFinishing &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1 || !activity.isDestroyed)
     }
 
     fun isSpace(str: String?): Boolean {
@@ -277,9 +255,7 @@ internal object UtilsBridge {
 
     // 文件操作相关方法
     fun createOrExistsDir(dir: File?): Boolean {
-        return dir?.let {
-            if (it.exists()) it.isDirectory else it.mkdirs()
-        } ?: false
+        return dir?.let { if (it.exists()) it.isDirectory else it.mkdirs() } ?: false
     }
 
     fun writeFileFromString(filePath: String, content: String, append: Boolean): Boolean {
@@ -292,9 +268,7 @@ internal object UtilsBridge {
                 }
                 if (!file.createNewFile()) return false
             }
-            FileWriter(file, append).use { writer ->
-                writer.write(content)
-            }
+            FileWriter(file, append).use { writer -> writer.write(content) }
             true
         } catch (e: IOException) {
             Log.e("UtilsBridge", "writeFileFromString failed", e)
@@ -309,9 +283,7 @@ internal object UtilsBridge {
             throwable.stackTrace.forEach { element ->
                 append("\tat ").append(element.toString()).append('\n')
             }
-            throwable.cause?.let { cause ->
-                append("Caused by: ").append(getFullStackTrace(cause))
-            }
+            throwable.cause?.let { cause -> append("Caused by: ").append(getFullStackTrace(cause)) }
         }
     }
 
@@ -350,10 +322,9 @@ internal object UtilsBridge {
         val len = hexString.length
         val data = ByteArray(len / 2)
         for (i in 0 until len step 2) {
-            data[i / 2] = ((Character.digit(hexString[i], 16) shl 4) + Character.digit(
-                hexString[i + 1],
-                16
-            )).toByte()
+            data[i / 2] =
+                ((Character.digit(hexString[i], 16) shl 4) + Character.digit(hexString[i + 1], 16))
+                    .toByte()
         }
         return data
     }
@@ -383,9 +354,7 @@ internal object UtilsBridge {
         }
     }
 
-    /**
-     * 文件头部信息类
-     */
+    /** 文件头部信息类 */
     class FileHead(private val name: String) {
         private val first = mutableMapOf<String, String>()
         private val last = mutableMapOf<String, String>()

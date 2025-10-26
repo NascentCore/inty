@@ -14,3 +14,11 @@
 
 ## UI/性能
 - Compose/Recyler 需避免无意义重组；图片与音频加载注意内存与缓存策略。
+
+## Kotlin/Compose UI 规范
+
+- 组件 UI 配置通过入参传递（提供合理默认值）；严禁在组件内部写 10.dp/10.sp/10.pt 等魔法值。
+- 默认值应来自 `core/design` 的设计令牌（如 `Spacing`、`Radii`、`Elevation`、`IconSize`、`AnimationDurations`、`TextStyleTokens`）或 `MaterialTheme`。
+- 优先使用 `MaterialTheme.colorScheme/typography`；需要扩展时通过 `CompositionLocal` 暴露自定义 tokens。
+- 容器组件需转发子项常用样式参数（内边距/圆角/间距等），避免写死。
+- 示例与推荐签名见根目录 `AGENTS.md` 的“Compose UI 规范”。

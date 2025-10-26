@@ -37,7 +37,9 @@ class ChatPagingRepository {
                         enablePlaceholders = ENABLE_PLACEHOLDERS,
                         initialLoadSize = PAGE_SIZE,
                     ),
-                pagingSourceFactory = { ChatPagingSource(useCache = useCache, sortSeed = sortSeed) },
+                pagingSourceFactory = {
+                    ChatPagingSource(useCache = useCache, sortSeed = sortSeed)
+                },
             )
             .flow
     }

@@ -56,18 +56,14 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
 
     Box(
         modifier =
-            modifier
-                .fillMaxWidth()
-                .aspectRatio(agentInfo.imageAspectRatio())
-                .noRippleClickable {
-                    onClick()
-                }
+            modifier.fillMaxWidth().aspectRatio(agentInfo.imageAspectRatio()).noRippleClickable {
+                onClick()
+            }
     ) {
         // 背景图片层
         Box(
             modifier =
-                Modifier
-                    .fillMaxSize()
+                Modifier.fillMaxSize()
                     .clip(
                         RoundedCornerShape(
                             topStart = 7.dp,
@@ -84,9 +80,7 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
 
             AsyncImage(
                 modifier = Modifier.fillMaxSize(),
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(imageUrl)
-                    .build(),
+                model = ImageRequest.Builder(LocalContext.current).data(imageUrl).build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 alignment = Alignment.TopCenter,
@@ -108,8 +102,7 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
         // 文本内容层 - 立即显示，不依赖图片加载状态
         Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .background(
                         brush = gradientBrush,
                         shape =
@@ -143,9 +136,7 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
             )
 
             if (filteredTags.isNotEmpty()) {
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .height(16.dp)) {
+                Box(modifier = Modifier.fillMaxWidth().height(16.dp)) {
                     SmartTagsLayout(
                         modifier = Modifier.matchParentSize(),
                         tags = filteredTags,

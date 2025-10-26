@@ -13,19 +13,15 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import coil3.video.VideoFrameDecoder
-import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
+import okhttp3.OkHttpClient
 
-/**
- * 高级Coil配置类
- * 根据Coil 3.x官方文档：https://coil-kt.github.io/coil/network/
- * 提供完整的网络支持和缓存策略
- */
+/** 高级Coil配置类 根据Coil 3.x官方文档：https://coil-kt.github.io/coil/network/ 提供完整的网络支持和缓存策略 */
 object AdvancedCoilConfig {
 
     /**
-     * 创建优化的ImageLoader，支持设备适配的图片压缩
-     * 根据Coil 3.x官方文档：https://coil-kt.github.io/coil/
+     * 创建优化的ImageLoader，支持设备适配的图片压缩 根据Coil 3.x官方文档：https://coil-kt.github.io/coil/
+     *
      * @param context 上下文
      * @return 配置好的ImageLoader
      */
@@ -54,45 +50,31 @@ object AdvancedCoilConfig {
                     add(GifDecoder.Factory())
                 }
                 add(VideoFrameDecoder.Factory())
-                add(
-                    OkHttpNetworkFetcherFactory(
-                        callFactory = {
-                            imageHttpClient
-                        }
-                    )
-                )
+                add(OkHttpNetworkFetcherFactory(callFactory = { imageHttpClient }))
             }
             .crossfade(true)
             .crossfade(300) // 300ms交叉淡入淡出
             .build()
     }
 
-
-    /**
-     * 创建专门用于图片加载的OkHttpClient
-     * 根据官方文档优化网络配置，处理连接重置问题
-     */
+    /** 创建专门用于图片加载的OkHttpClient 根据官方文档优化网络配置，处理连接重置问题 */
     private fun createImageHttpClient(): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(60, TimeUnit.SECONDS) // 连接超时60秒
-            .readTimeout(60, TimeUnit.SECONDS)     // 读取超时60秒
-            .writeTimeout(60, TimeUnit.SECONDS)    // 写入超时60秒
-            .retryOnConnectionFailure(true)        // 连接失败时重试
+            .readTimeout(60, TimeUnit.SECONDS) // 读取超时60秒
+            .writeTimeout(60, TimeUnit.SECONDS) // 写入超时60秒
+            .retryOnConnectionFailure(true) // 连接失败时重试
             .build()
     }
 
-    /**
-     * 初始化全局ImageLoader
-     * 使用优化的配置
-     */
+    /** 初始化全局ImageLoader 使用优化的配置 */
     fun initGlobalImageLoader() {
-        SingletonImageLoader.setSafe { context ->
-            createOptimizedImageLoader(context)
-        }
+        SingletonImageLoader.setSafe { context -> createOptimizedImageLoader(context) }
     }
 
     /**
      * 获取图片缓存大小（字节）
+     *
      * @param context 上下文
      * @return 缓存大小
      */
@@ -100,10 +82,7 @@ object AdvancedCoilConfig {
         return try {
             val cacheDir = context.cacheDir.resolve("image_cache")
             if (cacheDir.exists()) {
-                cacheDir.walkTopDown()
-                    .filter { it.isFile }
-                    .map { it.length() }
-                    .sum()
+                cacheDir.walkTopDown().filter { it.isFile }.map { it.length() }.sum()
             } else {
                 0L
             }
@@ -114,6 +93,7 @@ object AdvancedCoilConfig {
 
     /**
      * 清除图片缓存
+     *
      * @param context 上下文
      */
     fun clearImageCache(context: Context) {
@@ -129,6 +109,7 @@ object AdvancedCoilConfig {
 
     /**
      * 格式化缓存大小
+     *
      * @param bytes 字节数
      * @return 格式化的字符串
      */

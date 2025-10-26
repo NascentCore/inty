@@ -33,9 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * 封装项目用的Bottom Navigation Bar
- */
+/** 封装项目用的Bottom Navigation Bar */
 @Composable
 fun HeartBottomAppBar(
     modifier: Modifier = Modifier,
@@ -55,9 +53,7 @@ fun HeartBottomAppBar(
 
             NavigationBarItem(
                 selected = isSelected,
-                onClick = {
-                    onTabSelected(tab.index)
-                },
+                onClick = { onTabSelected(tab.index) },
                 icon = {
                     Box(modifier = Modifier) {
                         Image(
@@ -84,81 +80,73 @@ fun HeartBottomAppBar(
     }
 }
 
-/**
- * 项目底部tab数据
- */
+/** 项目底部tab数据 */
 data class HeartBottomTabItem(
     val index: Int,
     val selectedIcon: Int,
     val unselectedIcon: Int,
     val label: String = "", // 标签文字
-    val hasRedDot: Boolean = false,//是否有红点
+    val hasRedDot: Boolean = false, // 是否有红点
 )
 
-private val bottomTabItems = listOf(
-    HeartBottomTabItem(
-        index = 0,
-        selectedIcon = R.drawable.ic_tab_chat_selected,
-        unselectedIcon = R.drawable.ic_tab_chat_unselected,
-        label = "聊天"
-    ),
-    HeartBottomTabItem(
-        index = 1,
-        selectedIcon = R.drawable.ic_tab_notification_selected,
-        unselectedIcon = R.drawable.ic_tab_notification_unselected,
-        label = "消息",
-        hasRedDot = true
-    ),
-    HeartBottomTabItem(
-        index = 2,
-        selectedIcon = R.drawable.ic_tab_ai,
-        unselectedIcon = R.drawable.ic_tab_ai,
-        label = "" // Create tab 不需要文字标签
-    ),
-    HeartBottomTabItem(
-        index = 3,
-        selectedIcon = R.drawable.ic_tab_recommend_selected,
-        unselectedIcon = R.drawable.ic_tab_recommend_unselected,
-        label = "推荐"
-    ),
-    HeartBottomTabItem(
-        index = 4,
-        selectedIcon = R.drawable.ic_tab_profile_selected,
-        unselectedIcon = R.drawable.ic_tab_profile_unselected,
-        label = "我的"
+private val bottomTabItems =
+    listOf(
+        HeartBottomTabItem(
+            index = 0,
+            selectedIcon = R.drawable.ic_tab_chat_selected,
+            unselectedIcon = R.drawable.ic_tab_chat_unselected,
+            label = "聊天"
+        ),
+        HeartBottomTabItem(
+            index = 1,
+            selectedIcon = R.drawable.ic_tab_notification_selected,
+            unselectedIcon = R.drawable.ic_tab_notification_unselected,
+            label = "消息",
+            hasRedDot = true
+        ),
+        HeartBottomTabItem(
+            index = 2,
+            selectedIcon = R.drawable.ic_tab_ai,
+            unselectedIcon = R.drawable.ic_tab_ai,
+            label = "" // Create tab 不需要文字标签
+        ),
+        HeartBottomTabItem(
+            index = 3,
+            selectedIcon = R.drawable.ic_tab_recommend_selected,
+            unselectedIcon = R.drawable.ic_tab_recommend_unselected,
+            label = "推荐"
+        ),
+        HeartBottomTabItem(
+            index = 4,
+            selectedIcon = R.drawable.ic_tab_profile_selected,
+            unselectedIcon = R.drawable.ic_tab_profile_unselected,
+            label = "我的"
+        )
     )
-)
 
 @Preview
 @Composable
 private fun 预览底部导航栏() {
 
-    Column(
-        modifier = Modifier.Companion.background(HeartColor.primaryColor)
-    ) {
+    Column(modifier = Modifier.Companion.background(HeartColor.primaryColor)) {
         var checkedIndex by remember { mutableIntStateOf(0) }
         HeartBottomAppBar(
             modifier = Modifier.fillMaxWidth(),
             selectedTab = checkedIndex,
             tabItems = bottomTabItems
-        ) { checkedIndex = it }
+        ) {
+            checkedIndex = it
+        }
     }
 }
 
 @Preview
 @Composable
 fun HeartRedDot(modifier: Modifier = Modifier, radius: Int = 8) {
-    Box(
-        modifier = modifier
-            .size(radius.dp)
-            .clip(CircleShape)
-            .background(Color.Red)
-    )
+    Box(modifier = modifier.size(radius.dp).clip(CircleShape).background(Color.Red))
 }
 
-/**
- * 红点数字的现实，可以配置 99+，或者完整显示，目前基于业务，数字必须>0
- */
+/** 红点数字的现实，可以配置 99+，或者完整显示，目前基于业务，数字必须>0 */
 @Composable
 fun HeartRedNum(
     modifier: Modifier = Modifier,
@@ -166,25 +154,28 @@ fun HeartRedNum(
     omit: Boolean = false,
 ) {
 
-    val numberStr = when {
-        num in 1..99 -> "$num"
-        num > 99 -> if (omit) "99+" else "$num"
-        else -> ""
-    }
+    val numberStr =
+        when {
+            num in 1..99 -> "$num"
+            num > 99 -> if (omit) "99+" else "$num"
+            else -> ""
+        }
 
     if (numberStr.isNotBlank()) {
         Box(
-            modifier = modifier
-                .sizeIn(minWidth = 12.dp, minHeight = 12.dp)
-                .clip(CircleShape)
-                .background(Color.Red)
-                .padding(horizontal = 2.dp, vertical = 1.dp),
+            modifier =
+                modifier
+                    .sizeIn(minWidth = 12.dp, minHeight = 12.dp)
+                    .clip(CircleShape)
+                    .background(Color.Red)
+                    .padding(horizontal = 2.dp, vertical = 1.dp),
             contentAlignment = Alignment.Center
         ) {
-
             Text(
-                text = numberStr, fontSize = 10.sp,
-                fontWeight = FontWeight.Normal, color = Color.White,
+                text = numberStr,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Normal,
+                color = Color.White,
                 textAlign = TextAlign.Center
             )
         }

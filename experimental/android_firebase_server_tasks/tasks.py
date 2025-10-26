@@ -25,7 +25,9 @@ _TASKS: Dict[str, TaskInfo] = {}
 _TASKS_LOCK = threading.Lock()
 
 
-def create_task(*, device_token: str, task_name: str, duration_seconds: int) -> TaskInfo:
+def create_task(
+    *, device_token: str, task_name: str, duration_seconds: int
+) -> TaskInfo:
     task_id = str(uuid.uuid4())
     task = TaskInfo(
         task_id=task_id,
@@ -63,7 +65,9 @@ async def run_task_and_notify(task_id: str) -> None:
     }
 
     try:
-        send_message_to_token(device_token=task.device_token, title=title, body=body, data=data)
+        send_message_to_token(
+            device_token=task.device_token, title=title, body=body, data=data
+        )
     except Exception as err:
         logger.debug("Failed to send completion notification: %s", err)
         task.status = "completed_notification_failed"

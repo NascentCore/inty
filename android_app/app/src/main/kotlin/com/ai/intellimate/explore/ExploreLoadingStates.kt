@@ -33,11 +33,9 @@ fun ExploreLoadingStates(
                 LoadingMoreIndicator()
             }
         }
-
         is LoadState.Error -> {
             LoadMoreErrorIndicator()
         }
-
         is LoadState.NotLoading -> {
             // 只有在真正没有更多数据且不是初始状态时才显示
             // 增加更严格的条件：确保不是首次加载，且确实没有更多数据
@@ -57,9 +55,7 @@ fun ExploreLoadingStates(
 @Composable
 private fun LoadingMoreIndicator() {
     Box(
-        modifier = Modifier
-            .size(165.dp, 60.dp)
-            .padding(16.dp),
+        modifier = Modifier.size(165.dp, 60.dp).padding(16.dp),
         contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
@@ -69,9 +65,7 @@ private fun LoadingMoreIndicator() {
 /** 加载更多错误指示器 */
 @Composable
 private fun LoadMoreErrorIndicator() {
-    Box(modifier = Modifier
-        .fillMaxWidth()
-        .padding(16.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
         Text(
             text = "Failed to load more data",
             color = Color.White.copy(0.7f),
@@ -84,9 +78,7 @@ private fun LoadMoreErrorIndicator() {
 /** 没有更多数据指示器 - 跨两列显示 */
 @Composable
 private fun NoMoreDataIndicator() {
-    Box(modifier = Modifier
-        .fillMaxWidth()
-        .padding(16.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
         Text(
             text = "No more data available",
             color = Color.White.copy(0.6f),

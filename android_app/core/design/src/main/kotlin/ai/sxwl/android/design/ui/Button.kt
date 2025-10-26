@@ -1,5 +1,6 @@
 package ai.sxwl.android.design.ui
 
+import ai.sxwl.android.design.R
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,8 +29,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ai.sxwl.android.design.R
-
 
 @Composable
 fun HeartPrimaryButton(
@@ -39,13 +38,13 @@ fun HeartPrimaryButton(
 ) {
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth(.95f)
-            .height(50.dp)
-            .clip(RoundedCornerShape(25.dp))
-            .alpha(if (enable) 1f else .4f)
-            .background(brush = primaryBtnBrush)
-            .clickable(enabled = enable, onClick = onClick),
+        modifier =
+            Modifier.fillMaxWidth(.95f)
+                .height(50.dp)
+                .clip(RoundedCornerShape(25.dp))
+                .alpha(if (enable) 1f else .4f)
+                .background(brush = primaryBtnBrush)
+                .clickable(enabled = enable, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -71,10 +70,8 @@ private fun 按钮效果预览() {
         HeartFollowButton()
         Spacer(Modifier.height(8.dp))
         HeartFollowButton(isFollowing = true)
-
     }
 }
-
 
 @Composable
 fun HeartFollowButton(
@@ -82,12 +79,12 @@ fun HeartFollowButton(
     onClick: () -> Unit = {},
 ) {
     Box(
-        modifier = Modifier
-            .size(98.dp, 40.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .border(width = 1.dp, brush = heartDivBrush, shape = RoundedCornerShape(20.dp))
-            .background(brush = if (isFollowing) commonBtnBrush else primaryBtnBrush)
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier.size(98.dp, 40.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .border(width = 1.dp, brush = heartDivBrush, shape = RoundedCornerShape(20.dp))
+                .background(brush = if (isFollowing) commonBtnBrush else primaryBtnBrush)
+                .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -101,17 +98,15 @@ fun HeartFollowButton(
     }
 }
 
-/**
- * 简单的声音播放气泡，
- * 后续再设计优化成带尾巴的自定义背景
- */
+/** 简单的声音播放气泡， 后续再设计优化成带尾巴的自定义背景 */
 @Composable
 fun VoiceBubble(modifier: Modifier = Modifier, seconds: Int = 0) {
     Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(30.dp))
-            .background(Color(0XFF44354F))
-            .padding(horizontal = 8.dp, vertical = 2.dp),
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(30.dp))
+                .background(Color(0XFF44354F))
+                .padding(horizontal = 8.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
@@ -127,7 +122,6 @@ fun VoiceBubble(modifier: Modifier = Modifier, seconds: Int = 0) {
             fontWeight = FontWeight.Normal,
             color = Color(0xFFF5F5F5),
         )
-
     }
 }
 

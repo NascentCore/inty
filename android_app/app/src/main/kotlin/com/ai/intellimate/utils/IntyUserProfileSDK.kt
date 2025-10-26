@@ -19,7 +19,6 @@ object IntyUserProfileSDK {
                     LogUtils.i("Updated user profile from inty-sdk: ${userProfile.nickname}")
                     userProfile
                 }
-
                 is ApiResult.Error -> {
                     LogUtils.e("Failed to get user profile with inty-sdk: ${result.message}")
                     null
@@ -43,7 +42,6 @@ object IntyUserProfileSDK {
                     LogUtils.d("Updated user profile with inty-sdk: ${updatedUserProfile.nickname}")
                     updatedUserProfile
                 }
-
                 is ApiResult.Error -> {
                     LogUtils.e("Failed to update user profile with inty-sdk: ${result.message}")
                     null

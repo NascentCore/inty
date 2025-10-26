@@ -12,10 +12,12 @@ import {
   HistoryOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  BgColorsOutlined,
 } from "@ant-design/icons";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
 import { ChatPage } from "./pages/ChatPage";
+import { Live2DEmotionChatDemo } from "./pages/Live2DEmotionChatDemo";
 import AgentManagePage from "./pages/AgentManagePage";
 import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
 import { ApiKeyModal } from "./components/ApiKeyModal";
@@ -24,7 +26,7 @@ import { UserInfo } from "./components/UserInfo";
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
-type PageKey = "evaluation" | "history" | "chat" | "agents";
+type PageKey = "evaluation" | "history" | "chat" | "agents" | "live2d";
 
 interface NavigationItem {
   key: PageKey;
@@ -124,6 +126,12 @@ const AppContent: React.FC = () => {
       description: "与智能体进行一对一聊天",
     },
     {
+      key: "live2d",
+      icon: <BgColorsOutlined />,
+      label: "Live2D 情绪聊天",
+      description: "基于Gemini情绪标签切换背景",
+    },
+    {
       key: "agents",
       icon: <RobotOutlined />,
       label: "智能体管理",
@@ -153,6 +161,8 @@ const AppContent: React.FC = () => {
         return "评测记录";
       case "chat":
         return "单角色聊天";
+      case "live2d":
+        return "Live2D 情绪聊天 (Gemini Demo)";
       case "agents":
         return "智能体管理";
       default:
@@ -173,6 +183,8 @@ const AppContent: React.FC = () => {
         );
       case "chat":
         return <ChatPage />;
+      case "live2d":
+        return <Live2DEmotionChatDemo />;
       case "agents":
         return <AgentManagePage />;
 

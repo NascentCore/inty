@@ -12,9 +12,9 @@ import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import com.inty.api.client.IntyClient
 import com.inty.api.client.okhttp.IntyOkHttpClient
-import kotlinx.coroutines.withTimeout
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.withTimeout
 
 /**
  * Inty网络管理器 - 企业级网络库封装 提供统一的网络管理和API服务入口
@@ -40,7 +40,9 @@ object IntyNetworkManager {
             NetworkStateManager.initialize(context)
             NetworkConfig.setBuildType(buildType)
             isInitialized = true
-            LogUtils.d("IntyNetworkManager initialized with environment: ${NetworkConfig.getCurrentBuildType()}")
+            LogUtils.d(
+                "IntyNetworkManager initialized with environment: ${NetworkConfig.getCurrentBuildType()}"
+            )
         }
     }
 
@@ -58,7 +60,9 @@ object IntyNetworkManager {
     /** 创建新的客户端实例 使用新的配置系统 */
     private fun createClient(apiKey: String, baseUrl: String): IntyClient {
         val environmentConfig = NetworkConfig.getCurrentEnvironmentConfig()
-        LogUtils.d("Creating new IntyClient: apiKey=${apiKey.take(8)}..., baseUrl=$baseUrl, environment=${NetworkConfig.getCurrentBuildType()}")
+        LogUtils.d(
+            "Creating new IntyClient: apiKey=${apiKey.take(8)}..., baseUrl=$baseUrl, environment=${NetworkConfig.getCurrentBuildType()}"
+        )
         return IntyOkHttpClient.builder().apiKey(apiKey).baseUrl(baseUrl).build()
     }
 

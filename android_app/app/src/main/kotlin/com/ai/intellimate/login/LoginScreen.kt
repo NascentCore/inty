@@ -110,15 +110,10 @@ internal fun LoginScreen(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(0.6f))
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.6f))) {
         Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .background(
                         brush =

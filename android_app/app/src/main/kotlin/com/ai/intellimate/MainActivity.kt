@@ -32,12 +32,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.ai.intellimate.chat.ChatViewModel
 import com.ai.intellimate.utils.UnifiedStartupManager
+import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -66,11 +66,10 @@ class MainActivity : BaseActivity() {
             // 等待启动管理器完成必要初始化（但不等缓存数据）
             while (
                 UnifiedStartupManager.startupState.value ==
-                UnifiedStartupManager.StartupState.Initializing
+                    UnifiedStartupManager.StartupState.Initializing
             ) {
                 delay(50) // 50ms检查一次，更快响应
             }
-
 
             // 检查用户登录状态（包括游客用户）
             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
@@ -189,10 +188,7 @@ class MainActivity : BaseActivity() {
 
     /** 处理返回事件（按键返回或手势返回） */
     private fun handleBackPress() {
-        backPressHandler.handleBackPress(
-            onExit = { finish() },
-            onShowHint = { showExitHint() }
-        )
+        backPressHandler.handleBackPress(onExit = { finish() }, onShowHint = { showExitHint() })
     }
 
     /** 显示退出提示 */
@@ -242,8 +238,7 @@ private fun SplashUI(modifier: Modifier = Modifier, onSplashComplete: () -> Unit
         )
         Image(
             modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
+                Modifier.align(Alignment.BottomCenter)
                     .padding(bottom = 80.dp)
                     .size(80.dp)
                     .clip(RoundedCornerShape(10.dp)),
@@ -262,8 +257,8 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
         var waitTime = 0L
 
         while (
-            UnifiedStartupManager.startupState.value == UnifiedStartupManager.StartupState.Initializing
-            && waitTime < maxWaitTime
+            UnifiedStartupManager.startupState.value ==
+                UnifiedStartupManager.StartupState.Initializing && waitTime < maxWaitTime
         ) {
             delay(50)
             waitTime += 50
@@ -300,7 +295,9 @@ private suspend fun waitForChatAgents() {
         val hasChatData = UnifiedStartupManager.getCurrentChatAgents().isNotEmpty()
 
         if (hasChatData) {
-            LogUtils.d("SplashUI - 关键数据chat agents加载完成: ${UnifiedStartupManager.getCurrentChatAgents().size}个")
+            LogUtils.d(
+                "SplashUI - 关键数据chat agents加载完成: ${UnifiedStartupManager.getCurrentChatAgents().size}个"
+            )
             return
         }
 
@@ -311,10 +308,7 @@ private suspend fun waitForChatAgents() {
     LogUtils.w("SplashUI - chat agents数据加载超时，但继续进入主界面")
 }
 
-/**
- * 返回按键处理器 - 状态机模式
- * 提供优雅的二次确认退出功能
- */
+/** 返回按键处理器 - 状态机模式 提供优雅的二次确认退出功能 */
 private class BackPressHandler {
     private var lastBackTime = 0L
     private val backTimeout = 2000L // 2秒内需要第二次返回
@@ -322,13 +316,11 @@ private class BackPressHandler {
 
     /**
      * 处理返回按键事件
+     *
      * @param onExit 退出回调
      * @param onShowHint 显示提示回调
      */
-    fun handleBackPress(
-        onExit: () -> Unit,
-        onShowHint: () -> Unit
-    ) {
+    fun handleBackPress(onExit: () -> Unit, onShowHint: () -> Unit) {
         val currentTime = System.currentTimeMillis()
 
         when {
@@ -345,20 +337,17 @@ private class BackPressHandler {
         }
     }
 
-    /**
-     * 调度重置任务
-     */
+    /** 调度重置任务 */
     private fun scheduleReset() {
         resetJob?.cancel()
-        resetJob = CoroutineScope(Dispatchers.Main).launch {
-            delay(backTimeout)
-            // 2秒后自动重置，允许下次返回
-        }
+        resetJob =
+            CoroutineScope(Dispatchers.Main).launch {
+                delay(backTimeout)
+                // 2秒后自动重置，允许下次返回
+            }
     }
 
-    /**
-     * 清理资源
-     */
+    /** 清理资源 */
     fun cleanup() {
         resetJob?.cancel()
     }

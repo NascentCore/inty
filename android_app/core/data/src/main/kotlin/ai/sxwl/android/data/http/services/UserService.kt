@@ -34,14 +34,15 @@ object UserService {
             if (!userProfile.ageGroup.isNullOrEmpty()) {
                 builder.ageGroup(userProfile.ageGroup)
             }
-            val genderObj = userProfile.gender?.let {
-                when (it) {
-                    "MALE" -> com.inty.api.models.api.v1.users.profile.Gender.MALE
-                    "FEMALE" -> com.inty.api.models.api.v1.users.profile.Gender.FEMALE
-                    "OTHER" -> com.inty.api.models.api.v1.users.profile.Gender.OTHER
-                    else -> null
+            val genderObj =
+                userProfile.gender?.let {
+                    when (it) {
+                        "MALE" -> com.inty.api.models.api.v1.users.profile.Gender.MALE
+                        "FEMALE" -> com.inty.api.models.api.v1.users.profile.Gender.FEMALE
+                        "OTHER" -> com.inty.api.models.api.v1.users.profile.Gender.OTHER
+                        else -> null
+                    }
                 }
-            }
             if (genderObj != null) {
                 builder.gender(genderObj)
             }

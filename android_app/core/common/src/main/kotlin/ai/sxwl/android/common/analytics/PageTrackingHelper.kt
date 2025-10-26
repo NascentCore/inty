@@ -6,11 +6,7 @@ import android.app.Activity
 import androidx.fragment.app.Fragment
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * 页面追踪工具类
- * 用于记录用户页面访问、交互流程和崩溃时的上下文信息
- * 提供业务层友好的页面追踪功能
- */
+/** 页面追踪工具类 用于记录用户页面访问、交互流程和崩溃时的上下文信息 提供业务层友好的页面追踪功能 */
 object PageTrackingHelper {
 
     // 当前页面信息
@@ -26,9 +22,7 @@ object PageTrackingHelper {
     private val pageHistory = mutableListOf<String>()
     private val maxPageHistorySize = 5
 
-    /**
-     * 记录页面访问
-     */
+    /** 记录页面访问 */
     fun trackPageView(
         pageName: String,
         pageClass: String = "Unknown",
@@ -65,9 +59,7 @@ object PageTrackingHelper {
         }
     }
 
-    /**
-     * 记录用户交互
-     */
+    /** 记录用户交互 */
     fun trackUserInteraction(
         action: String,
         target: String,
@@ -94,15 +86,12 @@ object PageTrackingHelper {
                     "timestamp" to timestamp,
                 ) + additionalParams,
             )
-
         } catch (e: Exception) {
             LogUtils.e("Failed to track user interaction: ${e.message}")
         }
     }
 
-    /**
-     * 记录按钮点击
-     */
+    /** 记录按钮点击 */
     fun trackButtonClick(
         buttonName: String,
         pageName: String? = currentPage,
@@ -115,9 +104,7 @@ object PageTrackingHelper {
         )
     }
 
-    /**
-     * 记录网络请求
-     */
+    /** 记录网络请求 */
     fun trackNetworkRequest(
         url: String,
         method: String,
@@ -139,15 +126,12 @@ object PageTrackingHelper {
             // 设置 Crashlytics 自定义键
             FirebaseManager.setCustomKey("last_network_request", "$method $url")
             FirebaseManager.setCustomKey("last_network_success", success.toString())
-
         } catch (e: Exception) {
             LogUtils.e("Failed to track network request: ${e.message}")
         }
     }
 
-    /**
-     * 记录错误和异常
-     */
+    /** 记录错误和异常 */
     fun trackError(
         error: String,
         errorType: String = "unknown",
@@ -169,15 +153,12 @@ object PageTrackingHelper {
             FirebaseManager.setCustomKey("last_error", error)
             FirebaseManager.setCustomKey("last_error_type", errorType)
             FirebaseManager.setCustomKey("error_page", currentPage ?: "unknown")
-
         } catch (e: Exception) {
             LogUtils.e("Failed to track error: ${e.message}")
         }
     }
 
-    /**
-     * 获取当前页面信息
-     */
+    /** 获取当前页面信息 */
     fun getCurrentPageInfo(): Map<String, Any> {
         return mapOf(
             "current_page" to (currentPage ?: "unknown"),
@@ -189,9 +170,7 @@ object PageTrackingHelper {
         )
     }
 
-    /**
-     * 设置用户标识
-     */
+    /** 设置用户标识 */
     fun setUserId(userId: String) {
         try {
             FirebaseManager.setUserId(userId)
@@ -201,9 +180,7 @@ object PageTrackingHelper {
         }
     }
 
-    /**
-     * 设置用户属性
-     */
+    /** 设置用户属性 */
     fun setUserProperty(property: String, value: String) {
         try {
             FirebaseManager.setUserProperty(property, value)
@@ -228,16 +205,12 @@ object PageTrackingHelper {
         }
     }
 
-    /**
-     * 为 Activity 添加生命周期追踪
-     */
+    /** 为 Activity 添加生命周期追踪 */
     fun trackActivityLifecycle(activity: Activity, pageName: String) {
         trackPageView(pageName, activity.javaClass.simpleName)
     }
 
-    /**
-     * 为 Fragment 添加生命周期追踪
-     */
+    /** 为 Fragment 添加生命周期追踪 */
     fun trackFragmentLifecycle(fragment: Fragment, pageName: String) {
         trackPageView(pageName, fragment.javaClass.simpleName)
     }

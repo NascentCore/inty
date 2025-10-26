@@ -8,9 +8,6 @@ import android.util.Log
 import androidx.annotation.IntDef
 import androidx.annotation.RequiresApi
 import androidx.collection.SimpleArrayMap
-import org.json.JSONArray
-import org.json.JSONException
-import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 import java.io.StringReader
@@ -29,11 +26,11 @@ import javax.xml.transform.Source
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.stream.StreamResult
 import javax.xml.transform.stream.StreamSource
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
 
-/**
- * 日志工具类
- * 提供完整的日志功能，支持控制台输出、文件输出、JSON格式化、XML格式化等
- */
+/** 日志工具类 提供完整的日志功能，支持控制台输出、文件输出、JSON格式化、XML格式化等 */
 object LogUtils {
 
     const val V = Log.VERBOSE
@@ -43,9 +40,7 @@ object LogUtils {
     const val E = Log.ERROR
     const val A = Log.ASSERT
 
-    @IntDef(V, D, I, W, E, A)
-    @Retention(AnnotationRetention.SOURCE)
-    annotation class TYPE
+    @IntDef(V, D, I, W, E, A) @Retention(AnnotationRetention.SOURCE) annotation class TYPE
 
     private val T = charArrayOf('V', 'D', 'I', 'W', 'E', 'A')
 
@@ -75,47 +70,67 @@ object LogUtils {
     private val I_FORMATTER_MAP = SimpleArrayMap<Class<*>, IFormatter<*>>()
 
     // 使用 ThreadLocal 确保 SimpleDateFormat 的线程安全
-    private val simpleDateFormat = ThreadLocal.withInitial {
-        SimpleDateFormat("yyyy_MM_dd HH:mm:ss.SSS ", Locale.getDefault())
-    }
+    private val simpleDateFormat =
+        ThreadLocal.withInitial {
+            SimpleDateFormat("yyyy_MM_dd HH:mm:ss.SSS ", Locale.getDefault())
+        }
 
     // 专门用于日期解析的 ThreadLocal SimpleDateFormat
-    private val dateFormat = ThreadLocal.withInitial {
-        SimpleDateFormat("yyyy_MM_dd", Locale.getDefault())
-    }
+    private val dateFormat =
+        ThreadLocal.withInitial { SimpleDateFormat("yyyy_MM_dd", Locale.getDefault()) }
 
     fun getConfig(): Config = CONFIG
 
     // 基础日志方法
     fun v(vararg contents: Any?) = log(V, CONFIG.globalTag, *contents)
+
     fun vTag(tag: String, vararg contents: Any?) = log(V, tag, *contents)
+
     fun d(vararg contents: Any?) = log(D, CONFIG.globalTag, *contents)
+
     fun dTag(tag: String, vararg contents: Any?) = log(D, tag, *contents)
+
     fun i(vararg contents: Any?) = log(I, CONFIG.globalTag, *contents)
+
     fun iTag(tag: String, vararg contents: Any?) = log(I, tag, *contents)
+
     fun w(vararg contents: Any?) = log(W, CONFIG.globalTag, *contents)
+
     fun wTag(tag: String, vararg contents: Any?) = log(W, tag, *contents)
+
     fun e(vararg contents: Any?) = log(E, CONFIG.globalTag, *contents)
+
     fun eTag(tag: String, vararg contents: Any?) = log(E, tag, *contents)
+
     fun a(vararg contents: Any?) = log(A, CONFIG.globalTag, *contents)
+
     fun aTag(tag: String, vararg contents: Any?) = log(A, tag, *contents)
 
     // 文件日志方法
     fun file(content: Any?) = log(FILE or D, CONFIG.globalTag, content)
+
     fun file(@TYPE type: Int, content: Any?) = log(FILE or type, CONFIG.globalTag, content)
+
     fun file(tag: String, content: Any?) = log(FILE or D, tag, content)
+
     fun file(@TYPE type: Int, tag: String, content: Any?) = log(FILE or type, tag, content)
 
     // JSON日志方法
     fun json(content: Any?) = log(JSON or D, CONFIG.globalTag, content)
+
     fun json(@TYPE type: Int, content: Any?) = log(JSON or type, CONFIG.globalTag, content)
+
     fun json(tag: String, content: Any?) = log(JSON or D, tag, content)
+
     fun json(@TYPE type: Int, tag: String, content: Any?) = log(JSON or type, tag, content)
 
     // XML日志方法
     fun xml(content: String) = log(XML or D, CONFIG.globalTag, content)
+
     fun xml(@TYPE type: Int, content: String) = log(XML or type, CONFIG.globalTag, content)
+
     fun xml(tag: String, content: String) = log(XML or D, tag, content)
+
     fun xml(@TYPE type: Int, tag: String, content: String) = log(XML or type, tag, content)
 
     fun log(type: Int, tag: String, vararg contents: Any?) {
@@ -135,9 +150,7 @@ object LogUtils {
             }
 
             if ((CONFIG.log2FileSwitch || typeHigh == FILE) && typeLow >= CONFIG.fileFilter) {
-                EXECUTOR.execute {
-                    print2File(typeLow, tagHead.tag, tagHead.fileHead + body)
-                }
+                EXECUTOR.execute { print2File(typeLow, tagHead.tag, tagHead.fileHead + body) }
             }
         }
     }
@@ -164,43 +177,49 @@ object LogUtils {
         if (stackIndex >= stackTrace.size) {
             val targetElement = stackTrace[3]
             val fileName = getFileName(targetElement)
-            val finalTag = if (CONFIG.tagIsSpace && tag.isBlank()) {
-                val index = fileName.indexOf('.')
-                if (index == -1) fileName else fileName.substring(0, index)
-            } else {
-                tag
-            }
+            val finalTag =
+                if (CONFIG.tagIsSpace && tag.isBlank()) {
+                    val index = fileName.indexOf('.')
+                    if (index == -1) fileName else fileName.substring(0, index)
+                } else {
+                    tag
+                }
             return TagHead(finalTag, null, ": ")
         }
 
         val targetElement = stackTrace[stackIndex]
         val fileName = getFileName(targetElement)
-        val finalTag = if (CONFIG.tagIsSpace && tag.isBlank()) {
-            val index = fileName.indexOf('.')
-            if (index == -1) fileName else fileName.substring(0, index)
-        } else {
-            tag
-        }
+        val finalTag =
+            if (CONFIG.tagIsSpace && tag.isBlank()) {
+                val index = fileName.indexOf('.')
+                if (index == -1) fileName else fileName.substring(0, index)
+            } else {
+                tag
+            }
 
         if (CONFIG.logHeadSwitch) {
             val tName = Thread.currentThread().name
-            val head = String.format(
-                Locale.getDefault(),
-                "%s, %s.%s(%s:%d)",
-                tName,
-                targetElement.className,
-                targetElement.methodName,
-                fileName,
-                targetElement.lineNumber
-            )
+            val head =
+                String.format(
+                    Locale.getDefault(),
+                    "%s, %s.%s(%s:%d)",
+                    tName,
+                    targetElement.className,
+                    targetElement.methodName,
+                    fileName,
+                    targetElement.lineNumber
+                )
             val fileHead = " [$head]: "
 
             if (CONFIG.stackDeep <= 1) {
                 return TagHead(finalTag, arrayOf(head), fileHead)
             } else {
-                val consoleHead = Array(
-                    kotlin.comparisons.minOf(CONFIG.stackDeep, stackTrace.size - stackIndex)
-                ) { "" }
+                val consoleHead =
+                    Array(
+                        kotlin.comparisons.minOf(CONFIG.stackDeep, stackTrace.size - stackIndex)
+                    ) {
+                        ""
+                    }
                 consoleHead[0] = head
 
                 val spaceLen = tName.length + 2
@@ -208,15 +227,16 @@ object LogUtils {
 
                 for (i in 1 until consoleHead.size) {
                     val element = stackTrace[i + stackIndex]
-                    consoleHead[i] = String.format(
-                        Locale.getDefault(),
-                        "%s%s.%s(%s:%d)",
-                        space,
-                        element.className,
-                        element.methodName,
-                        getFileName(element),
-                        element.lineNumber
-                    )
+                    consoleHead[i] =
+                        String.format(
+                            Locale.getDefault(),
+                            "%s%s.%s(%s:%d)",
+                            space,
+                            element.className,
+                            element.methodName,
+                            getFileName(element),
+                            element.lineNumber
+                        )
                 }
                 return TagHead(finalTag, consoleHead, fileHead)
             }
@@ -246,21 +266,22 @@ object LogUtils {
     private fun processBody(type: Int, vararg contents: Any?): String {
         var body = NULL
         if (contents.isNotEmpty()) {
-            body = if (contents.size == 1) {
-                formatObject(type, contents[0])
-            } else {
-                val sb = kotlin.text.StringBuilder()
-                contents.forEachIndexed { index, content ->
-                    sb.append(ARGS)
-                        .append("[")
-                        .append(index)
-                        .append("]")
-                        .append(" = ")
-                        .append(formatObject(content))
-                        .append(LINE_SEP)
+            body =
+                if (contents.size == 1) {
+                    formatObject(type, contents[0])
+                } else {
+                    val sb = kotlin.text.StringBuilder()
+                    contents.forEachIndexed { index, content ->
+                        sb.append(ARGS)
+                            .append("[")
+                            .append(index)
+                            .append("]")
+                            .append(" = ")
+                            .append(formatObject(content))
+                            .append(LINE_SEP)
+                    }
+                    sb.toString()
                 }
-                sb.toString()
-            }
         }
         return body.ifEmpty { NOTHING }
     }
@@ -280,8 +301,7 @@ object LogUtils {
         if (I_FORMATTER_MAP.isEmpty().not()) {
             val iFormatter = I_FORMATTER_MAP[getClassFromObject(obj)]
             if (iFormatter != null) {
-                @Suppress("UNCHECKED_CAST")
-                return (iFormatter as IFormatter<Any>).format(obj)
+                @Suppress("UNCHECKED_CAST") return (iFormatter as IFormatter<Any>).format(obj)
             }
         }
 
@@ -307,10 +327,7 @@ object LogUtils {
 
     private fun printHead(type: Int, tag: String, head: Array<String>?) {
         head?.forEach { aHead ->
-            print2Console(
-                type, tag,
-                if (CONFIG.logBorderSwitch) LEFT_BORDER + aHead else aHead
-            )
+            print2Console(type, tag, if (CONFIG.logBorderSwitch) LEFT_BORDER + aHead else aHead)
         }
         if (CONFIG.logBorderSwitch) print2Console(type, tag, MIDDLE_BORDER)
     }
@@ -346,9 +363,7 @@ object LogUtils {
         }
 
         val lines = msg.split(LINE_SEP)
-        lines.forEach { line ->
-            print2Console(type, tag, LEFT_BORDER + line)
-        }
+        lines.forEach { line -> print2Console(type, tag, LEFT_BORDER + line) }
     }
 
     private fun processSingleTagMsg(
@@ -361,9 +376,7 @@ object LogUtils {
         if (CONFIG.logBorderSwitch) {
             sb.append(PLACEHOLDER).append(LINE_SEP)
             sb.append(TOP_BORDER).append(LINE_SEP)
-            head?.forEach { aHead ->
-                sb.append(LEFT_BORDER).append(aHead).append(LINE_SEP)
-            }
+            head?.forEach { aHead -> sb.append(LEFT_BORDER).append(aHead).append(LINE_SEP) }
             sb.append(MIDDLE_BORDER).append(LINE_SEP)
             msg.split(LINE_SEP).forEach { line ->
                 sb.append(LEFT_BORDER).append(line).append(LINE_SEP)
@@ -386,11 +399,12 @@ object LogUtils {
         }
 
         val len = msg.length
-        val countOfSub = if (CONFIG.logBorderSwitch) {
-            maxOf(0, (len - BOTTOM_BORDER.length) / MAX_LEN)
-        } else {
-            len / MAX_LEN
-        }
+        val countOfSub =
+            if (CONFIG.logBorderSwitch) {
+                maxOf(0, (len - BOTTOM_BORDER.length) / MAX_LEN)
+            } else {
+                len / MAX_LEN
+            }
 
         if (countOfSub > 0) {
             if (CONFIG.logBorderSwitch) {
@@ -400,18 +414,29 @@ object LogUtils {
                 for (i in 1 until countOfSub) {
                     val endIndex = minOf(index + MAX_LEN, len)
                     print2Console(
-                        type, tag,
-                        PLACEHOLDER + LINE_SEP + TOP_BORDER + LINE_SEP +
-                                LEFT_BORDER + msg.substring(index, endIndex) +
-                                LINE_SEP + BOTTOM_BORDER
+                        type,
+                        tag,
+                        PLACEHOLDER +
+                            LINE_SEP +
+                            TOP_BORDER +
+                            LINE_SEP +
+                            LEFT_BORDER +
+                            msg.substring(index, endIndex) +
+                            LINE_SEP +
+                            BOTTOM_BORDER
                     )
                     index += MAX_LEN
                 }
                 if (index < len) {
                     print2Console(
-                        type, tag,
-                        PLACEHOLDER + LINE_SEP + TOP_BORDER + LINE_SEP +
-                                LEFT_BORDER + msg.substring(index, len)
+                        type,
+                        tag,
+                        PLACEHOLDER +
+                            LINE_SEP +
+                            TOP_BORDER +
+                            LINE_SEP +
+                            LEFT_BORDER +
+                            msg.substring(index, len)
                     )
                 }
             } else {
@@ -421,7 +446,8 @@ object LogUtils {
                 for (i in 1 until countOfSub) {
                     val endIndex = minOf(index + MAX_LEN, len)
                     print2Console(
-                        type, tag,
+                        type,
+                        tag,
                         PLACEHOLDER + LINE_SEP + msg.substring(index, endIndex)
                     )
                     index += MAX_LEN
@@ -463,10 +489,8 @@ object LogUtils {
     }
 
     private fun getSdf(): SimpleDateFormat {
-        return simpleDateFormat.get() ?: SimpleDateFormat(
-            "yyyy_MM_dd HH:mm:ss.SSS ",
-            Locale.getDefault()
-        )
+        return simpleDateFormat.get()
+            ?: SimpleDateFormat("yyyy_MM_dd HH:mm:ss.SSS ", Locale.getDefault())
     }
 
     private fun createOrExistsFile(filePath: String, date: String): Boolean {
@@ -504,12 +528,13 @@ object LogUtils {
                 return
             }
 
-            val dueMillis = try {
-                dateFormatInstance.parse(date)?.time
-            } catch (e: ParseException) {
-                Log.e("LogUtils", "Failed to parse date: $date", e)
-                return
-            } ?: return
+            val dueMillis =
+                try {
+                    dateFormatInstance.parse(date)?.time
+                } catch (e: ParseException) {
+                    Log.e("LogUtils", "Failed to parse date: $date", e)
+                    return
+                } ?: return
 
             val cutOffTime = dueMillis - CONFIG.saveDays * 86400000L
 
@@ -518,12 +543,13 @@ object LogUtils {
                     val name = aFile.name
                     val logDay = findDate(name)
                     if (logDay.isNotEmpty()) {
-                        val logDayTime = try {
-                            dateFormatInstance.parse(logDay)?.time
-                        } catch (e: ParseException) {
-                            Log.w("LogUtils", "Failed to parse log day: $logDay", e)
-                            null
-                        }
+                        val logDayTime =
+                            try {
+                                dateFormatInstance.parse(logDay)?.time
+                            } catch (e: ParseException) {
+                                Log.w("LogUtils", "Failed to parse log day: $logDay", e)
+                                null
+                            }
                         if (logDayTime != null && logDayTime <= cutOffTime) {
                             EXECUTOR.execute {
                                 try {
@@ -599,8 +625,9 @@ object LogUtils {
         var fileHead: FileHead = FileHead("Log")
 
         init {
-            if (UtilsBridge.isSDCardEnableByEnvironment() && Utils.getApp()
-                    .getExternalFilesDir(null) != null
+            if (
+                UtilsBridge.isSDCardEnableByEnvironment() &&
+                    Utils.getApp().getExternalFilesDir(null) != null
             ) {
                 defaultDir = "${Utils.getApp().getExternalFilesDir(null)}${FILE_SEP}log$FILE_SEP"
             } else {
@@ -640,9 +667,11 @@ object LogUtils {
         }
 
         fun setDir(dir: String?): Config {
-            this.dir = if (dir.isNullOrBlank()) null else {
-                if (dir.endsWith(FILE_SEP)) dir else "$dir$FILE_SEP"
-            }
+            this.dir =
+                if (dir.isNullOrBlank()) null
+                else {
+                    if (dir.endsWith(FILE_SEP)) dir else "$dir$FILE_SEP"
+                }
             return this
         }
 
@@ -657,9 +686,11 @@ object LogUtils {
         }
 
         fun setFileExtension(fileExtension: String): Config {
-            this.fileExtension = if (fileExtension.isBlank()) ".txt" else {
-                if (fileExtension.startsWith(".")) fileExtension else ".$fileExtension"
-            }
+            this.fileExtension =
+                if (fileExtension.isBlank()) ".txt"
+                else {
+                    if (fileExtension.startsWith(".")) fileExtension else ".$fileExtension"
+                }
             return this
         }
 
@@ -745,29 +776,33 @@ object LogUtils {
         fun haveSetOnFileOutputListener(): Boolean = onFileOutputListener != null
 
         override fun toString(): String {
-            return kotlin.text.StringBuilder().apply {
-                append("process: ").append(getProcessNameSafe()).append(LINE_SEP)
-                append("logSwitch: ").append(logSwitch).append(LINE_SEP)
-                append("consoleSwitch: ").append(log2ConsoleSwitch).append(LINE_SEP)
-                append("tag: ").append(globalTag.ifEmpty { "null" })
-                    .append(LINE_SEP)
-                append("headSwitch: ").append(logHeadSwitch).append(LINE_SEP)
-                append("fileSwitch: ").append(log2FileSwitch).append(LINE_SEP)
-                append("dir: ").append(getDirSafe()).append(LINE_SEP)
-                append("filePrefix: ").append(filePrefix).append(LINE_SEP)
-                append("borderSwitch: ").append(logBorderSwitch).append(LINE_SEP)
-                append("singleTagSwitch: ").append(singleTagSwitch).append(LINE_SEP)
-                append("consoleFilter: ").append(T[consoleFilter - V]).append(LINE_SEP)
-                append("fileFilter: ").append(T[fileFilter - V]).append(LINE_SEP)
-                append("stackDeep: ").append(stackDeep).append(LINE_SEP)
-                append("stackOffset: ").append(stackOffset).append(LINE_SEP)
-                append("saveDays: ").append(saveDays).append(LINE_SEP)
-                append("formatter: ").append(I_FORMATTER_MAP).append(LINE_SEP)
-                append("fileWriter: ").append(fileWriter).append(LINE_SEP)
-                append("onConsoleOutputListener: ").append(onConsoleOutputListener).append(LINE_SEP)
-                append("onFileOutputListener: ").append(onFileOutputListener).append(LINE_SEP)
-                append("fileExtraHeader: ").append(fileHead.getAppended())
-            }.toString()
+            return kotlin.text
+                .StringBuilder()
+                .apply {
+                    append("process: ").append(getProcessNameSafe()).append(LINE_SEP)
+                    append("logSwitch: ").append(logSwitch).append(LINE_SEP)
+                    append("consoleSwitch: ").append(log2ConsoleSwitch).append(LINE_SEP)
+                    append("tag: ").append(globalTag.ifEmpty { "null" }).append(LINE_SEP)
+                    append("headSwitch: ").append(logHeadSwitch).append(LINE_SEP)
+                    append("fileSwitch: ").append(log2FileSwitch).append(LINE_SEP)
+                    append("dir: ").append(getDirSafe()).append(LINE_SEP)
+                    append("filePrefix: ").append(filePrefix).append(LINE_SEP)
+                    append("borderSwitch: ").append(logBorderSwitch).append(LINE_SEP)
+                    append("singleTagSwitch: ").append(singleTagSwitch).append(LINE_SEP)
+                    append("consoleFilter: ").append(T[consoleFilter - V]).append(LINE_SEP)
+                    append("fileFilter: ").append(T[fileFilter - V]).append(LINE_SEP)
+                    append("stackDeep: ").append(stackDeep).append(LINE_SEP)
+                    append("stackOffset: ").append(stackOffset).append(LINE_SEP)
+                    append("saveDays: ").append(saveDays).append(LINE_SEP)
+                    append("formatter: ").append(I_FORMATTER_MAP).append(LINE_SEP)
+                    append("fileWriter: ").append(fileWriter).append(LINE_SEP)
+                    append("onConsoleOutputListener: ")
+                        .append(onConsoleOutputListener)
+                        .append(LINE_SEP)
+                    append("onFileOutputListener: ").append(onFileOutputListener).append(LINE_SEP)
+                    append("fileExtraHeader: ").append(fileHead.getAppended())
+                }
+                .toString()
         }
     }
 
@@ -813,11 +848,12 @@ object LogUtils {
                 return
             }
             val delta = 19 - key.length // 19 is length of "Device Manufacturer"
-            val paddedKey = if (delta > 0) {
-                key + "                   ".substring(0, delta)
-            } else {
-                key
-            }
+            val paddedKey =
+                if (delta > 0) {
+                    key + "                   ".substring(0, delta)
+                } else {
+                    key
+                }
             mLast.add("$paddedKey: $value")
         }
 
@@ -827,12 +863,16 @@ object LogUtils {
 
         override fun toString(): String {
             val sb = kotlin.text.StringBuilder()
-            sb.append("════════════════════════════════════════════════════════════════════════════════\n")
+            sb.append(
+                "════════════════════════════════════════════════════════════════════════════════\n"
+            )
             sb.append("Log Title: $title\n")
             for (msg in mFirst) {
                 sb.append("$msg\n")
             }
-            sb.append("════════════════════════════════════════════════════════════════════════════════\n")
+            sb.append(
+                "════════════════════════════════════════════════════════════════════════════════\n"
+            )
             for (msg in mLast) {
                 sb.append("$msg\n")
             }
@@ -1004,10 +1044,12 @@ object LogUtils {
 
         @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
         private fun clipData2String(clipData: ClipData, sb: StringBuilder) {
-            val item = clipData.getItemAt(0) ?: run {
-                sb.append("ClipData.Item {}")
-                return
-            }
+            val item =
+                clipData.getItemAt(0)
+                    ?: run {
+                        sb.append("ClipData.Item {}")
+                        return
+                    }
 
             sb.append("ClipData.Item { ")
 
@@ -1090,34 +1132,38 @@ object LogUtils {
                 is IntArray -> obj.contentToString()
                 is LongArray -> obj.contentToString()
                 is ShortArray -> obj.contentToString()
-                else -> throw kotlin.IllegalArgumentException("Array has incompatible type: ${obj?.javaClass}")
+                else ->
+                    throw kotlin.IllegalArgumentException(
+                        "Array has incompatible type: ${obj?.javaClass}"
+                    )
             }
         }
-
-
     }
 
     private fun <T> getTypeClassFromParadigm(formatter: IFormatter<T>): Class<*>? {
         val genericInterfaces = formatter.javaClass.genericInterfaces
-        val type = if (genericInterfaces.size == 1) {
-            genericInterfaces[0]
-        } else {
-            formatter.javaClass.genericSuperclass
-        }
+        val type =
+            if (genericInterfaces.size == 1) {
+                genericInterfaces[0]
+            } else {
+                formatter.javaClass.genericSuperclass
+            }
 
         val actualType = (type as ParameterizedType).actualTypeArguments[0]
-        val finalType = when (actualType) {
-            is ParameterizedType -> actualType.rawType
-            else -> actualType
-        }
-
-        val className = finalType.toString().let { str ->
-            when {
-                str.startsWith("class ") -> str.substring(6)
-                str.startsWith("interface ") -> str.substring(10)
-                else -> str
+        val finalType =
+            when (actualType) {
+                is ParameterizedType -> actualType.rawType
+                else -> actualType
             }
-        }
+
+        val className =
+            finalType.toString().let { str ->
+                when {
+                    str.startsWith("class ") -> str.substring(6)
+                    str.startsWith("interface ") -> str.substring(10)
+                    else -> str
+                }
+            }
 
         return try {
             Class.forName(className)
@@ -1132,29 +1178,31 @@ object LogUtils {
 
         if (objClass.isAnonymousClass || objClass.isSynthetic) {
             val genericInterfaces = objClass.genericInterfaces
-            val className = if (genericInterfaces.size == 1) {
-                // interface
-                var type = genericInterfaces[0]
-                while (type is ParameterizedType) {
-                    type = type.rawType
+            val className =
+                if (genericInterfaces.size == 1) {
+                    // interface
+                    var type = genericInterfaces[0]
+                    while (type is ParameterizedType) {
+                        type = type.rawType
+                    }
+                    type.toString()
+                } else {
+                    // abstract class or lambda
+                    var type = objClass.genericSuperclass
+                    while (type is ParameterizedType) {
+                        type = type.rawType
+                    }
+                    type?.toString() ?: ""
                 }
-                type.toString()
-            } else {
-                // abstract class or lambda
-                var type = objClass.genericSuperclass
-                while (type is ParameterizedType) {
-                    type = type.rawType
-                }
-                type?.toString() ?: ""
-            }
 
-            val finalClassName = className.let { str ->
-                when {
-                    str.startsWith("class ") -> str.substring(6)
-                    str.startsWith("interface ") -> str.substring(10)
-                    else -> str
+            val finalClassName =
+                className.let { str ->
+                    when {
+                        str.startsWith("class ") -> str.substring(6)
+                        str.startsWith("interface ") -> str.substring(10)
+                        else -> str
+                    }
                 }
-            }
 
             return try {
                 Class.forName(finalClassName)
@@ -1166,6 +1214,4 @@ object LogUtils {
 
         return objClass
     }
-
-
 }

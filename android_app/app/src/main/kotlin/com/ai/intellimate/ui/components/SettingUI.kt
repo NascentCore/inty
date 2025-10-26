@@ -63,13 +63,9 @@ fun SettingSwitchItem(
 ) {
     Row(
         modifier =
-            modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .padding(horizontal = 12.dp)
-                .noRippleClickable {
-                    onToggle()
-                },
+            modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp).noRippleClickable {
+                onToggle()
+            },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
@@ -94,13 +90,9 @@ fun SettingNavigationItem(
 ) {
     Row(
         modifier =
-            modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .padding(horizontal = 12.dp)
-                .noRippleClickable {
-                    onClick()
-                },
+            modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp).noRippleClickable {
+                onClick()
+            },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val SPACER_WIDTH = 10.dp
@@ -132,10 +124,7 @@ fun SettingInfoItem(
     hasRedDot: Boolean = false,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .padding(horizontal = 12.dp),
+        modifier = modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
@@ -156,8 +145,7 @@ fun SettingDivider() {
     Spacer(Modifier.height(4.dp))
     Box(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .height(1.dp)
                 .background(
                     brush =
@@ -191,10 +179,7 @@ fun LogoutButton(onLogout: () -> Unit, modifier: Modifier = Modifier) {
                 .noRippleClickable { onLogout() }
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp)
-                .padding(horizontal = 12.dp),
+            modifier = Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Spacer(Modifier.weight(1f))

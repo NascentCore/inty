@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.max
 import kotlin.math.min
 
-
 @Composable
 fun HeartModalNavigationDrawer(
     drawerContent: @Composable () -> Unit,
@@ -51,28 +50,31 @@ fun HeartModalNavigationDrawer(
         var dragStartState by remember { mutableStateOf(DrawerValue.Closed) }
 
         // 计算位置
-        val targetOffset = if (drawerState == DrawerValue.Closed) {
-            screenWidthPx
-        } else {
-            screenWidthPx - drawerWidth
-        }
+        val targetOffset =
+            if (drawerState == DrawerValue.Closed) {
+                screenWidthPx
+            } else {
+                screenWidthPx - drawerWidth
+            }
         val currentOffset = if (isDragging) targetOffset + accumulatedDragOffset else targetOffset
 
         // 动画
-        val xOffset by animateFloatAsState(
-            targetValue = currentOffset,
-            animationSpec = tween(durationMillis = if (isDragging) 0 else 400)
-        )
+        val xOffset by
+            animateFloatAsState(
+                targetValue = currentOffset,
+                animationSpec = tween(durationMillis = if (isDragging) 0 else 400)
+            )
 
-        val maskLayerAlpha by animateFloatAsState(
-            targetValue = if (drawerState == DrawerValue.Closed) 0f else 0.6f,
-            animationSpec = tween(durationMillis = if (isDragging) 0 else 400),
-            finishedListener = {
-                if (it == 0f) {
-                    showMask = false
+        val maskLayerAlpha by
+            animateFloatAsState(
+                targetValue = if (drawerState == DrawerValue.Closed) 0f else 0.6f,
+                animationSpec = tween(durationMillis = if (isDragging) 0 else 400),
+                finishedListener = {
+                    if (it == 0f) {
+                        showMask = false
+                    }
                 }
-            }
-        )
+            )
 
         // 内容区域
         Box {
@@ -95,10 +97,8 @@ fun HeartModalNavigationDrawer(
                         accumulatedDragOffset = 0f
                     },
                     onDrag = { _, dragAmount ->
-                        accumulatedDragOffset = max(
-                            accumulatedDragOffset + dragAmount.x,
-                            -drawerWidth.toFloat()
-                        )
+                        accumulatedDragOffset =
+                            max(accumulatedDragOffset + dragAmount.x, -drawerWidth.toFloat())
                     }
                 )
             }
@@ -144,7 +144,6 @@ fun HeartModalNavigationDrawer(
                                 onDrawerStateChange(DrawerValue.Closed)
                             }
                         }
-
                         DrawerValue.Closed -> {
                             if (accumulatedDragOffset < -threshold) {
                                 onDrawerStateChange(DrawerValue.Open)
@@ -157,29 +156,23 @@ fun HeartModalNavigationDrawer(
                     when (dragStartState) {
                         DrawerValue.Open -> {
                             if (dragAmount.x > 0) {
-                                accumulatedDragOffset = min(
-                                    accumulatedDragOffset + dragAmount.x,
-                                    drawerWidth.toFloat()
-                                )
+                                accumulatedDragOffset =
+                                    min(accumulatedDragOffset + dragAmount.x, drawerWidth.toFloat())
                             } else if (dragAmount.x < 0) {
-                                accumulatedDragOffset = max(
-                                    accumulatedDragOffset + dragAmount.x,
-                                    0f
-                                )
+                                accumulatedDragOffset =
+                                    max(accumulatedDragOffset + dragAmount.x, 0f)
                             }
                         }
-
                         DrawerValue.Closed -> {
                             if (dragAmount.x < 0) {
-                                accumulatedDragOffset = max(
-                                    accumulatedDragOffset + dragAmount.x,
-                                    -drawerWidth.toFloat()
-                                )
+                                accumulatedDragOffset =
+                                    max(
+                                        accumulatedDragOffset + dragAmount.x,
+                                        -drawerWidth.toFloat()
+                                    )
                             } else if (dragAmount.x > 0) {
-                                accumulatedDragOffset = min(
-                                    accumulatedDragOffset + dragAmount.x,
-                                    0f
-                                )
+                                accumulatedDragOffset =
+                                    min(accumulatedDragOffset + dragAmount.x, 0f)
                             }
                         }
                     }
@@ -196,10 +189,8 @@ private fun EdgeDragArea(
     onDrag: (PointerInputChange, Offset) -> Unit,
 ) {
     Box(
-        modifier = Modifier
-            .width(20.dp)
-            .fillMaxSize()
-            .pointerInput(Unit) {
+        modifier =
+            Modifier.width(20.dp).fillMaxSize().pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = { onDragStart() },
                     onDragEnd = { onDragEnd() },
@@ -222,22 +213,23 @@ private fun MaskLayer(
     onMaskClick: () -> Unit,
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .alpha(
-                if (isDragging) {
-                    val progress = if (dragStartState == DrawerValue.Open) {
-                        1f - (accumulatedDragOffset / drawerWidth.toFloat())
+        modifier =
+            Modifier.fillMaxSize()
+                .alpha(
+                    if (isDragging) {
+                        val progress =
+                            if (dragStartState == DrawerValue.Open) {
+                                1f - (accumulatedDragOffset / drawerWidth.toFloat())
+                            } else {
+                                -accumulatedDragOffset / drawerWidth.toFloat()
+                            }
+                        (0.6f * progress).coerceIn(0f, 0.6f)
                     } else {
-                        -accumulatedDragOffset / drawerWidth.toFloat()
+                        maskLayerAlpha
                     }
-                    (0.6f * progress).coerceIn(0f, 0.6f)
-                } else {
-                    maskLayerAlpha
-                }
-            )
-            .background(color = Color(0xff000000))
-            .clickable { onMaskClick() }
+                )
+                .background(color = Color(0xff000000))
+                .clickable { onMaskClick() }
     )
 }
 
@@ -259,30 +251,32 @@ private fun DrawerContent(
     onDrag: (PointerInputChange, Offset) -> Unit,
 ) {
     Box(
-        modifier = Modifier
-            .onSizeChanged { onSizeChanged(it) }
-            .graphicsLayer {
-                translationX = if (isDragging) {
-                    when (dragStartState) {
-                        DrawerValue.Open -> screenWidthPx - drawerWidth + accumulatedDragOffset
-                        DrawerValue.Closed -> screenWidthPx + accumulatedDragOffset
-                    }
-                } else {
-                    xOffset
-                }
-            }
-            .pointerInput(Unit) {
-                if (enableGesture) {
-                    detectDragGestures(
-                        onDragStart = { onDragStart() },
-                        onDragEnd = { onDragEnd() },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            onDrag(change, dragAmount)
+        modifier =
+            Modifier.onSizeChanged { onSizeChanged(it) }
+                .graphicsLayer {
+                    translationX =
+                        if (isDragging) {
+                            when (dragStartState) {
+                                DrawerValue.Open ->
+                                    screenWidthPx - drawerWidth + accumulatedDragOffset
+                                DrawerValue.Closed -> screenWidthPx + accumulatedDragOffset
+                            }
+                        } else {
+                            xOffset
                         }
-                    )
                 }
-            }
+                .pointerInput(Unit) {
+                    if (enableGesture) {
+                        detectDragGestures(
+                            onDragStart = { onDragStart() },
+                            onDragEnd = { onDragEnd() },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                onDrag(change, dragAmount)
+                            }
+                        )
+                    }
+                }
     ) {
         drawerContent()
     }

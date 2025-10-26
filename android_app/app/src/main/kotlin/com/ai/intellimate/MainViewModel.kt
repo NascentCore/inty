@@ -15,8 +15,8 @@ import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
-import com.ai.intellimate.chat.ChatViewModel
 import com.ai.intellimate.audio.AudioManager
+import com.ai.intellimate.chat.ChatViewModel
 import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.intellimate.utils.HttpErrorHandler
@@ -73,7 +73,6 @@ class MainViewModel : BaseVM() {
     private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile = _userProfile.asStateFlow()
 
-
     init {
         // 使用统一启动管理器的数据快速初始化UI
         loadStartupData()
@@ -90,9 +89,7 @@ class MainViewModel : BaseVM() {
     }
 
     fun updateUserInfoLocal() {
-        _userProfile.update {
-            UserProfileManager.getUserProfile()
-        }
+        _userProfile.update { UserProfileManager.getUserProfile() }
     }
 
     fun loadBusinessData() {
@@ -116,13 +113,11 @@ class MainViewModel : BaseVM() {
             HomeTabIndex.Conversation -> {
                 chatViewModel?.getConversations()
             }
-
             HomeTabIndex.Profile -> {
                 // 使用refreshCreatedAgentsListIfOnTab()来避免重复请求
                 // 这样可以在一个地方统一管理Profile tab的数据刷新逻辑
                 refreshCreatedAgentsListIfOnTab()
             }
-
             else -> {}
         }
     }
@@ -131,8 +126,7 @@ class MainViewModel : BaseVM() {
     private fun stopAllAudioPlayback() {
         try {
             // 通过AudioManager单例停止所有播放
-            val audioManager =
-                AudioManager.getInstance(Utils.getApp(), viewModelScope)
+            val audioManager = AudioManager.getInstance(Utils.getApp(), viewModelScope)
             audioManager.stopAllPlayback()
         } catch (e: Exception) {
             LogUtils.e("MainViewModel - 停止音频播放失败: ${e.message}")
@@ -194,10 +188,14 @@ class MainViewModel : BaseVM() {
 
                 BillingRepository.fetchRemote()
             } catch (e: CancellationException) {
-                LogUtils.e("BillingRepository MainViewModel Member status update cancelled: ${e.message}")
+                LogUtils.e(
+                    "BillingRepository MainViewModel Member status update cancelled: ${e.message}"
+                )
                 // 协程被取消是正常情况，不需要特殊处理
             } catch (e: Exception) {
-                LogUtils.e("BillingRepository MainViewModel Member status update failed: ${e.message}")
+                LogUtils.e(
+                    "BillingRepository MainViewModel Member status update failed: ${e.message}"
+                )
                 // 不影响主流程，静默处理
             }
         }
@@ -238,15 +236,18 @@ class MainViewModel : BaseVM() {
                     is HttpResult.Success -> {
                         if (result.data.isEmpty()) {
                             hasMoreUserAgents = false
-                            LogUtils.d("loadUserCreatedAgentsSilently - No more user created agents to load")
+                            LogUtils.d(
+                                "loadUserCreatedAgentsSilently - No more user created agents to load"
+                            )
                         } else {
                             // 静默更新数据，直接替换
                             userCreatedAgents.clear()
                             userCreatedAgents.addAll(result.data)
-                            LogUtils.d("loadUserCreatedAgentsSilently - 静默更新数据: ${result.data.size}个")
+                            LogUtils.d(
+                                "loadUserCreatedAgentsSilently - 静默更新数据: ${result.data.size}个"
+                            )
                         }
                     }
-
                     is HttpResult.Failure -> {
                         LogUtils.e("loadUserCreatedAgentsSilently - API failure: ${result.message}")
                     }
@@ -282,11 +283,12 @@ class MainViewModel : BaseVM() {
                             } else {
                                 // 后续页，追加到现有列表
                                 userCreatedAgents.addAll(result.data)
-                                LogUtils.d("loadUserCreatedAgents - 追加第${currentUserAgentsPage + 1}页数据: ${result.data.size}个，总计: ${userCreatedAgents.size}个")
+                                LogUtils.d(
+                                    "loadUserCreatedAgents - 追加第${currentUserAgentsPage + 1}页数据: ${result.data.size}个，总计: ${userCreatedAgents.size}个"
+                                )
                             }
                         }
                     }
-
                     is HttpResult.Failure -> {
                         LogUtils.e("loadUserCreatedAgents - API failure: ${result.message}")
                         //                        showNetworkAwareError(result.message)
@@ -335,7 +337,6 @@ class MainViewModel : BaseVM() {
                             refreshCreatedAgentsListIfOnTab()
                             onSuccess(result.data)
                         }
-
                         is HttpResult.Failure -> {
                             LogUtils.e("createAgent error: $result")
                             val errorMessage =
@@ -437,21 +438,20 @@ class MainViewModel : BaseVM() {
                             ToastUtils.showShort(R.string.character_deleted_successfully)
                             onSuccess()
                         }
-
                         is HttpResult.Failure -> {
                             val errorMessage =
                                 result.message.ifBlank {
-                                    Utils.getApp().getString(
-                                        R.string.operation_failed_check_network,
-                                        Utils.getApp().getString(R.string.delete_failed),
-                                        Utils.getApp().getString(R.string.check_network_connection),
-                                    )
+                                    Utils.getApp()
+                                        .getString(
+                                            R.string.operation_failed_check_network,
+                                            Utils.getApp().getString(R.string.delete_failed),
+                                            Utils.getApp()
+                                                .getString(R.string.check_network_connection),
+                                        )
                                 }
                             ToastUtils.showShort(
-                                Utils.getApp().getString(
-                                    R.string.delete_failed_with_reason,
-                                    errorMessage
-                                )
+                                Utils.getApp()
+                                    .getString(R.string.delete_failed_with_reason, errorMessage)
                             )
                             onError(errorMessage)
                         }
@@ -495,22 +495,21 @@ class MainViewModel : BaseVM() {
                             // Toast removed to avoid duplicate - handled by calling activity
                             onSuccess(result.data)
                         }
-
                         is HttpResult.Failure -> {
                             LogUtils.e("updateAgent error: $result")
                             val errorMessage =
                                 result.message.ifBlank {
-                                    Utils.getApp().getString(
-                                        R.string.operation_failed_check_network,
-                                        Utils.getApp().getString(R.string.update_failed),
-                                        Utils.getApp().getString(R.string.check_network_connection),
-                                    )
+                                    Utils.getApp()
+                                        .getString(
+                                            R.string.operation_failed_check_network,
+                                            Utils.getApp().getString(R.string.update_failed),
+                                            Utils.getApp()
+                                                .getString(R.string.check_network_connection),
+                                        )
                                 }
                             ToastUtils.showShort(
-                                Utils.getApp().getString(
-                                    R.string.update_failed_with_reason,
-                                    errorMessage
-                                )
+                                Utils.getApp()
+                                    .getString(R.string.update_failed_with_reason, errorMessage)
                             )
                             onError(errorMessage)
                         }
@@ -550,7 +549,6 @@ class MainViewModel : BaseVM() {
                 IntySetting.setAppUpdateTips(rsp.update_required)
                 IntySetting.setAppGooglePlayUrl(rsp.download_url ?: "")
             }
-
             is HttpResult.Failure -> {
                 LogUtils.w("result.message")
             }

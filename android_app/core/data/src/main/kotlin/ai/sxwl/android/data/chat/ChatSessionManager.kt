@@ -40,10 +40,7 @@ object ChatSessionManager {
         }
     }
 
-    /**
-     * 从本地存储加载会话数据
-     * 暂时禁用数据持久化，避免序列化问题
-     */
+    /** 从本地存储加载会话数据 暂时禁用数据持久化，避免序列化问题 */
     private fun loadSessionFromStorage(agentId: String): AgentChatSession {
         val session = AgentChatSession()
 
@@ -54,10 +51,7 @@ object ChatSessionManager {
         return session
     }
 
-    /**
-     * 保存会话数据到本地存储
-     * 暂时禁用数据持久化，避免序列化问题
-     */
+    /** 保存会话数据到本地存储 暂时禁用数据持久化，避免序列化问题 */
     private fun saveSessionToStorage(agentId: String, session: AgentChatSession) {
         // 暂时禁用数据持久化，避免序列化问题
         // TODO: 实现更简单的数据存储方案
@@ -74,18 +68,24 @@ object ChatSessionManager {
 
     suspend fun ensureInitialHistory(agentId: String, pageSize: Int = DEFAULT_PAGE_SIZE) {
         val session = getSession(agentId)
-        LogUtils.i("ChatSessionManager.ensureInitialHistory called for $agentId, isInitialLoaded=${session.isInitialLoaded}")
+        LogUtils.i(
+            "ChatSessionManager.ensureInitialHistory called for $agentId, isInitialLoaded=${session.isInitialLoaded}"
+        )
         if (session.isInitialLoaded) return
         session.lock.withLock {
             if (session.isInitialLoaded) return
             try {
-                LogUtils.i("ChatSessionManager.ensureInitialHistory calling API for $agentId with pageSize=$pageSize, offset=0")
+                LogUtils.i(
+                    "ChatSessionManager.ensureInitialHistory calling API for $agentId with pageSize=$pageSize, offset=0"
+                )
                 val api: IChatApi = NetServiceMgr.getChatApi()
                 val result = api.getMsgs(agentId, pageSize, 0)
                 when (result) {
                     is HttpResult.Success -> {
                         val newMessages = result.data.messages ?: emptyList()
-                        LogUtils.i("ChatSessionManager.ensureInitialHistory API returned ${newMessages.size} messages for $agentId")
+                        LogUtils.i(
+                            "ChatSessionManager.ensureInitialHistory API returned ${newMessages.size} messages for $agentId"
+                        )
 
                         // 调试：打印每条消息的详细信息
                         newMessages.forEachIndexed { index, msg ->
@@ -105,7 +105,9 @@ object ChatSessionManager {
                         }
 
                         val unique = newMessages.distinctBy { keyFor(it) }
-                        LogUtils.i("ChatSessionManager.ensureInitialHistory after distinctBy: ${unique.size} unique messages")
+                        LogUtils.i(
+                            "ChatSessionManager.ensureInitialHistory after distinctBy: ${unique.size} unique messages"
+                        )
 
                         session.messages.value = unique
                         session.hasMore.value = result.data.hasMore
@@ -115,11 +117,14 @@ object ChatSessionManager {
                         // 保存到本地存储
                         saveSessionToStorage(agentId, session)
 
-                        LogUtils.i("ChatSessionManager.ensureInitialHistory loaded ${unique.size} msgs for $agentId, hasMore=${session.hasMore.value}")
+                        LogUtils.i(
+                            "ChatSessionManager.ensureInitialHistory loaded ${unique.size} msgs for $agentId, hasMore=${session.hasMore.value}"
+                        )
                     }
-
                     is HttpResult.Failure -> {
-                        LogUtils.e("ChatSessionManager.ensureInitialHistory failure for $agentId: ${result.message}")
+                        LogUtils.e(
+                            "ChatSessionManager.ensureInitialHistory failure for $agentId: ${result.message}"
+                        )
                         // 标记已尝试加载，避免重复打接口；仍允许后续手动刷新时再拉
                         session.isInitialLoaded = true
                         saveSessionToStorage(agentId, session)
@@ -156,11 +161,14 @@ object ChatSessionManager {
                         // 保存到本地存储
                         saveSessionToStorage(agentId, session)
 
-                        LogUtils.i("ChatSessionManager.loadMore for $agentId loaded ${more.size}, hasMore=${session.hasMore.value}, offset=${session.offset}")
+                        LogUtils.i(
+                            "ChatSessionManager.loadMore for $agentId loaded ${more.size}, hasMore=${session.hasMore.value}, offset=${session.offset}"
+                        )
                     }
-
                     is HttpResult.Failure -> {
-                        LogUtils.e("ChatSessionManager.loadMore failure for $agentId: ${result.message}")
+                        LogUtils.e(
+                            "ChatSessionManager.loadMore failure for $agentId: ${result.message}"
+                        )
                     }
                 }
             } catch (e: Exception) {
@@ -188,17 +196,19 @@ object ChatSessionManager {
 
             val api: IChatApi = NetServiceMgr.getChatApi()
             val req = SendMsgReq(listOf(userMsg))
-            val result = try {
-                api.sendMsg(agentId, req)
-            } catch (e: Exception) {
-                LogUtils.e("ChatSessionManager.sendMessage exception: ${e.message}")
-                HttpResult.Failure(e.message ?: "unknown error", -1)
-            }
+            val result =
+                try {
+                    api.sendMsg(agentId, req)
+                } catch (e: Exception) {
+                    LogUtils.e("ChatSessionManager.sendMessage exception: ${e.message}")
+                    HttpResult.Failure(e.message ?: "unknown error", -1)
+                }
 
             // 2) 移除loading
-            session.messages.value = session.messages.value.filterNot {
-                it.content == LOADING_PLACEHOLDER_CONTENT && it.role == ROLE_ASSISTANT
-            }
+            session.messages.value =
+                session.messages.value.filterNot {
+                    it.content == LOADING_PLACEHOLDER_CONTENT && it.role == ROLE_ASSISTANT
+                }
 
             // 3) 追加AI回复
             if (result is HttpResult.Success) {
@@ -227,42 +237,40 @@ object ChatSessionManager {
 
     fun updateMessageAudioUrl(agentId: String, messageId: String, audioUrl: String) {
         val session = getSession(agentId)
-        session.messages.value = session.messages.value.map { msg ->
-            if (msg.localMsgId == messageId) msg.copy(audio_url = audioUrl) else msg
-        }
+        session.messages.value =
+            session.messages.value.map { msg ->
+                if (msg.localMsgId == messageId) msg.copy(audio_url = audioUrl) else msg
+            }
 
         // 保存更新后的消息到本地存储
         saveSessionToStorage(agentId, session)
     }
 
-    /**
-     * 清理指定agent的聊天数据
-     */
+    /** 清理指定agent的聊天数据 */
     fun clearChatData(agentId: String) {
         agentIdToSession.remove(agentId)
         IntySetting.clearChatData(agentId)
         LogUtils.i("ChatSessionManager cleared chat data for agent $agentId")
     }
 
-    /**
-     * 清理所有聊天数据
-     */
+    /** 清理所有聊天数据 */
     fun clearAllChatData() {
         agentIdToSession.clear()
         IntySetting.clearAllChatData()
         LogUtils.i("ChatSessionManager cleared all chat data")
     }
 
-    /**
-     * 增量同步：检查服务器是否有新消息
-     * 只在本地有数据且已初始化时调用，避免重复请求
-     */
+    /** 增量同步：检查服务器是否有新消息 只在本地有数据且已初始化时调用，避免重复请求 */
     suspend fun syncLatestMessages(agentId: String, pageSize: Int = DEFAULT_PAGE_SIZE) {
         val session = getSession(agentId)
-        LogUtils.i("ChatSessionManager.syncLatestMessages called for $agentId, isInitialLoaded=${session.isInitialLoaded}, messagesCount=${session.messages.value.size}")
+        LogUtils.i(
+            "ChatSessionManager.syncLatestMessages called for $agentId, isInitialLoaded=${session.isInitialLoaded}, messagesCount=${session.messages.value.size}"
+        )
         if (!session.isInitialLoaded || session.messages.value.isEmpty()) {
             // 如果没有初始化或没有本地数据，使用正常的初始化流程
-            LogUtils.i("ChatSessionManager.syncLatestMessages calling ensureInitialHistory for $agentId")
+            LogUtils.i(
+                "ChatSessionManager.syncLatestMessages calling ensureInitialHistory for $agentId"
+            )
             ensureInitialHistory(agentId, pageSize)
             return
         }
@@ -278,12 +286,14 @@ object ChatSessionManager {
                         val localMessages = session.messages.value
 
                         // 检查是否有新消息（通过比较消息ID或内容）
-                        val hasNewMessages = serverMessages.any { serverMsg ->
-                            localMessages.none { localMsg ->
-                                localMsg.id == serverMsg.id ||
-                                        (localMsg.content == serverMsg.content && localMsg.role == serverMsg.role)
+                        val hasNewMessages =
+                            serverMessages.any { serverMsg ->
+                                localMessages.none { localMsg ->
+                                    localMsg.id == serverMsg.id ||
+                                        (localMsg.content == serverMsg.content &&
+                                            localMsg.role == serverMsg.role)
+                                }
                             }
-                        }
 
                         if (hasNewMessages) {
                             // 有新消息，重新加载完整数据
@@ -295,14 +305,19 @@ object ChatSessionManager {
                             // 保存到本地存储
                             saveSessionToStorage(agentId, session)
 
-                            LogUtils.i("ChatSessionManager.syncLatestMessages found new messages for $agentId, updated ${unique.size} messages")
+                            LogUtils.i(
+                                "ChatSessionManager.syncLatestMessages found new messages for $agentId, updated ${unique.size} messages"
+                            )
                         } else {
-                            LogUtils.i("ChatSessionManager.syncLatestMessages no new messages for $agentId")
+                            LogUtils.i(
+                                "ChatSessionManager.syncLatestMessages no new messages for $agentId"
+                            )
                         }
                     }
-
                     is HttpResult.Failure -> {
-                        LogUtils.e("ChatSessionManager.syncLatestMessages failure for $agentId: ${result.message}")
+                        LogUtils.e(
+                            "ChatSessionManager.syncLatestMessages failure for $agentId: ${result.message}"
+                        )
                     }
                 }
             } catch (e: Exception) {

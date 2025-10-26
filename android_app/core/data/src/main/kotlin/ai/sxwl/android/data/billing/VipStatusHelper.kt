@@ -4,8 +4,7 @@ import ai.sxwl.android.utils.LogUtils
 import android.app.Activity
 
 /**
- * VIP状态检查工具类
- * 统一管理VIP状态检查和购买逻辑
+ * VIP状态检查工具类 统一管理VIP状态检查和购买逻辑
  *
  * 职责：
  * - 简化VIP状态检查

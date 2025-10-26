@@ -61,9 +61,9 @@ fun AgentBackground(
     val optimalContentScale =
         if (
             currentImageWidth != null &&
-            currentImageHeight != null &&
-            currentImageWidth > 0 &&
-            currentImageHeight > 0
+                currentImageHeight != null &&
+                currentImageWidth > 0 &&
+                currentImageHeight > 0
         ) {
             calculateOptimalContentScale(
                 containerWidth = imageWidthDp,
@@ -78,21 +78,19 @@ fun AgentBackground(
     Box(modifier = modifier) {
         Column(
             modifier =
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState(), false)
-                    .onSizeChanged {
-                        val newHeight = with(density) { it.height.toDp().value.roundToInt() }
-                        if (newHeight > imageHeightDp) {
-                            imageHeightDp = newHeight
-                        }
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState(), false).onSizeChanged {
+                    val newHeight = with(density) { it.height.toDp().value.roundToInt() }
+                    if (newHeight > imageHeightDp) {
+                        imageHeightDp = newHeight
                     }
+                }
         ) {
             AsyncImage(
                 modifier = Modifier.size(imageWidthDp.dp, imageHeightDp.dp),
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(agentInfo?.getAlbumImage())
-                    .build(),
+                model =
+                    ImageRequest.Builder(LocalContext.current)
+                        .data(agentInfo?.getAlbumImage())
+                        .build(),
                 contentDescription = null,
                 alignment = Alignment.TopCenter,
                 contentScale = optimalContentScale,
@@ -111,8 +109,7 @@ fun AgentBackground(
             val colors = listOf(Color(0xFF000000), Color(0x00000000))
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .height(120.dp)
                         .background(brush = Brush.verticalGradient(colors))
             )
@@ -121,8 +118,7 @@ fun AgentBackground(
             val bottomColors = listOf(Color(0x001C1523), Color(0xFF1C1523))
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .height(300.dp)
                         .background(brush = Brush.verticalGradient(bottomColors))
                         .align(Alignment.BottomCenter)

@@ -52,7 +52,9 @@ internal class BillingPriceManager(
                 .build()
 
         billingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
-            LogUtils.d("Google Play 价格查询结果: 响应码=${billingResult.responseCode}, 详情: ${billingResult.debugMessage}")
+            LogUtils.d(
+                "Google Play 价格查询结果: 响应码=${billingResult.responseCode}, 详情: ${billingResult.debugMessage}"
+            )
 
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
@@ -73,19 +75,19 @@ internal class BillingPriceManager(
                                 )
                             }
                         }
-                    } ?: run {
-                        LogUtils.w("Google Play返回的商品列表为null")
-                        eventScope.launch {
-                            eventFlow.emit(
-                                BillingEvent.SkuDetailsQueryFailed(
-                                    billingResult.responseCode,
-                                    "Google Play返回的商品列表为null",
-                                )
-                            )
-                        }
                     }
+                        ?: run {
+                            LogUtils.w("Google Play返回的商品列表为null")
+                            eventScope.launch {
+                                eventFlow.emit(
+                                    BillingEvent.SkuDetailsQueryFailed(
+                                        billingResult.responseCode,
+                                        "Google Play返回的商品列表为null",
+                                    )
+                                )
+                            }
+                        }
                 }
-
                 BillingClient.BillingResponseCode.BILLING_UNAVAILABLE,
                 BillingClient.BillingResponseCode.DEVELOPER_ERROR,
                 BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE,
@@ -101,7 +103,6 @@ internal class BillingPriceManager(
                         )
                     }
                 }
-
                 else -> {
                     // 使用统一的错误处理
                     BillingErrorHandler.handlePriceQueryError(billingResult)
@@ -141,8 +142,8 @@ internal class BillingPriceManager(
                 // 检查价格是否有变化
                 if (
                     currentPlan.price != correctedPrice ||
-                    currentPlan.currencyCode != currencyCode ||
-                    currentPlan.priceAmountMicros != micros
+                        currentPlan.currencyCode != currencyCode ||
+                        currentPlan.priceAmountMicros != micros
                 ) {
 
                     val oldPrice = currentPlan.price
@@ -155,7 +156,9 @@ internal class BillingPriceManager(
                         )
                     updatedCount++
 
-                    LogUtils.i("✅ 价格有变化，更新计划: $planId, 名称: ${currentPlan.name}, 价格: $oldPrice -> $correctedPrice, 货币: ${currentPlan.currencyCode} -> $currencyCode")
+                    LogUtils.i(
+                        "✅ 价格有变化，更新计划: $planId, 名称: ${currentPlan.name}, 价格: $oldPrice -> $correctedPrice, 货币: ${currentPlan.currencyCode} -> $currencyCode"
+                    )
                 } else {
                     LogUtils.d("ℹ️ 价格无变化，跳过: $planId (${currentPlan.name})")
                 }

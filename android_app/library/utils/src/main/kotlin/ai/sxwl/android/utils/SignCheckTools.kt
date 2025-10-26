@@ -13,9 +13,7 @@ import java.security.cert.CertificateEncodingException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 
-/**
- * 应用签名自校验工具类
- */
+/** 应用签名自校验工具类 */
 class SignCheckTools(private val context: Context) {
 
     private val TAG = "SignCheckTools"
@@ -33,16 +31,12 @@ class SignCheckTools(private val context: Context) {
 
     fun getRealCer(): String? = realCer
 
-    /**
-     * 设置正确的签名
-     */
+    /** 设置正确的签名 */
     fun setRealCer(realCer: String) {
         this.realCer = realCer
     }
 
-    /**
-     * 获取应用的签名
-     */
+    /** 获取应用的签名 */
     fun getCertificateSHA1Fingerprint(): String? {
         try {
             // 获取包管理器
@@ -113,9 +107,7 @@ class SignCheckTools(private val context: Context) {
         }
     }
 
-    /**
-     * 将字节数组转换为16进制字符串
-     */
+    /** 将字节数组转换为16进制字符串 */
     private fun byte2HexFormatted(arr: ByteArray): String {
         val str = kotlin.text.StringBuilder(arr.size * 2)
 
@@ -132,6 +124,7 @@ class SignCheckTools(private val context: Context) {
 
     /**
      * 检测签名是否正确
+     *
      * @return true 签名正常 false 签名不正常
      */
     fun check(): Boolean {
@@ -145,9 +138,7 @@ class SignCheckTools(private val context: Context) {
         }
     }
 
-    /**
-     * 获取MD5签名
-     */
+    /** 获取MD5签名 */
     fun getCertificateMD5Fingerprint(): String? {
         try {
             val pm = context.packageManager
@@ -214,9 +205,7 @@ class SignCheckTools(private val context: Context) {
         }
     }
 
-    /**
-     * 获取SHA256签名
-     */
+    /** 获取SHA256签名 */
     fun getCertificateSHA256Fingerprint(): String? {
         try {
             val pm = context.packageManager

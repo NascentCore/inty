@@ -12,17 +12,12 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStream
 
-/**
- * 文件IO工具类
- * 提供文件IO相关的工具方法
- */
+/** 文件IO工具类 提供文件IO相关的工具方法 */
 object FileIoUtils {
 
     private const val BUFFER_SIZE = 524288
 
-    /**
-     * 从输入流写入文件
-     */
+    /** 从输入流写入文件 */
     fun writeFileFromIS(filePath: String?, inputStream: InputStream?): Boolean {
         val file = FileUtils.getFileByPath(filePath)
         return if (file != null) {
@@ -32,9 +27,7 @@ object FileIoUtils {
         }
     }
 
-    /**
-     * 从输入流写入文件
-     */
+    /** 从输入流写入文件 */
     fun writeFileFromIS(filePath: String?, inputStream: InputStream?, append: Boolean): Boolean {
         val file = FileUtils.getFileByPath(filePath)
         return if (file != null) {
@@ -44,16 +37,12 @@ object FileIoUtils {
         }
     }
 
-    /**
-     * 从输入流写入文件
-     */
+    /** 从输入流写入文件 */
     fun writeFileFromIS(file: File?, inputStream: InputStream?): Boolean {
         return writeFileFromIS(file, inputStream, false)
     }
 
-    /**
-     * 从输入流写入文件
-     */
+    /** 从输入流写入文件 */
     fun writeFileFromIS(file: File?, inputStream: InputStream?, append: Boolean): Boolean {
         if (file == null || inputStream == null) return false
 
@@ -87,9 +76,7 @@ object FileIoUtils {
         }
     }
 
-    /**
-     * 读取文件到字符串
-     */
+    /** 读取文件到字符串 */
     fun readFile2String(filePath: String?): String {
         val file = FileUtils.getFileByPath(filePath)
         return if (file != null) {
@@ -99,9 +86,7 @@ object FileIoUtils {
         }
     }
 
-    /**
-     * 读取文件到字符串
-     */
+    /** 读取文件到字符串 */
     fun readFile2String(filePath: String?, charsetName: String?): String {
         val file = FileUtils.getFileByPath(filePath)
         return if (file != null) {
@@ -111,27 +96,24 @@ object FileIoUtils {
         }
     }
 
-    /**
-     * 读取文件到字符串
-     */
+    /** 读取文件到字符串 */
     fun readFile2String(file: File?): String {
         return readFile2String(file, "UTF-8")
     }
 
-    /**
-     * 读取文件到字符串
-     */
+    /** 读取文件到字符串 */
     fun readFile2String(file: File?, charsetName: String?): String {
         if (file == null || !file.exists()) return ""
 
         var reader: BufferedReader? = null
         try {
             val sb = kotlin.text.StringBuilder()
-            val charset = try {
-                charsetName ?: "UTF-8"
-            } catch (e: Exception) {
-                "UTF-8" // 默认使用UTF-8
-            }
+            val charset =
+                try {
+                    charsetName ?: "UTF-8"
+                } catch (e: Exception) {
+                    "UTF-8" // 默认使用UTF-8
+                }
 
             reader = BufferedReader(InputStreamReader(FileInputStream(file), charset))
             var line: String?
@@ -151,9 +133,7 @@ object FileIoUtils {
         }
     }
 
-    /**
-     * 读取文件到字节数组
-     */
+    /** 读取文件到字节数组 */
     fun readFile2Bytes(filePath: String?): ByteArray {
         val file = FileUtils.getFileByPath(filePath)
         return if (file != null) {
@@ -163,9 +143,7 @@ object FileIoUtils {
         }
     }
 
-    /**
-     * 读取文件到字节数组
-     */
+    /** 读取文件到字节数组 */
     fun readFile2Bytes(file: File?): ByteArray {
         if (file == null || !file.exists()) return ByteArray(0)
 
@@ -194,9 +172,7 @@ object FileIoUtils {
         }
     }
 
-    /**
-     * 写入字符串到文件
-     */
+    /** 写入字符串到文件 */
     fun writeFileFromString(filePath: String?, content: String?): Boolean {
         val file = FileUtils.getFileByPath(filePath)
         return if (file != null) {
@@ -206,9 +182,7 @@ object FileIoUtils {
         }
     }
 
-    /**
-     * 写入字符串到文件
-     */
+    /** 写入字符串到文件 */
     fun writeFileFromString(filePath: String?, content: String?, append: Boolean): Boolean {
         val file = FileUtils.getFileByPath(filePath)
         return if (file != null) {
@@ -218,16 +192,12 @@ object FileIoUtils {
         }
     }
 
-    /**
-     * 写入字符串到文件
-     */
+    /** 写入字符串到文件 */
     fun writeFileFromString(file: File?, content: String?): Boolean {
         return writeFileFromString(file, content, false)
     }
 
-    /**
-     * 写入字符串到文件
-     */
+    /** 写入字符串到文件 */
     fun writeFileFromString(file: File?, content: String?, append: Boolean): Boolean {
         if (file == null || content == null) return false
 
@@ -252,9 +222,7 @@ object FileIoUtils {
         }
     }
 
-    /**
-     * 写入字节数组到文件
-     */
+    /** 写入字节数组到文件 */
     fun writeFileFromBytes(filePath: String?, bytes: ByteArray?): Boolean {
         val file = FileUtils.getFileByPath(filePath)
         return if (file != null) {
@@ -264,9 +232,7 @@ object FileIoUtils {
         }
     }
 
-    /**
-     * 写入字节数组到文件
-     */
+    /** 写入字节数组到文件 */
     fun writeFileFromBytes(filePath: String?, bytes: ByteArray?, append: Boolean): Boolean {
         val file = FileUtils.getFileByPath(filePath)
         return if (file != null) {
@@ -276,16 +242,12 @@ object FileIoUtils {
         }
     }
 
-    /**
-     * 写入字节数组到文件
-     */
+    /** 写入字节数组到文件 */
     fun writeFileFromBytes(file: File?, bytes: ByteArray?): Boolean {
         return writeFileFromBytes(file, bytes, false)
     }
 
-    /**
-     * 写入字节数组到文件
-     */
+    /** 写入字节数组到文件 */
     fun writeFileFromBytes(file: File?, bytes: ByteArray?, append: Boolean): Boolean {
         if (file == null || bytes == null) return false
 

@@ -102,7 +102,6 @@ class ExplorePagingSource(
                             nextKey = if (hasMore) page + 1 else null,
                         )
                     }
-
                     is NetworkResult.Error -> {
                         LogUtils.e("ExplorePagingSource - 网络加载失败: ${result.error}")
                         LoadResult.Error(Exception(result.error))
@@ -137,7 +136,6 @@ class ExplorePagingSource(
                 is HttpResult.Success -> {
                     NetworkResult.Success(result.data)
                 }
-
                 is HttpResult.Failure -> {
                     NetworkResult.Error(result.message)
                 }
@@ -172,8 +170,8 @@ class ExplorePagingSource(
     private fun shouldUpdateFromNetwork(): Boolean {
         // 确保用户账户已就绪（包括游客账户）且token有效
         return UnifiedStartupManager.isUserAccountReady() &&
-                IntySetting.isLogin() &&
-                IntySetting.getCurToken().isNotEmpty()
+            IntySetting.isLogin() &&
+            IntySetting.getCurToken().isNotEmpty()
     }
 }
 

@@ -106,9 +106,7 @@ internal fun ChatPage(
     LifecycleResumeEffect(isCurrentPage) {
         // 应用恢复时，增量同步最新消息
         chatViewModel.syncLatestMessages()
-        onPauseOrDispose {
-            chatViewModel.pauseVoicePlayback()
-        }
+        onPauseOrDispose { chatViewModel.pauseVoicePlayback() }
     }
 
     // 页面生命周期管理：离开页面时重置播放状态
@@ -146,14 +144,14 @@ internal fun ChatPage(
 
     // Keep talking二状态设置：默认跟随全局设置
     var agentKeepTalking by
-    remember(agentInfo?.id) {
-        mutableStateOf(
-            agentInfo?.let {
-                // 获取角色专用设置，如果不存在则使用全局设置
-                IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
-            } ?: false
-        )
-    }
+        remember(agentInfo?.id) {
+            mutableStateOf(
+                agentInfo?.let {
+                    // 获取角色专用设置，如果不存在则使用全局设置
+                    IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
+                } ?: false
+            )
+        }
 
     // 用于实时更新按钮显示状态
     var shouldShowButton by remember(agentInfo?.id) { mutableStateOf(agentKeepTalking) }
@@ -182,24 +180,16 @@ internal fun ChatPage(
         val scope = rememberCoroutineScope()
 
         Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent),
+            modifier = Modifier.fillMaxSize().background(Color.Transparent),
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
         ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .imePadding()
-            ) {
+            Column(modifier = Modifier.padding(innerPadding).imePadding()) {
                 Spacer(Modifier.height(48.dp))
 
                 agentInfo?.let { info ->
                     ChatTopBar(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 18.dp),
+                        modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
                         agentInfo = info,
                         showBackButton = showBackButton,
                         onBack = onBack,
@@ -265,19 +255,17 @@ internal fun ChatPage(
                     totalItemsForUi > visibleItemsForUi.size + LOAD_MORE_MIN_EXTRA_ITEMS
                 val isNearTopForUi =
                     totalItemsForUi > 0 &&
-                            lastVisibleIndexForUi >= (totalItemsForUi - LOAD_MORE_NEAR_TOP_THRESHOLD)
+                        lastVisibleIndexForUi >= (totalItemsForUi - LOAD_MORE_NEAR_TOP_THRESHOLD)
                 val hasScrolledForUi =
                     listState.firstVisibleItemIndex > 0 ||
-                            listState.firstVisibleItemScrollOffset > 0
+                        listState.firstVisibleItemScrollOffset > 0
                 val showLoadMoreUi =
                     hasMoreMessages &&
-                            (isLoadingMore ||
-                                    (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
+                        (isLoadingMore ||
+                            (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
 
                 LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
                     state = listState,
                     reverseLayout = true, // ⚠️此处使用了reverse，导致布局列表是反向的
                 ) {
@@ -287,64 +275,62 @@ internal fun ChatPage(
                     val filteredChatMessages = chatMessages.filter { !it.isOpening() }
                     // 添加安全检查
                     runCatching {
-                        if (filteredChatMessages.isNotEmpty()) {
-                            // 创建消息列表的副本以避免并发修改
-                            val messagesCopy = filteredChatMessages.toList()
-                            val items =
-                                messagesCopy.filter {
-                                    !(it.role == "user" && it.content == "continue")
-                                }
-                            if (items.isNotEmpty()) {
-                                itemsIndexed(
-                                    items,
-                                    key = { index, info ->
-                                        // 使用消息的唯一标识符作为 key，如果没有则使用索引和内容的组合
-                                        info.localMsgId.ifEmpty {
-                                            "${index}_${info.role}_${info.content.hashCode()}_${index}"
-                                        }
-                                    },
-                                ) { index, item ->
-                                    runCatching {
-                                        // 明确数据边界
-                                        if (index < items.size) {
-                                            ChatItem(
-                                                item,
-                                                isCurrentPage = isCurrentPage,
-                                                chatViewModel = chatViewModel,
-                                            )
-                                        }
-                                        Spacer(Modifier.height(16.dp))
+                            if (filteredChatMessages.isNotEmpty()) {
+                                // 创建消息列表的副本以避免并发修改
+                                val messagesCopy = filteredChatMessages.toList()
+                                val items =
+                                    messagesCopy.filter {
+                                        !(it.role == "user" && it.content == "continue")
                                     }
-                                        .onFailure { e ->
-                                            // 渲染失败时显示错误占位符
-                                            Box(
-                                                modifier =
-                                                    Modifier
-                                                        .fillMaxWidth()
-                                                        .height(60.dp)
-                                                        .background(
-                                                            Color.Red.copy(alpha = 0.1f)
-                                                        )
-                                            ) {
-                                                Text(
-                                                    text = "Message loading failed",
-                                                    color = Color.White,
-                                                    modifier = Modifier.align(Alignment.Center),
-                                                )
+                                if (items.isNotEmpty()) {
+                                    itemsIndexed(
+                                        items,
+                                        key = { index, info ->
+                                            // 使用消息的唯一标识符作为 key，如果没有则使用索引和内容的组合
+                                            info.localMsgId.ifEmpty {
+                                                "${index}_${info.role}_${info.content.hashCode()}_${index}"
                                             }
-                                            Spacer(Modifier.height(16.dp))
-                                        }
+                                        },
+                                    ) { index, item ->
+                                        runCatching {
+                                                // 明确数据边界
+                                                if (index < items.size) {
+                                                    ChatItem(
+                                                        item,
+                                                        isCurrentPage = isCurrentPage,
+                                                        chatViewModel = chatViewModel,
+                                                    )
+                                                }
+                                                Spacer(Modifier.height(16.dp))
+                                            }
+                                            .onFailure { e ->
+                                                // 渲染失败时显示错误占位符
+                                                Box(
+                                                    modifier =
+                                                        Modifier.fillMaxWidth()
+                                                            .height(60.dp)
+                                                            .background(
+                                                                Color.Red.copy(alpha = 0.1f)
+                                                            )
+                                                ) {
+                                                    Text(
+                                                        text = "Message loading failed",
+                                                        color = Color.White,
+                                                        modifier = Modifier.align(Alignment.Center),
+                                                    )
+                                                }
+                                                Spacer(Modifier.height(16.dp))
+                                            }
+                                    }
                                 }
                             }
                         }
-                    }
                         .onFailure { e ->
                             // 如果整个列表渲染失败，显示错误信息
                             item {
                                 Box(
                                     modifier =
-                                        Modifier
-                                            .fillMaxWidth()
+                                        Modifier.fillMaxWidth()
                                             .height(100.dp)
                                             .background(Color.Red.copy(alpha = 0.1f))
                                 ) {
@@ -360,7 +346,9 @@ internal fun ChatPage(
                     // 优化：等待getMsgs完成，并且（没有更多消息 或 消息列表为空）时才显示
                     val showIntroOpeningTop =
                         isQueryMsgsCompleted && ((!hasMoreMessages) || chatMessages.isEmpty())
-                    LogUtils.d("ChatPage: showIntroOpeningTop=$showIntroOpeningTop, isQueryMsgsCompleted=$isQueryMsgsCompleted, hasMoreMessages=$hasMoreMessages, chatMessages.size=${chatMessages.size}")
+                    LogUtils.d(
+                        "ChatPage: showIntroOpeningTop=$showIntroOpeningTop, isQueryMsgsCompleted=$isQueryMsgsCompleted, hasMoreMessages=$hasMoreMessages, chatMessages.size=${chatMessages.size}"
+                    )
                     if (showIntroOpeningTop) {
                         // Opening 消息（带音频自动播放逻辑，ChatItem 内部处理）
                         item {
@@ -402,17 +390,13 @@ internal fun ChatPage(
                     if (showLoadMoreUi) {
                         item {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(60.dp),
+                                modifier = Modifier.fillMaxWidth().height(60.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (isLoadingMore) {
                                     CircularProgressIndicator(
                                         color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier
-                                            .width(24.dp)
-                                            .height(24.dp),
+                                        modifier = Modifier.width(24.dp).height(24.dp),
                                     )
                                 } else {
                                     Text(
@@ -431,9 +415,9 @@ internal fun ChatPage(
                 LaunchedEffect(hasMoreMessages, isLoadingMore, chatMessages.size) {
                     // 使用 snapshotFlow 持续监听滚动状态变化
                     snapshotFlow {
-                        listState.firstVisibleItemIndex to
+                            listState.firstVisibleItemIndex to
                                 listState.firstVisibleItemScrollOffset
-                    }
+                        }
                         .collect { (firstVisibleIndex, scrollOffset) ->
                             // 添加小延迟，确保首次加载完成后再开始监听
                             delay(100)
@@ -452,7 +436,7 @@ internal fun ChatPage(
                             // 反向布局：接近顶部意味着可见的最大index接近总items末尾
                             val isNearTop =
                                 totalItemsCount > 0 &&
-                                        lastVisibleIndex >=
+                                    lastVisibleIndex >=
                                         (totalItemsCount - LOAD_MORE_NEAR_TOP_THRESHOLD)
                             // 在反向布局中，firstVisibleItemIndex=0表示在底部（最新消息），需要滚动到更早的消息才算滚动过
                             val hasScrolled = firstVisibleIndex > 0 || scrollOffset > 0
@@ -471,8 +455,7 @@ internal fun ChatPage(
                     if (agentInfo?.isDeleted == true) {
                         Box(
                             modifier =
-                                Modifier
-                                    .fillMaxWidth()
+                                Modifier.fillMaxWidth()
                                     .height(48.dp)
                                     .padding(horizontal = 16.dp)
                                     .clip(RoundedCornerShape(24.dp))

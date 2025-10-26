@@ -7,20 +7,22 @@ from openai.types.chat.chat_completion import ChatCompletion
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Chat with AI models')
-    parser.add_argument('--provider', 
-                       choices=['google', 'openrouter'], 
-                       default='openrouter',
-                       help='AI provider to use')
-    parser.add_argument('--model',
-                       default='google/gemini-2.5-flash',
-                       help='AI model to use')
+    parser = argparse.ArgumentParser(description="Chat with AI models")
+    parser.add_argument(
+        "--provider",
+        choices=["google", "openrouter"],
+        default="openrouter",
+        help="AI provider to use",
+    )
+    parser.add_argument(
+        "--model", default="google/gemini-2.5-flash", help="AI model to use"
+    )
     return parser.parse_args()
 
 
 class ProviderEnum(StrEnum):
-    google = 'google'
-    openrouter = 'openrouter'
+    google = "google"
+    openrouter = "openrouter"
 
 
 args = parse_args()
@@ -44,11 +46,10 @@ client = OpenAI(
     # api_key=os.getenv("GEMINI_API_KEY"),
     # If you want to OpenAI to read env var directly, you need to set OPENAI_API_KEY in your env
     # As OPENAI_API_KEY is the env var read by OpenAI SDK.
-
     # Gemini base URL
     # base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
     api_key=api_key,
-    base_url=base_url
+    base_url=base_url,
 )
 
 response: ChatCompletion = client.chat.completions.create(
@@ -61,8 +62,8 @@ response: ChatCompletion = client.chat.completions.create(
         {"role": "system", "content": "You are a helpful assistant."},
         {
             "role": "user",
-            "content": "Write a plot summary of a novel on AI causing human extinction"
-        }
+            "content": "Write a plot summary of a novel on AI causing human extinction",
+        },
     ],
     # extra_body={
     #   'extra_body': {

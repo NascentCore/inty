@@ -20,13 +20,13 @@ __author__ = "Claude Code"
 __description__ = "Agent Tags Migration Tool"
 
 from .models import (
-    Agent, 
-    CharacterInfo, 
-    TagExtractionResult, 
+    Agent,
+    CharacterInfo,
+    TagExtractionResult,
     MigrationStats,
     MigrationConfig,
     DatabaseConfig,
-    AppConfig
+    AppConfig,
 )
 
 from .tag_parser import TagParser
@@ -34,17 +34,17 @@ from .database import DatabaseManager, create_database_manager, load_config_from
 from .logger import setup_logger, MigrationLogger
 
 __all__ = [
-    'Agent',
-    'CharacterInfo', 
-    'TagExtractionResult',
-    'MigrationStats',
-    'MigrationConfig',
-    'DatabaseConfig',
-    'AppConfig',
-    'TagParser',
-    'DatabaseManager',
-    'create_database_manager',
-    'load_config_from_yaml',
-    'setup_logger',
-    'MigrationLogger',
+    "Agent",
+    "CharacterInfo",
+    "TagExtractionResult",
+    "MigrationStats",
+    "MigrationConfig",
+    "DatabaseConfig",
+    "AppConfig",
+    "TagParser",
+    "DatabaseManager",
+    "create_database_manager",
+    "load_config_from_yaml",
+    "setup_logger",
+    "MigrationLogger",
 ]

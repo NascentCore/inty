@@ -40,9 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-/**
- * Snackbar颜色数据类
- */
+/** Snackbar颜色数据类 */
 private data class SnackbarColors(
     val backgroundColor: Color,
     val textColor: Color,
@@ -50,19 +48,15 @@ private data class SnackbarColors(
     val icon: Painter
 )
 
-/**
- * 自定义Snackbar类型
- */
+/** 自定义Snackbar类型 */
 enum class HeartSnackbarType {
-    SUCCESS,    // 成功
-    ERROR,      // 错误
-    WARNING,    // 警告
-    INFO        // 信息
+    SUCCESS, // 成功
+    ERROR, // 错误
+    WARNING, // 警告
+    INFO // 信息
 }
 
-/**
- * 自定义Snackbar数据类
- */
+/** 自定义Snackbar数据类 */
 data class HeartSnackbarData(
     val message: String,
     val type: HeartSnackbarType = HeartSnackbarType.INFO,
@@ -71,16 +65,9 @@ data class HeartSnackbarData(
     val onAction: (() -> Unit)? = null
 )
 
-/**
- * 自定义Snackbar组件
- * 符合IntelliMate应用的设计风格
- */
+/** 自定义Snackbar组件 符合IntelliMate应用的设计风格 */
 @Composable
-fun HeartSnackbar(
-    data: HeartSnackbarData,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun HeartSnackbar(data: HeartSnackbarData, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     var visible by remember { mutableStateOf(true) }
 
     // 自动隐藏
@@ -91,14 +78,12 @@ fun HeartSnackbar(
 
     AnimatedVisibility(
         visible = visible,
-        enter = slideInVertically(
-            animationSpec = tween(300),
-            initialOffsetY = { it }
-        ) + fadeIn(animationSpec = tween(300)),
-        exit = slideOutVertically(
-            animationSpec = tween(300),
-            targetOffsetY = { it }
-        ) + fadeOut(animationSpec = tween(300)),
+        enter =
+            slideInVertically(animationSpec = tween(300), initialOffsetY = { it }) +
+                fadeIn(animationSpec = tween(300)),
+        exit =
+            slideOutVertically(animationSpec = tween(300), targetOffsetY = { it }) +
+                fadeOut(animationSpec = tween(300)),
         modifier = modifier
     ) {
         HeartSnackbarContent(
@@ -111,60 +96,52 @@ fun HeartSnackbar(
     }
 }
 
-/**
- * Snackbar内容组件
- */
+/** Snackbar内容组件 */
 @Composable
 private fun HeartSnackbarContent(
     data: HeartSnackbarData,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val snackbarColors = when (data.type) {
-        HeartSnackbarType.SUCCESS -> {
-            val bg = Color(0xFF1A472A) // 深绿色背景
-            val text = Color(0xFF4CAF50) // 绿色文字
-            val icon = Color(0xFF4CAF50) // 绿色图标
-            val iconPainter = painterResource(R.drawable.icon_checked_circle)
-            SnackbarColors(bg, text, icon, iconPainter)
+    val snackbarColors =
+        when (data.type) {
+            HeartSnackbarType.SUCCESS -> {
+                val bg = Color(0xFF1A472A) // 深绿色背景
+                val text = Color(0xFF4CAF50) // 绿色文字
+                val icon = Color(0xFF4CAF50) // 绿色图标
+                val iconPainter = painterResource(R.drawable.icon_checked_circle)
+                SnackbarColors(bg, text, icon, iconPainter)
+            }
+            HeartSnackbarType.ERROR -> {
+                val bg = Color(0xFF3D1F1F) // 深红色背景
+                val text = Color(0xFFF44336) // 红色文字
+                val icon = Color(0xFFF44336) // 红色图标
+                val iconPainter = painterResource(R.drawable.icon_error)
+                SnackbarColors(bg, text, icon, iconPainter)
+            }
+            HeartSnackbarType.WARNING -> {
+                val bg = Color(0xFF3D2F1F) // 深橙色背景
+                val text = Color(0xFFFF9800) // 橙色文字
+                val icon = Color(0xFFFF9800) // 橙色图标
+                val iconPainter = painterResource(R.drawable.icon_warn)
+                SnackbarColors(bg, text, icon, iconPainter)
+            }
+            HeartSnackbarType.INFO -> {
+                val bg = Color(0xFF1F2A3D) // 深蓝色背景
+                val text = Color(0xFF2196F3) // 蓝色文字
+                val icon = Color(0xFF2196F3) // 蓝色图标
+                val iconPainter = painterResource(R.drawable.icon_info)
+                SnackbarColors(bg, text, icon, iconPainter)
+            }
         }
 
-        HeartSnackbarType.ERROR -> {
-            val bg = Color(0xFF3D1F1F) // 深红色背景
-            val text = Color(0xFFF44336) // 红色文字
-            val icon = Color(0xFFF44336) // 红色图标
-            val iconPainter = painterResource(R.drawable.icon_error)
-            SnackbarColors(bg, text, icon, iconPainter)
-        }
-
-        HeartSnackbarType.WARNING -> {
-            val bg = Color(0xFF3D2F1F) // 深橙色背景
-            val text = Color(0xFFFF9800) // 橙色文字
-            val icon = Color(0xFFFF9800) // 橙色图标
-            val iconPainter = painterResource(R.drawable.icon_warn)
-            SnackbarColors(bg, text, icon, iconPainter)
-        }
-
-        HeartSnackbarType.INFO -> {
-            val bg = Color(0xFF1F2A3D) // 深蓝色背景
-            val text = Color(0xFF2196F3) // 蓝色文字
-            val icon = Color(0xFF2196F3) // 蓝色图标
-            val iconPainter = painterResource(R.drawable.icon_info)
-            SnackbarColors(bg, text, icon, iconPainter)
-        }
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
+    Box(modifier = modifier.fillMaxWidth().padding(16.dp)) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(snackbarColors.backgroundColor)
-                .padding(16.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(snackbarColors.backgroundColor)
+                    .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -200,28 +177,28 @@ private fun HeartSnackbarContent(
     }
 }
 
-/**
- * 自定义SnackbarHost
- */
+/** 自定义SnackbarHost */
 @Composable
 fun HeartSnackbarHost(
     hostState: SnackbarHostState,
     modifier: Modifier = Modifier,
-    snackbar: @Composable (data: HeartSnackbarData, onDismiss: () -> Unit) -> Unit = { data, onDismiss ->
-        HeartSnackbar(data = data, onDismiss = onDismiss)
-    }
+    snackbar: @Composable (data: HeartSnackbarData, onDismiss: () -> Unit) -> Unit =
+        { data, onDismiss ->
+            HeartSnackbar(data = data, onDismiss = onDismiss)
+        }
 ) {
     SnackbarHost(
         hostState = hostState,
         modifier = modifier,
         snackbar = { snackbarData ->
             // 将Material3的SnackbarData转换为自定义的HeartSnackbarData
-            val heartData = HeartSnackbarData(
-                message = snackbarData.visuals.message,
-                type = HeartSnackbarType.INFO, // 默认类型
-                actionLabel = snackbarData.visuals.actionLabel,
-                onAction = { snackbarData.performAction() }
-            )
+            val heartData =
+                HeartSnackbarData(
+                    message = snackbarData.visuals.message,
+                    type = HeartSnackbarType.INFO, // 默认类型
+                    actionLabel = snackbarData.visuals.actionLabel,
+                    onAction = { snackbarData.performAction() }
+                )
 
             snackbar(heartData) {
                 // 这里可以添加自定义的dismiss逻辑
@@ -230,9 +207,7 @@ fun HeartSnackbarHost(
     )
 }
 
-/**
- * 扩展函数：显示成功Snackbar
- */
+/** 扩展函数：显示成功Snackbar */
 suspend fun SnackbarHostState.showSuccessSnackbar(
     message: String,
     actionLabel: String? = null,
@@ -245,9 +220,7 @@ suspend fun SnackbarHostState.showSuccessSnackbar(
     )
 }
 
-/**
- * 扩展函数：显示错误Snackbar
- */
+/** 扩展函数：显示错误Snackbar */
 suspend fun SnackbarHostState.showErrorSnackbar(
     message: String,
     actionLabel: String? = null,
@@ -260,9 +233,7 @@ suspend fun SnackbarHostState.showErrorSnackbar(
     )
 }
 
-/**
- * 扩展函数：显示警告Snackbar
- */
+/** 扩展函数：显示警告Snackbar */
 suspend fun SnackbarHostState.showWarningSnackbar(
     message: String,
     actionLabel: String? = null,
@@ -275,9 +246,7 @@ suspend fun SnackbarHostState.showWarningSnackbar(
     )
 }
 
-/**
- * 扩展函数：显示信息Snackbar
- */
+/** 扩展函数：显示信息Snackbar */
 suspend fun SnackbarHostState.showInfoSnackbar(
     message: String,
     actionLabel: String? = null,
@@ -290,16 +259,13 @@ suspend fun SnackbarHostState.showInfoSnackbar(
     )
 }
 
-//region Preview
+// region Preview
 
 @Preview(showBackground = true)
 @Composable
 private fun HeartSnackbarSuccessPreview() {
     HeartSnackbar(
-        data = HeartSnackbarData(
-            message = "登录成功",
-            type = HeartSnackbarType.SUCCESS
-        ),
+        data = HeartSnackbarData(message = "登录成功", type = HeartSnackbarType.SUCCESS),
         onDismiss = {}
     )
 }
@@ -308,10 +274,7 @@ private fun HeartSnackbarSuccessPreview() {
 @Composable
 private fun HeartSnackbarErrorPreview() {
     HeartSnackbar(
-        data = HeartSnackbarData(
-            message = "登录失败，请重试",
-            type = HeartSnackbarType.ERROR
-        ),
+        data = HeartSnackbarData(message = "登录失败，请重试", type = HeartSnackbarType.ERROR),
         onDismiss = {}
     )
 }
@@ -320,10 +283,7 @@ private fun HeartSnackbarErrorPreview() {
 @Composable
 private fun HeartSnackbarWarningPreview() {
     HeartSnackbar(
-        data = HeartSnackbarData(
-            message = "网络连接不可用，请检查网络设置",
-            type = HeartSnackbarType.WARNING
-        ),
+        data = HeartSnackbarData(message = "网络连接不可用，请检查网络设置", type = HeartSnackbarType.WARNING),
         onDismiss = {}
     )
 }
@@ -332,10 +292,7 @@ private fun HeartSnackbarWarningPreview() {
 @Composable
 private fun HeartSnackbarInfoPreview() {
     HeartSnackbar(
-        data = HeartSnackbarData(
-            message = "正在加载用户信息...",
-            type = HeartSnackbarType.INFO
-        ),
+        data = HeartSnackbarData(message = "正在加载用户信息...", type = HeartSnackbarType.INFO),
         onDismiss = {}
     )
 }
@@ -344,14 +301,15 @@ private fun HeartSnackbarInfoPreview() {
 @Composable
 private fun HeartSnackbarWithActionPreview() {
     HeartSnackbar(
-        data = HeartSnackbarData(
-            message = "消息发送失败",
-            type = HeartSnackbarType.ERROR,
-            actionLabel = "重试",
-            onAction = {}
-        ),
+        data =
+            HeartSnackbarData(
+                message = "消息发送失败",
+                type = HeartSnackbarType.ERROR,
+                actionLabel = "重试",
+                onAction = {}
+            ),
         onDismiss = {}
     )
 }
 
-//endregion
+// endregion

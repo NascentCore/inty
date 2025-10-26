@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
  * - 确认购买: 向 Google 确认购买
  * - 服务器验证: 将购买凭证发送到后端验证
  * - 更新状态: 更新本地订阅状态
-*/
+ */
 internal class BillingPurchaseManager(
     private val billingClient: BillingClient,
     private val eventScope: CoroutineScope,
@@ -56,12 +56,10 @@ internal class BillingPurchaseManager(
                     showError("purchases is empty")
                 }
             }
-
             BillingClient.BillingResponseCode.USER_CANCELED -> {
                 LogUtils.i("用户取消购买")
                 // 用户取消不发送失败事件
             }
-
             BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> {
                 LogUtils.w("Item already owned: User already has this subscription")
                 showError("Item already owned")
@@ -74,7 +72,6 @@ internal class BillingPurchaseManager(
                     )
                 }
             }
-
             BillingClient.BillingResponseCode.ITEM_NOT_OWNED -> {
                 LogUtils.w("Item not owned: User has not purchased this item")
                 showError("Item not owned")
@@ -84,7 +81,6 @@ internal class BillingPurchaseManager(
                     )
                 }
             }
-
             BillingClient.BillingResponseCode.ITEM_UNAVAILABLE -> {
                 LogUtils.w("Item unavailable: Item is not available in current region")
                 showError("Item is not available in current region")
@@ -97,9 +93,10 @@ internal class BillingPurchaseManager(
                     )
                 }
             }
-
             BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {
-                LogUtils.e("Developer error: Please check product ID configuration, app signature, test user settings")
+                LogUtils.e(
+                    "Developer error: Please check product ID configuration, app signature, test user settings"
+                )
                 showError("Developer error")
                 eventScope.launch {
                     eventFlow.emit(
@@ -107,7 +104,6 @@ internal class BillingPurchaseManager(
                     )
                 }
             }
-
             BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
                 LogUtils.e("Service unavailable: Google Play services temporarily unavailable")
                 showError("Service unavailable")
@@ -120,7 +116,6 @@ internal class BillingPurchaseManager(
                     )
                 }
             }
-
             BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
                 LogUtils.e("Billing unavailable: Device does not support Google Play billing")
                 showError("Device does not support Google Play billing")
@@ -133,7 +128,6 @@ internal class BillingPurchaseManager(
                     )
                 }
             }
-
             BillingClient.BillingResponseCode.NETWORK_ERROR -> {
                 LogUtils.e("Network error: Network connection issue")
                 showError("Network error")
@@ -143,7 +137,6 @@ internal class BillingPurchaseManager(
                     )
                 }
             }
-
             BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED -> {
                 LogUtils.e("Feature not supported: Current device does not support this feature")
                 showError("Feature not supported")
@@ -156,7 +149,6 @@ internal class BillingPurchaseManager(
                     )
                 }
             }
-
             BillingClient.BillingResponseCode.ERROR -> {
                 LogUtils.e("General error: An unknown error occurred")
                 showError("General error")
@@ -166,9 +158,10 @@ internal class BillingPurchaseManager(
                     )
                 }
             }
-
             else -> {
-                LogUtils.e("购买失败: ${billingResult.debugMessage} (错误码: ${billingResult.responseCode})")
+                LogUtils.e(
+                    "购买失败: ${billingResult.debugMessage} (错误码: ${billingResult.responseCode})"
+                )
                 showError("Purchase failed: ${billingResult.debugMessage}")
                 eventScope.launch {
                     eventFlow.emit(
@@ -237,7 +230,9 @@ internal class BillingPurchaseManager(
                         orderId = purchase.orderId ?: "",
                     )
 
-                LogUtils.d("验证订阅: productId=${verifyRequest.productId}, purchaseToken=${verifyRequest.purchaseToken}, orderId=${verifyRequest.orderId}")
+                LogUtils.d(
+                    "验证订阅: productId=${verifyRequest.productId}, purchaseToken=${verifyRequest.purchaseToken}, orderId=${verifyRequest.orderId}"
+                )
 
                 // 调用验证接口
                 val result = api.verifySubscription(verifyRequest)
@@ -261,7 +256,6 @@ internal class BillingPurchaseManager(
                             showError("Subscription verification failed: ${response.message}")
                         }
                     }
-
                     is HttpResult.Failure -> {
                         LogUtils.e("❌ 订阅验证失败: ${result.message}")
                         showError("Subscription verification failed: ${result.message}")
@@ -287,7 +281,6 @@ internal class BillingPurchaseManager(
             ConnectionResult.SUCCESS -> {
                 LogUtils.i("✅ Google Play 服务可用")
             }
-
             ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED -> {
                 LogUtils.w("⚠️ Google Play 服务需要更新")
                 // 尝试更新 Google Play 服务
@@ -295,25 +288,21 @@ internal class BillingPurchaseManager(
                 showError("Google Play Service update required")
                 return false
             }
-
             ConnectionResult.SERVICE_DISABLED -> {
                 LogUtils.e("❌ Google Play 服务被禁用")
                 showError("Google Play Service disabled")
                 return false
             }
-
             ConnectionResult.SERVICE_MISSING -> {
                 LogUtils.e("❌ Google Play 服务未安装")
                 showError("Google Play Service missing")
                 return false
             }
-
             ConnectionResult.SERVICE_INVALID -> {
                 LogUtils.e("❌ Google Play 服务无效")
                 showError("Google Play Service invalid")
                 return false
             }
-
             else -> {
                 LogUtils.e("❌ Google Play 服务不可用: $resultCode")
                 showError("Google Play Service unavailable")
@@ -337,7 +326,9 @@ internal class BillingPurchaseManager(
             val billingResult =
                 billingClient.isFeatureSupported(BillingClient.FeatureType.SUBSCRIPTIONS)
             val isSupported = billingResult.responseCode == BillingClient.BillingResponseCode.OK
-            LogUtils.d("设备计费支持检查: $isSupported (响应码: ${billingResult.responseCode}), 详情: ${billingResult.debugMessage}")
+            LogUtils.d(
+                "设备计费支持检查: $isSupported (响应码: ${billingResult.responseCode}), 详情: ${billingResult.debugMessage}"
+            )
             if (!isSupported) {
                 showError("Billing feature not supported on this device")
             }
@@ -378,7 +369,9 @@ internal class BillingPurchaseManager(
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
                     skuDetailsList?.firstOrNull()?.let { skuDetails ->
-                        LogUtils.i("✅ 找到商品详情: ${skuDetails.sku}, 标题: ${skuDetails.title}, 价格: ${skuDetails.price} ${skuDetails.priceCurrencyCode}")
+                        LogUtils.i(
+                            "✅ 找到商品详情: ${skuDetails.sku}, 标题: ${skuDetails.title}, 价格: ${skuDetails.price} ${skuDetails.priceCurrencyCode}"
+                        )
 
                         // 使用 SkuDetails 启动购买流程
                         val billingFlowParams =
@@ -386,49 +379,45 @@ internal class BillingPurchaseManager(
                         val launchResult =
                             billingClient.launchBillingFlow(activity, billingFlowParams)
                         LogUtils.i("✅ 购买流程启动结果: $launchResult")
-                    } ?: run {
-                        LogUtils.e("❌ 未找到商品详情: $productId")
-                        showError("Product details not found: $productId")
                     }
+                        ?: run {
+                            LogUtils.e("❌ 未找到商品详情: $productId")
+                            showError("Product details not found: $productId")
+                        }
                 }
-
                 BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {
                     LogUtils.e("商品ID: $productId ❌ 开发者错误 (12): 请检查商品ID配置、应用签名、测试用户设置")
-                    showError("Developer error: Please check product ID configuration, app signature, test user settings")
+                    showError(
+                        "Developer error: Please check product ID configuration, app signature, test user settings"
+                    )
                 }
-
                 BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
                     LogUtils.e("❌ 服务不可用: Google Play 服务暂时不可用")
                     showError("Service unavailable: Google Play services temporarily unavailable")
                 }
-
                 BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
                     LogUtils.e("❌ 计费不可用: 设备不支持 Google Play 计费")
                     showError("Billing unavailable: Device does not support Google Play billing")
                 }
-
                 BillingClient.BillingResponseCode.ITEM_UNAVAILABLE -> {
                     LogUtils.w("❌ 商品不可用: 商品在当前地区不可用")
                     showError("Item unavailable: Item is not available in current region")
                 }
-
                 BillingClient.BillingResponseCode.NETWORK_ERROR -> {
                     LogUtils.e("❌ 网络错误: 网络连接问题")
                     showError("Network error: Network connection issue")
                 }
-
                 else -> {
-                    LogUtils.e("❌ 查询商品详情失败: ${billingResult.debugMessage} (错误码: ${billingResult.responseCode})")
+                    LogUtils.e(
+                        "❌ 查询商品详情失败: ${billingResult.debugMessage} (错误码: ${billingResult.responseCode})"
+                    )
                     showError("Query product details failed: ${billingResult.debugMessage}")
                 }
             }
         }
     }
 
-
     private fun showError(error: String?) {
-        error?.let {
-            ToastUtils.showShort(error)
-        }
+        error?.let { ToastUtils.showShort(error) }
     }
 }

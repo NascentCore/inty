@@ -105,7 +105,6 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
                                     else -> -1
                                 }
                         }
-
                         httpWrapper.getErrorMsgKey() -> msg = reader.nextString()
                         httpWrapper.getDataKey() -> {
                             // 处理返回 data = "" 的问题
@@ -127,7 +126,6 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
                             //                            }
 
                         }
-
                         else -> reader.skipValue()
                     }
                 }

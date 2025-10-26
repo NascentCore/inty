@@ -18,15 +18,18 @@ class AgentInfoActivity : BaseActivity() {
 
         /**
          * 启动单独的聊天界面
+         *
          * @param context 上下文context
          * @param agentInfo Agent的Info对象
          * @param agentId agent的id 两个参数选一即可，也必须只要有一个
          */
         fun launch(context: Context, agentInfo: AgentInfo? = null, agentId: String? = null) {
-            context.startActivity(Intent(context, AgentInfoActivity::class.java).also { intent ->
-                intent.putExtra(INTENT_KEY_AGENT_ID, agentId)
-                intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
-            })
+            context.startActivity(
+                Intent(context, AgentInfoActivity::class.java).also { intent ->
+                    intent.putExtra(INTENT_KEY_AGENT_ID, agentId)
+                    intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
+                }
+            )
         }
     }
 
@@ -36,11 +39,12 @@ class AgentInfoActivity : BaseActivity() {
 
     override fun initConfigData() {
         super.initConfigData()
-        agent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableExtra(INTENT_KEY_AGENT_INFO, AgentInfo::class.java)
-        } else {
-            intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
-        }
+        agent =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(INTENT_KEY_AGENT_INFO, AgentInfo::class.java)
+            } else {
+                intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
+            }
         agentId = intent.getStringExtra(INTENT_KEY_AGENT_ID)
         if (agent == null) {
             if (agentId != null) {

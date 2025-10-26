@@ -22,8 +22,9 @@ class ChatAPIUser(HttpUser):
     """
     专注于聊天的用户 - 收到回复后立即发送下一条消息
     """
+
     wait_time = between(0.1, 0.5)  # 极短间隔，快速连续聊天
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.auth_token: Optional[str] = None
@@ -39,31 +40,31 @@ class ChatAPIUser(HttpUser):
             "可以教我一些农活吗？",
             "农场里都有什么动物？",
             "你小时候就在农场长大吗？",
-            "夏天的农场一定很美吧？"
+            "夏天的农场一定很美吧？",
         ]
-        
+
     def on_start(self):
         """用户开始测试时的初始化操作"""
         self.register_guest()
-        
+
     def register_guest(self) -> bool:
         """
         注册游客用户
         """
         device_id = f"test_device_{uuid.uuid4().hex[:8]}"
-        
+
         # 根据 GuestRequest schema 构建正确的请求负载
         payload = {
             "device_id": device_id,
             "system_language": "zh",
-            "age_group": "adult"
+            "age_group": "adult",
         }
-        
+
         with self.client.post(
             "/api/v1/auth/guest",
             json=payload,
             name=None,  # 不在统计报告中显示此请求
-            catch_response=True
+            catch_response=True,
         ) as response:
             if response.status_code == 200:
                 try:
@@ -73,30 +74,34 @@ class ChatAPIUser(HttpUser):
                         response_data = data["data"]
                         self.auth_token = response_data.get("token")
                         self.user_id = response_data.get("guest_id")  # 修正字段名
-                        
+
                         if self.auth_token and self.user_id:
                             response.success()
                             return True
                         else:
-                            response.failure(f"缺失必要字段: token={self.auth_token}, guest_id={self.user_id}")
+                            response.failure(
+                                f"缺失必要字段: token={self.auth_token}, guest_id={self.user_id}"
+                            )
                             return False
                     else:
                         response.failure(f"注册失败: {data}")
                         return False
                 except Exception as e:
                     # 增加更详细的错误信息用于调试
-                    response.failure(f"解析响应失败: {e}, 响应内容: {response.text[:200]}")
+                    response.failure(
+                        f"解析响应失败: {e}, 响应内容: {response.text[:200]}"
+                    )
                     return False
             else:
                 response.failure(f"HTTP {response.status_code}: {response.text}")
                 return False
-    
+
     def get_auth_headers(self) -> Dict[str, str]:
         """获取认证头"""
         if not self.auth_token:
             return {}
         return {"Authorization": f"Bearer {self.auth_token}"}
-    
+
     @task
     def chat_with_agent(self):
         """
@@ -106,25 +111,23 @@ class ChatAPIUser(HttpUser):
             # 如果没有token，先注册
             if not self.register_guest():
                 return
-        
+
         message_content = random.choice(self.chat_messages)
-        
+
         payload = {
-            "messages": [
-                {"role": "user", "content": message_content}
-            ],
+            "messages": [{"role": "user", "content": message_content}],
             "stream": False,
-            "model": "chatbot", 
-            "language": "zh"
+            "model": "chatbot",
+            "language": "zh",
         }
-        
+
         with self.client.post(
             f"/api/v1/chats/agents/{self.agent_id}/chat/completions",
             json=payload,
             headers=self.get_auth_headers(),
             name="chat_completions",
             catch_response=True,
-            timeout=30  # 聊天可能需要更长时间
+            timeout=30,  # 聊天可能需要更长时间
         ) as response:
             if response.status_code == 200:
                 try:
@@ -142,7 +145,7 @@ class ChatAPIUser(HttpUser):
                 response.failure("认证失败，已重新注册")
             else:
                 response.failure(f"HTTP {response.status_code}: {response.text}")
-    
+
 
 if __name__ == "__main__":
     """
@@ -150,11 +153,13 @@ if __name__ == "__main__":
     """
     import os
     import sys
-    
+
     # 设置默认测试参数
     if len(sys.argv) == 1:
         # 基础聊天测试
-        os.system("locust -f locustfile.py --host=http://localhost:8000 --users=10 --spawn-rate=2 --run-time=5m --html=report.html")
+        os.system(
+            "locust -f locustfile.py --host=http://localhost:8000 --users=10 --spawn-rate=2 --run-time=5m --html=report.html"
+        )
     else:
         # 使用命令行参数
         pass

@@ -47,15 +47,10 @@ internal fun RegInfoScreen(
     var selectGender by remember { mutableStateOf(GENDER.OTHER) }
     var selectAge by remember { mutableStateOf("") }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(0.6f))
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.6f))) {
         Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .background(
                         brush =
@@ -109,16 +104,12 @@ internal fun RegInfoScreen(
 
             // 年龄选择
             FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 maxItemsInEachRow = 2,
             ) {
-                val itemModifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
+                val itemModifier = Modifier.weight(1f).height(48.dp)
 
                 AgeItem(
                     itemModifier,

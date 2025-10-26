@@ -47,7 +47,9 @@ def load_config(path: Optional[str] = None) -> Config:
         # Expand env vars like ${GOOGLE_API_KEY}
         gemini_data["api_key"] = os.path.expandvars(gemini_data["api_key"]) or None
 
-    cfg = Config(server=ServerSettings(**server_data), gemini=GeminiConfig(**gemini_data))
+    cfg = Config(
+        server=ServerSettings(**server_data), gemini=GeminiConfig(**gemini_data)
+    )
 
     # Export Google API key to env for google-genai
     if cfg.gemini.api_key and not os.environ.get("GOOGLE_API_KEY"):

@@ -98,6 +98,7 @@ git push
   - `INTY_API_KEY`：仅 dev 用，勿泄露
 
 脚本还会：
+
 - 检测并尝试释放 `:3000` 端口
 - 构建 `evaluation/inty_sdk`（包含手动安装 `tsc-multi`）
 

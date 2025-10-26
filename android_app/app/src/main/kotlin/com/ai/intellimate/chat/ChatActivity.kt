@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
-
 /** 私聊的聊天页面 */
 class ChatActivity : BaseActivity() {
 
@@ -25,15 +24,18 @@ class ChatActivity : BaseActivity() {
 
         /**
          * 启动单独的聊天界面
+         *
          * @param context 上下文context
          * @param agentInfo Agent的Info对象
          * @param agentId agent的id 两个参数选一即可，也必须只要有一个
          */
         fun launch(context: Context, agentInfo: AgentInfo? = null, agentId: String? = null) {
-            context.startActivity(Intent(context, ChatActivity::class.java).also { intent ->
-                intent.putExtra(INTENT_KEY_AGENT_ID, agentId)
-                intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
-            })
+            context.startActivity(
+                Intent(context, ChatActivity::class.java).also { intent ->
+                    intent.putExtra(INTENT_KEY_AGENT_ID, agentId)
+                    intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
+                }
+            )
         }
     }
 
@@ -43,21 +45,20 @@ class ChatActivity : BaseActivity() {
 
     override fun initConfigData() {
         super.initConfigData()
-        agent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableExtra(INTENT_KEY_AGENT_INFO, AgentInfo::class.java)
-        } else {
-            intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
-        }
+        agent =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(INTENT_KEY_AGENT_INFO, AgentInfo::class.java)
+            } else {
+                intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
+            }
         agentId = intent.getStringExtra(INTENT_KEY_AGENT_ID)
         when {
             agent != null -> {
                 chatViewModel.setAgentInfo(agent)
             }
-
             agentId != null -> {
                 chatViewModel.setAgentID(agentId!!)
             }
-
             else -> {
                 // 既没有agent对象也没有agent_id，说明参数传递有问题
                 finish()
@@ -72,8 +73,7 @@ class ChatActivity : BaseActivity() {
         super.ConfigComposeUI()
         ChatPage(
             modifier =
-                Modifier
-                    .fillMaxSize()
+                Modifier.fillMaxSize()
                     .background(HeartColor.primaryColor)
                     .imePadding()
                     .navigationBarsPadding(),

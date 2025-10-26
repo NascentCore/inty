@@ -76,20 +76,13 @@ fun ExplorePage(
             contentDescription = null
         )
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
             TopAppBar(
                 title = {
                     Image(
                         painter = painterResource(R.drawable.img_explore_title),
                         contentDescription = null,
-                        modifier =
-                            Modifier
-                                .height(30.dp)
-                                .fillMaxWidth(),
+                        modifier = Modifier.height(30.dp).fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )
@@ -107,21 +100,18 @@ fun ExplorePage(
                     is LoadState.Loading -> {
                         // 正在加载，保持刷新状态
                     }
-
                     is LoadState.NotLoading -> {
                         if (isRefreshing) {
                             // 刷新完成，隐藏指示器
                             isRefreshing = false
                         }
                     }
-
                     is LoadState.Error -> {
                         if (isRefreshing) {
                             // 刷新失败，也要隐藏指示器
                             isRefreshing = false
                         }
                     }
-
                     null -> {
                         // 无数据状态，如果正在刷新则停止
                         if (isRefreshing) {

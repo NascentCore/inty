@@ -8,96 +8,69 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-/**
- * 加密工具类
- * 提供加密相关的工具方法
- */
+/** 加密工具类 提供加密相关的工具方法 */
 object EncryptUtils {
 
-    /**
-     * MD5加密
-     */
+    /** MD5加密 */
     fun encryptMD5ToString(data: String?): String {
         if (data == null || data.isEmpty()) return ""
         return encryptMD5ToString(data.toByteArray())
     }
 
-    /**
-     * MD5加密
-     */
+    /** MD5加密 */
     fun encryptMD5ToString(data: ByteArray?): String {
         return bytes2HexString(encryptMD5(data))
     }
 
-    /**
-     * MD5加密
-     */
+    /** MD5加密 */
     fun encryptMD5(data: ByteArray?): ByteArray {
         return hashTemplate(data, "MD5")
     }
 
-    /**
-     * SHA1加密
-     */
+    /** SHA1加密 */
     fun encryptSHA1ToString(data: String?): String {
         if (data == null || data.isEmpty()) return ""
         return encryptSHA1ToString(data.toByteArray())
     }
 
-    /**
-     * SHA1加密
-     */
+    /** SHA1加密 */
     fun encryptSHA1ToString(data: ByteArray?): String {
         return bytes2HexString(encryptSHA1(data))
     }
 
-    /**
-     * SHA1加密
-     */
+    /** SHA1加密 */
     fun encryptSHA1(data: ByteArray?): ByteArray {
         return hashTemplate(data, "SHA1")
     }
 
-    /**
-     * SHA256加密
-     */
+    /** SHA256加密 */
     fun encryptSHA256ToString(data: String?): String {
         if (data == null || data.isEmpty()) return ""
         return encryptSHA256ToString(data.toByteArray())
     }
 
-    /**
-     * SHA256加密
-     */
+    /** SHA256加密 */
     fun encryptSHA256ToString(data: ByteArray?): String {
         return bytes2HexString(encryptSHA256(data))
     }
 
-    /**
-     * SHA256加密
-     */
+    /** SHA256加密 */
     fun encryptSHA256(data: ByteArray?): ByteArray {
         return hashTemplate(data, "SHA256")
     }
 
-    /**
-     * AES加密 (ECB模式)
-     */
+    /** AES加密 (ECB模式) */
     fun encryptAES2Base64(data: String?, key: String?): String {
         if (data == null || data.isEmpty() || key == null || key.isEmpty()) return ""
         return EncodeUtils.base64Encode2String(encryptAES(data.toByteArray(), key.toByteArray()))
     }
 
-    /**
-     * AES加密 (ECB模式)
-     */
+    /** AES加密 (ECB模式) */
     fun encryptAES(data: ByteArray?, key: ByteArray?): ByteArray {
         return desTemplate(data, key, "AES", "AES/ECB/PKCS5Padding", null, true)
     }
 
-    /**
-     * AES加密 (支持自定义transformation和IV)
-     */
+    /** AES加密 (支持自定义transformation和IV) */
     fun encryptAES2Base64(
         data: ByteArray,
         key: ByteArray,
@@ -113,24 +86,18 @@ object EncryptUtils {
         }
     }
 
-    /**
-     * AES解密 (ECB模式)
-     */
+    /** AES解密 (ECB模式) */
     fun decryptBase64AES(base64Data: String?, key: String?): String {
         if (base64Data == null || base64Data.isEmpty() || key == null || key.isEmpty()) return ""
         return String(decryptAES(EncodeUtils.base64Decode(base64Data), key.toByteArray()))
     }
 
-    /**
-     * AES解密 (ECB模式)
-     */
+    /** AES解密 (ECB模式) */
     fun decryptAES(data: ByteArray?, key: ByteArray?): ByteArray {
         return desTemplate(data, key, "AES", "AES/ECB/PKCS5Padding", null, false)
     }
 
-    /**
-     * AES解密 (支持自定义transformation和IV)
-     */
+    /** AES解密 (支持自定义transformation和IV) */
     fun decryptBase64AES(
         data: ByteArray,
         key: ByteArray,
@@ -150,6 +117,7 @@ object EncryptUtils {
 
     /**
      * AES-CBC加密 (推荐使用，比ECB更安全)
+     *
      * @param data 待加密数据
      * @param key 密钥 (16/24/32字节)
      * @return 加密结果，包含IV和密文
@@ -163,6 +131,7 @@ object EncryptUtils {
 
     /**
      * AES-CBC加密 (推荐使用，比ECB更安全)
+     *
      * @param data 待加密数据
      * @param key 密钥 (16/24/32字节)
      * @return 加密结果，包含IV和密文
@@ -191,12 +160,14 @@ object EncryptUtils {
 
     /**
      * AES-CBC解密
+     *
      * @param encryptedData 加密数据 (包含IV和密文)
      * @param key 密钥
      * @return 解密结果
      */
     fun decryptAESCBC(encryptedData: ByteArray?, key: ByteArray?): ByteArray? {
-        if (encryptedData == null || encryptedData.size < 16 || key == null || key.isEmpty()) return null
+        if (encryptedData == null || encryptedData.size < 16 || key == null || key.isEmpty())
+            return null
 
         return try {
 
@@ -222,6 +193,7 @@ object EncryptUtils {
 
     /**
      * AES-CBC解密 (Base64输入)
+     *
      * @param base64Data Base64编码的加密数据
      * @param key 密钥字符串
      * @return 解密结果字符串
@@ -241,6 +213,7 @@ object EncryptUtils {
 
     /**
      * AES-GCM加密 (最安全，支持认证加密)
+     *
      * @param data 待加密数据
      * @param key 密钥 (16/24/32字节)
      * @return 加密结果，包含IV和密文
@@ -254,6 +227,7 @@ object EncryptUtils {
 
     /**
      * AES-GCM加密 (最安全，支持认证加密)
+     *
      * @param data 待加密数据
      * @param key 密钥 (16/24/32字节)
      * @return 加密结果，包含IV和密文
@@ -289,12 +263,14 @@ object EncryptUtils {
 
     /**
      * AES-GCM解密
+     *
      * @param encryptedData 加密数据 (包含IV和密文)
      * @param key 密钥
      * @return 解密结果
      */
     fun decryptAESGCM(encryptedData: ByteArray?, key: ByteArray?): ByteArray? {
-        if (encryptedData == null || encryptedData.size < 12 || key == null || key.isEmpty()) return null
+        if (encryptedData == null || encryptedData.size < 12 || key == null || key.isEmpty())
+            return null
 
         return try {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -326,6 +302,7 @@ object EncryptUtils {
 
     /**
      * AES-GCM解密 (Base64输入)
+     *
      * @param base64Data Base64编码的加密数据
      * @param key 密钥字符串
      * @return 解密结果字符串
@@ -345,6 +322,7 @@ object EncryptUtils {
 
     /**
      * 生成安全的随机密钥
+     *
      * @param keySize 密钥长度 (128/192/256位)
      * @return 随机密钥
      */
@@ -356,6 +334,7 @@ object EncryptUtils {
 
     /**
      * 生成安全的随机IV
+     *
      * @param ivSize IV长度 (通常为12或16字节)
      * @return 随机IV
      */
@@ -398,12 +377,14 @@ object EncryptUtils {
         if (data == null || data.isEmpty() || key == null || key.isEmpty()) return ByteArray(0)
 
         // 验证密钥长度
-        val validKeyLengths = when (algorithm.uppercase()) {
-            "AES" -> listOf(16, 24, 32) // 128, 192, 256位
-            "DES" -> listOf(8) // 64位
-            "DESEDE", "3DES" -> listOf(16, 24) // 128, 192位
-            else -> listOf(16, 24, 32) // 默认AES长度
-        }
+        val validKeyLengths =
+            when (algorithm.uppercase()) {
+                "AES" -> listOf(16, 24, 32) // 128, 192, 256位
+                "DES" -> listOf(8) // 64位
+                "DESEDE",
+                "3DES" -> listOf(16, 24) // 128, 192位
+                else -> listOf(16, 24, 32) // 默认AES长度
+            }
 
         if (key.size !in validKeyLengths) {
             return ByteArray(0)

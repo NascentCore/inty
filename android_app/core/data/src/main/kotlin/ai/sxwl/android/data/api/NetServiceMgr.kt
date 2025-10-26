@@ -15,6 +15,10 @@ import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterF
 import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import java.net.InetAddress
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
@@ -23,10 +27,6 @@ import okhttp3.Request
 import okhttp3.Response
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
-import java.net.InetAddress
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 /** 获取基础URL 根据构建类型返回对应的API基础URL */
 private fun getBaseUrl(): String {
@@ -98,9 +98,7 @@ private class AuthInterceptor : Interceptor {
     }
 }
 
-/**
- * 记录错误和异常
- */
+/** 记录错误和异常 */
 private fun trackError(
     error: String,
     errorType: String = "unknown",
@@ -115,7 +113,6 @@ private fun trackError(
                 "timestamp" to System.currentTimeMillis(),
             ) + additionalParams,
         )
-
     } catch (e: Exception) {
         LogUtils.e("Failed to track error: ${e.message}")
     }
@@ -129,12 +126,13 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
         private val RETRYABLE_STATUS_CODES = setOf(500, 502, 503, 504, 429)
 
         // 可重试的异常类型
-        private val RETRYABLE_EXCEPTIONS = setOf(
-            "java.net.SocketTimeoutException",
-            "java.net.ConnectException",
-            "java.net.UnknownHostException",
-            "java.io.IOException"
-        )
+        private val RETRYABLE_EXCEPTIONS =
+            setOf(
+                "java.net.SocketTimeoutException",
+                "java.net.ConnectException",
+                "java.net.UnknownHostException",
+                "java.io.IOException"
+            )
 
         // 幂等性HTTP方法（可以安全重试）
         private val IDEMPOTENT_METHODS = setOf("GET", "HEAD", "PUT", "DELETE")
@@ -158,7 +156,9 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
 
                 // 检查响应是否应该重试
                 if (shouldRetryResponse(currentResponse, attempt)) {
-                    LogUtils.d("Retry attempt ${attempt + 1} for ${request.url} due to status ${currentResponse.code}")
+                    LogUtils.d(
+                        "Retry attempt ${attempt + 1} for ${request.url} due to status ${currentResponse.code}"
+                    )
 
                     // 记录重试事件
                     recordRetryEvent(request, attempt + 1, currentResponse.code, null)
@@ -179,7 +179,9 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
 
                 // 检查异常是否应该重试
                 if (shouldRetryException(e, attempt)) {
-                    LogUtils.i("Retry attempt ${attempt + 1} failed for ${request.url}: ${e.message}")
+                    LogUtils.i(
+                        "Retry attempt ${attempt + 1} failed for ${request.url}: ${e.message}"
+                    )
 
                     // 记录重试事件
                     recordRetryEvent(request, attempt + 1, null, e)
@@ -199,28 +201,23 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
         recordFinalFailure(request, maxRetries, lastException)
 
         // 如果有最后的响应，返回它；否则抛出最后的异常
-        return lastResponse ?: throw (lastException
-            ?: Exception("Network request failed after $maxRetries attempts"))
+        return lastResponse
+            ?: throw (lastException
+                ?: Exception("Network request failed after $maxRetries attempts"))
     }
 
-    /**
-     * 检查请求是否适合重试
-     */
+    /** 检查请求是否适合重试 */
     private fun shouldRetryRequest(request: Request): Boolean {
         // 只对幂等性方法进行重试
         return request.method in IDEMPOTENT_METHODS
     }
 
-    /**
-     * 检查响应是否应该重试
-     */
+    /** 检查响应是否应该重试 */
     private fun shouldRetryResponse(response: Response, attempt: Int): Boolean {
         return attempt < maxRetries - 1 && response.code in RETRYABLE_STATUS_CODES
     }
 
-    /**
-     * 检查异常是否应该重试
-     */
+    /** 检查异常是否应该重试 */
     private fun shouldRetryException(exception: Exception, attempt: Int): Boolean {
         if (attempt >= maxRetries - 1) return false
 
@@ -228,9 +225,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
         return RETRYABLE_EXCEPTIONS.any { exceptionType.contains(it) }
     }
 
-    /**
-     * 非阻塞延迟重试
-     */
+    /** 非阻塞延迟重试 */
     private fun delayRetry(attempt: Int) {
         try {
             // 使用指数退避，但避免阻塞主线程
@@ -249,9 +244,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
         }
     }
 
-    /**
-     * 记录重试事件
-     */
+    /** 记录重试事件 */
     private fun recordRetryEvent(
         request: Request,
         attempt: Int,
@@ -275,14 +268,8 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
         }
     }
 
-    /**
-     * 记录最终失败
-     */
-    private fun recordFinalFailure(
-        request: Request,
-        maxRetries: Int,
-        lastException: Exception?
-    ) {
+    /** 记录最终失败 */
+    private fun recordFinalFailure(request: Request, maxRetries: Int, lastException: Exception?) {
         LogUtils.e("All retry attempts failed for ${request.url} after $maxRetries attempts")
 
         try {
@@ -365,31 +352,28 @@ private class PerformanceInterceptor : Interceptor {
         }
     }
 
-
-    /**
-     * 记录性能指标（异步执行，不阻塞请求）
-     */
-    private fun recordPerformanceMetrics(
-        request: Request,
-        duration: Long,
-        isSuccessful: Boolean
-    ) {
+    /** 记录性能指标（异步执行，不阻塞请求） */
+    private fun recordPerformanceMetrics(request: Request, duration: Long, isSuccessful: Boolean) {
         try {
             // 使用线程池异步记录性能指标，避免阻塞主线程
             NetServiceMgr.performanceExecutor.execute {
                 when {
                     duration < FAST_REQUEST_THRESHOLD -> {
                         if (AppUtils.isAppDebug()) {
-                            LogUtils.i("✅ Fast request: ${request.method} ${request.url} (${duration}ms)")
+                            LogUtils.i(
+                                "✅ Fast request: ${request.method} ${request.url} (${duration}ms)"
+                            )
                         }
                     }
-
                     duration < SLOW_REQUEST_THRESHOLD -> {
-                        LogUtils.w("⚠️ Slow request: ${request.method} ${request.url} (${duration}ms)")
+                        LogUtils.w(
+                            "⚠️ Slow request: ${request.method} ${request.url} (${duration}ms)"
+                        )
 
                         // 使用Firebase Analytics记录慢请求
                         FirebaseManager.logEvent(
-                            "slow_request", mapOf(
+                            "slow_request",
+                            mapOf(
                                 "duration_ms" to duration,
                                 "method" to request.method,
                                 "url" to request.url.toString(),
@@ -397,13 +381,15 @@ private class PerformanceInterceptor : Interceptor {
                             )
                         )
                     }
-
                     else -> {
-                        LogUtils.e("🚨 Very slow request: ${request.method} ${request.url} (${duration}ms)")
+                        LogUtils.e(
+                            "🚨 Very slow request: ${request.method} ${request.url} (${duration}ms)"
+                        )
 
                         // 使用Firebase Analytics记录极慢请求
                         FirebaseManager.logEvent(
-                            "very_slow_request", mapOf(
+                            "very_slow_request",
+                            mapOf(
                                 "duration_ms" to duration,
                                 "method" to request.method,
                                 "url" to request.url.toString(),
@@ -423,22 +409,19 @@ private class PerformanceInterceptor : Interceptor {
         }
     }
 
-    /**
-     * 记录失败的性能指标
-     */
-    private fun recordFailureMetrics(
-        request: Request,
-        duration: Long,
-        exception: Exception
-    ) {
+    /** 记录失败的性能指标 */
+    private fun recordFailureMetrics(request: Request, duration: Long, exception: Exception) {
         try {
             // 使用线程池异步记录失败指标
             NetServiceMgr.performanceExecutor.execute {
-                LogUtils.e("❌ Request failed: ${request.method} ${request.url} (${duration}ms): ${exception.message}")
+                LogUtils.e(
+                    "❌ Request failed: ${request.method} ${request.url} (${duration}ms): ${exception.message}"
+                )
 
                 // 使用Firebase Analytics记录请求失败
                 FirebaseManager.logEvent(
-                    "request_failure", mapOf(
+                    "request_failure",
+                    mapOf(
                         "duration_ms" to duration,
                         "method" to request.method,
                         "url" to request.url.toString(),
@@ -489,11 +472,10 @@ private class CachedDns : Dns {
 object NetServiceMgr {
 
     // 性能监控专用线程池
-    internal val performanceExecutor = Executors.newFixedThreadPool(2) { r ->
-        Thread(r, "PerformanceMonitor").apply {
-            isDaemon = true
+    internal val performanceExecutor =
+        Executors.newFixedThreadPool(2) { r ->
+            Thread(r, "PerformanceMonitor").apply { isDaemon = true }
         }
-    }
 
     private val okHttpClient: OkHttpClient
         get() {
@@ -600,7 +582,6 @@ object NetServiceMgr {
             return retrofitUser
         }
 
-
     fun getUserApi(): IUserApi {
         return retrofitNormal.create(IUserApi::class.java)
     }
@@ -620,5 +601,4 @@ object NetServiceMgr {
     fun getCommonApi(): ICommonApi {
         return retrofitNormal.create(ICommonApi::class.java)
     }
-
 }

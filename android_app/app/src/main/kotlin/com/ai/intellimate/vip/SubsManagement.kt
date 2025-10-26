@@ -45,7 +45,6 @@ fun SubscriptionManagementScreen(
                     // 在View层执行实际的Intent启动
                     openPlayStoreSubscriptions(context)
                 }
-
                 is SubscriptionUiEvent.ShowToast -> {
                     ToastUtils.showShort(event.message)
                 }
@@ -68,9 +67,7 @@ fun SubscriptionManagementScreen(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier
-                                .padding(horizontal = 12.dp)
-                                .noRippleClickable { onBack() },
+                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
                         painter = painterResource(R.drawable.back),
                         contentDescription = null,
                     )

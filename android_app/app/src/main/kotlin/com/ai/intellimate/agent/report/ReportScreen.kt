@@ -56,19 +56,16 @@ fun ReportScreen(
 
     Box(
         modifier =
-            Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) {
-                    focusManager.clearFocus()
-                }
+            Modifier.fillMaxSize().clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) {
+                focusManager.clearFocus()
+            }
     ) {
         Column(
             modifier =
-                Modifier
-                    .matchParentSize()
+                Modifier.matchParentSize()
                     .padding(horizontal = 16.dp)
                     .imePadding()
                     .verticalScroll(rememberScrollState()),
@@ -133,9 +130,7 @@ fun ReportScreen(
             },
             navigationIcon = {
                 Image(
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp)
-                        .noRippleClickable { onBack() },
+                    modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
                     painter = painterResource(R.drawable.back),
                     contentDescription = null,
                 )

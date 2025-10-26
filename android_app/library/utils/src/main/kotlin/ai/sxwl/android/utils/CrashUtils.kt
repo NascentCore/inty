@@ -10,29 +10,26 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * 崩溃工具类
- * 提供崩溃处理相关的工具方法
- */
+/** 崩溃工具类 提供崩溃处理相关的工具方法 */
 object CrashUtils {
 
-    private val FILE_SEP = try {
-        FileSystems.getDefault().separator
-    } catch (e: Exception) {
-        "/" // 默认分隔符
-    }
+    private val FILE_SEP =
+        try {
+            FileSystems.getDefault().separator
+        } catch (e: Exception) {
+            "/" // 默认分隔符
+        }
 
     private val DEFAULT_UNCAUGHT_EXCEPTION_HANDLER = Thread.getDefaultUncaughtExceptionHandler()
 
-    /**
-     * 初始化
-     */
+    /** 初始化 */
     fun init() {
         init("")
     }
 
     /**
      * 初始化
+     *
      * @param crashDir 保存崩溃信息的目录
      */
     fun init(crashDir: File) {
@@ -41,6 +38,7 @@ object CrashUtils {
 
     /**
      * 初始化
+     *
      * @param crashDirPath 保存崩溃信息的目录路径
      */
     fun init(crashDirPath: String) {
@@ -49,6 +47,7 @@ object CrashUtils {
 
     /**
      * 初始化
+     *
      * @param onCrashListener 崩溃监听器
      */
     fun init(onCrashListener: OnCrashListener?) {
@@ -57,6 +56,7 @@ object CrashUtils {
 
     /**
      * 初始化
+     *
      * @param crashDir 保存崩溃信息的目录
      * @param onCrashListener 崩溃监听器
      */
@@ -66,30 +66,29 @@ object CrashUtils {
 
     /**
      * 初始化
+     *
      * @param crashDirPath 保存崩溃信息的目录路径
      * @param onCrashListener 崩溃监听器
      */
     fun init(crashDirPath: String, onCrashListener: OnCrashListener?) {
-        val dirPath = if (UtilsBridge.isSpace(crashDirPath)) {
-            try {
-                val app: Application? = Utils.getApp()
-                if (app != null) {
-                    app.filesDir.toString() + FILE_SEP + "crash" + FILE_SEP
-                } else {
+        val dirPath =
+            if (UtilsBridge.isSpace(crashDirPath)) {
+                try {
+                    val app: Application? = Utils.getApp()
+                    if (app != null) {
+                        app.filesDir.toString() + FILE_SEP + "crash" + FILE_SEP
+                    } else {
+                        "/crash/"
+                    }
+                } catch (e: Exception) {
                     "/crash/"
                 }
-            } catch (e: Exception) {
-                "/crash/"
+            } else {
+                if (crashDirPath.endsWith(FILE_SEP)) crashDirPath else crashDirPath + FILE_SEP
             }
-        } else {
-            if (crashDirPath.endsWith(FILE_SEP)) crashDirPath else crashDirPath + FILE_SEP
-        }
 
         Thread.setDefaultUncaughtExceptionHandler(
-            getUncaughtExceptionHandler(
-                dirPath,
-                onCrashListener
-            )
+            getUncaughtExceptionHandler(dirPath, onCrashListener)
         )
     }
 

@@ -9,16 +9,12 @@ import coil3.request.placeholder
 import coil3.size.Size
 import java.io.File
 
-/**
- * 图片加载工具类
- * 根据Coil 3.x官方文档优化，专门处理大图片加载的优化策略
- */
+/** 图片加载工具类 根据Coil 3.x官方文档优化，专门处理大图片加载的优化策略 */
 object ImageLoaderUtils {
 
     /**
-     * 创建设备适配的图片请求
-     * 根据设备屏幕密度和尺寸自动压缩图片，提供最佳性能
-     * 参考：https://coil-kt.github.io/coil/
+     * 创建设备适配的图片请求 根据设备屏幕密度和尺寸自动压缩图片，提供最佳性能 参考：https://coil-kt.github.io/coil/
+     *
      * @param context 上下文
      * @param imageUrl 图片URL
      * @param placeholder 占位图资源ID
@@ -54,8 +50,8 @@ object ImageLoaderUtils {
     }
 
     /**
-     * 创建针对大图片优化的ImageRequest
-     * 根据官方文档：https://coil-kt.github.io/coil/network/
+     * 创建针对大图片优化的ImageRequest 根据官方文档：https://coil-kt.github.io/coil/network/
+     *
      * @param context 上下文
      * @param imageUrl 图片URL
      * @param placeholder 占位图资源ID
@@ -80,6 +76,7 @@ object ImageLoaderUtils {
 
     /**
      * 创建针对头像优化的ImageRequest
+     *
      * @param context 上下文
      * @param imageUrl 图片URL
      * @param size 目标尺寸
@@ -100,6 +97,7 @@ object ImageLoaderUtils {
 
     /**
      * 创建针对缩略图优化的ImageRequest
+     *
      * @param context 上下文
      * @param imageUrl 图片URL
      * @param width 宽度
@@ -121,8 +119,8 @@ object ImageLoaderUtils {
     }
 
     /**
-     * 创建针对大图片的渐进式加载ImageRequest
-     * 适用于网络较慢的情况
+     * 创建针对大图片的渐进式加载ImageRequest 适用于网络较慢的情况
+     *
      * @param context 上下文
      * @param imageUrl 图片URL
      * @param placeholder 占位图
@@ -147,19 +145,21 @@ object ImageLoaderUtils {
 
     /**
      * 检查图片URL是否有效
+     *
      * @param imageUrl 图片URL
      * @return 是否有效
      */
     fun isValidImageUrl(imageUrl: String?): Boolean {
         return !imageUrl.isNullOrBlank() &&
-                (imageUrl.startsWith("http://") ||
-                        imageUrl.startsWith("https://") ||
-                        imageUrl.startsWith("file://") ||
-                        imageUrl.startsWith("content://"))
+            (imageUrl.startsWith("http://") ||
+                imageUrl.startsWith("https://") ||
+                imageUrl.startsWith("file://") ||
+                imageUrl.startsWith("content://"))
     }
 
     /**
      * 获取图片文件大小（如果可能）
+     *
      * @param imageUrl 图片URL
      * @return 文件大小（字节），如果无法获取则返回null
      */
@@ -178,6 +178,7 @@ object ImageLoaderUtils {
 
     /**
      * 检查是否为超大图片（超过5MB）
+     *
      * @param imageUrl 图片URL
      * @return 是否为超大图片
      */
@@ -188,6 +189,7 @@ object ImageLoaderUtils {
 
     /**
      * 检查是否为超大图片（超过10MB）
+     *
      * @param imageUrl 图片URL
      * @return 是否为超大图片
      */
