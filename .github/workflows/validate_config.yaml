@@ -6,8 +6,8 @@ on:
       - main
     paths:
       - "devops/config.yaml.*"
-      - ".github/workflows/test_config.yaml"
-      - "devops/test_configs.py"
+      - ".github/workflows/validate_config.yaml"
+      - "devops/validate_configs.py"
       - "app/core/config.py"
 
   pull_request:
@@ -15,8 +15,8 @@ on:
       - main
     paths:
       - "devops/config.yaml.*"
-      - ".github/workflows/test_config.yaml"
-      - "devops/test_configs.py"
+      - ".github/workflows/validate_config.yaml"
+      - "devops/validate_configs.py"
       - "app/core/config.py"
 
 jobs:
@@ -56,4 +56,4 @@ jobs:
         run: |
           # config.py 默认加载 config.yaml 文件，因此需要创建一份
           cp config.yaml.example config.yaml
-          pytest -v -s devops/test_configs.py
+          pytest -v -s devops/validate_configs.py
