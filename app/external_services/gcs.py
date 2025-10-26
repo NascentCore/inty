@@ -5,6 +5,7 @@ import loguru
 from google.cloud import storage
 
 from app.core.config import global_config_loaded_from_config_yaml
+from tests.fakes.gcs import FakeGCSClient
 
 logger = loguru.logger
 
@@ -16,21 +17,25 @@ GCS_GS_PREFIX = "gs://"
 
 gcs_client = None
 
-try:
-    gcs_client = storage.Client.from_service_account_json(
-        global_config_loaded_from_config_yaml.app.gcp_service_account_key
-    )
-except Exception as e:
-    if global_config_loaded_from_config_yaml.app.debug:
-        logger.error(f"GCS客户端初始化失败，debug 模式下忽略: {str(e)}")
-        logger.error(f"错误堆栈: {traceback.format_exc()}")
-    else:
-        raise
+
+def get_gcs_client():
+    """获取GCS客户端，根据配置选择真实或假客户端"""
+    global gcs_client
+    if gcs_client is None:
+        if global_config_loaded_from_config_yaml.gcs.use_fake_gcs:
+            logger.info("使用 GCS Fake 客户端进行测试")
+            gcs_client = FakeGCSClient()
+        else:
+            gcs_client = storage.Client.from_service_account_json(
+                global_config_loaded_from_config_yaml.app.gcp_service_account_key
+            )
+    return gcs_client
 
 
 def upload_to_gcs(file_data, content_type, bucket_name, path):
     try:
-        bucket = gcs_client.bucket(bucket_name)
+        client = get_gcs_client()
+        bucket = client.bucket(bucket_name)
         blob = bucket.blob(path)
         blob.upload_from_string(file_data, content_type=content_type)
         public_url = blob.public_url
@@ -48,7 +53,8 @@ def upload_to_gcs(file_data, content_type, bucket_name, path):
 def delete_from_gcs(bucket_name, path):
     """删除GCS文件，如果文件不存在则忽略"""
     try:
-        bucket = gcs_client.bucket(bucket_name)
+        client = get_gcs_client()
+        bucket = client.bucket(bucket_name)
         blob = bucket.blob(path)
 
         # 检查文件是否存在
@@ -81,14 +87,15 @@ def copy_gcs_file(source_url: str, destination_path: str, bucket_name: str) -> s
     Returns:
         新文件的公共URL
     """
-    bucket = gcs_client.bucket(bucket_name)
+    client = get_gcs_client()
+    bucket = client.bucket(bucket_name)
 
     _, source_path = get_bucket_and_path_from_gcs_url(source_url)
     if not source_path:
         raise ValueError(f"Invalid GCS URL: {source_url}")
 
     # 获取源bucket和blob
-    source_bucket = gcs_client.bucket(bucket_name)
+    source_bucket = client.bucket(bucket_name)
     source_blob = source_bucket.blob(source_path)
 
     # 检查源文件是否存在
@@ -96,7 +103,7 @@ def copy_gcs_file(source_url: str, destination_path: str, bucket_name: str) -> s
         raise FileNotFoundError(f"Source file not found: {source_url}")
 
     # 获取目标bucket和blob
-    destination_bucket = gcs_client.bucket(bucket_name)
+    destination_bucket = client.bucket(bucket_name)
     destination_blob = destination_bucket.blob(destination_path)
 
     # 复制文件
@@ -177,7 +184,8 @@ def is_temp_gcs_path(url: str, user_id: str) -> bool:
 def check_gcs_file_exists(bucket_name: str, path: str) -> bool:
     """检查GCS文件是否存在"""
     try:
-        bucket = gcs_client.bucket(bucket_name)
+        client = get_gcs_client()
+        bucket = client.bucket(bucket_name)
         blob = bucket.blob(path)
         return blob.exists()
     except Exception:
@@ -189,7 +197,8 @@ def download_from_gcs(url: str) -> bytes:
     bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(url)
     assert gcs_path
 
-    bucket = gcs_client.bucket(bucket_name)
+    client = get_gcs_client()
+    bucket = client.bucket(bucket_name)
     blob = bucket.blob(gcs_path)
     logger.debug(f"下载GCS文件: {bucket_name}/{gcs_path}")
     return blob.download_as_bytes()

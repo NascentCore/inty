@@ -172,7 +172,8 @@ class AgentConfig:
 
 @dataclass
 class GCSConfig:
-    bucket: str
+    use_fake_gcs: bool = False
+    bucket: str = "inty-storage"
     # DEPRECATED: 保留作为兼容；被 app.gcp_service_account_key 取代
     # 删除部署环境中的配置文件使用，然后删除这个代码。
     credentials: str = "<deprecated-do-not-use>"
