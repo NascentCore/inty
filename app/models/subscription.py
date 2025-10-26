@@ -1,5 +1,4 @@
 import enum
-from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from sqlalchemy import (

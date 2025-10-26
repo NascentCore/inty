@@ -1,12 +1,10 @@
 """问题文件解析服务"""
 
-import csv
-import io
 import json
 import logging
 from typing import Any, Dict, List
 
-from fastapi import HTTPException, UploadFile
+from fastapi import UploadFile
 
 logger = logging.getLogger(__name__)
 

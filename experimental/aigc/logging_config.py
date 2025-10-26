@@ -2,7 +2,6 @@
 Logging configuration for the AI Character Generator
 """
 
-import os
 import logging
 import logging.handlers
 from pathlib import Path

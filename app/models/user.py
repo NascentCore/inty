@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 import sqlalchemy as sa
 from loguru import logger
 from sqlalchemy import (
-    JSON,
     Boolean,
     Column,
     DateTime,
@@ -19,7 +18,6 @@ from sqlalchemy.orm import relationship, validates
 
 from app.models import Base
 from app.models.associations import agent_followers
-from app.models.notification import UserNotification
 
 
 class AuthType(str, enum.Enum):

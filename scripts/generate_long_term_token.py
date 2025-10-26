@@ -18,7 +18,6 @@ from pathlib import Path
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.core.config import global_config_loaded_from_config_yaml
 from app.core.security import create_access_token
 from app.db.session import get_async_db
 from app.models.user import User

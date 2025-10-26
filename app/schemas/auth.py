@@ -1,7 +1,6 @@
-from datetime import datetime
 from typing import Any, Dict, Optional, Union
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 from app.models.user import AuthType, Gender
 

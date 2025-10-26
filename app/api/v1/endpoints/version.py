@@ -1,4 +1,3 @@
-import logging
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException

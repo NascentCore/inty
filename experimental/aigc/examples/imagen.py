@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # A simple sample of using imagen to generate images with Vertex AI
 from gemini_client import GeminiClient
-from models import CharacterProfile, CharacterBackground, CharacterEncounter, CharacterImage
+from models import CharacterProfile, CharacterBackground, CharacterEncounter
 
 client = GeminiClient()
 

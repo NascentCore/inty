@@ -7,13 +7,12 @@ using the API key loaded from a .env file.
 """
 
 import argparse
-import datetime
 import os
 import json
 import time
 import requests
 from dotenv import load_dotenv
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 # Load environment variables from .env file
 load_dotenv()

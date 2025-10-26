@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from loguru import logger

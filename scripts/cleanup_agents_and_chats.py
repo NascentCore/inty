@@ -18,7 +18,6 @@
 import asyncio
 import sys
 from pathlib import Path
-from typing import List
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger

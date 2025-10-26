@@ -7,14 +7,12 @@ TODO：这个文件就是给 AI 角色补充元数据的工具
 
 import argparse
 import io
-import os
 import sys
 import uuid
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 from urllib.parse import urlparse
 
-import psycopg2
 import requests
 from loguru import logger
 from PIL import Image

@@ -1,7 +1,6 @@
 """评测会话管理服务"""
 
 import asyncio
-import json
 import logging
 import uuid
 from datetime import datetime
@@ -18,7 +17,6 @@ from app.models.evaluation import (
     EvaluationSession,
     EvaluationStatus,
 )
-from app.models.user import User
 from app.services import agent_service, chat_service
 from app.services.scoring_service import ScoringService
 

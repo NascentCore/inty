@@ -3,13 +3,9 @@
 Test script for the AI Character Generator
 """
 
-import pickle
-import time
-import logging
 import unittest
-from character_agent import CharacterAgent
-from models import CharacterGenerationRequest, CharacterImage
-from unittest.mock import patch, MagicMock
+from models import CharacterImage
+from unittest.mock import MagicMock
 from gemini_client import GeminiClient
 from models import CharacterProfile, CharacterBackground, CharacterEncounter
 

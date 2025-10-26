@@ -11,7 +11,6 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from typing_extensions import deprecated
 
-from app.core.config import global_config_loaded_from_config_yaml
 from app.core.uuid import get_new_user_id
 from app.models import User
 from app.models.chat import Chat

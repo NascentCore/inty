@@ -1,10 +1,7 @@
 import time
-import json
 import logging
-from typing import Optional
 from gemini_client import GeminiClient
 from models import CharacterProfile, CharacterGenerationRequest, CharacterGenerationResponse
-from config import Config
 
 class CharacterAgent:
     """Main AI agent for generating comprehensive character profiles"""

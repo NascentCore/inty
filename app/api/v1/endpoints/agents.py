@@ -8,15 +8,12 @@ from typing import Any, Dict, List, Union
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from loguru import logger
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
-from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
-from app.schemas.agent import AgentSortConfig
 from app.schemas.character_card import (
     CharacterCardExportRequest,
     CharacterCardImportRequest,

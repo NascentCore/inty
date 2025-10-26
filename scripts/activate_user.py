@@ -18,7 +18,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from app.db.session import get_async_db
 from app.models.user import User
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def activate_user(user_id: str = None, readable_id: str = None):

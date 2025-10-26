@@ -6,7 +6,6 @@ Helps diagnose and troubleshoot issues
 
 import os
 import sys
-import json
 import logging
 from pathlib import Path
 from config import Config
@@ -154,7 +153,7 @@ def test_models():
     print("=" * 50)
     
     try:
-        from models import CharacterGenerationRequest, CharacterProfile
+        from models import CharacterGenerationRequest
         
         # Test request model
         request = CharacterGenerationRequest(

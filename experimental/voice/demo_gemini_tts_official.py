@@ -2,10 +2,8 @@
 # pip install google-genai
 # 来自 https://aistudio.google.com/generate-speech，然后 选择右上角的 get code
 
-import base64
 import mimetypes
 import os
-import re
 import struct
 from google import genai
 from google.genai import types

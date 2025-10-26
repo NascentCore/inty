@@ -8,7 +8,6 @@ from app.models.subscription import (
     SubscriptionStatus,
     TransactionType,
 )
-from app.models.subscription_features import SubscriptionFeatures
 
 
 class SubscriptionPlanBase(BaseModel):

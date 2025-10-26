@@ -16,7 +16,6 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.response import APIResponse
 from app.schemas.subscription import (
     GooglePlayPurchaseRequest,
-    GooglePlayWebhookRequest,
     PurchaseVerificationRequest,
     PurchaseVerificationResponse,
     RefundRequest,

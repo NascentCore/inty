@@ -6,12 +6,9 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     String,
-    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSON
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 
 from app.models import Base
 

@@ -4,7 +4,7 @@ Timing utilities for measuring execution time.
 
 import time
 from contextlib import contextmanager
-from typing import Generator, Optional
+from typing import Generator
 
 from loguru import logger
 

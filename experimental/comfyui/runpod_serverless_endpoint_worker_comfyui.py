@@ -9,7 +9,6 @@ from datetime import datetime
 import os
 import json
 import random
-import re
 import time
 import runpod
 

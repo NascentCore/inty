@@ -1,7 +1,4 @@
-import sqlalchemy as sa
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy import Column, ForeignKey, String, Table
 
 from app.models import Base
 

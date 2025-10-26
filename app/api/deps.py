@@ -2,8 +2,7 @@
 依赖注入：为 FastAPI 接口处理函数注入依赖数据。
 """
 
-import logging
-from typing import Generator, Optional
+from typing import Generator
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -12,15 +11,11 @@ from loguru import logger
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing_extensions import deprecated
 
-from app import models, schemas
-from app.core import security
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.base import SessionLocal
 from app.db.session import get_async_db
 from app.models.user import User
-from app.schemas.token import TokenPayload
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 

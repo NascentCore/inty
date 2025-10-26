@@ -1,15 +1,12 @@
 import enum
 from datetime import UTC, datetime
-from typing import List, Optional
 
-from loguru import logger
 from sqlalchemy import (
     ARRAY,
     JSON,
     Boolean,
     Column,
     DateTime,
-    Enum,
     ForeignKey,
     Index,
     Integer,

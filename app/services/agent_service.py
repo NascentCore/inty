@@ -30,7 +30,6 @@ from app.external_services.gcs import (
 )
 from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
-from app.models.resource import ResourceType
 from app.schemas.agent import AgentSortOption
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.services.cache_service import cache_service

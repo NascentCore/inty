@@ -5,7 +5,6 @@ from sqlalchemy import ARRAY, Boolean, Column, DateTime
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 
 from app.models import Base
 
