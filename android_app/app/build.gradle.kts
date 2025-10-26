@@ -81,7 +81,8 @@ dependencies {
     implementation(libs.bundles.androidx.media3.bundle)
     implementation(libs.androidx.media3.datasource.okhttp)
 
-    // ===== UI 测试依赖 =====
+    // ===== 测试依赖 =====
+    testImplementation(libs.mockk)
     androidTestImplementation(libs.androidx.uiautomator)
 
 }

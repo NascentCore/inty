@@ -2,6 +2,8 @@ package com.ai.intellimate.profile
 
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.http.services.ImageService
+import io.mockk.coEvery
+import io.mockk.mockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -13,8 +15,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.mockito.MockedStatic
-import org.mockito.Mockito
 
 /**
  * 极简单元测试：验证头像上传成功时，ViewModel 会用返回的 URL 更新 avatar 字段。
@@ -25,20 +25,16 @@ class MySettingViewModelTest {
 
     private lateinit var vm: MySettingViewModel
 
-    private lateinit var imageServiceMock: MockedStatic<ImageService>
-
     @OptIn(ExperimentalCoroutinesApi::class)
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         vm = MySettingViewModel()
-        imageServiceMock = Mockito.mockStatic(ImageService::class.java)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @After
     fun tearDown() {
-        imageServiceMock.close()
         Dispatchers.resetMain()
     }
 
@@ -52,10 +48,9 @@ class MySettingViewModelTest {
         setAvatarMethod.isAccessible = true
         setAvatarMethod.invoke(vm, android.net.Uri.parse(localFileUri))
 
-        // stub: ImageService 返回服务端 URL
-        imageServiceMock.`when`<Any> {
-            ImageService.uploadUserAvatar(Mockito.any())
-        }.thenReturn("https://cdn.example.com/avatar-123.jpg")
+        // stub: ImageService 返回服务端 URL（静态方法）
+        mockkStatic(ImageService::class)
+        coEvery { ImageService.uploadUserAvatar(any()) } returns "https://cdn.example.com/avatar-123.jpg"
 
         // 执行
         vm.onSave()
