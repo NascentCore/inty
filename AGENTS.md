@@ -1,19 +1,17 @@
-# Inty: long term AI companionship: start with intimacy for young adults
+# Inty: long term AI companionship starting with intimacy roleplay for young adults
 
 Based on [AGENTS.md](https://agents.md/)
 
 ## Repo structure
 
-- `android_app/` IntelliMate, android app code，kotlin 原生架构
-- `app/` Inty 包含全部后端服务，fastapi http 服务
-- `alembic/` Inty 后端服务数据库管理组件，使用 <https://github.com/sqlalchemy/alembic>
-- `sdks/` Inty SDKs 包含多种语言的后端服务 SDK，使用 [stainless OpenAPI](https://www.stainless.com/docs) 生成
-  - `sdks/python` 后端服务 Python SDK，git module
-  - `sdks/typescript` 后端服务 Python SDK，git module
-- `evaluation/` Inty-eval, Inty 智能体/角色管理及评测工具，react 浏览器应用
+- `android_app/` IntelliMate, android app code，kotlin compose jetpack
+- `app/` Inty 后端服务，Python fastapi
+  - `app/openapi.json` 来自 fastapi 生成，并使用 stainless 生成 kotlin typescript SDK（分别以 submodule 形式位于 evaluation/inty_sdk android_app/library/inty_sdk
+- `alembic/` Inty 后端服务数据库 schema 管理，使用 <https://github.com/sqlalchemy/alembic>
+- `evaluation/` Inty 运营工具，react 由 app/ 后端提供 web serving
 - `experimental/` 原型代码
-- `scripts/` 运维、运营脚本
-- `devops/` Inty IntelliMate 运维相关代码
+- `scripts/` 各类脚本，以修改数据库记录为主
+- `devops/` 运维相关代码
 - `docs/` 文档
 
 ## 语言与输出
@@ -23,12 +21,13 @@ Based on [AGENTS.md](https://agents.md/)
 
 ## 文档维护
 
-- 当进行改动时，如变更足够重要且会影响相应目录的 `AGENTS.md` 指南，请同步更新该目录下的 `AGENTS.md`。
-- Markdown 文件应从以下文件中选择：`README.md`、`CURSOR_TODOS.md`、`ARCH.md`、`AGENTS.md`。
+- 当进行改动时，如变更足够重要且会影响相应目录的 `AGENTS.md` 指南、及其他 markdown 文件，请同步更新该目录下的 `AGENTS.md`、及其他 markdown 文件。
+- Markdown 文件应从以下文件中选择：`README.md`、`AGENT_TODOS.md`、`ARCH.md`、`AGENTS.md`。
 - Markdown 文件命名：全部使用 `.md` 后缀（小写），文件名使用全大写字母与下划线，例如 `FUTURE_PLANS.md`。
 
 ## 提交与变更请求记录规范
 
+- 完成改动后用 git commit 提交
 - 小改动：在提交信息中包含用户的原始变更请求（可放在提交说明 body 部分），并简述本次处理方式。
 - 大改动或新增大型功能：将用户的变更请求写入一个与代码改动同目录的 `<TASK>_REQUESTS.md` 文件；`<TASK>` 使用任务或分支的简明标识。在提交信息中引用该文件路径。
 - `<TASK>` 命名：使用全大写下划线（snake_case）风格并与分支/任务编号一致，例如 `AGENT_MANAGER_REFACTOR`；避免使用 `-` 与空格。
