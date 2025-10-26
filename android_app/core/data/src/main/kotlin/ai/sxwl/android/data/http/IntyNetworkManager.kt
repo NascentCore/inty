@@ -190,10 +190,8 @@ object IntyNetworkManager {
                     
                     // 尝试解析服务器返回的详细错误信息
                     try {
-                        val errorBody = e.body
-                        if (errorBody != null) {
-                            LogUtils.e("IntyNetworkManager: Server error body: $errorBody")
-                        }
+                        val errorBody = e.body()
+                        LogUtils.e("IntyNetworkManager: Server error body: $errorBody")
                     } catch (ex: Exception) {
                         LogUtils.e("IntyNetworkManager: Failed to parse error body: ${ex.message}")
                     }
