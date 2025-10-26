@@ -2,6 +2,8 @@ package com.ai.intellimate.utils
 
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
+import androidx.annotation.StringRes
+import com.ai.intellimate.R
 import kotlinx.coroutines.CancellationException
 
 /** 网络错误处理器 负责处理网络相关的错误提示和异常处理 */
@@ -52,10 +54,10 @@ object NetworkErrorHandler {
         // 检查是否为取消异常，如果是则不显示toast
         if (exception is CancellationException) {
             LogUtils.d("网络请求被取消: $requestUrl")
-            return "Request cancelled"
+            return getString(R.string.network_error_request_cancelled)
         }
 
-        val errorMessage = exception.message ?: "Network error occurred"
+        val errorMessage = exception.message ?: getString(R.string.network_error_occurred)
 
         // 检查错误消息是否包含取消相关词汇
         if (
@@ -69,5 +71,16 @@ object NetworkErrorHandler {
         // 显示错误消息
         ToastUtils.showShort(errorMessage)
         return errorMessage
+    }
+
+    /** 获取字符串资源 */
+    private fun getString(@StringRes resId: Int): String {
+        return try {
+            val context = ai.sxwl.android.utils.Utils.getApp()
+            context.getString(resId)
+        } catch (e: Exception) {
+            LogUtils.e("获取字符串资源失败: $resId", e)
+            "Unknown"
+        }
     }
 }
