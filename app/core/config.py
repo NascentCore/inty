@@ -28,7 +28,7 @@ class Environment(str, Enum):
 
     DEV = "dev"
     PROD = "prod"
-    LOCAL = "local"
+    TEST = "test"
     UNSPECIFIED = "unspecified"
 
 
@@ -338,7 +338,7 @@ def _validate_config(config: Config):
         limits.free_user_voice_24h_limit = default_free
 
     if (
-        config.app.environment != Environment.LOCAL
+        config.app.environment != Environment.TEST
         and limits.local_only_guest_user_image_gen_24h_limit > 0
     ):
         raise ValueError(

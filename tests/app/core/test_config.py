@@ -225,7 +225,7 @@ def test_local_only_guest_user_image_gen_limit_in_non_local_environment(config):
 
 
 def test_local_only_guest_user_image_gen_limit_in_local_environment(config):
-    config.app.environment = Environment.LOCAL
+    config.app.environment = Environment.TEST
     config.app.limits.local_only_guest_user_image_gen_24h_limit = 5
 
     # 应该不抛出异常
@@ -266,7 +266,7 @@ def test_name_for_openrouter_local_environment():
     """测试LOCAL环境下的name_for_openrouter属性"""
     app_config = AppConfig(
         name="inty-backend",
-        environment=Environment.LOCAL,
+        environment=Environment.TEST,
     )
 
     assert app_config.name_for_openrouter == "https://inty-backend-local"
