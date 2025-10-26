@@ -1,6 +1,7 @@
 # evaluation
 
-Inty Evaluation（评测与运营工具），基于 React/TypeScript 与 Vite 构建，运行于浏览器，直接对接后端用于智能体（角色）管理、对话体验与评测。
+Inty Evaluation（评测与运营工具），基于 React/TypeScript 与 Vite 构建。
+当前前端在构建后被拷贝至后端 `FastAPI` 静态目录，并由后端统一在 `/evaluation` 路由提供访问。
 
 - **⚠️ 注意：所有人操作的都是同一份后端数据，使用同样的 API key（仅用于 dev 环境）。请勿泄露或在公网展示。**
 
@@ -12,38 +13,51 @@ cd inty
 git submodule update --init --recursive
 ```
 
-## 快速开始（对接 dev 后端）
+## 快速开始（后端集成方式）
+
+方式一：本地直接运行后端并访问集成页面
 
 ```bash
-# 默认对接 https://dev.inty.sxwl.ai/api/v1
-# 启动并打开 http://localhost:3000/
-evaluation/start.sh
+# 构建前端并拷贝到 app/static/evaluation
+./build_evaluation.sh
+
+# 启动后端
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 浏览器访问（集成静态资源）
+# http://localhost:8000/evaluation
 ```
 
-## 对接本地后端
+方式二：使用 Docker 构建（多阶段构建自动产出并拷入静态资源）
 
 ```bash
-# 启动依赖（pgvector 数据库容器）
-docker compose up pgvector -d
+docker build --build-arg CONFIG_FILE=config.yaml -t inty-backend .
+docker run -p 8000:8000 -v $(pwd)/config.yaml:/config.yaml inty-backend
 
-# 启动后端（初始化数据库并创建管理员）
-./start.sh --dev
+# 浏览器访问
+# http://localhost:8000/evaluation
+```
 
-# 将前端指向本地后端
-# 打开 http://localhost:3000/
+## 开发模式（HMR）
+
+仍可使用前端开发服务器进行联调（HMR）——该模式下由脚本设置 `REACT_APP_API_BASE_URL` 等环境变量，并在本机 `:3000` 端口启动。
+
+```bash
+# 默认对接 `https://dev.inty.sxwl.ai/api/v1`
+evaluation/start.sh
+
+# 或指定本地后端
 evaluation/start.sh --backend-url http://localhost:8000/api/v1
 ```
 
-## 构建与预览
+## 构建与预览（仅前端）
+
+如需单独在 `evaluation/` 目录内构建并预览静态资源，可使用：
 
 ```bash
-# 在 evaluation 目录内进行生产构建
 evaluation/build.sh
-
-# 或使用 npm 指令（evaluation 目录）
-npm install
-npm run build
-npm run preview
+# 或（在 evaluation 目录）
+npm install && npm run build && npm run preview
 ```
 
 ## SDK 子模块与版本
@@ -75,16 +89,17 @@ git push
 
 示例参考：`https://github.com/NascentCore/inty/pull/655/files`
 
-## 环境变量（由 start.sh 设置）
+## 环境变量说明
 
-- `REACT_APP_API_BASE_URL`: 前端使用的后端 API 根路径，默认 `https://dev.inty.sxwl.ai/api/v1`
-- `INTY_BASE_URL`: 从 `REACT_APP_API_BASE_URL` 去掉 `api/v1` 得到的基础地址
-- `INTY_API_KEY`: 仅用于 dev 环境的测试密钥，切勿泄露
+- 集成构建（生产访问）：构建时不注入环境变量，前端使用相对路径访问后端 API。
+- 开发模式（HMR）：由 `evaluation/start.sh` 设置下列变量，仅用于本地开发：
+  - `REACT_APP_API_BASE_URL`：默认 `https://dev.inty.sxwl.ai/api/v1`
+  - `INTY_BASE_URL`：从上者去掉 `api/v1` 的基础地址
+  - `INTY_API_KEY`：仅 dev 用，勿泄露
 
-详见脚本 `evaluation/start.sh`，脚本会：
-- 写入上述环境变量
-- 在端口 3000 已被占用时尝试终止占用进程
-- 构建 `evaluation/inty_sdk`（包含手动安装 `tsc-multi` 以规避 yarn 的安装问题）
+脚本还会：
+- 检测并尝试释放 `:3000` 端口
+- 构建 `evaluation/inty_sdk`（包含手动安装 `tsc-multi`）
 
 ## 目录与页面
 
@@ -125,10 +140,22 @@ git push
 - Node/npm 未安装：脚本提供 nvm 自动安装选项；在 CI/服务器环境请自行安装
 - `tsc-multi` 安装失败：脚本已通过 tarball 手动安装（见 `evaluation/start.sh`）
 
+## 与后端集成（代码位置）
+
+- 构建与拷贝脚本：`build_evaluation.sh`（构建 `evaluation/`，拷贝至 `app/static/evaluation/`）
+- FastAPI 路由：`app/main.py`
+  - 静态资源挂载：`/static` 指向 `app/static`
+  - 页面入口：`GET /evaluation` 返回 `app/static/evaluation/index.html`
+  - 资源访问：`GET /evaluation/{path}` 返回对应静态文件
+- Docker 多阶段构建：`Dockerfile`
+  - 第一阶段构建前端并将产物置于 `/app/static/evaluation/`
+  - 第二阶段复制上述产物到后端镜像的 `app/static/evaluation/`
+
 ## Cursor Summary
 
 - 技术栈：React + TypeScript + Vite；浏览器直连后端
-- 启动脚本：`evaluation/start.sh`（设置环境变量、构建 SDK、启动 dev 服务器）
+- 集成访问：后端在 `/evaluation` 提供页面与静态资源
+- 启动脚本：`evaluation/start.sh`（本地联调/HMR）
 - 环境变量：`REACT_APP_API_BASE_URL`、`INTY_BASE_URL`、`INTY_API_KEY`
 - 子模块：`evaluation/inty_sdk`；通过脚本或手动指令同步与构建
 - 主要页面：`AgentManagePage`、`ChatPage`、`EvaluationPage`、`EvaluationHistoryPage`
