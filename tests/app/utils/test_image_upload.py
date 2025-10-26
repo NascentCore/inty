@@ -55,13 +55,6 @@ def create_test_user(db: Session, user_id: str) -> User:
     return test_user
 
 
-def mock_config_for_tests():
-    """为测试创建mock配置"""
-    with patch("app.core.config.global_config_loaded_from_config_yaml") as mock_config:
-        mock_config.gcs.use_fake_gcs = True
-        mock_config.gcs.bucket = "test-bucket"
-        # Cloudflare配置现在在config.yaml中，无需mock
-        return mock_config
 
 def register_user(db: Session, user_in) -> User:
     """Register user (phone number etc.)"""
@@ -126,15 +119,14 @@ class TestUploadImage:
         base_path = "images/uploads"
 
         # 确保使用fake GCS
-        with mock_config_for_tests() as mock_config:
-            async with async_session() as async_db:
-                result = await process_image_upload(
-                    file=upload_file,
-                    user_id=user_id,
-                    async_db=async_db,
-                    base_path=base_path,
-                    cropping_avatar=True,
-                )
+        async with async_session() as async_db:
+            result = await process_image_upload(
+                file=upload_file,
+                user_id=user_id,
+                async_db=async_db,
+                base_path=base_path,
+                cropping_avatar=True,
+            )
 
         # 验证上传结果
         assert result.code == 200
@@ -202,15 +194,14 @@ class TestUploadImage:
         base_path = "images/uploads"
 
         # 确保使用fake GCS
-        with mock_config_for_tests() as mock_config:
-            async with async_session() as async_db:
-                result = await process_image_upload(
-                    file=upload_file,
-                    user_id=user_id,
-                    async_db=async_db,
-                    base_path=base_path,
-                    cropping_avatar=True,
-                )
+        async with async_session() as async_db:
+            result = await process_image_upload(
+                file=upload_file,
+                user_id=user_id,
+                async_db=async_db,
+                base_path=base_path,
+                cropping_avatar=True,
+            )
 
         # 验证上传结果成功
         assert result.code == 200
@@ -505,13 +496,12 @@ class TestImageUploadCompression:
         )
 
         # 确保使用fake GCS
-        with mock_config_for_tests() as mock_config:
-            async with async_session() as async_db:
-                result = await process_image_upload(
-                    file=upload_file,
-                    user_id=user_id,
-                    async_db=async_db,
-                )
+        async with async_session() as async_db:
+            result = await process_image_upload(
+                file=upload_file,
+                user_id=user_id,
+                async_db=async_db,
+            )
 
         assert result.code == 200
         assert "cdn.example.com" in result.data.url
@@ -658,14 +648,13 @@ class TestImageUploadCropping:
         )
 
         # 确保使用fake GCS
-        with mock_config_for_tests() as mock_config:
-            async with async_session() as async_db:
-                result = await process_image_upload(
-                    file=upload_file,
-                    user_id=user_id,
-                    async_db=async_db,
-                    cropping_avatar=True,
-                )
+        async with async_session() as async_db:
+            result = await process_image_upload(
+                file=upload_file,
+                user_id=user_id,
+                async_db=async_db,
+                cropping_avatar=True,
+            )
 
         assert result.code == 200
         assert result.data.avatar_url is not None
@@ -713,14 +702,13 @@ class TestImageUploadCropping:
         )
 
         # 确保使用fake GCS
-        with mock_config_for_tests() as mock_config:
-            async with async_session() as async_db:
-                result = await process_image_upload(
-                    file=upload_file,
-                    user_id=user_id,
-                    async_db=async_db,
-                    cropping_avatar=True,
-                )
+        async with async_session() as async_db:
+            result = await process_image_upload(
+                file=upload_file,
+                user_id=user_id,
+                async_db=async_db,
+                cropping_avatar=True,
+            )
 
         assert result.code == 200
         # 即使没有检测到人脸，上传也应该成功，只是没有avatar_url
@@ -817,21 +805,20 @@ class TestImageUploadErrorHandling:
         )
 
         # 确保使用fake GCS
-        with mock_config_for_tests() as mock_config:
-            # Mock CDN 转换失败
-            with patch(
-                "app.services.image_transform_service.image_transform_service"
-            ) as mock_transform:
-                mock_transform.transform_mobile.side_effect = Exception(
-                    "CDN transform failed"
-                )
+        # Mock CDN 转换失败
+        with patch(
+            "app.services.image_transform_service.image_transform_service"
+        ) as mock_transform:
+            mock_transform.transform_mobile.side_effect = Exception(
+                "CDN transform failed"
+            )
 
-                async with async_session() as async_db:
-                    result = await process_image_upload(
-                        file=upload_file,
-                        user_id=user_id,
-                        async_db=async_db,
-                    )
+            async with async_session() as async_db:
+                result = await process_image_upload(
+                    file=upload_file,
+                    user_id=user_id,
+                    async_db=async_db,
+                )
 
         assert result.code == 200
         # 应该回退到GCS URL
