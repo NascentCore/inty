@@ -52,7 +52,9 @@ class FakeBlob:
         return f"{self.GCS_PUBLIC_HTTPS_PREFIX}{self._bucket_name}/{self._path}"
 
     # 与 google.cloud.storage.Blob 接口保持一致（方法）
-    def upload_from_string(self, data: Union[str, bytes], content_type: Optional[str] = None) -> None:
+    def upload_from_string(
+        self, data: Union[str, bytes], content_type: Optional[str] = None
+    ) -> None:
         file_path = self._fs_path()
         file_path.parent.mkdir(parents=True, exist_ok=True)
         if isinstance(data, str):

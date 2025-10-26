@@ -30,7 +30,6 @@ class AgentInfoViewModel : BaseVM() {
                     is HttpResult.Success -> {
                         setAgentInfo(result.data)
                     }
-
                     is HttpResult.Failure -> {
                         NetworkErrorHandler.showNetworkAwareError(result.message)
                     }
@@ -57,7 +56,6 @@ class AgentInfoViewModel : BaseVM() {
                     is HttpResult.Success -> {
                         _agentInfo.value = result.data
                     }
-
                     is HttpResult.Failure -> {
                         NetworkErrorHandler.showNetworkAwareError(result.message)
                     }

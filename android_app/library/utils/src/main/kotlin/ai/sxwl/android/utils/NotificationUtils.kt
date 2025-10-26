@@ -17,10 +17,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.Person
 
-/**
- * 通知工具类
- * 提供完整的通知管理功能，支持现代Android通知特性
- */
+/** 通知工具类 提供完整的通知管理功能，支持现代Android通知特性 */
 object NotificationUtils {
 
     private const val TAG = "NotificationUtils"
@@ -29,9 +26,7 @@ object NotificationUtils {
 
     // ==================== 通知配置类 ====================
 
-    /**
-     * 通知配置类
-     */
+    /** 通知配置类 */
     data class NotificationConfig(
         val id: Int,
         val channelId: String = DEFAULT_CHANNEL_ID,
@@ -54,24 +49,18 @@ object NotificationUtils {
         val style: NotificationStyle? = null
     )
 
-    /**
-     * 通知动作
-     */
-    data class NotificationAction(
-        val icon: Int,
-        val title: String,
-        val intent: Intent
-    )
+    /** 通知动作 */
+    data class NotificationAction(val icon: Int, val title: String, val intent: Intent)
 
-    /**
-     * 通知样式
-     */
+    /** 通知样式 */
     sealed class NotificationStyle {
         data class BigTextStyle(val bigText: String) : NotificationStyle()
+
         data class BigPictureStyle(val bigPicture: Bitmap, val bigLargeIcon: Bitmap? = null) :
             NotificationStyle()
 
         data class InboxStyle(val lines: List<String>) : NotificationStyle()
+
         data class MessagingStyle(
             val conversationTitle: String? = null,
             val messages: List<NotificationMessage> = emptyList()
@@ -84,9 +73,7 @@ object NotificationUtils {
         ) : NotificationStyle()
     }
 
-    /**
-     * 通知消息
-     */
+    /** 通知消息 */
     data class NotificationMessage(
         val text: String,
         val timestamp: Long,
@@ -95,9 +82,7 @@ object NotificationUtils {
 
     // ==================== 通知渠道管理 ====================
 
-    /**
-     * 创建通知渠道
-     */
+    /** 创建通知渠道 */
     fun createNotificationChannel(
         channelId: String,
         channelName: String,
@@ -109,14 +94,19 @@ object NotificationUtils {
         lightColor: Int = Color.BLUE
     ): Boolean {
         return createNotificationChannel(
-            Utils.getApp(), channelId, channelName, importance,
-            description, sound, vibrationPattern, lights, lightColor
+            Utils.getApp(),
+            channelId,
+            channelName,
+            importance,
+            description,
+            sound,
+            vibrationPattern,
+            lights,
+            lightColor
         )
     }
 
-    /**
-     * 创建通知渠道
-     */
+    /** 创建通知渠道 */
     fun createNotificationChannel(
         context: Context,
         channelId: String,
@@ -141,23 +131,25 @@ object NotificationUtils {
                 return true
             }
 
-            val channel = NotificationChannel(channelId, channelName, importance).apply {
-                this.description = description
-                this.vibrationPattern = vibrationPattern
-                this.enableLights(lights)
-                this.lightColor = lightColor
+            val channel =
+                NotificationChannel(channelId, channelName, importance).apply {
+                    this.description = description
+                    this.vibrationPattern = vibrationPattern
+                    this.enableLights(lights)
+                    this.lightColor = lightColor
 
-                // 设置音频属性
-                val audioAttributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
+                    // 设置音频属性
+                    val audioAttributes =
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
 
-                // 设置声音
-                val notificationSound =
-                    sound ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                setSound(notificationSound, audioAttributes)
-            }
+                    // 设置声音
+                    val notificationSound =
+                        sound ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                    setSound(notificationSound, audioAttributes)
+                }
 
             notificationManager.createNotificationChannel(channel)
             Log.d(TAG, "创建通知渠道成功: $channelId")
@@ -168,16 +160,12 @@ object NotificationUtils {
         }
     }
 
-    /**
-     * 删除通知渠道
-     */
+    /** 删除通知渠道 */
     fun deleteNotificationChannel(channelId: String): Boolean {
         return deleteNotificationChannel(Utils.getApp(), channelId)
     }
 
-    /**
-     * 删除通知渠道
-     */
+    /** 删除通知渠道 */
     fun deleteNotificationChannel(context: Context, channelId: String): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
 
@@ -196,16 +184,12 @@ object NotificationUtils {
 
     // ==================== 通知显示 ====================
 
-    /**
-     * 显示通知
-     */
+    /** 显示通知 */
     fun showNotification(config: NotificationConfig): Boolean {
         return showNotification(Utils.getApp(), config)
     }
 
-    /**
-     * 显示通知
-     */
+    /** 显示通知 */
     @SuppressLint("MissingPermission")
     fun showNotification(context: Context, config: NotificationConfig): Boolean {
         if (!areNotificationsEnabled(context)) {
@@ -216,7 +200,9 @@ object NotificationUtils {
         return try {
             // 确保通知渠道存在
             createNotificationChannel(
-                context, config.channelId, getChannelName(config.channelId),
+                context,
+                config.channelId,
+                getChannelName(config.channelId),
                 getChannelImportance(config.priority)
             )
 
@@ -232,36 +218,38 @@ object NotificationUtils {
         }
     }
 
-    /**
-     * 构建通知Builder
-     */
+    /** 构建通知Builder */
     private fun buildNotificationBuilder(
         context: Context,
         config: NotificationConfig
     ): NotificationCompat.Builder {
-        val builder = NotificationCompat.Builder(context, config.channelId)
-            .setSmallIcon(config.icon)
-            .setContentTitle(config.title)
-            .setContentText(config.content)
-            .setPriority(config.priority)
-            .setAutoCancel(config.autoCancel)
-            .setOngoing(config.ongoing)
-            .setShowWhen(config.showWhen)
+        val builder =
+            NotificationCompat.Builder(context, config.channelId)
+                .setSmallIcon(config.icon)
+                .setContentTitle(config.title)
+                .setContentText(config.content)
+                .setPriority(config.priority)
+                .setAutoCancel(config.autoCancel)
+                .setOngoing(config.ongoing)
+                .setShowWhen(config.showWhen)
 
         // 设置大图标
         config.largeIcon?.let { builder.setLargeIcon(it) }
 
         // 设置点击意图
         config.intent?.let { intent ->
-            val pendingIntent = try {
-                PendingIntent.getActivity(
-                    context, config.id, intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-            } catch (e: Exception) {
-                Log.e("NotificationUtils", "创建PendingIntent失败", e)
-                null
-            }
+            val pendingIntent =
+                try {
+                    PendingIntent.getActivity(
+                        context,
+                        config.id,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                } catch (e: Exception) {
+                    Log.e("NotificationUtils", "创建PendingIntent失败", e)
+                    null
+                }
             pendingIntent?.let { builder.setContentIntent(it) }
         }
 
@@ -284,32 +272,29 @@ object NotificationUtils {
                 is NotificationStyle.BigTextStyle -> {
                     builder.setStyle(NotificationCompat.BigTextStyle().bigText(style.bigText))
                 }
-
                 is NotificationStyle.BigPictureStyle -> {
-                    val bigPictureStyle = NotificationCompat.BigPictureStyle()
-                        .bigPicture(style.bigPicture)
+                    val bigPictureStyle =
+                        NotificationCompat.BigPictureStyle().bigPicture(style.bigPicture)
                     style.bigLargeIcon?.let { bigPictureStyle.bigLargeIcon(it) }
                     builder.setStyle(bigPictureStyle)
                 }
-
                 is NotificationStyle.InboxStyle -> {
                     val inboxStyle = NotificationCompat.InboxStyle()
                     style.lines.forEach { line -> inboxStyle.addLine(line) }
                     builder.setStyle(inboxStyle)
                 }
-
                 is NotificationStyle.MessagingStyle -> {
-                    val messagingStyle = if (style.conversationTitle != null) {
-                        NotificationCompat.MessagingStyle(style.conversationTitle)
-                    } else {
-                        NotificationCompat.MessagingStyle("Unknown UserName")
-                    }
+                    val messagingStyle =
+                        if (style.conversationTitle != null) {
+                            NotificationCompat.MessagingStyle(style.conversationTitle)
+                        } else {
+                            NotificationCompat.MessagingStyle("Unknown UserName")
+                        }
                     style.messages.forEach { message ->
                         messagingStyle.addMessage(message.text, message.timestamp, message.person)
                     }
                     builder.setStyle(messagingStyle)
                 }
-
                 is NotificationStyle.ProgressStyle -> {
                     builder.setProgress(style.max, style.progress, style.indeterminate)
                 }
@@ -318,18 +303,19 @@ object NotificationUtils {
 
         // 添加动作
         config.actions.forEach { action ->
-            val actionPendingIntent = try {
-                PendingIntent.getActivity(
-                    context, action.hashCode(), action.intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-            } catch (e: Exception) {
-                Log.e("NotificationUtils", "创建动作PendingIntent失败", e)
-                null
-            }
-            actionPendingIntent?.let {
-                builder.addAction(action.icon, action.title, it)
-            }
+            val actionPendingIntent =
+                try {
+                    PendingIntent.getActivity(
+                        context,
+                        action.hashCode(),
+                        action.intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                } catch (e: Exception) {
+                    Log.e("NotificationUtils", "创建动作PendingIntent失败", e)
+                    null
+                }
+            actionPendingIntent?.let { builder.addAction(action.icon, action.title, it) }
         }
 
         return builder
@@ -337,9 +323,7 @@ object NotificationUtils {
 
     // ==================== 便捷方法 ====================
 
-    /**
-     * 显示简单通知
-     */
+    /** 显示简单通知 */
     fun showSimpleNotification(
         id: Int,
         title: String,
@@ -347,18 +331,11 @@ object NotificationUtils {
         channelId: String = DEFAULT_CHANNEL_ID
     ): Boolean {
         return showNotification(
-            NotificationConfig(
-                id = id,
-                channelId = channelId,
-                title = title,
-                content = content
-            )
+            NotificationConfig(id = id, channelId = channelId, title = title, content = content)
         )
     }
 
-    /**
-     * 显示进度通知
-     */
+    /** 显示进度通知 */
     fun showProgressNotification(
         id: Int,
         title: String,
@@ -379,9 +356,7 @@ object NotificationUtils {
         )
     }
 
-    /**
-     * 显示大文本通知
-     */
+    /** 显示大文本通知 */
     fun showBigTextNotification(
         id: Int,
         title: String,
@@ -400,9 +375,7 @@ object NotificationUtils {
         )
     }
 
-    /**
-     * 显示大图片通知
-     */
+    /** 显示大图片通知 */
     fun showBigPictureNotification(
         id: Int,
         title: String,
@@ -424,16 +397,12 @@ object NotificationUtils {
 
     // ==================== 通知管理 ====================
 
-    /**
-     * 取消通知
-     */
+    /** 取消通知 */
     fun cancelNotification(id: Int): Boolean {
         return cancelNotification(Utils.getApp(), id)
     }
 
-    /**
-     * 取消通知
-     */
+    /** 取消通知 */
     fun cancelNotification(context: Context, id: Int): Boolean {
         return try {
             val notificationManager = NotificationManagerCompat.from(context)
@@ -446,16 +415,12 @@ object NotificationUtils {
         }
     }
 
-    /**
-     * 取消所有通知
-     */
+    /** 取消所有通知 */
     fun cancelAllNotifications(): Boolean {
         return cancelAllNotifications(Utils.getApp())
     }
 
-    /**
-     * 取消所有通知
-     */
+    /** 取消所有通知 */
     fun cancelAllNotifications(context: Context): Boolean {
         return try {
             val notificationManager = NotificationManagerCompat.from(context)
@@ -470,16 +435,12 @@ object NotificationUtils {
 
     // ==================== 权限检查 ====================
 
-    /**
-     * 检查通知是否启用
-     */
+    /** 检查通知是否启用 */
     fun areNotificationsEnabled(): Boolean {
         return areNotificationsEnabled(Utils.getApp())
     }
 
-    /**
-     * 检查通知是否启用
-     */
+    /** 检查通知是否启用 */
     fun areNotificationsEnabled(context: Context): Boolean {
         return try {
             NotificationManagerCompat.from(context).areNotificationsEnabled()
@@ -489,16 +450,12 @@ object NotificationUtils {
         }
     }
 
-    /**
-     * 检查通知渠道是否启用
-     */
+    /** 检查通知渠道是否启用 */
     fun isNotificationChannelEnabled(channelId: String): Boolean {
         return isNotificationChannelEnabled(Utils.getApp(), channelId)
     }
 
-    /**
-     * 检查通知渠道是否启用
-     */
+    /** 检查通知渠道是否启用 */
     fun isNotificationChannelEnabled(context: Context, channelId: String): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
 
@@ -516,9 +473,7 @@ object NotificationUtils {
 
     // ==================== 工具方法 ====================
 
-    /**
-     * 获取渠道名称
-     */
+    /** 获取渠道名称 */
     private fun getChannelName(channelId: String): String {
         return when (channelId) {
             DEFAULT_CHANNEL_ID -> DEFAULT_CHANNEL_NAME
@@ -529,9 +484,7 @@ object NotificationUtils {
         }
     }
 
-    /**
-     * 获取渠道重要性
-     */
+    /** 获取渠道重要性 */
     private fun getChannelImportance(priority: Int): Int {
         return when (priority) {
             NotificationCompat.PRIORITY_MIN -> NotificationManager.IMPORTANCE_MIN
@@ -543,9 +496,7 @@ object NotificationUtils {
         }
     }
 
-    /**
-     * 创建默认通知渠道
-     */
+    /** 创建默认通知渠道 */
     fun createDefaultChannels(): Boolean {
         return try {
             createNotificationChannel(
@@ -553,21 +504,21 @@ object NotificationUtils {
                 channelName = DEFAULT_CHANNEL_NAME,
                 importance = NotificationManager.IMPORTANCE_DEFAULT
             ) &&
-                    createNotificationChannel(
-                        channelId = "important",
-                        channelName = "重要通知",
-                        importance = NotificationManager.IMPORTANCE_HIGH
-                    ) &&
-                    createNotificationChannel(
-                        channelId = "normal",
-                        channelName = "普通通知",
-                        importance = NotificationManager.IMPORTANCE_DEFAULT
-                    ) &&
-                    createNotificationChannel(
-                        channelId = "silent",
-                        channelName = "静默通知",
-                        importance = NotificationManager.IMPORTANCE_LOW
-                    )
+                createNotificationChannel(
+                    channelId = "important",
+                    channelName = "重要通知",
+                    importance = NotificationManager.IMPORTANCE_HIGH
+                ) &&
+                createNotificationChannel(
+                    channelId = "normal",
+                    channelName = "普通通知",
+                    importance = NotificationManager.IMPORTANCE_DEFAULT
+                ) &&
+                createNotificationChannel(
+                    channelId = "silent",
+                    channelName = "静默通知",
+                    importance = NotificationManager.IMPORTANCE_LOW
+                )
         } catch (e: Exception) {
             Log.e(TAG, "创建默认通知渠道失败", e)
             false

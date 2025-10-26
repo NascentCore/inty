@@ -24,8 +24,7 @@ import com.ai.intellimate.R
 fun SubscriptionManagementContainer(content: @Composable () -> Unit) {
     Column(
         modifier =
-            Modifier
-                .padding(horizontal = 16.dp)
+            Modifier.padding(horizontal = 16.dp)
                 .fillMaxWidth()
                 .border(
                     brush =

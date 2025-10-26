@@ -32,7 +32,6 @@ class ChatTabViewModel : BaseVM() {
 
         _agentsFlow.value = initialFlow
         isInitialized = true
-
     }
 
     /** 获取聊天agents的Paging数据流 */

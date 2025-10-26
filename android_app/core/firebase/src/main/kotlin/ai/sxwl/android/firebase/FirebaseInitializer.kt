@@ -4,10 +4,7 @@ import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import androidx.startup.Initializer
 
-/**
- * Firebase初始化器
- * 在应用启动时自动初始化Firebase服务
- */
+/** Firebase初始化器 在应用启动时自动初始化Firebase服务 */
 class FirebaseInitializer : Initializer<FirebaseManager> {
 
     override fun create(context: Context): FirebaseManager {

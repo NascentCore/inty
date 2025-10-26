@@ -38,12 +38,9 @@ import com.ai.intellimate.R
 internal fun LoginCloseButton(onClose: () -> Unit) {
     Image(
         modifier =
-            Modifier
-                .padding(end = 16.dp, top = 16.dp)
-                .size(18.dp, 18.dp)
-                .noRippleClickable {
-                    onClose()
-                },
+            Modifier.padding(end = 16.dp, top = 16.dp).size(18.dp, 18.dp).noRippleClickable {
+                onClose()
+            },
         painter = painterResource(R.drawable.close),
         contentDescription = null,
     )
@@ -103,10 +100,7 @@ internal fun GoogleLoginButton(isLoading: Boolean, onLoginClick: () -> Unit) {
             Image(
                 painter = painterResource(id = R.drawable.google),
                 contentDescription = stringResource(R.string.content_desc_google_login),
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 20.dp)
-                    .size(24.dp),
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 20.dp).size(24.dp),
             )
             Text(
                 text = stringResource(R.string.continue_with_google),

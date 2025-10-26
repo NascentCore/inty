@@ -13,10 +13,10 @@ object IntySetting {
     // App级通用标记的存储 使用的对象
     private val allUserSetting: MMKV
 
-    //当前用户级别的数据存储
+    // 当前用户级别的数据存储
     private var curUserSetting: MMKV
 
-    //当前UserId
+    // 当前UserId
     private var curUid: String = ""
 
     init {
@@ -51,11 +51,7 @@ object IntySetting {
         return isGuestUser() && userAgeYoung()
     }
 
-    /**
-     * 切换用户
-     * 对应Guest登录Google账户
-     * Google账户退出登录，到Guest账户
-     */
+    /** 切换用户 对应Guest登录Google账户 Google账户退出登录，到Guest账户 */
     fun changeUser(uid: String) {
         curUserSetting
 
@@ -72,14 +68,11 @@ object IntySetting {
         return curUserSetting.decodeString("token") ?: ""
     }
 
-
     fun isLogin(): Boolean {
         return getCurUserID().isNotEmpty() && getCurToken().isNotEmpty()
     }
 
-    /**
-     * 登录接口后，本地处理登录业务的数据逻辑
-     */
+    /** 登录接口后，本地处理登录业务的数据逻辑 */
     fun login(isGuest: Boolean, uid: String, token: String) {
         changeUser(uid)
         setToken(token)
@@ -88,26 +81,20 @@ object IntySetting {
         }
     }
 
-    /**
-     * 用于业务标记消息已读的最后一条消息的判断
-     */
+    /** 用于业务标记消息已读的最后一条消息的判断 */
     fun isConversationReaded(agentID: String, lastMessage: String): Boolean {
         val configLastMsg = curUserSetting.decodeString("conversation_last_$agentID", agentID)
         LogUtils.d("$agentID = $configLastMsg, new=$lastMessage")
         return (configLastMsg == lastMessage)
     }
 
-    /**
-     * 用于业务标记消息已读的最后一条消息
-     */
+    /** 用于业务标记消息已读的最后一条消息 */
     fun setConversationReaded(agentID: String, lastMessage: String) {
         LogUtils.d("$agentID = $lastMessage")
         curUserSetting.putString("conversation_last_$agentID", lastMessage)
     }
 
-    /**
-     * 记录是否显示keepTalking按钮
-     */
+    /** 记录是否显示keepTalking按钮 */
     fun setShowKeepTalking(show: Boolean) {
         curUserSetting.putBoolean("show_keep_talking", show)
         // 当全局设置改变时，重置所有角色的keep talking设置为与全局一致
@@ -158,12 +145,10 @@ object IntySetting {
 
     // region Premium model相关设置
 
-
     /** 判断是否使用全局 高级vip模型 */
     fun isShowPremiumModel(): Boolean {
         return curUserSetting.decodeBool("show_premium_model", false)
     }
-
 
     // endregion
 
@@ -204,8 +189,7 @@ object IntySetting {
         }
         changeUser(geGuestUserID())
         // 延迟重置标志，确保401处理器有时间识别
-        Handler(Looper.getMainLooper())
-            .postDelayed({ isLoggingOut = false }, 2000)
+        Handler(Looper.getMainLooper()).postDelayed({ isLoggingOut = false }, 2000)
     }
 
     fun isLoggingOut(): Boolean {
@@ -281,28 +265,25 @@ object IntySetting {
     fun setShowGuested() {
         allUserSetting.putBoolean("show_guest", true)
     }
+
     // endregion
 
     // region 聊天数据持久化相关方法
 
-    /**
-     * 保存指定agent的聊天数据
-     * 使用简单的字符串存储，避免复杂的JSON序列化
-     */
+    /** 保存指定agent的聊天数据 使用简单的字符串存储，避免复杂的JSON序列化 */
     fun saveChatMessages(agentId: String, messages: List<ai.sxwl.android.data.api.model.MsgInfo>) {
         try {
             // 暂时禁用数据持久化，避免序列化问题
             // TODO: 实现更简单的数据存储方案
-            LogUtils.d("Chat messages persistence temporarily disabled for agent $agentId (${messages.size} messages)")
+            LogUtils.d(
+                "Chat messages persistence temporarily disabled for agent $agentId (${messages.size} messages)"
+            )
         } catch (e: Exception) {
             LogUtils.e("Failed to save chat messages for agent $agentId: ${e.message}")
         }
     }
 
-    /**
-     * 获取指定agent的聊天数据
-     * 暂时返回空列表，避免反序列化问题
-     */
+    /** 获取指定agent的聊天数据 暂时返回空列表，避免反序列化问题 */
     fun getChatMessages(agentId: String): List<ai.sxwl.android.data.api.model.MsgInfo> {
         // 暂时禁用数据持久化，避免反序列化问题
         // TODO: 实现更简单的数据存储方案
@@ -310,9 +291,7 @@ object IntySetting {
         return emptyList()
     }
 
-    /**
-     * 保存指定agent的分页状态
-     */
+    /** 保存指定agent的分页状态 */
     fun saveChatPaginationState(
         agentId: String,
         offset: Int,
@@ -322,12 +301,12 @@ object IntySetting {
         curUserSetting.putInt("chat_offset_$agentId", offset)
         curUserSetting.putBoolean("chat_has_more_$agentId", hasMore)
         curUserSetting.putBoolean("chat_initial_loaded_$agentId", isInitialLoaded)
-        LogUtils.d("Saved pagination state for agent $agentId: offset=$offset, hasMore=$hasMore, initialLoaded=$isInitialLoaded")
+        LogUtils.d(
+            "Saved pagination state for agent $agentId: offset=$offset, hasMore=$hasMore, initialLoaded=$isInitialLoaded"
+        )
     }
 
-    /**
-     * 获取指定agent的分页状态
-     */
+    /** 获取指定agent的分页状态 */
     fun getChatPaginationState(agentId: String): Triple<Int, Boolean, Boolean> {
         val offset = curUserSetting.decodeInt("chat_offset_$agentId", 0)
         val hasMore = curUserSetting.decodeBool("chat_has_more_$agentId", true)
@@ -335,9 +314,7 @@ object IntySetting {
         return Triple(offset, hasMore, isInitialLoaded)
     }
 
-    /**
-     * 清除指定agent的聊天数据
-     */
+    /** 清除指定agent的聊天数据 */
     fun clearChatData(agentId: String) {
         curUserSetting.removeValueForKey("chat_messages_$agentId")
         curUserSetting.removeValueForKey("chat_offset_$agentId")
@@ -346,16 +323,15 @@ object IntySetting {
         LogUtils.d("Cleared chat data for agent $agentId")
     }
 
-    /**
-     * 清除所有聊天数据
-     */
+    /** 清除所有聊天数据 */
     fun clearAllChatData() {
         val keys = curUserSetting.allKeys()
         keys?.forEach { key: String ->
-            if (key.startsWith("chat_messages_") ||
-                key.startsWith("chat_offset_") ||
-                key.startsWith("chat_has_more_") ||
-                key.startsWith("chat_initial_loaded_")
+            if (
+                key.startsWith("chat_messages_") ||
+                    key.startsWith("chat_offset_") ||
+                    key.startsWith("chat_has_more_") ||
+                    key.startsWith("chat_initial_loaded_")
             ) {
                 curUserSetting.removeValueForKey(key)
             }

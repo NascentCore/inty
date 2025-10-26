@@ -3,23 +3,22 @@ package com.ai.intellimate.audio
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.util.LruCache
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 /** 音频缓存管理器 提供内存缓存和本地文件缓存功能 */
 class AudioCacheManager private constructor(private val context: Context) {
 
     companion object {
-        @Volatile
-        private var INSTANCE: AudioCacheManager? = null
+        @Volatile private var INSTANCE: AudioCacheManager? = null
 
         fun getInstance(context: Context): AudioCacheManager {
             return INSTANCE
@@ -100,7 +99,6 @@ class AudioCacheManager private constructor(private val context: Context) {
                     file.delete()
                 }
             }
-
         } catch (e: Exception) {
             LogUtils.e("音频LOG测试 Failed to clear cache: ${e.message}")
         }
@@ -117,7 +115,6 @@ class AudioCacheManager private constructor(private val context: Context) {
                     file.delete()
                 }
             }
-
         } catch (e: Exception) {
             LogUtils.e("音频LOG测试 Failed to clean expired cache: ${e.message}")
         }
@@ -172,7 +169,9 @@ class AudioCacheManager private constructor(private val context: Context) {
                                     500 -> "服务器内部错误"
                                     else -> "HTTP错误: ${response.code}"
                                 }
-                            LogUtils.e("音频LOG测试 Failed to download audio: $errorMsg (${response.code})")
+                            LogUtils.e(
+                                "音频LOG测试 Failed to download audio: $errorMsg (${response.code})"
+                            )
 
                             // 对于4xx错误，不重试
                             if (response.code in 400..499) {
@@ -185,14 +184,14 @@ class AudioCacheManager private constructor(private val context: Context) {
                         when {
                             e.message?.contains("Connection reset", ignoreCase = true) == true ->
                                 "连接被重置"
-
                             e.message?.contains("timeout", ignoreCase = true) == true -> "连接超时"
                             e.message?.contains("network", ignoreCase = true) == true -> "网络错误"
                             else -> e.message ?: "未知错误"
                         }
 
-                    LogUtils.e("音频LOG测试 Failed to download audio (attempt ${retryCount + 1}): $errorMsg")
-
+                    LogUtils.e(
+                        "音频LOG测试 Failed to download audio (attempt ${retryCount + 1}): $errorMsg"
+                    )
 
                     // 如果是最后一次重试，返回null
                     if (retryCount == maxRetries) {

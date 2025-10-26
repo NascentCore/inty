@@ -165,9 +165,7 @@ fun PremiumPlanCard(
         if (plan.discountRate < 1) {
             DiscountTag(
                 discountRate = plan.discountRate,
-                modifier = Modifier
-                    .then(subModifier)
-                    .align(Alignment.BottomCenter),
+                modifier = Modifier.then(subModifier).align(Alignment.BottomCenter),
             )
         }
     }
@@ -183,11 +181,7 @@ fun PremiumPlanList(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .height(132.dp)
-                .padding(horizontal = 16.dp),
+        modifier = modifier.fillMaxWidth().height(132.dp).padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         plans.forEachIndexed { idx, plan ->
@@ -253,8 +247,8 @@ fun AutoRenewalNotice(modifier: Modifier = Modifier) {
         Text(
             text =
                 stringResource(R.string.auto_renews_cancel) +
-                        ".\n" +
-                        stringResource(R.string.subscription_consent),
+                    ".\n" +
+                    stringResource(R.string.subscription_consent),
             fontSize = 12.sp,
             lineHeight = 12.sp,
             color = Color.White,

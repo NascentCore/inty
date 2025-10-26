@@ -90,15 +90,14 @@ class AvatarGenerateViewModel : BaseVM() {
                 }
 
                 // 生成成功后，返回到Ai形象创建页面 Immediately navigate back to CreateRoleActivity
-                withContext(Dispatchers.Main) {
-                    onNavigateBack()
-                }
+                withContext(Dispatchers.Main) { onNavigateBack() }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    val errorMessage = NetworkErrorHandler.handleNetworkException(
-                        exception = e,
-                        operation = "generate avatar"
-                    )
+                    val errorMessage =
+                        NetworkErrorHandler.handleNetworkException(
+                            exception = e,
+                            operation = "generate avatar"
+                        )
                     AvatarManager.setGenerationError(errorMessage)
                     _errorMessage.value = errorMessage
                     LogUtils.e("Ai头像生成异常: ${e.message}")
@@ -161,10 +160,9 @@ class AvatarGenerateViewModel : BaseVM() {
     fun getSelectedAvatarUrl(): String? {
         return when {
             _generatedImageUrls.value.isNotEmpty() &&
-                    _selectedImageIndex.value < _generatedImageUrls.value.size -> {
+                _selectedImageIndex.value < _generatedImageUrls.value.size -> {
                 _generatedImageUrls.value[_selectedImageIndex.value]
             }
-
             _generatedImageUrl.value != null -> _generatedImageUrl.value
             else -> null
         }
@@ -186,7 +184,6 @@ class AvatarGenerateViewModel : BaseVM() {
                     LogUtils.i("generateBackground success: ${result.data}")
                     return result.data
                 }
-
                 is HttpResult.Failure -> {
                     LogUtils.e("generateBackground error: $result")
                     val errorMessage =
@@ -202,13 +199,10 @@ class AvatarGenerateViewModel : BaseVM() {
                 when {
                     e.message?.contains("timeout", ignoreCase = true) == true ->
                         "Network timeout, please try again later"
-
                     e.message?.contains("network", ignoreCase = true) == true ->
                         "Network connection failed, please check your network"
-
                     e.message?.contains("json", ignoreCase = true) == true ->
                         "Data format error, please try again later"
-
                     else -> e.message ?: "Unknown error"
                 }
             throw Exception(errorMessage)

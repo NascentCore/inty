@@ -44,7 +44,9 @@ class MessageBroker:
                 if not queues:
                     self._subscribers_by_client.pop(client_id, None)
 
-    async def publish_to_client(self, client_id: str, data: str, event: Optional[str] = None) -> None:
+    async def publish_to_client(
+        self, client_id: str, data: str, event: Optional[str] = None
+    ) -> None:
         event_name = event or DEFAULT_EVENT_NAME
         payload = f"event: {event_name}\ndata: {data}\n\n"
         async with self._lock:
@@ -124,7 +126,9 @@ async def _long_running_task(client_id: str, task_id: str, seconds: float) -> No
 async def start_task(req: StartTaskRequest) -> JSONResponse:
     task_id = str(uuid.uuid4())
     asyncio.create_task(_long_running_task(req.client_id, task_id, req.seconds))
-    return JSONResponse({"task_id": task_id, "status": "started", "eta_seconds": req.seconds})
+    return JSONResponse(
+        {"task_id": task_id, "status": "started", "eta_seconds": req.seconds}
+    )
 
 
 async def _error_stream(message: str) -> AsyncGenerator[str, None]:

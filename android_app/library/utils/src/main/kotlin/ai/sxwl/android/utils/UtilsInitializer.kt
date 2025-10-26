@@ -5,11 +5,7 @@ import android.content.Context
 import android.util.Log
 import androidx.startup.Initializer
 
-/**
- * Utils模块初始化器
- * 负责初始化工具类库
- * 使用androidx.startup.Initializer实现自动初始化
- */
+/** Utils模块初始化器 负责初始化工具类库 使用androidx.startup.Initializer实现自动初始化 */
 class UtilsInitializer : Initializer<Unit> {
 
     override fun create(context: Context) {

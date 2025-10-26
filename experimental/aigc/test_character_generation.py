@@ -22,7 +22,7 @@ def make_dummy_character():
             "eye_color": "green",
             "distinguishing_features": ["tattoo on right arm"],
             "clothing_style": "adventurer",
-            "accessories": ["amulet"]
+            "accessories": ["amulet"],
         },
         personality_summary="A brave and curious explorer.",
         background=CharacterBackground(
@@ -35,7 +35,7 @@ def make_dummy_character():
             relationships={"family": "unknown", "friends": "many met on travels"},
             skills=["navigation", "climbing", "negotiation"],
             quirks=["talks to self"],
-            backstory="Born in mystery, always seeking the next horizon."
+            backstory="Born in mystery, always seeking the next horizon.",
         ),
         encounter=CharacterEncounter(
             scene_description="You meet them at a bustling market.",
@@ -43,29 +43,30 @@ def make_dummy_character():
             mood="excited",
             initial_dialogue="Care to join me on an adventure?",
             user_role="potential companion",
-            encounter_type="adventure"
+            encounter_type="adventure",
         ),
         images=[
             CharacterImage(
                 url="https://example.com/image.png",
                 description="A portrait of the character",
                 scene_context="In front of a large, ornate building, holding a large sword",
-                image_style="realistic"
+                image_style="realistic",
             ),
             CharacterImage(
                 url="https://example.com/image.png",
                 description="A portrait of the character",
                 scene_context="In front of a dark and menacing forest, holding a large sword in combat stance",
-                image_style="realistic"
+                image_style="realistic",
             ),
             CharacterImage(
                 url="https://example.com/image.png",
                 description="A portrait of the character",
                 scene_context="Laying on a warm bed, with bandages on their arm, smiling, surrounded by fellow adventure companions",
-                image_style="realistic"
+                image_style="realistic",
             ),
-        ]
+        ],
     )
+
 
 def test_generate_char_images_happy_path():
     dummy_character = make_dummy_character()

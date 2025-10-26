@@ -9,12 +9,13 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
+import com.ai.intellimate.ViewModelEvent
 import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.utils.IntyUserProfileSDK
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
-import com.ai.intellimate.ViewModelEvent
 import com.architecture.httplib.core.HttpResult
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +26,6 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import java.io.File
 
 class MySettingViewModel : BaseVM() {
 
@@ -41,13 +41,9 @@ class MySettingViewModel : BaseVM() {
     private val _isSaving = MutableStateFlow(false)
     val isSaving = _isSaving.asStateFlow()
 
-    /**
-     * 发送事件通知
-     */
+    /** 发送事件通知 */
     private fun sendEvent(event: ViewModelEvent) {
-        viewModelScope.launch {
-            _events.emit(event)
-        }
+        viewModelScope.launch { _events.emit(event) }
     }
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
@@ -62,15 +58,12 @@ class MySettingViewModel : BaseVM() {
             EditKey.Name -> {
                 _userProfile.value = _userProfile.value.copy(nickname = editValue)
             }
-
             EditKey.Pronouns -> {
                 _userProfile.value = _userProfile.value.copy(gender = editValue)
             }
-
             EditKey.Persona -> {
                 _userProfile.value = _userProfile.value.copy(description = editValue)
             }
-
             EditKey.None -> {}
         }
     }
@@ -107,7 +100,6 @@ class MySettingViewModel : BaseVM() {
                                 ToastUtils.showShort(R.string.saved_successfully)
                             }
                         }
-
                         is HttpResult.Failure -> {
                             NetworkErrorHandler.showNetworkAwareError(result.message)
                             return@launchBackground

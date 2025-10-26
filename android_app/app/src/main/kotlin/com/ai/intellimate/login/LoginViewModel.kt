@@ -10,9 +10,9 @@ import ai.sxwl.android.utils.Utils
 import android.content.Intent
 import com.ai.intellimate.MainActivity
 import com.ai.intellimate.R
+import com.ai.intellimate.ViewModelEvent
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
-import com.ai.intellimate.ViewModelEvent
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -26,18 +26,13 @@ class LoginViewModel : BaseVM() {
     private val _events = MutableSharedFlow<ViewModelEvent>()
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
 
-    /**
-     * 发送事件通知
-     */
+    /** 发送事件通知 */
     private fun sendEvent(event: ViewModelEvent) {
-        launchUI {
-            _events.emit(event)
-        }
+        launchUI { _events.emit(event) }
     }
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val userApi by lazy { NetServiceMgr.getUserApi() }
-
 
     fun onGoogleLoginSuccess(idToken: String) {
         launchBackground {
@@ -57,7 +52,8 @@ class LoginViewModel : BaseVM() {
                     // 登录成功，IntySetting已经保存了登录状态
 
                     // 检查用户信息是否完整（年龄和性别）
-                    val needsRegInfo = userProfile.gender.isNullOrEmpty() ||
+                    val needsRegInfo =
+                        userProfile.gender.isNullOrEmpty() ||
                             userProfile.ageGroup.isNullOrEmpty() ||
                             userProfile.ageGroup == "<18"
 
@@ -82,10 +78,11 @@ class LoginViewModel : BaseVM() {
                         Utils.getApp().startActivity(intent)
                     }
                 }
-
                 is HttpResult.Failure -> {
                     LogUtils.e("Google login failed: ${result.message}")
-                    withContext(Dispatchers.Main) { NetworkErrorHandler.showNetworkAwareError(result.message) }
+                    withContext(Dispatchers.Main) {
+                        NetworkErrorHandler.showNetworkAwareError(result.message)
+                    }
                 }
             }
         }

@@ -6,10 +6,10 @@ import ai.sxwl.android.utils.Utils
 import android.content.Intent
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.MainActivity
+import com.ai.intellimate.ViewModelEvent
 import com.ai.intellimate.utils.IntyUserProfileSDK
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
-import com.ai.intellimate.ViewModelEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -23,13 +23,9 @@ class RegInfoViewModel : BaseVM() {
     private val _events = MutableSharedFlow<ViewModelEvent>()
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
 
-    /**
-     * 发送事件通知
-     */
+    /** 发送事件通知 */
     private fun sendEvent(event: ViewModelEvent) {
-        viewModelScope.launch {
-            _events.emit(event)
-        }
+        viewModelScope.launch { _events.emit(event) }
     }
 
     fun onSave(gender: GENDER, age: String) {

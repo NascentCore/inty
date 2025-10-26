@@ -28,22 +28,24 @@ class ScriptedClickTest {
 
         device.pressHome()
 
-        val intent = context.packageManager.getLaunchIntentForPackage(packageName)?.apply {
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        }
+        val intent =
+            context.packageManager.getLaunchIntentForPackage(packageName)?.apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            }
         requireNotNull(intent) { "Launch intent not found for package: $packageName" }
         context.startActivity(intent)
 
         device.wait(Until.hasObject(By.pkg(packageName).depth(0)), LAUNCH_TIMEOUT_MS)
 
-        val steps: List<Step> = listOf(
-            Wait(1000),
-            ClickText("允许"),
-            ClickText("Allow"),
-            ClickText("OK"),
-            ClickDesc("Navigate up"),
-            Back,
-        )
+        val steps: List<Step> =
+            listOf(
+                Wait(1000),
+                ClickText("允许"),
+                ClickText("Allow"),
+                ClickText("OK"),
+                ClickDesc("Navigate up"),
+                Back,
+            )
 
         runSteps(device, steps, packageName)
     }
@@ -60,7 +62,11 @@ class ScriptedClickTest {
         }
     }
 
-    private fun clickWithFallback(device: UiDevice, selector: BySelector, timeoutMs: Long = ACTION_TIMEOUT_MS) {
+    private fun clickWithFallback(
+        device: UiDevice,
+        selector: BySelector,
+        timeoutMs: Long = ACTION_TIMEOUT_MS
+    ) {
         val obj = device.wait(Until.findObject(selector), timeoutMs)
         obj?.click()
     }

@@ -8,18 +8,18 @@ import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import android.net.Uri
-import com.ai.intellimate.R
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
+import com.ai.intellimate.R
 import com.ai.intellimate.ViewModelEvent
+import java.io.InputStream
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.io.InputStream
 
 class ReportViewModel : BaseVM() {
 
@@ -27,13 +27,9 @@ class ReportViewModel : BaseVM() {
     private val _events = MutableSharedFlow<ViewModelEvent>()
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
 
-    /**
-     * 发送事件通知
-     */
+    /** 发送事件通知 */
     private fun sendEvent(event: ViewModelEvent) {
-        viewModelScope.launch {
-            _events.emit(event)
-        }
+        viewModelScope.launch { _events.emit(event) }
     }
 
     var targetID: String = ""
@@ -127,10 +123,13 @@ class ReportViewModel : BaseVM() {
                         ToastUtils.showShort(R.string.toast_submitted_successfully)
                         sendEvent(ViewModelEvent.ReportSubmitted)
                     }
-
                     is ApiResult.Error -> {
                         LogUtils.e("Report creation failed: ${result.message}")
-                        ToastUtils.showShort(result.message ?: Utils.getApp()?.getString(R.string.toast_report_creation_failed) ?: "Report creation failed")
+                        ToastUtils.showShort(
+                            result.message
+                                ?: Utils.getApp()?.getString(R.string.toast_report_creation_failed)
+                                ?: "Report creation failed"
+                        )
                     }
                 }
             } finally {
@@ -154,7 +153,6 @@ class ReportViewModel : BaseVM() {
                 LogUtils.i("Image uploaded successfully: $url")
                 url
             }
-
             is ApiResult.Error -> {
                 LogUtils.e("Image upload failed: ${result.message}")
                 null

@@ -13,6 +13,7 @@ import ai.sxwl.android.utils.ToastUtils
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -89,13 +90,17 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
+import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.SingleLineTextInputField
 import com.ai.intellimate.utils.AvatarManager
-import com.ai.intellimate.MainViewModel
 import com.architecture.httplib.core.HttpResult
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
+import java.io.File
+import java.net.URL
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -105,11 +110,6 @@ import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
-import java.io.File
-import java.net.URL
-import java.util.UUID
-import java.util.concurrent.TimeUnit
-import android.graphics.Color as AndroidColor
 
 /** 创建角色的页面 */
 class CreateRoleActivity : BaseActivity() {
@@ -119,13 +119,16 @@ class CreateRoleActivity : BaseActivity() {
 
         /**
          * 启动单独的聊天界面
+         *
          * @param context 上下文context
          * @param agentInfo Agent的Info对象
          */
         fun launch(context: Context, agentInfo: AgentInfo? = null) {
-            context.startActivity(Intent(context, CreateRoleActivity::class.java).also { intent ->
-                intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
-            })
+            context.startActivity(
+                Intent(context, CreateRoleActivity::class.java).also { intent ->
+                    intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
+                }
+            )
         }
     }
 
@@ -134,11 +137,12 @@ class CreateRoleActivity : BaseActivity() {
 
     override fun initConfigData() {
         super.initConfigData()
-        agent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableExtra(INTENT_KEY_AGENT_INFO, AgentInfo::class.java)
-        } else {
-            intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
-        }
+        agent =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(INTENT_KEY_AGENT_INFO, AgentInfo::class.java)
+            } else {
+                intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
+            }
     }
 
     @Composable
@@ -149,9 +153,7 @@ class CreateRoleActivity : BaseActivity() {
             mainViewModel = mainViewModel,
             onBack = { finish() },
             onCreateSuccess = { finish() },
-            onAvatarGenerateClick = {
-                AvatarGenerateActivity.Companion.launch(this)
-            },
+            onAvatarGenerateClick = { AvatarGenerateActivity.Companion.launch(this) },
             editAgent = agent,
         )
     }
@@ -238,13 +240,11 @@ private fun CreateRolePage(
                     LogUtils.i("Activity stopped - clearing AvatarManager data")
                     AvatarManager.clearAllAvatarData()
                 }
-
                 Lifecycle.Event.ON_DESTROY -> {
                     // Also clear when activity is destroyed
                     LogUtils.i("Activity destroyed - clearing AvatarManager data")
                     AvatarManager.clearAllAvatarData()
                 }
-
                 else -> {}
             }
         }
@@ -270,7 +270,6 @@ private fun CreateRolePage(
                             val body =
                                 MultipartBody.Part.createFormData("file", file.name, requestFile)
 
-
                             val agentApi = NetServiceMgr.getAgentApi()
                             // Use the mainViewModel's scope to launch the coroutine
                             mainViewModel.viewModelScope.launch(Dispatchers.IO) {
@@ -284,27 +283,43 @@ private fun CreateRolePage(
                                             // Update UI on main thread
                                             withContext(Dispatchers.Main) {
                                                 croppedAvatarUrl = uploadedUrl
-                                                ToastUtils.showShort(R.string.toast_avatar_cropped_uploaded)
+                                                ToastUtils.showShort(
+                                                    R.string.toast_avatar_cropped_uploaded
+                                                )
                                             }
                                         }
-
                                         is HttpResult.Failure -> {
                                             LogUtils.e("Upload failed: ${response.message}")
                                             withContext(Dispatchers.Main) {
-                                                ToastUtils.showShort(context.getString(R.string.toast_upload_failed_with_message, response.message ?: "Unknown error"))
+                                                ToastUtils.showShort(
+                                                    context.getString(
+                                                        R.string.toast_upload_failed_with_message,
+                                                        response.message ?: "Unknown error"
+                                                    )
+                                                )
                                             }
                                         }
                                     }
                                 } catch (e: Exception) {
                                     LogUtils.e("Upload exception: ${e.message}")
                                     withContext(Dispatchers.Main) {
-                                        ToastUtils.showShort(context.getString(R.string.toast_upload_failed_with_message, e.message ?: "Unknown error"))
+                                        ToastUtils.showShort(
+                                            context.getString(
+                                                R.string.toast_upload_failed_with_message,
+                                                e.message ?: "Unknown error"
+                                            )
+                                        )
                                     }
                                 }
                             }
                         } catch (e: Exception) {
                             LogUtils.e("Failed to prepare upload: ${e.message}")
-                            ToastUtils.showShort(context.getString(R.string.toast_failed_prepare_upload_with_message, e.message ?: "Unknown error"))
+                            ToastUtils.showShort(
+                                context.getString(
+                                    R.string.toast_failed_prepare_upload_with_message,
+                                    e.message ?: "Unknown error"
+                                )
+                            )
                         }
                     }
                 }
@@ -313,10 +328,7 @@ private fun CreateRolePage(
                     val cropError = UCrop.getError(data)
                     LogUtils.e("UCrop error: ${cropError?.message}")
                     ToastUtils.showShort(
-                        context.getString(
-                            R.string.toast_crop_failed,
-                            cropError?.message ?: ""
-                        )
+                        context.getString(R.string.toast_crop_failed, cropError?.message ?: "")
                     )
                 }
             }
@@ -454,9 +466,7 @@ private fun CreateRolePage(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier
-                                .padding(horizontal = 12.dp)
-                                .noRippleClickable { onBack() },
+                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
                         painter = painterResource(R.drawable.close),
                         contentDescription = null,
                     )
@@ -466,8 +476,7 @@ private fun CreateRolePage(
     ) { padding ->
         Column(
             modifier =
-                Modifier
-                    .fillMaxSize()
+                Modifier.fillMaxSize()
                     .imePadding()
                     .padding(
                         top = padding.calculateTopPadding(),
@@ -513,7 +522,9 @@ private fun CreateRolePage(
                                 ) {
                                     selectedImageIndex
                                 } else {
-                                    LogUtils.e("Face edit - Index out of bounds! selectedImageIndex: $selectedImageIndex, avatarUrls.size: ${avatarUrls.size}")
+                                    LogUtils.e(
+                                        "Face edit - Index out of bounds! selectedImageIndex: $selectedImageIndex, avatarUrls.size: ${avatarUrls.size}"
+                                    )
                                     0 // Fall back to first image
                                 }
 
@@ -532,7 +543,9 @@ private fun CreateRolePage(
                                     URL(imageUrl) // Test if URL is valid
                                     true
                                 } catch (e: Exception) {
-                                    LogUtils.e("Face edit - Invalid URL format: $imageUrl URL validation error: ${e.message}")
+                                    LogUtils.e(
+                                        "Face edit - Invalid URL format: $imageUrl URL validation error: ${e.message}"
+                                    )
                                     false
                                 }
 
@@ -556,7 +569,9 @@ private fun CreateRolePage(
                                         val request = Request.Builder().url(imageUrl).build()
 
                                         val response = client.newCall(request).execute()
-                                        LogUtils.d("Face edit download - HTTP response message: ${response.message}")
+                                        LogUtils.d(
+                                            "Face edit download - HTTP response message: ${response.message}"
+                                        )
 
                                         if (response.isSuccessful) {
                                             response.body?.let { body ->
@@ -574,9 +589,13 @@ private fun CreateRolePage(
                                             )
                                         }
                                     } catch (e: Exception) {
-                                        LogUtils.e("Failed to download image for cropping: $imageUrl Error details: ${e.message}")
+                                        LogUtils.e(
+                                            "Failed to download image for cropping: $imageUrl Error details: ${e.message}"
+                                        )
                                         withContext(Dispatchers.Main) {
-                                            ToastUtils.showShort(R.string.toast_failed_download_image_editing)
+                                            ToastUtils.showShort(
+                                                R.string.toast_failed_download_image_editing
+                                            )
                                         }
                                     }
                                 }
@@ -742,7 +761,9 @@ private fun CreateRolePage(
                                 request = request,
                                 onSuccess = { agentInfo ->
                                     isLoading = false
-                                    ToastUtils.showShort(context.getString(R.string.create_ai_successfully))
+                                    ToastUtils.showShort(
+                                        context.getString(R.string.create_ai_successfully)
+                                    )
                                     onCreateSuccess()
                                 },
                                 onError = { error ->
@@ -776,7 +797,9 @@ private fun CreateRolePage(
                                 e.message ?: context.getString(R.string.unknown_error),
                             )
                         ToastUtils.showShort(errorMessage)
-                        LogUtils.e("${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}")
+                        LogUtils.e(
+                            "${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}"
+                        )
                     }
                 },
             )
@@ -854,32 +877,30 @@ private fun AvatarUploadSection(
         Box(
             modifier =
                 Modifier.then(
-                    if (isEmpty) Modifier.size(200.dp)
-                    else Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(9.div(16f))
-                ).let { modifier ->
-                    if (isEmpty) {
-                        modifier
-                            .background(
-                                color = Color(0x1A78599A),
+                        if (isEmpty) Modifier.size(200.dp)
+                        else Modifier.fillMaxWidth().aspectRatio(9.div(16f))
+                    )
+                    .let { modifier ->
+                        if (isEmpty) {
+                            modifier
+                                .background(
+                                    color = Color(0x1A78599A),
+                                    shape = RoundedCornerShape(16.dp),
+                                )
+                                .noRippleClickable { onGenerateClick() }
+                        } else {
+                            modifier.background(
+                                color = Color.Black,
                                 shape = RoundedCornerShape(16.dp),
                             )
-                            .noRippleClickable { onGenerateClick() }
-                    } else {
-                        modifier.background(
-                            color = Color.Black,
-                            shape = RoundedCornerShape(16.dp),
-                        )
-                    }
-                },
+                        }
+                    },
             contentAlignment = Alignment.Center,
         ) {
             when {
                 isGenerating -> {
                     ThreeDotLoadingAnimation()
                 }
-
                 avatarUrls.isNotEmpty() -> {
                     val displayUrl = avatarUrls.getOrNull(selectedIndex) ?: avatarUrls.first()
                     AsyncImage(
@@ -888,14 +909,17 @@ private fun AvatarUploadSection(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
-                            LogUtils.d("AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl")
+                            LogUtils.d(
+                                "AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl"
+                            )
                         },
                         onError = {
-                            LogUtils.e("AvatarUploadSection: Failed to load selected avatar image: $displayUrl")
+                            LogUtils.e(
+                                "AvatarUploadSection: Failed to load selected avatar image: $displayUrl"
+                            )
                         },
                     )
                 }
-
                 avatarUrl != null -> {
                     AsyncImage(
                         model = avatarUrl,
@@ -903,14 +927,17 @@ private fun AvatarUploadSection(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
-                            LogUtils.d("AvatarUploadSection: Avatar image loaded successfully: $avatarUrl")
+                            LogUtils.d(
+                                "AvatarUploadSection: Avatar image loaded successfully: $avatarUrl"
+                            )
                         },
                         onError = {
-                            LogUtils.e("AvatarUploadSection: Failed to load avatar image: $avatarUrl")
+                            LogUtils.e(
+                                "AvatarUploadSection: Failed to load avatar image: $avatarUrl"
+                            )
                         },
                     )
                 }
-
                 else -> {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Image(
@@ -939,8 +966,7 @@ private fun AvatarUploadSection(
 
                     drawRoundRect(
                         color = Color.Gray,
-                        topLeft =
-                            Offset(strokeWidth / 2, strokeWidth / 2),
+                        topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
                         size =
                             Size(
                                 size.width - strokeWidth,
@@ -961,8 +987,7 @@ private fun AvatarUploadSection(
             if (avatarUrls.isNotEmpty() || avatarUrl != null) {
                 Box(
                     modifier =
-                        Modifier
-                            .align(Alignment.TopEnd)
+                        Modifier.align(Alignment.TopEnd)
                             .padding(8.dp)
                             .background(
                                 color = Color.Black.copy(alpha = 0.5f),
@@ -995,8 +1020,7 @@ private fun AvatarUploadSection(
         if (avatarUrls.isNotEmpty()) {
             Row(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .background(
                             color = Color.Black.copy(alpha = 0.5f),
                             shape = RoundedCornerShape(12.dp),
@@ -1006,11 +1030,7 @@ private fun AvatarUploadSection(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Fixed Regen button on the left
-                Box(
-                    modifier = Modifier
-                        .width(88.dp)
-                        .aspectRatio(9 / 16f)
-                ) {
+                Box(modifier = Modifier.width(88.dp).aspectRatio(9 / 16f)) {
                     RegenButton(
                         onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
                         enabled = !isGenerating,
@@ -1024,53 +1044,51 @@ private fun AvatarUploadSection(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     runCatching {
-                        if (avatarUrls.isNotEmpty()) {
-                            items(items = avatarUrls.indices.toList()) { index ->
-                                val imageUrl = avatarUrls[index]
-                                // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
-                                val thumbnailUrl =
-                                    getCdnImageUrl(
-                                        imageUrl,
-                                        width = 80,
-                                        quality = 60,
-                                    )
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .width(88.dp)
-                                            .aspectRatio(9 / 16f)
-                                            .background(
-                                                color = Color(0x1A78599A),
-                                                shape = RoundedCornerShape(8.dp),
-                                            )
-                                            .border(
-                                                width =
-                                                    if (index == selectedIndex) 3.dp else 1.dp,
-                                                color =
-                                                    if (index == selectedIndex)
-                                                        Color(0xFFE91E63)
-                                                    else Color.Transparent,
-                                                shape = RoundedCornerShape(8.dp),
-                                            )
-                                            .noRippleClickable { onImageSelected(index) },
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    AsyncImage(
-                                        model = thumbnailUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
-                                        contentDescription =
-                                            stringResource(
-                                                R.string.content_desc_generated_avatar_index,
-                                                index,
-                                            ),
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(4.dp),
-                                        contentScale = ContentScale.Crop,
-                                    )
+                            if (avatarUrls.isNotEmpty()) {
+                                items(items = avatarUrls.indices.toList()) { index ->
+                                    val imageUrl = avatarUrls[index]
+                                    // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
+                                    val thumbnailUrl =
+                                        getCdnImageUrl(
+                                            imageUrl,
+                                            width = 80,
+                                            quality = 60,
+                                        )
+                                    Box(
+                                        modifier =
+                                            Modifier.width(88.dp)
+                                                .aspectRatio(9 / 16f)
+                                                .background(
+                                                    color = Color(0x1A78599A),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                )
+                                                .border(
+                                                    width =
+                                                        if (index == selectedIndex) 3.dp else 1.dp,
+                                                    color =
+                                                        if (index == selectedIndex)
+                                                            Color(0xFFE91E63)
+                                                        else Color.Transparent,
+                                                    shape = RoundedCornerShape(8.dp),
+                                                )
+                                                .noRippleClickable { onImageSelected(index) },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        AsyncImage(
+                                            model = thumbnailUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
+                                            contentDescription =
+                                                stringResource(
+                                                    R.string.content_desc_generated_avatar_index,
+                                                    index,
+                                                ),
+                                            modifier = Modifier.fillMaxSize().padding(4.dp),
+                                            contentScale = ContentScale.Crop,
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }.onFailure { it.printStackTrace() }
+                        .onFailure { it.printStackTrace() }
                 }
             }
         }
@@ -1204,8 +1222,7 @@ private fun CreateButton(isLoading: Boolean, isEditMode: Boolean = false, onClic
         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(25.dp),
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .height(56.dp)
                 .background(
                     brush =

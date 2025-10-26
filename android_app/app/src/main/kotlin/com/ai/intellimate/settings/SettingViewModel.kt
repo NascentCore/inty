@@ -23,7 +23,6 @@ class SettingViewModel : BaseVM() {
 
     private val userApi: IUserApi by lazy { NetServiceMgr.getUserApi() }
 
-
     // 对话框状态
     private val _dialogState = MutableStateFlow(DialogState())
     val dialogState: StateFlow<DialogState> = _dialogState.asStateFlow()
@@ -44,7 +43,6 @@ class SettingViewModel : BaseVM() {
             try {
                 val result = userApi.userDeletionCheck()
 
-
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
@@ -52,18 +50,15 @@ class SettingViewModel : BaseVM() {
                                 deleteUserAccount()
                             } else {
                                 ToastUtils.showShort(
-                                    Utils.getApp().getString(
-                                        R.string.toast_cancel_subscription_first
-                                    )
+                                    Utils.getApp()
+                                        .getString(R.string.toast_cancel_subscription_first)
                                 )
                             }
                         }
-
                         is HttpResult.Failure -> {
                             ToastUtils.showShort(
-                                Utils.getApp().getString(
-                                    R.string.toast_check_account_deletion_error
-                                )
+                                Utils.getApp()
+                                    .getString(R.string.toast_check_account_deletion_error)
                             )
                         }
                     }
@@ -90,13 +85,11 @@ class SettingViewModel : BaseVM() {
             try {
                 val result = userApi.userDeleteAccount()
 
-
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
                             deleteAccountResultFlow.emit(true)
                         }
-
                         is HttpResult.Failure -> {
                             ToastUtils.showShort(
                                 Utils.getApp().getString(R.string.toast_account_deletion_error)

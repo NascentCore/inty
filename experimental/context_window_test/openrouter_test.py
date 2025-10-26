@@ -121,7 +121,9 @@ async def test_openrouter_performance_with_retry(
             raise e
 
 
-async def test_openrouter_performance(book_text: str, model: str, question: str = None) -> dict:
+async def test_openrouter_performance(
+    book_text: str, model: str, question: str = None
+) -> dict:
     """Test OpenRouter model performance with long context."""
 
     # Default question if none provided
@@ -162,12 +164,7 @@ Question: {question}"""
         # Generate content with streaming to capture first token
         stream = await client.chat.completions.create(
             model=model,
-            messages=[
-                {
-                    "role": "user", 
-                    "content": full_prompt
-                }
-            ],
+            messages=[{"role": "user", "content": full_prompt}],
             temperature=0.1,
             max_tokens=2048,
             stream=True,
@@ -179,7 +176,7 @@ Question: {question}"""
                 # Mark first token on first chunk with content
                 if not response_text:
                     tracker.mark_first_token()
-                
+
                 response_text += chunk.choices[0].delta.content
 
         # Count response tokens
@@ -216,22 +213,20 @@ def get_model_pricing(model: str) -> tuple[float, float]:
     pricing_map = {
         # Claude models
         "claude-3.5-sonnet": (3.0, 15.0),
-        "claude-3-sonnet": (3.0, 15.0), 
+        "claude-3-sonnet": (3.0, 15.0),
         "claude-3-haiku": (0.25, 1.25),
         "claude-3-opus": (15.0, 75.0),
-        
         # GPT models
         "gpt-4o": (2.5, 10.0),
         "gpt-4-turbo": (10.0, 30.0),
         "gpt-4": (30.0, 60.0),
         "gpt-3.5-turbo": (0.5, 1.5),
-        
         # Other models
         "mistral-large": (2.0, 6.0),
         "llama-3.1-405b": (2.7, 2.7),
         "llama-3.1-70b": (0.59, 0.79),
     }
-    
+
     # Default pricing if model not found
     return pricing_map.get(model, (1.0, 3.0))
 
@@ -257,7 +252,7 @@ def print_results(metrics: dict, model: str):
     input_tokens = metrics.get("input_tokens", 0)
     output_tokens = metrics.get("response_tokens", 0)
     input_price, output_price = get_model_pricing(model)
-    
+
     input_cost = (input_tokens / 1_000_000) * input_price
     output_cost = (output_tokens / 1_000_000) * output_price
     total_cost = input_cost + output_cost

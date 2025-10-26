@@ -43,11 +43,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.random.Random
 
-//存放一些普通的ui相关的函数
+// 存放一些普通的ui相关的函数
 
-/**
- * 随机生成一个颜色，包含随机透明度，compose的UI颜色
- */
+/** 随机生成一个颜色，包含随机透明度，compose的UI颜色 */
 fun randomColor(): Color {
     return Color(
         red = Random.nextInt(0, 255),
@@ -57,50 +55,50 @@ fun randomColor(): Color {
     )
 }
 
-/**
- * 简单的扩展函数，用于对数值标记为0 和 1 的时候;如果是null，则默认为0
- * 数值取反 作为类似boolean的效果
- */
+/** 简单的扩展函数，用于对数值标记为0 和 1 的时候;如果是null，则默认为0 数值取反 作为类似boolean的效果 */
 fun Int.not(): Int {
 
     assert(this == 1 || this == 0)
 
     return when (this) {
         0 -> 1
-
         1 -> 0
         else -> error("")
     }
 }
 
-//主题按钮 渐变色
-val primaryBtnBrush = Brush.horizontalGradient(
-    colors = listOf(
-        Color(0xFFC122FF),
-        Color(0xFFFF905D),
+// 主题按钮 渐变色
+val primaryBtnBrush =
+    Brush.horizontalGradient(
+        colors =
+            listOf(
+                Color(0xFFC122FF),
+                Color(0xFFFF905D),
+            )
     )
-)
 
-//常规按钮 渐变色
-val commonBtnBrush = Brush.horizontalGradient(
-    colors = listOf(
-        Color(0XFF2D213A),
-        Color(0XFF2D213A),
+// 常规按钮 渐变色
+val commonBtnBrush =
+    Brush.horizontalGradient(
+        colors =
+            listOf(
+                Color(0XFF2D213A),
+                Color(0XFF2D213A),
+            )
     )
-)
 
-//分隔符渐变色
-val heartDivBrush = Brush.horizontalGradient(
-    colors = listOf(
-        Color.White.copy(0f),
-        Color.White.copy(.09f),
-        Color.White.copy(0f),
+// 分隔符渐变色
+val heartDivBrush =
+    Brush.horizontalGradient(
+        colors =
+            listOf(
+                Color.White.copy(0f),
+                Color.White.copy(.09f),
+                Color.White.copy(0f),
+            )
     )
-)
 
-/**
- * 空状态页面
- */
+/** 空状态页面 */
 @Preview
 @Composable
 fun HeartEmptyUI(modifier: Modifier = Modifier, tips: String = "No relevant content") {
@@ -128,14 +126,17 @@ fun HeartEmptyUI(modifier: Modifier = Modifier, tips: String = "No relevant cont
 @Composable
 fun PoundTagText(textStr: String) {
     Box(
-        modifier = Modifier
-            .border(
-                width = 1.dp,
-                brush = heartDivBrush,
-                shape = RoundedCornerShape(size = 4.dp)
-            )
-            .background(color = HeartColor.primaryColor, shape = RoundedCornerShape(size = 4.dp))
-            .padding(horizontal = 6.dp, vertical = 4.dp),
+        modifier =
+            Modifier.border(
+                    width = 1.dp,
+                    brush = heartDivBrush,
+                    shape = RoundedCornerShape(size = 4.dp)
+                )
+                .background(
+                    color = HeartColor.primaryColor,
+                    shape = RoundedCornerShape(size = 4.dp)
+                )
+                .padding(horizontal = 6.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -146,7 +147,6 @@ fun PoundTagText(textStr: String) {
             textAlign = TextAlign.Center,
         )
     }
-
 }
 
 @Preview
@@ -158,11 +158,7 @@ private fun PreviewPoundText() {
     }
 }
 
-
-/**
- * 可滑动删除的列表容器
- * 要求itemContent不能透明
- */
+/** 可滑动删除的列表容器 要求itemContent不能透明 */
 @Composable
 fun SwipeableListItem(
     onDelete: () -> Unit = {},
@@ -172,8 +168,10 @@ fun SwipeableListItem(
     val swipeToDismissBoxState = rememberSwipeToDismissBoxState()
 
     LaunchedEffect(swipeToDismissBoxState.currentValue) {
-        if (swipeToDismissBoxState.currentValue == SwipeToDismissBoxValue.EndToStart &&
-            swipeToDismissBoxState.progress > 0.8f && !isDeleting
+        if (
+            swipeToDismissBoxState.currentValue == SwipeToDismissBoxValue.EndToStart &&
+                swipeToDismissBoxState.progress > 0.8f &&
+                !isDeleting
         ) {
             isDeleting = true
             onDelete()
@@ -186,26 +184,27 @@ fun SwipeableListItem(
         state = swipeToDismissBoxState,
         enableDismissFromStartToEnd = false, // 禁用从左向右滑动
         backgroundContent = {
-            val color by animateColorAsState(
-                when (swipeToDismissBoxState.targetValue) {
-                    SwipeToDismissBoxValue.EndToStart -> Color.Red
-                    SwipeToDismissBoxValue.Settled,
-                    SwipeToDismissBoxValue.StartToEnd,
-                        -> Color.Transparent
-                }
-            )
+            val color by
+                animateColorAsState(
+                    when (swipeToDismissBoxState.targetValue) {
+                        SwipeToDismissBoxValue.EndToStart -> Color.Red
+                        SwipeToDismissBoxValue.Settled,
+                        SwipeToDismissBoxValue.StartToEnd, -> Color.Transparent
+                    }
+                )
             val show = swipeToDismissBoxState.targetValue == SwipeToDismissBoxValue.EndToStart
-            val boxWidth = with(LocalDensity.current) {
-                (swipeToDismissBoxState.progress * LocalView.current.width).toDp()
-            }
+            val boxWidth =
+                with(LocalDensity.current) {
+                    (swipeToDismissBoxState.progress * LocalView.current.width).toDp()
+                }
             if (show) {
                 Spacer(Modifier.weight(1f))
                 Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(boxWidth)
-                        .background(color)
-                        .padding(horizontal = 20.dp),
+                    modifier =
+                        Modifier.fillMaxHeight()
+                            .width(boxWidth)
+                            .background(color)
+                            .padding(horizontal = 20.dp),
                     contentAlignment = Alignment.CenterEnd
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -224,7 +223,6 @@ fun SwipeableListItem(
                     }
                 }
             }
-
         },
         content = itemContent
     )

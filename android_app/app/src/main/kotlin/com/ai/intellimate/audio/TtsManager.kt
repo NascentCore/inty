@@ -19,8 +19,7 @@ import kotlinx.coroutines.withTimeout
 class TtsManager private constructor(private val context: Context) {
 
     companion object {
-        @Volatile
-        private var INSTANCE: TtsManager? = null
+        @Volatile private var INSTANCE: TtsManager? = null
 
         fun getInstance(context: Context): TtsManager {
             return INSTANCE
@@ -41,9 +40,7 @@ class TtsManager private constructor(private val context: Context) {
     private val inFlight = mutableMapOf<String, MutableList<(Result<String>) -> Unit>>()
 
     // 延迟获取API依赖
-    private val chatApi by lazy {
-        NetServiceMgr.getChatApi()
-    }
+    private val chatApi by lazy { NetServiceMgr.getChatApi() }
 
     /**
      * 生成消息语音
@@ -91,7 +88,9 @@ class TtsManager private constructor(private val context: Context) {
         ioScope.launch {
             try {
                 if (agentId.isEmpty() || messageId.isEmpty()) {
-                    LogUtils.e("音频LOG测试 TTS generation failed: agentId='$agentId', messageId='$messageId'")
+                    LogUtils.e(
+                        "音频LOG测试 TTS generation failed: agentId='$agentId', messageId='$messageId'"
+                    )
                     completeWithError(
                         dedupKey,
                         messageId,
@@ -103,7 +102,9 @@ class TtsManager private constructor(private val context: Context) {
 
                 // 验证agentId和messageId格式
                 if (agentId.length < 3 || messageId.length < 3) {
-                    LogUtils.e("音频LOG测试 TTS generation failed: Invalid ID format - agentId='$agentId', messageId='$messageId'")
+                    LogUtils.e(
+                        "音频LOG测试 TTS generation failed: Invalid ID format - agentId='$agentId', messageId='$messageId'"
+                    )
                     completeWithError(dedupKey, messageId, "TTS生成失败：ID格式无效", onError)
                     return@launch
                 }
@@ -126,18 +127,14 @@ class TtsManager private constructor(private val context: Context) {
                             if (audioUrl != null && audioUrl.isNotEmpty()) {
                                 completeWithSuccess(dedupKey, messageId, audioUrl, onSuccess)
                             } else {
-                                completeWithError(
-                                    dedupKey,
-                                    messageId,
-                                    "TTS生成失败：返回空音频URL",
-                                    onError
-                                )
+                                completeWithError(dedupKey, messageId, "TTS生成失败：返回空音频URL", onError)
                             }
                         }
                     }
-
                     is HttpResult.Failure -> {
-                        LogUtils.e("音频LOG测试 TTS generation failed: ${response.message} (Agent: $agentId)")
+                        LogUtils.e(
+                            "音频LOG测试 TTS generation failed: ${response.message} (Agent: $agentId)"
+                        )
                         completeWithError(
                             dedupKey,
                             messageId,
@@ -174,8 +171,9 @@ class TtsManager private constructor(private val context: Context) {
         directError: (String) -> Unit,
     ) {
         // 检查是否为取消操作，如果是则不显示错误toast
-        if (errorMsg.contains("cancelled", ignoreCase = true) ||
-            errorMsg.contains("cancel", ignoreCase = true)
+        if (
+            errorMsg.contains("cancelled", ignoreCase = true) ||
+                errorMsg.contains("cancel", ignoreCase = true)
         ) {
             LogUtils.d("音频LOG测试 TTS生成被取消: $messageId")
             return
@@ -184,7 +182,9 @@ class TtsManager private constructor(private val context: Context) {
         val callbacks = synchronized(inFlight) { inFlight.remove(key) ?: emptyList() }
         if (callbacks.isEmpty()) return directError(errorMsg)
         callbacks.forEach { it(Result.failure(IllegalStateException(errorMsg))) }
-        LogUtils.e("音频LOG测试 TTS complete error, dispatched to ${callbacks.size} callbacks for key=$key : $errorMsg")
+        LogUtils.e(
+            "音频LOG测试 TTS complete error, dispatched to ${callbacks.size} callbacks for key=$key : $errorMsg"
+        )
     }
 
     /** 检查是否正在生成指定消息的TTS */

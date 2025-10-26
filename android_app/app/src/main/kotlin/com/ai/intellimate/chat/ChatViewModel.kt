@@ -108,7 +108,6 @@ class ChatViewModel : BaseVM() {
     private var hasMoreJob: Job? = null
     private var boundAgentId: String? = null
 
-
     fun setAgentInfo(agentInfo: AgentInfo?) {
 
         // Firebase Analytics - 记录聊天会话开始
@@ -193,26 +192,25 @@ class ChatViewModel : BaseVM() {
             _hasMoreMessages.value = chatRepository.getHasMoreFlow(agentId).value
         }
 
-        messagesJob = viewModelScope.launch(Dispatchers.IO) {
-            chatRepository.getMessagesFlow(agentId).collect { list ->
-                _msgs.value = list
+        messagesJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                chatRepository.getMessagesFlow(agentId).collect { list -> _msgs.value = list }
             }
-        }
-        loadingMoreJob = viewModelScope.launch(Dispatchers.IO) {
-            chatRepository.getLoadingMoreFlow(agentId).collect { loading ->
-                _isLoadingMore.value = loading
+        loadingMoreJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                chatRepository.getLoadingMoreFlow(agentId).collect { loading ->
+                    _isLoadingMore.value = loading
+                }
             }
-        }
-        hasMoreJob = viewModelScope.launch(Dispatchers.IO) {
-            chatRepository.getHasMoreFlow(agentId).collect { more ->
-                _hasMoreMessages.value = more
+        hasMoreJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                chatRepository.getHasMoreFlow(agentId).collect { more ->
+                    _hasMoreMessages.value = more
+                }
             }
-        }
     }
 
-    /**
-     * 加载聊天历史 - 使用增量同步优化体验
-     */
+    /** 加载聊天历史 - 使用增量同步优化体验 */
     private fun loadChatHistory(agentId: String) {
         LogUtils.i("ChatViewModel.loadChatHistory called for agentId=$agentId")
         viewModelScope.launch(Dispatchers.IO) {
@@ -227,10 +225,7 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    /**
-     * 同步最新消息 - 用于应用恢复、页面切换等场景
-     * 优先显示本地数据，后台检查服务器更新
-     */
+    /** 同步最新消息 - 用于应用恢复、页面切换等场景 优先显示本地数据，后台检查服务器更新 */
     fun syncLatestMessages() {
         val agentId = _agentInfo.value?.id ?: return
         LogUtils.i("ChatViewModel.syncLatestMessages called for agentId=$agentId")
@@ -243,9 +238,7 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    /**
-     * 发送消息 - 使用新架构
-     */
+    /** 发送消息 - 使用新架构 */
     fun sendMsg() {
         // 防抖检查
         val currentTime = System.currentTimeMillis()
@@ -317,27 +310,32 @@ class ChatViewModel : BaseVM() {
                         )
 
                         runCatching {
-                            if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
-                                requestLogin.emit(true)
-                                return@runCatching
+                                if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
+                                    requestLogin.emit(true)
+                                    return@runCatching
+                                }
+                                // 有免费次数限制，需要vip订阅
+                                if (
+                                    result.data.code ==
+                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                ) {
+                                    // Firebase Analytics - 记录免费次数限制
+                                    FirebaseManager.logEvent(
+                                        "free_limit_reached",
+                                        mapOf("agent_id" to agentId, "user_type" to "free"),
+                                    )
+                                    showLimitDialog.emit(true)
+                                }
+                                result.data.data?.choices?.lastOrNull()?.message?.content?.let {
+                                    content ->
+                                    IntySetting.setConversationReaded(agentId, content)
+                                }
                             }
-                            // 有免费次数限制，需要vip订阅
-                            if (result.data.code == BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE) {
-                                // Firebase Analytics - 记录免费次数限制
-                                FirebaseManager.logEvent(
-                                    "free_limit_reached",
-                                    mapOf("agent_id" to agentId, "user_type" to "free"),
-                                )
-                                showLimitDialog.emit(true)
+                            .onFailure {
+                                LogUtils.e("Error processing AI response: ${it.message}")
+                                it.printStackTrace()
+                                _isWaitingForReply.value = false
                             }
-                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { content ->
-                                IntySetting.setConversationReaded(agentId, content)
-                            }
-                        }.onFailure {
-                            LogUtils.e("Error processing AI response: ${it.message}")
-                            it.printStackTrace()
-                            _isWaitingForReply.value = false
-                        }
                     }
                     is HttpResult.Failure -> {
                         // Firebase Analytics - 记录消息发送失败
@@ -351,16 +349,22 @@ class ChatViewModel : BaseVM() {
                         )
 
                         // Firebase Crashlytics - 记录非致命错误
-                        FirebaseManager.recordException(Exception("Message send failed: ${result.message}"))
+                        FirebaseManager.recordException(
+                            Exception("Message send failed: ${result.message}")
+                        )
 
                         // 显示网络错误
-                        NetworkErrorHandler.showNetworkAwareError("Something went wrong. Please try again later.")
+                        NetworkErrorHandler.showNetworkAwareError(
+                            "Something went wrong. Please try again later."
+                        )
                         _isWaitingForReply.value = false
                     }
                 }
             } catch (e: Exception) {
                 LogUtils.e("Unexpected error in sendMsg: ${e.message}")
-                NetworkErrorHandler.showNetworkAwareError("An unexpected error occurred while sending message")
+                NetworkErrorHandler.showNetworkAwareError(
+                    "An unexpected error occurred while sending message"
+                )
                 _isWaitingForReply.value = false
             } finally {
                 // 确保状态在最后被正确重置
@@ -430,9 +434,7 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    /**
-     * 同步最新消息：优先加载本地数据，然后检查服务器更新
-     */
+    /** 同步最新消息：优先加载本地数据，然后检查服务器更新 */
     private fun syncLatestMessages(agentId: String) {
         LogUtils.i("ChatViewModel.syncLatestMessages called for agentId=$agentId")
         viewModelScope.launch(Dispatchers.IO) {
@@ -443,7 +445,9 @@ class ChatViewModel : BaseVM() {
 
     /** 加载更多消息 */
     fun loadMoreMessages() {
-        LogUtils.d("loadMoreMessages called: hasMore=${_hasMoreMessages.value}, isLoading=${_isLoadingMore.value}, isQueryingMsgs=$isQueryingMsgs, currentOffset=$currentOffset")
+        LogUtils.d(
+            "loadMoreMessages called: hasMore=${_hasMoreMessages.value}, isLoading=${_isLoadingMore.value}, isQueryingMsgs=$isQueryingMsgs, currentOffset=$currentOffset"
+        )
 
         if (!_hasMoreMessages.value) {
             LogUtils.i("Cannot load more messages: no more messages available")
@@ -469,7 +473,6 @@ class ChatViewModel : BaseVM() {
 
     val showLimitDialog = MutableStateFlow(false)
     val requestLogin = MutableStateFlow(false)
-
 
     // 关闭limit次数 拦截消息的弹窗
     fun dismissDialog() = viewModelScope.launch { showLimitDialog.emit(false) }
@@ -498,28 +501,31 @@ class ChatViewModel : BaseVM() {
                 when (result) {
                     is HttpResult.Success -> {
                         runCatching {
-                            if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
-                                requestLogin.emit(true)
-                                return@runCatching
+                                if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
+                                    requestLogin.emit(true)
+                                    return@runCatching
+                                }
+                                // 有免费次数限制，需要vip订阅
+                                if (
+                                    result.data.code ==
+                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                ) {
+                                    showLimitDialog.emit(true)
+                                }
+                                result.data.data?.choices?.lastOrNull()?.message?.content?.let { str
+                                    ->
+                                    IntySetting.setConversationReaded(agent.id, str)
+                                }
                             }
-                            // 有免费次数限制，需要vip订阅
-                            if (
-                                result.data.code ==
-                                BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                            ) {
-                                showLimitDialog.emit(true)
+                            .onFailure {
+                                LogUtils.e(
+                                    "Error processing keep talking AI response: ${it.message}"
+                                )
+                                it.printStackTrace()
+                                // 错误恢复：确保状态正确
+                                _isWaitingForReply.value = false
                             }
-                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { str ->
-                                IntySetting.setConversationReaded(agent.id, str)
-                            }
-                        }.onFailure {
-                            LogUtils.e("Error processing keep talking AI response: ${it.message}")
-                            it.printStackTrace()
-                            // 错误恢复：确保状态正确
-                            _isWaitingForReply.value = false
-                        }
                     }
-
                     is HttpResult.Failure -> {
                         NetworkErrorHandler.showNetworkAwareError(result.message)
                         // 错误恢复：确保状态正确
@@ -555,7 +561,6 @@ class ChatViewModel : BaseVM() {
                 LogUtils.e(result.message)
                 //                showNetworkAwareError(result.message)
             }
-
             is HttpResult.Success -> {
                 // 更新指定agent的设置，保持其他agent的设置不变
                 _chatSettings.update { currentSettings ->
@@ -605,7 +610,9 @@ class ChatViewModel : BaseVM() {
             currentConversationsPage++
             loadConversations()
         } else {
-            LogUtils.d("loadMoreConversations - 跳过加载: isLoading=${_isLoadingConversations.value}, hasMoreData=$hasMoreConversations")
+            LogUtils.d(
+                "loadMoreConversations - 跳过加载: isLoading=${_isLoadingConversations.value}, hasMoreData=$hasMoreConversations"
+            )
         }
     }
 
@@ -628,13 +635,16 @@ class ChatViewModel : BaseVM() {
                             _conversations.value = userInitiatedConversations
                         }
                     }
-
                     is HttpResult.Failure -> {
-                        LogUtils.e("loadConversationsSilently - 第${currentConversationsPage + 1}页加载失败: ${result.message}")
+                        LogUtils.e(
+                            "loadConversationsSilently - 第${currentConversationsPage + 1}页加载失败: ${result.message}"
+                        )
                     }
                 }
             } catch (e: Exception) {
-                LogUtils.e("loadConversationsSilently - 第${currentConversationsPage + 1}页加载异常: ${e.message}")
+                LogUtils.e(
+                    "loadConversationsSilently - 第${currentConversationsPage + 1}页加载异常: ${e.message}"
+                )
             }
         }
     }
@@ -675,9 +685,10 @@ class ChatViewModel : BaseVM() {
                             }
                         }
                     }
-
                     is HttpResult.Failure -> {
-                        LogUtils.e("loadConversations - 第${currentConversationsPage + 1}页加载失败: ${result.message}")
+                        LogUtils.e(
+                            "loadConversations - 第${currentConversationsPage + 1}页加载失败: ${result.message}"
+                        )
                         // 如果加载失败，回退页码
                         if (currentConversationsPage > 0) {
                             currentConversationsPage--
@@ -686,7 +697,9 @@ class ChatViewModel : BaseVM() {
                     }
                 }
             } catch (e: Exception) {
-                LogUtils.e("loadConversations - 第${currentConversationsPage + 1}页加载异常: ${e.message}")
+                LogUtils.e(
+                    "loadConversations - 第${currentConversationsPage + 1}页加载异常: ${e.message}"
+                )
                 // 如果加载失败，回退页码
                 if (currentConversationsPage > 0) {
                     currentConversationsPage--
@@ -712,7 +725,6 @@ class ChatViewModel : BaseVM() {
                     is HttpResult.Success -> {
                         setAgentInfo(result.data)
                     }
-
                     is HttpResult.Failure -> {
                         NetworkErrorHandler.showNetworkAwareError(result.message)
                     }
@@ -732,7 +744,7 @@ class ChatViewModel : BaseVM() {
             currentConversations.map { conversation ->
                 if (
                     conversation.id == conversationItem.id &&
-                    conversation.agentId == conversationItem.agentId
+                        conversation.agentId == conversationItem.agentId
                 ) {
                     conversation.copy(isNew = false)
                 } else {

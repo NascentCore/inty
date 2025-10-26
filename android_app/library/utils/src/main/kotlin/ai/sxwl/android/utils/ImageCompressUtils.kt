@@ -2,22 +2,17 @@ package ai.sxwl.android.utils
 
 import android.content.Context
 import android.net.Uri
+import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import top.zibin.luban.Luban
 import top.zibin.luban.OnCompressListener
-import java.io.File
-import java.io.IOException
 
-/**
- * 图片压缩工具类
- * 基于Luban库封装，提供简洁的API供上层模块使用
- */
+/** 图片压缩工具类 基于Luban库封装，提供简洁的API供上层模块使用 */
 object ImageCompressUtils {
 
-    /**
-     * 压缩配置类
-     */
+    /** 压缩配置类 */
     data class CompressConfig(
         /** 压缩质量，范围0-100，默认80 */
         val quality: Int = 80,
@@ -31,9 +26,7 @@ object ImageCompressUtils {
         val keepOriginal: Boolean = false
     )
 
-    /**
-     * 压缩结果回调接口
-     */
+    /** 压缩结果回调接口 */
     interface CompressCallback {
         /** 压缩成功 */
         fun onSuccess(compressedFile: File)
@@ -72,29 +65,32 @@ object ImageCompressUtils {
                 .filter { path ->
                     try {
                         // 过滤条件：只处理图片文件
-                        val extension = if (path.contains('.')) {
-                            path.substringAfterLast('.', "").lowercase()
-                        } else {
-                            ""
-                        }
+                        val extension =
+                            if (path.contains('.')) {
+                                path.substringAfterLast('.', "").lowercase()
+                            } else {
+                                ""
+                            }
                         extension in listOf("jpg", "jpeg", "png", "webp", "bmp")
                     } catch (e: Exception) {
                         false
                     }
                 }
-                .setCompressListener(object : OnCompressListener {
-                    override fun onStart() {
-                        // 压缩开始
-                    }
+                .setCompressListener(
+                    object : OnCompressListener {
+                        override fun onStart() {
+                            // 压缩开始
+                        }
 
-                    override fun onSuccess(file: File) {
-                        callback.onSuccess(file)
-                    }
+                        override fun onSuccess(file: File) {
+                            callback.onSuccess(file)
+                        }
 
-                    override fun onError(e: Throwable) {
-                        callback.onError(e)
+                        override fun onError(e: Throwable) {
+                            callback.onError(e)
+                        }
                     }
-                })
+                )
                 .launch()
         } catch (e: Exception) {
             callback.onError(e)
@@ -133,29 +129,32 @@ object ImageCompressUtils {
                 .setTargetDir(getCompressCacheDir(context))
                 .filter { path ->
                     try {
-                        val extension = if (path.contains('.')) {
-                            path.substringAfterLast('.', "").lowercase()
-                        } else {
-                            ""
-                        }
+                        val extension =
+                            if (path.contains('.')) {
+                                path.substringAfterLast('.', "").lowercase()
+                            } else {
+                                ""
+                            }
                         extension in listOf("jpg", "jpeg", "png", "webp", "bmp")
                     } catch (e: Exception) {
                         false
                     }
                 }
-                .setCompressListener(object : OnCompressListener {
-                    override fun onStart() {
-                        // 压缩开始
-                    }
+                .setCompressListener(
+                    object : OnCompressListener {
+                        override fun onStart() {
+                            // 压缩开始
+                        }
 
-                    override fun onSuccess(file: File) {
-                        callback.onSuccess(file)
-                    }
+                        override fun onSuccess(file: File) {
+                            callback.onSuccess(file)
+                        }
 
-                    override fun onError(e: Throwable) {
-                        callback.onError(e)
+                        override fun onError(e: Throwable) {
+                            callback.onError(e)
+                        }
                     }
-                })
+                )
                 .launch()
         } catch (e: Exception) {
             callback.onError(e)
@@ -180,25 +179,26 @@ object ImageCompressUtils {
             .load(imageUri)
             .ignoreBy(config.maxSize)
             .setTargetDir(getCompressCacheDir(context))
-            .setCompressListener(object : OnCompressListener {
-                override fun onStart() {
-                    // 压缩开始
-                }
+            .setCompressListener(
+                object : OnCompressListener {
+                    override fun onStart() {
+                        // 压缩开始
+                    }
 
-                override fun onSuccess(file: File) {
-                    callback.onSuccess(file)
-                }
+                    override fun onSuccess(file: File) {
+                        callback.onSuccess(file)
+                    }
 
-                override fun onError(e: Throwable) {
-                    callback.onError(e)
+                    override fun onError(e: Throwable) {
+                        callback.onError(e)
+                    }
                 }
-            })
+            )
             .launch()
     }
 
     /**
-     * 同步压缩图片（在协程中使用）
-     * 注意：Luban的get()方法可能返回List<File>，这里简化为返回第一个文件
+     * 同步压缩图片（在协程中使用） 注意：Luban的get()方法可能返回List<File>，这里简化为返回第一个文件
      *
      * @param context 上下文
      * @param imageFile 要压缩的图片文件
@@ -209,28 +209,30 @@ object ImageCompressUtils {
         context: Context,
         imageFile: File,
         config: CompressConfig = CompressConfig()
-    ): File? = withContext(Dispatchers.IO) {
-        try {
-            if (!imageFile.exists()) {
-                return@withContext null
-            }
+    ): File? =
+        withContext(Dispatchers.IO) {
+            try {
+                if (!imageFile.exists()) {
+                    return@withContext null
+                }
 
-            val result = Luban.with(context)
-                .load(imageFile)
-                .ignoreBy(config.maxSize)
-                .setTargetDir(getCompressCacheDir(context))
-                .get()
+                val result =
+                    Luban.with(context)
+                        .load(imageFile)
+                        .ignoreBy(config.maxSize)
+                        .setTargetDir(getCompressCacheDir(context))
+                        .get()
 
-            // Luban的get()方法返回List<File>，取第一个
-            if (result is List<*> && result.isNotEmpty()) {
-                result.first() as? File
-            } else {
+                // Luban的get()方法返回List<File>，取第一个
+                if (result is List<*> && result.isNotEmpty()) {
+                    result.first() as? File
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
                 null
             }
-        } catch (e: Exception) {
-            null
         }
-    }
 
     /**
      * 获取压缩缓存目录

@@ -72,8 +72,7 @@ fun VipCenterContent(
         // 半透明遮罩层，确保内容可读性
         Box(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .fillMaxHeight(.77f)
                     .align(Alignment.BottomCenter)
                     .background(
@@ -199,9 +198,7 @@ private fun VipCenterHeader() {
 /** 会员权益列表 */
 @Composable
 private fun VipCenterBenefits() {
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 16.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited_chat))
 
         PremiumBenefitItem(stringResource(R.string.premium_benefit_higher_other_limits))

@@ -49,18 +49,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.ai.intellimate.agent.generate.CreateRoleActivity
 import com.ai.intellimate.chat.ChatActivity
-import com.ai.intellimate.login.LoginActivity
-import com.ai.intellimate.ui.ChatDialogData
-import com.ai.intellimate.ui.ExpiredVipDialog
-import com.ai.intellimate.ui.components.ForceUpgradeDialog
-import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.intellimate.chat.ChatPageContainer
 import com.ai.intellimate.chat.ChatViewModel
 import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
 import com.ai.intellimate.explore.ExplorePage
 import com.ai.intellimate.explore.ExploreViewModel
+import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.messages.ConversationsPage
 import com.ai.intellimate.profile.ProfilePage
+import com.ai.intellimate.ui.ChatDialogData
+import com.ai.intellimate.ui.ExpiredVipDialog
+import com.ai.intellimate.ui.components.ForceUpgradeDialog
+import com.ai.intellimate.vip.VipCenterActivity
 
 /** 主页面，包含五个tab */
 @Composable
@@ -93,15 +93,11 @@ fun HomeScreen(
 
     // 跟踪HomeScreen页面访问
     // 使用 PageTrackingHelper 进行页面跟踪
-    LaunchedEffect(Unit) {
-        PageTrackingHelper.trackPageView("HomeScreen", "MainActivity")
-    }
+    LaunchedEffect(Unit) { PageTrackingHelper.trackPageView("HomeScreen", "MainActivity") }
 
     Scaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .background(HeartColor.primaryColor)
-            .navigationBarsPadding(),
+        modifier =
+            modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
             AppBottomNavigationBar(
@@ -154,8 +150,8 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
             // 未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
             if (
                 !IntySetting.hasTipsVipExpired() &&
-                IntySetting.isLogin() &&
-                !IntySetting.isGuestUser()
+                    IntySetting.isLogin() &&
+                    !IntySetting.isGuestUser()
             ) {
                 showExpiredDialog = true
             }
@@ -236,15 +232,12 @@ private fun HomeContent(
                 viewModelFactory = viewModelFactory,
             )
         }
-
         HomeTabIndex.Conversation -> {
             ConversationsTabContent(chatViewModel = chatViewModel, context = context)
         }
-
         HomeTabIndex.Create -> {
             // Create tab is handled in handleTabSelection
         }
-
         HomeTabIndex.Explore -> {
             ExploreTabContent(
                 exploreViewModel = exploreViewModel,
@@ -252,7 +245,6 @@ private fun HomeContent(
                 innerPadding = innerPadding,
             )
         }
-
         HomeTabIndex.Profile -> {
             ProfileTabContent(mainViewModel = mainViewModel, context = context)
         }
@@ -310,9 +302,7 @@ private fun ExploreTabContent(
     ExplorePage(
         modifier = Modifier,
         innerPadding = innerPadding,
-        onClickAgent = { agent ->
-            ChatActivity.launch(context, agent)
-        },
+        onClickAgent = { agent -> ChatActivity.launch(context, agent) },
         viewModel = exploreViewModel,
     )
 }
@@ -339,9 +329,7 @@ private fun ProfileTabContent(mainViewModel: MainViewModel, context: Context) {
                 profile
             }
         }
-    LaunchedEffect(mainViewModel) {
-        mainViewModel.updateUserInfoLocal()
-    }
+    LaunchedEffect(mainViewModel) { mainViewModel.updateUserInfoLocal() }
     // 确保更新用户信息，处理切换账号后的信息同步
     LifecycleResumeEffect(mainViewModel) {
         mainViewModel.getUserProfile()
@@ -355,12 +343,8 @@ private fun ProfileTabContent(mainViewModel: MainViewModel, context: Context) {
         agents = userCreatedAgents,
         isLoading = isLoadingUserAgents.value,
         isRefreshing = isRefreshingUserAgents.value,
-        onClickAgent = { agent ->
-            ChatActivity.launch(context, agent)
-        },
-        onEditAgent = { agent ->
-            CreateRoleActivity.launch(context, agent)
-        },
+        onClickAgent = { agent -> ChatActivity.launch(context, agent) },
+        onEditAgent = { agent -> CreateRoleActivity.launch(context, agent) },
         onDeleteAgent = { agent ->
             mainViewModel.deleteAgent(
                 agentId = agent.id,
@@ -408,19 +392,17 @@ private fun AppBottomNavigationBar(
     onSelectTab: (Int) -> Unit,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(HeartColor.primaryColor)
-            .height(BottomNavigationBarHeight),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(HeartColor.primaryColor)
+                .height(BottomNavigationBarHeight),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         MAIN_TAB_LIST.forEachIndexed { index, tab ->
             BottomNavigationBarItem(
                 modifier =
-                    Modifier
-                        .fillMaxHeight()
-                        .weight(1f)
-                        .noRippleClickable { onSelectTab(index) },
+                    Modifier.fillMaxHeight().weight(1f).noRippleClickable { onSelectTab(index) },
                 tabInfo = tab,
                 selected = (index == selectedTab),
             )
@@ -468,8 +450,7 @@ fun AppBottomNavigationBarPreview() {
     // Preview for the entire bottom navigation bar positioned in the middle
     Box(
         modifier =
-            Modifier
-                .fillMaxSize()
+            Modifier.fillMaxSize()
                 .background(Color.Black), // Dark background to match the app theme
         contentAlignment = Alignment.Center,
     ) {

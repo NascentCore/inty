@@ -122,7 +122,6 @@ object UnifiedStartupManager {
                 _startupState.value = StartupState.Completed
                 _currentPhase.value = StartupPhase.Completed
                 _startupProgress.value = 1.0f
-
             } catch (e: Exception) {
                 LogUtils.e("UnifiedStartupManager - 异步初始化失败: ${e.message}")
                 _startupState.value = StartupState.Failed
@@ -154,7 +153,6 @@ object UnifiedStartupManager {
                 } else {
                     LogUtils.w("UnifiedStartupManager - 用户未登录或token无效，跳过数据加载")
                 }
-
             } catch (e: Exception) {
                 LogUtils.e("UnifiedStartupManager - 关键数据加载失败: ${e.message}")
             }
@@ -235,7 +233,6 @@ object UnifiedStartupManager {
         }
     }
 
-
     /** 阶段3：网络同步 */
     private suspend fun syncNetworkData() {
         _currentPhase.value = StartupPhase.NetworkSync
@@ -270,7 +267,9 @@ object UnifiedStartupManager {
             val userId = IntySetting.getCurUserID()
 
             val isValid = isLogin && token.isNotEmpty() && userId.isNotEmpty()
-            LogUtils.d("UnifiedStartupManager - 登录状态检查: isLogin=$isLogin, hasToken=${token.isNotEmpty()}, hasUserId=${userId.isNotEmpty()}, isValid=$isValid")
+            LogUtils.d(
+                "UnifiedStartupManager - 登录状态检查: isLogin=$isLogin, hasToken=${token.isNotEmpty()}, hasUserId=${userId.isNotEmpty()}, isValid=$isValid"
+            )
             isValid
         } catch (e: Exception) {
             LogUtils.e("UnifiedStartupManager - 登录状态检查异常: ${e.message}")
@@ -288,7 +287,6 @@ object UnifiedStartupManager {
                     IntySetting.login(true, guestId, token)
                     LogUtils.i("UnifiedStartupManager - 游客账户创建成功: $guestId")
                 }
-
                 is ApiResult.Error -> {
                     LogUtils.e("UnifiedStartupManager - 游客账户创建失败: ${result.message}")
                     throw Exception("Guest account creation failed: ${result.message}")
@@ -320,8 +318,7 @@ object UnifiedStartupManager {
     private suspend fun syncRecommendedAgents() {
         try {
             val agentApi: IAgentApi =
-                NetServiceMgr.getAgentApi()
-                    ?: throw IllegalStateException("IAgentApi not found")
+                NetServiceMgr.getAgentApi() ?: throw IllegalStateException("IAgentApi not found")
 
             val sortSeed = IntySetting.sortSeed()
             val result =
@@ -352,7 +349,6 @@ object UnifiedStartupManager {
                         }
                     }
                 }
-
                 is HttpResult.Failure -> {
                     LogUtils.w("UnifiedStartupManager - 推荐agents同步失败: ${result.message}")
                 }
@@ -366,8 +362,7 @@ object UnifiedStartupManager {
     private suspend fun syncChatAgents() {
         try {
             val agentApi: IAgentApi =
-                NetServiceMgr.getAgentApi()
-                    ?: throw IllegalStateException("IAgentApi not found")
+                NetServiceMgr.getAgentApi() ?: throw IllegalStateException("IAgentApi not found")
 
             val sortSeed = IntySetting.randomSortSeed()
             val result =
@@ -398,7 +393,6 @@ object UnifiedStartupManager {
                         }
                     }
                 }
-
                 is HttpResult.Failure -> {
                     LogUtils.w("UnifiedStartupManager - 聊天agents同步失败: ${result.message}")
                 }
@@ -436,8 +430,8 @@ object UnifiedStartupManager {
     /** 检查是否有缓存数据 */
     fun hasCacheData(): Boolean {
         return _recommendedAgents.value.isNotEmpty() ||
-                _chatAgents.value.isNotEmpty() ||
-                _userProfile.value != null
+            _chatAgents.value.isNotEmpty() ||
+            _userProfile.value != null
     }
 
     /** 手动刷新推荐agents */

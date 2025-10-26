@@ -27,15 +27,12 @@ fun KeepTalkingButton(visible: Boolean, onClick: () -> Unit) {
     if (!visible) return
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.Start,
     ) {
         Box(
             modifier =
-                Modifier
-                    .width(80.dp)
+                Modifier.width(80.dp)
                     .height(32.dp)
                     .background(Color.Black.copy(.3f), RoundedCornerShape(16.dp))
                     .noRippleClickable { onClick() },

@@ -110,8 +110,7 @@ fun ChatPageContainer(
         val currentAgent = agentList.getOrNull(pageState.currentPage)
         if (currentAgent != null) {
             try {
-                val audioManager =
-                    AudioManager.getInstance(Utils.getApp(), scope)
+                val audioManager = AudioManager.getInstance(Utils.getApp(), scope)
                 audioManager.stopAllPlayback()
             } catch (e: Exception) {
                 LogUtils.e("ChatPageContainer - 停止音频播放失败: ${e.message}")
@@ -126,8 +125,7 @@ fun ChatPageContainer(
             val appendState = agentsPagingItems.loadState.append
             val refreshState = agentsPagingItems.loadState.refresh
             val notEnd =
-                !(appendState is LoadState.NotLoading &&
-                        appendState.endOfPaginationReached)
+                !(appendState is LoadState.NotLoading && appendState.endOfPaginationReached)
             val canPrefetch = refreshState is LoadState.NotLoading
             if (pageState.currentPage >= thresholdIndex && notEnd && canPrefetch) {
                 // 修复：使用更安全的预取方式
@@ -156,7 +154,9 @@ fun ChatPageContainer(
         ) { currentPage ->
             // 防止数组越界
             if (currentPage < 0 || currentPage >= agentList.size) {
-                LogUtils.w("ChatPageContainer - HorizontalPager索引越界: currentPage=$currentPage, agentList.size=${agentList.size}")
+                LogUtils.w(
+                    "ChatPageContainer - HorizontalPager索引越界: currentPage=$currentPage, agentList.size=${agentList.size}"
+                )
                 // 如果索引无效，显示空页面或返回
                 return@HorizontalPager
             }
@@ -221,34 +221,31 @@ private fun NewUserGuide(
             visible = showHand,
             enter =
                 fadeIn() +
-                        slideInHorizontally(
-                            initialOffsetX = { fullWidth -> fullWidth / 6 } // 从屏幕右侧1/6处出现
-                        ),
+                    slideInHorizontally(
+                        initialOffsetX = { fullWidth -> fullWidth / 6 } // 从屏幕右侧1/6处出现
+                    ),
             exit = fadeOut(targetAlpha = 0.01f) + slideOutHorizontally(targetOffsetX = { it }),
         ) {
             val scope = rememberCoroutineScope()
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .noRippleClickable {
-                            // 只有在引导期间才响应点击
-                            if (isGuideActive) {
-                                scope.launch {
-                                    showHand = false
-                                    pageState.animateScrollToPage(initialPageIndex)
-                                    IntySetting.setShowGuested()
-                                    onGuideCompleted()
-                                    isGuideActive = false
-                                }
+                    Modifier.fillMaxSize().noRippleClickable {
+                        // 只有在引导期间才响应点击
+                        if (isGuideActive) {
+                            scope.launch {
+                                showHand = false
+                                pageState.animateScrollToPage(initialPageIndex)
+                                IntySetting.setShowGuested()
+                                onGuideCompleted()
+                                isGuideActive = false
                             }
                         }
+                    }
             ) {
                 // 背景渐变框
                 Box(
                     modifier =
-                        Modifier
-                            .align(Alignment.TopEnd)
+                        Modifier.align(Alignment.TopEnd)
                             .padding(top = 340.dp)
                             .size(210.dp, 40.dp)
                             .background(
@@ -264,8 +261,7 @@ private fun NewUserGuide(
                 // 手势图标
                 Image(
                     modifier =
-                        Modifier
-                            .align(Alignment.TopEnd)
+                        Modifier.align(Alignment.TopEnd)
                             .padding(top = 340.dp, end = 92.dp)
                             .size(112.dp),
                     painter = painterResource(R.drawable.scroll_hand),

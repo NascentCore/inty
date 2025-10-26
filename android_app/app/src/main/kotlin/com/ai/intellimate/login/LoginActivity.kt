@@ -7,9 +7,9 @@ import android.content.Intent
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.lifecycleScope
+import com.ai.intellimate.ViewModelEvent
 import com.ai.intellimate.utils.CredentialManagerHelper
 import com.ai.intellimate.utils.UserProfileManager
-import com.ai.intellimate.ViewModelEvent
 import kotlinx.coroutines.launch
 
 /**
@@ -22,6 +22,7 @@ class LoginActivity : BaseActivity() {
 
         /**
          * 启动登录界面
+         *
          * @param context 上下文context
          */
         fun launch(context: Context) {

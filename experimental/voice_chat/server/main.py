@@ -83,7 +83,9 @@ sessions: Dict[str, SessionState] = {}
 
 @app.post("/offer")
 async def offer(sdp: SDP):
-    ice_config = RTCConfiguration(iceServers=[RTCIceServer(urls=[config.server.stun_server])])
+    ice_config = RTCConfiguration(
+        iceServers=[RTCIceServer(urls=[config.server.stun_server])]
+    )
     pc = RTCPeerConnection(ice_config)
     session = SessionState()
     session.pc = pc
@@ -108,7 +110,11 @@ async def offer(sdp: SDP):
         raise HTTPException(status_code=400, detail=f"setRemoteDescription failed: {e}")
 
     # Add downlink audio track so client can receive audio
-    pc.addTrack(DownlinkAudioTrack(session.downlink_queue, sample_rate=config.gemini.receive_sample_rate))
+    pc.addTrack(
+        DownlinkAudioTrack(
+            session.downlink_queue, sample_rate=config.gemini.receive_sample_rate
+        )
+    )
 
     # Create and set local
     answer = await pc.createAnswer()
@@ -125,7 +131,9 @@ async def offer(sdp: SDP):
 
         await ice_complete
 
-    return JSONResponse({"sdp": pc.localDescription.sdp, "type": pc.localDescription.type})
+    return JSONResponse(
+        {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+    )
 
 
 async def gemini_bridge(session: SessionState):
@@ -147,12 +155,14 @@ async def gemini_bridge(session: SessionState):
     )
 
     async with client.aio.live.connect(model=model, config=live_config) as session_live:
+
         async def uplink():
             while True:
                 frame = await session.uplink_queue.get()
                 # Convert to 16k mono PCM bytes
                 # aiortc provides audio frames as av.AudioFrame
                 import av
+
                 # Resample to configured rate and mono using PyAV
                 resampler = av.audio.resampler.AudioResampler(
                     format="s16",
@@ -169,7 +179,10 @@ async def gemini_bridge(session: SessionState):
                     buffers.append(bytes(f.planes[0]))
                 data = b"".join(buffers)
                 await session_live.send(
-                    input={"data": data, "mime_type": f"audio/pcm;rate={config.gemini.send_sample_rate}"}
+                    input={
+                        "data": data,
+                        "mime_type": f"audio/pcm;rate={config.gemini.send_sample_rate}",
+                    }
                 )
 
         async def downlink():
@@ -185,7 +198,9 @@ async def gemini_bridge(session: SessionState):
                         # Create frame: s16, mono, 24000
                         samples = response.data
                         num_samples = len(samples) // 2
-                        frame = AudioFrame(format="s16", layout="mono", samples=num_samples)
+                        frame = AudioFrame(
+                            format="s16", layout="mono", samples=num_samples
+                        )
                         frame.sample_rate = config.gemini.receive_sample_rate
                         # Write planes
                         plane = frame.planes[0]

@@ -53,16 +53,13 @@ internal class BillingRemoteManager(
                                 subscriptionStatus =
                                     when {
                                         currentSubscription?.status == "ACTIVE" &&
-                                                currentSubscription.autoRenew == true ->
+                                            currentSubscription.autoRenew == true ->
                                             VipStatus.UI_SUBSCRIBED
-
                                         currentSubscription?.status == "ACTIVE" &&
-                                                currentSubscription.autoRenew == false ->
+                                            currentSubscription.autoRenew == false ->
                                             VipStatus.UI_SUBSCRIBED_EXPIRE_SOON
-
                                         currentSubscription?.status == "CANCELLED" ->
                                             VipStatus.UI_SUBSCRIBED_EXPIRE_SOON
-
                                         else -> VipStatus.UI_UNSUBSCRIBED
                                     },
                             )
@@ -96,17 +93,16 @@ internal class BillingRemoteManager(
                             LogUtils.w("BillingClient 未连接，等待连接成功后查询价格")
                         }
                     }
-
                     is HttpResult.Failure -> {
                         LogUtils.e("获取订阅计划失败: ${result.message}")
                     }
                 }
-            }.onFailure { exception ->
+            }
+            .onFailure { exception ->
                 when (exception) {
                     is CancellationException -> {
                         LogUtils.w("获取订阅计划被取消: ${exception.message}")
                     }
-
                     else -> {
                         LogUtils.e("获取订阅计划异常: ${exception.message}")
                     }

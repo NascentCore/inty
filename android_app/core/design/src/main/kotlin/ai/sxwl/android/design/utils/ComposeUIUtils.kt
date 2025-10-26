@@ -9,50 +9,45 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/**
- * Compose UI工具类
- * 用于获取系统bar高度、BottomBar和AppBar的高度
- */
+/** Compose UI工具类 用于获取系统bar高度、BottomBar和AppBar的高度 */
 object ComposeUIUtils {
 
     /**
      * 获取状态栏高度
+     *
      * @return 状态栏高度的Dp值
      */
     @Composable
     fun getStatusBarHeight(): Dp {
         val density = LocalDensity.current
-        return with(density) {
-            WindowInsets.statusBars.getTop(density).toDp()
-        }
+        return with(density) { WindowInsets.statusBars.getTop(density).toDp() }
     }
 
     /**
      * 获取导航栏高度
+     *
      * @return 导航栏高度的Dp值
      */
     @Composable
     fun getNavigationBarHeight(): Dp {
         val density = LocalDensity.current
-        return with(density) {
-            WindowInsets.navigationBars.getBottom(density).toDp()
-        }
+        return with(density) { WindowInsets.navigationBars.getBottom(density).toDp() }
     }
 
     /**
      * 获取系统栏总高度（状态栏 + 导航栏）
+     *
      * @return 系统栏总高度的Dp值
      */
     @Composable
     fun getSystemBarsHeight(): Dp {
         val density = LocalDensity.current
-        return with(density) {
-            WindowInsets.systemBars.getBottom(density).toDp()
-        }
+        return with(density) { WindowInsets.systemBars.getBottom(density).toDp() }
     }
 
     /**
      * 获取状态栏高度（像素值）
+     *
      * @return 状态栏高度的像素值
      */
     @Composable
@@ -62,6 +57,7 @@ object ComposeUIUtils {
 
     /**
      * 获取导航栏高度（像素值）
+     *
      * @return 导航栏高度的像素值
      */
     @Composable
@@ -71,6 +67,7 @@ object ComposeUIUtils {
 
     /**
      * 获取系统栏总高度（像素值）
+     *
      * @return 系统栏总高度的像素值
      */
     @Composable
@@ -79,8 +76,8 @@ object ComposeUIUtils {
     }
 
     /**
-     * 获取BottomBar的标准高度
-     * Material Design 3 中 BottomAppBar 的标准高度
+     * 获取BottomBar的标准高度 Material Design 3 中 BottomAppBar 的标准高度
+     *
      * @return BottomBar高度的Dp值
      */
     @Composable
@@ -89,8 +86,8 @@ object ComposeUIUtils {
     }
 
     /**
-     * 获取TopAppBar的标准高度
-     * Material Design 3 中 TopAppBar 的标准高度
+     * 获取TopAppBar的标准高度 Material Design 3 中 TopAppBar 的标准高度
+     *
      * @return TopAppBar高度的Dp值
      */
     @Composable
@@ -99,8 +96,8 @@ object ComposeUIUtils {
     }
 
     /**
-     * 获取Large TopAppBar的标准高度
-     * Material Design 3 中 Large TopAppBar 的标准高度
+     * 获取Large TopAppBar的标准高度 Material Design 3 中 Large TopAppBar 的标准高度
+     *
      * @return Large TopAppBar高度的Dp值
      */
     @Composable
@@ -109,8 +106,8 @@ object ComposeUIUtils {
     }
 
     /**
-     * 获取Medium TopAppBar的标准高度
-     * Material Design 3 中 Medium TopAppBar 的标准高度
+     * 获取Medium TopAppBar的标准高度 Material Design 3 中 Medium TopAppBar 的标准高度
+     *
      * @return Medium TopAppBar高度的Dp值
      */
     @Composable
@@ -119,8 +116,8 @@ object ComposeUIUtils {
     }
 
     /**
-     * 获取Small TopAppBar的标准高度
-     * Material Design 3 中 Small TopAppBar 的标准高度
+     * 获取Small TopAppBar的标准高度 Material Design 3 中 Small TopAppBar 的标准高度
+     *
      * @return Small TopAppBar高度的Dp值
      */
     @Composable
@@ -129,8 +126,8 @@ object ComposeUIUtils {
     }
 
     /**
-     * 获取屏幕安全区域的总高度
-     * 包括状态栏、导航栏等系统UI区域
+     * 获取屏幕安全区域的总高度 包括状态栏、导航栏等系统UI区域
+     *
      * @return 安全区域总高度的Dp值
      */
     @Composable
@@ -145,6 +142,7 @@ object ComposeUIUtils {
 
     /**
      * 获取屏幕可用高度（排除系统bar）
+     *
      * @return 可用高度的Dp值
      */
     @Composable

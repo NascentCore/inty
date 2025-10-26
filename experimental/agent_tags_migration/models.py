@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 class DatabaseConfig(BaseModel):
     """数据库配置模型"""
+
     host: str
     port: int
     user: str
@@ -27,12 +28,14 @@ class DatabaseConfig(BaseModel):
 
 class AppConfig(BaseModel):
     """应用配置模型"""
+
     database: DatabaseConfig
     environment: Optional[str] = "development"
-    
-    
+
+
 class CharacterInfo(BaseModel):
     """角色信息模型"""
+
     name: Optional[str] = None
     age: Optional[int] = None
     gender: Optional[str] = None
@@ -44,6 +47,7 @@ class CharacterInfo(BaseModel):
 
 class Agent(BaseModel):
     """智能体数据模型"""
+
     id: str
     readable_id: Optional[str] = None
     name: str
@@ -56,6 +60,7 @@ class Agent(BaseModel):
 
 class TagExtractionResult(BaseModel):
     """标签提取结果模型"""
+
     agent_id: str
     agent_name: str
     original_tags: Optional[List[str]] = None
@@ -68,6 +73,7 @@ class TagExtractionResult(BaseModel):
 
 class MigrationStats(BaseModel):
     """迁移统计信息模型"""
+
     total_agents: int = 0
     agents_with_personality: int = 0
     agents_with_character_info: int = 0
@@ -82,6 +88,7 @@ class MigrationStats(BaseModel):
 
 class MigrationConfig(BaseModel):
     """迁移配置模型"""
+
     batch_size: int = 100
     dry_run: bool = True
     skip_existing_tags: bool = True

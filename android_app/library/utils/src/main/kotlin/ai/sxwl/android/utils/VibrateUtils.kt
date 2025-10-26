@@ -8,23 +8,16 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.annotation.RequiresPermission
 
-/**
- * 震动工具类
- * 提供震动相关的工具方法
- */
+/** 震动工具类 提供震动相关的工具方法 */
 object VibrateUtils {
 
-    /**
-     * 震动
-     */
+    /** 震动 */
     @RequiresPermission(Manifest.permission.VIBRATE)
     fun vibrate(duration: Long) {
         vibrate(Utils.getApp(), duration)
     }
 
-    /**
-     * 震动
-     */
+    /** 震动 */
     @RequiresPermission(Manifest.permission.VIBRATE)
     fun vibrate(context: Context?, duration: Long) {
         if (context == null) return
@@ -36,31 +29,23 @@ object VibrateUtils {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 vibrator.vibrate(
-                    VibrationEffect.createOneShot(
-                        safeDuration,
-                        VibrationEffect.DEFAULT_AMPLITUDE
-                    )
+                    VibrationEffect.createOneShot(safeDuration, VibrationEffect.DEFAULT_AMPLITUDE)
                 )
             } else {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(safeDuration)
+                @Suppress("DEPRECATION") vibrator.vibrate(safeDuration)
             }
         } catch (e: Exception) {
             LogUtils.e("VibrateUtils", "震动失败", e)
         }
     }
 
-    /**
-     * 震动
-     */
+    /** 震动 */
     @RequiresPermission(Manifest.permission.VIBRATE)
     fun vibrate(pattern: LongArray, repeat: Int) {
         vibrate(Utils.getApp(), pattern, repeat)
     }
 
-    /**
-     * 震动
-     */
+    /** 震动 */
     @RequiresPermission(Manifest.permission.VIBRATE)
     fun vibrate(context: Context?, pattern: LongArray, repeat: Int) {
         if (context == null) return
@@ -74,25 +59,20 @@ object VibrateUtils {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 vibrator.vibrate(VibrationEffect.createWaveform(pattern, safeRepeat))
             } else {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(pattern, safeRepeat)
+                @Suppress("DEPRECATION") vibrator.vibrate(pattern, safeRepeat)
             }
         } catch (e: Exception) {
             LogUtils.e("VibrateUtils", "震动失败", e)
         }
     }
 
-    /**
-     * 取消震动
-     */
+    /** 取消震动 */
     @RequiresPermission(Manifest.permission.VIBRATE)
     fun cancel() {
         cancel(Utils.getApp())
     }
 
-    /**
-     * 取消震动
-     */
+    /** 取消震动 */
     @RequiresPermission(Manifest.permission.VIBRATE)
     fun cancel(context: Context?) {
         if (context == null) return
@@ -105,9 +85,7 @@ object VibrateUtils {
         }
     }
 
-    /**
-     * 获取Vibrator
-     */
+    /** 获取Vibrator */
     private fun getVibrator(context: Context): Vibrator? {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -124,16 +102,12 @@ object VibrateUtils {
         }
     }
 
-    /**
-     * 是否有震动器
-     */
+    /** 是否有震动器 */
     fun hasVibrator(): Boolean {
         return hasVibrator(Utils.getApp())
     }
 
-    /**
-     * 是否有震动器
-     */
+    /** 是否有震动器 */
     fun hasVibrator(context: Context?): Boolean {
         if (context == null) return false
         val vibrator = getVibrator(context) ?: return false
@@ -142,8 +116,7 @@ object VibrateUtils {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 vibrator.hasVibrator()
             } else {
-                @Suppress("DEPRECATION")
-                vibrator.hasVibrator()
+                @Suppress("DEPRECATION") vibrator.hasVibrator()
             }
         } catch (e: Exception) {
             LogUtils.e("VibrateUtils", "检查震动器失败", e)

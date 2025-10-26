@@ -9,10 +9,8 @@ plugins {
 
 android {
     namespace = "ai.sxwl.android.data"
-    //room插件 配置scheme目录
-    room {
-        schemaDirectory("$projectDir/schemas")
-    }
+    // room插件 配置scheme目录
+    room { schemaDirectory("$projectDir/schemas") }
 }
 
 dependencies {
@@ -41,5 +39,4 @@ dependencies {
 
     // ===== Retrofit 协程支持 =====
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
-
 }

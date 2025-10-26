@@ -23,10 +23,10 @@ tasks.register("printVersionInfo") {
 }
 
 android {
-    namespace = "com.ai.intellimate"//这是代码命名空间，与代码package保持一致即可
+    namespace = "com.ai.intellimate" // 这是代码命名空间，与代码package保持一致即可
 
     defaultConfig {
-        applicationId = "com.ai.intellimate"//这是app的唯一标识id，不可随意修改
+        applicationId = "com.ai.intellimate" // 这是app的唯一标识id，不可随意修改
         // Google OAuth client ID
         // TODO: This is the same now for debug and release builds for convenience.
         // Create a new client ID for debug build, but keep the production one for backward
@@ -56,8 +56,7 @@ android {
 }
 
 dependencies {
-
-    implementation(libs.androidx.appcompat)//ucropActivity需要
+    implementation(libs.androidx.appcompat) // ucropActivity需要
     implementation(libs.androidx.paging.compose)
 
     // ===== 项目模块 =====
@@ -83,5 +82,4 @@ dependencies {
 
     // ===== UI 测试依赖 =====
     androidTestImplementation(libs.androidx.uiautomator)
-
 }

@@ -5,15 +5,14 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.Lifecycle
 
-/**
- * 工具类核心类，提供应用初始化和基础功能
- */
+/** 工具类核心类，提供应用初始化和基础功能 */
 object Utils {
 
     private var sApp: Application? = null
 
     /**
      * 初始化工具类
+     *
      * @param app Application实例
      */
     fun init(app: Application?) {
@@ -34,6 +33,7 @@ object Utils {
 
     /**
      * 获取Application实例
+     *
      * @return Application实例
      */
     fun getApp(): Application {
@@ -50,7 +50,9 @@ object Utils {
         }
 
         // 如果反射失败，抛出更明确的异常
-        throw IllegalStateException("Failed to initialize Application. Please call Utils.init() in Application.onCreate()")
+        throw IllegalStateException(
+            "Failed to initialize Application. Please call Utils.init() in Application.onCreate()"
+        )
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -73,16 +75,23 @@ object Utils {
 
     interface OnAppStatusChangedListener {
         fun onForeground(activity: Activity)
+
         fun onBackground(activity: Activity)
     }
 
     open class ActivityLifecycleCallbacks {
         open fun onActivityCreated(activity: Activity) {}
+
         open fun onActivityStarted(activity: Activity) {}
+
         open fun onActivityResumed(activity: Activity) {}
+
         open fun onActivityPaused(activity: Activity) {}
+
         open fun onActivityStopped(activity: Activity) {}
+
         open fun onActivityDestroyed(activity: Activity) {}
+
         open fun onLifecycleChanged(activity: Activity, event: Lifecycle.Event) {}
     }
 

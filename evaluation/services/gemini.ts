@@ -72,10 +72,15 @@ function buildSystemPrompt(): string {
   ].join("\n");
 }
 
-function buildUserPrompt(history: ChatHistoryItem[], userInput: string): string {
+function buildUserPrompt(
+  history: ChatHistoryItem[],
+  userInput: string,
+): string {
   const historyText = history
     .slice(-10)
-    .map((m) => (m.role === "user" ? `用户: ${m.content}` : `助手: ${m.content}`))
+    .map((m) =>
+      m.role === "user" ? `用户: ${m.content}` : `助手: ${m.content}`,
+    )
     .join("\n");
   const scene =
     "现在请基于对话上下文，给出本轮回复 reply，并选择最贴合的 emotion（仅从列表中选一个）。";
@@ -128,7 +133,9 @@ export async function generateReplyWithEmotion(
 
   if (!resp.ok) {
     const detail = await resp.text().catch(() => "");
-    throw new Error(`Gemini 调用失败: HTTP ${resp.status} ${resp.statusText} ${detail}`);
+    throw new Error(
+      `Gemini 调用失败: HTTP ${resp.status} ${resp.statusText} ${detail}`,
+    );
   }
 
   const data = await resp.json();
@@ -139,7 +146,8 @@ export async function generateReplyWithEmotion(
   const parsed = extractJson(text);
   if (parsed && typeof parsed === "object") {
     const emotionCandidate = String(parsed.emotion || "");
-    const normalized = (emotionCandidate.charAt(0).toUpperCase() + emotionCandidate.slice(1)) as Emotion;
+    const normalized = (emotionCandidate.charAt(0).toUpperCase() +
+      emotionCandidate.slice(1)) as Emotion;
     const isValid = EMOTIONS.includes(normalized);
     return {
       reply: String(parsed.reply || "(无内容)"),

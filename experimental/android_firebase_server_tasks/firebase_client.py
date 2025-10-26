@@ -84,7 +84,9 @@ def send_message_to_token(
         data=data or {},
         android=messaging.AndroidConfig(
             priority="high",
-            notification=messaging.AndroidNotification(channel_id="server_task_updates"),
+            notification=messaging.AndroidNotification(
+                channel_id="server_task_updates"
+            ),
         ),
     )
     try:
