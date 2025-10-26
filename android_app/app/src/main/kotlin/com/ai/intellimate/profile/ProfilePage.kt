@@ -92,7 +92,7 @@ internal fun ProfilePage(
         PageTrackingHelper.trackPageView(
             "ProfilePage",
             "MainActivity",
-            mapOf("agent_count" to agents.size, "is_loading" to isLoading)
+            mapOf("agent_count" to agents.size, "is_loading" to isLoading),
         )
     }
 
@@ -100,7 +100,7 @@ internal fun ProfilePage(
         AsyncImage(
             modifier = Modifier.align(Alignment.TopEnd),
             model = R.drawable.notify_header_bg,
-            contentDescription = null
+            contentDescription = null,
         )
         Scaffold(
             modifier = Modifier.fillMaxSize().background(Color.Transparent),
@@ -127,16 +127,16 @@ internal fun ProfilePage(
                     Spacer(Modifier.width(16.dp))
                     Box(
                         modifier =
-                            Modifier.size(120.dp)
-                                .background(color = Color.White, shape = CircleShape)
-                                .padding(4.dp)
+                        Modifier.size(120.dp)
+                            .background(color = Color.White, shape = CircleShape)
+                            .padding(4.dp),
                     ) {
                         AsyncImage(
                             modifier = Modifier.fillMaxSize().clip(CircleShape),
                             model =
-                                ImageRequest.Builder(context)
-                                    .data(getCdnImageUrl(userProfile.avatar, width = 512))
-                                    .build(),
+                            ImageRequest.Builder(context)
+                                .data(getCdnImageUrl(userProfile.avatar, width = 512))
+                                .build(),
                             placeholder = painterResource(R.drawable.app_icon),
                             error = painterResource(R.drawable.app_icon),
                             contentDescription = null,
@@ -176,7 +176,7 @@ internal fun ProfilePage(
                     Text(
                         modifier = Modifier.weight(1f),
                         text =
-                            userProfile.description ?: stringResource(R.string.persona_placeholder),
+                        userProfile.description ?: stringResource(R.string.persona_placeholder),
                         color = Color.White,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
@@ -187,7 +187,7 @@ internal fun ProfilePage(
                     Spacer(Modifier.width(8.dp))
 
                     AuthClickable(
-                        onClick = { ModifyProfileActivity.launch(context, userProfile) }
+                        onClick = { ModifyProfileActivity.launch(context, userProfile) },
                     ) { authModifier ->
                         AsyncImage(
                             modifier = authModifier.size(40.dp),
@@ -224,8 +224,8 @@ internal fun ProfilePage(
 
                     Text(
                         modifier =
-                            Modifier.padding(horizontal = 16.dp)
-                                .align(Alignment.CenterHorizontally),
+                        Modifier.padding(horizontal = 16.dp)
+                            .align(Alignment.CenterHorizontally),
                         text = stringResource(R.string.no_agent),
                         color = Color.White.copy(0.55f),
                         fontSize = 14.sp,
@@ -247,10 +247,10 @@ internal fun ProfilePage(
 
                                 if (
                                     lastVisibleItem != null &&
-                                        lastVisibleItem.index >=
-                                            totalItems - 3 && // Trigger 3 items before end
-                                        !isLoading &&
-                                        agents.isNotEmpty()
+                                    lastVisibleItem.index >=
+                                    totalItems - 3 && // Trigger 3 items before end
+                                    !isLoading &&
+                                    agents.isNotEmpty()
                                 ) {
                                     onLoadMore()
                                 }
@@ -265,23 +265,23 @@ internal fun ProfilePage(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         runCatching {
-                                if (agents.isNotEmpty()) {
-                                    itemsIndexed(
-                                        items = agents,
-                                        key = { index, agent -> "${agent.id}_$index" },
-                                    ) { index, agent ->
-                                        MyAgentCard(
-                                            modifier =
-                                                Modifier.noRippleClickable { onClickAgent(agent) },
-                                            agentInfo = agent,
-                                            onEditAgent = onEditAgent,
-                                            onDeleteAgent = onDeleteAgent,
-                                        )
-                                    }
-                                    // 添加一个底部空白，便于更好操作交互
-                                    item { Spacer(Modifier.height(80.dp)) }
+                            if (agents.isNotEmpty()) {
+                                itemsIndexed(
+                                    items = agents,
+                                    key = { index, agent -> "${agent.id}_$index" },
+                                ) { index, agent ->
+                                    MyAgentCard(
+                                        modifier =
+                                        Modifier.noRippleClickable { onClickAgent(agent) },
+                                        agentInfo = agent,
+                                        onEditAgent = onEditAgent,
+                                        onDeleteAgent = onDeleteAgent,
+                                    )
                                 }
+                                // 添加一个底部空白，便于更好操作交互
+                                item { Spacer(Modifier.height(80.dp)) }
                             }
+                        }
                             .onFailure { it.printStackTrace() }
 
                         // Loading indicator when loading more (only show when there's no data)
@@ -351,17 +351,22 @@ private fun MyAgentCard(
         }
 
         // 缓存渐变画笔，避免每次重组时重新创建
-        val gradientBrush = remember {
-            Brush.verticalGradient(
-                colors = listOf(Color.Transparent, Color.Black.copy(.5f), Color.Black.copy(.9f))
-            )
-        }
+        val gradientBrush =
+            remember {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        Color.Black.copy(.5f),
+                        Color.Black.copy(.9f)
+                    ),
+                )
+            }
         Column(
             modifier =
-                Modifier.fillMaxWidth()
-                    .background(brush = gradientBrush)
-                    .padding(8.dp)
-                    .align(Alignment.BottomCenter),
+            Modifier.fillMaxWidth()
+                .background(brush = gradientBrush)
+                .padding(8.dp)
+                .align(Alignment.BottomCenter),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
@@ -387,23 +392,23 @@ private fun MyAgentCard(
             Box(modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)) {
                 Box(
                     modifier =
-                        Modifier.size(28.dp)
-                            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                            .noRippleClickable(
-                                onClick = {
-                                    val currentTime = System.currentTimeMillis()
-                                    if (AntiClick.isValidClick(lastClickTime)) {
-                                        lastClickTime = currentTime
-                                        showMenu = true
-                                    }
+                    Modifier.size(28.dp)
+                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                        .noRippleClickable(
+                            onClick = {
+                                val currentTime = System.currentTimeMillis()
+                                if (AntiClick.isValidClick(lastClickTime)) {
+                                    lastClickTime = currentTime
+                                    showMenu = true
                                 }
-                            ),
+                            },
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     AsyncImage(
                         modifier = Modifier.size(20.dp),
                         model = R.drawable.icon_more2,
-                        contentDescription = null
+                        contentDescription = null,
                     )
                 }
 
@@ -458,7 +463,7 @@ private fun MyAgentCard(
                 text = {
                     Text(
                         text =
-                            stringResource(R.string.delete_character_confirm_full, agentInfo.name),
+                        stringResource(R.string.delete_character_confirm_full, agentInfo.name),
                         color = Color.White,
                         fontSize = 14.sp,
                     )
@@ -521,10 +526,10 @@ private fun PremiumBanner(
 
             Row(
                 Modifier.border(
-                        width = 0.5.dp,
-                        color = Color(0x61D523FF),
-                        shape = RoundedCornerShape(size = 12.dp),
-                    )
+                    width = 0.5.dp,
+                    color = Color(0x61D523FF),
+                    shape = RoundedCornerShape(size = 12.dp),
+                )
                     .background(color = Color(0x33D216FF), shape = RoundedCornerShape(size = 12.dp))
                     .padding(horizontal = 8.dp)
                     .align(BiasAlignment(.95f, .1f)),

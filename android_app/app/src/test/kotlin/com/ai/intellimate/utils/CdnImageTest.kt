@@ -7,7 +7,6 @@ import org.junit.Test
 
 /** 测试 getCdnImageUrl 函数的功能 */
 class CdnImageTest {
-
     @Test
     fun `getCdnImageUrl should return null when originUrl is null`() {
         // Given

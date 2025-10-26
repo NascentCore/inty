@@ -4,7 +4,6 @@ import retrofit2.HttpException
 
 /** HTTP 错误处理器 负责处理 HTTP 异常并返回用户友好的错误消息 */
 object HttpErrorHandler {
-
     /**
      * 处理 HTTP 异常并返回用户友好的错误消息
      *
@@ -30,7 +29,8 @@ object HttpErrorHandler {
             429 -> "Too many requests, please try again later"
             500 -> "Internal server error, please try again later"
             502,
-            503 -> "Server temporarily unavailable, please try again later"
+            503,
+            -> "Server temporarily unavailable, please try again later"
             else -> "Network request failed (${e.code()})"
         }
     }
@@ -42,7 +42,10 @@ object HttpErrorHandler {
      * @param operation 操作名称，用于自定义错误消息
      * @return 用户友好的错误消息
      */
-    fun handleGeneralException(e: Exception, operation: String = "operation"): String {
+    fun handleGeneralException(
+        e: Exception,
+        operation: String = "operation",
+    ): String {
         return when {
             e.message?.contains("timeout", ignoreCase = true) == true ->
                 "Request timeout, please try again later"

@@ -55,7 +55,9 @@ enum class GENDER(val value: String) {
 }
 
 @JsonClass(generateAdapter = true)
-data class GoogleLoginRequest(@Json(name = "id_token") val idToken: String)
+data class GoogleLoginRequest(
+    @Json(name = "id_token") val idToken: String,
+)
 
 @JsonClass(generateAdapter = true)
 data class GoogleLoginResponse(val token: String, val user: UserProfile)

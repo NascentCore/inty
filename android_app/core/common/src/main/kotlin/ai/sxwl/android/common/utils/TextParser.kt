@@ -8,7 +8,6 @@ import androidx.compose.ui.text.withStyle
 
 /** 文案解析工具类 用于解析opening文案中的括号内容，将括号内的文案设置为斜体和浅色 */
 object TextParser {
-
     /**
      * 解析opening文案，将()内的内容设置为斜体和浅色
      *
@@ -33,10 +32,10 @@ object TextParser {
                             // 使用斜体和浅色样式渲染开始括号
                             withStyle(
                                 style =
-                                    SpanStyle(
-                                        fontStyle = FontStyle.Companion.Italic,
-                                        color = Color(0x8CFFFFFF) // 浅色
-                                    )
+                                SpanStyle(
+                                    fontStyle = FontStyle.Companion.Italic,
+                                    color = Color(0x8CFFFFFF), // 浅色
+                                ),
                             ) {
                                 append(char.toString())
                             }
@@ -48,10 +47,10 @@ object TextParser {
                             // 使用斜体和浅色样式渲染结束括号
                             withStyle(
                                 style =
-                                    SpanStyle(
-                                        fontStyle = FontStyle.Companion.Italic,
-                                        color = Color(0x8CFFFFFF) // 浅色
-                                    )
+                                SpanStyle(
+                                    fontStyle = FontStyle.Companion.Italic,
+                                    color = Color(0x8CFFFFFF), // 浅色
+                                ),
                             ) {
                                 append(char.toString())
                             }
@@ -60,10 +59,10 @@ object TextParser {
                             // 在括号内，使用斜体和浅色样式
                             withStyle(
                                 style =
-                                    SpanStyle(
-                                        fontStyle = FontStyle.Companion.Italic,
-                                        color = Color(0x8CFFFFFF) // 浅色
-                                    )
+                                SpanStyle(
+                                    fontStyle = FontStyle.Companion.Italic,
+                                    color = Color(0x8CFFFFFF), // 浅色
+                                ),
                             ) {
                                 append(char.toString())
                             }

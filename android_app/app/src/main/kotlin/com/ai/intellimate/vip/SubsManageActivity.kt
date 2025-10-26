@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 
 /** 订阅管理页面 */
 class SubsManageActivity : BaseActivity() {
-
     companion object {
         /**
          * 启动订阅管理页面
@@ -35,7 +34,10 @@ class SubsManageActivity : BaseActivity() {
 
 /** 订阅管理内容组件 */
 @Composable
-private fun SubsManageContent(onBack: () -> Unit, viewModel: SubsManageViewModel) {
+private fun SubsManageContent(
+    onBack: () -> Unit,
+    viewModel: SubsManageViewModel,
+) {
     SubscriptionManagementScreen(
         modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor),
         onBack = onBack,

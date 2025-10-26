@@ -15,7 +15,6 @@ import com.ai.intellimate.utils.IntyUserProfileSDK
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,9 +25,9 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
 
 class MySettingViewModel : BaseVM() {
-
     // 事件通知机制
     private val _events = MutableSharedFlow<ViewModelEvent>()
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
@@ -53,7 +52,10 @@ class MySettingViewModel : BaseVM() {
         viewModelScope.launch { userProfile?.let { _userProfile.emit(userProfile) } }
     }
 
-    fun changeUserProfile(editKey: EditKey, editValue: String) {
+    fun changeUserProfile(
+        editKey: EditKey,
+        editValue: String,
+    ) {
         when (editKey) {
             EditKey.Name -> {
                 _userProfile.value = _userProfile.value.copy(nickname = editValue)
@@ -85,7 +87,7 @@ class MySettingViewModel : BaseVM() {
                             .asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
                     val result =
                         userApi.uploadAvatar(
-                            MultipartBody.Part.createFormData("file", "file.png", requestBody)
+                            MultipartBody.Part.createFormData("file", "file.png", requestBody),
                         )
 
                     when (result) {
@@ -93,7 +95,7 @@ class MySettingViewModel : BaseVM() {
                             _userProfile.value =
                                 _userProfile.value.copy(
                                     // No cropping, just use the provided url.
-                                    avatar = result.data.url
+                                    avatar = result.data.url,
                                 )
                             // Show success toast for avatar upload
                             viewModelScope.launch(Dispatchers.Main) {

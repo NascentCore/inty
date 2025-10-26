@@ -36,13 +36,18 @@ import com.ai.intellimate.ui.components.SmartTagsLayout
 
 /** Explore页面的角色卡片组件 */
 @Composable
-fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, onClick: () -> Unit) {
+fun ExploreCharacterCard(
+    modifier: Modifier = Modifier,
+    agentInfo: AgentInfo,
+    onClick: () -> Unit,
+) {
     // 缓存渐变画笔，避免每次重组时重新创建
-    val gradientBrush = remember {
-        Brush.verticalGradient(
-            colors = listOf(Color.Transparent, Color.Black.copy(.6f), Color.Black.copy(.95f))
-        )
-    }
+    val gradientBrush =
+        remember {
+            Brush.verticalGradient(
+                colors = listOf(Color.Transparent, Color.Black.copy(.6f), Color.Black.copy(.95f)),
+            )
+        }
 
     // 缓存过滤后的标签，避免每次重组时重新计算
     val filteredTags = remember(agentInfo.tags) { agentInfo.tags?.filterNotNull() ?: emptyList() }
@@ -56,22 +61,22 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
 
     Box(
         modifier =
-            modifier.fillMaxWidth().aspectRatio(agentInfo.imageAspectRatio()).noRippleClickable {
-                onClick()
-            }
+        modifier.fillMaxWidth().aspectRatio(agentInfo.imageAspectRatio()).noRippleClickable {
+            onClick()
+        },
     ) {
         // 背景图片层
         Box(
             modifier =
-                Modifier.fillMaxSize()
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = 7.dp,
-                            topEnd = 7.dp,
-                            bottomStart = 8.dp,
-                            bottomEnd = 8.dp,
-                        )
-                    )
+            Modifier.fillMaxSize()
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 7.dp,
+                        topEnd = 7.dp,
+                        bottomStart = 8.dp,
+                        bottomEnd = 8.dp,
+                    ),
+                ),
         ) {
             // 使用 Shimmer 占位符
             if (!imageLoaded) {
@@ -102,17 +107,17 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
         // 文本内容层 - 立即显示，不依赖图片加载状态
         Column(
             modifier =
-                Modifier.fillMaxWidth()
-                    .background(
-                        brush = gradientBrush,
-                        shape =
-                            RoundedCornerShape(
-                                bottomStart = 7.dp,
-                                bottomEnd = 7.dp,
-                            ), // 比图片的倒角8.dp小1，来遮挡像素级白边
-                    )
-                    .padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
-                    .align(Alignment.BottomCenter),
+            Modifier.fillMaxWidth()
+                .background(
+                    brush = gradientBrush,
+                    shape =
+                    RoundedCornerShape(
+                        bottomStart = 7.dp,
+                        bottomEnd = 7.dp,
+                    ), // 比图片的倒角8.dp小1，来遮挡像素级白边
+                )
+                .padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
+                .align(Alignment.BottomCenter),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(

@@ -46,31 +46,33 @@ fun SettingsCheckBoxItem(
     onCheckChanged: (Boolean) -> Unit = {},
 ) {
     val modifier =
-        if (isInGroup) Modifier
-        else
+        if (isInGroup) {
+            Modifier
+        } else {
             Modifier.clip(RoundedCornerShape(8.dp))
                 .background(Color(0x3378599A))
                 .border(
                     width = .05.dp,
                     brush =
-                        Brush.horizontalGradient(
-                            colors =
-                                listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(.3f),
-                                    Color.Transparent,
-                                )
+                    Brush.horizontalGradient(
+                        colors =
+                        listOf(
+                            Color.Transparent,
+                            Color.White.copy(.3f),
+                            Color.Transparent,
                         ),
-                    shape = RoundedCornerShape(8.dp)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
                 )
+        }
 
     Row(
         modifier =
-            Modifier.fillMaxWidth()
-                .height(56.dp)
-                .then(modifier)
-                .clickable { onCheckChanged(item.checked.not()) } // 让整个item可点击
-                .padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth()
+            .height(56.dp)
+            .then(modifier)
+            .clickable { onCheckChanged(item.checked.not()) } // 让整个item可点击
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -87,7 +89,7 @@ fun SettingsCheckBoxItem(
         Image(
             painter = painterResource(iconRes),
             contentDescription = "",
-            modifier = Modifier.size(20.dp).clip(CircleShape)
+            modifier = Modifier.size(20.dp).clip(CircleShape),
             // 移除checkbox的单独点击，因为整个item已经可点击了
         )
     }
@@ -102,23 +104,25 @@ fun SettingsSwitchItem(
     onCheckChanged: (Boolean) -> Unit = {},
 ) {
     val modifier =
-        if (isInGroup) Modifier
-        else
+        if (isInGroup) {
+            Modifier
+        } else {
             Modifier.clip(RoundedCornerShape(8.dp))
                 .background(Color(0x3378599A))
                 .border(
                     width = .05.dp,
                     brush =
-                        Brush.horizontalGradient(
-                            colors =
-                                listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(.3f),
-                                    Color.Transparent,
-                                )
+                    Brush.horizontalGradient(
+                        colors =
+                        listOf(
+                            Color.Transparent,
+                            Color.White.copy(.3f),
+                            Color.Transparent,
                         ),
-                    shape = RoundedCornerShape(8.dp)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
                 )
+        }
 
     Row(
         modifier = Modifier.fillMaxWidth().height(56.dp).then(modifier).padding(horizontal = 12.dp),
@@ -138,21 +142,20 @@ fun SettingsSwitchItem(
             checked = item.checked,
             onCheckedChange = onCheckChanged,
             colors =
-                SwitchDefaults.colors()
-                    .copy(
-                        checkedTrackColor = Color(0xFF62C18E),
-                        uncheckedTrackColor = Color(0xFF43394F),
-                        uncheckedBorderColor = Color.Transparent,
-                        disabledCheckedBorderColor = Color.Transparent,
-                        disabledUncheckedBorderColor = Color.Transparent,
-                    )
+            SwitchDefaults.colors()
+                .copy(
+                    checkedTrackColor = Color(0xFF62C18E),
+                    uncheckedTrackColor = Color(0xFF43394F),
+                    uncheckedBorderColor = Color.Transparent,
+                    disabledCheckedBorderColor = Color.Transparent,
+                    disabledUncheckedBorderColor = Color.Transparent,
+                ),
         )
     }
 }
 
 /** 设置item的数据类 */
 sealed class SettingsItemData {
-
     /** 开关设置 */
     data class SwitchItemData(
         val title: String = "",
@@ -198,32 +201,33 @@ fun SettingsArrowItem(
     isInGroup: Boolean = false,
     onItemClick: () -> Unit = {},
 ) {
-
     val modifier =
-        if (isInGroup) Modifier
-        else
+        if (isInGroup) {
+            Modifier
+        } else {
             Modifier.clip(RoundedCornerShape(8.dp))
                 .background(Color(0x3378599A))
                 .border(
                     width = .05.dp,
                     brush =
-                        Brush.horizontalGradient(
-                            colors =
-                                listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(.3f),
-                                    Color.Transparent,
-                                )
+                    Brush.horizontalGradient(
+                        colors =
+                        listOf(
+                            Color.Transparent,
+                            Color.White.copy(.3f),
+                            Color.Transparent,
                         ),
-                    shape = RoundedCornerShape(8.dp)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
                 )
+        }
     Row(
         modifier =
-            Modifier.fillMaxWidth()
-                .height(56.dp)
-                .then(modifier)
-                .clickable(onClick = onItemClick)
-                .padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth()
+            .height(56.dp)
+            .then(modifier)
+            .clickable(onClick = onItemClick)
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -274,34 +278,33 @@ fun SettingsIconArrowItem(
     item: SettingsItemData.IconItemData,
     onItemClick: () -> Unit = {},
 ) {
-
     Row(
         modifier =
-            Modifier.fillMaxWidth()
-                .height(56.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0x3378599A))
-                .border(
-                    width = .05.dp,
-                    brush =
-                        Brush.horizontalGradient(
-                            colors =
-                                listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(.3f),
-                                    Color.Transparent,
-                                )
-                        ),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .clickable(onClick = onItemClick)
-                .padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth()
+            .height(56.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0x3378599A))
+            .border(
+                width = .05.dp,
+                brush =
+                Brush.horizontalGradient(
+                    colors =
+                    listOf(
+                        Color.Transparent,
+                        Color.White.copy(.3f),
+                        Color.Transparent,
+                    ),
+                ),
+                shape = RoundedCornerShape(8.dp),
+            )
+            .clickable(onClick = onItemClick)
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
             painter = painterResource(item.icon),
             contentDescription = "",
-            modifier = Modifier.size(30.dp)
+            modifier = Modifier.size(30.dp),
         )
 
         Spacer(Modifier.width(8.dp))
@@ -335,7 +338,7 @@ fun SettingsIconArrowItem(
 @Composable
 private fun 预览ICON设置条目() {
     SettingsIconArrowItem(
-        item = SettingsItemData.IconItemData(R.drawable.img_girl_lite, "会员订阅", "热烈欢迎订阅")
+        item = SettingsItemData.IconItemData(R.drawable.img_girl_lite, "会员订阅", "热烈欢迎订阅"),
     )
 }
 
@@ -352,19 +355,19 @@ fun SettingsItemGroup(
             .border(
                 width = .05.dp,
                 brush =
-                    Brush.horizontalGradient(
-                        colors =
-                            listOf(
-                                Color.Transparent,
-                                Color.White.copy(.3f),
-                                Color.Transparent,
-                            )
+                Brush.horizontalGradient(
+                    colors =
+                    listOf(
+                        Color.Transparent,
+                        Color.White.copy(.3f),
+                        Color.Transparent,
                     ),
-                shape = RoundedCornerShape(8.dp)
+                ),
+                shape = RoundedCornerShape(8.dp),
             )
             .then(modifier),
         horizontalAlignment = horizontal,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         contents()
     }
@@ -380,13 +383,13 @@ private fun 预览设置分组容器() {
         IntelliMateDivider()
         SettingsArrowItem(
             item = SettingsItemData.CommonItemData("关于App", "v1.0.0", arrow = false),
-            isInGroup = true
+            isInGroup = true,
         )
         IntelliMateDivider()
         SettingsCheckBoxItem(
             item = SettingsItemData.SwitchItemData("轻灵字体", true),
             fontLight = true,
-            isInGroup = true
+            isInGroup = true,
         )
     }
 }
@@ -399,14 +402,14 @@ fun IntelliMateDivider() {
             .height(.2.dp)
             .background(
                 brush =
-                    Brush.horizontalGradient(
-                        colors =
-                            listOf(
-                                Color.Transparent,
-                                Color.White.copy(.3f),
-                                Color.Transparent,
-                            )
-                    )
-            )
+                Brush.horizontalGradient(
+                    colors =
+                    listOf(
+                        Color.Transparent,
+                        Color.White.copy(.3f),
+                        Color.Transparent,
+                    ),
+                ),
+            ),
     )
 }

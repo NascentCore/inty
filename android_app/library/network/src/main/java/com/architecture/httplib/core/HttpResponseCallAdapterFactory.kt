@@ -1,11 +1,11 @@
 package com.architecture.httplib.core
 
 import com.architecture.httplib.error.BusinessException
-import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Type
 import retrofit2.Call
 import retrofit2.CallAdapter
 import retrofit2.Retrofit
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
 
 /**
  * 作用：将默认的网络请求执行器（OkHttpCall）转换成适合被不同平台来调用的网络请求执行器形式

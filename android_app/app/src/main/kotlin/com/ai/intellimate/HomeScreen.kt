@@ -97,7 +97,7 @@ fun HomeScreen(
 
     Scaffold(
         modifier =
-            modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
+        modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
             AppBottomNavigationBar(
@@ -150,8 +150,8 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
             // 未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
             if (
                 !IntySetting.hasTipsVipExpired() &&
-                    IntySetting.isLogin() &&
-                    !IntySetting.isGuestUser()
+                IntySetting.isLogin() &&
+                !IntySetting.isGuestUser()
             ) {
                 showExpiredDialog = true
             }
@@ -180,8 +180,9 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
                     val googleProductId = plan?.googleProductId
                     if (googleProductId != null) {
                         // 启动购买流程
-                        if (context is Activity)
+                        if (context is Activity) {
                             BillingRepository.launchBillingFlow(context, googleProductId)
+                        }
                     } else {
                         // 跳转到订阅中心
                         VipCenterActivity.launch(context)
@@ -200,7 +201,11 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
 }
 
 /** 处理Tab选择逻辑 */
-private fun handleTabSelection(tabIndex: Int, context: Context, mainViewModel: MainViewModel) {
+private fun handleTabSelection(
+    tabIndex: Int,
+    context: Context,
+    mainViewModel: MainViewModel,
+) {
     if (tabIndex == HomeTabIndex.Create.ordinal) {
         if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
             CreateRoleActivity.launch(context)
@@ -273,7 +278,10 @@ private fun ChatTabContent(
 
 /** 会话Tab内容 */
 @Composable
-private fun ConversationsTabContent(chatViewModel: ChatViewModel, context: Context) {
+private fun ConversationsTabContent(
+    chatViewModel: ChatViewModel,
+    context: Context,
+) {
     val conversations by chatViewModel.conversations.collectAsState()
     val isLoadingConversations by chatViewModel.isLoadingConversations.collectAsState()
     val isRefreshingConversations by chatViewModel.isRefreshingConversations.collectAsState()
@@ -309,7 +317,10 @@ private fun ExploreTabContent(
 
 /** 我的Tab内容 */
 @Composable
-private fun ProfileTabContent(mainViewModel: MainViewModel, context: Context) {
+private fun ProfileTabContent(
+    mainViewModel: MainViewModel,
+    context: Context,
+) {
     val userProfile by mainViewModel.userProfile.collectAsStateWithLifecycle()
     val userCreatedAgents = mainViewModel.userCreatedAgents
     val isLoadingUserAgents = mainViewModel.isLoadingUserAgents.collectAsState()
@@ -393,16 +404,16 @@ private fun AppBottomNavigationBar(
 ) {
     Row(
         modifier =
-            modifier
-                .fillMaxWidth()
-                .background(HeartColor.primaryColor)
-                .height(BottomNavigationBarHeight),
+        modifier
+            .fillMaxWidth()
+            .background(HeartColor.primaryColor)
+            .height(BottomNavigationBarHeight),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         MAIN_TAB_LIST.forEachIndexed { index, tab ->
             BottomNavigationBarItem(
                 modifier =
-                    Modifier.fillMaxHeight().weight(1f).noRippleClickable { onSelectTab(index) },
+                Modifier.fillMaxHeight().weight(1f).noRippleClickable { onSelectTab(index) },
                 tabInfo = tab,
                 selected = (index == selectedTab),
             )
@@ -413,7 +424,11 @@ private fun AppBottomNavigationBar(
 val TabIconSize = 26.dp
 
 @Composable
-private fun BottomNavigationBarItem(modifier: Modifier, tabInfo: TabInfo, selected: Boolean) {
+private fun BottomNavigationBarItem(
+    modifier: Modifier,
+    tabInfo: TabInfo,
+    selected: Boolean,
+) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -430,7 +445,7 @@ private fun BottomNavigationBarItem(modifier: Modifier, tabInfo: TabInfo, select
         val spacerRatio = 0.05f
         val spacerHeight = TabIconSize.value * spacerRatio
         Spacer(
-            modifier = Modifier.height(spacerHeight.dp)
+            modifier = Modifier.height(spacerHeight.dp),
         ) // Vertical spacing between icon and text
 
         val tabTextFontSizeRatio = 0.45f
@@ -450,8 +465,8 @@ fun AppBottomNavigationBarPreview() {
     // Preview for the entire bottom navigation bar positioned in the middle
     Box(
         modifier =
-            Modifier.fillMaxSize()
-                .background(Color.Black), // Dark background to match the app theme
+        Modifier.fillMaxSize()
+            .background(Color.Black), // Dark background to match the app theme
         contentAlignment = Alignment.Center,
     ) {
         AppBottomNavigationBar(

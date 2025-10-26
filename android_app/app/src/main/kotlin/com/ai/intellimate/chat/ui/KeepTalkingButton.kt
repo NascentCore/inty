@@ -23,7 +23,10 @@ import com.ai.intellimate.R
 
 /** Keep Talking按钮组件 */
 @Composable
-fun KeepTalkingButton(visible: Boolean, onClick: () -> Unit) {
+fun KeepTalkingButton(
+    visible: Boolean,
+    onClick: () -> Unit,
+) {
     if (!visible) return
 
     Row(
@@ -32,10 +35,10 @@ fun KeepTalkingButton(visible: Boolean, onClick: () -> Unit) {
     ) {
         Box(
             modifier =
-                Modifier.width(80.dp)
-                    .height(32.dp)
-                    .background(Color.Black.copy(.3f), RoundedCornerShape(16.dp))
-                    .noRippleClickable { onClick() },
+            Modifier.width(80.dp)
+                .height(32.dp)
+                .background(Color.Black.copy(.3f), RoundedCornerShape(16.dp))
+                .noRippleClickable { onClick() },
             contentAlignment = Alignment.Center,
         ) {
             // 播放按钮图标 (>>)

@@ -7,7 +7,6 @@ import ai.sxwl.android.utils.LogUtils
 
 /** 使用 inty-sdk 进行用户信息操作的工具类 */
 object IntyUserProfileSDK {
-
     /** 获取用户信息 */
     suspend fun getUserProfile(): UserProfile? {
         return try {
@@ -33,7 +32,6 @@ object IntyUserProfileSDK {
     /** 更新用户信息 */
     suspend fun updateUserProfile(userProfile: UserProfile): UserProfile? {
         return try {
-
             val result = UserService.updateUserProfile(userProfile)
 
             when (result) {

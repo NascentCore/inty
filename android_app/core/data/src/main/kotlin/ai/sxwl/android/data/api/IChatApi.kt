@@ -38,11 +38,13 @@ interface IChatApi {
     ): HttpResult<List<ConversationItem>>
 
     @GET("/api/v1/ai/agents/{agent_id}")
-    suspend fun getAgentInfo(@Path("agent_id") agent_id: String): HttpResult<AgentInfo>
+    suspend fun getAgentInfo(
+        @Path("agent_id") agent_id: String,
+    ): HttpResult<AgentInfo>
 
     @GET("/api/v1/chats/agents/{agent_id}/settings")
     suspend fun getChatSettings(
-        @Path("agent_id") agent_id: String
+        @Path("agent_id") agent_id: String,
     ): HttpResult<ChatSettingsResponse.ChatSettingRspData>
 
     @PUT("/api/v1/chats/agents/{agent_id}/settings")

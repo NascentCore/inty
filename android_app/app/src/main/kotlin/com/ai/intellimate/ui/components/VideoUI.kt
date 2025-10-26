@@ -18,8 +18,10 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 
 /** 自定义全屏视频播放器。 继承VideoView并重写onMeasure方法确保全屏显示。 */
 private class FullScreenVideoView(context: Context) : VideoView(context) {
-
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+    override fun onMeasure(
+        widthMeasureSpec: Int,
+        heightMeasureSpec: Int,
+    ) {
         val width = getDefaultSize(0, widthMeasureSpec)
         val height = getDefaultSize(0, heightMeasureSpec)
         setMeasuredDimension(width, height)

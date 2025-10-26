@@ -57,7 +57,7 @@ fun ChatTopBar(
         if (showBackButton) {
             AsyncImage(
                 modifier =
-                    Modifier.size(BACK_BUTTON_SIZE.dp).noRippleClickable { onBack?.invoke() },
+                Modifier.size(BACK_BUTTON_SIZE.dp).noRippleClickable { onBack?.invoke() },
                 model = R.drawable.back,
                 contentDescription = null,
             )
@@ -66,36 +66,36 @@ fun ChatTopBar(
 
         Row(
             modifier =
-                Modifier.background(
-                        color = CHAT_TOP_BAR_BACKGROUND_COLOR,
-                        shape = RoundedCornerShape(CHAT_TOP_BAR_CORNER_RADIUS.dp),
-                    )
-                    .noRippleClickable {
-                        scope.launch {
-                            // 如果是已经删除的agent，则不可点击，并提示
-                            if (agentInfo.isDeleted) {
-                                ToastUtils.showShort(R.string.str_agent_is_deleted)
-                            } else {
-                                AgentInfoActivity.launch(context, agentInfo)
-                            }
+            Modifier.background(
+                color = CHAT_TOP_BAR_BACKGROUND_COLOR,
+                shape = RoundedCornerShape(CHAT_TOP_BAR_CORNER_RADIUS.dp),
+            )
+                .noRippleClickable {
+                    scope.launch {
+                        // 如果是已经删除的agent，则不可点击，并提示
+                        if (agentInfo.isDeleted) {
+                            ToastUtils.showShort(R.string.str_agent_is_deleted)
+                        } else {
+                            AgentInfoActivity.launch(context, agentInfo)
                         }
-                    },
+                    }
+                },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AsyncImage(
                 modifier =
-                    Modifier.padding(CHAT_TOP_BAR_AVATAR_PADDING.dp)
-                        .size(CHAT_TOP_BAR_AVATAR_SIZE.dp)
-                        .clip(CircleShape),
+                Modifier.padding(CHAT_TOP_BAR_AVATAR_PADDING.dp)
+                    .size(CHAT_TOP_BAR_AVATAR_SIZE.dp)
+                    .clip(CircleShape),
                 model =
-                    ImageRequest.Builder(context)
-                        .data(getCdnImageUrl(agentInfo.avatar, width = 64))
-                        .build(),
+                ImageRequest.Builder(context)
+                    .data(getCdnImageUrl(agentInfo.avatar, width = 64))
+                    .build(),
                 placeholder = painterResource(R.drawable.img_default_avatar),
                 error = painterResource(R.drawable.img_default_avatar),
                 contentDescription = null,
                 alignment = Alignment.TopCenter,
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
             )
 
             Spacer(modifier = Modifier.width(6.dp))
@@ -114,11 +114,11 @@ fun ChatTopBar(
 
         Box(
             modifier =
-                Modifier.size(48.dp, 32.dp)
-                    .background(
-                        color = Color.Black.copy(.3f),
-                        shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
-                    ),
+            Modifier.size(48.dp, 32.dp)
+                .background(
+                    color = Color.Black.copy(.3f),
+                    shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
+                ),
             contentAlignment = Alignment.Center,
         ) {
             AsyncImage(

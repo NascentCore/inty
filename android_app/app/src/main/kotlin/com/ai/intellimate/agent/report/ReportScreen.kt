@@ -56,19 +56,19 @@ fun ReportScreen(
 
     Box(
         modifier =
-            Modifier.fillMaxSize().clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) {
-                focusManager.clearFocus()
-            }
+        Modifier.fillMaxSize().clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+        ) {
+            focusManager.clearFocus()
+        },
     ) {
         Column(
             modifier =
-                Modifier.matchParentSize()
-                    .padding(horizontal = 16.dp)
-                    .imePadding()
-                    .verticalScroll(rememberScrollState()),
+            Modifier.matchParentSize()
+                .padding(horizontal = 16.dp)
+                .imePadding()
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // 布局占位用
@@ -118,8 +118,8 @@ fun ReportScreen(
         // 顶部导航栏
         CenterAlignedTopAppBar(
             colors =
-                TopAppBarDefaults.centerAlignedTopAppBarColors()
-                    .copy(containerColor = Color(0XFF1C1523)),
+            TopAppBarDefaults.centerAlignedTopAppBarColors()
+                .copy(containerColor = Color(0XFF1C1523)),
             title = {
                 Text(
                     text = stringResource(R.string.str_report),

@@ -86,8 +86,8 @@ fun ExploreContent(
             // 首次进入时使用缓存数据，不应该显示加载更多loading
             if (
                 currentTime - lastScrollTime < 1000 &&
-                    lazyPagingItems.itemCount > 0 &&
-                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
+                lazyPagingItems.itemCount > 0 &&
+                lazyPagingItems.loadState.refresh is LoadState.NotLoading
             ) {
                 showLoadMoreLoading = true
                 // 延迟隐藏loading
@@ -142,13 +142,13 @@ fun ExploreContent(
                 items(
                     count = lazyPagingItems.itemCount,
                     key =
-                        lazyPagingItems.itemKey { agent ->
-                            // 确保key的唯一性，避免空id导致的重复key问题
-                            agent.id.ifEmpty {
-                                // 如果id为空，使用其他字段组合生成唯一key
-                                "${agent.name}_${agent.avatar}_${agent.createdAt}"
-                            }
-                        },
+                    lazyPagingItems.itemKey { agent ->
+                        // 确保key的唯一性，避免空id导致的重复key问题
+                        agent.id.ifEmpty {
+                            // 如果id为空，使用其他字段组合生成唯一key
+                            "${agent.name}_${agent.avatar}_${agent.createdAt}"
+                        }
+                    },
                 ) { index ->
                     val agent = lazyPagingItems[index]
                     if (agent != null) {
@@ -161,9 +161,9 @@ fun ExploreContent(
                         // 显示加载占位符
                         ShimmerPlaceholder(
                             modifier =
-                                Modifier.fillMaxWidth()
-                                    .height(200.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                            Modifier.fillMaxWidth()
+                                .height(200.dp)
+                                .clip(RoundedCornerShape(8.dp)),
                         )
                     }
                 }

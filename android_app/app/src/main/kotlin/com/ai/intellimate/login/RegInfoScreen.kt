@@ -50,15 +50,15 @@ internal fun RegInfoScreen(
     Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.6f))) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        brush =
-                            Brush.verticalGradient(
-                                colors = listOf(Color(0xFF322341), Color(0xFF120E24))
-                            ),
-                        shape = RoundedCornerShape(24.dp, 24.dp, 0.dp, 0.dp),
-                    )
+            Modifier.fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(
+                    brush =
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xFF322341), Color(0xFF120E24)),
+                    ),
+                    shape = RoundedCornerShape(24.dp, 24.dp, 0.dp, 0.dp),
+                ),
         ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 CloseButton(onClose = onClose)
@@ -164,7 +164,7 @@ internal fun RegInfoScreen(
                     } else {
                         onSave(selectGender, selectAge)
                     }
-                }
+                },
             )
 
             Spacer(Modifier.height(60.dp))

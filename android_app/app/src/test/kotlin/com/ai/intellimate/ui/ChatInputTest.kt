@@ -7,7 +7,6 @@ import org.junit.Test
 
 /** ChatInput 相关函数的测试 */
 class ChatInputTest {
-
     @Test
     fun `insertParenthesesAtCursor should be callable`() {
         // Given

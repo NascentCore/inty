@@ -52,7 +52,6 @@ fun IntySmallTextField(
     maxLines: Int = Int.MAX_VALUE,
     maxLength: Int = 1000, // 输入文案默认最大1000个字符
 ) {
-
     Row(modifier = modifier.wrapContentHeight(), verticalAlignment = Alignment.CenterVertically) {
         leadingIcon?.let { it() }
 
@@ -101,9 +100,9 @@ fun IntySmallTextField(
             val scope = rememberCoroutineScope()
             TextField(
                 modifier =
-                    Modifier.fillMaxWidth().onFocusChanged { focusState ->
-                        onFocusChanged?.invoke(focusState.isFocused)
-                    },
+                Modifier.fillMaxWidth().onFocusChanged { focusState ->
+                    onFocusChanged?.invoke(focusState.isFocused)
+                },
                 enabled = enabled,
                 singleLine = singleLine,
                 value = textFieldValue,
@@ -128,15 +127,15 @@ fun IntySmallTextField(
                 keyboardActions = newActions,
                 textStyle = TextStyle.Default.copy(fontSize = 14.sp, color = Color.White),
                 colors =
-                    TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        disabledContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        cursorColor = Color.White,
-                    ),
+                TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                    cursorColor = Color.White,
+                ),
                 placeholder = placeholder,
                 maxLines = maxLines,
             )
@@ -160,7 +159,6 @@ fun IntySmallTextField2(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     onValueChange: (String) -> Unit,
 ) {
-
     Row(modifier = modifier.fillMaxHeight(), verticalAlignment = Alignment.CenterVertically) {
         leadingIcon?.let { it() }
 
@@ -196,7 +194,7 @@ fun IntySmallTextField2(
 
         Box(
             modifier =
-                Modifier.fillMaxHeight().weight(1f).padding(horizontal = 8.dp, vertical = 4.dp),
+            Modifier.fillMaxHeight().weight(1f).padding(horizontal = 8.dp, vertical = 4.dp),
             contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
         ) {
             BasicTextField(

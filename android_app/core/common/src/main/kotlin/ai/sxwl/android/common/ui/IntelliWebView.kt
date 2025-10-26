@@ -41,8 +41,10 @@ import kotlinx.serialization.Serializable
 /** 项目封装的简单的webView */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun IntelliWebView(url: String, onBack: () -> Unit) {
-
+private fun IntelliWebView(
+    url: String,
+    onBack: () -> Unit,
+) {
     var progress by rememberSaveable { mutableIntStateOf(0) }
     var isRefreshing by rememberSaveable { mutableStateOf(false) }
     var webTitle by remember { mutableStateOf("IntelliMate") }
@@ -53,7 +55,7 @@ private fun IntelliWebView(url: String, onBack: () -> Unit) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(text = webTitle, fontSize = 18.sp)
                 }
@@ -66,7 +68,7 @@ private fun IntelliWebView(url: String, onBack: () -> Unit) {
                     )
                 }
             },
-            actions = { IconButton(onClick = {}, enabled = false) {} }
+            actions = { IconButton(onClick = {}, enabled = false) {} },
         )
         ProgressIndicator(progress)
         WebViewer(
@@ -106,30 +108,41 @@ private fun WebViewer(
             WebView(context).apply {
                 webViewClient =
                     object : WebViewClient() {
-
                         // Enable BackHandler if WebView can go back
-                        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                        override fun onPageStarted(
+                            view: WebView?,
+                            url: String?,
+                            favicon: Bitmap?,
+                        ) {
                             super.onPageStarted(view, url, favicon)
                             isBackEnabled = view?.canGoBack() == true
                             // web的title
                             titleInvoke(view?.title)
                         }
 
-                        override fun onPageFinished(view: WebView?, url: String?) {
+                        override fun onPageFinished(
+                            view: WebView?,
+                            url: String?,
+                        ) {
                             super.onPageFinished(view, url)
                             titleInvoke(view?.title)
                         }
                     }
                 webChromeClient =
                     object : WebChromeClient() {
-
                         // Pass up current loading progress to be used by ProgressIndicator function
-                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                        override fun onProgressChanged(
+                            view: WebView?,
+                            newProgress: Int,
+                        ) {
                             super.onProgressChanged(view, newProgress)
                             updateProgress(newProgress)
                         }
 
-                        override fun onReceivedTitle(view: WebView?, title: String?) {
+                        override fun onReceivedTitle(
+                            view: WebView?,
+                            title: String?,
+                        ) {
                             super.onReceivedTitle(view, title)
                             titleInvoke(title)
                         }
@@ -153,7 +166,7 @@ private fun WebViewer(
                 setRefreshed()
             }
             webView = wv
-        }
+        },
     )
 }
 
@@ -161,12 +174,15 @@ private fun WebViewer(
 
 // 使用data class 定义对象，作为路由,内部就是参数
 // https://developer.android.google.cn/guide/navigation/design/type-safety?hl=zh_cn
+
 /** 这里是跳转到webView的路由，带有参数url */
 @Serializable data class RouteWeb(val url: String)
 
 /** 扩展navController导航到Web页面 */
-fun NavController.navigateToWeb(url: String, options: NavOptions? = null) =
-    navigate(route = RouteWeb(url), options)
+fun NavController.navigateToWeb(
+    url: String,
+    options: NavOptions? = null,
+) = navigate(route = RouteWeb(url), options)
 
 /** 添加页面到navHost */
 fun NavGraphBuilder.webScreen(controller: NavController) {

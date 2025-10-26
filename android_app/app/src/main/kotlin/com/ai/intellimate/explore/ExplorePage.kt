@@ -59,7 +59,7 @@ fun ExplorePage(
             mapOf(
                 "agent_count" to (lazyPagingItems?.itemCount ?: 0),
                 "is_loading" to (lazyPagingItems?.loadState?.refresh is LoadState.Loading),
-            )
+            ),
         )
     }
 
@@ -73,7 +73,7 @@ fun ExplorePage(
         AsyncImage(
             modifier = Modifier.align(Alignment.TopEnd),
             model = R.drawable.notify_header_bg,
-            contentDescription = null
+            contentDescription = null,
         )
 
         Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {

@@ -75,9 +75,7 @@ import com.ai.intellimate.utils.NetworkErrorHandler
 
 /** Ai 模型形象的 封面头像生成页面 */
 class AvatarGenerateActivity : BaseActivity() {
-
     companion object {
-
         /**
          * 启动单独的聊天界面
          *
@@ -131,8 +129,8 @@ private fun AvatarGeneratePage(
         topBar = {
             CenterAlignedTopAppBar(
                 colors =
-                    TopAppBarDefaults.centerAlignedTopAppBarColors()
-                        .copy(containerColor = Color.Transparent),
+                TopAppBarDefaults.centerAlignedTopAppBarColors()
+                    .copy(containerColor = Color.Transparent),
                 title = {
                     Text(
                         text = stringResource(R.string.generate_avatar),
@@ -144,7 +142,7 @@ private fun AvatarGeneratePage(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                        Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
                         painter = painterResource(R.drawable.close),
                         contentDescription = null,
                     )
@@ -154,18 +152,18 @@ private fun AvatarGeneratePage(
     ) { padding ->
         Column(
             modifier =
-                Modifier.fillMaxSize()
-                    .imePadding()
-                    .padding(
-                        top = padding.calculateTopPadding(),
-                        start = padding.calculateLeftPadding(LayoutDirection.Ltr),
-                        end = padding.calculateRightPadding(LayoutDirection.Ltr),
-                    )
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
-                    .pointerInput(Unit) {
-                        detectTapGestures(onTap = { focusManager.clearFocus() })
-                    },
+            Modifier.fillMaxSize()
+                .imePadding()
+                .padding(
+                    top = padding.calculateTopPadding(),
+                    start = padding.calculateLeftPadding(LayoutDirection.Ltr),
+                    end = padding.calculateRightPadding(LayoutDirection.Ltr),
+                )
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(modifier = Modifier.height(24.dp))
@@ -209,7 +207,7 @@ private fun AvatarGeneratePage(
                             AvatarManager.setGeneratedAvatarUrl(selectedUrl)
                         }
                         onBack()
-                    }
+                    },
                 )
             }
 
@@ -219,12 +217,15 @@ private fun AvatarGeneratePage(
 }
 
 @Composable
-private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
+private fun AvatarPreviewSection(
+    imageUrl: String?,
+    isLoading: Boolean,
+) {
     Box(
         modifier =
-            Modifier.fillMaxWidth()
-                .height(320.dp)
-                .background(color = Color(0x1A78599A), shape = RoundedCornerShape(16.dp)),
+        Modifier.fillMaxWidth()
+            .height(320.dp)
+            .background(color = Color(0x1A78599A), shape = RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center,
     ) {
         when {
@@ -278,17 +279,17 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
                     color = Color.Gray,
                     topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
                     size =
-                        Size(
-                            size.width - strokeWidth,
-                            size.height - strokeWidth,
-                        ),
+                    Size(
+                        size.width - strokeWidth,
+                        size.height - strokeWidth,
+                    ),
                     cornerRadius = CornerRadius(cornerRadius),
                     style =
-                        Stroke(
-                            width = strokeWidth,
-                            pathEffect =
-                                PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength)),
-                        ),
+                    Stroke(
+                        width = strokeWidth,
+                        pathEffect =
+                        PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength)),
+                    ),
                 )
             }
         }
@@ -296,7 +297,10 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
 }
 
 @Composable
-private fun PromptInputField(value: String, onValueChange: (String) -> Unit) {
+private fun PromptInputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
     Column {
         Text(
             text = stringResource(R.string.describe_desired_avatar),
@@ -310,15 +314,15 @@ private fun PromptInputField(value: String, onValueChange: (String) -> Unit) {
             value = value,
             onValueChange = onValueChange,
             modifier =
-                Modifier.fillMaxWidth()
-                    .background(color = Color(0x1A78599A), shape = RoundedCornerShape(12.dp))
-                    .border(
-                        width = 1.dp,
-                        color = Color.White.copy(0.2f),
-                        shape = RoundedCornerShape(12.dp),
-                    )
-                    .padding(16.dp)
-                    .height(120.dp),
+            Modifier.fillMaxWidth()
+                .background(color = Color(0x1A78599A), shape = RoundedCornerShape(12.dp))
+                .border(
+                    width = 1.dp,
+                    color = Color.White.copy(0.2f),
+                    shape = RoundedCornerShape(12.dp),
+                )
+                .padding(16.dp)
+                .height(120.dp),
             textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
             cursorBrush = SolidColor(Color.White),
             decorationBox = { innerTextField ->
@@ -338,31 +342,35 @@ private fun PromptInputField(value: String, onValueChange: (String) -> Unit) {
 }
 
 @Composable
-private fun GenerateButton(isLoading: Boolean, enabled: Boolean, onClick: () -> Unit) {
+private fun GenerateButton(
+    isLoading: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
     Button(
         onClick = onClick,
         enabled = enabled && !isLoading,
         colors =
-            ButtonDefaults.buttonColors(
-                containerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-            ),
+        ButtonDefaults.buttonColors(
+            containerColor = Color.Transparent,
+            disabledContainerColor = Color.Transparent,
+        ),
         shape = RoundedCornerShape(25.dp),
         modifier =
-            Modifier.fillMaxWidth()
-                .height(56.dp)
-                .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors =
-                                if (enabled && !isLoading) {
-                                    listOf(Color(0xFFE91E63), Color(0xFFFF9800))
-                                } else {
-                                    listOf(Color(0x4DE91E63), Color(0x4DFF9800))
-                                }
-                        ),
-                    shape = RoundedCornerShape(25.dp),
+        Modifier.fillMaxWidth()
+            .height(56.dp)
+            .background(
+                brush =
+                Brush.horizontalGradient(
+                    colors =
+                    if (enabled && !isLoading) {
+                        listOf(Color(0xFFE91E63), Color(0xFFFF9800))
+                    } else {
+                        listOf(Color(0x4DE91E63), Color(0x4DFF9800))
+                    },
                 ),
+                shape = RoundedCornerShape(25.dp),
+            ),
     ) {
         if (isLoading) {
             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
@@ -414,11 +422,11 @@ fun ThreeDotLoadingAnimation() {
 
             Box(
                 modifier =
-                    Modifier.size(12.dp)
-                        .background(
-                            color = Color(0xFFE91E63).copy(alpha = alpha),
-                            shape = CircleShape,
-                        )
+                Modifier.size(12.dp)
+                    .background(
+                        color = Color(0xFFE91E63).copy(alpha = alpha),
+                        shape = CircleShape,
+                    ),
             )
         }
     }
@@ -454,23 +462,26 @@ private fun AvatarGridSection(
                     )
                 Box(
                     modifier =
-                        Modifier.weight(1f)
-                            .aspectRatio(9 / 16f)
-                            .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
-                            .border(
-                                width = if (index == selectedIndex) 3.dp else 1.dp,
-                                color =
-                                    if (index == selectedIndex) Color(0xFFE91E63)
-                                    else Color.Transparent,
-                                shape = RoundedCornerShape(8.dp),
-                            )
-                            .noRippleClickable { onImageSelected(index) },
+                    Modifier.weight(1f)
+                        .aspectRatio(9 / 16f)
+                        .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
+                        .border(
+                            width = if (index == selectedIndex) 3.dp else 1.dp,
+                            color =
+                            if (index == selectedIndex) {
+                                Color(0xFFE91E63)
+                            } else {
+                                Color.Transparent
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                        )
+                        .noRippleClickable { onImageSelected(index) },
                     contentAlignment = Alignment.Center,
                 ) {
                     AsyncImage(
                         model = thumbnailUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
                         contentDescription =
-                            stringResource(R.string.content_desc_generated_avatar_index, index),
+                        stringResource(R.string.content_desc_generated_avatar_index, index),
                         modifier = Modifier.fillMaxSize().padding(4.dp),
                         contentScale = ContentScale.Crop,
                     )
@@ -481,18 +492,21 @@ private fun AvatarGridSection(
 }
 
 @Composable
-fun RegenButton(onClick: () -> Unit, enabled: Boolean = true) {
+fun RegenButton(
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+) {
     Box(
         modifier =
-            Modifier.fillMaxSize()
-                .heightIn(112.dp)
-                .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
-                .border(
-                    width = 1.dp,
-                    color = if (enabled) Color.Gray else Color.White.copy(0.2f),
-                    shape = RoundedCornerShape(8.dp),
-                )
-                .noRippleClickable { if (enabled) onClick() },
+        Modifier.fillMaxSize()
+            .heightIn(112.dp)
+            .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
+            .border(
+                width = 1.dp,
+                color = if (enabled) Color.Gray else Color.White.copy(0.2f),
+                shape = RoundedCornerShape(8.dp),
+            )
+            .noRippleClickable { if (enabled) onClick() },
         contentAlignment = Alignment.Center,
     ) {
         Text(

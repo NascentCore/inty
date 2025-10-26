@@ -54,9 +54,9 @@ fun SmartTagsLayout(
 
     FlowRow(
         modifier =
-            modifier.fillMaxWidth().onGloballyPositioned { layoutCoordinates ->
-                availableWidth = layoutCoordinates.size.width.toFloat()
-            },
+        modifier.fillMaxWidth().onGloballyPositioned { layoutCoordinates ->
+            availableWidth = layoutCoordinates.size.width.toFloat()
+        },
         horizontalArrangement = horizontalArrangement,
         maxItemsInEachRow = Int.MAX_VALUE,
     ) {
@@ -89,13 +89,13 @@ private fun calculateVisibleTags(
 
         if (
             currentLineWidth + estimatedTagWidth + tagSpacing > availableWidth &&
-                currentLine < maxLines
+            currentLine < maxLines
         ) {
             currentLine++
             currentLineWidth = estimatedTagWidth
         } else if (
             currentLineWidth + estimatedTagWidth + tagSpacing > availableWidth &&
-                currentLine >= maxLines
+            currentLine >= maxLines
         ) {
             break
         } else {
@@ -109,7 +109,10 @@ private fun calculateVisibleTags(
 }
 
 /** 估算 tag 的宽度 */
-private fun estimateTagWidth(text: String, density: Density): Float {
+private fun estimateTagWidth(
+    text: String,
+    density: Density,
+): Float {
     val charWidth = with(density) { 7.dp.toPx() }
     val horizontalPadding = with(density) { 12.dp.toPx() }
     return text.length * charWidth + horizontalPadding
@@ -119,20 +122,20 @@ private fun estimateTagWidth(text: String, density: Density): Float {
 private fun TagItem(text: String) {
     Box(
         modifier =
-            Modifier.background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
-                .border(
-                    width = 1.dp,
-                    brush =
-                        Brush.linearGradient(
-                            colors =
-                                listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(0.09f),
-                                    Color.Transparent,
-                                )
-                        ),
-                    shape = RoundedCornerShape(4.dp),
-                )
+        Modifier.background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
+            .border(
+                width = 1.dp,
+                brush =
+                Brush.linearGradient(
+                    colors =
+                    listOf(
+                        Color.Transparent,
+                        Color.White.copy(0.09f),
+                        Color.Transparent,
+                    ),
+                ),
+                shape = RoundedCornerShape(4.dp),
+            ),
     ) {
         Text(
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 5.dp),
@@ -148,15 +151,15 @@ private fun TagItem(text: String) {
 private fun LiteTagItem(text: String) {
     Box(
         modifier =
-            Modifier.background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
-                .border(
-                    width = .5.dp,
-                    brush =
-                        Brush.horizontalGradient(
-                            colors = listOf(Color(0xFF842BA7), Color(0xFF331141))
-                        ),
-                    shape = RoundedCornerShape(4.dp),
-                )
+        Modifier.background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
+            .border(
+                width = .5.dp,
+                brush =
+                Brush.horizontalGradient(
+                    colors = listOf(Color(0xFF842BA7), Color(0xFF331141)),
+                ),
+                shape = RoundedCornerShape(4.dp),
+            ),
     ) {
         Text(
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),

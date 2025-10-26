@@ -57,7 +57,6 @@ fun randomColor(): Color {
 
 /** 简单的扩展函数，用于对数值标记为0 和 1 的时候;如果是null，则默认为0 数值取反 作为类似boolean的效果 */
 fun Int.not(): Int {
-
     assert(this == 1 || this == 0)
 
     return when (this) {
@@ -71,47 +70,50 @@ fun Int.not(): Int {
 val primaryBtnBrush =
     Brush.horizontalGradient(
         colors =
-            listOf(
-                Color(0xFFC122FF),
-                Color(0xFFFF905D),
-            )
+        listOf(
+            Color(0xFFC122FF),
+            Color(0xFFFF905D),
+        ),
     )
 
 // 常规按钮 渐变色
 val commonBtnBrush =
     Brush.horizontalGradient(
         colors =
-            listOf(
-                Color(0XFF2D213A),
-                Color(0XFF2D213A),
-            )
+        listOf(
+            Color(0XFF2D213A),
+            Color(0XFF2D213A),
+        ),
     )
 
 // 分隔符渐变色
 val heartDivBrush =
     Brush.horizontalGradient(
         colors =
-            listOf(
-                Color.White.copy(0f),
-                Color.White.copy(.09f),
-                Color.White.copy(0f),
-            )
+        listOf(
+            Color.White.copy(0f),
+            Color.White.copy(.09f),
+            Color.White.copy(0f),
+        ),
     )
 
 /** 空状态页面 */
 @Preview
 @Composable
-fun HeartEmptyUI(modifier: Modifier = Modifier, tips: String = "No relevant content") {
+fun HeartEmptyUI(
+    modifier: Modifier = Modifier,
+    tips: String = "No relevant content",
+) {
     Column(
         modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Image(
             painter = painterResource(R.drawable.img_empty_content),
             contentDescription = "",
             contentScale = ContentScale.Crop,
-            modifier = Modifier
+            modifier = Modifier,
         )
         Text(
             text = tips,
@@ -127,17 +129,17 @@ fun HeartEmptyUI(modifier: Modifier = Modifier, tips: String = "No relevant cont
 fun PoundTagText(textStr: String) {
     Box(
         modifier =
-            Modifier.border(
-                    width = 1.dp,
-                    brush = heartDivBrush,
-                    shape = RoundedCornerShape(size = 4.dp)
-                )
-                .background(
-                    color = HeartColor.primaryColor,
-                    shape = RoundedCornerShape(size = 4.dp)
-                )
-                .padding(horizontal = 6.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center
+        Modifier.border(
+            width = 1.dp,
+            brush = heartDivBrush,
+            shape = RoundedCornerShape(size = 4.dp),
+        )
+            .background(
+                color = HeartColor.primaryColor,
+                shape = RoundedCornerShape(size = 4.dp),
+            )
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = textStr,
@@ -170,8 +172,8 @@ fun SwipeableListItem(
     LaunchedEffect(swipeToDismissBoxState.currentValue) {
         if (
             swipeToDismissBoxState.currentValue == SwipeToDismissBoxValue.EndToStart &&
-                swipeToDismissBoxState.progress > 0.8f &&
-                !isDeleting
+            swipeToDismissBoxState.progress > 0.8f &&
+            !isDeleting
         ) {
             isDeleting = true
             onDelete()
@@ -189,8 +191,9 @@ fun SwipeableListItem(
                     when (swipeToDismissBoxState.targetValue) {
                         SwipeToDismissBoxValue.EndToStart -> Color.Red
                         SwipeToDismissBoxValue.Settled,
-                        SwipeToDismissBoxValue.StartToEnd, -> Color.Transparent
-                    }
+                        SwipeToDismissBoxValue.StartToEnd,
+                        -> Color.Transparent
+                    },
                 )
             val show = swipeToDismissBoxState.targetValue == SwipeToDismissBoxValue.EndToStart
             val boxWidth =
@@ -201,29 +204,29 @@ fun SwipeableListItem(
                 Spacer(Modifier.weight(1f))
                 Box(
                     modifier =
-                        Modifier.fillMaxHeight()
-                            .width(boxWidth)
-                            .background(color)
-                            .padding(horizontal = 20.dp),
-                    contentAlignment = Alignment.CenterEnd
+                    Modifier.fillMaxHeight()
+                        .width(boxWidth)
+                        .background(color)
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = Alignment.CenterEnd,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             painter = painterResource(R.drawable.icon_trash),
                             contentDescription = "Delete",
-                            tint = Color.White
+                            tint = Color.White,
                         )
                         if (swipeToDismissBoxState.progress > 0.5f) {
                             Text(
                                 text = "松开删除",
                                 color = Color.White,
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.bodySmall,
                             )
                         }
                     }
                 }
             }
         },
-        content = itemContent
+        content = itemContent,
     )
 }

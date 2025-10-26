@@ -14,7 +14,6 @@ import kotlinx.coroutines.launch
 
 /** Explore页面ViewModel 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑 */
 class ExploreViewModel : BaseVM() {
-
     private val pagingRepository = ExplorePagingRepository()
 
     // Paging数据流
@@ -59,7 +58,6 @@ class ExploreViewModel : BaseVM() {
 
     /** 强制刷新推荐agents 简化策略：直接使用Paging的刷新机制，让Paging处理状态 */
     fun refreshRecommendAgents() {
-
         viewModelScope.launch {
             try {
                 // 直接创建新的刷新数据流，让Paging处理状态
@@ -72,7 +70,10 @@ class ExploreViewModel : BaseVM() {
         }
     }
 
-    fun saveScrollPosition(index: Int, offset: Int) {
+    fun saveScrollPosition(
+        index: Int,
+        offset: Int,
+    ) {
         _savedFirstVisibleIndex.value = index
         _savedFirstVisibleOffset.value = offset
     }

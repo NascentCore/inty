@@ -36,7 +36,6 @@ import kotlinx.coroutines.launch
  * 生命周期: 在 MainActivity 中集成，用户登录后初始化
  */
 object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener {
-
     private const val DISCONNECT_RECONNECT_DELAY_MS = 1000L
     private const val TAG = "BillingRepository"
 
@@ -135,7 +134,10 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     }
 
     /** 统一日志记录 */
-    private fun log(message: String, level: Int = LogUtils.I) {
+    private fun log(
+        message: String,
+        level: Int = LogUtils.I,
+    ) {
         when (level) {
             LogUtils.V -> LogUtils.v("$TAG - $message")
             LogUtils.D -> LogUtils.d("$TAG - $message")
@@ -170,7 +172,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
     override fun onBillingSetupFinished(billingResult: BillingResult) {
         log(
-            "BillingClient 连接结果: 响应码=${billingResult.responseCode}, 详情: ${billingResult.debugMessage}"
+            "BillingClient 连接结果: 响应码=${billingResult.responseCode}, 详情: ${billingResult.debugMessage}",
         )
 
         if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
@@ -184,7 +186,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     private fun handleBillingSetupSuccess() {
         isConnected = true
         log(
-            "BillingClient 连接成功 isReady:${billingClient.isReady}, connectState: ${billingClient.connectionState}"
+            "BillingClient 连接成功 isReady:${billingClient.isReady}, connectState: ${billingClient.connectionState}",
         )
 
         // 更新初始化状态
@@ -201,7 +203,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     private fun handleBillingSetupFailure(billingResult: BillingResult) {
         log(
             "BillingClient 连接失败: ${billingResult.debugMessage}, 响应码: ${billingResult.responseCode}",
-            LogUtils.E
+            LogUtils.E,
         )
 
         // 更新初始化状态
@@ -294,7 +296,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
         if (internalConnected != clientConnected) {
             log(
                 "状态不一致检测到: internalConnected=$internalConnected, clientConnected=$clientConnected",
-                LogUtils.W
+                LogUtils.W,
             )
             isConnected = clientConnected
         }
@@ -320,7 +322,10 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     }
 
     /** 启动购买流程 */
-    fun launchBillingFlow(activity: Activity, productId: String) {
+    fun launchBillingFlow(
+        activity: Activity,
+        productId: String,
+    ) {
         purchaseManager.launchBillingFlow(activity, productId)
     }
 
@@ -360,7 +365,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                 if (oldStatus.isSubscribed != newStatus.isSubscribed) {
                     log(
                         "订阅状态发生变化: ${oldStatus.isSubscribed} -> ${newStatus.isSubscribed}",
-                        LogUtils.I
+                        LogUtils.I,
                     )
                     _eventFlow.emit(BillingEvent.SubscriptionStatusChanged(oldStatus, newStatus))
                 }

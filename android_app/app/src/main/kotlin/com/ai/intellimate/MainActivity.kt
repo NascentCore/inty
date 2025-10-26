@@ -32,16 +32,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.ai.intellimate.chat.ChatViewModel
 import com.ai.intellimate.utils.UnifiedStartupManager
-import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
-
     val mainViewModel: MainViewModel by viewModels()
     val chatViewModel: ChatViewModel by viewModels()
 
@@ -66,14 +65,13 @@ class MainActivity : BaseActivity() {
             // 等待启动管理器完成必要初始化（但不等缓存数据）
             while (
                 UnifiedStartupManager.startupState.value ==
-                    UnifiedStartupManager.StartupState.Initializing
+                UnifiedStartupManager.StartupState.Initializing
             ) {
                 delay(50) // 50ms检查一次，更快响应
             }
 
             // 检查用户登录状态（包括游客用户）
             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-
                 // 加载业务数据（包括版本检查等）
                 mainViewModel.loadBusinessData()
 
@@ -82,7 +80,6 @@ class MainActivity : BaseActivity() {
 
                 // 只有正式用户才加载需要认证的数据
                 if (!IntySetting.isGuestUser()) {
-
                     // Load user created agents
                     mainViewModel.getUserCreatedAgents()
 
@@ -221,7 +218,10 @@ class MainActivity : BaseActivity() {
 
 @Preview
 @Composable
-private fun SplashUI(modifier: Modifier = Modifier, onSplashComplete: () -> Unit = {}) {
+private fun SplashUI(
+    modifier: Modifier = Modifier,
+    onSplashComplete: () -> Unit = {},
+) {
     // 使用LaunchedEffect来执行初始化逻辑
     LaunchedEffect(Unit) {
         // 等待初始化完成
@@ -238,10 +238,10 @@ private fun SplashUI(modifier: Modifier = Modifier, onSplashComplete: () -> Unit
         )
         Image(
             modifier =
-                Modifier.align(Alignment.BottomCenter)
-                    .padding(bottom = 80.dp)
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(10.dp)),
+            Modifier.align(Alignment.BottomCenter)
+                .padding(bottom = 80.dp)
+                .size(80.dp)
+                .clip(RoundedCornerShape(10.dp)),
             painter = painterResource(R.drawable.icon_splash_icon),
             contentDescription = "",
             contentScale = ContentScale.Crop,
@@ -258,7 +258,7 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
 
         while (
             UnifiedStartupManager.startupState.value ==
-                UnifiedStartupManager.StartupState.Initializing && waitTime < maxWaitTime
+            UnifiedStartupManager.StartupState.Initializing && waitTime < maxWaitTime
         ) {
             delay(50)
             waitTime += 50
@@ -296,7 +296,7 @@ private suspend fun waitForChatAgents() {
 
         if (hasChatData) {
             LogUtils.d(
-                "SplashUI - 关键数据chat agents加载完成: ${UnifiedStartupManager.getCurrentChatAgents().size}个"
+                "SplashUI - 关键数据chat agents加载完成: ${UnifiedStartupManager.getCurrentChatAgents().size}个",
             )
             return
         }
@@ -320,7 +320,10 @@ private class BackPressHandler {
      * @param onExit 退出回调
      * @param onShowHint 显示提示回调
      */
-    fun handleBackPress(onExit: () -> Unit, onShowHint: () -> Unit) {
+    fun handleBackPress(
+        onExit: () -> Unit,
+        onShowHint: () -> Unit,
+    ) {
         val currentTime = System.currentTimeMillis()
 
         when {

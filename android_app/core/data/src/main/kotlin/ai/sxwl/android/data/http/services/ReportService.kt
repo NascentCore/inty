@@ -7,7 +7,6 @@ import java.io.InputStream
 
 /** 举报服务 封装所有举报相关的API调用 */
 object ReportService {
-
     /** 创建举报 */
     suspend fun createReport(
         reasonIds: List<Long>,

@@ -37,7 +37,6 @@ import kotlinx.coroutines.launch
 // 操作什么数据，支持什么 UI？Model 是 beans
 // View 是各类 page/activity。
 class ChatViewModel : BaseVM() {
-
     // 依赖注入 - 使用新的架构
     private val chatRepository: ChatRepository = ChatModule.getChatRepository()
     private val sendMessageUseCase: SendMessageUseCase = ChatModule.sendMessageUseCase
@@ -109,7 +108,6 @@ class ChatViewModel : BaseVM() {
     private var boundAgentId: String? = null
 
     fun setAgentInfo(agentInfo: AgentInfo?) {
-
         // Firebase Analytics - 记录聊天会话开始
         agentInfo?.let { agent ->
             FirebaseManager.logEvent(
@@ -310,27 +308,27 @@ class ChatViewModel : BaseVM() {
                         )
 
                         runCatching {
-                                if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
-                                    requestLogin.emit(true)
-                                    return@runCatching
-                                }
-                                // 有免费次数限制，需要vip订阅
-                                if (
-                                    result.data.code ==
-                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                                ) {
-                                    // Firebase Analytics - 记录免费次数限制
-                                    FirebaseManager.logEvent(
-                                        "free_limit_reached",
-                                        mapOf("agent_id" to agentId, "user_type" to "free"),
-                                    )
-                                    showLimitDialog.emit(true)
-                                }
-                                result.data.data?.choices?.lastOrNull()?.message?.content?.let {
-                                    content ->
-                                    IntySetting.setConversationReaded(agentId, content)
-                                }
+                            if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
+                                requestLogin.emit(true)
+                                return@runCatching
                             }
+                            // 有免费次数限制，需要vip订阅
+                            if (
+                                result.data.code ==
+                                BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                            ) {
+                                // Firebase Analytics - 记录免费次数限制
+                                FirebaseManager.logEvent(
+                                    "free_limit_reached",
+                                    mapOf("agent_id" to agentId, "user_type" to "free"),
+                                )
+                                showLimitDialog.emit(true)
+                            }
+                            result.data.data?.choices?.lastOrNull()?.message?.content?.let {
+                                    content ->
+                                IntySetting.setConversationReaded(agentId, content)
+                            }
+                        }
                             .onFailure {
                                 LogUtils.e("Error processing AI response: ${it.message}")
                                 it.printStackTrace()
@@ -350,12 +348,12 @@ class ChatViewModel : BaseVM() {
 
                         // Firebase Crashlytics - 记录非致命错误
                         FirebaseManager.recordException(
-                            Exception("Message send failed: ${result.message}")
+                            Exception("Message send failed: ${result.message}"),
                         )
 
                         // 显示网络错误
                         NetworkErrorHandler.showNetworkAwareError(
-                            "Something went wrong. Please try again later."
+                            "Something went wrong. Please try again later.",
                         )
                         _isWaitingForReply.value = false
                     }
@@ -363,7 +361,7 @@ class ChatViewModel : BaseVM() {
             } catch (e: Exception) {
                 LogUtils.e("Unexpected error in sendMsg: ${e.message}")
                 NetworkErrorHandler.showNetworkAwareError(
-                    "An unexpected error occurred while sending message"
+                    "An unexpected error occurred while sending message",
                 )
                 _isWaitingForReply.value = false
             } finally {
@@ -413,7 +411,10 @@ class ChatViewModel : BaseVM() {
     // region TTS相关功能
 
     /** 更新消息的音频URL（供AudioManager回调使用） */
-    fun updateMessageAudioUrl(messageId: String, audioUrl: String) {
+    fun updateMessageAudioUrl(
+        messageId: String,
+        audioUrl: String,
+    ) {
         val agentId = agentInfo.value?.id ?: return
         chatRepository.updateMessageAudioUrl(agentId, messageId, audioUrl)
     }
@@ -446,7 +447,7 @@ class ChatViewModel : BaseVM() {
     /** 加载更多消息 */
     fun loadMoreMessages() {
         LogUtils.d(
-            "loadMoreMessages called: hasMore=${_hasMoreMessages.value}, isLoading=${_isLoadingMore.value}, isQueryingMsgs=$isQueryingMsgs, currentOffset=$currentOffset"
+            "loadMoreMessages called: hasMore=${_hasMoreMessages.value}, isLoading=${_isLoadingMore.value}, isQueryingMsgs=$isQueryingMsgs, currentOffset=$currentOffset",
         )
 
         if (!_hasMoreMessages.value) {
@@ -501,25 +502,25 @@ class ChatViewModel : BaseVM() {
                 when (result) {
                     is HttpResult.Success -> {
                         runCatching {
-                                if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
-                                    requestLogin.emit(true)
-                                    return@runCatching
-                                }
-                                // 有免费次数限制，需要vip订阅
-                                if (
-                                    result.data.code ==
-                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                                ) {
-                                    showLimitDialog.emit(true)
-                                }
-                                result.data.data?.choices?.lastOrNull()?.message?.content?.let { str
-                                    ->
-                                    IntySetting.setConversationReaded(agent.id, str)
-                                }
+                            if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
+                                requestLogin.emit(true)
+                                return@runCatching
                             }
+                            // 有免费次数限制，需要vip订阅
+                            if (
+                                result.data.code ==
+                                BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                            ) {
+                                showLimitDialog.emit(true)
+                            }
+                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { str,
+                                ->
+                                IntySetting.setConversationReaded(agent.id, str)
+                            }
+                        }
                             .onFailure {
                                 LogUtils.e(
-                                    "Error processing keep talking AI response: ${it.message}"
+                                    "Error processing keep talking AI response: ${it.message}",
                                 )
                                 it.printStackTrace()
                                 // 错误恢复：确保状态正确
@@ -551,46 +552,48 @@ class ChatViewModel : BaseVM() {
         return _chatSettings.value[agentId]
     }
 
-    private fun getChatSetting() = launchBackground {
-        val agentId = agentInfo.value?.id ?: return@launchBackground
-        // 有agent信息，才请求
-        val result = chatApi.getChatSettings(agentId)
-        when (result) {
-            is HttpResult.Failure -> {
-                // 此设置，暂时不用toast显示
-                LogUtils.e(result.message)
-                //                showNetworkAwareError(result.message)
-            }
-            is HttpResult.Success -> {
-                // 更新指定agent的设置，保持其他agent的设置不变
-                _chatSettings.update { currentSettings ->
-                    currentSettings + (agentId to result.data)
+    private fun getChatSetting() =
+        launchBackground {
+            val agentId = agentInfo.value?.id ?: return@launchBackground
+            // 有agent信息，才请求
+            val result = chatApi.getChatSettings(agentId)
+            when (result) {
+                is HttpResult.Failure -> {
+                    // 此设置，暂时不用toast显示
+                    LogUtils.e(result.message)
+                    //                showNetworkAwareError(result.message)
                 }
-            }
-        }
-    }
-
-    // 高级模型定制化回复的接口调用
-    fun updateChatReplySettings(prompt: String) = launchBackground {
-        val agentId = agentInfo.value?.id ?: return@launchBackground
-        // 有agent信息，才请求
-        val req = ChatSettingsReq(style_prompt = prompt)
-        val result = chatApi.updateChatSettings(agentId, req)
-        when (result) {
-            is HttpResult.Failure -> NetworkErrorHandler.showNetworkAwareError(result.message)
-            is HttpResult.Success -> {
-                NetworkErrorHandler.showNetworkAwareError(
-                    Utils.getApp().getString(R.string.custom_reply_successful)
-                )
-                // 要更新指定agent的chatsetting
-                result.data.data?.let { chatSettingData ->
+                is HttpResult.Success -> {
+                    // 更新指定agent的设置，保持其他agent的设置不变
                     _chatSettings.update { currentSettings ->
-                        currentSettings + (agentId to chatSettingData)
+                        currentSettings + (agentId to result.data)
                     }
                 }
             }
         }
-    }
+
+    // 高级模型定制化回复的接口调用
+    fun updateChatReplySettings(prompt: String) =
+        launchBackground {
+            val agentId = agentInfo.value?.id ?: return@launchBackground
+            // 有agent信息，才请求
+            val req = ChatSettingsReq(style_prompt = prompt)
+            val result = chatApi.updateChatSettings(agentId, req)
+            when (result) {
+                is HttpResult.Failure -> NetworkErrorHandler.showNetworkAwareError(result.message)
+                is HttpResult.Success -> {
+                    NetworkErrorHandler.showNetworkAwareError(
+                        Utils.getApp().getString(R.string.custom_reply_successful),
+                    )
+                    // 要更新指定agent的chatsetting
+                    result.data.data?.let { chatSettingData ->
+                        _chatSettings.update { currentSettings ->
+                            currentSettings + (agentId to chatSettingData)
+                        }
+                    }
+                }
+            }
+        }
 
     fun getConversations() {
         currentConversationsPage = 0
@@ -611,7 +614,7 @@ class ChatViewModel : BaseVM() {
             loadConversations()
         } else {
             LogUtils.d(
-                "loadMoreConversations - 跳过加载: isLoading=${_isLoadingConversations.value}, hasMoreData=$hasMoreConversations"
+                "loadMoreConversations - 跳过加载: isLoading=${_isLoadingConversations.value}, hasMoreData=$hasMoreConversations",
             )
         }
     }
@@ -637,13 +640,13 @@ class ChatViewModel : BaseVM() {
                     }
                     is HttpResult.Failure -> {
                         LogUtils.e(
-                            "loadConversationsSilently - 第${currentConversationsPage + 1}页加载失败: ${result.message}"
+                            "loadConversationsSilently - 第${currentConversationsPage + 1}页加载失败: ${result.message}",
                         )
                     }
                 }
             } catch (e: Exception) {
                 LogUtils.e(
-                    "loadConversationsSilently - 第${currentConversationsPage + 1}页加载异常: ${e.message}"
+                    "loadConversationsSilently - 第${currentConversationsPage + 1}页加载异常: ${e.message}",
                 )
             }
         }
@@ -687,7 +690,7 @@ class ChatViewModel : BaseVM() {
                     }
                     is HttpResult.Failure -> {
                         LogUtils.e(
-                            "loadConversations - 第${currentConversationsPage + 1}页加载失败: ${result.message}"
+                            "loadConversations - 第${currentConversationsPage + 1}页加载失败: ${result.message}",
                         )
                         // 如果加载失败，回退页码
                         if (currentConversationsPage > 0) {
@@ -698,7 +701,7 @@ class ChatViewModel : BaseVM() {
                 }
             } catch (e: Exception) {
                 LogUtils.e(
-                    "loadConversations - 第${currentConversationsPage + 1}页加载异常: ${e.message}"
+                    "loadConversations - 第${currentConversationsPage + 1}页加载异常: ${e.message}",
                 )
                 // 如果加载失败，回退页码
                 if (currentConversationsPage > 0) {
@@ -744,7 +747,7 @@ class ChatViewModel : BaseVM() {
             currentConversations.map { conversation ->
                 if (
                     conversation.id == conversationItem.id &&
-                        conversation.agentId == conversationItem.agentId
+                    conversation.agentId == conversationItem.agentId
                 ) {
                     conversation.copy(isNew = false)
                 } else {

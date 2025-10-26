@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.Flow
 
 /** Explore页面的Paging数据仓库 负责管理Paging数据流、配置和传统数据请求 集成了原ExploreRepository的所有功能 */
 class ExplorePagingRepository {
-
     companion object {
         // 使用统一的常量
         private const val PAGE_SIZE = ExploreConstants.PAGE_SIZE
@@ -28,18 +27,18 @@ class ExplorePagingRepository {
         sortSeed: Int = IntySetting.sortSeed(),
     ): Flow<PagingData<AgentInfo>> {
         return Pager(
-                config =
-                    PagingConfig(
-                        pageSize = PAGE_SIZE,
-                        prefetchDistance = PREFETCH_DISTANCE,
-                        enablePlaceholders = ENABLE_PLACEHOLDERS,
-                        initialLoadSize = PAGE_SIZE,
-                        maxSize = PAGE_SIZE * ExploreConstants.MAX_CACHE_PAGES, // 最大缓存页数
-                    ),
-                pagingSourceFactory = {
-                    ExplorePagingSource(useCache = useCache, sortSeed = sortSeed)
-                },
-            )
+            config =
+            PagingConfig(
+                pageSize = PAGE_SIZE,
+                prefetchDistance = PREFETCH_DISTANCE,
+                enablePlaceholders = ENABLE_PLACEHOLDERS,
+                initialLoadSize = PAGE_SIZE,
+                maxSize = PAGE_SIZE * ExploreConstants.MAX_CACHE_PAGES, // 最大缓存页数
+            ),
+            pagingSourceFactory = {
+                ExplorePagingSource(useCache = useCache, sortSeed = sortSeed)
+            },
+        )
             .flow
     }
 

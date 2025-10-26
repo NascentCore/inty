@@ -17,7 +17,6 @@ sealed class SubscriptionUiEvent {
 
 /** 订阅管理页面 ViewModel */
 class SubsManageViewModel : BaseVM() {
-
     private val _uiEvent = MutableSharedFlow<SubscriptionUiEvent>()
     val uiEvent: SharedFlow<SubscriptionUiEvent> = _uiEvent
 

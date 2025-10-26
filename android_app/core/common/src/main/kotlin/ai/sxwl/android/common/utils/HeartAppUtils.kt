@@ -7,7 +7,6 @@ import androidx.compose.ui.platform.LocalContext
 
 /** 简单封装的一些工具函数 */
 object HeartAppUtils {
-
     /** 判断app是否debug的包 */
     @Composable
     fun isAppDebugMode(): Boolean {

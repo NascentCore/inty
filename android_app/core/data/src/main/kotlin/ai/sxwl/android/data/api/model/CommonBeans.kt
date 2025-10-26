@@ -13,7 +13,6 @@ data class AppVersionRsp(
     val data: AppVersionData? = null,
     val message: String? = null,
 ) {
-
     @Keep
     data class AppVersionData(
         val changelog: String? = null, // 更新变动文案

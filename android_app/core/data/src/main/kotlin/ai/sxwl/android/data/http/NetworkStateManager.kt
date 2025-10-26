@@ -11,7 +11,6 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 /** 网络状态管理器 提供统一的网络状态监控和管理 */
 object NetworkStateManager {
-
     private var connectivityManager: ConnectivityManager? = null
     private var applicationContext: Context? = null
     private val networkCallbacks = CopyOnWriteArrayList<ConnectivityManager.NetworkCallback>()

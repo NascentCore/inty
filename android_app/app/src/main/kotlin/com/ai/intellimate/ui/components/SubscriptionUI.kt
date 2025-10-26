@@ -24,18 +24,22 @@ import com.ai.intellimate.R
 fun SubscriptionManagementContainer(content: @Composable () -> Unit) {
     Column(
         modifier =
-            Modifier.padding(horizontal = 16.dp)
-                .fillMaxWidth()
-                .border(
-                    brush =
-                        Brush.linearGradient(
-                            colors =
-                                listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
-                        ),
-                    width = 1.dp,
-                    shape = RoundedCornerShape(8.dp),
-                )
-                .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
+        Modifier.padding(horizontal = 16.dp)
+            .fillMaxWidth()
+            .border(
+                brush =
+                Brush.linearGradient(
+                    colors =
+                    listOf(
+                        Color.Transparent,
+                        Color.White.copy(0.2f),
+                        Color.Transparent
+                    ),
+                ),
+                width = 1.dp,
+                shape = RoundedCornerShape(8.dp),
+            )
+            .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp)),
     ) {
         Spacer(Modifier.height(8.dp))
         content()

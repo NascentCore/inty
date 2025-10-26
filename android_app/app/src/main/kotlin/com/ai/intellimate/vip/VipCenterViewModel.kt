@@ -30,7 +30,7 @@ class VipCenterViewModel : BaseVM() {
             _selectedPlanIndex.value = index
             val selectedPlan = currentPlans[index]
             LogUtils.d(
-                "BillingRepository VipViewModel 选择订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId})"
+                "BillingRepository VipViewModel 选择订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId})",
             )
         }
     }

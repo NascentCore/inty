@@ -10,7 +10,6 @@ import kotlinx.coroutines.withContext
 
 /** 音频预加载管理器 负责在启动时预加载agents的开场白音频资源，优化聊天页面音频播放体验 */
 object AudioPreloadManager {
-
     private var isInitialized = false
     private lateinit var audioCacheManager: AudioCacheManager
 
@@ -28,7 +27,10 @@ object AudioPreloadManager {
      * @param agents 需要预加载的agents列表
      * @param maxConcurrent 最大并发预加载数量
      */
-    suspend fun preloadAgentsOpeningAudios(agents: List<AgentInfo>, maxConcurrent: Int = 3) {
+    suspend fun preloadAgentsOpeningAudios(
+        agents: List<AgentInfo>,
+        maxConcurrent: Int = 3,
+    ) {
         if (!isInitialized) {
             LogUtils.w("AudioPreloadManager - 未初始化，跳过预加载")
             return
@@ -61,7 +63,10 @@ object AudioPreloadManager {
      * @param agents 需要预加载的agents列表
      * @param criticalCount 关键音频数量（前几个）
      */
-    suspend fun preloadCriticalOpeningAudios(agents: List<AgentInfo>, criticalCount: Int = 5) {
+    suspend fun preloadCriticalOpeningAudios(
+        agents: List<AgentInfo>,
+        criticalCount: Int = 5,
+    ) {
         if (!isInitialized) {
             LogUtils.w("AudioPreloadManager - 未初始化，跳过关键音频预加载")
             return
@@ -108,34 +113,36 @@ object AudioPreloadManager {
      * @param audioUrls 音频URL列表
      * @param maxConcurrent 最大并发数
      */
-    private suspend fun preloadAudioUrls(audioUrls: List<String>, maxConcurrent: Int) =
-        coroutineScope {
-            // 将URL列表分组，每组最多maxConcurrent个
-            val chunks = audioUrls.chunked(maxConcurrent)
+    private suspend fun preloadAudioUrls(
+        audioUrls: List<String>,
+        maxConcurrent: Int,
+    ) = coroutineScope {
+        // 将URL列表分组，每组最多maxConcurrent个
+        val chunks = audioUrls.chunked(maxConcurrent)
 
-            chunks.forEach { chunk ->
-                // 并发预加载当前组的所有音频
-                val jobs =
-                    chunk.map { url ->
-                        async {
-                            try {
-                                // 检查是否已经缓存
-                                if (!audioCacheManager.isCached(url)) {
-                                    audioCacheManager.preloadAudio(url)
-                                    LogUtils.i("AudioPreloadManager - 预加载音频成功: $url")
-                                } else {
-                                    LogUtils.i("AudioPreloadManager - 音频已缓存，跳过: $url")
-                                }
-                            } catch (e: Exception) {
-                                LogUtils.e("AudioPreloadManager - 预加载音频失败: $url, 错误: ${e.message}")
+        chunks.forEach { chunk ->
+            // 并发预加载当前组的所有音频
+            val jobs =
+                chunk.map { url ->
+                    async {
+                        try {
+                            // 检查是否已经缓存
+                            if (!audioCacheManager.isCached(url)) {
+                                audioCacheManager.preloadAudio(url)
+                                LogUtils.i("AudioPreloadManager - 预加载音频成功: $url")
+                            } else {
+                                LogUtils.i("AudioPreloadManager - 音频已缓存，跳过: $url")
                             }
+                        } catch (e: Exception) {
+                            LogUtils.e("AudioPreloadManager - 预加载音频失败: $url, 错误: ${e.message}")
                         }
                     }
+                }
 
-                // 等待当前组的所有任务完成
-                jobs.forEach { it.await() }
-            }
+            // 等待当前组的所有任务完成
+            jobs.forEach { it.await() }
         }
+    }
 
     /**
      * 检查音频是否已预加载

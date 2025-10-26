@@ -14,7 +14,6 @@ import kotlinx.coroutines.launch
 
 /** 应用Application的实现类 */
 class IntelliMateApp : Application() {
-
     override fun onCreate() {
         super.onCreate()
         // 立即初始化网络管理器（轻量级，不阻塞）

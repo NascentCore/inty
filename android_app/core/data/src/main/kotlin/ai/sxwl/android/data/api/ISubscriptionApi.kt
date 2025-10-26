@@ -10,7 +10,6 @@ import retrofit2.http.POST
 
 /** 订阅计划相关API接口 */
 interface ISubscriptionApi {
-
     /**
      * 获取订阅计划列表 GET /api/v1/subscription/plans
      *
@@ -27,6 +26,6 @@ interface ISubscriptionApi {
      */
     @POST("api/v1/subscription/verify")
     suspend fun verifySubscription(
-        @Body request: SubscriptionVerifyRequest
+        @Body request: SubscriptionVerifyRequest,
     ): HttpResult<SubscriptionVerifyResponse>
 }

@@ -166,8 +166,9 @@ object EncryptUtils {
      * @return 解密结果
      */
     fun decryptAESCBC(encryptedData: ByteArray?, key: ByteArray?): ByteArray? {
-        if (encryptedData == null || encryptedData.size < 16 || key == null || key.isEmpty())
+        if (encryptedData == null || encryptedData.size < 16 || key == null || key.isEmpty()) {
             return null
+        }
 
         return try {
 
@@ -269,8 +270,9 @@ object EncryptUtils {
      * @return 解密结果
      */
     fun decryptAESGCM(encryptedData: ByteArray?, key: ByteArray?): ByteArray? {
-        if (encryptedData == null || encryptedData.size < 12 || key == null || key.isEmpty())
+        if (encryptedData == null || encryptedData.size < 12 || key == null || key.isEmpty()) {
             return null
+        }
 
         return try {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -344,9 +346,9 @@ object EncryptUtils {
         return iv
     }
 
-    ///////////////////////////////////////////////////////////////////////////
+    // /////////////////////////////////////////////////////////////////////////
     // private methods
-    ///////////////////////////////////////////////////////////////////////////
+    // /////////////////////////////////////////////////////////////////////////
 
     private fun hashTemplate(data: ByteArray?, algorithm: String): ByteArray {
         if (data == null || data.isEmpty()) return ByteArray(0)

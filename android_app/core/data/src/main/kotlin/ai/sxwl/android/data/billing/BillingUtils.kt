@@ -7,7 +7,6 @@ import com.google.android.gms.common.GoogleApiAvailability
 
 /** 计费工具类 */
 internal object BillingUtils {
-
     /** 检查Google Play服务是否可用 */
     fun isGooglePlayServicesAvailable(context: Context): Boolean {
         val googleApiAvailability = GoogleApiAvailability.getInstance()
@@ -56,7 +55,10 @@ internal object BillingUtils {
     }
 
     /** 根据货币代码修正货币符号 */
-    fun correctCurrencySymbol(price: String, currencyCode: String): String {
+    fun correctCurrencySymbol(
+        price: String,
+        currencyCode: String,
+    ): String {
         val numberPart = price.filter { it.isDigit() || it == '.' }
 
         // 删除小数点后的 .00

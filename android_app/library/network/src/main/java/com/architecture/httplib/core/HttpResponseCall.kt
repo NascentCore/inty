@@ -1,12 +1,12 @@
 package com.architecture.httplib.core
 
 import com.architecture.httplib.error.BusinessException
-import java.io.IOException
 import okhttp3.Request
 import okio.Timeout
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.io.IOException
 
 /**
  * 重新定义Call,适配到HttpResult 以及错误转换Handler
@@ -98,15 +98,15 @@ internal class HttpResponseCall<S : Any>(
                         //                            )
                         //                        )
                         //
-                        ////                        callback.onResponse(
-                        ////                            this@HttpResponseCall,
-                        ////                            Response.success(
-                        ////                                HttpResult.ApiError(
-                        ////                                    errorResponse?.message ?: "",
-                        ////                                    errorResponse?.code ?: -1
-                        ////                                )
-                        ////                            )
-                        ////                        )
+                        // //                        callback.onResponse(
+                        // //                            this@HttpResponseCall,
+                        // //                            Response.success(
+                        // //                                HttpResult.ApiError(
+                        // //                                    errorResponse?.message ?: "",
+                        // //                                    errorResponse?.code ?: -1
+                        // //                                )
+                        // //                            )
+                        // //                        )
                         //
                         //                        callback.onResponse(
                         //                            this@HttpResponseCall,

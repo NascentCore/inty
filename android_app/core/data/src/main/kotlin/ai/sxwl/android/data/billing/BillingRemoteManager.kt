@@ -17,12 +17,10 @@ internal class BillingRemoteManager(
     private val plansFlow: MutableStateFlow<List<VipPlan>>,
     private val priceManager: BillingPriceManager,
 ) {
-
     private val api = NetServiceMgr.getSubscriptionApi()
 
     /** 获取远程数据 */
     suspend fun fetchRemote(isConnected: Boolean) {
-
         runCatching { api.getSubscriptionPlans() }
             .onSuccess { result ->
                 when (result) {
@@ -51,17 +49,17 @@ internal class BillingRemoteManager(
                                 // CANCELLED是"subscribed_expiring" 已取消但未到期
                                 // null 认为是未订阅
                                 subscriptionStatus =
-                                    when {
-                                        currentSubscription?.status == "ACTIVE" &&
-                                            currentSubscription.autoRenew == true ->
-                                            VipStatus.UI_SUBSCRIBED
-                                        currentSubscription?.status == "ACTIVE" &&
-                                            currentSubscription.autoRenew == false ->
-                                            VipStatus.UI_SUBSCRIBED_EXPIRE_SOON
-                                        currentSubscription?.status == "CANCELLED" ->
-                                            VipStatus.UI_SUBSCRIBED_EXPIRE_SOON
-                                        else -> VipStatus.UI_UNSUBSCRIBED
-                                    },
+                                when {
+                                    currentSubscription?.status == "ACTIVE" &&
+                                        currentSubscription.autoRenew == true ->
+                                        VipStatus.UI_SUBSCRIBED
+                                    currentSubscription?.status == "ACTIVE" &&
+                                        currentSubscription.autoRenew == false ->
+                                        VipStatus.UI_SUBSCRIBED_EXPIRE_SOON
+                                    currentSubscription?.status == "CANCELLED" ->
+                                        VipStatus.UI_SUBSCRIBED_EXPIRE_SOON
+                                    else -> VipStatus.UI_UNSUBSCRIBED
+                                },
                             )
 
                         // 保存到本地并更新Flow

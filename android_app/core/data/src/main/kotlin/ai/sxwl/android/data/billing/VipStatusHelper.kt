@@ -13,7 +13,6 @@ import android.app.Activity
  * - 错误处理
  */
 object VipStatusHelper {
-
     /** 检查用户是否为VIP */
     fun isUserVip(): Boolean {
         return BillingRepository.vipStatusFlow.value.isSubscribed
@@ -25,7 +24,10 @@ object VipStatusHelper {
     }
 
     /** 检查VIP状态并执行相应操作 */
-    fun checkVipStatus(onVip: () -> Unit, onNotVip: () -> Unit) {
+    fun checkVipStatus(
+        onVip: () -> Unit,
+        onNotVip: () -> Unit,
+    ) {
         if (isUserVip()) {
             onVip()
         } else {
@@ -34,7 +36,10 @@ object VipStatusHelper {
     }
 
     /** 统一的购买逻辑 - 购买第一个可用计划 */
-    fun purchaseFirstVip(activity: Activity, onError: (String) -> Unit = {}) {
+    fun purchaseFirstVip(
+        activity: Activity,
+        onError: (String) -> Unit = {},
+    ) {
         val currentPlans = BillingRepository.plansFlow.value
         if (currentPlans.isNotEmpty()) {
             val selectedPlan = currentPlans[0]
@@ -55,7 +60,11 @@ object VipStatusHelper {
     }
 
     /** 购买指定计划 */
-    fun purchasePlan(activity: Activity, productId: String, onError: (String) -> Unit = {}) {
+    fun purchasePlan(
+        activity: Activity,
+        productId: String,
+        onError: (String) -> Unit = {},
+    ) {
         // 检查用户是否已经订阅
         if (isUserVip()) {
             LogUtils.w("VipStatusHelper - 用户已经是订阅用户，无需重复购买")

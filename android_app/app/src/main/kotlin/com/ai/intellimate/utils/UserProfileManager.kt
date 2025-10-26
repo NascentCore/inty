@@ -6,7 +6,6 @@ import ai.sxwl.android.utils.LogUtils
 
 /** 用户信息的数据管理类 */
 object UserProfileManager {
-
     fun saveUserProfile(userProfile: UserProfile) {
         IntySetting.setUserProfileData("id", userProfile.id)
         IntySetting.setUserProfileData("nickname", userProfile.nickname)
@@ -50,10 +49,10 @@ object UserProfileManager {
             isSuperuser = IntySetting.getUserProfileBoolean("is_superuser", false),
             phone = IntySetting.getUserProfileData("phone")?.takeIf { it.isNotEmpty() },
             ageGroup =
-                IntySetting.getUserProfileData("age_group")
-                    ?: IntySetting.getUserProfileInt("age_group_int", 0)
-                        .takeIf { it > 0 }
-                        .toString(),
+            IntySetting.getUserProfileData("age_group")
+                ?: IntySetting.getUserProfileInt("age_group_int", 0)
+                    .takeIf { it > 0 }
+                    .toString(),
         )
     }
 

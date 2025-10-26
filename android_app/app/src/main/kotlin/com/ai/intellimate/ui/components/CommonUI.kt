@@ -22,19 +22,23 @@ import com.ai.intellimate.R
 
 /** 通用渐变按钮组件 */
 @Composable
-fun GradientButton(text: String, onSave: () -> Unit, modifier: Modifier = Modifier) {
+fun GradientButton(
+    text: String,
+    onSave: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Box(
         modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .height(50.dp)
-                .background(
-                    brush =
-                        Brush.linearGradient(colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))),
-                    shape = RoundedCornerShape(25.dp),
-                )
-                .noRippleClickable { onSave() }
+        modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .height(50.dp)
+            .background(
+                brush =
+                Brush.linearGradient(colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))),
+                shape = RoundedCornerShape(25.dp),
+            )
+            .noRippleClickable { onSave() },
     ) {
         Text(
             modifier = Modifier.align(Alignment.Center),

@@ -7,7 +7,6 @@ import com.squareup.moshi.Types
 
 /** 计费本地存储管理类 */
 internal object BillingStorage {
-
     private const val KEY_VIP_STATUS = "vip_status"
     private const val KEY_SUBSCRIPTION_PLANS = "subscription_plans"
 

@@ -20,7 +20,6 @@ import retrofit2.HttpException
 
 /** 设置页面 ViewModel */
 class SettingViewModel : BaseVM() {
-
     private val userApi: IUserApi by lazy { NetServiceMgr.getUserApi() }
 
     // 对话框状态
@@ -51,14 +50,14 @@ class SettingViewModel : BaseVM() {
                             } else {
                                 ToastUtils.showShort(
                                     Utils.getApp()
-                                        .getString(R.string.toast_cancel_subscription_first)
+                                        .getString(R.string.toast_cancel_subscription_first),
                                 )
                             }
                         }
                         is HttpResult.Failure -> {
                             ToastUtils.showShort(
                                 Utils.getApp()
-                                    .getString(R.string.toast_check_account_deletion_error)
+                                    .getString(R.string.toast_check_account_deletion_error),
                             )
                         }
                     }
@@ -92,7 +91,7 @@ class SettingViewModel : BaseVM() {
                         }
                         is HttpResult.Failure -> {
                             ToastUtils.showShort(
-                                Utils.getApp().getString(R.string.toast_account_deletion_error)
+                                Utils.getApp().getString(R.string.toast_account_deletion_error),
                             )
                         }
                     }

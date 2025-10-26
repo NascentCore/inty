@@ -12,9 +12,9 @@ import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import com.inty.api.client.IntyClient
 import com.inty.api.client.okhttp.IntyOkHttpClient
+import kotlinx.coroutines.withTimeout
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
-import kotlinx.coroutines.withTimeout
 
 /**
  * Inty网络管理器 - 企业级网络库封装 提供统一的网络管理和API服务入口
@@ -27,13 +27,15 @@ import kotlinx.coroutines.withTimeout
  * 5. 业务API服务入口
  */
 object IntyNetworkManager {
-
     private val clientCache = ConcurrentHashMap<String, IntyClient>()
     private var isInitialized = false
     private var applicationContextRef: WeakReference<Context>? = null
 
     /** 初始化网络管理器 使用弱引用避免内存泄露 */
-    fun initialize(context: Context, buildType: String) {
+    fun initialize(
+        context: Context,
+        buildType: String,
+    ) {
         if (!isInitialized) {
             // 使用弱引用保存 ApplicationContext，避免内存泄露
             this.applicationContextRef = WeakReference(context.applicationContext)
@@ -41,7 +43,7 @@ object IntyNetworkManager {
             NetworkConfig.setBuildType(buildType)
             isInitialized = true
             LogUtils.d(
-                "IntyNetworkManager initialized with environment: ${NetworkConfig.getCurrentBuildType()}"
+                "IntyNetworkManager initialized with environment: ${NetworkConfig.getCurrentBuildType()}",
             )
         }
     }
@@ -58,10 +60,15 @@ object IntyNetworkManager {
     }
 
     /** 创建新的客户端实例 使用新的配置系统 */
-    private fun createClient(apiKey: String, baseUrl: String): IntyClient {
+    private fun createClient(
+        apiKey: String,
+        baseUrl: String,
+    ): IntyClient {
         val environmentConfig = NetworkConfig.getCurrentEnvironmentConfig()
         LogUtils.d(
-            "Creating new IntyClient: apiKey=${apiKey.take(8)}..., baseUrl=$baseUrl, environment=${NetworkConfig.getCurrentBuildType()}"
+            "Creating new IntyClient: apiKey=${apiKey.take(
+                8
+            )}..., baseUrl=$baseUrl, environment=${NetworkConfig.getCurrentBuildType()}",
         )
         return IntyOkHttpClient.builder().apiKey(apiKey).baseUrl(baseUrl).build()
     }
@@ -89,7 +96,7 @@ object IntyNetworkManager {
     private fun checkInitialized() {
         if (!isInitialized) {
             throw IllegalStateException(
-                "IntyNetworkManager not initialized. Call initialize() first."
+                "IntyNetworkManager not initialized. Call initialize() first.",
             )
         }
     }
@@ -104,8 +111,7 @@ object IntyNetworkManager {
     }
 
     /** 获取当前环境配置 */
-    fun getCurrentEnvironmentConfig(): NetworkConfig.EnvironmentConfig =
-        NetworkConfig.getCurrentEnvironmentConfig()
+    fun getCurrentEnvironmentConfig(): NetworkConfig.EnvironmentConfig = NetworkConfig.getCurrentEnvironmentConfig()
 
     /** 检查是否为调试环境 */
     fun isDebugEnvironment(): Boolean = NetworkConfig.isDebugEnvironment()

@@ -11,7 +11,6 @@ import androidx.compose.ui.unit.dp
 
 /** Compose UI工具类 用于获取系统bar高度、BottomBar和AppBar的高度 */
 object ComposeUIUtils {
-
     /**
      * 获取状态栏高度
      *

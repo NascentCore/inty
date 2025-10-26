@@ -17,7 +17,6 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,10 +27,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 /** 企业级音频播放管理器 基于Media3实现，支持Opus格式，提供完整的音频焦点管理和播放控制 */
 class AudioPlaybackManager private constructor(private val context: Context) : Player.Listener {
-
     companion object {
         @Volatile private var INSTANCE: AudioPlaybackManager? = null
 
@@ -82,7 +81,6 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
     /** 初始化ExoPlayer */
     private fun initializePlayer() {
         try {
-
             // 创建OkHttp数据源工厂，支持缓存
             val okHttpClient =
                 OkHttpClient.Builder()
@@ -122,7 +120,10 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
      * @param audioInfo 音频信息
      * @param autoPlay 是否自动播放
      */
-    fun playAudio(audioInfo: AudioInfo, autoPlay: Boolean = true) {
+    fun playAudio(
+        audioInfo: AudioInfo,
+        autoPlay: Boolean = true,
+    ) {
         try {
             // 检查是否是同一个音频（优先使用messageId判断）
             val isSameAudio = currentAudioInfo?.messageId == audioInfo.messageId
@@ -201,7 +202,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             // 检查当前状态是否允许恢复
             if (_playbackState.value != PlaybackState.PAUSED) {
                 LogUtils.w(
-                    "音频LOG测试 Cannot resume: current state is ${_playbackState.value}, expected PAUSED"
+                    "音频LOG测试 Cannot resume: current state is ${_playbackState.value}, expected PAUSED",
                 )
                 return
             }
@@ -338,7 +339,8 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
                     audioManager?.abandonAudioFocusRequest(request)
                 }
             } else {
-                @Suppress("DEPRECATION") audioManager?.abandonAudioFocus {}
+                @Suppress("DEPRECATION")
+                audioManager?.abandonAudioFocus {}
             }
             audioFocusRequest = null
         } catch (e: Exception) {

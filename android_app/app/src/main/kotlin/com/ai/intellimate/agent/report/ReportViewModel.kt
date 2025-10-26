@@ -13,16 +13,15 @@ import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.ViewModelEvent
-import java.io.InputStream
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.InputStream
 
 class ReportViewModel : BaseVM() {
-
     // 事件通知机制
     private val _events = MutableSharedFlow<ViewModelEvent>()
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
@@ -62,7 +61,7 @@ class ReportViewModel : BaseVM() {
                     description = "Other, details in report description",
                     code = "OTHER",
                 ),
-            )
+            ),
         )
     val reasons = _reasons.asStateFlow()
 
@@ -128,7 +127,7 @@ class ReportViewModel : BaseVM() {
                         ToastUtils.showShort(
                             result.message
                                 ?: Utils.getApp()?.getString(R.string.toast_report_creation_failed)
-                                ?: "Report creation failed"
+                                ?: "Report creation failed",
                         )
                     }
                 }
@@ -144,7 +143,6 @@ class ReportViewModel : BaseVM() {
     }
 
     private suspend fun uploadImageWithIntySdk(inputStream: InputStream): String? {
-
         val result = ReportService.uploadImage(inputStream, "report-image.jpg")
 
         return when (result) {

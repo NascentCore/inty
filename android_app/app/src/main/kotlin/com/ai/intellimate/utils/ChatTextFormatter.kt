@@ -12,7 +12,6 @@ import androidx.compose.ui.unit.TextUnit
 
 /** 聊天文本格式化工具类 将括号内容转换为斜体，支持嵌套括号 */
 object ChatTextFormatter {
-
     /**
      * 格式化聊天消息文本
      *
@@ -29,78 +28,79 @@ object ChatTextFormatter {
         fontWeight: FontWeight,
         normalColor: Color,
         italicColor: Color,
-    ): AnnotatedString = buildAnnotatedString {
-        val bracketPairs = findBracketPairs(text)
-        var currentIndex = 0
-        var pairIndex = 0
+    ): AnnotatedString =
+        buildAnnotatedString {
+            val bracketPairs = findBracketPairs(text)
+            var currentIndex = 0
+            var pairIndex = 0
 
-        while (currentIndex < text.length) {
-            if (pairIndex < bracketPairs.size && currentIndex == bracketPairs[pairIndex].first) {
-                // 开始括号 - 斜体样式
-                withStyle(
-                    SpanStyle(
-                        color = italicColor,
-                        fontSize = fontSize,
-                        fontWeight = fontWeight,
-                        fontStyle = FontStyle.Italic,
-                        fontFamily = FontFamily.Default,
-                    )
-                ) {
-                    append(text[currentIndex])
-                }
-                currentIndex++
+            while (currentIndex < text.length) {
+                if (pairIndex < bracketPairs.size && currentIndex == bracketPairs[pairIndex].first) {
+                    // 开始括号 - 斜体样式
+                    withStyle(
+                        SpanStyle(
+                            color = italicColor,
+                            fontSize = fontSize,
+                            fontWeight = fontWeight,
+                            fontStyle = FontStyle.Italic,
+                            fontFamily = FontFamily.Default,
+                        ),
+                    ) {
+                        append(text[currentIndex])
+                    }
+                    currentIndex++
 
-                // 括号内容为斜体
-                val endIndex = bracketPairs[pairIndex].second
-                withStyle(
-                    SpanStyle(
-                        color = italicColor,
-                        fontSize = fontSize,
-                        fontWeight = fontWeight,
-                        fontStyle = FontStyle.Italic,
-                        fontFamily = FontFamily.Default,
-                    )
-                ) {
-                    append(text.substring(currentIndex, endIndex))
-                }
-
-                // 结束括号 - 斜体样式
-                withStyle(
-                    SpanStyle(
-                        color = italicColor,
-                        fontSize = fontSize,
-                        fontWeight = fontWeight,
-                        fontStyle = FontStyle.Italic,
-                        fontFamily = FontFamily.Default,
-                    )
-                ) {
-                    append(text[endIndex])
-                }
-                currentIndex = endIndex + 1
-                pairIndex++
-            } else {
-                // 普通文本 - 按字符串片段添加而不是逐字符，避免破坏emoji
-                val nextBracketIndex =
-                    if (pairIndex < bracketPairs.size) {
-                        bracketPairs[pairIndex].first
-                    } else {
-                        text.length
+                    // 括号内容为斜体
+                    val endIndex = bracketPairs[pairIndex].second
+                    withStyle(
+                        SpanStyle(
+                            color = italicColor,
+                            fontSize = fontSize,
+                            fontWeight = fontWeight,
+                            fontStyle = FontStyle.Italic,
+                            fontFamily = FontFamily.Default,
+                        ),
+                    ) {
+                        append(text.substring(currentIndex, endIndex))
                     }
 
-                withStyle(
-                    SpanStyle(
-                        color = normalColor,
-                        fontSize = fontSize,
-                        fontWeight = fontWeight,
-                        fontFamily = FontFamily.Default,
-                    )
-                ) {
-                    append(text.substring(currentIndex, nextBracketIndex))
+                    // 结束括号 - 斜体样式
+                    withStyle(
+                        SpanStyle(
+                            color = italicColor,
+                            fontSize = fontSize,
+                            fontWeight = fontWeight,
+                            fontStyle = FontStyle.Italic,
+                            fontFamily = FontFamily.Default,
+                        ),
+                    ) {
+                        append(text[endIndex])
+                    }
+                    currentIndex = endIndex + 1
+                    pairIndex++
+                } else {
+                    // 普通文本 - 按字符串片段添加而不是逐字符，避免破坏emoji
+                    val nextBracketIndex =
+                        if (pairIndex < bracketPairs.size) {
+                            bracketPairs[pairIndex].first
+                        } else {
+                            text.length
+                        }
+
+                    withStyle(
+                        SpanStyle(
+                            color = normalColor,
+                            fontSize = fontSize,
+                            fontWeight = fontWeight,
+                            fontFamily = FontFamily.Default,
+                        ),
+                    ) {
+                        append(text.substring(currentIndex, nextBracketIndex))
+                    }
+                    currentIndex = nextBracketIndex
                 }
-                currentIndex = nextBracketIndex
             }
         }
-    }
 
     /** 查找匹配的括号对 */
     private fun findBracketPairs(text: String): List<Pair<Int, Int>> {
@@ -110,9 +110,11 @@ object ChatTextFormatter {
         text.forEachIndexed { index, char ->
             when (char) {
                 '(',
-                '（' -> stack.add(Pair(char, index))
+                '（',
+                -> stack.add(Pair(char, index))
                 ')',
-                '）' -> {
+                '）',
+                -> {
                     val matchingStart = if (char == ')') '(' else '（'
                     for (i in stack.size - 1 downTo 0) {
                         if (stack[i].first == matchingStart) {

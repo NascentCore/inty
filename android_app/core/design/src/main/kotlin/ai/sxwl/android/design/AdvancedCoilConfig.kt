@@ -13,12 +13,11 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import coil3.video.VideoFrameDecoder
-import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 /** 高级Coil配置类 根据Coil 3.x官方文档：https://coil-kt.github.io/coil/network/ 提供完整的网络支持和缓存策略 */
 object AdvancedCoilConfig {
-
     /**
      * 创建优化的ImageLoader，支持设备适配的图片压缩 根据Coil 3.x官方文档：https://coil-kt.github.io/coil/
      *

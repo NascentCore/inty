@@ -124,7 +124,6 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
                             //                                data =
                             // dataTypeAdapter.fromJson(com.ata.utils.toJson(readData))
                             //                            }
-
                         }
                         else -> reader.skipValue()
                     }

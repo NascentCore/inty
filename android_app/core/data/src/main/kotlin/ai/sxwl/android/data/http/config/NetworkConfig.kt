@@ -2,7 +2,6 @@ package ai.sxwl.android.data.http.config
 
 /** 网络配置管理 提供环境相关的配置管理，替代原有的硬编码配置 */
 object NetworkConfig {
-
     /** 构建类型枚举 */
     enum class BuildType(val value: String) {
         LOCAL("local"),
@@ -90,28 +89,28 @@ object NetworkConfig {
         return EnvironmentConfig(
             baseUrl = "http://${Constant.USER_HOST_LOCAL}/",
             timeout =
-                TimeoutConfig(
-                    connectTimeoutMs = 10000, // 本地环境可以更短
-                    writeTimeoutMs = 10000,
-                    readTimeoutMs = 20000,
-                ),
+            TimeoutConfig(
+                connectTimeoutMs = 10000, // 本地环境可以更短
+                writeTimeoutMs = 10000,
+                readTimeoutMs = 20000,
+            ),
             retry =
-                RetryConfig(
-                    maxRetries = 2, // 本地环境减少重试
-                    retryDelayMs = 500,
-                ),
+            RetryConfig(
+                maxRetries = 2, // 本地环境减少重试
+                retryDelayMs = 500,
+            ),
             connection =
-                ConnectionConfig(
-                    maxConnections = 3,
-                    keepAliveDurationMs = 60000, // 1 minute
-                ),
+            ConnectionConfig(
+                maxConnections = 3,
+                keepAliveDurationMs = 60000, // 1 minute
+            ),
             logging =
-                LoggingConfig(
-                    enableRequestLogging = true,
-                    enablePerformanceLogging = true,
-                    enableChuckerLogging = true,
-                    logLevel = LogLevel.DEBUG,
-                ),
+            LoggingConfig(
+                enableRequestLogging = true,
+                enablePerformanceLogging = true,
+                enableChuckerLogging = true,
+                logLevel = LogLevel.DEBUG,
+            ),
         )
     }
 
@@ -120,20 +119,20 @@ object NetworkConfig {
         return EnvironmentConfig(
             baseUrl = "https://${Constant.USER_HOST_DEV}/",
             timeout =
-                TimeoutConfig(
-                    connectTimeoutMs = 15000,
-                    writeTimeoutMs = 15000,
-                    readTimeoutMs = 30000,
-                ),
+            TimeoutConfig(
+                connectTimeoutMs = 15000,
+                writeTimeoutMs = 15000,
+                readTimeoutMs = 30000,
+            ),
             retry = RetryConfig(maxRetries = 3, retryDelayMs = 1000),
             connection = ConnectionConfig(maxConnections = 5, keepAliveDurationMs = 300000),
             logging =
-                LoggingConfig(
-                    enableRequestLogging = true,
-                    enablePerformanceLogging = true,
-                    enableChuckerLogging = true,
-                    logLevel = LogLevel.DEBUG,
-                ),
+            LoggingConfig(
+                enableRequestLogging = true,
+                enablePerformanceLogging = true,
+                enableChuckerLogging = true,
+                logLevel = LogLevel.DEBUG,
+            ),
         )
     }
 
@@ -142,28 +141,28 @@ object NetworkConfig {
         return EnvironmentConfig(
             baseUrl = "https://${Constant.USER_HOST_DEV}/",
             timeout =
-                TimeoutConfig(
-                    connectTimeoutMs = 20000, // Play环境可能需要更长时间
-                    writeTimeoutMs = 20000,
-                    readTimeoutMs = 45000,
-                ),
+            TimeoutConfig(
+                connectTimeoutMs = 20000, // Play环境可能需要更长时间
+                writeTimeoutMs = 20000,
+                readTimeoutMs = 45000,
+            ),
             retry =
-                RetryConfig(
-                    maxRetries = 5, // Play环境增加重试
-                    retryDelayMs = 2000,
-                ),
+            RetryConfig(
+                maxRetries = 5, // Play环境增加重试
+                retryDelayMs = 2000,
+            ),
             connection =
-                ConnectionConfig(
-                    maxConnections = 8,
-                    keepAliveDurationMs = 600000, // 10 minutes
-                ),
+            ConnectionConfig(
+                maxConnections = 8,
+                keepAliveDurationMs = 600000, // 10 minutes
+            ),
             logging =
-                LoggingConfig(
-                    enableRequestLogging = true,
-                    enablePerformanceLogging = true,
-                    enableChuckerLogging = false, // Play环境关闭Chucker
-                    logLevel = LogLevel.INFO,
-                ),
+            LoggingConfig(
+                enableRequestLogging = true,
+                enablePerformanceLogging = true,
+                enableChuckerLogging = false, // Play环境关闭Chucker
+                logLevel = LogLevel.INFO,
+            ),
         )
     }
 
@@ -172,24 +171,24 @@ object NetworkConfig {
         return EnvironmentConfig(
             baseUrl = "https://${Constant.USER_HOST}/",
             timeout =
-                TimeoutConfig(
-                    connectTimeoutMs = 10000, // 生产环境优化超时
-                    writeTimeoutMs = 10000,
-                    readTimeoutMs = 20000,
-                ),
+            TimeoutConfig(
+                connectTimeoutMs = 10000, // 生产环境优化超时
+                writeTimeoutMs = 10000,
+                readTimeoutMs = 20000,
+            ),
             retry = RetryConfig(maxRetries = 3, retryDelayMs = 1000),
             connection =
-                ConnectionConfig(
-                    maxConnections = 10,
-                    keepAliveDurationMs = 600000, // 10 minutes
-                ),
+            ConnectionConfig(
+                maxConnections = 10,
+                keepAliveDurationMs = 600000, // 10 minutes
+            ),
             logging =
-                LoggingConfig(
-                    enableRequestLogging = false, // 生产环境关闭详细日志
-                    enablePerformanceLogging = true,
-                    enableChuckerLogging = false,
-                    logLevel = LogLevel.WARN,
-                ),
+            LoggingConfig(
+                enableRequestLogging = false, // 生产环境关闭详细日志
+                enablePerformanceLogging = true,
+                enableChuckerLogging = false,
+                logLevel = LogLevel.WARN,
+            ),
         )
     }
 

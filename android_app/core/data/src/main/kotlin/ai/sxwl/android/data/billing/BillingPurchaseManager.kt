@@ -35,11 +35,13 @@ internal class BillingPurchaseManager(
     private val eventFlow: MutableSharedFlow<BillingEvent>,
     private val vipStatusFlow: MutableStateFlow<VipStatus>,
 ) {
-
     private val api = NetServiceMgr.getSubscriptionApi()
 
     /** 处理购买更新 */
-    fun onPurchasesUpdated(billingResult: BillingResult, purchases: MutableList<Purchase>?) {
+    fun onPurchasesUpdated(
+        billingResult: BillingResult,
+        purchases: MutableList<Purchase>?,
+    ) {
         LogUtils.d("购买更新回调: 响应码=${billingResult.responseCode}")
 
         when (billingResult.responseCode) {
@@ -68,7 +70,7 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
                             "Item already owned",
-                        )
+                        ),
                     )
                 }
             }
@@ -77,7 +79,7 @@ internal class BillingPurchaseManager(
                 showError("Item not owned")
                 eventScope.launch {
                     eventFlow.emit(
-                        BillingEvent.PurchaseFailed(billingResult.responseCode, "Item not owned")
+                        BillingEvent.PurchaseFailed(billingResult.responseCode, "Item not owned"),
                     )
                 }
             }
@@ -89,18 +91,18 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
                             "Item is not available in current region",
-                        )
+                        ),
                     )
                 }
             }
             BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {
                 LogUtils.e(
-                    "Developer error: Please check product ID configuration, app signature, test user settings"
+                    "Developer error: Please check product ID configuration, app signature, test user settings",
                 )
                 showError("Developer error")
                 eventScope.launch {
                     eventFlow.emit(
-                        BillingEvent.PurchaseFailed(billingResult.responseCode, "Developer error")
+                        BillingEvent.PurchaseFailed(billingResult.responseCode, "Developer error"),
                     )
                 }
             }
@@ -112,7 +114,7 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
                             "Service unavailable",
-                        )
+                        ),
                     )
                 }
             }
@@ -124,7 +126,7 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
                             "Device does not support Google Play billing",
-                        )
+                        ),
                     )
                 }
             }
@@ -133,7 +135,7 @@ internal class BillingPurchaseManager(
                 showError("Network error")
                 eventScope.launch {
                     eventFlow.emit(
-                        BillingEvent.PurchaseFailed(billingResult.responseCode, "Network error")
+                        BillingEvent.PurchaseFailed(billingResult.responseCode, "Network error"),
                     )
                 }
             }
@@ -145,7 +147,7 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
                             "Feature not supported",
-                        )
+                        ),
                     )
                 }
             }
@@ -154,13 +156,13 @@ internal class BillingPurchaseManager(
                 showError("General error")
                 eventScope.launch {
                     eventFlow.emit(
-                        BillingEvent.PurchaseFailed(billingResult.responseCode, "General error")
+                        BillingEvent.PurchaseFailed(billingResult.responseCode, "General error"),
                     )
                 }
             }
             else -> {
                 LogUtils.e(
-                    "购买失败: ${billingResult.debugMessage} (错误码: ${billingResult.responseCode})"
+                    "购买失败: ${billingResult.debugMessage} (错误码: ${billingResult.responseCode})",
                 )
                 showError("Purchase failed: ${billingResult.debugMessage}")
                 eventScope.launch {
@@ -168,7 +170,7 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
                             billingResult.debugMessage,
-                        )
+                        ),
                     )
                 }
             }
@@ -211,7 +213,7 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
                             billingResult.debugMessage,
-                        )
+                        ),
                     )
                 }
             }
@@ -231,7 +233,7 @@ internal class BillingPurchaseManager(
                     )
 
                 LogUtils.d(
-                    "验证订阅: productId=${verifyRequest.productId}, purchaseToken=${verifyRequest.purchaseToken}, orderId=${verifyRequest.orderId}"
+                    "验证订阅: productId=${verifyRequest.productId}, purchaseToken=${verifyRequest.purchaseToken}, orderId=${verifyRequest.orderId}",
                 )
 
                 // 调用验证接口
@@ -327,7 +329,7 @@ internal class BillingPurchaseManager(
                 billingClient.isFeatureSupported(BillingClient.FeatureType.SUBSCRIPTIONS)
             val isSupported = billingResult.responseCode == BillingClient.BillingResponseCode.OK
             LogUtils.d(
-                "设备计费支持检查: $isSupported (响应码: ${billingResult.responseCode}), 详情: ${billingResult.debugMessage}"
+                "设备计费支持检查: $isSupported (响应码: ${billingResult.responseCode}), 详情: ${billingResult.debugMessage}",
             )
             if (!isSupported) {
                 showError("Billing feature not supported on this device")
@@ -341,7 +343,10 @@ internal class BillingPurchaseManager(
     }
 
     /** 启动购买流程 */
-    fun launchBillingFlow(activity: Activity, productId: String) {
+    fun launchBillingFlow(
+        activity: Activity,
+        productId: String,
+    ) {
         // 检查购买前条件
         if (!checkPurchasePreconditions(activity)) {
             showError("Purchase preconditions check failed")
@@ -355,7 +360,10 @@ internal class BillingPurchaseManager(
     }
 
     /** 内部购买流程实现 */
-    private fun launchBillingFlowInternal(activity: Activity, productId: String) {
+    private fun launchBillingFlowInternal(
+        activity: Activity,
+        productId: String,
+    ) {
         // 查询商品详情（使用 SkuDetails API）
         val params =
             SkuDetailsParams.newBuilder()
@@ -370,7 +378,7 @@ internal class BillingPurchaseManager(
                 BillingClient.BillingResponseCode.OK -> {
                     skuDetailsList?.firstOrNull()?.let { skuDetails ->
                         LogUtils.i(
-                            "✅ 找到商品详情: ${skuDetails.sku}, 标题: ${skuDetails.title}, 价格: ${skuDetails.price} ${skuDetails.priceCurrencyCode}"
+                            "✅ 找到商品详情: ${skuDetails.sku}, 标题: ${skuDetails.title}, 价格: ${skuDetails.price} ${skuDetails.priceCurrencyCode}",
                         )
 
                         // 使用 SkuDetails 启动购买流程
@@ -388,7 +396,7 @@ internal class BillingPurchaseManager(
                 BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {
                     LogUtils.e("商品ID: $productId ❌ 开发者错误 (12): 请检查商品ID配置、应用签名、测试用户设置")
                     showError(
-                        "Developer error: Please check product ID configuration, app signature, test user settings"
+                        "Developer error: Please check product ID configuration, app signature, test user settings",
                     )
                 }
                 BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
@@ -409,7 +417,7 @@ internal class BillingPurchaseManager(
                 }
                 else -> {
                     LogUtils.e(
-                        "❌ 查询商品详情失败: ${billingResult.debugMessage} (错误码: ${billingResult.responseCode})"
+                        "❌ 查询商品详情失败: ${billingResult.debugMessage} (错误码: ${billingResult.responseCode})",
                     )
                     showError("Query product details failed: ${billingResult.debugMessage}")
                 }

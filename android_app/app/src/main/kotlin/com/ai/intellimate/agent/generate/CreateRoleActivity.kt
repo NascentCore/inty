@@ -97,10 +97,6 @@ import com.ai.intellimate.utils.AvatarManager
 import com.architecture.httplib.core.HttpResult
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
-import java.io.File
-import java.net.URL
-import java.util.UUID
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -110,10 +106,13 @@ import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
+import java.net.URL
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 /** 创建角色的页面 */
 class CreateRoleActivity : BaseActivity() {
-
     companion object {
         private const val INTENT_KEY_AGENT_INFO = "intent_key_agent_info"
 
@@ -123,11 +122,14 @@ class CreateRoleActivity : BaseActivity() {
          * @param context 上下文context
          * @param agentInfo Agent的Info对象
          */
-        fun launch(context: Context, agentInfo: AgentInfo? = null) {
+        fun launch(
+            context: Context,
+            agentInfo: AgentInfo? = null,
+        ) {
             context.startActivity(
                 Intent(context, CreateRoleActivity::class.java).also { intent ->
                     intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
-                }
+                },
             )
         }
     }
@@ -175,7 +177,7 @@ private fun CreateRolePage(
     var gender by remember { mutableStateOf(editAgent?.gender ?: "FEMALE") }
     var settings by remember {
         mutableStateOf(
-            editAgent?.settings?.get("description") as? String ?: editAgent?.prompt ?: ""
+            editAgent?.settings?.get("description") as? String ?: editAgent?.prompt ?: "",
         )
     }
     var intro by remember { mutableStateOf(editAgent?.intro ?: "") }
@@ -188,7 +190,9 @@ private fun CreateRolePage(
             if (isEditMode && editAgent.backgroundImages.isEmpty()) {
                 // If no background images array, use single background field
                 editAgent.background.takeIf { it.isNotBlank() }
-            } else null
+            } else {
+                null
+            },
         )
     }
     var avatarUrls by remember {
@@ -207,15 +211,17 @@ private fun CreateRolePage(
                 }
             } else {
                 0
-            }
+            },
         )
     }
     var isGeneratingAvatar by remember { mutableStateOf(false) }
     var croppedAvatarUrl by remember {
         mutableStateOf<String?>(
-            if (isEditMode)
+            if (isEditMode) {
                 editAgent.avatar.takeIf { it.isNotBlank() && it != editAgent.background }
-            else null
+            } else {
+                null
+            },
         )
     }
 
@@ -233,21 +239,22 @@ private fun CreateRolePage(
 
     // Clean up AvatarManager when leaving the activity
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_STOP -> {
-                    // Clear AvatarManager when activity is stopped (user navigates away)
-                    LogUtils.i("Activity stopped - clearing AvatarManager data")
-                    AvatarManager.clearAllAvatarData()
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_STOP -> {
+                        // Clear AvatarManager when activity is stopped (user navigates away)
+                        LogUtils.i("Activity stopped - clearing AvatarManager data")
+                        AvatarManager.clearAllAvatarData()
+                    }
+                    Lifecycle.Event.ON_DESTROY -> {
+                        // Also clear when activity is destroyed
+                        LogUtils.i("Activity destroyed - clearing AvatarManager data")
+                        AvatarManager.clearAllAvatarData()
+                    }
+                    else -> {}
                 }
-                Lifecycle.Event.ON_DESTROY -> {
-                    // Also clear when activity is destroyed
-                    LogUtils.i("Activity destroyed - clearing AvatarManager data")
-                    AvatarManager.clearAllAvatarData()
-                }
-                else -> {}
             }
-        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
@@ -255,7 +262,7 @@ private fun CreateRolePage(
     // UCrop launcher for avatar cropping
     val cropLauncher =
         rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult()
+            contract = ActivityResultContracts.StartActivityForResult(),
         ) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
                 result.data?.let { data ->
@@ -284,7 +291,7 @@ private fun CreateRolePage(
                                             withContext(Dispatchers.Main) {
                                                 croppedAvatarUrl = uploadedUrl
                                                 ToastUtils.showShort(
-                                                    R.string.toast_avatar_cropped_uploaded
+                                                    R.string.toast_avatar_cropped_uploaded,
                                                 )
                                             }
                                         }
@@ -294,8 +301,8 @@ private fun CreateRolePage(
                                                 ToastUtils.showShort(
                                                     context.getString(
                                                         R.string.toast_upload_failed_with_message,
-                                                        response.message ?: "Unknown error"
-                                                    )
+                                                        response.message ?: "Unknown error",
+                                                    ),
                                                 )
                                             }
                                         }
@@ -306,8 +313,8 @@ private fun CreateRolePage(
                                         ToastUtils.showShort(
                                             context.getString(
                                                 R.string.toast_upload_failed_with_message,
-                                                e.message ?: "Unknown error"
-                                            )
+                                                e.message ?: "Unknown error",
+                                            ),
                                         )
                                     }
                                 }
@@ -317,8 +324,8 @@ private fun CreateRolePage(
                             ToastUtils.showShort(
                                 context.getString(
                                     R.string.toast_failed_prepare_upload_with_message,
-                                    e.message ?: "Unknown error"
-                                )
+                                    e.message ?: "Unknown error",
+                                ),
                             )
                         }
                     }
@@ -328,7 +335,7 @@ private fun CreateRolePage(
                     val cropError = UCrop.getError(data)
                     LogUtils.e("UCrop error: ${cropError?.message}")
                     ToastUtils.showShort(
-                        context.getString(R.string.toast_crop_failed, cropError?.message ?: "")
+                        context.getString(R.string.toast_crop_failed, cropError?.message ?: ""),
                     )
                 }
             }
@@ -337,7 +344,6 @@ private fun CreateRolePage(
     // 检查是否有生成的头像URL - 使用DisposableEffect来监听生命周期
     DisposableEffect(Unit) {
         val checkAvatarStatus = {
-
             // Check if generation is in progress
             val generatingStatus = AvatarManager.isGenerating()
             isGeneratingAvatar = generatingStatus
@@ -379,35 +385,35 @@ private fun CreateRolePage(
 
     // 监听Activity生命周期，特别是onResume事件
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    // Check generation status
+                    isGeneratingAvatar = AvatarManager.isGenerating()
 
-                // Check generation status
-                isGeneratingAvatar = AvatarManager.isGenerating()
+                    // Check for multiple URLs
+                    val currentUrls = AvatarManager.getCurrentAvatarUrls()
+                    if (currentUrls.isNotEmpty() && currentUrls != avatarUrls) {
+                        avatarUrls = currentUrls
+                        selectedImageIndex = AvatarManager.getSelectedImageIndex()
+                        avatarUrl = null
+                    } else {
+                        // Check for single URL
+                        val currentUrl = AvatarManager.getCurrentAvatarUrl()
+                        if (currentUrl != null && currentUrl != avatarUrl) {
+                            avatarUrl = currentUrl
+                            avatarUrls = emptyList()
+                        }
+                    }
 
-                // Check for multiple URLs
-                val currentUrls = AvatarManager.getCurrentAvatarUrls()
-                if (currentUrls.isNotEmpty() && currentUrls != avatarUrls) {
-                    avatarUrls = currentUrls
-                    selectedImageIndex = AvatarManager.getSelectedImageIndex()
-                    avatarUrl = null
-                } else {
-                    // Check for single URL
-                    val currentUrl = AvatarManager.getCurrentAvatarUrl()
-                    if (currentUrl != null && currentUrl != avatarUrl) {
-                        avatarUrl = currentUrl
-                        avatarUrls = emptyList()
+                    // Check for errors
+                    val error = AvatarManager.getGenerationError()
+                    if (error != null) {
+                        ToastUtils.showShort(error)
+                        isGeneratingAvatar = false
                     }
                 }
-
-                // Check for errors
-                val error = AvatarManager.getGenerationError()
-                if (error != null) {
-                    ToastUtils.showShort(error)
-                    isGeneratingAvatar = false
-                }
             }
-        }
 
         lifecycleOwner.lifecycle.addObserver(observer)
 
@@ -453,8 +459,8 @@ private fun CreateRolePage(
         topBar = {
             CenterAlignedTopAppBar(
                 colors =
-                    TopAppBarDefaults.centerAlignedTopAppBarColors()
-                        .copy(containerColor = Color.Transparent),
+                TopAppBarDefaults.centerAlignedTopAppBarColors()
+                    .copy(containerColor = Color.Transparent),
                 title = {
                     Text(
                         text = if (isEditMode) "Edit IntelliMate" else "Create IntelliMate",
@@ -466,7 +472,7 @@ private fun CreateRolePage(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                        Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
                         painter = painterResource(R.drawable.close),
                         contentDescription = null,
                     )
@@ -476,18 +482,18 @@ private fun CreateRolePage(
     ) { padding ->
         Column(
             modifier =
-                Modifier.fillMaxSize()
-                    .imePadding()
-                    .padding(
-                        top = padding.calculateTopPadding(),
-                        start = padding.calculateLeftPadding(LayoutDirection.Ltr),
-                        end = padding.calculateRightPadding(LayoutDirection.Ltr),
-                    )
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
-                    .pointerInput(Unit) {
-                        detectTapGestures(onTap = { focusManager.clearFocus() })
-                    },
+            Modifier.fillMaxSize()
+                .imePadding()
+                .padding(
+                    top = padding.calculateTopPadding(),
+                    start = padding.calculateLeftPadding(LayoutDirection.Ltr),
+                    end = padding.calculateRightPadding(LayoutDirection.Ltr),
+                )
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(modifier = Modifier.height(24.dp))
@@ -523,7 +529,7 @@ private fun CreateRolePage(
                                     selectedImageIndex
                                 } else {
                                     LogUtils.e(
-                                        "Face edit - Index out of bounds! selectedImageIndex: $selectedImageIndex, avatarUrls.size: ${avatarUrls.size}"
+                                        "Face edit - Index out of bounds! selectedImageIndex: $selectedImageIndex, avatarUrls.size: ${avatarUrls.size}",
                                     )
                                     0 // Fall back to first image
                                 }
@@ -544,7 +550,7 @@ private fun CreateRolePage(
                                     true
                                 } catch (e: Exception) {
                                     LogUtils.e(
-                                        "Face edit - Invalid URL format: $imageUrl URL validation error: ${e.message}"
+                                        "Face edit - Invalid URL format: $imageUrl URL validation error: ${e.message}",
                                     )
                                     false
                                 }
@@ -570,7 +576,7 @@ private fun CreateRolePage(
 
                                         val response = client.newCall(request).execute()
                                         LogUtils.d(
-                                            "Face edit download - HTTP response message: ${response.message}"
+                                            "Face edit download - HTTP response message: ${response.message}",
                                         )
 
                                         if (response.isSuccessful) {
@@ -585,16 +591,16 @@ private fun CreateRolePage(
                                             } ?: run { throw Exception("Response body is null") }
                                         } else {
                                             throw Exception(
-                                                "HTTP ${response.code}: ${response.message}"
+                                                "HTTP ${response.code}: ${response.message}",
                                             )
                                         }
                                     } catch (e: Exception) {
                                         LogUtils.e(
-                                            "Failed to download image for cropping: $imageUrl Error details: ${e.message}"
+                                            "Failed to download image for cropping: $imageUrl Error details: ${e.message}",
                                         )
                                         withContext(Dispatchers.Main) {
                                             ToastUtils.showShort(
-                                                R.string.toast_failed_download_image_editing
+                                                R.string.toast_failed_download_image_editing,
                                             )
                                         }
                                     }
@@ -762,7 +768,7 @@ private fun CreateRolePage(
                                 onSuccess = { agentInfo ->
                                     isLoading = false
                                     ToastUtils.showShort(
-                                        context.getString(R.string.create_ai_successfully)
+                                        context.getString(R.string.create_ai_successfully),
                                     )
                                     onCreateSuccess()
                                 },
@@ -788,8 +794,11 @@ private fun CreateRolePage(
                     } catch (e: Exception) {
                         isLoading = false
                         val operation =
-                            if (isEditMode) context.getString(R.string.update_failed)
-                            else context.getString(R.string.creation_failed)
+                            if (isEditMode) {
+                                context.getString(R.string.update_failed)
+                            } else {
+                                context.getString(R.string.creation_failed)
+                            }
                         val errorMessage =
                             context.getString(
                                 R.string.operation_error_with_reason,
@@ -798,7 +807,7 @@ private fun CreateRolePage(
                             )
                         ToastUtils.showShort(errorMessage)
                         LogUtils.e(
-                            "${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}"
+                            "${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}",
                         )
                     }
                 },
@@ -850,7 +859,7 @@ private fun startUCropWithLocalFile(
                             UCropActivity.NONE,
                             UCropActivity.NONE,
                         ) // Only allow scaling gestures
-                    }
+                    },
                 )
                 .getIntent(context)
 
@@ -876,25 +885,28 @@ private fun AvatarUploadSection(
     Column(modifier = Modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier =
-                Modifier.then(
-                        if (isEmpty) Modifier.size(200.dp)
-                        else Modifier.fillMaxWidth().aspectRatio(9.div(16f))
-                    )
-                    .let { modifier ->
-                        if (isEmpty) {
-                            modifier
-                                .background(
-                                    color = Color(0x1A78599A),
-                                    shape = RoundedCornerShape(16.dp),
-                                )
-                                .noRippleClickable { onGenerateClick() }
-                        } else {
-                            modifier.background(
-                                color = Color.Black,
+            Modifier.then(
+                if (isEmpty) {
+                    Modifier.size(200.dp)
+                } else {
+                    Modifier.fillMaxWidth().aspectRatio(9.div(16f))
+                },
+            )
+                .let { modifier ->
+                    if (isEmpty) {
+                        modifier
+                            .background(
+                                color = Color(0x1A78599A),
                                 shape = RoundedCornerShape(16.dp),
                             )
-                        }
-                    },
+                            .noRippleClickable { onGenerateClick() }
+                    } else {
+                        modifier.background(
+                            color = Color.Black,
+                            shape = RoundedCornerShape(16.dp),
+                        )
+                    }
+                },
             contentAlignment = Alignment.Center,
         ) {
             when {
@@ -910,12 +922,12 @@ private fun AvatarUploadSection(
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
-                                "AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl"
+                                "AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl",
                             )
                         },
                         onError = {
                             LogUtils.e(
-                                "AvatarUploadSection: Failed to load selected avatar image: $displayUrl"
+                                "AvatarUploadSection: Failed to load selected avatar image: $displayUrl",
                             )
                         },
                     )
@@ -928,12 +940,12 @@ private fun AvatarUploadSection(
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
-                                "AvatarUploadSection: Avatar image loaded successfully: $avatarUrl"
+                                "AvatarUploadSection: Avatar image loaded successfully: $avatarUrl",
                             )
                         },
                         onError = {
                             LogUtils.e(
-                                "AvatarUploadSection: Failed to load avatar image: $avatarUrl"
+                                "AvatarUploadSection: Failed to load avatar image: $avatarUrl",
                             )
                         },
                     )
@@ -968,17 +980,17 @@ private fun AvatarUploadSection(
                         color = Color.Gray,
                         topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
                         size =
-                            Size(
-                                size.width - strokeWidth,
-                                size.height - strokeWidth,
-                            ),
+                        Size(
+                            size.width - strokeWidth,
+                            size.height - strokeWidth,
+                        ),
                         cornerRadius = CornerRadius(cornerRadius),
                         style =
-                            Stroke(
-                                width = strokeWidth,
-                                pathEffect =
-                                    PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength)),
-                            ),
+                        Stroke(
+                            width = strokeWidth,
+                            pathEffect =
+                            PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength)),
+                        ),
                     )
                 }
             }
@@ -987,14 +999,14 @@ private fun AvatarUploadSection(
             if (avatarUrls.isNotEmpty() || avatarUrl != null) {
                 Box(
                     modifier =
-                        Modifier.align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .background(
-                                color = Color.Black.copy(alpha = 0.5f),
-                                shape = RoundedCornerShape(16.dp),
-                            )
-                            .noRippleClickable { onFaceEdit() }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    Modifier.align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .background(
+                            color = Color.Black.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(16.dp),
+                        )
+                        .noRippleClickable { onFaceEdit() }
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1020,12 +1032,12 @@ private fun AvatarUploadSection(
         if (avatarUrls.isNotEmpty()) {
             Row(
                 modifier =
-                    Modifier.fillMaxWidth()
-                        .background(
-                            color = Color.Black.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(12.dp),
-                        )
-                        .padding(12.dp),
+                Modifier.fillMaxWidth()
+                    .background(
+                        color = Color.Black.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(12.dp),
+                    )
+                    .padding(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1044,50 +1056,52 @@ private fun AvatarUploadSection(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     runCatching {
-                            if (avatarUrls.isNotEmpty()) {
-                                items(items = avatarUrls.indices.toList()) { index ->
-                                    val imageUrl = avatarUrls[index]
-                                    // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
-                                    val thumbnailUrl =
-                                        getCdnImageUrl(
-                                            imageUrl,
-                                            width = 80,
-                                            quality = 60,
+                        if (avatarUrls.isNotEmpty()) {
+                            items(items = avatarUrls.indices.toList()) { index ->
+                                val imageUrl = avatarUrls[index]
+                                // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
+                                val thumbnailUrl =
+                                    getCdnImageUrl(
+                                        imageUrl,
+                                        width = 80,
+                                        quality = 60,
+                                    )
+                                Box(
+                                    modifier =
+                                    Modifier.width(88.dp)
+                                        .aspectRatio(9 / 16f)
+                                        .background(
+                                            color = Color(0x1A78599A),
+                                            shape = RoundedCornerShape(8.dp),
                                         )
-                                    Box(
-                                        modifier =
-                                            Modifier.width(88.dp)
-                                                .aspectRatio(9 / 16f)
-                                                .background(
-                                                    color = Color(0x1A78599A),
-                                                    shape = RoundedCornerShape(8.dp),
-                                                )
-                                                .border(
-                                                    width =
-                                                        if (index == selectedIndex) 3.dp else 1.dp,
-                                                    color =
-                                                        if (index == selectedIndex)
-                                                            Color(0xFFE91E63)
-                                                        else Color.Transparent,
-                                                    shape = RoundedCornerShape(8.dp),
-                                                )
-                                                .noRippleClickable { onImageSelected(index) },
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        AsyncImage(
-                                            model = thumbnailUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
-                                            contentDescription =
-                                                stringResource(
-                                                    R.string.content_desc_generated_avatar_index,
-                                                    index,
-                                                ),
-                                            modifier = Modifier.fillMaxSize().padding(4.dp),
-                                            contentScale = ContentScale.Crop,
+                                        .border(
+                                            width =
+                                            if (index == selectedIndex) 3.dp else 1.dp,
+                                            color =
+                                            if (index == selectedIndex) {
+                                                Color(0xFFE91E63)
+                                            } else {
+                                                Color.Transparent
+                                            },
+                                            shape = RoundedCornerShape(8.dp),
                                         )
-                                    }
+                                        .noRippleClickable { onImageSelected(index) },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    AsyncImage(
+                                        model = thumbnailUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
+                                        contentDescription =
+                                        stringResource(
+                                            R.string.content_desc_generated_avatar_index,
+                                            index,
+                                        ),
+                                        modifier = Modifier.fillMaxSize().padding(4.dp),
+                                        contentScale = ContentScale.Crop,
+                                    )
                                 }
                             }
                         }
+                    }
                         .onFailure { it.printStackTrace() }
                 }
             }
@@ -1096,7 +1110,10 @@ private fun AvatarUploadSection(
 }
 
 @Composable
-private fun GenderSelectionSection(selectedGender: String, onGenderChange: (String) -> Unit) {
+private fun GenderSelectionSection(
+    selectedGender: String,
+    onGenderChange: (String) -> Unit,
+) {
     Column {
         Text(
             text = stringResource(R.string.gender_unmodified_full),
@@ -1148,15 +1165,15 @@ private fun CustomTextField(
             value = value,
             onValueChange = onValueChange,
             modifier =
-                Modifier.fillMaxWidth()
-                    .background(color = Color(0x1A78599A), shape = RoundedCornerShape(12.dp))
-                    .border(
-                        width = 1.dp,
-                        color = Color.White.copy(0.2f),
-                        shape = RoundedCornerShape(12.dp),
-                    )
-                    .padding(16.dp)
-                    .let { if (minLines > 1) it.height((minLines * 24 + 32).dp) else it },
+            Modifier.fillMaxWidth()
+                .background(color = Color(0x1A78599A), shape = RoundedCornerShape(12.dp))
+                .border(
+                    width = 1.dp,
+                    color = Color.White.copy(0.2f),
+                    shape = RoundedCornerShape(12.dp),
+                )
+                .padding(16.dp)
+                .let { if (minLines > 1) it.height((minLines * 24 + 32).dp) else it },
             textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
             cursorBrush = SolidColor(Color.White),
             decorationBox = { innerTextField ->
@@ -1191,11 +1208,11 @@ private fun GenderButton(
         colors = ButtonDefaults.buttonColors(containerColor = Color(0x1A78599A)),
         shape = RoundedCornerShape(20.dp),
         modifier =
-            modifier.border(
-                width = if (isSelected) 2.dp else 1.dp,
-                color = if (isSelected) Color(0xFFE91E63) else Color.White.copy(0.3f),
-                shape = RoundedCornerShape(20.dp),
-            ),
+        modifier.border(
+            width = if (isSelected) 2.dp else 1.dp,
+            color = if (isSelected) Color(0xFFE91E63) else Color.White.copy(0.3f),
+            shape = RoundedCornerShape(20.dp),
+        ),
     ) {
         Text(
             text = text,
@@ -1207,7 +1224,11 @@ private fun GenderButton(
 }
 
 @Composable
-private fun CreateButton(isLoading: Boolean, isEditMode: Boolean = false, onClick: () -> Unit) {
+private fun CreateButton(
+    isLoading: Boolean,
+    isEditMode: Boolean = false,
+    onClick: () -> Unit,
+) {
     var lastClickTime by remember { mutableLongStateOf(0L) }
 
     Button(
@@ -1222,15 +1243,15 @@ private fun CreateButton(isLoading: Boolean, isEditMode: Boolean = false, onClic
         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(25.dp),
         modifier =
-            Modifier.fillMaxWidth()
-                .height(56.dp)
-                .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors = listOf(Color(0xFFE91E63), Color(0xFFFF9800))
-                        ),
-                    shape = RoundedCornerShape(25.dp),
+        Modifier.fillMaxWidth()
+            .height(56.dp)
+            .background(
+                brush =
+                Brush.horizontalGradient(
+                    colors = listOf(Color(0xFFE91E63), Color(0xFFFF9800)),
                 ),
+                shape = RoundedCornerShape(25.dp),
+            ),
     ) {
         if (isLoading) {
             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))

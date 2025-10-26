@@ -6,7 +6,6 @@ import ai.sxwl.android.data.http.IntyNetworkManager
 
 /** 智能体服务 封装所有智能体相关的API调用 替换原有的 IAgentApi */
 object AgentService {
-
     /** 获取推荐智能体列表 替换: IAgentApi.recommendAgents() */
     suspend fun getRecommendAgents(
         page: Int = 1,
@@ -43,10 +42,10 @@ object AgentService {
                                         com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
                                             .Sort
                                             .RANDOM
-                                }
+                                },
                             )
                             .sortSeed(sortSeed)
-                            .build()
+                            .build(),
                     )
 
             // 这里需要根据实际的IntySDK返回结构进行转换
@@ -76,7 +75,10 @@ object AgentService {
     }
 
     /** 更新智能体 替换: IAgentApi.updateAgent() 注意: 当前 IntySDK 没有直接的 update agent API */
-    suspend fun updateAgent(agentId: String, agentInfo: AgentInfo): ApiResult<AgentInfo> {
+    suspend fun updateAgent(
+        agentId: String,
+        agentInfo: AgentInfo,
+    ): ApiResult<AgentInfo> {
         return IntyNetworkManager.executeRequest("Update Agent") {
             // 当前 IntySDK 没有直接的 update agent API
             // 可能需要通过其他方式实现
@@ -106,7 +108,10 @@ object AgentService {
     }
 
     /** 获取我的智能体列表 替换: IAgentApi.getMyAgents() */
-    suspend fun getMyAgents(page: Int = 1, pageSize: Int = 10): ApiResult<List<AgentInfo>> {
+    suspend fun getMyAgents(
+        page: Int = 1,
+        pageSize: Int = 10,
+    ): ApiResult<List<AgentInfo>> {
         return IntyNetworkManager.executeRequest("Get My Agents") {
             val response =
                 IntyNetworkManager.getClient()
@@ -118,7 +123,7 @@ object AgentService {
                         com.inty.api.models.api.v1.ai.agents.AgentFollowingParams.builder()
                             .page(page.toLong())
                             .pageSize(pageSize.toLong())
-                            .build()
+                            .build(),
                     )
 
             // 这里需要根据实际的IntySDK返回结构进行转换

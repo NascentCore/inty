@@ -133,9 +133,9 @@ object LanguageUtils {
         }
     }
 
-    ///////////////////////////////////////////////////////////////////////////
+    // /////////////////////////////////////////////////////////////////////////
     // private methods
-    ///////////////////////////////////////////////////////////////////////////
+    // /////////////////////////////////////////////////////////////////////////
 
     private fun applyLanguageReal(locale: Locale?, isRelaunchApp: Boolean) {
         // 简化实现，实际应用中需要保存到SharedPreferences
@@ -248,7 +248,8 @@ object LanguageUtils {
                     configuration.locales[0]
                 }
             } else {
-                @Suppress("DEPRECATION") configuration.locale
+                @Suppress("DEPRECATION")
+                configuration.locale
             }
         } catch (e: Exception) {
             Log.e("LanguageUtils", "Failed to get locale from configuration", e)

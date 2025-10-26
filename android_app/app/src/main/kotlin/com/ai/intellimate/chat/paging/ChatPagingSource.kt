@@ -23,7 +23,6 @@ class ChatPagingSource(
     private val useCache: Boolean = true,
     private val sortSeed: Int = IntySetting.randomSortSeed(),
 ) : PagingSource<Int, AgentInfo>() {
-
     private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
 
     companion object {
@@ -122,7 +121,10 @@ class ChatPagingSource(
     }
 
     /** 从网络加载数据 */
-    private suspend fun loadFromNetwork(page: Int, pageSize: Int): NetworkResult {
+    private suspend fun loadFromNetwork(
+        page: Int,
+        pageSize: Int,
+    ): NetworkResult {
         return try {
             val result =
                 agentApi.chatAgents(
@@ -145,7 +147,10 @@ class ChatPagingSource(
     }
 
     /** 异步从网络加载数据（不阻塞UI） */
-    private fun loadFromNetworkAsync(page: Int, pageSize: Int) {
+    private fun loadFromNetworkAsync(
+        page: Int,
+        pageSize: Int,
+    ) {
         // 在后台协程中执行，不阻塞当前加载
         CoroutineScope(Dispatchers.IO).launch {
             try {

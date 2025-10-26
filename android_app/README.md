@@ -131,6 +131,19 @@ PATH="/Users/yzhao/Library/Android/sdk/platform-tools:$PATH"
 - [Coil](https://coil-kt.github.io/coil/) 用于图片加载
 - [Firebase](https://firebase.google.com/) 用于后端服务
 
+## 代码风格与 Lint
+
+本项目已集成 ktlint 作为 Kotlin 代码风格检查与自动格式化工具（通过 org.jlleitschuh.gradle.ktlint 插件）。
+
+- 运行自动格式化与检查（推荐从 `android_app/` 目录执行）：
+
+```bash
+./gradlew ktlintFormat ktlintCheck
+```
+
+- 规则配置位于根目录 `.editorconfig`。为兼容现有代码与降低大规模重构成本，已临时关闭部分严格规则（如 `max-line-length`、`property-naming` 等）。后续可逐步开启并修复。
+
+
 ## Cursor Summary
 
 - 栈与导航: Kotlin + Jetpack Compose 构建 UI；以 Activity/Intent 为主的导航；Compose 组件集中在 `app/src/main/kotlin/com/ai/intellimate`。

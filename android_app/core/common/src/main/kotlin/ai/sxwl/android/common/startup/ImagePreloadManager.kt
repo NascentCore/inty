@@ -19,7 +19,6 @@ import kotlinx.coroutines.withContext
 
 /** 统一的图片预加载管理器 整合 design 模块的优化配置，提供高性能的图片预加载服务 支持批量预加载、关键图片优先、设备适配等优化策略 */
 object ImagePreloadManager {
-
     private var isInitialized = false
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -43,7 +42,10 @@ object ImagePreloadManager {
      * @param agents 需要预加载的agents列表
      * @param maxConcurrent 最大并发预加载数量
      */
-    suspend fun preloadAgentsImages(agents: List<AgentInfo>, maxConcurrent: Int = 5) {
+    suspend fun preloadAgentsImages(
+        agents: List<AgentInfo>,
+        maxConcurrent: Int = 5,
+    ) {
         if (!isInitialized) {
             LogUtils.w("ImagePreloadManager - 未初始化，跳过预加载")
             return
@@ -88,7 +90,10 @@ object ImagePreloadManager {
      * @param agents 需要预加载的agents列表
      * @param criticalCount 关键图片数量（前几屏）
      */
-    suspend fun preloadCriticalImages(agents: List<AgentInfo>, criticalCount: Int = 10) {
+    suspend fun preloadCriticalImages(
+        agents: List<AgentInfo>,
+        criticalCount: Int = 10,
+    ) {
         if (!isInitialized) {
             LogUtils.w("ImagePreloadManager - 未初始化，跳过关键图片预加载")
             return
@@ -123,7 +128,10 @@ object ImagePreloadManager {
      * @param imageUrls 需要预加载的图片URL列表
      * @param maxConcurrent 最大并发数
      */
-    private suspend fun preloadImagesToCoilCache(imageUrls: List<String>, maxConcurrent: Int = 5) {
+    private suspend fun preloadImagesToCoilCache(
+        imageUrls: List<String>,
+        maxConcurrent: Int = 5,
+    ) {
         coroutineScope {
             // 分批处理，控制并发数
             imageUrls.chunked(maxConcurrent).forEach { batch ->
@@ -135,13 +143,13 @@ object ImagePreloadManager {
                                 val request =
                                     ImageLoaderUtils.createDeviceAdaptiveImageRequest(
                                         context = Utils.getApp(),
-                                        imageUrl = imageUrl
+                                        imageUrl = imageUrl,
                                     )
                                 // 执行预加载，图片会被缓存到全局ImageLoader的内存和磁盘缓存中
                                 SingletonImageLoader.get(Utils.getApp()).execute(request)
                             } catch (e: Exception) {
                                 LogUtils.w(
-                                    "ImagePreloadManager - 预加载失败: $imageUrl, 错误: ${e.message}"
+                                    "ImagePreloadManager - 预加载失败: $imageUrl, 错误: ${e.message}",
                                 )
                             }
                         }
@@ -159,7 +167,10 @@ object ImagePreloadManager {
      * @param imageUrl 图片URL
      * @param size 目标尺寸，默认使用设备适配尺寸
      */
-    suspend fun preloadSingleImage(imageUrl: String, size: Size = Size.ORIGINAL) {
+    suspend fun preloadSingleImage(
+        imageUrl: String,
+        size: Size = Size.ORIGINAL,
+    ) {
         if (!isInitialized || imageUrl.isBlank()) {
             return
         }
@@ -171,7 +182,7 @@ object ImagePreloadManager {
                     if (size == Size.ORIGINAL) {
                         ImageLoaderUtils.createDeviceAdaptiveImageRequest(
                             context = Utils.getApp(),
-                            imageUrl = imageUrl
+                            imageUrl = imageUrl,
                         )
                     } else {
                         ImageRequest.Builder(Utils.getApp()).data(imageUrl).size(size).build()
@@ -189,23 +200,27 @@ object ImagePreloadManager {
      * @param avatarUrl 头像 URL
      * @param backgroundUrl 背景图片 URL
      */
-    fun preloadAgentImages(avatarUrl: String?, backgroundUrl: String?) {
+    fun preloadAgentImages(
+        avatarUrl: String?,
+        backgroundUrl: String?,
+    ) {
         if (!isInitialized) return
 
         scope.launch {
             try {
                 // 并发预加载头像和背景图片
                 val avatarJob = async { avatarUrl?.let { preloadSingleImage(it, Size(120, 120)) } }
-                val backgroundJob = async {
-                    backgroundUrl?.let { preloadSingleImage(it, Size(400, 300)) }
-                }
+                val backgroundJob =
+                    async {
+                        backgroundUrl?.let { preloadSingleImage(it, Size(400, 300)) }
+                    }
 
                 // 等待两个任务完成
                 avatarJob.await()
                 backgroundJob.await()
 
                 LogUtils.d(
-                    "ImagePreloadManager - 预加载 Agent 图片完成: avatar=$avatarUrl, background=$backgroundUrl"
+                    "ImagePreloadManager - 预加载 Agent 图片完成: avatar=$avatarUrl, background=$backgroundUrl",
                 )
             } catch (e: Exception) {
                 LogUtils.e("ImagePreloadManager - 预加载 Agent 图片失败", e)
@@ -237,7 +252,10 @@ object ImagePreloadManager {
      * @param avatarUrl 头像 URL
      * @param size 头像尺寸
      */
-    fun preloadAgentAvatar(avatarUrl: String?, size: Int = 120) {
+    fun preloadAgentAvatar(
+        avatarUrl: String?,
+        size: Int = 120,
+    ) {
         if (!isInitialized || avatarUrl.isNullOrBlank()) return
 
         scope.launch {
@@ -247,10 +265,10 @@ object ImagePreloadManager {
                     ImageLoaderUtils.createAvatarImageRequest(
                         context = Utils.getApp(),
                         imageUrl = avatarUrl,
-                        size = size
+                        size = size,
                     )
                 SingletonImageLoader.get(Utils.getApp()).execute(request)
-                LogUtils.d("ImagePreloadManager - 预加载 Agent 头像: $avatarUrl (${size}x${size})")
+                LogUtils.d("ImagePreloadManager - 预加载 Agent 头像: $avatarUrl (${size}x$size)")
             } catch (e: Exception) {
                 LogUtils.e("ImagePreloadManager - 预加载 Agent 头像失败", e)
             }
@@ -264,7 +282,11 @@ object ImagePreloadManager {
      * @param width 宽度
      * @param height 高度
      */
-    fun preloadAgentBackground(backgroundUrl: String?, width: Int = 400, height: Int = 300) {
+    fun preloadAgentBackground(
+        backgroundUrl: String?,
+        width: Int = 400,
+        height: Int = 300,
+    ) {
         if (!isInitialized || backgroundUrl.isNullOrBlank()) return
 
         scope.launch {
@@ -275,11 +297,11 @@ object ImagePreloadManager {
                         context = Utils.getApp(),
                         imageUrl = backgroundUrl,
                         width = width,
-                        height = height
+                        height = height,
                     )
                 SingletonImageLoader.get(Utils.getApp()).execute(request)
                 LogUtils.d(
-                    "ImagePreloadManager - 预加载 Agent 背景: $backgroundUrl (${width}x${height})"
+                    "ImagePreloadManager - 预加载 Agent 背景: $backgroundUrl (${width}x$height)",
                 )
             } catch (e: Exception) {
                 LogUtils.e("ImagePreloadManager - 预加载 Agent 背景失败", e)
@@ -315,7 +337,10 @@ object ImagePreloadManager {
      * @param imageUrls 图片 URL 列表
      * @param maxConcurrent 最大并发数
      */
-    fun preloadImages(imageUrls: List<String>, maxConcurrent: Int = 5) {
+    fun preloadImages(
+        imageUrls: List<String>,
+        maxConcurrent: Int = 5,
+    ) {
         if (!isInitialized || imageUrls.isEmpty()) return
 
         scope.launch {

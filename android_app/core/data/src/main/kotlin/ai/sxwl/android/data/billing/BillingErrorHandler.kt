@@ -7,7 +7,6 @@ import com.android.billingclient.api.BillingResult
 
 /** Billing错误处理工具类 统一处理各种billing错误情况 */
 object BillingErrorHandler {
-
     /** 错误类型枚举 */
     enum class ErrorType {
         PRICE_QUERY,
@@ -39,7 +38,10 @@ object BillingErrorHandler {
     }
 
     /** 获取错误信息 */
-    private fun getErrorMessage(billingResult: BillingResult, errorType: ErrorType): String {
+    private fun getErrorMessage(
+        billingResult: BillingResult,
+        errorType: ErrorType,
+    ): String {
         val prefix =
             when (errorType) {
                 ErrorType.PRICE_QUERY -> "价格查询失败: "
@@ -89,7 +91,10 @@ object BillingErrorHandler {
     }
 
     /** 提供解决建议 */
-    private fun provideSolutionSuggestions(billingResult: BillingResult, context: Context?) {
+    private fun provideSolutionSuggestions(
+        billingResult: BillingResult,
+        context: Context?,
+    ) {
         val suggestions =
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {

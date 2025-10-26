@@ -69,7 +69,6 @@ fun SettingContent(
 
     Scaffold(modifier = modifier, topBar = { SettingTopBar(onBack = onBack) }) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-
             // 支持与帮助区域
             SupportAndHelpSection(
                 context = context,
@@ -116,7 +115,10 @@ private fun SettingTopBar(onBack: () -> Unit) {
 
 /** 支持与帮助区域 */
 @Composable
-private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Unit) {
+private fun SupportAndHelpSection(
+    context: Context,
+    onShowDeleteDialog: () -> Unit,
+) {
     SettingSection {
         // 邮件联系
         val email = stringResource(R.string.settings_email_inty)
@@ -201,9 +203,11 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
         SettingNavigationItem(
             title = stringResource(R.string.settings_about),
             subtitle =
-                if (IntySetting.hasAppUpdateTips())
-                    stringResource(R.string.version_update_available, BuildConfig.VERSION_NAME)
-                else BuildConfig.VERSION_NAME,
+            if (IntySetting.hasAppUpdateTips()) {
+                stringResource(R.string.version_update_available, BuildConfig.VERSION_NAME)
+            } else {
+                BuildConfig.VERSION_NAME
+            },
             onClick = {
                 runCatching {
                     val url = IntySetting.appGooglePlayUrl()
@@ -242,7 +246,10 @@ private fun SettingDialogs(
 }
 
 /** 发送邮件 */
-private fun mailTo(context: Context, email: String) {
+private fun mailTo(
+    context: Context,
+    email: String,
+) {
     val intent = Intent(Intent.ACTION_SENDTO).apply { data = "mailto:$email".toUri() }
     try {
         context.startActivity(Intent.createChooser(intent, "email"))

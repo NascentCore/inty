@@ -36,16 +36,15 @@ fun HeartPrimaryButton(
     enable: Boolean = true,
     onClick: () -> Unit = {},
 ) {
-
     Box(
         modifier =
-            Modifier.fillMaxWidth(.95f)
-                .height(50.dp)
-                .clip(RoundedCornerShape(25.dp))
-                .alpha(if (enable) 1f else .4f)
-                .background(brush = primaryBtnBrush)
-                .clickable(enabled = enable, onClick = onClick),
-        contentAlignment = Alignment.Center
+        Modifier.fillMaxWidth(.95f)
+            .height(50.dp)
+            .clip(RoundedCornerShape(25.dp))
+            .alpha(if (enable) 1f else .4f)
+            .background(brush = primaryBtnBrush)
+            .clickable(enabled = enable, onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = btnText,
@@ -80,12 +79,12 @@ fun HeartFollowButton(
 ) {
     Box(
         modifier =
-            Modifier.size(98.dp, 40.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .border(width = 1.dp, brush = heartDivBrush, shape = RoundedCornerShape(20.dp))
-                .background(brush = if (isFollowing) commonBtnBrush else primaryBtnBrush)
-                .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
+        Modifier.size(98.dp, 40.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .border(width = 1.dp, brush = heartDivBrush, shape = RoundedCornerShape(20.dp))
+            .background(brush = if (isFollowing) commonBtnBrush else primaryBtnBrush)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = if (isFollowing) "Following" else "Follow",
@@ -100,23 +99,26 @@ fun HeartFollowButton(
 
 /** 简单的声音播放气泡， 后续再设计优化成带尾巴的自定义背景 */
 @Composable
-fun VoiceBubble(modifier: Modifier = Modifier, seconds: Int = 0) {
+fun VoiceBubble(
+    modifier: Modifier = Modifier,
+    seconds: Int = 0,
+) {
     Row(
         modifier =
-            modifier
-                .clip(RoundedCornerShape(30.dp))
-                .background(Color(0XFF44354F))
-                .padding(horizontal = 8.dp, vertical = 2.dp),
+        modifier
+            .clip(RoundedCornerShape(30.dp))
+            .background(Color(0XFF44354F))
+            .padding(horizontal = 8.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
             painter = painterResource(R.drawable.ic_voice),
             contentDescription = "",
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
         )
         Spacer(Modifier.width(2.dp))
         Text(
-            text = "${seconds}”",
+            text = "$seconds”",
             fontSize = 14.sp,
             lineHeight = 22.sp,
             fontWeight = FontWeight.Normal,

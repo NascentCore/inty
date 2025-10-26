@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
 class AvatarGenerateViewModel : BaseVM() {
-
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val agentApi by lazy { NetServiceMgr.getAgentApi() }
 
@@ -96,7 +95,7 @@ class AvatarGenerateViewModel : BaseVM() {
                     val errorMessage =
                         NetworkErrorHandler.handleNetworkException(
                             exception = e,
-                            operation = "generate avatar"
+                            operation = "generate avatar",
                         )
                     AvatarManager.setGenerationError(errorMessage)
                     _errorMessage.value = errorMessage
@@ -172,9 +171,7 @@ class AvatarGenerateViewModel : BaseVM() {
         _errorMessage.value = null
     }
 
-    private suspend fun generateBackground(
-        request: GenerateBackgroundRequest
-    ): GenerateBackgroundResponse {
+    private suspend fun generateBackground(request: GenerateBackgroundRequest): GenerateBackgroundResponse {
         try {
             val result = agentApi.generateBackground(request)
             LogUtils.i("generateBackground = $result")

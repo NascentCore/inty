@@ -58,7 +58,10 @@ import com.ai.intellimate.audio.VoicePlayer
 import com.ai.intellimate.utils.ChatTextFormatter
 
 /** 复制文本到剪贴板；这是用于测试功能。 */
-private fun debugOnlyCopyToClipboard(context: Context, text: String) {
+private fun debugOnlyCopyToClipboard(
+    context: Context,
+    text: String,
+) {
     val clipboard = context.getSystemService<ClipboardManager>()
     val clip = ClipData.newPlainText("Message", text)
     clipboard?.setPrimaryClip(clip)
@@ -66,28 +69,32 @@ private fun debugOnlyCopyToClipboard(context: Context, text: String) {
 
 /** 聊天消息项目组件 */
 @Composable
-fun ChatItem(item: MsgInfo, isCurrentPage: Boolean = true, chatViewModel: ChatViewModel? = null) {
+fun ChatItem(
+    item: MsgInfo,
+    isCurrentPage: Boolean = true,
+    chatViewModel: ChatViewModel? = null,
+) {
     runCatching {
-            when (item.role) {
-                "assistant" -> {
-                    ChatItemAI(item, isCurrentPage, chatViewModel)
-                }
-                "user" -> {
-                    ChatItemUser(item)
-                }
-                else -> {
-                    LogUtils.i("unknown role: $item")
-                    // 未知角色的消息显示为普通文本
-                    ChatItemUser(item)
-                }
+        when (item.role) {
+            "assistant" -> {
+                ChatItemAI(item, isCurrentPage, chatViewModel)
+            }
+            "user" -> {
+                ChatItemUser(item)
+            }
+            else -> {
+                LogUtils.i("unknown role: $item")
+                // 未知角色的消息显示为普通文本
+                ChatItemUser(item)
             }
         }
+    }
         .onFailure { e ->
             LogUtils.e("Error rendering chat item: ${e.message}")
             // 渲染失败时显示错误占位符
             Box(
                 modifier =
-                    Modifier.fillMaxWidth().height(60.dp).background(Color.Red.copy(alpha = 0.1f))
+                Modifier.fillMaxWidth().height(60.dp).background(Color.Red.copy(alpha = 0.1f)),
             ) {
                 Text(
                     text = "Message display failed",
@@ -106,127 +113,129 @@ private fun ChatItemAI(
     chatViewModel: ChatViewModel? = null,
 ) {
     runCatching {
-            Column {
-                // 播放器按钮
-                if (item.content.isNotEmpty() && item.content != "loading_animation") {
-                    // 使用传入的chatViewModel，如果没有则创建一个新的（向后兼容）
-                    val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
-                    val agentInfo by viewModel.agentInfo.collectAsState()
+        Column {
+            // 播放器按钮
+            if (item.content.isNotEmpty() && item.content != "loading_animation") {
+                // 使用传入的chatViewModel，如果没有则创建一个新的（向后兼容）
+                val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
+                val agentInfo by viewModel.agentInfo.collectAsState()
 
-                    // 解析agentId：优先使用chatViewModel.agentInfo.id，其次使用消息meta中的agentId
-                    val vmAgentId = agentInfo?.id
-                    val metaAgentId = item.agentId()
-                    val safeAgentId = vmAgentId ?: metaAgentId ?: ""
+                // 解析agentId：优先使用chatViewModel.agentInfo.id，其次使用消息meta中的agentId
+                val vmAgentId = agentInfo?.id
+                val metaAgentId = item.agentId()
+                val safeAgentId = vmAgentId ?: metaAgentId ?: ""
 
-                    // 为每个消息生成唯一的测试URL，避免状态混乱
-                    val audioInfo =
-                        AudioInfo(
-                            url = item.audio_url ?: "",
-                            title = "Voice Message",
-                            artist = "AI Agent",
-                            messageId = item.localMsgId, // 使用localMsgId，包含_assistant_标识，用于播放状态管理
-                            agentId = safeAgentId,
-                            agentName = agentInfo?.name, // 添加Agent名称用于日志分析
-                        )
+                // 为每个消息生成唯一的测试URL，避免状态混乱
+                val audioInfo =
+                    AudioInfo(
+                        url = item.audio_url ?: "",
+                        title = "Voice Message",
+                        artist = "AI Agent",
+                        messageId = item.localMsgId, // 使用localMsgId，包含_assistant_标识，用于播放状态管理
+                        agentId = safeAgentId,
+                        agentName = agentInfo?.name, // 添加Agent名称用于日志分析
+                    )
 
-                    // 检查queryMsgs是否完成
-                    val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
+                // 检查queryMsgs是否完成
+                val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
 
-                    // 检查当前消息列表是否只有开场白消息,避免已经聊过多个消息后，再进入还播放开场白
-                    val allMessages by viewModel.msgs.collectAsState()
-                    // 更准确的消息过滤：只计算实际的聊天消息（排除intro和开场白）
-                    val actualChatMessages =
-                        allMessages.filter { !it.isOpening() && it.role != "system" }
-                    val isOnlyOpeningMessage = actualChatMessages.isEmpty()
+                // 检查当前消息列表是否只有开场白消息,避免已经聊过多个消息后，再进入还播放开场白
+                val allMessages by viewModel.msgs.collectAsState()
+                // 更准确的消息过滤：只计算实际的聊天消息（排除intro和开场白）
+                val actualChatMessages =
+                    allMessages.filter { !it.isOpening() && it.role != "system" }
+                val isOnlyOpeningMessage = actualChatMessages.isEmpty()
 
-                    // 检查开场白是否已播放过
-                    val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
+                // 检查开场白是否已播放过
+                val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
 
-                    // 开场白自动播放逻辑：只有开场白消息且未播放过，且queryMsgs已完成
-                    val shouldAutoPlay =
-                        item.isOpening() &&
-                            isOnlyOpeningMessage &&
-                            !hasPlayedOpening &&
-                            isCurrentPage &&
-                            isQueryMsgsCompleted &&
-                            !(safeAgentId.isEmpty()) &&
-                            audioInfo.url.isNotEmpty()
+                // 开场白自动播放逻辑：只有开场白消息且未播放过，且queryMsgs已完成
+                val shouldAutoPlay =
+                    item.isOpening() &&
+                        isOnlyOpeningMessage &&
+                        !hasPlayedOpening &&
+                        isCurrentPage &&
+                        isQueryMsgsCompleted &&
+                        !(safeAgentId.isEmpty()) &&
+                        audioInfo.url.isNotEmpty()
 
-                    if (safeAgentId.isNotEmpty()) {
-                        VoicePlayer(
-                            audioInfo = audioInfo,
-                            autoPlay = shouldAutoPlay,
-                            modifier = Modifier.widthIn(38.dp),
-                            onPlayStateChange = { isPlaying ->
-                                LogUtils.d(
-                                    "音频LOG测试 VoicePlayer play state changed: $isPlaying for message: ${item.localMsgId}"
-                                )
-                            },
-                            onTtsGenerated = { audioUrl ->
-                                // 使用localMsgId进行匹配，因为ChatViewModel中使用的是localMsgId
-                                viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
-                            },
-                            serverMessageId = item.id, // 传递服务器端ID用于TTS生成
-                        )
-                    }
-                }
-                // 消息
-                val msgShape =
-                    if (item.content.isNotEmpty() && item.content != "loading_animation")
-                        RoundedCornerShape(topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
-                    else RoundedCornerShape(12.dp)
-
-                Row {
-                    val context = LocalContext.current
-                    Box(
-                        modifier =
-                            Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
-                                .padding(12.dp, 13.dp)
-                                .widthIn(1.dp, 300.dp)
-                                .pointerInput(item.content) {
-                                    detectTapGestures(
-                                        onLongPress = {
-                                            debugOnlyCopyToClipboard(context, item.content)
-                                        }
-                                    )
-                                }
-                    ) {
-                        if (item.content == "loading_animation") {
-                            LoadingAnimation()
-                        } else {
-                            // 消息文本
-                            StyledMessageText(
-                                text = item.content,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
-                                normalColor = Color.White,
-                                actionColor = Color.White.copy(0.55f),
+                if (safeAgentId.isNotEmpty()) {
+                    VoicePlayer(
+                        audioInfo = audioInfo,
+                        autoPlay = shouldAutoPlay,
+                        modifier = Modifier.widthIn(38.dp),
+                        onPlayStateChange = { isPlaying ->
+                            LogUtils.d(
+                                "音频LOG测试 VoicePlayer play state changed: $isPlaying for message: ${item.localMsgId}",
                             )
-                        }
-                    }
-                    Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                        },
+                        onTtsGenerated = { audioUrl ->
+                            // 使用localMsgId进行匹配，因为ChatViewModel中使用的是localMsgId
+                            viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
+                        },
+                        serverMessageId = item.id, // 传递服务器端ID用于TTS生成
+                    )
                 }
             }
+            // 消息
+            val msgShape =
+                if (item.content.isNotEmpty() && item.content != "loading_animation") {
+                    RoundedCornerShape(topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
+                } else {
+                    RoundedCornerShape(12.dp)
+                }
+
+            Row {
+                val context = LocalContext.current
+                Box(
+                    modifier =
+                    Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
+                        .padding(12.dp, 13.dp)
+                        .widthIn(1.dp, 300.dp)
+                        .pointerInput(item.content) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    debugOnlyCopyToClipboard(context, item.content)
+                                },
+                            )
+                        },
+                ) {
+                    if (item.content == "loading_animation") {
+                        LoadingAnimation()
+                    } else {
+                        // 消息文本
+                        StyledMessageText(
+                            text = item.content,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Normal,
+                            normalColor = Color.White,
+                            actionColor = Color.White.copy(0.55f),
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+            }
         }
+    }
         .onFailure { e ->
             // 渲染失败时显示简化版本
             Row {
                 val context = LocalContext.current
                 Box(
                     modifier =
-                        Modifier.background(
-                                Color.Black.copy(alpha = 0.5f),
-                                RoundedCornerShape(12.dp),
+                    Modifier.background(
+                        Color.Black.copy(alpha = 0.5f),
+                        RoundedCornerShape(12.dp),
+                    )
+                        .padding(12.dp, 13.dp)
+                        .widthIn(1.dp, 300.dp)
+                        .pointerInput(item.content) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    debugOnlyCopyToClipboard(context, item.content)
+                                },
                             )
-                            .padding(12.dp, 13.dp)
-                            .widthIn(1.dp, 300.dp)
-                            .pointerInput(item.content) {
-                                detectTapGestures(
-                                    onLongPress = {
-                                        debugOnlyCopyToClipboard(context, item.content)
-                                    }
-                                )
-                            }
+                        },
                 ) {
                     Text(
                         text = item.content.ifEmpty { "Message content is empty" },
@@ -243,35 +252,35 @@ private fun ChatItemAI(
 @Composable
 private fun ChatItemUser(item: MsgInfo) {
     runCatching {
-            Row {
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
-                val context = LocalContext.current
-                Box(
-                    modifier =
-                        Modifier.background(
-                                Color.White.copy(alpha = 0.6f),
-                                RoundedCornerShape(12.dp),
-                            )
-                            .padding(12.dp, 13.dp)
-                            .widthIn(1.dp, 300.dp)
-                            .pointerInput(item.content) {
-                                detectTapGestures(
-                                    onLongPress = {
-                                        debugOnlyCopyToClipboard(context, item.content)
-                                    }
-                                )
-                            }
-                ) {
-                    StyledMessageText(
-                        text = item.content,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Normal,
-                        normalColor = Color(0xff090909),
-                        actionColor = Color(0xff090909).copy(0.6f),
-                    )
-                }
+        Row {
+            Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+            val context = LocalContext.current
+            Box(
+                modifier =
+                Modifier.background(
+                    Color.White.copy(alpha = 0.6f),
+                    RoundedCornerShape(12.dp),
+                )
+                    .padding(12.dp, 13.dp)
+                    .widthIn(1.dp, 300.dp)
+                    .pointerInput(item.content) {
+                        detectTapGestures(
+                            onLongPress = {
+                                debugOnlyCopyToClipboard(context, item.content)
+                            },
+                        )
+                    },
+            ) {
+                StyledMessageText(
+                    text = item.content,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    normalColor = Color(0xff090909),
+                    actionColor = Color(0xff090909).copy(0.6f),
+                )
             }
         }
+    }
         .onFailure { e ->
             // 渲染失败时显示简化版本
             Row {
@@ -279,19 +288,19 @@ private fun ChatItemUser(item: MsgInfo) {
                 val context = LocalContext.current
                 Box(
                     modifier =
-                        Modifier.background(
-                                Color.White.copy(alpha = 0.6f),
-                                RoundedCornerShape(12.dp),
+                    Modifier.background(
+                        Color.White.copy(alpha = 0.6f),
+                        RoundedCornerShape(12.dp),
+                    )
+                        .padding(12.dp, 13.dp)
+                        .widthIn(1.dp, 300.dp)
+                        .pointerInput(item.content) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    debugOnlyCopyToClipboard(context, item.content)
+                                },
                             )
-                            .padding(12.dp, 13.dp)
-                            .widthIn(1.dp, 300.dp)
-                            .pointerInput(item.content) {
-                                detectTapGestures(
-                                    onLongPress = {
-                                        debugOnlyCopyToClipboard(context, item.content)
-                                    }
-                                )
-                            }
+                        },
                 ) {
                     Text(
                         text = item.content.ifEmpty { "Message content is empty" },
@@ -313,17 +322,17 @@ private fun StyledMessageText(
     actionColor: Color,
 ) {
     runCatching {
-            Text(
-                text =
-                    ChatTextFormatter.formatChatMessage(
-                        text = text,
-                        fontSize = fontSize,
-                        fontWeight = fontWeight,
-                        normalColor = normalColor,
-                        italicColor = actionColor,
-                    )
-            )
-        }
+        Text(
+            text =
+            ChatTextFormatter.formatChatMessage(
+                text = text,
+                fontSize = fontSize,
+                fontWeight = fontWeight,
+                normalColor = normalColor,
+                italicColor = actionColor,
+            ),
+        )
+    }
         .onFailure { e ->
             // 格式化失败时显示原始文本
             Text(
@@ -356,8 +365,8 @@ private fun LoadingAnimation() {
 
             Box(
                 modifier =
-                    Modifier.size(6.dp)
-                        .background(color = Color.White.copy(dotAlpha * 0.7f), shape = CircleShape)
+                Modifier.size(6.dp)
+                    .background(color = Color.White.copy(dotAlpha * 0.7f), shape = CircleShape),
             )
         }
     }
@@ -366,27 +375,27 @@ private fun LoadingAnimation() {
 /** 优化的可折叠文本卡片组件 使用新的ExpandableText组件实现 */
 @Composable
 fun AgentInfoChatCard(info: String) {
-
-    val str = buildAnnotatedString {
-        withStyle(style = SpanStyle(fontWeight = FontWeight.SemiBold)) { append("Intro: ") }
-        append(info)
-    }
+    val str =
+        buildAnnotatedString {
+            withStyle(style = SpanStyle(fontWeight = FontWeight.SemiBold)) { append("Intro: ") }
+            append(info)
+        }
 
     Box(
         modifier =
-            Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                .padding(12.dp)
+        Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .padding(12.dp),
     ) {
         ExpandableTextWithButton(
             text = str,
             collapsedMaxLines = 3,
             textStyle =
-                TextStyle(
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                    color = Color.White,
-                    fontWeight = FontWeight.Normal,
-                ),
+            TextStyle(
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = Color.White,
+                fontWeight = FontWeight.Normal,
+            ),
         )
     }
 }
@@ -415,21 +424,24 @@ private fun ExpandableTextWithButton(
                 }
                 // 文案过长，需要折叠的时候，才加上bottom的padding
                 pd =
-                    if (textLayoutResult.lineCount >= 3 && textLayoutResult.hasVisualOverflow) 15
-                    else 0
+                    if (textLayoutResult.lineCount >= 3 && textLayoutResult.hasVisualOverflow) {
+                        15
+                    } else {
+                        0
+                    }
             },
         )
         if (expandable) {
             Icon(
                 painter =
-                    painterResource(
-                        if (isExpanded) R.drawable.ic_arrow_up else R.drawable.ic_arrow_down
-                    ),
+                painterResource(
+                    if (isExpanded) R.drawable.ic_arrow_up else R.drawable.ic_arrow_down,
+                ),
                 contentDescription = null,
                 modifier =
-                    Modifier.size(18.dp)
-                        .align(Alignment.BottomEnd)
-                        .noRippleClickable(onClick = { isExpanded = isExpanded.not() }),
+                Modifier.size(18.dp)
+                    .align(Alignment.BottomEnd)
+                    .noRippleClickable(onClick = { isExpanded = isExpanded.not() }),
                 tint = Color.White,
             )
         }

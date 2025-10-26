@@ -11,7 +11,6 @@ import ai.sxwl.android.firebase.FirebaseManager
  * - 接口隔离：提供细粒度的Analytics接口
  */
 interface AnalyticsMixin {
-
     /** 页面名称，实现类需要提供 */
     val screenName: String
 
@@ -40,19 +39,28 @@ interface AnalyticsMixin {
     }
 
     /** 跟踪用户行为事件 */
-    fun trackEvent(eventName: String, params: Map<String, Any> = emptyMap()) {
+    fun trackEvent(
+        eventName: String,
+        params: Map<String, Any> = emptyMap(),
+    ) {
         FirebaseManager.logEvent(eventName, params)
     }
 
     /** 跟踪页面内的特定操作 */
-    fun trackPageAction(action: String, params: Map<String, Any> = emptyMap()) {
+    fun trackPageAction(
+        action: String,
+        params: Map<String, Any> = emptyMap(),
+    ) {
         val eventName = "${screenName}_$action"
         val allParams = params + mapOf("screen_name" to screenName, "screen_class" to screenClass)
         trackEvent(eventName, allParams)
     }
 
     /** 跟踪错误事件 */
-    fun trackError(error: String, params: Map<String, Any> = emptyMap()) {
+    fun trackError(
+        error: String,
+        params: Map<String, Any> = emptyMap(),
+    ) {
         val errorParams =
             params +
                 mapOf(
@@ -64,7 +72,11 @@ interface AnalyticsMixin {
     }
 
     /** 跟踪性能指标 */
-    fun trackPerformance(metric: String, value: Number, unit: String = "") {
+    fun trackPerformance(
+        metric: String,
+        value: Number,
+        unit: String = "",
+    ) {
         val params =
             mapOf(
                 "metric_name" to metric,
@@ -80,7 +92,7 @@ interface AnalyticsMixin {
     fun trackUserAction(
         action: String,
         target: String? = null,
-        params: Map<String, Any> = emptyMap()
+        params: Map<String, Any> = emptyMap(),
     ) {
         val actionParams =
             params +
@@ -95,7 +107,10 @@ interface AnalyticsMixin {
     }
 
     /** 跟踪业务事件 */
-    fun trackBusinessEvent(businessEvent: String, params: Map<String, Any> = emptyMap()) {
+    fun trackBusinessEvent(
+        businessEvent: String,
+        params: Map<String, Any> = emptyMap(),
+    ) {
         val businessParams =
             params +
                 mapOf(
@@ -107,7 +122,10 @@ interface AnalyticsMixin {
     }
 
     /** 跟踪按钮点击（使用PageTrackingHelper） */
-    fun trackButtonClick(buttonName: String, params: Map<String, Any> = emptyMap()) {
+    fun trackButtonClick(
+        buttonName: String,
+        params: Map<String, Any> = emptyMap(),
+    ) {
         PageTrackingHelper.trackButtonClick(buttonName, screenName, params)
     }
 
@@ -116,7 +134,7 @@ interface AnalyticsMixin {
         url: String,
         method: String,
         success: Boolean,
-        responseTime: Long = 0L
+        responseTime: Long = 0L,
     ) {
         PageTrackingHelper.trackNetworkRequest(url, method, success, responseTime)
     }
@@ -125,7 +143,7 @@ interface AnalyticsMixin {
     fun trackAppError(
         error: String,
         errorType: String = "unknown",
-        params: Map<String, Any> = emptyMap()
+        params: Map<String, Any> = emptyMap(),
     ) {
         PageTrackingHelper.trackError(error, errorType, params)
     }

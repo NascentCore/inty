@@ -8,7 +8,6 @@ import com.inty.api.models.api.v1.auth.AuthCreateGuestParams
 
 /** 认证服务 封装所有认证相关的API调用 替换原有的 IUserApi 认证相关方法 */
 object AuthService {
-
     /** 创建游客账户 替换: IUserApi.createGuest() */
     suspend fun createGuest(): ApiResult<Pair<String, String>> {
         return IntyNetworkManager.executeRequest("Create Guest") {
@@ -21,7 +20,7 @@ object AuthService {
                         AuthCreateGuestParams.builder()
                             .deviceId(DeviceUtils.getUniqueDeviceId())
                             .systemLanguage(LanguageUtils.getCurrentLanguage().language)
-                            .build()
+                            .build(),
                     )
 
             val guestId =
@@ -44,7 +43,7 @@ object AuthService {
                     .login(
                         com.inty.api.models.api.v1.auth.google.GoogleLoginParams.builder()
                             .idToken(idToken)
-                            .build()
+                            .build(),
                     )
 
             val userId =

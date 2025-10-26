@@ -117,7 +117,8 @@ data class CreateAgentRequest(
     val prompt: String,
 )
 
-@JsonClass(generateAdapter = true) data class GenerateBackgroundRequest(val prompt: String)
+@JsonClass(generateAdapter = true)
+data class GenerateBackgroundRequest(val prompt: String)
 
 @JsonClass(generateAdapter = true)
 data class GenerateBackgroundResponse(

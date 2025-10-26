@@ -4,10 +4,6 @@ import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
-import java.lang.ref.WeakReference
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicLong
-import kotlin.reflect.KClass
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -15,6 +11,10 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import java.lang.ref.WeakReference
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.reflect.KClass
 
 /** 事件总线核心接口 定义了事件总线的基本操作 */
 interface IEventBus {
@@ -26,7 +26,10 @@ interface IEventBus {
     )
 
     /** 取消订阅 */
-    fun <T : Any> unsubscribe(eventClass: KClass<T>, subscriber: EventSubscriber<T>)
+    fun <T : Any> unsubscribe(
+        eventClass: KClass<T>,
+        subscriber: EventSubscriber<T>,
+    )
 
     /** 发布事件 */
     fun <T : Any> post(event: T)
@@ -107,7 +110,10 @@ internal class EventBusManager(
         logDebug("订阅事件: ${eventClass.simpleName}, 优先级: $priority")
     }
 
-    fun <T : Any> unsubscribe(eventClass: KClass<T>, subscriber: EventSubscriber<T>) {
+    fun <T : Any> unsubscribe(
+        eventClass: KClass<T>,
+        subscriber: EventSubscriber<T>,
+    ) {
         subscribers[eventClass]?.removeIf { it.getSubscriber == subscriber }
         updateStats()
         logDebug("取消订阅事件: ${eventClass.simpleName}")
@@ -153,7 +159,7 @@ internal class EventBusManager(
         stats =
             stats.copy(
                 lastCleanupTime = System.currentTimeMillis(),
-                totalSubscribers = subscribers.values.sumOf { it.size }
+                totalSubscribers = subscribers.values.sumOf { it.size },
             )
 
         logDebug("清理完成，移除 $removedCount 个无效订阅者")
@@ -170,7 +176,7 @@ internal class EventBusManager(
     fun getStats(): EventBusStats {
         return stats.copy(
             totalSubscribers = subscribers.values.sumOf { it.size },
-            activeEventTypes = subscribers.size
+            activeEventTypes = subscribers.size,
         )
     }
 
@@ -197,7 +203,7 @@ internal class EventBusManager(
         stats =
             stats.copy(
                 totalSubscribers = subscribers.values.sumOf { it.size },
-                activeEventTypes = subscribers.size
+                activeEventTypes = subscribers.size,
             )
     }
 
@@ -242,7 +248,6 @@ private class WeakEventSubscriber<T : Any>(
 
 /** 事件总线单例实现 提供全局事件总线功能 */
 object EventBus : IEventBus {
-
     private val manager = EventBusManager()
 
     override fun <T : Any> subscribe(
@@ -253,7 +258,10 @@ object EventBus : IEventBus {
         manager.subscribe(eventClass, subscriber, priority)
     }
 
-    override fun <T : Any> unsubscribe(eventClass: KClass<T>, subscriber: EventSubscriber<T>) {
+    override fun <T : Any> unsubscribe(
+        eventClass: KClass<T>,
+        subscriber: EventSubscriber<T>,
+    ) {
         manager.unsubscribe(eventClass, subscriber)
     }
 
@@ -290,7 +298,6 @@ object EventBus : IEventBus {
 
 /** EventBus扩展函数，提供更便捷的API */
 object EventBusExtensions {
-
     /** 使用lambda表达式订阅事件 */
     inline fun <reified T : Any> IEventBus.subscribe(
         priority: Int = 0,
@@ -303,7 +310,7 @@ object EventBusExtensions {
                     onEvent(event)
                 }
             },
-            priority
+            priority,
         )
     }
 
@@ -324,12 +331,15 @@ object EventBusExtensions {
 
         lifecycleOwner.lifecycle.addObserver(
             object : LifecycleEventObserver {
-                override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                override fun onStateChanged(
+                    source: LifecycleOwner,
+                    event: Lifecycle.Event,
+                ) {
                     if (event == Lifecycle.Event.ON_DESTROY) {
                         unsubscribe(T::class, subscriber)
                     }
                 }
-            }
+            },
         )
     }
 

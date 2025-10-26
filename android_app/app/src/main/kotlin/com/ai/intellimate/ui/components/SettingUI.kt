@@ -30,22 +30,29 @@ import com.ai.intellimate.R
 
 /** 设置项容器组件 */
 @Composable
-fun SettingSection(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+fun SettingSection(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
     Column(
         modifier =
-            modifier
-                .padding(horizontal = 16.dp)
-                .fillMaxWidth()
-                .border(
-                    brush =
-                        Brush.linearGradient(
-                            colors =
-                                listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
-                        ),
-                    width = 1.dp,
-                    shape = RoundedCornerShape(8.dp),
-                )
-                .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
+        modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth()
+            .border(
+                brush =
+                Brush.linearGradient(
+                    colors =
+                    listOf(
+                        Color.Transparent,
+                        Color.White.copy(0.2f),
+                        Color.Transparent
+                    ),
+                ),
+                width = 1.dp,
+                shape = RoundedCornerShape(8.dp),
+            )
+            .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp)),
     ) {
         Spacer(Modifier.height(8.dp))
         content()
@@ -63,17 +70,20 @@ fun SettingSwitchItem(
 ) {
     Row(
         modifier =
-            modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp).noRippleClickable {
-                onToggle()
-            },
+        modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp).noRippleClickable {
+            onToggle()
+        },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
         Spacer(Modifier.weight(1f))
         Image(
             painter =
-                if (isEnabled) painterResource(R.drawable.opened)
-                else painterResource(R.drawable.closed),
+            if (isEnabled) {
+                painterResource(R.drawable.opened)
+            } else {
+                painterResource(R.drawable.closed)
+            },
             contentDescription = null,
         )
     }
@@ -90,9 +100,9 @@ fun SettingNavigationItem(
 ) {
     Row(
         modifier =
-            modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp).noRippleClickable {
-                onClick()
-            },
+        modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp).noRippleClickable {
+            onClick()
+        },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val SPACER_WIDTH = 10.dp
@@ -145,38 +155,49 @@ fun SettingDivider() {
     Spacer(Modifier.height(4.dp))
     Box(
         modifier =
-            Modifier.fillMaxWidth()
-                .height(1.dp)
-                .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors =
-                                listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
-                        )
-                )
+        Modifier.fillMaxWidth()
+            .height(1.dp)
+            .background(
+                brush =
+                Brush.horizontalGradient(
+                    colors =
+                    listOf(
+                        Color.Transparent,
+                        Color.White.copy(0.2f),
+                        Color.Transparent
+                    ),
+                ),
+            ),
     )
     Spacer(Modifier.height(4.dp))
 }
 
 /** 退出登录按钮组件 */
 @Composable
-fun LogoutButton(onLogout: () -> Unit, modifier: Modifier = Modifier) {
+fun LogoutButton(
+    onLogout: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier =
-            modifier
-                .padding(horizontal = 16.dp)
-                .fillMaxWidth()
-                .border(
-                    brush =
-                        Brush.linearGradient(
-                            colors =
-                                listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
-                        ),
-                    width = 1.dp,
-                    shape = RoundedCornerShape(8.dp),
-                )
-                .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
-                .noRippleClickable { onLogout() }
+        modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth()
+            .border(
+                brush =
+                Brush.linearGradient(
+                    colors =
+                    listOf(
+                        Color.Transparent,
+                        Color.White.copy(0.2f),
+                        Color.Transparent
+                    ),
+                ),
+                width = 1.dp,
+                shape = RoundedCornerShape(8.dp),
+            )
+            .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
+            .noRippleClickable { onLogout() },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 12.dp),

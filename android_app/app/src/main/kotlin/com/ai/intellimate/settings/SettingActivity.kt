@@ -16,9 +16,7 @@ import com.ai.intellimate.R
 
 /** 设置页面 */
 class SettingActivity : BaseActivity() {
-
     companion object {
-
         /**
          * 启动设置界面
          *
@@ -42,8 +40,11 @@ class SettingActivity : BaseActivity() {
                 mainViewModel.logout()
                 // 显示退出成功提示
                 val str =
-                    if (isDelete) getString(R.string.delete_account_successfully)
-                    else getString(R.string.logout_successfully)
+                    if (isDelete) {
+                        getString(R.string.delete_account_successfully)
+                    } else {
+                        getString(R.string.logout_successfully)
+                    }
                 ToastUtils.showShort(str)
                 // 返回到主页面
                 val intent = Intent(this@SettingActivity, MainActivity::class.java)

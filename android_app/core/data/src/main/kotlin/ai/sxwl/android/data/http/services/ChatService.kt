@@ -6,7 +6,6 @@ import ai.sxwl.android.data.http.IntyNetworkManager
 
 /** 聊天服务 封装所有聊天相关的API调用 替换原有的 IChatApi */
 object ChatService {
-
     /** 发送聊天消息 替换: IChatApi.sendMessage() */
     suspend fun sendMessage(
         agentId: String,
@@ -26,7 +25,7 @@ object ChatService {
                             .agentId(agentId)
                             .messageId("temp_message_id") // 这里需要根据实际情况处理
                             .language("en") // 这里需要根据实际情况处理
-                            .build()
+                            .build(),
                     )
 
             // 当前 IntySDK 的 Chat 数据结构与业务层不匹配
@@ -51,7 +50,7 @@ object ChatService {
                     .getMessages(
                         com.inty.api.models.api.v1.chats.agents.AgentGetMessagesParams.builder()
                             .agentId("temp_agent_id") // 这里需要根据实际情况处理
-                            .build()
+                            .build(),
                     )
 
             // 这里需要根据实际的IntySDK返回结构进行转换
@@ -70,7 +69,7 @@ object ChatService {
                     .create(
                         com.inty.api.models.api.v1.chats.ChatCreateParams.builder()
                             .agentId(agentId)
-                            .build()
+                            .build(),
                     )
 
             chat.id() ?: throw IllegalStateException("Conversation ID is null")
@@ -99,7 +98,7 @@ object ChatService {
                         com.inty.api.models.api.v1.chats.ChatListParams.builder()
                             .limit(pageSize.toLong())
                             .skip(((page - 1) * pageSize).toLong())
-                            .build()
+                            .build(),
                     )
 
             // 这里需要根据实际的IntySDK返回结构进行转换

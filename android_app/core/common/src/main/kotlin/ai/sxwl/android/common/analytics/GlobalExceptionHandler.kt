@@ -9,8 +9,10 @@ class GlobalExceptionHandler(
     private val context: Context,
     private val defaultHandler: Thread.UncaughtExceptionHandler?,
 ) : Thread.UncaughtExceptionHandler {
-
-    override fun uncaughtException(thread: Thread, exception: Throwable) {
+    override fun uncaughtException(
+        thread: Thread,
+        exception: Throwable,
+    ) {
         try {
             // 记录异常发生时的上下文信息
             recordCrashContext(thread, exception)
@@ -30,7 +32,10 @@ class GlobalExceptionHandler(
         }
     }
 
-    private fun recordCrashContext(thread: Thread, exception: Throwable) {
+    private fun recordCrashContext(
+        thread: Thread,
+        exception: Throwable,
+    ) {
         try {
             // 记录线程信息
             FirebaseManager.setCustomKey("crash_thread_name", thread.name)

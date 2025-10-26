@@ -61,12 +61,15 @@ fun SingleLineTextInputField(
             value = inputValue,
             onValueChange = onValueChange,
             keyboardOptions =
-                KeyboardOptions(
-                    imeAction = ImeAction.Done,
-                    capitalization =
-                        if (capitalizeFirstLetter) KeyboardCapitalization.Sentences
-                        else KeyboardCapitalization.None,
-                ),
+            KeyboardOptions(
+                imeAction = ImeAction.Done,
+                capitalization =
+                if (capitalizeFirstLetter) {
+                    KeyboardCapitalization.Sentences
+                } else {
+                    KeyboardCapitalization.None
+                },
+            ),
             placeholder = {
                 Text(text = placeholder, fontSize = inputFontSize, color = Color.White.copy(0.5f))
             },
@@ -74,17 +77,17 @@ fun SingleLineTextInputField(
             singleLine = true,
             textStyle = TextStyle(color = Color.White, fontSize = inputFontSize),
             colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.White.copy(0.2f),
-                    unfocusedBorderColor = Color.White.copy(0.2f),
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedPlaceholderColor = Color.White.copy(0.5f),
-                    unfocusedPlaceholderColor = Color.White.copy(0.5f),
-                    focusedContainerColor = Color(0x1A78599A),
-                    unfocusedContainerColor = Color(0x1A78599A),
-                    cursorColor = Color.White,
-                ),
+            OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color.White.copy(0.2f),
+                unfocusedBorderColor = Color.White.copy(0.2f),
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedPlaceholderColor = Color.White.copy(0.5f),
+                unfocusedPlaceholderColor = Color.White.copy(0.5f),
+                focusedContainerColor = Color(0x1A78599A),
+                unfocusedContainerColor = Color(0x1A78599A),
+                cursorColor = Color.White,
+            ),
             shape = RoundedCornerShape(cornerRadius.dp),
         )
     }

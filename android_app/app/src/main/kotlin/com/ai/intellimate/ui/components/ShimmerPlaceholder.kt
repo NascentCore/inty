@@ -29,24 +29,24 @@ fun ShimmerPlaceholder(
             initialValue = 0.2f,
             targetValue = 0.6f,
             animationSpec =
-                infiniteRepeatable(animation = tween(1000), repeatMode = RepeatMode.Reverse),
+            infiniteRepeatable(animation = tween(1000), repeatMode = RepeatMode.Reverse),
             label = "shimmer_alpha",
         )
 
     Box(
         modifier =
-            modifier
-                .clip(RoundedCornerShape(cornerRadius))
-                .background(
-                    brush =
-                        Brush.verticalGradient(
-                            colors =
-                                listOf(
-                                    Color(0xFF2A2A2A).copy(alpha = alpha),
-                                    Color(0xFF3A3A3A).copy(alpha = alpha),
-                                    Color(0xFF2A2A2A).copy(alpha = alpha),
-                                )
-                        )
-                )
+        modifier
+            .clip(RoundedCornerShape(cornerRadius))
+            .background(
+                brush =
+                Brush.verticalGradient(
+                    colors =
+                    listOf(
+                        Color(0xFF2A2A2A).copy(alpha = alpha),
+                        Color(0xFF3A3A3A).copy(alpha = alpha),
+                        Color(0xFF2A2A2A).copy(alpha = alpha),
+                    ),
+                ),
+            ),
     )
 }

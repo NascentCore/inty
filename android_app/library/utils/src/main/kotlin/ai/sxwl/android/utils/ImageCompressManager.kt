@@ -1,8 +1,6 @@
 package ai.sxwl.android.utils
 
 import android.content.Context
-import java.io.File
-import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -12,6 +10,8 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.IOException
 
 /** 图片压缩管理器 提供更高级的图片压缩功能，包括批量压缩、进度监控、结果统计等 */
 class ImageCompressManager private constructor() {
@@ -67,72 +67,74 @@ class ImageCompressManager private constructor() {
         taskId: String = generateTaskId()
     ): Flow<CompressStats> =
         flow {
-                val validFiles = imageFiles.filter { ImageCompressUtils.isSupportedImageFormat(it) }
+            val validFiles = imageFiles.filter { ImageCompressUtils.isSupportedImageFormat(it) }
 
-                if (validFiles.isEmpty()) {
-                    emit(CompressStats())
-                    return@flow
+            if (validFiles.isEmpty()) {
+                emit(CompressStats())
+                return@flow
+            }
+
+            val task = CompressTask(taskId, validFiles, config)
+            activeTasks[taskId] = task
+
+            val originalSize =
+                try {
+                    validFiles.sumOf {
+                        try {
+                            it.length()
+                        } catch (e: Exception) {
+                            0L
+                        }
+                    }
+                } catch (e: Exception) {
+                    0L
                 }
+            var successCount = 0
+            var failedCount = 0
+            var compressedSize = 0L
 
-                val task = CompressTask(taskId, validFiles, config)
-                activeTasks[taskId] = task
+            emit(CompressStats(totalFiles = validFiles.size, originalSize = originalSize))
 
-                val originalSize =
-                    try {
-                        validFiles.sumOf {
+            validFiles.forEachIndexed { index, file ->
+                try {
+                    val compressedFile =
+                        ImageCompressUtils.compressImageSync(context, file, config)
+                    if (compressedFile != null) {
+                        successCount++
+                        compressedSize +=
                             try {
-                                it.length()
+                                compressedFile.length()
                             } catch (e: Exception) {
                                 0L
                             }
-                        }
-                    } catch (e: Exception) {
-                        0L
-                    }
-                var successCount = 0
-                var failedCount = 0
-                var compressedSize = 0L
-
-                emit(CompressStats(totalFiles = validFiles.size, originalSize = originalSize))
-
-                validFiles.forEachIndexed { index, file ->
-                    try {
-                        val compressedFile =
-                            ImageCompressUtils.compressImageSync(context, file, config)
-                        if (compressedFile != null) {
-                            successCount++
-                            compressedSize +=
-                                try {
-                                    compressedFile.length()
-                                } catch (e: Exception) {
-                                    0L
-                                }
-                        } else {
-                            failedCount++
-                        }
-                    } catch (e: Exception) {
+                    } else {
                         failedCount++
                     }
-
-                    val stats =
-                        CompressStats(
-                            totalFiles = validFiles.size,
-                            successCount = successCount,
-                            failedCount = failedCount,
-                            originalSize = originalSize,
-                            compressedSize = compressedSize,
-                            compressionRatio =
-                                if (originalSize > 0) {
-                                    (1f - compressedSize.toFloat() / originalSize.toFloat()) * 100f
-                                } else 0f
-                        )
-
-                    taskStats[taskId] = stats
-                    emit(stats)
+                } catch (e: Exception) {
+                    failedCount++
                 }
 
-                activeTasks.remove(taskId)
+                val stats =
+                    CompressStats(
+                        totalFiles = validFiles.size,
+                        successCount = successCount,
+                        failedCount = failedCount,
+                        originalSize = originalSize,
+                        compressedSize = compressedSize,
+                        compressionRatio =
+                        if (originalSize > 0) {
+                            (1f - compressedSize.toFloat() / originalSize.toFloat()) * 100f
+                        } else {
+                            0f
+                        }
+                    )
+
+                taskStats[taskId] = stats
+                emit(stats)
             }
+
+            activeTasks.remove(taskId)
+        }
             .flowOn(Dispatchers.IO)
 
     /**

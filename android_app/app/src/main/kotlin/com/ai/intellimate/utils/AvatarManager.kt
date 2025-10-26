@@ -1,7 +1,6 @@
 package com.ai.intellimate.utils
 
 object AvatarManager {
-
     private var generatedAvatarUrl: String? = null
     private var generatedAvatarUrls: List<String> = emptyList()
     private var selectedImageIndex: Int = 0

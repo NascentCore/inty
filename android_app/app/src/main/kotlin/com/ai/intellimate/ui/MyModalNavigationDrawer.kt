@@ -43,8 +43,11 @@ fun MyModalNavigationDrawer(
         val xOffset by
             animateFloatAsState(
                 targetValue =
-                    if (drawerState.value == DrawerValue.Closed) screenWidthPx.toFloat()
-                    else screenWidthPx - drawerWidth.value.toFloat(),
+                if (drawerState.value == DrawerValue.Closed) {
+                    screenWidthPx.toFloat()
+                } else {
+                    screenWidthPx - drawerWidth.value.toFloat()
+                },
                 animationSpec = tween(durationMillis = 400),
             )
         // 半透明
@@ -60,16 +63,16 @@ fun MyModalNavigationDrawer(
         if (showMask.value || drawerState.value == DrawerValue.Open) {
             Box(
                 modifier =
-                    Modifier.fillMaxSize()
-                        .alpha(maskLayerAlpha)
-                        .background(color = Color(0xff000000))
-                        .clickable { drawerState.value = DrawerValue.Closed }
+                Modifier.fillMaxSize()
+                    .alpha(maskLayerAlpha)
+                    .background(color = Color(0xff000000))
+                    .clickable { drawerState.value = DrawerValue.Closed },
             ) {}
             // 抽屉
             Box(
                 modifier =
-                    Modifier.onSizeChanged { drawerWidth.intValue = it.width }
-                        .graphicsLayer { translationX = xOffset }
+                Modifier.onSizeChanged { drawerWidth.intValue = it.width }
+                    .graphicsLayer { translationX = xOffset },
             ) {
                 drawerContent()
             }

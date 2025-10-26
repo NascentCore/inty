@@ -29,14 +29,17 @@ import com.ai.intellimate.R
 
 /** 删除账号确认对话框 */
 @Composable
-fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+fun DeleteAccountDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(color = Color(0xFF1B0130))
-                    .padding(12.dp)
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(color = Color(0xFF1B0130))
+                .padding(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -109,10 +112,10 @@ fun ForceUpgradeDialog(
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(false, false, true)) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(color = Color(0xFF1B0130))
-                    .padding(12.dp)
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(color = Color(0xFF1B0130))
+                .padding(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

@@ -360,7 +360,7 @@ object StoreUtils {
         val availableSize = getInternalStorageAvailableSize(context)
         val requiredSizeFormat = FileUtils.formatFileSize(requiredSize)
         val availableSizeFormat = FileUtils.formatFileSize(availableSize)
-        return "内部存储空间不足，需要${requiredSizeFormat}，可用${availableSizeFormat}"
+        return "内部存储空间不足，需要$requiredSizeFormat，可用$availableSizeFormat"
     }
 
     /** 获取目录大小 */

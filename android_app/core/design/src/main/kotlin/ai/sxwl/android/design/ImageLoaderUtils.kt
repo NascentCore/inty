@@ -11,7 +11,6 @@ import java.io.File
 
 /** 图片加载工具类 根据Coil 3.x官方文档优化，专门处理大图片加载的优化策略 */
 object ImageLoaderUtils {
-
     /**
      * 创建设备适配的图片请求 根据设备屏幕密度和尺寸自动压缩图片，提供最佳性能 参考：https://coil-kt.github.io/coil/
      *
@@ -29,7 +28,7 @@ object ImageLoaderUtils {
         @DrawableRes placeholder: Int = R.drawable.img_girl_lite,
         @DrawableRes error: Int = R.drawable.img_girl_lite,
         maxWidth: Int? = null,
-        maxHeight: Int? = null
+        maxHeight: Int? = null,
     ): ImageRequest {
         val displayMetrics = context.resources.displayMetrics
         val screenWidth = maxWidth ?: displayMetrics.widthPixels
@@ -62,7 +61,7 @@ object ImageLoaderUtils {
         context: Context,
         imageUrl: String?,
         @DrawableRes placeholder: Int = R.drawable.img_girl_lite,
-        @DrawableRes error: Int = R.drawable.img_girl_lite
+        @DrawableRes error: Int = R.drawable.img_girl_lite,
     ): ImageRequest {
         return ImageRequest.Builder(context)
             .data(imageUrl)
@@ -85,7 +84,7 @@ object ImageLoaderUtils {
     fun createAvatarImageRequest(
         context: Context,
         imageUrl: String?,
-        size: Int = 120
+        size: Int = 120,
     ): ImageRequest {
         return ImageRequest.Builder(context)
             .data(imageUrl)
@@ -108,7 +107,7 @@ object ImageLoaderUtils {
         context: Context,
         imageUrl: String?,
         width: Int = 300,
-        height: Int = 200
+        height: Int = 200,
     ): ImageRequest {
         return ImageRequest.Builder(context)
             .data(imageUrl)
@@ -131,7 +130,7 @@ object ImageLoaderUtils {
         context: Context,
         imageUrl: String?,
         @DrawableRes placeholder: Int = R.drawable.img_girl_lite,
-        @DrawableRes error: Int = R.drawable.img_girl_lite
+        @DrawableRes error: Int = R.drawable.img_girl_lite,
     ): ImageRequest {
         return ImageRequest.Builder(context)
             .data(imageUrl)
@@ -151,10 +150,12 @@ object ImageLoaderUtils {
      */
     fun isValidImageUrl(imageUrl: String?): Boolean {
         return !imageUrl.isNullOrBlank() &&
-            (imageUrl.startsWith("http://") ||
-                imageUrl.startsWith("https://") ||
-                imageUrl.startsWith("file://") ||
-                imageUrl.startsWith("content://"))
+            (
+                imageUrl.startsWith("http://") ||
+                    imageUrl.startsWith("https://") ||
+                    imageUrl.startsWith("file://") ||
+                    imageUrl.startsWith("content://")
+                )
     }
 
     /**

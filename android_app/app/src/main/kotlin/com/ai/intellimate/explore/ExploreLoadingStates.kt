@@ -41,9 +41,9 @@ fun ExploreLoadingStates(
             // 增加更严格的条件：确保不是首次加载，且确实没有更多数据
             if (
                 lazyPagingItems.loadState.append.endOfPaginationReached &&
-                    lazyPagingItems.itemCount > 0 &&
-                    lazyPagingItems.loadState.refresh is LoadState.NotLoading &&
-                    !lazyPagingItems.loadState.prepend.endOfPaginationReached
+                lazyPagingItems.itemCount > 0 &&
+                lazyPagingItems.loadState.refresh is LoadState.NotLoading &&
+                !lazyPagingItems.loadState.prepend.endOfPaginationReached
             ) { // 确保不是初始状态
                 NoMoreDataIndicator()
             }

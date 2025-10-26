@@ -12,7 +12,6 @@ import kotlinx.coroutines.launch
 
 /** 注册信息完善页面，性别和年龄 */
 class RegInfoActivity : BaseActivity() {
-
     companion object {
         /**
          * 启动注册信息页面

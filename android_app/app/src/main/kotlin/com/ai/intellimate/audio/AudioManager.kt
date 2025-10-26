@@ -11,18 +11,20 @@ import kotlinx.coroutines.launch
 /** 统一音频管理器 协调各个音频子模块，提供统一的音频服务接口 */
 class AudioManager
 private constructor(private val context: Context, private var scope: CoroutineScope) {
-
     companion object {
         @Volatile private var INSTANCE: AudioManager? = null
 
-        fun getInstance(context: Context, scope: CoroutineScope): AudioManager {
+        fun getInstance(
+            context: Context,
+            scope: CoroutineScope,
+        ): AudioManager {
             return INSTANCE
                 ?: synchronized(this) {
-                        INSTANCE
-                            ?: AudioManager(context.applicationContext, scope).also {
-                                INSTANCE = it
-                            }
-                    }
+                    INSTANCE
+                        ?: AudioManager(context.applicationContext, scope).also {
+                            INSTANCE = it
+                        }
+                }
                     .also { instance ->
                         // 更新Scope以确保协程能正常执行
                         instance.scope = scope
@@ -81,11 +83,13 @@ private constructor(private val context: Context, private var scope: CoroutineSc
             // 开场白消息的localMsgId通常包含_assistant_标识
             val isOpeningMessage = messageId.contains("_assistant_")
             if (!isOpeningMessage) {
-                LogUtils.i("音频LOG测试 Auto play audio is disabled, skipping message voice playback")
+                LogUtils.i(
+                    "音频LOG测试 Auto play audio is disabled, skipping message voice playback"
+                )
                 return
             } else {
                 LogUtils.d(
-                    "音频LOG测试 Opening message detected (messageId contains '_assistant_'), allowing auto play despite user setting"
+                    "音频LOG测试 Opening message detected (messageId contains '_assistant_'), allowing auto play despite user setting",
                 )
             }
         }
@@ -131,7 +135,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                 artist = "AI",
                 messageId = messageId,
                 agentId = agentId,
-                agentName = agentName
+                agentName = agentName,
             )
 
         // 始终在主线程调用ExoPlayer相关API
@@ -156,7 +160,8 @@ private constructor(private val context: Context, private var scope: CoroutineSc
         mainHandler.post {
             try {
                 playbackManager.pausePlayback()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -165,7 +170,8 @@ private constructor(private val context: Context, private var scope: CoroutineSc
         mainHandler.post {
             try {
                 playbackManager.resumePlayback()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 

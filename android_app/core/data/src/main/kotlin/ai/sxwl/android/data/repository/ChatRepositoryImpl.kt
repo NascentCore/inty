@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** 聊天Repository实现 作为Domain层和Data层之间的桥梁 */
 class ChatRepositoryImpl : ChatRepository {
-
     override fun getMessagesFlow(agentId: String): StateFlow<List<MsgInfo>> {
         return ChatSessionManager.messagesFlow(agentId)
     }
@@ -23,32 +22,45 @@ class ChatRepositoryImpl : ChatRepository {
         return ChatSessionManager.hasMoreFlow(agentId)
     }
 
-    override suspend fun ensureInitialHistory(agentId: String, pageSize: Int) {
+    override suspend fun ensureInitialHistory(
+        agentId: String,
+        pageSize: Int,
+    ) {
         LogUtils.d("ChatRepositoryImpl.ensureInitialHistory called for $agentId")
         ChatSessionManager.ensureInitialHistory(agentId, pageSize)
     }
 
-    override suspend fun loadMoreMessages(agentId: String, pageSize: Int) {
+    override suspend fun loadMoreMessages(
+        agentId: String,
+        pageSize: Int,
+    ) {
         LogUtils.d("ChatRepositoryImpl.loadMoreMessages called for $agentId")
         ChatSessionManager.loadMore(agentId, pageSize)
     }
 
     override suspend fun sendMessage(
         agentId: String,
-        content: String
+        content: String,
     ): HttpResult<SendMsgResponse> {
         LogUtils.d("ChatRepositoryImpl.sendMessage called for $agentId: $content")
         return ChatSessionManager.sendMessage(agentId, content)
     }
 
-    override suspend fun syncLatestMessages(agentId: String, pageSize: Int) {
+    override suspend fun syncLatestMessages(
+        agentId: String,
+        pageSize: Int,
+    ) {
         LogUtils.d("ChatRepositoryImpl.syncLatestMessages called for $agentId")
         ChatSessionManager.syncLatestMessages(agentId, pageSize)
     }
 
-    override fun updateMessageAudioUrl(agentId: String, messageId: String, audioUrl: String) {
+    override fun updateMessageAudioUrl(
+        agentId: String,
+        messageId: String,
+        audioUrl: String,
+    ) {
         LogUtils.d(
-            "ChatRepositoryImpl.updateMessageAudioUrl called for $agentId, messageId: $messageId"
+            "ChatRepositoryImpl.updateMessageAudioUrl called for $agentId, messageId: $messageId",
         )
         ChatSessionManager.updateMessageAudioUrl(agentId, messageId, audioUrl)
     }

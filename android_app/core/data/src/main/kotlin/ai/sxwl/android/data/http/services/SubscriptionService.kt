@@ -6,7 +6,6 @@ import ai.sxwl.android.data.http.IntyNetworkManager
 
 /** 订阅服务 封装所有订阅相关的API调用 替换原有的 ISubscriptionApi */
 object SubscriptionService {
-
     /**
      * 获取订阅计划列表 替换: ISubscriptionApi.getSubscriptionPlans() 注意: IntySDK可能没有直接的subscriptions
      * API，需要根据实际情况实现

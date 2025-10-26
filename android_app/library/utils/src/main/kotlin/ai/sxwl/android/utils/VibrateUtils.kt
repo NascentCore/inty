@@ -32,7 +32,8 @@ object VibrateUtils {
                     VibrationEffect.createOneShot(safeDuration, VibrationEffect.DEFAULT_AMPLITUDE)
                 )
             } else {
-                @Suppress("DEPRECATION") vibrator.vibrate(safeDuration)
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(safeDuration)
             }
         } catch (e: Exception) {
             LogUtils.e("VibrateUtils", "震动失败", e)
@@ -59,7 +60,8 @@ object VibrateUtils {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 vibrator.vibrate(VibrationEffect.createWaveform(pattern, safeRepeat))
             } else {
-                @Suppress("DEPRECATION") vibrator.vibrate(pattern, safeRepeat)
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(pattern, safeRepeat)
             }
         } catch (e: Exception) {
             LogUtils.e("VibrateUtils", "震动失败", e)
@@ -116,7 +118,8 @@ object VibrateUtils {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 vibrator.hasVibrator()
             } else {
-                @Suppress("DEPRECATION") vibrator.hasVibrator()
+                @Suppress("DEPRECATION")
+                vibrator.hasVibrator()
             }
         } catch (e: Exception) {
             LogUtils.e("VibrateUtils", "检查震动器失败", e)

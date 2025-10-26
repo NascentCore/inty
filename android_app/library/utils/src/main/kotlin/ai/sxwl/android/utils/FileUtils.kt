@@ -341,8 +341,9 @@ object FileUtils {
 
     /** 获取文件大小 */
     fun getFileSize(file: File?): Long {
-        return if (file == null || !file.exists()) -1
-        else if (file.isDirectory) getDirLength(file) else file.length()
+        return if (file == null || !file.exists()) {
+            -1
+        } else if (file.isDirectory) getDirLength(file) else file.length()
     }
 
     /** 获取文件大小 */

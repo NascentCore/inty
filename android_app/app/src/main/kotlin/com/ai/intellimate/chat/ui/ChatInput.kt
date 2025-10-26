@@ -57,19 +57,19 @@ fun ChatInput(
 
     Column(
         modifier =
-            Modifier.padding(
-                    start = horizontalPadding,
-                    top = topPadding,
-                    end = horizontalPadding,
-                    bottom = bottomPadding,
-                )
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(horizontalPadding))
-                .background(colorResource(id = R.color.dark_purple_60_percent))
-                .clickable(enabled = IntySetting.needBlockInput()) {
-                    // 游客 未登录的用户，需要弹出年龄段选择，18岁以下的，不让输入。
-                    RegInfoActivity.launch(context)
-                }
+        Modifier.padding(
+            start = horizontalPadding,
+            top = topPadding,
+            end = horizontalPadding,
+            bottom = bottomPadding,
+        )
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(horizontalPadding))
+            .background(colorResource(id = R.color.dark_purple_60_percent))
+            .clickable(enabled = IntySetting.needBlockInput()) {
+                // 游客 未登录的用户，需要弹出年龄段选择，18岁以下的，不让输入。
+                RegInfoActivity.launch(context)
+            },
     ) {
         // 主输入区域
         Row(
@@ -83,10 +83,10 @@ fun ChatInput(
                 singleLine = false,
                 onValueChange = { input -> chatViewModel.inputData.value = input },
                 keyboardOptions =
-                    KeyboardOptions(
-                        imeAction = ImeAction.Default,
-                        capitalization = KeyboardCapitalization.Sentences,
-                    ),
+                KeyboardOptions(
+                    imeAction = ImeAction.Default,
+                    capitalization = KeyboardCapitalization.Sentences,
+                ),
                 keyboardActions = KeyboardActions(),
                 onFocusChanged = { focused -> isInputFocused.value = focused },
                 onSelectionChanged = { selection ->
@@ -145,11 +145,11 @@ private fun NarrationInputButton(
 
     Box(
         modifier =
-            modifier
-                .size(40.dp)
-                .padding(horizontal = 8.dp, vertical = 8.dp)
-                .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
-                .noRippleClickable { onInsertParentheses(parenthesesText) },
+        modifier
+            .size(40.dp)
+            .padding(horizontal = 8.dp, vertical = 8.dp)
+            .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+            .noRippleClickable { onInsertParentheses(parenthesesText) },
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -209,7 +209,10 @@ internal fun insertParenthesesAtCursor(
  * @param cursorPosition 光标位置
  * @return true 如果光标在括号内，false 否则
  */
-internal fun isCursorInsideParentheses(text: String, cursorPosition: Int): Boolean {
+internal fun isCursorInsideParentheses(
+    text: String,
+    cursorPosition: Int,
+): Boolean {
     if (text.isEmpty() || cursorPosition >= text.length) return false
 
     // 从光标位置向前查找最近的 '('

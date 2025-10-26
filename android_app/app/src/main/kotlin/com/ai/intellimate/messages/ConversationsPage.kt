@@ -65,7 +65,7 @@ fun ConversationsPage(
             mapOf(
                 "conversation_count" to conversations.size,
                 "is_loading" to isLoadingConversations,
-            )
+            ),
         )
     }
 
@@ -73,7 +73,7 @@ fun ConversationsPage(
         AsyncImage(
             modifier = Modifier.align(Alignment.TopEnd),
             model = R.drawable.notify_header_bg,
-            contentDescription = null
+            contentDescription = null,
         )
         Content(
             conversations = conversations,
@@ -175,20 +175,20 @@ private fun MessageTabContent(
             // 会话列表
             if (conversations.isNotEmpty()) {
                 runCatching {
-                        itemsIndexed(
-                            items = conversations,
-                            key = { index, conversion -> "${conversion.agentId}_$index" },
-                        ) { _, conversion ->
-                            AuthClickable(onClick = { onClickConversationItem(conversion) }) {
+                    itemsIndexed(
+                        items = conversations,
+                        key = { index, conversion -> "${conversion.agentId}_$index" },
+                    ) { _, conversion ->
+                        AuthClickable(onClick = { onClickConversationItem(conversion) }) {
                                 authModifier ->
-                                ChatHistoryItem(
-                                    modifier = authModifier.fillMaxWidth(),
-                                    conversation = conversion,
-                                )
-                            }
+                            ChatHistoryItem(
+                                modifier = authModifier.fillMaxWidth(),
+                                conversation = conversion,
+                            )
                         }
-                        item { Spacer(Modifier.height(60.dp)) }
                     }
+                    item { Spacer(Modifier.height(60.dp)) }
+                }
                     .onFailure { it.printStackTrace() }
             }
 
@@ -233,7 +233,7 @@ private fun ChatHistoryItem(
             placeholder = painterResource(placeholderID),
             contentDescription = null,
             alignment = Alignment.TopCenter,
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
         )
 
         Spacer(Modifier.width(14.dp))

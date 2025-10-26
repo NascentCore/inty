@@ -59,18 +59,18 @@ private fun OpenChatDialog(
     Dialog(
         onDismissRequest = onCancel,
         properties =
-            DialogProperties(
-                dismissOnBackPress = false,
-                dismissOnClickOutside = false,
-                usePlatformDefaultWidth = false,
-            ),
+        DialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false,
+        ),
     ) {
         Box(
             modifier =
-                Modifier.fillMaxWidth()
-                    .heightIn(430.dp)
-                    .padding(horizontal = 24.dp)
-                    .clip(RoundedCornerShape(8.dp))
+            Modifier.fillMaxWidth()
+                .heightIn(430.dp)
+                .padding(horizontal = 24.dp)
+                .clip(RoundedCornerShape(8.dp)),
         ) {
             Image(
                 painter = painterResource(dialogData.imageRes),
@@ -164,21 +164,24 @@ private fun PreviewUnlimitChatDialog() {
 }
 
 @Composable
-internal fun HeartPrimaryButton(btnText: String, enable: Boolean = true, onClick: () -> Unit = {}) {
-
+internal fun HeartPrimaryButton(
+    btnText: String,
+    enable: Boolean = true,
+    onClick: () -> Unit = {},
+) {
     Box(
         modifier =
-            Modifier.fillMaxWidth(.95f)
-                .height(50.dp)
-                .clip(RoundedCornerShape(25.dp))
-                .alpha(if (enable) 1f else .4f)
-                .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))
-                        )
-                )
-                .clickable(enabled = enable, onClick = onClick),
+        Modifier.fillMaxWidth(.95f)
+            .height(50.dp)
+            .clip(RoundedCornerShape(25.dp))
+            .alpha(if (enable) 1f else .4f)
+            .background(
+                brush =
+                Brush.horizontalGradient(
+                    colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D)),
+                ),
+            )
+            .clickable(enabled = enable, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -225,11 +228,11 @@ internal fun ExpiredVipDialog(
     Dialog(
         onDismissRequest = onCancel,
         properties =
-            DialogProperties(
-                dismissOnBackPress = false,
-                dismissOnClickOutside = false,
-                usePlatformDefaultWidth = true,
-            ),
+        DialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = true,
+        ),
     ) {
         Box(modifier = Modifier.clip(RoundedCornerShape(20.dp))) {
             Image(
@@ -316,15 +319,15 @@ internal fun ReplyStyleSheet(
     ) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                    .background(
-                        brush =
-                            Brush.verticalGradient(
-                                colors = listOf(Color(0xFF322341), Color(0xFF120E24))
-                            )
-                    )
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                .background(
+                    brush =
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xFF322341), Color(0xFF120E24)),
+                    ),
+                )
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             IconButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {

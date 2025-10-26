@@ -3,7 +3,6 @@ package ai.sxwl.android.common.base
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -11,9 +10,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 
 abstract class BaseVM : ViewModel() {
-
     // 后台任务作用域（独立于UI生命周期）
     private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -24,18 +23,19 @@ abstract class BaseVM : ViewModel() {
     private val backgroundJobs: MutableList<Job> = mutableListOf()
 
     // 异常处理器
-    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        when (throwable) {
-            is CancellationException -> {
-                // 正常的取消异常，只记录日志，不显示toast
-                LogUtils.d("协程正常取消: ${throwable.message}")
-            }
-            else -> {
-                // 其他异常需要记录
-                LogUtils.e("协程异常: ${throwable.message}", throwable)
+    private val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            when (throwable) {
+                is CancellationException -> {
+                    // 正常的取消异常，只记录日志，不显示toast
+                    LogUtils.d("协程正常取消: ${throwable.message}")
+                }
+                else -> {
+                    // 其他异常需要记录
+                    LogUtils.e("协程异常: ${throwable.message}", throwable)
+                }
             }
         }
-    }
 
     /** 启动UI相关协程（随ViewModel生命周期） 适用于：状态更新、事件处理、UI交互 默认上下文：Main线程，适合UI操作 */
     protected fun launchUI(
@@ -46,7 +46,7 @@ abstract class BaseVM : ViewModel() {
             scope = viewModelScope,
             context = context,
             jobList = uiJobs,
-            block = block
+            block = block,
         )
     }
 
@@ -59,7 +59,7 @@ abstract class BaseVM : ViewModel() {
             scope = backgroundScope,
             context = context,
             jobList = backgroundJobs,
-            block = block
+            block = block,
         )
     }
 
@@ -83,7 +83,7 @@ abstract class BaseVM : ViewModel() {
             context = context,
             jobList = uiJobs,
             onError = onError,
-            block = block
+            block = block,
         )
     }
 
@@ -136,7 +136,7 @@ abstract class BaseVM : ViewModel() {
     private suspend fun CoroutineScope.executeBlock(
         block: suspend CoroutineScope.() -> Unit,
         contextName: String,
-        onError: (Exception) -> Unit = {}
+        onError: (Exception) -> Unit = {},
     ) {
         try {
             block.invoke(this)

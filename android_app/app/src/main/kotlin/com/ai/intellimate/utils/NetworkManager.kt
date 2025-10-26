@@ -7,11 +7,11 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.util.Log
 import androidx.core.content.getSystemService
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * 网络管理工具类
@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
  * 3. 提供网络恢复后的回调机制
  */
 class NetworkManager private constructor() {
-
     companion object {
         private const val TAG = "NetworkManager"
 
@@ -47,7 +46,10 @@ class NetworkManager private constructor() {
          * @param isConnected 是否已连接网络
          * @param networkType 网络类型
          */
-        fun onNetworkStateChanged(isConnected: Boolean, networkType: NetworkType)
+        fun onNetworkStateChanged(
+            isConnected: Boolean,
+            networkType: NetworkType,
+        )
 
         /** 网络恢复回调 当网络从断开状态恢复到连接状态时触发 */
         fun onNetworkRestored() {}
@@ -236,20 +238,20 @@ class NetworkManager private constructor() {
      */
     fun getNetworkStateFlow(): Flow<NetworkState> =
         callbackFlow {
-                val listener =
-                    object : NetworkStateListener {
-                        override fun onNetworkStateChanged(
-                            isConnected: Boolean,
-                            networkType: NetworkType,
-                        ) {
-                            trySend(NetworkState(isConnected, networkType))
-                        }
+            val listener =
+                object : NetworkStateListener {
+                    override fun onNetworkStateChanged(
+                        isConnected: Boolean,
+                        networkType: NetworkType,
+                    ) {
+                        trySend(NetworkState(isConnected, networkType))
                     }
+                }
 
-                addNetworkStateListener(listener)
+            addNetworkStateListener(listener)
 
-                awaitClose { removeNetworkStateListener(listener) }
-            }
+            awaitClose { removeNetworkStateListener(listener) }
+        }
             .distinctUntilChanged()
 
     /** 网络状态数据类 */

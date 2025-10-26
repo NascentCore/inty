@@ -27,12 +27,11 @@ import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.ui.components.MySettingScreen
 import com.ai.intellimate.utils.UCropHelper
 import com.yalantis.ucrop.UCrop
-import java.util.Locale
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 /** 个人设置页面 */
 class ModifyProfileActivity : BaseActivity() {
-
     companion object {
         private const val INTENT_KEY_USER_INFO = "intent_key_agent_info"
 
@@ -42,11 +41,14 @@ class ModifyProfileActivity : BaseActivity() {
          * @param context 上下文context
          * @param userInfo UserProfile对象
          */
-        fun launch(context: Context, userInfo: UserProfile? = null) {
+        fun launch(
+            context: Context,
+            userInfo: UserProfile? = null,
+        ) {
             context.startActivity(
                 Intent(context, ModifyProfileActivity::class.java).also { intent ->
                     intent.putExtra(INTENT_KEY_USER_INFO, userInfo)
-                }
+                },
             )
         }
     }
@@ -81,14 +83,14 @@ class ModifyProfileActivity : BaseActivity() {
 
         val activityCropResultLauncher =
             rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-                result ->
+                    result ->
                 if (result.resultCode == RESULT_OK) {
                     runCatching {
-                            result.data?.let { intentResult ->
-                                val imageUri = UCrop.getOutput(intentResult) // 图片uri
-                                imageUri?.let { imageUriReal -> viewModel.setAvatar(imageUriReal) }
-                            }
+                        result.data?.let { intentResult ->
+                            val imageUri = UCrop.getOutput(intentResult) // 图片uri
+                            imageUri?.let { imageUriReal -> viewModel.setAvatar(imageUriReal) }
                         }
+                    }
                         .onFailure { e -> e.printStackTrace() }
                 }
             }
@@ -97,35 +99,35 @@ class ModifyProfileActivity : BaseActivity() {
             rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
                 imageUri?.let { uri ->
                     runCatching {
-                            // Check file size before cropping - limit to 10MB
-                            val fileSize = getFileSize(context, uri)
-                            // TODO: 使用 firebase remote config 配置应集中管理
-                            // https://firebase.google.com/docs/remote-config
-                            val maxSizeMB = 10
-                            val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
-                            if (fileSize > maxSizeBytes) {
-                                val maxSizeMBStr =
-                                    String.Companion.format(Locale.getDefault(), "%dMB", maxSizeMB)
-                                val fileSizeMBStr =
-                                    String.Companion.format(
-                                        Locale.getDefault(),
-                                        "%.1fMB",
-                                        fileSize / (1024.0 * 1024.0)
-                                    )
-                                val msg =
-                                    String.format(
-                                        context.getString(
-                                            R.string.user_avatar_size_too_large_with_size_format
-                                        ),
-                                        maxSizeMBStr,
-                                        fileSizeMBStr,
-                                    )
-                                lifecycleScope.launch { ToastUtils.showShort(msg) }
-                                return@let
-                            }
-                            val intentCrop = UCropHelper.getIntent(context, uri, cropTitle)
-                            activityCropResultLauncher.launch(intentCrop)
+                        // Check file size before cropping - limit to 10MB
+                        val fileSize = getFileSize(context, uri)
+                        // TODO: 使用 firebase remote config 配置应集中管理
+                        // https://firebase.google.com/docs/remote-config
+                        val maxSizeMB = 10
+                        val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
+                        if (fileSize > maxSizeBytes) {
+                            val maxSizeMBStr =
+                                String.Companion.format(Locale.getDefault(), "%dMB", maxSizeMB)
+                            val fileSizeMBStr =
+                                String.Companion.format(
+                                    Locale.getDefault(),
+                                    "%.1fMB",
+                                    fileSize / (1024.0 * 1024.0),
+                                )
+                            val msg =
+                                String.format(
+                                    context.getString(
+                                        R.string.user_avatar_size_too_large_with_size_format,
+                                    ),
+                                    maxSizeMBStr,
+                                    fileSizeMBStr,
+                                )
+                            lifecycleScope.launch { ToastUtils.showShort(msg) }
+                            return@let
                         }
+                        val intentCrop = UCropHelper.getIntent(context, uri, cropTitle)
+                        activityCropResultLauncher.launch(intentCrop)
+                    }
                         .onFailure { it.printStackTrace() }
                 }
             }
@@ -171,7 +173,10 @@ class ModifyProfileActivity : BaseActivity() {
         }
     }
 
-    private fun getFileSize(context: Context, uri: Uri): Long {
+    private fun getFileSize(
+        context: Context,
+        uri: Uri,
+    ): Long {
         return try {
             context.contentResolver.openInputStream(uri)?.use { input ->
                 input.available().toLong()

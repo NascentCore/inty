@@ -102,7 +102,7 @@ fun MySettingScreen(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                        Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
                         painter = painterResource(R.drawable.back),
                         contentDescription = null,
                     )
@@ -159,12 +159,15 @@ fun MySettingScreen(
 
 /** 头像选择区域 */
 @Composable
-private fun AvatarSection(avatar: String, onSelectAvatar: () -> Unit) {
+private fun AvatarSection(
+    avatar: String,
+    onSelectAvatar: () -> Unit,
+) {
     Box(
         modifier =
-            Modifier.size(120.dp)
-                .background(color = Color.White, shape = CircleShape)
-                .padding(4.dp),
+        Modifier.size(120.dp)
+            .background(color = Color.White, shape = CircleShape)
+            .padding(4.dp),
         contentAlignment = Alignment.Center,
     ) {
         AsyncImage(
@@ -176,9 +179,9 @@ private fun AvatarSection(avatar: String, onSelectAvatar: () -> Unit) {
         )
         Image(
             modifier =
-                Modifier.size(40.dp).align(Alignment.BottomEnd).noRippleClickable {
-                    onSelectAvatar()
-                },
+            Modifier.size(40.dp).align(Alignment.BottomEnd).noRippleClickable {
+                onSelectAvatar()
+            },
             painter = painterResource(R.drawable.icon_camera),
             contentDescription = null,
         )
@@ -196,11 +199,11 @@ fun MySettingItem(
 ) {
     Row(
         modifier =
-            modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .padding(horizontal = horizontalPadding.dp)
-                .noRippleClickable { onClick() },
+        modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .padding(horizontal = horizontalPadding.dp)
+            .noRippleClickable { onClick() },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(text = key, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
@@ -222,29 +225,32 @@ fun MySettingItem(
 
 /** 保存按钮组件 */
 @Composable
-fun SaveButton(onSave: () -> Unit, isSaving: Boolean = false) {
+fun SaveButton(
+    onSave: () -> Unit,
+    isSaving: Boolean = false,
+) {
     Box(
         modifier =
-            Modifier.fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .height(50.dp)
-                .background(
-                    brush =
-                        Brush.linearGradient(
-                            colors =
-                                if (isSaving) {
-                                    listOf(Color(0xFF666666), Color(0xFF888888))
-                                } else {
-                                    listOf(Color(0xFFC122FF), Color(0xFFFF905D))
-                                }
-                        ),
-                    shape = RoundedCornerShape(25.dp),
-                )
-                .noRippleClickable {
-                    if (!isSaving) {
-                        onSave()
-                    }
+        Modifier.fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .height(50.dp)
+            .background(
+                brush =
+                Brush.linearGradient(
+                    colors =
+                    if (isSaving) {
+                        listOf(Color(0xFF666666), Color(0xFF888888))
+                    } else {
+                        listOf(Color(0xFFC122FF), Color(0xFFFF905D))
+                    },
+                ),
+                shape = RoundedCornerShape(25.dp),
+            )
+            .noRippleClickable {
+                if (!isSaving) {
+                    onSave()
                 }
+            },
     ) {
         if (isSaving) {
             // 显示加载动画
@@ -277,15 +283,15 @@ fun EditDialog(
     Box(modifier = Modifier.fillMaxSize().imePadding().noRippleClickable { onDismiss() }) {
         Column(
             modifier =
-                Modifier.align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .background(
-                        brush =
-                            Brush.verticalGradient(
-                                colors = listOf(Color(0xff322341), Color(0xff120E24))
-                            ),
-                        shape = RoundedCornerShape(24.dp, 24.dp, 0.dp, 0.dp),
+            Modifier.align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(
+                    brush =
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xff322341), Color(0xff120E24)),
                     ),
+                    shape = RoundedCornerShape(24.dp, 24.dp, 0.dp, 0.dp),
+                ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // 关闭按钮
@@ -293,7 +299,7 @@ fun EditDialog(
                 painter = painterResource(R.drawable.close),
                 contentDescription = null,
                 modifier =
-                    Modifier.padding(16.dp).align(Alignment.End).noRippleClickable { onDismiss() },
+                Modifier.padding(16.dp).align(Alignment.End).noRippleClickable { onDismiss() },
             )
 
             // 标题
@@ -322,7 +328,11 @@ fun EditDialog(
 
 /** 编辑内容组件 */
 @Composable
-private fun EditContent(editKey: EditKey, editValue: String, onValueChange: (String) -> Unit) {
+private fun EditContent(
+    editKey: EditKey,
+    editValue: String,
+    onValueChange: (String) -> Unit,
+) {
     when (editKey) {
         EditKey.Name -> {
             NameEditField(value = editValue, onValueChange = onValueChange)
@@ -341,18 +351,21 @@ private fun EditContent(editKey: EditKey, editValue: String, onValueChange: (Str
 
 /** 姓名编辑字段 */
 @Composable
-private fun NameEditField(value: String, onValueChange: (String) -> Unit) {
+private fun NameEditField(
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
     Row(
         modifier =
-            Modifier.padding(horizontal = 16.dp, vertical = 0.dp)
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-                .background(Color.White.copy(0.1f), RoundedCornerShape(8.dp))
-                .border(
-                    width = 0.5.dp,
-                    color = Color.White.copy(0.2f),
-                    shape = RoundedCornerShape(8.dp),
-                ),
+        Modifier.padding(horizontal = 16.dp, vertical = 0.dp)
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .background(Color.White.copy(0.1f), RoundedCornerShape(8.dp))
+            .border(
+                width = 0.5.dp,
+                color = Color.White.copy(0.2f),
+                shape = RoundedCornerShape(8.dp),
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IntySmallTextField(
@@ -367,20 +380,23 @@ private fun NameEditField(value: String, onValueChange: (String) -> Unit) {
 
 /** 角色描述编辑字段 */
 @Composable
-private fun PersonaEditField(value: String, onValueChange: (String) -> Unit) {
+private fun PersonaEditField(
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
     val focusRequester = remember { FocusRequester() }
     Box(
         modifier =
-            Modifier.padding(horizontal = 16.dp, vertical = 0.dp)
-                .fillMaxWidth()
-                .height(112.dp)
-                .background(Color.White.copy(0.1f), RoundedCornerShape(8.dp))
-                .border(
-                    width = 0.5.dp,
-                    color = Color.White.copy(0.2f),
-                    shape = RoundedCornerShape(8.dp),
-                )
-                .clickable { focusRequester.requestFocus() }
+        Modifier.padding(horizontal = 16.dp, vertical = 0.dp)
+            .fillMaxWidth()
+            .height(112.dp)
+            .background(Color.White.copy(0.1f), RoundedCornerShape(8.dp))
+            .border(
+                width = 0.5.dp,
+                color = Color.White.copy(0.2f),
+                shape = RoundedCornerShape(8.dp),
+            )
+            .clickable { focusRequester.requestFocus() },
     ) {
         IntySmallTextField2(
             modifier = Modifier.fillMaxSize().focusRequester(focusRequester),
@@ -409,10 +425,13 @@ private fun PersonaEditField(value: String, onValueChange: (String) -> Unit) {
 
 /** 代词选择编辑字段 */
 @Composable
-private fun PronounsEditField(value: String, onValueChange: (String) -> Unit) {
+private fun PronounsEditField(
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
     Row(
         modifier =
-            Modifier.padding(horizontal = 16.dp, vertical = 0.dp).fillMaxWidth().height(48.dp),
+        Modifier.padding(horizontal = 16.dp, vertical = 0.dp).fillMaxWidth().height(48.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PronounsItem(
@@ -444,28 +463,28 @@ private fun RowScope.PronounsItem(
 ) {
     Box(
         modifier =
-            Modifier.weight(1f)
-                .fillMaxHeight()
-                .background(color = Color(0x3378599A), shape = RoundedCornerShape(24.dp))
-                .then(
-                    if (isSelected) {
-                        Modifier.border(
-                            brush =
-                                Brush.linearGradient(
-                                    colors = listOf(Color(0xffC122FF), Color(0xffFF905D))
-                                ),
-                            width = 2.dp,
-                            shape = RoundedCornerShape(24.dp),
-                        )
-                    } else {
-                        Modifier.border(
-                            width = 0.5.dp,
-                            color = Color.White.copy(0.2f),
-                            shape = RoundedCornerShape(24.dp),
-                        )
-                    }
-                )
-                .noRippleClickable { onSelected() },
+        Modifier.weight(1f)
+            .fillMaxHeight()
+            .background(color = Color(0x3378599A), shape = RoundedCornerShape(24.dp))
+            .then(
+                if (isSelected) {
+                    Modifier.border(
+                        brush =
+                        Brush.linearGradient(
+                            colors = listOf(Color(0xffC122FF), Color(0xffFF905D)),
+                        ),
+                        width = 2.dp,
+                        shape = RoundedCornerShape(24.dp),
+                    )
+                } else {
+                    Modifier.border(
+                        width = 0.5.dp,
+                        color = Color.White.copy(0.2f),
+                        shape = RoundedCornerShape(24.dp),
+                    )
+                },
+            )
+            .noRippleClickable { onSelected() },
         contentAlignment = Alignment.Center,
     ) {
         if (isSelected) {

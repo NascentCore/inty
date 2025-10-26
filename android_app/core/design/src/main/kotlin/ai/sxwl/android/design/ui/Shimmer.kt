@@ -33,18 +33,21 @@ import androidx.compose.ui.unit.dp
 
 /** 骨架屏基础组件 */
 @Composable
-fun ShimmerBox(modifier: Modifier = Modifier, shape: Shape = RoundedCornerShape(4.dp)) {
+fun ShimmerBox(
+    modifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(4.dp),
+) {
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translateAnim by
         transition.animateFloat(
             initialValue = 0f,
             targetValue = 1000f,
             animationSpec =
-                infiniteRepeatable(
-                    animation = tween(durationMillis = 1200, easing = LinearEasing),
-                    repeatMode = RepeatMode.Restart
-                ),
-            label = "shimmer"
+            infiniteRepeatable(
+                animation = tween(durationMillis = 1200, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+            label = "shimmer",
         )
 
     val shimmerColors =
@@ -58,7 +61,7 @@ fun ShimmerBox(modifier: Modifier = Modifier, shape: Shape = RoundedCornerShape(
         Brush.linearGradient(
             colors = shimmerColors,
             start = Offset.Zero,
-            end = Offset(x = translateAnim, y = translateAnim)
+            end = Offset(x = translateAnim, y = translateAnim),
         )
 
     Box(modifier = modifier.clip(shape).background(brush))
@@ -74,18 +77,18 @@ fun AgentCardShimmer(modifier: Modifier = Modifier) {
         // 模拟渐变遮罩
         Box(
             modifier =
-                Modifier.matchParentSize()
-                    .background(
-                        brush =
-                            Brush.verticalGradient(
-                                colors =
-                                    listOf(
-                                        Color.Transparent,
-                                        Color.Black.copy(alpha = 0.3f),
-                                        Color.Black.copy(alpha = 0.7f)
-                                    )
-                            )
-                    )
+            Modifier.matchParentSize()
+                .background(
+                    brush =
+                    Brush.verticalGradient(
+                        colors =
+                        listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.3f),
+                            Color.Black.copy(alpha = 0.7f),
+                        ),
+                    ),
+                ),
         )
 
         // 内容区域 - 底部对齐
@@ -93,7 +96,7 @@ fun AgentCardShimmer(modifier: Modifier = Modifier) {
             // Agent名称和关注按钮
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 // 名称
                 ShimmerBox(modifier = Modifier.weight(1f).height(16.dp))
@@ -116,7 +119,7 @@ fun AgentCardShimmer(modifier: Modifier = Modifier) {
             // 统计信息
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 ShimmerBox(modifier = Modifier.width(60.dp).height(10.dp))
 
@@ -138,18 +141,17 @@ fun AgentAvatarCardShimmer(modifier: Modifier = Modifier) {
 @Composable
 fun AgentsScreenShimmer(modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxWidth()) {
-
         // 主卡片区域 - 使用weight(1f)占满剩余空间
         AgentCardShimmer(
             modifier =
-                Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp, vertical = 16.dp)
+            Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp, vertical = 16.dp),
         )
 
         // 头像轮播区域
         Box(modifier = Modifier.fillMaxWidth().height(112.dp).padding(horizontal = 16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 repeat(5) { index -> AgentAvatarCardShimmer(modifier = Modifier.size(88.dp)) }
             }

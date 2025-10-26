@@ -17,7 +17,9 @@ tasks.register("printVersionInfo") {
         println("Version code: ${android.defaultConfig.versionCode}")
         println("Version name: ${android.defaultConfig.versionName}")
         println(
-            "Version name with suffix: ${android.defaultConfig.versionName}${android.defaultConfig.versionNameSuffix}"
+            "Version name with suffix: " +
+                android.defaultConfig.versionName +
+                android.defaultConfig.versionNameSuffix,
         )
     }
 }

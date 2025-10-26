@@ -8,7 +8,6 @@ import java.util.concurrent.ConcurrentHashMap
 
 /** 页面追踪工具类 用于记录用户页面访问、交互流程和崩溃时的上下文信息 提供业务层友好的页面追踪功能 */
 object PageTrackingHelper {
-
     // 当前页面信息
     private var currentPage: String? = null
     private var currentPageClass: String? = null
@@ -67,7 +66,7 @@ object PageTrackingHelper {
     ) {
         try {
             val timestamp = System.currentTimeMillis()
-            val interactionKey = "${action}_${target}_${timestamp}"
+            val interactionKey = "${action}_${target}_$timestamp"
 
             // 添加到交互历史
             addToInteractionHistory(interactionKey, "$action on $target")
@@ -181,7 +180,10 @@ object PageTrackingHelper {
     }
 
     /** 设置用户属性 */
-    fun setUserProperty(property: String, value: String) {
+    fun setUserProperty(
+        property: String,
+        value: String,
+    ) {
         try {
             FirebaseManager.setUserProperty(property, value)
             FirebaseManager.setCustomKey("user_$property", value)
@@ -190,7 +192,10 @@ object PageTrackingHelper {
         }
     }
 
-    private fun addToInteractionHistory(key: String, value: String) {
+    private fun addToInteractionHistory(
+        key: String,
+        value: String,
+    ) {
         userInteractionHistory[key] = value
         if (userInteractionHistory.size > maxHistorySize) {
             val oldestKey = userInteractionHistory.keys.first()
@@ -206,12 +211,18 @@ object PageTrackingHelper {
     }
 
     /** 为 Activity 添加生命周期追踪 */
-    fun trackActivityLifecycle(activity: Activity, pageName: String) {
+    fun trackActivityLifecycle(
+        activity: Activity,
+        pageName: String,
+    ) {
         trackPageView(pageName, activity.javaClass.simpleName)
     }
 
     /** 为 Fragment 添加生命周期追踪 */
-    fun trackFragmentLifecycle(fragment: Fragment, pageName: String) {
+    fun trackFragmentLifecycle(
+        fragment: Fragment,
+        pageName: String,
+    ) {
         trackPageView(pageName, fragment.javaClass.simpleName)
     }
 }

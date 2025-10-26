@@ -17,9 +17,7 @@ import kotlinx.coroutines.launch
  * https://developer.android.com/identity/sign-in/credential-manager-siwg
  */
 class LoginActivity : BaseActivity() {
-
     companion object {
-
         /**
          * 启动登录界面
          *
@@ -82,6 +80,9 @@ class LoginActivity : BaseActivity() {
 
 /** 登录内容组件 */
 @Composable
-private fun LoginContent(onClose: () -> Unit, onGoogleLoginSuccess: (idToken: String) -> Unit) {
+private fun LoginContent(
+    onClose: () -> Unit,
+    onGoogleLoginSuccess: (idToken: String) -> Unit,
+) {
     LoginScreen(onClose = onClose, onGoogleLoginSuccess = onGoogleLoginSuccess)
 }

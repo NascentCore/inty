@@ -6,7 +6,6 @@ import kotlinx.coroutines.CancellationException
 
 /** 网络错误处理器 负责处理网络相关的错误提示和异常处理 */
 object NetworkErrorHandler {
-
     /**
      * 显示网络感知的错误提示 在无网络情况下不会显示错误 Toast
      *
@@ -24,7 +23,7 @@ object NetworkErrorHandler {
         // 检查是否为取消操作，如果是则不显示toast
         if (
             errorMessage.contains("cancelled", ignoreCase = true) ||
-                errorMessage.contains("cancel", ignoreCase = true)
+            errorMessage.contains("cancel", ignoreCase = true)
         ) {
             LogUtils.d("网络请求被取消: $requestUrl")
             return
@@ -60,7 +59,7 @@ object NetworkErrorHandler {
         // 检查错误消息是否包含取消相关词汇
         if (
             errorMessage.contains("cancelled", ignoreCase = true) ||
-                errorMessage.contains("cancel", ignoreCase = true)
+            errorMessage.contains("cancel", ignoreCase = true)
         ) {
             LogUtils.d("网络请求被取消: $requestUrl - $errorMessage")
             return errorMessage

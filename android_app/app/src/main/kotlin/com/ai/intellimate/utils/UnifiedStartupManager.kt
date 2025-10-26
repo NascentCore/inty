@@ -25,7 +25,6 @@ import kotlinx.coroutines.launch
 
 /** 统一启动管理器 整合所有启动相关功能：缓存加载、网络预加载、用户管理、进度跟踪 */
 object UnifiedStartupManager {
-
     private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // 启动状态
@@ -107,7 +106,6 @@ object UnifiedStartupManager {
 
     /** 异步初始化 - 进行数据预加载和缓存，不阻塞启动 */
     fun initializeAsync(context: Context) {
-
         startupScope.launch {
             try {
                 // 阶段0：初始化预加载管理器（在后台线程中）
@@ -133,7 +131,6 @@ object UnifiedStartupManager {
     private fun loadCriticalData() {
         startupScope.launch {
             try {
-
                 // 优先加载缓存数据（非阻塞）
                 loadCacheDataNonBlocking()
 
@@ -215,7 +212,6 @@ object UnifiedStartupManager {
     /** 加载缓存数据（非阻塞版本，用于关键数据加载） */
     private suspend fun loadCacheDataNonBlocking() {
         try {
-
             // 快速加载缓存数据，不等待
             if (UserProfileManager.hasUserProfile()) {
                 val profile = UserProfileManager.getUserProfile()
@@ -268,7 +264,7 @@ object UnifiedStartupManager {
 
             val isValid = isLogin && token.isNotEmpty() && userId.isNotEmpty()
             LogUtils.d(
-                "UnifiedStartupManager - 登录状态检查: isLogin=$isLogin, hasToken=${token.isNotEmpty()}, hasUserId=${userId.isNotEmpty()}, isValid=$isValid"
+                "UnifiedStartupManager - 登录状态检查: isLogin=$isLogin, hasToken=${token.isNotEmpty()}, hasUserId=${userId.isNotEmpty()}, isValid=$isValid",
             )
             isValid
         } catch (e: Exception) {

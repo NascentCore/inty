@@ -1,8 +1,8 @@
 package com.squareup.moshi
 
+import okio.BufferedSource
 import java.lang.reflect.Type
 import java.util.concurrent.atomic.AtomicBoolean
-import okio.BufferedSource
 
 class DefaultIfNullFactory : JsonAdapter.Factory {
     override fun create(

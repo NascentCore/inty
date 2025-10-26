@@ -11,7 +11,6 @@ import androidx.compose.runtime.collectAsState
 
 /** Ai模型的信息介绍页面 */
 class AgentInfoActivity : BaseActivity() {
-
     companion object {
         private const val INTENT_KEY_AGENT_ID = "intent_key_agent_id"
         private const val INTENT_KEY_AGENT_INFO = "intent_key_agent_info"
@@ -23,12 +22,16 @@ class AgentInfoActivity : BaseActivity() {
          * @param agentInfo Agent的Info对象
          * @param agentId agent的id 两个参数选一即可，也必须只要有一个
          */
-        fun launch(context: Context, agentInfo: AgentInfo? = null, agentId: String? = null) {
+        fun launch(
+            context: Context,
+            agentInfo: AgentInfo? = null,
+            agentId: String? = null,
+        ) {
             context.startActivity(
                 Intent(context, AgentInfoActivity::class.java).also { intent ->
                     intent.putExtra(INTENT_KEY_AGENT_ID, agentId)
                     intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
-                }
+                },
             )
         }
     }

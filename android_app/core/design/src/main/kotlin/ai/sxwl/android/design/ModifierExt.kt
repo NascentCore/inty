@@ -29,9 +29,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toBitmap
-import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlin.math.roundToInt
 
 /**
  * Modifier的扩展函数，用于捕获内部compose的UI转化为bitmap val picture = remember { Picture() }
@@ -81,7 +81,11 @@ fun createBitmapFromPicture(picture: Picture): Bitmap {
  *
  * @param picture 是compose的Picture，需要captureContent配合使用，picture才能有内容
  */
-fun getBitmapWithAppWaterMarker(context: Context, @DrawableRes res: Int, picture: Picture): Bitmap {
+fun getBitmapWithAppWaterMarker(
+    context: Context,
+    @DrawableRes res: Int,
+    picture: Picture,
+): Bitmap {
     val bitmap = createBitmapFromPicture(picture)
     val size = Size(bitmap.width.toFloat(), bitmap.height.toFloat())
     // 处理 Immutable bitmap passed to Canvas constructor
@@ -91,7 +95,7 @@ fun getBitmapWithAppWaterMarker(context: Context, @DrawableRes res: Int, picture
             drawImage(
                 image = bm.asImageBitmap(),
                 topLeftOffset = offsetOfWaterMarker(bm, size, WaterMarkerPosition.BOTTOM_END),
-                paint = Paint()
+                paint = Paint(),
             )
         }
     }
@@ -105,42 +109,41 @@ private fun offsetOfWaterMarker(
     bitmap: Bitmap,
     size: Size,
     position: WaterMarkerPosition = WaterMarkerPosition.BOTTOM_END,
-) =
-    when (position) {
-        WaterMarkerPosition.TOP_START -> Offset.Zero
-        WaterMarkerPosition.TOP_CENTER -> Offset((size.width - bitmap.width) / 2, 0f)
-        WaterMarkerPosition.TOP_END -> Offset(size.width - bitmap.width, 0f)
-        WaterMarkerPosition.CENTER_START ->
-            Offset(
-                0f,
-                (size.height - bitmap.height) / 2,
-            )
-        WaterMarkerPosition.CENTER ->
-            Offset(
-                (size.width - bitmap.width) / 2,
-                (size.height - bitmap.height) / 2,
-            )
-        WaterMarkerPosition.CENTER_END ->
-            Offset(
-                size.width - bitmap.width,
-                (size.height - bitmap.height) / 2,
-            )
-        WaterMarkerPosition.BOTTOM_START ->
-            Offset(
-                0f,
-                size.height - bitmap.height,
-            )
-        WaterMarkerPosition.BOTTOM_CENTER ->
-            Offset(
-                (size.width - bitmap.width) / 2,
-                size.height - bitmap.height,
-            )
-        WaterMarkerPosition.BOTTOM_END ->
-            Offset(
-                size.width - bitmap.width,
-                size.height - bitmap.height,
-            )
-    }
+) = when (position) {
+    WaterMarkerPosition.TOP_START -> Offset.Zero
+    WaterMarkerPosition.TOP_CENTER -> Offset((size.width - bitmap.width) / 2, 0f)
+    WaterMarkerPosition.TOP_END -> Offset(size.width - bitmap.width, 0f)
+    WaterMarkerPosition.CENTER_START ->
+        Offset(
+            0f,
+            (size.height - bitmap.height) / 2,
+        )
+    WaterMarkerPosition.CENTER ->
+        Offset(
+            (size.width - bitmap.width) / 2,
+            (size.height - bitmap.height) / 2,
+        )
+    WaterMarkerPosition.CENTER_END ->
+        Offset(
+            size.width - bitmap.width,
+            (size.height - bitmap.height) / 2,
+        )
+    WaterMarkerPosition.BOTTOM_START ->
+        Offset(
+            0f,
+            size.height - bitmap.height,
+        )
+    WaterMarkerPosition.BOTTOM_CENTER ->
+        Offset(
+            (size.width - bitmap.width) / 2,
+            size.height - bitmap.height,
+        )
+    WaterMarkerPosition.BOTTOM_END ->
+        Offset(
+            size.width - bitmap.width,
+            size.height - bitmap.height,
+        )
+}
 
 /** 水印的位置 */
 enum class WaterMarkerPosition {
@@ -160,17 +163,16 @@ fun Modifier.drawAppWaterMarker(
     context: Context,
     @DrawableRes res: Int,
     position: WaterMarkerPosition = WaterMarkerPosition.BOTTOM_END,
-) =
-    this.drawWithContent {
-        drawContent()
-        // 绘制水印
-        appWaterMarker(context, res)?.let { bitmap ->
-            drawImage(
-                image = bitmap.asImageBitmap(),
-                topLeft = offsetOfWaterMarker(bitmap, size, position)
-            )
-        }
+) = this.drawWithContent {
+    drawContent()
+    // 绘制水印
+    appWaterMarker(context, res)?.let { bitmap ->
+        drawImage(
+            image = bitmap.asImageBitmap(),
+            topLeft = offsetOfWaterMarker(bitmap, size, position),
+        )
     }
+}
 
 private fun appWaterMarker(
     context: Context,
@@ -181,12 +183,12 @@ private fun appWaterMarker(
     //  return   BitmapFactory.decodeResource(context.resources, R.drawable.icon_svg)
     val waterMarker =
         ContextCompat.getDrawable(context, res)?.let { drawable ->
-            if (size != Size.Zero)
+            if (size != Size.Zero) {
                 drawable.toBitmap(
                     width = size.width.roundToInt(),
-                    height = size.height.roundToInt()
+                    height = size.height.roundToInt(),
                 )
-            else {
+            } else {
                 drawable.toBitmap()
             }
         }
@@ -198,7 +200,6 @@ private fun appWaterMarker(
 // 去掉点击ripple效果的方式,可以设置给不需要ripple的button组件上，
 val emptyInteractionSource =
     object : MutableInteractionSource {
-
         override val interactions: Flow<Interaction>
             get() = MutableSharedFlow()
 
@@ -213,24 +214,23 @@ fun Modifier.noRippleClickable(
     onClickLabel: String? = null,
     role: Role? = null,
     onClick: () -> Unit = {},
-) =
-    this.composed {
-        var lastClickTime by remember { mutableLongStateOf(0L) }
-        clickable(
-            interactionSource = emptyInteractionSource,
-            indication = null,
-            enabled = enabled,
-            onClickLabel = onClickLabel,
-            role = role,
-            onClick = {
-                val currentTime = System.currentTimeMillis()
-                if (AntiClick.isValidClick(lastClickTime)) {
-                    lastClickTime = currentTime
-                    onClick()
-                }
-            },
-        )
-    }
+) = this.composed {
+    var lastClickTime by remember { mutableLongStateOf(0L) }
+    clickable(
+        interactionSource = emptyInteractionSource,
+        indication = null,
+        enabled = enabled,
+        onClickLabel = onClickLabel,
+        role = role,
+        onClick = {
+            val currentTime = System.currentTimeMillis()
+            if (AntiClick.isValidClick(lastClickTime)) {
+                lastClickTime = currentTime
+                onClick()
+            }
+        },
+    )
+}
 
 /** 点击防抖 */
 object AntiClick {

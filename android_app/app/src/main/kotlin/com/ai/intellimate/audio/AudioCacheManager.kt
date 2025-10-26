@@ -3,20 +3,19 @@ package com.ai.intellimate.audio
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.util.LruCache
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import java.security.MessageDigest
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 
 /** 音频缓存管理器 提供内存缓存和本地文件缓存功能 */
 class AudioCacheManager private constructor(private val context: Context) {
-
     companion object {
         @Volatile private var INSTANCE: AudioCacheManager? = null
 
@@ -170,7 +169,7 @@ class AudioCacheManager private constructor(private val context: Context) {
                                     else -> "HTTP错误: ${response.code}"
                                 }
                             LogUtils.e(
-                                "音频LOG测试 Failed to download audio: $errorMsg (${response.code})"
+                                "音频LOG测试 Failed to download audio: $errorMsg (${response.code})",
                             )
 
                             // 对于4xx错误，不重试
@@ -190,7 +189,7 @@ class AudioCacheManager private constructor(private val context: Context) {
                         }
 
                     LogUtils.e(
-                        "音频LOG测试 Failed to download audio (attempt ${retryCount + 1}): $errorMsg"
+                        "音频LOG测试 Failed to download audio (attempt ${retryCount + 1}): $errorMsg",
                     )
 
                     // 如果是最后一次重试，返回null
@@ -211,7 +210,10 @@ class AudioCacheManager private constructor(private val context: Context) {
         }
 
     /** 保存数据到文件 */
-    private fun saveToFile(file: File, data: ByteArray) {
+    private fun saveToFile(
+        file: File,
+        data: ByteArray,
+    ) {
         try {
             FileOutputStream(file).use { fos -> fos.write(data) }
         } catch (e: IOException) {

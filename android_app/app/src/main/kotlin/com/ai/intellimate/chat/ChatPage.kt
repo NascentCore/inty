@@ -78,7 +78,6 @@ internal fun ChatPage(
     onBack: (() -> Unit)? = null,
     isCurrentPage: Boolean = true,
 ) {
-
     val context = LocalContext.current
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val isQueryMsgsCompleted by chatViewModel.isQueryMsgsCompleted.collectAsState()
@@ -92,7 +91,7 @@ internal fun ChatPage(
                 "agent_id" to (agentInfo?.id ?: "unknown"),
                 "agent_name" to (agentInfo?.name ?: "unknown"),
                 "show_back_button" to showBackButton,
-            )
+            ),
         )
     }
 
@@ -149,7 +148,7 @@ internal fun ChatPage(
                 agentInfo?.let {
                     // 获取角色专用设置，如果不存在则使用全局设置
                     IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
-                } ?: false
+                } ?: false,
             )
         }
 
@@ -171,7 +170,9 @@ internal fun ChatPage(
 
     Box(
         modifier =
-            modifier.pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
+        modifier.pointerInput(
+            Unit
+        ) { detectTapGestures(onTap = { focusManager.clearFocus() }) },
     ) {
         // 背景
         AgentBackground(agentInfo = agentInfo, showGradients = true)
@@ -261,8 +262,10 @@ internal fun ChatPage(
                         listState.firstVisibleItemScrollOffset > 0
                 val showLoadMoreUi =
                     hasMoreMessages &&
-                        (isLoadingMore ||
-                            (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
+                        (
+                            isLoadingMore ||
+                                (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi)
+                            )
 
                 LazyColumn(
                     modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
@@ -275,64 +278,64 @@ internal fun ChatPage(
                     val filteredChatMessages = chatMessages.filter { !it.isOpening() }
                     // 添加安全检查
                     runCatching {
-                            if (filteredChatMessages.isNotEmpty()) {
-                                // 创建消息列表的副本以避免并发修改
-                                val messagesCopy = filteredChatMessages.toList()
-                                val items =
-                                    messagesCopy.filter {
-                                        !(it.role == "user" && it.content == "continue")
+                        if (filteredChatMessages.isNotEmpty()) {
+                            // 创建消息列表的副本以避免并发修改
+                            val messagesCopy = filteredChatMessages.toList()
+                            val items =
+                                messagesCopy.filter {
+                                    !(it.role == "user" && it.content == "continue")
+                                }
+                            if (items.isNotEmpty()) {
+                                itemsIndexed(
+                                    items,
+                                    key = { index, info ->
+                                        // 使用消息的唯一标识符作为 key，如果没有则使用索引和内容的组合
+                                        info.localMsgId.ifEmpty {
+                                            "${index}_${info.role}_${info.content.hashCode()}_$index"
+                                        }
+                                    },
+                                ) { index, item ->
+                                    runCatching {
+                                        // 明确数据边界
+                                        if (index < items.size) {
+                                            ChatItem(
+                                                item,
+                                                isCurrentPage = isCurrentPage,
+                                                chatViewModel = chatViewModel,
+                                            )
+                                        }
+                                        Spacer(Modifier.height(16.dp))
                                     }
-                                if (items.isNotEmpty()) {
-                                    itemsIndexed(
-                                        items,
-                                        key = { index, info ->
-                                            // 使用消息的唯一标识符作为 key，如果没有则使用索引和内容的组合
-                                            info.localMsgId.ifEmpty {
-                                                "${index}_${info.role}_${info.content.hashCode()}_${index}"
+                                        .onFailure { e ->
+                                            // 渲染失败时显示错误占位符
+                                            Box(
+                                                modifier =
+                                                Modifier.fillMaxWidth()
+                                                    .height(60.dp)
+                                                    .background(
+                                                        Color.Red.copy(alpha = 0.1f),
+                                                    ),
+                                            ) {
+                                                Text(
+                                                    text = "Message loading failed",
+                                                    color = Color.White,
+                                                    modifier = Modifier.align(Alignment.Center),
+                                                )
                                             }
-                                        },
-                                    ) { index, item ->
-                                        runCatching {
-                                                // 明确数据边界
-                                                if (index < items.size) {
-                                                    ChatItem(
-                                                        item,
-                                                        isCurrentPage = isCurrentPage,
-                                                        chatViewModel = chatViewModel,
-                                                    )
-                                                }
-                                                Spacer(Modifier.height(16.dp))
-                                            }
-                                            .onFailure { e ->
-                                                // 渲染失败时显示错误占位符
-                                                Box(
-                                                    modifier =
-                                                        Modifier.fillMaxWidth()
-                                                            .height(60.dp)
-                                                            .background(
-                                                                Color.Red.copy(alpha = 0.1f)
-                                                            )
-                                                ) {
-                                                    Text(
-                                                        text = "Message loading failed",
-                                                        color = Color.White,
-                                                        modifier = Modifier.align(Alignment.Center),
-                                                    )
-                                                }
-                                                Spacer(Modifier.height(16.dp))
-                                            }
-                                    }
+                                            Spacer(Modifier.height(16.dp))
+                                        }
                                 }
                             }
                         }
+                    }
                         .onFailure { e ->
                             // 如果整个列表渲染失败，显示错误信息
                             item {
                                 Box(
                                     modifier =
-                                        Modifier.fillMaxWidth()
-                                            .height(100.dp)
-                                            .background(Color.Red.copy(alpha = 0.1f))
+                                    Modifier.fillMaxWidth()
+                                        .height(100.dp)
+                                        .background(Color.Red.copy(alpha = 0.1f)),
                                 ) {
                                     Text(
                                         text = "Chat history loading failed, please retry",
@@ -347,7 +350,7 @@ internal fun ChatPage(
                     val showIntroOpeningTop =
                         isQueryMsgsCompleted && ((!hasMoreMessages) || chatMessages.isEmpty())
                     LogUtils.d(
-                        "ChatPage: showIntroOpeningTop=$showIntroOpeningTop, isQueryMsgsCompleted=$isQueryMsgsCompleted, hasMoreMessages=$hasMoreMessages, chatMessages.size=${chatMessages.size}"
+                        "ChatPage: showIntroOpeningTop=$showIntroOpeningTop, isQueryMsgsCompleted=$isQueryMsgsCompleted, hasMoreMessages=$hasMoreMessages, chatMessages.size=${chatMessages.size}",
                     )
                     if (showIntroOpeningTop) {
                         // Opening 消息（带音频自动播放逻辑，ChatItem 内部处理）
@@ -360,10 +363,10 @@ internal fun ChatPage(
                                             content = agent.opening,
                                             role = "assistant",
                                             meta_data =
-                                                MsgInfo.MsgMetaData(
-                                                    agentId = agent.id,
-                                                    isOpening = true,
-                                                ),
+                                            MsgInfo.MsgMetaData(
+                                                agentId = agent.id,
+                                                isOpening = true,
+                                            ),
                                             audio_url = agent.opening_audio_url,
                                         )
                                     ChatItem(
@@ -402,7 +405,7 @@ internal fun ChatPage(
                                     Text(
                                         text = "Pull to load more",
                                         color =
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                         style = MaterialTheme.typography.bodySmall,
                                     )
                                 }
@@ -415,9 +418,9 @@ internal fun ChatPage(
                 LaunchedEffect(hasMoreMessages, isLoadingMore, chatMessages.size) {
                     // 使用 snapshotFlow 持续监听滚动状态变化
                     snapshotFlow {
-                            listState.firstVisibleItemIndex to
-                                listState.firstVisibleItemScrollOffset
-                        }
+                        listState.firstVisibleItemIndex to
+                            listState.firstVisibleItemScrollOffset
+                    }
                         .collect { (firstVisibleIndex, scrollOffset) ->
                             // 添加小延迟，确保首次加载完成后再开始监听
                             delay(100)
@@ -437,7 +440,7 @@ internal fun ChatPage(
                             val isNearTop =
                                 totalItemsCount > 0 &&
                                     lastVisibleIndex >=
-                                        (totalItemsCount - LOAD_MORE_NEAR_TOP_THRESHOLD)
+                                    (totalItemsCount - LOAD_MORE_NEAR_TOP_THRESHOLD)
                             // 在反向布局中，firstVisibleItemIndex=0表示在底部（最新消息），需要滚动到更早的消息才算滚动过
                             val hasScrolled = firstVisibleIndex > 0 || scrollOffset > 0
                             val shouldLoadMore = hasEnoughData && isNearTop && hasScrolled
@@ -455,11 +458,11 @@ internal fun ChatPage(
                     if (agentInfo?.isDeleted == true) {
                         Box(
                             modifier =
-                                Modifier.fillMaxWidth()
-                                    .height(48.dp)
-                                    .padding(horizontal = 16.dp)
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(Color(0x9937303D)),
+                            Modifier.fillMaxWidth()
+                                .height(48.dp)
+                                .padding(horizontal = 16.dp)
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Color(0x9937303D)),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(

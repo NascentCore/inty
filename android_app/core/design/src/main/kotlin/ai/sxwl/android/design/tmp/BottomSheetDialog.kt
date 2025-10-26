@@ -63,11 +63,11 @@ fun BottomSheetDialog(
         ) {
             Box(
                 modifier =
-                    Modifier.fillMaxSize().background(color = Color.Transparent).clickableNoRipple {
-                        if (canceledOnTouchOutside) {
-                            onDismissRequest()
-                        }
+                Modifier.fillMaxSize().background(color = Color.Transparent).clickableNoRipple {
+                    if (canceledOnTouchOutside) {
+                        onDismissRequest()
                     }
+                },
             )
         }
         InnerDialog(visible = visible, content = content)
@@ -75,37 +75,41 @@ fun BottomSheetDialog(
 }
 
 @Composable
-private fun BoxScope.InnerDialog(visible: Boolean, content: @Composable () -> Unit) {
+private fun BoxScope.InnerDialog(
+    visible: Boolean,
+    content: @Composable () -> Unit,
+) {
     var offsetY by remember { mutableFloatStateOf(value = 0f) }
     val offsetYAnimate by animateFloatAsState(targetValue = offsetY, label = "")
     AnimatedVisibility(
         modifier =
-            Modifier.align(alignment = Alignment.BottomCenter)
-                .offset(offset = { IntOffset(0, offsetYAnimate.roundToInt()) }),
+        Modifier.align(alignment = Alignment.BottomCenter)
+            .offset(offset = { IntOffset(0, offsetYAnimate.roundToInt()) }),
         visible = visible,
         enter =
-            slideInVertically(
-                animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing),
-                initialOffsetY = { 2 * it },
-            ),
+        slideInVertically(
+            animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing),
+            initialOffsetY = { 2 * it },
+        ),
         exit =
-            slideOutVertically(
-                animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing),
-                targetOffsetY = { it },
-            ),
+        slideOutVertically(
+            animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing),
+            targetOffsetY = { it },
+        ),
     ) {
         DisposableEffect(key1 = null) { onDispose { offsetY = 0f } }
         Box { content() }
     }
 }
 
-private fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier = composed {
-    clickable(
-        onClick = onClick,
-        indication = null,
-        interactionSource = remember { MutableInteractionSource() },
-    )
-}
+private fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier =
+    composed {
+        clickable(
+            onClick = onClick,
+            indication = null,
+            interactionSource = remember { MutableInteractionSource() },
+        )
+    }
 
 // 目前仅在chat page中使用
 @Composable
@@ -121,7 +125,7 @@ private object DiaAmountWindowScopeInstance : DiaAmountWindowScope {
     @Composable
     override fun SetDiaAmount(dimAmount: Float) {
         val curView = LocalView.current
-        /* 更改dialog window的透明度 */
+        // 更改dialog window的透明度
         LaunchedEffect(curView, dimAmount) {
             try {
                 val window = curView.findWindow() ?: return@LaunchedEffect
@@ -141,6 +145,5 @@ private object DiaAmountWindowScopeInstance : DiaAmountWindowScope {
             else -> null
         }
 
-    private fun View.findWindow(): Window? =
-        (parent as? DialogWindowProvider)?.window ?: context.findWindow()
+    private fun View.findWindow(): Window? = (parent as? DialogWindowProvider)?.window ?: context.findWindow()
 }

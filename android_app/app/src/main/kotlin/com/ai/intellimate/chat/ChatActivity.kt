@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 
 /** 私聊的聊天页面 */
 class ChatActivity : BaseActivity() {
-
     companion object {
         private const val INTENT_KEY_AGENT_ID = "intent_key_agent_id"
         private const val INTENT_KEY_AGENT_INFO = "intent_key_agent_info"
@@ -29,12 +28,16 @@ class ChatActivity : BaseActivity() {
          * @param agentInfo Agent的Info对象
          * @param agentId agent的id 两个参数选一即可，也必须只要有一个
          */
-        fun launch(context: Context, agentInfo: AgentInfo? = null, agentId: String? = null) {
+        fun launch(
+            context: Context,
+            agentInfo: AgentInfo? = null,
+            agentId: String? = null,
+        ) {
             context.startActivity(
                 Intent(context, ChatActivity::class.java).also { intent ->
                     intent.putExtra(INTENT_KEY_AGENT_ID, agentId)
                     intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
-                }
+                },
             )
         }
     }
@@ -73,10 +76,10 @@ class ChatActivity : BaseActivity() {
         super.ConfigComposeUI()
         ChatPage(
             modifier =
-                Modifier.fillMaxSize()
-                    .background(HeartColor.primaryColor)
-                    .imePadding()
-                    .navigationBarsPadding(),
+            Modifier.fillMaxSize()
+                .background(HeartColor.primaryColor)
+                .imePadding()
+                .navigationBarsPadding(),
             chatViewModel = chatViewModel,
             showBackButton = true,
             onBack = { finish() },
@@ -87,7 +90,7 @@ class ChatActivity : BaseActivity() {
             screenName = "ChatScreen",
             screenClass = "ChatActivity",
             additionalParams =
-                mapOf("agent_id" to agentId, "agent_name" to (agent?.name ?: "unknown")),
+            mapOf("agent_id" to agentId, "agent_name" to (agent?.name ?: "unknown")),
         )
     }
 

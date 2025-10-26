@@ -22,7 +22,6 @@ class ExplorePagingSource(
     private val useCache: Boolean = true,
     private val sortSeed: Int = IntySetting.sortSeed(),
 ) : PagingSource<Int, AgentInfo>() {
-
     private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
 
     companion object {
@@ -63,7 +62,6 @@ class ExplorePagingSource(
 
                 // 检查用户账户是否已就绪，如果未就绪则等待或返回空数据
                 if (!UnifiedStartupManager.isUserAccountReady()) {
-
                     // 等待用户账户就绪，最多等待3秒
                     var waitTime = 0
                     while (!UnifiedStartupManager.isUserAccountReady() && waitTime < 3000) {
@@ -123,7 +121,10 @@ class ExplorePagingSource(
     }
 
     /** 从网络加载数据 */
-    private suspend fun loadFromNetwork(page: Int, pageSize: Int): NetworkResult {
+    private suspend fun loadFromNetwork(
+        page: Int,
+        pageSize: Int,
+    ): NetworkResult {
         return try {
             val result =
                 agentApi.exploreAgents(
@@ -146,7 +147,10 @@ class ExplorePagingSource(
     }
 
     /** 异步从网络加载数据（不阻塞UI） */
-    private fun loadFromNetworkAsync(page: Int, pageSize: Int) {
+    private fun loadFromNetworkAsync(
+        page: Int,
+        pageSize: Int,
+    ) {
         // 在后台协程中执行，不阻塞当前加载
         CoroutineScope(Dispatchers.IO).launch {
             try {

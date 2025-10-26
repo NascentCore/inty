@@ -18,7 +18,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class RegInfoViewModel : BaseVM() {
-
     // 事件通知机制
     private val _events = MutableSharedFlow<ViewModelEvent>()
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
@@ -28,7 +27,10 @@ class RegInfoViewModel : BaseVM() {
         viewModelScope.launch { _events.emit(event) }
     }
 
-    fun onSave(gender: GENDER, age: String) {
+    fun onSave(
+        gender: GENDER,
+        age: String,
+    ) {
         launchBackground {
             val info = UserProfileManager.getUserProfile()
             // 调用接口，需要让服务端存储游客的性别和年龄数据

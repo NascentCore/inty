@@ -48,9 +48,10 @@ fun VoicePlayer(
     serverMessageId: String? = null, // 服务器端消息ID，用于TTS生成
 ) {
     val context = LocalContext.current
-    val audioManager = remember {
-        AudioManager.getInstance(context, CoroutineScope(Dispatchers.Main + SupervisorJob()))
-    }
+    val audioManager =
+        remember {
+            AudioManager.getInstance(context, CoroutineScope(Dispatchers.Main + SupervisorJob()))
+        }
 
     // 本地播放状态使用本地messageId；TTS状态跟踪优先使用serverMessageId
     val messageId = audioInfo.messageId ?: audioInfo.url
@@ -90,7 +91,7 @@ fun VoicePlayer(
                 val elapsedTime = System.currentTimeMillis() - ttsGenerationStartTime
                 if (elapsedTime > 30000) { // 30秒超时
                     LogUtils.e(
-                        "音频LOG测试 TTS generation timeout: trackingId=$ttsTrackingId (localMsgId=$messageId), elapsed: ${elapsedTime}ms"
+                        "音频LOG测试 TTS generation timeout: trackingId=$ttsTrackingId (localMsgId=$messageId), elapsed: ${elapsedTime}ms",
                     )
                     isGeneratingTts = false
                     ttsGenerationFailed = true
@@ -136,7 +137,8 @@ fun VoicePlayer(
                     PlaybackState.PLAYING,
                     PlaybackState.READY,
                     PlaybackState.ENDED,
-                    PlaybackState.ERROR -> {
+                    PlaybackState.ERROR,
+                    -> {
                         isLoading = false
                     }
                     else -> {
@@ -209,7 +211,7 @@ fun VoicePlayer(
                     onTtsGenerated = onTtsGenerated,
                     onTtsFailed = { error ->
                         LogUtils.e(
-                            "音频LOG测试 Auto play TTS generation failed: $error (Agent: ${audioInfo.agentName})"
+                            "音频LOG测试 Auto play TTS generation failed: $error (Agent: ${audioInfo.agentName})",
                         )
                         ttsGenerationFailed = true
                         isLoading = false
@@ -219,12 +221,12 @@ fun VoicePlayer(
                 )
             } else {
                 LogUtils.d(
-                    "音频LOG测试 VoicePlayer auto play conditions no longer met after delay: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError"
+                    "音频LOG测试 VoicePlayer auto play conditions no longer met after delay: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError",
                 )
             }
         } else {
             LogUtils.w(
-                "音频LOG测试 VoicePlayer auto play conditions not met: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError, agentId='${audioInfo.agentId}'"
+                "音频LOG测试 VoicePlayer auto play conditions not met: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError, agentId='${audioInfo.agentId}'",
             )
         }
     }
@@ -310,11 +312,11 @@ private fun ChatVoicePlayer(
 ) {
     Row(
         modifier =
-            modifier
-                .clip(RoundedCornerShape(topEnd = 10.dp, topStart = 10.dp, bottomEnd = 10.dp))
-                .background(Color(0xFF44354F))
-                .clickable { onPlayPause() }
-                .padding(horizontal = 8.dp, vertical = 2.dp),
+        modifier
+            .clip(RoundedCornerShape(topEnd = 10.dp, topStart = 10.dp, bottomEnd = 10.dp))
+            .background(Color(0xFF44354F))
+            .clickable { onPlayPause() }
+            .padding(horizontal = 8.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
@@ -354,10 +356,13 @@ private fun ChatVoicePlayer(
                 else -> {
                     Icon(
                         imageVector =
-                            ImageVector.vectorResource(
-                                if (isPlaying) R.drawable.ic_pause_voice
-                                else R.drawable.ic_play_voice
-                            ),
+                        ImageVector.vectorResource(
+                            if (isPlaying) {
+                                R.drawable.ic_pause_voice
+                            } else {
+                                R.drawable.ic_play_voice
+                            },
+                        ),
                         contentDescription = if (isPlaying) "Pause" else "Play",
                         tint = Color.White,
                         modifier = Modifier.size(16.dp),
@@ -365,6 +370,7 @@ private fun ChatVoicePlayer(
                 }
             }
         }
+
         // 格式化时间
         fun formatTime(timeMs: Long): String {
             val seconds = timeMs / 1000

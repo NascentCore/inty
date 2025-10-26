@@ -14,15 +14,16 @@ import retrofit2.http.POST
 import retrofit2.http.Part
 
 interface IUserApi {
-
     @POST("/api/v1/auth/google/login")
     suspend fun loginByGoogle(
-        @Body loginRequest: GoogleLoginRequest
+        @Body loginRequest: GoogleLoginRequest,
     ): HttpResult<GoogleLoginResponse>
 
     @Multipart
     @POST("/api/v1/images")
-    suspend fun uploadAvatar(@Part file: MultipartBody.Part): HttpResult<UploadAvatarResponse>
+    suspend fun uploadAvatar(
+        @Part file: MultipartBody.Part,
+    ): HttpResult<UploadAvatarResponse>
 
     @GET("/api/v1/users/deletion/check")
     suspend fun userDeletionCheck(): HttpResult<UserDeletionCheckResponse>

@@ -43,7 +43,6 @@ enum class HomeTabIndex {
 }
 
 class MainViewModel : BaseVM() {
-
     private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
 
     private val commonApi: ICommonApi by lazy { NetServiceMgr.getCommonApi() }
@@ -189,12 +188,12 @@ class MainViewModel : BaseVM() {
                 BillingRepository.fetchRemote()
             } catch (e: CancellationException) {
                 LogUtils.e(
-                    "BillingRepository MainViewModel Member status update cancelled: ${e.message}"
+                    "BillingRepository MainViewModel Member status update cancelled: ${e.message}",
                 )
                 // 协程被取消是正常情况，不需要特殊处理
             } catch (e: Exception) {
                 LogUtils.e(
-                    "BillingRepository MainViewModel Member status update failed: ${e.message}"
+                    "BillingRepository MainViewModel Member status update failed: ${e.message}",
                 )
                 // 不影响主流程，静默处理
             }
@@ -237,14 +236,14 @@ class MainViewModel : BaseVM() {
                         if (result.data.isEmpty()) {
                             hasMoreUserAgents = false
                             LogUtils.d(
-                                "loadUserCreatedAgentsSilently - No more user created agents to load"
+                                "loadUserCreatedAgentsSilently - No more user created agents to load",
                             )
                         } else {
                             // 静默更新数据，直接替换
                             userCreatedAgents.clear()
                             userCreatedAgents.addAll(result.data)
                             LogUtils.d(
-                                "loadUserCreatedAgentsSilently - 静默更新数据: ${result.data.size}个"
+                                "loadUserCreatedAgentsSilently - 静默更新数据: ${result.data.size}个",
                             )
                         }
                     }
@@ -284,7 +283,7 @@ class MainViewModel : BaseVM() {
                                 // 后续页，追加到现有列表
                                 userCreatedAgents.addAll(result.data)
                                 LogUtils.d(
-                                    "loadUserCreatedAgents - 追加第${currentUserAgentsPage + 1}页数据: ${result.data.size}个，总计: ${userCreatedAgents.size}个"
+                                    "loadUserCreatedAgents - 追加第${currentUserAgentsPage + 1}页数据: ${result.data.size}个，总计: ${userCreatedAgents.size}个",
                                 )
                             }
                         }
@@ -392,7 +391,6 @@ class MainViewModel : BaseVM() {
 
     // 游客模式数据加载，游客用户仍然可以访问推荐数据
     private fun loadGuestModeData() {
-
         viewModelScope.launch {
             try {
                 // 更新UI状态
@@ -419,7 +417,11 @@ class MainViewModel : BaseVM() {
         }
     }
 
-    fun deleteAgent(agentId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun deleteAgent(
+        agentId: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit,
+    ) {
         launchBackground {
             try {
                 val result = agentApi.deleteAgent(agentId)
@@ -451,7 +453,7 @@ class MainViewModel : BaseVM() {
                                 }
                             ToastUtils.showShort(
                                 Utils.getApp()
-                                    .getString(R.string.delete_failed_with_reason, errorMessage)
+                                    .getString(R.string.delete_failed_with_reason, errorMessage),
                             )
                             onError(errorMessage)
                         }
@@ -509,7 +511,7 @@ class MainViewModel : BaseVM() {
                                 }
                             ToastUtils.showShort(
                                 Utils.getApp()
-                                    .getString(R.string.update_failed_with_reason, errorMessage)
+                                    .getString(R.string.update_failed_with_reason, errorMessage),
                             )
                             onError(errorMessage)
                         }
@@ -537,21 +539,22 @@ class MainViewModel : BaseVM() {
     /** 检查app版本更新 */
     val needForceUpgrade = MutableStateFlow<AppVersionRsp.AppVersionData?>(null)
 
-    private fun checkAppVersion() = launchBackground {
-        val result = commonApi.checkAppUpgrade()
-        when (result) {
-            is HttpResult.Success -> {
-                val rsp = result.data
-                if (rsp.update_required && rsp.force_update) {
-                    // 有更新，且需要强制更新
-                    needForceUpgrade.emit(rsp)
+    private fun checkAppVersion() =
+        launchBackground {
+            val result = commonApi.checkAppUpgrade()
+            when (result) {
+                is HttpResult.Success -> {
+                    val rsp = result.data
+                    if (rsp.update_required && rsp.force_update) {
+                        // 有更新，且需要强制更新
+                        needForceUpgrade.emit(rsp)
+                    }
+                    IntySetting.setAppUpdateTips(rsp.update_required)
+                    IntySetting.setAppGooglePlayUrl(rsp.download_url ?: "")
                 }
-                IntySetting.setAppUpdateTips(rsp.update_required)
-                IntySetting.setAppGooglePlayUrl(rsp.download_url ?: "")
-            }
-            is HttpResult.Failure -> {
-                LogUtils.w("result.message")
+                is HttpResult.Failure -> {
+                    LogUtils.w("result.message")
+                }
             }
         }
-    }
 }

@@ -42,7 +42,7 @@ object TimeUtils {
         pattern: String,
         locale: Locale = Locale.getDefault()
     ): SimpleDateFormat {
-        val key = "${pattern}_${locale}"
+        val key = "${pattern}_$locale"
         return formatterCache.getOrPut(key) { SimpleDateFormat(pattern, locale) }
     }
 
@@ -342,16 +342,16 @@ object TimeUtils {
         if (utcString.isBlank()) return ""
 
         return runCatching {
-                val instant = Instant.parse(utcString)
-                val systemZone = ZoneId.systemDefault()
-                val localDateTime = instant.atZone(systemZone)
+            val instant = Instant.parse(utcString)
+            val systemZone = ZoneId.systemDefault()
+            val localDateTime = instant.atZone(systemZone)
 
-                if (isToday(localDateTime)) {
-                    localDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
-                } else {
-                    localDateTime.format(DateTimeFormatter.ofPattern("MM/dd"))
-                }
+            if (isToday(localDateTime)) {
+                localDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+            } else {
+                localDateTime.format(DateTimeFormatter.ofPattern("MM/dd"))
             }
+        }
             .getOrNull() ?: ""
     }
 
@@ -365,11 +365,11 @@ object TimeUtils {
         if (utcString.isBlank()) return ""
 
         return runCatching {
-                val instant = Instant.parse(utcString)
-                val systemZone = ZoneId.systemDefault()
-                val localDateTime = instant.atZone(systemZone)
-                localDateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
-            }
+            val instant = Instant.parse(utcString)
+            val systemZone = ZoneId.systemDefault()
+            val localDateTime = instant.atZone(systemZone)
+            localDateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+        }
             .getOrNull() ?: ""
     }
 

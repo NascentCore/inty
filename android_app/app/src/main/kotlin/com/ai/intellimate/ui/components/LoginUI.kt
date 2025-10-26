@@ -38,9 +38,9 @@ import com.ai.intellimate.R
 internal fun LoginCloseButton(onClose: () -> Unit) {
     Image(
         modifier =
-            Modifier.padding(end = 16.dp, top = 16.dp).size(18.dp, 18.dp).noRippleClickable {
-                onClose()
-            },
+        Modifier.padding(end = 16.dp, top = 16.dp).size(18.dp, 18.dp).noRippleClickable {
+            onClose()
+        },
         painter = painterResource(R.drawable.close),
         contentDescription = null,
     )
@@ -82,16 +82,19 @@ internal fun WelcomeSubtitle() {
 
 /** Google 登录按钮组件 */
 @Composable
-internal fun GoogleLoginButton(isLoading: Boolean, onLoginClick: () -> Unit) {
+internal fun GoogleLoginButton(
+    isLoading: Boolean,
+    onLoginClick: () -> Unit,
+) {
     Button(
         onClick = onLoginClick,
         modifier = Modifier.size(width = 300.dp, height = 56.dp),
         shape = RoundedCornerShape(30.dp),
         colors =
-            ButtonDefaults.buttonColors(
-                containerColor = Color.White,
-                disabledContainerColor = Color.White.copy(.7f),
-            ),
+        ButtonDefaults.buttonColors(
+            containerColor = Color.White,
+            disabledContainerColor = Color.White.copy(.7f),
+        ),
         border = BorderStroke(1.dp, Color(0xFFEEEEEE)),
         contentPadding = PaddingValues(0.dp),
         enabled = !isLoading,

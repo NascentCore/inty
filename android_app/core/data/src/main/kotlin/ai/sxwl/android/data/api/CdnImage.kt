@@ -14,7 +14,11 @@ package ai.sxwl.android.data.api
  * @param quality 需要的图片质量 默认75%的原图质量
  * @return 业务cdn处理后的url，也可能null，也可能不处理
  */
-fun getCdnImageUrl(originUrl: String?, width: Int = 1080, quality: Int = 75): String? {
+fun getCdnImageUrl(
+    originUrl: String?,
+    width: Int = 1080,
+    quality: Int = 75,
+): String? {
     if (originUrl.isNullOrBlank()) return null
     return when {
         originUrl.contains("/cdn-cgi/image/") -> originUrl

@@ -298,6 +298,9 @@ ai-android-navigation-compose = { id = "ai.android.navigation.compose" }
 ai-jvm-library = { id = "ai.jvm.library" }
 ai-maven-publish = { id = "ai.maven.publish" }
 
+# ===== Code Quality / Lint =====
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "12.1.1" }
+
 # ===== Google Services =====
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebaseCrashlytics" }

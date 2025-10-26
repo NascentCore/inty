@@ -7,14 +7,14 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.perf.FirebasePerformance
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics和Performance的初始化和使用
@@ -58,11 +58,11 @@ object FirebaseManager {
             performanceEnabled = true,
             // 低价值事件默认加入采样
             samplingRates =
-                mapOf(
-                    "user_interaction" to 0.1,
-                    "message_sent" to 0.5,
-                    // 保留高价值 100%：失败/401/最终失败/页面
-                ),
+            mapOf(
+                "user_interaction" to 0.1,
+                "message_sent" to 0.5,
+                // 保留高价值 100%：失败/401/最终失败/页面
+            ),
             minIntervalMsPerEvent = mapOf("user_interaction" to 5_000L, "message_sent" to 1_000L),
         )
 

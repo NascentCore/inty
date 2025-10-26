@@ -45,7 +45,10 @@ data class Usage(
 )
 
 @JsonClass(generateAdapter = true)
-data class QueryMsgReq(val page: String = "", @Json(name = "page_size") val pageSize: String = "")
+data class QueryMsgReq(
+    val page: String = "",
+    @Json(name = "page_size") val pageSize: String = "",
+)
 
 @JsonClass(generateAdapter = true)
 data class QueryMsgsResponse(
@@ -79,7 +82,6 @@ data class MsgInfo(
     // 本地创建一个msgId，临时用于消息标记
     val localMsgId: String = "${System.nanoTime()}_${role}_${content.hashCode()}",
 ) {
-
     fun isOpening(): Boolean {
         return meta_data?.isOpening == true
     }
@@ -117,14 +119,14 @@ data class ConversationItem(
 
     fun convertToAgentInfo(): AgentInfo {
         return AgentInfo(
-                avatar = agentAvatar,
-                background = agentBackground,
-                id = agentId,
-                name = agentName,
-                intro = agentIntro,
-                opening = agentOpening,
-                opening_audio_url = agentOpeningAudioUrl,
-            )
+            avatar = agentAvatar,
+            background = agentBackground,
+            id = agentId,
+            name = agentName,
+            intro = agentIntro,
+            opening = agentOpening,
+            opening_audio_url = agentOpeningAudioUrl,
+        )
             .also { info -> info.isDeleted = this.isDeleted }
     }
 }

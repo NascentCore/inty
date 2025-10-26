@@ -9,7 +9,6 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
 /** Agent缓存管理器 负责缓存推荐agents和关注agents数据 */
 object AgentCacheManager {
-
     private const val KEY_RECOMMENDED_AGENTS = "cached_recommended_agents"
     private const val KEY_CHAT_AGENTS = "cached_chat_agents"
     private const val KEY_FOLLOWING_AGENTS = "cached_following_agents"

@@ -8,9 +8,7 @@ import androidx.compose.runtime.Composable
 
 /** 会员中心页面，展示会员权益与订阅选项。 */
 class VipCenterActivity : BaseActivity() {
-
     companion object {
-
         /**
          * 启动订阅中心界面
          *

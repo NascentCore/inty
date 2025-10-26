@@ -69,7 +69,7 @@ fun ChatSettingsDrawer(
                 agentInfo?.let {
                     // 获取角色专用设置，如果不存在则使用全局设置
                     IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
-                } ?: false
+                } ?: false,
             )
         }
 
@@ -103,14 +103,14 @@ fun ChatSettingsDrawer(
         drawerContent = {
             Column(
                 modifier =
-                    Modifier.width(319.dp)
-                        .fillMaxHeight()
-                        .background(
-                            brush =
-                                Brush.verticalGradient(
-                                    colors = listOf(Color(0xFF322341), Color(0xFF120E24))
-                                )
-                        )
+                Modifier.width(319.dp)
+                    .fillMaxHeight()
+                    .background(
+                        brush =
+                        Brush.verticalGradient(
+                            colors = listOf(Color(0xFF322341), Color(0xFF120E24)),
+                        ),
+                    ),
             ) {
                 Text(
                     text = stringResource(R.string.chat_settings_my_persona_title),
@@ -124,22 +124,25 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier =
-                        Modifier.padding(horizontal = horizontalPadding.dp)
-                            .fillMaxWidth()
-                            .border(
-                                brush =
-                                    Brush.linearGradient(
-                                        colors =
-                                            listOf(
-                                                Color.Transparent,
-                                                Color.White.copy(0.2f),
-                                                Color.Transparent,
-                                            )
-                                    ),
-                                width = 1.dp,
-                                shape = RoundedCornerShape(8.dp),
-                            )
-                            .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
+                    Modifier.padding(horizontal = horizontalPadding.dp)
+                        .fillMaxWidth()
+                        .border(
+                            brush =
+                            Brush.linearGradient(
+                                colors =
+                                listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(0.2f),
+                                    Color.Transparent,
+                                ),
+                            ),
+                            width = 1.dp,
+                            shape = RoundedCornerShape(8.dp),
+                        )
+                        .background(
+                            color = Color(0x3378599A),
+                            shape = RoundedCornerShape(8.dp)
+                        ),
                 ) {
                     MySettingItem(
                         key = stringResource(R.string.str_name),
@@ -202,40 +205,43 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier =
-                        Modifier.padding(horizontal = horizontalPadding.dp)
-                            .fillMaxWidth()
-                            .border(
-                                brush =
-                                    Brush.linearGradient(
-                                        colors =
-                                            listOf(
-                                                Color.Transparent,
-                                                Color.White.copy(0.2f),
-                                                Color.Transparent,
-                                            )
-                                    ),
-                                width = 1.dp,
-                                shape = RoundedCornerShape(8.dp),
-                            )
-                            .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
+                    Modifier.padding(horizontal = horizontalPadding.dp)
+                        .fillMaxWidth()
+                        .border(
+                            brush =
+                            Brush.linearGradient(
+                                colors =
+                                listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(0.2f),
+                                    Color.Transparent,
+                                ),
+                            ),
+                            width = 1.dp,
+                            shape = RoundedCornerShape(8.dp),
+                        )
+                        .background(
+                            color = Color(0x3378599A),
+                            shape = RoundedCornerShape(8.dp)
+                        ),
                 ) {
                     agentInfo?.let { agent ->
 
                         // 举报入口
                         Row(
                             modifier =
-                                Modifier.fillMaxWidth()
-                                    .height(56.dp)
-                                    .padding(horizontal = horizontalPadding.dp)
-                                    .noRippleClickable {
-                                        // 检查是否正式登录（非游客且已登录）
-                                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                            ReportActivity.launch(context, agent.id, "AGENT")
-                                        } else {
-                                            // 未登录或游客时跳转到登录页面
-                                            LoginActivity.launch(context)
-                                        }
-                                    },
+                            Modifier.fillMaxWidth()
+                                .height(56.dp)
+                                .padding(horizontal = horizontalPadding.dp)
+                                .noRippleClickable {
+                                    // 检查是否正式登录（非游客且已登录）
+                                    if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                        ReportActivity.launch(context, agent.id, "AGENT")
+                                    } else {
+                                        // 未登录或游客时跳转到登录页面
+                                        LoginActivity.launch(context)
+                                    }
+                                },
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(

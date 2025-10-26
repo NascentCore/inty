@@ -19,7 +19,6 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface IAgentApi {
-
     /** 用于explore页面的列表数据 */
     @GET("api/v1/ai/agents/recommend")
     suspend fun exploreAgents(
@@ -45,7 +44,9 @@ interface IAgentApi {
     ): HttpResult<AgentInfoResponse>
 
     @POST("/api/v1/ai/agents")
-    suspend fun createAgent(@Body request: CreateAgentRequest): HttpResult<AgentInfo>
+    suspend fun createAgent(
+        @Body request: CreateAgentRequest,
+    ): HttpResult<AgentInfo>
 
     @GET("/api/v1/ai/agents/me")
     suspend fun getUserCreatedAgents(
@@ -55,11 +56,13 @@ interface IAgentApi {
 
     @POST("/api/v1/ai/agents/text-to-image")
     suspend fun generateBackground(
-        @Body request: GenerateBackgroundRequest
+        @Body request: GenerateBackgroundRequest,
     ): HttpResult<GenerateBackgroundResponse>
 
     @GET("/api/v1/ai/agents/{agentId}")
-    suspend fun getAgentDetail(@Path("agentId") agentId: String): HttpResult<AgentInfo>
+    suspend fun getAgentDetail(
+        @Path("agentId") agentId: String,
+    ): HttpResult<AgentInfo>
 
     @PUT("/api/v1/ai/agents/{agentId}")
     suspend fun updateAgent(
@@ -68,9 +71,13 @@ interface IAgentApi {
     ): HttpResult<AgentInfo>
 
     @DELETE("/api/v1/ai/agents/{agentId}")
-    suspend fun deleteAgent(@Path("agentId") agentId: String): HttpResult<AgentInfo>
+    suspend fun deleteAgent(
+        @Path("agentId") agentId: String,
+    ): HttpResult<AgentInfo>
 
     @Multipart
     @POST("/api/v1/images")
-    suspend fun uploadAvatar(@Part file: MultipartBody.Part): HttpResult<UploadAvatarResponse>
+    suspend fun uploadAvatar(
+        @Part file: MultipartBody.Part,
+    ): HttpResult<UploadAvatarResponse>
 }

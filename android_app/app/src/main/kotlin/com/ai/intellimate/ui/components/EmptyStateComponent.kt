@@ -52,7 +52,7 @@ fun EmptyStateComponent(
         AsyncImage(
             model = R.drawable.img_content_empty,
             contentScale = ContentScale.Crop,
-            contentDescription = null
+            contentDescription = null,
         )
 
         Spacer(Modifier.height(16.dp))

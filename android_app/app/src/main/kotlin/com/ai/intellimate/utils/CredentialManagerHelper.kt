@@ -20,7 +20,6 @@ import kotlinx.coroutines.withContext
  * https://developer.android.google.cn/identity/sign-in/credential-manager-siwg?hl=zh-cn
  */
 object CredentialManagerHelper {
-
     /**
      * 使用 Credential Manager & GetSignInWithGoogleOption 进行 Google 登录（支持现有账户和新用户注册）
      * https://developer.android.com/identity/sign-in/credential-manager
@@ -98,7 +97,7 @@ object CredentialManagerHelper {
                 }
                 else -> {
                     LogUtils.e(
-                        "Unexpected type of credential: ${credential::class.java.simpleName}"
+                        "Unexpected type of credential: ${credential::class.java.simpleName}",
                     )
                     Result.failure(Exception("Unexpected credential type"))
                 }

@@ -8,6 +8,9 @@ import android.util.Log
 import androidx.annotation.IntDef
 import androidx.annotation.RequiresApi
 import androidx.collection.SimpleArrayMap
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 import java.io.StringReader
@@ -26,9 +29,6 @@ import javax.xml.transform.Source
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.stream.StreamResult
 import javax.xml.transform.stream.StreamSource
-import org.json.JSONArray
-import org.json.JSONException
-import org.json.JSONObject
 
 /** 日志工具类 提供完整的日志功能，支持控制台输出、文件输出、JSON格式化、XML格式化等 */
 object LogUtils {
@@ -40,7 +40,9 @@ object LogUtils {
     const val E = Log.ERROR
     const val A = Log.ASSERT
 
-    @IntDef(V, D, I, W, E, A) @Retention(AnnotationRetention.SOURCE) annotation class TYPE
+    @IntDef(V, D, I, W, E, A)
+    @Retention(AnnotationRetention.SOURCE)
+    annotation class TYPE
 
     private val T = charArrayOf('V', 'D', 'I', 'W', 'E', 'A')
 
@@ -301,7 +303,8 @@ object LogUtils {
         if (I_FORMATTER_MAP.isEmpty().not()) {
             val iFormatter = I_FORMATTER_MAP[getClassFromObject(obj)]
             if (iFormatter != null) {
-                @Suppress("UNCHECKED_CAST") return (iFormatter as IFormatter<Any>).format(obj)
+                @Suppress("UNCHECKED_CAST")
+                return (iFormatter as IFormatter<Any>).format(obj)
             }
         }
 
@@ -627,7 +630,7 @@ object LogUtils {
         init {
             if (
                 UtilsBridge.isSDCardEnableByEnvironment() &&
-                    Utils.getApp().getExternalFilesDir(null) != null
+                Utils.getApp().getExternalFilesDir(null) != null
             ) {
                 defaultDir = "${Utils.getApp().getExternalFilesDir(null)}${FILE_SEP}log$FILE_SEP"
             } else {
@@ -668,8 +671,9 @@ object LogUtils {
 
         fun setDir(dir: String?): Config {
             this.dir =
-                if (dir.isNullOrBlank()) null
-                else {
+                if (dir.isNullOrBlank()) {
+                    null
+                } else {
                     if (dir.endsWith(FILE_SEP)) dir else "$dir$FILE_SEP"
                 }
             return this
@@ -687,8 +691,9 @@ object LogUtils {
 
         fun setFileExtension(fileExtension: String): Config {
             this.fileExtension =
-                if (fileExtension.isBlank()) ".txt"
-                else {
+                if (fileExtension.isBlank()) {
+                    ".txt"
+                } else {
                     if (fileExtension.startsWith(".")) fileExtension else ".$fileExtension"
                 }
             return this

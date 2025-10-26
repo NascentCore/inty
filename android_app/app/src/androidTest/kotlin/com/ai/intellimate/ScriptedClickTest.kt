@@ -13,7 +13,6 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ScriptedClickTest {
-
     companion object {
         private const val LAUNCH_TIMEOUT_MS: Long = 5_000
         private const val ACTION_TIMEOUT_MS: Long = 3_000
@@ -50,7 +49,11 @@ class ScriptedClickTest {
         runSteps(device, steps, packageName)
     }
 
-    private fun runSteps(device: UiDevice, steps: List<Step>, packageName: String) {
+    private fun runSteps(
+        device: UiDevice,
+        steps: List<Step>,
+        packageName: String,
+    ) {
         for (step in steps) {
             when (step) {
                 is Wait -> SystemClock.sleep(step.ms)
@@ -65,7 +68,7 @@ class ScriptedClickTest {
     private fun clickWithFallback(
         device: UiDevice,
         selector: BySelector,
-        timeoutMs: Long = ACTION_TIMEOUT_MS
+        timeoutMs: Long = ACTION_TIMEOUT_MS,
     ) {
         val obj = device.wait(Until.findObject(selector), timeoutMs)
         obj?.click()

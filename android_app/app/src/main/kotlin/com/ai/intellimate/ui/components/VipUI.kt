@@ -40,23 +40,26 @@ import kotlin.math.ceil
 
 /** 折扣标签组件 */
 @Composable
-private fun DiscountTag(discountRate: Double, modifier: Modifier = Modifier) {
+private fun DiscountTag(
+    discountRate: Double,
+    modifier: Modifier = Modifier,
+) {
     Box(
         modifier =
-            modifier
-                .fillMaxWidth(0.8f)
-                .clip(RoundedCornerShape(6.dp))
-                .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors =
-                                listOf(
-                                    colorResource(R.color.light_blue),
-                                    colorResource(R.color.light_purple),
-                                    colorResource(R.color.blue),
-                                )
-                        )
+        modifier
+            .fillMaxWidth(0.8f)
+            .clip(RoundedCornerShape(6.dp))
+            .background(
+                brush =
+                Brush.horizontalGradient(
+                    colors =
+                    listOf(
+                        colorResource(R.color.light_blue),
+                        colorResource(R.color.light_purple),
+                        colorResource(R.color.blue),
+                    ),
                 ),
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -65,11 +68,11 @@ private fun DiscountTag(discountRate: Double, modifier: Modifier = Modifier) {
         ) {
             Text(
                 text =
-                    String.format(
-                        Locale.getDefault(),
-                        "%d%%",
-                        ceil((1 - discountRate) * 100).toInt(),
-                    ),
+                String.format(
+                    Locale.getDefault(),
+                    "%d%%",
+                    ceil((1 - discountRate) * 100).toInt(),
+                ),
                 color = Color.Black,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
@@ -116,20 +119,20 @@ fun PremiumPlanCard(
 
     Box(
         modifier =
-            modifier
-                .fillMaxHeight()
-                .background(
-                    color = if (isSelected) Color(0x99350D5D) else Color(0x991C1523),
-                    shape = RoundedCornerShape(8.dp),
-                )
-                .border(
-                    width = 1.dp,
-                    color = if (isSelected) Color.White else Color.Transparent,
-                    shape = RoundedCornerShape(8.dp),
-                )
-                .then(subModifier)
-                .clickable(enabled = !isSubscribed) { onClick() }
-                .padding(vertical = 14.dp),
+        modifier
+            .fillMaxHeight()
+            .background(
+                color = if (isSelected) Color(0x99350D5D) else Color(0x991C1523),
+                shape = RoundedCornerShape(8.dp),
+            )
+            .border(
+                width = 1.dp,
+                color = if (isSelected) Color.White else Color.Transparent,
+                shape = RoundedCornerShape(8.dp),
+            )
+            .then(subModifier)
+            .clickable(enabled = !isSubscribed) { onClick() }
+            .padding(vertical = 14.dp),
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(
@@ -139,10 +142,10 @@ fun PremiumPlanCard(
             Text(
                 text = plan.name,
                 color =
-                    when {
-                        isSubscribed -> Color.White.copy(alpha = 0.5f)
-                        else -> Color.White
-                    },
+                when {
+                    isSubscribed -> Color.White.copy(alpha = 0.5f)
+                    else -> Color.White
+                },
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
                 modifier = subModifier,
@@ -151,10 +154,10 @@ fun PremiumPlanCard(
             Text(
                 text = plan.price,
                 color =
-                    when {
-                        isSubscribed -> Color.White.copy(alpha = 0.5f)
-                        else -> Color.White
-                    },
+                when {
+                    isSubscribed -> Color.White.copy(alpha = 0.5f)
+                    else -> Color.White
+                },
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Normal,
                 modifier = subModifier,
@@ -206,28 +209,28 @@ fun PurchaseButton(
 ) {
     Box(
         modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(horizontal = 15.dp)
-                .height(56.dp)
-                .clip(RoundedCornerShape(28.dp))
-                .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors = listOf(Color(0xFF9756FF), Color(0xFFEF56FF))
-                        )
-                )
-                .alpha(if (isSubscribed) .4f else 1f)
-                .clickable(enabled = !isSubscribed && hasSelectedPlan, onClick = onPurchase),
+        modifier
+            .fillMaxWidth()
+            .padding(horizontal = 15.dp)
+            .height(56.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                brush =
+                Brush.horizontalGradient(
+                    colors = listOf(Color(0xFF9756FF), Color(0xFFEF56FF)),
+                ),
+            )
+            .alpha(if (isSubscribed) .4f else 1f)
+            .clickable(enabled = !isSubscribed && hasSelectedPlan, onClick = onPurchase),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text =
-                if (isSubscribed) {
-                    stringResource(R.string.premium_subscribed)
-                } else {
-                    stringResource(R.string.premium_subscribe)
-                },
+            if (isSubscribed) {
+                stringResource(R.string.premium_subscribed)
+            } else {
+                stringResource(R.string.premium_subscribe)
+            },
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
@@ -246,9 +249,9 @@ fun AutoRenewalNotice(modifier: Modifier = Modifier) {
     ) {
         Text(
             text =
-                stringResource(R.string.auto_renews_cancel) +
-                    ".\n" +
-                    stringResource(R.string.subscription_consent),
+            stringResource(R.string.auto_renews_cancel) +
+                ".\n" +
+                stringResource(R.string.subscription_consent),
             fontSize = 12.sp,
             lineHeight = 12.sp,
             color = Color.White,

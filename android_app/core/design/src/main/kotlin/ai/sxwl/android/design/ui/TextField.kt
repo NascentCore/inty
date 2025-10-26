@@ -42,10 +42,10 @@ fun HeartMultiLineEditor(
             color = Color(0x59FFFFFF),
             textAlign = TextAlign.Start,
             lineHeightStyle =
-                LineHeightStyle(
-                    alignment = LineHeightStyle.Alignment.Center,
-                    trim = LineHeightStyle.Trim.Both
-                )
+            LineHeightStyle(
+                alignment = LineHeightStyle.Alignment.Center,
+                trim = LineHeightStyle.Trim.Both,
+            ),
         ),
     @IntRange(from = 0L) maxLength: Int = Int.MAX_VALUE,
     maxLines: Int = Int.MAX_VALUE,
@@ -78,7 +78,7 @@ fun HeartMultiLineEditor(
                 if (supportStr.isNotEmpty()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
+                        horizontalArrangement = Arrangement.End,
                     ) {
                         Text(
                             text = supportStr,
@@ -86,17 +86,17 @@ fun HeartMultiLineEditor(
                             lineHeight = 22.sp,
                             fontWeight = FontWeight.Normal,
                             color = Color(0x8CFFFFFF),
-                            modifier = Modifier
+                            modifier = Modifier,
                         )
                     }
                 }
             },
             colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent,
-                    disabledBorderColor = Color.Transparent
-                )
+            OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent,
+                disabledBorderColor = Color.Transparent,
+            ),
         )
     }
 }

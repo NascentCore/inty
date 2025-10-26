@@ -2,7 +2,6 @@ package com.ai.intellimate
 
 /** ViewModel事件类型 */
 sealed class ViewModelEvent {
-
     /** 登录成功事件 */
     object LoginSuccess : ViewModelEvent()
 

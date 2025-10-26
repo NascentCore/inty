@@ -53,7 +53,10 @@ import com.ai.intellimate.ui.components.SmartTagsLayout
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
+internal fun AiAgentInfoScreen(
+    agent: AgentInfo,
+    onBack: () -> Unit,
+) {
     val context = LocalContext.current
     var showBottomSheet by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState()
@@ -71,13 +74,13 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
             topBar = {
                 CenterAlignedTopAppBar(
                     colors =
-                        TopAppBarDefaults.centerAlignedTopAppBarColors()
-                            .copy(containerColor = Color.Transparent),
+                    TopAppBarDefaults.centerAlignedTopAppBarColors()
+                        .copy(containerColor = Color.Transparent),
                     title = {},
                     navigationIcon = {
                         Image(
                             modifier =
-                                Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
                             painter = painterResource(R.drawable.back),
                             contentDescription = null,
                         )
@@ -85,9 +88,9 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                     actions = {
                         Image(
                             modifier =
-                                Modifier.padding(horizontal = 12.dp).noRippleClickable {
-                                    showBottomSheet = true
-                                },
+                            Modifier.padding(horizontal = 12.dp).noRippleClickable {
+                                showBottomSheet = true
+                            },
                             painter = painterResource(R.drawable.icon_more2),
                             contentDescription = null,
                         )
@@ -99,37 +102,37 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                 // 顶部渐变遮罩
                 Box(
                     modifier =
-                        Modifier.fillMaxWidth()
-                            .height(160.dp)
-                            .background(
-                                brush =
-                                    Brush.verticalGradient(
-                                        listOf(Color(0xFF000000), Color(0x00000000))
-                                    )
-                            )
+                    Modifier.fillMaxWidth()
+                        .height(160.dp)
+                        .background(
+                            brush =
+                            Brush.verticalGradient(
+                                listOf(Color(0xFF000000), Color(0x00000000)),
+                            ),
+                        ),
                 )
                 Box(modifier = Modifier.fillMaxWidth().weight(1f))
                 Box(
                     modifier =
-                        Modifier.fillMaxWidth()
-                            .background(
-                                brush =
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            Color(0x00000000),
-                                            HeartColor.primaryColor.copy(.3f),
-                                            HeartColor.primaryColor.copy(.7f),
-                                            HeartColor.primaryColor.copy(.9f),
-                                            HeartColor.primaryColor,
-                                            HeartColor.primaryColor,
-                                        ),
-                                        endY = 900f,
-                                    )
-                            )
+                    Modifier.fillMaxWidth()
+                        .background(
+                            brush =
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color(0x00000000),
+                                    HeartColor.primaryColor.copy(.3f),
+                                    HeartColor.primaryColor.copy(.7f),
+                                    HeartColor.primaryColor.copy(.9f),
+                                    HeartColor.primaryColor,
+                                    HeartColor.primaryColor,
+                                ),
+                                endY = 900f,
+                            ),
+                        ),
                 ) {
                     Column(
                         modifier =
-                            Modifier.padding(innerPadding).verticalScroll(rememberScrollState())
+                        Modifier.padding(innerPadding).verticalScroll(rememberScrollState()),
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -165,25 +168,25 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
 
                         Column(
                             modifier =
-                                Modifier.padding(horizontal = 16.dp)
-                                    .fillMaxWidth()
-                                    .border(
-                                        brush =
-                                            Brush.linearGradient(
-                                                colors =
-                                                    listOf(
-                                                        Color.Transparent,
-                                                        Color.White.copy(0.2f),
-                                                        Color.Transparent,
-                                                    )
-                                            ),
-                                        width = 1.dp,
-                                        shape = RoundedCornerShape(8.dp),
-                                    )
-                                    .background(
-                                        color = Color(0x3378599A),
-                                        shape = RoundedCornerShape(8.dp),
-                                    )
+                            Modifier.padding(horizontal = 16.dp)
+                                .fillMaxWidth()
+                                .border(
+                                    brush =
+                                    Brush.linearGradient(
+                                        colors =
+                                        listOf(
+                                            Color.Transparent,
+                                            Color.White.copy(0.2f),
+                                            Color.Transparent,
+                                        ),
+                                    ),
+                                    width = 1.dp,
+                                    shape = RoundedCornerShape(8.dp),
+                                )
+                                .background(
+                                    color = Color(0x3378599A),
+                                    shape = RoundedCornerShape(8.dp),
+                                ),
                         ) {
                             Spacer(Modifier.height(16.dp))
                             Text(
@@ -198,18 +201,18 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                                 // 使用智能 Tags 布局
                                 val gender =
                                     runCatching {
-                                            val tmpGender = agent.gender.lowercase()
-                                            tmpGender.replaceFirst(
-                                                tmpGender.first(),
-                                                tmpGender.first().uppercase().first(),
-                                            )
-                                        }
+                                        val tmpGender = agent.gender.lowercase()
+                                        tmpGender.replaceFirst(
+                                            tmpGender.first(),
+                                            tmpGender.first().uppercase().first(),
+                                        )
+                                    }
                                         .getOrNull() ?: ""
 
                                 val agentTags =
                                     mutableListOf(
                                         // FEMALE/MALE转化为Female/Male
-                                        stringResource(R.string.gender_tag_format, gender)
+                                        stringResource(R.string.gender_tag_format, gender),
                                     )
                                 // 取10个即可，避免太多，因为设计也只需要显示一行
                                 agent.tags?.take(10)?.forEach { tag ->
@@ -293,21 +296,28 @@ private fun AgentSpacerLine() {
     Spacer(Modifier.height(4.dp))
     Box(
         modifier =
-            Modifier.fillMaxWidth()
-                .height(1.dp)
-                .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors =
-                                listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
-                        )
-                )
+        Modifier.fillMaxWidth()
+            .height(1.dp)
+            .background(
+                brush =
+                Brush.horizontalGradient(
+                    colors =
+                    listOf(
+                        Color.Transparent,
+                        Color.White.copy(0.2f),
+                        Color.Transparent
+                    ),
+                ),
+            ),
     ) {}
     Spacer(Modifier.height(4.dp))
 }
 
 @Composable
-private fun BottomSheetContent(onReportClick: () -> Unit, onCancelClick: () -> Unit) {
+private fun BottomSheetContent(
+    onReportClick: () -> Unit,
+    onCancelClick: () -> Unit,
+) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp)) {
         // Report按钮
         Button(
@@ -358,7 +368,7 @@ private fun PreviewAgentInfoScreen() {
             isFollowed = true,
             name = "小甜甜",
             opening =
-                "青青河边草，又有到海角，野火烧不尽，天涯也不到，啦啦啦啦啦，啦啦啦啦，啦啦啦啦，啦啦啦啦啦啦，轻轻河边草，又有到海角，野火烧不尽，春风吹不到。哈哈哈哈。",
+            "青青河边草，又有到海角，野火烧不尽，天涯也不到，啦啦啦啦啦，啦啦啦啦，啦啦啦啦，啦啦啦啦啦啦，轻轻河边草，又有到海角，野火烧不尽，春风吹不到。哈哈哈哈。",
             intro = "自我介绍，这是一个，什么可以说的呢，不知道，小甜甜就是小甜甜",
             prompt = "性感，时尚，火辣，大方",
         )

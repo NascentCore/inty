@@ -19,7 +19,10 @@ import com.ai.intellimate.R
 import com.ai.intellimate.utils.TextStyleUtils
 
 @Composable
-fun PolicyRow(context: Context, fontSize: TextUnit) {
+fun PolicyRow(
+    context: Context,
+    fontSize: TextUnit,
+) {
     Row(
         // 占据全部宽度，这样下面的居中显示才有意义
         modifier = Modifier.fillMaxWidth(),
@@ -35,17 +38,17 @@ fun PolicyRow(context: Context, fontSize: TextUnit) {
 
         Text(
             text =
-                buildAnnotatedString {
-                    withStyle(
-                        SpanStyle(
-                            color = Color.White.copy(alpha = 0.6f),
-                            fontSize = fontSize,
-                            fontWeight = FontWeight.Normal,
-                        )
-                    ) {
-                        append(" and ")
-                    }
+            buildAnnotatedString {
+                withStyle(
+                    SpanStyle(
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = fontSize,
+                        fontWeight = FontWeight.Normal,
+                    ),
+                ) {
+                    append(" and ")
                 }
+            },
         )
 
         TextStyleUtils.BuildLink(

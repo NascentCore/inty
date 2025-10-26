@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.Flow
 
 /** Chat页面的Paging数据仓库 负责管理聊天agents的Paging数据流、配置和传统数据请求 */
 class ChatPagingRepository {
-
     companion object {
         // 使用统一的常量
         private const val PAGE_SIZE = ChatConstants.PAGE_SIZE
@@ -28,19 +27,18 @@ class ChatPagingRepository {
         useCache: Boolean = true,
         sortSeed: Int = IntySetting.randomSortSeed(),
     ): Flow<PagingData<AgentInfo>> {
-
         return Pager(
-                config =
-                    PagingConfig(
-                        pageSize = PAGE_SIZE,
-                        prefetchDistance = PREFETCH_DISTANCE,
-                        enablePlaceholders = ENABLE_PLACEHOLDERS,
-                        initialLoadSize = PAGE_SIZE,
-                    ),
-                pagingSourceFactory = {
-                    ChatPagingSource(useCache = useCache, sortSeed = sortSeed)
-                },
-            )
+            config =
+            PagingConfig(
+                pageSize = PAGE_SIZE,
+                prefetchDistance = PREFETCH_DISTANCE,
+                enablePlaceholders = ENABLE_PLACEHOLDERS,
+                initialLoadSize = PAGE_SIZE,
+            ),
+            pagingSourceFactory = {
+                ChatPagingSource(useCache = useCache, sortSeed = sortSeed)
+            },
+        )
             .flow
     }
 

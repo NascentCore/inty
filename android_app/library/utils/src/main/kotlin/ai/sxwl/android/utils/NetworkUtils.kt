@@ -214,7 +214,8 @@ object NetworkUtils {
             val capabilities = cm.getNetworkCapabilities(network) ?: return false
             !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
         } else {
-            @Suppress("DEPRECATION") cm.isActiveNetworkMetered
+            @Suppress("DEPRECATION")
+            cm.isActiveNetworkMetered
         }
     }
 
@@ -250,7 +251,8 @@ object NetworkUtils {
             val network = cm.activeNetwork ?: return NetworkType.NONE
             getNetworkTypeFromCapabilities(cm.getNetworkCapabilities(network))
         } else {
-            @Suppress("DEPRECATION") val networkInfo = cm.activeNetworkInfo
+            @Suppress("DEPRECATION")
+            val networkInfo = cm.activeNetworkInfo
             when {
                 networkInfo?.isConnected != true -> NetworkType.NONE
                 networkInfo.type == ConnectivityManager.TYPE_WIFI -> NetworkType.WIFI
@@ -323,54 +325,54 @@ object NetworkUtils {
         if (context == null) return callbackFlow { close() }
 
         return callbackFlow {
-                val listener =
-                    object : NetworkStateListener {
-                        override fun onNetworkStateChanged(networkState: NetworkState) {
-                            try {
-                                trySend(networkState)
-                            } catch (e: Exception) {
-                                Log.e("NetworkUtils", "发送网络状态失败", e)
-                            }
+            val listener =
+                object : NetworkStateListener {
+                    override fun onNetworkStateChanged(networkState: NetworkState) {
+                        try {
+                            trySend(networkState)
+                        } catch (e: Exception) {
+                            Log.e("NetworkUtils", "发送网络状态失败", e)
                         }
                     }
-
-                // 注册网络回调
-                val cm =
-                    context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-                val networkRequest =
-                    NetworkRequest.Builder()
-                        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                        .build()
-
-                val callback =
-                    object : ConnectivityManager.NetworkCallback() {
-                        @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
-                        override fun onAvailable(network: Network) {
-                            super.onAvailable(network)
-                            val networkState = getNetworkState(context)
-                            listener.onNetworkStateChanged(networkState)
-                            if (networkState.isConnected) {
-                                listener.onNetworkRestored()
-                            }
-                        }
-
-                        override fun onLost(network: Network) {
-                            super.onLost(network)
-                            listener.onNetworkStateChanged(NetworkState(false, NetworkType.NONE))
-                        }
-                    }
-
-                cm?.registerNetworkCallback(networkRequest, callback)
-
-                // 立即发送当前网络状态
-                try {
-                    trySend(getNetworkState(context))
-                } catch (e: Exception) {
-                    Log.e("NetworkUtils", "发送初始网络状态失败", e)
                 }
 
-                awaitClose { cm?.unregisterNetworkCallback(callback) }
+            // 注册网络回调
+            val cm =
+                context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            val networkRequest =
+                NetworkRequest.Builder()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .build()
+
+            val callback =
+                object : ConnectivityManager.NetworkCallback() {
+                    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
+                    override fun onAvailable(network: Network) {
+                        super.onAvailable(network)
+                        val networkState = getNetworkState(context)
+                        listener.onNetworkStateChanged(networkState)
+                        if (networkState.isConnected) {
+                            listener.onNetworkRestored()
+                        }
+                    }
+
+                    override fun onLost(network: Network) {
+                        super.onLost(network)
+                        listener.onNetworkStateChanged(NetworkState(false, NetworkType.NONE))
+                    }
+                }
+
+            cm?.registerNetworkCallback(networkRequest, callback)
+
+            // 立即发送当前网络状态
+            try {
+                trySend(getNetworkState(context))
+            } catch (e: Exception) {
+                Log.e("NetworkUtils", "发送初始网络状态失败", e)
             }
+
+            awaitClose { cm?.unregisterNetworkCallback(callback) }
+        }
             .distinctUntilChanged()
     }
 
@@ -396,8 +398,10 @@ object NetworkUtils {
 
             // 检查是否有高质量网络能力
             capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
+                (
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                    )
         } else {
             isWifiConnected(context) || isEthernetConnected(context)
         }

@@ -8,7 +8,6 @@ import ai.sxwl.android.data.usecase.SyncChatDataUseCase
 
 /** 聊天模块依赖注入 提供聊天相关的依赖 */
 object ChatModule {
-
     // Repository
     private val _chatRepository: ChatRepository by lazy { ChatRepositoryImpl() }
 

@@ -9,7 +9,6 @@ import com.tencent.mmkv.MMKV
 import kotlin.random.Random
 
 object IntySetting {
-
     // App级通用标记的存储 使用的对象
     private val allUserSetting: MMKV
 
@@ -73,7 +72,11 @@ object IntySetting {
     }
 
     /** 登录接口后，本地处理登录业务的数据逻辑 */
-    fun login(isGuest: Boolean, uid: String, token: String) {
+    fun login(
+        isGuest: Boolean,
+        uid: String,
+        token: String,
+    ) {
         changeUser(uid)
         setToken(token)
         if (isGuest) {
@@ -82,14 +85,20 @@ object IntySetting {
     }
 
     /** 用于业务标记消息已读的最后一条消息的判断 */
-    fun isConversationReaded(agentID: String, lastMessage: String): Boolean {
+    fun isConversationReaded(
+        agentID: String,
+        lastMessage: String,
+    ): Boolean {
         val configLastMsg = curUserSetting.decodeString("conversation_last_$agentID", agentID)
         LogUtils.d("$agentID = $configLastMsg, new=$lastMessage")
         return (configLastMsg == lastMessage)
     }
 
     /** 用于业务标记消息已读的最后一条消息 */
-    fun setConversationReaded(agentID: String, lastMessage: String) {
+    fun setConversationReaded(
+        agentID: String,
+        lastMessage: String,
+    ) {
         LogUtils.d("$agentID = $lastMessage")
         curUserSetting.putString("conversation_last_$agentID", lastMessage)
     }
@@ -114,7 +123,10 @@ object IntySetting {
     }
 
     // 角色专用的keep talking设置 (二状态: true/false)
-    fun setAgentKeepTalking(agentId: String, show: Boolean) {
+    fun setAgentKeepTalking(
+        agentId: String,
+        show: Boolean,
+    ) {
         curUserSetting.putBoolean("agent_keep_talking_$agentId", show)
     }
 
@@ -202,13 +214,13 @@ object IntySetting {
     }
 
     // 用于首页chat的页面请求数据的seed，每次app启动时生成固定值
-    private var _randomSortSeed: Int? = null
+    private var randomSortSeedCached: Int? = null
 
     fun randomSortSeed(): Int {
-        if (_randomSortSeed == null) {
-            _randomSortSeed = Random.Default.nextInt()
+        if (randomSortSeedCached == null) {
+            randomSortSeedCached = Random.Default.nextInt()
         }
-        return _randomSortSeed!!
+        return randomSortSeedCached!!
     }
 
     fun updateSortSeed(seed: Int) {
@@ -216,7 +228,10 @@ object IntySetting {
     }
 
     // region 通用的用户信息存储方法（不依赖具体的 UserProfile 类）
-    fun setUserProfileData(key: String, value: String) {
+    fun setUserProfileData(
+        key: String,
+        value: String,
+    ) {
         curUserSetting.putString("user_profile_$key", value)
     }
 
@@ -224,19 +239,31 @@ object IntySetting {
         return curUserSetting.decodeString("user_profile_$key")
     }
 
-    fun setUserProfileBoolean(key: String, value: Boolean) {
+    fun setUserProfileBoolean(
+        key: String,
+        value: Boolean,
+    ) {
         curUserSetting.putBoolean("user_profile_$key", value)
     }
 
-    fun getUserProfileBoolean(key: String, defaultValue: Boolean = false): Boolean {
+    fun getUserProfileBoolean(
+        key: String,
+        defaultValue: Boolean = false,
+    ): Boolean {
         return curUserSetting.decodeBool("user_profile_$key", defaultValue)
     }
 
-    fun setUserProfileInt(key: String, value: Int) {
+    fun setUserProfileInt(
+        key: String,
+        value: Int,
+    ) {
         curUserSetting.putInt("user_profile_$key", value)
     }
 
-    fun getUserProfileInt(key: String, defaultValue: Int = 0): Int {
+    fun getUserProfileInt(
+        key: String,
+        defaultValue: Int = 0,
+    ): Int {
         return curUserSetting.decodeInt("user_profile_$key", defaultValue)
     }
 
@@ -271,12 +298,15 @@ object IntySetting {
     // region 聊天数据持久化相关方法
 
     /** 保存指定agent的聊天数据 使用简单的字符串存储，避免复杂的JSON序列化 */
-    fun saveChatMessages(agentId: String, messages: List<ai.sxwl.android.data.api.model.MsgInfo>) {
+    fun saveChatMessages(
+        agentId: String,
+        messages: List<ai.sxwl.android.data.api.model.MsgInfo>,
+    ) {
         try {
             // 暂时禁用数据持久化，避免序列化问题
             // TODO: 实现更简单的数据存储方案
             LogUtils.d(
-                "Chat messages persistence temporarily disabled for agent $agentId (${messages.size} messages)"
+                "Chat messages persistence temporarily disabled for agent $agentId (${messages.size} messages)",
             )
         } catch (e: Exception) {
             LogUtils.e("Failed to save chat messages for agent $agentId: ${e.message}")
@@ -296,13 +326,13 @@ object IntySetting {
         agentId: String,
         offset: Int,
         hasMore: Boolean,
-        isInitialLoaded: Boolean
+        isInitialLoaded: Boolean,
     ) {
         curUserSetting.putInt("chat_offset_$agentId", offset)
         curUserSetting.putBoolean("chat_has_more_$agentId", hasMore)
         curUserSetting.putBoolean("chat_initial_loaded_$agentId", isInitialLoaded)
         LogUtils.d(
-            "Saved pagination state for agent $agentId: offset=$offset, hasMore=$hasMore, initialLoaded=$isInitialLoaded"
+            "Saved pagination state for agent $agentId: offset=$offset, hasMore=$hasMore, initialLoaded=$isInitialLoaded",
         )
     }
 
@@ -329,9 +359,9 @@ object IntySetting {
         keys?.forEach { key: String ->
             if (
                 key.startsWith("chat_messages_") ||
-                    key.startsWith("chat_offset_") ||
-                    key.startsWith("chat_has_more_") ||
-                    key.startsWith("chat_initial_loaded_")
+                key.startsWith("chat_offset_") ||
+                key.startsWith("chat_has_more_") ||
+                key.startsWith("chat_initial_loaded_")
             ) {
                 curUserSetting.removeValueForKey(key)
             }
@@ -340,5 +370,4 @@ object IntySetting {
     }
 
     // endregion
-
 }

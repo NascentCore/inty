@@ -15,7 +15,6 @@ import kotlinx.coroutines.launch
 
 /** 举报页面 */
 class ReportActivity : BaseActivity() {
-
     companion object {
         private const val INTENT_KEY_TARGET_ID = "intent_key_target_id"
         private const val INTENT_KEY_TARGET_TYPE = "intent_key_target_type"
@@ -27,12 +26,16 @@ class ReportActivity : BaseActivity() {
          * @param targetType
          * @param targetId
          */
-        fun launch(context: Context, targetType: String = "USER", targetId: String? = null) {
+        fun launch(
+            context: Context,
+            targetType: String = "USER",
+            targetId: String? = null,
+        ) {
             context.startActivity(
                 Intent(context, ReportActivity::class.java).also { intent ->
                     intent.putExtra(INTENT_KEY_TARGET_ID, targetId)
                     intent.putExtra(INTENT_KEY_TARGET_TYPE, targetType)
-                }
+                },
             )
         }
     }
@@ -68,7 +71,10 @@ class ReportActivity : BaseActivity() {
 
 /** 举报内容组件 */
 @Composable
-private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit) {
+private fun ReportContent(
+    viewModel: ReportViewModel,
+    onBack: () -> Unit,
+) {
     val reasons = viewModel.reasons.collectAsState()
     val selectIDs = viewModel.selectIDS
     val description = viewModel.description.collectAsState()

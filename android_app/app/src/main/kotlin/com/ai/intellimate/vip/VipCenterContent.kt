@@ -72,21 +72,21 @@ fun VipCenterContent(
         // 半透明遮罩层，确保内容可读性
         Box(
             modifier =
-                Modifier.fillMaxWidth()
-                    .fillMaxHeight(.77f)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        brush =
-                            Brush.verticalGradient(
-                                colors =
-                                    listOf(
-                                        Color(0x001C1523),
-                                        Color(0xA81C1523),
-                                        Color(0xE31C1523),
-                                        Color(0xFF1C1523),
-                                    )
-                            )
-                    )
+            Modifier.fillMaxWidth()
+                .fillMaxHeight(.77f)
+                .align(Alignment.BottomCenter)
+                .background(
+                    brush =
+                    Brush.verticalGradient(
+                        colors =
+                        listOf(
+                            Color(0x001C1523),
+                            Color(0xA81C1523),
+                            Color(0xE31C1523),
+                            Color(0xFF1C1523),
+                        ),
+                    ),
+                ),
         )
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -115,21 +115,23 @@ fun VipCenterContent(
                 val selectedPlan =
                     if (selectedPlanIndex >= 0 && selectedPlanIndex < plans.size) {
                         plans[selectedPlanIndex]
-                    } else null
+                    } else {
+                        null
+                    }
 
                 selectedPlan?.let { plan ->
                     SubscriptionDescriptionText(
                         text =
-                            stringResource(
-                                R.string.subscription_description_fmt_str,
-                                plan.price,
-                                plan.name.lowercase(),
-                            )
+                        stringResource(
+                            R.string.subscription_description_fmt_str,
+                            plan.price,
+                            plan.name.lowercase(),
+                        ),
                     )
                 }
                     ?: run {
                         SubscriptionDescriptionText(
-                            text = stringResource(R.string.subscription_description_placeholder)
+                            text = stringResource(R.string.subscription_description_placeholder),
                         )
                     }
 

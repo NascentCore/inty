@@ -25,38 +25,44 @@ import com.ai.intellimate.R
 // 激活状态的渐变背景
 private val premiumActiveBrush =
     Brush.horizontalGradient(
-        colors = listOf(Color(0xFF00EEFF), Color(0xFF0B50FF), Color(0xFFFF00D0))
+        colors = listOf(Color(0xFF00EEFF), Color(0xFF0B50FF), Color(0xFFFF00D0)),
     )
 
 // 置灰状态的渐变背景
 private val premiumInactiveBrush =
     Brush.horizontalGradient(
-        colors = listOf(Color(0xFF595959), Color(0xFF9E9E9E), Color(0xFF686868))
+        colors = listOf(Color(0xFF595959), Color(0xFF9E9E9E), Color(0xFF686868)),
     )
 
 /** Premium Model标签组件 */
 @Composable
-fun PremiumModelTag(isPremiumModel: Boolean = false, onClick: () -> Unit) {
+fun PremiumModelTag(
+    isPremiumModel: Boolean = false,
+    onClick: () -> Unit,
+) {
     Row(
         modifier =
-            Modifier.padding(horizontal = 16.dp)
-                .height(28.dp)
-                .background(
-                    brush = if (isPremiumModel) premiumActiveBrush else premiumInactiveBrush,
-                    shape = RoundedCornerShape(16.dp),
-                )
-                .noRippleClickable { onClick() }
-                .padding(horizontal = 10.dp),
+        Modifier.padding(horizontal = 16.dp)
+            .height(28.dp)
+            .background(
+                brush = if (isPremiumModel) premiumActiveBrush else premiumInactiveBrush,
+                shape = RoundedCornerShape(16.dp),
+            )
+            .noRippleClickable { onClick() }
+            .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
         // V图标
         Image(
             painter =
-                painterResource(
-                    if (isPremiumModel) R.drawable.icon_vip_flag_on
-                    else R.drawable.icon_vip_flag_off
-                ),
+            painterResource(
+                if (isPremiumModel) {
+                    R.drawable.icon_vip_flag_on
+                } else {
+                    R.drawable.icon_vip_flag_off
+                },
+            ),
             contentDescription = "upgrade to premium icon",
             modifier = Modifier.size(20.dp),
         )

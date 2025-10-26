@@ -8,7 +8,6 @@ import com.inty.api.models.api.v1.users.profile.ProfileUpdateParams
 
 /** 用户服务 封装所有用户相关的API调用 替换原有的 IUserApi 用户相关方法 */
 object UserService {
-
     /** 获取用户信息 替换: IUserApi.getUserProfile() */
     suspend fun getUserProfile(): ApiResult<UserProfile> {
         return IntyNetworkManager.executeRequest("Get User Profile") {
