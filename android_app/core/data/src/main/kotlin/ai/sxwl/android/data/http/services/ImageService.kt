@@ -7,10 +7,10 @@ import com.inty.api.models.api.v1.report.ApiResponseDict
 import java.io.File
 import java.io.FileInputStream
 
-/** 图片服务 封装所有图片上传相关的API调用 替换原有的 IUserApi.uploadAvatar() 和 IAgentApi.uploadAvatar() */
+/** 图片服务 封装图片上传API调用 使用 Inty SDK */
 object ImageService {
 
-    /** 上传图片文件 替换: IUserApi.uploadAvatar() 和 IAgentApi.uploadAvatar() */
+    /** 上传图片文件 */
     suspend fun uploadImage(filePath: String, croppingAvatar: Boolean = false): ApiResult<String> {
         return IntyNetworkManager.executeRequest("Upload Image") {
             val file = File(filePath)

@@ -55,10 +55,6 @@ object UserService {
         }
     }
 
-    /** 上传头像 替换: IUserApi.uploadAvatar() 使用 IntySDK 的图片上传 API */
-    suspend fun uploadAvatar(filePath: String): ApiResult<String> {
-        return ImageService.uploadImage(filePath, croppingAvatar = true)
-    }
 
     /** 删除用户账户 替换: IUserApi.deleteUser() 注意: 当前 IntySDK 没有直接的 delete user API */
     suspend fun deleteUser(): ApiResult<Unit> {
