@@ -14,7 +14,6 @@ import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.utils.IntyUserProfileSDK
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
-import com.architecture.httplib.core.HttpResult
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -23,9 +22,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
+ 
 
 class MySettingViewModel : BaseVM() {
 
@@ -79,29 +76,11 @@ class MySettingViewModel : BaseVM() {
                         return@launchBackground
                     }
 
-                    val requestBody =
-                        File(fileUri.path!!)
-                            .asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
-                    val result =
-                        userApi.uploadAvatar(
-                            MultipartBody.Part.createFormData("file", "file.png", requestBody)
-                        )
-
-                    when (result) {
-                        is HttpResult.Success -> {
-                            _userProfile.value =
-                                _userProfile.value.copy(
-                                    // No cropping, just use the provided url.
-                                    avatar = result.data.url
-                                )
-                            // Show success toast for avatar upload
-                            viewModelScope.launch(Dispatchers.Main) {
-                                ToastUtils.showShort(R.string.saved_successfully)
-                            }
-                        }
-                        is HttpResult.Failure -> {
-                            NetworkErrorHandler.showNetworkAwareError(result.message)
-                            return@launchBackground
+                    try {
+                        val uploadedUrl = ImageService.uploadUserAvatar(File(fileUri.path!!))
+                        _userProfile.value = _userProfile.value.copy(avatar = uploadedUrl)
+                        viewModelScope.launch(Dispatchers.Main) {
+                            ToastUtils.showShort(R.string.saved_successfully)
                         }
                     } catch (e: Exception) {
                         NetworkErrorHandler.showNetworkAwareError(e.message ?: "Upload failed")
@@ -111,12 +90,10 @@ class MySettingViewModel : BaseVM() {
 
                 val updatedProfile = IntyUserProfileSDK.updateUserProfile(_userProfile.value)
                 if (updatedProfile != null) {
-                    // Show success toast for profile update
                     viewModelScope.launch(Dispatchers.Main) {
                         ToastUtils.showShort(Utils.getApp().getString(R.string.saved_successfully))
                         UserProfileManager.saveUserProfile(updatedProfile)
                     }
-                    // 发送用户信息更新成功事件
                     sendEvent(ViewModelEvent.UserProfileUpdated)
                 } else {
                     NetworkErrorHandler.showNetworkAwareError("Failed to update user profile")
