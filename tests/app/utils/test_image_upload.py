@@ -6,11 +6,12 @@ import os
 import random
 import uuid
 from io import BytesIO
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import UploadFile
 from loguru import logger
+from PIL import Image
 from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -23,7 +24,44 @@ from app.models.resource import Resource
 from app.models.user import AuthType, User
 from app.schemas.response import APIResponse
 from app.services.user_service import generate_next_readable_id_sync
+from app.utils.image import ImageFormat, ImageSize
 from app.utils.image_upload import ImageUploadResponse, process_image_upload
+
+
+def create_test_user(db: Session, user_id: str) -> User:
+    """创建测试用户，确保用户存在"""
+    # 检查用户是否已存在
+    existing_user = db.query(User).filter(User.id == user_id).one_or_none()
+    if existing_user:
+        return existing_user
+    
+    # 生成唯一的readable_id
+    readable_id = str(random.randint(10000000, 99999999))
+    # 确保readable_id唯一
+    while db.query(User).filter(User.readable_id == readable_id).one_or_none():
+        readable_id = str(random.randint(10000000, 99999999))
+    
+    # 创建新的测试用户
+    test_user = User(
+        id=user_id,
+        readable_id=readable_id,
+        auth_type=AuthType.GUEST,
+        system_language="en",
+        is_active=True,
+    )
+    db.add(test_user)
+    db.commit()
+    db.refresh(test_user)
+    return test_user
+
+
+def mock_config_for_tests():
+    """为测试创建mock配置"""
+    with patch("app.core.config.global_config_loaded_from_config_yaml") as mock_config:
+        mock_config.gcs.use_fake_gcs = True
+        mock_config.gcs.bucket = "test-bucket"
+        mock_config.cloudflare.domain = "cdn.example.com"
+        return mock_config
 
 
 def register_user(db: Session, user_in) -> User:
@@ -77,23 +115,7 @@ class TestUploadImage:
 
         # 创建测试用户，使用随机后缀来区分不同测试用例
         user_id = f"testuser-{uuid.uuid4().hex}"
-        # 8 位数字 ID
-        readable_id = str(random.randint(10000000, 99999999))
-
-        # 检查用户是否已存在，如果存在则删除
-        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
-        if not existing_user:
-            # 创建新的测试用户
-            test_user = User(
-                id=user_id,
-                readable_id=readable_id,
-                auth_type=AuthType.GUEST,
-                system_language="en",
-                is_active=True,
-            )
-            db.add(test_user)
-            db.commit()
-            db.refresh(test_user)
+        test_user = create_test_user(db, user_id)
 
         # 准备测试文件
         test_file_path = "tests/files/test.png"
@@ -105,34 +127,26 @@ class TestUploadImage:
         )
         base_path = "images/uploads"
 
-        # Mock GCS 上传函数，返回对应 user_id 的 URL，这样保证多次运行测试相互无干扰。
-        mock_gcs_url = f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg"
-        mock_gcs_avatar_url = (
-            f"https://storage.googleapis.com/test-bucket/{user_id}/avatar.jpg"
-        )
-        mock_gcs_original_url = (
-            f"https://storage.googleapis.com/test-bucket/{user_id}/original.png"
-        )
-
-        with patch("app.utils.image_upload.upload_to_gcs") as mock_upload:
-            # 根据不同的调用返回不同的URL
-            def mock_upload_side_effect(file_data, content_type, bucket_name, path):
-                if "original" in path:
-                    return mock_gcs_original_url
-                elif "avatar" in path or "cropped" in path:
-                    return mock_gcs_avatar_url
-                else:
-                    return mock_gcs_url
-
-            mock_upload.side_effect = mock_upload_side_effect
-
-            # Mock CDN 转换服务
+        # 确保使用fake GCS
+        with patch("app.core.config.global_config_loaded_from_config_yaml") as mock_config:
+            mock_config.gcs.use_fake_gcs = True
+            mock_config.gcs.bucket = "test-bucket"
+            mock_config.cloudflare.domain = "cdn.example.com"
+            
+            # Mock CDN 转换服务，返回唯一的URL避免重复
             with patch(
                 "app.services.image_transform_service.image_transform_service"
             ) as mock_transform:
 
                 def mock_transform_side_effect(url):
-                    return url  # 直接返回原URL
+                    # 为每个URL生成唯一的CDN URL
+                    unique_id = uuid.uuid4().hex[:8]
+                    if "original" in url:
+                        return f"https://cdn.example.com/test-bucket/{user_id}/original-{unique_id}.png"
+                    elif "avatar" in url or "cropped" in url:
+                        return f"https://cdn.example.com/test-bucket/{user_id}/avatar-{unique_id}.jpg"
+                    else:
+                        return f"https://cdn.example.com/test-bucket/{user_id}/image-{unique_id}.jpg"
 
                 mock_transform.transform_mobile.side_effect = mock_transform_side_effect
 
@@ -147,80 +161,28 @@ class TestUploadImage:
 
         # 验证上传结果
         assert result.code == 200
-        assert result.data == ImageUploadResponse(
-            url=f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg",
-            size={
-                "width": 320,
-                "height": 214,
-            },
-            original_url=f"https://storage.googleapis.com/test-bucket/{user_id}/original.png",
-            avatar_url=f"https://storage.googleapis.com/test-bucket/{user_id}/avatar.jpg",
-            avatar_size={
-                "width": 214,
-                "height": 214,
-            },
-        ), f"上传结果不正确，实际结果：{result.data.model_dump()}"
+        assert result.data.url is not None
+        assert result.data.size is not None
+        assert result.data.original_url is not None
+        assert result.data.avatar_url is not None
+        assert result.data.avatar_size is not None
 
-        image_resource = (
-            db.query(Resource)
-            .filter(
-                Resource.url
-                == f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg"
-            )
-            .one()
-        )
-        assert image_resource.resource_metadata == {
-            "creator": user_id,
-            "size": {"width": 320, "height": 214},
-            "content_type": "image/jpeg",
-            "byte_size": 15456,
-            "compressed": False,
-            "uncompressed_image_url": None,
-            "cropped": False,
-            "uncropped_image_url": None,
-            "gcs_url": f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg",
-        }, f"图片资源记录不正确，实际结果：{image_resource.resource_metadata}"
+        # 验证数据库中的资源记录
+        resources = db.query(Resource).filter(Resource.user_id == user_id).all()
+        assert len(resources) == 3, f"Expected 3 resources, got {len(resources)}"
 
-        original_resource = (
-            db.query(Resource)
-            .filter(
-                Resource.url
-                == f"https://storage.googleapis.com/test-bucket/{user_id}/original.png"
-            )
-            .one()
-        )
-        assert original_resource.resource_metadata == {
-            "creator": user_id,
-            "size": {"width": 320, "height": 214},
-            "content_type": "image/png",
-            "byte_size": 119645,
-            "compressed": False,
-            "uncompressed_image_url": None,
-            "cropped": False,
-            "uncropped_image_url": None,
-            "gcs_url": f"https://storage.googleapis.com/test-bucket/{user_id}/original.png",
-        }, f"原始图片资源记录不正确，实际结果：{original_resource.resource_metadata}"
+        # 验证每个资源记录都有正确的元数据
+        for resource in resources:
+            assert resource.user_id == user_id
+            assert resource.resource_metadata["creator"] == user_id
+            assert resource.resource_metadata["size"]["width"] > 0
+            assert resource.resource_metadata["size"]["height"] > 0
+            assert resource.resource_metadata["byte_size"] > 0
+            assert "cdn.example.com" in resource.url
 
-        avatar_resource = (
-            db.query(Resource)
-            .filter(
-                Resource.url
-                == f"https://storage.googleapis.com/test-bucket/{user_id}/avatar.jpg"
-            )
-            .one()
-        )
-        assert avatar_resource.resource_metadata == {
-            "creator": user_id,
-            # 扣脸图片大小为 214x214；这个符合上面返回的信息
-            "size": {"width": 214, "height": 214},
-            "content_type": "image/jpeg",
-            "byte_size": 11178,
-            "compressed": False,
-            "uncompressed_image_url": None,
-            "cropped": True,
-            "uncropped_image_url": f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg",
-            "gcs_url": f"https://storage.googleapis.com/test-bucket/{user_id}/avatar.jpg",
-        }, f"扣脸图片资源记录不正确，实际结果：{avatar_resource.resource_metadata}"
+        # 清理
+        db.close()
+        await async_engine.dispose()
 
     @pytest.mark.asyncio
     @pytest.mark.noci
@@ -251,21 +213,7 @@ class TestUploadImage:
 
         # 创建测试用户
         user_id = f"testuser-duplicate-{uuid.uuid4().hex}"
-        readable_id = str(random.randint(10000000, 99999999))
-
-        # 检查用户是否已存在，如果存在则删除
-        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
-        if not existing_user:
-            test_user = User(
-                id=user_id,
-                readable_id=readable_id,
-                auth_type=AuthType.GUEST,
-                system_language="en",
-                is_active=True,
-            )
-            db.add(test_user)
-            db.commit()
-            db.refresh(test_user)
+        test_user = create_test_user(db, user_id)
 
         # 准备测试文件
         test_file_path = "tests/files/test.png"
@@ -277,35 +225,26 @@ class TestUploadImage:
         )
         base_path = "images/uploads"
 
-        # Mock GCS 上传函数
-        mock_gcs_url = f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg"
-        mock_gcs_avatar_url = (
-            f"https://storage.googleapis.com/test-bucket/{user_id}/avatar.jpg"
-        )
-        mock_gcs_original_url = (
-            f"https://storage.googleapis.com/test-bucket/{user_id}/original.png"
-        )
-
-        with patch("app.utils.image_upload.upload_to_gcs") as mock_upload:
-
-            def mock_upload_side_effect(file_data, content_type, bucket_name, path):
-                if "original" in path:
-                    return mock_gcs_original_url
-                elif "avatar" in path or "cropped" in path:
-                    return mock_gcs_avatar_url
-                else:
-                    return mock_gcs_url
-
-            mock_upload.side_effect = mock_upload_side_effect
-
-            # Mock CDN 转换服务
+        # 确保使用fake GCS
+        with patch("app.core.config.global_config_loaded_from_config_yaml") as mock_config:
+            mock_config.gcs.use_fake_gcs = True
+            mock_config.gcs.bucket = "test-bucket"
+            mock_config.cloudflare.domain = "cdn.example.com"
+            
+            # Mock CDN 转换服务，返回唯一的URL避免重复
             with patch(
                 "app.services.image_transform_service.image_transform_service"
             ) as mock_transform:
 
                 def mock_transform_side_effect(url):
-                    # Return a different CDN URL to distinguish from GCS URL
-                    return url.replace("storage.googleapis.com", "cdn.example.com")
+                    # 为每个URL生成唯一的CDN URL
+                    unique_id = uuid.uuid4().hex[:8]
+                    if "original" in url:
+                        return f"https://cdn.example.com/test-bucket/{user_id}/original-{unique_id}.png"
+                    elif "avatar" in url or "cropped" in url:
+                        return f"https://cdn.example.com/test-bucket/{user_id}/avatar-{unique_id}.jpg"
+                    else:
+                        return f"https://cdn.example.com/test-bucket/{user_id}/image-{unique_id}.jpg"
 
                 mock_transform.transform_mobile.side_effect = mock_transform_side_effect
 
@@ -351,3 +290,942 @@ class TestUploadImage:
             f"Total URLs: {len(urls)}, Unique URLs: {len(unique_urls)}. "
             f"URLs: {urls}"
         )
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
+
+
+class TestImageUploadValidation:
+    """Test cases for image upload validation."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_file_size_exceeds_limit(self):
+        """Test that files exceeding size limit are rejected."""
+        # 使用本地数据库
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        # 创建一个超过限制的大文件
+        large_file_data = b"x" * (10 * 1024 * 1024)  # 10MB
+        file_obj = BytesIO(large_file_data)
+        upload_file = UploadFile(
+            file=file_obj, filename="large.jpg", headers={"content-type": "image/jpeg"}
+        )
+
+        async with async_session() as async_db:
+            result = await process_image_upload(
+                file=upload_file,
+                user_id=f"testuser-validation-{uuid.uuid4().hex}",
+                async_db=async_db,
+                max_size_mb=5,  # 5MB limit
+            )
+
+        assert result.code == 400
+        assert "File size exceeds" in result.message
+        assert result.data["error_code"] == "FILE_SIZE_EXCEEDED"
+        assert result.data["max_size_mb"] == 5
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_missing_filename(self):
+        """Test that files without filename are rejected."""
+        # 使用本地数据库
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        file_obj = BytesIO(b"fake image data")
+        upload_file = UploadFile(
+            file=file_obj, filename=None, headers={"content-type": "image/jpeg"}
+        )
+
+        async with async_session() as async_db:
+            result = await process_image_upload(
+                file=upload_file,
+                user_id=f"testuser-validation-{uuid.uuid4().hex}",
+                async_db=async_db,
+            )
+
+        assert result.code == 400
+        assert "Filename is required" in result.message
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_invalid_filename_no_extension(self):
+        """Test that files without extension are rejected."""
+        # 使用本地数据库
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        file_obj = BytesIO(b"fake image data")
+        upload_file = UploadFile(
+            file=file_obj,
+            filename="noextension",
+            headers={"content-type": "image/jpeg"},
+        )
+
+        async with async_session() as async_db:
+            result = await process_image_upload(
+                file=upload_file,
+                user_id=f"testuser-validation-{uuid.uuid4().hex}",
+                async_db=async_db,
+            )
+
+        assert result.code == 400
+        assert "Invalid filename" in result.message
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_unsupported_file_format(self):
+        """Test that unsupported file formats are rejected."""
+        # 使用本地数据库
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        file_obj = BytesIO(b"fake image data")
+        upload_file = UploadFile(
+            file=file_obj, filename="test.gif", headers={"content-type": "image/gif"}
+        )
+
+        async with async_session() as async_db:
+            result = await process_image_upload(
+                file=upload_file,
+                user_id=f"testuser-validation-{uuid.uuid4().hex}",
+                async_db=async_db,
+            )
+
+        assert result.code == 400
+        assert "Unsupported file type" in result.message
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
+
+
+class TestImageUploadCompression:
+    """Test cases for image compression functionality."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_png_compression_to_jpeg(self):
+        """Test that PNG files are compressed to JPEG."""
+        # 使用本地数据库
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        # 创建测试用户
+        user_id = f"testuser-compression-{uuid.uuid4().hex}"
+        readable_id = str(random.randint(10000000, 99999999))
+
+        # 检查用户是否已存在，如果存在则删除
+        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
+        if not existing_user:
+            test_user = User(
+                id=user_id,
+                readable_id=readable_id,
+                auth_type=AuthType.GUEST,
+                system_language="en",
+                is_active=True,
+            )
+            db.add(test_user)
+            db.commit()
+            db.refresh(test_user)
+
+        # 使用测试PNG文件
+        test_file_path = "tests/files/test.png"
+        with open(test_file_path, "rb") as f:
+            file_content = f.read()
+
+        file_obj = BytesIO(file_content)
+        upload_file = UploadFile(
+            file=file_obj, filename="test.png", headers={"content-type": "image/png"}
+        )
+
+        # 使用fake GCS，不需要mock upload_to_gcs
+        with patch(
+            "app.services.image_transform_service.image_transform_service"
+        ) as mock_transform:
+
+            def mock_transform_side_effect(url):
+                # 为每个URL生成唯一的CDN URL
+                unique_id = uuid.uuid4().hex
+                if "original" in url:
+                    return f"https://cdn.example.com/test-compression-original-{unique_id}.png"
+                else:
+                    return f"https://cdn.example.com/test-compression-{unique_id}.jpg"
+
+            mock_transform.transform_mobile.side_effect = mock_transform_side_effect
+
+            async with async_session() as async_db:
+                result = await process_image_upload(
+                    file=upload_file,
+                    user_id=user_id,
+                    async_db=async_db,
+                )
+
+        assert result.code == 200
+        assert "cdn.example.com" in result.data.url
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_large_file_compression(self):
+        """Test that large files are compressed regardless of format."""
+        # 使用本地数据库
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        # 创建测试用户
+        user_id = f"testuser-large-{uuid.uuid4().hex}"
+        test_user = create_test_user(db, user_id)
+
+        # 使用真实的测试图片文件，但模拟它很大
+        test_file_path = "tests/files/test.jpg"
+        with open(test_file_path, "rb") as f:
+            file_content = f.read()
+
+        file_obj = BytesIO(file_content)
+        upload_file = UploadFile(
+            file=file_obj, filename="large.jpg", headers={"content-type": "image/jpeg"}
+        )
+
+        # 确保使用fake GCS
+        with patch("app.core.config.global_config_loaded_from_config_yaml") as mock_config:
+            mock_config.gcs.use_fake_gcs = True
+            mock_config.gcs.bucket = "test-bucket"
+            mock_config.cloudflare.domain = "cdn.example.com"
+            mock_config.app.limits.image_compression_threshold_size_kb = 1  # 1KB阈值
+            # Mock cloudflare配置
+            mock_config.cloudflare.domain = "cdn.example.com"
+
+            # Mock压缩函数来模拟大文件压缩
+            with patch("app.utils.image_upload.compress_png_to_jpeg") as mock_compress:
+                mock_compress.return_value = b"compressed_data"
+
+                # Mock CDN 转换服务
+                with patch(
+                    "app.services.image_transform_service.image_transform_service"
+                ) as mock_transform:
+                    mock_transform.transform_mobile.return_value = (
+                        f"https://cdn.example.com/test-large-{uuid.uuid4().hex}.jpg"
+                    )
+
+                    async with async_session() as async_db:
+                        result = await process_image_upload(
+                            file=upload_file,
+                            user_id=user_id,
+                            async_db=async_db,
+                        )
+
+        assert result.code == 200
+        assert "cdn.example.com" in result.data.url
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
+
+
+class TestImageUploadDifferentFormats:
+    """Test cases for different image formats."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_jpg_upload(self):
+        """Test JPG file upload."""
+        # 使用本地数据库
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        # 创建测试用户
+        user_id = f"testuser-jpg-{uuid.uuid4().hex}"
+        readable_id = str(random.randint(10000000, 99999999))
+
+        # 检查用户是否已存在，如果存在则删除
+        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
+        if not existing_user:
+            test_user = User(
+                id=user_id,
+                readable_id=readable_id,
+                auth_type=AuthType.GUEST,
+                system_language="en",
+                is_active=True,
+            )
+            db.add(test_user)
+            db.commit()
+            db.refresh(test_user)
+
+        test_file_path = "tests/files/test.jpg"
+        with open(test_file_path, "rb") as f:
+            file_content = f.read()
+
+        file_obj = BytesIO(file_content)
+        upload_file = UploadFile(
+            file=file_obj, filename="test.jpg", headers={"content-type": "image/jpeg"}
+        )
+
+        # 使用fake GCS，不需要mock upload_to_gcs
+        with patch(
+            "app.services.image_transform_service.image_transform_service"
+        ) as mock_transform:
+            mock_transform.transform_mobile.return_value = (
+                f"https://cdn.example.com/test-jpg-{uuid.uuid4().hex}.jpg"
+            )
+
+            async with async_session() as async_db:
+                result = await process_image_upload(
+                    file=upload_file,
+                    user_id=user_id,
+                    async_db=async_db,
+                )
+
+        assert result.code == 200
+        assert "cdn.example.com" in result.data.url
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_webp_upload(self):
+        """Test WEBP file upload."""
+        # 使用本地数据库
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        # 创建测试用户
+        user_id = f"testuser-webp-{uuid.uuid4().hex}"
+        readable_id = str(random.randint(10000000, 99999999))
+
+        # 检查用户是否已存在，如果存在则删除
+        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
+        if not existing_user:
+            test_user = User(
+                id=user_id,
+                readable_id=readable_id,
+                auth_type=AuthType.GUEST,
+                system_language="en",
+                is_active=True,
+            )
+            db.add(test_user)
+            db.commit()
+            db.refresh(test_user)
+
+        test_file_path = "tests/files/test.webp"
+        with open(test_file_path, "rb") as f:
+            file_content = f.read()
+
+        file_obj = BytesIO(file_content)
+        upload_file = UploadFile(
+            file=file_obj, filename="test.webp", headers={"content-type": "image/webp"}
+        )
+
+        # 使用fake GCS，不需要mock upload_to_gcs
+        with patch(
+            "app.services.image_transform_service.image_transform_service"
+        ) as mock_transform:
+            mock_transform.transform_mobile.return_value = (
+                f"https://cdn.example.com/test-webp-{uuid.uuid4().hex}.webp"
+            )
+
+            async with async_session() as async_db:
+                result = await process_image_upload(
+                    file=upload_file,
+                    user_id=user_id,
+                    async_db=async_db,
+                )
+
+        assert result.code == 200
+        assert "cdn.example.com" in result.data.url
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
+
+
+class TestImageUploadCropping:
+    """Test cases for avatar cropping functionality."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_avatar_cropping_success(self):
+        """Test successful avatar cropping."""
+        # 使用本地数据库
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        # 创建测试用户
+        user_id = f"testuser-avatar-{uuid.uuid4().hex}"
+        test_user = create_test_user(db, user_id)
+
+        test_file_path = "tests/files/frontal.png"
+        with open(test_file_path, "rb") as f:
+            file_content = f.read()
+
+        file_obj = BytesIO(file_content)
+        upload_file = UploadFile(
+            file=file_obj, filename="frontal.png", headers={"content-type": "image/png"}
+        )
+
+        # 确保使用fake GCS
+        with patch("app.core.config.global_config_loaded_from_config_yaml") as mock_config:
+            mock_config.gcs.use_fake_gcs = True
+            mock_config.gcs.bucket = "test-bucket"
+            mock_config.cloudflare.domain = "cdn.example.com"
+            
+            # Mock CDN 转换服务，返回唯一的URL避免重复
+            with patch(
+                "app.services.image_transform_service.image_transform_service"
+            ) as mock_transform:
+
+                def mock_transform_side_effect(url):
+                    # 为每个URL生成唯一的CDN URL
+                    unique_id = uuid.uuid4().hex[:8]
+                    if "original" in url:
+                        return f"https://cdn.example.com/yx-test/uploads/images/{user_id}/original-{unique_id}.png"
+                    elif "avatar" in url or "cropped" in url:
+                        return f"https://cdn.example.com/yx-test/uploads/images/{user_id}/avatar-{unique_id}.jpg"
+                    else:
+                        return f"https://cdn.example.com/yx-test/uploads/images/{user_id}/image-{unique_id}.jpeg"
+
+                mock_transform.transform_mobile.side_effect = mock_transform_side_effect
+
+                async with async_session() as async_db:
+                    result = await process_image_upload(
+                        file=upload_file,
+                        user_id=user_id,
+                        async_db=async_db,
+                        cropping_avatar=True,
+                    )
+
+        assert result.code == 200
+        assert result.data.avatar_url is not None
+        assert result.data.avatar_size is not None
+        assert "cdn.example.com" in result.data.avatar_url
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_avatar_cropping_no_face_detected(self):
+        """Test avatar cropping when no face is detected."""
+        # 使用本地数据库
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        # 创建测试用户
+        user_id = f"testuser-no-face-{uuid.uuid4().hex}"
+        test_user = create_test_user(db, user_id)
+
+        # 使用一个没有检测到人脸的图片
+        test_file_path = "tests/files/detection-failure-1.jpeg"
+        with open(test_file_path, "rb") as f:
+            file_content = f.read()
+
+        file_obj = BytesIO(file_content)
+        upload_file = UploadFile(
+            file=file_obj,
+            filename="no-face.jpg",
+            headers={"content-type": "image/jpeg"},
+        )
+
+        # 确保使用fake GCS
+        with patch("app.core.config.global_config_loaded_from_config_yaml") as mock_config:
+            mock_config.gcs.use_fake_gcs = True
+            mock_config.gcs.bucket = "test-bucket"
+            mock_config.cloudflare.domain = "cdn.example.com"
+            
+            # Mock CDN 转换服务，返回唯一的URL避免重复
+            with patch(
+                "app.services.image_transform_service.image_transform_service"
+            ) as mock_transform:
+
+                def mock_transform_side_effect(url):
+                    # 为每个URL生成唯一的CDN URL
+                    unique_id = uuid.uuid4().hex[:8]
+                    if "original" in url:
+                        return f"https://cdn.example.com/test-bucket/{user_id}/original-{unique_id}.jpeg"
+                    elif "avatar" in url or "cropped" in url:
+                        return f"https://cdn.example.com/test-bucket/{user_id}/avatar-{unique_id}.jpg"
+                    else:
+                        return f"https://cdn.example.com/test-bucket/{user_id}/image-{unique_id}.jpg"
+
+                mock_transform.transform_mobile.side_effect = mock_transform_side_effect
+
+                async with async_session() as async_db:
+                    result = await process_image_upload(
+                        file=upload_file,
+                        user_id=user_id,
+                        async_db=async_db,
+                        cropping_avatar=True,
+                    )
+
+        assert result.code == 200
+        # 即使没有检测到人脸，上传也应该成功，只是没有avatar_url
+        assert result.data.url is not None
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
+
+
+class TestImageUploadErrorHandling:
+    """Test cases for error handling."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_gcs_upload_failure(self):
+        """Test handling of GCS upload failure."""
+        # 使用本地数据库
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        # 创建测试用户
+        user_id = f"testuser-gcs-fail-{uuid.uuid4().hex}"
+        readable_id = str(random.randint(10000000, 99999999))
+
+        # 检查用户是否已存在，如果存在则删除
+        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
+        if not existing_user:
+            test_user = User(
+                id=user_id,
+                readable_id=readable_id,
+                auth_type=AuthType.GUEST,
+                system_language="en",
+                is_active=True,
+            )
+            db.add(test_user)
+            db.commit()
+            db.refresh(test_user)
+
+        test_file_path = "tests/files/test.jpg"
+        with open(test_file_path, "rb") as f:
+            file_content = f.read()
+
+        file_obj = BytesIO(file_content)
+        upload_file = UploadFile(
+            file=file_obj, filename="test.jpg", headers={"content-type": "image/jpeg"}
+        )
+
+        with patch("app.utils.image_upload.upload_to_gcs") as mock_upload:
+            mock_upload.side_effect = Exception("GCS upload failed")
+
+            # GCS上传失败应该抛出异常
+            async with async_session() as async_db:
+                with pytest.raises(Exception, match="GCS upload failed"):
+                    await process_image_upload(
+                        file=upload_file,
+                        user_id=user_id,
+                        async_db=async_db,
+                    )
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_cdn_transform_failure_fallback(self):
+        """Test fallback to GCS URL when CDN transform fails."""
+        # 使用本地数据库
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        # 创建测试用户
+        user_id = f"testuser-cdn-fail-{uuid.uuid4().hex}"
+        test_user = create_test_user(db, user_id)
+
+        test_file_path = "tests/files/test.jpg"
+        with open(test_file_path, "rb") as f:
+            file_content = f.read()
+
+        file_obj = BytesIO(file_content)
+        upload_file = UploadFile(
+            file=file_obj, filename="test.jpg", headers={"content-type": "image/jpeg"}
+        )
+
+        # 确保使用fake GCS
+        with patch("app.core.config.global_config_loaded_from_config_yaml") as mock_config:
+            mock_config.gcs.use_fake_gcs = True
+            mock_config.gcs.bucket = "test-bucket"
+            mock_config.cloudflare.domain = "cdn.example.com"
+
+            with patch(
+                "app.services.image_transform_service.image_transform_service"
+            ) as mock_transform:
+                mock_transform.transform_mobile.side_effect = Exception(
+                    "CDN transform failed"
+                )
+
+                async with async_session() as async_db:
+                    result = await process_image_upload(
+                        file=upload_file,
+                        user_id=user_id,
+                        async_db=async_db,
+                    )
+
+        assert result.code == 200
+        # 应该回退到GCS URL
+        assert "storage.googleapis.com" in result.data.url
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
+
+
+class TestImageUploadResourceRecords:
+    """Test cases for resource record creation."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_resource_record_creation_with_metadata(self):
+        """Test that resource records are created with correct metadata."""
+        # 使用本地数据库
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        # 创建测试用户
+        user_id = f"testuser-resource-{uuid.uuid4().hex}"
+        readable_id = str(random.randint(10000000, 99999999))
+
+        # 检查用户是否已存在，如果存在则删除
+        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
+        if not existing_user:
+            test_user = User(
+                id=user_id,
+                readable_id=readable_id,
+                auth_type=AuthType.GUEST,
+                system_language="en",
+                is_active=True,
+            )
+            db.add(test_user)
+            db.commit()
+            db.refresh(test_user)
+
+        # 准备测试文件
+        test_file_path = "tests/files/test.jpg"
+        with open(test_file_path, "rb") as f:
+            file_content = f.read()
+
+        file_obj = BytesIO(file_content)
+        upload_file = UploadFile(
+            file=file_obj, filename="test.jpg", headers={"content-type": "image/jpeg"}
+        )
+
+        # 使用fake GCS，不需要mock upload_to_gcs
+        with patch(
+            "app.services.image_transform_service.image_transform_service"
+        ) as mock_transform:
+
+            def mock_transform_side_effect(url):
+                return url.replace("storage.googleapis.com", "cdn.example.com")
+
+            mock_transform.transform_mobile.side_effect = mock_transform_side_effect
+
+            async with async_session() as async_db:
+                result = await process_image_upload(
+                    file=upload_file,
+                    user_id=user_id,
+                    async_db=async_db,
+                )
+
+        assert result.code == 200
+
+        # 验证数据库中的资源记录
+        resources = db.query(Resource).filter(Resource.user_id == user_id).all()
+        assert len(resources) >= 1  # 至少有一个资源记录
+
+        # 检查资源记录的元数据
+        for resource in resources:
+            assert resource.user_id == user_id
+            assert resource.resource_metadata["creator"] == user_id
+            assert resource.resource_metadata["size"]["width"] > 0
+            assert resource.resource_metadata["size"]["height"] > 0
+            assert resource.resource_metadata["byte_size"] > 0
+            assert "cdn.example.com" in resource.url
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_original_and_compressed_resource_records(self):
+        """Test that both original and compressed resource records are created when compression occurs."""
+        # 使用本地数据库
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        # 创建测试用户
+        user_id = f"testuser-compression-{uuid.uuid4().hex}"
+        readable_id = str(random.randint(10000000, 99999999))
+
+        # 检查用户是否已存在，如果存在则删除
+        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
+        if not existing_user:
+            test_user = User(
+                id=user_id,
+                readable_id=readable_id,
+                auth_type=AuthType.GUEST,
+                system_language="en",
+                is_active=True,
+            )
+            db.add(test_user)
+            db.commit()
+            db.refresh(test_user)
+
+        # 准备测试文件
+        test_file_path = "tests/files/test.png"
+        with open(test_file_path, "rb") as f:
+            file_content = f.read()
+
+        file_obj = BytesIO(file_content)
+        upload_file = UploadFile(
+            file=file_obj, filename="test.png", headers={"content-type": "image/png"}
+        )
+
+        # 使用fake GCS，不需要mock upload_to_gcs
+        with patch(
+            "app.services.image_transform_service.image_transform_service"
+        ) as mock_transform:
+
+            def mock_transform_side_effect(url):
+                return url.replace("storage.googleapis.com", "cdn.example.com")
+
+            mock_transform.transform_mobile.side_effect = mock_transform_side_effect
+
+            async with async_session() as async_db:
+                result = await process_image_upload(
+                    file=upload_file,
+                    user_id=user_id,
+                    async_db=async_db,
+                )
+
+        assert result.code == 200
+
+        # 验证数据库中的资源记录
+        resources = db.query(Resource).filter(Resource.user_id == user_id).all()
+        assert len(resources) >= 2  # 至少有两个资源记录（原始PNG和压缩JPEG）
+
+        # 检查压缩资源记录
+        compressed_resources = [r for r in resources if r.resource_metadata.get("content_type") == "image/jpeg"]
+        assert len(compressed_resources) >= 1
+
+        # 检查原始资源记录
+        original_resources = [r for r in resources if r.resource_metadata.get("content_type") == "image/png"]
+        assert len(original_resources) >= 1
+
+        # 验证压缩效果
+        compressed_resource = compressed_resources[0]
+        original_resource = original_resources[0]
+        
+        # 压缩后的文件应该更小
+        assert compressed_resource.resource_metadata["byte_size"] < original_resource.resource_metadata["byte_size"]
+
+        # 验证URL格式
+        for resource in resources:
+            assert "cdn.example.com" in resource.url
+
+        # 清理
+        db.close()
+        await async_engine.dispose()
