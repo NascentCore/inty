@@ -126,36 +126,15 @@ class TestUploadImage:
         base_path = "images/uploads"
 
         # 确保使用fake GCS
-        with patch("app.core.config.global_config_loaded_from_config_yaml") as mock_config:
-            mock_config.gcs.use_fake_gcs = True
-            mock_config.gcs.bucket = "test-bucket"
-            mock_config.cloudflare.domain = "cdn.example.com"
-            
-            # Mock CDN 转换服务，返回唯一的URL避免重复
-            with patch(
-                "app.services.image_transform_service.image_transform_service"
-            ) as mock_transform:
-
-                def mock_transform_side_effect(url):
-                    # 为每个URL生成唯一的CDN URL
-                    unique_id = uuid.uuid4().hex[:8]
-                    if "original" in url:
-                        return f"https://cdn.example.com/test-bucket/{user_id}/original-{unique_id}.png"
-                    elif "avatar" in url or "cropped" in url:
-                        return f"https://cdn.example.com/test-bucket/{user_id}/avatar-{unique_id}.jpg"
-                    else:
-                        return f"https://cdn.example.com/test-bucket/{user_id}/image-{unique_id}.jpg"
-
-                mock_transform.transform_mobile.side_effect = mock_transform_side_effect
-
-                async with async_session() as async_db:
-                    result = await process_image_upload(
-                        file=upload_file,
-                        user_id=user_id,
-                        async_db=async_db,
-                        base_path=base_path,
-                        cropping_avatar=True,
-                    )
+        with mock_config_for_tests() as mock_config:
+            async with async_session() as async_db:
+                result = await process_image_upload(
+                    file=upload_file,
+                    user_id=user_id,
+                    async_db=async_db,
+                    base_path=base_path,
+                    cropping_avatar=True,
+                )
 
         # 验证上传结果
         assert result.code == 200
@@ -579,19 +558,12 @@ class TestImageUploadDifferentFormats:
         )
 
         # 使用fake GCS，不需要mock upload_to_gcs
-        with patch(
-            "app.services.image_transform_service.image_transform_service"
-        ) as mock_transform:
-            mock_transform.transform_mobile.return_value = (
-                f"https://cdn.example.com/test-jpg-{uuid.uuid4().hex}.jpg"
+        async with async_session() as async_db:
+            result = await process_image_upload(
+                file=upload_file,
+                user_id=user_id,
+                async_db=async_db,
             )
-
-            async with async_session() as async_db:
-                result = await process_image_upload(
-                    file=upload_file,
-                    user_id=user_id,
-                    async_db=async_db,
-                )
 
         assert result.code == 200
         assert "cdn.example.com" in result.data.url
@@ -634,19 +606,12 @@ class TestImageUploadDifferentFormats:
         )
 
         # 使用fake GCS，不需要mock upload_to_gcs
-        with patch(
-            "app.services.image_transform_service.image_transform_service"
-        ) as mock_transform:
-            mock_transform.transform_mobile.return_value = (
-                f"https://cdn.example.com/test-webp-{uuid.uuid4().hex}.webp"
+        async with async_session() as async_db:
+            result = await process_image_upload(
+                file=upload_file,
+                user_id=user_id,
+                async_db=async_db,
             )
-
-            async with async_session() as async_db:
-                result = await process_image_upload(
-                    file=upload_file,
-                    user_id=user_id,
-                    async_db=async_db,
-                )
 
         assert result.code == 200
         assert "cdn.example.com" in result.data.url
@@ -693,35 +658,14 @@ class TestImageUploadCropping:
         )
 
         # 确保使用fake GCS
-        with patch("app.core.config.global_config_loaded_from_config_yaml") as mock_config:
-            mock_config.gcs.use_fake_gcs = True
-            mock_config.gcs.bucket = "test-bucket"
-            mock_config.cloudflare.domain = "cdn.example.com"
-            
-            # Mock CDN 转换服务，返回唯一的URL避免重复
-            with patch(
-                "app.services.image_transform_service.image_transform_service"
-            ) as mock_transform:
-
-                def mock_transform_side_effect(url):
-                    # 为每个URL生成唯一的CDN URL
-                    unique_id = uuid.uuid4().hex[:8]
-                    if "original" in url:
-                        return f"https://cdn.example.com/yx-test/uploads/images/{user_id}/original-{unique_id}.png"
-                    elif "avatar" in url or "cropped" in url:
-                        return f"https://cdn.example.com/yx-test/uploads/images/{user_id}/avatar-{unique_id}.jpg"
-                    else:
-                        return f"https://cdn.example.com/yx-test/uploads/images/{user_id}/image-{unique_id}.jpeg"
-
-                mock_transform.transform_mobile.side_effect = mock_transform_side_effect
-
-                async with async_session() as async_db:
-                    result = await process_image_upload(
-                        file=upload_file,
-                        user_id=user_id,
-                        async_db=async_db,
-                        cropping_avatar=True,
-                    )
+        with mock_config_for_tests() as mock_config:
+            async with async_session() as async_db:
+                result = await process_image_upload(
+                    file=upload_file,
+                    user_id=user_id,
+                    async_db=async_db,
+                    cropping_avatar=True,
+                )
 
         assert result.code == 200
         assert result.data.avatar_url is not None
@@ -769,35 +713,14 @@ class TestImageUploadCropping:
         )
 
         # 确保使用fake GCS
-        with patch("app.core.config.global_config_loaded_from_config_yaml") as mock_config:
-            mock_config.gcs.use_fake_gcs = True
-            mock_config.gcs.bucket = "test-bucket"
-            mock_config.cloudflare.domain = "cdn.example.com"
-            
-            # Mock CDN 转换服务，返回唯一的URL避免重复
-            with patch(
-                "app.services.image_transform_service.image_transform_service"
-            ) as mock_transform:
-
-                def mock_transform_side_effect(url):
-                    # 为每个URL生成唯一的CDN URL
-                    unique_id = uuid.uuid4().hex[:8]
-                    if "original" in url:
-                        return f"https://cdn.example.com/test-bucket/{user_id}/original-{unique_id}.jpeg"
-                    elif "avatar" in url or "cropped" in url:
-                        return f"https://cdn.example.com/test-bucket/{user_id}/avatar-{unique_id}.jpg"
-                    else:
-                        return f"https://cdn.example.com/test-bucket/{user_id}/image-{unique_id}.jpg"
-
-                mock_transform.transform_mobile.side_effect = mock_transform_side_effect
-
-                async with async_session() as async_db:
-                    result = await process_image_upload(
-                        file=upload_file,
-                        user_id=user_id,
-                        async_db=async_db,
-                        cropping_avatar=True,
-                    )
+        with mock_config_for_tests() as mock_config:
+            async with async_session() as async_db:
+                result = await process_image_upload(
+                    file=upload_file,
+                    user_id=user_id,
+                    async_db=async_db,
+                    cropping_avatar=True,
+                )
 
         assert result.code == 200
         # 即使没有检测到人脸，上传也应该成功，只是没有avatar_url
@@ -894,11 +817,8 @@ class TestImageUploadErrorHandling:
         )
 
         # 确保使用fake GCS
-        with patch("app.core.config.global_config_loaded_from_config_yaml") as mock_config:
-            mock_config.gcs.use_fake_gcs = True
-            mock_config.gcs.bucket = "test-bucket"
-            mock_config.cloudflare.domain = "cdn.example.com"
-
+        with mock_config_for_tests() as mock_config:
+            # Mock CDN 转换失败
             with patch(
                 "app.services.image_transform_service.image_transform_service"
             ) as mock_transform:
