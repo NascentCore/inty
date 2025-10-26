@@ -202,6 +202,7 @@ def test_process_agent_image_urls():
 
 
 @pytest.mark.asyncio
+@pytest.mark.noci
 async def test_get_balanced_score_based_agents_pagination(db_session):
     """
     Test that the agents returned from get_balanced_score_based_agents are paginated correctly.
@@ -230,6 +231,7 @@ async def test_get_balanced_score_based_agents_pagination(db_session):
 
 
 @pytest.mark.asyncio
+@pytest.mark.noci
 async def test_get_balanced_score_based_agents_stable_with_sort_seed(db_session):
     """
     Test that the agents returned from get_balanced_score_based_agents are stable with the same sort seed.

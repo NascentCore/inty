@@ -21,6 +21,7 @@ class TestUserDeletion:
     """Test user deletion functionality"""
 
     @pytest.mark.asyncio
+    @pytest.mark.noci
     async def test_delete_user_account_real_function(self):
         """Test the real delete_user_account function with async database"""
 

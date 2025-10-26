@@ -1,4 +1,5 @@
 import copy
+import pytest
 import uuid
 
 from loguru import logger
@@ -10,6 +11,7 @@ from app.models.agent import Agent, AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender, User
 
 
+@pytest.mark.noci
 def test_agent_extensions_field():
     """测试 Agent 模型的 extensions 字段的读写操作"""
 
