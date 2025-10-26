@@ -270,7 +270,7 @@ private fun CreateRolePage(
                             // Use the mainViewModel's scope to launch the coroutine
                             mainViewModel.viewModelScope.launch(Dispatchers.IO) {
                                 try {
-                                    val response = ImageService.uploadAvatar(file.absolutePath)
+                                    val response = ImageService.uploadImage(file.absolutePath, croppingAvatar = true)
                                     when (response) {
                                         is ApiResult.Success -> {
                                             val uploadedUrl = response.data

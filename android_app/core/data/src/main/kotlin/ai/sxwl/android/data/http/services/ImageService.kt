@@ -33,14 +33,4 @@ object ImageService {
             url
         }
     }
-
-    /** 上传头像图片 替换: IUserApi.uploadAvatar() 和 IAgentApi.uploadAvatar() */
-    suspend fun uploadAvatar(filePath: String): ApiResult<String> {
-        return uploadImage(filePath, croppingAvatar = true)
-    }
-
-    /** 上传背景图片 替换: IAgentApi.uploadAvatar() 用于背景图片上传 */
-    suspend fun uploadBackgroundImage(filePath: String): ApiResult<String> {
-        return uploadImage(filePath, croppingAvatar = false)
-    }
 }

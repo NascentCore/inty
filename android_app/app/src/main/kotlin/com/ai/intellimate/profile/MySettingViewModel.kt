@@ -87,7 +87,7 @@ class MySettingViewModel : BaseVM() {
                         return@launchBackground
                     }
 
-                    val result = ImageService.uploadAvatar(fileUri.path!!)
+                    val result = ImageService.uploadImage(fileUri.path!!, croppingAvatar = true)
 
                     when (result) {
                         is ApiResult.Success -> {
