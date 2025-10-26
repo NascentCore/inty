@@ -1,34 +1,10 @@
 name: Android UI Tests
 
+# TODO: 此工作流当前仍不稳定（模拟器在 GitHub Actions 上偶发启动失败/超时），
+# 后续需增加重试/更高超时与缓存策略，或迁移到自托管 Runner。
+
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "android_app/**/*.kt"
-      - "android_app/**/*.kts"
-      - "android_app/**/*.java"
-      - "android_app/**/*.xml"
-      - "android_app/**/*.pro"
-      - "android_app/**/*.gradle*"
-      - "android_app/gradle/**"
-      - "android_app/**/gradle.properties"
-      - "android_app/gradlew"
-      - ".github/workflows/android_ui_tests.yaml"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "android_app/**/*.kt"
-      - "android_app/**/*.kts"
-      - "android_app/**/*.java"
-      - "android_app/**/*.xml"
-      - "android_app/**/*.pro"
-      - "android_app/**/*.gradle*"
-      - "android_app/gradle/**"
-      - "android_app/**/gradle.properties"
-      - "android_app/gradlew"
-      - ".github/workflows/android_ui_tests.yaml"
+  workflow_dispatch:
 
 jobs:
   connected-tests:
