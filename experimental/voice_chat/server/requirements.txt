@@ -1,0 +1,9 @@
+fastapi==0.115.2
+uvicorn[standard]==0.32.0
+aiortc==1.9.0
+numpy==2.1.2
+pydantic==2.9.2
+starlette==0.39.2
+google-genai>=1.40.0,<2.0.0
+PyYAML==6.0.2
+# av is optional in this demo; aiortc uses PyAV internally but we avoid building it here
