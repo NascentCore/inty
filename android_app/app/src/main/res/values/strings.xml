@@ -41,7 +41,7 @@
     <string name="update_failed">Update failed</string>
     <string name="delete_failed">Delete failed</string>
     <string name="creation_failed">Creation failed</string>
-    <string name="user_avatar_size_too_large_with_size_format">File must be smaller than %s, got %s</string>
+    <string name="user_avatar_size_too_large_with_size_format" formatted="false">File must be smaller than %s, got %s</string>
 
     <!-- Network error messages -->
     <string name="unknown_error">Unknown error</string>
@@ -143,7 +143,7 @@
     <string name="auto_renews_cancel">Auto-renew, cancel at any time</string>
     <string name="subscription_consent">By subscribing you agree to our</string>
     <string name="subscription_description_placeholder">Will be charged at the next billing date</string>
-    <string name="subscription_description_fmt_str">%s will be charged %s, cancel at any time</string>
+    <string name="subscription_description_fmt_str" formatted="false">%s will be charged %s, cancel at any time</string>
 
     <!-- Chat -->
     <string name="chat_settings_my_persona_title">My Persona</string>
@@ -249,4 +249,13 @@
     <string name="str_persona">Persona Description</string>
     <string name="str_message_is_too_long">message is too long. Please send it in parts.</string>
     <string name="version_update_available">%s\n(new version available)</string>
+
+    <!-- Toast Messages - Additional -->
+    <string name="toast_avatar_cropped_uploaded">Avatar cropped and uploaded</string>
+    <string name="toast_upload_failed_with_message">Upload failed: %s</string>
+    <string name="toast_failed_prepare_upload_with_message">Failed to prepare upload: %s</string>
+    <string name="toast_failed_download_image_editing">Failed to download image for editing</string>
+    <string name="toast_please_select_reason">Please select at least one reason</string>
+    <string name="toast_submitted_successfully">Submitted successfully. We will review it soon.</string>
+    <string name="toast_report_creation_failed">Report creation failed</string>
 </resources>

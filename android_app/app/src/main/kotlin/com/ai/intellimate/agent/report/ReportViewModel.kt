@@ -8,6 +8,7 @@ import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import android.net.Uri
+import com.ai.intellimate.R
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
@@ -87,7 +88,7 @@ class ReportViewModel : BaseVM() {
 
     fun submit() {
         if (selectIDS.isEmpty()) {
-            ToastUtils.showShort("Please select at least one reason")
+            ToastUtils.showShort(R.string.toast_please_select_reason)
             return
         }
 
@@ -123,13 +124,13 @@ class ReportViewModel : BaseVM() {
 
                 when (result) {
                     is ApiResult.Success -> {
-                        ToastUtils.showShort("Submitted successfully. We'll review it soon.")
+                        ToastUtils.showShort(R.string.toast_submitted_successfully)
                         sendEvent(ViewModelEvent.ReportSubmitted)
                     }
 
                     is ApiResult.Error -> {
                         LogUtils.e("Report creation failed: ${result.message}")
-                        ToastUtils.showShort(result.message ?: "Report creation failed")
+                        ToastUtils.showShort(result.message ?: Utils.getApp()?.getString(R.string.toast_report_creation_failed) ?: "Report creation failed")
                     }
                 }
             } finally {
