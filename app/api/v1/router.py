@@ -6,6 +6,7 @@ from app.api.v1.endpoints import (
     chat,
     chats,
     evaluation,
+    emotions,
     images,
     notification,
     report,
@@ -36,6 +37,7 @@ api_router.include_router(report.router, tags=["report"])
 api_router.include_router(agents.router, tags=["agents", "characters"])
 api_router.include_router(chats.router, tags=["chats"])
 api_router.include_router(chat.router, tags=["chat"])
+api_router.include_router(emotions.router, tags=["emotions", "live2d"])
 api_router.include_router(images.router, tags=["images", "resources"])
 api_router.include_router(settings.router, tags=["settings"])
 
