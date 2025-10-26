@@ -4,7 +4,6 @@ from fastapi.responses import JSONResponse
 import uvicorn
 import logging
 import time
-from typing import Optional
 
 from config import Config
 from models import CharacterGenerationRequest, CharacterGenerationResponse

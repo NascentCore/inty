@@ -4,7 +4,7 @@ import io
 import json
 import os
 import time
-from typing import Dict, List, Tuple, Union
+from typing import Dict, Union
 from google.genai import types
 from google import genai
 from PIL import Image

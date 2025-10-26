@@ -5,7 +5,6 @@ Shows how to use the system with a simple example
 """
 
 import os
-import json
 import logging
 from character_agent import CharacterAgent
 from models import CharacterGenerationRequest

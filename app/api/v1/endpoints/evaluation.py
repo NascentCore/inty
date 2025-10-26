@@ -441,7 +441,6 @@ async def get_evaluation_agents(
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        from app.models.agent import AgentVisibility
         from app.services import agent_service
 
         if type == "private":

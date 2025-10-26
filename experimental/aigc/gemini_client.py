@@ -6,9 +6,9 @@ import time
 import logging
 from PIL import Image as PILImage
 from io import BytesIO
-from typing import List, Dict, Any, Optional
+from typing import List
 from config import Config
-from models import CharacterProfile, CharacterImage, CharacterBackground, CharacterEncounter
+from models import CharacterProfile, CharacterBackground, CharacterEncounter
 from utils import safe_json_loads, validate_character_data
 
 

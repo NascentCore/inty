@@ -15,8 +15,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import append_filename_suffix, upload_to_gcs
-from app.models.resource import ResourceType
-from app.schemas.resource import ResourceCreate
 from app.schemas.response import APIResponse
 from app.services.resource_service import async_create_image_resource
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar

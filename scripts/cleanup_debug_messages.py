@@ -7,10 +7,7 @@
 
 import asyncio
 import logging
-from typing import Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text, select, update
-from app.core.config import global_config_loaded_from_config_yaml
 from app.api.deps import get_async_db
 from app import models
 

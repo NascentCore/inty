@@ -3,7 +3,6 @@ Images endpoints for general image upload functionality.
 """
 
 import traceback
-from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from loguru import logger

@@ -5,9 +5,7 @@
 """
 
 import asyncio
-import os
 import sys
-import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 

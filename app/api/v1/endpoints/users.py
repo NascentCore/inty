@@ -3,26 +3,21 @@ from typing import Any, Optional
 
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
-    File,
     HTTPException,
     Query,
-    UploadFile,
 )
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
-from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import get_async_db
 from app.schemas.response import APIResponse
 from app.schemas.user import DeviceTokenRegister, User, UserList, UserUpdate
 from app.schemas.user_deletion import (
     AccountDeletionRequest,
     AccountDeletionResponse,
-    AnonymizationStatsResponse,
     DeletionCheckResponse,
 )
 from app.services import user_service

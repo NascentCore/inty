@@ -5,7 +5,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 from app.models.report import ReportStatus
-from app.schemas.response import PagedResponse, PaginationData
+from app.schemas.response import PagedResponse
 
 
 class ReportReason(BaseModel):

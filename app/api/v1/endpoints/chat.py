@@ -1,23 +1,16 @@
-import asyncio
-import json
-import logging
 import time
 import uuid
-from typing import Any, List, Optional, Union
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException
 from langchain_core.messages import HumanMessage
 from loguru import logger
-from pydantic import BaseModel
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import models, schemas
+from app import schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
-from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.user import AuthType
 from app.schemas.chat import ChatCompletionRequest

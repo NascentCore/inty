@@ -1,18 +1,11 @@
 import asyncio
-import json
-import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, RLock
 from typing import Any, Dict, List, Optional
 
-from jinja2 import Template as Jinja2Template
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables import Runnable, RunnableLambda
 from langchain_postgres import PostgresChatMessageHistory
-from langgraph.graph import MessagesState
-from langgraph.managed import RemainingSteps
 from loguru import logger
 from openai import OpenAI
 from psycopg_pool import ConnectionPool
@@ -25,7 +18,6 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.models import chat_history
 from app.services.cache_service import cache_service
 from app.utils.openai_client import (
-    create_openai_client,
     get_base_openai_client,
     langchain_message_to_openai_message,
     wrap_client_with_langsmith,

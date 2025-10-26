@@ -13,7 +13,7 @@ Inty Backend Chat API 负载测试脚本 (简化版)
 
 import random
 import uuid
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from locust import HttpUser, between, task
 

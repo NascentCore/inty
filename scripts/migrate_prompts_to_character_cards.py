@@ -8,9 +8,8 @@ Agent prompt字段迁移到角色卡字段的脚本
 import asyncio
 import re
 import logging
-from typing import Dict, Optional
+from typing import Dict
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.config import global_config_loaded_from_config_yaml
 from app.api.deps import get_async_db
 from app import models
 

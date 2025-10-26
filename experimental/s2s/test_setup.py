@@ -12,7 +12,7 @@ def test_imports():
     print("🔍 Testing imports...")
 
     try:
-        import openai
+        import openai  # noqa: F401
 
         print("✅ openai - OK")
     except ImportError:
@@ -20,7 +20,7 @@ def test_imports():
         return False
 
     try:
-        import sounddevice
+        import sounddevice  # noqa: F401
 
         print("✅ sounddevice - OK")
     except ImportError:
@@ -28,7 +28,7 @@ def test_imports():
         return False
 
     try:
-        import numpy
+        import numpy  # noqa: F401
 
         print("✅ numpy - OK")
     except ImportError:

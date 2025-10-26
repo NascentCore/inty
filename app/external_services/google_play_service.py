@@ -1,11 +1,8 @@
-import json
-import logging
 import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
-from google.oauth2 import service_account
-from googleapiclient.discovery import Resource, build
+from googleapiclient.discovery import Resource
 from googleapiclient.errors import HttpError
 from loguru import logger
 

@@ -23,7 +23,6 @@ from app.schemas.response import (
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
-from app.services.resource_service import delete_resource
 from app.services.voice_service import voice_service
 
 # TODO: Prefix should be /chat instead of /chats.
@@ -533,7 +532,6 @@ async def agent_chat_completions(
 
             # 先获取聊天设置，再处理AI回复
             try:
-                import asyncio
 
                 # 先获取或创建聊天设置
                 chat_settings = await chat_service.get_or_create_chat_settings(

@@ -1,8 +1,6 @@
-from enum import StrEnum
 import sqlalchemy as sa
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text, Index
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 
 from app.models import Base
 

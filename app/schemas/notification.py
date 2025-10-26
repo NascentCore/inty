@@ -3,8 +3,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.notification import NotificationTemplateType
-from app.schemas.response import PagedResponse, PaginationData
+from app.schemas.response import PagedResponse
 
 
 class NotificationItem(BaseModel):

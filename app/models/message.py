@@ -3,7 +3,6 @@ import enum
 import sqlalchemy as sa
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, String
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 
 from app.models import Base
 

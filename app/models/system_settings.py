@@ -1,9 +1,7 @@
 import enum
-from datetime import datetime, timezone
 
 import sqlalchemy as sa
 from sqlalchemy import Column, DateTime, Enum, Index, String, Text
-from sqlalchemy.sql import func
 
 from app.models import Base
 

@@ -6,7 +6,6 @@
 
 import asyncio
 import sys
-import os
 import time
 import json
 from pathlib import Path
@@ -19,7 +18,6 @@ sys.path.insert(0, str(project_root))
 
 try:
     import yaml
-    import openai
     from openai import AsyncOpenAI
 except ImportError as e:
     print(f"依赖缺失: {e}")

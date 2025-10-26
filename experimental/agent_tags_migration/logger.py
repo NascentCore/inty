@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 try:
-    from colorama import init, Fore, Back, Style
+    from colorama import init, Fore, Style
     init(autoreset=True)
     COLORAMA_AVAILABLE = True
 except ImportError:

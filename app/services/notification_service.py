@@ -1,12 +1,11 @@
 import traceback
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import List, Optional, Tuple
 
 from fastapi import BackgroundTasks
 from firebase_admin import messaging
 from firebase_admin.exceptions import InvalidArgumentError
 from jinja2 import Template
-from jinja2.exceptions import TemplateError
 from loguru import logger
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession

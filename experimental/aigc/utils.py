@@ -5,7 +5,7 @@ Utility functions for the AI Character Generator
 import json
 import re
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 def clean_json_response(response_text: str, logger: logging.Logger = None) -> str:
     """

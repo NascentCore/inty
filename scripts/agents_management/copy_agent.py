@@ -10,13 +10,12 @@ import argparse
 import asyncio
 import sys
 from pathlib import Path
-from typing import Optional
 
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql.operators import and_, or_
+from sqlalchemy.sql.operators import and_
 
 # Add the app directory to the Python path so we can import models
 sys.path.append(str(Path(__file__).parent.parent.parent))
