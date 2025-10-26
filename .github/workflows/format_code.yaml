@@ -46,7 +46,6 @@ jobs:
 
       - name: Install ktfmt (via Maven Central jar)
         run: |
-          set -euxo pipefail
           curl -fsSL https://repo1.maven.org/maven2/com/facebook/ktfmt/0.49/ktfmt-0.49-jar-with-dependencies.jar -o ktfmt.jar
           sudo mkdir -p /usr/local/lib/ktfmt
           sudo mv ktfmt.jar /usr/local/lib/ktfmt/ktfmt.jar
@@ -55,7 +54,6 @@ jobs:
           exec java -jar /usr/local/lib/ktfmt/ktfmt.jar "$@"
           EOF
           sudo chmod +x /usr/local/bin/ktfmt
-          ktfmt --help >/dev/null
 
       - name: Configure git user
         run: |
@@ -63,11 +61,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Run fmt.sh (format entire repo)
-        run: |
-          set -euxo pipefail
-          ./fmt.sh --all || (status=$?; echo "fmt.sh exited $status, checking repo status..."; if git diff --quiet; then echo "No changes to commit"; exit 0; else echo "Formatting failed"; exit $status; fi)
+        run: ./fmt.sh --all
 
       - name: Push changes (if any)
-        run: |
-          set -euxo pipefail
-          git push
+        run: git push
