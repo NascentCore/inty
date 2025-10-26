@@ -4,5 +4,5 @@
     <string name="connect">连接</string>
     <string name="disconnect">断开</string>
     <string name="send">发送</string>
-    <string name="placeholder_message">输入要发送的消息</string>
+    <string name="placeholder_message">输入任务秒数（默认3）</string>
 </resources>

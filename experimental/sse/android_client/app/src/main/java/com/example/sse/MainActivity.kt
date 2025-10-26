@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
+import java.util.UUID
 import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
 import androidx.lifecycle.LiveData
@@ -39,6 +40,8 @@ class MainActivity : ComponentActivity() {
             output.text = text
         }
 
+        appendHeader(output)
+
         btnConnect.setOnClickListener {
             viewModel.connect()
         }
@@ -46,13 +49,17 @@ class MainActivity : ComponentActivity() {
             viewModel.disconnect()
         }
         btnSend.setOnClickListener {
-            val message = input.text?.toString()?.trim().orEmpty()
-            if (message.isNotEmpty()) {
-                lifecycleScope.launch {
-                    viewModel.sendMessage(message)
-                }
+            val secondsText = input.text?.toString()?.trim().orEmpty()
+            val seconds = secondsText.toDoubleOrNull() ?: 3.0
+            lifecycleScope.launch {
+                viewModel.startTask(seconds)
             }
         }
+    }
+
+    private fun appendHeader(output: TextView) {
+        val header = "client_id: ${'$'}{SseViewModel.CLIENT_ID} (input秒数 -> 启动长任务)"
+        output.text = header
     }
 }
 
@@ -76,7 +83,7 @@ class SseViewModel : ViewModel() {
     fun connect() {
         if (eventSource != null) return
         val request = Request.Builder()
-            .url(SERVER_BASE + "/stream")
+            .url(SERVER_BASE + "/stream?client_id=" + CLIENT_ID)
             .header("Accept", "text/event-stream")
             .build()
 
@@ -116,23 +123,48 @@ class SseViewModel : ViewModel() {
 
     suspend fun sendMessage(message: String) {
         withContext(Dispatchers.IO) {
-            val json = "{" + "\"message\":\"" + message.replace("\"", "\\\"") + "\"}"
+            val json = "{" +
+                    "\"client_id\":\"" + CLIENT_ID + "\"," +
+                    "\"seconds\":" + message.replace("\"", "") +
+                    "}"
             val body = json.toRequestBody("application/json".toMediaType())
             val request = Request.Builder()
-                .url(SERVER_BASE + "/publish")
+                .url(SERVER_BASE + "/start_task")
                 .post(body)
                 .build()
             try {
                 client.newCall(request).execute().use { resp ->
-                    append("[send] ${'$'}{resp.code}")
+                    append("[start_task] ${'$'}{resp.code}")
                 }
             } catch (e: Exception) {
-                append("[send-error] ${'$'}{e.message}")
+                append("[start_task-error] ${'$'}{e.message}")
+            }
+        }
+    }
+
+    suspend fun startTask(seconds: Double) {
+        withContext(Dispatchers.IO) {
+            val json = "{" +
+                    "\"client_id\":\"" + CLIENT_ID + "\"," +
+                    "\"seconds\":" + seconds.toString() +
+                    "}"
+            val body = json.toRequestBody("application/json".toMediaType())
+            val request = Request.Builder()
+                .url(SERVER_BASE + "/start_task")
+                .post(body)
+                .build()
+            try {
+                client.newCall(request).execute().use { resp ->
+                    append("[start_task] ${'$'}{resp.code}")
+                }
+            } catch (e: Exception) {
+                append("[start_task-error] ${'$'}{e.message}")
             }
         }
     }
 
     companion object {
         private const val SERVER_BASE = "http://10.0.2.2:8009"
+        val CLIENT_ID: String = UUID.randomUUID().toString()
     }
 }
