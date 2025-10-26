@@ -1,13 +1,5 @@
 # Inty SDK examples
 
-## Python
-
-```bash
-# https 允许匿名读取
-pip install git+https://github.com/NascentCore/inty-python.git
-python experimental/inty_sdks/example.py
-```
-
 ## Typescript
 
 ```bash

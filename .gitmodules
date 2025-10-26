@@ -1,7 +1,3 @@
-[submodule "sdks/python"]
-	path = sdks/python
-	url = https://github.com/NascentCore/inty-python.git
-	ignore = dirty
 [submodule "android_app/library/inty_sdk"]
 	path = android_app/library/inty_sdk
 	url = https://github.com/NascentCore/inty-kotlin.git

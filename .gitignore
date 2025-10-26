@@ -183,7 +183,6 @@ inty-firebase-key.json
 /.secrets/
 
 # stainless output sdks
-/app/inty-python/
 /app/inty-typescript/
 # Android studio playdebug build type 写 apk/aab 的目录
 /playdebug/
