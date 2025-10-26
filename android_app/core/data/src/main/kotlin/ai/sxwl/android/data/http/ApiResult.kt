@@ -18,10 +18,7 @@ fun <T> Exception.toApiResult(): ApiResult<T> {
     
     // 尝试获取HTTP状态码
     val httpCode = when (this) {
-        is com.inty.api.errors.InternalServerException -> 500
-        is com.inty.api.errors.BadRequestException -> 400
-        is com.inty.api.errors.UnauthorizedException -> 401
-        is com.inty.api.errors.NotFoundException -> 404
+        is com.inty.api.errors.IntyServiceException -> this.statusCode()
         else -> -1
     }
     
