@@ -7,11 +7,18 @@ on:
     paths:
       # 后端代码
       - "app/**/*.py"
-      - "alembic/**/*"
+      - "alembic/**/*.py"
       # 开发环境配置文件
       - "devops/config.yaml.dev"
       # 评测系统
-      - "evaluation/**/*"
+      - "evaluation/**/*.{ts,tsx,js,jsx,css,scss,less,html,json,svg,png,jpg,jpeg,ico,webp}"
+      - "evaluation/tsconfig.json"
+      - "evaluation/tsconfig.node.json"
+      - "evaluation/package.json"
+      - "evaluation/package-lock.json"
+      - "evaluation/vite.config.ts"
+      - "evaluation/vitest.config.ts"
+      - "evaluation/index.html"
       - "build_evaluation.sh"
       - "Dockerfile"
       - ".github/workflows/build_and_deploy.yml"
