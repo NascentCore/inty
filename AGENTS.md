@@ -80,6 +80,9 @@ else:
 
 - 避免使用 `try ... except Exception` 来覆盖所有异常，而应该至拦截函数能处理的异常
 
+- 测试用例目录不应被声明为包：包含 `test_*.py` 的测试目录不要放置 `__init__.py`；但用于复用的测试辅助库目录应当作为包存在，并包含 `__init__.py`。
+- 所有正式 Python 包必须包含空的 `__init__.py`（仅用于声明包）。
+
 ## Android App
 
 - 只支持 portrait 显示；不支持 landscape 显示，无需在改动时考虑兼容 landscape 显示。
