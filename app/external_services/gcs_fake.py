@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Optional, Union
 
@@ -13,12 +15,17 @@ class FakeGCSClient:
     - Blob 支持：upload_from_string、download_as_bytes、exists、delete、rewrite、public_url。
     """
 
-    def __init__(self, base_dir: Optional[Union[str, Path]] = None) -> None:
-        self.base_dir = Path(base_dir) if base_dir is not None else Path.cwd() / ".fake_gcs"
+    def __init__(self) -> None:
+        self.base_dir = Path(tempfile.mkdtemp(prefix="fake_gcs_"))
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
     def bucket(self, name: str) -> "FakeBucket":
         return FakeBucket(self, name)
+
+    def cleanup(self) -> None:
+        """清理所有存储的文件和目录"""
+        if self.base_dir.exists():
+            shutil.rmtree(self.base_dir)
 
 
 class FakeBucket:

@@ -56,6 +56,7 @@ async def upload_image(
             cropping_avatar=cropping_avatar,  # Use the direct parameter
         )
         if result.data:
+            # 如果返回的是错误，则 data == None，就无需转换数据
             result.data = result.data.model_dump()
         return result
     except Exception as e:

@@ -61,34 +61,6 @@ async def process_image_upload(
     Returns:
         APIResponse with success/error status and data
     """
-    # Validate file content type
-    if not file.content_type:
-        logger.error("File content type is required")
-        return APIResponse.error(
-            message="File content type is required",
-            data={
-                "error_code": "FILE_CONTENT_TYPE_REQUIRED",
-                "error_message": "File content type is required",
-            },
-        )
-
-    # Allow image/* types and application/octet-stream (Android may send this)
-    allowed_content_types = ["image/", "application/octet-stream"]
-    is_valid_content_type = any(file.content_type.startswith(prefix) for prefix in allowed_content_types)
-    
-    if not is_valid_content_type:
-        logger.error(f"不支持的文件类型: {file.content_type}")
-        return APIResponse.error(
-            message="Only image files are allowed",
-            data={
-                "error_code": "UNSUPPORTED_CONTENT_TYPE",
-                "received_content_type": file.content_type,
-                "allowed_content_types": allowed_content_types,
-            },
-        )
-    
-    logger.debug(f"文件内容类型验证通过: {file.content_type}")
-
     max_size_bytes = max_size_mb * 1024 * 1024
 
     file_data = await file.read()
@@ -136,7 +108,6 @@ async def process_image_upload(
                 "supported_formats": allowed_extensions,
                 "received_format": file_ext,
                 "filename": file.filename,
-                "content_type": file.content_type,
             },
         )
     
@@ -145,7 +116,7 @@ async def process_image_upload(
     # Store original file data before compression
     original_file_data = file_data
     original_file_ext = file_ext
-    original_content_type = file.content_type
+    original_content_type = f"image/{file_ext}"
 
     # Compress PNG and large files
     # Always compress PNG, and also compress if file is > 500KB.
@@ -175,10 +146,11 @@ async def process_image_upload(
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     unique_id = uuid.uuid4().hex[:8]
     file_gcs_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}.{file_ext}"
+    content_type = f"image/{file_ext}"
 
     gcs_url = upload_to_gcs(
         file_data,
-        file.content_type,
+        content_type,
         global_config_loaded_from_config_yaml.gcs.bucket,
         file_gcs_path,
     )

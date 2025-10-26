@@ -1,23 +1,18 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 import sys
 import types
+from pathlib import Path
 
 import pytest
 
-from tests.fakes.gcs import FakeGCSClient
+from app.external_services.gcs_fake import FakeGCSClient
 
 
 @pytest.fixture()
-def tmp_fake_root(tmp_path: Path) -> Path:
-    return tmp_path / "fake_gcs_root"
-
-
-@pytest.fixture()
-def fake_client(tmp_fake_root: Path) -> FakeGCSClient:
-    return FakeGCSClient(base_dir=tmp_fake_root)
+def fake_client() -> FakeGCSClient:
+    return FakeGCSClient()
 
 
 def test_upload_and_public_url_and_download(fake_client: FakeGCSClient):
@@ -61,7 +56,7 @@ def test_rewrite_copy(fake_client: FakeGCSClient):
 
 
 def test_integration_with_app_external_services_gcs_module(
-    monkeypatch: pytest.MonkeyPatch, tmp_fake_root: Path
+    monkeypatch: pytest.MonkeyPatch
 ):
     # 将 fake client 注入到 app.external_services.gcs.gcs_client 中，验证最常用方法的兼容性
     import importlib
@@ -73,7 +68,7 @@ def test_integration_with_app_external_services_gcs_module(
     )
     sys.modules["app.core.config"] = cfg_mod
 
-    fake = FakeGCSClient(base_dir=tmp_fake_root)
+    fake = FakeGCSClient()
 
     # 懒加载目标模块，避免提前初始化
     gcs_module = importlib.import_module("app.external_services.gcs")
@@ -101,3 +96,33 @@ def test_integration_with_app_external_services_gcs_module(
     # 删除
     assert gcs_module.delete_from_gcs(bucket, path) is True
     assert gcs_module.check_gcs_file_exists(bucket, path) is False
+
+
+def test_fake_gcs_client_cleanup():
+    """测试假GCS客户端清理功能"""
+    fake = FakeGCSClient()
+    bucket = "test-bucket"
+
+    # 上传多个文件
+    content = b"test content"
+    paths = ["test1.txt", "dir/test2.txt", "dir/subdir/test3.txt"]
+
+    for path in paths:
+        blob = fake.bucket(bucket).blob(path)
+        blob.upload_from_string(content)
+        assert blob.exists()
+
+    # 验证文件和目录存在
+    assert fake.base_dir.exists()
+    assert (fake.base_dir / bucket).exists()
+
+    # 清理
+    fake.cleanup()
+
+    # 验证所有文件和目录被删除
+    for path in paths:
+        blob = fake.bucket(bucket).blob(path)
+        assert not blob.exists()
+
+    assert not (fake.base_dir / bucket).exists()
+    assert not fake.base_dir.exists()
