@@ -90,3 +90,14 @@ jobs:
           gh pr merge --auto --squash ${{ steps.create-pr.outputs.pull-request-number }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add Pull Request URL to summary
+        if: steps.create-pr.outputs.pull-request-url
+        run: |
+          {
+            echo "### Pull Request URL";
+            echo;
+            echo '```';
+            echo "${{ steps.create-pr.outputs.pull-request-url }}";
+            echo '```';
+          } >> "$GITHUB_STEP_SUMMARY"
