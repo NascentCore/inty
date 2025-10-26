@@ -2,7 +2,8 @@
 set -euo pipefail
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 export PYTHONUNBUFFERED=1
-export PYTHONPATH="$SCRIPT_DIR/../..:$PYTHONPATH"
+# Ensure repo root (/workspace) is on PYTHONPATH for module import experimental.voice_chat.server.main
+export PYTHONPATH="$SCRIPT_DIR/../../..:$PYTHONPATH"
 
 if [ -f "$SCRIPT_DIR/.venv/bin/activate" ]; then
   source "$SCRIPT_DIR/.venv/bin/activate"
