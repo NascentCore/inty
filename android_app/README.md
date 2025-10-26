@@ -23,6 +23,34 @@ experience your own imagination.
 - cmd+↑（放大模拟器设备界面）cmd+↓ （缩小模拟器设备界面）
 - [adb shell monkey](https://developer.android.com/studio/test/other-testing-tools/monkey)
 
+## 运行脚本化点击测试（UIAutomator）
+
+前置条件：
+- 已连接且解锁的模拟器或真机（可用 `adb devices` 检查）
+- 可以正常安装/启动 `app` 的 Debug 构建
+
+测试类路径：`app/src/androidTest/kotlin/com/ai/intellimate/ScriptedClickTest.kt`
+
+在 Android Studio 中运行：
+- 打开上述测试类，右键运行“Run 'ScriptedClickTest'”，选择目标设备
+
+命令行运行（推荐从 `android_app/` 目录执行）：
+
+```bash
+cd android_app
+# 仅运行该测试类（Debug 变体）
+ANDROID_SERIAL=<device_id 可选> \
+./gradlew :app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.ai.intellimate.ScriptedClickTest
+
+# 运行模块内所有 androidTest（Debug 变体）
+ANDROID_SERIAL=<device_id 可选> ./gradlew :app:connectedDebugAndroidTest
+```
+
+小贴士：
+- 若首次启动会弹出权限对话框，测试会尝试点击“允许/Allow/OK”；若设备语言不同，可在 `ScriptedClickTest` 的 `steps` 中增删 `ClickText/ClickDesc/ClickResId/Wait/Back` 等步骤以匹配实际界面。
+- 若连接多台设备，可通过设置 `ANDROID_SERIAL=<device_id>` 指定目标设备（用 `adb devices` 获取 `device_id`）。
+
 ## Repo 初始化
 
 ```bash
