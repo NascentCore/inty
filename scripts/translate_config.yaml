@@ -11,6 +11,8 @@ max_chars_per_chunk: 3500
 # 保护词：保持原样不翻译（大小写不敏感按原样保留）
 protected_terms:
   - inty
+  - Cursor
+  - Claude
   - FastAPI
   - Alembic
   - OpenAPI

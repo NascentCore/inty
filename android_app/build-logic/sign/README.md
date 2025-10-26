@@ -106,7 +106,7 @@ android {
 - `gson:2.13.1` - JSON解析
 - `kotlin-stdlib`- Kotlin标准库
 
-## 光标摘要
+## Cursor 摘要
 
 - 目录用途：约定方式构建中的签名配置支持（读取`signing-config.json`），为模块提供 `debug/release` 签名参数。
 - 关键能力: `SignKeyConfig`使用 Gson 解析 JSON，提供常量以提供 Gradle 脚本引用；支持惰性加载与错误处理。

@@ -5,7 +5,7 @@
 
 名字有点混淆：`pydantic model`带了模型，但是这里的模型是sqlalchemey schema。
 
-## 光标摘要
+## Cursor 摘要
 
 - 目录用途: 定义 SQLAlchemy ORM 模型（表结构），作为数据库迁移与运行时期的数据结构基准。
 - 关键文件：`user.py`、`agent.py`、`chat.py`、`message.py`、`subscription.py`、`settings.py`、`system_settings.py`、`evaluation.py` 等。

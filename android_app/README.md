@@ -82,7 +82,7 @@ PATH="/Users/yzhao/Library/Android/sdk/platform-tools:$PATH"
 - [线圈](https://coil-kt.github.io/coil/) 用于图片加载
 - [Firebase](https://firebase.google.com/) 用于硬件服务
 
-## 光标摘要
+## Cursor 摘要
 
 - 栈与导航：Kotlin + Jetpack Compose 构建 UI；以 Activity/Intent 为主的导航；Compose 组件集中在`app/src/main/kotlin/com/ai/intellimate`。
 - 模块划分:

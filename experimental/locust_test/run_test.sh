@@ -1,6 +1,6 @@
 #！/bin/bash
 # Inty Backend Locust 负载测试启动脚本
-#作者：克劳德
+#作者：Claude
 # 日期：2025-08-14
 
 set -e

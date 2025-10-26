@@ -2,7 +2,7 @@
 
 <https://github.com/nagadomi/lbpcascade_animeface>
 
-## 光标摘要
+## Cursor 摘要
 
 - 目录用途: 存放 OpenCV 级联分类器模型文件，用于图像/人脸检测等任务。
 - 来源：`lbpcascade_animeface` 项目等。

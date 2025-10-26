@@ -35,7 +35,7 @@
 - 构建`build-logic`模块，使之生成相应插件
 - 在对应项目中，各自模块`module`的`build.gradle`中引入需要的自定义`plugin`，就可节省重复配置，专业项目管理
 
-## 光标摘要
+## Cursor 摘要
 
 - 目录用途: 承载项目级构建约定与自定义 Gradle 插件，集中管理 Kotlin/Android/Compose 及发布配置。
 - 关键模块：

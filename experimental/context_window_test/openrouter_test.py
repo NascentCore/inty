@@ -208,7 +208,7 @@ def safe_count_tokens(text: str, context: str = "") -> int:
 def get_model_pricing(model: str) -> tuple[float, float]:
     """Get approximate pricing for different models (per 1M tokens)."""
     pricing_map = {
-#克劳德模型
+#Claude模型
         "claude-3.5-sonnet": (3.0, 15.0),
         "claude-3-sonnet": (3.0, 15.0), 
         "claude-3-haiku": (0.25, 1.25),

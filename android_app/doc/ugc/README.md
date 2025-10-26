@@ -4,7 +4,7 @@
 
 [1] https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/blob/master/en
 
-## 光标摘要
+## Cursor 摘要
 
 - 目录用途：货架与UGC（用户生成内容）相关的资源与规范。
 - 资源：`dirty_words.en` 等敏感词列表，用于内容合规/过滤。

@@ -1,6 +1,6 @@
 ＃ 习俗
 
-## 光标摘要
+## Cursor 摘要
 
 - 目录用途: 自定义 Gradle 插件与构建约定集合，统一 Android/Kotlin/Compose 工程配置。
 - 关键插件/扩展：

@@ -1,4 +1,4 @@
-# 克劳德.md
+# CLAUDE.md
 
 此文件 pr 提供了在使用此存储库中的代码时对 Claude Code (claude.ai/code) 的指导。
 

@@ -129,7 +129,7 @@ Firebase 服务通过以下方式自动初始化：
 - Firebase Analytics：最新版本
 - Firebase Crashlytics：最新版本
 
-## 光标摘要
+## Cursor 摘要
 
 - 目录用途：集成 Firebase Analytics 与 Crashlytics，并封装常用追踪/崩溃上报接口。
 - 关键类：
