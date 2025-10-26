@@ -1,3 +1,5 @@
+# build-logic
+
 #### Build-logic构建方式配置说明
 
 > `gradle`项目的构建几经迭代，从最原始的`gradle,ext`配置，到后来的`buildSrc`方式，再到现在
@@ -32,3 +34,11 @@
   `gradlePlugin`包内。
 - 构建`build-logic`模块，使之生成相应插件
 - 在对应项目中，各自模块`module`的`build.gradle`中引入需要的自定义`plugin`，就可节省重复配置，精简项目管理
+
+## Cursor Summary
+
+- 目录用途: 承载项目级构建约定与自定义 Gradle 插件，集中管理 Kotlin/Android/Compose 及发布配置。
+- 关键模块:
+  - `convention`: 自定义插件与扩展，提供 Android 应用/库、Compose、Navigation、Maven 发布、Kotlin 配置等约定。
+  - `sign`: 签名配置解析与常量暴露（见 `build-logic/sign`）。
+- 关键类: `AndroidApplicationPlugin`、`AndroidLibraryPlugin`、`AndroidApplicationComposePlugin`、`AndroidFeatureComposePlugin`、`NavigationComposePlugin`、`ProjectConfig`、`SignKeyConfig` 等。

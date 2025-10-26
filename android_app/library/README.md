@@ -1,4 +1,4 @@
-# Library
+# library
 
 ## 快速开始
 
@@ -53,3 +53,11 @@ inty-kotlin (主入口)
 - **分层解耦**：核心逻辑与 HTTP 实现分离
 - **可扩展性**：未来可添加其他 HTTP 客户端实现
 - **简化使用**：用户只需依赖主模块即可
+
+## Cursor Summary
+
+- 目录用途: 聚合可复用的独立库模块。
+- 当前子模块:
+  - `network`: 提供 HTTP 调用的响应包装与适配（如 `HttpResponseCallAdapterFactory`、`HttpResponseCall`）。
+  - `utils`: 图片压缩、网络工具等通用能力（如 `ImageCompressManager`/`ImageCompressUtils`、`NetworkUtils`）。
+- 说明: 文档中提到的 `inty-sdk` 为可选的 SDK 子模块内容；本仓库实际以 `network` 与 `utils` 两个模块为主，支撑 App 网络与工具层能力。

@@ -1,4 +1,4 @@
-# App
+# app
 
 ## Tips
 
@@ -80,3 +80,16 @@ alembic upgrade head
 - If alembic shows multiple heads error, you can delete the heads shown by `alembic show heads`
 
 - Install alembic and update database `alembic upgrade head`
+
+## Cursor Summary
+
+- Framework: FastAPI 应用（`app/main.py`），路由分层于 `app/api/v1` 与 `app/api/v2`（用户、聊天、代理、资源、设置、鉴权、订阅、语音、评测、通知、管理等）。
+- Data: SQLAlchemy 模型位于 `app/models`；数据库会话/基类在 `app/db`；迁移由仓库根目录 `alembic/` 管理。
+- Schemas: Pydantic 架构体在 `app/schemas`，与路由/服务之间进行 IO 验证与转换。
+- Services: 领域服务集中于 `app/services`（例如 `chat_service`、`agent_service`、`subscription_service`、`voice_service`、`evaluation_service` 等）。
+- LLM/AI: 提供方与辅助封装在 `app/utils`（`openai_client.py`、`gemini.py`、`langchain.py` 等），供服务层调用。
+- Prompting: 角色/人格/语气等提示词素材在 `app/core/agent` 与 `app/core/prompting`。
+- Voice: 语音/TTS 相关模型与工具在 `app/core/voice`。
+- Config/Logging: 集中配置与日志在 `app/core/config.py`、`app/core/logging.py`。
+- Middleware: 错误处理中间件见 `app/middleware/error_handler.py`。
+- OpenAPI/SDK: `app/openapi.json` 与仓库根部 `stainless.yml` 协同 Stainless 生成多语言 SDK（详见本 README 前半部分说明）。
