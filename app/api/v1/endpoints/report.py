@@ -43,7 +43,9 @@ async def upload_report_image(
     try:
         # Validate file type
         if not file.content_type or not file.content_type.startswith("image/"):
-            return APIResponse.error(message="Only image files are allowed")
+            return APIResponse.error(
+                message=f"File content type is not image, got: {file.content_type}"
+            )
 
         # Validate file size (e.g., max 10MB)
         max_size = 10 * 1024 * 1024  # 10MB

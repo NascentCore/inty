@@ -55,15 +55,10 @@ async def upload_image(
             base_path=base_path,
             cropping_avatar=cropping_avatar,  # Use the direct parameter
         )
-        result.data = result.data.model_dump()
+        if result.data:
+            result.data = result.data.model_dump()
         return result
-    except ValueError as e:
-        logger.error(f"文件验证错误: {str(e)}")
-        logger.error(f"验证错误堆栈: {traceback.format_exc()}")
-        return APIResponse.error(message=str(e))
     except Exception as e:
         logger.error(f"图片上传失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
         return APIResponse.error(message="Image upload failed")
-    finally:
-        logger.debug("=== 图片上传请求处理完成 ===")

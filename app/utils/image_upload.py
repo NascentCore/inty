@@ -72,9 +72,22 @@ async def process_image_upload(
             },
         )
 
-    if not file.content_type.startswith("image/"):
+    # Allow image/* types and application/octet-stream (Android may send this)
+    allowed_content_types = ["image/", "application/octet-stream"]
+    is_valid_content_type = any(file.content_type.startswith(prefix) for prefix in allowed_content_types)
+    
+    if not is_valid_content_type:
         logger.error(f"不支持的文件类型: {file.content_type}")
-        return APIResponse.error(message="Only image files are allowed")
+        return APIResponse.error(
+            message="Only image files are allowed",
+            data={
+                "error_code": "UNSUPPORTED_CONTENT_TYPE",
+                "received_content_type": file.content_type,
+                "allowed_content_types": allowed_content_types,
+            },
+        )
+    
+    logger.debug(f"文件内容类型验证通过: {file.content_type}")
 
     max_size_bytes = max_size_mb * 1024 * 1024
 
@@ -115,14 +128,19 @@ async def process_image_upload(
         logger.error(
             f"不支持的文件扩展名: {file_ext}，支持的格式: {allowed_extensions}"
         )
+        logger.error(f"文件名: {file.filename}, 内容类型: {file.content_type}")
         return APIResponse.error(
             message="Unsupported file type, only jpg, jpeg, png, webp formats are supported",
             data={
                 "error_code": "UNSUPPORTED_FILE_TYPE",
                 "supported_formats": allowed_extensions,
                 "received_format": file_ext,
+                "filename": file.filename,
+                "content_type": file.content_type,
             },
         )
+    
+    logger.debug(f"文件扩展名验证通过: {file_ext}")
 
     # Store original file data before compression
     original_file_data = file_data
