@@ -1,4 +1,6 @@
-# AI 驱动的、面向北美年轻男性的亲密体验模拟 Android app（AI-driven intimacy simulation for NA young male adults）
+# android_app
+
+AI 驱动的、面向北美年轻男性的亲密体验模拟 Android app（AI-driven intimacy simulation for NA young male adults）
 
 [![Build release APK and AAB](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml)
 [![Build and release debug APK](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml)
@@ -103,3 +105,23 @@ PATH="/Users/yzhao/Library/Android/sdk/platform-tools:$PATH"
 - [MMKV](https://github.com/Tencent/MMKV) 用于高效存储
 - [Coil](https://coil-kt.github.io/coil/) 用于图片加载
 - [Firebase](https://firebase.google.com/) 用于后端服务
+
+## Cursor Summary
+
+- 栈与导航: Kotlin + Jetpack Compose 构建 UI；以 Activity/Intent 为主的导航；Compose 组件集中在 `app/src/main/kotlin/com/ai/intellimate`。
+- 模块划分:
+  - `app`: 功能入口与特性页面（聊天、探索、角色信息/生成、VIP/订阅、登录、设置/资料、音频/TTS），含 ViewModel 与 Activity。
+  - `core/common`: 基础 Activity/ViewModel、分析埋点、事件总线、启动与通用工具。
+  - `core/data`: 领域模型与仓库；API 接口（`IUserApi`/`IChatApi`/`IAgentApi`/`ISubscriptionApi`）与 `IntyNetworkManager`。
+  - `core/design`: 主题（`Color`/`Type`/`Theme` 等）与可复用 Compose UI 组件与工具。
+  - `core/firebase`: Firebase 初始化、FCM 推送服务与管理。
+  - `library/network`: 轻量网络层与 CallAdapter（自定义响应包装）。
+  - `library/utils`: 图片压缩/网络等工具集合。
+  - `build-logic/convention`: Gradle 约定式插件（Compose/Navigation/Kotlin Android 等）。
+ - 网络与环境: `core/data` 通过自定义网络层访问后端；构建类型决定 `baseUrl`；`local` 对应 `http://localhost:8000`，通过 `adb reverse` 映射。
+ - 数据与存储: 使用 MMKV 本地存储（见仓库引用）。
+ - 计费: 集成 Google Play Billing（`BillingRepository` 及价格/购买/状态管理器）。
+ - 音频/语音: TTS 与音频播放/缓存管理（`TtsManager`/`AudioPlaybackManager`/`VoicePlayer` 等）。
+ - 推送通知: Firebase Cloud Messaging 集成。
+ - 分页: 聊天/探索采用 PagingSource 与仓库封装。
+ - 工程化: 版本库（libs.versions.toml）、ProGuard 规则、构建逻辑与 CI。

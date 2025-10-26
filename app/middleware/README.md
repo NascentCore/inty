@@ -1,0 +1,7 @@
+# middleware
+
+## Cursor Summary
+
+- 目录用途: FastAPI 中间件集合，负责横切关注点处理。
+- 关键文件: `error_handler.py` 提供统一的异常捕获与响应格式化；`__init__.py` 导出装配入口。
+- 关联: 注册于应用启动，覆盖 API 路由处理流程的前后阶段。

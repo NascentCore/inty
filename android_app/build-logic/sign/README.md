@@ -1,4 +1,4 @@
-# Android 签名配置系统
+# sign
 
 ## 概述
 
@@ -111,3 +111,9 @@ android {
 
 - `gson:2.13.1` - JSON解析
 - `kotlin-stdlib` - Kotlin标准库
+
+## Cursor Summary
+
+- 目录用途: 约定式构建中的签名配置支持（读取 `signing-config.json`），为模块提供 `debug/release` 签名参数。
+- 关键能力: `SignKeyConfig` 使用 Gson 解析 JSON，暴露常量以供 Gradle 脚本引用；支持懒加载与错误处理。
+- 安全建议: 不将签名文件与配置提交到版本库，敏感信息通过环境变量或安全存储管理。

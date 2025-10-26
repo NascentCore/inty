@@ -1,4 +1,4 @@
-# Firebase 模块
+# firebase
 
 本模块提供 Firebase Analytics 和 Crashlytics 的集成功能。
 
@@ -130,3 +130,12 @@ Firebase 服务通过以下方式自动初始化：
 - Firebase BOM: 34.1.0
 - Firebase Analytics: 最新版本
 - Firebase Crashlytics: 最新版本
+
+## Cursor Summary
+
+- 目录用途: 集成 Firebase Analytics 与 Crashlytics，并封装常用追踪/崩溃上报接口。
+- 关键类:
+  - `FirebaseInitializer`: 应用启动自动初始化入口。
+  - `FCMService`: Firebase Cloud Messaging 服务。
+  - `FirebaseManager`: 事件日志、用户属性、异常上报等统一封装。
+- 使用方式: 模块自动初始化，业务侧按需调用 `FirebaseManager` API 进行埋点与异常收集。
