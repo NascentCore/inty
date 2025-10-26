@@ -187,6 +187,16 @@ object IntyNetworkManager {
                 is com.inty.api.errors.InternalServerException -> {
                     LogUtils.e("IntyNetworkManager: Internal Server Error (500) - ${e.message}")
                     LogUtils.e("IntyNetworkManager: Server error details: ${e.toString()}")
+                    
+                    // 尝试解析服务器返回的详细错误信息
+                    try {
+                        val errorBody = e.body
+                        if (errorBody != null) {
+                            LogUtils.e("IntyNetworkManager: Server error body: $errorBody")
+                        }
+                    } catch (ex: Exception) {
+                        LogUtils.e("IntyNetworkManager: Failed to parse error body: ${ex.message}")
+                    }
                 }
                 is com.inty.api.errors.BadRequestException -> {
                     LogUtils.e("IntyNetworkManager: Bad Request (400) - ${e.message}")

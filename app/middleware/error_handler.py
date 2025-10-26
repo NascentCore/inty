@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
@@ -114,3 +115,62 @@ async def validation_error_handler(request: Request, exc: ValidationError):
             "data": {"detail": exc.errors()},
         },
     )
+
+
+async def general_exception_handler(request: Request, exc: Exception):
+    """Handle all other exceptions (500 errors)"""
+    logger.error(f"=== 通用服务器错误 (500错误) ===")
+    logger.error(f"请求方法: {request.method}")
+    logger.error(f"请求URL: {request.url}")
+    logger.error(f"请求路径: {request.url.path}")
+    logger.error(f"请求头: {dict(request.headers)}")
+    
+    # 记录异常详情
+    logger.error(f"异常类型: {type(exc).__name__}")
+    logger.error(f"异常消息: {str(exc)}")
+    logger.error(f"异常堆栈跟踪:")
+    logger.error(traceback.format_exc())
+    
+    # 记录请求体信息（如果可能）
+    try:
+        body = await request.body()
+        logger.error(f"请求体大小: {len(body)} bytes")
+        if len(body) < 1000:  # 只记录小文件的内容
+            logger.error(f"请求体内容: {body.decode('utf-8', errors='ignore')}")
+    except Exception as e:
+        logger.error(f"无法读取请求体: {str(e)}")
+    
+    logger.error(f"=== 通用服务器错误详情结束 ===")
+
+    # 根据环境决定是否返回详细错误信息
+    from app.core.config import global_config_loaded_from_config_yaml
+    
+    if global_config_loaded_from_config_yaml.app.debug:
+        # 调试模式：返回详细错误信息
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "message": f"Internal server error: {str(exc)}",
+                "data": {
+                    "error_type": type(exc).__name__,
+                    "error_message": str(exc),
+                    "traceback": traceback.format_exc(),
+                    "request_info": {
+                        "method": request.method,
+                        "url": str(request.url),
+                        "path": request.url.path,
+                    }
+                },
+            },
+        )
+    else:
+        # 生产模式：返回通用错误信息
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "message": "Internal server error",
+                "data": None,
+            },
+        )

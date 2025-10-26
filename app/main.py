@@ -21,6 +21,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.core.logging import init_logger
 from app.external_services.firebase import init_firebase
 from app.middleware.error_handler import (
+    general_exception_handler,
     jwt_exception_handler,
     sqlalchemy_exception_handler,
     validation_error_handler,
@@ -80,6 +81,8 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(JWTError, jwt_exception_handler)
 app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(ValidationError, validation_error_handler)
+# 注册通用异常处理器 - 必须放在最后，作为兜底处理器
+app.add_exception_handler(Exception, general_exception_handler)
 
 app.include_router(api_router)
 app.include_router(api_v2_router)

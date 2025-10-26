@@ -21,7 +21,6 @@ fun <T> Exception.toApiResult(): ApiResult<T> {
         is com.inty.api.errors.InternalServerException -> 500
         is com.inty.api.errors.BadRequestException -> 400
         is com.inty.api.errors.UnauthorizedException -> 401
-        is com.inty.api.errors.ForbiddenException -> 403
         is com.inty.api.errors.NotFoundException -> 404
         else -> -1
     }
