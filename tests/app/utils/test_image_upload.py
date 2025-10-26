@@ -493,21 +493,7 @@ class TestImageUploadCompression:
 
         # 创建测试用户
         user_id = f"testuser-compression-{uuid.uuid4().hex}"
-        readable_id = str(random.randint(10000000, 99999999))
-
-        # 检查用户是否已存在，如果存在则删除
-        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
-        if not existing_user:
-            test_user = User(
-                id=user_id,
-                readable_id=readable_id,
-                auth_type=AuthType.GUEST,
-                system_language="en",
-                is_active=True,
-            )
-            db.add(test_user)
-            db.commit()
-            db.refresh(test_user)
+        test_user = create_test_user(db, user_id)
 
         # 使用测试PNG文件
         test_file_path = "tests/files/test.png"
@@ -645,21 +631,7 @@ class TestImageUploadDifferentFormats:
 
         # 创建测试用户
         user_id = f"testuser-jpg-{uuid.uuid4().hex}"
-        readable_id = str(random.randint(10000000, 99999999))
-
-        # 检查用户是否已存在，如果存在则删除
-        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
-        if not existing_user:
-            test_user = User(
-                id=user_id,
-                readable_id=readable_id,
-                auth_type=AuthType.GUEST,
-                system_language="en",
-                is_active=True,
-            )
-            db.add(test_user)
-            db.commit()
-            db.refresh(test_user)
+        test_user = create_test_user(db, user_id)
 
         test_file_path = "tests/files/test.jpg"
         with open(test_file_path, "rb") as f:
@@ -715,21 +687,7 @@ class TestImageUploadDifferentFormats:
 
         # 创建测试用户
         user_id = f"testuser-webp-{uuid.uuid4().hex}"
-        readable_id = str(random.randint(10000000, 99999999))
-
-        # 检查用户是否已存在，如果存在则删除
-        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
-        if not existing_user:
-            test_user = User(
-                id=user_id,
-                readable_id=readable_id,
-                auth_type=AuthType.GUEST,
-                system_language="en",
-                is_active=True,
-            )
-            db.add(test_user)
-            db.commit()
-            db.refresh(test_user)
+        test_user = create_test_user(db, user_id)
 
         test_file_path = "tests/files/test.webp"
         with open(test_file_path, "rb") as f:
@@ -943,21 +901,7 @@ class TestImageUploadErrorHandling:
 
         # 创建测试用户
         user_id = f"testuser-gcs-fail-{uuid.uuid4().hex}"
-        readable_id = str(random.randint(10000000, 99999999))
-
-        # 检查用户是否已存在，如果存在则删除
-        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
-        if not existing_user:
-            test_user = User(
-                id=user_id,
-                readable_id=readable_id,
-                auth_type=AuthType.GUEST,
-                system_language="en",
-                is_active=True,
-            )
-            db.add(test_user)
-            db.commit()
-            db.refresh(test_user)
+        test_user = create_test_user(db, user_id)
 
         test_file_path = "tests/files/test.jpg"
         with open(test_file_path, "rb") as f:
@@ -1073,21 +1017,7 @@ class TestImageUploadResourceRecords:
 
         # 创建测试用户
         user_id = f"testuser-resource-{uuid.uuid4().hex}"
-        readable_id = str(random.randint(10000000, 99999999))
-
-        # 检查用户是否已存在，如果存在则删除
-        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
-        if not existing_user:
-            test_user = User(
-                id=user_id,
-                readable_id=readable_id,
-                auth_type=AuthType.GUEST,
-                system_language="en",
-                is_active=True,
-            )
-            db.add(test_user)
-            db.commit()
-            db.refresh(test_user)
+        test_user = create_test_user(db, user_id)
 
         # 准备测试文件
         test_file_path = "tests/files/test.jpg"
@@ -1158,21 +1088,7 @@ class TestImageUploadResourceRecords:
 
         # 创建测试用户
         user_id = f"testuser-compression-{uuid.uuid4().hex}"
-        readable_id = str(random.randint(10000000, 99999999))
-
-        # 检查用户是否已存在，如果存在则删除
-        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
-        if not existing_user:
-            test_user = User(
-                id=user_id,
-                readable_id=readable_id,
-                auth_type=AuthType.GUEST,
-                system_language="en",
-                is_active=True,
-            )
-            db.add(test_user)
-            db.commit()
-            db.refresh(test_user)
+        test_user = create_test_user(db, user_id)
 
         # 准备测试文件
         test_file_path = "tests/files/test.png"
