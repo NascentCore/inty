@@ -19,7 +19,8 @@ from pydantic import AnyHttpUrl
 
 GEMINI_2_5_FLASH = "google/gemini-2.5-flash"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-API_V1_PREFIX = "/api/v1"
+# API 路由前缀常量移动到 app.api.constants
+from app.api.constants import API_V1_PREFIX
 
 
 class Environment(str, Enum):
@@ -31,7 +32,7 @@ class Environment(str, Enum):
     UNSPECIFIED = "unspecified"
 
 
-API_V2_PREFIX = "/api/v2"
+from app.api.constants import API_V2_PREFIX
 
 
 @dataclass
