@@ -36,5 +36,5 @@ elevenlabs:
   api_key: "<your-elevenlabs-api-key>"
 
 cloudflare:
-  enabled = True
+  enabled = true
   domain = "cdn.example.com"
