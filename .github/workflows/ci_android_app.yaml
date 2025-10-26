@@ -55,8 +55,12 @@ jobs:
             android_app/.gradle
             android_app/build
             android_app/app/build
-            android_app/network/build
-            android_app/utils/build
+            android_app/core/common/build
+            android_app/core/data/build
+            android_app/core/design/build
+            android_app/core/firebase/build
+            android_app/library/network/build
+            android_app/library/utils/build
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-
@@ -72,6 +76,14 @@ jobs:
             BASE="origin/$BASE_REF"
           else
             BASE="${{ github.event.before }}"
+            # 尝试拉取 before 提交，避免浅克隆导致缺失
+            if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ]; then
+              git fetch --no-tags --depth=1 origin "$BASE" || true
+            fi
+            # 兜底：找不到 before 时与上一个提交比较
+            if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+              BASE=$(git rev-parse HEAD^ || echo "")
+            fi
           fi
           echo "BASE=$BASE"
           CHANGED_FILES=$(git diff --name-only "$BASE" "${{ github.sha }}" | tr -d '\r')
@@ -84,34 +96,28 @@ jobs:
           while IFS= read -r file; do
             [ -z "$file" ] && continue
             case "$file" in
-              android_app/settings.gradle.kts|android_app/gradle/*|android_app/build-logic/*|android_app/**/build.gradle.kts|android_app/**/gradle.properties)
+              android_app/settings.gradle.kts|android_app/gradle/*|android_app/gradle/*/*|android_app/build-logic/*|android_app/*/build.gradle.kts|android_app/*/*/build.gradle.kts|android_app/*/gradle.properties|android_app/*/*/gradle.properties)
                 run_all=true ;;
-              android_app/app/*|android_app/app/**)
+              android_app/app/*|android_app/app/*/*|android_app/app/*/*/*)
                 TASKS="$TASKS :app:testDebugUnitTest" ;;
-              android_app/core/common/*|android_app/core/common/**)
+              android_app/core/common/*|android_app/core/common/*/*|android_app/core/common/*/*/*)
                 TASKS="$TASKS :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
-              android_app/core/data/*|android_app/core/data/**)
+              android_app/core/data/*|android_app/core/data/*/*|android_app/core/data/*/*/*)
                 TASKS="$TASKS :core:data:testDebugUnitTest :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
-              android_app/core/design/*|android_app/core/design/**)
-                TASKS="$TASKS :core:design:testDebugUnitTest :app:testDebugUnitTest" ;;
-              android_app/core/firebase/*|android_app/core/firebase/**)
-                TASKS="$TASKS :core:common:testDebugUnitTest :core:data:testDebugUnitTest :app:testDebugUnitTest" ;;
-              android_app/library/utils/*|android_app/library/utils/**)
-                TASKS="$TASKS :library:utils:testDebugUnitTest :core:data:testDebugUnitTest :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
-              android_app/library/network/*|android_app/library/network/**)
-                TASKS="$TASKS :core:data:testDebugUnitTest :app:testDebugUnitTest" ;;
+              android_app/core/design/*|android_app/core/design/*/*|android_app/core/design/*/*/*)
+                TASKS="$TASKS :core:design:testDebugUnitTest :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
+              android_app/core/firebase/*|android_app/core/firebase/*/*|android_app/core/firebase/*/*/*)
+                TASKS="$TASKS :core:firebase:testDebugUnitTest :core:common:testDebugUnitTest :core:data:testDebugUnitTest :app:testDebugUnitTest" ;;
+              android_app/library/utils/*|android_app/library/utils/*/*|android_app/library/utils/*/*/*)
+                TASKS="$TASKS :library:utils:testDebugUnitTest :core:design:testDebugUnitTest :core:firebase:testDebugUnitTest :core:data:testDebugUnitTest :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
+              android_app/library/network/*|android_app/library/network/*/*|android_app/library/network/*/*/*)
+                TASKS="$TASKS :library:network:testDebugUnitTest :core:data:testDebugUnitTest :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
+              android_app/library/inty_sdk|android_app/library/inty_sdk/*|android_app/library/inty_sdk/*/*|android_app/library/inty_sdk/*/*/*)
+                TASKS="$TASKS :core:data:testDebugUnitTest :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
             esac
 
-            # 收集测试类过滤器（仅 src/test 下）
-            case "$file" in
-              android_app/*/src/test/java/*.java|android_app/*/src/test/java/**/*.java)
-                ONLY_TEST_CHANGES=false
-                ;;
-              android_app/*/src/test/kotlin/*.kt|android_app/*/src/test/kotlin/**/*.kt)
-                ;;
-            esac
-
-            if [[ "$file" == android_app/*/src/test/*/[^/]*.kt || "$file" == android_app/*/src/test/*/**/[^/]*.kt || "$file" == android_app/*/src/test/*/[^/]*.java || "$file" == android_app/*/src/test/*/**/[^/]*.java ]]; then
+            # 收集测试类过滤器（仅 src/test 下的 .kt/.java，任意深度）
+            if [[ "$file" == android_app/* && "$file" == *"/src/test/"* && ( "$file" == *.kt || "$file" == *.java ) ]]; then
               # 解析包名模式：从 src/test/{java,kotlin}/ 之后的路径转换为 FQCN
               rel=${file#android_app/}
               rel=${rel#*/src/test/}
@@ -123,13 +129,17 @@ jobs:
             else
               # 不是测试文件，标记存在业务代码改动
               case "$file" in
-                android_app/*/src/main/**) ONLY_TEST_CHANGES=false ;;
+                android_app/*/src/*) # 除 test 目录以外的源码改动
+                  if [[ "$file" != *"/src/test/"* ]]; then
+                    ONLY_TEST_CHANGES=false
+                  fi
+                  ;;
               esac
             fi
           done <<< "$CHANGED_FILES"
 
           if $run_all; then
-            TASKS=":app:testDebugUnitTest :core:common:testDebugUnitTest :core:data:testDebugUnitTest :core:design:testDebugUnitTest :library:utils:testDebugUnitTest"
+            TASKS=":app:testDebugUnitTest :core:common:testDebugUnitTest :core:data:testDebugUnitTest :core:design:testDebugUnitTest :core:firebase:testDebugUnitTest :library:utils:testDebugUnitTest :library:network:testDebugUnitTest"
           fi
 
           TASKS=$(echo "$TASKS" | xargs -n1 | sort -u | xargs)
