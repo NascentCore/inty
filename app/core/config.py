@@ -172,6 +172,7 @@ class AgentConfig:
 
 @dataclass
 class GCSConfig:
+    # 如果为 True，则使用假GCS客户端；在本地存储文件，不使用 GCS 服务。用于测试。
     use_fake_gcs: bool = False
     bucket: str = "inty-storage"
     # DEPRECATED: 保留作为兼容；被 app.gcp_service_account_key 取代
