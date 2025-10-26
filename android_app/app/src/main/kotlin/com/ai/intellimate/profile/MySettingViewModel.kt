@@ -1,8 +1,8 @@
 package com.ai.intellimate.profile
 
 import ai.sxwl.android.common.base.BaseVM
-import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.http.services.ImageService
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import android.net.Uri
@@ -14,7 +14,6 @@ import com.ai.intellimate.utils.IntyUserProfileSDK
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.ai.intellimate.ViewModelEvent
-import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,9 +21,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 
 class MySettingViewModel : BaseVM() {
@@ -50,8 +46,7 @@ class MySettingViewModel : BaseVM() {
         }
     }
 
-    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    private val userApi by lazy { NetServiceMgr.getUserApi() }
+    // 头像上传迁移到基于 Inty 配置的直连服务（OkHttp 调 /api/v1/images）
 
     fun init(userProfile: UserProfile?) {
         viewModelScope.launch { userProfile?.let { _userProfile.emit(userProfile) } }
@@ -87,31 +82,15 @@ class MySettingViewModel : BaseVM() {
                         return@launchBackground
                     }
 
-                    val requestBody =
-                        File(fileUri.path!!)
-                            .asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
-                    val result =
-                        userApi.uploadAvatar(
-                            MultipartBody.Part.createFormData("file", "file.png", requestBody)
-                        )
-
-                    when (result) {
-                        is HttpResult.Success -> {
-                            _userProfile.value =
-                                _userProfile.value.copy(
-                                    // No cropping, just use the provided url.
-                                    avatar = result.data.url
-                                )
-                            // Show success toast for avatar upload
-                            viewModelScope.launch(Dispatchers.Main) {
-                                ToastUtils.showShort(R.string.saved_successfully)
-                            }
+                    try {
+                        val uploadedUrl = ImageService.uploadUserAvatar(File(fileUri.path!!))
+                        _userProfile.value = _userProfile.value.copy(avatar = uploadedUrl)
+                        viewModelScope.launch(Dispatchers.Main) {
+                            ToastUtils.showShort(R.string.saved_successfully)
                         }
-
-                        is HttpResult.Failure -> {
-                            NetworkErrorHandler.showNetworkAwareError(result.message)
-                            return@launchBackground
-                        }
+                    } catch (e: Exception) {
+                        NetworkErrorHandler.showNetworkAwareError(e.message ?: "Upload failed")
+                        return@launchBackground
                     }
                 }
 
