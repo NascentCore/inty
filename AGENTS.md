@@ -26,6 +26,11 @@ Based on [AGENTS.md](https://agents.md/)
 - 当进行改动时，如变更足够重要且会影响相应目录的 `AGENTS.md` 指南，请同步更新该目录下的 `AGENTS.md`。
 - Markdown 文件应从以下文件中选择：`README.md`、`CURSOR_TODOS.md`、`ARCH.md`、`AGENTS.md`。
 
+## 提交与变更请求记录规范
+
+- 小改动：在提交信息中包含用户的原始变更请求（可放在提交说明 body 部分），并简述本次处理方式。
+- 大改动或新增大型功能：将用户的变更请求写入一个与代码改动同目录的 `<TASK>_REQUESTS.md` 文件；`<TASK>` 使用任务或分支的简明标识。在提交信息中引用该文件路径。
+
 ## Coding style
 
 ### Do not repeat in comments what's already obvious in the code
