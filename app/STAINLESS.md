@@ -10,7 +10,6 @@
    发送生成请求到 [stainless project](https://app.stainless.com/inty/inty/overview)
    生成并更新：
    [inty-kotlin](https://github.com/NascentCore/inty-kotlin)
-   [inty-python](https://github.com/NascentCore/inty-python)
    [inty-typescript](https://github.com/NascentCore/inty-typescript)
    更新产生的 Pull Request 需要手动合并到代码库，如 https://github.com/NascentCore/inty-kotlin/pull/3
    TODO: 此处 stainless 会启动这 3 个代码库上的 release 工作流，但是其中个别工作流会失败（release docker）导致无法自动提交 pull request；

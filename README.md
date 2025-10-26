@@ -41,26 +41,12 @@ git submodule update --init --recursive
 
 <img width="960" height="236" alt="image" src="https://github.com/user-attachments/assets/a3b34dad-45f4-43d0-b1fb-c066f8397bd2" />
 
-```bash
-# 以 sdks/python 为例
-pushd sdks/python
-git checkout <上面的回滚的 commit>
-popd
-git commit -a -m "回滚 sdks/python sumbodule"
 ```
 
 [Git Module 使用指南](https://www.atlassian.com/git/articles/core-concept-workflows-and-tips)
 
 ### 更新 Git submodule 到最新的代码分支
 
-```bash
-# 以更新 sdks/python 为例
-pushd sdks/python
-git checkout main
-git pull
-popd
-git commit -m "更新 sdks/python submodule"
-git push
 ```
 
 ### 同步 git submodules

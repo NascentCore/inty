@@ -12,11 +12,6 @@ organization:
 # `targets` define the output targets and their customization options, such as
 # whether to emit the Node SDK and what it's package name should be.
 targets:
-  python:
-    package_name: inty
-    production_repo: NascentCore/inty-python
-    publish:
-      pypi: false
   typescript:
     package_name: inty
     production_repo: NascentCore/inty-typescript

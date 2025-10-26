@@ -1,8 +1,11 @@
 import os
 
 import pytest
-from inty import Inty
 from loguru import logger
+
+# Optional dependency: skip tests if Python SDK is not available
+inty_module = pytest.importorskip("inty")
+Inty = getattr(inty_module, "Inty")
 
 from app.external_services.gcs import download_from_gcs
 

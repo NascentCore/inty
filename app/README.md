@@ -36,12 +36,6 @@ to Stainless studio.
 
 Or using stl cli with stainless.yml matches stainless studio's configs.
 
-### Python SDK
-
-```bash
-pip install git+ssh://git@github.com/NascentCore/inty-python.git/
-```
-
 ### Typescript
 
 ### Kotlin
