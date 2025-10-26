@@ -5,7 +5,13 @@ from typing import Dict, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
+from aiortc import (
+    RTCPeerConnection,
+    RTCSessionDescription,
+    MediaStreamTrack,
+    RTCConfiguration,
+    RTCIceServer,
+)
 from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder
 from starlette.responses import JSONResponse
 
@@ -77,7 +83,8 @@ sessions: Dict[str, SessionState] = {}
 
 @app.post("/offer")
 async def offer(sdp: SDP):
-    pc = RTCPeerConnection()
+    ice_config = RTCConfiguration(iceServers=[RTCIceServer(urls=[config.server.stun_server])])
+    pc = RTCPeerConnection(ice_config)
     session = SessionState()
     session.pc = pc
 

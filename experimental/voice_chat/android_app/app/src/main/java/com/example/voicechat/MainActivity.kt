@@ -111,30 +111,41 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun sendOffer(offer: SessionDescription) {
-        val json = JSONObject()
-        json.put("sdp", offer.description)
-        json.put("type", offer.type.canonicalForm())
+        Thread {
+            try {
+                val json = JSONObject()
+                json.put("sdp", offer.description)
+                json.put("type", offer.type.canonicalForm())
 
-        val req = Request.Builder()
-            .url("${serverUrl}/offer")
-            .post(json.toString().toRequestBody("application/json".toMediaType()))
-            .build()
+                val req = Request.Builder()
+                    .url("${serverUrl}/offer")
+                    .post(json.toString().toRequestBody("application/json".toMediaType()))
+                    .build()
 
-        http.newCall(req).execute().use { resp ->
-            if (!resp.isSuccessful) throw RuntimeException("HTTP ${'$'}{resp.code}")
-            val body = resp.body?.string() ?: throw RuntimeException("empty body")
-            val obj = JSONObject(body)
-            val answer = SessionDescription(SessionDescription.Type.fromCanonicalForm(obj.getString("type")), obj.getString("sdp"))
-            runOnUiThread {
-                peerConnection?.setRemoteDescription(object: SdpObserver {
-                    override fun onSetSuccess() {
-                        findViewById<TextView>(R.id.status).text = "Connected"
+                http.newCall(req).execute().use { resp ->
+                    if (!resp.isSuccessful) throw RuntimeException("HTTP ${'$'}{resp.code}")
+                    val body = resp.body?.string() ?: throw RuntimeException("empty body")
+                    val obj = JSONObject(body)
+                    val answer = SessionDescription(
+                        SessionDescription.Type.fromCanonicalForm(obj.getString("type")),
+                        obj.getString("sdp")
+                    )
+                    runOnUiThread {
+                        peerConnection?.setRemoteDescription(object: SdpObserver {
+                            override fun onSetSuccess() {
+                                findViewById<TextView>(R.id.status).text = "Connected"
+                            }
+                            override fun onSetFailure(p0: String?) {}
+                            override fun onCreateSuccess(p0: SessionDescription?) {}
+                            override fun onCreateFailure(p0: String?) {}
+                        }, answer)
                     }
-                    override fun onSetFailure(p0: String?) {}
-                    override fun onCreateSuccess(p0: SessionDescription?) {}
-                    override fun onCreateFailure(p0: String?) {}
-                }, answer)
+                }
+            } catch (t: Throwable) {
+                runOnUiThread {
+                    findViewById<TextView>(R.id.status).text = "Error: ${'$'}{t.message}"
+                }
             }
-        }
+        }.start()
     }
 }
