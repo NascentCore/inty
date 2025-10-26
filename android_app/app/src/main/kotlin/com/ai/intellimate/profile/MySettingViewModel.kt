@@ -5,6 +5,7 @@ import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.http.services.ImageService
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import android.net.Uri
@@ -113,7 +114,18 @@ class MySettingViewModel : BaseVM() {
                         is ApiResult.Error -> {
                             LogUtils.e("MySettingViewModel: Avatar upload failed - Code: ${result.code}, Message: ${result.message}")
                             LogUtils.e("MySettingViewModel: Avatar upload exception: ${result.exception}")
-                            NetworkErrorHandler.showNetworkAwareError(result.message?: "Failed to upload avatar")
+                            
+                            // 根据错误码提供更友好的错误信息
+                            val errorMessage = when (result.code) {
+                                500 -> "服务器内部错误，请稍后重试"
+                                400 -> "图片格式不支持或文件过大"
+                                401 -> "登录已过期，请重新登录"
+                                403 -> "没有权限上传图片"
+                                404 -> "上传服务不可用"
+                                else -> result.message ?: "上传失败，请重试"
+                            }
+                            
+                            NetworkErrorHandler.showNetworkAwareError(errorMessage)
                             return@launchBackground
                         }
                     }

@@ -184,8 +184,21 @@ object IntyNetworkManager {
             
             // 尝试获取更多HTTP错误信息
             when (e) {
-                is com.inty.api.core.HttpException -> {
-                    LogUtils.e("IntyNetworkManager: HTTP Exception - Status: ${e.statusCode}, Body: ${e.body}")
+                is com.inty.api.errors.InternalServerException -> {
+                    LogUtils.e("IntyNetworkManager: Internal Server Error (500) - ${e.message}")
+                    LogUtils.e("IntyNetworkManager: Server error details: ${e.toString()}")
+                }
+                is com.inty.api.errors.BadRequestException -> {
+                    LogUtils.e("IntyNetworkManager: Bad Request (400) - ${e.message}")
+                }
+                is com.inty.api.errors.UnauthorizedException -> {
+                    LogUtils.e("IntyNetworkManager: Unauthorized (401) - ${e.message}")
+                }
+                is com.inty.api.errors.ForbiddenException -> {
+                    LogUtils.e("IntyNetworkManager: Forbidden (403) - ${e.message}")
+                }
+                is com.inty.api.errors.NotFoundException -> {
+                    LogUtils.e("IntyNetworkManager: Not Found (404) - ${e.message}")
                 }
                 is java.net.SocketTimeoutException -> {
                     LogUtils.e("IntyNetworkManager: Request timeout after ${actualConfig.timeoutMs}ms")

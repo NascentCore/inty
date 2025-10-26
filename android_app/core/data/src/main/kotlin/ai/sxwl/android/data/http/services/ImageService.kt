@@ -6,7 +6,7 @@ import ai.sxwl.android.utils.LogUtils
 import com.inty.api.models.api.v1.V1UploadImageParams
 import com.inty.api.models.api.v1.report.ApiResponseDict
 import java.io.File
-import java.io.FileInputStream
+import java.nio.file.Paths
 
 /** 图片服务 封装图片上传API调用 使用 Inty SDK */
 object ImageService {
@@ -25,8 +25,12 @@ object ImageService {
             // 记录文件信息
             LogUtils.d("ImageService: File exists - size: ${file.length()} bytes, name: ${file.name}, absolutePath: ${file.absolutePath}")
 
+            // 使用 Path 而不是 FileInputStream，这是 SDK 推荐的方式
+            val filePath = Paths.get(filePath)
+            LogUtils.d("ImageService: Created Path object: $filePath")
+
             val params = V1UploadImageParams.builder()
-                .file(FileInputStream(file))
+                .file(filePath)  // ✅ 使用 Path 对象
                 .croppingAvatar(croppingAvatar)
                 .build()
 
