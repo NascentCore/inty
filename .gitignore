@@ -189,3 +189,6 @@ inty-firebase-key.json
 
 # 前端构建产物 - 不应该提交到仓库
 /app/static/
+
+# Gradle temp dir
+.gradle/
