@@ -1,6 +1,5 @@
 package ai.sxwl.android.data.http.config
 
-
 /** 网络配置管理 提供环境相关的配置管理，替代原有的硬编码配置 */
 object NetworkConfig {
 
@@ -60,6 +59,7 @@ object NetworkConfig {
     }
 
     private var currentBuildTypeStr = ""
+
     fun setBuildType(buildType: String) {
         currentBuildTypeStr = buildType
     }

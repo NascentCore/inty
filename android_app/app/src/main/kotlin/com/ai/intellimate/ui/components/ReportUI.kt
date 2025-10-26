@@ -37,10 +37,7 @@ import com.ai.intellimate.ui.IntySmallTextField2
 @Composable
 fun ReportItem(text: String, selected: Boolean, onClick: () -> Unit = {}) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .noRippleClickable { onClick() },
+        modifier = Modifier.fillMaxWidth().height(48.dp).noRippleClickable { onClick() },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(text = text, fontSize = 14.sp, color = Color.White.copy(0.55f))
@@ -58,8 +55,7 @@ fun ReportItem(text: String, selected: Boolean, onClick: () -> Unit = {}) {
 fun ReportReasonsContainer(title: String, content: @Composable () -> Unit) {
     Column(
         modifier =
-            Modifier
-                .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
+            Modifier.background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
                 .border(
                     brush =
                         Brush.linearGradient(
@@ -100,8 +96,7 @@ fun ReportDescriptionContainer(
 ) {
     Column(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
                 .border(
                     brush =
@@ -127,23 +122,18 @@ fun ReportDescriptionContainer(
 
         Box(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .height(112.dp)
                     .background(color = Color.White.copy(0.1f), shape = RoundedCornerShape(8.dp))
                     .padding(vertical = 10.dp)
         ) {
             IntySmallTextField2(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                 value = description,
                 maxLength = maxLength,
                 placeholder = {
                     Text(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .align(Alignment.TopStart),
+                        modifier = Modifier.matchParentSize().align(Alignment.TopStart),
                         text = placeholder,
                         fontWeight = FontWeight.Normal,
                         color = Color.White.copy(0.55f),
@@ -154,9 +144,7 @@ fun ReportDescriptionContainer(
             )
 
             Text(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(horizontal = 12.dp),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(horizontal = 12.dp),
                 text = stringResource(R.string.character_count_format_full, description.length),
                 fontSize = 12.sp,
                 color = Color.White.copy(0.55f),
@@ -171,8 +159,7 @@ fun ReportDescriptionContainer(
 fun ReportImageEvidenceContainer(title: String, images: List<String>, onClickAddImage: () -> Unit) {
     Column(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
                 .border(
                     brush =
@@ -198,8 +185,7 @@ fun ReportImageEvidenceContainer(title: String, images: List<String>, onClickAdd
 
         Box(
             modifier =
-                Modifier
-                    .size(88.dp)
+                Modifier.size(88.dp)
                     .align(Alignment.Start)
                     .background(color = Color.White.copy(0.1f), shape = RoundedCornerShape(8.dp))
                     .clip(RoundedCornerShape(8.dp))
@@ -207,20 +193,18 @@ fun ReportImageEvidenceContainer(title: String, images: List<String>, onClickAdd
             if (images.isNotEmpty()) {
                 AsyncImage(
                     modifier = Modifier.fillMaxSize(),
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(images.firstOrNull())
-                        .build(),
+                    model =
+                        ImageRequest.Builder(LocalContext.current)
+                            .data(images.firstOrNull())
+                            .build(),
                     contentDescription = null
                 )
             } else {
                 Image(
                     modifier =
-                        Modifier
-                            .size(26.dp)
-                            .align(Alignment.Center)
-                            .noRippleClickable {
-                                onClickAddImage()
-                            },
+                        Modifier.size(26.dp).align(Alignment.Center).noRippleClickable {
+                            onClickAddImage()
+                        },
                     painter = painterResource(R.drawable.btn_add6),
                     contentDescription = null,
                 )
@@ -236,8 +220,7 @@ fun ReportImageEvidenceContainer(title: String, images: List<String>, onClickAdd
 fun SaveBtn(onSave: () -> Unit, isSubmitting: Boolean = false) {
     Box(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .height(50.dp)
                 .background(

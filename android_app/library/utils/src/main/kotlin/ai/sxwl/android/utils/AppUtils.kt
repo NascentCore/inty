@@ -16,33 +16,24 @@ import androidx.core.content.getSystemService
 import java.security.MessageDigest
 import kotlin.system.exitProcess
 
-/**
- * 应用工具类
- * 提供应用相关的工具方法
- */
+/** 应用工具类 提供应用相关的工具方法 */
 object AppUtils {
 
     // ==================== 应用状态监听 ====================
 
-    /**
-     * 注册应用状态变化监听器
-     */
+    /** 注册应用状态变化监听器 */
     fun registerAppStatusChangedListener(listener: Utils.OnAppStatusChangedListener) {
         UtilsBridge.addOnAppStatusChangedListener(listener)
     }
 
-    /**
-     * 注销应用状态变化监听器
-     */
+    /** 注销应用状态变化监听器 */
     fun unregisterAppStatusChangedListener(listener: Utils.OnAppStatusChangedListener) {
         UtilsBridge.removeOnAppStatusChangedListener(listener)
     }
 
     // ==================== 应用信息查询 ====================
 
-    /**
-     * 判断应用是否已安装
-     */
+    /** 判断应用是否已安装 */
     fun isAppInstalled(packageName: String): Boolean {
         if (UtilsBridge.isSpace(packageName)) return false
         return try {
@@ -57,9 +48,7 @@ object AppUtils {
         }
     }
 
-    /**
-     * 判断是否为调试应用
-     */
+    /** 判断是否为调试应用 */
     fun isAppDebug(packageName: String = Utils.getApp()?.packageName ?: ""): Boolean {
         if (UtilsBridge.isSpace(packageName)) return false
         return try {
@@ -75,9 +64,7 @@ object AppUtils {
         }
     }
 
-    /**
-     * 判断是否为系统应用
-     */
+    /** 判断是否为系统应用 */
     fun isAppSystem(packageName: String = Utils.getApp()?.packageName ?: ""): Boolean {
         if (UtilsBridge.isSpace(packageName)) return false
         return try {
@@ -93,9 +80,7 @@ object AppUtils {
         }
     }
 
-    /**
-     * 判断应用是否在前台
-     */
+    /** 判断应用是否在前台 */
     fun isAppForeground(packageName: String = Utils.getApp()?.packageName ?: ""): Boolean {
         if (UtilsBridge.isSpace(packageName)) return false
         return try {
@@ -106,9 +91,7 @@ object AppUtils {
         }
     }
 
-    /**
-     * 判断应用是否正在运行
-     */
+    /** 判断应用是否正在运行 */
     fun isAppRunning(packageName: String): Boolean {
         if (UtilsBridge.isSpace(packageName)) return false
 
@@ -135,9 +118,7 @@ object AppUtils {
 
     // ==================== 应用启动控制 ====================
 
-    /**
-     * 启动应用
-     */
+    /** 启动应用 */
     fun launchApp(packageName: String) {
         if (UtilsBridge.isSpace(packageName)) return
 
@@ -156,9 +137,7 @@ object AppUtils {
         }
     }
 
-    /**
-     * 重启应用
-     */
+    /** 重启应用 */
     fun relaunchApp(killProcess: Boolean = false) {
         try {
             val app = Utils.getApp() ?: return
@@ -173,8 +152,8 @@ object AppUtils {
 
             intent.addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_CLEAR_TASK
             )
             app.startActivity(intent)
 
@@ -189,23 +168,26 @@ object AppUtils {
         }
     }
 
-    /**
-     * 退出应用
-     */
+    /** 退出应用 */
     fun exitApp() {
         try {
             // 先尝试正常退出
             UtilsBridge.finishAllActivities()
 
             // 延迟退出，给Activity时间完成清理
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                try {
-                    Log.w("AppUtils", "强制退出应用，可能导致数据丢失")
-                    exitProcess(0)
-                } catch (e: Exception) {
-                    Log.e("AppUtils", "强制退出失败", e)
-                }
-            }, 100)
+            android.os
+                .Handler(android.os.Looper.getMainLooper())
+                .postDelayed(
+                    {
+                        try {
+                            Log.w("AppUtils", "强制退出应用，可能导致数据丢失")
+                            exitProcess(0)
+                        } catch (e: Exception) {
+                            Log.e("AppUtils", "强制退出失败", e)
+                        }
+                    },
+                    100
+                )
         } catch (e: Exception) {
             Log.e("AppUtils", "退出应用失败", e)
         }
@@ -213,14 +195,10 @@ object AppUtils {
 
     // ==================== 应用信息获取 ====================
 
-    /**
-     * 获取应用包名
-     */
+    /** 获取应用包名 */
     fun getPackageName(): String = Utils.getApp()?.packageName ?: ""
 
-    /**
-     * 获取应用名称
-     */
+    /** 获取应用名称 */
     fun getAppName(packageName: String = Utils.getApp()?.packageName ?: ""): String {
         if (UtilsBridge.isSpace(packageName)) return ""
         return try {
@@ -236,9 +214,7 @@ object AppUtils {
         }
     }
 
-    /**
-     * 获取应用版本名称
-     */
+    /** 获取应用版本名称 */
     fun getVersionName(packageName: String = Utils.getApp()?.packageName ?: ""): String {
         if (UtilsBridge.isSpace(packageName)) return ""
         return try {
@@ -254,9 +230,7 @@ object AppUtils {
         }
     }
 
-    /**
-     * 获取应用版本号
-     */
+    /** 获取应用版本号 */
     fun getVersionCode(packageName: String = Utils.getApp()?.packageName ?: ""): Int {
         if (UtilsBridge.isSpace(packageName)) return -1
         return try {
@@ -272,9 +246,7 @@ object AppUtils {
         }
     }
 
-    /**
-     * 获取应用图标
-     */
+    /** 获取应用图标 */
     fun getAppIcon(packageName: String = Utils.getApp()?.packageName ?: ""): Drawable? {
         if (UtilsBridge.isSpace(packageName)) return null
         return try {
@@ -290,9 +262,7 @@ object AppUtils {
         }
     }
 
-    /**
-     * 获取应用路径
-     */
+    /** 获取应用路径 */
     fun getAppPath(packageName: String = Utils.getApp()?.packageName ?: ""): String {
         if (UtilsBridge.isSpace(packageName)) return ""
         return try {
@@ -310,18 +280,17 @@ object AppUtils {
 
     // ==================== 应用设置 ====================
 
-    /**
-     * 打开应用详情设置
-     */
+    /** 打开应用详情设置 */
     fun openAppDetailsSettings(packageName: String = Utils.getApp()?.packageName ?: "") {
         if (UtilsBridge.isSpace(packageName)) return
 
         try {
             val app = Utils.getApp() ?: return
-            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = Uri.fromParts("package", packageName, null)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
+            val intent =
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", packageName, null)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
             app.startActivity(intent)
         } catch (e: Exception) {
             Log.e("AppUtils", "打开应用详情设置失败", e)
@@ -330,6 +299,7 @@ object AppUtils {
 
     /**
      * 打开应用详情设置（带回调）
+     *
      * @deprecated startActivityForResult已废弃，建议使用Activity Result API
      */
     @Deprecated("startActivityForResult已废弃，建议使用Activity Result API")
@@ -341,9 +311,10 @@ object AppUtils {
         if (UtilsBridge.isSpace(packageName)) return
 
         try {
-            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = Uri.fromParts("package", packageName, null)
-            }
+            val intent =
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", packageName, null)
+                }
             activity.startActivityForResult(intent, requestCode)
         } catch (e: Exception) {
             Log.e("AppUtils", "打开应用详情设置失败", e)
@@ -352,9 +323,7 @@ object AppUtils {
 
     // ==================== 应用签名 ====================
 
-    /**
-     * 获取应用签名
-     */
+    /** 获取应用签名 */
     fun getAppSignatures(
         packageName: String = Utils.getApp()?.packageName ?: ""
     ): Array<Signature>? {
@@ -384,9 +353,7 @@ object AppUtils {
         }
     }
 
-    /**
-     * 获取应用签名SHA1值
-     */
+    /** 获取应用签名SHA1值 */
     fun getAppSignatureSHA1(packageName: String = Utils.getApp()?.packageName ?: ""): String? {
         val signatures = getAppSignatures(packageName) ?: return null
         return signatures.firstOrNull()?.let { signature ->
@@ -403,9 +370,7 @@ object AppUtils {
 
     // ==================== 应用信息数据类 ====================
 
-    /**
-     * 应用信息数据类
-     */
+    /** 应用信息数据类 */
     data class AppInfo(
         val packageName: String,
         val name: String,
@@ -417,19 +382,17 @@ object AppUtils {
     ) {
         override fun toString(): String {
             return "AppInfo{" +
-                    "packageName='$packageName', " +
-                    "name='$name', " +
-                    "versionName='$versionName', " +
-                    "versionCode=$versionCode, " +
-                    "isSystem=$isSystem, " +
-                    "isDebug=$isDebug" +
-                    "}"
+                "packageName='$packageName', " +
+                "name='$name', " +
+                "versionName='$versionName', " +
+                "versionCode=$versionCode, " +
+                "isSystem=$isSystem, " +
+                "isDebug=$isDebug" +
+                "}"
         }
     }
 
-    /**
-     * 获取应用信息
-     */
+    /** 获取应用信息 */
     fun getAppInfo(packageName: String = Utils.getApp()?.packageName ?: ""): AppInfo? {
         if (UtilsBridge.isSpace(packageName)) return null
 
@@ -456,9 +419,7 @@ object AppUtils {
         }
     }
 
-    /**
-     * 获取所有已安装应用信息
-     */
+    /** 获取所有已安装应用信息 */
     fun getAllAppInfo(): List<AppInfo> {
         return try {
             val app = Utils.getApp() ?: return emptyList()

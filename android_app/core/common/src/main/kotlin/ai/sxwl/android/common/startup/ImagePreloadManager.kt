@@ -17,11 +17,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * 统一的图片预加载管理器
- * 整合 design 模块的优化配置，提供高性能的图片预加载服务
- * 支持批量预加载、关键图片优先、设备适配等优化策略
- */
+/** 统一的图片预加载管理器 整合 design 模块的优化配置，提供高性能的图片预加载服务 支持批量预加载、关键图片优先、设备适配等优化策略 */
 object ImagePreloadManager {
 
     private var isInitialized = false
@@ -131,21 +127,25 @@ object ImagePreloadManager {
         coroutineScope {
             // 分批处理，控制并发数
             imageUrls.chunked(maxConcurrent).forEach { batch ->
-                val deferred = batch.map { imageUrl ->
-                    async {
-                        try {
-                            // 使用全局ImageLoader和ImageLoaderUtils创建优化请求
-                            val request = ImageLoaderUtils.createDeviceAdaptiveImageRequest(
-                                context = Utils.getApp(),
-                                imageUrl = imageUrl
-                            )
-                            // 执行预加载，图片会被缓存到全局ImageLoader的内存和磁盘缓存中
-                            SingletonImageLoader.get(Utils.getApp()).execute(request)
-                        } catch (e: Exception) {
-                            LogUtils.w("ImagePreloadManager - 预加载失败: $imageUrl, 错误: ${e.message}")
+                val deferred =
+                    batch.map { imageUrl ->
+                        async {
+                            try {
+                                // 使用全局ImageLoader和ImageLoaderUtils创建优化请求
+                                val request =
+                                    ImageLoaderUtils.createDeviceAdaptiveImageRequest(
+                                        context = Utils.getApp(),
+                                        imageUrl = imageUrl
+                                    )
+                                // 执行预加载，图片会被缓存到全局ImageLoader的内存和磁盘缓存中
+                                SingletonImageLoader.get(Utils.getApp()).execute(request)
+                            } catch (e: Exception) {
+                                LogUtils.w(
+                                    "ImagePreloadManager - 预加载失败: $imageUrl, 错误: ${e.message}"
+                                )
+                            }
                         }
                     }
-                }
 
                 // 等待当前批次完成
                 deferred.forEach { it.await() }
@@ -154,8 +154,7 @@ object ImagePreloadManager {
     }
 
     /**
-     * 预加载单个图片到全局ImageLoader缓存
-     * 使用 design 模块的设备适配优化
+     * 预加载单个图片到全局ImageLoader缓存 使用 design 模块的设备适配优化
      *
      * @param imageUrl 图片URL
      * @param size 目标尺寸，默认使用设备适配尺寸
@@ -168,17 +167,15 @@ object ImagePreloadManager {
         try {
             withContext(Dispatchers.IO) {
                 // 使用 design 模块的设备适配优化
-                val request = if (size == Size.ORIGINAL) {
-                    ImageLoaderUtils.createDeviceAdaptiveImageRequest(
-                        context = Utils.getApp(),
-                        imageUrl = imageUrl
-                    )
-                } else {
-                    ImageRequest.Builder(Utils.getApp())
-                        .data(imageUrl)
-                        .size(size)
-                        .build()
-                }
+                val request =
+                    if (size == Size.ORIGINAL) {
+                        ImageLoaderUtils.createDeviceAdaptiveImageRequest(
+                            context = Utils.getApp(),
+                            imageUrl = imageUrl
+                        )
+                    } else {
+                        ImageRequest.Builder(Utils.getApp()).data(imageUrl).size(size).build()
+                    }
                 SingletonImageLoader.get(Utils.getApp()).execute(request)
             }
         } catch (e: Exception) {
@@ -187,8 +184,7 @@ object ImagePreloadManager {
     }
 
     /**
-     * 预加载 Agent 相关图片
-     * 使用并发优化，同时预加载头像和背景图片
+     * 预加载 Agent 相关图片 使用并发优化，同时预加载头像和背景图片
      *
      * @param avatarUrl 头像 URL
      * @param backgroundUrl 背景图片 URL
@@ -199,9 +195,7 @@ object ImagePreloadManager {
         scope.launch {
             try {
                 // 并发预加载头像和背景图片
-                val avatarJob = async {
-                    avatarUrl?.let { preloadSingleImage(it, Size(120, 120)) }
-                }
+                val avatarJob = async { avatarUrl?.let { preloadSingleImage(it, Size(120, 120)) } }
                 val backgroundJob = async {
                     backgroundUrl?.let { preloadSingleImage(it, Size(400, 300)) }
                 }
@@ -210,7 +204,9 @@ object ImagePreloadManager {
                 avatarJob.await()
                 backgroundJob.await()
 
-                LogUtils.d("ImagePreloadManager - 预加载 Agent 图片完成: avatar=$avatarUrl, background=$backgroundUrl")
+                LogUtils.d(
+                    "ImagePreloadManager - 预加载 Agent 图片完成: avatar=$avatarUrl, background=$backgroundUrl"
+                )
             } catch (e: Exception) {
                 LogUtils.e("ImagePreloadManager - 预加载 Agent 图片失败", e)
             }
@@ -218,8 +214,7 @@ object ImagePreloadManager {
     }
 
     /**
-     * 预加载用户头像
-     * 使用头像优化的尺寸
+     * 预加载用户头像 使用头像优化的尺寸
      *
      * @param avatarUrl 头像 URL
      */
@@ -237,8 +232,7 @@ object ImagePreloadManager {
     }
 
     /**
-     * 预加载 Agent 头像（指定尺寸）
-     * 使用头像优化的请求配置
+     * 预加载 Agent 头像（指定尺寸） 使用头像优化的请求配置
      *
      * @param avatarUrl 头像 URL
      * @param size 头像尺寸
@@ -249,11 +243,12 @@ object ImagePreloadManager {
         scope.launch {
             try {
                 // 使用 design 模块的头像优化配置
-                val request = ImageLoaderUtils.createAvatarImageRequest(
-                    context = Utils.getApp(),
-                    imageUrl = avatarUrl,
-                    size = size
-                )
+                val request =
+                    ImageLoaderUtils.createAvatarImageRequest(
+                        context = Utils.getApp(),
+                        imageUrl = avatarUrl,
+                        size = size
+                    )
                 SingletonImageLoader.get(Utils.getApp()).execute(request)
                 LogUtils.d("ImagePreloadManager - 预加载 Agent 头像: $avatarUrl (${size}x${size})")
             } catch (e: Exception) {
@@ -263,8 +258,7 @@ object ImagePreloadManager {
     }
 
     /**
-     * 预加载 Agent 背景图片
-     * 使用背景图片优化的请求配置
+     * 预加载 Agent 背景图片 使用背景图片优化的请求配置
      *
      * @param backgroundUrl 背景图片 URL
      * @param width 宽度
@@ -276,24 +270,24 @@ object ImagePreloadManager {
         scope.launch {
             try {
                 // 使用 design 模块的缩略图优化配置
-                val request = ImageLoaderUtils.createThumbnailImageRequest(
-                    context = Utils.getApp(),
-                    imageUrl = backgroundUrl,
-                    width = width,
-                    height = height
-                )
+                val request =
+                    ImageLoaderUtils.createThumbnailImageRequest(
+                        context = Utils.getApp(),
+                        imageUrl = backgroundUrl,
+                        width = width,
+                        height = height
+                    )
                 SingletonImageLoader.get(Utils.getApp()).execute(request)
-                LogUtils.d("ImagePreloadManager - 预加载 Agent 背景: $backgroundUrl (${width}x${height})")
+                LogUtils.d(
+                    "ImagePreloadManager - 预加载 Agent 背景: $backgroundUrl (${width}x${height})"
+                )
             } catch (e: Exception) {
                 LogUtils.e("ImagePreloadManager - 预加载 Agent 背景失败", e)
             }
         }
     }
 
-    /**
-     * 清理图片缓存
-     * 使用 design 模块的统一缓存管理
-     */
+    /** 清理图片缓存 使用 design 模块的统一缓存管理 */
     fun clearImageCache() {
         if (!isInitialized) return
 
@@ -305,10 +299,7 @@ object ImagePreloadManager {
         }
     }
 
-    /**
-     * 获取图片缓存大小
-     * 使用 design 模块的统一缓存统计
-     */
+    /** 获取图片缓存大小 使用 design 模块的统一缓存统计 */
     fun getImageCacheSize(): String {
         return if (isInitialized) {
             val cacheSize = AdvancedCoilConfig.getImageCacheSize(Utils.getApp())
@@ -319,8 +310,7 @@ object ImagePreloadManager {
     }
 
     /**
-     * 预加载多个图片（批量优化）
-     * 使用并发控制和设备适配优化
+     * 预加载多个图片（批量优化） 使用并发控制和设备适配优化
      *
      * @param imageUrls 图片 URL 列表
      * @param maxConcurrent 最大并发数
@@ -333,11 +323,8 @@ object ImagePreloadManager {
                 withContext(Dispatchers.IO) {
                     // 分批处理，控制并发数
                     imageUrls.chunked(maxConcurrent).forEach { batch ->
-                        val deferred = batch.map { imageUrl ->
-                            async {
-                                preloadSingleImage(imageUrl)
-                            }
-                        }
+                        val deferred =
+                            batch.map { imageUrl -> async { preloadSingleImage(imageUrl) } }
                         // 等待当前批次完成
                         deferred.forEach { it.await() }
                     }

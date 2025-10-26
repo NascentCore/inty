@@ -3,17 +3,13 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
-
 group = "ai.sxwl.android"
+
 version = "1.0.0"
 
-
-android {
-    namespace = "ai.sxwl.android.firebase"
-}
+android { namespace = "ai.sxwl.android.firebase" }
 
 dependencies {
-
     implementation(libs.androidx.startup)
 
     // Firebase dependencies
@@ -22,5 +18,4 @@ dependencies {
 
     // Core dependencies
     implementation(projects.library.utils)
-
 }

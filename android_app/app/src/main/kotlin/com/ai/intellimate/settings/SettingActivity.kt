@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.ai.intellimate.MainActivity
-import com.ai.intellimate.R
 import com.ai.intellimate.MainViewModel
+import com.ai.intellimate.R
 
 /** 设置页面 */
 class SettingActivity : BaseActivity() {
@@ -21,6 +21,7 @@ class SettingActivity : BaseActivity() {
 
         /**
          * 启动设置界面
+         *
          * @param context 上下文context
          */
         fun launch(context: Context) {
@@ -34,9 +35,7 @@ class SettingActivity : BaseActivity() {
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
         SettingContent(
-            modifier = Modifier.Companion
-                .fillMaxSize()
-                .background(HeartColor.primaryColor),
+            modifier = Modifier.Companion.fillMaxSize().background(HeartColor.primaryColor),
             onBack = { finish() },
             onLogout = { isDelete ->
                 // 使用MainViewModel的logout方法，不重启应用
@@ -48,8 +47,7 @@ class SettingActivity : BaseActivity() {
                 ToastUtils.showShort(str)
                 // 返回到主页面
                 val intent = Intent(this@SettingActivity, MainActivity::class.java)
-                intent.flags =
-                    Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 startActivity(intent)
                 finish()
             },

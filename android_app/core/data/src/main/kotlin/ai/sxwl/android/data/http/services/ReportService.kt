@@ -17,11 +17,12 @@ object ReportService {
         imageUrls: List<String>,
     ): ApiResult<Unit> {
         return IntyNetworkManager.executeRequest("Create Report") {
-            val type = if (targetType == "USER") {
-                ReportCreateParams.TargetType.USER
-            } else {
-                ReportCreateParams.TargetType.AGENT
-            }
+            val type =
+                if (targetType == "USER") {
+                    ReportCreateParams.TargetType.USER
+                } else {
+                    ReportCreateParams.TargetType.AGENT
+                }
             val reportParams =
                 ReportCreateParams.builder()
                     .reasonIds(reasonIds)

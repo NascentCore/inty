@@ -8,6 +8,7 @@ import android.media.AudioManager
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.content.getSystemService
+import androidx.media3.common.AudioAttributes as Media3AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -16,6 +17,7 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -26,15 +28,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
-import androidx.media3.common.AudioAttributes as Media3AudioAttributes
 
 /** 企业级音频播放管理器 基于Media3实现，支持Opus格式，提供完整的音频焦点管理和播放控制 */
 class AudioPlaybackManager private constructor(private val context: Context) : Player.Listener {
 
     companion object {
-        @Volatile
-        private var INSTANCE: AudioPlaybackManager? = null
+        @Volatile private var INSTANCE: AudioPlaybackManager? = null
 
         fun getInstance(context: Context): AudioPlaybackManager {
             return INSTANCE
@@ -201,7 +200,9 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
         try {
             // 检查当前状态是否允许恢复
             if (_playbackState.value != PlaybackState.PAUSED) {
-                LogUtils.w("音频LOG测试 Cannot resume: current state is ${_playbackState.value}, expected PAUSED")
+                LogUtils.w(
+                    "音频LOG测试 Cannot resume: current state is ${_playbackState.value}, expected PAUSED"
+                )
                 return
             }
 
@@ -291,7 +292,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
                 .build()
 
         return audioManager?.requestAudioFocus(audioFocusRequest!!) ==
-                AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+            AudioManager.AUDIOFOCUS_REQUEST_GRANTED
     }
 
     @Suppress("DEPRECATION")
@@ -314,17 +315,14 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
                     exoPlayer?.play()
                 }
             }
-
             AudioManager.AUDIOFOCUS_LOSS -> {
                 // 永久丢失焦点，暂停播放但不改变状态
                 exoPlayer?.pause()
             }
-
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 // 临时丢失焦点，暂停播放但不改变状态
                 exoPlayer?.pause()
             }
-
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                 // 降低音量而不是暂停
                 exoPlayer?.volume = 0.3f
@@ -373,26 +371,22 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
     override fun onPlaybackStateChanged(playbackState: Int) {
         super.onPlaybackStateChanged(playbackState)
 
-
         when (playbackState) {
             Player.STATE_IDLE -> {
                 _playbackState.value = PlaybackState.IDLE
                 _isLoading.value = false
                 stopPositionUpdate()
             }
-
             Player.STATE_BUFFERING -> {
                 _playbackState.value = PlaybackState.BUFFERING
                 _isLoading.value = true
             }
-
             Player.STATE_READY -> {
                 _playbackState.value = PlaybackState.READY
                 _isLoading.value = false
                 _duration.value = exoPlayer?.duration ?: 0L
                 startPositionUpdate()
             }
-
             Player.STATE_ENDED -> {
                 _playbackState.value = PlaybackState.ENDED
                 _isLoading.value = false
@@ -422,11 +416,9 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
                 PlaybackState.PLAYING -> {
                     _playbackState.value = PlaybackState.PAUSED
                 }
-
                 PlaybackState.BUFFERING -> {
                     // 保持缓冲状态，不改变
                 }
-
                 else -> {
                     // 其他状态保持不变
                 }

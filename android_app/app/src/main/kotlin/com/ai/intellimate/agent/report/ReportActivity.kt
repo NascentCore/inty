@@ -22,15 +22,18 @@ class ReportActivity : BaseActivity() {
 
         /**
          * 启动单独的聊天界面
+         *
          * @param context 上下文context
          * @param targetType
          * @param targetId
          */
         fun launch(context: Context, targetType: String = "USER", targetId: String? = null) {
-            context.startActivity(Intent(context, ReportActivity::class.java).also { intent ->
-                intent.putExtra(INTENT_KEY_TARGET_ID, targetId)
-                intent.putExtra(INTENT_KEY_TARGET_TYPE, targetType)
-            })
+            context.startActivity(
+                Intent(context, ReportActivity::class.java).also { intent ->
+                    intent.putExtra(INTENT_KEY_TARGET_ID, targetId)
+                    intent.putExtra(INTENT_KEY_TARGET_TYPE, targetType)
+                }
+            )
         }
     }
 
@@ -48,7 +51,6 @@ class ReportActivity : BaseActivity() {
                     is ViewModelEvent.ReportSubmitted -> {
                         finish()
                     }
-
                     else -> {
                         // 其他事件暂不处理
                     }
@@ -60,9 +62,7 @@ class ReportActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
-        ReportContent(
-            viewModel = viewModel,
-            onBack = { finish() })
+        ReportContent(viewModel = viewModel, onBack = { finish() })
     }
 }
 

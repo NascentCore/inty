@@ -5,12 +5,10 @@ plugins {
 }
 
 group = "ai.sxwl.android"
+
 version = "1.0.0"
 
-android {
-    namespace = "ai.sxwl.android.design"
-}
-
+android { namespace = "ai.sxwl.android.design" }
 
 dependencies {
     api(libs.bundles.coil.bundle)

@@ -16,6 +16,7 @@ class RegInfoActivity : BaseActivity() {
     companion object {
         /**
          * 启动注册信息页面
+         *
          * @param context 上下文context
          */
         fun launch(context: Context) {
@@ -34,7 +35,6 @@ class RegInfoActivity : BaseActivity() {
                     is ViewModelEvent.UserProfileUpdated -> {
                         finish()
                     }
-
                     else -> {
                         // 其他事件暂不处理
                     }

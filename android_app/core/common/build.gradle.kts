@@ -7,14 +7,12 @@ plugins {
 }
 
 group = "ai.sxwl.android"
+
 version = "1.0.0"
 
-android {
-    namespace = "ai.sxwl.android.common"
-}
+android { namespace = "ai.sxwl.android.common" }
 
 dependencies {
-
     implementation(libs.accompanist.permissions)
 
     implementation(libs.bundles.compose.ui.bundle)
@@ -30,5 +28,4 @@ dependencies {
 
     // Coil图片加载
     implementation(libs.coil.kt)
-
 }

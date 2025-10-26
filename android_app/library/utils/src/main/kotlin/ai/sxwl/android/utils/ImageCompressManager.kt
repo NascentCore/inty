@@ -1,6 +1,8 @@
 package ai.sxwl.android.utils
 
 import android.content.Context
+import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -10,31 +12,22 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.IOException
 
-/**
- * 图片压缩管理器
- * 提供更高级的图片压缩功能，包括批量压缩、进度监控、结果统计等
- */
+/** 图片压缩管理器 提供更高级的图片压缩功能，包括批量压缩、进度监控、结果统计等 */
 class ImageCompressManager private constructor() {
 
     companion object {
-        @Volatile
-        private var INSTANCE: ImageCompressManager? = null
+        @Volatile private var INSTANCE: ImageCompressManager? = null
 
         fun getInstance(): ImageCompressManager {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: ImageCompressManager().also { INSTANCE = it }
-            }
+            return INSTANCE
+                ?: synchronized(this) { INSTANCE ?: ImageCompressManager().also { INSTANCE = it } }
         }
     }
 
     private val compressScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    /**
-     * 压缩统计信息
-     */
+    /** 压缩统计信息 */
     data class CompressStats(
         val totalFiles: Int = 0,
         val successCount: Int = 0,
@@ -47,9 +40,7 @@ class ImageCompressManager private constructor() {
             get() = successCount + failedCount >= totalFiles
     }
 
-    /**
-     * 压缩任务信息
-     */
+    /** 压缩任务信息 */
     data class CompressTask(
         val id: String,
         val files: List<File>,
@@ -74,73 +65,75 @@ class ImageCompressManager private constructor() {
         imageFiles: List<File>,
         config: ImageCompressUtils.CompressConfig = ImageCompressUtils.CompressConfig(),
         taskId: String = generateTaskId()
-    ): Flow<CompressStats> = flow {
-        val validFiles = imageFiles.filter { ImageCompressUtils.isSupportedImageFormat(it) }
+    ): Flow<CompressStats> =
+        flow {
+                val validFiles = imageFiles.filter { ImageCompressUtils.isSupportedImageFormat(it) }
 
-        if (validFiles.isEmpty()) {
-            emit(CompressStats())
-            return@flow
-        }
-
-        val task = CompressTask(taskId, validFiles, config)
-        activeTasks[taskId] = task
-
-        val originalSize = try {
-            validFiles.sumOf {
-                try {
-                    it.length()
-                } catch (e: Exception) {
-                    0L
+                if (validFiles.isEmpty()) {
+                    emit(CompressStats())
+                    return@flow
                 }
-            }
-        } catch (e: Exception) {
-            0L
-        }
-        var successCount = 0
-        var failedCount = 0
-        var compressedSize = 0L
 
-        emit(
-            CompressStats(
-                totalFiles = validFiles.size,
-                originalSize = originalSize
-            )
-        )
+                val task = CompressTask(taskId, validFiles, config)
+                activeTasks[taskId] = task
 
-        validFiles.forEachIndexed { index, file ->
-            try {
-                val compressedFile = ImageCompressUtils.compressImageSync(context, file, config)
-                if (compressedFile != null) {
-                    successCount++
-                    compressedSize += try {
-                        compressedFile.length()
+                val originalSize =
+                    try {
+                        validFiles.sumOf {
+                            try {
+                                it.length()
+                            } catch (e: Exception) {
+                                0L
+                            }
+                        }
                     } catch (e: Exception) {
                         0L
                     }
-                } else {
-                    failedCount++
+                var successCount = 0
+                var failedCount = 0
+                var compressedSize = 0L
+
+                emit(CompressStats(totalFiles = validFiles.size, originalSize = originalSize))
+
+                validFiles.forEachIndexed { index, file ->
+                    try {
+                        val compressedFile =
+                            ImageCompressUtils.compressImageSync(context, file, config)
+                        if (compressedFile != null) {
+                            successCount++
+                            compressedSize +=
+                                try {
+                                    compressedFile.length()
+                                } catch (e: Exception) {
+                                    0L
+                                }
+                        } else {
+                            failedCount++
+                        }
+                    } catch (e: Exception) {
+                        failedCount++
+                    }
+
+                    val stats =
+                        CompressStats(
+                            totalFiles = validFiles.size,
+                            successCount = successCount,
+                            failedCount = failedCount,
+                            originalSize = originalSize,
+                            compressedSize = compressedSize,
+                            compressionRatio =
+                                if (originalSize > 0) {
+                                    (1f - compressedSize.toFloat() / originalSize.toFloat()) * 100f
+                                } else 0f
+                        )
+
+                    taskStats[taskId] = stats
+                    emit(stats)
                 }
-            } catch (e: Exception) {
-                failedCount++
+
+                activeTasks.remove(taskId)
             }
-
-            val stats = CompressStats(
-                totalFiles = validFiles.size,
-                successCount = successCount,
-                failedCount = failedCount,
-                originalSize = originalSize,
-                compressedSize = compressedSize,
-                compressionRatio = if (originalSize > 0) {
-                    (1f - compressedSize.toFloat() / originalSize.toFloat()) * 100f
-                } else 0f
-            )
-
-            taskStats[taskId] = stats
-            emit(stats)
-        }
-
-        activeTasks.remove(taskId)
-    }.flowOn(Dispatchers.IO)
+            .flowOn(Dispatchers.IO)
 
     /**
      * 压缩单个图片（带回调）
@@ -161,18 +154,12 @@ class ImageCompressManager private constructor() {
                 val compressedFile =
                     ImageCompressUtils.compressImageSync(context, imageFile, config)
                 if (compressedFile != null) {
-                    withContext(Dispatchers.Main) {
-                        callback.onSuccess(compressedFile)
-                    }
+                    withContext(Dispatchers.Main) { callback.onSuccess(compressedFile) }
                 } else {
-                    withContext(Dispatchers.Main) {
-                        callback.onError(IOException("压缩失败"))
-                    }
+                    withContext(Dispatchers.Main) { callback.onError(IOException("压缩失败")) }
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    callback.onError(e)
-                }
+                withContext(Dispatchers.Main) { callback.onError(e) }
             }
         }
     }
@@ -196,11 +183,12 @@ class ImageCompressManager private constructor() {
             return
         }
 
-        val fileSizeKB = try {
-            imageFile.length() / 1024
-        } catch (e: Exception) {
-            0
-        }
+        val fileSizeKB =
+            try {
+                imageFile.length() / 1024
+            } catch (e: Exception) {
+                0
+            }
 
         if (fileSizeKB <= targetSizeKB) {
             // 文件已经足够小，直接返回原文件
@@ -209,28 +197,30 @@ class ImageCompressManager private constructor() {
         }
 
         // 根据文件大小动态调整压缩参数
-        val config = when {
-            fileSizeKB > 5000 -> ImageCompressUtils.CompressConfig(
-                quality = 60,
-                maxWidth = 800,
-                maxHeight = 1200,
-                maxSize = targetSizeKB
-            )
-
-            fileSizeKB > 2000 -> ImageCompressUtils.CompressConfig(
-                quality = 70,
-                maxWidth = 1000,
-                maxHeight = 1500,
-                maxSize = targetSizeKB
-            )
-
-            else -> ImageCompressUtils.CompressConfig(
-                quality = 80,
-                maxWidth = 1200,
-                maxHeight = 1800,
-                maxSize = targetSizeKB
-            )
-        }
+        val config =
+            when {
+                fileSizeKB > 5000 ->
+                    ImageCompressUtils.CompressConfig(
+                        quality = 60,
+                        maxWidth = 800,
+                        maxHeight = 1200,
+                        maxSize = targetSizeKB
+                    )
+                fileSizeKB > 2000 ->
+                    ImageCompressUtils.CompressConfig(
+                        quality = 70,
+                        maxWidth = 1000,
+                        maxHeight = 1500,
+                        maxSize = targetSizeKB
+                    )
+                else ->
+                    ImageCompressUtils.CompressConfig(
+                        quality = 80,
+                        maxWidth = 1200,
+                        maxHeight = 1800,
+                        maxSize = targetSizeKB
+                    )
+            }
 
         compressImageAsync(context, imageFile, config, callback)
     }
@@ -264,17 +254,13 @@ class ImageCompressManager private constructor() {
         taskStats.remove(taskId)
     }
 
-    /**
-     * 清理所有任务和统计信息
-     */
+    /** 清理所有任务和统计信息 */
     fun clearAllTasks() {
         activeTasks.clear()
         taskStats.clear()
     }
 
-    /**
-     * 生成任务ID
-     */
+    /** 生成任务ID */
     private fun generateTaskId(): String {
         return try {
             "compress_${System.currentTimeMillis()}_${(1000..9999).random()}"
@@ -283,9 +269,7 @@ class ImageCompressManager private constructor() {
         }
     }
 
-    /**
-     * 释放资源
-     */
+    /** 释放资源 */
     fun destroy() {
         compressScope.cancel()
         clearAllTasks()
@@ -293,61 +277,51 @@ class ImageCompressManager private constructor() {
     }
 }
 
-/**
- * 图片压缩扩展函数
- */
+/** 图片压缩扩展函数 */
 
-/**
- * 快速压缩单个图片
- */
+/** 快速压缩单个图片 */
 fun File.compressImage(
     context: Context,
     config: ImageCompressUtils.CompressConfig = ImageCompressUtils.CompressConfig(),
     callback: (File) -> Unit
 ) {
-    ImageCompressManager.getInstance().compressImageAsync(
-        context,
-        this,
-        config,
-        object : ImageCompressUtils.CompressCallback {
-            override fun onSuccess(compressedFile: File) {
-                callback(compressedFile)
-            }
+    ImageCompressManager.getInstance()
+        .compressImageAsync(
+            context,
+            this,
+            config,
+            object : ImageCompressUtils.CompressCallback {
+                override fun onSuccess(compressedFile: File) {
+                    callback(compressedFile)
+                }
 
-            override fun onError(throwable: Throwable) {
-                // 忽略错误，或者可以添加日志
+                override fun onError(throwable: Throwable) {
+                    // 忽略错误，或者可以添加日志
+                }
             }
-        }
-    )
+        )
 }
 
-/**
- * 智能压缩单个图片
- */
-fun File.smartCompress(
-    context: Context,
-    targetSizeKB: Int = 500,
-    callback: (File) -> Unit
-) {
-    ImageCompressManager.getInstance().smartCompress(
-        context,
-        this,
-        targetSizeKB,
-        object : ImageCompressUtils.CompressCallback {
-            override fun onSuccess(compressedFile: File) {
-                callback(compressedFile)
-            }
+/** 智能压缩单个图片 */
+fun File.smartCompress(context: Context, targetSizeKB: Int = 500, callback: (File) -> Unit) {
+    ImageCompressManager.getInstance()
+        .smartCompress(
+            context,
+            this,
+            targetSizeKB,
+            object : ImageCompressUtils.CompressCallback {
+                override fun onSuccess(compressedFile: File) {
+                    callback(compressedFile)
+                }
 
-            override fun onError(throwable: Throwable) {
-                // 忽略错误，或者可以添加日志
+                override fun onError(throwable: Throwable) {
+                    // 忽略错误，或者可以添加日志
+                }
             }
-        }
-    )
+        )
 }
 
-/**
- * 批量压缩图片列表
- */
+/** 批量压缩图片列表 */
 fun List<File>.compressImages(
     context: Context,
     config: ImageCompressUtils.CompressConfig = ImageCompressUtils.CompressConfig(),

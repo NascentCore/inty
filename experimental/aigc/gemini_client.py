@@ -16,6 +16,7 @@ class GeminiImage(gemini_types.Image):
     """
     A wrapper around the gemini_types.Image class that adds a few convenience methods.
     """
+
     def decode_base64(self):
         self.image_bytes = base64.b64decode(self.image_bytes)
 
@@ -27,12 +28,12 @@ class GeminiImage(gemini_types.Image):
 
 class GeminiClient:
     """Client for interacting with Gemini API for character generation"""
-    
+
     def __init__(self):
         """Initialize the Gemini client"""
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing Gemini client...")
-        
+
         try:
             # genai.configure(api_key=Config.GEMINI_API_KEY)
             self.client = genai.Client()
@@ -42,14 +43,15 @@ class GeminiClient:
         except Exception as e:
             self.logger.error(f"Failed to initialize Gemini client: {e}")
             raise
-        
-    def generate_character_profile(self, brief_description: str, genre: str = "fantasy", 
-                                 tone: str = "neutral") -> CharacterProfile:
+
+    def generate_character_profile(
+        self, brief_description: str, genre: str = "fantasy", tone: str = "neutral"
+    ) -> CharacterProfile:
         """Generate a complete character profile from a brief description"""
-        
+
         self.logger.info(f"Generating character profile for: {brief_description}")
         self.logger.debug(f"Genre: {genre}, Tone: {tone}")
-        
+
         prompt = f"""
         You are an expert character designer and storyteller. Create a detailed, engaging character profile based on this brief description: "{brief_description}"
         
@@ -99,41 +101,51 @@ class GeminiClient:
         
         Remember: Return ONLY the JSON object, no additional formatting or text.
         """
-        
+
         self.logger.debug(f"Generated prompt length: {len(prompt)} characters")
-        
+
         try:
             self.logger.info("Sending character generation request to Gemini API...")
             start_time = time.time()
-            
-            response = self.client.models.generate_content(model=Config.CHARACTER_GENERATION_MODEL, contents=prompt)
-            
+
+            response = self.client.models.generate_content(
+                model=Config.CHARACTER_GENERATION_MODEL, contents=prompt
+            )
+
             api_time = time.time() - start_time
             self.logger.info(f"Gemini API response received in {api_time:.2f} seconds")
             self.logger.debug(f"Response text length: {len(response.text)} characters")
-            
+
             # Log the first 200 characters of response for debugging
-            response_preview = response.text[:200] + "..." if len(response.text) > 200 else response.text
+            response_preview = (
+                response.text[:200] + "..."
+                if len(response.text) > 200
+                else response.text
+            )
             self.logger.debug(f"Response preview: {response_preview}")
-            
+
             self.logger.info("Parsing JSON response...")
             character_data = safe_json_loads(response.text, self.logger)
             self.logger.info("JSON parsing successful")
-            
+
             # Validate character data structure
             if not validate_character_data(character_data, self.logger):
                 raise ValueError("Character data validation failed")
-            
+
             # Log character data structure
-            self.logger.debug(f"Character name: {character_data.get('name', 'Unknown')}")
+            self.logger.debug(
+                f"Character name: {character_data.get('name', 'Unknown')}"
+            )
             self.logger.debug(f"Character age: {character_data.get('age', 'Unknown')}")
-            self.logger.debug(f"Character gender: {character_data.get('gender', 'Unknown')}")
-            
+            self.logger.debug(
+                f"Character gender: {character_data.get('gender', 'Unknown')}"
+            )
+
             # Create CharacterProfile object
             self.logger.info("Creating CharacterProfile object...")
             background = CharacterBackground(**character_data["background"])
             encounter = CharacterEncounter(**character_data["encounter"])
-            
+
             character = CharacterProfile(
                 name=character_data["name"],
                 age=character_data["age"],
@@ -142,29 +154,39 @@ class GeminiClient:
                 personality_summary=character_data["personality_summary"],
                 background=background,
                 encounter=encounter,
-                images=[]  # Will be populated separately
+                images=[],  # Will be populated separately
             )
-            
-            self.logger.info(f"Character profile created successfully: {character.name}")
+
+            self.logger.info(
+                f"Character profile created successfully: {character.name}"
+            )
             return character
-            
+
         except json.JSONDecodeError as e:
             self.logger.error(f"Failed to parse JSON response: {e}")
-            self.logger.error(f"Response text: {response.text if 'response' in locals() else 'No response'}")
+            self.logger.error(
+                f"Response text: {response.text if 'response' in locals() else 'No response'}"
+            )
             raise Exception(f"Failed to parse character profile JSON: {str(e)}")
         except KeyError as e:
             self.logger.error(f"Missing required field in character data: {e}")
-            self.logger.error(f"Available fields: {list(character_data.keys()) if 'character_data' in locals() else 'No data'}")
+            self.logger.error(
+                f"Available fields: {list(character_data.keys()) if 'character_data' in locals() else 'No data'}"
+            )
             raise Exception(f"Missing required field in character profile: {str(e)}")
         except Exception as e:
             self.logger.error(f"Failed to generate character profile: {str(e)}")
             raise Exception(f"Failed to generate character profile: {str(e)}")
-    
-    def generate_character_images(self, character: CharacterProfile, num_images_per_scene: int = 1) -> List[GeminiImage]:
+
+    def generate_character_images(
+        self, character: CharacterProfile, num_images_per_scene: int = 1
+    ) -> List[GeminiImage]:
         """Generate consistent character images based on the character profile"""
-        
-        self.logger.info(f"Generating {num_images_per_scene} images per scene for {character.images} scenes for character: {character.name}")
-        
+
+        self.logger.info(
+            f"Generating {num_images_per_scene} images per scene for {character.images} scenes for character: {character.name}"
+        )
+
         # Create a detailed physical description for image generation
         appearance = character.physical_appearance
         physical_desc = f"""
@@ -177,12 +199,14 @@ class GeminiClient:
         Clothing style: {appearance.get('clothing_style', 'casual')}
         Accessories: {', '.join(appearance.get('accessories', []))}
         """
-        
-        self.logger.debug(f"Physical description length: {len(physical_desc)} characters")
-        
+
+        self.logger.debug(
+            f"Physical description length: {len(physical_desc)} characters"
+        )
+
         images = []
         num_scenes = len(character.images)
-        
+
         for i, scene in enumerate(character.images):
             # Each scene requires a new image generation run.
             self.logger.info(f"Generating image {i+1}/{num_scenes}: {scene}")
@@ -200,7 +224,7 @@ class GeminiClient:
             """
 
             self.logger.debug(f"Image prompt length: {len(image_prompt)} characters")
-            
+
             # Generate image using Gemini
             start_time = time.time()
 
@@ -216,10 +240,10 @@ class GeminiClient:
                 ),
             )
             image_time = time.time() - start_time
-            
+
             # Log response for debugging
             self.logger.info(f"Image generation response: {response}")
-            
+
             # Extract image data from the response
             assert response.generated_images, "No images generated"
             assert len(response.generated_images) == 1, "Expected exactly one image"
@@ -232,15 +256,18 @@ class GeminiClient:
 
             self.logger.info(f"Image {i+1} processed in {image_time:.2f} seconds")
 
-        self.logger.info(f"Successfully generated {len(images)} images for {character.name}")
+        self.logger.info(
+            f"Successfully generated {len(images)} images for {character.name}"
+        )
         return images
 
-
-    def enhance_character_details(self, character: CharacterProfile) -> CharacterProfile:
+    def enhance_character_details(
+        self, character: CharacterProfile
+    ) -> CharacterProfile:
         """Enhance character details with additional depth and consistency"""
-        
+
         self.logger.info(f"Enhancing character details for: {character.name}")
-        
+
         prompt = f"""
         Enhance and refine this character profile to make it more engaging and consistent:
         
@@ -261,42 +288,58 @@ class GeminiClient:
         
         Remember: Return ONLY the JSON object, no additional formatting or text.
         """
-        
+
         try:
             self.logger.info("Sending character enhancement request to Gemini API...")
             start_time = time.time()
-            
-            response = self.client.models.generate_content(model=Config.CHARACTER_GENERATION_MODEL, prompt=prompt)
-            
+
+            response = self.client.models.generate_content(
+                model=Config.CHARACTER_GENERATION_MODEL, prompt=prompt
+            )
+
             api_time = time.time() - start_time
-            self.logger.info(f"Enhancement API response received in {api_time:.2f} seconds")
-            
+            self.logger.info(
+                f"Enhancement API response received in {api_time:.2f} seconds"
+            )
+
             enhancements = safe_json_loads(response.text, self.logger)
             self.logger.info("Enhancement JSON parsed successfully")
-            
+
             # Update character with enhanced details
             original_quirks_count = len(character.background.quirks)
-            character.background.quirks.extend(enhancements.get("additional_quirks", []))
-            character.background.backstory = enhancements.get("enhanced_backstory", character.background.backstory)
-            
+            character.background.quirks.extend(
+                enhancements.get("additional_quirks", [])
+            )
+            character.background.backstory = enhancements.get(
+                "enhanced_backstory", character.background.backstory
+            )
+
             # Add new fields to physical_appearance
-            character.physical_appearance.update({
-                "speech_patterns": enhancements.get("speech_patterns", ""),
-                "body_language": enhancements.get("body_language", ""),
-                "emotional_triggers": enhancements.get("emotional_triggers", []),
-                "growth_arc": enhancements.get("growth_arc", "")
-            })
-            
+            character.physical_appearance.update(
+                {
+                    "speech_patterns": enhancements.get("speech_patterns", ""),
+                    "body_language": enhancements.get("body_language", ""),
+                    "emotional_triggers": enhancements.get("emotional_triggers", []),
+                    "growth_arc": enhancements.get("growth_arc", ""),
+                }
+            )
+
             new_quirks_count = len(character.background.quirks)
-            self.logger.info(f"Character enhanced: added {new_quirks_count - original_quirks_count} new quirks")
-            self.logger.debug(f"Enhanced fields: speech_patterns, body_language, emotional_triggers, growth_arc")
-            
+            self.logger.info(
+                f"Character enhanced: added {new_quirks_count - original_quirks_count} new quirks"
+            )
+            self.logger.debug(
+                f"Enhanced fields: speech_patterns, body_language, emotional_triggers, growth_arc"
+            )
+
             return character
-            
+
         except json.JSONDecodeError as e:
             self.logger.error(f"Failed to parse enhancement JSON: {e}")
-            self.logger.error(f"Response text: {response.text if 'response' in locals() else 'No response'}")
+            self.logger.error(
+                f"Response text: {response.text if 'response' in locals() else 'No response'}"
+            )
         except Exception as e:
             self.logger.error(f"Failed to enhance character details: {str(e)}")
-        
-        return character 
+
+        return character

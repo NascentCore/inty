@@ -11,7 +11,6 @@ class GlobalErrorHandler : HttpResponseCallAdapterFactory.ErrorHandler {
     override fun onFailure(throwable: BusinessException) {
         when (throwable.code) {
             101 -> {}
-
             102 -> {}
         }
     }

@@ -9,6 +9,7 @@ python getimg_request.py
 
 Based on https://docs.getimg.ai/reference/poststablediffusionxltexttoimage
 """
+
 import os
 import requests
 from PIL import Image
@@ -21,7 +22,7 @@ url = "https://api.getimg.ai/v1/stable-diffusion-xl/text-to-image"
 headers = {
     "accept": "application/json",
     "authorization": f"Bearer {os.getenv(ENV_VAR_NAME)}",
-    "content-type": "application/json"
+    "content-type": "application/json",
 }
 data = {
     "prompt": "A beautiful sunset over mountains, movie poster art, high quality",
@@ -31,10 +32,10 @@ data = {
     "steps": 30,
     "guidance": 7.5,
     "seed": 42,
-    "output_format": "png"
+    "output_format": "png",
 }
 
 response = requests.post(url, headers=headers, json=data)
-image_base64_data = response.json()['image']
+image_base64_data = response.json()["image"]
 img = Image.open(BytesIO(base64.b64decode(image_base64_data)))
 img.show()

@@ -11,10 +11,7 @@ import java.io.IOException
 import java.io.InputStreamReader
 import java.util.Properties
 
-/**
- * ROM工具类
- * 提供ROM相关的工具方法
- */
+/** ROM工具类 提供ROM相关的工具方法 */
 object RomUtils {
 
     private val ROM_HUAWEI = arrayOf("huawei")
@@ -55,163 +52,117 @@ object RomUtils {
 
     private var romInfoBean: RomInfo? = null
 
-    /**
-     * 是否是华为设备
-     */
+    /** 是否是华为设备 */
     fun isHuawei(): Boolean {
         return ROM_HUAWEI[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是鸿蒙系统
-     */
+    /** 是否是鸿蒙系统 */
     fun isHarmonyOS(): Boolean {
         return ROM_HARMONY[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是荣耀设备
-     */
+    /** 是否是荣耀设备 */
     fun isHonor(): Boolean {
         return ROM_HONOR[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是vivo设备
-     */
+    /** 是否是vivo设备 */
     fun isVivo(): Boolean {
         return ROM_VIVO[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是小米设备
-     */
+    /** 是否是小米设备 */
     fun isXiaomi(): Boolean {
         return ROM_XIAOMI[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是OPPO设备
-     */
+    /** 是否是OPPO设备 */
     fun isOppo(): Boolean {
         return ROM_OPPO[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是乐视设备
-     */
+    /** 是否是乐视设备 */
     fun isLeeco(): Boolean {
         return ROM_LEECO[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是360设备
-     */
+    /** 是否是360设备 */
     fun is360(): Boolean {
         return ROM_360[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是中兴设备
-     */
+    /** 是否是中兴设备 */
     fun isZte(): Boolean {
         return ROM_ZTE[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是一加设备
-     */
+    /** 是否是一加设备 */
     fun isOneplus(): Boolean {
         return ROM_ONEPLUS[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是努比亚设备
-     */
+    /** 是否是努比亚设备 */
     fun isNubia(): Boolean {
         return ROM_NUBIA[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是酷派设备
-     */
+    /** 是否是酷派设备 */
     fun isCoolpad(): Boolean {
         return ROM_COOLPAD[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是LG设备
-     */
+    /** 是否是LG设备 */
     fun isLg(): Boolean {
         return ROM_LG[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是Google设备
-     */
+    /** 是否是Google设备 */
     fun isGoogle(): Boolean {
         return ROM_GOOGLE[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是三星设备
-     */
+    /** 是否是三星设备 */
     fun isSamsung(): Boolean {
         return ROM_SAMSUNG[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是魅族设备
-     */
+    /** 是否是魅族设备 */
     fun isMeizu(): Boolean {
         return ROM_MEIZU[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是联想设备
-     */
+    /** 是否是联想设备 */
     fun isLenovo(): Boolean {
         return ROM_LENOVO[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是锤子设备
-     */
+    /** 是否是锤子设备 */
     fun isSmartisan(): Boolean {
         return ROM_SMARTISAN[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是HTC设备
-     */
+    /** 是否是HTC设备 */
     fun isHtc(): Boolean {
         return ROM_HTC[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是索尼设备
-     */
+    /** 是否是索尼设备 */
     fun isSony(): Boolean {
         return ROM_SONY[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是金立设备
-     */
+    /** 是否是金立设备 */
     fun isGionee(): Boolean {
         return ROM_GIONEE[0] == getRomInfo().name
     }
 
-    /**
-     * 是否是摩托罗拉设备
-     */
+    /** 是否是摩托罗拉设备 */
     fun isMotorola(): Boolean {
         return ROM_MOTOROLA[0] == getRomInfo().name
     }
 
-    /**
-     * 获取ROM信息
-     */
+    /** 获取ROM信息 */
     fun getRomInfo(): RomInfo {
         if (romInfoBean != null) return romInfoBean!!
 
@@ -227,111 +178,89 @@ object RomUtils {
                 romInfoBean!!.version = if (temp.size > 1) temp[1] else version
                 return romInfoBean!!
             }
-
             checkIsHarmonyOs() -> {
                 romInfoBean!!.name = ROM_HARMONY[0]
                 romInfoBean!!.version = getRomVersion(VERSION_PROPERTY_HARMONY)
                 return romInfoBean!!
             }
-
             isRightRom(brand, manufacturer, *ROM_HONOR) -> {
                 romInfoBean!!.name = ROM_HONOR[0]
                 romInfoBean!!.version = getRomVersion(VERSION_PROPERTY_HONOR)
                 return romInfoBean!!
             }
-
             isRightRom(brand, manufacturer, *ROM_VIVO) -> {
                 romInfoBean!!.name = ROM_VIVO[0]
                 romInfoBean!!.version = getRomVersion(VERSION_PROPERTY_VIVO)
                 return romInfoBean!!
             }
-
             isRightRom(brand, manufacturer, *ROM_XIAOMI) -> {
                 romInfoBean!!.name = ROM_XIAOMI[0]
                 romInfoBean!!.version = getRomVersion(VERSION_PROPERTY_XIAOMI)
                 return romInfoBean!!
             }
-
             isRightRom(brand, manufacturer, *ROM_OPPO) -> {
                 romInfoBean!!.name = ROM_OPPO[0]
                 romInfoBean!!.version = getRomVersion(VERSION_PROPERTY_OPPO)
                 return romInfoBean!!
             }
-
             isRightRom(brand, manufacturer, *ROM_LEECO) -> {
                 romInfoBean!!.name = ROM_LEECO[0]
                 romInfoBean!!.version = getRomVersion(VERSION_PROPERTY_LEECO)
                 return romInfoBean!!
             }
-
             isRightRom(brand, manufacturer, *ROM_360) -> {
                 romInfoBean!!.name = ROM_360[0]
                 romInfoBean!!.version = getRomVersion(VERSION_PROPERTY_360)
                 return romInfoBean!!
             }
-
             isRightRom(brand, manufacturer, *ROM_ZTE) -> {
                 romInfoBean!!.name = ROM_ZTE[0]
                 romInfoBean!!.version = getRomVersion(VERSION_PROPERTY_ZTE)
                 return romInfoBean!!
             }
-
             isRightRom(brand, manufacturer, *ROM_ONEPLUS) -> {
                 romInfoBean!!.name = ROM_ONEPLUS[0]
                 romInfoBean!!.version = getRomVersion(VERSION_PROPERTY_ONEPLUS)
                 return romInfoBean!!
             }
-
             isRightRom(brand, manufacturer, *ROM_NUBIA) -> {
                 romInfoBean!!.name = ROM_NUBIA[0]
                 romInfoBean!!.version = getRomVersion(VERSION_PROPERTY_NUBIA)
                 return romInfoBean!!
             }
-
             isRightRom(brand, manufacturer, *ROM_COOLPAD) -> {
                 romInfoBean!!.name = ROM_COOLPAD[0]
             }
-
             isRightRom(brand, manufacturer, *ROM_LG) -> {
                 romInfoBean!!.name = ROM_LG[0]
             }
-
             isRightRom(brand, manufacturer, *ROM_GOOGLE) -> {
                 romInfoBean!!.name = ROM_GOOGLE[0]
             }
-
             isRightRom(brand, manufacturer, *ROM_SAMSUNG) -> {
                 romInfoBean!!.name = ROM_SAMSUNG[0]
             }
-
             isRightRom(brand, manufacturer, *ROM_MEIZU) -> {
                 romInfoBean!!.name = ROM_MEIZU[0]
             }
-
             isRightRom(brand, manufacturer, *ROM_LENOVO) -> {
                 romInfoBean!!.name = ROM_LENOVO[0]
             }
-
             isRightRom(brand, manufacturer, *ROM_SMARTISAN) -> {
                 romInfoBean!!.name = ROM_SMARTISAN[0]
             }
-
             isRightRom(brand, manufacturer, *ROM_HTC) -> {
                 romInfoBean!!.name = ROM_HTC[0]
             }
-
             isRightRom(brand, manufacturer, *ROM_SONY) -> {
                 romInfoBean!!.name = ROM_SONY[0]
             }
-
             isRightRom(brand, manufacturer, *ROM_GIONEE) -> {
                 romInfoBean!!.name = ROM_GIONEE[0]
             }
-
             isRightRom(brand, manufacturer, *ROM_MOTOROLA) -> {
                 romInfoBean!!.name = ROM_MOTOROLA[0]
             }
-
             else -> {
                 romInfoBean!!.name = manufacturer
             }
@@ -350,9 +279,7 @@ object RomUtils {
         return false
     }
 
-    /**
-     * 检查是否为鸿蒙系统
-     */
+    /** 检查是否为鸿蒙系统 */
     private fun checkIsHarmonyOs(): Boolean {
         return try {
             val buildExClass = Class.forName("com.huawei.system.BuildEx")
@@ -478,85 +405,60 @@ object RomUtils {
         }
     }
 
-    /**
-     * ROM信息数据类
-     */
-    data class RomInfo(
-        var name: String = "",
-        var version: String = ""
-    ) {
+    /** ROM信息数据类 */
+    data class RomInfo(var name: String = "", var version: String = "") {
         override fun toString(): String {
             return "RomInfo{name=$name, version=$version}"
         }
     }
 
     // 保留原有的便捷方法，保持向后兼容
-    /**
-     * 获取ROM名称
-     */
+    /** 获取ROM名称 */
     fun getRomName(): String {
         return getRomInfo().name
     }
 
-    /**
-     * 获取ROM版本
-     */
+    /** 获取ROM版本 */
     fun getRomVersion(): String {
         return getRomInfo().version
     }
 
-    /**
-     * 检查是否为MIUI
-     */
+    /** 检查是否为MIUI */
     fun isMIUI(): Boolean {
         return isXiaomi()
     }
 
-    /**
-     * 检查是否为EMUI
-     */
+    /** 检查是否为EMUI */
     fun isEMUI(): Boolean {
         return isHuawei()
     }
 
-    /**
-     * 检查是否为ColorOS
-     */
+    /** 检查是否为ColorOS */
     fun isColorOS(): Boolean {
         return isOppo()
     }
 
-    /**
-     * 检查是否为FuntouchOS
-     */
+    /** 检查是否为FuntouchOS */
     fun isFuntouchOS(): Boolean {
         return isVivo()
     }
 
-    /**
-     * 检查是否为Flyme
-     */
+    /** 检查是否为Flyme */
     fun isFlyme(): Boolean {
         return isMeizu()
     }
 
-    /**
-     * 检查是否为SmartisanOS
-     */
+    /** 检查是否为SmartisanOS */
     fun isSmartisanOS(): Boolean {
         return isSmartisan()
     }
 
-    /**
-     * 检查是否为OneUI
-     */
+    /** 检查是否为OneUI */
     fun isOneUI(): Boolean {
         return isSamsung()
     }
 
-    /**
-     * 检查是否为AOSP
-     */
+    /** 检查是否为AOSP */
     fun isAOSP(): Boolean {
         return isGoogle()
     }

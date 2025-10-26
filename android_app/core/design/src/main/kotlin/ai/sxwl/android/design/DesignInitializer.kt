@@ -3,11 +3,7 @@ package ai.sxwl.android.design
 import android.content.Context
 import androidx.startup.Initializer
 
-/**
- * Design模块初始化器
- * 负责初始化图片加载库等设计相关组件
- * 使用androidx.startup.Initializer实现自动初始化
- */
+/** Design模块初始化器 负责初始化图片加载库等设计相关组件 使用androidx.startup.Initializer实现自动初始化 */
 class DesignInitializer : Initializer<Unit> {
 
     override fun create(context: Context) {

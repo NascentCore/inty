@@ -20,6 +20,7 @@ import java.lang.ref.WeakReference
  * 5. 优雅降级：在异常情况下提供兜底方案
  *
  * 使用示例：
+ *
  * ```kotlin
  * // 短时间显示
  * ToastUtils.showShort("操作成功")
@@ -39,8 +40,7 @@ object ToastUtils {
     private const val MIN_INTERVAL = 1000L
 
     // 上次显示Toast的时间戳（使用volatile确保线程安全）
-    @Volatile
-    private var lastShowTime = 0L
+    @Volatile private var lastShowTime = 0L
 
     // 主线程Handler，用于线程安全
     private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
@@ -108,9 +108,7 @@ object ToastUtils {
         showLargeTextToast(getString(messageResId), Toast.LENGTH_LONG)
     }
 
-    /**
-     * 取消当前显示的Toast
-     */
+    /** 取消当前显示的Toast */
     @JvmStatic
     fun cancel() {
         currentToast?.get()?.cancel()
@@ -138,15 +136,11 @@ object ToastUtils {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             showToastInternal(message, duration)
         } else {
-            mainHandler.post {
-                showToastInternal(message, duration)
-            }
+            mainHandler.post { showToastInternal(message, duration) }
         }
     }
 
-    /**
-     * 内部显示方法
-     */
+    /** 内部显示方法 */
     private fun showToastInternal(message: String, duration: Int) {
         try {
             // 取消之前的Toast
@@ -170,7 +164,6 @@ object ToastUtils {
             // 保存引用和时间戳
             currentToast = WeakReference(toast)
             lastShowTime = System.currentTimeMillis()
-
         } catch (e: SecurityException) {
             // 权限异常，记录日志但不降级
             Log.e(TAG, "Toast显示权限异常: $message", e)
@@ -185,9 +178,7 @@ object ToastUtils {
         }
     }
 
-    /**
-     * 显示长文本Toast（自定义布局）
-     */
+    /** 显示长文本Toast（自定义布局） */
     private fun showLargeTextToast(message: String, duration: Int) {
         if (message.isBlank()) {
             return
@@ -203,15 +194,11 @@ object ToastUtils {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             showLargeTextToastInternal(message, duration)
         } else {
-            mainHandler.post {
-                showLargeTextToastInternal(message, duration)
-            }
+            mainHandler.post { showLargeTextToastInternal(message, duration) }
         }
     }
 
-    /**
-     * 内部长文本显示方法
-     */
+    /** 内部长文本显示方法 */
     private fun showLargeTextToastInternal(message: String, duration: Int) {
         try {
             // 取消之前的Toast
@@ -236,7 +223,6 @@ object ToastUtils {
             // 保存引用和时间戳
             currentToast = WeakReference(toast)
             lastShowTime = System.currentTimeMillis()
-
         } catch (e: SecurityException) {
             // 权限异常，记录日志但不降级
             Log.e(TAG, "长文本Toast显示权限异常: $message", e)
@@ -251,9 +237,7 @@ object ToastUtils {
         }
     }
 
-    /**
-     * 兜底Toast方法
-     */
+    /** 兜底Toast方法 */
     private fun fallbackToast(message: String, duration: Int) {
         try {
             val context = Utils.getApp()
@@ -284,9 +268,7 @@ object ToastUtils {
         }
     }
 
-    /**
-     * 获取字符串资源
-     */
+    /** 获取字符串资源 */
     private fun getString(@StringRes resId: Int): String {
         return try {
             val context = Utils.getApp()
@@ -301,13 +283,12 @@ object ToastUtils {
         }
     }
 
-    /**
-     * 获取应用Context
-     */
+    /** 获取应用Context */
     private val context: Context?
-        get() = try {
-            Utils.getApp()
-        } catch (e: Exception) {
-            null
-        }
+        get() =
+            try {
+                Utils.getApp()
+            } catch (e: Exception) {
+                null
+            }
 }

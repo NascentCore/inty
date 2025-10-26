@@ -26,7 +26,9 @@ def generate():
         types.Content(
             role="user",
             parts=[
-                types.Part.from_text(text="""(My hand slides to the nape of your neck, my thumb caressing your skin.) \"And what, pray tell, would you consider a worthy pursuit, my enigmatic one?\" (My eyes sparkle with playful challenge.) \"Something more... tactile?\""""),
+                types.Part.from_text(
+                    text="""(My hand slides to the nape of your neck, my thumb caressing your skin.) \"And what, pray tell, would you consider a worthy pursuit, my enigmatic one?\" (My eyes sparkle with playful challenge.) \"Something more... tactile?\""""
+                ),
             ],
         ),
     ]
@@ -37,9 +39,7 @@ def generate():
         ],
         speech_config=types.SpeechConfig(
             voice_config=types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                    voice_name="Zephyr"
-                )
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Zephyr")
             )
         ),
     )
@@ -56,7 +56,10 @@ def generate():
             or chunk.candidates[0].content.parts is None
         ):
             continue
-        if chunk.candidates[0].content.parts[0].inline_data and chunk.candidates[0].content.parts[0].inline_data.data:
+        if (
+            chunk.candidates[0].content.parts[0].inline_data
+            and chunk.candidates[0].content.parts[0].inline_data.data
+        ):
             file_name = f"ENTER_FILE_NAME_{file_index}"
             file_index += 1
             inline_data = chunk.candidates[0].content.parts[0].inline_data
@@ -68,6 +71,7 @@ def generate():
             save_binary_file(f"{file_name}{file_extension}", data_buffer)
         else:
             print(chunk.text)
+
 
 def convert_to_wav(audio_data: bytes, mime_type: str) -> bytes:
     """Generates a WAV file header for the given audio data and parameters.
@@ -93,21 +97,22 @@ def convert_to_wav(audio_data: bytes, mime_type: str) -> bytes:
 
     header = struct.pack(
         "<4sI4s4sIHHIIHH4sI",
-        b"RIFF",          # ChunkID
-        chunk_size,       # ChunkSize (total file size - 8 bytes)
-        b"WAVE",          # Format
-        b"fmt ",          # Subchunk1ID
-        16,               # Subchunk1Size (16 for PCM)
-        1,                # AudioFormat (1 for PCM)
-        num_channels,     # NumChannels
-        sample_rate,      # SampleRate
-        byte_rate,        # ByteRate
-        block_align,      # BlockAlign
+        b"RIFF",  # ChunkID
+        chunk_size,  # ChunkSize (total file size - 8 bytes)
+        b"WAVE",  # Format
+        b"fmt ",  # Subchunk1ID
+        16,  # Subchunk1Size (16 for PCM)
+        1,  # AudioFormat (1 for PCM)
+        num_channels,  # NumChannels
+        sample_rate,  # SampleRate
+        byte_rate,  # ByteRate
+        block_align,  # BlockAlign
         bits_per_sample,  # BitsPerSample
-        b"data",          # Subchunk2ID
-        data_size         # Subchunk2Size (size of audio data)
+        b"data",  # Subchunk2ID
+        data_size,  # Subchunk2Size (size of audio data)
     )
     return header + audio_data
+
 
 def parse_audio_mime_type(mime_type: str) -> dict[str, int | None]:
     """Parses bits per sample and rate from an audio MIME type string.
@@ -126,7 +131,7 @@ def parse_audio_mime_type(mime_type: str) -> dict[str, int | None]:
 
     # Extract rate from parameters
     parts = mime_type.split(";")
-    for param in parts: # Skip the main type part
+    for param in parts:  # Skip the main type part
         param = param.strip()
         if param.lower().startswith("rate="):
             try:
@@ -134,12 +139,12 @@ def parse_audio_mime_type(mime_type: str) -> dict[str, int | None]:
                 rate = int(rate_str)
             except (ValueError, IndexError):
                 # Handle cases like "rate=" with no value or non-integer value
-                pass # Keep rate as default
+                pass  # Keep rate as default
         elif param.startswith("audio/L"):
             try:
                 bits_per_sample = int(param.split("L", 1)[1])
             except (ValueError, IndexError):
-                pass # Keep bits_per_sample as default if conversion fails
+                pass  # Keep bits_per_sample as default if conversion fails
 
     return {"bits_per_sample": bits_per_sample, "rate": rate}
 

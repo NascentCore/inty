@@ -31,119 +31,85 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
-/**
- * 骨架屏基础组件
- */
+/** 骨架屏基础组件 */
 @Composable
-fun ShimmerBox(
-    modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(4.dp)
-) {
+fun ShimmerBox(modifier: Modifier = Modifier, shape: Shape = RoundedCornerShape(4.dp)) {
     val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnim by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmer"
-    )
+    val translateAnim by
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1000f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(durationMillis = 1200, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart
+                ),
+            label = "shimmer"
+        )
 
-    val shimmerColors = listOf(
-        Color.LightGray.copy(alpha = 0.6f),
-        Color.LightGray.copy(alpha = 0.2f),
-        Color.LightGray.copy(alpha = 0.6f),
-    )
+    val shimmerColors =
+        listOf(
+            Color.LightGray.copy(alpha = 0.6f),
+            Color.LightGray.copy(alpha = 0.2f),
+            Color.LightGray.copy(alpha = 0.6f),
+        )
 
-    val brush = Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset.Zero,
-        end = Offset(x = translateAnim, y = translateAnim)
-    )
+    val brush =
+        Brush.linearGradient(
+            colors = shimmerColors,
+            start = Offset.Zero,
+            end = Offset(x = translateAnim, y = translateAnim)
+        )
 
-    Box(
-        modifier = modifier
-            .clip(shape)
-            .background(brush)
-    )
+    Box(modifier = modifier.clip(shape).background(brush))
 }
 
-/**
- * Agent卡片骨架屏
- */
+/** Agent卡片骨架屏 */
 @Composable
-fun AgentCardShimmer(
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF2A2A2A))
-    ) {
+fun AgentCardShimmer(modifier: Modifier = Modifier) {
+    Box(modifier = modifier.clip(RoundedCornerShape(12.dp)).background(Color(0xFF2A2A2A))) {
         // 模拟背景图片的骨架屏
-        ShimmerBox(
-            modifier = Modifier.matchParentSize(),
-            shape = RoundedCornerShape(12.dp)
-        )
+        ShimmerBox(modifier = Modifier.matchParentSize(), shape = RoundedCornerShape(12.dp))
 
         // 模拟渐变遮罩
         Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.3f),
-                            Color.Black.copy(alpha = 0.7f)
-                        )
+            modifier =
+                Modifier.matchParentSize()
+                    .background(
+                        brush =
+                            Brush.verticalGradient(
+                                colors =
+                                    listOf(
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.3f),
+                                        Color.Black.copy(alpha = 0.7f)
+                                    )
+                            )
                     )
-                )
         )
 
         // 内容区域 - 底部对齐
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-                .align(Alignment.BottomStart)
-        ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(12.dp).align(Alignment.BottomStart)) {
             // Agent名称和关注按钮
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // 名称
-                ShimmerBox(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(16.dp)
-                )
+                ShimmerBox(modifier = Modifier.weight(1f).height(16.dp))
 
                 Spacer(modifier = Modifier.width(8.dp))
 
                 // 关注按钮
-                ShimmerBox(
-                    modifier = Modifier.size(32.dp),
-                    shape = CircleShape
-                )
+                ShimmerBox(modifier = Modifier.size(32.dp), shape = CircleShape)
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
             // Agent描述
-            ShimmerBox(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(12.dp)
-            )
+            ShimmerBox(modifier = Modifier.fillMaxWidth().height(12.dp))
             Spacer(modifier = Modifier.height(4.dp))
-            ShimmerBox(
-                modifier = Modifier
-                    .width(200.dp)
-                    .height(12.dp)
-            )
+            ShimmerBox(modifier = Modifier.width(200.dp).height(12.dp))
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -152,73 +118,40 @@ fun AgentCardShimmer(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ShimmerBox(
-                    modifier = Modifier
-                        .width(60.dp)
-                        .height(10.dp)
-                )
+                ShimmerBox(modifier = Modifier.width(60.dp).height(10.dp))
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                ShimmerBox(
-                    modifier = Modifier
-                        .width(60.dp)
-                        .height(10.dp)
-                )
+                ShimmerBox(modifier = Modifier.width(60.dp).height(10.dp))
             }
         }
     }
 }
 
-/**
- * Agent头像卡片骨架屏
- */
+/** Agent头像卡片骨架屏 */
 @Composable
-fun AgentAvatarCardShimmer(
-    modifier: Modifier = Modifier
-) {
-    ShimmerBox(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-    )
+fun AgentAvatarCardShimmer(modifier: Modifier = Modifier) {
+    ShimmerBox(modifier = modifier.clip(RoundedCornerShape(12.dp)))
 }
 
-/**
- * Agents页面骨架屏
- */
+/** Agents页面骨架屏 */
 @Composable
-fun AgentsScreenShimmer(
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-    ) {
+fun AgentsScreenShimmer(modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxWidth()) {
 
         // 主卡片区域 - 使用weight(1f)占满剩余空间
         AgentCardShimmer(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(horizontal = 24.dp, vertical = 16.dp)
+            modifier =
+                Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp, vertical = 16.dp)
         )
 
         // 头像轮播区域
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(112.dp)
-                .padding(horizontal = 16.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxWidth().height(112.dp).padding(horizontal = 16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                repeat(5) { index ->
-                    AgentAvatarCardShimmer(
-                        modifier = Modifier.size(88.dp)
-                    )
-                }
+                repeat(5) { index -> AgentAvatarCardShimmer(modifier = Modifier.size(88.dp)) }
             }
         }
 

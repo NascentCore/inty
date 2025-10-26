@@ -1,5 +1,21 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Card, Input, Button, List, Typography, Space, Tag, message, Tooltip } from "antd";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  Card,
+  Input,
+  Button,
+  List,
+  Typography,
+  Space,
+  Tag,
+  message,
+  Tooltip,
+} from "antd";
 import { SendOutlined, BgColorsOutlined, KeyOutlined } from "@ant-design/icons";
 import type { Emotion } from "../services/gemini";
 import { generateReplyWithEmotion, EMOTIONS } from "../services/gemini";
@@ -30,11 +46,16 @@ export const Live2DEmotionChatDemo: React.FC = () => {
   }, []);
 
   const backgroundEmotion: Emotion = useMemo(() => {
-    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant" && m.emotion);
+    const lastAssistant = [...messages]
+      .reverse()
+      .find((m) => m.role === "assistant" && m.emotion);
     return (lastAssistant?.emotion as Emotion) || "Neutral";
   }, [messages]);
 
-  const bgUrl = useMemo(() => getEmotionBackgroundUrl(backgroundEmotion), [backgroundEmotion]);
+  const bgUrl = useMemo(
+    () => getEmotionBackgroundUrl(backgroundEmotion),
+    [backgroundEmotion],
+  );
 
   const saveApiKey = useCallback(() => {
     const k = apiKey.trim();
@@ -159,15 +180,24 @@ export const Live2DEmotionChatDemo: React.FC = () => {
                       style={{
                         maxWidth: "70%",
                         marginLeft: m.role === "assistant" ? 0 : "auto",
-                        background: m.role === "assistant" ? "rgba(255,255,255,0.95)" : "rgba(24,144,255,0.9)",
+                        background:
+                          m.role === "assistant"
+                            ? "rgba(255,255,255,0.95)"
+                            : "rgba(24,144,255,0.9)",
                         color: m.role === "assistant" ? "#000" : "#fff",
                         padding: "12px 16px",
                         borderRadius: 18,
-                        border: m.role === "assistant" ? "1px solid #f0f0f0" : "none",
+                        border:
+                          m.role === "assistant" ? "1px solid #f0f0f0" : "none",
                         boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
                       }}
                     >
-                      <Paragraph style={{ margin: 0, color: m.role === "assistant" ? undefined : "#fff" }}>
+                      <Paragraph
+                        style={{
+                          margin: 0,
+                          color: m.role === "assistant" ? undefined : "#fff",
+                        }}
+                      >
                         {m.content}
                       </Paragraph>
                       {m.role === "assistant" && m.emotion && (
@@ -181,7 +211,13 @@ export const Live2DEmotionChatDemo: React.FC = () => {
               />
             </div>
 
-            <div style={{ padding: 12, background: "rgba(255,255,255,0.9)", borderTop: "1px solid #f0f0f0" }}>
+            <div
+              style={{
+                padding: 12,
+                background: "rgba(255,255,255,0.9)",
+                borderTop: "1px solid #f0f0f0",
+              }}
+            >
               <Space.Compact style={{ width: "100%" }}>
                 <TextArea
                   ref={inputRef}
@@ -191,7 +227,13 @@ export const Live2DEmotionChatDemo: React.FC = () => {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
                 />
-                <Button type="primary" icon={<SendOutlined />} loading={sending} onClick={handleSend} disabled={!input.trim()}>
+                <Button
+                  type="primary"
+                  icon={<SendOutlined />}
+                  loading={sending}
+                  onClick={handleSend}
+                  disabled={!input.trim()}
+                >
                   发送
                 </Button>
               </Space.Compact>

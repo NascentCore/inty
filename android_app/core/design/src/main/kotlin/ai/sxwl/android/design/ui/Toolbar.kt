@@ -52,18 +52,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 
-/**
- * 简单封装的compose的topAppBar
- */
+/** 简单封装的compose的topAppBar */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeartTopAppBar(
-    modifier: Modifier = Modifier,//修饰符
-    title: String = "",//标题
-    @DrawableRes navIcon: Int? = R.drawable.ic_arrow_back,//导航图标
+    modifier: Modifier = Modifier, // 修饰符
+    title: String = "", // 标题
+    @DrawableRes navIcon: Int? = R.drawable.ic_arrow_back, // 导航图标
     @DrawableRes moreIcon: Int? = null,
-    onClickMore: () -> Unit = {},//点击设置按钮
-    onBack: () -> Unit = {},//返回按钮的事件
+    onClickMore: () -> Unit = {}, // 点击设置按钮
+    onBack: () -> Unit = {}, // 返回按钮的事件
 ) {
     TopAppBar(
         title = {
@@ -80,7 +78,6 @@ fun HeartTopAppBar(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
-
             }
         },
         modifier = modifier,
@@ -110,43 +107,36 @@ fun HeartTopAppBar(
     )
 }
 
-/**
- * 效果预览
- */
+/** 效果预览 */
 @Preview
 @Composable
 private fun 预览普通封装的状态栏() {
     Column(modifier = Modifier.fillMaxWidth()) {
-        HeartTopAppBar(title = "IntelliMate") { }
+        HeartTopAppBar(title = "IntelliMate") {}
         Spacer(Modifier.height(8.dp))
-        HeartTopAppBar(title = "", navIcon = null, moreIcon = R.drawable.ic_settings) { }
+        HeartTopAppBar(title = "", navIcon = null, moreIcon = R.drawable.ic_settings) {}
         HeartTopAppBar(
             title = "",
             navIcon = R.drawable.ic_arrow_back,
             moreIcon = R.drawable.ic_more
-        ) { }
+        ) {}
     }
 }
 
-/**
- * 简单封装的compose的topAppBar
- */
+/** 简单封装的compose的topAppBar */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeartStarTopAppBar(
-    modifier: Modifier = Modifier,//修饰符
-    title: String = "",//标题
+    modifier: Modifier = Modifier, // 修饰符
+    title: String = "", // 标题
 ) {
     TopAppBar(
         title = {
             Text(
-                text = buildAnnotatedString {
-                    withStyle(
-                        style = SpanStyle(brush = primaryBtnBrush)
-                    ) {
-                        append(title)
-                    }
-                },
+                text =
+                    buildAnnotatedString {
+                        withStyle(style = SpanStyle(brush = primaryBtnBrush)) { append(title) }
+                    },
                 fontSize = 24.sp,
                 lineHeight = 28.sp,
                 fontWeight = FontWeight.Black
@@ -157,49 +147,41 @@ fun HeartStarTopAppBar(
     )
 }
 
-/**
- * 效果预览
- */
+/** 效果预览 */
 @Preview
 @Composable
 private fun 预览star标题的状态栏() {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        HeartStarTopAppBar(title = "✨Popular")
-    }
+    Column(modifier = Modifier.fillMaxWidth()) { HeartStarTopAppBar(title = "✨Popular") }
 }
 
-/**
- * 与Ai聊天顶部的标题栏
- */
+/** 与Ai聊天顶部的标题栏 */
 data class HeartChatTopAppBarData(
-    val avatarUrl: String? = "",//头像的url
-    val nickName: String? = "",//昵称
-    val hasFollowed: Boolean = false,//是否已经关注
+    val avatarUrl: String? = "", // 头像的url
+    val nickName: String? = "", // 昵称
+    val hasFollowed: Boolean = false, // 是否已经关注
 )
 
-/**
- * 和ai聊天顶部的标题栏
- */
+/** 和ai聊天顶部的标题栏 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeartChatTopAppBar(
     modifier: Modifier = Modifier,
-    showBack: Boolean = false,//是否显示返回按钮
-    onBack: () -> Unit = {},//点击返回
-    chatTopData: HeartChatTopAppBarData,//相关数据
-    onBarClick: () -> Unit = {},//点击用户头像昵称区域
-    onAddClick: () -> Unit = {},//点击加号
-    onMenuClick: () -> Unit = {},//点击右侧菜单
+    showBack: Boolean = false, // 是否显示返回按钮
+    onBack: () -> Unit = {}, // 点击返回
+    chatTopData: HeartChatTopAppBarData, // 相关数据
+    onBarClick: () -> Unit = {}, // 点击用户头像昵称区域
+    onAddClick: () -> Unit = {}, // 点击加号
+    onMenuClick: () -> Unit = {}, // 点击右侧菜单
 ) {
     TopAppBar(
         title = {
             Row(
-                modifier = Modifier
-                    .height(40.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(color = Color.Black.copy(.4f))
-                    .clickable(onClick = onBarClick)
-                    .padding(horizontal = 2.dp),
+                modifier =
+                    Modifier.height(40.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(color = Color.Black.copy(.4f))
+                        .clickable(onClick = onBarClick)
+                        .padding(horizontal = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -207,9 +189,7 @@ fun HeartChatTopAppBar(
                 AsyncImage(
                     model = avatar,
                     contentDescription = "avatar",
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape),
+                    modifier = Modifier.size(36.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
 
@@ -258,18 +238,17 @@ fun HeartChatTopAppBar(
                     )
                 }
             }
-
         },
         actions = {
             Box(
-                modifier = Modifier
-                    .size(48.dp, 32.dp)
-                    .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
-                    .background(
-                        Color.Black.copy(.4f),
-                        shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
-                    )
-                    .clickable(onClick = onMenuClick),
+                modifier =
+                    Modifier.size(48.dp, 32.dp)
+                        .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
+                        .background(
+                            Color.Black.copy(.4f),
+                            shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+                        )
+                        .clickable(onClick = onMenuClick),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -293,9 +272,7 @@ private fun 预览聊天顶部标题栏() {
     )
 }
 
-/**
- * 带Tab的顶部工具栏
- */
+/** 带Tab的顶部工具栏 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeartTabTopAppBar(
@@ -315,11 +292,8 @@ fun HeartTabTopAppBar(
                     // 使用自定义的indicator，跟随tab移动
                     if (tabPositions.isNotEmpty()) {
                         Box(
-                            modifier = Modifier
-                                .offset(
-                                    x = tabPositions[selectedTabIndex].left,
-                                    y = 0.dp
-                                ),
+                            modifier =
+                                Modifier.offset(x = tabPositions[selectedTabIndex].left, y = 0.dp),
                             contentAlignment = Alignment.BottomStart
                         ) {
                             Image(
@@ -341,13 +315,12 @@ fun HeartTabTopAppBar(
                             if (selectedTabIndex == index) {
                                 // 选中状态使用渐变色文字
                                 Text(
-                                    text = buildAnnotatedString {
-                                        withStyle(
-                                            style = SpanStyle(brush = primaryBtnBrush)
-                                        ) {
-                                            append(tabTitle)
-                                        }
-                                    },
+                                    text =
+                                        buildAnnotatedString {
+                                            withStyle(style = SpanStyle(brush = primaryBtnBrush)) {
+                                                append(tabTitle)
+                                            }
+                                        },
                                     fontSize = 20.sp,
                                     lineHeight = 28.sp,
                                     fontWeight = FontWeight.SemiBold,
@@ -397,11 +370,10 @@ private fun 预览TabLayout() {
     }
 }
 
-
 @Preview
 @Composable
 fun HeartTopAppBarBackground(modifier: Modifier = Modifier) {
-    //背景图
+    // 背景图
     Image(
         painter = painterResource(R.drawable.img_profile_bg_top),
         contentDescription = "",

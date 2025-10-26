@@ -10,13 +10,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
-
 /** 订阅管理页面 */
 class SubsManageActivity : BaseActivity() {
 
     companion object {
         /**
          * 启动订阅管理页面
+         *
          * @param context 上下文context
          */
         fun launch(context: Context) {
@@ -29,10 +29,7 @@ class SubsManageActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
-        SubsManageContent(
-            onBack = { finish() },
-            viewModel = viewModel
-        )
+        SubsManageContent(onBack = { finish() }, viewModel = viewModel)
     }
 }
 
@@ -40,9 +37,7 @@ class SubsManageActivity : BaseActivity() {
 @Composable
 private fun SubsManageContent(onBack: () -> Unit, viewModel: SubsManageViewModel) {
     SubscriptionManagementScreen(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(HeartColor.primaryColor),
+        modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor),
         onBack = onBack,
         viewModel = viewModel,
     )

@@ -7,18 +7,17 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.perf.FirebasePerformance
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Firebase管理器
- * 负责Firebase Analytics、Crashlytics和Performance的初始化和使用
+ * Firebase管理器 负责Firebase Analytics、Crashlytics和Performance的初始化和使用
  *
  * 特性：
  * - 线程安全的单例模式
@@ -33,14 +32,11 @@ object FirebaseManager {
     private val isInitialized = AtomicBoolean(false)
 
     // 缓存 Firebase 实例，避免重复获取
-    @Volatile
-    private var analytics: FirebaseAnalytics? = null
+    @Volatile private var analytics: FirebaseAnalytics? = null
 
-    @Volatile
-    private var crashlytics: FirebaseCrashlytics? = null
+    @Volatile private var crashlytics: FirebaseCrashlytics? = null
 
-    @Volatile
-    private var performance: FirebasePerformance? = null
+    @Volatile private var performance: FirebasePerformance? = null
 
     // 使用SupervisorJob确保子协程异常不影响其他协程
     private val firebaseScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -55,28 +51,27 @@ object FirebaseManager {
     )
 
     @Volatile
-    private var config: Config = Config(
-        analyticsEnabled = true,
-        crashlyticsEnabled = true,
-        performanceEnabled = true,
-        // 低价值事件默认加入采样
-        samplingRates = mapOf(
-            "user_interaction" to 0.1,
-            "message_sent" to 0.5,
-            // 保留高价值 100%：失败/401/最终失败/页面
-        ),
-        minIntervalMsPerEvent = mapOf("user_interaction" to 5_000L, "message_sent" to 1_000L),
-    )
+    private var config: Config =
+        Config(
+            analyticsEnabled = true,
+            crashlyticsEnabled = true,
+            performanceEnabled = true,
+            // 低价值事件默认加入采样
+            samplingRates =
+                mapOf(
+                    "user_interaction" to 0.1,
+                    "message_sent" to 0.5,
+                    // 保留高价值 100%：失败/401/最终失败/页面
+                ),
+            minIntervalMsPerEvent = mapOf("user_interaction" to 5_000L, "message_sent" to 1_000L),
+        )
 
     // 错误统计，避免重复错误日志
     private val errorCounts = ConcurrentHashMap<String, Int>()
     private val maxErrorLogs = 5 // 每种错误最多记录5次
     private val lastEventTimes = ConcurrentHashMap<String, Long>()
 
-    /**
-     * 初始化Firebase服务
-     * 线程安全，支持重复调用
-     */
+    /** 初始化Firebase服务 线程安全，支持重复调用 */
     fun initialize(context: Context) {
         if (isInitialized.get()) {
             LogUtils.i("FirebaseManager - 已经初始化，跳过重复初始化")
@@ -138,10 +133,7 @@ object FirebaseManager {
         return performance
     }
 
-    /**
-     * 安全地记录事件到 Analytics
-     * 使用SupervisorJob确保异常不会影响其他操作
-     */
+    /** 安全地记录事件到 Analytics 使用SupervisorJob确保异常不会影响其他操作 */
     fun logEvent(eventName: String, parameters: Map<String, Any> = emptyMap()) {
         if (!shouldLogEvent(eventName)) return
 
@@ -162,10 +154,7 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 安全地记录页面访问
-     * 使用SupervisorJob确保异常隔离
-     */
+    /** 安全地记录页面访问 使用SupervisorJob确保异常隔离 */
     fun logScreenView(
         screenName: String,
         screenClass: String,
@@ -176,11 +165,12 @@ object FirebaseManager {
 
             firebaseScope.launch {
                 try {
-                    val bundle = Bundle().apply {
-                        putString(FirebaseAnalytics.Param.SCREEN_NAME, screenName)
-                        putString(FirebaseAnalytics.Param.SCREEN_CLASS, screenClass)
-                        putParamsToBundle(this, additionalParams)
-                    }
+                    val bundle =
+                        Bundle().apply {
+                            putString(FirebaseAnalytics.Param.SCREEN_NAME, screenName)
+                            putString(FirebaseAnalytics.Param.SCREEN_CLASS, screenClass)
+                            putParamsToBundle(this, additionalParams)
+                        }
                     analytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
                 } catch (e: Exception) {
                     logError("logScreenView", "Failed to log screen view: ${e.message}")
@@ -191,10 +181,7 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 安全地设置用户属性
-     * 使用SupervisorJob确保异常隔离
-     */
+    /** 安全地设置用户属性 使用SupervisorJob确保异常隔离 */
     fun setUserProperty(property: String, value: String) {
         try {
             val analytics = getAnalytics()
@@ -213,10 +200,7 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 安全地设置用户ID
-     * 使用SupervisorJob确保异常隔离
-     */
+    /** 安全地设置用户ID 使用SupervisorJob确保异常隔离 */
     fun setUserId(userId: String) {
         try {
             val analytics = getAnalytics()
@@ -235,10 +219,7 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 安全地记录异常
-     * 使用SupervisorJob确保异常隔离
-     */
+    /** 安全地记录异常 使用SupervisorJob确保异常隔离 */
     fun recordException(exception: Throwable, customKeys: Map<String, String> = emptyMap()) {
         try {
             val crashlytics = getCrashlytics() ?: return
@@ -256,9 +237,7 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 安全地设置自定义键
-     */
+    /** 安全地设置自定义键 */
     fun setCustomKey(key: String, value: String) {
         try {
             val crashlytics = getCrashlytics() ?: return
@@ -350,9 +329,7 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 记录自定义日志
-     */
+    /** 记录自定义日志 */
     fun log(message: String) {
         try {
             val crashlytics = getCrashlytics() ?: return
@@ -368,9 +345,7 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 更新日志开关与采样配置
-     */
+    /** 更新日志开关与采样配置 */
     fun updateSwitches(
         enableAnalytics: Boolean? = null,
         enableCrashlytics: Boolean? = null,
@@ -379,19 +354,18 @@ object FirebaseManager {
         samplingRates: Map<String, Double>? = null,
         minIntervalMsPerEvent: Map<String, Long>? = null,
     ) {
-        config = config.copy(
-            analyticsEnabled = enableAnalytics ?: config.analyticsEnabled,
-            crashlyticsEnabled = enableCrashlytics ?: config.crashlyticsEnabled,
-            performanceEnabled = enablePerformance ?: config.performanceEnabled,
-            disabledEvents = disabledEvents ?: config.disabledEvents,
-            samplingRates = samplingRates ?: config.samplingRates,
-            minIntervalMsPerEvent = minIntervalMsPerEvent ?: config.minIntervalMsPerEvent,
-        )
+        config =
+            config.copy(
+                analyticsEnabled = enableAnalytics ?: config.analyticsEnabled,
+                crashlyticsEnabled = enableCrashlytics ?: config.crashlyticsEnabled,
+                performanceEnabled = enablePerformance ?: config.performanceEnabled,
+                disabledEvents = disabledEvents ?: config.disabledEvents,
+                samplingRates = samplingRates ?: config.samplingRates,
+                minIntervalMsPerEvent = minIntervalMsPerEvent ?: config.minIntervalMsPerEvent,
+            )
     }
 
-    /**
-     * 预定义的事件常量
-     */
+    /** 预定义的事件常量 */
     object Events {
         const val APP_OPEN = "app_open"
         const val USER_LOGIN = "user_login"
@@ -403,9 +377,7 @@ object FirebaseManager {
         const val SETTINGS_CHANGED = "settings_changed"
     }
 
-    /**
-     * 预定义的用户属性常量
-     */
+    /** 预定义的用户属性常量 */
     object UserProperties {
         const val USER_TYPE = "user_type"
         const val SUBSCRIPTION_LEVEL = "subscription_level"
@@ -413,19 +385,15 @@ object FirebaseManager {
         const val DEVICE_TYPE = "device_type"
     }
 
-    /**
-     * Firebase 推送消息注册
-     */
+    /** Firebase 推送消息注册 */
     suspend fun registerFCM(): String {
         val token = FirebaseMessaging.getInstance().token.await()
         return token
     }
 
-    //region Performance Monitoring 相关方法
+    // region Performance Monitoring 相关方法
 
-    /**
-     * 开始一个自定义追踪
-     */
+    /** 开始一个自定义追踪 */
     fun startTrace(traceName: String): com.google.firebase.perf.metrics.Trace? {
         return try {
             val perf = getPerformance() ?: return null
@@ -438,9 +406,7 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 停止追踪并记录
-     */
+    /** 停止追踪并记录 */
     fun stopTrace(trace: com.google.firebase.perf.metrics.Trace?) {
         try {
             trace?.stop()
@@ -449,9 +415,7 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 为追踪添加自定义属性
-     */
+    /** 为追踪添加自定义属性 */
     fun putTraceAttribute(
         trace: com.google.firebase.perf.metrics.Trace?,
         attributeName: String,
@@ -464,9 +428,7 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 为追踪添加自定义指标
-     */
+    /** 为追踪添加自定义指标 */
     fun putTraceMetric(
         trace: com.google.firebase.perf.metrics.Trace?,
         metricName: String,
@@ -479,13 +441,8 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 创建网络请求监控
-     */
-    fun createHttpMetric(
-        url: String,
-        method: String
-    ): Any? {
+    /** 创建网络请求监控 */
+    fun createHttpMetric(url: String, method: String): Any? {
         return try {
             val perf = getPerformance() ?: return null
             val httpMetric = perf.newHttpMetric(url, method)
@@ -496,9 +453,7 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 开始网络请求监控
-     */
+    /** 开始网络请求监控 */
     fun startHttpMetric(httpMetric: Any?) {
         try {
             (httpMetric as? com.google.firebase.perf.metrics.HttpMetric)?.start()
@@ -507,14 +462,8 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 停止网络请求监控
-     */
-    fun stopHttpMetric(
-        httpMetric: Any?,
-        responseCode: Int,
-        responseSize: Long? = null
-    ) {
+    /** 停止网络请求监控 */
+    fun stopHttpMetric(httpMetric: Any?, responseCode: Int, responseSize: Long? = null) {
         try {
             val metric = httpMetric as? com.google.firebase.perf.metrics.HttpMetric
             if (metric != null) {
@@ -527,9 +476,7 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 便捷方法：执行带性能监控的操作
-     */
+    /** 便捷方法：执行带性能监控的操作 */
     inline fun <T> trace(
         traceName: String,
         operation: (com.google.firebase.perf.metrics.Trace?) -> T
@@ -542,12 +489,9 @@ object FirebaseManager {
         }
     }
 
-    //endregion
+    // endregion
 
-    /**
-     * 清理资源
-     * 在应用退出时调用，避免内存泄漏
-     */
+    /** 清理资源 在应用退出时调用，避免内存泄漏 */
     fun cleanup() {
         try {
             // 取消所有协程

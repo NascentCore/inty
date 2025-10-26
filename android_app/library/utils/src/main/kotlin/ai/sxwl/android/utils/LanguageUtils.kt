@@ -8,46 +8,33 @@ import android.os.Build
 import android.util.Log
 import java.util.Locale
 
-/**
- * 语言工具类
- * 提供语言相关的工具方法
- */
+/** 语言工具类 提供语言相关的工具方法 */
 object LanguageUtils {
 
     private const val KEY_LOCALE = "KEY_LOCALE"
     private const val VALUE_FOLLOW_SYSTEM = "VALUE_FOLLOW_SYSTEM"
 
-    /**
-     * 应用系统语言
-     */
+    /** 应用系统语言 */
     fun applySystemLanguage() {
         applySystemLanguage(false)
     }
 
-    /**
-     * 应用系统语言
-     */
+    /** 应用系统语言 */
     fun applySystemLanguage(isRelaunchApp: Boolean) {
         applyLanguageReal(null, isRelaunchApp)
     }
 
-    /**
-     * 应用语言
-     */
+    /** 应用语言 */
     fun applyLanguage(locale: Locale) {
         applyLanguage(locale, false)
     }
 
-    /**
-     * 应用语言
-     */
+    /** 应用语言 */
     fun applyLanguage(locale: Locale, isRelaunchApp: Boolean) {
         applyLanguageReal(locale, isRelaunchApp)
     }
 
-    /**
-     * 获取当前语言
-     */
+    /** 获取当前语言 */
     fun getCurrentLanguage(): Locale {
         return try {
             val app: Application? = Utils.getApp()
@@ -63,9 +50,7 @@ object LanguageUtils {
         }
     }
 
-    /**
-     * 获取当前语言
-     */
+    /** 获取当前语言 */
     fun getCurrentLanguage(context: Context): Locale {
         return try {
             val resources = context.resources
@@ -77,9 +62,7 @@ object LanguageUtils {
         }
     }
 
-    /**
-     * 获取系统语言
-     */
+    /** 获取系统语言 */
     fun getSystemLanguage(): Locale {
         return try {
             getLocale(Resources.getSystem().configuration)
@@ -89,44 +72,32 @@ object LanguageUtils {
         }
     }
 
-    /**
-     * 是否为中文
-     */
+    /** 是否为中文 */
     fun isChinese(): Boolean {
         return isChinese(getCurrentLanguage())
     }
 
-    /**
-     * 是否为中文
-     */
+    /** 是否为中文 */
     fun isChinese(locale: Locale): Boolean {
         return locale.language == "zh"
     }
 
-    /**
-     * 是否为英文
-     */
+    /** 是否为英文 */
     fun isEnglish(): Boolean {
         return isEnglish(getCurrentLanguage())
     }
 
-    /**
-     * 是否为英文
-     */
+    /** 是否为英文 */
     fun isEnglish(locale: Locale): Boolean {
         return locale.language == "en"
     }
 
-    /**
-     * 获取语言字符串
-     */
+    /** 获取语言字符串 */
     fun locale2String(locale: Locale): String {
         return "${locale.language}_${locale.country}"
     }
 
-    /**
-     * 字符串转语言
-     */
+    /** 字符串转语言 */
     fun string2Locale(localeString: String?): Locale? {
         if (localeString.isNullOrEmpty()) return null
         return try {
@@ -140,7 +111,6 @@ object LanguageUtils {
                         null
                     }
                 }
-
                 2 -> {
                     if (parts[0].isNotEmpty() && parts[1].isNotEmpty()) {
                         Locale(parts[0], parts[1])
@@ -149,7 +119,6 @@ object LanguageUtils {
                         null
                     }
                 }
-
                 else -> {
                     Log.w("LanguageUtils", "Invalid locale string format: $localeString")
                     null
@@ -171,16 +140,19 @@ object LanguageUtils {
     private fun applyLanguageReal(locale: Locale?, isRelaunchApp: Boolean) {
         // 简化实现，实际应用中需要保存到SharedPreferences
         val destLocal = locale ?: getSystemLanguage()
-        updateAppContextLanguage(destLocal, object : Utils.Consumer<Boolean> {
-            override fun accept(success: Boolean) {
-                if (success) {
-                    restart(isRelaunchApp)
-                } else {
-                    // 使用重启应用
-                    AppUtils.relaunchApp()
+        updateAppContextLanguage(
+            destLocal,
+            object : Utils.Consumer<Boolean> {
+                override fun accept(success: Boolean) {
+                    if (success) {
+                        restart(isRelaunchApp)
+                    } else {
+                        // 使用重启应用
+                        AppUtils.relaunchApp()
+                    }
                 }
             }
-        })
+        )
     }
 
     private fun restart(isRelaunchApp: Boolean) {
@@ -276,8 +248,7 @@ object LanguageUtils {
                     configuration.locales[0]
                 }
             } else {
-                @Suppress("DEPRECATION")
-                configuration.locale
+                @Suppress("DEPRECATION") configuration.locale
             }
         } catch (e: Exception) {
             Log.e("LanguageUtils", "Failed to get locale from configuration", e)

@@ -169,7 +169,9 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     }
 
     override fun onBillingSetupFinished(billingResult: BillingResult) {
-        log("BillingClient 连接结果: 响应码=${billingResult.responseCode}, 详情: ${billingResult.debugMessage}")
+        log(
+            "BillingClient 连接结果: 响应码=${billingResult.responseCode}, 详情: ${billingResult.debugMessage}"
+        )
 
         if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
             handleBillingSetupSuccess()
@@ -181,7 +183,9 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     /** 处理BillingClient连接成功 */
     private fun handleBillingSetupSuccess() {
         isConnected = true
-        log("BillingClient 连接成功 isReady:${billingClient.isReady}, connectState: ${billingClient.connectionState}")
+        log(
+            "BillingClient 连接成功 isReady:${billingClient.isReady}, connectState: ${billingClient.connectionState}"
+        )
 
         // 更新初始化状态
         updateInitState(isInitialized = true, isConnected = true, errorMessage = null)
@@ -247,23 +251,21 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
     /** 智能重连：根据错误类型选择不同的重连策略 */
     private fun smartReconnect(billingResult: BillingResult) {
-        val (delayMs, message) = when (billingResult.responseCode) {
-            BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
-                10000L to "服务不可用，使用较长延迟重连: 10秒"
+        val (delayMs, message) =
+            when (billingResult.responseCode) {
+                BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
+                    10000L to "服务不可用，使用较长延迟重连: 10秒"
+                }
+                BillingClient.BillingResponseCode.NETWORK_ERROR -> {
+                    5000L to "网络错误，使用中等延迟重连: 5秒"
+                }
+                BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
+                    30000L to "计费不可用，使用更长延迟重连: 30秒"
+                }
+                else -> {
+                    5000L to "其他错误，使用标准延迟重连: 5秒"
+                }
             }
-
-            BillingClient.BillingResponseCode.NETWORK_ERROR -> {
-                5000L to "网络错误，使用中等延迟重连: 5秒"
-            }
-
-            BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
-                30000L to "计费不可用，使用更长延迟重连: 30秒"
-            }
-
-            else -> {
-                5000L to "其他错误，使用标准延迟重连: 5秒"
-            }
-        }
 
         log(message, LogUtils.W)
         scheduleReconnect(delayMs)
@@ -331,17 +333,14 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                         log("购买成功，刷新状态")
                         refreshSubscriptionStatus()
                     }
-
                     is BillingEvent.Connected -> {
                         log("连接成功，刷新状态")
                         refreshSubscriptionStatus()
                     }
-
                     is BillingEvent.AppResumed -> {
                         log("应用恢复，检查状态")
                         refreshSubscriptionStatus()
                     }
-
                     else -> log("未处理事件: $event")
                 }
             }

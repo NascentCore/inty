@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
-import { EMOTIONS, generateReplyWithEmotion, type Emotion } from "../services/gemini";
+import {
+  EMOTIONS,
+  generateReplyWithEmotion,
+  type Emotion,
+} from "../services/gemini";
 
 // Helper to mock fetch
 const mockFetch = (payload: any, ok = true) => {
@@ -16,7 +20,9 @@ const mockFetch = (payload: any, ok = true) => {
 describe("gemini service", () => {
   it("returns parsed reply and valid emotion when JSON is correct", async () => {
     const output = { reply: "你好！", emotion: "Happy" };
-    mockFetch({ candidates: [{ content: { parts: [{ text: JSON.stringify(output) }] } }] });
+    mockFetch({
+      candidates: [{ content: { parts: [{ text: JSON.stringify(output) }] } }],
+    });
 
     const res = await generateReplyWithEmotion("KEY", [], "hi");
     expect(res.reply).toBe("你好！");
@@ -25,7 +31,9 @@ describe("gemini service", () => {
 
   it("normalizes unknown emotion to Neutral", async () => {
     const output = { reply: "OK", emotion: "UnknownLabel" };
-    mockFetch({ candidates: [{ content: { parts: [{ text: JSON.stringify(output) }] } }] });
+    mockFetch({
+      candidates: [{ content: { parts: [{ text: JSON.stringify(output) }] } }],
+    });
 
     const res = await generateReplyWithEmotion("KEY", [], "hi");
     expect(res.reply).toBe("OK");
@@ -33,7 +41,8 @@ describe("gemini service", () => {
   });
 
   it("extracts JSON from fenced or verbose output", async () => {
-    const noisy = "Here is your result:\n```json\n{\"reply\":\"Yo\",\"emotion\":\"Excited\"}\n```";
+    const noisy =
+      'Here is your result:\n```json\n{"reply":"Yo","emotion":"Excited"}\n```';
     mockFetch({ candidates: [{ content: { parts: [{ text: noisy }] } }] });
 
     const res = await generateReplyWithEmotion("KEY", [], "hi");
@@ -42,7 +51,9 @@ describe("gemini service", () => {
   });
 
   it("falls back to Neutral if non-JSON", async () => {
-    mockFetch({ candidates: [{ content: { parts: [{ text: "plain text" }] } }] });
+    mockFetch({
+      candidates: [{ content: { parts: [{ text: "plain text" }] } }],
+    });
 
     const res = await generateReplyWithEmotion("KEY", [], "hi");
     expect(res.emotion).toBe("Neutral");
@@ -55,7 +66,14 @@ describe("gemini service", () => {
 
   it("throws when http error", async () => {
     // @ts-ignore
-    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500, statusText: "ERR", text: async () => "boom" });
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: "ERR",
+        text: async () => "boom",
+      });
     await expect(generateReplyWithEmotion("KEY", [], "hi")).rejects.toThrow();
   });
 });

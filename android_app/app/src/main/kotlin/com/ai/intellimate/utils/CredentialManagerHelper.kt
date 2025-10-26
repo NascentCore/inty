@@ -42,9 +42,7 @@ object CredentialManagerHelper {
                 // GetGoogleIdOption 用于创建“使用 Google 账号登录”流程
                 // GetSignInWithGoogleOption 用于触发“使用 Google 账号登录”按钮流程
                 val signInWithGoogleOption =
-                    GetSignInWithGoogleOption.Builder(
-                        serverClientId = BuildConfig.WEB_CLIENT_ID
-                    )
+                    GetSignInWithGoogleOption.Builder(serverClientId = BuildConfig.WEB_CLIENT_ID)
                         .build()
 
                 // 创建获取凭证请求
@@ -98,9 +96,10 @@ object CredentialManagerHelper {
                         Result.failure(Exception("Unexpected credential type"))
                     }
                 }
-
                 else -> {
-                    LogUtils.e("Unexpected type of credential: ${credential::class.java.simpleName}")
+                    LogUtils.e(
+                        "Unexpected type of credential: ${credential::class.java.simpleName}"
+                    )
                     Result.failure(Exception("Unexpected credential type"))
                 }
             }

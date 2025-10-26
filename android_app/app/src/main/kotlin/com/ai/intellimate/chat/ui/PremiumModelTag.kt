@@ -39,8 +39,7 @@ private val premiumInactiveBrush =
 fun PremiumModelTag(isPremiumModel: Boolean = false, onClick: () -> Unit) {
     Row(
         modifier =
-            Modifier
-                .padding(horizontal = 16.dp)
+            Modifier.padding(horizontal = 16.dp)
                 .height(28.dp)
                 .background(
                     brush = if (isPremiumModel) premiumActiveBrush else premiumInactiveBrush,

@@ -39,8 +39,7 @@ internal object BillingStorage {
     /** 保存本地订阅计划 */
     fun saveLocalPlans(plans: List<VipPlan>) {
         try {
-            val type =
-                Types.newParameterizedType(List::class.java, VipPlan::class.java)
+            val type = Types.newParameterizedType(List::class.java, VipPlan::class.java)
             val adapter = MoshiUtils.moshiBuild.adapter<List<VipPlan>>(type)
             val json = adapter.toJson(plans) ?: ""
             IntySetting.setUserProfileData(KEY_SUBSCRIPTION_PLANS, json)

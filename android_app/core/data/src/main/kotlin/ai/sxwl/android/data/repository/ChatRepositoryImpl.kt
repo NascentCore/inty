@@ -8,10 +8,7 @@ import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.flow.StateFlow
 
-/**
- * 聊天Repository实现
- * 作为Domain层和Data层之间的桥梁
- */
+/** 聊天Repository实现 作为Domain层和Data层之间的桥梁 */
 class ChatRepositoryImpl : ChatRepository {
 
     override fun getMessagesFlow(agentId: String): StateFlow<List<MsgInfo>> {
@@ -36,7 +33,10 @@ class ChatRepositoryImpl : ChatRepository {
         ChatSessionManager.loadMore(agentId, pageSize)
     }
 
-    override suspend fun sendMessage(agentId: String, content: String): HttpResult<SendMsgResponse> {
+    override suspend fun sendMessage(
+        agentId: String,
+        content: String
+    ): HttpResult<SendMsgResponse> {
         LogUtils.d("ChatRepositoryImpl.sendMessage called for $agentId: $content")
         return ChatSessionManager.sendMessage(agentId, content)
     }
@@ -47,7 +47,9 @@ class ChatRepositoryImpl : ChatRepository {
     }
 
     override fun updateMessageAudioUrl(agentId: String, messageId: String, audioUrl: String) {
-        LogUtils.d("ChatRepositoryImpl.updateMessageAudioUrl called for $agentId, messageId: $messageId")
+        LogUtils.d(
+            "ChatRepositoryImpl.updateMessageAudioUrl called for $agentId, messageId: $messageId"
+        )
         ChatSessionManager.updateMessageAudioUrl(agentId, messageId, audioUrl)
     }
 

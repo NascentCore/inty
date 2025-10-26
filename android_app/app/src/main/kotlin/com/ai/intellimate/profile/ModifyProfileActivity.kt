@@ -21,14 +21,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
 import com.ai.intellimate.R
+import com.ai.intellimate.ViewModelEvent
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.ui.components.MySettingScreen
 import com.ai.intellimate.utils.UCropHelper
-import com.ai.intellimate.ViewModelEvent
 import com.yalantis.ucrop.UCrop
-import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 /** 个人设置页面 */
 class ModifyProfileActivity : BaseActivity() {
@@ -38,17 +38,16 @@ class ModifyProfileActivity : BaseActivity() {
 
         /**
          * 启动单独的聊天界面
+         *
          * @param context 上下文context
          * @param userInfo UserProfile对象
          */
         fun launch(context: Context, userInfo: UserProfile? = null) {
             context.startActivity(
-                Intent(
-                    context,
-                    ModifyProfileActivity::class.java
-                ).also { intent ->
-                intent.putExtra(INTENT_KEY_USER_INFO, userInfo)
-            })
+                Intent(context, ModifyProfileActivity::class.java).also { intent ->
+                    intent.putExtra(INTENT_KEY_USER_INFO, userInfo)
+                }
+            )
         }
     }
 
@@ -66,7 +65,6 @@ class ModifyProfileActivity : BaseActivity() {
                     is ViewModelEvent.UserProfileUpdated -> {
                         finish()
                     }
-
                     else -> {
                         // 其他事件暂不处理
                     }
@@ -82,18 +80,15 @@ class ModifyProfileActivity : BaseActivity() {
         val cropTitle = stringResource(id = R.string.crop_image)
 
         val activityCropResultLauncher =
-            rememberLauncherForActivityResult(
-                ActivityResultContracts.StartActivityForResult()
-            ) { result ->
+            rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                result ->
                 if (result.resultCode == RESULT_OK) {
                     runCatching {
-                        result.data?.let { intentResult ->
-                            val imageUri = UCrop.getOutput(intentResult) // 图片uri
-                            imageUri?.let { imageUriReal ->
-                                viewModel.setAvatar(imageUriReal)
+                            result.data?.let { intentResult ->
+                                val imageUri = UCrop.getOutput(intentResult) // 图片uri
+                                imageUri?.let { imageUriReal -> viewModel.setAvatar(imageUriReal) }
                             }
                         }
-                    }
                         .onFailure { e -> e.printStackTrace() }
                 }
             }
@@ -102,36 +97,35 @@ class ModifyProfileActivity : BaseActivity() {
             rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
                 imageUri?.let { uri ->
                     runCatching {
-                        // Check file size before cropping - limit to 10MB
-                        val fileSize = getFileSize(context, uri)
-                        // TODO: 使用 firebase remote config 配置应集中管理
-                        // https://firebase.google.com/docs/remote-config
-                        val maxSizeMB = 10
-                        val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
-                        if (fileSize > maxSizeBytes) {
-                            val maxSizeMBStr =
-                                String.Companion.format(Locale.getDefault(), "%dMB", maxSizeMB)
-                            val fileSizeMBStr =
-                                String.Companion.format(
-                                    Locale.getDefault(),
-                                    "%.1fMB",
-                                    fileSize / (1024.0 * 1024.0)
-                                )
-                            val msg =
-                                String.format(
-                                    context.getString(
-                                        R.string
-                                            .user_avatar_size_too_large_with_size_format
-                                    ),
-                                    maxSizeMBStr,
-                                    fileSizeMBStr,
-                                )
-                            lifecycleScope.launch { ToastUtils.showShort(msg) }
-                            return@let
+                            // Check file size before cropping - limit to 10MB
+                            val fileSize = getFileSize(context, uri)
+                            // TODO: 使用 firebase remote config 配置应集中管理
+                            // https://firebase.google.com/docs/remote-config
+                            val maxSizeMB = 10
+                            val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
+                            if (fileSize > maxSizeBytes) {
+                                val maxSizeMBStr =
+                                    String.Companion.format(Locale.getDefault(), "%dMB", maxSizeMB)
+                                val fileSizeMBStr =
+                                    String.Companion.format(
+                                        Locale.getDefault(),
+                                        "%.1fMB",
+                                        fileSize / (1024.0 * 1024.0)
+                                    )
+                                val msg =
+                                    String.format(
+                                        context.getString(
+                                            R.string.user_avatar_size_too_large_with_size_format
+                                        ),
+                                        maxSizeMBStr,
+                                        fileSizeMBStr,
+                                    )
+                                lifecycleScope.launch { ToastUtils.showShort(msg) }
+                                return@let
+                            }
+                            val intentCrop = UCropHelper.getIntent(context, uri, cropTitle)
+                            activityCropResultLauncher.launch(intentCrop)
                         }
-                        val intentCrop = UCropHelper.getIntent(context, uri, cropTitle)
-                        activityCropResultLauncher.launch(intentCrop)
-                    }
                         .onFailure { it.printStackTrace() }
                 }
             }

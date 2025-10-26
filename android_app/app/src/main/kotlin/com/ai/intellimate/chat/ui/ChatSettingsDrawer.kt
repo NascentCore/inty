@@ -43,13 +43,13 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
+import com.ai.intellimate.chat.ChatViewModel
 import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.profile.MySettingViewModel
 import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.ui.components.MySettingItem
-import com.ai.intellimate.chat.ChatViewModel
 
 /** 聊天设置抽屉组件 */
 @Composable
@@ -64,22 +64,20 @@ fun ChatSettingsDrawer(
 
     // Keep talking二状态设置：默认跟随全局设置
     var agentKeepTalking by
-    remember(agentInfo?.id) {
-        mutableStateOf(
-            agentInfo?.let {
-                // 获取角色专用设置，如果不存在则使用全局设置
-                IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
-            } ?: false
-        )
-    }
+        remember(agentInfo?.id) {
+            mutableStateOf(
+                agentInfo?.let {
+                    // 获取角色专用设置，如果不存在则使用全局设置
+                    IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
+                } ?: false
+            )
+        }
 
     val horizontalPadding = 16
 
     // 在组件初始化时立即更新用户信息,未添加这部分触发更新userInfo的时候，会因为在chatViewModel中虽然更新了userProfile
-    //但是userProfileState并没有正确触发数据流的更新，引起UI层数据不能正确显示真实数据的问题。
-    LaunchedEffect(chatViewModel) {
-        chatViewModel.updateUserInfo()
-    }
+    // 但是userProfileState并没有正确触发数据流的更新，引起UI层数据不能正确显示真实数据的问题。
+    LaunchedEffect(chatViewModel) { chatViewModel.updateUserInfo() }
 
     val userProfileState by chatViewModel.userProfile.collectAsState()
 
@@ -105,8 +103,7 @@ fun ChatSettingsDrawer(
         drawerContent = {
             Column(
                 modifier =
-                    Modifier
-                        .width(319.dp)
+                    Modifier.width(319.dp)
                         .fillMaxHeight()
                         .background(
                             brush =
@@ -127,8 +124,7 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier =
-                        Modifier
-                            .padding(horizontal = horizontalPadding.dp)
+                        Modifier.padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =
@@ -206,8 +202,7 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier =
-                        Modifier
-                            .padding(horizontal = horizontalPadding.dp)
+                        Modifier.padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =
@@ -229,8 +224,7 @@ fun ChatSettingsDrawer(
                         // 举报入口
                         Row(
                             modifier =
-                                Modifier
-                                    .fillMaxWidth()
+                                Modifier.fillMaxWidth()
                                     .height(56.dp)
                                     .padding(horizontal = horizontalPadding.dp)
                                     .noRippleClickable {

@@ -63,14 +63,11 @@ fun BottomSheetDialog(
         ) {
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(color = Color.Transparent)
-                        .clickableNoRipple {
-                            if (canceledOnTouchOutside) {
-                                onDismissRequest()
-                            }
+                    Modifier.fillMaxSize().background(color = Color.Transparent).clickableNoRipple {
+                        if (canceledOnTouchOutside) {
+                            onDismissRequest()
                         }
+                    }
             )
         }
         InnerDialog(visible = visible, content = content)
@@ -83,8 +80,7 @@ private fun BoxScope.InnerDialog(visible: Boolean, content: @Composable () -> Un
     val offsetYAnimate by animateFloatAsState(targetValue = offsetY, label = "")
     AnimatedVisibility(
         modifier =
-            Modifier
-                .align(alignment = Alignment.BottomCenter)
+            Modifier.align(alignment = Alignment.BottomCenter)
                 .offset(offset = { IntOffset(0, offsetYAnimate.roundToInt()) }),
         visible = visible,
         enter =

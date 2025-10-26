@@ -36,41 +36,43 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * 应用项目封装的items
- */
+/** 应用项目封装的items */
 @Composable
 fun SettingsCheckBoxItem(
     item: SettingsItemData.SwitchItemData,
-    fontLight: Boolean = false,//使用字重小一点
+    fontLight: Boolean = false, // 使用字重小一点
     isInGroup: Boolean = false,
-    lightColor: Boolean = false,//浅色字
+    lightColor: Boolean = false, // 浅色字
     onCheckChanged: (Boolean) -> Unit = {},
 ) {
-    val modifier = if (isInGroup) Modifier else Modifier
-        .clip(RoundedCornerShape(8.dp))
-        .background(Color(0x3378599A))
-        .border(
-            width = .05.dp, brush = Brush.horizontalGradient(
-                colors = listOf(
-                    Color.Transparent,
-                    Color.White.copy(.3f),
-                    Color.Transparent,
+    val modifier =
+        if (isInGroup) Modifier
+        else
+            Modifier.clip(RoundedCornerShape(8.dp))
+                .background(Color(0x3378599A))
+                .border(
+                    width = .05.dp,
+                    brush =
+                        Brush.horizontalGradient(
+                            colors =
+                                listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(.3f),
+                                    Color.Transparent,
+                                )
+                        ),
+                    shape = RoundedCornerShape(8.dp)
                 )
-            ),
-            shape = RoundedCornerShape(8.dp)
-        )
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .then(modifier)
-            .clickable { onCheckChanged(item.checked.not()) } // 让整个item可点击
-            .padding(horizontal = 12.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(56.dp)
+                .then(modifier)
+                .clickable { onCheckChanged(item.checked.not()) } // 让整个item可点击
+                .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-    )
-    {
+    ) {
         Text(
             text = item.title,
             fontSize = 14.sp,
@@ -85,47 +87,43 @@ fun SettingsCheckBoxItem(
         Image(
             painter = painterResource(iconRes),
             contentDescription = "",
-            modifier = Modifier
-                .size(20.dp)
-                .clip(CircleShape)
+            modifier = Modifier.size(20.dp).clip(CircleShape)
             // 移除checkbox的单独点击，因为整个item已经可点击了
         )
     }
 }
 
-/**
- * 只有标题和开关的item
- */
+/** 只有标题和开关的item */
 @Composable
 fun SettingsSwitchItem(
     item: SettingsItemData.SwitchItemData,
-    fontLight: Boolean = false,//使用字重小一点
+    fontLight: Boolean = false, // 使用字重小一点
     isInGroup: Boolean = false,
     onCheckChanged: (Boolean) -> Unit = {},
 ) {
-    val modifier = if (isInGroup) Modifier else Modifier
-        .clip(RoundedCornerShape(8.dp))
-        .background(Color(0x3378599A))
-        .border(
-            width = .05.dp, brush = Brush.horizontalGradient(
-                colors = listOf(
-                    Color.Transparent,
-                    Color.White.copy(.3f),
-                    Color.Transparent,
+    val modifier =
+        if (isInGroup) Modifier
+        else
+            Modifier.clip(RoundedCornerShape(8.dp))
+                .background(Color(0x3378599A))
+                .border(
+                    width = .05.dp,
+                    brush =
+                        Brush.horizontalGradient(
+                            colors =
+                                listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(.3f),
+                                    Color.Transparent,
+                                )
+                        ),
+                    shape = RoundedCornerShape(8.dp)
                 )
-            ),
-            shape = RoundedCornerShape(8.dp)
-        )
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .then(modifier)
-            .padding(horizontal = 12.dp),
+        modifier = Modifier.fillMaxWidth().height(56.dp).then(modifier).padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-    )
-    {
+    ) {
         Text(
             text = item.title,
             fontSize = 14.sp,
@@ -139,51 +137,41 @@ fun SettingsSwitchItem(
         Switch(
             checked = item.checked,
             onCheckedChange = onCheckChanged,
-            colors = SwitchDefaults.colors()
-                .copy(
-                    checkedTrackColor = Color(0xFF62C18E),
-                    uncheckedTrackColor = Color(0xFF43394F),
-                    uncheckedBorderColor = Color.Transparent,
-                    disabledCheckedBorderColor = Color.Transparent,
-                    disabledUncheckedBorderColor = Color.Transparent,
-                )
+            colors =
+                SwitchDefaults.colors()
+                    .copy(
+                        checkedTrackColor = Color(0xFF62C18E),
+                        uncheckedTrackColor = Color(0xFF43394F),
+                        uncheckedBorderColor = Color.Transparent,
+                        disabledCheckedBorderColor = Color.Transparent,
+                        disabledUncheckedBorderColor = Color.Transparent,
+                    )
         )
     }
 }
 
-
-/**
- * 设置item的数据类
- */
+/** 设置item的数据类 */
 sealed class SettingsItemData {
 
-    /**
-     * 开关设置
-     */
+    /** 开关设置 */
     data class SwitchItemData(
         val title: String = "",
         val checked: Boolean = false,
     ) : SettingsItemData()
 
-    /**
-     * 普通item数据
-     */
+    /** 普通item数据 */
     data class CommonItemData(
         val title: String = "",
         val content: String = "",
         val arrow: Boolean = true,
     ) : SettingsItemData()
 
-    /**
-     * icon item数据
-     */
+    /** icon item数据 */
     data class IconItemData(
         @param:DrawableRes val icon: Int,
         val title: String = "",
         val subTitle: String = "",
     ) : SettingsItemData()
-
-
 }
 
 @Preview
@@ -202,41 +190,42 @@ private fun 预览设置开关() {
     }
 }
 
-
-/**
- * 有标题和描述以及箭头的item
- */
+/** 有标题和描述以及箭头的item */
 @Composable
 fun SettingsArrowItem(
     item: SettingsItemData.CommonItemData,
-    fontLight: Boolean = false,//使用字重小一点
+    fontLight: Boolean = false, // 使用字重小一点
     isInGroup: Boolean = false,
     onItemClick: () -> Unit = {},
 ) {
 
-    val modifier = if (isInGroup) Modifier else Modifier
-        .clip(RoundedCornerShape(8.dp))
-        .background(Color(0x3378599A))
-        .border(
-            width = .05.dp, brush = Brush.horizontalGradient(
-                colors = listOf(
-                    Color.Transparent,
-                    Color.White.copy(.3f),
-                    Color.Transparent,
+    val modifier =
+        if (isInGroup) Modifier
+        else
+            Modifier.clip(RoundedCornerShape(8.dp))
+                .background(Color(0x3378599A))
+                .border(
+                    width = .05.dp,
+                    brush =
+                        Brush.horizontalGradient(
+                            colors =
+                                listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(.3f),
+                                    Color.Transparent,
+                                )
+                        ),
+                    shape = RoundedCornerShape(8.dp)
                 )
-            ),
-            shape = RoundedCornerShape(8.dp)
-        )
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .then(modifier)
-            .clickable(onClick = onItemClick)
-            .padding(horizontal = 12.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(56.dp)
+                .then(modifier)
+                .clickable(onClick = onItemClick)
+                .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-    )
-    {
+    ) {
         Text(
             text = item.title,
             fontSize = 14.sp,
@@ -260,14 +249,10 @@ fun SettingsArrowItem(
         )
         if (item.arrow) {
             Spacer(Modifier.width(8.dp))
-            Image(
-                painter = painterResource(R.drawable.ic_arrow_forward),
-                contentDescription = ""
-            )
+            Image(painter = painterResource(R.drawable.ic_arrow_forward), contentDescription = "")
         }
     }
 }
-
 
 @Preview
 @Composable
@@ -279,20 +264,11 @@ private fun 预览普通设置条目() {
         Spacer(Modifier.height(10.dp))
         SettingsArrowItem(item = SettingsItemData.CommonItemData("Light用户协议", "欢迎查看"), true)
         Spacer(Modifier.height(10.dp))
-        SettingsArrowItem(
-            item = SettingsItemData.CommonItemData(
-                "关于App",
-                "v1.0.0",
-                arrow = false
-            )
-        )
+        SettingsArrowItem(item = SettingsItemData.CommonItemData("关于App", "v1.0.0", arrow = false))
     }
 }
 
-
-/**
- * 有图标、标题以及箭头的item
- */
+/** 有图标、标题以及箭头的item */
 @Composable
 fun SettingsIconArrowItem(
     item: SettingsItemData.IconItemData,
@@ -300,26 +276,28 @@ fun SettingsIconArrowItem(
 ) {
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0x3378599A))
-            .border(
-                width = .05.dp, brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        Color.White.copy(.3f),
-                        Color.Transparent,
-                    )
-                ),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .clickable(onClick = onItemClick)
-            .padding(horizontal = 12.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(56.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0x3378599A))
+                .border(
+                    width = .05.dp,
+                    brush =
+                        Brush.horizontalGradient(
+                            colors =
+                                listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(.3f),
+                                    Color.Transparent,
+                                )
+                        ),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .clickable(onClick = onItemClick)
+                .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-    )
-    {
+    ) {
         Image(
             painter = painterResource(item.icon),
             contentDescription = "",
@@ -350,26 +328,18 @@ fun SettingsIconArrowItem(
         )
         Spacer(Modifier.width(8.dp))
         Image(painter = painterResource(R.drawable.ic_arrow_forward), contentDescription = "")
-
     }
 }
-
 
 @Preview
 @Composable
 private fun 预览ICON设置条目() {
     SettingsIconArrowItem(
-        item = SettingsItemData.IconItemData(
-            R.drawable.img_girl_lite,
-            "会员订阅",
-            "热烈欢迎订阅"
-        )
+        item = SettingsItemData.IconItemData(R.drawable.img_girl_lite, "会员订阅", "热烈欢迎订阅")
     )
 }
 
-/**
- * 设置分组的背景容器
- */
+/** 设置分组的背景容器 */
 @Composable
 fun SettingsItemGroup(
     modifier: Modifier = Modifier,
@@ -377,17 +347,19 @@ fun SettingsItemGroup(
     contents: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
-        Modifier
-            .clip(RoundedCornerShape(8.dp))
+        Modifier.clip(RoundedCornerShape(8.dp))
             .background(Color(0x3378599A))
             .border(
-                width = .05.dp, brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        Color.White.copy(.3f),
-                        Color.Transparent,
-                    )
-                ),
+                width = .05.dp,
+                brush =
+                    Brush.horizontalGradient(
+                        colors =
+                            listOf(
+                                Color.Transparent,
+                                Color.White.copy(.3f),
+                                Color.Transparent,
+                            )
+                    ),
                 shape = RoundedCornerShape(8.dp)
             )
             .then(modifier),
@@ -402,22 +374,12 @@ fun SettingsItemGroup(
 @Composable
 private fun 预览设置分组容器() {
     SettingsItemGroup {
-        SettingsArrowItem(
-            item = SettingsItemData.CommonItemData("隐私政策"),
-            isInGroup = true
-        )
+        SettingsArrowItem(item = SettingsItemData.CommonItemData("隐私政策"), isInGroup = true)
+        IntelliMateDivider()
+        SettingsArrowItem(item = SettingsItemData.CommonItemData("用户协议", "欢迎查看"), isInGroup = true)
         IntelliMateDivider()
         SettingsArrowItem(
-            item = SettingsItemData.CommonItemData("用户协议", "欢迎查看"),
-            isInGroup = true
-        )
-        IntelliMateDivider()
-        SettingsArrowItem(
-            item = SettingsItemData.CommonItemData(
-                "关于App",
-                "v1.0.0",
-                arrow = false
-            ),
+            item = SettingsItemData.CommonItemData("关于App", "v1.0.0", arrow = false),
             isInGroup = true
         )
         IntelliMateDivider()
@@ -426,7 +388,6 @@ private fun 预览设置分组容器() {
             fontLight = true,
             isInGroup = true
         )
-
     }
 }
 
@@ -434,17 +395,18 @@ private fun 预览设置分组容器() {
 @Composable
 fun IntelliMateDivider() {
     Box(
-        Modifier
-            .fillMaxWidth()
+        Modifier.fillMaxWidth()
             .height(.2.dp)
             .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        Color.White.copy(.3f),
-                        Color.Transparent,
+                brush =
+                    Brush.horizontalGradient(
+                        colors =
+                            listOf(
+                                Color.Transparent,
+                                Color.White.copy(.3f),
+                                Color.Transparent,
+                            )
                     )
-                )
             )
     )
 }

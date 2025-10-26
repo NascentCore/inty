@@ -7,11 +7,11 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.util.Log
 import androidx.core.content.getSystemService
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * 网络管理工具类
@@ -37,8 +37,7 @@ class NetworkManager private constructor() {
     private var connectivityManager: ConnectivityManager? = null
     private var applicationContext: Context? = null
     private val networkCallbacks = CopyOnWriteArrayList<NetworkCallback>()
-    private val networkStateListeners =
-        CopyOnWriteArrayList<NetworkStateListener>()
+    private val networkStateListeners = CopyOnWriteArrayList<NetworkStateListener>()
 
     /** 网络状态监听器接口 */
     interface NetworkStateListener {
@@ -201,7 +200,6 @@ class NetworkManager private constructor() {
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> NetworkType.MOBILE
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) ->
                 NetworkType.ETHERNET
-
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) -> NetworkType.VPN
             else -> NetworkType.UNKNOWN
         }

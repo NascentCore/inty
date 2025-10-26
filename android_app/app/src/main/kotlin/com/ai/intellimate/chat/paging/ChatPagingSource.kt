@@ -24,9 +24,7 @@ class ChatPagingSource(
     private val sortSeed: Int = IntySetting.randomSortSeed(),
 ) : PagingSource<Int, AgentInfo>() {
 
-    private val agentApi: IAgentApi by lazy {
-        NetServiceMgr.getAgentApi()
-    }
+    private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
 
     companion object {
         // 使用统一的常量
@@ -103,7 +101,6 @@ class ChatPagingSource(
                             nextKey = if (hasMore) page + 1 else null,
                         )
                     }
-
                     is NetworkResult.Error -> {
                         LogUtils.e("ChatPagingSource - 网络加载失败: ${result.error}")
                         LoadResult.Error(Exception(result.error))
@@ -138,7 +135,6 @@ class ChatPagingSource(
                 is HttpResult.Success -> {
                     NetworkResult.Success(result.data)
                 }
-
                 is HttpResult.Failure -> {
                     NetworkResult.Error(result.message)
                 }
@@ -172,8 +168,8 @@ class ChatPagingSource(
     private fun shouldUpdateFromNetwork(): Boolean {
         // 确保用户账户已就绪（包括游客账户）且token有效
         return UnifiedStartupManager.isUserAccountReady() &&
-                IntySetting.isLogin() &&
-                IntySetting.getCurToken().isNotEmpty()
+            IntySetting.isLogin() &&
+            IntySetting.getCurToken().isNotEmpty()
     }
 }
 

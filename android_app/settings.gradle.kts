@@ -30,11 +30,17 @@ dependencyResolutionManagement {
 rootProject.name = "Inty"
 
 include(":app")
+
 include(":core:common")
+
 include(":core:data")
+
 include(":core:design")
+
 include(":core:firebase")
+
 include(":library:utils")
+
 include(":library:network")
 
 // 将 inty_sdk 作为复合构建（composite build）

@@ -29,7 +29,9 @@ class VipCenterViewModel : BaseVM() {
         if (index >= 0 && index < currentPlans.size) {
             _selectedPlanIndex.value = index
             val selectedPlan = currentPlans[index]
-            LogUtils.d("BillingRepository VipViewModel 选择订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId})")
+            LogUtils.d(
+                "BillingRepository VipViewModel 选择订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId})"
+            )
         }
     }
 

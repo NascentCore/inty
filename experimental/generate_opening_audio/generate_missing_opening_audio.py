@@ -35,7 +35,10 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.models.agent import Agent
 from app.services.voice_service import VoiceService, GENDER_VOICE_MAPPING
-from app.core.agent.prompt_template import has_template_variable, render_prompt_jinja2_template
+from app.core.agent.prompt_template import (
+    has_template_variable,
+    render_prompt_jinja2_template,
+)
 
 
 class OpeningAudioGenerator:
@@ -52,40 +55,40 @@ class OpeningAudioGenerator:
 
         # 统计信息
         self.stats = {
-            'total': 0,
-            'processed': 0,
-            'success': 0,
-            'failed': 0,
-            'skipped': 0,
+            "total": 0,
+            "processed": 0,
+            "success": 0,
+            "failed": 0,
+            "skipped": 0,
         }
 
     def load_config(self):
         """从 YAML 文件加载配置"""
         logger.info(f"加载配置文件: {self.config_path}")
-        with open(self.config_path, 'r', encoding='utf-8') as f:
+        with open(self.config_path, "r", encoding="utf-8") as f:
             self.config = yaml.safe_load(f)
         logger.info("配置加载成功")
 
     async def setup_database(self):
         """设置数据库连接"""
-        db_config = self.config['database']
+        db_config = self.config["database"]
         async_url = f"postgresql+asyncpg://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['db']}"
 
-        logger.info(f"连接数据库: {db_config['host']}:{db_config['port']}/{db_config['db']}")
+        logger.info(
+            f"连接数据库: {db_config['host']}:{db_config['port']}/{db_config['db']}"
+        )
 
         self.engine = create_async_engine(
             async_url,
-            pool_size=db_config.get('pool_size', 10),
-            max_overflow=db_config.get('max_overflow', 5),
-            pool_timeout=db_config.get('pool_timeout', 10),
-            pool_recycle=db_config.get('pool_recycle', 3600),
-            pool_pre_ping=db_config.get('pool_pre_ping', True),
+            pool_size=db_config.get("pool_size", 10),
+            max_overflow=db_config.get("max_overflow", 5),
+            pool_timeout=db_config.get("pool_timeout", 10),
+            pool_recycle=db_config.get("pool_recycle", 3600),
+            pool_pre_ping=db_config.get("pool_pre_ping", True),
         )
 
         self.async_session = sessionmaker(
-            bind=self.engine,
-            class_=AsyncSession,
-            expire_on_commit=False
+            bind=self.engine, class_=AsyncSession, expire_on_commit=False
         )
 
         logger.info("数据库连接建立成功")
@@ -106,20 +109,22 @@ class OpeningAudioGenerator:
         self.voice_service = VoiceService()
 
     async def get_agents_without_audio(
-        self,
-        limit: Optional[int] = None,
-        agent_id: Optional[str] = None
+        self, limit: Optional[int] = None, agent_id: Optional[str] = None
     ) -> List[Agent]:
         """查询需要生成语音的 agents"""
         async with self.async_session() as session:
-            query = select(Agent).where(
-                and_(
-                    Agent.deleted_at.is_(None),  # 未删除
-                    Agent.opening.isnot(None),   # 有开场白文本
-                    Agent.opening != '',          # 开场白不为空
-                    Agent.opening_audio_url.is_(None)  # 没有语音 URL
+            query = (
+                select(Agent)
+                .where(
+                    and_(
+                        Agent.deleted_at.is_(None),  # 未删除
+                        Agent.opening.isnot(None),  # 有开场白文本
+                        Agent.opening != "",  # 开场白不为空
+                        Agent.opening_audio_url.is_(None),  # 没有语音 URL
+                    )
                 )
-            ).order_by(Agent.created_at.desc())
+                .order_by(Agent.created_at.desc())
+            )
 
             # 如果指定了 agent_id，只查询该 agent
             if agent_id:
@@ -141,23 +146,21 @@ class OpeningAudioGenerator:
                 and_(
                     Agent.deleted_at.is_(None),
                     Agent.opening.isnot(None),
-                    Agent.opening != '',
-                    Agent.opening_audio_url.is_(None)
+                    Agent.opening != "",
+                    Agent.opening_audio_url.is_(None),
                 )
             )
             result = await session.execute(query)
             return result.scalar()
 
     async def generate_opening_voice_for_agent(
-        self,
-        agent: Agent,
-        session: AsyncSession
+        self, agent: Agent, session: AsyncSession
     ) -> bool:
         """为单个 agent 生成开场白语音"""
         try:
             if not agent.opening or not agent.opening.strip():
                 logger.debug(f"Agent {agent.id} ({agent.name}) 没有开场白文本，跳过")
-                self.stats['skipped'] += 1
+                self.stats["skipped"] += 1
                 return False
 
             opening = agent.opening
@@ -165,11 +168,11 @@ class OpeningAudioGenerator:
             # 处理模板变量
             if has_template_variable(opening):
                 opening = render_prompt_jinja2_template(
-                    opening,
-                    char=agent.name,
-                    user="you"
+                    opening, char=agent.name, user="you"
                 )
-                logger.debug(f"Agent {agent.id} 开场白包含模板变量，渲染后: {opening[:50]}...")
+                logger.debug(
+                    f"Agent {agent.id} 开场白包含模板变量，渲染后: {opening[:50]}..."
+                )
 
             # 确定使用的 voice_id
             voice_id_to_use = agent.voice_id
@@ -179,7 +182,7 @@ class OpeningAudioGenerator:
                     logger.warning(
                         f"Agent {agent.id} ({agent.name}) 性别 {agent.gender.value} 没有对应的默认音色ID，跳过"
                     )
-                    self.stats['skipped'] += 1
+                    self.stats["skipped"] += 1
                     return False
 
             logger.info(
@@ -191,12 +194,12 @@ class OpeningAudioGenerator:
             voice_result = await self.voice_service.generate_voice(
                 text=opening,
                 voice_id=voice_id_to_use,
-                db=session  # 传入 session 以使用缓存
+                db=session,  # 传入 session 以使用缓存
             )
 
             if not voice_result:
                 logger.error(f"Agent {agent.id} ({agent.name}) 语音生成失败")
-                self.stats['failed'] += 1
+                self.stats["failed"] += 1
                 return False
 
             audio_url, audio_duration = voice_result
@@ -216,13 +219,13 @@ class OpeningAudioGenerator:
                     f"[时长: {audio_duration:.2f}秒] (未保存到数据库)"
                 )
 
-            self.stats['success'] += 1
+            self.stats["success"] += 1
             return True
 
         except Exception as e:
             logger.error(f"Agent {agent.id} ({agent.name}) 处理失败: {str(e)}")
             logger.exception("详细错误信息:")
-            self.stats['failed'] += 1
+            self.stats["failed"] += 1
             return False
 
     async def process_batch(self, agents: List[Agent]):
@@ -230,14 +233,10 @@ class OpeningAudioGenerator:
         async with self.async_session() as session:
             for i, agent in enumerate(agents, 1):
                 logger.info(f"[{i}/{len(agents)}] 处理 Agent {agent.id} ({agent.name})")
-                self.stats['processed'] += 1
+                self.stats["processed"] += 1
                 await self.generate_opening_voice_for_agent(agent, session)
 
-    async def run(
-        self,
-        limit: Optional[int] = None,
-        agent_id: Optional[str] = None
-    ):
+    async def run(self, limit: Optional[int] = None, agent_id: Optional[str] = None):
         """运行主逻辑"""
         start_time = datetime.now()
 
@@ -262,7 +261,7 @@ class OpeningAudioGenerator:
             logger.info(f"指定 Agent ID: {agent_id}")
         else:
             total_count = await self.count_agents_without_audio()
-            self.stats['total'] = total_count
+            self.stats["total"] = total_count
             logger.info(f"找到 {total_count} 个需要生成语音的 Agents")
 
             if total_count == 0:
@@ -290,7 +289,9 @@ class OpeningAudioGenerator:
             end_idx = min(start_idx + self.batch_size, len(agents))
             batch = agents[start_idx:end_idx]
 
-            logger.info(f"\n批次 {batch_idx + 1}/{batch_count}: 处理 {len(batch)} 个 Agents")
+            logger.info(
+                f"\n批次 {batch_idx + 1}/{batch_count}: 处理 {len(batch)} 个 Agents"
+            )
             logger.info("-" * 60)
 
             await self.process_batch(batch)
@@ -335,40 +336,27 @@ async def main():
 
   # 使用自定义配置文件
   python generate_missing_opening_audio.py --config /path/to/config.yaml
-        """
+        """,
     )
 
     parser.add_argument(
-        '--config',
+        "--config",
         type=str,
-        default='../../config.yaml',
-        help='配置文件路径（默认：../../config.yaml）'
+        default="../../config.yaml",
+        help="配置文件路径（默认：../../config.yaml）",
     )
 
     parser.add_argument(
-        '--batch-size',
-        type=int,
-        default=10,
-        help='每批处理的数量（默认：10）'
+        "--batch-size", type=int, default=10, help="每批处理的数量（默认：10）"
     )
 
     parser.add_argument(
-        '--dry-run',
-        action='store_true',
-        help='只查询和生成语音，不更新数据库'
+        "--dry-run", action="store_true", help="只查询和生成语音，不更新数据库"
     )
 
-    parser.add_argument(
-        '--limit',
-        type=int,
-        help='限制处理的数量（用于测试）'
-    )
+    parser.add_argument("--limit", type=int, help="限制处理的数量（用于测试）")
 
-    parser.add_argument(
-        '--agent-id',
-        type=str,
-        help='只处理指定的 agent ID'
-    )
+    parser.add_argument("--agent-id", type=str, help="只处理指定的 agent ID")
 
     args = parser.parse_args()
 
@@ -377,7 +365,7 @@ async def main():
     logger.add(
         sys.stderr,
         format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
-        level="INFO"
+        level="INFO",
     )
 
     # 解析配置文件路径
@@ -391,9 +379,7 @@ async def main():
 
     # 创建生成器并运行
     generator = OpeningAudioGenerator(
-        config_path=str(config_path),
-        dry_run=args.dry_run,
-        batch_size=args.batch_size
+        config_path=str(config_path), dry_run=args.dry_run, batch_size=args.batch_size
     )
 
     try:
@@ -407,5 +393,5 @@ async def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
