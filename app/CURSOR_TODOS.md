@@ -1,0 +1,23 @@
+### 后端（FastAPI）架构级 TODO（app 根）
+
+- [ ] 架构分层与边界：`api/`、`schemas/`、`services/`、`models/`、`utils/`、`middleware/`、`external_services/` 明确职责，禁止跨层耦合
+- [ ] 依赖注入：统一使用 FastAPI `Depends` 提供 service/repository；生命周期与资源回收一致
+- [ ] 配置管理：`settings.llm_config` 与全局配置优先级固化；dev/staging/prod 环境隔离与密钥管理
+- [ ] OpenAPI 单一真源：与 `stainless.yml`、`app/openapi.json` 对齐；自动生成 TS/Kotlin/Python SDK
+- [ ] 鉴权与权限：OAuth2/JWT + 刷新；多终端 token 策略；角色/权限（超级用户/评测）
+- [ ] 错误模型统一：`{code, message, details, request_id}`；异常中间件与 HTTP 状态映射规范
+- [ ] 可观测性：OpenTelemetry Trace/Metrics/Logs；`x-request-id` 贯穿；结构化日志与慢查询日志
+- [ ] 数据与迁移：Alembic 版本命名/审查流程；自动迁移校验；外键/索引治理与数据修复脚本
+- [ ] 连接与性能：SQLAlchemy 连接池/超时；N+1 检测；分页与游标统一（含确定性排序）
+- [ ] 缓存层：Redis 键命名规范/TTL/失效策略；避免击穿/雪崩；热点键监控
+- [ ] 幂等与重试：写接口幂等键；Idempotency-Key 规范；任务重试与去重
+- [ ] 后台任务：选择队列（Celery/RQ/Arq）并标准化；任务状态表与可视化；重试与失败告警
+- [ ] 资源与媒体：CDN/GCS 路径归一化流程固化；尺寸信息补齐；上传/下载限速与配额
+- [ ] 语音系统：ElevenLabs 客户端复用；异步生成队列；缓存与回退；用量记录与限额
+- [ ] 角色卡与提示词：层级合并（main/mode/output_format）标准化；SillyTavern V2 兼容路径巩固
+- [ ] AgentManager：实例缓存/闲置清理策略；强制重载接口；更新后缓存失效一致性
+- [ ] RAI/安全：输入校验与内容过滤透传；请求大小/速率限制；审计日志与敏感操作追踪
+- [ ] 流式接口：SSE/WebSocket 协议统一（心跳/重连/鉴权/限流）；前后端协商格式
+- [ ] 合同/集成测试：与 Android 契约测试；外部服务打桩；E2E 回归与回放
+- [ ] CI/CD：pre-commit/格式化/类型检查（ruff/mypy）；变更日志与版本化；回滚与迁移手册
+- [ ] 文档化：开发者指南、API 变更说明与迁移指引自动生成并随发布产出
