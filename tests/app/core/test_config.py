@@ -27,7 +27,7 @@ def config():
             name="test",
             environment=Environment.PROD,  # 非local环境
             limits=AppConfig.LimitsConfig(
-                local_only_guest_user_image_gen_24h_limit=0,  # 合法配置
+                test_only_guest_user_image_gen_24h_limit=0,  # 合法配置
             ),
         ),
         security=SecurityConfig(secret_key="test"),
@@ -215,31 +215,31 @@ def test_guest_equals_free_is_valid():
 
 def test_local_only_guest_user_image_gen_limit_in_non_local_environment(config):
     config.app.environment = Environment.DEV
-    config.app.limits.local_only_guest_user_image_gen_24h_limit = 5
+    config.app.limits.test_only_guest_user_image_gen_24h_limit = 5
 
     with pytest.raises(
         ValueError,
-        match="local_only_guest_user_image_gen_24h_limit is only allowed in local environment",
+        match="test_only_guest_user_image_gen_24h_limit is only allowed in test environment",
     ):
         _validate_config(config)
 
 
 def test_local_only_guest_user_image_gen_limit_in_local_environment(config):
     config.app.environment = Environment.TEST
-    config.app.limits.local_only_guest_user_image_gen_24h_limit = 5
+    config.app.limits.test_only_guest_user_image_gen_24h_limit = 5
 
     # 应该不抛出异常
     _validate_config(config)
-    assert config.app.limits.local_only_guest_user_image_gen_24h_limit == 5
+    assert config.app.limits.test_only_guest_user_image_gen_24h_limit == 5
 
 
 def test_local_only_guest_user_image_gen_limit_zero_in_non_local_environment(config):
     config.app.environment = Environment.PROD
-    config.app.limits.local_only_guest_user_image_gen_24h_limit = 0
+    config.app.limits.test_only_guest_user_image_gen_24h_limit = 0
 
     # 应该不抛出异常
     _validate_config(config)
-    assert config.app.limits.local_only_guest_user_image_gen_24h_limit == 0
+    assert config.app.limits.test_only_guest_user_image_gen_24h_limit == 0
 
 
 def test_name_for_openrouter_dev_environment():
@@ -262,14 +262,14 @@ def test_name_for_openrouter_prod_environment():
     assert app_config.name_for_openrouter == "https://inty-backend-prod"
 
 
-def test_name_for_openrouter_local_environment():
-    """测试LOCAL环境下的name_for_openrouter属性"""
+def test_name_for_openrouter_test_environment():
+    """测试TEST环境下的name_for_openrouter属性"""
     app_config = AppConfig(
         name="inty-backend",
         environment=Environment.TEST,
     )
 
-    assert app_config.name_for_openrouter == "https://inty-backend-local"
+    assert app_config.name_for_openrouter == "https://inty-backend-test"
 
 
 def test_name_for_openrouter_unspecified_environment():
