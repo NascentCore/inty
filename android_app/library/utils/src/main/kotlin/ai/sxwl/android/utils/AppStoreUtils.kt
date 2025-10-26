@@ -37,7 +37,7 @@ object AppStoreUtils {
                 Log.w(TAG, "packageName为空，无法获取应用商店Intent")
                 return null
             }
-            
+
             when {
                 RomUtils.isSamsung() -> getSamsungAppStoreIntent(config.packageName)
                 else -> getGenericAppStoreIntent(config)
@@ -135,7 +135,7 @@ object AppStoreUtils {
             Log.w(TAG, "packageName为空，无法获取三星应用商店Intent")
             return null
         }
-        
+
         val intent = Intent().apply {
             setClassName(SAMSUNG_APPS_PACKAGE, "com.sec.android.app.samsungapps.Main")
             data = "http://www.samsungapps.com/appquery/appDetail.as?appId=$packageName".toUri()

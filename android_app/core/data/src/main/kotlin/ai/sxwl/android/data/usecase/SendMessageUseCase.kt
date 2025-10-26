@@ -13,7 +13,7 @@ import javax.inject.Inject
 class SendMessageUseCase @Inject constructor(
     private val chatRepository: ChatRepository
 ) {
-    
+
     suspend operator fun invoke(agentId: String, content: String): HttpResult<SendMsgResponse> {
         LogUtils.d("SendMessageUseCase: sending message to agent $agentId")
         return chatRepository.sendMessage(agentId, content)

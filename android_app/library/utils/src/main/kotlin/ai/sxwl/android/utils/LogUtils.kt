@@ -320,7 +320,7 @@ object LogUtils {
             printSubMsg(type, tag, msg)
             return
         }
-        
+
         val len = msg.length
         val countOfSub = len / MAX_LEN
 
@@ -384,7 +384,7 @@ object LogUtils {
             print2Console(type, tag, msg)
             return
         }
-        
+
         val len = msg.length
         val countOfSub = if (CONFIG.logBorderSwitch) {
             maxOf(0, (len - BOTTOM_BORDER.length) / MAX_LEN)
@@ -510,7 +510,7 @@ object LogUtils {
                 Log.e("LogUtils", "Failed to parse date: $date", e)
                 return
             } ?: return
-            
+
             val cutOffTime = dueMillis - CONFIG.saveDays * 86400000L
 
             files.forEach { aFile ->

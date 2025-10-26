@@ -408,7 +408,7 @@ object EncryptUtils {
         if (key.size !in validKeyLengths) {
             return ByteArray(0)
         }
-        
+
         return try {
             val keySpec = SecretKeySpec(key, algorithm)
             val cipher = Cipher.getInstance(transformation)

@@ -201,7 +201,7 @@ class ImageCompressManager private constructor() {
         } catch (e: Exception) {
             0
         }
-        
+
         if (fileSizeKB <= targetSizeKB) {
             // 文件已经足够小，直接返回原文件
             callback.onSuccess(imageFile)

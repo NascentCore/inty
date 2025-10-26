@@ -56,7 +56,7 @@ object NetworkErrorHandler {
             LogUtils.d("网络请求被取消: $requestUrl")
             return "Request cancelled"
         }
-        
+
         val errorMessage = exception.message ?: "Network error occurred"
 
         // 检查错误消息是否包含取消相关词汇
