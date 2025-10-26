@@ -65,7 +65,6 @@ jobs:
       - name: Run fmt.sh (format entire repo)
         run: |
           set -euxo pipefail
-          chmod +x ./fmt.sh
           ./fmt.sh --all || (status=$?; echo "fmt.sh exited $status, checking repo status..."; if git diff --quiet; then echo "No changes to commit"; exit 0; else echo "Formatting failed"; exit $status; fi)
 
       - name: Push changes (if any)
