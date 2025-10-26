@@ -1,9 +1,0 @@
----
-description: alembic
-globs: app/models/**/*.py,alembic/**/*.py
-alwaysApply: false
----
-
-# Sqlalchemy models
-
-* When generating sqlalchemy table definition, place them in `app/models` dir.
