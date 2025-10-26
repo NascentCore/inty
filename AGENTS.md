@@ -67,6 +67,8 @@ else:
 
 - 只支持 portrait 显示；不支持 landscape 显示，无需在改动时考虑兼容 landscape 显示。
 
+- 网络栈存在并行实现：Retrofit/Moshi（`NetServiceMgr` + `I*Api`）与生成的 Inty SDK（`IntyNetworkManager` + `*Service`）同时使用，易导致错误处理/鉴权/环境配置不一致，以及重复创建 `OkHttpClient`。
+
 ## CloudFlare
 
 - @<https://developers.cloudflare.com/llms.txt>
