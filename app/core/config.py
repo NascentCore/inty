@@ -343,10 +343,57 @@ def _validate_config(config: Config):
         )
 
 
-global_config_loaded_from_config_yaml = load_config("config.yaml")
-print(f"[CONFIG] Database URL: {global_config_loaded_from_config_yaml.database.url}")
-_validate_config(global_config_loaded_from_config_yaml)
+def _load_or_default_config() -> "Config":
+    """Load config from CONFIG_PATH or config.yaml; fallback to safe defaults.
 
+    目标：在模块导入阶段避免因为缺少配置文件而导致导入失败，从而破坏测试/工具的模块导入冒烟检查。
+    - 若存在配置文件则按原逻辑加载并校验；
+    - 若不存在则提供占位的默认配置（不做严格校验），保证应用可被导入。
+    """
+
+    # 允许通过环境变量覆盖配置路径（例如在容器或 CI 中）
+    config_path_env = os.getenv("CONFIG_PATH", "config.yaml")
+    config_path = Path(config_path_env)
+
+    if config_path.exists():
+        cfg = load_config(str(config_path))
+        print(f"[CONFIG] Database URL: {cfg.database.url}")
+        _validate_config(cfg)
+        return cfg
+
+    # 提供最小可用的占位配置，避免导入期崩溃
+    DEFAULT_PLACEHOLDER = "local"
+    try:
+        cfg = Config(
+            app=AppConfig(),
+            security=SecurityConfig(),
+            database=DatabaseSettings(),
+            google_oauth=GoogleOAuthConfig(),
+            verification=VerificationConfig(),
+            logging=LoggingConfig(),
+            embedding=EmbeddingConfig(),
+            agent=AgentConfig(
+                api_key=DEFAULT_PLACEHOLDER,
+                langchain_api_key=DEFAULT_PLACEHOLDER,
+            ),
+            gcs=GCSConfig(bucket=DEFAULT_PLACEHOLDER),
+            firebase=FirebaseConfig(service_account_path=f"{DEFAULT_PLACEHOLDER}.json"),
+            google_play=GooglePlayConfig(),
+            elevenlabs=ElevenLabsConfig(api_key=DEFAULT_PLACEHOLDER),
+            cloudflare=CloudflareConfig(),
+        )
+    except Exception as e:
+        # 极端情况下也要避免导入失败
+        print(f"[CONFIG] Failed to build default config: {e}")
+        raise
+
+    logger.warning(
+        f"Config file not found at '{config_path}'. Using in-memory defaults for import-time."
+    )
+    return cfg
+
+
+global_config_loaded_from_config_yaml = _load_or_default_config()
 
 # 设置 LangSmith 环境变量用于支持 tracing，因为其只支持从环境变量读取设置，而非依赖注入。
 os.environ["LANGSMITH_TRACING_V2"] = "true"
@@ -356,7 +403,7 @@ os.environ["LANGSMITH_PROJECT"] = (
 os.environ["LANGCHAIN_API_KEY"] = (
     global_config_loaded_from_config_yaml.agent.langchain_api_key
 )
-logger.debug(f"Setting LangSmith environment variables for project: ")
+logger.debug("Setting LangSmith environment variables for project: ")
 logger.debug(f"LANGSMITH_TRACING_V2: {os.getenv('LANGSMITH_TRACING_V2')}")
 logger.debug(f"LANGSMITH_PROJECT: {os.getenv('LANGSMITH_PROJECT')}")
 logger.debug(f"LANGCHAIN_API_KEY: {os.getenv('LANGCHAIN_API_KEY')}")
