@@ -55,7 +55,9 @@ async def upload_image(
             base_path=base_path,
             cropping_avatar=cropping_avatar,  # Use the direct parameter
         )
-        result.data = result.data.model_dump()
+        if result.data:
+            # 如果返回的是错误，则 data == None，就无需转换数据
+            result.data = result.data.model_dump()
         return result
     except ValueError as e:
         logger.error(f"文件验证错误: {str(e)}")
