@@ -11,6 +11,7 @@ import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
+import ai.sxwl.android.utils.Utils
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -94,14 +95,12 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.SingleLineTextInputField
 import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.MainViewModel
-import com.architecture.httplib.core.HttpResult
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -265,16 +264,20 @@ private fun CreateRolePage(
                         // Upload the cropped image to server
                         try {
                             val file = File(resultUri.path!!)
-
+                            LogUtils.d("CreateRoleActivity: Starting avatar upload - file path: ${file.absolutePath}")
+                            LogUtils.d("CreateRoleActivity: File exists: ${file.exists()}, size: ${file.length()} bytes")
 
                             // Use the mainViewModel's scope to launch the coroutine
                             mainViewModel.viewModelScope.launch(Dispatchers.IO) {
                                 try {
-                                    val response = ImageService.uploadImage(file.absolutePath, croppingAvatar = true)
-                                    when (response) {
+                                    LogUtils.d("CreateRoleActivity: Launching upload coroutine")
+                                    val result = ImageService.uploadImage(file.absolutePath, croppingAvatar = true)
+                                    LogUtils.d("CreateRoleActivity: Upload result received: ${result::class.simpleName}")
+                                    
+                                    when (result) {
                                         is ApiResult.Success -> {
-                                            val uploadedUrl = response.data
-                                            LogUtils.i("Avatar uploaded successfully: $uploadedUrl")
+                                            val uploadedUrl = result.data
+                                            LogUtils.i("CreateRoleActivity: Avatar uploaded successfully: $uploadedUrl")
 
                                             // Update UI on main thread
                                             withContext(Dispatchers.Main) {
@@ -283,22 +286,27 @@ private fun CreateRolePage(
                                             }
                                         }
 
-                                        is ApiResult.Failure -> {
-                                            LogUtils.e("Upload failed: ${response.error}")
+                                        is ApiResult.Error -> {
+                                            LogUtils.e("CreateRoleActivity: Avatar upload failed - Code: ${result.code}, Message: ${result.message}")
+                                            LogUtils.e("CreateRoleActivity: Exception: ${result.exception}")
                                             withContext(Dispatchers.Main) {
-                                                ToastUtils.showShort(context.getString(R.string.toast_upload_failed_with_message, response.error ?: "Unknown error"))
+                                                ToastUtils.showShort(context.getString(R.string.toast_upload_failed_with_message, result.message ?: "Unknown error"))
                                             }
                                         }
                                     }
                                 } catch (e: Exception) {
-                                    LogUtils.e("Upload exception: ${e.message}")
+                                    LogUtils.e("CreateRoleActivity: Upload coroutine exception: ${e.message}")
+                                    LogUtils.e("CreateRoleActivity: Exception type: ${e.javaClass.simpleName}")
+                                    LogUtils.e("CreateRoleActivity: Exception stack trace:", e)
                                     withContext(Dispatchers.Main) {
                                         ToastUtils.showShort(context.getString(R.string.toast_upload_failed_with_message, e.message ?: "Unknown error"))
                                     }
                                 }
                             }
                         } catch (e: Exception) {
-                            LogUtils.e("Failed to prepare upload: ${e.message}")
+                            LogUtils.e("CreateRoleActivity: Failed to prepare upload: ${e.message}")
+                            LogUtils.e("CreateRoleActivity: Prepare upload exception type: ${e.javaClass.simpleName}")
+                            LogUtils.e("CreateRoleActivity: Prepare upload exception stack trace:", e)
                             ToastUtils.showShort(context.getString(R.string.toast_failed_prepare_upload_with_message, e.message ?: "Unknown error"))
                         }
                     }
@@ -691,6 +699,12 @@ private fun CreateRolePage(
                     isLoading = true
 
                     try {
+                        LogUtils.d("CreateRoleActivity: Preparing ${if (isEditMode) "update" else "create"} request")
+                        LogUtils.d("CreateRoleActivity: Request details - name: $name, gender: $gender")
+                        LogUtils.d("CreateRoleActivity: Avatar URL: $finalAvatarUrl")
+                        LogUtils.d("CreateRoleActivity: Background URL: $backgroundUrl")
+                        LogUtils.d("CreateRoleActivity: Background images count: ${backgroundImagesList.size}")
+                        
                         val request =
                             CreateAgentRequest(
                                 name = name,
@@ -704,17 +718,23 @@ private fun CreateRolePage(
                                 visibility = visibility,
                                 prompt = settings,
                             )
+                        
+                        LogUtils.d("CreateRoleActivity: Request object created successfully")
+                        
                         // Call API through ViewModel
                         if (isEditMode) {
+                            LogUtils.d("CreateRoleActivity: Calling updateAgent for agent ID: ${editAgent.id}")
                             mainViewModel.updateAgent(
                                 agentId = editAgent.id,
                                 request = request,
                                 onSuccess = { agentInfo ->
+                                    LogUtils.i("CreateRoleActivity: Agent updated successfully")
                                     isLoading = false
                                     ToastUtils.showShort(R.string.character_updated_successfully)
                                     onCreateSuccess()
                                 },
                                 onError = { error ->
+                                    LogUtils.e("CreateRoleActivity: Agent update failed - Error: $error")
                                     isLoading = false
                                     val errorMessage =
                                         if (error.isBlank()) {
@@ -733,14 +753,17 @@ private fun CreateRolePage(
                                 },
                             )
                         } else {
+                            LogUtils.d("CreateRoleActivity: Calling createAgent")
                             mainViewModel.createAgent(
                                 request = request,
                                 onSuccess = { agentInfo ->
+                                    LogUtils.i("CreateRoleActivity: Agent created successfully")
                                     isLoading = false
                                     ToastUtils.showShort(context.getString(R.string.create_ai_successfully))
                                     onCreateSuccess()
                                 },
                                 onError = { error ->
+                                    LogUtils.e("CreateRoleActivity: Agent creation failed - Error: $error")
                                     isLoading = false
                                     val errorMessage =
                                         if (error.isBlank()) {
@@ -760,6 +783,9 @@ private fun CreateRolePage(
                             )
                         }
                     } catch (e: Exception) {
+                        LogUtils.e("CreateRoleActivity: ${if (isEditMode) "UpdateRole" else "CreateRole"} exception: ${e.message}")
+                        LogUtils.e("CreateRoleActivity: Exception type: ${e.javaClass.simpleName}")
+                        LogUtils.e("CreateRoleActivity: Exception stack trace:", e)
                         isLoading = false
                         val operation =
                             if (isEditMode) context.getString(R.string.update_failed)
@@ -771,7 +797,6 @@ private fun CreateRolePage(
                                 e.message ?: context.getString(R.string.unknown_error),
                             )
                         ToastUtils.showShort(errorMessage)
-                        LogUtils.e("${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}")
                     }
                 },
             )

@@ -163,18 +163,44 @@ object IntyNetworkManager {
         val actualConfig = config ?: getDefaultRequestConfig()
 
         return try {
+            LogUtils.d("IntyNetworkManager: Starting $operation with timeout: ${actualConfig.timeoutMs}ms")
+            
             if (NetworkConfig.shouldEnableDetailedLogging()) {
                 LogUtils.i("🔄 Executing $operation")
             }
 
             val result = withTimeout(actualConfig.timeoutMs) { apiCall() }
 
+            LogUtils.d("IntyNetworkManager: $operation completed successfully")
             if (NetworkConfig.shouldEnableDetailedLogging()) {
                 LogUtils.i("✅ $operation succeeded")
             }
 
             ApiResult.Success(result)
         } catch (e: Exception) {
+            LogUtils.e("IntyNetworkManager: $operation failed with exception: ${e.javaClass.simpleName}")
+            LogUtils.e("IntyNetworkManager: Exception message: ${e.message}")
+            LogUtils.e("IntyNetworkManager: Exception stack trace:", e)
+            
+            // 尝试获取更多HTTP错误信息
+            when (e) {
+                is com.inty.api.core.HttpException -> {
+                    LogUtils.e("IntyNetworkManager: HTTP Exception - Status: ${e.statusCode}, Body: ${e.body}")
+                }
+                is java.net.SocketTimeoutException -> {
+                    LogUtils.e("IntyNetworkManager: Request timeout after ${actualConfig.timeoutMs}ms")
+                }
+                is java.net.ConnectException -> {
+                    LogUtils.e("IntyNetworkManager: Connection failed - ${e.message}")
+                }
+                is java.io.IOException -> {
+                    LogUtils.e("IntyNetworkManager: IO Exception - ${e.message}")
+                }
+                else -> {
+                    LogUtils.e("IntyNetworkManager: Unknown exception type: ${e.javaClass.name}")
+                }
+            }
+            
             if (NetworkConfig.shouldEnableDetailedLogging()) {
                 LogUtils.i("❌ $operation failed: ${e.message}")
             }

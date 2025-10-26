@@ -13,7 +13,18 @@ sealed class ApiResult<out T> {
 /** 将异常转换为ApiResult */
 fun <T> Exception.toApiResult(): ApiResult<T> {
     LogUtils.e("API exception: ${this.message}")
-    return ApiResult.Error(code = -1, message = this.message ?: "Unknown error", exception = this)
+    LogUtils.e("API exception type: ${this.javaClass.simpleName}")
+    LogUtils.e("API exception stack trace:", this)
+    
+    // 尝试获取HTTP状态码
+    val httpCode = when (this) {
+        is com.inty.api.core.HttpException -> this.statusCode
+        else -> -1
+    }
+    
+    LogUtils.e("API exception HTTP code: $httpCode")
+    
+    return ApiResult.Error(code = httpCode, message = this.message ?: "Unknown error", exception = this)
 }
 
 /** 执行API调用并返回ApiResult */

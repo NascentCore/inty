@@ -1,6 +1,7 @@
 package com.ai.intellimate.profile
 
 import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.http.services.ImageService
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.api.model.UserProfile
@@ -77,20 +78,27 @@ class MySettingViewModel : BaseVM() {
 
     fun onSave() {
         launchBackground {
+            LogUtils.d("MySettingViewModel: Starting onSave operation")
             _isSaving.value = true
             try {
                 if (_avatarChanged.value) {
+                    LogUtils.d("MySettingViewModel: Avatar has changed, uploading new avatar")
                     val fileUri = _userProfile.value.avatar?.toUri()
+                    LogUtils.d("MySettingViewModel: Avatar URI: $fileUri")
 
                     if (fileUri?.path == null) {
+                        LogUtils.e("MySettingViewModel: Invalid avatar file - path is null")
                         NetworkErrorHandler.showNetworkAwareError("Invalid avatar file")
                         return@launchBackground
                     }
 
+                    LogUtils.d("MySettingViewModel: Starting avatar upload - path: ${fileUri.path}")
                     val result = ImageService.uploadImage(fileUri.path!!, croppingAvatar = true)
+                    LogUtils.d("MySettingViewModel: Avatar upload result: ${result::class.simpleName}")
 
                     when (result) {
                         is ApiResult.Success -> {
+                            LogUtils.i("MySettingViewModel: Avatar uploaded successfully: ${result.data}")
                             _userProfile.value =
                                 _userProfile.value.copy(
                                     // No cropping, just use the provided url.
@@ -102,15 +110,21 @@ class MySettingViewModel : BaseVM() {
                             }
                         }
 
-                        is ApiResult.Failure -> {
-                            NetworkErrorHandler.showNetworkAwareError(result.error)
+                        is ApiResult.Error -> {
+                            LogUtils.e("MySettingViewModel: Avatar upload failed - Code: ${result.code}, Message: ${result.message}")
+                            LogUtils.e("MySettingViewModel: Avatar upload exception: ${result.exception}")
+                            NetworkErrorHandler.showNetworkAwareError(result.message?: "Failed to upload avatar")
                             return@launchBackground
                         }
                     }
+                } else {
+                    LogUtils.d("MySettingViewModel: Avatar unchanged, skipping upload")
                 }
 
+                LogUtils.d("MySettingViewModel: Updating user profile")
                 val updatedProfile = IntyUserProfileSDK.updateUserProfile(_userProfile.value)
                 if (updatedProfile != null) {
+                    LogUtils.i("MySettingViewModel: User profile updated successfully")
                     // Show success toast for profile update
                     viewModelScope.launch(Dispatchers.Main) {
                         ToastUtils.showShort(Utils.getApp().getString(R.string.saved_successfully))
@@ -119,9 +133,16 @@ class MySettingViewModel : BaseVM() {
                     // 发送用户信息更新成功事件
                     sendEvent(ViewModelEvent.UserProfileUpdated)
                 } else {
+                    LogUtils.e("MySettingViewModel: Failed to update user profile - returned null")
                     NetworkErrorHandler.showNetworkAwareError("Failed to update user profile")
                 }
+            } catch (e: Exception) {
+                LogUtils.e("MySettingViewModel: onSave exception: ${e.message}")
+                LogUtils.e("MySettingViewModel: Exception type: ${e.javaClass.simpleName}")
+                LogUtils.e("MySettingViewModel: Exception stack trace:", e)
+                NetworkErrorHandler.showNetworkAwareError("Save failed: ${e.message ?: "Unknown error"}")
             } finally {
+                LogUtils.d("MySettingViewModel: onSave operation completed")
                 _isSaving.value = false
             }
         }
