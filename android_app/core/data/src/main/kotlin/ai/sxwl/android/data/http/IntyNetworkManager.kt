@@ -204,9 +204,6 @@ object IntyNetworkManager {
                 is com.inty.api.errors.UnauthorizedException -> {
                     LogUtils.e("IntyNetworkManager: Unauthorized (401) - ${e.message}")
                 }
-                is com.inty.api.errors.ForbiddenException -> {
-                    LogUtils.e("IntyNetworkManager: Forbidden (403) - ${e.message}")
-                }
                 is com.inty.api.errors.NotFoundException -> {
                     LogUtils.e("IntyNetworkManager: Not Found (404) - ${e.message}")
                 }
