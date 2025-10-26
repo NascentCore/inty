@@ -291,20 +291,20 @@ private fun CreateRolePage(
                                         is HttpResult.Failure -> {
                                             LogUtils.e("Upload failed: ${response.message}")
                                             withContext(Dispatchers.Main) {
-                                                ToastUtils.showShort(getString(R.string.toast_upload_failed_with_message, response.message))
+                                                ToastUtils.showShort(context.getString(R.string.toast_upload_failed_with_message, response.message ?: "Unknown error"))
                                             }
                                         }
                                     }
                                 } catch (e: Exception) {
                                     LogUtils.e("Upload exception: ${e.message}")
                                     withContext(Dispatchers.Main) {
-                                        ToastUtils.showShort(getString(R.string.toast_upload_failed_with_message, e.message))
+                                        ToastUtils.showShort(context.getString(R.string.toast_upload_failed_with_message, e.message ?: "Unknown error"))
                                     }
                                 }
                             }
                         } catch (e: Exception) {
                             LogUtils.e("Failed to prepare upload: ${e.message}")
-                            ToastUtils.showShort(getString(R.string.toast_failed_prepare_upload_with_message, e.message))
+                            ToastUtils.showShort(context.getString(R.string.toast_failed_prepare_upload_with_message, e.message ?: "Unknown error"))
                         }
                     }
                 }
