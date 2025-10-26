@@ -28,7 +28,7 @@ class Environment(str, Enum):
 
     DEV = "dev"
     PROD = "prod"
-    LOCAL = "local"
+    TEST = "test"
     UNSPECIFIED = "unspecified"
 
 
@@ -119,7 +119,7 @@ class AppConfig:
         # DEPRECATED: Use free_user_image_gen_24h_limit instead
         free_user_image_gen_daily_limit: int = 4
         # Only used for testing purpose to allow easier integration with test client.
-        local_only_guest_user_image_gen_24h_limit: int = 0
+        test_only_guest_user_image_gen_24h_limit: int = 0
         free_user_image_gen_24h_limit: int = 4
         subscribed_user_image_gen_24h_limit: int = 8
         free_user_agent_creation_24h_limit: int = 6
@@ -172,7 +172,9 @@ class AgentConfig:
 
 @dataclass
 class GCSConfig:
-    bucket: str
+    # 如果为 True，则使用假GCS客户端；在本地存储文件，不使用 GCS 服务。用于测试。
+    use_fake_gcs: bool = False
+    bucket: str = "inty-storage"
     # DEPRECATED: 保留作为兼容；被 app.gcp_service_account_key 取代
     # 删除部署环境中的配置文件使用，然后删除这个代码。
     credentials: str = "<deprecated-do-not-use>"
@@ -336,11 +338,11 @@ def _validate_config(config: Config):
         limits.free_user_voice_24h_limit = default_free
 
     if (
-        config.app.environment != Environment.LOCAL
-        and limits.local_only_guest_user_image_gen_24h_limit > 0
+        config.app.environment != Environment.TEST
+        and limits.test_only_guest_user_image_gen_24h_limit > 0
     ):
         raise ValueError(
-            "local_only_guest_user_image_gen_24h_limit is only allowed in local environment"
+            "test_only_guest_user_image_gen_24h_limit is only allowed in test environment"
         )
 
 
