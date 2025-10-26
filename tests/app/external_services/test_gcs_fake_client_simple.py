@@ -82,39 +82,23 @@ class TestFakeGCSClientDirect:
 
     def test_fake_gcs_client_with_gcs_service(self):
         """测试假GCS客户端与GCS服务的集成"""
-        # 模拟配置启用假GCS
-        mock_config = MagicMock()
-        mock_config.gcs.use_fake_gcs = True
-        mock_config.gcs.bucket = "test-bucket"
-        mock_config.app.debug = True
-        mock_config.app.gcp_service_account_key = ".secrets/gcp-service-account-key.json"
+        # 由于配置文件已经启用了假GCS客户端，直接测试即可
+        import app.external_services.gcs
 
-        with patch("app.external_services.gcs.global_config_loaded_from_config_yaml", mock_config):
-            # 重新导入GCS模块
-            import importlib
-
-            import app.external_services.gcs
-
-            # 重置全局gcs_client变量
-            app.external_services.gcs.gcs_client = None
-
-            # 重新加载模块以使用新的配置
-            importlib.reload(app.external_services.gcs)
-
-            # 测试上传
-            test_data = b"test integration content"
-            result_url = app.external_services.gcs.upload_to_gcs(
-                test_data, "text/plain", "test-bucket", "test/integration.txt"
-            )
-
-            # 验证返回的URL格式
-            assert result_url.startswith("https://storage.googleapis.com/")
-            assert "test-bucket" in result_url
-            assert "test/integration.txt" in result_url
-
-            # 验证文件存在
-            assert app.external_services.gcs.check_gcs_file_exists("test-bucket", "test/integration.txt")
-
-            # 验证下载
-            downloaded_data = app.external_services.gcs.download_from_gcs(result_url)
-            assert downloaded_data == test_data
+        # 测试上传
+        test_data = b"test integration content"
+        result_url = app.external_services.gcs.upload_to_gcs(
+            test_data, "text/plain", "test-bucket", "test/integration.txt"
+        )
+        
+        # 验证返回的URL格式
+        assert result_url.startswith("https://storage.googleapis.com/")
+        assert "test-bucket" in result_url
+        assert "test/integration.txt" in result_url
+        
+        # 验证文件存在
+        assert app.external_services.gcs.check_gcs_file_exists("test-bucket", "test/integration.txt")
+        
+        # 验证下载
+        downloaded_data = app.external_services.gcs.download_from_gcs(result_url)
+        assert downloaded_data == test_data
