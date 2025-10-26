@@ -11,7 +11,7 @@ import javax.inject.Inject
 class LoadChatHistoryUseCase @Inject constructor(
     private val chatRepository: ChatRepository
 ) {
-    
+
     suspend operator fun invoke(agentId: String, pageSize: Int = 20) {
         LogUtils.d("LoadChatHistoryUseCase: loading chat history for agent $agentId")
         chatRepository.ensureInitialHistory(agentId, pageSize)

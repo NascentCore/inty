@@ -11,7 +11,7 @@ import javax.inject.Inject
 class SyncChatDataUseCase @Inject constructor(
     private val chatRepository: ChatRepository
 ) {
-    
+
     suspend operator fun invoke(agentId: String, pageSize: Int = 20) {
         LogUtils.d("SyncChatDataUseCase: syncing chat data for agent $agentId")
         chatRepository.syncLatestMessages(agentId, pageSize)

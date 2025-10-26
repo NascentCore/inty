@@ -302,7 +302,7 @@ class ChatViewModel : BaseVM() {
             try {
                 val result = sendMessageUseCase(agentId, inputMsg.trimEnd())
                 LogUtils.i("Send message result: $result")
-                
+
                 // 处理发送结果
                 when (result) {
                     is HttpResult.Success -> {

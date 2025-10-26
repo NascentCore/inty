@@ -20,7 +20,7 @@ class UtilsInitializer : Initializer<Unit> {
                 Log.e("UtilsInitializer", "Application context is null")
                 return
             }
-            
+
             // 初始化Utils工具类
             Utils.init(app)
             CrashUtils.init()

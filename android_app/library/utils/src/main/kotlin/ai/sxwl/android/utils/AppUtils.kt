@@ -362,7 +362,7 @@ object AppUtils {
         return try {
             val app = Utils.getApp() ?: return null
             val pm = app.packageManager ?: return null
-            
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val pi = pm.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
                 val signingInfo = pi.signingInfo

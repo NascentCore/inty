@@ -244,7 +244,7 @@ object LanguageUtils {
                 consumer.accept(false)
                 return
             }
-            
+
             val configuration = Configuration(resources.configuration)
             configuration.setLocale(locale)
 
