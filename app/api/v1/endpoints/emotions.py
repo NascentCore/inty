@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from loguru import logger
 
+from app import schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
 from app.schemas.response import APIResponse
@@ -18,13 +19,17 @@ router = APIRouter(prefix="/emotions", route_class=LoggerRoute)
 
 
 @router.get("/list", response_model=APIResponse[EmotionListResponse])
-async def list_emotions(_: deps.CurrentUser = Depends(deps.get_current_active_user)):
+async def list_emotions(
+    _: schemas.User = Depends(deps.get_current_active_user),
+):
     emotions = emotion_service.list_emotions()
     return APIResponse.success(EmotionListResponse(emotions=emotions))
 
 
 @router.get("/mapping", response_model=APIResponse[EmotionMappingResponse])
-async def get_mapping(_: deps.CurrentUser = Depends(deps.get_current_active_user)):
+async def get_mapping(
+    _: schemas.User = Depends(deps.get_current_active_user),
+):
     mapping = emotion_service.get_mapping()
     return APIResponse.success(EmotionMappingResponse(mapping=mapping))
 
@@ -32,7 +37,7 @@ async def get_mapping(_: deps.CurrentUser = Depends(deps.get_current_active_user
 @router.post("/mapping", response_model=APIResponse[EmotionMappingResponse])
 async def set_mapping(
     body: EmotionMappingSetRequest,
-    _: deps.CurrentUser = Depends(deps.get_current_active_user),
+    _: schemas.User = Depends(deps.get_current_active_user),
 ):
     try:
         mapping = emotion_service.set_mapping(body.mapping, replace=body.replace)
@@ -45,7 +50,7 @@ async def set_mapping(
 @router.post("/select", response_model=APIResponse[EmotionSelectResult])
 async def select_emotion(
     body: EmotionSelectRequest,
-    _: deps.CurrentUser = Depends(deps.get_current_active_user),
+    _: schemas.User = Depends(deps.get_current_active_user),
 ):
     selected = emotion_service.select_emotion_with_gemini(
         emotion_service.EmotionSelectInput(

@@ -67,7 +67,9 @@ def set_mapping(new_mapping: Dict[str, str], replace: bool = True) -> Dict[str, 
         replace: True 则整体替换，False 则合并覆盖
     """
     allowed = set(_emotion_names())
-    invalid = [k for k in new_mapping.keys() if _normalize_emotion(k) not in allowed]
+    invalid = [
+        k for k in new_mapping.keys() if _canonical_emotion(k) not in allowed
+    ]
     if invalid:
         raise ValueError(f"包含非法情绪: {invalid}")
 
@@ -145,7 +147,9 @@ def select_emotion_with_gemini(inp: EmotionSelectInput) -> str:
         ),
     )
 
-    model = global_config_loaded_from_config_yaml.agent.model
+    # 统一模型名：配置里用于 OpenRouter 的前缀 "google/" 不适用于 Google GenAI SDK
+    cfg_model = global_config_loaded_from_config_yaml.agent.model
+    model = cfg_model.split("/", 1)[1] if "/" in cfg_model else cfg_model
     try:
         resp = client.models.generate_content(
             model=model,
