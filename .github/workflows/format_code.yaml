@@ -82,3 +82,11 @@ jobs:
           delete-branch: true
           author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
           committer: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+        id: create-pr
+
+      - name: Enable auto-merge for Pull Request
+        if: steps.create-pr.outputs.pull-request-number
+        run: |
+          gh pr merge --auto --squash ${{ steps.create-pr.outputs.pull-request-number }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
