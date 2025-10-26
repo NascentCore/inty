@@ -1,6 +1,5 @@
 package ai.sxwl.android.data.chat
 
-import ai.sxwl.android.data.annotations.GeneratedByAI
 import ai.sxwl.android.data.api.IChatApi
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.MsgInfo
@@ -15,7 +14,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-@GeneratedByAI
 object ChatSessionManager {
 
     private const val DEFAULT_PAGE_SIZE = 20
