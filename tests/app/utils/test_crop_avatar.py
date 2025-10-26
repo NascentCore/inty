@@ -1,4 +1,6 @@
+import os
 import random
+import tempfile
 
 import pytest
 from PIL import Image, ImageChops
@@ -166,12 +168,20 @@ def test_calculate_crop_square_boundaries():
     assert avatar_square == (5, 0, 40, 40)
 
 
-def test_crop_square_face_handle_all_image_formats():
+@pytest.fixture()
+def tmp_dir():
+    """Set up temporary directory for test files."""
+    tmp_dir = tempfile.TemporaryDirectory()
+    yield tmp_dir.name
+    tmp_dir.cleanup()
+
+
+def test_crop_square_face_handle_all_image_formats(tmp_dir):
     img_path = "tests/files/test.jpg"
     img_data = open(img_path, "rb").read()
     crop_avatar_result = crop_avatar(img_data)
     cropped_img = crop_avatar_result.image
-    cropped_img.save("avatar_test_image.jpg")
+    cropped_img.save(os.path.join(tmp_dir, "avatar_test_image.jpg"))
     assert cropped_img.size == (214, 214)
     assert crop_avatar_result.size == ImageSize(width=214, height=214)
 
@@ -179,7 +189,7 @@ def test_crop_square_face_handle_all_image_formats():
     img_data = open(img_path, "rb").read()
     crop_avatar_result = crop_avatar(img_data)
     cropped_img = crop_avatar_result.image
-    cropped_img.save("avatar_test_image.png")
+    cropped_img.save(os.path.join(tmp_dir, "avatar_test_image.png"))
     assert cropped_img.size == (214, 214)
     assert crop_avatar_result.size == ImageSize(width=214, height=214)
 
@@ -187,7 +197,7 @@ def test_crop_square_face_handle_all_image_formats():
     img_data = open(img_path, "rb").read()
     crop_avatar_result = crop_avatar(img_data)
     cropped_img = crop_avatar_result.image
-    cropped_img.save("avatar_test_image.webp")
+    cropped_img.save(os.path.join(tmp_dir, "avatar_test_image.webp"))
     assert cropped_img.size == (214, 214)
     assert crop_avatar_result.size == ImageSize(width=214, height=214)
 
