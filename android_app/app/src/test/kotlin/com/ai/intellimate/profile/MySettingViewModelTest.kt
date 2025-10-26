@@ -3,7 +3,7 @@ package com.ai.intellimate.profile
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.http.services.ImageService
 import io.mockk.coEvery
-import io.mockk.mockkStatic
+import io.mockk.mockkObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -44,16 +44,16 @@ class MySettingViewModelTest {
         val localFileUri = "file:///tmp/avatar.jpg"
         vm.init(UserProfile(avatar = localFileUri))
         // 标记头像已变更
-        val setAvatarMethod = MySettingViewModel::class.java.getDeclaredMethod("setAvatar", android.net.Uri::class.java)
-        setAvatarMethod.isAccessible = true
-        setAvatarMethod.invoke(vm, android.net.Uri.parse(localFileUri))
+        vm.setAvatar(android.net.Uri.parse(localFileUri))
 
         // stub: ImageService 返回服务端 URL（静态方法）
-        mockkStatic(ImageService::class)
+        mockkObject(ImageService)
         coEvery { ImageService.uploadUserAvatar(any()) } returns "https://cdn.example.com/avatar-123.jpg"
 
         // 执行
         vm.onSave()
+        // 等待后台任务完成
+        vm.awaitAllBackgroundJobs()
 
         // 断言：avatar 更新为服务端 URL
         val avatar = vm.userProfile.value.avatar
