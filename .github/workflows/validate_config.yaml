@@ -55,5 +55,5 @@ jobs:
       - name: Validate configs
         run: |
           # config.py 默认加载 config.yaml 文件，因此需要创建一份
-          cp config.yaml.example config.yaml
+          cp devops/config.yaml.test config.yaml
           pytest -v -s devops/validate_configs.py
