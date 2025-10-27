@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Firebase Logging Sample</string>
+    <string name="log_event">记录事件</string>
+    <string name="test_crash">测试崩溃</string>
+    <string name="log_custom_event">记录自定义事件</string>
+    <string name="log_user_property">设置用户属性</string>
+    <string name="log_performance">记录性能事件</string>
+    <string name="event_name">事件名称</string>
+    <string name="event_parameter">事件参数</string>
+    <string name="user_id">用户ID</string>
+    <string name="user_property_key">属性键</string>
+    <string name="user_property_value">属性值</string>
+    <string name="log_sent">日志已发送</string>
+    <string name="crash_triggered">崩溃已触发</string>
+    <string name="user_property_set">用户属性已设置</string>
+    <string name="performance_logged">性能事件已记录</string>
+</resources>
