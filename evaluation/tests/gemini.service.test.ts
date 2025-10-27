@@ -66,14 +66,12 @@ describe("gemini service", () => {
 
   it("throws when http error", async () => {
     // @ts-ignore
-    global.fetch = vi
-      .fn()
-      .mockResolvedValue({
-        ok: false,
-        status: 500,
-        statusText: "ERR",
-        text: async () => "boom",
-      });
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: "ERR",
+      text: async () => "boom",
+    });
     await expect(generateReplyWithEmotion("KEY", [], "hi")).rejects.toThrow();
   });
 });
