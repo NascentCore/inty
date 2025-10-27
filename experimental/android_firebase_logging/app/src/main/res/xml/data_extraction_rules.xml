@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- 排除 Firebase 配置文件 -->
+        <exclude domain="file" path="google-services.json" />
+        
+        <!-- 排除日志文件 -->
+        <exclude domain="file" path="logs/" />
+        
+        <!-- 排除临时文件 -->
+        <exclude domain="file" path="temp/" />
+    </cloud-backup>
+    
+    <device-transfer>
+        <!-- 排除 Firebase 配置文件 -->
+        <exclude domain="file" path="google-services.json" />
+        
+        <!-- 排除日志文件 -->
+        <exclude domain="file" path="logs/" />
+        
+        <!-- 排除临时文件 -->
+        <exclude domain="file" path="temp/" />
+    </device-transfer>
+</data-extraction-rules>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- 排除 Firebase 配置文件，因为它包含敏感信息 -->
+    <exclude domain="file" path="google-services.json" />
+    
+    <!-- 排除日志文件 -->
+    <exclude domain="file" path="logs/" />
+    
+    <!-- 排除临时文件 -->
+    <exclude domain="file" path="temp/" />
+</full-backup-content>
