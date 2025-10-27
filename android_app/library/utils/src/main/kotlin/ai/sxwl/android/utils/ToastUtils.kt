@@ -65,7 +65,7 @@ object ToastUtils {
      */
     @JvmStatic
     fun showShort(@StringRes messageResId: Int) {
-        showToast(getString(messageResId), Toast.LENGTH_SHORT)
+        showToast(StringResourceUtils.getString(messageResId), Toast.LENGTH_SHORT)
     }
 
     /**
@@ -85,7 +85,7 @@ object ToastUtils {
      */
     @JvmStatic
     fun showLong(@StringRes messageResId: Int) {
-        showToast(getString(messageResId), Toast.LENGTH_LONG)
+        showToast(StringResourceUtils.getString(messageResId), Toast.LENGTH_LONG)
     }
 
     /**
@@ -105,7 +105,7 @@ object ToastUtils {
      */
     @JvmStatic
     fun showLargeText(@StringRes messageResId: Int) {
-        showLargeTextToast(getString(messageResId), Toast.LENGTH_LONG)
+        showLargeTextToast(StringResourceUtils.getString(messageResId), Toast.LENGTH_LONG)
     }
 
     /** 取消当前显示的Toast */
@@ -265,21 +265,6 @@ object ToastUtils {
                 // 如果连系统Toast都失败了，至少记录日志
                 Log.e(TAG, "Toast显示失败: $message", e2)
             }
-        }
-    }
-
-    /** 获取字符串资源 */
-    private fun getString(@StringRes resId: Int): String {
-        return try {
-            val context = Utils.getApp()
-            if (context != null) {
-                context.getString(resId)
-            } else {
-                "Unknown"
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "获取字符串资源失败: $resId", e)
-            "Unknown"
         }
     }
 
