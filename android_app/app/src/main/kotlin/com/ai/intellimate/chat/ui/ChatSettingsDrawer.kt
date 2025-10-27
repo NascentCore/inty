@@ -103,8 +103,7 @@ fun ChatSettingsDrawer(
         drawerContent = {
             Column(
                 modifier =
-                    Modifier
-                        .width(319.dp)
+                    Modifier.width(319.dp)
                         .fillMaxHeight()
                         .background(
                             brush =
@@ -125,8 +124,7 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier =
-                        Modifier
-                            .padding(horizontal = horizontalPadding.dp)
+                        Modifier.padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =
@@ -204,8 +202,7 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier =
-                        Modifier
-                            .padding(horizontal = horizontalPadding.dp)
+                        Modifier.padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =
@@ -227,8 +224,7 @@ fun ChatSettingsDrawer(
                         // 举报入口
                         Row(
                             modifier =
-                                Modifier
-                                    .fillMaxWidth()
+                                Modifier.fillMaxWidth()
                                     .height(56.dp)
                                     .padding(horizontal = horizontalPadding.dp)
                                     .noRippleClickable {
