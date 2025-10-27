@@ -10,7 +10,7 @@ import os
 import json
 from unittest.mock import patch, MagicMock
 
-# Add the scripts directory to the path
+# Add the current directory to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 def test_imports():

@@ -10,7 +10,7 @@ import sys
 import json
 from datetime import datetime
 
-# Add the scripts directory to the path
+# Add the current directory to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from weekly_ai_industry_report import AIIndustryReporter

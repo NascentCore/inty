@@ -2,6 +2,22 @@
 
 这个工具使用Google Custom Search API搜索过去一周的AI行业新闻，然后使用Gemini API生成综合摘要报告。
 
+## 📁 项目结构
+
+这是一个自包含的工具包，包含以下文件：
+
+```
+scripts/weekly_ai_industry_report/
+├── __init__.py                    # 包初始化文件
+├── weekly_ai_industry_report.py  # 主程序
+├── test_weekly_ai_report.py      # 测试套件
+├── example_usage.py              # 使用示例
+├── requirements.txt              # 依赖包列表
+├── setup.py                     # 安装配置
+├── install.sh                   # 自动安装脚本
+└── README.md                    # 本文档
+```
+
 ## 功能特性
 
 - 🔍 使用Google Custom Search API搜索最近7天的AI相关新闻
@@ -44,10 +60,27 @@ set GOOGLE_CSE_ID="your_custom_search_engine_id"
 set GEMINI_API_KEY="your_gemini_api_key"
 ```
 
-## 安装依赖
+## 快速安装
+
+### 方法1：使用自动安装脚本（推荐）
 
 ```bash
-pip install google-generativeai google-api-python-client
+cd scripts/weekly_ai_industry_report
+./install.sh
+```
+
+### 方法2：手动安装
+
+```bash
+cd scripts/weekly_ai_industry_report
+pip install -r requirements.txt
+```
+
+### 方法3：作为Python包安装
+
+```bash
+cd scripts/weekly_ai_industry_report
+pip install -e .
 ```
 
 ## 使用方法
@@ -55,7 +88,17 @@ pip install google-generativeai google-api-python-client
 ### 基本使用
 
 ```bash
-python3 scripts/weekly_ai_industry_report.py
+cd scripts/weekly_ai_industry_report
+python3 weekly_ai_industry_report.py
+```
+
+### 作为模块使用
+
+```python
+from weekly_ai_industry_report import AIIndustryReporter
+
+reporter = AIIndustryReporter()
+report = reporter.generate_weekly_report()
 ```
 
 ### 输出示例
