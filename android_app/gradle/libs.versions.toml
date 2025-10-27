@@ -3,9 +3,9 @@
 [versions]
 # Android & Kotlin 核心版本
 agp = "8.13.0"
-kotlin = "2.2.20"
+kotlin = "2.2.21"
 coroutines = "1.10.2"
-ksp = "2.2.20-2.0.3"
+ksp = "2.3.0"
 androidDesugarJdkLibs = "2.1.5"
 
 # AndroidX 核心库
@@ -31,7 +31,6 @@ androidxComposeMaterial3AdaptiveNavigationSuite = "1.4.0"
 # AndroidX 功能库
 biometric = "1.1.0"
 browser = "1.9.0"
-cameraX = "1.5.1"
 coreSplashscreen = "1.2.0-rc01"
 dataStore = "1.1.7"
 emoji2 = "1.6.0"
@@ -54,8 +53,6 @@ coil = "3.3.0"
 gson = "2.13.2"
 moshi = "1.15.2"
 koin = "4.1.1"
-lottie = "6.6.10"
-ktor = "3.3.1"
 okhttp = "5.2.1"
 retrofit = "3.0.0"
 
@@ -128,15 +125,6 @@ androidx-media3-effect = { module = "androidx.media3:media3-effect", version.ref
 androidx-media3-datasource-cronet = { module = "androidx.media3:media3-datasource-cronet", version.ref = "media3" }
 androidx-media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }
 
-# ===== CameraX 相关 =====
-androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraX" }
-androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "cameraX" }
-androidx-camera-extensions = { module = "androidx.camera:camera-extensions", version.ref = "cameraX" }
-androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraX" }
-androidx-camera-mlkit-vision = { module = "androidx.camera:camera-mlkit-vision", version.ref = "cameraX" }
-androidx-camera-video = { module = "androidx.camera:camera-video", version.ref = "cameraX" }
-androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraX" }
-
 # ===== Compose 相关 =====
 androidx-activity-graphics = { group = "androidx.graphics", name = "graphics-shapes", version.ref = "graphics" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityKtx" }
@@ -152,7 +140,6 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 androidx-compose-ui-util = { group = "androidx.compose.ui", name = "ui-util" }
 androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout" }
-androidx-compose-material-iconsExtended = { group = "androidx.compose.material", name = "material-icons-extended" }
 androidx-compose-animation = { group = "androidx.compose.animation", name = "animation", version.ref = "composeUI" }
 
 # ===== Jetpack 组件 =====
@@ -207,6 +194,7 @@ gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 moshi = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
 moshi-kotlin-codegen = { group = "com.squareup.moshi", name = "moshi-kotlin-codegen", version.ref = "moshi" }
 koin = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+koin-compose = { module = "io.insert-koin:koin-android-compose", version.ref = "koin" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
 retrofit-core = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
@@ -214,19 +202,6 @@ retrofit-converter-kotlin-serialization = { module = "com.squareup.retrofit2:con
 retrofit-moshi = { group = "com.squareup.retrofit2", name = "converter-moshi", version.ref = "retrofit" }
 retrofit-kotlin-serialization = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlinx-serialization-converter", version.ref = "retrofitKotlinxSerializationJson" }
 retrofit2-kotlin-coroutines-adapter = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlin-coroutines-adapter", version.ref = "retrofit2-kotlin-coroutines-adapter" }
-
-# ===== Ktor 网络库 =====
-ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktor" }
-ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
-ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
-ktor-client-encoding = { module = "io.ktor:ktor-client-encoding", version.ref = "ktor" }
-ktor-client-android-jvm = { module = "io.ktor:ktor-client-android-jvm", version.ref = "ktor" }
-ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
-
-# ===== 动画库 =====
-lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottie" }
 
 # ===== Google & Firebase 相关 =====
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
@@ -308,20 +283,17 @@ firebase-perf = { id = "com.google.firebase.firebase-perf", version.ref = "fireb
 #region 多个依赖库组成依赖包 🎒
 
 [bundles]
+
 # ===== 网络相关 =====
-okhttp = ["okhttp", "okhttp-logging"]
 retrofit = ["retrofit-core", "retrofit-converter-kotlin-serialization", "okhttp", "okhttp-logging"]
 
 # ===== Google & Firebase 相关 =====
 google-auth = ["google-identity", "credential-manager", "credential-manager-play-services"]
 firebase = ["firebase-bom", "firebase-analytics", "firebase-crashlytics", "firebase-messaging", "firebase-messaging-directboot", "firebase-perf"]
+credentials = ["credential-manager", "credential-manager-play-services", "google-identity"]
 
 # ===== 媒体相关 =====
 androidx-media3-bundle = ["androidx-media3", "androidx-media3-common", "androidx-media3-ui", "androidx-media3-hls", "androidx-media3-dash"]
-androidx-camera-bundle = ["androidx-camera-camera2", "androidx-camera-core", "androidx-camera-extensions", "androidx-camera-lifecycle", "androidx-camera-mlkit-vision", "androidx-camera-video", "androidx-camera-view"]
-
-# ===== 网络客户端 =====
-ktor-bundle = ["ktor-client-core", "ktor-client-cio", "ktor-client-content-negotiation", "ktor-client-logging", "ktor-client-encoding", "ktor-serialization-kotlinx-json"]
 
 # ===== 图片加载 =====
 coil-bundle = ["coil-kt", "coil-network-okhttp", "coil-kt-gif", "coil-kt-svg", "coil-kt-video", "coil-network-cache-control", "coil-kt-compose", "coil-kt-network"]
@@ -332,14 +304,5 @@ compose-ui-bundle = ["androidx-compose-ui-util", "androidx-constraintlayout-comp
 
 # ===== JSON 序列化 =====
 moshi = ["moshi", "retrofit-moshi"]
-
-# ===== 协程 =====
-coroutines = ["kotlinx-coroutines-core", "kotlinx-coroutines-android"]
-
-# ===== Firebase 核心服务 =====
-firebase-core = ["firebase-analytics", "firebase-messaging", "firebase-messaging-directboot", "firebase-crashlytics", "firebase-perf"]
-
-# ===== 身份验证 =====
-credentials = ["credential-manager", "credential-manager-play-services", "google-identity"]
 
 #endregion
