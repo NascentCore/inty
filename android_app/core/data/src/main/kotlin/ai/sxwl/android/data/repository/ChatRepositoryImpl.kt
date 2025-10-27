@@ -44,16 +44,19 @@ class ChatRepositoryImpl(
             when (result) {
                 is HttpResult.Success -> {
                     val messages = result.data.messages ?: emptyList()
-                    LogUtils.i("ChatRepositoryImpl.ensureInitialHistory loaded ${messages.size} messages for $agentId")
+                    LogUtils.i(
+                        "ChatRepositoryImpl.ensureInitialHistory loaded ${messages.size} messages for $agentId"
+                    )
 
                     localDataSource.updateMessages(agentId, messages)
                     localDataSource.setHasMore(agentId, result.data.hasMore)
                     localDataSource.setOffset(agentId, if (messages.isNotEmpty()) pageSize else 0)
                     localDataSource.setInitialLoaded(agentId, true)
                 }
-
                 is HttpResult.Failure -> {
-                    LogUtils.e("ChatRepositoryImpl.ensureInitialHistory failure for $agentId: ${result.message}")
+                    LogUtils.e(
+                        "ChatRepositoryImpl.ensureInitialHistory failure for $agentId: ${result.message}"
+                    )
                     localDataSource.setInitialLoaded(agentId, true)
                 }
             }
@@ -84,11 +87,14 @@ class ChatRepositoryImpl(
                     }
                     localDataSource.setHasMore(agentId, result.data.hasMore)
 
-                    LogUtils.i("ChatRepositoryImpl.loadMoreMessages loaded ${moreMessages.size} more messages for $agentId")
+                    LogUtils.i(
+                        "ChatRepositoryImpl.loadMoreMessages loaded ${moreMessages.size} more messages for $agentId"
+                    )
                 }
-
                 is HttpResult.Failure -> {
-                    LogUtils.e("ChatRepositoryImpl.loadMoreMessages failure for $agentId: ${result.message}")
+                    LogUtils.e(
+                        "ChatRepositoryImpl.loadMoreMessages failure for $agentId: ${result.message}"
+                    )
                 }
             }
         } catch (e: Exception) {
@@ -110,18 +116,20 @@ class ChatRepositoryImpl(
 
         localDataSource.prependMessages(agentId, listOf(loadingMsg, userMsg))
 
-        val result = try {
-            remoteDataSource.sendMessage(agentId, listOf(userMsg))
-        } catch (e: Exception) {
-            LogUtils.e("ChatRepositoryImpl.sendMessage exception: ${e.message}")
-            HttpResult.Failure(e.message ?: "unknown error", -1)
-        }
+        val result =
+            try {
+                remoteDataSource.sendMessage(agentId, listOf(userMsg))
+            } catch (e: Exception) {
+                LogUtils.e("ChatRepositoryImpl.sendMessage exception: ${e.message}")
+                HttpResult.Failure(e.message ?: "unknown error", -1)
+            }
 
         // 2) 移除loading占位
         val currentMessages = localDataSource.getMessagesFlow(agentId).value
-        val filteredMessages = currentMessages.filterNot {
-            it.content == LOADING_PLACEHOLDER_CONTENT && it.role == ROLE_ASSISTANT
-        }
+        val filteredMessages =
+            currentMessages.filterNot {
+                it.content == LOADING_PLACEHOLDER_CONTENT && it.role == ROLE_ASSISTANT
+            }
         localDataSource.updateMessages(agentId, filteredMessages)
 
         // 3) 追加AI回复
@@ -144,9 +152,14 @@ class ChatRepositoryImpl(
     override suspend fun syncLatestMessages(agentId: String, pageSize: Int) {
         LogUtils.d("ChatRepositoryImpl.syncLatestMessages called for $agentId")
 
-        if (!localDataSource.isInitialLoaded(agentId) || localDataSource.getMessagesFlow(agentId).value.isEmpty()) {
+        if (
+            !localDataSource.isInitialLoaded(agentId) ||
+                localDataSource.getMessagesFlow(agentId).value.isEmpty()
+        ) {
             // 如果没有初始化或没有本地数据，使用正常的初始化流程
-            LogUtils.i("ChatRepositoryImpl.syncLatestMessages calling ensureInitialHistory for $agentId")
+            LogUtils.i(
+                "ChatRepositoryImpl.syncLatestMessages calling ensureInitialHistory for $agentId"
+            )
             ensureInitialHistory(agentId, pageSize)
             return
         }
@@ -159,12 +172,14 @@ class ChatRepositoryImpl(
                     val localMessages = localDataSource.getMessagesFlow(agentId).value
 
                     // 检查是否有新消息
-                    val hasNewMessages = serverMessages.any { serverMsg ->
-                        localMessages.none { localMsg ->
-                            localMsg.id == serverMsg.id ||
-                                    (localMsg.content == serverMsg.content && localMsg.role == serverMsg.role)
+                    val hasNewMessages =
+                        serverMessages.any { serverMsg ->
+                            localMessages.none { localMsg ->
+                                localMsg.id == serverMsg.id ||
+                                    (localMsg.content == serverMsg.content &&
+                                        localMsg.role == serverMsg.role)
+                            }
                         }
-                    }
 
                     if (hasNewMessages) {
                         // 有新消息，更新本地数据
@@ -175,14 +190,19 @@ class ChatRepositoryImpl(
                             if (serverMessages.isNotEmpty()) pageSize else 0
                         )
 
-                        LogUtils.i("ChatRepositoryImpl.syncLatestMessages found new messages for $agentId, updated ${serverMessages.size} messages")
+                        LogUtils.i(
+                            "ChatRepositoryImpl.syncLatestMessages found new messages for $agentId, updated ${serverMessages.size} messages"
+                        )
                     } else {
-                        LogUtils.i("ChatRepositoryImpl.syncLatestMessages no new messages for $agentId")
+                        LogUtils.i(
+                            "ChatRepositoryImpl.syncLatestMessages no new messages for $agentId"
+                        )
                     }
                 }
-
                 is HttpResult.Failure -> {
-                    LogUtils.e("ChatRepositoryImpl.syncLatestMessages failure for $agentId: ${result.message}")
+                    LogUtils.e(
+                        "ChatRepositoryImpl.syncLatestMessages failure for $agentId: ${result.message}"
+                    )
                 }
             }
         } catch (e: Exception) {
@@ -191,7 +211,9 @@ class ChatRepositoryImpl(
     }
 
     override fun updateMessageAudioUrl(agentId: String, messageId: String, audioUrl: String) {
-        LogUtils.d("ChatRepositoryImpl.updateMessageAudioUrl called for $agentId, messageId: $messageId")
+        LogUtils.d(
+            "ChatRepositoryImpl.updateMessageAudioUrl called for $agentId, messageId: $messageId"
+        )
         localDataSource.updateMessageAudioUrl(agentId, messageId, audioUrl)
     }
 

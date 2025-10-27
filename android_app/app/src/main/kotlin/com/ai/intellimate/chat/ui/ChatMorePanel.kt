@@ -82,8 +82,7 @@ fun ChatMorePanel(
                 val density = LocalDensity.current
                 Column(
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
+                        Modifier.fillMaxWidth()
                             .background(color = HeartColor.primaryColor)
                             .onGloballyPositioned { coords ->
                                 val h = with(density) { coords.size.height.toDp() }
@@ -188,14 +187,11 @@ private fun MorePanelItem(icon: Int, text: String, onClick: () -> Unit) {
         Spacer(Modifier.height(20.dp))
         Box(
             modifier =
-                Modifier
-                    .size(64.dp)
+                Modifier.size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier
-                    .size(36.dp)
-                    .align(Alignment.Center),
+                modifier = Modifier.size(36.dp).align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )
