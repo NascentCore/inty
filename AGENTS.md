@@ -9,9 +9,9 @@ Based on [AGENTS.md](https://agents.md/)
   - `app/openapi.json` 来自 fastapi 生成，并使用 stainless 生成 kotlin typescript SDK（分别以 submodule 形式位于 evaluation/inty_sdk android_app/library/inty_sdk
 - `alembic/` Inty 后端服务数据库 schema 管理，使用 <https://github.com/sqlalchemy/alembic>
 - `evaluation/` Inty 运营工具，react 由 app/ 后端提供 web serving
-- `experimental/` 原型代码
 - `scripts/` 各类脚本，以修改数据库记录为主
 - `devops/` 运维相关代码
+- `experimental/` 原型代码
 - `docs/` 文档
 
 ## 语言与输出
@@ -31,6 +31,7 @@ Based on [AGENTS.md](https://agents.md/)
 - 小改动：在提交信息中包含用户的原始变更请求（可放在提交说明 body 部分），并简述本次处理方式。
 - 大改动或新增大型功能：将用户的变更请求写入一个与代码改动同目录的 `<TASK>_REQUESTS.md` 文件；`<TASK>` 使用任务或分支的简明标识。在提交信息中引用该文件路径。
 - `<TASK>` 命名：使用全大写下划线（snake_case）风格并与分支/任务编号一致，例如 `AGENT_MANAGER_REFACTOR`；避免使用 `-` 与空格。
+- 不要写关于改动内容的 summary markdown 文件
 
 ## Coding style
 
@@ -78,15 +79,12 @@ else:
 ## Python
 
 - 避免使用 `try ... except Exception` 来覆盖所有异常，而应该至拦截函数能处理的异常
-
 - 测试用例目录不应被声明为包：包含 `test_*.py` 的测试目录不要放置 `__init__.py`；但用于复用的测试辅助库目录应当作为包存在，并包含 `__init__.py`。
 - 所有正式 Python 包必须包含空的 `__init__.py`（仅用于声明包）。
 
 ## Android App
 
 - 只支持 portrait 显示；不支持 landscape 显示，无需在改动时考虑兼容 landscape 显示。
-
-- 网络栈存在并行实现：Retrofit/Moshi（`NetServiceMgr` + `I*Api`）与生成的 Inty SDK（`IntyNetworkManager` + `*Service`）同时使用，易导致错误处理/鉴权/环境配置不一致，以及重复创建 `OkHttpClient`。
 
 ## CloudFlare
 
