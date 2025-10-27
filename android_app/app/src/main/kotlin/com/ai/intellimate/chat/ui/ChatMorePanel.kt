@@ -45,7 +45,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
-import com.ai.intellimate.chat.ChatViewModel
+import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.ui.ReplyStyleSheet
 import com.ai.intellimate.vip.VipCenterActivity
@@ -82,7 +82,8 @@ fun ChatMorePanel(
                 val density = LocalDensity.current
                 Column(
                     modifier =
-                        Modifier.fillMaxWidth()
+                        Modifier
+                            .fillMaxWidth()
                             .background(color = HeartColor.primaryColor)
                             .onGloballyPositioned { coords ->
                                 val h = with(density) { coords.size.height.toDp() }
@@ -187,11 +188,14 @@ private fun MorePanelItem(icon: Int, text: String, onClick: () -> Unit) {
         Spacer(Modifier.height(20.dp))
         Box(
             modifier =
-                Modifier.size(64.dp)
+                Modifier
+                    .size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier.size(36.dp).align(Alignment.Center),
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )

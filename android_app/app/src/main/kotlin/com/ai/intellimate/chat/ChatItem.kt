@@ -55,6 +55,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioInfo
 import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.audio.VoicePlayer
+import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.utils.ChatTextFormatter
 
 /** 复制文本到剪贴板；这是用于测试功能。 */
@@ -87,7 +88,10 @@ fun ChatItem(item: MsgInfo, isCurrentPage: Boolean = true, chatViewModel: ChatVi
             // 渲染失败时显示错误占位符
             Box(
                 modifier =
-                    Modifier.fillMaxWidth().height(60.dp).background(Color.Red.copy(alpha = 0.1f))
+                    Modifier
+                        .fillMaxWidth()
+                        .height(60.dp)
+                        .background(Color.Red.copy(alpha = 0.1f))
             ) {
                 Text(
                     text = "Message display failed",
@@ -180,7 +184,8 @@ private fun ChatItemAI(
                     val context = LocalContext.current
                     Box(
                         modifier =
-                            Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
+                            Modifier
+                                .background(Color.Black.copy(alpha = 0.5f), msgShape)
                                 .padding(12.dp, 13.dp)
                                 .widthIn(1.dp, 300.dp)
                                 .pointerInput(item.content) {
@@ -204,7 +209,9 @@ private fun ChatItemAI(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                    Spacer(modifier = Modifier
+                        .widthIn(80.dp)
+                        .weight(1f))
                 }
             }
         }
@@ -214,7 +221,8 @@ private fun ChatItemAI(
                 val context = LocalContext.current
                 Box(
                     modifier =
-                        Modifier.background(
+                        Modifier
+                            .background(
                                 Color.Black.copy(alpha = 0.5f),
                                 RoundedCornerShape(12.dp),
                             )
@@ -234,7 +242,9 @@ private fun ChatItemAI(
                         fontSize = 14.sp,
                     )
                 }
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                Spacer(modifier = Modifier
+                    .widthIn(80.dp)
+                    .weight(1f))
             }
         }
 }
@@ -244,11 +254,14 @@ private fun ChatItemAI(
 private fun ChatItemUser(item: MsgInfo) {
     runCatching {
             Row {
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                Spacer(modifier = Modifier
+                    .widthIn(80.dp)
+                    .weight(1f))
                 val context = LocalContext.current
                 Box(
                     modifier =
-                        Modifier.background(
+                        Modifier
+                            .background(
                                 Color.White.copy(alpha = 0.6f),
                                 RoundedCornerShape(12.dp),
                             )
@@ -275,11 +288,14 @@ private fun ChatItemUser(item: MsgInfo) {
         .onFailure { e ->
             // 渲染失败时显示简化版本
             Row {
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                Spacer(modifier = Modifier
+                    .widthIn(80.dp)
+                    .weight(1f))
                 val context = LocalContext.current
                 Box(
                     modifier =
-                        Modifier.background(
+                        Modifier
+                            .background(
                                 Color.White.copy(alpha = 0.6f),
                                 RoundedCornerShape(12.dp),
                             )
@@ -356,7 +372,8 @@ private fun LoadingAnimation() {
 
             Box(
                 modifier =
-                    Modifier.size(6.dp)
+                    Modifier
+                        .size(6.dp)
                         .background(color = Color.White.copy(dotAlpha * 0.7f), shape = CircleShape)
             )
         }
@@ -374,7 +391,8 @@ fun AgentInfoChatCard(info: String) {
 
     Box(
         modifier =
-            Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            Modifier
+                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                 .padding(12.dp)
     ) {
         ExpandableTextWithButton(
@@ -405,7 +423,9 @@ private fun ExpandableTextWithButton(
         var pd by remember { mutableIntStateOf(0) }
         Text(
             text = text,
-            modifier = Modifier.fillMaxWidth().padding(end = pd.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = pd.dp),
             style = textStyle,
             maxLines = if (isExpanded) Int.MAX_VALUE else collapsedMaxLines,
             overflow = TextOverflow.Ellipsis,
@@ -427,7 +447,8 @@ private fun ExpandableTextWithButton(
                     ),
                 contentDescription = null,
                 modifier =
-                    Modifier.size(18.dp)
+                    Modifier
+                        .size(18.dp)
                         .align(Alignment.BottomEnd)
                         .noRippleClickable(onClick = { isExpanded = isExpanded.not() }),
                 tint = Color.White,

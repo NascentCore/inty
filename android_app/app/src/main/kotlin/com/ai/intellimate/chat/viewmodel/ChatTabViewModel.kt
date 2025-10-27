@@ -2,19 +2,20 @@ package com.ai.intellimate.chat.viewmodel
 
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.di.ChatModule
+import ai.sxwl.android.data.usecase.agent.GetChatAgentsUseCase
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.ai.intellimate.chat.paging.ChatPagingRepository
 import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
-/** ChatTab页面ViewModel 负责管理聊天agents的Paging数据流、刷新、缓存等逻辑 独立于ExploreTab，使用chatAgents API */
+/** ChatTab页面ViewModel 负责管理聊天agents的Paging数据流、刷新、缓存等逻辑 */
 class ChatTabViewModel : BaseVM() {
 
-    private val pagingRepository = ChatPagingRepository()
+    private val getChatAgentsUseCase: GetChatAgentsUseCase = ChatModule.getChatAgentsUseCase
 
     // Paging数据流
     private val _agentsFlow = MutableStateFlow<Flow<PagingData<AgentInfo>>?>(null)
@@ -27,8 +28,7 @@ class ChatTabViewModel : BaseVM() {
         if (isInitialized) return
 
         // 创建初始数据流（优先使用缓存）
-        val initialFlow =
-            pagingRepository.getInitialChatAgents().cachedIn(viewModelScope) // 在ViewModel作用域内缓存
+        val initialFlow = getChatAgentsUseCase().cachedIn(viewModelScope) // 在ViewModel作用域内缓存
 
         _agentsFlow.value = initialFlow
         isInitialized = true
@@ -40,6 +40,13 @@ class ChatTabViewModel : BaseVM() {
             initializePagingData()
         }
         return _agentsFlow.value
+    }
+
+    /** 刷新聊天agents数据 */
+    fun refreshChatAgents(): Flow<PagingData<AgentInfo>> {
+        val refreshFlow = getChatAgentsUseCase.refresh().cachedIn(viewModelScope)
+        _agentsFlow.value = refreshFlow
+        return refreshFlow
     }
 
     /** 监听预加载数据更新 */

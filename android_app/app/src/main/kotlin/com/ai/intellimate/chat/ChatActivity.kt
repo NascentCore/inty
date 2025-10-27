@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.ai.intellimate.chat.viewmodel.ChatViewModel
 
 /** 私聊的聊天页面 */
 class ChatActivity : BaseActivity() {
@@ -73,7 +74,8 @@ class ChatActivity : BaseActivity() {
         super.ConfigComposeUI()
         ChatPage(
             modifier =
-                Modifier.fillMaxSize()
+                Modifier
+                    .fillMaxSize()
                     .background(HeartColor.primaryColor)
                     .imePadding()
                     .navigationBarsPadding(),
