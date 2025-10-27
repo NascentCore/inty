@@ -14,9 +14,4 @@ object ChatConstants {
     /** 初始页码 */
     const val INITIAL_PAGE = 1
 
-    /** ChatAgents缓存键前缀 */
-    const val CHAT_AGENTS_CACHE_PREFIX = "chat_agents_"
-
-    /** 预加载的ChatAgents数量（启动时） */
-    const val PRELOAD_CHAT_AGENTS_COUNT = 20
 }

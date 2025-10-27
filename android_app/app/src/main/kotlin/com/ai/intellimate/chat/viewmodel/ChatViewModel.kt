@@ -1,4 +1,4 @@
-package com.ai.intellimate.chat
+package com.ai.intellimate.chat.viewmodel
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM

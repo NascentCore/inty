@@ -16,7 +16,7 @@ import ai.sxwl.android.utils.Utils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.audio.AudioManager
-import com.ai.intellimate.chat.ChatViewModel
+import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.intellimate.utils.HttpErrorHandler

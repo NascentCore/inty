@@ -30,14 +30,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import com.ai.intellimate.chat.ChatViewModel
+import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.utils.UnifiedStartupManager
-import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -238,7 +238,8 @@ private fun SplashUI(modifier: Modifier = Modifier, onSplashComplete: () -> Unit
         )
         Image(
             modifier =
-                Modifier.align(Alignment.BottomCenter)
+                Modifier
+                    .align(Alignment.BottomCenter)
                     .padding(bottom = 80.dp)
                     .size(80.dp)
                     .clip(RoundedCornerShape(10.dp)),
