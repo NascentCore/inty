@@ -1,4 +1,4 @@
-name: format_code
+name: Auto format all code
 
 on:
   schedule:
