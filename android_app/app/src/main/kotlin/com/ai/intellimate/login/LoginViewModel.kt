@@ -66,8 +66,8 @@ class LoginViewModel : BaseVM() {
                     // 检查用户信息是否完整（年龄和性别）
                     val needsRegInfo =
                         userProfile.gender.isNullOrEmpty() ||
-                                userProfile.ageGroup.isNullOrEmpty() ||
-                                userProfile.ageGroup == "<18"
+                            userProfile.ageGroup.isNullOrEmpty() ||
+                            userProfile.ageGroup == "<18"
 
                     withContext(Dispatchers.Main) {
                         // 显示登录成功提示
@@ -90,7 +90,6 @@ class LoginViewModel : BaseVM() {
                         Utils.getApp().startActivity(intent)
                     }
                 }
-
                 is HttpResult.Failure -> {
                     LogUtils.e("Google login failed: ${result.message}")
                     withContext(Dispatchers.Main) {

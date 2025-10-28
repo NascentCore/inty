@@ -47,12 +47,13 @@ object VipStatusHelper {
                 subscriptionLevel
             )
 
-            LogUtils.i("VipStatusHelper - Firebase用户属性已更新: userType=$userType, subscriptionLevel=$subscriptionLevel")
+            LogUtils.i(
+                "VipStatusHelper - Firebase用户属性已更新: userType=$userType, subscriptionLevel=$subscriptionLevel"
+            )
         } catch (e: Exception) {
             LogUtils.e("VipStatusHelper - 更新Firebase用户属性失败: ${e.message}")
         }
     }
-
 
     /** 购买指定计划 */
     fun purchasePlan(activity: Activity, productId: String, onError: (String) -> Unit = {}) {

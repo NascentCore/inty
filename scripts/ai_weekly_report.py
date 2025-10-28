@@ -19,6 +19,7 @@ sys.path.insert(0, str(weekly_report_dir))
 if __name__ == "__main__":
     try:
         from weekly_ai_industry_report import main
+
         main()
     except ImportError as e:
         print(f"❌ Error importing weekly report generator: {e}")

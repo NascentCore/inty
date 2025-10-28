@@ -14,17 +14,16 @@ class AudioManager
 private constructor(private val context: Context, private var scope: CoroutineScope) {
 
     companion object {
-        @Volatile
-        private var INSTANCE: AudioManager? = null
+        @Volatile private var INSTANCE: AudioManager? = null
 
         fun getInstance(context: Context, scope: CoroutineScope): AudioManager {
             return INSTANCE
                 ?: synchronized(this) {
-                    INSTANCE
-                        ?: AudioManager(context.applicationContext, scope).also {
-                            INSTANCE = it
-                        }
-                }
+                        INSTANCE
+                            ?: AudioManager(context.applicationContext, scope).also {
+                                INSTANCE = it
+                            }
+                    }
                     .also { instance ->
                         // 更新Scope以确保协程能正常执行
                         instance.scope = scope
@@ -174,8 +173,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
         mainHandler.post {
             try {
                 playbackManager.pausePlayback()
-            } catch (_: Exception) {
-            }
+            } catch (_: Exception) {}
         }
     }
 
@@ -184,8 +182,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
         mainHandler.post {
             try {
                 playbackManager.resumePlayback()
-            } catch (_: Exception) {
-            }
+            } catch (_: Exception) {}
         }
     }
 

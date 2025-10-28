@@ -61,9 +61,7 @@ fun AgentBackground(
     var hasReportedImageSuccess by remember { mutableStateOf(false) }
 
     // 当agentInfo变化时，重置图片展示状态
-    LaunchedEffect(agentInfo?.id) {
-        hasReportedImageSuccess = false
-    }
+    LaunchedEffect(agentInfo?.id) { hasReportedImageSuccess = false }
 
     // 计算最佳的 ContentScale
     val currentImageWidth = imageWidth
@@ -88,15 +86,12 @@ fun AgentBackground(
     Box(modifier = modifier) {
         Column(
             modifier =
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState(), false)
-                    .onSizeChanged {
-                        val newHeight = with(density) { it.height.toDp().value.roundToInt() }
-                        if (newHeight > imageHeightDp) {
-                            imageHeightDp = newHeight
-                        }
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState(), false).onSizeChanged {
+                    val newHeight = with(density) { it.height.toDp().value.roundToInt() }
+                    if (newHeight > imageHeightDp) {
+                        imageHeightDp = newHeight
                     }
+                }
         ) {
             AsyncImage(
                 modifier = Modifier.size(imageWidthDp.dp, imageHeightDp.dp),
@@ -139,8 +134,7 @@ fun AgentBackground(
             val colors = listOf(Color(0xFF000000), Color(0x00000000))
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .height(120.dp)
                         .background(brush = Brush.verticalGradient(colors))
             )
@@ -149,8 +143,7 @@ fun AgentBackground(
             val bottomColors = listOf(Color(0x001C1523), Color(0xFF1C1523))
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .height(300.dp)
                         .background(brush = Brush.verticalGradient(bottomColors))
                         .align(Alignment.BottomCenter)

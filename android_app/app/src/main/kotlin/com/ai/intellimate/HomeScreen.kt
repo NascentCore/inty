@@ -97,10 +97,7 @@ fun HomeScreen(
 
     Scaffold(
         modifier =
-            modifier
-                .fillMaxSize()
-                .background(HeartColor.primaryColor)
-                .navigationBarsPadding(),
+            modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
             AppBottomNavigationBar(
@@ -405,10 +402,7 @@ private fun AppBottomNavigationBar(
         MAIN_TAB_LIST.forEachIndexed { index, tab ->
             BottomNavigationBarItem(
                 modifier =
-                    Modifier
-                        .fillMaxHeight()
-                        .weight(1f)
-                        .noRippleClickable { onSelectTab(index) },
+                    Modifier.fillMaxHeight().weight(1f).noRippleClickable { onSelectTab(index) },
                 tabInfo = tab,
                 selected = (index == selectedTab),
             )
@@ -456,8 +450,7 @@ fun AppBottomNavigationBarPreview() {
     // Preview for the entire bottom navigation bar positioned in the middle
     Box(
         modifier =
-            Modifier
-                .fillMaxSize()
+            Modifier.fillMaxSize()
                 .background(Color.Black), // Dark background to match the app theme
         contentAlignment = Alignment.Center,
     ) {

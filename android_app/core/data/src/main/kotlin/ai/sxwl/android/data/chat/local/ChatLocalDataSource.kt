@@ -9,10 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-/**
- * 聊天本地数据源
- * 负责管理聊天消息的本地缓存和状态
- */
+/** 聊天本地数据源 负责管理聊天消息的本地缓存和状态 */
 class ChatLocalDataSource {
 
     private data class AgentChatSession(
@@ -27,9 +24,7 @@ class ChatLocalDataSource {
     private val agentIdToSession = mutableMapOf<String, AgentChatSession>()
 
     private fun getSession(agentId: String): AgentChatSession {
-        return agentIdToSession.getOrPut(agentId) {
-            AgentChatSession()
-        }
+        return agentIdToSession.getOrPut(agentId) { AgentChatSession() }
     }
 
     fun getMessagesFlow(agentId: String): StateFlow<List<MsgInfo>> =
@@ -43,9 +38,7 @@ class ChatLocalDataSource {
 
     suspend fun updateMessages(agentId: String, messages: List<MsgInfo>) {
         val session = getSession(agentId)
-        session.lock.withLock {
-            session.messages.value = messages
-        }
+        session.lock.withLock { session.messages.value = messages }
     }
 
     suspend fun appendMessages(agentId: String, newMessages: List<MsgInfo>) {
@@ -97,9 +90,10 @@ class ChatLocalDataSource {
 
     fun updateMessageAudioUrl(agentId: String, messageId: String, audioUrl: String) {
         val session = getSession(agentId)
-        session.messages.value = session.messages.value.map { msg ->
-            if (msg.localMsgId == messageId) msg.copy(audio_url = audioUrl) else msg
-        }
+        session.messages.value =
+            session.messages.value.map { msg ->
+                if (msg.localMsgId == messageId) msg.copy(audio_url = audioUrl) else msg
+            }
     }
 
     fun clearChatData(agentId: String) {

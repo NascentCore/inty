@@ -10,14 +10,14 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.perf.FirebasePerformance
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics和Performance的初始化和使用
@@ -35,14 +35,11 @@ object FirebaseManager {
     private val isInitialized = AtomicBoolean(false)
 
     // 缓存 Firebase 实例，避免重复获取
-    @Volatile
-    private var analytics: FirebaseAnalytics? = null
+    @Volatile private var analytics: FirebaseAnalytics? = null
 
-    @Volatile
-    private var crashlytics: FirebaseCrashlytics? = null
+    @Volatile private var crashlytics: FirebaseCrashlytics? = null
 
-    @Volatile
-    private var performance: FirebasePerformance? = null
+    @Volatile private var performance: FirebasePerformance? = null
 
     // 使用SupervisorJob确保子协程异常不影响其他协程
     private val firebaseScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -63,28 +60,33 @@ object FirebaseManager {
             crashlyticsEnabled = true,
             performanceEnabled = true,
             // 优化采样配置 - 减少低价值事件上报
-            disabledEvents = setOf(
-                // 完全禁用低价值事件
-                "page_visible",      // 页面可见性变化过于频繁
-                "page_hidden",       // 页面隐藏事件价值较低
-                "page_lifecycle",    // 生命周期事件过于详细
-            ),
+            disabledEvents =
+                setOf(
+                    // 完全禁用低价值事件
+                    "page_visible", // 页面可见性变化过于频繁
+                    "page_hidden", // 页面隐藏事件价值较低
+                    "page_lifecycle", // 生命周期事件过于详细
+                ),
             samplingRates =
                 mapOf(
                     // 调试模式下提高采样率，便于调试
-                    "user_interaction" to if (AppUtils.isAppDebug()) 1.0 else 0.1,           // 调试100%，发布10%
-                    Events.MESSAGE_SENT to if (AppUtils.isAppDebug()) 1.0 else 0.5,           // 调试100%，发布50%
-                    "explore_page_view" to if (AppUtils.isAppDebug()) 1.0 else 0.3,           // 调试100%，发布30%
-                    "voice_playback_start" to if (AppUtils.isAppDebug()) 1.0 else 0.5,        // 调试100%，发布50%
+                    "user_interaction" to if (AppUtils.isAppDebug()) 1.0 else 0.1, // 调试100%，发布10%
+                    Events.MESSAGE_SENT to if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
+                    "explore_page_view" to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                    "voice_playback_start" to
+                        if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
 
                     // 高价值事件 - 保持100%采样
                     // 错误、失败、认证、页面访问等关键事件保持100%
                 ),
-            minIntervalMsPerEvent = mapOf(
-                // 调试模式下降低限频，便于调试
-                "user_interaction" to if (AppUtils.isAppDebug()) 1_000L else 10_000L,            // 调试1秒，发布10秒
-                Events.MESSAGE_SENT to if (AppUtils.isAppDebug()) 500L else 2_000L,            // 调试0.5秒，发布2秒
-            ),
+            minIntervalMsPerEvent =
+                mapOf(
+                    // 调试模式下降低限频，便于调试
+                    "user_interaction" to
+                        if (AppUtils.isAppDebug()) 1_000L else 10_000L, // 调试1秒，发布10秒
+                    Events.MESSAGE_SENT to
+                        if (AppUtils.isAppDebug()) 500L else 2_000L, // 调试0.5秒，发布2秒
+                ),
         )
 
     // 错误统计，避免重复错误日志
@@ -461,12 +463,13 @@ object FirebaseManager {
         additionalParams: Map<String, Any> = emptyMap()
     ) {
         try {
-            val params = mapOf(
-                "metric_name" to metricName,
-                "metric_value" to value,
-                "metric_unit" to unit,
-                "timestamp" to System.currentTimeMillis()
-            ) + additionalParams
+            val params =
+                mapOf(
+                    "metric_name" to metricName,
+                    "metric_value" to value,
+                    "metric_unit" to unit,
+                    "timestamp" to System.currentTimeMillis()
+                ) + additionalParams
 
             logEvent("performance_metric", params)
         } catch (e: Exception) {

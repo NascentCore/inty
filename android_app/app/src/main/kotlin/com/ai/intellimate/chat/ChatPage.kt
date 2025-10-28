@@ -181,25 +181,17 @@ internal fun ChatPage(
         val scope = rememberCoroutineScope()
 
         Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent),
+            modifier = Modifier.fillMaxSize().background(Color.Transparent),
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
         ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .imePadding()
-            ) {
+            Column(modifier = Modifier.padding(innerPadding).imePadding()) {
                 Spacer(Modifier.height(48.dp))
 
                 // 立即显示TopBar和Premium标签（不等待数据加载）
                 agentInfo?.let { info ->
                     ChatTopBar(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 18.dp),
+                        modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
                         agentInfo = info,
                         showBackButton = showBackButton,
                         onBack = onBack,
@@ -277,9 +269,7 @@ internal fun ChatPage(
                             (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
 
                 LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
                     state = listState,
                     reverseLayout = true, // ⚠️此处使用了reverse，导致布局列表是反向的
                 ) {
@@ -321,8 +311,7 @@ internal fun ChatPage(
                                                 // 渲染失败时显示错误占位符
                                                 Box(
                                                     modifier =
-                                                        Modifier
-                                                            .fillMaxWidth()
+                                                        Modifier.fillMaxWidth()
                                                             .height(60.dp)
                                                             .background(
                                                                 Color.Red.copy(alpha = 0.1f)
@@ -345,8 +334,7 @@ internal fun ChatPage(
                             item {
                                 Box(
                                     modifier =
-                                        Modifier
-                                            .fillMaxWidth()
+                                        Modifier.fillMaxWidth()
                                             .height(100.dp)
                                             .background(Color.Red.copy(alpha = 0.1f))
                                 ) {
@@ -406,17 +394,13 @@ internal fun ChatPage(
                     if (showLoadMoreUi) {
                         item {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(60.dp),
+                                modifier = Modifier.fillMaxWidth().height(60.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (isLoadingMore) {
                                     CircularProgressIndicator(
                                         color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier
-                                            .width(24.dp)
-                                            .height(24.dp),
+                                        modifier = Modifier.width(24.dp).height(24.dp),
                                     )
                                 } else {
                                     Text(
@@ -475,8 +459,7 @@ internal fun ChatPage(
                     if (agentInfo?.isDeleted == true) {
                         Box(
                             modifier =
-                                Modifier
-                                    .fillMaxWidth()
+                                Modifier.fillMaxWidth()
                                     .height(48.dp)
                                     .padding(horizontal = 16.dp)
                                     .clip(RoundedCornerShape(24.dp))

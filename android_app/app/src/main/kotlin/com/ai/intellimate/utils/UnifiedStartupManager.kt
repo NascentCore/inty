@@ -288,7 +288,6 @@ object UnifiedStartupManager {
                     IntySetting.login(true, guestId, token)
                     LogUtils.i("UnifiedStartupManager - 游客账户创建成功: $guestId")
                 }
-
                 is ApiResult.Error -> {
                     LogUtils.e("UnifiedStartupManager - 游客账户创建失败: ${result.message}")
                     throw Exception("Guest account creation failed: ${result.message}")
@@ -358,7 +357,6 @@ object UnifiedStartupManager {
                         }
                     }
                 }
-
                 is HttpResult.Failure -> {
                     LogUtils.w("UnifiedStartupManager - 推荐agents同步失败: ${result.message}")
                 }
@@ -403,7 +401,6 @@ object UnifiedStartupManager {
                         }
                     }
                 }
-
                 is HttpResult.Failure -> {
                     LogUtils.w("UnifiedStartupManager - 聊天agents同步失败: ${result.message}")
                 }
@@ -441,8 +438,8 @@ object UnifiedStartupManager {
     /** 检查是否有缓存数据 */
     fun hasCacheData(): Boolean {
         return _recommendedAgents.value.isNotEmpty() ||
-                _chatAgents.value.isNotEmpty() ||
-                _userProfile.value != null
+            _chatAgents.value.isNotEmpty() ||
+            _userProfile.value != null
     }
 
     /** 手动刷新推荐agents */

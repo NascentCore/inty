@@ -227,7 +227,7 @@ fun VoicePlayer(
                         )
                     )
                 }
-                
+
                 // 只有在播放状态真正改变时才调用回调
                 if (wasPlaying != isPlaying) {
                     onPlayStateChange?.invoke(isPlaying)
@@ -262,7 +262,7 @@ fun VoicePlayer(
                         )
                     )
                 }
-                
+
                 // 如果从播放状态变为非当前消息，调用回调
                 if (wasPlaying || wasLoading) {
                     onPlayStateChange?.invoke(false)
