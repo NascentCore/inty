@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -95,6 +96,7 @@ fun ChatMorePanel(
                         MorePanelItem(
                             icon = R.drawable.icon_reply_chat,
                             text = stringResource(R.string.reply_style),
+                            isVip = true,
                             onClick = {
                                 // 检查是否正式登录（非游客且已登录）
                                 if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
@@ -141,16 +143,16 @@ fun ChatMorePanel(
 
     // 获取当前agent的聊天设置，确保按agent隔离，并监听chatSettings变化
     val currentChatSetting by
-        remember(agentInfo?.id, chatSettings) {
-            derivedStateOf {
-                agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
-            }
+    remember(agentInfo?.id, chatSettings) {
+        derivedStateOf {
+            agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
         }
+    }
 
     val replyStr by
-        remember(agentInfo?.id, currentChatSetting) {
-            derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
-        }
+    remember(agentInfo?.id, currentChatSetting) {
+        derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
+    }
     if (showSheet) {
         ReplyStyleSheet(
             sheetState = sheetState,
@@ -180,7 +182,7 @@ fun ChatMorePanel(
 
 /** 更多面板项目组件 */
 @Composable
-private fun MorePanelItem(icon: Int, text: String, onClick: () -> Unit) {
+private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onClick: () -> Unit) {
     Column(
         modifier = Modifier.noRippleClickable { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -199,6 +201,15 @@ private fun MorePanelItem(icon: Int, text: String, onClick: () -> Unit) {
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )
+            if (isVip) {
+                Image(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 5.dp, end = 2.dp),
+                    painter = painterResource(R.drawable.ic_vip_badge),
+                    contentDescription = null,
+                )
+            }
         }
         Spacer(Modifier.height(6.dp))
         Text(text = text, fontSize = 14.sp, fontWeight = FontWeight.Normal, color = Color.White)
