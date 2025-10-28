@@ -2,8 +2,10 @@ package ai.sxwl.android.common.analytics
 
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
-import android.app.Activity
-import androidx.fragment.app.Fragment
+import androidx.activity.ComponentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import java.util.concurrent.ConcurrentHashMap
 
 /** 页面追踪工具类 用于记录用户页面访问、交互流程和崩溃时的上下文信息 提供业务层友好的页面追踪功能 */
@@ -13,6 +15,8 @@ object PageTrackingHelper {
     private var currentPage: String? = null
     private var currentPageClass: String? = null
     private var pageStartTime: Long = 0L
+    private var pageVisibleTime: Long = 0L // 页面可见开始时间
+    private var pageLifecycleStartTime: Long = 0L // 页面生命周期开始时间
 
     // 用户交互历史（最近10个操作）
     private val userInteractionHistory = ConcurrentHashMap<String, String>()
@@ -29,16 +33,38 @@ object PageTrackingHelper {
         additionalParams: Map<String, Any> = emptyMap(),
     ) {
         try {
-            // 记录页面结束时间（如果有上一个页面）
+            val currentTime = System.currentTimeMillis()
+
+            // 记录上一个页面的停留时长（如果有）
             if (currentPage != null) {
-                val timeSpent = System.currentTimeMillis() - pageStartTime
-                LogUtils.i("Page tracking: $currentPage spent ${timeSpent}ms")
+                val timeSpent = currentTime - pageStartTime
+                val visibleTimeSpent =
+                    if (pageVisibleTime > 0) currentTime - pageVisibleTime else 0L
+                val lifecycleTimeSpent =
+                    if (pageLifecycleStartTime > 0) currentTime - pageLifecycleStartTime else 0L
+
+                LogUtils.i("页面访问追踪: $currentPage 停留时长=${timeSpent}ms, 可见时长=${visibleTimeSpent}ms, 生命周期时长=${lifecycleTimeSpent}ms")
+
+                // 记录页面离开事件
+                FirebaseManager.logEvent(
+                    "page_leave",
+                    FirebaseManager.safeEventParams(
+                        "page_name" to currentPage,
+                        "page_class" to (currentPageClass ?: "unknown"),
+                        "time_spent" to timeSpent,
+                        "visible_time_spent" to visibleTimeSpent,
+                        "lifecycle_time_spent" to lifecycleTimeSpent,
+                        "timestamp" to currentTime
+                    )
+                )
             }
 
             // 更新当前页面信息
             currentPage = pageName
             currentPageClass = pageClass
-            pageStartTime = System.currentTimeMillis()
+            pageStartTime = currentTime
+            pageVisibleTime = currentTime // 假设页面访问时就是可见的
+            pageLifecycleStartTime = currentTime
 
             // 添加到页面历史
             addToPageHistory(pageName)
@@ -47,15 +73,105 @@ object PageTrackingHelper {
             FirebaseManager.setCustomKey("current_page", pageName)
             FirebaseManager.setCustomKey("current_page_class", pageClass)
             FirebaseManager.setCustomKey("page_start_time", pageStartTime.toString())
+            FirebaseManager.setCustomKey("page_visible_time", pageVisibleTime.toString())
+            FirebaseManager.setCustomKey(
+                "page_lifecycle_start_time",
+                pageLifecycleStartTime.toString()
+            )
 
-            // 记录 Analytics 事件
+            // 记录 Analytics 事件 - 使用安全参数处理
+            val safeParams = FirebaseManager.safeEventParams(
+                "timestamp" to currentTime,
+                "page_name" to pageName,
+                "page_class" to pageClass
+            ) + additionalParams.mapValues { it.value?.toString() ?: "unknown" }
+
             FirebaseManager.logScreenView(
                 pageName,
                 pageClass,
-                additionalParams + mapOf("timestamp" to System.currentTimeMillis()),
+                safeParams
             )
         } catch (e: Exception) {
             LogUtils.e("Failed to track page view: ${e.message}")
+        }
+    }
+
+    /** 记录页面可见性变化 */
+    fun trackPageVisibility(isVisible: Boolean) {
+        try {
+            val currentTime = System.currentTimeMillis()
+
+            if (isVisible) {
+                // 页面变为可见
+                pageVisibleTime = currentTime
+                LogUtils.i("页面可见性追踪: $currentPage 变为可见")
+
+                FirebaseManager.logEvent(
+                    "page_visible",
+                    FirebaseManager.safeEventParams(
+                        "page_name" to (currentPage ?: "unknown"),
+                        "page_class" to (currentPageClass ?: "unknown"),
+                        "timestamp" to currentTime
+                    )
+                )
+            } else {
+                // 页面变为不可见
+                if (pageVisibleTime > 0) {
+                    val visibleTimeSpent = currentTime - pageVisibleTime
+                    LogUtils.i("页面可见性追踪: $currentPage 变为不可见，可见时长=${visibleTimeSpent}ms")
+
+                    FirebaseManager.logEvent(
+                        "page_hidden",
+                        FirebaseManager.safeEventParams(
+                            "page_name" to (currentPage ?: "unknown"),
+                            "page_class" to (currentPageClass ?: "unknown"),
+                            "visible_time_spent" to visibleTimeSpent,
+                            "timestamp" to currentTime
+                        )
+                    )
+                }
+                pageVisibleTime = 0L // 重置可见时间
+            }
+        } catch (e: Exception) {
+            LogUtils.e("Failed to track page visibility: ${e.message}")
+        }
+    }
+
+    /** 记录页面生命周期变化 */
+    fun trackPageLifecycle(lifecycleEvent: String) {
+        try {
+            val currentTime = System.currentTimeMillis()
+
+            when (lifecycleEvent.lowercase()) {
+                "oncreate", "onstart" -> {
+                    if (pageLifecycleStartTime == 0L) {
+                        pageLifecycleStartTime = currentTime
+                    }
+                }
+
+                "ondestroy", "onstop" -> {
+                    if (pageLifecycleStartTime > 0) {
+                        val lifecycleTimeSpent = currentTime - pageLifecycleStartTime
+                        LogUtils.i("页面生命周期追踪: $currentPage $lifecycleEvent，生命周期时长=${lifecycleTimeSpent}ms")
+
+                        FirebaseManager.logEvent(
+                            "page_lifecycle",
+                            FirebaseManager.safeEventParams(
+                                "page_name" to (currentPage ?: "unknown"),
+                                "page_class" to (currentPageClass ?: "unknown"),
+                                "lifecycle_event" to lifecycleEvent,
+                                "lifecycle_time_spent" to lifecycleTimeSpent,
+                                "timestamp" to currentTime
+                            )
+                        )
+
+                        // 重置生命周期开始时间
+                        pageLifecycleStartTime = 0L
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            LogUtils.e("Failed to track page lifecycle: ${e.message}")
         }
     }
 
@@ -160,34 +276,19 @@ object PageTrackingHelper {
 
     /** 获取当前页面信息 */
     fun getCurrentPageInfo(): Map<String, Any> {
+        val currentTime = System.currentTimeMillis()
         return mapOf(
             "current_page" to (currentPage ?: "unknown"),
             "current_page_class" to (currentPageClass ?: "unknown"),
             "page_start_time" to pageStartTime,
-            "time_on_page" to (System.currentTimeMillis() - pageStartTime),
+            "page_visible_time" to pageVisibleTime,
+            "page_lifecycle_start_time" to pageLifecycleStartTime,
+            "time_on_page" to (currentTime - pageStartTime),
+            "visible_time_on_page" to if (pageVisibleTime > 0) (currentTime - pageVisibleTime) else 0L,
+            "lifecycle_time_on_page" to if (pageLifecycleStartTime > 0) (currentTime - pageLifecycleStartTime) else 0L,
             "interaction_history" to userInteractionHistory.toMap(),
             "page_history" to pageHistory.toList(),
         )
-    }
-
-    /** 设置用户标识 */
-    fun setUserId(userId: String) {
-        try {
-            FirebaseManager.setUserId(userId)
-            FirebaseManager.setCustomKey("user_id", userId)
-        } catch (e: Exception) {
-            LogUtils.e("Failed to set user ID: ${e.message}")
-        }
-    }
-
-    /** 设置用户属性 */
-    fun setUserProperty(property: String, value: String) {
-        try {
-            FirebaseManager.setUserProperty(property, value)
-            FirebaseManager.setCustomKey("user_$property", value)
-        } catch (e: Exception) {
-            LogUtils.e("Failed to set user property: ${e.message}")
-        }
     }
 
     private fun addToInteractionHistory(key: String, value: String) {
@@ -205,13 +306,36 @@ object PageTrackingHelper {
         }
     }
 
-    /** 为 Activity 添加生命周期追踪 */
-    fun trackActivityLifecycle(activity: Activity, pageName: String) {
+    /** 为 Activity 添加生命周期追踪 - 使用Lifecycle自动监听 */
+    fun trackActivityLifecycle(activity: ComponentActivity, pageName: String) {
+        // 记录页面访问
         trackPageView(pageName, activity.javaClass.simpleName)
-    }
 
-    /** 为 Fragment 添加生命周期追踪 */
-    fun trackFragmentLifecycle(fragment: Fragment, pageName: String) {
-        trackPageView(pageName, fragment.javaClass.simpleName)
+        // 注册生命周期监听器
+        activity.lifecycle.addObserver(object : LifecycleEventObserver {
+            override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                when (event) {
+                    Lifecycle.Event.ON_CREATE -> trackPageLifecycle("onCreate")
+                    Lifecycle.Event.ON_START -> trackPageLifecycle("onStart")
+                    Lifecycle.Event.ON_RESUME -> {
+                        trackPageVisibility(true)
+                        trackPageLifecycle("onResume")
+                    }
+
+                    Lifecycle.Event.ON_PAUSE -> {
+                        trackPageVisibility(false)
+                        trackPageLifecycle("onPause")
+                    }
+
+                    Lifecycle.Event.ON_STOP -> trackPageLifecycle("onStop")
+                    Lifecycle.Event.ON_DESTROY -> trackPageLifecycle("onDestroy")
+                    Lifecycle.Event.ON_ANY -> {
+                        // 不需要处理ON_ANY事件
+                    }
+                }
+            }
+        })
+
+        LogUtils.i("PageTrackingHelper - 已为 ${activity.javaClass.simpleName} 注册生命周期追踪")
     }
 }

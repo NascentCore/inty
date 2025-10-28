@@ -78,11 +78,13 @@ fun ChatPageContainer(
             list
         }
 
-    // 如果 agentList 为空，显示空状态
+    // 如果 agentList 为空，显示加载状态而不是空白
     if (agentList.isEmpty()) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            // 可以在这里显示加载中或空状态的UI
-            // 暂时显示空白，等待数据加载
+            // 显示加载指示器，而不是空白
+            androidx.compose.material3.CircularProgressIndicator(
+                color = androidx.compose.material3.MaterialTheme.colorScheme.primary
+            )
         }
         return
     }
@@ -230,23 +232,26 @@ private fun NewUserGuide(
             val scope = rememberCoroutineScope()
             Box(
                 modifier =
-                    Modifier.fillMaxSize().noRippleClickable {
-                        // 只有在引导期间才响应点击
-                        if (isGuideActive) {
-                            scope.launch {
-                                showHand = false
-                                pageState.animateScrollToPage(initialPageIndex)
-                                IntySetting.setShowGuested()
-                                onGuideCompleted()
-                                isGuideActive = false
+                    Modifier
+                        .fillMaxSize()
+                        .noRippleClickable {
+                            // 只有在引导期间才响应点击
+                            if (isGuideActive) {
+                                scope.launch {
+                                    showHand = false
+                                    pageState.animateScrollToPage(initialPageIndex)
+                                    IntySetting.setShowGuested()
+                                    onGuideCompleted()
+                                    isGuideActive = false
+                                }
                             }
                         }
-                    }
             ) {
                 // 背景渐变框
                 Box(
                     modifier =
-                        Modifier.align(Alignment.TopEnd)
+                        Modifier
+                            .align(Alignment.TopEnd)
                             .padding(top = 340.dp)
                             .size(210.dp, 40.dp)
                             .background(
@@ -262,7 +267,8 @@ private fun NewUserGuide(
                 // 手势图标
                 Image(
                     modifier =
-                        Modifier.align(Alignment.TopEnd)
+                        Modifier
+                            .align(Alignment.TopEnd)
                             .padding(top = 340.dp, end = 92.dp)
                             .size(112.dp),
                     painter = painterResource(R.drawable.scroll_hand),

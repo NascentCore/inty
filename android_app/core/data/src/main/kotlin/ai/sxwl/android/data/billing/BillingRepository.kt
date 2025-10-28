@@ -363,6 +363,9 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                         LogUtils.I
                     )
                     _eventFlow.emit(BillingEvent.SubscriptionStatusChanged(oldStatus, newStatus))
+
+                    // 自动更新Firebase用户属性
+                    VipStatusHelper.updateFirebaseUserProperties()
                 }
             } catch (e: Exception) {
                 log("刷新订阅状态失败: ${e.message}", LogUtils.E)

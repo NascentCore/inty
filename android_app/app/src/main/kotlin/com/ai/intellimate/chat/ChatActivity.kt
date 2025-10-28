@@ -44,6 +44,8 @@ class ChatActivity : BaseActivity() {
     private var agent: AgentInfo? = null
     private var agentId: String? = null
 
+    override fun getPageName(): String = "ChatActivity"
+
     override fun initConfigData() {
         super.initConfigData()
         agent =
@@ -74,7 +76,8 @@ class ChatActivity : BaseActivity() {
         super.ConfigComposeUI()
         ChatPage(
             modifier =
-                Modifier.fillMaxSize()
+                Modifier
+                    .fillMaxSize()
                     .background(HeartColor.primaryColor)
                     .imePadding()
                     .navigationBarsPadding(),

@@ -160,22 +160,56 @@ class ChatViewModel : BaseVM() {
             return
         }
 
+        // 记录上一个Agent信息用于事件上报
+        val previousAgent = _agentInfo.value
+
+        // 上报Agent切换事件
+        FirebaseManager.logEvent(
+            FirebaseManager.Events.AGENT_SWITCH,
+            FirebaseManager.safeEventParams(
+                "from_agent_id" to (previousAgent?.id ?: ""),
+                "from_agent_name" to (previousAgent?.name ?: ""),
+                "to_agent_id" to agentInfo.id,
+                "to_agent_name" to agentInfo.name,
+                "switch_method" to "manual",
+                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                "timestamp" to System.currentTimeMillis()
+            )
+        )
+
         _agentInfo.value = agentInfo
-        _msgs.update { emptyList() }
         lastQueryAgentId = agentInfo.id
         isQueryingMsgs = false
-        _isQueryMsgsCompleted.value = false
 
         // 重置分页状态
         currentOffset = 0
         _hasMoreMessages.value = true
         _isLoadingMore.value = false
 
-        // 查询新 agent 的消息 - 使用新架构
+        // 立即绑定到Agent会话，获取本地缓存数据
         bindToAgentSession(agentInfo.id)
-        // 使用增量同步，优先加载本地数据，然后同步服务器 - 使用UseCase
-        loadChatHistory(agentInfo.id)
-        // 查询改聊天设置
+
+        // 检查是否有本地缓存数据
+        val hasLocalData = chatRepository.getMessagesFlow(agentInfo.id).value.isNotEmpty()
+
+        if (hasLocalData) {
+            // 有本地数据，立即标记为完成，然后后台同步
+            _isQueryMsgsCompleted.value = true
+            // 后台同步最新数据
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    syncChatDataUseCase(agentInfo.id)
+                } catch (e: Exception) {
+                    LogUtils.e("ChatViewModel.setAgentInfo background sync error: ${e.message}")
+                }
+            }
+        } else {
+            // 没有本地数据，需要加载
+            _isQueryMsgsCompleted.value = false
+            loadChatHistory(agentInfo.id)
+        }
+
+        // 查询聊天设置
         getChatSetting()
     }
 
@@ -264,34 +298,61 @@ class ChatViewModel : BaseVM() {
         inputData.value = ""
         _isWaitingForReply.value = true
 
+        // 检查是否是第一次聊天（没有历史消息）
+        val currentMessages = _msgs.value
+        val hasChatHistory = currentMessages.any { it.role == "user" }
+
+        // 如果是第一次聊天，上报CHAT_STARTED事件
+        if (!hasChatHistory) {
+            _agentInfo.value?.let { agent ->
+                FirebaseManager.logEvent(
+                    FirebaseManager.Events.CHAT_STARTED,
+                    FirebaseManager.safeEventParams(
+                        "agent_id" to agent.id,
+                        "agent_name" to agent.name,
+                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                        "timestamp" to System.currentTimeMillis()
+                    )
+                )
+            }
+        }
+
         // Firebase Analytics - 记录消息发送
         _agentInfo.value?.let { agent ->
+            val startTime = System.currentTimeMillis()
+
             FirebaseManager.logEvent(
-                "message_sent",
-                mapOf(
+                FirebaseManager.Events.MESSAGE_SENT,
+                FirebaseManager.safeEventParams(
                     "agent_id" to agent.id,
+                    "agent_name" to agent.name,
                     "message_length" to inputMsg.length,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                ),
+                    "timestamp" to startTime
+                )
             )
 
             // Firebase Crashlytics - 记录消息发送上下文
             FirebaseManager.setCustomKey("last_message_length", inputMsg.length.toString())
             FirebaseManager.setCustomKey("last_message_preview", inputMsg.take(50))
+            FirebaseManager.setCustomKey("last_agent_id", agent.id)
 
             // 追踪消息发送
             PageTrackingHelper.trackUserInteraction(
                 "message_send",
                 "chat_input",
-                mapOf(
+                FirebaseManager.safeEventParams(
                     "agent_id" to agent.id,
+                    "agent_name" to agent.name,
                     "message_length" to inputMsg.length,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                ),
+                    "timestamp" to startTime
+                )
             )
         }
 
         viewModelScope.launch(Dispatchers.IO) {
+            val aiResponseStartTime = System.currentTimeMillis()
             try {
                 val result = sendMessageUseCase(agentId, inputMsg.trimEnd())
                 LogUtils.i("Send message result: $result")
@@ -299,58 +360,101 @@ class ChatViewModel : BaseVM() {
                 // 处理发送结果
                 when (result) {
                     is HttpResult.Success -> {
-                        // Firebase Analytics - 记录消息发送成功
+                        val responseTime = System.currentTimeMillis() - aiResponseStartTime
+
+                        // Firebase Analytics - 记录消息发送成功和AI响应时间
                         FirebaseManager.logEvent(
                             "message_send_success",
-                            mapOf(
+                            FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
+                                "agent_name" to (_agentInfo.value?.name),
                                 "response_code" to (result.data.code ?: 0),
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                            ),
+                                "ai_response_time" to responseTime
+                            )
+                        )
+
+                        // 记录AI响应时间性能指标
+                        FirebaseManager.logPerformanceMetric(
+                            FirebaseManager.Events.AI_RESPONSE_TIME,
+                            responseTime,
+                            "ms",
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to agentId,
+                                "agent_name" to (_agentInfo.value?.name),
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free"
+                            )
+                        )
+
+                        // 上报AI回复接收事件
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.AI_RESPONSE_RECEIVED,
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to agentId,
+                                "agent_name" to (_agentInfo.value?.name),
+                                "response_time" to responseTime,
+                                "response_code" to (result.data.code ?: 0),
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "timestamp" to System.currentTimeMillis()
+                            )
                         )
 
                         runCatching {
-                                if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
-                                    requestLogin.emit(true)
-                                    return@runCatching
-                                }
-                                // 有免费次数限制，需要vip订阅
-                                if (
-                                    result.data.code ==
-                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                                ) {
-                                    // Firebase Analytics - 记录免费次数限制
-                                    FirebaseManager.logEvent(
-                                        "free_limit_reached",
-                                        mapOf("agent_id" to agentId, "user_type" to "free"),
-                                    )
-                                    showLimitDialog.emit(true)
-                                }
-                                result.data.data?.choices?.lastOrNull()?.message?.content?.let {
-                                    content ->
-                                    IntySetting.setConversationReaded(agentId, content)
-                                }
+                            if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
+                                requestLogin.emit(true)
+                                return@runCatching
                             }
+                            // 有免费次数限制，需要vip订阅
+                            if (
+                                result.data.code ==
+                                BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                            ) {
+                                // Firebase Analytics - 记录免费次数限制
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.FREE_LIMIT_HIT,
+                                    FirebaseManager.safeEventParams(
+                                        "agent_id" to agentId,
+                                        "agent_name" to (_agentInfo.value?.name ?: ""),
+                                        "user_type" to "free",
+                                        "timestamp" to System.currentTimeMillis()
+                                    )
+                                )
+                                showLimitDialog.emit(true)
+                            }
+                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { content ->
+                                IntySetting.setConversationReaded(agentId, content)
+                            }
+                        }
                             .onFailure {
                                 LogUtils.e("Error processing AI response: ${it.message}")
                                 it.printStackTrace()
                                 _isWaitingForReply.value = false
                             }
                     }
+
                     is HttpResult.Failure -> {
+                        val responseTime = System.currentTimeMillis() - aiResponseStartTime
+
                         // Firebase Analytics - 记录消息发送失败
                         FirebaseManager.logEvent(
                             "message_send_failure",
-                            mapOf(
+                            FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
+                                "agent_name" to (_agentInfo.value?.name),
                                 "error_message" to result.message,
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                            ),
+                                "ai_response_time" to responseTime
+                            )
                         )
 
                         // Firebase Crashlytics - 记录非致命错误
                         FirebaseManager.recordException(
-                            Exception("Message send failed: ${result.message}")
+                            Exception("Message send failed: ${result.message}"),
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to agentId,
+                                "agent_name" to (_agentInfo.value?.name),
+                                "response_time" to responseTime
+                            )
                         )
 
                         // 显示网络错误
@@ -501,22 +605,22 @@ class ChatViewModel : BaseVM() {
                 when (result) {
                     is HttpResult.Success -> {
                         runCatching {
-                                if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
-                                    requestLogin.emit(true)
-                                    return@runCatching
-                                }
-                                // 有免费次数限制，需要vip订阅
-                                if (
-                                    result.data.code ==
-                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                                ) {
-                                    showLimitDialog.emit(true)
-                                }
-                                result.data.data?.choices?.lastOrNull()?.message?.content?.let { str
-                                    ->
-                                    IntySetting.setConversationReaded(agent.id, str)
-                                }
+                            if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
+                                requestLogin.emit(true)
+                                return@runCatching
                             }
+                            // 有免费次数限制，需要vip订阅
+                            if (
+                                result.data.code ==
+                                BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                            ) {
+                                showLimitDialog.emit(true)
+                            }
+                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { str
+                                ->
+                                IntySetting.setConversationReaded(agent.id, str)
+                            }
+                        }
                             .onFailure {
                                 LogUtils.e(
                                     "Error processing keep talking AI response: ${it.message}"
@@ -526,6 +630,7 @@ class ChatViewModel : BaseVM() {
                                 _isWaitingForReply.value = false
                             }
                     }
+
                     is HttpResult.Failure -> {
                         NetworkErrorHandler.showNetworkAwareError(result.message)
                         // 错误恢复：确保状态正确
@@ -561,6 +666,7 @@ class ChatViewModel : BaseVM() {
                 LogUtils.e(result.message)
                 //                showNetworkAwareError(result.message)
             }
+
             is HttpResult.Success -> {
                 // 更新指定agent的设置，保持其他agent的设置不变
                 _chatSettings.update { currentSettings ->
@@ -635,6 +741,7 @@ class ChatViewModel : BaseVM() {
                             _conversations.value = userInitiatedConversations
                         }
                     }
+
                     is HttpResult.Failure -> {
                         LogUtils.e(
                             "loadConversationsSilently - 第${currentConversationsPage + 1}页加载失败: ${result.message}"
@@ -685,6 +792,7 @@ class ChatViewModel : BaseVM() {
                             }
                         }
                     }
+
                     is HttpResult.Failure -> {
                         LogUtils.e(
                             "loadConversations - 第${currentConversationsPage + 1}页加载失败: ${result.message}"
@@ -725,6 +833,7 @@ class ChatViewModel : BaseVM() {
                     is HttpResult.Success -> {
                         setAgentInfo(result.data)
                     }
+
                     is HttpResult.Failure -> {
                         NetworkErrorHandler.showNetworkAwareError(result.message)
                     }
@@ -744,7 +853,7 @@ class ChatViewModel : BaseVM() {
             currentConversations.map { conversation ->
                 if (
                     conversation.id == conversationItem.id &&
-                        conversation.agentId == conversationItem.agentId
+                    conversation.agentId == conversationItem.agentId
                 ) {
                     conversation.copy(isNew = false)
                 } else {

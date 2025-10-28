@@ -181,16 +181,25 @@ internal fun ChatPage(
         val scope = rememberCoroutineScope()
 
         Scaffold(
-            modifier = Modifier.fillMaxSize().background(Color.Transparent),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent),
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
         ) { innerPadding ->
-            Column(modifier = Modifier.padding(innerPadding).imePadding()) {
+            Column(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .imePadding()
+            ) {
                 Spacer(Modifier.height(48.dp))
 
+                // 立即显示TopBar和Premium标签（不等待数据加载）
                 agentInfo?.let { info ->
                     ChatTopBar(
-                        modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 18.dp),
                         agentInfo = info,
                         showBackButton = showBackButton,
                         onBack = onBack,
@@ -242,12 +251,14 @@ internal fun ChatPage(
                         showPremiumDialog = false
                     }
                 }
+
+                // 消息列表区域 - 等待数据加载完成
                 val chatMessages by chatViewModel.msgs.collectAsState()
                 val isLoadingMore by chatViewModel.isLoadingMore.collectAsState()
                 val hasMoreMessages by chatViewModel.hasMoreMessages.collectAsState()
                 val listState = rememberLazyListState()
 
-                // 计算是否展示“加载更多”区域（仅在真正的 load more 场景出现）
+                // 计算是否展示"加载更多"区域（仅在真正的 load more 场景出现）
                 val layoutInfo = listState.layoutInfo
                 val visibleItemsForUi = layoutInfo.visibleItemsInfo
                 val totalItemsForUi = layoutInfo.totalItemsCount
@@ -266,7 +277,9 @@ internal fun ChatPage(
                             (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
 
                 LazyColumn(
-                    modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 16.dp),
                     state = listState,
                     reverseLayout = true, // ⚠️此处使用了reverse，导致布局列表是反向的
                 ) {
@@ -308,7 +321,8 @@ internal fun ChatPage(
                                                 // 渲染失败时显示错误占位符
                                                 Box(
                                                     modifier =
-                                                        Modifier.fillMaxWidth()
+                                                        Modifier
+                                                            .fillMaxWidth()
                                                             .height(60.dp)
                                                             .background(
                                                                 Color.Red.copy(alpha = 0.1f)
@@ -331,7 +345,8 @@ internal fun ChatPage(
                             item {
                                 Box(
                                     modifier =
-                                        Modifier.fillMaxWidth()
+                                        Modifier
+                                            .fillMaxWidth()
                                             .height(100.dp)
                                             .background(Color.Red.copy(alpha = 0.1f))
                                 ) {
@@ -391,13 +406,17 @@ internal fun ChatPage(
                     if (showLoadMoreUi) {
                         item {
                             Box(
-                                modifier = Modifier.fillMaxWidth().height(60.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(60.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (isLoadingMore) {
                                     CircularProgressIndicator(
                                         color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.width(24.dp).height(24.dp),
+                                        modifier = Modifier
+                                            .width(24.dp)
+                                            .height(24.dp),
                                     )
                                 } else {
                                     Text(
@@ -450,13 +469,14 @@ internal fun ChatPage(
                         }
                 }
 
-                // 输入框区域
+                // 输入框区域 - 立即显示（不等待数据加载）
                 Column {
                     // 如果是已经删除的agent，则不可点击，并提示
                     if (agentInfo?.isDeleted == true) {
                         Box(
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .height(48.dp)
                                     .padding(horizontal = 16.dp)
                                     .clip(RoundedCornerShape(24.dp))

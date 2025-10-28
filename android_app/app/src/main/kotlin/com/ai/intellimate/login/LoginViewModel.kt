@@ -4,6 +4,7 @@ import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.GoogleLoginRequest
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
@@ -49,13 +50,24 @@ class LoginViewModel : BaseVM() {
                     IntySetting.login(false, userProfile.id, token) // false 表示不是游客用户
                     UserProfileManager.saveUserProfile(userProfile)
 
+                    // 上报用户登录事件
+                    FirebaseManager.logEvent(
+                        FirebaseManager.Events.USER_LOGIN,
+                        FirebaseManager.safeEventParams(
+                            "user_id" to userProfile.id,
+                            "user_name" to (userProfile.nickname),
+                            "login_method" to "google",
+                            "timestamp" to System.currentTimeMillis()
+                        )
+                    )
+
                     // 登录成功，IntySetting已经保存了登录状态
 
                     // 检查用户信息是否完整（年龄和性别）
                     val needsRegInfo =
                         userProfile.gender.isNullOrEmpty() ||
-                            userProfile.ageGroup.isNullOrEmpty() ||
-                            userProfile.ageGroup == "<18"
+                                userProfile.ageGroup.isNullOrEmpty() ||
+                                userProfile.ageGroup == "<18"
 
                     withContext(Dispatchers.Main) {
                         // 显示登录成功提示
@@ -78,6 +90,7 @@ class LoginViewModel : BaseVM() {
                         Utils.getApp().startActivity(intent)
                     }
                 }
+
                 is HttpResult.Failure -> {
                     LogUtils.e("Google login failed: ${result.message}")
                     withContext(Dispatchers.Main) {

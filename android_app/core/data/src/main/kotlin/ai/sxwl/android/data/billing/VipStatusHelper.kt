@@ -1,5 +1,6 @@
 package ai.sxwl.android.data.billing
 
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.app.Activity
 
@@ -24,35 +25,34 @@ object VipStatusHelper {
         return BillingRepository.vipStatusFlow.value
     }
 
-    /** 检查VIP状态并执行相应操作 */
-    fun checkVipStatus(onVip: () -> Unit, onNotVip: () -> Unit) {
-        if (isUserVip()) {
-            onVip()
-        } else {
-            onNotVip()
+    /** 获取订阅等级 */
+    fun getSubscriptionLevel(): String {
+        val vipStatus = getVipStatus()
+        return when {
+            vipStatus.isSubscribed -> "premium"
+            vipStatus.everSubscribed -> "expired"
+            else -> "free"
         }
     }
 
-    /** 统一的购买逻辑 - 购买第一个可用计划 */
-    fun purchaseFirstVip(activity: Activity, onError: (String) -> Unit = {}) {
-        val currentPlans = BillingRepository.plansFlow.value
-        if (currentPlans.isNotEmpty()) {
-            val selectedPlan = currentPlans[0]
+    /** 更新Firebase用户属性（VIP状态变化时调用） */
+    fun updateFirebaseUserProperties() {
+        try {
+            val userType = if (isUserVip()) "vip" else "free"
+            val subscriptionLevel = getSubscriptionLevel()
 
-            // 检查用户是否已经订阅
-            if (isUserVip()) {
-                LogUtils.w("VipStatusHelper - 用户已经是订阅用户，无需重复购买")
-                onError("用户已经是订阅用户")
-                return
-            }
+            FirebaseManager.setUserProperty(FirebaseManager.UserProperties.USER_TYPE, userType)
+            FirebaseManager.setUserProperty(
+                FirebaseManager.UserProperties.SUBSCRIPTION_LEVEL,
+                subscriptionLevel
+            )
 
-            // 启动购买流程
-            BillingRepository.launchBillingFlow(activity, selectedPlan.googleProductId)
-        } else {
-            LogUtils.w("VipStatusHelper - 无可用会员订阅计划")
-            onError("无可用订阅计划")
+            LogUtils.i("VipStatusHelper - Firebase用户属性已更新: userType=$userType, subscriptionLevel=$subscriptionLevel")
+        } catch (e: Exception) {
+            LogUtils.e("VipStatusHelper - 更新Firebase用户属性失败: ${e.message}")
         }
     }
+
 
     /** 购买指定计划 */
     fun purchasePlan(activity: Activity, productId: String, onError: (String) -> Unit = {}) {

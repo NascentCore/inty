@@ -33,12 +33,9 @@ object ChatModule {
 
     val syncChatDataUseCase: SyncChatDataUseCase by lazy { SyncChatDataUseCase(_chatRepository) }
 
-    val getChatAgentsUseCase: GetChatAgentsUseCase by lazy {
-        GetChatAgentsUseCase(_agentRepository)
-    }
+    val getChatAgentsUseCase: GetChatAgentsUseCase by lazy { GetChatAgentsUseCase(_agentRepository) }
 
     // Repository for external access
     fun getChatRepository(): ChatRepository = _chatRepository
-
     fun getAgentRepository(): AgentRepository = _agentRepository
 }

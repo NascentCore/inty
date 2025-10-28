@@ -1,5 +1,8 @@
 package ai.sxwl.android.firebase
 
+import ai.sxwl.android.utils.AppUtils
+import ai.sxwl.android.utils.DeviceUtils
+import ai.sxwl.android.utils.LanguageUtils
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.os.Bundle
@@ -7,14 +10,14 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.perf.FirebasePerformance
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics和Performance的初始化和使用
@@ -32,11 +35,14 @@ object FirebaseManager {
     private val isInitialized = AtomicBoolean(false)
 
     // 缓存 Firebase 实例，避免重复获取
-    @Volatile private var analytics: FirebaseAnalytics? = null
+    @Volatile
+    private var analytics: FirebaseAnalytics? = null
 
-    @Volatile private var crashlytics: FirebaseCrashlytics? = null
+    @Volatile
+    private var crashlytics: FirebaseCrashlytics? = null
 
-    @Volatile private var performance: FirebasePerformance? = null
+    @Volatile
+    private var performance: FirebasePerformance? = null
 
     // 使用SupervisorJob确保子协程异常不影响其他协程
     private val firebaseScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -56,14 +62,29 @@ object FirebaseManager {
             analyticsEnabled = true,
             crashlyticsEnabled = true,
             performanceEnabled = true,
-            // 低价值事件默认加入采样
+            // 优化采样配置 - 减少低价值事件上报
+            disabledEvents = setOf(
+                // 完全禁用低价值事件
+                "page_visible",      // 页面可见性变化过于频繁
+                "page_hidden",       // 页面隐藏事件价值较低
+                "page_lifecycle",    // 生命周期事件过于详细
+            ),
             samplingRates =
                 mapOf(
-                    "user_interaction" to 0.1,
-                    "message_sent" to 0.5,
-                    // 保留高价值 100%：失败/401/最终失败/页面
+                    // 调试模式下提高采样率，便于调试
+                    "user_interaction" to if (AppUtils.isAppDebug()) 1.0 else 0.1,           // 调试100%，发布10%
+                    Events.MESSAGE_SENT to if (AppUtils.isAppDebug()) 1.0 else 0.5,           // 调试100%，发布50%
+                    "explore_page_view" to if (AppUtils.isAppDebug()) 1.0 else 0.3,           // 调试100%，发布30%
+                    "voice_playback_start" to if (AppUtils.isAppDebug()) 1.0 else 0.5,        // 调试100%，发布50%
+
+                    // 高价值事件 - 保持100%采样
+                    // 错误、失败、认证、页面访问等关键事件保持100%
                 ),
-            minIntervalMsPerEvent = mapOf("user_interaction" to 5_000L, "message_sent" to 1_000L),
+            minIntervalMsPerEvent = mapOf(
+                // 调试模式下降低限频，便于调试
+                "user_interaction" to if (AppUtils.isAppDebug()) 1_000L else 10_000L,            // 调试1秒，发布10秒
+                Events.MESSAGE_SENT to if (AppUtils.isAppDebug()) 500L else 2_000L,            // 调试0.5秒，发布2秒
+            ),
         )
 
     // 错误统计，避免重复错误日志
@@ -135,7 +156,17 @@ object FirebaseManager {
 
     /** 安全地记录事件到 Analytics 使用SupervisorJob确保异常不会影响其他操作 */
     fun logEvent(eventName: String, parameters: Map<String, Any> = emptyMap()) {
-        if (!shouldLogEvent(eventName)) return
+        // 调试模式下输出详细日志
+        if (AppUtils.isAppDebug()) {
+            LogUtils.d("FirebaseManager", "尝试记录事件: $eventName, 参数: $parameters")
+        }
+
+        if (!shouldLogEvent(eventName)) {
+            if (AppUtils.isAppDebug()) {
+                LogUtils.d("FirebaseManager", "事件被过滤: $eventName")
+            }
+            return
+        }
 
         try {
             val analytics = getAnalytics() ?: return
@@ -145,6 +176,11 @@ object FirebaseManager {
                 try {
                     val bundle = createBundle(parameters)
                     analytics.logEvent(eventName, bundle)
+
+                    // 调试模式下确认事件已发送
+                    if (AppUtils.isAppDebug()) {
+                        LogUtils.d("FirebaseManager", "✅ 事件已发送: $eventName")
+                    }
                 } catch (e: Exception) {
                     logError("logEvent", "Failed to log event: ${e.message}")
                 }
@@ -237,89 +273,23 @@ object FirebaseManager {
         }
     }
 
-    /** 安全地设置自定义键 */
-    fun setCustomKey(key: String, value: String) {
+    /** 设置Crashlytics自定义键 - 支持多种类型 */
+    fun setCustomKey(key: String, value: Any?) {
         try {
             val crashlytics = getCrashlytics() ?: return
 
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    crashlytics.setCustomKey(key, value)
-                } catch (e: Exception) {
-                    logError("setCustomKey", "Failed to set custom key: ${e.message}")
-                }
-            }
-        } catch (e: Exception) {
-            logError("setCustomKey", "Failed to create custom key: ${e.message}")
-        }
-    }
-
-    fun setCustomKey(key: String, value: Boolean) {
-        try {
-            val crashlytics = getCrashlytics() ?: return
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    crashlytics.setCustomKey(key, value)
-                } catch (e: Exception) {
-                    logError("setCustomKey", "Failed to set custom key: ${e.message}")
-                }
-            }
-        } catch (e: Exception) {
-            logError("setCustomKey", "Failed to create custom key: ${e.message}")
-        }
-    }
-
-    fun setCustomKey(key: String, value: Int) {
-        try {
-            val crashlytics = getCrashlytics() ?: return
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    crashlytics.setCustomKey(key, value)
-                } catch (e: Exception) {
-                    logError("setCustomKey", "Failed to set custom key: ${e.message}")
-                }
-            }
-        } catch (e: Exception) {
-            logError("setCustomKey", "Failed to create custom key: ${e.message}")
-        }
-    }
-
-    fun setCustomKey(key: String, value: Long) {
-        try {
-            val crashlytics = getCrashlytics() ?: return
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    crashlytics.setCustomKey(key, value)
-                } catch (e: Exception) {
-                    logError("setCustomKey", "Failed to set custom key: ${e.message}")
-                }
-            }
-        } catch (e: Exception) {
-            logError("setCustomKey", "Failed to create custom key: ${e.message}")
-        }
-    }
-
-    fun setCustomKey(key: String, value: Float) {
-        try {
-            val crashlytics = getCrashlytics() ?: return
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    crashlytics.setCustomKey(key, value)
-                } catch (e: Exception) {
-                    logError("setCustomKey", "Failed to set custom key: ${e.message}")
-                }
-            }
-        } catch (e: Exception) {
-            logError("setCustomKey", "Failed to create custom key: ${e.message}")
-        }
-    }
-
-    fun setCustomKey(key: String, value: Double) {
-        try {
-            val crashlytics = getCrashlytics() ?: return
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    crashlytics.setCustomKey(key, value)
+                    when (value) {
+                        is String -> crashlytics.setCustomKey(key, value)
+                        is Boolean -> crashlytics.setCustomKey(key, value)
+                        is Int -> crashlytics.setCustomKey(key, value)
+                        is Long -> crashlytics.setCustomKey(key, value)
+                        is Float -> crashlytics.setCustomKey(key, value)
+                        is Double -> crashlytics.setCustomKey(key, value)
+                        null -> crashlytics.setCustomKey(key, "null")
+                        else -> crashlytics.setCustomKey(key, value.toString())
+                    }
                 } catch (e: Exception) {
                     logError("setCustomKey", "Failed to set custom key: ${e.message}")
                 }
@@ -367,7 +337,17 @@ object FirebaseManager {
 
     /** 预定义的事件常量 */
     object Events {
-        const val APP_OPEN = "app_open"
+        // Firebase内置事件
+        const val APP_OPEN = FirebaseAnalytics.Event.APP_OPEN
+        const val LOGIN = FirebaseAnalytics.Event.LOGIN
+        const val SIGN_UP = FirebaseAnalytics.Event.SIGN_UP
+        const val SCREEN_VIEW = FirebaseAnalytics.Event.SCREEN_VIEW
+        const val SELECT_CONTENT = FirebaseAnalytics.Event.SELECT_CONTENT
+        const val SHARE = FirebaseAnalytics.Event.SHARE
+        const val SEARCH = FirebaseAnalytics.Event.SEARCH
+        const val PURCHASE = FirebaseAnalytics.Event.PURCHASE
+
+        // 业务自定义事件
         const val USER_LOGIN = "user_login"
         const val USER_LOGOUT = "user_logout"
         const val CHAT_STARTED = "chat_started"
@@ -375,6 +355,26 @@ object FirebaseManager {
         const val AI_RESPONSE_RECEIVED = "ai_response_received"
         const val PROFILE_UPDATED = "profile_updated"
         const val SETTINGS_CHANGED = "settings_changed"
+
+        // 性能相关事件
+        const val AI_RESPONSE_TIME = "ai_response_time"
+        const val TTS_GENERATION_TIME = "tts_generation_time"
+        const val VOICE_PLAYBACK_TIME = "voice_playback_time"
+        const val IMAGE_LOAD_TIME = "image_load_time"
+        const val PAGE_LOAD_TIME = "page_load_time"
+        const val DATABASE_OPERATION_TIME = "database_operation_time"
+
+        // 业务关键事件
+        const val AGENT_SWITCH = "agent_switch"
+
+        // UI交互事件
+        const val IMAGE_SHOW_SUCCESS = "image_show_success"
+        const val AUDIO_PLAY_END = "audio_play_end"
+        const val PULL_UP_INPUT = "pull_up_input"
+        const val VOICE_PLAYBACK_START = "voice_playback_start"
+        const val IMAGE_GENERATION_START = "image_generation_start"
+        const val SUBSCRIPTION_START = "subscription_start"
+        const val FREE_LIMIT_HIT = "free_limit_hit"
     }
 
     /** 预定义的用户属性常量 */
@@ -383,12 +383,105 @@ object FirebaseManager {
         const val SUBSCRIPTION_LEVEL = "subscription_level"
         const val APP_VERSION = "app_version"
         const val DEVICE_TYPE = "device_type"
+        const val DEVICE_MODEL = "device_model"
+        const val OS_VERSION = "os_version"
+        const val APP_BUILD_TYPE = "app_build_type"
+        const val USER_REGION = "user_region"
+        const val LANGUAGE = "language"
     }
 
     /** Firebase 推送消息注册 */
     suspend fun registerFCM(): String {
         val token = FirebaseMessaging.getInstance().token.await()
         return token
+    }
+
+    /** 设置设备信息 */
+    fun setDeviceInfo() {
+        try {
+            // 设置应用版本信息
+            val versionName = AppUtils.getVersionName()
+            val versionCode = AppUtils.getVersionCode()
+            setUserProperty(UserProperties.APP_VERSION, versionName)
+            setUserProperty("app_version_code", versionCode.toString())
+
+            // 设置设备信息
+            setUserProperty(UserProperties.DEVICE_MODEL, DeviceUtils.getModel())
+            setUserProperty(UserProperties.OS_VERSION, DeviceUtils.getSDKVersionName())
+            setUserProperty("os_version_code", DeviceUtils.getSDKVersionCode().toString())
+            setUserProperty(UserProperties.DEVICE_TYPE, "android")
+            setUserProperty("device_brand", DeviceUtils.getBrand())
+            setUserProperty("device_manufacturer", DeviceUtils.getManufacturer())
+            setUserProperty("device_product", DeviceUtils.getProduct())
+
+            // 设置屏幕信息
+            setUserProperty("screen_width", DeviceUtils.getScreenWidth().toString())
+            setUserProperty("screen_height", DeviceUtils.getScreenHeight().toString())
+            setUserProperty("screen_density", DeviceUtils.getScreenDensity().toString())
+            setUserProperty("screen_density_dpi", DeviceUtils.getScreenDensityDpi().toString())
+
+            // 设置语言和地区信息
+            val currentLocale = LanguageUtils.getCurrentLanguage()
+            setUserProperty(UserProperties.LANGUAGE, currentLocale.language)
+            setUserProperty(UserProperties.USER_REGION, currentLocale.country)
+            setUserProperty("locale_display", currentLocale.displayName)
+
+            // 设置设备特殊属性
+            setUserProperty("is_emulator", DeviceUtils.isEmulator().toString())
+            setUserProperty("is_rooted", DeviceUtils.isDeviceRooted().toString())
+            setUserProperty("is_debug", AppUtils.isAppDebug().toString())
+
+            LogUtils.i("FirebaseManager - 设备信息设置完成")
+        } catch (e: Exception) {
+            logError("setDeviceInfo", "Failed to set device info: ${e.message}")
+        }
+    }
+
+    /** 设置用户信息（登录后调用） */
+    fun setUserInfo(userId: String, userType: String = "free", subscriptionLevel: String = "none") {
+        try {
+            // 设置用户ID
+            setUserId(userId)
+
+            // 设置用户属性
+            setUserProperty(UserProperties.USER_TYPE, userType)
+            setUserProperty(UserProperties.SUBSCRIPTION_LEVEL, subscriptionLevel)
+
+            LogUtils.i("FirebaseManager - 用户信息设置完成: userId=$userId, userType=$userType")
+        } catch (e: Exception) {
+            logError("setUserInfo", "Failed to set user info: ${e.message}")
+        }
+    }
+
+    /** 记录性能指标 */
+    fun logPerformanceMetric(
+        metricName: String,
+        value: Long,
+        unit: String = "ms",
+        additionalParams: Map<String, Any> = emptyMap()
+    ) {
+        try {
+            val params = mapOf(
+                "metric_name" to metricName,
+                "metric_value" to value,
+                "metric_unit" to unit,
+                "timestamp" to System.currentTimeMillis()
+            ) + additionalParams
+
+            logEvent("performance_metric", params)
+        } catch (e: Exception) {
+            logError("logPerformanceMetric", "Failed to log performance metric: ${e.message}")
+        }
+    }
+
+    /** 安全的事件参数处理 */
+    fun safeEventParam(key: String, value: Any?): Pair<String, String> {
+        return key to (value?.toString() ?: "unknown")
+    }
+
+    /** 批量安全事件参数处理 */
+    fun safeEventParams(vararg params: Pair<String, Any?>): Map<String, String> {
+        return params.associate { (key, value) -> safeEventParam(key, value) }
     }
 
     // region Performance Monitoring 相关方法
@@ -517,20 +610,58 @@ object FirebaseManager {
 
     // 私有辅助方法
     private fun shouldLogEvent(eventName: String): Boolean {
-        if (!isInitialized.get() || !config.analyticsEnabled) return false
-        if (eventName in config.disabledEvents) return false
+        if (!isInitialized.get()) {
+            if (AppUtils.isAppDebug()) {
+                LogUtils.w("FirebaseManager", "FirebaseManager未初始化，拒绝事件: $eventName")
+            }
+            return false
+        }
 
-        // 检查采样率
-        val samplingRate = config.samplingRates[eventName] ?: 1.0
-        if (Math.random() > samplingRate) return false
+        if (!config.analyticsEnabled) {
+            if (AppUtils.isAppDebug()) {
+                LogUtils.w("FirebaseManager", "Analytics已禁用，拒绝事件: $eventName")
+            }
+            return false
+        }
 
-        // 检查限频
+        // 检查是否被禁用
+        if (eventName in config.disabledEvents) {
+            if (AppUtils.isAppDebug()) {
+                LogUtils.d("FirebaseManager", "事件被禁用: $eventName")
+            }
+            return false
+        }
+
+        // 检查限频（优先检查，避免频繁计算）
         val minInterval = config.minIntervalMsPerEvent[eventName] ?: 0L
         if (minInterval > 0) {
             val lastTime = lastEventTimes[eventName] ?: 0L
             val currentTime = System.currentTimeMillis()
-            if (currentTime - lastTime < minInterval) return false
+            if (currentTime - lastTime < minInterval) {
+                if (AppUtils.isAppDebug()) {
+                    LogUtils.d(
+                        "FirebaseManager",
+                        "事件被限频: $eventName (间隔: ${currentTime - lastTime}ms < ${minInterval}ms)"
+                    )
+                }
+                return false
+            }
             lastEventTimes[eventName] = currentTime
+        }
+
+        // 检查采样率
+        val samplingRate = config.samplingRates[eventName] ?: 1.0
+        if (samplingRate < 1.0) {
+            val random = Math.random()
+            if (random > samplingRate) {
+                if (AppUtils.isAppDebug()) {
+                    LogUtils.d(
+                        "FirebaseManager",
+                        "事件被采样过滤: $eventName (随机值: $random > 采样率: $samplingRate)"
+                    )
+                }
+                return false
+            }
         }
 
         return true

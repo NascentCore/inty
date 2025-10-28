@@ -24,8 +24,8 @@ class IntelliMateApp : Application() {
         // 立即初始化统一启动管理器（只做必要的登录判断，不阻塞）
         UnifiedStartupManager.initializeEssential(this)
 
-        // 记录应用启动事件
-        FirebaseManager.logEvent("app_start")
+        // Firebase初始化和设备信息设置
+        initializeFirebaseAnalytics()
 
         // 安装全局异常处理器
         GlobalExceptionHandler.Companion.install(this)
@@ -39,6 +39,20 @@ class IntelliMateApp : Application() {
                 LogUtils.e("IntyApp - 异步初始化失败: ${e.message}")
             }
         }
+    }
+
+    /** Firebase Analytics初始化 */
+    private fun initializeFirebaseAnalytics() {
+        // FirebaseManager内部已有完善的异常处理，这里主要是Application级别的额外保护
+        // FirebaseInitializer已经自动初始化了FirebaseManager，这里作为备用保障
+
+        // 记录应用启动事件 - 使用Firebase内置事件
+        FirebaseManager.logEvent(FirebaseManager.Events.APP_OPEN)
+
+        // 设置设备信息
+        FirebaseManager.setDeviceInfo()
+
+        LogUtils.i("IntelliMateApp - Firebase Analytics初始化完成")
     }
 
     override fun onTerminate() {
