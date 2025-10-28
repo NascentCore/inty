@@ -44,6 +44,8 @@ class ChatActivity : BaseActivity() {
     private var agent: AgentInfo? = null
     private var agentId: String? = null
 
+    override fun getPageName(): String = "ChatActivity"
+
     override fun initConfigData() {
         super.initConfigData()
         agent =

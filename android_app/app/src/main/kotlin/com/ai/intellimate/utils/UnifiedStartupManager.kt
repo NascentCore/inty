@@ -5,9 +5,11 @@ import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.services.AuthService
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import com.ai.intellimate.audio.AudioPreloadManager
@@ -305,6 +307,13 @@ object UnifiedStartupManager {
             if (userProfile != null) {
                 UserProfileManager.saveUserProfile(userProfile)
                 _userProfile.value = userProfile
+
+                // 设置Firebase用户信息
+                val userId = IntySetting.getCurUserID()
+                val userType = if (VipStatusHelper.isUserVip()) "vip" else "free"
+                val subscriptionLevel = VipStatusHelper.getSubscriptionLevel()
+                FirebaseManager.setUserInfo(userId, userType, subscriptionLevel)
+
                 LogUtils.i("UnifiedStartupManager - 用户信息同步成功: ${userProfile.nickname}")
             } else {
                 LogUtils.w("UnifiedStartupManager - 用户信息同步失败")
@@ -443,17 +452,6 @@ object UnifiedStartupManager {
                 syncRecommendedAgents()
             } catch (e: Exception) {
                 LogUtils.e("UnifiedStartupManager - recommended agents刷新失败: ${e.message}")
-            }
-        }
-    }
-
-    /** 异步加载explore agents（不阻塞启动） */
-    fun loadExploreAgentsAsync() {
-        startupScope.launch {
-            try {
-                syncRecommendedAgents()
-            } catch (e: Exception) {
-                LogUtils.e("UnifiedStartupManager - explore agents异步加载失败: ${e.message}")
             }
         }
     }

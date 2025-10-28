@@ -1,5 +1,6 @@
 package com.ai.intellimate.audio
 
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.os.Handler
@@ -13,16 +14,17 @@ class AudioManager
 private constructor(private val context: Context, private var scope: CoroutineScope) {
 
     companion object {
-        @Volatile private var INSTANCE: AudioManager? = null
+        @Volatile
+        private var INSTANCE: AudioManager? = null
 
         fun getInstance(context: Context, scope: CoroutineScope): AudioManager {
             return INSTANCE
                 ?: synchronized(this) {
-                        INSTANCE
-                            ?: AudioManager(context.applicationContext, scope).also {
-                                INSTANCE = it
-                            }
-                    }
+                    INSTANCE
+                        ?: AudioManager(context.applicationContext, scope).also {
+                            INSTANCE = it
+                        }
+                }
                     .also { instance ->
                         // 更新Scope以确保协程能正常执行
                         instance.scope = scope
@@ -60,6 +62,8 @@ private constructor(private val context: Context, private var scope: CoroutineSc
         agentName: String? = null, // Agent名称，用于日志分析
         forceRegenerateTts: Boolean = false, // 是否强制重新生成TTS
     ) {
+        val playbackStartTime = System.currentTimeMillis()
+
         // 参数验证
         if (messageId.isEmpty()) {
             LogUtils.e("音频LOG测试 playMessageVoice failed: messageId is empty")
@@ -72,6 +76,20 @@ private constructor(private val context: Context, private var scope: CoroutineSc
             onTtsFailed?.invoke("Agent ID Can't be null")
             return
         }
+
+        // 记录语音播放开始事件
+        FirebaseManager.logEvent(
+            FirebaseManager.Events.VOICE_PLAYBACK_START,
+            FirebaseManager.safeEventParams(
+                "message_id" to messageId,
+                "agent_id" to agentId,
+                "agent_name" to agentName,
+                "has_audio_url" to (!audioUrl.isNullOrEmpty()),
+                "auto_play" to autoPlay,
+                "is_manual_click" to isManualClick,
+                "timestamp" to playbackStartTime
+            )
+        )
 
         // 检查是否启用自动播放
         // 手动点击时不受自动播放设置影响
@@ -156,7 +174,8 @@ private constructor(private val context: Context, private var scope: CoroutineSc
         mainHandler.post {
             try {
                 playbackManager.pausePlayback()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -165,7 +184,8 @@ private constructor(private val context: Context, private var scope: CoroutineSc
         mainHandler.post {
             try {
                 playbackManager.resumePlayback()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 

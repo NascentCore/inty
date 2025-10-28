@@ -1,6 +1,6 @@
 plugins { alias(libs.plugins.ai.android.library) }
 
-android { namespace = "com.inty.utils" }
+android { namespace = "ai.sxwl.android.utils" }
 
 dependencies {
     // ===== AndroidX 核心库 =====

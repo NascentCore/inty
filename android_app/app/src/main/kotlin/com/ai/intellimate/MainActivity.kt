@@ -43,6 +43,8 @@ import kotlin.math.abs
 class MainActivity : BaseActivity() {
 
     val mainViewModel: MainViewModel by viewModels()
+
+    override fun getPageName(): String = "MainActivity"
     val chatViewModel: ChatViewModel by viewModels()
 
     // 返回拦截相关变量
@@ -76,9 +78,6 @@ class MainActivity : BaseActivity() {
 
                 // 加载业务数据（包括版本检查等）
                 mainViewModel.loadBusinessData()
-
-                // 异步加载explore agents（不阻塞启动）
-                UnifiedStartupManager.loadExploreAgentsAsync()
 
                 // 只有正式用户才加载需要认证的数据
                 if (!IntySetting.isGuestUser()) {
