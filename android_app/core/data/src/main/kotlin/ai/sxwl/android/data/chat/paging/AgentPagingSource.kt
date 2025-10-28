@@ -14,7 +14,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Agent分页数据源 负责处理聊天agents的分页加载、缓存管理 */
+/**
+ * Agent分页数据源
+ * 负责处理聊天agents的分页加载、缓存管理
+ */
 class AgentPagingSource(
     private val useCache: Boolean = true,
     private val sortSeed: Int = IntySetting.randomSortSeed(),
@@ -99,6 +102,7 @@ class AgentPagingSource(
                             nextKey = if (hasMore) page + 1 else null,
                         )
                     }
+
                     is NetworkResult.Error -> {
                         LogUtils.e("AgentPagingSource - 网络加载失败: ${result.error}")
                         LoadResult.Error(Exception(result.error))
@@ -122,17 +126,17 @@ class AgentPagingSource(
     /** 从网络加载数据 */
     private suspend fun loadFromNetwork(page: Int, pageSize: Int): NetworkResult {
         return try {
-            val result =
-                agentApi.chatAgents(
-                    page = page,
-                    pageSize = pageSize,
-                    sort_seed = sortSeed.toString(),
-                )
+            val result = agentApi.chatAgents(
+                page = page,
+                pageSize = pageSize,
+                sort_seed = sortSeed.toString(),
+            )
 
             when (result) {
                 is HttpResult.Success -> {
                     NetworkResult.Success(result.data)
                 }
+
                 is HttpResult.Failure -> {
                     NetworkResult.Error(result.message)
                 }
@@ -177,6 +181,5 @@ class AgentPagingSource(
 /** 网络请求结果 */
 sealed class NetworkResult {
     data class Success(val data: AgentInfoResponse) : NetworkResult()
-
     data class Error(val error: String) : NetworkResult()
 }
