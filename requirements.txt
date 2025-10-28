@@ -128,4 +128,3 @@ Pillow==11.3.0
 animeface==2.0.3
 elevenlabs>=2.15.0
 mutagen
-google-generativeai>=0.8.0
