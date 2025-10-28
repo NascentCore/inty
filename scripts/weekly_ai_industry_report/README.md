@@ -13,7 +13,6 @@ scripts/weekly_ai_industry_report/
 ├── test_weekly_ai_report.py      # 测试套件
 ├── example_usage.py              # 使用示例
 ├── requirements.txt              # 依赖包列表
-├── setup.py                     # 安装配置
 ├── install.sh                   # 自动安装脚本
 └── README.md                    # 本文档
 ```
@@ -76,11 +75,12 @@ cd scripts/weekly_ai_industry_report
 pip install -r requirements.txt
 ```
 
-### 方法3：作为Python包安装
+### 方法3：直接运行（无需安装）
 
 ```bash
 cd scripts/weekly_ai_industry_report
-pip install -e .
+pip install -r requirements.txt
+python3 weekly_ai_industry_report.py
 ```
 
 ## 使用方法
@@ -92,9 +92,12 @@ cd scripts/weekly_ai_industry_report
 python3 weekly_ai_industry_report.py
 ```
 
-### 作为模块使用
+### 作为脚本模块使用
 
 ```python
+# 在Python脚本中导入使用
+import sys
+sys.path.append('scripts/weekly_ai_industry_report')
 from weekly_ai_industry_report import AIIndustryReporter
 
 reporter = AIIndustryReporter()
