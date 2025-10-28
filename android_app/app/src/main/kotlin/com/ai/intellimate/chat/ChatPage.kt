@@ -194,6 +194,7 @@ internal fun ChatPage(
             ) {
                 Spacer(Modifier.height(48.dp))
 
+                // 立即显示TopBar和Premium标签（不等待数据加载）
                 agentInfo?.let { info ->
                     ChatTopBar(
                         modifier = Modifier
@@ -250,12 +251,14 @@ internal fun ChatPage(
                         showPremiumDialog = false
                     }
                 }
+
+                // 消息列表区域 - 等待数据加载完成
                 val chatMessages by chatViewModel.msgs.collectAsState()
                 val isLoadingMore by chatViewModel.isLoadingMore.collectAsState()
                 val hasMoreMessages by chatViewModel.hasMoreMessages.collectAsState()
                 val listState = rememberLazyListState()
 
-                // 计算是否展示“加载更多”区域（仅在真正的 load more 场景出现）
+                // 计算是否展示"加载更多"区域（仅在真正的 load more 场景出现）
                 val layoutInfo = listState.layoutInfo
                 val visibleItemsForUi = layoutInfo.visibleItemsInfo
                 val totalItemsForUi = layoutInfo.totalItemsCount
@@ -466,7 +469,7 @@ internal fun ChatPage(
                         }
                 }
 
-                // 输入框区域
+                // 输入框区域 - 立即显示（不等待数据加载）
                 Column {
                     // 如果是已经删除的agent，则不可点击，并提示
                     if (agentInfo?.isDeleted == true) {

@@ -78,11 +78,13 @@ fun ChatPageContainer(
             list
         }
 
-    // 如果 agentList 为空，显示空状态
+    // 如果 agentList 为空，显示加载状态而不是空白
     if (agentList.isEmpty()) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            // 可以在这里显示加载中或空状态的UI
-            // 暂时显示空白，等待数据加载
+            // 显示加载指示器，而不是空白
+            androidx.compose.material3.CircularProgressIndicator(
+                color = androidx.compose.material3.MaterialTheme.colorScheme.primary
+            )
         }
         return
     }

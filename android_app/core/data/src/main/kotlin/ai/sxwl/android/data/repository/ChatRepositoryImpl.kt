@@ -39,6 +39,38 @@ class ChatRepositoryImpl(
 
         if (localDataSource.isInitialLoaded(agentId)) return
 
+        // 先检查是否有本地缓存数据
+        val localMessages = localDataSource.getMessagesFlow(agentId).value
+        if (localMessages.isNotEmpty()) {
+            LogUtils.i("ChatRepositoryImpl.ensureInitialHistory found ${localMessages.size} local messages for $agentId")
+            localDataSource.setInitialLoaded(agentId, true)
+            // 后台同步最新数据
+            try {
+                val result = remoteDataSource.getMessages(agentId, pageSize, 0)
+                when (result) {
+                    is HttpResult.Success -> {
+                        val serverMessages = result.data.messages ?: emptyList()
+                        if (serverMessages.isNotEmpty()) {
+                            localDataSource.updateMessages(agentId, serverMessages)
+                            localDataSource.setHasMore(agentId, result.data.hasMore)
+                            localDataSource.setOffset(
+                                agentId,
+                                if (serverMessages.isNotEmpty()) pageSize else 0
+                            )
+                            LogUtils.i("ChatRepositoryImpl.ensureInitialHistory synced ${serverMessages.size} server messages for $agentId")
+                        }
+                    }
+
+                    is HttpResult.Failure -> {
+                        LogUtils.e("ChatRepositoryImpl.ensureInitialHistory sync failure for $agentId: ${result.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                LogUtils.e("ChatRepositoryImpl.ensureInitialHistory sync exception: ${e.message}")
+            }
+            return
+        }
+
         try {
             val result = remoteDataSource.getMessages(agentId, pageSize, 0)
             when (result) {

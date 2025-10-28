@@ -178,21 +178,38 @@ class ChatViewModel : BaseVM() {
         )
 
         _agentInfo.value = agentInfo
-        _msgs.update { emptyList() }
         lastQueryAgentId = agentInfo.id
         isQueryingMsgs = false
-        _isQueryMsgsCompleted.value = false
 
         // 重置分页状态
         currentOffset = 0
         _hasMoreMessages.value = true
         _isLoadingMore.value = false
 
-        // 查询新 agent 的消息 - 使用新架构
+        // 立即绑定到Agent会话，获取本地缓存数据
         bindToAgentSession(agentInfo.id)
-        // 使用增量同步，优先加载本地数据，然后同步服务器 - 使用UseCase
-        loadChatHistory(agentInfo.id)
-        // 查询改聊天设置
+
+        // 检查是否有本地缓存数据
+        val hasLocalData = chatRepository.getMessagesFlow(agentInfo.id).value.isNotEmpty()
+
+        if (hasLocalData) {
+            // 有本地数据，立即标记为完成，然后后台同步
+            _isQueryMsgsCompleted.value = true
+            // 后台同步最新数据
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    syncChatDataUseCase(agentInfo.id)
+                } catch (e: Exception) {
+                    LogUtils.e("ChatViewModel.setAgentInfo background sync error: ${e.message}")
+                }
+            }
+        } else {
+            // 没有本地数据，需要加载
+            _isQueryMsgsCompleted.value = false
+            loadChatHistory(agentInfo.id)
+        }
+
+        // 查询聊天设置
         getChatSetting()
     }
 
