@@ -1,3 +1,12 @@
+# 业务运营相关信息
+
+- Ads platform: ADs power browser
+  - Google Ads (yxzhao6@gmail.com)
+  - facebook business (yxzhao6@gmail.com)
+- YouTube channel: https://www.youtube.com/@IntelliMate（转化率最好，可以长期转化）
+- Facebook page: https://www.facebook.com/profile.php?id=61579913877109#
+- X account: https://x.com/IntelliMate2025 (CPM 低、量大）
+
 1. message_send_success是发送消息并且服务器正确返回的事件。（不区分是否触发次数限制，vip限制等）
 1. chat_session_start在app端和后端都有打点。app端的用意是开始渲染当前聊天界面，但目前看上报时机会冗余，不够精准。
 1. free_limit_reached这个是免费用发送消息后，触发了接口返回次数限制的时候上报。1. 另有app_start（启动App时）
