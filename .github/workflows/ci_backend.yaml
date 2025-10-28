@@ -82,8 +82,21 @@ jobs:
           cp devops/config.yaml.test config.yaml
           # alembic upgrade head: no need to run, as start.sh already includes it
           ./start.sh --dev &
-          # Wait for the server to start. If the time is too short, it needs to be increased.
-          sleep 10
+
+          # Wait for the server to be ready with better retry logic
+          echo "Waiting for server to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:8000 > /dev/null 2>&1; then
+              echo "Server is ready!"
+              break
+            fi
+            echo "Attempt $i: Server not ready yet, waiting..."
+            sleep 2
+          done
+
+          # Final check with verbose output
+          curl --verbose --fail http://localhost:8000
+
           # noci marker is defined in pytest.ini
           # applied on test functions with noci marker will be skipped on CI
           pytest -m "not noci" -v -s tests/

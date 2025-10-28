@@ -41,12 +41,7 @@ def init_logger():
     """初始化日志配置"""
     # 强制使用 UTC 时区，确保所有日志时间为 UTC
     os.environ["TZ"] = "UTC"
-    if hasattr(time, "tzset"):
-        try:
-            time.tzset()
-        except OSError:
-            # 某些平台可能不支持 tzset 或设置失败
-            pass
+    time.tzset()
     # 移除默认的处理器
     logger.remove()
 
