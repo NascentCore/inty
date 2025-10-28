@@ -168,6 +168,17 @@ class AgentConfig:
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
     vertex_image_model: str = "imagen-4.0-fast-generate-001"
     force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词
+    # 图片生成配置
+    image_generation_prompt_template: str = (
+        "保持图片中角色的外观完全一致（发型、脸型、服装风格、身材特征等），\n"
+        "但根据以下场景调整姿势、表情和背景：\n\n"
+        "角色性格：{agent_personality}\n"
+        "角色背景设定：{agent_background}\n\n"
+        "最近的对话：\n{chat_history}\n\n"
+        "用户要求：{user_message}\n\n"
+        "请生成一张符合上述场景的图片，确保角色外观与参考图保持高度一致。"
+    )
+    image_generation_default_history_count: int = 10
 
 
 @dataclass

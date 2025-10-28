@@ -256,6 +256,72 @@ async def add_ai_message(
         raise
 
 
+async def add_ai_image_message(
+    db: AsyncSession,
+    session_id: str,
+    image_url: str,
+    image_metadata: dict,
+    prompt: str,
+    agent_id: Optional[str] = None,
+    source_message_id: Optional[int] = None,
+) -> Optional[int]:
+    """
+    添加AI图片消息到聊天历史，返回插入的消息ID
+
+    Args:
+        db: 数据库会话
+        session_id: 会话ID
+        image_url: 图片URL（GCS URI）
+        image_metadata: 图片元数据
+        prompt: 生成图片的提示词
+        agent_id: Agent ID
+        source_message_id: 来源消息ID（用于标记这张图片是基于哪条消息生成的）
+
+    Returns:
+        插入的消息ID
+    """
+    try:
+        # 构建图片消息的JSON格式数据
+        message_data = {
+            "type": "image",
+            "data": {
+                "image_url": image_url,
+                "width": image_metadata.get("width", 0),
+                "height": image_metadata.get("height", 0),
+                "format": image_metadata.get("format", "jpeg"),
+                "prompt": prompt,
+            },
+        }
+
+        # 构建meta_data
+        meta_data = {}
+        if agent_id:
+            meta_data["agentId"] = agent_id
+            meta_data["isOpening"] = False
+        if source_message_id:
+            meta_data["source_message_id"] = source_message_id
+        meta_data["messageType"] = "image"
+
+        # 使用ORM创建新记录
+        chat_history = ChatHistory(
+            session_id=session_id, message=message_data, meta_data=meta_data
+        )
+
+        db.add(chat_history)
+        await db.commit()
+        await db.refresh(chat_history)  # 获取生成的ID
+
+        logger.debug(
+            f"添加AI图片消息到会话 {session_id}: {image_url}, ID: {chat_history.id}"
+        )
+        return chat_history.id
+
+    except Exception as e:
+        logger.error(f"添加AI图片消息失败 {session_id}: {str(e)}")
+        await db.rollback()
+        raise
+
+
 async def get_latest_ai_message_id(db: AsyncSession, session_id: str) -> Optional[int]:
     """获取会话中最新的AI消息ID"""
     try:
@@ -279,6 +345,68 @@ async def get_latest_ai_message_id(db: AsyncSession, session_id: str) -> Optiona
 
     except Exception as e:
         logger.error(f"获取最新AI消息ID失败 {session_id}: {str(e)}")
+        return None
+
+
+async def delete_image_by_source_message(
+    db: AsyncSession, session_id: str, source_message_id: int
+) -> Optional[str]:
+    """
+    删除指定来源消息生成的图片消息
+
+    Args:
+        db: 数据库会话
+        session_id: 会话ID
+        source_message_id: 来源消息ID
+
+    Returns:
+        被删除的图片URL（GCS URI），如果没有找到则返回None
+    """
+    try:
+        # 查询并删除该来源消息的图片
+        stmt = select(ChatHistory).where(
+            and_(
+                ChatHistory.session_id == session_id,
+                ChatHistory.message["type"].astext == "image",
+                ChatHistory.meta_data["source_message_id"].astext
+                == str(source_message_id),
+            )
+        )
+
+        result = await db.execute(stmt)
+        image_message = result.scalar_one_or_none()
+
+        if image_message:
+            # 提取图片URL
+            message_data = image_message.message
+            if isinstance(message_data, str):
+                message_data = json.loads(message_data)
+
+            image_url = message_data.get("data", {}).get("image_url")
+
+            # 删除记录
+            await db.delete(image_message)
+            await db.commit()
+
+            logger.info(
+                f"删除图片消息: session_id={session_id}, "
+                f"source_message_id={source_message_id}, image_url={image_url}"
+            )
+
+            return image_url
+        else:
+            logger.debug(
+                f"未找到需要删除的图片消息: session_id={session_id}, "
+                f"source_message_id={source_message_id}"
+            )
+            return None
+
+    except Exception as e:
+        logger.error(
+            f"删除图片消息失败: session_id={session_id}, "
+            f"source_message_id={source_message_id}, error={str(e)}"
+        )
+        await db.rollback()
         return None
 
 
@@ -418,16 +546,44 @@ def get_messages_paginated(
                         elif isinstance(meta_data_raw, dict):
                             meta_data = meta_data_raw
 
-                    messages.append(
-                        {
-                            "id": message_id,  # 添加消息ID
-                            "role": role,
-                            "content": content,
-                            "audio_url": audio_url,  # 添加audio_url字段
-                            "meta_data": meta_data,  # 添加meta_data字段
-                            "timestamp": created_at.isoformat() if created_at else None,
-                        }
-                    )
+                    # 构建基础消息对象
+                    timestamp_str = created_at.isoformat() if created_at else None
+                    message_obj = {
+                        "id": message_id,  # 添加消息ID
+                        "role": role,
+                        "sender_type": (
+                            "USER" if role == "user" else "AI"
+                        ),  # 添加 sender_type 以保持向后兼容
+                        "content": content,
+                        "audio_url": audio_url,  # 添加audio_url字段
+                        "meta_data": meta_data,  # 添加meta_data字段
+                        "timestamp": timestamp_str,
+                        "created_at": timestamp_str,  # 添加 created_at 以保持向后兼容
+                    }
+
+                    # 检查是否是图片消息
+                    if message_type == "image" and "data" in message_data:
+                        image_data = message_data["data"]
+                        message_obj["type"] = "image"
+
+                        # 转换 GCS URI 为 CDN URL
+                        gcs_uri = image_data.get("image_url")
+                        if gcs_uri:
+                            from app.services.image_transform_service import (
+                                image_transform_service,
+                            )
+
+                            message_obj["image_url"] = (
+                                image_transform_service.transform_desktop(gcs_uri)
+                            )
+                        else:
+                            message_obj["image_url"] = None
+
+                        # 不返回 image_metadata 和 prompt 字段
+                    else:
+                        message_obj["type"] = "text"
+
+                    messages.append(message_obj)
 
                 except (json.JSONDecodeError, TypeError, KeyError) as e:
                     logger.warning(
@@ -463,6 +619,7 @@ def get_messages_paginated(
 def get_all_messages(session_id: str) -> List[Dict[str, Any]]:
     """
     获取所有聊天消息（不分页）
+    使用 get_messages_paginated 获取完整数据，包括图片消息
 
     Args:
         session_id: 会话ID
@@ -471,21 +628,9 @@ def get_all_messages(session_id: str) -> List[Dict[str, Any]]:
         消息列表
     """
     try:
-        history = get_chat_history(session_id)
-        messages = history.messages
-
-        result = []
-        for message in messages:
-            role = "user" if isinstance(message, HumanMessage) else "assistant"
-            result.append(
-                {
-                    "role": role,
-                    "content": message.content,
-                    "timestamp": None,  # PostgresChatMessageHistory 默认没有时间戳
-                }
-            )
-
-        return result
+        # 使用 get_messages_paginated 获取所有消息（设置一个很大的 limit）
+        result_data = get_messages_paginated(session_id, limit=10000, offset=0)
+        return result_data.get("messages", [])
 
     except Exception as e:
         logger.error(f"获取所有消息失败 {session_id}: {str(e)}")

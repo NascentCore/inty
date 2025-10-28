@@ -276,3 +276,20 @@ class ClearMessagesResponse(BaseModel):
     target_message: Optional[dict] = None  # 目标消息信息（当使用message_id时）
     deleted_time_range: Optional[dict] = None  # 删除的时间范围
     cutoff_timestamp: Optional[str] = None  # 截止时间戳（当使用timestamp时）
+
+
+class ChatImageGenerationRequest(BaseModel):
+    """聊天生图请求 - 基于已有消息生成图片"""
+
+    message_id: int  # 必填：要生成图片的消息ID
+    history_count: Optional[int] = None
+    request_id: Optional[str] = None
+
+
+class ChatImageGenerationResponse(BaseModel):
+    """聊天生图响应"""
+
+    image_url: str
+    image_metadata: dict
+    prompt: str
+    message_id: int

@@ -18,6 +18,7 @@ class ImageTransformService:
     def __init__(self):
         self.config = global_config_loaded_from_config_yaml.cloudflare
         self.gcs_pattern = re.compile(r"https?://storage\.googleapis\.com/([^/]+/.+)")
+        self.gcs_uri_pattern = re.compile(r"gs://([^/]+/.+)")  # 支持 gs:// 格式
         # CDN URL pattern: https://domain.com/bucket/path (简单代理模式)
         self.cdn_pattern = None
         if self.config.domain:
@@ -26,16 +27,23 @@ class ImageTransformService:
             )
 
     def is_gcs_url(self, url: str) -> bool:
-        """检查是否为GCS URL"""
+        """检查是否为GCS URL（支持 https:// 和 gs:// 格式）"""
         if not url:
             return False
-        return bool(self.gcs_pattern.match(url))
+        return bool(self.gcs_pattern.match(url) or self.gcs_uri_pattern.match(url))
 
     def extract_gcs_path(self, gcs_url: str) -> Optional[str]:
-        """从GCS URL中提取bucket和路径部分"""
+        """从GCS URL中提取bucket和路径部分（支持 https:// 和 gs:// 格式）"""
+        # 尝试匹配 https://storage.googleapis.com/bucket/path 格式
         match = self.gcs_pattern.match(gcs_url)
         if match:
             return match.group(1)  # 返回bucket/path部分
+
+        # 尝试匹配 gs://bucket/path 格式
+        match = self.gcs_uri_pattern.match(gcs_url)
+        if match:
+            return match.group(1)  # 返回bucket/path部分
+
         return None
 
     def is_cloudflare_url(self, url: str) -> bool:
