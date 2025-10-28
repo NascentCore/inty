@@ -71,20 +71,19 @@ object FirebaseManager {
             ),
             samplingRates =
                 mapOf(
-                    // 低价值事件 - 大幅降低采样率
-                    "user_interaction" to 0.01,           // 1%采样
-
-                    // 中等价值事件 - 适度采样
-                    Events.MESSAGE_SENT to 0.2,           // 20%采样
-                    "explore_page_view" to 0.3,           // 30%采样
-                    "voice_playback_start" to 0.5,        // 50%采样
+                    // 调试模式下提高采样率，便于调试
+                    "user_interaction" to if (AppUtils.isAppDebug()) 1.0 else 0.1,           // 调试100%，发布10%
+                    Events.MESSAGE_SENT to if (AppUtils.isAppDebug()) 1.0 else 0.5,           // 调试100%，发布50%
+                    "explore_page_view" to if (AppUtils.isAppDebug()) 1.0 else 0.3,           // 调试100%，发布30%
+                    "voice_playback_start" to if (AppUtils.isAppDebug()) 1.0 else 0.5,        // 调试100%，发布50%
 
                     // 高价值事件 - 保持100%采样
                     // 错误、失败、认证、页面访问等关键事件保持100%
                 ),
             minIntervalMsPerEvent = mapOf(
-                "user_interaction" to 10_000L,            // 10秒限频
-                Events.MESSAGE_SENT to 2_000L,            // 2秒限频
+                // 调试模式下降低限频，便于调试
+                "user_interaction" to if (AppUtils.isAppDebug()) 1_000L else 10_000L,            // 调试1秒，发布10秒
+                Events.MESSAGE_SENT to if (AppUtils.isAppDebug()) 500L else 2_000L,            // 调试0.5秒，发布2秒
             ),
         )
 
@@ -157,7 +156,17 @@ object FirebaseManager {
 
     /** 安全地记录事件到 Analytics 使用SupervisorJob确保异常不会影响其他操作 */
     fun logEvent(eventName: String, parameters: Map<String, Any> = emptyMap()) {
-        if (!shouldLogEvent(eventName)) return
+        // 调试模式下输出详细日志
+        if (AppUtils.isAppDebug()) {
+            LogUtils.d("FirebaseManager", "尝试记录事件: $eventName, 参数: $parameters")
+        }
+
+        if (!shouldLogEvent(eventName)) {
+            if (AppUtils.isAppDebug()) {
+                LogUtils.d("FirebaseManager", "事件被过滤: $eventName")
+            }
+            return
+        }
 
         try {
             val analytics = getAnalytics() ?: return
@@ -167,6 +176,11 @@ object FirebaseManager {
                 try {
                     val bundle = createBundle(parameters)
                     analytics.logEvent(eventName, bundle)
+
+                    // 调试模式下确认事件已发送
+                    if (AppUtils.isAppDebug()) {
+                        LogUtils.d("FirebaseManager", "✅ 事件已发送: $eventName")
+                    }
                 } catch (e: Exception) {
                     logError("logEvent", "Failed to log event: ${e.message}")
                 }
@@ -596,23 +610,59 @@ object FirebaseManager {
 
     // 私有辅助方法
     private fun shouldLogEvent(eventName: String): Boolean {
-        if (!isInitialized.get() || !config.analyticsEnabled) return false
+        if (!isInitialized.get()) {
+            if (AppUtils.isAppDebug()) {
+                LogUtils.w("FirebaseManager", "FirebaseManager未初始化，拒绝事件: $eventName")
+            }
+            return false
+        }
+
+        if (!config.analyticsEnabled) {
+            if (AppUtils.isAppDebug()) {
+                LogUtils.w("FirebaseManager", "Analytics已禁用，拒绝事件: $eventName")
+            }
+            return false
+        }
 
         // 检查是否被禁用
-        if (eventName in config.disabledEvents) return false
+        if (eventName in config.disabledEvents) {
+            if (AppUtils.isAppDebug()) {
+                LogUtils.d("FirebaseManager", "事件被禁用: $eventName")
+            }
+            return false
+        }
 
         // 检查限频（优先检查，避免频繁计算）
         val minInterval = config.minIntervalMsPerEvent[eventName] ?: 0L
         if (minInterval > 0) {
             val lastTime = lastEventTimes[eventName] ?: 0L
             val currentTime = System.currentTimeMillis()
-            if (currentTime - lastTime < minInterval) return false
+            if (currentTime - lastTime < minInterval) {
+                if (AppUtils.isAppDebug()) {
+                    LogUtils.d(
+                        "FirebaseManager",
+                        "事件被限频: $eventName (间隔: ${currentTime - lastTime}ms < ${minInterval}ms)"
+                    )
+                }
+                return false
+            }
             lastEventTimes[eventName] = currentTime
         }
 
         // 检查采样率
         val samplingRate = config.samplingRates[eventName] ?: 1.0
-        if (samplingRate < 1.0 && Math.random() > samplingRate) return false
+        if (samplingRate < 1.0) {
+            val random = Math.random()
+            if (random > samplingRate) {
+                if (AppUtils.isAppDebug()) {
+                    LogUtils.d(
+                        "FirebaseManager",
+                        "事件被采样过滤: $eventName (随机值: $random > 采样率: $samplingRate)"
+                    )
+                }
+                return false
+            }
+        }
 
         return true
     }
