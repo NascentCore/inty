@@ -160,6 +160,23 @@ class ChatViewModel : BaseVM() {
             return
         }
 
+        // 记录上一个Agent信息用于事件上报
+        val previousAgent = _agentInfo.value
+
+        // 上报Agent切换事件
+        FirebaseManager.logEvent(
+            FirebaseManager.Events.AGENT_SWITCH,
+            FirebaseManager.safeEventParams(
+                "from_agent_id" to (previousAgent?.id ?: ""),
+                "from_agent_name" to (previousAgent?.name ?: ""),
+                "to_agent_id" to agentInfo.id,
+                "to_agent_name" to agentInfo.name,
+                "switch_method" to "manual",
+                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                "timestamp" to System.currentTimeMillis()
+            )
+        )
+
         _agentInfo.value = agentInfo
         _msgs.update { emptyList() }
         lastQueryAgentId = agentInfo.id
@@ -264,6 +281,25 @@ class ChatViewModel : BaseVM() {
         inputData.value = ""
         _isWaitingForReply.value = true
 
+        // 检查是否是第一次聊天（没有历史消息）
+        val currentMessages = _msgs.value
+        val hasChatHistory = currentMessages.any { it.role == "user" }
+
+        // 如果是第一次聊天，上报CHAT_STARTED事件
+        if (!hasChatHistory) {
+            _agentInfo.value?.let { agent ->
+                FirebaseManager.logEvent(
+                    FirebaseManager.Events.CHAT_STARTED,
+                    FirebaseManager.safeEventParams(
+                        "agent_id" to agent.id,
+                        "agent_name" to agent.name,
+                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                        "timestamp" to System.currentTimeMillis()
+                    )
+                )
+            }
+        }
+
         // Firebase Analytics - 记录消息发送
         _agentInfo.value?.let { agent ->
             val startTime = System.currentTimeMillis()
@@ -333,6 +369,19 @@ class ChatViewModel : BaseVM() {
                             )
                         )
 
+                        // 上报AI回复接收事件
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.AI_RESPONSE_RECEIVED,
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to agentId,
+                                "agent_name" to (_agentInfo.value?.name),
+                                "response_time" to responseTime,
+                                "response_code" to (result.data.code ?: 0),
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "timestamp" to System.currentTimeMillis()
+                            )
+                        )
+
                         runCatching {
                             if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
                                 requestLogin.emit(true)
@@ -345,8 +394,13 @@ class ChatViewModel : BaseVM() {
                             ) {
                                 // Firebase Analytics - 记录免费次数限制
                                 FirebaseManager.logEvent(
-                                    "free_limit_reached",
-                                    mapOf("agent_id" to agentId, "user_type" to "free"),
+                                    FirebaseManager.Events.FREE_LIMIT_HIT,
+                                    FirebaseManager.safeEventParams(
+                                        "agent_id" to agentId,
+                                        "agent_name" to (_agentInfo.value?.name ?: ""),
+                                        "user_type" to "free",
+                                        "timestamp" to System.currentTimeMillis()
+                                    )
                                 )
                                 showLimitDialog.emit(true)
                             }

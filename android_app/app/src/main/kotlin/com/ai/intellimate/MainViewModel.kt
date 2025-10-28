@@ -10,6 +10,7 @@ import ai.sxwl.android.data.api.model.CreateAgentRequest
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
@@ -362,6 +363,20 @@ class MainViewModel : BaseVM() {
 
     // 新增：用户登出方法
     fun logout() {
+        // 获取当前用户信息用于事件上报
+        val currentUserProfile = _userProfile.value
+
+        // 上报用户登出事件
+        FirebaseManager.logEvent(
+            FirebaseManager.Events.USER_LOGOUT,
+            FirebaseManager.safeEventParams(
+                "user_id" to currentUserProfile.id,
+                "user_name" to currentUserProfile.nickname,
+                "logout_method" to "manual",
+                "timestamp" to System.currentTimeMillis()
+            )
+        )
+        
         // 清理内存数据
         followingAgents.clear()
         userCreatedAgents.clear()
