@@ -232,26 +232,23 @@ private fun NewUserGuide(
             val scope = rememberCoroutineScope()
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .noRippleClickable {
-                            // 只有在引导期间才响应点击
-                            if (isGuideActive) {
-                                scope.launch {
-                                    showHand = false
-                                    pageState.animateScrollToPage(initialPageIndex)
-                                    IntySetting.setShowGuested()
-                                    onGuideCompleted()
-                                    isGuideActive = false
-                                }
+                    Modifier.fillMaxSize().noRippleClickable {
+                        // 只有在引导期间才响应点击
+                        if (isGuideActive) {
+                            scope.launch {
+                                showHand = false
+                                pageState.animateScrollToPage(initialPageIndex)
+                                IntySetting.setShowGuested()
+                                onGuideCompleted()
+                                isGuideActive = false
                             }
                         }
+                    }
             ) {
                 // 背景渐变框
                 Box(
                     modifier =
-                        Modifier
-                            .align(Alignment.TopEnd)
+                        Modifier.align(Alignment.TopEnd)
                             .padding(top = 340.dp)
                             .size(210.dp, 40.dp)
                             .background(
@@ -267,8 +264,7 @@ private fun NewUserGuide(
                 // 手势图标
                 Image(
                     modifier =
-                        Modifier
-                            .align(Alignment.TopEnd)
+                        Modifier.align(Alignment.TopEnd)
                             .padding(top = 340.dp, end = 92.dp)
                             .size(112.dp),
                     painter = painterResource(R.drawable.scroll_hand),

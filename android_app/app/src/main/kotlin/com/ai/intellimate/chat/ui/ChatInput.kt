@@ -85,8 +85,7 @@ fun ChatInput(
 
     Column(
         modifier =
-            Modifier
-                .padding(
+            Modifier.padding(
                     start = horizontalPadding,
                     top = topPadding,
                     end = horizontalPadding,
@@ -102,9 +101,7 @@ fun ChatInput(
     ) {
         // 主输入区域
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
             IntySmallTextField(
@@ -296,17 +293,13 @@ private fun MultiUseAccessButton(
         // 有输入内容时，发送按钮显示
         if (hasInput) {
             AsyncImage(
-                modifier = Modifier
-                    .size(buttonSize)
-                    .noRippleClickable { onSendMessage() },
+                modifier = Modifier.size(buttonSize).noRippleClickable { onSendMessage() },
                 model = R.drawable.btn_send,
                 contentDescription = null,
             )
         } else {
             AsyncImage(
-                modifier = Modifier
-                    .size(buttonSize)
-                    .noRippleClickable { onToggleMorePanel() },
+                modifier = Modifier.size(buttonSize).noRippleClickable { onToggleMorePanel() },
                 model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2,
                 contentDescription = null,
             )

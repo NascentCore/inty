@@ -4,10 +4,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.paging.PagingData
 import kotlinx.coroutines.flow.Flow
 
-/**
- * Agent领域层接口
- * 定义Agent相关的业务逻辑接口，不依赖具体实现
- */
+/** Agent领域层接口 定义Agent相关的业务逻辑接口，不依赖具体实现 */
 interface AgentRepository {
 
     /** 获取聊天agents的分页数据流 */

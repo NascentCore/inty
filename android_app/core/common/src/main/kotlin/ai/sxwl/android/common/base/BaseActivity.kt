@@ -19,7 +19,7 @@ abstract class BaseActivity : ComponentActivity() {
 
         // 页面追踪 - 记录页面访问
         PageTrackingHelper.trackActivityLifecycle(this, getPageName())
-        
+
         // 非UI数据初始化
         initConfigData()
         // initUI
