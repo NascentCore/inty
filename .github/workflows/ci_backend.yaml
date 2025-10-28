@@ -79,6 +79,7 @@ jobs:
 
       - name: Run python tests
         run: |
+          set -x
           cp devops/config.yaml.test config.yaml
           # alembic upgrade head: no need to run, as start.sh already includes it
           ./start.sh --dev &
