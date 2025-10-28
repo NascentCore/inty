@@ -59,7 +59,6 @@ def init_logger():
         format=global_config_loaded_from_config_yaml.logging.format,
         level=global_config_loaded_from_config_yaml.logging.level,
         colorize=False,  # Disable ANSI colors to prevent escape codes in logs
-        timezone="UTC",
     )
 
     # 拦截标准 logging 的日志（例如 FastAPI/uvicorn）
