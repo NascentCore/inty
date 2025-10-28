@@ -352,6 +352,11 @@ object FirebaseManager {
 
         // 业务关键事件
         const val AGENT_SWITCH = "agent_switch"
+
+        // UI交互事件
+        const val IMAGE_SHOW_SUCCESS = "image_show_success"
+        const val AUDIO_PLAY_END = "audio_play_end"
+        const val PULL_UP_INPUT = "pull_up_input"
         const val VOICE_PLAYBACK_START = "voice_playback_start"
         const val IMAGE_GENERATION_START = "image_generation_start"
         const val SUBSCRIPTION_START = "subscription_start"

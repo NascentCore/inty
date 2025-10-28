@@ -1,6 +1,7 @@
 package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.firebase.FirebaseManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +57,14 @@ fun AgentBackground(
     var imageWidth by remember { mutableStateOf<Int?>(null) }
     var imageHeight by remember { mutableStateOf<Int?>(null) }
 
+    // 图片展示成功状态，避免重复上报
+    var hasReportedImageSuccess by remember { mutableStateOf(false) }
+
+    // 当agentInfo变化时，重置图片展示状态
+    LaunchedEffect(agentInfo?.id) {
+        hasReportedImageSuccess = false
+    }
+
     // 计算最佳的 ContentScale
     val currentImageWidth = imageWidth
     val currentImageHeight = imageHeight
@@ -78,12 +88,15 @@ fun AgentBackground(
     Box(modifier = modifier) {
         Column(
             modifier =
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState(), false).onSizeChanged {
-                    val newHeight = with(density) { it.height.toDp().value.roundToInt() }
-                    if (newHeight > imageHeightDp) {
-                        imageHeightDp = newHeight
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState(), false)
+                    .onSizeChanged {
+                        val newHeight = with(density) { it.height.toDp().value.roundToInt() }
+                        if (newHeight > imageHeightDp) {
+                            imageHeightDp = newHeight
+                        }
                     }
-                }
         ) {
             AsyncImage(
                 modifier = Modifier.size(imageWidthDp.dp, imageHeightDp.dp),
@@ -99,6 +112,23 @@ fun AgentBackground(
                     val drawable = state.painter
                     imageWidth = drawable.intrinsicSize.width.toInt()
                     imageHeight = drawable.intrinsicSize.height.toInt()
+
+                    // 上报图片展示成功事件（避免重复上报）
+                    if (!hasReportedImageSuccess && agentInfo != null) {
+                        hasReportedImageSuccess = true
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.IMAGE_SHOW_SUCCESS,
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to agentInfo.id,
+                                "agent_name" to agentInfo.name,
+                                "image_url" to (agentInfo.getAlbumImage() ?: ""),
+                                "image_width" to imageWidth,
+                                "image_height" to imageHeight,
+                                "content_scale" to optimalContentScale.toString(),
+                                "timestamp" to System.currentTimeMillis()
+                            )
+                        )
+                    }
                 },
             )
         }
@@ -109,7 +139,8 @@ fun AgentBackground(
             val colors = listOf(Color(0xFF000000), Color(0x00000000))
             Box(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .height(120.dp)
                         .background(brush = Brush.verticalGradient(colors))
             )
@@ -118,7 +149,8 @@ fun AgentBackground(
             val bottomColors = listOf(Color(0x001C1523), Color(0xFF1C1523))
             Box(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .height(300.dp)
                         .background(brush = Brush.verticalGradient(bottomColors))
                         .align(Alignment.BottomCenter)

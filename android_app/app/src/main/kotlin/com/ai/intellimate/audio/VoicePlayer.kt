@@ -1,5 +1,6 @@
 package com.ai.intellimate.audio
 
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -63,6 +64,11 @@ fun VoicePlayer(
     var ttsGenerationFailed by remember(messageId) { mutableStateOf(false) } // TTS生成是否失败
     var userClickedRecently by remember(messageId) { mutableStateOf(false) } // 用户最近是否点击过
     var ttsGenerationStartTime by remember(messageId) { mutableLongStateOf(0L) } // TTS生成开始时间
+
+    // 音频播放结束事件上报状态跟踪
+    var hasReportedPlayEnd by remember(messageId) { mutableStateOf(false) }
+    var playStartTime by remember(messageId) { mutableLongStateOf(0L) }
+    var isAutoPlay by remember(messageId) { mutableStateOf(false) }
 
     // 监听TTS生成状态（使用serverMessageId优先作为跟踪ID）
     LaunchedEffect(ttsTrackingId) {
@@ -149,6 +155,11 @@ fun VoicePlayer(
                     isGeneratingTts = false
                     userClickedRecently = false
 
+                    // 记录播放开始时间和自动播放状态
+                    playStartTime = System.currentTimeMillis()
+                    isAutoPlay = autoPlay
+                    hasReportedPlayEnd = false
+
                     // 开场白播放开始时立即标记为已播放
                     if (messageId.contains("_assistant_")) {
                         audioInfo.agentId?.let { agentId ->
@@ -156,6 +167,67 @@ fun VoicePlayer(
                         }
                     }
                 }
+
+                // 当播放结束时，上报播放结束事件
+                if (state == PlaybackState.ENDED && !hasReportedPlayEnd && playStartTime > 0) {
+                    hasReportedPlayEnd = true
+                    val playDuration = System.currentTimeMillis() - playStartTime
+
+                    FirebaseManager.logEvent(
+                        FirebaseManager.Events.AUDIO_PLAY_END,
+                        FirebaseManager.safeEventParams(
+                            "agent_id" to (audioInfo.agentId ?: ""),
+                            "agent_name" to (audioInfo.agentName ?: ""),
+                            "message_id" to messageId,
+                            "is_auto_play" to isAutoPlay,
+                            "play_status" to "completed",
+                            "play_duration" to playDuration,
+                            "audio_url" to audioInfo.url,
+                            "timestamp" to System.currentTimeMillis()
+                        )
+                    )
+                }
+
+                // 当播放被暂停时，上报播放结束事件
+                if (state == PlaybackState.PAUSED && !hasReportedPlayEnd && playStartTime > 0) {
+                    hasReportedPlayEnd = true
+                    val playDuration = System.currentTimeMillis() - playStartTime
+
+                    FirebaseManager.logEvent(
+                        FirebaseManager.Events.AUDIO_PLAY_END,
+                        FirebaseManager.safeEventParams(
+                            "agent_id" to (audioInfo.agentId ?: ""),
+                            "agent_name" to (audioInfo.agentName ?: ""),
+                            "message_id" to messageId,
+                            "is_auto_play" to isAutoPlay,
+                            "play_status" to "paused",
+                            "play_duration" to playDuration,
+                            "audio_url" to audioInfo.url,
+                            "timestamp" to System.currentTimeMillis()
+                        )
+                    )
+                }
+
+                // 当播放出错时，上报播放结束事件
+                if (state == PlaybackState.ERROR && !hasReportedPlayEnd && playStartTime > 0) {
+                    hasReportedPlayEnd = true
+                    val playDuration = System.currentTimeMillis() - playStartTime
+
+                    FirebaseManager.logEvent(
+                        FirebaseManager.Events.AUDIO_PLAY_END,
+                        FirebaseManager.safeEventParams(
+                            "agent_id" to (audioInfo.agentId ?: ""),
+                            "agent_name" to (audioInfo.agentName ?: ""),
+                            "message_id" to messageId,
+                            "is_auto_play" to isAutoPlay,
+                            "play_status" to "error",
+                            "play_duration" to playDuration,
+                            "audio_url" to audioInfo.url,
+                            "timestamp" to System.currentTimeMillis()
+                        )
+                    )
+                }
+                
                 // 只有在播放状态真正改变时才调用回调
                 if (wasPlaying != isPlaying) {
                     onPlayStateChange?.invoke(isPlaying)
@@ -171,6 +243,26 @@ fun VoicePlayer(
                 hasError = false
                 isLoading = false
 
+                // 如果从播放状态变为非当前消息，上报播放停止事件
+                if ((wasPlaying || wasLoading) && !hasReportedPlayEnd && playStartTime > 0) {
+                    hasReportedPlayEnd = true
+                    val playDuration = System.currentTimeMillis() - playStartTime
+
+                    FirebaseManager.logEvent(
+                        FirebaseManager.Events.AUDIO_PLAY_END,
+                        FirebaseManager.safeEventParams(
+                            "agent_id" to (audioInfo.agentId ?: ""),
+                            "agent_name" to (audioInfo.agentName ?: ""),
+                            "message_id" to messageId,
+                            "is_auto_play" to isAutoPlay,
+                            "play_status" to "stopped",
+                            "play_duration" to playDuration,
+                            "audio_url" to audioInfo.url,
+                            "timestamp" to System.currentTimeMillis()
+                        )
+                    )
+                }
+                
                 // 如果从播放状态变为非当前消息，调用回调
                 if (wasPlaying || wasLoading) {
                     onPlayStateChange?.invoke(false)

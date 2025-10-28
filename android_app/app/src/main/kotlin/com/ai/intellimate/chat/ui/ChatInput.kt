@@ -2,6 +2,7 @@ package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.firebase.FirebaseManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -16,9 +17,12 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +55,30 @@ fun ChatInput(
     val inputData = chatViewModel.inputData.collectAsState()
     val inputSelection = chatViewModel.inputSelection.collectAsState()
     val isInputFocused = remember { mutableStateOf(false) }
+
+    // 键盘弹出状态跟踪
+    var hasReportedKeyboardPullUp by remember { mutableStateOf(false) }
+
+    // 获取agent信息用于事件上报
+    val agentInfo by chatViewModel.agentInfo.collectAsState()
+
+    // 监听输入框焦点变化，上报键盘弹出事件
+    LaunchedEffect(isInputFocused.value) {
+        if (isInputFocused.value && !hasReportedKeyboardPullUp && agentInfo != null) {
+            hasReportedKeyboardPullUp = true
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.PULL_UP_INPUT,
+                FirebaseManager.safeEventParams(
+                    "agent_id" to agentInfo?.id,
+                    "agent_name" to agentInfo?.name,
+                    "timestamp" to System.currentTimeMillis()
+                )
+            )
+        } else if (!isInputFocused.value) {
+            // 输入框失去焦点时重置状态，允许下次重新上报
+            hasReportedKeyboardPullUp = false
+        }
+    }
 
     val horizontalPadding = 16.dp
     val topPadding = 16.dp
