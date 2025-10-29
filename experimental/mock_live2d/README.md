@@ -14,7 +14,8 @@
 ```
 mock_live2d/
 ├── backend/                 # FastAPI 后端
-│   ├── main.py             # 主应用文件
+│   ├── main.py             # 主应用（需要 Gemini API）
+│   ├── demo_main.py        # 演示模式（无需 API）
 │   ├── requirements.txt    # Python 依赖
 │   ├── create_placeholder_images.py  # 生成占位图像
 │   └── images/             # 静态图像文件
@@ -26,6 +27,7 @@ mock_live2d/
 │   └── package.json        # Node.js 依赖
 ├── start_backend.sh        # 后端启动脚本
 ├── start_frontend.sh       # 前端启动脚本
+├── start_demo.sh           # 一键演示启动
 └── README.md              # 说明文档
 ```
 

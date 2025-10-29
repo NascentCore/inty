@@ -4,7 +4,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional
 import random
-from pathlib import Path
 
 app = FastAPI(title="Chatbot with Image Selection Demo (Demo Mode)")
 
@@ -35,34 +34,13 @@ class ChatResponse(BaseModel):
 
 # Image database with sentiment labels
 IMAGE_DATABASE = {
-    "happy": [
-        {"url": "/images/happy1.jpg", "description": "Smiling character with bright eyes"},
-        {"url": "/images/happy2.jpg", "description": "Joyful expression with raised eyebrows"},
-    ],
-    "sad": [
-        {"url": "/images/sad1.jpg", "description": "Droopy eyes and downturned mouth"},
-        {"url": "/images/sad2.jpg", "description": "Tears and melancholic expression"},
-    ],
-    "angry": [
-        {"url": "/images/angry1.jpg", "description": "Furrowed brows and clenched jaw"},
-        {"url": "/images/angry2.jpg", "description": "Intense glare with tight lips"},
-    ],
-    "surprised": [
-        {"url": "/images/surprised1.jpg", "description": "Wide eyes and open mouth"},
-        {"url": "/images/surprised2.jpg", "description": "Raised eyebrows and shocked expression"},
-    ],
-    "neutral": [
-        {"url": "/images/neutral1.jpg", "description": "Calm expression with gentle smile"},
-        {"url": "/images/neutral2.jpg", "description": "Peaceful look with soft eyes"},
-    ],
-    "excited": [
-        {"url": "/images/excited1.jpg", "description": "Bright smile with sparkling eyes"},
-        {"url": "/images/excited2.jpg", "description": "Energetic expression with wide grin"},
-    ],
-    "worried": [
-        {"url": "/images/worried1.jpg", "description": "Concerned look with furrowed brows"},
-        {"url": "/images/worried2.jpg", "description": "Anxious expression with tense mouth"},
-    ],
+    "happy": ["/images/happy1.jpg", "/images/happy2.jpg"],
+    "sad": ["/images/sad1.jpg", "/images/sad2.jpg"],
+    "angry": ["/images/angry1.jpg", "/images/angry2.jpg"],
+    "surprised": ["/images/surprised1.jpg", "/images/surprised2.jpg"],
+    "neutral": ["/images/neutral1.jpg", "/images/neutral2.jpg"],
+    "excited": ["/images/excited1.jpg", "/images/excited2.jpg"],
+    "worried": ["/images/worried1.jpg", "/images/worried2.jpg"],
 }
 
 # Simple demo responses
@@ -126,7 +104,7 @@ def select_image(sentiment: str) -> Optional[str]:
     """Select an appropriate image based on sentiment"""
     if sentiment in IMAGE_DATABASE:
         images = IMAGE_DATABASE[sentiment]
-        return random.choice(images)["url"]
+        return random.choice(images)
     return None
 
 @app.post("/chat", response_model=ChatResponse)
