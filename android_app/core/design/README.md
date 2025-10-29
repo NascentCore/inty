@@ -1,4 +1,4 @@
-# design
+# design - 设计系统
 
 ## Cursor Summary
 

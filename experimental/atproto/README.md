@@ -1,4 +1,4 @@
-# ATProto (Account Portability Protocol) Demo
+# ATProto (Account Portability Protocol) Demo - 去中心化协议
 
 **This is experimental, ask Yaxiong for details**
 

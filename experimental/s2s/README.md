@@ -1,4 +1,4 @@
-# S2S demo
+# S2S demo - 语音对话
 
 ## Get started
 

@@ -1,4 +1,4 @@
-# android_app
+# android_app - Android 应用
 
 AI 驱动的、面向北美年轻男性的亲密体验模拟 Android app（AI-driven intimacy simulation for NA young male adults）
 

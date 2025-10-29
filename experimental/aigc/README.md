@@ -1,4 +1,4 @@
-# AI Character Generator
+# AI Character Generator - AI 角色生成器
 
 An intelligent AI agent that generates comprehensive fictional character profiles using the Gemini API. This system creates detailed characters with consistent physical appearances, engaging backgrounds, and meaningful encounter scenarios for role-play sessions.
 

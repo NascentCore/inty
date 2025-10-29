@@ -1,4 +1,4 @@
-# doc
+# doc - 文档资源
 
 ## Cursor Summary
 

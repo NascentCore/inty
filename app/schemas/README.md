@@ -1,4 +1,4 @@
-# schemas
+# schemas - 数据架构
 
 此处定义了 API 输入、输出数据类型、与数据库表结构定义的 `app/models` 中的类型对应。
 此处的数据结构均为类型化，精确定义，如 `ModelConfig` 字段，其对应的是数据库中的 JSON 字段。

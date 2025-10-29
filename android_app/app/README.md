@@ -1,4 +1,4 @@
-# app
+# app - 应用模块
 
 ## Cursor Summary
 

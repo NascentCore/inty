@@ -1,4 +1,4 @@
-# firebase
+# firebase - Firebase 集成
 
 本模块提供 Firebase Analytics 和 Crashlytics 的集成功能。
 

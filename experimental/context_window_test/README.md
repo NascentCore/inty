@@ -1,4 +1,4 @@
-# Gemini 2.5 Pro Long Context Performance Test
+# Gemini 2.5 Pro Long Context Performance Test - 长上下文测试
 
 This tool tests Gemini 2.5 Pro performance with long context input (~500k tokens), measuring first token latency and total response time.
 

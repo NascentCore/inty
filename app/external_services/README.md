@@ -1,4 +1,4 @@
-# external_services
+# external_services - 外部服务
 
 ## Cursor Summary
 

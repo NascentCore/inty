@@ -1,4 +1,4 @@
-# ugc
+# ugc - 用户内容
 
 Resource files used for managing UGC (User-generated content) content.
 

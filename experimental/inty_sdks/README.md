@@ -1,4 +1,4 @@
-# Inty SDK examples
+# Inty SDK examples - SDK 示例
 
 ## Typescript
 

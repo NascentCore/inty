@@ -1,4 +1,4 @@
-# Inty Backend Chat API 负载测试
+# Inty Backend Chat API 负载测试 - 性能测试
 
 本目录包含用于 Inty Backend chat 接口并发性能测试的完整解决方案，使用 Locust 框架进行负载测试，支持在 Google Cloud Platform 上部署和执行。
 

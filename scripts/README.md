@@ -1,4 +1,4 @@
-# Scripts
+# Scripts - 工具脚本
 
 This directory contains utility scripts for the Inty backend.
 

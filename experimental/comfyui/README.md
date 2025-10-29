@@ -1,4 +1,4 @@
-# ComfyUI
+# ComfyUI - 图像生成
 
 ## Proposed architecture
 

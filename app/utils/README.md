@@ -1,4 +1,4 @@
-# utils
+# utils - 工具函数
 
 [Cropping avatar from image](crop_avatar.py)
 
