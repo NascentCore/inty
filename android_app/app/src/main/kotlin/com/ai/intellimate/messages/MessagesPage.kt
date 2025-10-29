@@ -49,7 +49,7 @@ import com.ai.intellimate.utils.AuthClickable
 
 /** 主页面第二个tab，会话列表页面，包含关注和聊天列表 */
 @Composable
-fun ConversationsPage(
+fun MessagesPage(
     modifier: Modifier,
     conversations: List<ConversationItem>,
     onClickConversationItem: (ConversationItem) -> Unit,
@@ -60,7 +60,7 @@ fun ConversationsPage(
     // 使用 PageTrackingHelper 进行页面跟踪
     LaunchedEffect(Unit) {
         PageTrackingHelper.trackPageView(
-            "ConversationsPage",
+            "MessagesPage",
             "MainActivity",
             mapOf(
                 "conversation_count" to conversations.size,
@@ -95,7 +95,9 @@ private fun Content(
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
     Scaffold(
-        modifier = Modifier.fillMaxSize().background(Color.Transparent),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent),
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
@@ -103,7 +105,9 @@ private fun Content(
                     Image(
                         painter = painterResource(R.drawable.img_message_title),
                         contentDescription = null,
-                        modifier = Modifier.height(30.dp).fillMaxWidth(),
+                        modifier = Modifier
+                            .height(30.dp)
+                            .fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )
@@ -113,7 +117,9 @@ private fun Content(
             )
         },
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)) {
             MessageTabContent(
                 conversations = conversations,
                 onClickConversationItem = onClickConversationItem,
@@ -161,7 +167,9 @@ private fun MessageTabContent(
             if (isRefreshing) {
                 item {
                     Box(
-                        modifier = Modifier.fillMaxWidth().height(80.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
@@ -196,7 +204,9 @@ private fun MessageTabContent(
             if (isLoading) {
                 item {
                     Box(
-                        modifier = Modifier.fillMaxWidth().height(80.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
@@ -228,7 +238,9 @@ private fun ChatHistoryItem(
 
         // 头像
         AsyncImage(
-            modifier = Modifier.size(56.dp).clip(CircleShape),
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape),
             model = getCdnImageUrl(conversation.agentAvatar, width = 128),
             placeholder = painterResource(placeholderID),
             contentDescription = null,
