@@ -57,13 +57,16 @@ class ExploreViewModel : BaseVM() {
         return _agentsFlow.value
     }
 
-    /** 强制刷新推荐agents 简化策略：直接使用Paging的刷新机制，让Paging处理状态 */
+    /** 强制刷新推荐agents：先清空数据，再加载新数据（更新sort seed） */
     fun refreshRecommendAgents() {
-
         viewModelScope.launch {
             try {
-                // 直接创建新的刷新数据流，让Paging处理状态
-                val refreshFlow = getRecommendAgentsUseCase().cachedIn(viewModelScope)
+                // 先清空数据，显示空页面，等待新数据
+                _agentsFlow.value = null
+
+                // 使用刷新方法，会更新sort seed并禁用缓存
+                val refreshFlow = getRecommendAgentsUseCase.refresh()
+                    .cachedIn(viewModelScope)
 
                 _agentsFlow.value = refreshFlow
             } catch (e: Exception) {

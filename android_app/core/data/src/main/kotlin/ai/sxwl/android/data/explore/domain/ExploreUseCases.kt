@@ -16,4 +16,9 @@ class GetRecommendAgentsUseCase(
     operator fun invoke(useCache: Boolean = true): Flow<PagingData<AgentInfo>> {
         return exploreRepository.getInitialRecommendAgents()
     }
+
+    /** 刷新推荐agents数据（更新sort seed） */
+    fun refresh(): Flow<PagingData<AgentInfo>> {
+        return exploreRepository.refreshRecommendAgents()
+    }
 }

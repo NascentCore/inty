@@ -19,6 +19,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -35,6 +36,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.utils.GuestLoginLimiter
+import kotlinx.coroutines.delay
 
 /** Explore页面 - 推荐agents展示 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,29 +102,61 @@ fun ExplorePage(
 
             // 使用原生下拉刷新状态
             var isRefreshing by remember { mutableStateOf(false) }
+            var refreshStartTime by remember { mutableLongStateOf(0L) }
 
             // 监听Paging的刷新状态，自动控制下拉刷新指示器
+            // 添加最小持续时间（400ms），避免快速完成时的闪动
             LaunchedEffect(lazyPagingItems?.loadState?.refresh, isRefreshing) {
+                val currentTime = System.currentTimeMillis()
+                val minRefreshDuration = 400L // 最小刷新持续时间（毫秒）
+                val elapsedTime = if (refreshStartTime > 0) currentTime - refreshStartTime else 0L
+
                 when (lazyPagingItems?.loadState?.refresh) {
                     is LoadState.Loading -> {
                         // 正在加载，保持刷新状态
+                        // 如果 refreshStartTime 未设置且正在刷新，则设置开始时间
+                        if (isRefreshing && refreshStartTime == 0L) {
+                            refreshStartTime = currentTime
+                        }
                     }
                     is LoadState.NotLoading -> {
                         if (isRefreshing) {
-                            // 刷新完成，隐藏指示器
-                            isRefreshing = false
+                            // 刷新完成，但确保至少显示最小持续时间
+                            if (elapsedTime >= minRefreshDuration) {
+                                isRefreshing = false
+                                refreshStartTime = 0L
+                            } else {
+                                // 延迟到最小持续时间后再隐藏
+                                delay(minRefreshDuration - elapsedTime)
+                                isRefreshing = false
+                                refreshStartTime = 0L
+                            }
                         }
                     }
                     is LoadState.Error -> {
                         if (isRefreshing) {
-                            // 刷新失败，也要隐藏指示器
-                            isRefreshing = false
+                            // 刷新失败，也要隐藏指示器，但确保至少显示最小持续时间
+                            if (elapsedTime >= minRefreshDuration) {
+                                isRefreshing = false
+                                refreshStartTime = 0L
+                            } else {
+                                delay(minRefreshDuration - elapsedTime)
+                                isRefreshing = false
+                                refreshStartTime = 0L
+                            }
                         }
                     }
                     null -> {
                         // 无数据状态，如果正在刷新则停止
                         if (isRefreshing) {
-                            isRefreshing = false
+                            if (elapsedTime >= minRefreshDuration) {
+                                isRefreshing = false
+                                refreshStartTime = 0L
+                            } else {
+                                delay(minRefreshDuration - elapsedTime)
+                                isRefreshing = false
+                                refreshStartTime = 0L
+                            }
                         }
                     }
                 }
@@ -136,7 +170,9 @@ fun ExplorePage(
                         GuestLoginLimiter.checkAndNavigateToLogin(context)
                         return@PullToRefreshBox
                     }
-                    
+
+                    // 设置刷新开始时间
+                    refreshStartTime = System.currentTimeMillis()
                     isRefreshing = true
                     viewModel.refreshRecommendAgents()
                 },
