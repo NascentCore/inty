@@ -2,8 +2,7 @@ package com.ai.intellimate.chat.viewmodel
 
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.data.di.ChatModule
-import ai.sxwl.android.data.usecase.agent.GetChatAgentsUseCase
+import ai.sxwl.android.data.di.DataModule
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
@@ -15,7 +14,7 @@ import kotlinx.coroutines.launch
 /** ChatTab页面ViewModel 负责管理聊天agents的Paging数据流、刷新、缓存等逻辑 */
 class ChatTabViewModel : BaseVM() {
 
-    private val getChatAgentsUseCase: GetChatAgentsUseCase = ChatModule.getChatAgentsUseCase
+    private val getChatAgentsUseCase = DataModule.getChatAgentsUseCase
 
     // Paging数据流
     private val _agentsFlow = MutableStateFlow<Flow<PagingData<AgentInfo>>?>(null)
@@ -44,7 +43,7 @@ class ChatTabViewModel : BaseVM() {
 
     /** 刷新聊天agents数据 */
     fun refreshChatAgents(): Flow<PagingData<AgentInfo>> {
-        val refreshFlow = getChatAgentsUseCase.refresh().cachedIn(viewModelScope)
+        val refreshFlow = getChatAgentsUseCase().cachedIn(viewModelScope)
         _agentsFlow.value = refreshFlow
         return refreshFlow
     }

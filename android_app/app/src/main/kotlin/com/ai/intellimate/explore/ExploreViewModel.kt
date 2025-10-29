@@ -2,6 +2,7 @@ package com.ai.intellimate.explore
 
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
@@ -15,7 +16,7 @@ import kotlinx.coroutines.launch
 /** Explore页面ViewModel 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑 */
 class ExploreViewModel : BaseVM() {
 
-    private val pagingRepository = ExplorePagingRepository()
+    private val getRecommendAgentsUseCase = DataModule.getRecommendAgentsUseCase
 
     // Paging数据流
     private val _agentsFlow = MutableStateFlow<Flow<PagingData<AgentInfo>>?>(null)
@@ -41,8 +42,7 @@ class ExploreViewModel : BaseVM() {
 
         // 创建初始数据流（优先使用缓存）
         val initialFlow =
-            pagingRepository
-                .getInitialRecommendAgents()
+            getRecommendAgentsUseCase()
                 .cachedIn(viewModelScope) // 在ViewModel作用域内缓存
 
         _agentsFlow.value = initialFlow
@@ -63,7 +63,7 @@ class ExploreViewModel : BaseVM() {
         viewModelScope.launch {
             try {
                 // 直接创建新的刷新数据流，让Paging处理状态
-                val refreshFlow = pagingRepository.refreshRecommendAgents().cachedIn(viewModelScope)
+                val refreshFlow = getRecommendAgentsUseCase().cachedIn(viewModelScope)
 
                 _agentsFlow.value = refreshFlow
             } catch (e: Exception) {

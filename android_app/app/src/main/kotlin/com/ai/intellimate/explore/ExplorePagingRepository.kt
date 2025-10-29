@@ -1,6 +1,7 @@
 package com.ai.intellimate.explore
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.cache.RecommendedAgentCacheProvider
 import ai.sxwl.android.data.store.IntySetting
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -8,7 +9,9 @@ import androidx.paging.PagingData
 import kotlinx.coroutines.flow.Flow
 
 /** Explore页面的Paging数据仓库 负责管理Paging数据流、配置和传统数据请求 集成了原ExploreRepository的所有功能 */
-class ExplorePagingRepository {
+class ExplorePagingRepository(
+    private val cacheProvider: RecommendedAgentCacheProvider? = null,
+) {
 
     companion object {
         // 使用统一的常量
@@ -28,18 +31,22 @@ class ExplorePagingRepository {
         sortSeed: Int = IntySetting.sortSeed(),
     ): Flow<PagingData<AgentInfo>> {
         return Pager(
-                config =
-                    PagingConfig(
-                        pageSize = PAGE_SIZE,
-                        prefetchDistance = PREFETCH_DISTANCE,
-                        enablePlaceholders = ENABLE_PLACEHOLDERS,
-                        initialLoadSize = PAGE_SIZE,
-                        maxSize = PAGE_SIZE * ExploreConstants.MAX_CACHE_PAGES, // 最大缓存页数
-                    ),
-                pagingSourceFactory = {
-                    ExplorePagingSource(useCache = useCache, sortSeed = sortSeed)
-                },
-            )
+            config =
+                PagingConfig(
+                    pageSize = PAGE_SIZE,
+                    prefetchDistance = PREFETCH_DISTANCE,
+                    enablePlaceholders = ENABLE_PLACEHOLDERS,
+                    initialLoadSize = PAGE_SIZE,
+                    maxSize = PAGE_SIZE * ExploreConstants.MAX_CACHE_PAGES, // 最大缓存页数
+                ),
+            pagingSourceFactory = {
+                ExplorePagingSource(
+                    useCache = useCache,
+                    sortSeed = sortSeed,
+                    cacheProvider = cacheProvider
+                )
+            },
+        )
             .flow
     }
 

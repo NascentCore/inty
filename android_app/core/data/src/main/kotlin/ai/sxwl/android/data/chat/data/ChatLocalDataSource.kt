@@ -1,4 +1,4 @@
-package ai.sxwl.android.data.chat.local
+package ai.sxwl.android.data.chat.data
 
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.store.IntySetting
@@ -9,7 +9,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-/** 聊天本地数据源 负责管理聊天消息的本地缓存和状态 */
+/**
+ * 聊天本地数据源
+ * 负责管理聊天消息的本地缓存和状态
+ * 遵循Clean Architecture的数据层模式
+ */
 class ChatLocalDataSource {
 
     private data class AgentChatSession(

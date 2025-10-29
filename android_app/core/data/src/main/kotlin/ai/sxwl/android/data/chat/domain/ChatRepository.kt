@@ -1,10 +1,15 @@
-package ai.sxwl.android.data.domain
+package ai.sxwl.android.data.chat.domain
 
 import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.data.api.model.SendMsgResponse
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.flow.StateFlow
 
-/** 聊天领域层接口 定义聊天相关的业务逻辑接口，不依赖具体实现 */
+/**
+ * Chat领域层接口
+ * 定义聊天相关的业务逻辑接口，不依赖具体实现
+ * 遵循Clean Architecture的依赖倒置原则
+ */
 interface ChatRepository {
 
     /** 获取指定agent的消息流 */
@@ -26,7 +31,7 @@ interface ChatRepository {
     suspend fun sendMessage(
         agentId: String,
         content: String
-    ): HttpResult<ai.sxwl.android.data.api.model.SendMsgResponse>
+    ): HttpResult<SendMsgResponse>
 
     /** 同步最新消息 */
     suspend fun syncLatestMessages(agentId: String, pageSize: Int = 20)
