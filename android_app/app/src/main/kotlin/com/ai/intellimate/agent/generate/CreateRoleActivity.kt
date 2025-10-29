@@ -903,38 +903,32 @@ private fun AvatarUploadSection(
                 }
                 avatarUrls.isNotEmpty() -> {
                     val displayUrl = avatarUrls.getOrNull(selectedIndex) ?: avatarUrls.first()
-                    LogUtils.d("AvatarUploadSection: Displaying selected avatar with URL: $displayUrl")
-                    LogUtils.d("AvatarUploadSection: Selected index: $selectedIndex, Total URLs: ${avatarUrls.size}")
-                    
                     val previewUrl =
                         getCdnImageUrl(
                             displayUrl,
                             width = Config.TextToImage.Preview.WIDTH,
                             quality = Config.TextToImage.Preview.QUALITY,
                         )
-                    
-                    LogUtils.d("AvatarUploadSection: CDN preview URL generated: $previewUrl")
-                    LogUtils.d("AvatarUploadSection: Scaling parameters - Width: ${Config.TextToImage.Preview.WIDTH}, Quality: ${Config.TextToImage.Preview.QUALITY}")
-                    LogUtils.d("AvatarUploadSection: Using ${if (previewUrl != null) "CDN preview URL" else "original URL"} for image loading")
-                    
                     AsyncImage(
                         model = previewUrl ?: displayUrl,
                         contentDescription = stringResource(R.string.content_desc_selected_avatar),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
-                            LogUtils.d("AvatarUploadSection: Selected avatar image loaded successfully")
-                            LogUtils.d("AvatarUploadSection: Final loaded URL: ${previewUrl ?: displayUrl}")
+                            LogUtils.d(
+                                "AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl, preview: $previewUrl"
+                            )
                         },
-                        onError = { error ->
-                            LogUtils.e("AvatarUploadSection: Failed to load selected avatar image")
-                            LogUtils.e("AvatarUploadSection: Error details: $error")
-                            LogUtils.e("AvatarUploadSection: Attempted URL: ${previewUrl ?: displayUrl}")
+                        onError = {
+                            LogUtils.e(
+                                "AvatarUploadSection: Failed to load selected avatar image: $displayUrl"
+                            )
                         },
                     )
                 }
                 avatarUrl != null -> {
-                    LogUtils.d("AvatarUploadSection: Displaying avatar with URL: $avatarUrl")
+                    // FIXME: 这里应该跟上面的逻辑去重。
+                    LogUtils.d("AvatarUploadSection: Displaying single avatar with URL: $avatarUrl")
                     
                     val previewUrl =
                         getCdnImageUrl(
@@ -942,24 +936,20 @@ private fun AvatarUploadSection(
                             width = Config.TextToImage.Preview.WIDTH,
                             quality = Config.TextToImage.Preview.QUALITY,
                         )
-                    
-                    LogUtils.d("AvatarUploadSection: CDN preview URL generated: $previewUrl")
-                    LogUtils.d("AvatarUploadSection: Scaling parameters - Width: ${Config.TextToImage.Preview.WIDTH}, Quality: ${Config.TextToImage.Preview.QUALITY}")
-                    LogUtils.d("AvatarUploadSection: Using ${if (previewUrl != null) "CDN preview URL" else "original URL"} for image loading")
-                    
                     AsyncImage(
                         model = previewUrl ?: avatarUrl,
                         contentDescription = stringResource(R.string.content_desc_generated_avatar),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
-                            LogUtils.d("AvatarUploadSection: Avatar image loaded successfully")
-                            LogUtils.d("AvatarUploadSection: Final loaded URL: ${previewUrl ?: avatarUrl}")
+                            LogUtils.d(
+                                "AvatarUploadSection: Avatar image loaded successfully: $avatarUrl, preview: $previewUrl"
+                            )
                         },
-                        onError = { error ->
-                            LogUtils.e("AvatarUploadSection: Failed to load avatar image")
-                            LogUtils.e("AvatarUploadSection: Error details: $error")
-                            LogUtils.e("AvatarUploadSection: Attempted URL: ${previewUrl ?: avatarUrl}")
+                        onError = {
+                            LogUtils.e(
+                                "AvatarUploadSection: Failed to load avatar image: $avatarUrl"
+                            )
                         },
                     )
                 }
