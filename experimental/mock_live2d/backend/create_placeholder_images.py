@@ -19,16 +19,18 @@ PLACEHOLDER_IMAGES = {
     "worried2.jpg": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/8A8A",
 }
 
+
 def create_placeholder_images():
     images_dir = Path("images")
     images_dir.mkdir(exist_ok=True)
-    
+
     for filename, data_url in PLACEHOLDER_IMAGES.items():
-        base64_data = data_url.split(',')[1]
+        base64_data = data_url.split(",")[1]
         image_data = base64.b64decode(base64_data)
-        with open(images_dir / filename, 'wb') as f:
+        with open(images_dir / filename, "wb") as f:
             f.write(image_data)
         print(f"Created {filename}")
+
 
 if __name__ == "__main__":
     create_placeholder_images()

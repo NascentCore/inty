@@ -1,9 +1,6 @@
 package ai.sxwl.android.data.explore.paging
 
-/**
- * Explore页面常量
- * 定义Explore页面相关的常量
- */
+/** Explore页面常量 定义Explore页面相关的常量 */
 object ExploreConstants {
     const val PAGE_SIZE = 20
     const val INITIAL_PAGE = 1

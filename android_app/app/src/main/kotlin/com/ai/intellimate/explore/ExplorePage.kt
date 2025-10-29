@@ -79,19 +79,13 @@ fun ExplorePage(
             contentDescription = null
         )
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
             TopAppBar(
                 title = {
                     Image(
                         painter = painterResource(R.drawable.img_explore_title),
                         contentDescription = null,
-                        modifier = Modifier
-                            .height(30.dp)
-                            .fillMaxWidth(),
+                        modifier = Modifier.height(30.dp).fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )

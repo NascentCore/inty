@@ -11,11 +11,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import kotlinx.coroutines.flow.Flow
 
-/**
- * Agent仓库实现
- * 作为Domain层和Data层之间的桥梁
- * 遵循Clean Architecture的Repository模式
- */
+/** Agent仓库实现 作为Domain层和Data层之间的桥梁 遵循Clean Architecture的Repository模式 */
 class AgentRepositoryImpl(
     private val cacheProvider: AgentCacheProvider? = null,
 ) : AgentRepository {
@@ -30,21 +26,21 @@ class AgentRepositoryImpl(
         LogUtils.d("AgentRepositoryImpl.getChatAgentsFlow: useCache=$useCache, sortSeed=$sortSeed")
 
         return Pager(
-            config =
-                PagingConfig(
-                    pageSize = PAGE_SIZE,
-                    prefetchDistance = PREFETCH_DISTANCE,
-                    enablePlaceholders = ENABLE_PLACEHOLDERS,
-                    initialLoadSize = PAGE_SIZE,
-                ),
-            pagingSourceFactory = {
-                AgentPagingSource(
-                    useCache = useCache,
-                    sortSeed = sortSeed,
-                    cacheProvider = cacheProvider
-                )
-            },
-        )
+                config =
+                    PagingConfig(
+                        pageSize = PAGE_SIZE,
+                        prefetchDistance = PREFETCH_DISTANCE,
+                        enablePlaceholders = ENABLE_PLACEHOLDERS,
+                        initialLoadSize = PAGE_SIZE,
+                    ),
+                pagingSourceFactory = {
+                    AgentPagingSource(
+                        useCache = useCache,
+                        sortSeed = sortSeed,
+                        cacheProvider = cacheProvider
+                    )
+                },
+            )
             .flow
     }
 

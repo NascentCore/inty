@@ -10,11 +10,7 @@ import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.flow.StateFlow
 
-/**
- * 聊天Repository实现
- * 作为Domain层和Data层之间的桥梁
- * 遵循Clean Architecture的Repository模式
- */
+/** 聊天Repository实现 作为Domain层和Data层之间的桥梁 遵循Clean Architecture的Repository模式 */
 class ChatRepositoryImpl(
     private val localDataSource: ChatLocalDataSource,
     private val remoteDataSource: ChatRemoteDataSource
@@ -68,7 +64,6 @@ class ChatRepositoryImpl(
                             )
                         }
                     }
-
                     is HttpResult.Failure -> {
                         LogUtils.e(
                             "ChatRepositoryImpl.ensureInitialHistory sync failure for $agentId: ${result.message}"
@@ -95,7 +90,6 @@ class ChatRepositoryImpl(
                     localDataSource.setOffset(agentId, if (messages.isNotEmpty()) pageSize else 0)
                     localDataSource.setInitialLoaded(agentId, true)
                 }
-
                 is HttpResult.Failure -> {
                     LogUtils.e(
                         "ChatRepositoryImpl.ensureInitialHistory failure for $agentId: ${result.message}"
@@ -134,7 +128,6 @@ class ChatRepositoryImpl(
                         "ChatRepositoryImpl.loadMoreMessages loaded ${moreMessages.size} more messages for $agentId"
                     )
                 }
-
                 is HttpResult.Failure -> {
                     LogUtils.e(
                         "ChatRepositoryImpl.loadMoreMessages failure for $agentId: ${result.message}"
@@ -198,7 +191,7 @@ class ChatRepositoryImpl(
 
         if (
             !localDataSource.isInitialLoaded(agentId) ||
-            localDataSource.getMessagesFlow(agentId).value.isEmpty()
+                localDataSource.getMessagesFlow(agentId).value.isEmpty()
         ) {
             // 如果没有初始化或没有本地数据，使用正常的初始化流程
             LogUtils.i(
@@ -220,8 +213,8 @@ class ChatRepositoryImpl(
                         serverMessages.any { serverMsg ->
                             localMessages.none { localMsg ->
                                 localMsg.id == serverMsg.id ||
-                                        (localMsg.content == serverMsg.content &&
-                                                localMsg.role == serverMsg.role)
+                                    (localMsg.content == serverMsg.content &&
+                                        localMsg.role == serverMsg.role)
                             }
                         }
 
@@ -243,7 +236,6 @@ class ChatRepositoryImpl(
                         )
                     }
                 }
-
                 is HttpResult.Failure -> {
                     LogUtils.e(
                         "ChatRepositoryImpl.syncLatestMessages failure for $agentId: ${result.message}"

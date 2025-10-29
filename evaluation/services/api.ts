@@ -934,7 +934,7 @@ export const chatImageApi = {
       message_id: number; // 必填：要生成图片的消息ID
       history_count?: number;
       request_id?: string;
-    }
+    },
   ): Promise<{
     image_url: string;
     image_metadata: {

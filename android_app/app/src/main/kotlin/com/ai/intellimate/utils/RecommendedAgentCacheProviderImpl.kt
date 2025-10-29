@@ -4,11 +4,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.cache.RecommendedAgentCacheProvider
 import ai.sxwl.android.data.store.IntySetting
 
-/**
- * 推荐Agent缓存提供者实现
- * 在app模块中实现core/data模块定义的接口
- * 解决跨模块依赖问题
- */
+/** 推荐Agent缓存提供者实现 在app模块中实现core/data模块定义的接口 解决跨模块依赖问题 */
 class RecommendedAgentCacheProviderImpl : RecommendedAgentCacheProvider {
 
     override suspend fun getCachedRecommendedAgents(): List<AgentInfo> {

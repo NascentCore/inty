@@ -49,10 +49,7 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
       });
 
       // 使用 Promise.race 来实现超时控制
-      const response = await Promise.race([
-        apiPromise,
-        timeoutPromise,
-      ]) as {
+      const response = (await Promise.race([apiPromise, timeoutPromise])) as {
         image_url: string;
         image_metadata: {
           width: number;
@@ -83,7 +80,7 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
       }
     } catch (error: any) {
       console.error("Image generation error:", error);
-      
+
       // 处理特定错误
       if (error?.response?.status === 400) {
         message.error("只能对最后一条AI回复生成图片");
@@ -107,7 +104,9 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
 
   return (
     <>
-      <Tooltip title={hasImage ? "重新生成图片" : "根据消息生成与角色一致的图片"}>
+      <Tooltip
+        title={hasImage ? "重新生成图片" : "根据消息生成与角色一致的图片"}
+      >
         <Button
           type="text"
           icon={loading ? <LoadingOutlined /> : <PictureOutlined />}

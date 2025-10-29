@@ -11,11 +11,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import kotlinx.coroutines.flow.Flow
 
-/**
- * Explore仓库实现
- * 作为Domain层和Data层之间的桥梁
- * 遵循Clean Architecture的Repository模式
- */
+/** Explore仓库实现 作为Domain层和Data层之间的桥梁 遵循Clean Architecture的Repository模式 */
 class ExploreRepositoryImpl(
     private val cacheProvider: RecommendedAgentCacheProvider? = null,
 ) : ExploreRepository {
@@ -31,25 +27,27 @@ class ExploreRepositoryImpl(
         useCache: Boolean,
         sortSeed: Int
     ): Flow<PagingData<AgentInfo>> {
-        LogUtils.d("ExploreRepositoryImpl.getRecommendAgentsFlow: useCache=$useCache, sortSeed=$sortSeed")
+        LogUtils.d(
+            "ExploreRepositoryImpl.getRecommendAgentsFlow: useCache=$useCache, sortSeed=$sortSeed"
+        )
 
         return Pager(
-            config =
-                PagingConfig(
-                    pageSize = PAGE_SIZE,
-                    prefetchDistance = PREFETCH_DISTANCE,
-                    enablePlaceholders = ENABLE_PLACEHOLDERS,
-                    initialLoadSize = PAGE_SIZE,
-                    maxSize = PAGE_SIZE * MAX_CACHE_PAGES,
-                ),
-            pagingSourceFactory = {
-                ExplorePagingSource(
-                    useCache = useCache,
-                    sortSeed = sortSeed,
-                    cacheProvider = cacheProvider
-                )
-            },
-        )
+                config =
+                    PagingConfig(
+                        pageSize = PAGE_SIZE,
+                        prefetchDistance = PREFETCH_DISTANCE,
+                        enablePlaceholders = ENABLE_PLACEHOLDERS,
+                        initialLoadSize = PAGE_SIZE,
+                        maxSize = PAGE_SIZE * MAX_CACHE_PAGES,
+                    ),
+                pagingSourceFactory = {
+                    ExplorePagingSource(
+                        useCache = useCache,
+                        sortSeed = sortSeed,
+                        cacheProvider = cacheProvider
+                    )
+                },
+            )
             .flow
     }
 

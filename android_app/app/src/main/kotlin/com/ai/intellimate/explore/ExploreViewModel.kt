@@ -41,9 +41,7 @@ class ExploreViewModel : BaseVM() {
         )
 
         // 创建初始数据流（优先使用缓存）
-        val initialFlow =
-            getRecommendAgentsUseCase()
-                .cachedIn(viewModelScope) // 在ViewModel作用域内缓存
+        val initialFlow = getRecommendAgentsUseCase().cachedIn(viewModelScope) // 在ViewModel作用域内缓存
 
         _agentsFlow.value = initialFlow
         isInitialized = true
@@ -65,8 +63,7 @@ class ExploreViewModel : BaseVM() {
                 _agentsFlow.value = null
 
                 // 使用刷新方法，会更新sort seed并禁用缓存
-                val refreshFlow = getRecommendAgentsUseCase.refresh()
-                    .cachedIn(viewModelScope)
+                val refreshFlow = getRecommendAgentsUseCase.refresh().cachedIn(viewModelScope)
 
                 _agentsFlow.value = refreshFlow
             } catch (e: Exception) {

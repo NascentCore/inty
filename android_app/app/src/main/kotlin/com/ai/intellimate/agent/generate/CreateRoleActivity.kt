@@ -932,7 +932,7 @@ private fun AvatarUploadSection(
                 // 单选模式：单个头像（编辑模式/用户上传/AI生成单个头像）
                 avatarUrl != null -> {
                     LogUtils.d("AvatarUploadSection: Displaying single avatar with URL: $avatarUrl")
-                    
+
                     val previewUrl =
                         getCdnImageUrl(
                             avatarUrl,
@@ -1265,6 +1265,7 @@ private fun CreateButton(isLoading: Boolean, isEditMode: Boolean = false, onClic
 
 /**
  * Configuration object for text-to-image preview settings
+ *
  * @GeneratedByAI - AI generated configuration for image scaling parameters
  */
 object Config {

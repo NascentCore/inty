@@ -79,4 +79,3 @@ export const ImageMessage: React.FC<ImageMessageProps> = ({
 };
 
 export default ImageMessage;
-

@@ -185,9 +185,14 @@ export const ChatPage: React.FC = () => {
             index === self.findIndex((m) => m.remoteId === msg.remoteId),
         );
 
-        console.log(`消息列表已刷新，共 ${convertedMessages.length} 条消息（去重后 ${uniqueMessages.length} 条）`);
-        console.log('图片消息数量:', uniqueMessages.filter(m => m.type === 'image').length);
-        console.log('所有消息:', uniqueMessages);
+        console.log(
+          `消息列表已刷新，共 ${convertedMessages.length} 条消息（去重后 ${uniqueMessages.length} 条）`,
+        );
+        console.log(
+          "图片消息数量:",
+          uniqueMessages.filter((m) => m.type === "image").length,
+        );
+        console.log("所有消息:", uniqueMessages);
 
         setMessages(uniqueMessages);
       }
@@ -270,7 +275,9 @@ export const ChatPage: React.FC = () => {
             index === self.findIndex((m) => m.remoteId === msg.remoteId),
         );
 
-        console.log(`获取到 ${convertedMessages.length} 条消息，去重后 ${uniqueMessages.length} 条`);
+        console.log(
+          `获取到 ${convertedMessages.length} 条消息，去重后 ${uniqueMessages.length} 条`,
+        );
 
         // 更新当前会话的消息
         setMessages(uniqueMessages);
@@ -331,10 +338,12 @@ export const ChatPage: React.FC = () => {
         // 转换消息格式（支持文本和图片消息）
         const convertedMessages: ChatMessage[] = (chatData.messages || []).map(
           (msg, index) => ({
-            id: `msg_${chatData.chat_info?.id || 'unknown'}_${index}_${Date.now()}`,
-            role: msg.role || (msg.sender_type === "USER" ? "user" : "assistant"), // 优先使用 role，fallback 到 sender_type
+            id: `msg_${chatData.chat_info?.id || "unknown"}_${index}_${Date.now()}`,
+            role:
+              msg.role || (msg.sender_type === "USER" ? "user" : "assistant"), // 优先使用 role，fallback 到 sender_type
             content: msg.content || "",
-            timestamp: msg.timestamp || msg.created_at || new Date().toISOString(),
+            timestamp:
+              msg.timestamp || msg.created_at || new Date().toISOString(),
             remoteId: msg.id ? msg.id.toString() : undefined, // 使用真实消息ID
             type: msg.type || "text",
             image_url: msg.image_url,
@@ -342,23 +351,33 @@ export const ChatPage: React.FC = () => {
           }),
         );
 
-        console.log('获取到的聊天数据:', chatData);
-        console.log('消息数量:', chatData.messages?.length);
+        console.log("获取到的聊天数据:", chatData);
+        console.log("消息数量:", chatData.messages?.length);
         if (chatData.messages && chatData.messages.length > 0) {
-          console.log('第一条消息示例:', chatData.messages[0]);
+          console.log("第一条消息示例:", chatData.messages[0]);
         }
-        console.log('转换后的消息:', convertedMessages);
+        console.log("转换后的消息:", convertedMessages);
 
         // 去重：根据 remoteId 去除重复消息
         const uniqueMessages = convertedMessages.filter(
           (msg, index, self) =>
-            msg.remoteId && index === self.findIndex((m) => m.remoteId === msg.remoteId),
+            msg.remoteId &&
+            index === self.findIndex((m) => m.remoteId === msg.remoteId),
         );
 
         console.log(`去重后消息数量: ${uniqueMessages.length}`);
-        console.log('用户消息数量:', uniqueMessages.filter(m => m.role === 'user').length);
-        console.log('AI消息数量:', uniqueMessages.filter(m => m.role === 'assistant').length);
-        console.log('图片消息数量:', uniqueMessages.filter(m => m.type === 'image').length);
+        console.log(
+          "用户消息数量:",
+          uniqueMessages.filter((m) => m.role === "user").length,
+        );
+        console.log(
+          "AI消息数量:",
+          uniqueMessages.filter((m) => m.role === "assistant").length,
+        );
+        console.log(
+          "图片消息数量:",
+          uniqueMessages.filter((m) => m.type === "image").length,
+        );
 
         // 创建会话对象
         const session: ChatSession = {
@@ -366,7 +385,8 @@ export const ChatPage: React.FC = () => {
           agent_id: agent.id,
           agent_name: agent.name,
           messages: uniqueMessages,
-          created_at: chatData.chat_info?.created_at || new Date().toISOString(),
+          created_at:
+            chatData.chat_info?.created_at || new Date().toISOString(),
         };
 
         setCurrentSession(session);
@@ -531,7 +551,9 @@ export const ChatPage: React.FC = () => {
               index === self.findIndex((m) => m.remoteId === msg.remoteId),
           );
 
-          console.log(`刷新消息：原始 ${refreshedMessages.length} 条，去重后 ${uniqueMessages.length} 条`);
+          console.log(
+            `刷新消息：原始 ${refreshedMessages.length} 条，去重后 ${uniqueMessages.length} 条`,
+          );
 
           // 更新消息列表（最新的在底部）
           setMessages(uniqueMessages.reverse());
@@ -652,7 +674,9 @@ export const ChatPage: React.FC = () => {
               index === self.findIndex((m) => m.remoteId === msg.remoteId),
           );
 
-          console.log(`清除消息后刷新：原始 ${convertedMessages.length} 条，去重后 ${uniqueMessages.length} 条`);
+          console.log(
+            `清除消息后刷新：原始 ${convertedMessages.length} 条，去重后 ${uniqueMessages.length} 条`,
+          );
 
           setMessages(uniqueMessages);
 
@@ -1316,27 +1340,30 @@ export const ChatPage: React.FC = () => {
                                     wordBreak: "break-word",
                                   }}
                                 >
-                                  {message.content && message.role === "assistant"
+                                  {message.content &&
+                                  message.role === "assistant"
                                     ? formatMessageContent(message.content)
                                     : message.content || ""}
                                 </Paragraph>
-                                
+
                                 {/* 如果有生成的图片，在文本下方显示 */}
-                                {message.role === "assistant" && message.meta_data?.generated_image && (
-                                  <div style={{ marginTop: "12px" }}>
-                                    <Image
-                                      src={message.meta_data.generated_image.image_url}
-                                      alt="Generated image"
-                                      style={{
-                                        maxWidth: "300px",
-                                        borderRadius: "8px",
-                                      }}
-                                      placeholder={
-                                        <Spin size="small" />
-                                      }
-                                    />
-                                  </div>
-                                )}
+                                {message.role === "assistant" &&
+                                  message.meta_data?.generated_image && (
+                                    <div style={{ marginTop: "12px" }}>
+                                      <Image
+                                        src={
+                                          message.meta_data.generated_image
+                                            .image_url
+                                        }
+                                        alt="Generated image"
+                                        style={{
+                                          maxWidth: "300px",
+                                          borderRadius: "8px",
+                                        }}
+                                        placeholder={<Spin size="small" />}
+                                      />
+                                    </div>
+                                  )}
                                 <div
                                   style={{
                                     fontSize: "10px",
@@ -1397,31 +1424,41 @@ export const ChatPage: React.FC = () => {
                                       message.type !== "image" &&
                                       message.remoteId &&
                                       typeof message.remoteId === "string" &&
-                                      !message.remoteId.startsWith("assistant_") &&
+                                      !message.remoteId.startsWith(
+                                        "assistant_",
+                                      ) &&
                                       !message.remoteId.startsWith("error_") &&
                                       !message.remoteId.startsWith("remote_") &&
                                       !isNaN(Number(message.remoteId)) &&
                                       selectedAgent &&
                                       selectedAgent.id &&
-                                      index === getLastAssistantMessageIndex() && (
+                                      index ===
+                                        getLastAssistantMessageIndex() && (
                                         <MessageToImageIcon
                                           messageId={Number(message.remoteId)}
                                           agentId={selectedAgent.id}
-                                          hasImage={!!message.meta_data?.generated_image}
+                                          hasImage={
+                                            !!message.meta_data?.generated_image
+                                          }
                                           size="small"
                                           onImageGenerated={(imageData) => {
                                             // 立即更新当前消息的 meta_data，提供即时反馈
                                             setMessages((prevMessages) => {
                                               return prevMessages.map((msg) => {
-                                                if (msg.remoteId === message.remoteId) {
+                                                if (
+                                                  msg.remoteId ===
+                                                  message.remoteId
+                                                ) {
                                                   return {
                                                     ...msg,
                                                     meta_data: {
                                                       ...msg.meta_data,
                                                       generated_image: {
-                                                        image_url: imageData.image_url,
+                                                        image_url:
+                                                          imageData.image_url,
                                                         width: imageData.width,
-                                                        height: imageData.height,
+                                                        height:
+                                                          imageData.height,
                                                       },
                                                     },
                                                   };

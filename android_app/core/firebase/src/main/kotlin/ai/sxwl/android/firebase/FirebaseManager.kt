@@ -10,14 +10,14 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.perf.FirebasePerformance
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics和Performance的初始化和使用
@@ -107,27 +107,37 @@ object FirebaseManager {
 
                     // 🟡 性能相关事件 - 保持现有采样配置
                     "user_interaction" to if (AppUtils.isAppDebug()) 1.0 else 1.0, // 调试100%，发布100%
-                    Events.VOICE_PLAYBACK_START to if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
+                    Events.VOICE_PLAYBACK_START to
+                        if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
                     "slow_request" to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     "network_retry" to if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
                     "network_request" to if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
 
                     // 🟡 性能指标事件 - 保持现有采样配置
-                    Events.AI_RESPONSE_TIME to if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
-                    Events.TTS_GENERATION_TIME to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
-                    Events.VOICE_PLAYBACK_TIME to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
-                    Events.IMAGE_LOAD_TIME to if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
-                    Events.PAGE_LOAD_TIME to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
-                    Events.DATABASE_OPERATION_TIME to if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
+                    Events.AI_RESPONSE_TIME to
+                        if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
+                    Events.TTS_GENERATION_TIME to
+                        if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                    Events.VOICE_PLAYBACK_TIME to
+                        if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                    Events.IMAGE_LOAD_TIME to
+                        if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
+                    Events.PAGE_LOAD_TIME to
+                        if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                    Events.DATABASE_OPERATION_TIME to
+                        if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
                 ),
             minIntervalMsPerEvent =
                 mapOf(
                     // 🔴 业务数据点 - 无限制或很宽松的限频
-                    Events.MESSAGE_SENT to if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
-                    Events.VOICE_PLAYBACK_START to if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
+                    Events.MESSAGE_SENT to
+                        if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
+                    Events.VOICE_PLAYBACK_START to
+                        if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
 
                     // 🟡 性能相关事件 - 保持现有限频配置
-                    "user_interaction" to if (AppUtils.isAppDebug()) 1_000L else 10_000L, // 调试1秒，发布10秒
+                    "user_interaction" to
+                        if (AppUtils.isAppDebug()) 1_000L else 10_000L, // 调试1秒，发布10秒
                     "slow_request" to if (AppUtils.isAppDebug()) 2_000L else 5_000L, // 调试2秒，发布5秒
                     "network_retry" to if (AppUtils.isAppDebug()) 1_000L else 3_000L, // 调试1秒，发布3秒
                     "network_request" to if (AppUtils.isAppDebug()) 500L else 2_000L, // 调试0.5秒，发布2秒

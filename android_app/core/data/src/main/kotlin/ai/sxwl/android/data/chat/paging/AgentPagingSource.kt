@@ -69,7 +69,7 @@ class AgentPagingSource(
                                 } else {
                                     validCachedAgents.size >= pageSize
                                 }
-                            
+
                             return@withContext LoadResult.Page(
                                 data = validCachedAgents,
                                 prevKey = null,
@@ -111,14 +111,19 @@ class AgentPagingSource(
                         val validAgents = agents.filter { it.id.isNotEmpty() }
 
                         // Guest用户限制：只允许第一页有更多数据
-                        val hasMore = if (IntySetting.isLogin() && IntySetting.isGuestUser()) {
-                            false // Guest用户没有更多数据
-                        } else {
-                            validAgents.isNotEmpty() && validAgents.size >= pageSize
-                        }
+                        val hasMore =
+                            if (IntySetting.isLogin() && IntySetting.isGuestUser()) {
+                                false // Guest用户没有更多数据
+                            } else {
+                                validAgents.isNotEmpty() && validAgents.size >= pageSize
+                            }
 
                         // 缓存第一页数据
-                        if (page == INITIAL_PAGE && validAgents.isNotEmpty() && cacheProvider != null) {
+                        if (
+                            page == INITIAL_PAGE &&
+                                validAgents.isNotEmpty() &&
+                                cacheProvider != null
+                        ) {
                             cacheProvider.cacheChatAgents(validAgents)
                             cacheProvider.refreshChatAgents()
                             LogUtils.i("AgentPagingSource - 缓存第一页数据: ${validAgents.size}个")
