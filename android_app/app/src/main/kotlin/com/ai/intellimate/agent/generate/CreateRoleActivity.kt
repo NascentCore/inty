@@ -425,13 +425,15 @@ private fun CreateRolePage(
                 isGeneratingAvatar = currentGenerationStatus
             }
 
-            // 只在状态发生变化时记录，减少日志噪音
+            // 头像状态管理：多选模式优先，单选模式备选
             val currentUrls = AvatarManager.getCurrentAvatarUrls()
             if (currentUrls.isNotEmpty() && currentUrls != avatarUrls) {
+                // 多选模式：AI生成了多个头像变体
                 avatarUrls = currentUrls
                 selectedImageIndex = AvatarManager.getSelectedImageIndex()
                 avatarUrl = null
             } else {
+                // 单选模式：单个头像（编辑模式/用户上传/AI生成单个头像）
                 val currentUrl = AvatarManager.getCurrentAvatarUrl()
                 if (currentUrl != null && currentUrl != avatarUrl) {
                     avatarUrl = currentUrl
@@ -901,6 +903,7 @@ private fun AvatarUploadSection(
                 isGenerating -> {
                     ThreeDotLoadingAnimation()
                 }
+                // 多选模式：AI生成了多个头像变体，用户可从中选择
                 avatarUrls.isNotEmpty() -> {
                     val displayUrl = avatarUrls.getOrNull(selectedIndex) ?: avatarUrls.first()
                     val previewUrl =
@@ -926,8 +929,8 @@ private fun AvatarUploadSection(
                         },
                     )
                 }
+                // 单选模式：单个头像（编辑模式/用户上传/AI生成单个头像）
                 avatarUrl != null -> {
-                    // FIXME: 这里应该跟上面的逻辑去重。
                     LogUtils.d("AvatarUploadSection: Displaying single avatar with URL: $avatarUrl")
                     
                     val previewUrl =
