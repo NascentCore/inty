@@ -8,6 +8,8 @@
 * 状态：未开始
 * 优先级：p1
 * 来源：https://applink.feishu.cn/client/message/link/open?token=AmfpyocKAMADaQGjKHxGwBM%3D
+* 业界参考：https://upshot-ai.medium.com/app-uninstalls-whats-driving-them-and-how-to-reduce-churn-e7b7d40eb43e
+A staggering 25% of users abandon an app after just one use, and nearly 50% of apps are uninstalled within 30 days.
 
 ## 工具
 
