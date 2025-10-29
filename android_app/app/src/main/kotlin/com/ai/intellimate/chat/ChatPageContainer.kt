@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -45,6 +46,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.utils.GuestLoginLimiter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -99,6 +101,7 @@ fun ChatPageContainer(
     val pageState = rememberPagerState(initialPage = safeInitialPage) { agentList.size }
     val prefetchThreshold = 5 // 距离本业末尾数据还有5个时，触发静默加载下一页
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     // 新用户引导状态
     var hasShowGuest by remember { mutableStateOf(IntySetting.hasShowGuest()) }
@@ -108,6 +111,13 @@ fun ChatPageContainer(
     // 监听页面变化
     LaunchedEffect(pageState.currentPage) {
         onPageChanged(pageState.currentPage)
+
+        // Guest用户滑动限制检查
+        if (GuestLoginLimiter.shouldLimitScroll(pageState.currentPage, 20)) {
+            LogUtils.d("ChatPageContainer - Guest用户滑动限制触发，当前页面: ${pageState.currentPage}")
+            GuestLoginLimiter.checkAndNavigateToLogin(context)
+            return@LaunchedEffect // 不继续执行后续逻辑
+        }
 
         // 页面切换时停止当前播放的音频，避免播放错误agent的音频
         val currentAgent = agentList.getOrNull(pageState.currentPage)
@@ -130,7 +140,9 @@ fun ChatPageContainer(
             val notEnd =
                 !(appendState is LoadState.NotLoading && appendState.endOfPaginationReached)
             val canPrefetch = refreshState is LoadState.NotLoading
-            if (pageState.currentPage >= thresholdIndex && notEnd && canPrefetch) {
+
+            // Guest用户限制：不进行预取加载
+            if (GuestLoginLimiter.isFormalUser() && pageState.currentPage >= thresholdIndex && notEnd && canPrefetch) {
                 // 修复：使用更安全的预取方式
                 // 通过访问最后一个有效索引来触发Paging的append加载
                 try {
@@ -232,23 +244,26 @@ private fun NewUserGuide(
             val scope = rememberCoroutineScope()
             Box(
                 modifier =
-                    Modifier.fillMaxSize().noRippleClickable {
-                        // 只有在引导期间才响应点击
-                        if (isGuideActive) {
-                            scope.launch {
-                                showHand = false
-                                pageState.animateScrollToPage(initialPageIndex)
-                                IntySetting.setShowGuested()
-                                onGuideCompleted()
-                                isGuideActive = false
+                    Modifier
+                        .fillMaxSize()
+                        .noRippleClickable {
+                            // 只有在引导期间才响应点击
+                            if (isGuideActive) {
+                                scope.launch {
+                                    showHand = false
+                                    pageState.animateScrollToPage(initialPageIndex)
+                                    IntySetting.setShowGuested()
+                                    onGuideCompleted()
+                                    isGuideActive = false
+                                }
                             }
                         }
-                    }
             ) {
                 // 背景渐变框
                 Box(
                     modifier =
-                        Modifier.align(Alignment.TopEnd)
+                        Modifier
+                            .align(Alignment.TopEnd)
                             .padding(top = 340.dp)
                             .size(210.dp, 40.dp)
                             .background(
@@ -264,7 +279,8 @@ private fun NewUserGuide(
                 // 手势图标
                 Image(
                     modifier =
-                        Modifier.align(Alignment.TopEnd)
+                        Modifier
+                            .align(Alignment.TopEnd)
                             .padding(top = 340.dp, end = 92.dp)
                             .size(112.dp),
                     painter = painterResource(R.drawable.scroll_hand),

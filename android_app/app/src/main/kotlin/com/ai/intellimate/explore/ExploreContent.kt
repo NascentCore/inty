@@ -21,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -40,6 +42,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.EmptyDataState
 import com.ai.intellimate.ui.components.NetworkErrorState
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
+import com.ai.intellimate.utils.GuestLoginLimiter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
@@ -55,6 +58,7 @@ fun ExploreContent(
 ) {
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
     val vm: ExploreViewModel = viewModel()
+    val context = LocalContext.current
 
     val gridState =
         rememberLazyGridState(
@@ -65,48 +69,95 @@ fun ExploreContent(
     // 检测用户是否主动滚动到底部触发加载更多
     var showLoadMoreLoading by remember { mutableStateOf(false) }
     var lastScrollTime by remember { mutableLongStateOf(0L) }
+    var hasUserScrolled by remember { mutableStateOf(false) } // 标记用户是否主动滚动过
 
-    // 检测滚动状态
-    val isScrolledToBottom by remember {
+    // 检测底部Spacer是否可见（Spacer总是最后一个item，索引为 totalItemsCount - 1）
+    val isSpacerVisible by remember {
         derivedStateOf {
             val layoutInfo = gridState.layoutInfo
             val totalItemsCount = layoutInfo.totalItemsCount
-            val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            if (totalItemsCount == 0) return@derivedStateOf false
 
-            // 检测是否滚动到底部
-            totalItemsCount > 0 && lastVisibleItemIndex >= totalItemsCount - 1
+            // Spacer是最后一个item，检查最后一个item的索引是否可见
+            val spacerIndex = totalItemsCount - 1
+            layoutInfo.visibleItemsInfo.any { it.index == spacerIndex }
         }
     }
 
-    // 监听滚动到底部事件
-    LaunchedEffect(isScrolledToBottom, lazyPagingItems?.loadState?.append) {
-        if (isScrolledToBottom && lazyPagingItems?.loadState?.append is LoadState.Loading) {
-            val currentTime = System.currentTimeMillis()
-            // 关键修复：只有在用户主动滚动且不是首次加载时才显示loading
-            // 首次进入时使用缓存数据，不应该显示加载更多loading
-            if (
-                currentTime - lastScrollTime < 1000 &&
-                    lazyPagingItems.itemCount > 0 &&
-                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
-            ) {
-                showLoadMoreLoading = true
-                // 延迟隐藏loading
-                delay(2000)
-                showLoadMoreLoading = false
+    // 检测是否到达第一页末尾（最后一个可见的agent item索引 >= 19，即第20个item）
+    val isAtPageEnd by remember {
+        derivedStateOf {
+            val layoutInfo = gridState.layoutInfo
+            // 找到最后一个可见的agent item（排除加载状态指示器和Spacer）
+            val agentItems = layoutInfo.visibleItemsInfo.filter { itemInfo ->
+                // 计算agent items的数量：totalItemsCount - 2（加载状态 + Spacer）
+                val agentItemCount = lazyPagingItems?.itemCount ?: 0
+                itemInfo.index < agentItemCount
             }
+            val lastVisibleAgentIndex = agentItems.lastOrNull()?.index ?: -1
+            lastVisibleAgentIndex >= 19 // 第20个agent item，索引为19
         }
     }
 
-    // 更新滚动时间与保存滚动位置
-    LaunchedEffect(gridState.isScrollInProgress) {
+    // 检测滚动方向：记录上一次的第一可见item索引
+    var lastFirstVisibleIndex by remember { mutableIntStateOf(-1) }
+    var isScrollingDown by remember { mutableStateOf(false) } // 是否向下滚动（期待加载更多）
+
+    // 监听滚动状态，检测滚动方向和保存位置
+    LaunchedEffect(gridState.isScrollInProgress, gridState.firstVisibleItemIndex) {
         if (gridState.isScrollInProgress) {
+            val currentFirstVisibleIndex = gridState.firstVisibleItemIndex
+
+            // 判断滚动方向：向下滚动时，firstVisibleItemIndex增大
+            isScrollingDown = currentFirstVisibleIndex > lastFirstVisibleIndex
+
             lastScrollTime = System.currentTimeMillis()
+            hasUserScrolled = true // 标记用户已主动滚动
+            lastFirstVisibleIndex = currentFirstVisibleIndex
         } else {
             // 滚动停止时保存位置
             vm.saveScrollPosition(
                 gridState.firstVisibleItemIndex,
                 gridState.firstVisibleItemScrollOffset,
             )
+            lastFirstVisibleIndex = gridState.firstVisibleItemIndex
+        }
+    }
+
+    // Guest用户拦截逻辑：当Spacer可见 + 向下滚动 + 到达第一页末尾时触发
+    LaunchedEffect(isSpacerVisible, isAtPageEnd, isScrollingDown) {
+        if (
+            isSpacerVisible &&
+            isAtPageEnd &&
+            isScrollingDown &&
+            hasUserScrolled &&
+            GuestLoginLimiter.shouldLimitGuest()
+        ) {
+            // 触发guest登录拦截
+            GuestLoginLimiter.checkAndNavigateToLogin(context)
+        }
+    }
+
+    // 监听滚动到底部事件（用于显示loading指示器）
+    LaunchedEffect(isSpacerVisible, lazyPagingItems?.loadState?.append) {
+        if (isSpacerVisible && hasUserScrolled) { // 只有用户主动滚动过才检查
+            val currentTime = System.currentTimeMillis()
+
+            // 只有在Paging正在加载时才显示loading指示器
+            if (lazyPagingItems?.loadState?.append is LoadState.Loading) {
+                // 只有在用户主动滚动且不是首次加载时才显示loading
+                // 首次进入时使用缓存数据，不应该显示加载更多loading
+                if (
+                    currentTime - lastScrollTime < 1000 &&
+                    lazyPagingItems.itemCount > 0 &&
+                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
+                ) {
+                    showLoadMoreLoading = true
+                    // 延迟隐藏loading
+                    delay(2000)
+                    showLoadMoreLoading = false
+                }
+            }
         }
     }
 
@@ -161,7 +212,8 @@ fun ExploreContent(
                         // 显示加载占位符
                         ShimmerPlaceholder(
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .height(200.dp)
                                     .clip(RoundedCornerShape(8.dp))
                         )
@@ -182,7 +234,11 @@ fun ExploreContent(
 /** 空状态指示器 */
 @Composable
 private fun EmptyStateIndicator() {
-    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .height(200.dp), contentAlignment = Alignment.Center
+    ) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
     }
 }

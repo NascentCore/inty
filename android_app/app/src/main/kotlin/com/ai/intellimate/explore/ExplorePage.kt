@@ -34,6 +34,7 @@ import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
+import com.ai.intellimate.utils.GuestLoginLimiter
 
 /** Explore页面 - 推荐agents展示 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,13 +77,19 @@ fun ExplorePage(
             contentDescription = null
         )
 
-        Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent)
+        ) {
             TopAppBar(
                 title = {
                     Image(
                         painter = painterResource(R.drawable.img_explore_title),
                         contentDescription = null,
-                        modifier = Modifier.height(30.dp).fillMaxWidth(),
+                        modifier = Modifier
+                            .height(30.dp)
+                            .fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )
@@ -124,6 +131,12 @@ fun ExplorePage(
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
                 onRefresh = {
+                    // Guest用户限制：下拉刷新时跳转到登录页面
+                    if (GuestLoginLimiter.shouldLimitGuest()) {
+                        GuestLoginLimiter.checkAndNavigateToLogin(context)
+                        return@PullToRefreshBox
+                    }
+                    
                     isRefreshing = true
                     viewModel.refreshRecommendAgents()
                 },

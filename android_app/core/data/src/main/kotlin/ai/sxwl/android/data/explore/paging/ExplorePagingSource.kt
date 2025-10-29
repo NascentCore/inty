@@ -36,6 +36,18 @@ class ExplorePagingSource(
                 val page = params.key ?: INITIAL_PAGE
                 val pageSize = params.loadSize.coerceAtMost(PAGE_SIZE)
 
+                LogUtils.i("ExplorePagingSource - 加载第${page}页，页面大小: $pageSize")
+
+                // Guest用户限制：只允许加载第一页
+                if (IntySetting.isLogin() && IntySetting.isGuestUser() && page > INITIAL_PAGE) {
+                    LogUtils.d("ExplorePagingSource - Guest用户限制：不允许加载第${page}页")
+                    return@withContext LoadResult.Page(
+                        data = emptyList(),
+                        prevKey = null,
+                        nextKey = null,
+                    )
+                }
+
                 // 第一页特殊处理：优先使用缓存数据
                 if (page == INITIAL_PAGE && useCache && cacheProvider != null) {
                     val cachedAgents = cacheProvider.getCachedRecommendedAgents()
@@ -50,13 +62,18 @@ class ExplorePagingSource(
                                 loadFromNetworkAsync(page, pageSize)
                             }
 
-                            // 关键修复：即使缓存数据不足一页，也假设有更多数据
-                            // 这样Paging会继续尝试加载下一页，确保分页功能正常
-                            // 但是要确保缓存数据不为空，避免无限循环
+                            // Guest用户限制：假设没有更多数据
+                            val hasMoreData =
+                                if (IntySetting.isLogin() && IntySetting.isGuestUser()) {
+                                    false // Guest用户没有更多数据
+                                } else {
+                                    validCachedAgents.isNotEmpty() // 正式用户假设有更多数据
+                                }
+                            
                             return@withContext LoadResult.Page(
                                 data = validCachedAgents,
                                 prevKey = null,
-                                nextKey = if (validCachedAgents.isNotEmpty()) page + 1 else null,
+                                nextKey = if (hasMoreData) page + 1 else null,
                             )
                         }
                     }
@@ -79,7 +96,13 @@ class ExplorePagingSource(
                         val agents = result.data.list ?: emptyList()
                         // 过滤掉id为空的agent，避免key重复问题
                         val validAgents = agents.filter { it.id.isNotEmpty() }
-                        val hasMore = validAgents.isNotEmpty() && validAgents.size >= pageSize
+
+                        // Guest用户限制：只允许第一页有更多数据
+                        val hasMore = if (IntySetting.isLogin() && IntySetting.isGuestUser()) {
+                            false // Guest用户没有更多数据
+                        } else {
+                            validAgents.isNotEmpty() && validAgents.size >= pageSize
+                        }
 
                         // 缓存第一页数据
                         if (page == INITIAL_PAGE && validAgents.isNotEmpty() && cacheProvider != null) {

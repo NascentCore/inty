@@ -37,6 +37,16 @@ class AgentPagingSource(
 
                 LogUtils.i("AgentPagingSource - 加载第${page}页，页面大小: $pageSize")
 
+                // Guest用户限制：只允许加载第一页
+                if (IntySetting.isLogin() && IntySetting.isGuestUser() && page > INITIAL_PAGE) {
+                    LogUtils.d("AgentPagingSource - Guest用户限制：不允许加载第${page}页")
+                    return@withContext LoadResult.Page(
+                        data = emptyList(),
+                        prevKey = null,
+                        nextKey = null,
+                    )
+                }
+
                 // 第一页特殊处理：优先使用缓存数据
                 if (page == INITIAL_PAGE && useCache && cacheProvider != null) {
                     val cachedAgents = cacheProvider.getCachedChatAgents()
@@ -52,8 +62,14 @@ class AgentPagingSource(
                             }
 
                             // 关键修复：正确处理分页逻辑
-                            // 如果缓存数据足够一页，假设有更多数据；否则假设没有更多数据
-                            val hasMoreData = validCachedAgents.size >= pageSize
+                            // Guest用户：假设没有更多数据；正式用户：如果缓存数据足够一页，假设有更多数据
+                            val hasMoreData =
+                                if (IntySetting.isLogin() && IntySetting.isGuestUser()) {
+                                    false // Guest用户没有更多数据
+                                } else {
+                                    validCachedAgents.size >= pageSize
+                                }
+                            
                             return@withContext LoadResult.Page(
                                 data = validCachedAgents,
                                 prevKey = null,
@@ -93,7 +109,13 @@ class AgentPagingSource(
                         val agents = result.data.list ?: emptyList()
                         // 过滤掉id为空的agent，避免key重复问题
                         val validAgents = agents.filter { it.id.isNotEmpty() }
-                        val hasMore = validAgents.isNotEmpty() && validAgents.size >= pageSize
+
+                        // Guest用户限制：只允许第一页有更多数据
+                        val hasMore = if (IntySetting.isLogin() && IntySetting.isGuestUser()) {
+                            false // Guest用户没有更多数据
+                        } else {
+                            validAgents.isNotEmpty() && validAgents.size >= pageSize
+                        }
 
                         // 缓存第一页数据
                         if (page == INITIAL_PAGE && validAgents.isNotEmpty() && cacheProvider != null) {
