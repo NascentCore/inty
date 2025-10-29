@@ -11,14 +11,20 @@ import { chatImageApi } from "../services/api";
 interface MessageToImageIconProps {
   messageId: number; // 消息ID（必填）
   agentId: string; // Agent ID（必填）
+  hasImage?: boolean; // 是否已有图片
   disabled?: boolean;
   size?: "small" | "middle" | "large";
-  onImageGenerated?: (imageUrl: string) => void;
+  onImageGenerated?: (imageData: {
+    image_url: string;
+    width: number;
+    height: number;
+  }) => void;
 }
 
 export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
   messageId,
   agentId,
+  hasImage = false,
   disabled = false,
   size = "middle",
   onImageGenerated,
@@ -58,14 +64,17 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
       };
 
       if (response && response.image_url) {
-        const imageUrl = response.image_url;
         if (onImageGenerated) {
-          // 如果提供了回调函数，调用它来在聊天窗口中显示图片
-          onImageGenerated(imageUrl);
+          // 传递完整的图片数据给回调函数
+          onImageGenerated({
+            image_url: response.image_url,
+            width: response.image_metadata.width,
+            height: response.image_metadata.height,
+          });
           message.success("图片生成成功！");
         } else {
           // 否则使用模态框显示（向后兼容）
-          setGeneratedImage(imageUrl);
+          setGeneratedImage(response.image_url);
           setModalVisible(true);
           message.success("图片生成成功！");
         }
@@ -98,7 +107,7 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
 
   return (
     <>
-      <Tooltip title="根据消息生成与角色一致的图片">
+      <Tooltip title={hasImage ? "重新生成图片" : "根据消息生成与角色一致的图片"}>
         <Button
           type="text"
           icon={loading ? <LoadingOutlined /> : <PictureOutlined />}
@@ -107,7 +116,7 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
           size={buttonSize}
           loading={loading}
           style={{
-            color: "#666",
+            color: hasImage ? "#52c41a" : "#666", // 已有图片显示绿色
             padding: "2px 4px",
             height: "auto",
             minWidth: "auto",

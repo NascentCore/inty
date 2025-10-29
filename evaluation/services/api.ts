@@ -755,6 +755,14 @@ export const chatApi = {
       timestamp: string;
       type?: "text" | "image";
       image_url?: string;
+      meta_data?: {
+        generated_image?: {
+          image_url: string;
+          width: number;
+          height: number;
+          prompt?: string;
+        };
+      };
     }>;
     pagination: {
       total: number;
@@ -781,6 +789,14 @@ export const chatApi = {
       timestamp: string;
       type?: "text" | "image";
       image_url?: string;
+      meta_data?: {
+        generated_image?: {
+          image_url: string;
+          width: number;
+          height: number;
+          prompt?: string;
+        };
+      };
     }>;
     total: number;
     limit: number;

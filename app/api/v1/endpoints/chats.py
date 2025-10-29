@@ -1279,24 +1279,17 @@ async def generate_chat_image(
             )
             raise HTTPException(status_code=400, detail="只能对最后一条AI回复生成图片")
 
-        # 删除该消息的旧图片（如果存在）
-        old_image_url = await chat_history_service.delete_image_by_source_message(
-            db, session_id, request.message_id
-        )
-        if old_image_url:
-            logger.info(f"已删除旧图片消息: {old_image_url}")
-            # TODO: 可选 - 从GCS删除旧图片文件以节省存储空间
-
         # 调用图片生成服务（使用 Gemini 2.5 Flash Image）
+        # 重复生成会直接覆盖 meta_data 中的 generated_image，无需删除旧数据
         from app.services.image_generation_service import image_generation_service
 
         result = await image_generation_service.generate_chat_image_with_gemini(
             db=db,
             session_id=session_id,
+            message_id=request.message_id,  # 传入要更新的消息ID
             agent_data=agent_data,
             message_content=message_content,
             history_count=request.history_count,
-            source_message_id=request.message_id,  # 传递来源消息ID
         )
 
         # 记录用量

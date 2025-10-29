@@ -64,6 +64,14 @@ interface ChatMessage {
   remoteId?: string; // 数据库消息ID，用于删除和重发功能
   type?: "text" | "image"; // 消息类型：文本或图片
   image_url?: string; // 图片URL（仅图片消息）
+  meta_data?: {
+    generated_image?: {
+      image_url: string;
+      width: number;
+      height: number;
+      prompt?: string;
+    };
+  };
 }
 
 export const ChatPage: React.FC = () => {
@@ -167,6 +175,7 @@ export const ChatPage: React.FC = () => {
             remoteId: msg.id.toString(),
             type: msg.type || "text",
             image_url: msg.image_url,
+            meta_data: msg.meta_data,
           }),
         );
 
@@ -251,6 +260,7 @@ export const ChatPage: React.FC = () => {
             remoteId: msg.id.toString(),
             type: msg.type || "text",
             image_url: msg.image_url,
+            meta_data: msg.meta_data,
           }),
         );
 
@@ -328,6 +338,7 @@ export const ChatPage: React.FC = () => {
             remoteId: msg.id ? msg.id.toString() : undefined, // 使用真实消息ID
             type: msg.type || "text",
             image_url: msg.image_url,
+            meta_data: msg.meta_data,
           }),
         );
 
@@ -414,6 +425,7 @@ export const ChatPage: React.FC = () => {
                 remoteId: msg.id ? String(msg.id) : `remote_${index}`, // 安全地访问id字段
                 type: msg.type || "text",
                 image_url: msg.image_url,
+                meta_data: msg.meta_data,
               }),
             );
 
@@ -509,6 +521,7 @@ export const ChatPage: React.FC = () => {
               remoteId: msg.id ? String(msg.id) : `remote_${index}`,
               type: msg.type || "text",
               image_url: msg.image_url,
+              meta_data: msg.meta_data,
             }),
           );
 
@@ -630,6 +643,7 @@ export const ChatPage: React.FC = () => {
             remoteId: msg.id.toString(), // 添加remoteId
             type: msg.type || "text",
             image_url: msg.image_url,
+            meta_data: msg.meta_data,
           }));
 
           // 去重：根据 remoteId 去除重复消息
@@ -1292,11 +1306,26 @@ export const ChatPage: React.FC = () => {
                                       : "none",
                                 }}
                               >
-                                {/* 显示图片消息或文本消息 */}
-                                {message.type === "image" && message.image_url ? (
-                                  <div style={{ marginBottom: "8px" }}>
+                                {/* 显示文本消息 */}
+                                <Paragraph
+                                  style={{
+                                    margin: 0,
+                                    color:
+                                      message.role === "user" ? "#fff" : "#000",
+                                    whiteSpace: "pre-wrap",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {message.content && message.role === "assistant"
+                                    ? formatMessageContent(message.content)
+                                    : message.content || ""}
+                                </Paragraph>
+                                
+                                {/* 如果有生成的图片，在文本下方显示 */}
+                                {message.role === "assistant" && message.meta_data?.generated_image && (
+                                  <div style={{ marginTop: "12px" }}>
                                     <Image
-                                      src={message.image_url}
+                                      src={message.meta_data.generated_image.image_url}
                                       alt="Generated image"
                                       style={{
                                         maxWidth: "300px",
@@ -1307,20 +1336,6 @@ export const ChatPage: React.FC = () => {
                                       }
                                     />
                                   </div>
-                                ) : (
-                                  <Paragraph
-                                    style={{
-                                      margin: 0,
-                                      color:
-                                        message.role === "user" ? "#fff" : "#000",
-                                      whiteSpace: "pre-wrap",
-                                      wordBreak: "break-word",
-                                    }}
-                                  >
-                                    {message.content && message.role === "assistant"
-                                      ? formatMessageContent(message.content)
-                                      : message.content || ""}
-                                  </Paragraph>
                                 )}
                                 <div
                                   style={{
@@ -1392,14 +1407,30 @@ export const ChatPage: React.FC = () => {
                                         <MessageToImageIcon
                                           messageId={Number(message.remoteId)}
                                           agentId={selectedAgent.id}
+                                          hasImage={!!message.meta_data?.generated_image}
                                           size="small"
-                                          onImageGenerated={async (imageUrl) => {
-                                            handleImageGenerated(
-                                              message.content,
-                                              imageUrl,
-                                            );
-                                            // 刷新消息列表以显示新生成的图片消息
-                                            await refreshMessages();
+                                          onImageGenerated={(imageData) => {
+                                            // 立即更新当前消息的 meta_data，提供即时反馈
+                                            setMessages((prevMessages) => {
+                                              return prevMessages.map((msg) => {
+                                                if (msg.remoteId === message.remoteId) {
+                                                  return {
+                                                    ...msg,
+                                                    meta_data: {
+                                                      ...msg.meta_data,
+                                                      generated_image: {
+                                                        image_url: imageData.image_url,
+                                                        width: imageData.width,
+                                                        height: imageData.height,
+                                                      },
+                                                    },
+                                                  };
+                                                }
+                                                return msg;
+                                              });
+                                            });
+                                            // 图片已立即显示，无需刷新
+                                            // 用户刷新页面时会从服务器同步最新数据
                                           }}
                                         />
                                       )}

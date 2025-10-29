@@ -256,6 +256,60 @@ async def add_ai_message(
         raise
 
 
+async def update_message_metadata(
+    db: AsyncSession,
+    session_id: str,
+    message_id: int,
+    metadata_update: dict,
+) -> bool:
+    """
+    更新消息的 meta_data 字段
+
+    Args:
+        db: 数据库会话
+        session_id: 会话ID
+        message_id: 消息ID
+        metadata_update: 要更新/合并的元数据
+
+    Returns:
+        是否更新成功
+    """
+    try:
+        # 查询现有消息
+        stmt = select(ChatHistory).where(
+            and_(
+                ChatHistory.session_id == session_id,
+                ChatHistory.id == message_id,
+            )
+        )
+        result = await db.execute(stmt)
+        chat_history = result.scalar_one_or_none()
+
+        if not chat_history:
+            logger.warning(
+                f"消息不存在: session_id={session_id}, message_id={message_id}"
+            )
+            return False
+
+        # 合并现有 meta_data 和新数据
+        existing_meta = chat_history.meta_data or {}
+        merged_meta = {**existing_meta, **metadata_update}
+
+        # 更新消息
+        chat_history.meta_data = merged_meta
+        await db.commit()
+
+        logger.debug(
+            f"更新消息 meta_data 成功: session_id={session_id}, message_id={message_id}"
+        )
+        return True
+
+    except Exception as e:
+        logger.error(f"更新消息 meta_data 失败: {str(e)}")
+        await db.rollback()
+        return False
+
+
 async def add_ai_image_message(
     db: AsyncSession,
     session_id: str,
@@ -561,7 +615,7 @@ def get_messages_paginated(
                         "created_at": timestamp_str,  # 添加 created_at 以保持向后兼容
                     }
 
-                    # 检查是否是图片消息
+                    # 检查是否是图片消息（独立的图片消息，兼容旧数据）
                     if message_type == "image" and "data" in message_data:
                         image_data = message_data["data"]
                         message_obj["type"] = "image"
@@ -582,6 +636,32 @@ def get_messages_paginated(
                         # 不返回 image_metadata 和 prompt 字段
                     else:
                         message_obj["type"] = "text"
+
+                    # 解析 meta_data 中的 generated_image 字段（新数据格式）
+                    if meta_data and "generated_image" in meta_data:
+                        from app.services.image_transform_service import (
+                            image_transform_service,
+                        )
+
+                        generated_image = meta_data["generated_image"]
+                        image_url = generated_image.get("image_url")
+
+                        if image_url:
+                            # 转换 GCS URI 为 CDN URL
+                            cdn_url = image_transform_service.transform_desktop(
+                                image_url
+                            )
+
+                            # 在 meta_data 中添加转换后的 CDN URL
+                            if "meta_data" not in message_obj:
+                                message_obj["meta_data"] = {}
+
+                            message_obj["meta_data"]["generated_image"] = {
+                                "image_url": cdn_url,
+                                "width": generated_image.get("width"),
+                                "height": generated_image.get("height"),
+                            }
+                            # 不包含 prompt 字段
 
                     messages.append(message_obj)
 

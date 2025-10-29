@@ -81,21 +81,21 @@ class ImageGenerationService:
         self,
         db: AsyncSession,
         session_id: str,
+        message_id: int,
         agent_data: dict,
         message_content: str,
         history_count: Optional[int] = None,
-        source_message_id: Optional[int] = None,
     ) -> Dict:
         """
-        使用 Gemini 2.5 Flash Image 生成聊天图片
+        使用 Gemini 2.5 Flash Image 生成聊天图片并更新到消息 meta_data
 
         Args:
             db: 数据库会话
             session_id: 聊天会话ID
+            message_id: 要更新的消息ID
             agent_data: Agent数据
             message_content: 触发生图的消息内容
             history_count: 要使用的历史消息数量
-            source_message_id: 来源消息ID（标记这张图片是基于哪条消息生成的）
 
         Returns:
             包含图片信息的字典
@@ -313,26 +313,41 @@ class ImageGenerationService:
                 "byte_size": len(image_data),
             }
 
-            # 将图片作为AI消息保存到聊天历史
-            message_id = await chat_history_service.add_ai_image_message(
+            # 更新消息的 meta_data，将图片信息存储在其中
+            metadata_update = {
+                "generated_image": {
+                    "image_url": gcs_uri,  # 存储 GCS URI
+                    "width": width,
+                    "height": height,
+                    "format": image_format.lower(),
+                    "prompt": prompt,
+                    "generated_at": datetime.utcnow().isoformat(),
+                }
+            }
+
+            success = await chat_history_service.update_message_metadata(
                 db=db,
                 session_id=session_id,
-                image_url=gcs_uri,  # 存储 GCS URI
-                image_metadata=image_metadata,
-                prompt=prompt,
-                agent_id=agent_data.get("id"),
-                source_message_id=source_message_id,  # 传递来源消息ID
+                message_id=message_id,
+                metadata_update=metadata_update,
             )
 
+            if not success:
+                raise ValueError(f"更新消息 {message_id} 的 meta_data 失败")
+
             logger.info(
-                f"图片生成成功并保存到聊天历史，message_id={message_id}, cdn_url={cdn_url}"
+                f"图片生成成功并更新到消息 meta_data，message_id={message_id}, cdn_url={cdn_url}"
             )
 
             return {
-                "image_url": cdn_url,  # 返回 CDN URL
-                "image_metadata": image_metadata,
-                "prompt": prompt,
                 "message_id": message_id,
+                "image_url": cdn_url,  # 返回 CDN URL
+                "image_metadata": {
+                    "width": width,
+                    "height": height,
+                    "format": image_format.lower(),
+                },
+                "prompt": prompt,
             }
 
         except Exception as e:
