@@ -2,11 +2,14 @@ package com.ai.intellimate
 
 import ai.sxwl.android.common.analytics.GlobalExceptionHandler
 import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.app.Application
+import com.ai.intellimate.utils.AgentCacheProviderImpl
 import com.ai.intellimate.utils.NetworkManager
+import com.ai.intellimate.utils.RecommendedAgentCacheProviderImpl
 import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +23,13 @@ class IntelliMateApp : Application() {
         // 立即初始化网络管理器（轻量级，不阻塞）
         NetworkManager.Companion.getInstance().initialize(this)
         IntyNetworkManager.initialize(this, buildType = BuildConfig.BUILD_TYPE)
+
+        // 初始化缓存提供者并注入到DataModule
+        val chatCacheProvider = AgentCacheProviderImpl()
+        val recommendedCacheProvider = RecommendedAgentCacheProviderImpl()
+        DataModule.setAgentCacheProvider(chatCacheProvider)
+        DataModule.setRecommendedCacheProvider(recommendedCacheProvider)
+        LogUtils.i("IntelliMateApp - 数据层依赖注入初始化完成")
 
         // 立即初始化统一启动管理器（只做必要的登录判断，不阻塞）
         UnifiedStartupManager.initializeEssential(this)

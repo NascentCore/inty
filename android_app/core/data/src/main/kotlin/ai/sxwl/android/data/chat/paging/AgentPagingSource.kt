@@ -4,6 +4,7 @@ import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AgentInfoResponse
+import ai.sxwl.android.data.cache.AgentCacheProvider
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import androidx.paging.PagingSource
@@ -18,6 +19,7 @@ import kotlinx.coroutines.withContext
 class AgentPagingSource(
     private val useCache: Boolean = true,
     private val sortSeed: Int = IntySetting.randomSortSeed(),
+    private val cacheProvider: AgentCacheProvider? = null,
 ) : PagingSource<Int, AgentInfo>() {
 
     private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
@@ -36,23 +38,29 @@ class AgentPagingSource(
                 LogUtils.i("AgentPagingSource - 加载第${page}页，页面大小: $pageSize")
 
                 // 第一页特殊处理：优先使用缓存数据
-                if (page == INITIAL_PAGE && useCache) {
-                    // 暂时注释掉缓存逻辑，避免依赖问题
-                    // val cachedAgents = UnifiedStartupManager.getCurrentChatAgents()
-                    // if (cachedAgents.isNotEmpty()) {
-                    //     // 如果有缓存数据，返回缓存数据，同时后台加载网络数据
-                    //     if (shouldUpdateFromNetwork()) {
-                    //         // 后台静默刷新，不阻塞UI
-                    //         loadFromNetworkAsync(page, pageSize)
-                    //     }
-                    //
-                    //     // 返回缓存数据，假设有更多数据以支持分页
-                    //     return@withContext LoadResult.Page(
-                    //         data = cachedAgents,
-                    //         prevKey = null,
-                    //         nextKey = if (cachedAgents.isNotEmpty()) page + 1 else null,
-                    //     )
-                    // }
+                if (page == INITIAL_PAGE && useCache && cacheProvider != null) {
+                    val cachedAgents = cacheProvider.getCachedChatAgents()
+                    if (cachedAgents.isNotEmpty()) {
+                        // 过滤掉id为空的agent，避免key重复问题
+                        val validCachedAgents = cachedAgents.filter { it.id.isNotEmpty() }
+
+                        if (validCachedAgents.isNotEmpty()) {
+                            // 如果有缓存数据，返回缓存数据，同时后台加载网络数据
+                            if (cacheProvider.shouldUpdateFromNetwork()) {
+                                // 后台静默刷新，不阻塞UI
+                                loadFromNetworkAsync(page, pageSize)
+                            }
+
+                            // 关键修复：正确处理分页逻辑
+                            // 如果缓存数据足够一页，假设有更多数据；否则假设没有更多数据
+                            val hasMoreData = validCachedAgents.size >= pageSize
+                            return@withContext LoadResult.Page(
+                                data = validCachedAgents,
+                                prevKey = null,
+                                nextKey = if (hasMoreData) page + 1 else null,
+                            )
+                        }
+                    }
                 }
 
                 // 检查用户账户是否已就绪，如果未就绪则等待或返回空数据
@@ -83,18 +91,19 @@ class AgentPagingSource(
                 when (result) {
                     is NetworkResult.Success -> {
                         val agents = result.data.list ?: emptyList()
-                        val hasMore = agents.isNotEmpty() && agents.size >= pageSize
+                        // 过滤掉id为空的agent，避免key重复问题
+                        val validAgents = agents.filter { it.id.isNotEmpty() }
+                        val hasMore = validAgents.isNotEmpty() && validAgents.size >= pageSize
 
                         // 缓存第一页数据
-                        if (page == INITIAL_PAGE && agents.isNotEmpty()) {
-                            // 暂时注释掉缓存逻辑
-                            // AgentCacheManager.cacheChatAgents(agents)
-                            // UnifiedStartupManager.refreshChatAgents()
-                            LogUtils.i("AgentPagingSource - 缓存第一页数据: ${agents.size}个")
+                        if (page == INITIAL_PAGE && validAgents.isNotEmpty() && cacheProvider != null) {
+                            cacheProvider.cacheChatAgents(validAgents)
+                            cacheProvider.refreshChatAgents()
+                            LogUtils.i("AgentPagingSource - 缓存第一页数据: ${validAgents.size}个")
                         }
 
                         LoadResult.Page(
-                            data = agents,
+                            data = validAgents,
                             prevKey = if (page == INITIAL_PAGE) null else page - 1,
                             nextKey = if (hasMore) page + 1 else null,
                         )
@@ -150,11 +159,12 @@ class AgentPagingSource(
                 val result = loadFromNetwork(page, pageSize)
                 if (result is NetworkResult.Success) {
                     val agents = result.data.list ?: emptyList()
-                    if (agents.isNotEmpty()) {
-                        // 暂时注释掉缓存逻辑
-                        // AgentCacheManager.cacheChatAgents(agents)
-                        // UnifiedStartupManager.refreshChatAgents()
-                        LogUtils.i("AgentPagingSource - 后台刷新完成: ${agents.size}个")
+                    // 过滤掉id为空的agent，避免key重复问题
+                    val validAgents = agents.filter { it.id.isNotEmpty() }
+                    if (validAgents.isNotEmpty() && cacheProvider != null) {
+                        cacheProvider.cacheChatAgents(validAgents)
+                        cacheProvider.refreshChatAgents()
+                        LogUtils.i("AgentPagingSource - 后台刷新完成: ${validAgents.size}个")
                     }
                 }
             } catch (e: Exception) {

@@ -1,4 +1,4 @@
-package com.ai.intellimate.explore
+package ai.sxwl.android.data.explore.paging
 
 import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
@@ -9,11 +9,9 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.ai.intellimate.utils.UnifiedStartupManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -64,23 +62,13 @@ class ExplorePagingSource(
                     }
                 }
 
-                // 检查用户账户是否已就绪，如果未就绪则等待或返回空数据
-                if (!UnifiedStartupManager.isUserAccountReady()) {
-
-                    // 等待用户账户就绪，最多等待3秒
-                    var waitTime = 0
-                    while (!UnifiedStartupManager.isUserAccountReady() && waitTime < 3000) {
-                        delay(100)
-                        waitTime += 100
-                    }
-
-                    if (!UnifiedStartupManager.isUserAccountReady()) {
-                        return@withContext LoadResult.Page(
-                            data = emptyList(),
-                            prevKey = null,
-                            nextKey = null,
-                        )
-                    }
+                // 检查用户账户是否已就绪，如果未就绪则返回空数据
+                if (!IntySetting.isLogin()) {
+                    return@withContext LoadResult.Page(
+                        data = emptyList(),
+                        prevKey = null,
+                        nextKey = null,
+                    )
                 }
 
                 // 从网络加载数据
