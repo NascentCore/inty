@@ -1,4 +1,4 @@
-name: Build and deploy inty backend
+name: Build and deploy Inty backend
 
 on:
   push:
