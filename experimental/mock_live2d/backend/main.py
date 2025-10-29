@@ -23,18 +23,22 @@ app.mount("/images", StaticFiles(directory="images"), name="images")
 # Configure Gemini
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
+
 class ChatMessage(BaseModel):
     role: str  # "user" or "assistant"
     content: str
     image_url: Optional[str] = None
 
+
 class ChatRequest(BaseModel):
     message: str
     conversation_history: List[ChatMessage] = []
 
+
 class ChatResponse(BaseModel):
     message: str
     image_url: Optional[str] = None
+
 
 # Image database with sentiment labels
 IMAGE_DATABASE = {
@@ -47,32 +51,34 @@ IMAGE_DATABASE = {
     "worried": ["/images/worried1.jpg", "/images/worried2.jpg"],
 }
 
+
 def get_gemini_response(message: str, conversation_history: List[ChatMessage]) -> str:
     """Get response from Gemini API"""
-    model = genai.GenerativeModel('gemini-pro')
-    
+    model = genai.GenerativeModel("gemini-pro")
+
     # Build conversation context
     context = "你是一个友好的AI助手，请用中文回复用户的问题。"
-    
+
     # Add conversation history
     for msg in conversation_history[-10:]:  # Keep last 10 messages for context
         if msg.role == "user":
             context += f"\n用户: {msg.content}"
         else:
             context += f"\n助手: {msg.content}"
-    
+
     context += f"\n用户: {message}"
-    
+
     try:
         response = model.generate_content(context)
         return response.text
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gemini API error: {str(e)}")
 
+
 def analyze_sentiment_with_gemini(message: str) -> str:
     """Analyze sentiment of the message using Gemini"""
-    model = genai.GenerativeModel('gemini-pro')
-    
+    model = genai.GenerativeModel("gemini-pro")
+
     prompt = f"""
 请分析以下消息的情感，并从以下选项中选择最匹配的一个：
 happy, sad, angry, surprised, neutral, excited, worried
@@ -81,13 +87,21 @@ happy, sad, angry, surprised, neutral, excited, worried
 
 只返回一个情感标签，不要其他内容。
 """
-    
+
     try:
         response = model.generate_content(prompt)
         sentiment = response.text.strip().lower()
-        
+
         # Validate sentiment
-        valid_sentiments = ["happy", "sad", "angry", "surprised", "neutral", "excited", "worried"]
+        valid_sentiments = [
+            "happy",
+            "sad",
+            "angry",
+            "surprised",
+            "neutral",
+            "excited",
+            "worried",
+        ]
         if sentiment in valid_sentiments:
             return sentiment
         else:
@@ -96,6 +110,7 @@ happy, sad, angry, surprised, neutral, excited, worried
         print(f"Sentiment analysis error: {e}")
         return "neutral"
 
+
 def select_image(sentiment: str) -> Optional[str]:
     """Select an appropriate image based on sentiment"""
     if sentiment in IMAGE_DATABASE:
@@ -103,23 +118,23 @@ def select_image(sentiment: str) -> Optional[str]:
         return images[0]
     return None
 
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     """Main chat endpoint"""
     try:
         # Get response from Gemini
-        bot_response = get_gemini_response(request.message, request.conversation_history)
-        
+        bot_response = get_gemini_response(
+            request.message, request.conversation_history
+        )
+
         # Analyze sentiment of the bot's response
         sentiment = analyze_sentiment_with_gemini(bot_response)
-        
+
         # Select appropriate image
         image_url = select_image(sentiment)
-        
-        return ChatResponse(
-            message=bot_response,
-            image_url=image_url
-        )
+
+        return ChatResponse(message=bot_response, image_url=image_url)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -128,6 +143,8 @@ async def chat(request: ChatRequest):
 async def root():
     return {"message": "Chatbot with Image Selection Demo API"}
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

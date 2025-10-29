@@ -28,7 +28,13 @@ import { UserInfo } from "./components/UserInfo";
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
-type PageKey = "evaluation" | "history" | "chat" | "agents" | "live2d" | "settings";
+type PageKey =
+  | "evaluation"
+  | "history"
+  | "chat"
+  | "agents"
+  | "live2d"
+  | "settings";
 
 interface NavigationItem {
   key: PageKey;

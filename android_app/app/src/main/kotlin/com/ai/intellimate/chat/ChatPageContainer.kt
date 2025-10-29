@@ -142,7 +142,12 @@ fun ChatPageContainer(
             val canPrefetch = refreshState is LoadState.NotLoading
 
             // Guest用户限制：不进行预取加载
-            if (GuestLoginLimiter.isFormalUser() && pageState.currentPage >= thresholdIndex && notEnd && canPrefetch) {
+            if (
+                GuestLoginLimiter.isFormalUser() &&
+                    pageState.currentPage >= thresholdIndex &&
+                    notEnd &&
+                    canPrefetch
+            ) {
                 // 修复：使用更安全的预取方式
                 // 通过访问最后一个有效索引来触发Paging的append加载
                 try {
@@ -244,26 +249,23 @@ private fun NewUserGuide(
             val scope = rememberCoroutineScope()
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .noRippleClickable {
-                            // 只有在引导期间才响应点击
-                            if (isGuideActive) {
-                                scope.launch {
-                                    showHand = false
-                                    pageState.animateScrollToPage(initialPageIndex)
-                                    IntySetting.setShowGuested()
-                                    onGuideCompleted()
-                                    isGuideActive = false
-                                }
+                    Modifier.fillMaxSize().noRippleClickable {
+                        // 只有在引导期间才响应点击
+                        if (isGuideActive) {
+                            scope.launch {
+                                showHand = false
+                                pageState.animateScrollToPage(initialPageIndex)
+                                IntySetting.setShowGuested()
+                                onGuideCompleted()
+                                isGuideActive = false
                             }
                         }
+                    }
             ) {
                 // 背景渐变框
                 Box(
                     modifier =
-                        Modifier
-                            .align(Alignment.TopEnd)
+                        Modifier.align(Alignment.TopEnd)
                             .padding(top = 340.dp)
                             .size(210.dp, 40.dp)
                             .background(
@@ -279,8 +281,7 @@ private fun NewUserGuide(
                 // 手势图标
                 Image(
                     modifier =
-                        Modifier
-                            .align(Alignment.TopEnd)
+                        Modifier.align(Alignment.TopEnd)
                             .padding(top = 340.dp, end = 92.dp)
                             .size(112.dp),
                     painter = painterResource(R.drawable.scroll_hand),

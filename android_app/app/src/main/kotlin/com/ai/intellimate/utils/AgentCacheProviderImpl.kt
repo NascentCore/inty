@@ -4,11 +4,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.cache.AgentCacheProvider
 import ai.sxwl.android.data.store.IntySetting
 
-/**
- * Agent缓存提供者实现
- * 在app模块中实现core/data模块定义的接口
- * 解决跨模块依赖问题
- */
+/** Agent缓存提供者实现 在app模块中实现core/data模块定义的接口 解决跨模块依赖问题 */
 class AgentCacheProviderImpl : AgentCacheProvider {
 
     override suspend fun getCachedChatAgents(): List<AgentInfo> {

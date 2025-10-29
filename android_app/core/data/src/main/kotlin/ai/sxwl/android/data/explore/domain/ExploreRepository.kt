@@ -4,11 +4,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.paging.PagingData
 import kotlinx.coroutines.flow.Flow
 
-/**
- * Explore领域层接口
- * 定义探索页面相关的业务逻辑接口，不依赖具体实现
- * 遵循Clean Architecture的依赖倒置原则
- */
+/** Explore领域层接口 定义探索页面相关的业务逻辑接口，不依赖具体实现 遵循Clean Architecture的依赖倒置原则 */
 interface ExploreRepository {
 
     /** 获取推荐agents的分页数据流 */

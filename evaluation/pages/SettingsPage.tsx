@@ -115,9 +115,18 @@ export const SettingsPage: React.FC = () => {
               label="默认历史消息数量"
               rules={[
                 { required: true, message: "请输入默认历史消息数量" },
-                { type: "number", min: 1, max: 50, message: "请输入1-50之间的数字" },
+                {
+                  type: "number",
+                  min: 1,
+                  max: 50,
+                  message: "请输入1-50之间的数字",
+                },
               ]}
-              extra={<Text type="secondary">生成图片时默认使用的聊天历史消息数量</Text>}
+              extra={
+                <Text type="secondary">
+                  生成图片时默认使用的聊天历史消息数量
+                </Text>
+              }
             >
               <InputNumber
                 min={1}
@@ -149,4 +158,3 @@ export const SettingsPage: React.FC = () => {
 };
 
 export default SettingsPage;
-

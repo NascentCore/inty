@@ -9,11 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-/**
- * 聊天本地数据源
- * 负责管理聊天消息的本地缓存和状态
- * 遵循Clean Architecture的数据层模式
- */
+/** 聊天本地数据源 负责管理聊天消息的本地缓存和状态 遵循Clean Architecture的数据层模式 */
 class ChatLocalDataSource {
 
     private data class AgentChatSession(

@@ -4,14 +4,8 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.paging.PagingData
 import kotlinx.coroutines.flow.Flow
 
-/**
- * 获取推荐Agents用例
- * 封装获取推荐Agents的业务逻辑
- * 遵循Clean Architecture的UseCase模式
- */
-class GetRecommendAgentsUseCase(
-    private val exploreRepository: ExploreRepository
-) {
+/** 获取推荐Agents用例 封装获取推荐Agents的业务逻辑 遵循Clean Architecture的UseCase模式 */
+class GetRecommendAgentsUseCase(private val exploreRepository: ExploreRepository) {
 
     operator fun invoke(useCache: Boolean = true): Flow<PagingData<AgentInfo>> {
         return exploreRepository.getInitialRecommendAgents()

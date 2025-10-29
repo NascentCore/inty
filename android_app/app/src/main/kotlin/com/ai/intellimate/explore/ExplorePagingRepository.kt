@@ -31,22 +31,22 @@ class ExplorePagingRepository(
         sortSeed: Int = IntySetting.sortSeed(),
     ): Flow<PagingData<AgentInfo>> {
         return Pager(
-            config =
-                PagingConfig(
-                    pageSize = PAGE_SIZE,
-                    prefetchDistance = PREFETCH_DISTANCE,
-                    enablePlaceholders = ENABLE_PLACEHOLDERS,
-                    initialLoadSize = PAGE_SIZE,
-                    maxSize = PAGE_SIZE * ExploreConstants.MAX_CACHE_PAGES, // 最大缓存页数
-                ),
-            pagingSourceFactory = {
-                ExplorePagingSource(
-                    useCache = useCache,
-                    sortSeed = sortSeed,
-                    cacheProvider = cacheProvider
-                )
-            },
-        )
+                config =
+                    PagingConfig(
+                        pageSize = PAGE_SIZE,
+                        prefetchDistance = PREFETCH_DISTANCE,
+                        enablePlaceholders = ENABLE_PLACEHOLDERS,
+                        initialLoadSize = PAGE_SIZE,
+                        maxSize = PAGE_SIZE * ExploreConstants.MAX_CACHE_PAGES, // 最大缓存页数
+                    ),
+                pagingSourceFactory = {
+                    ExplorePagingSource(
+                        useCache = useCache,
+                        sortSeed = sortSeed,
+                        cacheProvider = cacheProvider
+                    )
+                },
+            )
             .flow
     }
 

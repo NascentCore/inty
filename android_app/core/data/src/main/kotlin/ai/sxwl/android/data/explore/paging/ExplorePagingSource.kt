@@ -69,7 +69,7 @@ class ExplorePagingSource(
                                 } else {
                                     validCachedAgents.isNotEmpty() // 正式用户假设有更多数据
                                 }
-                            
+
                             return@withContext LoadResult.Page(
                                 data = validCachedAgents,
                                 prevKey = null,
@@ -98,14 +98,19 @@ class ExplorePagingSource(
                         val validAgents = agents.filter { it.id.isNotEmpty() }
 
                         // Guest用户限制：只允许第一页有更多数据
-                        val hasMore = if (IntySetting.isLogin() && IntySetting.isGuestUser()) {
-                            false // Guest用户没有更多数据
-                        } else {
-                            validAgents.isNotEmpty() && validAgents.size >= pageSize
-                        }
+                        val hasMore =
+                            if (IntySetting.isLogin() && IntySetting.isGuestUser()) {
+                                false // Guest用户没有更多数据
+                            } else {
+                                validAgents.isNotEmpty() && validAgents.size >= pageSize
+                            }
 
                         // 缓存第一页数据
-                        if (page == INITIAL_PAGE && validAgents.isNotEmpty() && cacheProvider != null) {
+                        if (
+                            page == INITIAL_PAGE &&
+                                validAgents.isNotEmpty() &&
+                                cacheProvider != null
+                        ) {
                             cacheProvider.cacheRecommendedAgents(validAgents)
                             cacheProvider.refreshRecommendedAgents()
                         }
@@ -116,7 +121,6 @@ class ExplorePagingSource(
                             nextKey = if (hasMore) page + 1 else null,
                         )
                     }
-
                     is NetworkResult.Error -> {
                         LogUtils.e("ExplorePagingSource - 网络加载失败: ${result.error}")
                         LoadResult.Error(Exception(result.error))
@@ -151,7 +155,6 @@ class ExplorePagingSource(
                 is HttpResult.Success -> {
                     NetworkResult.Success(result.data)
                 }
-
                 is HttpResult.Failure -> {
                     NetworkResult.Error(result.message)
                 }
@@ -181,7 +184,6 @@ class ExplorePagingSource(
             }
         }
     }
-
 }
 
 /** 网络请求结果 */

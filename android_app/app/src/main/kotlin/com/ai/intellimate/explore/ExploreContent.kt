@@ -89,11 +89,12 @@ fun ExploreContent(
         derivedStateOf {
             val layoutInfo = gridState.layoutInfo
             // 找到最后一个可见的agent item（排除加载状态指示器和Spacer）
-            val agentItems = layoutInfo.visibleItemsInfo.filter { itemInfo ->
-                // 计算agent items的数量：totalItemsCount - 2（加载状态 + Spacer）
-                val agentItemCount = lazyPagingItems?.itemCount ?: 0
-                itemInfo.index < agentItemCount
-            }
+            val agentItems =
+                layoutInfo.visibleItemsInfo.filter { itemInfo ->
+                    // 计算agent items的数量：totalItemsCount - 2（加载状态 + Spacer）
+                    val agentItemCount = lazyPagingItems?.itemCount ?: 0
+                    itemInfo.index < agentItemCount
+                }
             val lastVisibleAgentIndex = agentItems.lastOrNull()?.index ?: -1
             lastVisibleAgentIndex >= 19 // 第20个agent item，索引为19
         }
@@ -128,10 +129,10 @@ fun ExploreContent(
     LaunchedEffect(isSpacerVisible, isAtPageEnd, isScrollingDown) {
         if (
             isSpacerVisible &&
-            isAtPageEnd &&
-            isScrollingDown &&
-            hasUserScrolled &&
-            GuestLoginLimiter.shouldLimitGuest()
+                isAtPageEnd &&
+                isScrollingDown &&
+                hasUserScrolled &&
+                GuestLoginLimiter.shouldLimitGuest()
         ) {
             // 触发guest登录拦截
             GuestLoginLimiter.checkAndNavigateToLogin(context)
@@ -149,8 +150,8 @@ fun ExploreContent(
                 // 首次进入时使用缓存数据，不应该显示加载更多loading
                 if (
                     currentTime - lastScrollTime < 1000 &&
-                    lazyPagingItems.itemCount > 0 &&
-                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
+                        lazyPagingItems.itemCount > 0 &&
+                        lazyPagingItems.loadState.refresh is LoadState.NotLoading
                 ) {
                     showLoadMoreLoading = true
                     // 延迟隐藏loading
@@ -212,8 +213,7 @@ fun ExploreContent(
                         // 显示加载占位符
                         ShimmerPlaceholder(
                             modifier =
-                                Modifier
-                                    .fillMaxWidth()
+                                Modifier.fillMaxWidth()
                                     .height(200.dp)
                                     .clip(RoundedCornerShape(8.dp))
                         )
@@ -234,11 +234,7 @@ fun ExploreContent(
 /** 空状态指示器 */
 @Composable
 private fun EmptyStateIndicator() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .height(200.dp), contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
     }
 }
