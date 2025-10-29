@@ -106,7 +106,7 @@ object FirebaseManager {
                     "free_limit_reached" to 1.0, // 达到免费限制
 
                     // 🟡 性能相关事件 - 保持现有采样配置
-                    "user_interaction" to if (AppUtils.isAppDebug()) 1.0 else 0.1, // 调试100%，发布10%
+                    "user_interaction" to if (AppUtils.isAppDebug()) 1.0 else 1.0, // 调试100%，发布100%
                     Events.VOICE_PLAYBACK_START to if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
                     "slow_request" to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     "network_retry" to if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
