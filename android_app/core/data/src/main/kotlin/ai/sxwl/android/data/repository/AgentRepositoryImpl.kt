@@ -1,6 +1,7 @@
 package ai.sxwl.android.data.repository
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.cache.AgentCacheProvider
 import ai.sxwl.android.data.chat.paging.AgentPagingSource
 import ai.sxwl.android.data.domain.AgentRepository
 import ai.sxwl.android.data.store.IntySetting
@@ -11,7 +12,9 @@ import androidx.paging.PagingData
 import kotlinx.coroutines.flow.Flow
 
 /** Agent仓库实现 作为Domain层和Data层之间的桥梁 */
-class AgentRepositoryImpl : AgentRepository {
+class AgentRepositoryImpl(
+    private val cacheProvider: AgentCacheProvider? = null,
+) : AgentRepository {
 
     companion object {
         private const val PAGE_SIZE = 20
@@ -31,7 +34,11 @@ class AgentRepositoryImpl : AgentRepository {
                         initialLoadSize = PAGE_SIZE,
                     ),
                 pagingSourceFactory = {
-                    AgentPagingSource(useCache = useCache, sortSeed = sortSeed)
+                    AgentPagingSource(
+                        useCache = useCache,
+                        sortSeed = sortSeed,
+                        cacheProvider = cacheProvider
+                    )
                 },
             )
             .flow

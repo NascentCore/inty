@@ -1,5 +1,6 @@
 package ai.sxwl.android.data.di
 
+import ai.sxwl.android.data.cache.AgentCacheProvider
 import ai.sxwl.android.data.chat.local.ChatLocalDataSource
 import ai.sxwl.android.data.chat.remote.ChatRemoteDataSource
 import ai.sxwl.android.data.domain.AgentRepository
@@ -18,11 +19,20 @@ object ChatModule {
     private val _chatLocalDataSource: ChatLocalDataSource by lazy { ChatLocalDataSource() }
     private val _chatRemoteDataSource: ChatRemoteDataSource by lazy { ChatRemoteDataSource() }
 
+    // Cache Provider (injected from app module)
+    private var _cacheProvider: AgentCacheProvider? = null
+
+    fun setCacheProvider(cacheProvider: AgentCacheProvider) {
+        _cacheProvider = cacheProvider
+    }
+
     // Repositories
     private val _chatRepository: ChatRepository by lazy {
         ChatRepositoryImpl(_chatLocalDataSource, _chatRemoteDataSource)
     }
-    private val _agentRepository: AgentRepository by lazy { AgentRepositoryImpl() }
+    private val _agentRepository: AgentRepository by lazy {
+        AgentRepositoryImpl(_cacheProvider)
+    }
 
     // UseCases
     val sendMessageUseCase: SendMessageUseCase by lazy { SendMessageUseCase(_chatRepository) }
