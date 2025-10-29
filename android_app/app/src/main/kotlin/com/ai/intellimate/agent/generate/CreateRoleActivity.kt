@@ -425,13 +425,15 @@ private fun CreateRolePage(
                 isGeneratingAvatar = currentGenerationStatus
             }
 
-            // 只在状态发生变化时记录，减少日志噪音
+            // 头像状态管理：多选模式优先，单选模式备选
             val currentUrls = AvatarManager.getCurrentAvatarUrls()
             if (currentUrls.isNotEmpty() && currentUrls != avatarUrls) {
+                // 多选模式：AI生成了多个头像变体
                 avatarUrls = currentUrls
                 selectedImageIndex = AvatarManager.getSelectedImageIndex()
                 avatarUrl = null
             } else {
+                // 单选模式：单个头像（编辑模式/用户上传/AI生成单个头像）
                 val currentUrl = AvatarManager.getCurrentAvatarUrl()
                 if (currentUrl != null && currentUrl != avatarUrl) {
                     avatarUrl = currentUrl
@@ -901,16 +903,23 @@ private fun AvatarUploadSection(
                 isGenerating -> {
                     ThreeDotLoadingAnimation()
                 }
+                // 多选模式：AI生成了多个头像变体，用户可从中选择
                 avatarUrls.isNotEmpty() -> {
                     val displayUrl = avatarUrls.getOrNull(selectedIndex) ?: avatarUrls.first()
+                    val previewUrl =
+                        getCdnImageUrl(
+                            displayUrl,
+                            width = Config.TextToImage.Preview.WIDTH,
+                            quality = Config.TextToImage.Preview.QUALITY,
+                        )
                     AsyncImage(
-                        model = displayUrl,
+                        model = previewUrl ?: displayUrl,
                         contentDescription = stringResource(R.string.content_desc_selected_avatar),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
-                                "AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl"
+                                "AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl, preview: $previewUrl"
                             )
                         },
                         onError = {
@@ -920,15 +929,24 @@ private fun AvatarUploadSection(
                         },
                     )
                 }
+                // 单选模式：单个头像（编辑模式/用户上传/AI生成单个头像）
                 avatarUrl != null -> {
+                    LogUtils.d("AvatarUploadSection: Displaying single avatar with URL: $avatarUrl")
+                    
+                    val previewUrl =
+                        getCdnImageUrl(
+                            avatarUrl,
+                            width = Config.TextToImage.Preview.WIDTH,
+                            quality = Config.TextToImage.Preview.QUALITY,
+                        )
                     AsyncImage(
-                        model = avatarUrl,
+                        model = previewUrl ?: avatarUrl,
                         contentDescription = stringResource(R.string.content_desc_generated_avatar),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
-                                "AvatarUploadSection: Avatar image loaded successfully: $avatarUrl"
+                                "AvatarUploadSection: Avatar image loaded successfully: $avatarUrl, preview: $previewUrl"
                             )
                         },
                         onError = {
@@ -1241,6 +1259,21 @@ private fun CreateButton(isLoading: Boolean, isEditMode: Boolean = false, onClic
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White,
             )
+        }
+    }
+}
+
+/**
+ * Configuration object for text-to-image preview settings
+ * @GeneratedByAI - AI generated configuration for image scaling parameters
+ */
+object Config {
+    object TextToImage {
+        object Preview {
+            /** Preview image width for CDN scaling */
+            const val WIDTH = 400
+            /** Preview image quality for CDN scaling (0-100) */
+            const val QUALITY = 60
         }
     }
 }
