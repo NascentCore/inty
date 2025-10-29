@@ -10,14 +10,14 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.perf.FirebasePerformance
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics和Performance的初始化和使用
@@ -59,7 +59,7 @@ object FirebaseManager {
             analyticsEnabled = true,
             crashlyticsEnabled = true,
             performanceEnabled = true,
-            // 优化采样配置 - 减少低价值事件上报
+            // 优化采样配置 - 业务数据点100%采样，性能事件保持现有配置
             disabledEvents =
                 setOf(
                     // 完全禁用低价值事件
@@ -69,23 +69,68 @@ object FirebaseManager {
                 ),
             samplingRates =
                 mapOf(
-                    // 调试模式下提高采样率，便于调试
-                    "user_interaction" to if (AppUtils.isAppDebug()) 1.0 else 0.1, // 调试100%，发布10%
-                    Events.MESSAGE_SENT to if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
-                    "explore_page_view" to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
-                    "voice_playback_start" to
-                        if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
+                    // 🔴 业务数据点 - 100%采样（关键业务事件）
+                    Events.APP_OPEN to 1.0, // 应用启动
+                    Events.LOGIN to 1.0, // 用户登录
+                    Events.SIGN_UP to 1.0, // 用户注册
+                    Events.SCREEN_VIEW to 1.0, // 页面访问
+                    Events.SELECT_CONTENT to 1.0, // 内容选择
+                    Events.SHARE to 1.0, // 分享功能
+                    Events.SEARCH to 1.0, // 搜索功能
+                    Events.PURCHASE to 1.0, // 购买事件
+                    Events.USER_LOGIN to 1.0, // 用户登录
+                    Events.USER_LOGOUT to 1.0, // 用户登出
+                    Events.CHAT_STARTED to 1.0, // 聊天开始
+                    Events.MESSAGE_SENT to 1.0, // 消息发送
+                    Events.AI_RESPONSE_RECEIVED to 1.0, // AI回复接收
+                    Events.PROFILE_UPDATED to 1.0, // 个人资料更新
+                    Events.SETTINGS_CHANGED to 1.0, // 设置变更
+                    Events.AGENT_SWITCH to 1.0, // Agent切换
+                    Events.SUBSCRIPTION_START to 1.0, // 订阅开始
+                    Events.FREE_LIMIT_HIT to 1.0, // 达到免费限制
 
-                    // 高价值事件 - 保持100%采样
-                    // 错误、失败、认证、页面访问等关键事件保持100%
+                    // 🔴 错误和失败事件 - 100%采样
+                    "auth_failure" to 1.0, // 认证失败
+                    "app_error" to 1.0, // 应用错误
+                    "message_send_failure" to 1.0, // 消息发送失败
+                    "network_final_failure" to 1.0, // 网络请求最终失败
+                    "request_failure" to 1.0, // 请求失败
+                    "very_slow_request" to 1.0, // 极慢请求
+
+                    // 🔴 页面追踪事件 - 100%采样
+                    "page_leave" to 1.0, // 页面离开
+                    "explore_page_view" to 1.0, // 探索页面访问
+                    "chat_session_start" to 1.0, // 聊天会话开始
+                    "chat_session_end" to 1.0, // 聊天会话结束
+                    "message_send_success" to 1.0, // 消息发送成功
+                    "free_limit_reached" to 1.0, // 达到免费限制
+
+                    // 🟡 性能相关事件 - 保持现有采样配置
+                    "user_interaction" to if (AppUtils.isAppDebug()) 1.0 else 0.1, // 调试100%，发布10%
+                    Events.VOICE_PLAYBACK_START to if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
+                    "slow_request" to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                    "network_retry" to if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
+                    "network_request" to if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
+
+                    // 🟡 性能指标事件 - 保持现有采样配置
+                    Events.AI_RESPONSE_TIME to if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
+                    Events.TTS_GENERATION_TIME to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                    Events.VOICE_PLAYBACK_TIME to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                    Events.IMAGE_LOAD_TIME to if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
+                    Events.PAGE_LOAD_TIME to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                    Events.DATABASE_OPERATION_TIME to if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
                 ),
             minIntervalMsPerEvent =
                 mapOf(
-                    // 调试模式下降低限频，便于调试
-                    "user_interaction" to
-                        if (AppUtils.isAppDebug()) 1_000L else 10_000L, // 调试1秒，发布10秒
-                    Events.MESSAGE_SENT to
-                        if (AppUtils.isAppDebug()) 500L else 2_000L, // 调试0.5秒，发布2秒
+                    // 🔴 业务数据点 - 无限制或很宽松的限频
+                    Events.MESSAGE_SENT to if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
+                    Events.VOICE_PLAYBACK_START to if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
+
+                    // 🟡 性能相关事件 - 保持现有限频配置
+                    "user_interaction" to if (AppUtils.isAppDebug()) 1_000L else 10_000L, // 调试1秒，发布10秒
+                    "slow_request" to if (AppUtils.isAppDebug()) 2_000L else 5_000L, // 调试2秒，发布5秒
+                    "network_retry" to if (AppUtils.isAppDebug()) 1_000L else 3_000L, // 调试1秒，发布3秒
+                    "network_request" to if (AppUtils.isAppDebug()) 500L else 2_000L, // 调试0.5秒，发布2秒
                 ),
         )
 
