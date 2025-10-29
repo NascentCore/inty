@@ -1,4 +1,4 @@
-# user_privilege
+# user_privilege - 用户权限
 
 APIs for managing user's privileges:
 

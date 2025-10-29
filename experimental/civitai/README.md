@@ -1,4 +1,4 @@
-# Civitai Model Parser
+# Civitai Model Parser - 模型解析器
 
 A minimal Python parser to extract key information from Civitai model pages.
 

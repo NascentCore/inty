@@ -1,4 +1,4 @@
-# InTy
+# InTy - AI 智能伴侣平台
 
 ```text
 IntelliMate: Ultimate companionship, reimagined with AI

@@ -1,4 +1,4 @@
-# db
+# db - 数据库
 
 These are for accessing database, it's different from models, which defines tables.
 Tables are critical for alembic to work correctly.

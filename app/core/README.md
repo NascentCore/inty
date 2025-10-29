@@ -1,4 +1,4 @@
-# core
+# core - 核心模块
 
 ## Cursor Summary
 

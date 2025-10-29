@@ -1,4 +1,4 @@
-# Agent Tags Migration
+# Agent Tags Migration - 标签迁移
 
 这个工具用于从智能体的 `personality` 字段中提取标签信息，并将其迁移到 `tags` 字段中。
 

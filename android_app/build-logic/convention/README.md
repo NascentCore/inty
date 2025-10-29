@@ -1,4 +1,4 @@
-# convention
+# convention - 构建约定
 
 ## Cursor Summary
 

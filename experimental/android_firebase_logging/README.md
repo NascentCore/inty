@@ -1,4 +1,4 @@
-# Android Firebase 远程日志采集示例
+# Android Firebase 远程日志采集示例 - 日志采集
 
 这是一个基于 Firebase 的 Android 远程日志采集示例应用，展示如何集成 Firebase Analytics 和 Crashlytics 来收集应用日志和崩溃信息。
 

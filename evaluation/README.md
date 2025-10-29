@@ -1,4 +1,4 @@
-# evaluation
+# evaluation - 评测运营工具
 
 Inty Evaluation（评测与运营工具），基于 React/TypeScript 与 Vite 构建。
 当前前端在构建后被拷贝至后端 `FastAPI` 静态目录，并由后端统一在 `/evaluation` 路由提供访问。

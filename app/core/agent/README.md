@@ -1,4 +1,4 @@
-# agent
+# agent - 智能体核心
 
 ## Cursor Summary
 

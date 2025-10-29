@@ -1,4 +1,4 @@
-# Alembic revisions
+# Alembic revisions - 数据库版本
 
 @donggang
 
