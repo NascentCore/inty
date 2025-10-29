@@ -1,83 +1,88 @@
 /**
  * MessageToImageIcon component for generating images from message content
+ * 使用新的聊天生图接口，基于消息ID生成与角色一致的图片
  */
 
 import React, { useState } from "react";
 import { Button, Tooltip, Modal, Image, Spin, message } from "antd";
 import { PictureOutlined, LoadingOutlined } from "@ant-design/icons";
-import { imageApi } from "../services/api";
+import { chatImageApi } from "../services/api";
 
 interface MessageToImageIconProps {
-  messageContent: string;
+  messageId: number; // 消息ID（必填）
+  agentId: string; // Agent ID（必填）
   disabled?: boolean;
   size?: "small" | "middle" | "large";
   onImageGenerated?: (imageUrl: string) => void;
 }
 
 export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
-  messageContent,
+  messageId,
+  agentId,
   disabled = false,
   size = "middle",
   onImageGenerated,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
   const handleGenerateImage = async () => {
-    if (!messageContent.trim()) {
-      message.warning("消息内容为空，无法生成图片");
-      return;
-    }
-
     setLoading(true);
     try {
       // 创建带超时的 Promise
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
           reject(new Error("图片生成超时，请稍后重试"));
-        }, 20000); // 20秒超时
+        }, 30000); // 30秒超时
       });
 
-      const apiPromise = imageApi.textToImage({
-        prompt: messageContent,
-        enhance_prompt: false, // Don't enhance for message content
-        count: 1, // Generate only 1 image
+      const apiPromise = chatImageApi.generateImage(agentId, {
+        message_id: messageId,
+        history_count: 10, // 使用最近10条消息作为上下文
       });
 
       // 使用 Promise.race 来实现超时控制
-      const response = (await Promise.race([apiPromise, timeoutPromise])) as {
-        urls: string[];
-        count: number;
-        format: string;
-        remaining_usage: {
-          used_count: number;
-          limit: number;
+      const response = await Promise.race([
+        apiPromise,
+        timeoutPromise,
+      ]) as {
+        image_url: string;
+        image_metadata: {
+          width: number;
+          height: number;
+          format: string;
         };
-        rai_filtered_count?: number;
-        rai_reasons?: string[];
+        prompt: string;
+        message_id: number;
       };
 
-      if (response && response.urls && response.urls.length > 0) {
-        const imageUrl = response.urls[0]; // 取第一张图片
+      if (response && response.image_url) {
+        const imageUrl = response.image_url;
         if (onImageGenerated) {
           // 如果提供了回调函数，调用它来在聊天窗口中显示图片
           onImageGenerated(imageUrl);
           message.success("图片生成成功！");
         } else {
           // 否则使用模态框显示（向后兼容）
-          setGeneratedImages(response.urls);
+          setGeneratedImage(imageUrl);
           setModalVisible(true);
           message.success("图片生成成功！");
         }
       } else {
         message.error("图片生成失败：未返回有效图片");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Image generation error:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "图片生成失败，请稍后重试";
-      message.error(errorMessage);
+      
+      // 处理特定错误
+      if (error?.response?.status === 400) {
+        message.error("只能对最后一条AI回复生成图片");
+      } else {
+        const errorMessage =
+          error instanceof Error ? error.message : "图片生成失败，请稍后重试";
+        message.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -85,7 +90,7 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
 
   const handleModalClose = () => {
     setModalVisible(false);
-    setGeneratedImages([]);
+    setGeneratedImage(null);
   };
 
   const buttonSize =
@@ -93,7 +98,7 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
 
   return (
     <>
-      <Tooltip title="根据消息内容生成图片">
+      <Tooltip title="根据消息生成与角色一致的图片">
         <Button
           type="text"
           icon={loading ? <LoadingOutlined /> : <PictureOutlined />}
@@ -119,23 +124,17 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
         centered
       >
         <div style={{ textAlign: "center" }}>
-          {generatedImages.length > 0 ? (
-            <div>
-              {generatedImages.map((url, index) => (
-                <div key={index} style={{ marginBottom: 16 }}>
-                  <Image
-                    src={url}
-                    alt={`Generated image ${index + 1}`}
-                    style={{ maxWidth: "100%", maxHeight: "400px" }}
-                    placeholder={
-                      <div style={{ textAlign: "center", padding: "50px" }}>
-                        <Spin size="large" />
-                      </div>
-                    }
-                  />
+          {generatedImage ? (
+            <Image
+              src={generatedImage}
+              alt="Generated image"
+              style={{ maxWidth: "100%", maxHeight: "400px" }}
+              placeholder={
+                <div style={{ textAlign: "center", padding: "50px" }}>
+                  <Spin size="large" />
                 </div>
-              ))}
-            </div>
+              }
+            />
           ) : (
             <div style={{ padding: "50px" }}>
               <Spin size="large" />

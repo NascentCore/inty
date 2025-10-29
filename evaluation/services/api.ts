@@ -739,29 +739,31 @@ export const chatApi = {
       size?: number;
     },
   ): Promise<{
-    chat: {
+    chat_info: {
       id: string;
       agent_id: string;
       user_id: string;
-      is_active: boolean;
       created_at: string;
       updated_at: string;
     };
-    agent: {
-      id: string;
-      name: string;
-      avatar?: string;
-      description?: string;
-    };
     messages: Array<{
-      content: string;
+      id?: number;
+      role: "user" | "assistant";
       sender_type: "USER" | "AI";
+      content: string;
       created_at: string;
+      timestamp: string;
+      type?: "text" | "image";
+      image_url?: string;
     }>;
-    total: number;
-    page: number;
-    size: number;
-    has_more: boolean;
+    pagination: {
+      total: number;
+      limit: number;
+      offset: number;
+      page: number;
+      has_more: boolean;
+      total_pages: number;
+    };
   }> => apiClient.get(`/chats/agents/${agentId}/detail`, params),
 
   // 获取轻量级消息列表
@@ -777,6 +779,8 @@ export const chatApi = {
       role: "user" | "assistant";
       content: string;
       timestamp: string;
+      type?: "text" | "image";
+      image_url?: string;
     }>;
     total: number;
     limit: number;
@@ -903,6 +907,46 @@ export const imageApi = {
 };
 
 // =============================================================================
+// 聊天图片生成API
+// =============================================================================
+
+export const chatImageApi = {
+  // 生成聊天图片
+  generateImage: (
+    agentId: string,
+    data: {
+      message_id: number; // 必填：要生成图片的消息ID
+      history_count?: number;
+      request_id?: string;
+    }
+  ): Promise<{
+    image_url: string;
+    image_metadata: {
+      width: number;
+      height: number;
+      format: string;
+    };
+    prompt: string;
+    message_id: number;
+  }> => apiClient.post(`/chats/agents/${agentId}/generate-image`, data),
+
+  // 获取图片生成配置
+  getConfig: (): Promise<{
+    prompt_template: string;
+    default_history_count: number;
+  }> => apiClient.get("/ai/agents/image-generation/config"),
+
+  // 更新图片生成配置（仅超级用户）
+  updateConfig: (config: {
+    prompt_template?: string;
+    default_history_count?: number;
+  }): Promise<{
+    prompt_template: string;
+    default_history_count: number;
+  }> => apiClient.put("/ai/agents/image-generation/config", config),
+};
+
+// =============================================================================
 // 导出默认API实例
 // =============================================================================
 
@@ -917,6 +961,7 @@ export default {
   users: userApi,
   voices: voiceApi,
   images: imageApi,
+  chatImage: chatImageApi,
   inty: intyClient,
   WebSocketManager,
   // 获取 Inty 客户端的函数，确保只有在有 API Key 时才返回客户端

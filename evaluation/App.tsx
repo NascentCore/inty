@@ -13,12 +13,14 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   BgColorsOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
 import { ChatPage } from "./pages/ChatPage";
 import { Live2DEmotionChatDemo } from "./pages/Live2DEmotionChatDemo";
 import AgentManagePage from "./pages/AgentManagePage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
 import { ApiKeyModal } from "./components/ApiKeyModal";
 import { UserInfo } from "./components/UserInfo";
@@ -26,7 +28,7 @@ import { UserInfo } from "./components/UserInfo";
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
-type PageKey = "evaluation" | "history" | "chat" | "agents" | "live2d";
+type PageKey = "evaluation" | "history" | "chat" | "agents" | "live2d" | "settings";
 
 interface NavigationItem {
   key: PageKey;
@@ -150,6 +152,12 @@ const AppContent: React.FC = () => {
       label: "评测记录",
       description: "查看历史评测会话和结果",
     },
+    {
+      key: "settings",
+      icon: <SettingOutlined />,
+      label: "系统设置",
+      description: "配置图片生成等系统参数",
+    },
   ];
 
   // 获取页面标题
@@ -165,6 +173,8 @@ const AppContent: React.FC = () => {
         return "Live2D 情绪聊天 (Gemini Demo)";
       case "agents":
         return "智能体管理";
+      case "settings":
+        return "系统设置";
       default:
         return "智能体评测系统";
     }
@@ -187,6 +197,8 @@ const AppContent: React.FC = () => {
         return <Live2DEmotionChatDemo />;
       case "agents":
         return <AgentManagePage />;
+      case "settings":
+        return <SettingsPage />;
 
       default:
         return null;

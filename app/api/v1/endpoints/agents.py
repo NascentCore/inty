@@ -35,6 +35,18 @@ from app.utils.image import AspectRatio, ImageFormat
 router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 
 
+async def get_current_superuser(
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> schemas.User:
+    """验证当前用户是否为超级管理员"""
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="只有超级用户才能访问此接口",
+        )
+    return current_user
+
+
 @router.get(
     "/",
     response_model=schemas.APIResponse[List[schemas.Agent]],
@@ -844,3 +856,72 @@ async def get_openrouter_models(
     except Exception as e:
         logger.error(f"获取OpenRouter模型失败: {str(e)}")
         return schemas.APIResponse.error(message=f"获取OpenRouter模型失败: {str(e)}")
+
+
+@router.get(
+    "/image-generation/config",
+    response_model=schemas.APIResponse[Dict[str, Any]],
+    summary="获取图片生成配置",
+    description="获取当前图片生成的提示词模板和默认参数配置",
+    tags=["inty-eval"],
+)
+async def get_image_generation_config(
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """获取图片生成配置"""
+    try:
+        config = {
+            "prompt_template": global_config_loaded_from_config_yaml.agent.image_generation_prompt_template,
+            "default_history_count": global_config_loaded_from_config_yaml.agent.image_generation_default_history_count,
+        }
+
+        logger.debug(f"用户 {current_user.id} 获取图片生成配置")
+        return schemas.APIResponse.success(data=config)
+
+    except Exception as e:
+        logger.error(f"获取图片生成配置失败: {str(e)}")
+        return schemas.APIResponse.error(message=f"获取图片生成配置失败: {str(e)}")
+
+
+@router.put(
+    "/image-generation/config",
+    response_model=schemas.APIResponse[Dict[str, Any]],
+    summary="更新图片生成配置",
+    description="更新图片生成的提示词模板和默认参数配置（仅超级用户）",
+    tags=["inty-eval"],
+)
+async def update_image_generation_config(
+    config: Dict[str, Any],
+    current_user: schemas.User = Depends(get_current_superuser),
+) -> Any:
+    """
+    更新图片生成配置（仅超级用户）
+
+    注意：此接口更新内存中的配置，重启后会恢复到config.yaml中的值。
+    如需持久化，请直接修改config.yaml文件。
+    """
+    try:
+        # 更新内存中的配置
+        if "prompt_template" in config:
+            global_config_loaded_from_config_yaml.agent.image_generation_prompt_template = config[
+                "prompt_template"
+            ]
+
+        if "default_history_count" in config:
+            global_config_loaded_from_config_yaml.agent.image_generation_default_history_count = config[
+                "default_history_count"
+            ]
+
+        logger.info(f"超级用户 {current_user.id} 更新了图片生成配置")
+
+        # 返回更新后的配置
+        updated_config = {
+            "prompt_template": global_config_loaded_from_config_yaml.agent.image_generation_prompt_template,
+            "default_history_count": global_config_loaded_from_config_yaml.agent.image_generation_default_history_count,
+        }
+
+        return schemas.APIResponse.success(data=updated_config)
+
+    except Exception as e:
+        logger.error(f"更新图片生成配置失败: {str(e)}")
+        return schemas.APIResponse.error(message=f"更新图片生成配置失败: {str(e)}")

@@ -293,3 +293,26 @@ export interface Voice {
   available_for_tiers?: string[];
   high_quality_base_model_ids?: string[];
 }
+
+// 图片生成相关类型
+export interface ChatImageGenerationRequest {
+  message_id: number; // 必填：要生成图片的消息ID
+  history_count?: number;
+  request_id?: string;
+}
+
+export interface ChatImageGenerationResponse {
+  image_url: string;
+  image_metadata: {
+    width: number;
+    height: number;
+    format: string;
+  };
+  prompt: string;
+  message_id: number;
+}
+
+export interface ImageGenerationConfig {
+  prompt_template: string;
+  default_history_count: number;
+}

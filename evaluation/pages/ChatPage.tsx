@@ -62,6 +62,8 @@ interface ChatMessage {
   content: string;
   timestamp: string;
   remoteId?: string; // 数据库消息ID，用于删除和重发功能
+  type?: "text" | "image"; // 消息类型：文本或图片
+  image_url?: string; // 图片URL（仅图片消息）
 }
 
 export const ChatPage: React.FC = () => {
@@ -126,6 +128,65 @@ export const ChatPage: React.FC = () => {
   const [resending, setResending] = useState<string | null>(null);
   const [clearing, setClearing] = useState<string | null>(null);
 
+  // 获取最后一条有效的AI消息的索引
+  const getLastAssistantMessageIndex = useCallback(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (
+        msg.role === "assistant" &&
+        msg.remoteId &&
+        !msg.remoteId.startsWith("assistant_") &&
+        !msg.remoteId.startsWith("error_") &&
+        !msg.remoteId.startsWith("remote_")
+      ) {
+        return i;
+      }
+    }
+    return -1;
+  }, [messages]);
+
+  // 刷新当前会话的消息列表
+  const refreshMessages = useCallback(async () => {
+    if (!selectedAgent?.id) {
+      return;
+    }
+
+    try {
+      const messagesData = await api.chat.getMessages(selectedAgent.id, {
+        page: 1,
+        size: 100,
+      });
+
+      if (messagesData.messages && messagesData.messages.length > 0) {
+        const convertedMessages: ChatMessage[] = messagesData.messages.map(
+          (msg, index) => ({
+            id: `msg_${selectedAgent.id}_${index}_${Date.now()}`,
+            role: msg.role,
+            content: msg.content || "",
+            timestamp: msg.timestamp,
+            remoteId: msg.id.toString(),
+            type: msg.type || "text",
+            image_url: msg.image_url,
+          }),
+        );
+
+        // 去重：根据 remoteId 去除重复消息
+        const uniqueMessages = convertedMessages.filter(
+          (msg, index, self) =>
+            index === self.findIndex((m) => m.remoteId === msg.remoteId),
+        );
+
+        console.log(`消息列表已刷新，共 ${convertedMessages.length} 条消息（去重后 ${uniqueMessages.length} 条）`);
+        console.log('图片消息数量:', uniqueMessages.filter(m => m.type === 'image').length);
+        console.log('所有消息:', uniqueMessages);
+
+        setMessages(uniqueMessages);
+      }
+    } catch (error) {
+      console.error("刷新消息列表失败:", error);
+    }
+  }, [selectedAgent?.id]);
+
   // 滚动到底部
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -180,25 +241,35 @@ export const ChatPage: React.FC = () => {
       });
 
       if (messagesData.messages && messagesData.messages.length > 0) {
-        // 转换消息格式
+        // 转换消息格式（支持文本和图片消息）
         const convertedMessages: ChatMessage[] = messagesData.messages.map(
           (msg, index) => ({
             id: `msg_history_${index}_${Date.now()}`,
             role: msg.role,
-            content: msg.content,
+            content: msg.content || "",
             timestamp: msg.timestamp,
             remoteId: msg.id.toString(),
+            type: msg.type || "text",
+            image_url: msg.image_url,
           }),
         );
 
+        // 去重：根据 remoteId 去除重复消息
+        const uniqueMessages = convertedMessages.filter(
+          (msg, index, self) =>
+            index === self.findIndex((m) => m.remoteId === msg.remoteId),
+        );
+
+        console.log(`获取到 ${convertedMessages.length} 条消息，去重后 ${uniqueMessages.length} 条`);
+
         // 更新当前会话的消息
-        setMessages(convertedMessages);
+        setMessages(uniqueMessages);
 
         // 更新当前会话
         if (currentSession) {
           const updatedSession = {
             ...currentSession,
-            messages: convertedMessages,
+            messages: uniqueMessages,
           };
           setCurrentSession(updatedSession);
 
@@ -210,7 +281,7 @@ export const ChatPage: React.FC = () => {
           saveChatHistory(updatedHistory);
         }
 
-        message.success(`成功获取 ${convertedMessages.length} 条聊天记录`);
+        message.success(`成功获取 ${uniqueMessages.length} 条聊天记录`);
       } else {
         message.info("暂无聊天记录");
       }
@@ -247,29 +318,48 @@ export const ChatPage: React.FC = () => {
           size: 100,
         });
 
-        // 转换消息格式
-        const convertedMessages: ChatMessage[] = chatData.messages.map(
+        // 转换消息格式（支持文本和图片消息）
+        const convertedMessages: ChatMessage[] = (chatData.messages || []).map(
           (msg, index) => ({
-            id: `msg_${chatData.chat.id}_${index}_${Date.now()}`,
-            role: msg.sender_type === "USER" ? "user" : "assistant",
-            content: msg.content,
-            timestamp: msg.created_at,
-            sender_type: msg.sender_type,
-            remoteId: `remote_${index}`, // 添加远程消息ID
+            id: `msg_${chatData.chat_info?.id || 'unknown'}_${index}_${Date.now()}`,
+            role: msg.role || (msg.sender_type === "USER" ? "user" : "assistant"), // 优先使用 role，fallback 到 sender_type
+            content: msg.content || "",
+            timestamp: msg.timestamp || msg.created_at || new Date().toISOString(),
+            remoteId: msg.id ? msg.id.toString() : undefined, // 使用真实消息ID
+            type: msg.type || "text",
+            image_url: msg.image_url,
           }),
         );
 
+        console.log('获取到的聊天数据:', chatData);
+        console.log('消息数量:', chatData.messages?.length);
+        if (chatData.messages && chatData.messages.length > 0) {
+          console.log('第一条消息示例:', chatData.messages[0]);
+        }
+        console.log('转换后的消息:', convertedMessages);
+
+        // 去重：根据 remoteId 去除重复消息
+        const uniqueMessages = convertedMessages.filter(
+          (msg, index, self) =>
+            msg.remoteId && index === self.findIndex((m) => m.remoteId === msg.remoteId),
+        );
+
+        console.log(`去重后消息数量: ${uniqueMessages.length}`);
+        console.log('用户消息数量:', uniqueMessages.filter(m => m.role === 'user').length);
+        console.log('AI消息数量:', uniqueMessages.filter(m => m.role === 'assistant').length);
+        console.log('图片消息数量:', uniqueMessages.filter(m => m.type === 'image').length);
+
         // 创建会话对象
         const session: ChatSession = {
-          id: chatData.chat.id,
+          id: chatData.chat_info?.id || `temp_${Date.now()}`,
           agent_id: agent.id,
           agent_name: agent.name,
-          messages: convertedMessages,
-          created_at: chatData.chat.created_at,
+          messages: uniqueMessages,
+          created_at: chatData.chat_info?.created_at || new Date().toISOString(),
         };
 
         setCurrentSession(session);
-        setMessages(convertedMessages);
+        setMessages(uniqueMessages);
 
         // 更新本地历史记录缓存
         const existingHistoryIndex = chatHistory.findIndex(
@@ -319,15 +409,23 @@ export const ChatPage: React.FC = () => {
               (msg, index) => ({
                 id: `msg_history_${index}_${Date.now()}`,
                 role: msg.role, // 直接使用API返回的role字段（'user' 或 'assistant'）
-                content: msg.content,
+                content: msg.content || "",
                 timestamp: msg.timestamp,
                 remoteId: msg.id ? String(msg.id) : `remote_${index}`, // 安全地访问id字段
+                type: msg.type || "text",
+                image_url: msg.image_url,
               }),
             );
 
-            setMessages(convertedMessages.reverse()); // 反转顺序，最新的在底部
+            // 去重：根据 remoteId 去除重复消息
+            const uniqueMessages = convertedMessages.filter(
+              (msg, index, self) =>
+                index === self.findIndex((m) => m.remoteId === msg.remoteId),
+            );
+
+            setMessages(uniqueMessages.reverse()); // 反转顺序，最新的在底部
             console.log(
-              `成功加载智能体 ${agent.name} 的历史消息，共 ${convertedMessages.length} 条`,
+              `成功加载智能体 ${agent.name} 的历史消息，共 ${uniqueMessages.length} 条（原始 ${convertedMessages.length} 条）`,
             );
           }
         } catch (historyError) {
@@ -406,19 +504,29 @@ export const ChatPage: React.FC = () => {
             (msg, index) => ({
               id: `msg_refreshed_${index}_${Date.now()}`,
               role: msg.role,
-              content: msg.content,
+              content: msg.content || "",
               timestamp: msg.timestamp,
               remoteId: msg.id ? String(msg.id) : `remote_${index}`,
+              type: msg.type || "text",
+              image_url: msg.image_url,
             }),
           );
 
+          // 去重：根据 remoteId 去除重复消息
+          const uniqueMessages = refreshedMessages.filter(
+            (msg, index, self) =>
+              index === self.findIndex((m) => m.remoteId === msg.remoteId),
+          );
+
+          console.log(`刷新消息：原始 ${refreshedMessages.length} 条，去重后 ${uniqueMessages.length} 条`);
+
           // 更新消息列表（最新的在底部）
-          setMessages(refreshedMessages.reverse());
+          setMessages(uniqueMessages.reverse());
 
           // 更新会话
           const updatedSession = {
             ...currentSession,
-            messages: refreshedMessages,
+            messages: uniqueMessages,
           };
           setCurrentSession(updatedSession);
 
@@ -520,12 +628,23 @@ export const ChatPage: React.FC = () => {
             content: msg.content,
             timestamp: msg.timestamp,
             remoteId: msg.id.toString(), // 添加remoteId
+            type: msg.type || "text",
+            image_url: msg.image_url,
           }));
-          setMessages(convertedMessages);
+
+          // 去重：根据 remoteId 去除重复消息
+          const uniqueMessages = convertedMessages.filter(
+            (msg, index, self) =>
+              index === self.findIndex((m) => m.remoteId === msg.remoteId),
+          );
+
+          console.log(`清除消息后刷新：原始 ${convertedMessages.length} 条，去重后 ${uniqueMessages.length} 条`);
+
+          setMessages(uniqueMessages);
 
           const updatedSession = {
             ...currentSession,
-            messages: convertedMessages,
+            messages: uniqueMessages,
           };
           setCurrentSession(updatedSession);
 
@@ -1113,7 +1232,7 @@ export const ChatPage: React.FC = () => {
                   {messages.length > 0 && (
                     <List
                       dataSource={messages}
-                      renderItem={(message) => (
+                      renderItem={(message: ChatMessage, index: number) => (
                         <div>
                           <List.Item
                             style={{
@@ -1173,19 +1292,36 @@ export const ChatPage: React.FC = () => {
                                       : "none",
                                 }}
                               >
-                                <Paragraph
-                                  style={{
-                                    margin: 0,
-                                    color:
-                                      message.role === "user" ? "#fff" : "#000",
-                                    whiteSpace: "pre-wrap",
-                                    wordBreak: "break-word",
-                                  }}
-                                >
-                                  {message.role === "assistant"
-                                    ? formatMessageContent(message.content)
-                                    : message.content}
-                                </Paragraph>
+                                {/* 显示图片消息或文本消息 */}
+                                {message.type === "image" && message.image_url ? (
+                                  <div style={{ marginBottom: "8px" }}>
+                                    <Image
+                                      src={message.image_url}
+                                      alt="Generated image"
+                                      style={{
+                                        maxWidth: "300px",
+                                        borderRadius: "8px",
+                                      }}
+                                      placeholder={
+                                        <Spin size="small" />
+                                      }
+                                    />
+                                  </div>
+                                ) : (
+                                  <Paragraph
+                                    style={{
+                                      margin: 0,
+                                      color:
+                                        message.role === "user" ? "#fff" : "#000",
+                                      whiteSpace: "pre-wrap",
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
+                                    {message.content && message.role === "assistant"
+                                      ? formatMessageContent(message.content)
+                                      : message.content || ""}
+                                  </Paragraph>
+                                )}
                                 <div
                                   style={{
                                     fontSize: "10px",
@@ -1241,17 +1377,32 @@ export const ChatPage: React.FC = () => {
                                         />
                                       )}
 
-                                    {/* 图片生成按钮 - 对所有消息显示 */}
-                                    <MessageToImageIcon
-                                      messageContent={message.content}
-                                      size="small"
-                                      onImageGenerated={(imageUrl) =>
-                                        handleImageGenerated(
-                                          message.content,
-                                          imageUrl,
-                                        )
-                                      }
-                                    />
+                                    {/* 图片生成按钮 - 只在最后一条AI文本消息显示 */}
+                                    {message.role === "assistant" &&
+                                      message.type !== "image" &&
+                                      message.remoteId &&
+                                      typeof message.remoteId === "string" &&
+                                      !message.remoteId.startsWith("assistant_") &&
+                                      !message.remoteId.startsWith("error_") &&
+                                      !message.remoteId.startsWith("remote_") &&
+                                      !isNaN(Number(message.remoteId)) &&
+                                      selectedAgent &&
+                                      selectedAgent.id &&
+                                      index === getLastAssistantMessageIndex() && (
+                                        <MessageToImageIcon
+                                          messageId={Number(message.remoteId)}
+                                          agentId={selectedAgent.id}
+                                          size="small"
+                                          onImageGenerated={async (imageUrl) => {
+                                            handleImageGenerated(
+                                              message.content,
+                                              imageUrl,
+                                            );
+                                            // 刷新消息列表以显示新生成的图片消息
+                                            await refreshMessages();
+                                          }}
+                                        />
+                                      )}
 
                                     {/* 只有历史消息才显示重新发送和删除按钮 */}
                                     {message.remoteId &&

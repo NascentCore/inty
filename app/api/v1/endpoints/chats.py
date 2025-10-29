@@ -1165,3 +1165,168 @@ async def clear_agent_chat_messages(
         raise HTTPException(
             status_code=500, detail=f"Failed to clear messages: {str(e)}"
         )
+
+
+@router.post(
+    "/agents/{agent_id}/generate-image",
+    response_model=schemas.APIResponse[schemas.ChatImageGenerationResponse],
+    summary="基于聊天上下文生成图片",
+    description="根据Agent角色、聊天历史和用户消息生成图片，并保存到聊天历史中",
+    tags=["inty-eval"],
+)
+async def generate_chat_image(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    request: schemas.ChatImageGenerationRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    基于聊天上下文生成图片
+
+    流程：
+    1. 验证用户和Agent
+    2. 获取或创建聊天会话
+    3. 检查图片生成限额
+    4. 调用图片生成服务
+    5. 记录用量
+    6. 返回图片信息
+    """
+    try:
+        logger.info(
+            f"开始生成聊天图片 - Agent ID: {agent_id}, User ID: {current_user.id}"
+        )
+
+        # 验证Agent是否存在
+        from sqlalchemy import select
+
+        result = await db.execute(
+            select(models.Agent.id, models.Agent.name).where(
+                models.Agent.id == agent_id
+            )
+        )
+        agent_basic = result.first()
+        if not agent_basic:
+            logger.error(f"Agent未找到: {agent_id}")
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        # 获取或创建聊天会话
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db, user_id=current_user.id, agent_id=agent_id
+        )
+
+        # 验证chat中的agent_id是否与传入的一致
+        if chat.agent_id != agent_id:
+            logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Agent ID mismatch: expected={agent_id}, actual={chat.agent_id}",
+            )
+
+        session_id = generate_session_id(chat.id)
+
+        # 检查图片生成限额
+        is_allowed, used_count, daily_limit = (
+            await subscription_service.check_image_gen_limit(db, current_user)
+        )
+
+        if not is_allowed:
+            logger.warning(
+                f"用户 {current_user.id} 已达到图片生成限额: {used_count}/{daily_limit}"
+            )
+            from app.models.user import AuthType
+
+            if current_user.auth_type == AuthType.GUEST:
+                return create_business_error_response(
+                    error_info=BusinessErrorCode.GUEST_LOGIN_REQUIRED,
+                    extra_data={"used_count": used_count, "daily_limit": daily_limit},
+                )
+            else:
+                return create_business_error_response(
+                    error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
+                    extra_data={"used_count": used_count, "daily_limit": daily_limit},
+                )
+
+        # 获取Agent完整数据
+        agent_data = await agent_service.get_agent_for_chat(db, agent_id=chat.agent_id)
+        if not agent_data:
+            logger.error(f"Agent数据未找到: {chat.agent_id}")
+            raise HTTPException(status_code=404, detail="Agent data not found")
+
+        # 根据 message_id 查询消息内容
+        message_content = await chat_history_service.get_message_content(
+            db=db,
+            session_id=session_id,
+            message_id=str(request.message_id),
+        )
+
+        if not message_content:
+            logger.error(f"消息未找到: message_id={request.message_id}")
+            raise HTTPException(
+                status_code=404, detail=f"Message not found: {request.message_id}"
+            )
+
+        logger.debug(f"查询到消息内容: {message_content[:100]}...")
+
+        # 验证只能对最后一条AI回复生成图片
+        latest_ai_message_id = await chat_history_service.get_latest_ai_message_id(
+            db, session_id
+        )
+        if latest_ai_message_id != request.message_id:
+            logger.warning(
+                f"只能对最后一条AI回复生成图片: latest={latest_ai_message_id}, "
+                f"requested={request.message_id}"
+            )
+            raise HTTPException(status_code=400, detail="只能对最后一条AI回复生成图片")
+
+        # 删除该消息的旧图片（如果存在）
+        old_image_url = await chat_history_service.delete_image_by_source_message(
+            db, session_id, request.message_id
+        )
+        if old_image_url:
+            logger.info(f"已删除旧图片消息: {old_image_url}")
+            # TODO: 可选 - 从GCS删除旧图片文件以节省存储空间
+
+        # 调用图片生成服务（使用 Gemini 2.5 Flash Image）
+        from app.services.image_generation_service import image_generation_service
+
+        result = await image_generation_service.generate_chat_image_with_gemini(
+            db=db,
+            session_id=session_id,
+            agent_data=agent_data,
+            message_content=message_content,
+            history_count=request.history_count,
+            source_message_id=request.message_id,  # 传递来源消息ID
+        )
+
+        # 记录用量
+        try:
+            await subscription_service.record_usage(
+                db,
+                current_user.id,
+                "image_generation",
+                1,
+                extra_data={
+                    "agent_id": agent_id,
+                    "message_content": message_content[:100],  # 只记录前100个字符
+                },
+            )
+            logger.debug(f"图片生成用量记录成功: user_id={current_user.id}")
+        except Exception as e:
+            logger.warning(f"记录图片生成用量失败: {str(e)}")
+
+        logger.info(
+            f"聊天图片生成成功 - Agent ID: {agent_id}, Message ID: {result['message_id']}"
+        )
+
+        return schemas.APIResponse.success(
+            data=schemas.ChatImageGenerationResponse(**result)
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"生成聊天图片失败 - Agent ID: {agent_id}, Error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate image: {str(e)}"
+        )
