@@ -145,6 +145,7 @@ async def async_create_image_resource(
     cropped: bool = False,
     uncropped_image_url: Optional[str] = None,
     gcs_url: Optional[str] = None,
+    prompts: Optional[dict] = None,
 ) -> None:
     """
     创建图片资源记录的辅助函数 (异步版本)
@@ -163,6 +164,7 @@ async def async_create_image_resource(
         cropped=cropped,
         uncropped_image_url=uncropped_image_url,
         gcs_url=gcs_url,
+        prompts=prompts,
     )
 
     # Convert to dict for database storage
