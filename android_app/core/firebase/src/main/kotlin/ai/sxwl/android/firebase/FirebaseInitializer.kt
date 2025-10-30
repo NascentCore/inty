@@ -14,6 +14,8 @@ class FirebaseInitializer : Initializer<FirebaseManager> {
 
         try {
             FirebaseManager.initialize(context)
+            // 初始化 Remote Config（A/B 实验与动态配置）
+            RemoteConfigManager.initialize(context)
             if (AppUtils.isAppDebug()) {
                 FirebaseAnalytics.getInstance(context).setAnalyticsCollectionEnabled(true)
             }

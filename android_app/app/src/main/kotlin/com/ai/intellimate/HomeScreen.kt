@@ -47,6 +47,8 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import ai.sxwl.android.firebase.RemoteConfigManager
+import ai.sxwl.android.firebase.FirebaseManager
 import com.ai.intellimate.agent.generate.CreateRoleActivity
 import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.chat.ChatPageContainer
@@ -121,6 +123,9 @@ fun HomeScreen(
         ExpiredDialogLogic(mainViewModel)
 
         AppVersionLogic(mainViewModel)
+
+        // 基于 Remote Config 的最小 A/B 演示 Banner
+        RemoteConfigAbDemoBanner()
     }
 }
 
@@ -136,6 +141,46 @@ private fun AppVersionLogic(mainViewModel: MainViewModel) {
                 runCatching { rsp?.download_url?.let { url -> uriHandler.openUri(url) } }
             },
         )
+    }
+}
+
+/**
+ * Remote Config A/B 测试演示：
+ * - 通过参数 `ab_home_banner_variant` 控制展示不同的 Banner 风格与文案
+ * - 变体："A" 与 "B"（默认 "A"）
+ */
+@Composable
+private fun RemoteConfigAbDemoBanner() {
+    // 确保初始化后拉取一次配置
+    LaunchedEffect(Unit) { RemoteConfigManager.refreshAsync() }
+
+    val variant = RemoteConfigManager.abVariant.collectAsStateWithLifecycle().value
+    val isVariantB = variant.equals("B", ignoreCase = true)
+
+    // 仅作演示：始终显示一个小条幅，A/B 改变配色与文案
+    Box(
+        modifier =
+            Modifier.fillMaxWidth().background(
+                if (isVariantB) Color(0xFF262F80) else Color(0xFF4CAF50)
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        val text = if (isVariantB) "B 版本：立即试用 Premium 功能" else "A 版本：解锁全部功能"
+        Text(
+            text = text,
+            color = Color.White,
+            fontSize = 14.sp,
+            modifier = Modifier.padding(vertical = 6.dp),
+            fontWeight = FontWeight.SemiBold,
+        )
+
+        // 曝光打点（非必要，但利于观测），按需节流
+        LaunchedEffect(variant) {
+            FirebaseManager.logEvent(
+                "ab_home_banner_exposed",
+                mapOf("variant" to variant),
+            )
+        }
     }
 }
 

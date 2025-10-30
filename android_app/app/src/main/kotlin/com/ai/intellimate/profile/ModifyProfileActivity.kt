@@ -26,6 +26,7 @@ import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.ui.components.MySettingScreen
 import com.ai.intellimate.utils.UCropHelper
+import ai.sxwl.android.firebase.RemoteConfigManager
 import com.yalantis.ucrop.UCrop
 import java.util.Locale
 import kotlinx.coroutines.launch
@@ -99,9 +100,8 @@ class ModifyProfileActivity : BaseActivity() {
                     runCatching {
                             // Check file size before cropping - limit to 10MB
                             val fileSize = getFileSize(context, uri)
-                            // TODO: 使用 firebase remote config 配置应集中管理
-                            // https://firebase.google.com/docs/remote-config
-                            val maxSizeMB = 10
+                            // 使用 Firebase Remote Config 控制头像大小（MB）
+                            val maxSizeMB = RemoteConfigManager.getAvatarMaxSizeMb()
                             val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
                             if (fileSize > maxSizeBytes) {
                                 val maxSizeMBStr =
