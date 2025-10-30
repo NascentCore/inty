@@ -71,6 +71,8 @@ nginx.conf:/etc/nginx/conf.d/sxwl.ai.conf
 - [GCP inty-prod endpoint check](https://console.cloud.google.com/monitoring/synthetic-monitoring?project=alien-paratext-461204-i9)
 - API endpoint: <https://app.inty.cc>
   - Monitoring: <https://app.checklyhq.com/accounts/1896e6d6-1599-414f-998e-3dabcc58fd7f>
+- CloudFlare: `it@sxwl.ai`
+  - 图片裁切、图片缩放、图片压缩（不改变文件格式 80% 质量缩小到 1/4）
 
 ## Inty-dev
 
