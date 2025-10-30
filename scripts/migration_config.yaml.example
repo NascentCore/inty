@@ -1,0 +1,110 @@
+# 数据库迁移配置文件模板
+# 复制此文件为 migration_config.yaml 并修改相应的配置
+
+environments:
+  source:
+    name: "源数据库"
+    database:
+      host: "SOURCE_HOST"          # 源数据库主机地址
+      port: 5432                   # 源数据库端口
+      user: "SOURCE_USER"          # 源数据库用户名
+      password: "SOURCE_PASSWORD"  # 源数据库密码
+      db: "SOURCE_DB"              # 源数据库名称
+
+  sink:
+    name: "目标数据库"
+    database:
+      host: "SINK_HOST"            # 目标数据库主机地址
+      port: 5432                   # 目标数据库端口
+      user: "SINK_USER"            # 目标数据库用户名
+      password: "SINK_PASSWORD"    # 目标数据库密码
+      db: "SINK_DB"                # 目标数据库名称
+
+migration:
+  # 批量插入大小，根据内存情况调整
+  batch_size: 1000
+  
+  # 遇到错误时是否继续迁移其他表
+  continue_on_error: true
+  
+  # 是否验证数据完整性
+  verify_data: true
+  
+  # 迁移日志文件路径
+  log_file: "migration_log.json"
+  
+  # 是否在迁移前备份目标数据库
+  backup_before_migration: false
+  
+  # 备份文件路径（如果启用备份）
+  backup_file: "sink_backup.sql"
+  
+  # 要排除的表（不迁移这些表）
+  exclude_tables: []
+  # 示例:
+  # exclude_tables: ["temp_table", "log_table"]
+  
+  # 只迁移指定的表（如果为空则迁移所有表）
+  include_tables: []
+  # 示例:
+  # include_tables: ["users", "agents", "chats"]
+
+logging:
+  level: "INFO"                    # 日志级别: DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(levelname)s - %(message)s"
+  file: "migration.log"            # 日志文件路径
+
+# 高级配置
+advanced:
+  # 连接池配置
+  connection_pool:
+    min_size: 1
+    max_size: 10
+    
+  # 超时配置（秒）
+  timeouts:
+    connection: 30
+    query: 300
+    
+  # 是否在迁移前检查表结构一致性
+  check_schema_consistency: true
+  
+  # 是否在迁移后重置序列值
+  reset_sequences: true
+  
+  # 是否在迁移后更新表统计信息
+  update_statistics: true
+
+# 验证配置
+verification:
+  # 是否验证外键约束
+  check_foreign_keys: true
+  
+  # 是否验证索引
+  check_indexes: true
+  
+  # 是否验证序列值
+  check_sequences: true
+  
+  # 抽样验证比例（0.0-1.0）
+  sample_ratio: 0.1
+  
+  # 是否验证关键业务数据
+  check_business_data: true
+  
+  # 关键表列表（用于业务数据验证）
+  critical_tables: ["users", "agents", "chats", "messages"]
+
+# 回滚配置
+rollback:
+  # 是否在回滚前创建备份
+  backup_before_rollback: true
+  
+  # 回滚备份文件路径
+  backup_file: "rollback_backup.sql"
+  
+  # 是否只清空数据（保留表结构）
+  truncate_only: true
+  
+  # 是否删除表（危险操作）
+  drop_tables: false
