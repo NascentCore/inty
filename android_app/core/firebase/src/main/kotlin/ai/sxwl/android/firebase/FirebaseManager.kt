@@ -10,6 +10,8 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.perf.FirebasePerformance
+import com.google.firebase.remoteconfig.FirebaseRemoteConfig
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +42,8 @@ object FirebaseManager {
     @Volatile private var crashlytics: FirebaseCrashlytics? = null
 
     @Volatile private var performance: FirebasePerformance? = null
+
+    @Volatile private var remoteConfig: FirebaseRemoteConfig? = null
 
     // 使用SupervisorJob确保子协程异常不影响其他协程
     private val firebaseScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -168,6 +172,15 @@ object FirebaseManager {
             // 初始化 Firebase Performance
             performance = FirebasePerformance.getInstance()
 
+            // 初始化 Firebase Remote Config
+            remoteConfig = FirebaseRemoteConfig.getInstance()
+            val configSettings = FirebaseRemoteConfigSettings.Builder()
+                .setMinimumFetchIntervalInSeconds(
+                    if (AppUtils.isAppDebug()) 0L else 3600L // 调试模式立即获取，发布模式1小时
+                )
+                .build()
+            remoteConfig?.setConfigSettingsAsync(configSettings)
+
             isInitialized.set(true)
             LogUtils.i("FirebaseManager - 初始化成功")
         } catch (e: Exception) {
@@ -209,6 +222,92 @@ object FirebaseManager {
         }
         if (!config.performanceEnabled) return null
         return performance
+    }
+
+    /** 安全地获取 Remote Config 实例 */
+    fun getRemoteConfig(): FirebaseRemoteConfig? {
+        if (!isInitialized.get()) {
+            logError("getRemoteConfig", "FirebaseManager not initialized")
+            return null
+        }
+        return remoteConfig
+    }
+
+    /** 获取 Remote Config 参数值（String） */
+    fun getRemoteConfigString(key: String, defaultValue: String = ""): String {
+        return try {
+            getRemoteConfig()?.getString(key) ?: defaultValue
+        } catch (e: Exception) {
+            logError("getRemoteConfigString", "Failed to get config: ${e.message}")
+            defaultValue
+        }
+    }
+
+    /** 获取 Remote Config 参数值（Boolean） */
+    fun getRemoteConfigBoolean(key: String, defaultValue: Boolean = false): Boolean {
+        return try {
+            getRemoteConfig()?.getBoolean(key) ?: defaultValue
+        } catch (e: Exception) {
+            logError("getRemoteConfigBoolean", "Failed to get config: ${e.message}")
+            defaultValue
+        }
+    }
+
+    /** 获取 Remote Config 参数值（Long） */
+    fun getRemoteConfigLong(key: String, defaultValue: Long = 0L): Long {
+        return try {
+            getRemoteConfig()?.getLong(key) ?: defaultValue
+        } catch (e: Exception) {
+            logError("getRemoteConfigLong", "Failed to get config: ${e.message}")
+            defaultValue
+        }
+    }
+
+    /** 获取 Remote Config 参数值（Double） */
+    fun getRemoteConfigDouble(key: String, defaultValue: Double = 0.0): Double {
+        return try {
+            getRemoteConfig()?.getDouble(key) ?: defaultValue
+        } catch (e: Exception) {
+            logError("getRemoteConfigDouble", "Failed to get config: ${e.message}")
+            defaultValue
+        }
+    }
+
+    /** 获取 Remote Config 参数值（Int） */
+    fun getRemoteConfigInt(key: String, defaultValue: Int = 0): Int {
+        return try {
+            getRemoteConfig()?.getLong(key)?.toInt() ?: defaultValue
+        } catch (e: Exception) {
+            logError("getRemoteConfigInt", "Failed to get config: ${e.message}")
+            defaultValue
+        }
+    }
+
+    /** 获取 Remote Config 参数值（Float） */
+    fun getRemoteConfigFloat(key: String, defaultValue: Float = 0f): Float {
+        return try {
+            getRemoteConfig()?.getDouble(key)?.toFloat() ?: defaultValue
+        } catch (e: Exception) {
+            logError("getRemoteConfigFloat", "Failed to get config: ${e.message}")
+            defaultValue
+        }
+    }
+
+    /** 异步获取 Remote Config（从服务器拉取最新配置） */
+    suspend fun fetchRemoteConfig(): Boolean {
+        return try {
+            val config = getRemoteConfig() ?: return false
+            val result = config.fetchAndActivate().await()
+            if (result) {
+                LogUtils.i("FirebaseManager - Remote Config 获取并激活成功")
+            } else {
+                LogUtils.d("FirebaseManager - Remote Config 获取成功但未激活（可能无更新）")
+            }
+            result
+        } catch (e: Exception) {
+            logError("fetchRemoteConfig", "Failed to fetch config: ${e.message}")
+            false
+        }
     }
 
     /** 安全地记录事件到 Analytics 使用SupervisorJob确保异常不会影响其他操作 */
@@ -652,6 +751,7 @@ object FirebaseManager {
             analytics = null
             crashlytics = null
             performance = null
+            remoteConfig = null
 
             // 重置状态
             isInitialized.set(false)
