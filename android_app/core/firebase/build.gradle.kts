@@ -15,6 +15,7 @@ dependencies {
     // Firebase dependencies
     implementation(platform(libs.firebase.bom))
     implementation(libs.bundles.firebase)
+    implementation(libs.firebase.config)
 
     // Core dependencies
     implementation(projects.library.utils)

@@ -10,6 +10,7 @@
 - ✅ 用户行为追踪
 - ✅ 自定义事件和属性
 - ✅ 非致命错误记录
+- ✅ Remote Config 远程参数与 AB 测试
 
 ## 使用方法
 
@@ -73,6 +74,33 @@ FirebaseManager.setCustomKey("user_level", 5)
 FirebaseManager.setCustomKey("is_premium", true)
 ```
 
+### 7. Remote Config 与 AB 测试（最小示例）
+
+Remote Config 会在应用启动时通过 `FirebaseInitializer` 自动初始化并 `fetchAndActivate`。可直接通过 `RemoteConfigManager` 读取参数。
+
+```kotlin
+// 读取头像大小上限（MB），默认 10
+val maxSizeMB = RemoteConfigManager.getLong(
+    RemoteConfigManager.KEY_PROFILE_AVATAR_MAX_SIZE_MB,
+    10L,
+)
+
+// 读取 AB 变体："A" | "B"
+val variant = RemoteConfigManager.getString(
+    RemoteConfigManager.KEY_AB_PROFILE_AVATAR_MESSAGE_VARIANT,
+    "A",
+)
+
+if (variant.equals("B", ignoreCase = true)) {
+    // 展示 B 方案的 UI 或提示
+}
+```
+
+在 Firebase Console 中：
+- 创建 Remote Config 参数 `profile_avatar_max_size_mb`（如 10/5 等值）
+- 创建参数 `ab_profile_avatar_message_variant`，设置实验的变体为 A/B
+- 使用 Firebase A/B Testing 以该参数为实验维度，分流用户并观察指标
+
 ## 测试功能
 
 ### 测试崩溃报告
@@ -116,6 +144,7 @@ CrashlyticsTest.recordTestException(Exception("Test exception"))
 2. 在发布版本中移除测试崩溃代码
 3. 遵循隐私政策，合理收集用户数据
 4. 避免记录敏感信息
+5. Debug 构建最小拉取间隔为 0 秒；Release 为 3600 秒
 
 ## 配置说明
 

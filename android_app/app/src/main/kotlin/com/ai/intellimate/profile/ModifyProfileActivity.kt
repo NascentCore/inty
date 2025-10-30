@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
 import com.ai.intellimate.R
+import ai.sxwl.android.firebase.RemoteConfigManager
 import com.ai.intellimate.ViewModelEvent
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
@@ -97,12 +98,14 @@ class ModifyProfileActivity : BaseActivity() {
             rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
                 imageUri?.let { uri ->
                     runCatching {
-                            // Check file size before cropping - limit to 10MB
+                            // 读取 Remote Config 配置：头像大小上限（MB），默认 10MB
                             val fileSize = getFileSize(context, uri)
-                            // TODO: 使用 firebase remote config 配置应集中管理
-                            // https://firebase.google.com/docs/remote-config
-                            val maxSizeMB = 10
-                            val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
+                            val maxSizeMB =
+                                RemoteConfigManager.getLong(
+                                    RemoteConfigManager.KEY_PROFILE_AVATAR_MAX_SIZE_MB,
+                                    10L,
+                                ).toInt()
+                            val maxSizeBytes = maxSizeMB * 1024 * 1024
                             if (fileSize > maxSizeBytes) {
                                 val maxSizeMBStr =
                                     String.Companion.format(Locale.getDefault(), "%dMB", maxSizeMB)
@@ -112,7 +115,7 @@ class ModifyProfileActivity : BaseActivity() {
                                         "%.1fMB",
                                         fileSize / (1024.0 * 1024.0)
                                     )
-                                val msg =
+                                var msg =
                                     String.format(
                                         context.getString(
                                             R.string.user_avatar_size_too_large_with_size_format
@@ -120,6 +123,15 @@ class ModifyProfileActivity : BaseActivity() {
                                         maxSizeMBStr,
                                         fileSizeMBStr,
                                     )
+                                // AB 测试：B 变体追加提示语
+                                val variant =
+                                    RemoteConfigManager.getString(
+                                        RemoteConfigManager.KEY_AB_PROFILE_AVATAR_MESSAGE_VARIANT,
+                                        "A",
+                                    )
+                                if (variant.equals("B", ignoreCase = true)) {
+                                    msg += "（建议压缩头像以提升上传成功率）"
+                                }
                                 lifecycleScope.launch { ToastUtils.showShort(msg) }
                                 return@let
                             }
