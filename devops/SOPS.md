@@ -17,4 +17,7 @@
 
 ### 拷贝数据
 
-TBA
+```bash
+docker run --rm -e PGPASSWORD=<password> --network host postgres:16 pg_dump -h localhost -p 5432 -U postgres -d devdb -Fc >devdb.dump
+docker run --rm -e PGPASSWORD=<password> --network host -v $(pwd)/devdb.dump:/devdb.dump postgres:16 pg_restore -h <host> -p 5432 -U postgres -d inty-dev /devdb.dump
+```
