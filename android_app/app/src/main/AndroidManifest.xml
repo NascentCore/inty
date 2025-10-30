@@ -125,6 +125,12 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Login" />
 
+        <activity
+            android:name=".abtest.ABTestDemoActivity"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Inty" />
+
         <activity android:name=".vip.VipCenterActivity" />
         <activity
             android:name=".vip.SubsManageActivity"

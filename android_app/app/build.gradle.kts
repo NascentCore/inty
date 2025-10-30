@@ -72,6 +72,7 @@ dependencies {
 
     // ===== Google 服务 =====
     implementation(libs.bundles.credentials)
+    implementation(libs.firebase.config)
 
     // ===== 图片处理 =====
     implementation(libs.ucrop)

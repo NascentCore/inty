@@ -210,6 +210,7 @@ firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 firebase-messaging-directboot = { module = "com.google.firebase:firebase-messaging-directboot" }
 firebase-perf = { module = "com.google.firebase:firebase-perf" }
+firebase-config = { module = "com.google.firebase:firebase-config" }
 
 billing-client = { module = "com.android.billingclient:billing-ktx", version.ref = "billingKtx" }
 google-identity = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleIdentity" }
@@ -289,7 +290,7 @@ retrofit = ["retrofit-core", "retrofit-converter-kotlin-serialization", "okhttp"
 
 # ===== Google & Firebase 相关 =====
 google-auth = ["google-identity", "credential-manager", "credential-manager-play-services"]
-firebase = ["firebase-bom", "firebase-analytics", "firebase-crashlytics", "firebase-messaging", "firebase-messaging-directboot", "firebase-perf"]
+firebase = ["firebase-bom", "firebase-analytics", "firebase-crashlytics", "firebase-messaging", "firebase-messaging-directboot", "firebase-perf", "firebase-config"]
 credentials = ["credential-manager", "credential-manager-play-services", "google-identity"]
 
 # ===== 媒体相关 =====
