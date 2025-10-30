@@ -131,6 +131,14 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
 
+        <!-- Firebase Remote Config AB Test Demo -->
+        <activity
+            android:name=".remoteconfig.AbTestDemoActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Inty" />
+
     </application>
 
 </manifest>

@@ -80,6 +80,9 @@ dependencies {
     implementation(libs.bundles.androidx.media3.bundle)
     implementation(libs.androidx.media3.datasource.okhttp)
 
+    // ===== Firebase Remote Config =====
+    implementation(libs.firebase.config)
+
     // ===== UI 测试依赖 =====
     androidTestImplementation(libs.androidx.uiautomator)
 }
