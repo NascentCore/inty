@@ -3,7 +3,6 @@ package ai.sxwl.android.data.billing
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.SubscriptionVerifyRequest
 import ai.sxwl.android.utils.LogUtils
-import ai.sxwl.android.utils.ToastUtils
 import android.app.Activity
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
@@ -53,121 +52,150 @@ internal class BillingPurchaseManager(
                     }
                 } else {
                     LogUtils.w("Billing 购买成功但购买列表为空")
-                    showError("purchases is empty")
+                    eventScope.launch {
+                        eventFlow.emit(
+                            BillingEvent.ShowError(
+                                BillingErrorCode.PURCHASES_EMPTY
+                            )
+                        )
+                    }
                 }
             }
+
             BillingClient.BillingResponseCode.USER_CANCELED -> {
                 LogUtils.i("Billing 用户取消购买")
                 // 用户取消不发送失败事件
             }
+
             BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> {
                 LogUtils.w("Billing Item already owned: User already has this subscription")
-                showError("Item already owned")
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
+                            BillingErrorCode.ITEM_ALREADY_OWNED,
                             billingResult.responseCode,
-                            "Item already owned",
+                            "Item already owned"
                         )
                     )
                 }
             }
+
             BillingClient.BillingResponseCode.ITEM_NOT_OWNED -> {
                 LogUtils.w("Billing Item not owned: User has not purchased this item")
-                showError("Item not owned")
-                eventScope.launch {
-                    eventFlow.emit(
-                        BillingEvent.PurchaseFailed(billingResult.responseCode, "Item not owned")
-                    )
-                }
-            }
-            BillingClient.BillingResponseCode.ITEM_UNAVAILABLE -> {
-                LogUtils.w("Billing Item unavailable: Item is not available in current region")
-                showError("Item is not available in current region")
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
+                            BillingErrorCode.ITEM_NOT_OWNED,
                             billingResult.responseCode,
-                            "Item is not available in current region",
+                            "Item not owned"
                         )
                     )
                 }
             }
+
+            BillingClient.BillingResponseCode.ITEM_UNAVAILABLE -> {
+                LogUtils.w("Billing Item unavailable: Item is not available in current region")
+                eventScope.launch {
+                    eventFlow.emit(
+                        BillingEvent.PurchaseFailed(
+                            BillingErrorCode.ITEM_UNAVAILABLE,
+                            billingResult.responseCode,
+                            "Item is not available in current region"
+                        )
+                    )
+                }
+            }
+
             BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {
                 LogUtils.e(
                     "Billing Developer error: Please check product ID configuration, app signature, test user settings"
                 )
-                showError("Developer error")
                 eventScope.launch {
                     eventFlow.emit(
-                        BillingEvent.PurchaseFailed(billingResult.responseCode, "Developer error")
+                        BillingEvent.PurchaseFailed(
+                            BillingErrorCode.DEVELOPER_ERROR,
+                            billingResult.responseCode,
+                            "Developer error"
+                        )
                     )
                 }
             }
+
             BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
                 LogUtils.e("Billing Service unavailable: Google Play services temporarily unavailable")
-                showError("Service unavailable")
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
+                            BillingErrorCode.SERVICE_UNAVAILABLE,
                             billingResult.responseCode,
-                            "Service unavailable",
+                            "Service unavailable"
                         )
                     )
                 }
             }
+
             BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
                 LogUtils.e("Billing Billing unavailable: Device does not support Google Play billing")
-                showError("Device does not support Google Play billing")
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
+                            BillingErrorCode.BILLING_NOT_SUPPORTED,
                             billingResult.responseCode,
-                            "Device does not support Google Play billing",
+                            "Device does not support Google Play billing"
                         )
                     )
                 }
             }
+
             BillingClient.BillingResponseCode.NETWORK_ERROR -> {
                 LogUtils.e("Billing Network error: Network connection issue")
-                showError("Network error")
-                eventScope.launch {
-                    eventFlow.emit(
-                        BillingEvent.PurchaseFailed(billingResult.responseCode, "Network error")
-                    )
-                }
-            }
-            BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED -> {
-                LogUtils.e("Billing Feature not supported: Current device does not support this feature")
-                showError("Feature not supported")
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
+                            BillingErrorCode.NETWORK_ERROR,
                             billingResult.responseCode,
-                            "Feature not supported",
+                            "Network error"
                         )
                     )
                 }
             }
-            BillingClient.BillingResponseCode.ERROR -> {
-                LogUtils.e("Billing General error: An unknown error occurred")
-                showError("General error")
+
+            BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED -> {
+                LogUtils.e("Billing Feature not supported: Current device does not support this feature")
                 eventScope.launch {
                     eventFlow.emit(
-                        BillingEvent.PurchaseFailed(billingResult.responseCode, "General error")
+                        BillingEvent.PurchaseFailed(
+                            BillingErrorCode.BILLING_FEATURE_NOT_SUPPORTED,
+                            billingResult.responseCode,
+                            "Feature not supported"
+                        )
                     )
                 }
             }
+
+            BillingClient.BillingResponseCode.ERROR -> {
+                LogUtils.e("Billing General error: An unknown error occurred")
+                eventScope.launch {
+                    eventFlow.emit(
+                        BillingEvent.PurchaseFailed(
+                            BillingErrorCode.UNKNOWN_ERROR,
+                            billingResult.responseCode,
+                            "General error"
+                        )
+                    )
+                }
+            }
+
             else -> {
                 LogUtils.e(
                     "Billing 购买失败: ${billingResult.debugMessage} (错误码: ${billingResult.responseCode})"
                 )
-                showError("Purchase failed: ${billingResult.debugMessage}")
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
+                            BillingErrorCode.PURCHASE_FAILED,
                             billingResult.responseCode,
-                            billingResult.debugMessage,
+                            billingResult.debugMessage
                         )
                     )
                 }
@@ -198,7 +226,6 @@ internal class BillingPurchaseManager(
                 eventScope.launch { eventFlow.emit(BillingEvent.PurchaseSuccess(purchase)) }
             } else {
                 LogUtils.e("Billing 购买确认失败: ${billingResult.debugMessage}")
-                showError("Purchase acknowledgment failed")
 
                 // 购买确认失败，回滚订阅状态
                 val oldStatus = VipStatus(isSubscribed = false)
@@ -209,8 +236,9 @@ internal class BillingPurchaseManager(
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
+                            BillingErrorCode.PURCHASE_ACKNOWLEDGMENT_FAILED,
                             billingResult.responseCode,
-                            billingResult.debugMessage,
+                            billingResult.debugMessage
                         )
                     )
                 }
@@ -253,17 +281,39 @@ internal class BillingPurchaseManager(
                             BillingStorage.saveLocalVipStatus(newStatus)
                         } else {
                             LogUtils.w("Billing ⚠️ 订阅验证失败: ${response.message}")
-                            showError("Subscription verification failed: ${response.message}")
+                            eventScope.launch {
+                                eventFlow.emit(
+                                    BillingEvent.ShowError(
+                                        BillingErrorCode.SUBSCRIPTION_VERIFICATION_FAILED,
+                                        response.message
+                                    )
+                                )
+                            }
                         }
                     }
+
                     is HttpResult.Failure -> {
                         LogUtils.e("Billing ❌ 订阅验证失败: ${result.message}")
-                        showError("Subscription verification failed: ${result.message}")
+                        eventScope.launch {
+                            eventFlow.emit(
+                                BillingEvent.ShowError(
+                                    BillingErrorCode.SUBSCRIPTION_VERIFICATION_FAILED,
+                                    result.message
+                                )
+                            )
+                        }
                     }
                 }
             } catch (e: Exception) {
                 LogUtils.e("Billing ❌ 订阅验证异常: ${e.message}")
-                showError("Subscription verification exception: ${e.message}")
+                eventScope.launch {
+                    eventFlow.emit(
+                        BillingEvent.ShowError(
+                            BillingErrorCode.SUBSCRIPTION_VERIFICATION_EXCEPTION,
+                            e.message
+                        )
+                    )
+                }
             }
         }
     }
@@ -281,31 +331,66 @@ internal class BillingPurchaseManager(
             ConnectionResult.SUCCESS -> {
                 LogUtils.i("Billing ✅ Google Play 服务可用")
             }
+
             ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED -> {
                 LogUtils.w("Billing ⚠️ Google Play 服务需要更新")
-                // 尝试更新 Google Play 服务
-                googleApiAvailability.getErrorDialog(activity, resultCode, 1001)?.show()
-                showError("Google Play Service update required")
+                eventScope.launch {
+                    eventFlow.emit(
+                        BillingEvent.GooglePlayServiceError(
+                            BillingErrorCode.GOOGLE_PLAY_SERVICE_UPDATE_REQUIRED,
+                            resultCode,
+                            1001
+                        )
+                    )
+                }
                 return false
             }
+
             ConnectionResult.SERVICE_DISABLED -> {
                 LogUtils.e("Billing ❌ Google Play 服务被禁用")
-                showError("Google Play Service disabled")
+                eventScope.launch {
+                    eventFlow.emit(
+                        BillingEvent.ShowError(
+                            BillingErrorCode.GOOGLE_PLAY_SERVICE_DISABLED
+                        )
+                    )
+                }
                 return false
             }
+
             ConnectionResult.SERVICE_MISSING -> {
                 LogUtils.e("Billing ❌ Google Play 服务未安装")
-                showError("Google Play Service missing")
+                eventScope.launch {
+                    eventFlow.emit(
+                        BillingEvent.ShowError(
+                            BillingErrorCode.GOOGLE_PLAY_SERVICE_MISSING
+                        )
+                    )
+                }
                 return false
             }
+
             ConnectionResult.SERVICE_INVALID -> {
                 LogUtils.e("Billing ❌ Google Play 服务无效")
-                showError("Google Play Service invalid")
+                eventScope.launch {
+                    eventFlow.emit(
+                        BillingEvent.ShowError(
+                            BillingErrorCode.GOOGLE_PLAY_SERVICE_INVALID
+                        )
+                    )
+                }
                 return false
             }
+
             else -> {
                 LogUtils.e("Billing ❌ Google Play 服务不可用: $resultCode")
-                showError("Google Play Service unavailable")
+                eventScope.launch {
+                    eventFlow.emit(
+                        BillingEvent.ShowError(
+                            BillingErrorCode.GOOGLE_PLAY_SERVICE_UNAVAILABLE
+                        )
+                    )
+                }
                 return false
             }
         }
@@ -313,7 +398,13 @@ internal class BillingPurchaseManager(
         // 检查设备是否支持计费
         if (!isBillingSupported()) {
             LogUtils.e("Billing ❌ 设备不支持 Google Play 计费")
-            showError("Google Play billing isn't supported on this device")
+            eventScope.launch {
+                eventFlow.emit(
+                    BillingEvent.ShowError(
+                        BillingErrorCode.BILLING_NOT_SUPPORTED
+                    )
+                )
+            }
             return false
         }
 
@@ -330,12 +421,25 @@ internal class BillingPurchaseManager(
                 "Billing 设备计费支持检查: $isSupported (响应码: ${billingResult.responseCode}), 详情: ${billingResult.debugMessage}"
             )
             if (!isSupported) {
-                showError("Billing feature not supported on this device")
+                eventScope.launch {
+                    eventFlow.emit(
+                        BillingEvent.ShowError(
+                            BillingErrorCode.BILLING_FEATURE_NOT_SUPPORTED
+                        )
+                    )
+                }
             }
             isSupported
         } catch (e: Exception) {
             LogUtils.e("Billing 检查计费支持时出错: ${e.message}")
-            showError("Error checking billing support: ${e.message}")
+            eventScope.launch {
+                eventFlow.emit(
+                    BillingEvent.ShowError(
+                        BillingErrorCode.BILLING_SUPPORT_CHECK_ERROR,
+                        e.message
+                    )
+                )
+            }
             false
         }
     }
@@ -344,7 +448,13 @@ internal class BillingPurchaseManager(
     fun launchBillingFlow(activity: Activity, productId: String) {
         // 检查购买前条件
         if (!checkPurchasePreconditions(activity)) {
-            showError("Purchase preconditions check failed")
+            eventScope.launch {
+                eventFlow.emit(
+                    BillingEvent.ShowError(
+                        BillingErrorCode.PURCHASE_PRECONDITIONS_CHECK_FAILED
+                    )
+                )
+            }
             return
         }
 
@@ -364,7 +474,7 @@ internal class BillingPurchaseManager(
                 .build()
 
         LogUtils.i("Billing [购买流程] 开始查询商品详情，商品ID: $productId")
-        
+
         billingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
             LogUtils.i("Billing [购买流程] 查询商品详情结果: 响应码=${billingResult.responseCode}, 详情=${billingResult.debugMessage}")
 
@@ -391,42 +501,98 @@ internal class BillingPurchaseManager(
                     }
                         ?: run {
                             LogUtils.e("Billing ❌ 未找到商品详情: $productId")
-                            showError("Product details not found: $productId")
+                            eventScope.launch {
+                                eventFlow.emit(
+                                    BillingEvent.SkuDetailsQueryFailed(
+                                        BillingErrorCode.PRODUCT_DETAILS_NOT_FOUND,
+                                        BillingClient.BillingResponseCode.OK,
+                                        productId
+                                    )
+                                )
+                            }
                         }
                 }
+
                 BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {
                     LogUtils.e("Billing 商品ID: $productId ❌ 开发者错误 (12): 请检查商品ID配置、应用签名、测试用户设置")
-                    showError(
-                        "Developer error: Please check product ID configuration, app signature, test user settings"
-                    )
+                    eventScope.launch {
+                        eventFlow.emit(
+                            BillingEvent.SkuDetailsQueryFailed(
+                                BillingErrorCode.DEVELOPER_ERROR,
+                                billingResult.responseCode,
+                                "Please check product ID configuration, app signature, test user settings"
+                            )
+                        )
+                    }
                 }
+
                 BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
                     LogUtils.e("Billing ❌ 服务不可用: Google Play 服务暂时不可用")
-                    showError("Service unavailable: Google Play services temporarily unavailable")
+                    eventScope.launch {
+                        eventFlow.emit(
+                            BillingEvent.SkuDetailsQueryFailed(
+                                BillingErrorCode.SERVICE_UNAVAILABLE,
+                                billingResult.responseCode,
+                                "Google Play services temporarily unavailable"
+                            )
+                        )
+                    }
                 }
+
                 BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
                     LogUtils.e("Billing ❌ 计费不可用: 设备不支持 Google Play 计费")
-                    showError("Billing unavailable: Device does not support Google Play billing")
+                    eventScope.launch {
+                        eventFlow.emit(
+                            BillingEvent.SkuDetailsQueryFailed(
+                                BillingErrorCode.BILLING_NOT_SUPPORTED,
+                                billingResult.responseCode,
+                                "Device does not support Google Play billing"
+                            )
+                        )
+                    }
                 }
+
                 BillingClient.BillingResponseCode.ITEM_UNAVAILABLE -> {
                     LogUtils.w("Billing ❌ 商品不可用: 商品在当前地区不可用")
-                    showError("Item unavailable: Item is not available in current region")
+                    eventScope.launch {
+                        eventFlow.emit(
+                            BillingEvent.SkuDetailsQueryFailed(
+                                BillingErrorCode.ITEM_UNAVAILABLE,
+                                billingResult.responseCode,
+                                "Item is not available in current region"
+                            )
+                        )
+                    }
                 }
+
                 BillingClient.BillingResponseCode.NETWORK_ERROR -> {
                     LogUtils.e("Billing ❌ 网络错误: 网络连接问题")
-                    showError("Network error: Network connection issue")
+                    eventScope.launch {
+                        eventFlow.emit(
+                            BillingEvent.SkuDetailsQueryFailed(
+                                BillingErrorCode.NETWORK_ERROR,
+                                billingResult.responseCode,
+                                "Network connection issue"
+                            )
+                        )
+                    }
                 }
+
                 else -> {
                     LogUtils.e(
                         "Billing ❌ 查询商品详情失败: ${billingResult.debugMessage} (错误码: ${billingResult.responseCode})"
                     )
-                    showError("Query product details failed: ${billingResult.debugMessage}")
+                    eventScope.launch {
+                        eventFlow.emit(
+                            BillingEvent.SkuDetailsQueryFailed(
+                                BillingErrorCode.PRODUCT_DETAILS_QUERY_FAILED,
+                                billingResult.responseCode,
+                                billingResult.debugMessage
+                            )
+                        )
+                    }
                 }
             }
         }
-    }
-
-    private fun showError(error: String?) {
-        error?.let { ToastUtils.showShort(error) }
     }
 }

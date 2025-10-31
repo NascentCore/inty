@@ -96,8 +96,9 @@ internal class BillingPriceManager(
                             eventScope.launch {
                                 eventFlow.emit(
                                     BillingEvent.SkuDetailsQueryFailed(
+                                        BillingErrorCode.PRODUCT_DETAILS_QUERY_FAILED,
                                         billingResult.responseCode,
-                                        "查询成功但返回空商品列表",
+                                        "查询成功但返回空商品列表"
                                     )
                                 )
                             }
@@ -109,28 +110,71 @@ internal class BillingPriceManager(
                             eventScope.launch {
                                 eventFlow.emit(
                                     BillingEvent.SkuDetailsQueryFailed(
+                                        BillingErrorCode.PRODUCT_DETAILS_QUERY_FAILED,
                                         billingResult.responseCode,
-                                        "Google Play返回的商品列表为null",
+                                        "Google Play返回的商品列表为null"
                                     )
                                 )
                             }
                         }
                 }
-                BillingClient.BillingResponseCode.BILLING_UNAVAILABLE,
-                BillingClient.BillingResponseCode.DEVELOPER_ERROR,
-                BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE,
+
+                BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
+                    // 使用统一的错误处理
+                    BillingErrorHandler.handlePriceQueryError(billingResult)
+                    eventScope.launch {
+                        eventFlow.emit(
+                            BillingEvent.SkuDetailsQueryFailed(
+                                BillingErrorCode.BILLING_NOT_SUPPORTED,
+                                billingResult.responseCode,
+                                billingResult.debugMessage
+                            )
+                        )
+                    }
+                }
+
+                BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {
+                    // 使用统一的错误处理
+                    BillingErrorHandler.handlePriceQueryError(billingResult)
+                    eventScope.launch {
+                        eventFlow.emit(
+                            BillingEvent.SkuDetailsQueryFailed(
+                                BillingErrorCode.DEVELOPER_ERROR,
+                                billingResult.responseCode,
+                                billingResult.debugMessage
+                            )
+                        )
+                    }
+                }
+
+                BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
+                    // 使用统一的错误处理
+                    BillingErrorHandler.handlePriceQueryError(billingResult)
+                    eventScope.launch {
+                        eventFlow.emit(
+                            BillingEvent.SkuDetailsQueryFailed(
+                                BillingErrorCode.SERVICE_UNAVAILABLE,
+                                billingResult.responseCode,
+                                billingResult.debugMessage
+                            )
+                        )
+                    }
+                }
+
                 BillingClient.BillingResponseCode.NETWORK_ERROR -> {
                     // 使用统一的错误处理
                     BillingErrorHandler.handlePriceQueryError(billingResult)
                     eventScope.launch {
                         eventFlow.emit(
                             BillingEvent.SkuDetailsQueryFailed(
+                                BillingErrorCode.NETWORK_ERROR,
                                 billingResult.responseCode,
-                                billingResult.debugMessage,
+                                billingResult.debugMessage
                             )
                         )
                     }
                 }
+
                 else -> {
                     // 使用统一的错误处理
                     BillingErrorHandler.handlePriceQueryError(billingResult)
@@ -138,8 +182,9 @@ internal class BillingPriceManager(
                     eventScope.launch {
                         eventFlow.emit(
                             BillingEvent.SkuDetailsQueryFailed(
+                                BillingErrorCode.UNKNOWN_ERROR,
                                 billingResult.responseCode,
-                                billingResult.debugMessage,
+                                billingResult.debugMessage
                             )
                         )
                     }
@@ -151,7 +196,7 @@ internal class BillingPriceManager(
     /** 根据SkuDetails更新计划价格（旧API方法） */
     private fun updateLocalPlans(currentPlans: List<VipPlan>, skuDetailsList: List<SkuDetails>) {
         LogUtils.i("Billing [价格更新] 开始处理 ${skuDetailsList.size} 个商品的价格更新")
-        
+
         val updatedPlans = currentPlans.toMutableList()
         var updatedCount = 0
 
@@ -206,7 +251,7 @@ internal class BillingPriceManager(
                     val oldPrice = currentPlan.price
                     val oldCurrency = currentPlan.currencyCode
                     val oldMicros = currentPlan.priceAmountMicros
-                    
+
                     updatedPlans[index] =
                         currentPlan.copy(
                             price = correctedPrice,
@@ -266,7 +311,7 @@ internal class BillingPriceManager(
             updatedPlans.forEach { plan ->
                 LogUtils.d("  - ${plan.googleProductId}: ${plan.name}, 价格=${plan.price}, 货币=${plan.currencyCode}, 微单位=${plan.priceAmountMicros}")
             }
-            
+
             plansFlow.value = updatedPlans
             LogUtils.i("Billing [价格更新] ✅ plansFlow 已更新")
 

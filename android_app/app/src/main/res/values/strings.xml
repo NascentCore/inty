@@ -69,7 +69,7 @@
     <string name="premium_benefit_higher_other_limits">Higher image speech synthesis limits</string>
     <string name="premium_benefit_model">Empathetic AI</string>
     <string name="premium_benefit_chat_style">Customizable chat style</string>
-    
+
     <string name="premium_benefit_newfeature">Priority access to new features</string>
 
     <string name="premium_subscribe">Subscribe</string>
@@ -258,4 +258,50 @@
     <string name="toast_please_select_reason">Please select at least one reason</string>
     <string name="toast_submitted_successfully">Submitted successfully. We will review it soon.</string>
     <string name="toast_report_creation_failed">Report creation failed</string>
+
+    <!-- Billing Error Messages -->
+    <!-- 购买相关错误 -->
+    <string name="billing_error_purchases_empty">Purchase failed: purchases list is empty</string>
+    <string name="billing_error_item_already_owned">You already have this subscription</string>
+    <string name="billing_error_item_not_owned">You don\'t own this item</string>
+    <string name="billing_error_item_unavailable">This item is not available in your region</string>
+    <string name="billing_error_purchase_failed">Purchase failed. Please try again later</string>
+    <string name="billing_error_purchase_acknowledgment_failed">Purchase verification failed. Please contact support</string>
+
+    <!-- 订阅验证相关错误 -->
+    <string name="billing_error_subscription_verification_failed">Subscription verification failed: %s</string>
+    <string name="billing_error_subscription_verification_exception">Subscription verification error. Please try again</string>
+
+    <!-- Google Play 服务相关错误 -->
+    <string name="billing_error_google_play_service_update_required">Google Play services need to be updated</string>
+    <string name="billing_error_google_play_service_disabled">Google Play services are disabled</string>
+    <string name="billing_error_google_play_service_missing">Google Play services are not installed</string>
+    <string name="billing_error_google_play_service_invalid">Google Play services are invalid</string>
+    <string name="billing_error_google_play_service_unavailable">Google Play services are unavailable</string>
+
+    <!-- 计费功能相关错误 -->
+    <string name="billing_error_billing_not_supported">Your device doesn\'t support Google Play billing</string>
+    <string name="billing_error_billing_feature_not_supported">Billing feature is not supported on this device</string>
+
+    <!-- 服务相关错误 -->
+    <string name="billing_error_service_unavailable">Google Play services are temporarily unavailable. Please try again later</string>
+    <string name="billing_error_network_error">Network connection error. Please check your connection and try again</string>
+    <string name="billing_error_developer_error">Configuration error. Please contact support</string>
+
+    <!-- 商品查询相关错误 -->
+    <string name="billing_error_product_details_not_found">Product not found: %s</string>
+    <string name="billing_error_product_details_query_failed">Failed to load product details: %s</string>
+
+    <!-- 前置检查错误 -->
+    <string name="billing_error_purchase_preconditions_check_failed">Unable to proceed with purchase. Please check your device settings</string>
+    <string name="billing_error_billing_support_check_error">Error checking billing support: %s</string>
+
+    <!-- 未知错误 -->
+    <string name="billing_error_unknown_error">An unknown error occurred. Please try again later</string>
+
+    <!-- Billing 降级处理默认错误消息 -->
+    <string name="billing_error_fallback_generic">An error occurred</string>
+    <string name="billing_error_fallback_purchase">Purchase failed</string>
+    <string name="billing_error_fallback_product_details">Failed to load product details</string>
+    <string name="billing_error_fallback_google_play_service">Google Play services error</string>
 </resources>
