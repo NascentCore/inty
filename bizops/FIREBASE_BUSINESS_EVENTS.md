@@ -26,9 +26,10 @@
 | `chat_session_end` | ChatViewModel.kt | 聊天会话结束 |
 | `agent_switch` | ChatViewModel.kt | Agent切换 |
 | `message_sent` | ChatViewModel.kt | 消息发送 |
-| `message_send_success` | ChatViewModel.kt | 消息发送成功 |
-| `message_send_failure` | ChatViewModel.kt | 消息发送失败 |
-| `ai_response_received` | ChatViewModel.kt | AI回复接收 |
+| `message_send_success` | ChatViewModel.kt | 消息发送成功（包含API响应时间和端到端时间） |
+| `message_send_failure` | ChatViewModel.kt | 消息发送失败（包含API响应时间和端到端时间） |
+| `message_send_exception` | ChatViewModel.kt | 消息发送异常（包含端到端时间） |
+| `ai_response_received` | ChatViewModel.kt | AI回复接收（包含API响应时间和端到端时间） |
 | `free_limit_hit` | ChatViewModel.kt | 达到免费限制 |
 
 ### 页面访问
@@ -36,6 +37,12 @@
 |---------|---------|---------|
 | `page_leave` | PageTrackingHelper.kt | 页面离开（记录停留时长） |
 | `explore_page_view` | ExploreViewModel.kt | 探索页面访问 |
+
+### 订阅与计费
+| 事件名称 | 使用位置 | 业务含义 |
+|---------|---------|---------|
+| `subscription_price_fetched` | BillingPriceManager.kt | 从Google Play获取到的订阅价格 |
+| `subscription_price_displayed` | VipCenterContent.kt | UI上显示的订阅价格 |
 
 ### 用户交互
 | 事件名称 | 使用位置 | 业务含义 |
@@ -93,12 +100,25 @@
 - `agent_id`、`agent_name`：Agent信息
 - `user_type`：用户类型（vip/free）
 - `message_length`：消息长度
-- `ai_response_time`：AI响应时间
+- `ai_response_time`：AI响应时间（API调用时间，从发起网络请求到收到响应）
+- `end_to_end_time`：端到端时间（从用户点击发送按钮到收到响应，包含UI处理、API调用等全部时间）
 - `timestamp`：事件时间戳
+
+### 订阅价格参数
+- `product_id`、`product_name`、`plan_type`：订阅商品信息
+- `google_play_price`、`google_play_currency_code`、`google_play_price_micros`：Google Play原始价格信息
+- `displayed_price`、`currency_code`、`price_micros`：UI显示的价格信息
+- `corrected_price`、`old_price`：价格变化对比
+- `discount_rate`、`original_price`：折扣和原价信息
+- `is_selected`、`selected_plan_index`、`total_plans_count`：选择状态和计划数量
+- `is_subscribed`：用户订阅状态
+- `price_changed`、`currency_changed`、`micros_changed`：价格变化标识
 
 ### 性能参数
 - `duration_ms`：持续时间
-- `response_time`：响应时间
+- `response_time`：响应时间（API调用时间）
+- `ai_response_time`：AI响应时间（API调用时间，从发起网络请求到收到响应）
+- `end_to_end_time`：端到端时间（从用户操作开始到收到响应的完整时间，包含UI处理、API调用等全部时间）
 - `time_spent`：页面停留时长
 - `success`：操作是否成功
 
@@ -117,10 +137,13 @@
 ### 商业决策支持
 - **用户转化**：免费用户转VIP的路径分析
 - **功能价值**：各功能的使用频率和用户满意度
+- **订阅定价**：订阅价格获取和显示情况监控，分析价格变化对用户转化的影响
 - **错误监控**：快速发现和修复问题
 
 ### 性能优化
-- **AI响应时间**：优化AI服务性能
+- **AI响应时间**：优化AI服务性能（API调用时间）
+- **端到端时间**：优化用户真实感知的延迟（从用户点击到收到响应的完整时间）
+- **性能瓶颈识别**：通过对比API响应时间和端到端时间，识别UI处理、网络延迟、本地处理等各个环节的性能瓶颈
 - **网络性能**：识别慢请求和失败点
 - **用户体验**：页面加载和交互响应优化
 

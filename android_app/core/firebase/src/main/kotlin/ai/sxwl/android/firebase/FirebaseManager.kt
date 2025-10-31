@@ -95,6 +95,7 @@ object FirebaseManager {
                     "auth_failure" to 1.0, // 认证失败
                     "app_error" to 1.0, // 应用错误
                     "message_send_failure" to 1.0, // 消息发送失败
+                    "message_send_exception" to 1.0, // 消息发送异常
                     "network_final_failure" to 1.0, // 网络请求最终失败
                     "request_failure" to 1.0, // 请求失败
                     "very_slow_request" to 1.0, // 极慢请求
@@ -115,9 +116,8 @@ object FirebaseManager {
                     "network_retry" to if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
                     "network_request" to if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
 
-                    // 🟡 性能指标事件 - 保持现有采样配置
-                    Events.AI_RESPONSE_TIME to
-                        if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
+                    // 🔴 性能指标事件 - 100%采样（关键性能指标）
+                    Events.AI_RESPONSE_TIME to 1.0, // AI响应时间（100%采样）
                     Events.TTS_GENERATION_TIME to
                         if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     Events.VOICE_PLAYBACK_TIME to
