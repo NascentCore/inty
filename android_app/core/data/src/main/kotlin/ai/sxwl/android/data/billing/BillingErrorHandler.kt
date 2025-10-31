@@ -28,11 +28,11 @@ object BillingErrorHandler {
         errorType: ErrorType = ErrorType.GENERAL,
     ) {
         val errorMessage = getErrorMessage(billingResult, errorType)
-        LogUtils.e("BillingErrorHandler - $errorMessage")
+        LogUtils.e("Billing BillingErrorHandler - $errorMessage")
 
         // 记录详细错误信息
-        LogUtils.i("BillingErrorHandler - 详细错误信息: ${billingResult.debugMessage}")
-        LogUtils.i("BillingErrorHandler - 错误响应码: ${billingResult.responseCode}")
+        LogUtils.i("Billing BillingErrorHandler - 详细错误信息: ${billingResult.debugMessage}")
+        LogUtils.i("Billing BillingErrorHandler - 错误响应码: ${billingResult.responseCode}")
 
         // 提供解决建议
         provideSolutionSuggestions(billingResult, context)
@@ -121,7 +121,7 @@ object BillingErrorHandler {
                 }
             }
 
-        LogUtils.i("BillingErrorHandler - 解决建议:")
-        suggestions.forEach { suggestion -> LogUtils.i("BillingErrorHandler - $suggestion") }
+        LogUtils.i("Billing BillingErrorHandler - 解决建议:")
+        suggestions.forEach { suggestion -> LogUtils.i("Billing BillingErrorHandler - $suggestion") }
     }
 }

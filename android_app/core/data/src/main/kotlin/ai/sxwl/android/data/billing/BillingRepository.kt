@@ -38,7 +38,7 @@ import kotlinx.coroutines.launch
 object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener {
 
     private const val DISCONNECT_RECONNECT_DELAY_MS = 1000L
-    private const val TAG = "BillingRepository"
+    private const val TAG = "Billing BillingRepository"
 
     private lateinit var billingClient: BillingClient
     private var isConnected = false
@@ -195,6 +195,19 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
         // 连接成功后，立即获取远程数据
         eventScope.launch { fetchRemote() }
+
+        // 如果现有plans中有价格占位符，强制刷新价格
+        val currentPlans = _plansFlow.value
+        if (currentPlans.any { it.price == "-" || it.price.isEmpty() }) {
+            log("检测到价格占位符，强制刷新价格", LogUtils.D)
+            eventScope.launch {
+                // 稍等片刻，确保fetchRemote完成后再查询价格
+                delay(1000)
+                if (isConnected && ::priceManager.isInitialized) {
+                    priceManager.querySkuDetails(isConnected)
+                }
+            }
+        }
     }
 
     /** 处理BillingClient连接失败 */

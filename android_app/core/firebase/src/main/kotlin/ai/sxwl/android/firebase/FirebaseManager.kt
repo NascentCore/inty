@@ -10,14 +10,14 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.perf.FirebasePerformance
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics和Performance的初始化和使用
@@ -88,6 +88,8 @@ object FirebaseManager {
                     Events.AGENT_SWITCH to 1.0, // Agent切换
                     Events.SUBSCRIPTION_START to 1.0, // 订阅开始
                     Events.FREE_LIMIT_HIT to 1.0, // 达到免费限制
+                    Events.SUBSCRIPTION_PRICE_FETCHED to 1.0, // Google Play获取到的价格（100%采样）
+                    Events.SUBSCRIPTION_PRICE_DISPLAYED to 1.0, // UI上显示的价格（100%采样）
 
                     // 🔴 错误和失败事件 - 100%采样
                     "auth_failure" to 1.0, // 认证失败
@@ -432,6 +434,10 @@ object FirebaseManager {
         const val IMAGE_GENERATION_START = "image_generation_start"
         const val SUBSCRIPTION_START = "subscription_start"
         const val FREE_LIMIT_HIT = "free_limit_hit"
+
+        // Billing价格相关事件
+        const val SUBSCRIPTION_PRICE_FETCHED = "subscription_price_fetched" // Google Play获取到的价格
+        const val SUBSCRIPTION_PRICE_DISPLAYED = "subscription_price_displayed" // UI上显示的价格
     }
 
     /** 预定义的用户属性常量 */
