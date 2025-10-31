@@ -48,10 +48,10 @@ object VipStatusHelper {
             )
 
             LogUtils.i(
-                "VipStatusHelper - Firebase用户属性已更新: userType=$userType, subscriptionLevel=$subscriptionLevel"
+                "Billing VipStatusHelper - Firebase用户属性已更新: userType=$userType, subscriptionLevel=$subscriptionLevel"
             )
         } catch (e: Exception) {
-            LogUtils.e("VipStatusHelper - 更新Firebase用户属性失败: ${e.message}")
+            LogUtils.e("Billing VipStatusHelper - 更新Firebase用户属性失败: ${e.message}")
         }
     }
 
@@ -59,7 +59,7 @@ object VipStatusHelper {
     fun purchasePlan(activity: Activity, productId: String, onError: (String) -> Unit = {}) {
         // 检查用户是否已经订阅
         if (isUserVip()) {
-            LogUtils.w("VipStatusHelper - 用户已经是订阅用户，无需重复购买")
+            LogUtils.w("Billing VipStatusHelper - 用户已经是订阅用户，无需重复购买")
             onError("用户已经是订阅用户")
             return
         }
@@ -69,7 +69,7 @@ object VipStatusHelper {
         val planExists = currentPlans.any { it.googleProductId == productId }
 
         if (!planExists) {
-            LogUtils.w("VipStatusHelper - 指定的计划不存在: $productId")
+            LogUtils.w("Billing VipStatusHelper - 指定的计划不存在: $productId")
             onError("指定的计划不存在")
             return
         }

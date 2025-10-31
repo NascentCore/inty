@@ -46,10 +46,11 @@
 |---------|---------|------|---------|--------|
 | `chat_started` | ChatViewModel.kt | `agent_id`, `agent_name`, `user_type`, `timestamp` | 聊天会话开始 | 🔴 100% |
 | `message_sent` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_length`, `user_type`, `timestamp` | 消息发送 | 🔴 100% |
-| `message_send_success` | ChatViewModel.kt | `agent_id`, `agent_name`, `response_code`, `user_type`, `ai_response_time` | 消息发送成功 | 🔴 100% |
-| `message_send_failure` | ChatViewModel.kt | 预留 | 消息发送失败 | 🔴 100% |
+| `message_send_success` | ChatViewModel.kt | `agent_id`, `agent_name`, `response_code`, `user_type`, `ai_response_time`, `end_to_end_time` | 消息发送成功（包含API响应时间和端到端时间） | 🔴 100% |
+| `message_send_failure` | ChatViewModel.kt | `agent_id`, `agent_name`, `error_message`, `user_type`, `ai_response_time`, `end_to_end_time` | 消息发送失败（包含API响应时间和端到端时间） | 🔴 100% |
+| `message_send_exception` | ChatViewModel.kt | `agent_id`, `agent_name`, `error_message`, `user_type`, `end_to_end_time` | 消息发送异常（包含端到端时间） | 🔴 100% |
 | `free_limit_reached` | ChatViewModel.kt | 预留 | 达到免费限制 | 🔴 100% |
-| `ai_response_received` | FirebaseManager.Events | 预留 | AI回复接收 | 🔴 100% |
+| `ai_response_received` | ChatViewModel.kt | `agent_id`, `agent_name`, `response_time`, `end_to_end_time`, `response_code`, `user_type`, `timestamp` | AI回复接收（包含API响应时间和端到端时间） | 🔴 100% |
 
 ### 1.5 页面追踪事件
 
@@ -69,7 +70,14 @@
 | `agent_switch` | FirebaseManager.Events | 预留 | Agent切换 | 🔴 100% |
 | `voice_playback_start` | AudioManager.kt | `message_id`, `agent_id`, `agent_name`, `has_audio_url`, `auto_play`, `is_manual_click`, `timestamp` | 语音播放开始 | 🔴 100% |
 
-### 1.7 网络请求事件
+### 1.7 订阅与计费事件
+
+| 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
+|---------|---------|------|---------|--------|
+| `subscription_price_fetched` | BillingPriceManager.kt | `product_id`, `product_name`, `plan_type`, `google_play_price`, `google_play_currency_code`, `google_play_price_micros`, `corrected_price`, `old_price`, `old_currency_code`, `old_price_micros`, `has_placeholder`, `price_changed`, `currency_changed`, `micros_changed` | 从Google Play获取到的订阅价格详细信息（包含价格变化对比） | 🔴 100% |
+| `subscription_price_displayed` | VipCenterContent.kt | `product_id`, `product_name`, `plan_type`, `displayed_price`, `currency_code`, `price_micros`, `discount_rate`, `original_price`, `is_selected`, `selected_plan_index`, `total_plans_count`, `is_subscribed`, `timestamp` | UI上显示的订阅价格详细信息（包含选择状态和订阅状态） | 🔴 100% |
+
+### 1.8 网络请求事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
@@ -80,7 +88,7 @@
 | `very_slow_request` | NetServiceMgr.kt | `duration_ms`, `method`, `url`, `successful` | 极慢请求（>10秒） | 🔴 100% |
 | `request_failure` | NetServiceMgr.kt | `duration_ms`, `method`, `url`, `error_type`, `error_message` | 请求失败 | 🔴 100% |
 
-### 1.8 错误监控事件
+### 1.9 错误监控事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
@@ -92,7 +100,7 @@
 
 | 事件名称 | 使用位置 | 业务含义 | 采样率 |
 |---------|---------|---------|--------|
-| `ai_response_time` | ChatViewModel.kt | AI响应时间 | 🟡 调试100%，发布50% |
+| `ai_response_time` | ChatViewModel.kt | AI响应时间（API调用时间） | 🔴 100% |
 | `tts_generation_time` | FirebaseManager.Events | TTS生成时间（预留） | 🟡 调试100%，发布30% |
 | `voice_playback_time` | FirebaseManager.Events | 语音播放时间（预留） | 🟡 调试100%，发布30% |
 | `image_load_time` | FirebaseManager.Events | 图片加载时间（预留） | 🟡 调试100%，发布20% |
@@ -103,7 +111,7 @@
 
 | 功能 | 使用位置 | 业务含义 | 采样率 |
 |------|---------|---------|--------|
-| `logPerformanceMetric` | ChatViewModel.kt | 记录AI响应时间 | 🟡 调试100%，发布50% |
+| `logPerformanceMetric` | ChatViewModel.kt | 记录AI响应时间（API调用时间） | 🔴 100% |
 | HTTP网络监控 | NetServiceMgr.kt | 自动监控网络请求性能 | 🟡 调试100%，发布30% |
 | 自定义追踪 | FirebaseManager.kt | 自定义性能追踪 | 🟡 调试100%，发布20% |
 
@@ -204,10 +212,18 @@
 - `agent_id`、`agent_name`：Agent相关信息，用于分析用户偏好
 - `user_type`：用户类型（vip/free），用于商业分析
 - `message_length`、`ai_response_time`：聊天相关指标
+- `ai_response_time`：AI响应时间（API调用时间，从发起网络请求到收到响应）
+- `end_to_end_time`：端到端时间（从用户点击发送按钮到收到响应的完整时间，包含UI处理、API调用等全部时间），用于衡量真实的用户体验
 - `timestamp`：事件时间戳，用于时序分析
+- `product_id`、`product_name`、`plan_type`：订阅商品信息，用于订阅分析
+- `google_play_price`、`google_play_currency_code`、`google_play_price_micros`：Google Play原始价格信息
+- `displayed_price`、`currency_code`、`price_micros`：UI显示的价格信息
+- `price_changed`、`currency_changed`、`micros_changed`：价格变化标识，用于监控价格更新
 
 ### 5.2 性能监控参数
 - `duration_ms`、`response_time`：性能指标，用于优化
+- `ai_response_time`：AI响应时间（API调用时间，从发起网络请求到收到响应），用于API性能分析
+- `end_to_end_time`：端到端时间（从用户操作开始到收到响应的完整时间），用于真实的用户体验分析，比API响应时间更能反映用户感知的延迟
 - `time_spent`：页面停留时长，用于用户体验分析
 - `success`、`response_code`：成功率和错误分析
 
@@ -219,9 +235,11 @@
 
 ### 6.1 核心业务指标
 - **用户行为分析**：页面停留时长、用户交互模式、Agent偏好
-- **聊天体验优化**：AI响应时间、消息发送成功率、语音播放体验
-- **商业决策支持**：用户转化路径、功能使用频率、订阅分析
-- **问题快速发现**：错误监控、网络性能、应用稳定性
+- **聊天体验优化**：AI响应时间（API性能）、端到端时间（用户真实感知延迟）、消息发送成功率、语音播放体验
+- **性能分析**：通过对比API响应时间和端到端时间，可以识别UI处理、网络延迟、本地处理等各个环节的性能瓶颈
+- **商业决策支持**：用户转化路径、功能使用频率、订阅分析、订阅价格变化监控
+- **订阅定价分析**：Google Play价格获取情况、UI价格显示情况、价格变化对转化的影响
+- **问题快速发现**：错误监控、网络性能、应用稳定性、价格更新异常、性能瓶颈定位
 
 ### 6.2 数据质量保证
 - **业务数据完整性**：关键业务事件100%采样，确保数据完整

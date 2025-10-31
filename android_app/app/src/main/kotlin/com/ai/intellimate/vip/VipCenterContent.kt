@@ -1,5 +1,7 @@
 package com.ai.intellimate.vip
 
+import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.utils.LogUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -17,8 +19,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -65,6 +69,47 @@ fun VipCenterContent(
     val selectedPlanIndex by viewModel.selectedPlanIndex.collectAsState()
     val vipStatus by viewModel.vipStatusFlow.collectAsState()
 
+    // 当UI显示价格时，上报Firebase事件（100%采样）
+    // 使用plans的key来避免重复上报相同的价格信息
+    val plansKey = remember(plans) {
+        plans.joinToString("|") { "${it.googleProductId}:${it.price}:${it.currencyCode}:${it.priceAmountMicros}" }
+    }
+
+    LaunchedEffect(plansKey, selectedPlanIndex, vipStatus.isSubscribed) {
+        if (plans.isNotEmpty()) {
+            try {
+                // 为每个计划上报价格显示事件
+                plans.forEachIndexed { index, plan ->
+                    FirebaseManager.logEvent(
+                        FirebaseManager.Events.SUBSCRIPTION_PRICE_DISPLAYED,
+                        mapOf(
+                            "product_id" to plan.googleProductId,
+                            "product_name" to (plan.name ?: ""),
+                            "plan_type" to (plan.planType ?: ""),
+                            "displayed_price" to (plan.price ?: "-"),
+                            "currency_code" to (plan.currencyCode ?: ""),
+                            "price_micros" to plan.priceAmountMicros,
+                            "discount_rate" to plan.discountRate,
+                            "original_price" to (plan.originalPrice ?: "-"),
+                            "is_selected" to (index == selectedPlanIndex),
+                            "selected_plan_index" to selectedPlanIndex,
+                            "total_plans_count" to plans.size,
+                            "is_subscribed" to vipStatus.isSubscribed,
+                            "timestamp" to System.currentTimeMillis(),
+                        )
+                    )
+                }
+                LogUtils.d(
+                    "Billing VipCenterContent - ✅ Firebase事件已上报: SUBSCRIPTION_PRICE_DISPLAYED, 计划数量: ${plans.size}"
+                )
+            } catch (e: Exception) {
+                LogUtils.e(
+                    "Billing VipCenterContent - ⚠️ Firebase事件上报失败: ${e.message}"
+                )
+            }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // 全屏视频播放器
         BackgroundVideoPlayer()
@@ -72,7 +117,8 @@ fun VipCenterContent(
         // 半透明遮罩层，确保内容可读性
         Box(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .fillMaxHeight(.77f)
                     .align(Alignment.BottomCenter)
                     .background(
@@ -198,7 +244,9 @@ private fun VipCenterHeader() {
 /** 会员权益列表 */
 @Composable
 private fun VipCenterBenefits() {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp)) {
         PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited_chat))
 
         PremiumBenefitItem(stringResource(R.string.premium_benefit_higher_other_limits))

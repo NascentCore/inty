@@ -110,7 +110,7 @@ class ChatViewModel : BaseVM() {
         // Firebase Analytics - 记录聊天会话开始
         agentInfo?.let { agent ->
             FirebaseManager.logEvent(
-                "chat_session_start",
+                FirebaseManager.Events.CHAT_SESSION_START,
                 mapOf(
                     "agent_id" to agent.id,
                     "agent_name" to agent.name,
@@ -124,9 +124,9 @@ class ChatViewModel : BaseVM() {
             FirebaseManager.setCustomKey("current_agent_id", agent.id)
             FirebaseManager.setCustomKey("current_agent_name", agent.name)
 
-            // 追踪聊天会话开始
+            // 追踪聊天会话开始（用户操作：开始会话）
             PageTrackingHelper.trackUserInteraction(
-                "chat_session_start",
+                PageTrackingHelper.UserActions.START_SESSION,
                 agent.name,
                 mapOf(
                     "agent_id" to agent.id,
@@ -147,7 +147,10 @@ class ChatViewModel : BaseVM() {
             audioManager?.stopAllPlayback()
 
             // Firebase Analytics - 记录聊天会话结束
-            FirebaseManager.logEvent("chat_session_end", mapOf("reason" to "agent_cleared"))
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.CHAT_SESSION_END,
+                mapOf("reason" to "agent_cleared")
+            )
             return
         }
 
@@ -315,9 +318,9 @@ class ChatViewModel : BaseVM() {
         }
 
         // Firebase Analytics - 记录消息发送
+        // 记录端到端时间的起始点（用户点击发送按钮的时间）
+        val endToEndStartTime = System.currentTimeMillis()
         _agentInfo.value?.let { agent ->
-            val startTime = System.currentTimeMillis()
-
             FirebaseManager.logEvent(
                 FirebaseManager.Events.MESSAGE_SENT,
                 FirebaseManager.safeEventParams(
@@ -325,7 +328,7 @@ class ChatViewModel : BaseVM() {
                     "agent_name" to agent.name,
                     "message_length" to inputMsg.length,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                    "timestamp" to startTime
+                    "timestamp" to endToEndStartTime
                 )
             )
 
@@ -334,16 +337,16 @@ class ChatViewModel : BaseVM() {
             FirebaseManager.setCustomKey("last_message_preview", inputMsg.take(50))
             FirebaseManager.setCustomKey("last_agent_id", agent.id)
 
-            // 追踪消息发送
+            // 追踪消息发送（用户操作：发送消息）
             PageTrackingHelper.trackUserInteraction(
-                "message_send",
+                PageTrackingHelper.UserActions.SEND_MESSAGE,
                 "chat_input",
                 FirebaseManager.safeEventParams(
                     "agent_id" to agent.id,
                     "agent_name" to agent.name,
                     "message_length" to inputMsg.length,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                    "timestamp" to startTime
+                    "timestamp" to endToEndStartTime
                 )
             )
         }
@@ -358,20 +361,22 @@ class ChatViewModel : BaseVM() {
                 when (result) {
                     is HttpResult.Success -> {
                         val responseTime = System.currentTimeMillis() - aiResponseStartTime
+                        val endToEndTime = System.currentTimeMillis() - endToEndStartTime
 
-                        // Firebase Analytics - 记录消息发送成功和AI响应时间
+                        // Firebase Analytics - 记录消息发送成功、AI响应时间和端到端时间
                         FirebaseManager.logEvent(
-                            "message_send_success",
+                            FirebaseManager.Events.MESSAGE_SEND_SUCCESS,
                             FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
                                 "response_code" to (result.data.code ?: 0),
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                "ai_response_time" to responseTime
+                                "ai_response_time" to responseTime,
+                                "end_to_end_time" to endToEndTime
                             )
                         )
 
-                        // 记录AI响应时间性能指标
+                        // 记录AI响应时间性能指标（API调用时间）
                         FirebaseManager.logPerformanceMetric(
                             FirebaseManager.Events.AI_RESPONSE_TIME,
                             responseTime,
@@ -383,13 +388,14 @@ class ChatViewModel : BaseVM() {
                             )
                         )
 
-                        // 上报AI回复接收事件
+                        // 上报AI回复接收事件（包含API响应时间和端到端时间）
                         FirebaseManager.logEvent(
                             FirebaseManager.Events.AI_RESPONSE_RECEIVED,
                             FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
                                 "response_time" to responseTime,
+                                "end_to_end_time" to endToEndTime,
                                 "response_code" to (result.data.code ?: 0),
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "timestamp" to System.currentTimeMillis()
@@ -431,16 +437,18 @@ class ChatViewModel : BaseVM() {
                     }
                     is HttpResult.Failure -> {
                         val responseTime = System.currentTimeMillis() - aiResponseStartTime
+                        val endToEndTime = System.currentTimeMillis() - endToEndStartTime
 
-                        // Firebase Analytics - 记录消息发送失败
+                        // Firebase Analytics - 记录消息发送失败（包含API响应时间和端到端时间）
                         FirebaseManager.logEvent(
-                            "message_send_failure",
+                            FirebaseManager.Events.MESSAGE_SEND_FAILURE,
                             FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
                                 "error_message" to result.message,
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                "ai_response_time" to responseTime
+                                "ai_response_time" to responseTime,
+                                "end_to_end_time" to endToEndTime
                             )
                         )
 
@@ -450,7 +458,8 @@ class ChatViewModel : BaseVM() {
                             FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
-                                "response_time" to responseTime
+                                "response_time" to responseTime,
+                                "end_to_end_time" to endToEndTime
                             )
                         )
 
@@ -462,7 +471,31 @@ class ChatViewModel : BaseVM() {
                     }
                 }
             } catch (e: Exception) {
+                val endToEndTime = System.currentTimeMillis() - endToEndStartTime
                 LogUtils.e("Unexpected error in sendMsg: ${e.message}")
+
+                // Firebase Analytics - 记录异常情况下的端到端时间
+                FirebaseManager.logEvent(
+                    FirebaseManager.Events.MESSAGE_SEND_EXCEPTION,
+                    FirebaseManager.safeEventParams(
+                        "agent_id" to agentId,
+                        "agent_name" to (_agentInfo.value?.name),
+                        "error_message" to (e.message ?: "unknown error"),
+                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                        "end_to_end_time" to endToEndTime
+                    )
+                )
+
+                // Firebase Crashlytics - 记录异常
+                FirebaseManager.recordException(
+                    e,
+                    FirebaseManager.safeEventParams(
+                        "agent_id" to agentId,
+                        "agent_name" to (_agentInfo.value?.name),
+                        "end_to_end_time" to endToEndTime
+                    )
+                )
+
                 NetworkErrorHandler.showNetworkAwareError(
                     "An unexpected error occurred while sending message"
                 )

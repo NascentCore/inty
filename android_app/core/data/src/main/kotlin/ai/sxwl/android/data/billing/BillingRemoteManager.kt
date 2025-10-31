@@ -69,42 +69,75 @@ internal class BillingRemoteManager(
                         vipStatusFlow.value = vipStatus
 
                         // 更新订阅计划列表
+                        // 保留现有价格信息，避免覆盖
+                        LogUtils.i("Billing [远程数据] 开始更新订阅计划列表，后端返回 ${response.plans.size} 个计划")
+
+                        val existingPlans = plansFlow.value.associateBy { it.googleProductId }
+                        LogUtils.d("Billing [远程数据] 当前本地计划数量: ${existingPlans.size}")
+                        existingPlans.values.forEach { plan ->
+                            LogUtils.d("  - ${plan.googleProductId}: ${plan.name}, 价格=${plan.price}, 货币=${plan.currencyCode}")
+                        }
+                        
                         val vipPlans =
                             response.plans.mapNotNull { plan ->
                                 plan.googlePlayProductId?.let { productId ->
-                                    VipPlan(
-                                        googleProductId = productId,
-                                        discountRate = plan.discountRate ?: 1.0,
-                                        name = plan.name ?: "",
-                                        planType = plan.planType ?: "",
-                                        description = plan.description ?: "",
-                                    )
+                                    // 如果已存在该计划，保留其价格信息
+                                    existingPlans[productId]?.let { existingPlan ->
+                                        LogUtils.d(
+                                            "Billing [远程数据] 保留现有计划的价格信息: $productId\n" +
+                                                    "  保留的价格: ${existingPlan.price}\n" +
+                                                    "  保留的货币: ${existingPlan.currencyCode}\n" +
+                                                    "  保留的微单位: ${existingPlan.priceAmountMicros}"
+                                        )
+                                        // 更新计划的基础信息，但保留价格信息
+                                        existingPlan.copy(
+                                            discountRate = plan.discountRate
+                                                ?: existingPlan.discountRate,
+                                            name = plan.name ?: existingPlan.name,
+                                            planType = plan.planType ?: existingPlan.planType,
+                                            description = plan.description
+                                                ?: existingPlan.description,
+                                        )
+                                    } ?: run {
+                                        LogUtils.d("Billing [远程数据] 新计划（无价格信息）: $productId, ${plan.name}")
+                                        VipPlan(
+                                            // 新计划，使用默认值
+                                            googleProductId = productId,
+                                            discountRate = plan.discountRate ?: 1.0,
+                                            name = plan.name ?: "",
+                                            planType = plan.planType ?: "",
+                                            description = plan.description ?: "",
+                                        )
+                                    }
                                 }
                             }
 
-                        // 直接更新plansFlow，不进行复杂的变化检测
-                        BillingStorage.saveLocalPlans(vipPlans)
+                        LogUtils.i("Billing [远程数据] 计划列表更新完成，共 ${vipPlans.size} 个计划")
+                        // 更新plansFlow，但先不保存到缓存（等待价格更新后再保存）
                         plansFlow.value = vipPlans
 
                         // 如果 BillingClient 已连接，立即查询价格
                         if (isConnected) {
+                            LogUtils.i("Billing [远程数据] BillingClient 已连接，立即查询价格")
                             priceManager.querySkuDetails(isConnected)
                         } else {
-                            LogUtils.w("BillingClient 未连接，等待连接成功后查询价格")
+                            LogUtils.w("Billing [远程数据] BillingClient 未连接，等待连接成功后查询价格")
+                            // 如果未连接，暂时保存基础信息到缓存（不包含价格）
+                            // 等连接成功后再更新价格
                         }
                     }
                     is HttpResult.Failure -> {
-                        LogUtils.e("获取订阅计划失败: ${result.message}")
+                        LogUtils.e("Billing 获取订阅计划失败: ${result.message}")
                     }
                 }
             }
             .onFailure { exception ->
                 when (exception) {
                     is CancellationException -> {
-                        LogUtils.w("获取订阅计划被取消: ${exception.message}")
+                        LogUtils.w("Billing 获取订阅计划被取消: ${exception.message}")
                     }
                     else -> {
-                        LogUtils.e("获取订阅计划异常: ${exception.message}")
+                        LogUtils.e("Billing 获取订阅计划异常: ${exception.message}")
                     }
                 }
             }

@@ -38,7 +38,7 @@ import kotlinx.coroutines.launch
 object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener {
 
     private const val DISCONNECT_RECONNECT_DELAY_MS = 1000L
-    private const val TAG = "BillingRepository"
+    private const val TAG = "Billing BillingRepository"
 
     private lateinit var billingClient: BillingClient
     private var isConnected = false
@@ -93,7 +93,12 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     private fun handleGooglePlayServicesUnavailable() {
         log("Google Play 服务不可用，跳过BillingClient初始化", LogUtils.W)
         updateInitState(errorMessage = "Google Play 服务不可用")
-        emitEvent(BillingEvent.InitializationFailed("Google Play 服务不可用"))
+        emitEvent(
+            BillingEvent.InitializationFailed(
+                BillingErrorCode.GOOGLE_PLAY_SERVICE_UNAVAILABLE,
+                "Google Play 服务不可用"
+            )
+        )
     }
 
     /** 初始化BillingClient */
@@ -195,6 +200,19 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
         // 连接成功后，立即获取远程数据
         eventScope.launch { fetchRemote() }
+
+        // 如果现有plans中有价格占位符，强制刷新价格
+        val currentPlans = _plansFlow.value
+        if (currentPlans.any { it.price == "-" || it.price.isEmpty() }) {
+            log("检测到价格占位符，强制刷新价格", LogUtils.D)
+            eventScope.launch {
+                // 稍等片刻，确保fetchRemote完成后再查询价格
+                delay(1000)
+                if (isConnected && ::priceManager.isInitialized) {
+                    priceManager.querySkuDetails(isConnected)
+                }
+            }
+        }
     }
 
     /** 处理BillingClient连接失败 */
@@ -256,12 +274,15 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                 BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
                     10000L to "服务不可用，使用较长延迟重连: 10秒"
                 }
+
                 BillingClient.BillingResponseCode.NETWORK_ERROR -> {
                     5000L to "网络错误，使用中等延迟重连: 5秒"
                 }
+
                 BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
                     30000L to "计费不可用，使用更长延迟重连: 30秒"
                 }
+
                 else -> {
                     5000L to "其他错误，使用标准延迟重连: 5秒"
                 }
@@ -333,14 +354,17 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                         log("购买成功，刷新状态")
                         refreshSubscriptionStatus()
                     }
+
                     is BillingEvent.Connected -> {
                         log("连接成功，刷新状态")
                         refreshSubscriptionStatus()
                     }
+
                     is BillingEvent.AppResumed -> {
                         log("应用恢复，检查状态")
                         refreshSubscriptionStatus()
                     }
+
                     else -> log("未处理事件: $event")
                 }
             }
