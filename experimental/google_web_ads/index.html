@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Web Ads Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .button:active {
+            transform: translateY(0);
+        }
+        .info-box {
+            background: #f5f5f5;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        .info-box p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Google Web Ads Demo</h1>
+        <p class="subtitle">演示 Google Ads 转换跟踪和再营销标签集成</p>
+        
+        <form id="demoForm">
+            <div class="form-group">
+                <label for="email">邮箱地址</label>
+                <input type="email" id="email" name="email" placeholder="your@email.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="action">操作类型</label>
+                <input type="text" id="action" name="action" placeholder="例如：注册、购买、下载" value="注册">
+            </div>
+            
+            <button type="submit" class="button">提交（触发转换事件）</button>
+        </form>
+        
+        <div id="status" class="status" style="display: none;"></div>
+        
+        <div class="info-box">
+            <p><strong>说明：</strong></p>
+            <p>1. 本页面已集成 Google Ads 转换跟踪代码</p>
+            <p>2. 点击提交按钮会触发转换事件，发送到 Google Ads</p>
+            <p>3. 页面加载时会自动发送页面浏览事件（用于再营销）</p>
+            <p>4. 查看浏览器控制台可以看到发送的事件详情</p>
+        </div>
+    </div>
+
+    <!-- Google Ads Global Site Tag (gtag.js) -->
+    <!-- 请将 YOUR_GOOGLE_ADS_ID 替换为你的 Google Ads ID -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-YOUR_GOOGLE_ADS_ID"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        
+        // 配置 Google Ads ID（请替换为实际的 ID）
+        gtag('config', 'AW-YOUR_GOOGLE_ADS_ID', {
+            'send_page_view': true
+        });
+        
+        // 转换跟踪函数
+        function trackConversion(conversionLabel, value, currency = 'CNY') {
+            gtag('event', 'conversion', {
+                'send_to': 'AW-YOUR_GOOGLE_ADS_ID/' + conversionLabel,
+                'value': value,
+                'currency': currency
+            });
+            console.log('转换事件已发送:', {
+                conversionLabel: conversionLabel,
+                value: value,
+                currency: currency
+            });
+        }
+        
+        // 自定义事件跟踪
+        function trackEvent(eventName, eventParams = {}) {
+            gtag('event', eventName, eventParams);
+            console.log('事件已发送:', eventName, eventParams);
+        }
+        
+        // 表单提交处理
+        document.getElementById('demoForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const action = document.getElementById('action').value;
+            
+            // 显示状态
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status success';
+            statusDiv.textContent = '✅ 转换事件已发送！请查看浏览器控制台查看详情。';
+            
+            // 发送转换事件
+            trackConversion('YOUR_CONVERSION_LABEL', 1.0);
+            
+            // 发送自定义事件
+            trackEvent('form_submit', {
+                'email': email,
+                'action': action
+            });
+            
+            // 重置表单
+            setTimeout(() => {
+                this.reset();
+                statusDiv.style.display = 'none';
+            }, 3000);
+        });
+        
+        // 页面加载时发送页面浏览事件（用于再营销）
+        window.addEventListener('load', function() {
+            console.log('页面已加载，Google Ads 标签已初始化');
+            trackEvent('page_view', {
+                'page_title': document.title,
+                'page_location': window.location.href
+            });
+        });
+    </script>
+</body>
+</html>
