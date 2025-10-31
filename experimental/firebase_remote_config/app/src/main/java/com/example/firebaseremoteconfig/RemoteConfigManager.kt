@@ -55,8 +55,8 @@ class RemoteConfigManager private constructor() {
         )
         remoteConfig.setDefaultsAsync(defaultValues)
         
-        // 立即获取配置（可选，用于首次启动）
-        fetchAndActivate()
+        // 注意：不在 init 中调用 fetchAndActivate()，因为它是 suspend 函数
+        // 首次配置获取应在 ViewModel 的 loadConfig() 中进行
     }
     
     /**

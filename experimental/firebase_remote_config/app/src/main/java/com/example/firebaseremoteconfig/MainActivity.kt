@@ -7,6 +7,9 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -34,20 +37,20 @@ class MainViewModel : ViewModel() {
     
     private val remoteConfigManager = RemoteConfigManager.getInstance()
     
-    var buttonVariant by mutableStateOf(ABTestVariant.CONTROL)
-        private set
+    private val _buttonVariant = MutableStateFlow(ABTestVariant.CONTROL)
+    val buttonVariant: StateFlow<ABTestVariant> = _buttonVariant.asStateFlow()
     
-    var welcomeMessage by mutableStateOf("")
-        private set
+    private val _welcomeMessage = MutableStateFlow("")
+    val welcomeMessage: StateFlow<String> = _welcomeMessage.asStateFlow()
     
-    var isNewFeatureEnabled by mutableStateOf(false)
-        private set
+    private val _isNewFeatureEnabled = MutableStateFlow(false)
+    val isNewFeatureEnabled: StateFlow<Boolean> = _isNewFeatureEnabled.asStateFlow()
     
-    var configStatus by mutableStateOf("加载中...")
-        private set
+    private val _configStatus = MutableStateFlow("加载中...")
+    val configStatus: StateFlow<String> = _configStatus.asStateFlow()
     
-    var isLoading by mutableStateOf(false)
-        private set
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     
     init {
         loadConfig()
@@ -55,36 +58,39 @@ class MainViewModel : ViewModel() {
     
     fun loadConfig() {
         viewModelScope.launch {
-            isLoading = true
+            _isLoading.value = true
             try {
+                // 首次加载时尝试获取最新配置
+                remoteConfigManager.fetchAndActivate()
+                
                 val variantString = remoteConfigManager.getButtonColorVariant()
-                buttonVariant = ABTestVariant.fromString(variantString)
-                welcomeMessage = remoteConfigManager.getWelcomeMessage()
-                isNewFeatureEnabled = remoteConfigManager.isNewFeatureEnabled()
-                configStatus = "配置已加载\n${remoteConfigManager.getConfigInfo()}"
+                _buttonVariant.value = ABTestVariant.fromString(variantString)
+                _welcomeMessage.value = remoteConfigManager.getWelcomeMessage()
+                _isNewFeatureEnabled.value = remoteConfigManager.isNewFeatureEnabled()
+                _configStatus.value = "配置已加载\n${remoteConfigManager.getConfigInfo()}"
             } catch (e: Exception) {
-                configStatus = "加载配置失败: ${e.message}"
+                _configStatus.value = "加载配置失败: ${e.message}"
             } finally {
-                isLoading = false
+                _isLoading.value = false
             }
         }
     }
     
     fun refreshConfig() {
         viewModelScope.launch {
-            isLoading = true
+            _isLoading.value = true
             try {
                 val updated = remoteConfigManager.fetchAndActivate()
                 if (updated) {
                     loadConfig()
-                    configStatus = "配置已更新\n${remoteConfigManager.getConfigInfo()}"
+                    _configStatus.value = "配置已更新\n${remoteConfigManager.getConfigInfo()}"
                 } else {
-                    configStatus = "配置已是最新\n${remoteConfigManager.getConfigInfo()}"
+                    _configStatus.value = "配置已是最新\n${remoteConfigManager.getConfigInfo()}"
                 }
             } catch (e: Exception) {
-                configStatus = "刷新配置失败: ${e.message}"
+                _configStatus.value = "刷新配置失败: ${e.message}"
             } finally {
-                isLoading = false
+                _isLoading.value = false
             }
         }
     }
