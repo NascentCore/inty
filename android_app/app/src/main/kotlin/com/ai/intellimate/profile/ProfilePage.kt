@@ -103,7 +103,9 @@ internal fun ProfilePage(
             contentDescription = null
         )
         Scaffold(
-            modifier = Modifier.fillMaxSize().background(Color.Transparent),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent),
             containerColor = Color.Transparent,
         ) { innerPadding ->
             Column(Modifier.fillMaxWidth()) {
@@ -127,12 +129,15 @@ internal fun ProfilePage(
                     Spacer(Modifier.width(16.dp))
                     Box(
                         modifier =
-                            Modifier.size(120.dp)
+                            Modifier
+                                .size(120.dp)
                                 .background(color = Color.White, shape = CircleShape)
                                 .padding(4.dp)
                     ) {
                         AsyncImage(
-                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
                             model =
                                 ImageRequest.Builder(context)
                                     .data(getCdnImageUrl(userProfile.avatar, width = 512))
@@ -224,7 +229,8 @@ internal fun ProfilePage(
 
                     Text(
                         modifier =
-                            Modifier.padding(horizontal = 16.dp)
+                            Modifier
+                                .padding(horizontal = 16.dp)
                                 .align(Alignment.CenterHorizontally),
                         text = stringResource(R.string.no_agent),
                         color = Color.White.copy(0.55f),
@@ -324,7 +330,9 @@ private fun MyAgentCard(
     // 图片加载状态
     var imageLoaded by remember { mutableStateOf(false) }
 
-    Box(modifier = modifier.size(165.dp, 220.dp).clip(RoundedCornerShape(12.dp))) {
+    Box(modifier = modifier
+        .size(165.dp, 220.dp)
+        .clip(RoundedCornerShape(12.dp))) {
         if (hasAvatarToLoad) {
             // 有头像需要加载时，使用 Shimmer 占位符
             if (!imageLoaded) {
@@ -339,6 +347,8 @@ private fun MyAgentCard(
                 error = null, // 加载失败时也使用 Shimmer 占位显示
                 onSuccess = { imageLoaded = true },
                 onError = { imageLoaded = false },
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter
             )
         } else {
             // 没有头像需要加载时，直接显示默认头像
@@ -358,7 +368,8 @@ private fun MyAgentCard(
         }
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .background(brush = gradientBrush)
                     .padding(8.dp)
                     .align(Alignment.BottomCenter),
@@ -384,10 +395,13 @@ private fun MyAgentCard(
 
         // 右下角的菜单按钮
         if (onEditAgent != null || onDeleteAgent != null) {
-            Box(modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)) {
+            Box(modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(4.dp)) {
                 Box(
                     modifier =
-                        Modifier.size(28.dp)
+                        Modifier
+                            .size(28.dp)
                             .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
                             .noRippleClickable(
                                 onClick = {
@@ -508,7 +522,10 @@ private fun PremiumBanner(
     onClick: () -> Unit = {},
 ) {
     AuthClickable(
-        modifier = Modifier.fillMaxWidth().heightIn(120.dp).padding(horizontal = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(120.dp)
+            .padding(horizontal = 12.dp),
         onClick = onClick,
     ) { authModifier ->
         Box(modifier = authModifier) {
@@ -520,7 +537,8 @@ private fun PremiumBanner(
             )
 
             Row(
-                Modifier.border(
+                Modifier
+                    .border(
                         width = 0.5.dp,
                         color = Color(0x61D523FF),
                         shape = RoundedCornerShape(size = 12.dp),
