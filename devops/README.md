@@ -58,8 +58,11 @@ htpasswd:/etc/nginx/.htpasswd # Used by nginx.conf
 nginx.conf:/etc/nginx/conf.d/sxwl.ai.conf
 ```
 
-## Inty prod 部署
+## Inty prod & dev 部署
 
+- 公用同一数据库服务器 inty-prod，dev:inty-dev prod:inty
+  - [看板](https://console.cloud.google.com/sql/instances/inty-prod/system-insights?project=alien-paratext-461204-i9)
+  - [查询性能分析](https://console.cloud.google.com/sql/instances/inty-prod/insights;duration=P1D;sort_by=TOTAL_EXEC_TIME/executed?project=alien-paratext-461204-i9)
 - GCP zone: asia-southeast1-a
   - CloudSQL Postgres: [inty-prod](https://console.cloud.google.com/sql/instances/inty-prod):sxwl666A!
   - GCE VM: [dev-instance](https://console.cloud.google.com/compute/instancesDetail/zones/asia-southeast1-a/instances/dev-instance)
@@ -74,12 +77,13 @@ nginx.conf:/etc/nginx/conf.d/sxwl.ai.conf
 - CloudFlare: `it@sxwl.ai`
   - 图片裁切、图片缩放、图片压缩（不改变文件格式 80% 质量缩小到 1/4）
 
-## Inty-dev
+### Inty-dev
 
 共享的用于支持开发和评测的后端
 
-- Endpoint: <https://dev.inty.sxwl.ai>
+- URL：<https://dev.inty.sxwl.ai>
 - [logs](https://cloudlogging.app.goo.gl/X1mKZ555YZnRUYFD6)
+- 运营评测工具：<https://dev.inty.sxwl.ai/evaluation>
 
 ## Other services
 
