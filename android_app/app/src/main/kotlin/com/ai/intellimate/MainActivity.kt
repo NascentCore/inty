@@ -12,25 +12,33 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlinx.coroutines.CoroutineScope
@@ -53,8 +61,17 @@ class MainActivity : BaseActivity() {
     private var gestureDetector: GestureDetector? = null
     private val backPressHandler = BackPressHandler()
 
+    // 防重复执行的标志
+    private var hasInitializedConfig = false
+
     override fun initConfigData() {
         super.initConfigData()
+
+        // 防止重复执行（onCreate时会调用一次，登录成功后可能再调用一次）
+        if (hasInitializedConfig) {
+            LogUtils.d("MainActivity - initConfigData 已执行过，跳过重复执行")
+            return
+        }
 
         // 追踪页面访问
         PageTrackingHelper.trackPageView("MainActivity", "MainActivity")
@@ -64,8 +81,16 @@ class MainActivity : BaseActivity() {
 
         mainViewModel.setChatViewModel(chatViewModel)
 
+        // 标记已初始化（但只标记基本设置，数据加载在登录成功后执行）
+        hasInitializedConfig = true
+
         // 立即显示UI，不等待启动管理器完成
         // 二次进入应用（进程未被杀）的场景不会再看到自定义 SplashActivity
+        loadUserDataIfLoggedIn()
+    }
+
+    /** 如果用户已登录，加载用户数据 */
+    private fun loadUserDataIfLoggedIn() {
         lifecycleScope.launch {
             // 等待启动管理器完成必要初始化（但不等缓存数据）
             while (
@@ -75,41 +100,34 @@ class MainActivity : BaseActivity() {
                 delay(50) // 50ms检查一次，更快响应
             }
 
-            // 检查用户登录状态（包括游客用户）
+            // 检查用户登录状态（不再包括游客用户）
             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-
                 // 加载业务数据（包括版本检查等）
                 mainViewModel.loadBusinessData()
 
-                // 只有正式用户才加载需要认证的数据
-                if (!IntySetting.isGuestUser()) {
+                // Load user created agents
+                mainViewModel.getUserCreatedAgents()
 
-                    // Load user created agents
-                    mainViewModel.getUserCreatedAgents()
+                // 初始化 BillingRepository（在用户登录后）
+                delay(500) // 给登录流程一些时间
+                BillingRepository.initialize(this@MainActivity)
 
-                    // 初始化 BillingRepository（在用户登录后）
-                    delay(500) // 给登录流程一些时间
-                    BillingRepository.initialize(this@MainActivity)
+                // BillingRepository初始化完成后，再调用updatePlans
+                delay(500) // 给BillingRepository一些初始化时间
+                mainViewModel.updatePlans()
 
-                    // BillingRepository初始化完成后，再调用updatePlans
-                    delay(500) // 给BillingRepository一些初始化时间
-                    mainViewModel.updatePlans()
+                // 启动订阅状态监控
+                BillingRepository.startEnhancedSubscriptionMonitoring()
 
-                    // 启动订阅状态监控
-                    BillingRepository.startEnhancedSubscriptionMonitoring()
-
-                    // 监听 Billing 事件并处理 UI 错误提示
-                    launch(Dispatchers.Main) {
-                        BillingRepository.eventFlow.collect { event ->
-                            BillingErrorHandler.handleBillingEvent(
-                                event,
-                                this@MainActivity,
-                                this@MainActivity
-                            )
-                        }
+                // 监听 Billing 事件并处理 UI 错误提示
+                launch(Dispatchers.Main) {
+                    BillingRepository.eventFlow.collect { event ->
+                        BillingErrorHandler.handleBillingEvent(
+                            event,
+                            this@MainActivity,
+                            this@MainActivity
+                        )
                     }
-                } else {
-                    LogUtils.i("MainActivity - 游客用户，跳过需要认证的数据加载")
                 }
             } else {
                 LogUtils.w("MainActivity - 用户未登录，跳过需要认证的数据加载")
@@ -120,19 +138,55 @@ class MainActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
-        // 手动控制SplashUI显示，类似IntelliMate模式
-        var showSplash by remember { mutableStateOf(true) }
-        if (showSplash) {
-            // 显示自定义SplashUI
-            SplashUI(onSplashComplete = { showSplash = false })
-        } else {
-            // 显示主界面
+        // 直接使用ViewModel的StateFlow，实现响应式UI更新
+        val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
+
+        // 实时检查登录状态变化（用于响应在其他Activity中的logout操作）
+        LaunchedEffect(Unit) {
+            // 使用协程定期检查登录状态，快速响应logout
+            while (true) {
+                val currentState = IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                val viewModelState = mainViewModel.isLoggedIn.value
+
+                // 如果实际状态与ViewModel状态不一致，立即更新ViewModel
+                if (currentState != viewModelState) {
+                    mainViewModel.updateLoginState()
+                }
+
+                kotlinx.coroutines.delay(100) // 每100ms检查一次，快速响应logout
+            }
+        }
+
+        // 当登录状态变化时，更新数据加载（只在从未登录变为已登录时执行一次）
+        // 使用 key 避免重复执行：当 isLoggedIn 从未登录变为已登录时才执行
+        var lastLoggedInState by remember { mutableStateOf(isLoggedIn) }
+        var hasInitialized by remember { mutableStateOf(false) }
+
+        LaunchedEffect(isLoggedIn) {
+            // 只在从未登录变为已登录时执行，避免重复触发
+            if (isLoggedIn && !lastLoggedInState && !hasInitialized) {
+                lastLoggedInState = true
+                hasInitialized = true
+                kotlinx.coroutines.delay(100) // 小延迟确保状态已稳定
+                // 登录成功后，加载用户数据
+                loadUserDataIfLoggedIn()
+            } else if (!isLoggedIn) {
+                lastLoggedInState = false
+                hasInitialized = false // 重置，以便下次登录时重新初始化
+            }
+        }
+
+        if (isLoggedIn) {
+            // 用户已登录，显示主界面
             HomeScreen(
                 modifier = Modifier.fillMaxSize(),
                 mainViewModel = mainViewModel,
                 chatViewModel = chatViewModel,
                 viewModelFactory = defaultViewModelProviderFactory,
             )
+        } else {
+            // 用户未登录，显示登录界面
+            SplashLoginUI(mainViewModel = mainViewModel)
         }
     }
 
@@ -210,12 +264,25 @@ class MainActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
-        // 刷新关注列表和创建的角色列表
-        mainViewModel.refreshCreatedAgentsListIfOnTab()
-        // 应用恢复时通知billing系统刷新状态
-        BillingRepository.notifyAppResumed()
-        // 恢复音频播放（如果有正在播放的音频）
-        chatViewModel.resumeVoicePlayback()
+
+        // 立即检查登录状态变化（关键：在onResume时立即检查并更新）
+        // 这样可以响应在其他Activity（如SettingActivity）中的logout操作
+        // 确保MainActivity恢复时能立即感知状态变化，避免看到旧UI
+        val currentLoginState = IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+        if (mainViewModel.isLoggedIn.value != currentLoginState) {
+            // 立即更新MainViewModel的状态，触发UI重组
+            mainViewModel.updateLoginState()
+        }
+
+        // 只有在已登录时才执行这些操作
+        if (mainViewModel.isLoggedIn.value) {
+            // 刷新关注列表和创建的角色列表
+            mainViewModel.refreshCreatedAgentsListIfOnTab()
+            // 应用恢复时通知billing系统刷新状态
+            BillingRepository.notifyAppResumed()
+            // 恢复音频播放（如果有正在播放的音频）
+            chatViewModel.resumeVoicePlayback()
+        }
     }
 
     override fun onPause() {
@@ -228,6 +295,175 @@ class MainActivity : BaseActivity() {
         super.onDestroy()
         // 清理返回按键处理器
         backPressHandler.cleanup()
+    }
+}
+
+/** Splash 登录界面 - 集成 Google 登录按钮和隐私政策 */
+@Composable
+private fun SplashLoginUI(
+    modifier: Modifier = Modifier,
+    mainViewModel: MainViewModel,
+) {
+    val context = LocalContext.current
+    var isLoading by remember { mutableStateOf(false) }
+    var lastClickTime by remember { mutableLongStateOf(0L) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // 直接在这里处理登录逻辑，不再依赖 LoginViewModel
+    // Google 登录处理
+    fun performGoogleSignIn() {
+        if (isLoading) return
+
+        val currentTime = System.currentTimeMillis()
+        if (!ai.sxwl.android.design.AntiClick.isValidClick(lastClickTime)) return
+        lastClickTime = currentTime
+
+        coroutineScope.launch {
+            isLoading = true
+            try {
+                val result =
+                    com.ai.intellimate.utils.CredentialManagerHelper.signInWithGoogle(context)
+                result.fold(
+                    onSuccess = { idToken ->
+                        LogUtils.i("Credential Manager sign-in successful")
+
+                        // 直接调用后端登录接口
+                        val userApi = ai.sxwl.android.data.api.NetServiceMgr.getUserApi()
+                        val loginResult = userApi.loginByGoogle(
+                            ai.sxwl.android.data.api.model.GoogleLoginRequest(idToken = idToken)
+                        )
+
+                        when (loginResult) {
+                            is com.architecture.httplib.core.HttpResult.Success -> {
+                                val token = loginResult.data.token
+                                val userProfile = loginResult.data.user
+
+                                // 保存用户信息和 token
+                                IntySetting.login(false, userProfile.id, token)
+                                com.ai.intellimate.utils.UserProfileManager.saveUserProfile(
+                                    userProfile
+                                )
+
+                                // 上报用户登录事件
+                                ai.sxwl.android.firebase.FirebaseManager.logEvent(
+                                    ai.sxwl.android.firebase.FirebaseManager.Events.USER_LOGIN,
+                                    ai.sxwl.android.firebase.FirebaseManager.safeEventParams(
+                                        "user_id" to userProfile.id,
+                                        "user_name" to (userProfile.nickname),
+                                        "login_method" to "google",
+                                        "timestamp" to System.currentTimeMillis()
+                                    )
+                                )
+
+                                // 检查用户信息是否完整（年龄和性别）
+                                val needsRegInfo =
+                                    userProfile.gender.isNullOrEmpty() ||
+                                            userProfile.ageGroup.isNullOrEmpty() ||
+                                            userProfile.ageGroup == "<18"
+
+                                // 显示登录成功提示
+                                ToastUtils.showShort(R.string.login_successfully)
+
+                                // 更新登录状态（用户已经登录成功，只是信息可能不完整）
+                                // 这会导致 UI 从 SplashLoginUI 切换到 HomeScreen
+                                mainViewModel.updateLoginState()
+
+                                if (needsRegInfo) {
+                                    // 需要完善注册信息，跳转到 RegInfo 页面
+                                    // 注意：此时 MainActivity 已经显示 HomeScreen，跳转到 RegInfoActivity 后
+                                    // RegInfoActivity 完成后，MainActivity 会恢复，状态仍然是已登录，显示 HomeScreen
+                                    com.ai.intellimate.login.RegInfoActivity.launch(context)
+                                } else {
+                                    // 用户信息完整，不需要额外操作，状态已更新，UI 已切换
+                                    // onLoginSuccess() 回调可以不执行，因为状态已更新
+                                }
+                            }
+
+                            is com.architecture.httplib.core.HttpResult.Failure -> {
+                                LogUtils.e("Google login failed: ${loginResult.message}")
+                                com.ai.intellimate.utils.NetworkErrorHandler.showNetworkAwareError(
+                                    loginResult.message
+                                )
+                            }
+                        }
+                    },
+                    onFailure = { exception ->
+                        // 检查是否为用户取消操作，如果是则不显示错误提示
+                        when (exception) {
+                            is androidx.credentials.exceptions.GetCredentialCancellationException -> {
+                                LogUtils.i("User cancelled the login process")
+                            }
+
+                            is androidx.credentials.exceptions.GetCredentialInterruptedException -> {
+                                LogUtils.i("Login process was interrupted")
+                            }
+
+                            is androidx.credentials.exceptions.NoCredentialException -> {
+                                val errorMessage =
+                                    context.getString(R.string.no_credentials_available)
+                                LogUtils.e("Credential Manager sign-in failed: $errorMessage")
+                                coroutineScope.launch {
+                                    ToastUtils.showShort(errorMessage)
+                                }
+                            }
+
+                            is androidx.credentials.exceptions.GetCredentialException -> {
+                                val errorMessage = context.getString(R.string.get_credential_failed)
+                                LogUtils.e("Credential Manager sign-in failed: $errorMessage")
+                                coroutineScope.launch {
+                                    ToastUtils.showShort(errorMessage)
+                                }
+                            }
+
+                            else -> {
+                                val errorMessage = context.getString(R.string.login_failed)
+                                LogUtils.e("Credential Manager sign-in failed: $errorMessage")
+                                coroutineScope.launch {
+                                    ToastUtils.showShort(errorMessage)
+                                }
+                            }
+                        }
+                    }
+                )
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    Box(modifier) {
+        Image(
+            modifier = Modifier.fillMaxSize(),
+            painter = painterResource(R.drawable.app_bg),
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter,
+            contentDescription = "",
+        )
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Image(
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(RoundedCornerShape(10.dp)),
+                painter = painterResource(R.drawable.icon_splash_icon),
+                contentDescription = "",
+                contentScale = ContentScale.Crop,
+            )
+            Spacer(modifier = Modifier.height(120.dp))
+
+            // Google 登录按钮
+            GoogleLoginButton(isLoading = isLoading, onLoginClick = { performGoogleSignIn() })
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 隐私政策文本
+            com.ai.intellimate.ui.components.PolicyText()
+
+            Spacer(modifier = Modifier.height(80.dp))
+        }
     }
 }
 
@@ -248,17 +484,30 @@ private fun SplashUI(modifier: Modifier = Modifier, onSplashComplete: () -> Unit
             alignment = Alignment.TopCenter,
             contentDescription = "",
         )
-        Image(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 80.dp)
-                    .size(80.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Image(
+                modifier = Modifier
+                    .size(120.dp)
                     .clip(RoundedCornerShape(10.dp)),
-            painter = painterResource(R.drawable.icon_splash_icon),
-            contentDescription = "",
-            contentScale = ContentScale.Crop,
-        )
+                painter = painterResource(R.drawable.icon_splash_icon),
+                contentDescription = "",
+                contentScale = ContentScale.Crop,
+            )
+            Spacer(modifier = Modifier.height(120.dp))
+
+            // Google 登录按钮
+            GoogleLoginButton(isLoading = true, onLoginClick = { })
+
+            Spacer(modifier = Modifier.height(80.dp))
+
+        }
+
     }
 }
 

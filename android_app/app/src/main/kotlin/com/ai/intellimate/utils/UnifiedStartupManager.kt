@@ -6,8 +6,6 @@ import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.VipStatusHelper
-import ai.sxwl.android.data.http.ApiResult
-import ai.sxwl.android.data.http.services.AuthService
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
@@ -81,20 +79,16 @@ object UnifiedStartupManager {
             try {
                 // 检查登录状态，确保有有效的token
                 if (!isUserLoggedIn()) {
-                    LogUtils.i("UnifiedStartupManager - 用户未登录或token无效，创建游客账户")
-                    try {
-                        createGuestAccount()
-                        // 这里需拉取用户信息
-                        refreshUserProfile()
-                    } catch (e: Exception) {
-                        LogUtils.e("UnifiedStartupManager - 游客账户创建失败: ${e.message}")
-                        // 游客账户创建失败，仍然继续，避免阻塞启动
-                    }
+                    LogUtils.i("UnifiedStartupManager - 用户未登录或token无效，等待用户登录")
+                    // 不再创建游客账户，等待用户登录
+                    _userAccountReady.value = false
+                    _startupProgress.value = 0.0f
+                    return@launch
                 } else {
                     LogUtils.i("UnifiedStartupManager - 用户已登录，token有效")
                 }
 
-                // 确保用户账户状态已就绪（无论是正式用户还是游客）
+                // 确保用户账户状态已就绪
                 _userAccountReady.value = true
                 _startupProgress.value = 0.3f
                 // 立即开始关键数据预加载，不等待异步初始化
@@ -153,6 +147,8 @@ object UnifiedStartupManager {
                     }
                 } else {
                     LogUtils.w("UnifiedStartupManager - 用户未登录或token无效，跳过数据加载")
+                    // 如果 chatAgents 接口不需要 token，可以尝试预加载（但可能失败）
+                    // 这里不预加载，等待用户登录后再加载
                 }
             } catch (e: Exception) {
                 LogUtils.e("UnifiedStartupManager - 关键数据加载失败: ${e.message}")
@@ -278,26 +274,6 @@ object UnifiedStartupManager {
         }
     }
 
-    /** 创建游客账户 */
-    private suspend fun createGuestAccount() {
-        try {
-            val result = AuthService.createGuest()
-            when (result) {
-                is ApiResult.Success -> {
-                    val (guestId, token) = result.data
-                    IntySetting.login(true, guestId, token)
-                    LogUtils.i("UnifiedStartupManager - 游客账户创建成功: $guestId")
-                }
-                is ApiResult.Error -> {
-                    LogUtils.e("UnifiedStartupManager - 游客账户创建失败: ${result.message}")
-                    throw Exception("Guest account creation failed: ${result.message}")
-                }
-            }
-        } catch (e: Exception) {
-            LogUtils.e("UnifiedStartupManager - 游客账户创建异常: ${e.message}")
-            throw e
-        }
-    }
 
     /** 同步用户信息 */
     private suspend fun syncUserProfile() {

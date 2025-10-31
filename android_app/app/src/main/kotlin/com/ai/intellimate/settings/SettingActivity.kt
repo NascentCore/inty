@@ -10,7 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.ai.intellimate.MainActivity
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.R
 
@@ -35,20 +34,21 @@ class SettingActivity : BaseActivity() {
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
         SettingContent(
-            modifier = Modifier.Companion.fillMaxSize().background(HeartColor.primaryColor),
+            modifier = Modifier.Companion
+                .fillMaxSize()
+                .background(HeartColor.primaryColor),
             onBack = { finish() },
             onLogout = { isDelete ->
-                // 使用MainViewModel的logout方法，不重启应用
+                // 使用MainViewModel的logout方法
                 mainViewModel.logout()
                 // 显示退出成功提示
                 val str =
                     if (isDelete) getString(R.string.delete_account_successfully)
                     else getString(R.string.logout_successfully)
                 ToastUtils.showShort(str)
-                // 返回到主页面
-                val intent = Intent(this@SettingActivity, MainActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                startActivity(intent)
+                // logout后，MainActivity会在Compose UI中定期检查登录状态（每200ms）
+                // 一旦检测到状态变化，UI会立即从HomeScreen切换到SplashLoginUI
+                // 只需要关闭Settings界面即可
                 finish()
             },
         )

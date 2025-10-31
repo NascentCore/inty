@@ -2,10 +2,7 @@ package com.ai.intellimate.login
 
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.GENDER
-import ai.sxwl.android.utils.Utils
-import android.content.Intent
 import androidx.lifecycle.viewModelScope
-import com.ai.intellimate.MainActivity
 import com.ai.intellimate.ViewModelEvent
 import com.ai.intellimate.utils.IntyUserProfileSDK
 import com.ai.intellimate.utils.NetworkErrorHandler
@@ -43,14 +40,8 @@ class RegInfoViewModel : BaseVM() {
                     UserProfileManager.saveUserProfile(result)
 
                     // 发送用户信息更新成功事件
+                    // 不再重启 MainActivity，MainActivity 会自动感知状态变化
                     sendEvent(ViewModelEvent.UserProfileUpdated)
-
-                    // 重启 MainActivity 以清理所有缓存数据
-                    val intent =
-                        Intent(Utils.getApp(), MainActivity::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        }
-                    Utils.getApp().startActivity(intent)
                 }
             } else {
                 NetworkErrorHandler.showNetworkAwareError("Failed to update user profile")
