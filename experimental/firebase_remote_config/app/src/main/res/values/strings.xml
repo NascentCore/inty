@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Firebase Remote Config AB Test</string>
+    <string name="button_color_variant_a">蓝色按钮 (变体 A)</string>
+    <string name="button_color_variant_b">红色按钮 (变体 B)</string>
+    <string name="button_color_variant_control">默认按钮 (对照组)</string>
+    <string name="welcome_message_title">欢迎消息</string>
+    <string name="current_variant">当前变体: %1$s</string>
+    <string name="refresh_config">刷新配置</string>
+    <string name="config_status">配置状态: %1$s</string>
+</resources>
