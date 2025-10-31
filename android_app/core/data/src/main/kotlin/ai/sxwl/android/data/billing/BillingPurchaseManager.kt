@@ -9,7 +9,7 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.Purchase
-import com.android.billingclient.api.SkuDetailsParams
+import com.android.billingclient.api.QueryProductDetailsParams
 import com.architecture.httplib.core.HttpResult
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
@@ -47,8 +47,8 @@ internal class BillingPurchaseManager(
                     LogUtils.i("Billing 购买成功，处理 ${purchases.size} 个购买")
                     for (purchase in purchases) {
                         handlePurchase(purchase)
-                        // 发送购买成功事件
-                        eventScope.launch { eventFlow.emit(BillingEvent.PurchaseSuccess(purchase)) }
+                        // 不再在这里立即发送 PurchaseSuccess 事件，而是在验证成功后发送
+                        // 避免过早触发远程状态刷新，导致状态闪烁
                     }
                 } else {
                     LogUtils.w("Billing 购买成功但购买列表为空")
@@ -206,11 +206,24 @@ internal class BillingPurchaseManager(
     /** 处理购买 */
     private fun handlePurchase(purchase: Purchase) {
         if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
+            // 乐观更新：立即更新UI状态，让用户立即看到状态变化
+            // 然后在后台异步验证，如果验证失败再回滚
+            val optimisticStatus =
+                VipStatus(
+                    isSubscribed = true,
+                    subscriptionId = purchase.products.firstOrNull(),
+                    purchaseTime = purchase.purchaseTime,
+                )
+            vipStatusFlow.value = optimisticStatus
+            BillingStorage.saveLocalVipStatus(optimisticStatus)
+            LogUtils.i("Billing ✅ 乐观更新订阅状态，UI将立即显示已订阅")
+
+            // 后台异步执行确认和验证
             if (!purchase.isAcknowledged) {
                 acknowledgePurchase(purchase)
             }
 
-            // 调用后端验证订阅信息，验证成功后再更新状态
+            // 调用后端验证订阅信息，如果验证失败则回滚状态
             verifySubscriptionWithServer(purchase)
         }
     }
@@ -222,16 +235,13 @@ internal class BillingPurchaseManager(
         billingClient.acknowledgePurchase(acknowledgePurchaseParams) { billingResult ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 LogUtils.i("Billing 购买确认成功")
-                // 确认成功，通知购买成功事件
-                eventScope.launch { eventFlow.emit(BillingEvent.PurchaseSuccess(purchase)) }
+                // 确认成功，但不立即发送 PurchaseSuccess 事件
+                // 等待后端验证成功后再发送，避免过早触发远程状态刷新
             } else {
-                LogUtils.e("Billing 购买确认失败: ${billingResult.debugMessage}")
+                LogUtils.e("Billing 购买确认失败，回滚乐观更新状态: ${billingResult.debugMessage}")
 
-                // 购买确认失败，回滚订阅状态
-                val oldStatus = VipStatus(isSubscribed = false)
-                vipStatusFlow.value = oldStatus
-                BillingStorage.saveLocalVipStatus(oldStatus)
-                LogUtils.w("Billing 已回滚订阅状态")
+                // 购买确认失败，回滚乐观更新
+                rollbackOptimisticStatus()
 
                 eventScope.launch {
                     eventFlow.emit(
@@ -269,18 +279,24 @@ internal class BillingPurchaseManager(
                     is HttpResult.Success -> {
                         val response = result.data
                         if (response.isVerified) {
-                            LogUtils.i("Billing ✅ 订阅验证成功")
-                            // 验证成功后更新状态
-                            val newStatus =
+                            LogUtils.i("Billing ✅ 订阅验证成功，状态已确认")
+                            // 验证成功，更新完整状态信息（可能包含后端返回的额外信息）
+                            val confirmedStatus =
                                 VipStatus(
                                     isSubscribed = true,
                                     subscriptionId = purchase.products.firstOrNull(),
                                     purchaseTime = purchase.purchaseTime,
                                 )
-                            vipStatusFlow.value = newStatus
-                            BillingStorage.saveLocalVipStatus(newStatus)
+                            vipStatusFlow.value = confirmedStatus
+                            BillingStorage.saveLocalVipStatus(confirmedStatus)
+
+                            // 验证成功后再发送 PurchaseSuccess 事件，触发远程状态刷新
+                            // 此时后端已确认订阅，刷新不会导致状态回退
+                            eventFlow.emit(BillingEvent.PurchaseSuccess(purchase))
                         } else {
-                            LogUtils.w("Billing ⚠️ 订阅验证失败: ${response.message}")
+                            LogUtils.w("Billing ⚠️ 订阅验证失败，回滚乐观更新状态: ${response.message}")
+                            // 验证失败，回滚乐观更新
+                            rollbackOptimisticStatus()
                             eventScope.launch {
                                 eventFlow.emit(
                                     BillingEvent.ShowError(
@@ -293,7 +309,9 @@ internal class BillingPurchaseManager(
                     }
 
                     is HttpResult.Failure -> {
-                        LogUtils.e("Billing ❌ 订阅验证失败: ${result.message}")
+                        LogUtils.e("Billing ❌ 订阅验证失败，回滚乐观更新状态: ${result.message}")
+                        // 验证失败，回滚乐观更新
+                        rollbackOptimisticStatus()
                         eventScope.launch {
                             eventFlow.emit(
                                 BillingEvent.ShowError(
@@ -305,7 +323,9 @@ internal class BillingPurchaseManager(
                     }
                 }
             } catch (e: Exception) {
-                LogUtils.e("Billing ❌ 订阅验证异常: ${e.message}")
+                LogUtils.e("Billing ❌ 订阅验证异常，回滚乐观更新状态: ${e.message}")
+                // 验证异常，回滚乐观更新
+                rollbackOptimisticStatus()
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.ShowError(
@@ -316,6 +336,14 @@ internal class BillingPurchaseManager(
                 }
             }
         }
+    }
+
+    /** 回滚乐观更新的状态 */
+    private fun rollbackOptimisticStatus() {
+        val oldStatus = VipStatus(isSubscribed = false)
+        vipStatusFlow.value = oldStatus
+        BillingStorage.saveLocalVipStatus(oldStatus)
+        LogUtils.w("Billing 已回滚乐观更新的订阅状态")
     }
 
     /** 检查购买前的状态 */
@@ -466,35 +494,69 @@ internal class BillingPurchaseManager(
 
     /** 内部购买流程实现 */
     private fun launchBillingFlowInternal(activity: Activity, productId: String) {
-        // 查询商品详情（使用 SkuDetails API）
-        val params =
-            SkuDetailsParams.newBuilder()
-                .setSkusList(listOf(productId))
-                .setType(BillingClient.SkuType.SUBS)
-                .build()
+        // 查询商品详情（使用 ProductDetails API - Billing Library 8.0+）
+        val product = QueryProductDetailsParams.Product.newBuilder()
+            .setProductId(productId)
+            .setProductType(BillingClient.ProductType.SUBS)
+            .build()
+
+        val params = QueryProductDetailsParams.newBuilder()
+            .setProductList(listOf(product))
+            .build()
 
         LogUtils.i("Billing [购买流程] 开始查询商品详情，商品ID: $productId")
 
-        billingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
+        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsResult ->
             LogUtils.i("Billing [购买流程] 查询商品详情结果: 响应码=${billingResult.responseCode}, 详情=${billingResult.debugMessage}")
 
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
-                    skuDetailsList?.firstOrNull()?.let { skuDetails ->
+                    val productDetails = productDetailsResult?.productDetailsList?.firstOrNull()
+                    productDetails?.let {
+                        // 获取订阅优惠详情（通常使用第一个）
+                        val subscriptionOfferDetails =
+                            it.subscriptionOfferDetails?.firstOrNull()
+                        val offerToken = subscriptionOfferDetails?.offerToken
+
+                        if (offerToken == null) {
+                            LogUtils.e("Billing ❌ 未找到订阅优惠详情: $productId")
+                            eventScope.launch {
+                                eventFlow.emit(
+                                    BillingEvent.SkuDetailsQueryFailed(
+                                        BillingErrorCode.PRODUCT_DETAILS_NOT_FOUND,
+                                        BillingClient.BillingResponseCode.OK,
+                                        "No subscription offer details found for $productId"
+                                    )
+                                )
+                            }
+                            return@queryProductDetailsAsync
+                        }
+
+                        val pricingPhase =
+                            subscriptionOfferDetails.pricingPhases.pricingPhaseList.firstOrNull()
                         LogUtils.i(
                             "Billing [购买流程] ✅ 找到商品详情:\n" +
-                                    "  商品ID: ${skuDetails.sku}\n" +
-                                    "  标题: ${skuDetails.title}\n" +
-                                    "  描述: ${skuDetails.description}\n" +
-                                    "  原始价格: ${skuDetails.price}\n" +
-                                    "  货币代码: ${skuDetails.priceCurrencyCode}\n" +
-                                    "  价格微单位: ${skuDetails.priceAmountMicros}\n" +
-                                    "  价格周期: ${skuDetails.subscriptionPeriod}"
+                                    "  商品ID: ${it.productId}\n" +
+                                    "  标题: ${it.title}\n" +
+                                    "  描述: ${it.description}\n" +
+                                    "  原始价格: ${pricingPhase?.formattedPrice ?: "N/A"}\n" +
+                                    "  货币代码: ${pricingPhase?.priceCurrencyCode ?: "N/A"}\n" +
+                                    "  价格微单位: ${pricingPhase?.priceAmountMicros ?: 0L}\n" +
+                                    "  价格周期: ${pricingPhase?.billingPeriod ?: "N/A"}\n" +
+                                    "  优惠Token: $offerToken"
                         )
 
-                        // 使用 SkuDetails 启动购买流程
-                        val billingFlowParams =
-                            BillingFlowParams.newBuilder().setSkuDetails(skuDetails).build()
+                        // 使用 ProductDetails 启动购买流程（Billing Library 8.0+）
+                        val productDetailsParams =
+                            BillingFlowParams.ProductDetailsParams.newBuilder()
+                                .setProductDetails(it)
+                                .setOfferToken(offerToken)
+                                .build()
+
+                        val billingFlowParams = BillingFlowParams.newBuilder()
+                            .setProductDetailsParamsList(listOf(productDetailsParams))
+                            .build()
+
                         val launchResult =
                             billingClient.launchBillingFlow(activity, billingFlowParams)
                         LogUtils.i("Billing ✅ 购买流程启动结果: $launchResult")

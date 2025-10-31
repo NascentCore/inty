@@ -63,7 +63,7 @@ firebaseCrashlytics = "3.0.6"
 firebasePerf = "2.0.1"
 googleIdentity = "1.1.1"
 credentialManager = "1.6.0-beta03"
-billingKtx = "7.0.0"
+billingKtx = "8.0.0"
 
 # 测试相关库
 espressoCore = "3.7.0"
