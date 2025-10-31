@@ -51,15 +51,16 @@ internal class BillingRemoteManager(
                                 // CANCELLED是"subscribed_expiring" 已取消但未到期
                                 // null 认为是未订阅
                                 subscriptionStatus =
-                                    when {
-                                        currentSubscription?.status == "ACTIVE" &&
-                                            currentSubscription.autoRenew == true ->
+                                    when (currentSubscription?.status) {
+                                        "ACTIVE" if currentSubscription.autoRenew == true ->
                                             VipStatus.UI_SUBSCRIBED
-                                        currentSubscription?.status == "ACTIVE" &&
-                                            currentSubscription.autoRenew == false ->
+
+                                        "ACTIVE" if currentSubscription.autoRenew == false ->
                                             VipStatus.UI_SUBSCRIBED_EXPIRE_SOON
-                                        currentSubscription?.status == "CANCELLED" ->
+
+                                        "CANCELLED" ->
                                             VipStatus.UI_SUBSCRIBED_EXPIRE_SOON
+
                                         else -> VipStatus.UI_UNSUBSCRIBED
                                     },
                             )
@@ -77,7 +78,7 @@ internal class BillingRemoteManager(
                         existingPlans.values.forEach { plan ->
                             LogUtils.d("  - ${plan.googleProductId}: ${plan.name}, 价格=${plan.price}, 货币=${plan.currencyCode}")
                         }
-                        
+
                         val vipPlans =
                             response.plans.mapNotNull { plan ->
                                 plan.googlePlayProductId?.let { productId ->
@@ -119,13 +120,14 @@ internal class BillingRemoteManager(
                         // 如果 BillingClient 已连接，立即查询价格
                         if (isConnected) {
                             LogUtils.i("Billing [远程数据] BillingClient 已连接，立即查询价格")
-                            priceManager.querySkuDetails(isConnected)
+                            priceManager.queryProductDetails(isConnected)
                         } else {
                             LogUtils.w("Billing [远程数据] BillingClient 未连接，等待连接成功后查询价格")
                             // 如果未连接，暂时保存基础信息到缓存（不包含价格）
                             // 等连接成功后再更新价格
                         }
                     }
+
                     is HttpResult.Failure -> {
                         LogUtils.e("Billing 获取订阅计划失败: ${result.message}")
                     }
@@ -136,6 +138,7 @@ internal class BillingRemoteManager(
                     is CancellationException -> {
                         LogUtils.w("Billing 获取订阅计划被取消: ${exception.message}")
                     }
+
                     else -> {
                         LogUtils.e("Billing 获取订阅计划异常: ${exception.message}")
                     }

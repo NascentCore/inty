@@ -106,7 +106,11 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
         billingClient =
             BillingClient.newBuilder(context.applicationContext)
                 .setListener(this)
-                .enablePendingPurchases()
+                .enablePendingPurchases(
+                    com.android.billingclient.api.PendingPurchasesParams.newBuilder()
+                        .enableOneTimeProducts()
+                        .build()
+                )
                 .build()
     }
 
@@ -209,7 +213,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                 // 稍等片刻，确保fetchRemote完成后再查询价格
                 delay(1000)
                 if (isConnected && ::priceManager.isInitialized) {
-                    priceManager.querySkuDetails(isConnected)
+                    priceManager.queryProductDetails(isConnected)
                 }
             }
         }

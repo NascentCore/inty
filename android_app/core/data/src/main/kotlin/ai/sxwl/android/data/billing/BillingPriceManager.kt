@@ -3,20 +3,20 @@ package ai.sxwl.android.data.billing
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import com.android.billingclient.api.BillingClient
-import com.android.billingclient.api.SkuDetails
-import com.android.billingclient.api.SkuDetailsParams
+import com.android.billingclient.api.ProductDetails
+import com.android.billingclient.api.QueryProductDetailsParams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 /* 从 Google Play 查询实时价格：
- * 使用已弃用但仍可用的 SkuDetails API
+ * 使用 ProductDetails API (Billing Library 8.0+)
  * 查询订阅商品的价格信息
  * 更新本地 VipPlan 对象，包含：
  * - 格式化的价格字符串
- * -货币代码
- * -微单位价格
+ * - 货币代码
+ * - 微单位价格
  * 处理货币符号修正
  * 仅在 BillingClient 连接时查询价格
  */
@@ -28,7 +28,7 @@ internal class BillingPriceManager(
 ) {
 
     /** 查询商品详情并更新价格 */
-    fun querySkuDetails(isConnected: Boolean) {
+    fun queryProductDetails(isConnected: Boolean) {
         // 检查BillingClient连接状态
         if (!isConnected) {
             LogUtils.w("Billing Billing [价格查询] BillingClient 未连接，无法查询商品")
@@ -49,79 +49,86 @@ internal class BillingPriceManager(
             LogUtils.d("  - ${plan.googleProductId}: ${plan.name}, 当前价格=${plan.price}, 货币=${plan.currencyCode}, 微单位=${plan.priceAmountMicros}")
         }
 
-        // 使用 SkuDetails API
-        val params =
-            SkuDetailsParams.newBuilder()
-                .setSkusList(subscriptionIds)
-                .setType(BillingClient.SkuType.SUBS)
+        // 使用 ProductDetails API (Billing Library 8.0+)
+        val productList = subscriptionIds.map { productId ->
+            QueryProductDetailsParams.Product.newBuilder()
+                .setProductId(productId)
+                .setProductType(BillingClient.ProductType.SUBS)
                 .build()
+        }
 
-        LogUtils.d("Billing [价格查询] 调用 querySkuDetailsAsync，查询 ${subscriptionIds.size} 个商品")
+        val params = QueryProductDetailsParams.newBuilder()
+            .setProductList(productList)
+            .build()
 
-        billingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
+        LogUtils.d("Billing [价格查询] 调用 queryProductDetailsAsync，查询 ${subscriptionIds.size} 个商品")
+
+        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsResult ->
             LogUtils.i(
                 "Billing [价格查询] Google Play 返回结果: 响应码=${billingResult.responseCode}, 详情=${billingResult.debugMessage}"
             )
 
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
-                    skuDetailsList?.let { detailsList ->
-                        if (detailsList.isNotEmpty()) {
-                            LogUtils.i("Billing [价格查询] ✅ 查询成功，获取到 ${detailsList.size} 个商品信息")
+                    val detailsList = productDetailsResult?.productDetailsList
+                    if (detailsList != null && detailsList.isNotEmpty()) {
+                        LogUtils.i("Billing [价格查询] ✅ 查询成功，获取到 ${detailsList.size} 个商品信息")
 
-                            // 详细记录每个商品的价格信息
-                            LogUtils.i("Billing [价格查询] Google Play 返回的商品详情:")
-                            detailsList.forEach { skuDetails ->
-                                LogUtils.i(
-                                    "  📦 商品ID: ${skuDetails.sku}\n" +
-                                            "     标题: ${skuDetails.title}\n" +
-                                            "     描述: ${skuDetails.description}\n" +
-                                            "     原始价格: ${skuDetails.price}\n" +
-                                            "     货币代码: ${skuDetails.priceCurrencyCode}\n" +
-                                            "     价格微单位: ${skuDetails.priceAmountMicros}\n" +
-                                            "     价格周期: ${skuDetails.subscriptionPeriod}"
-                                )
-                            }
+                        // 详细记录每个商品的价格信息
+                        LogUtils.i("Billing [价格查询] Google Play 返回的商品详情:")
+                        detailsList.forEach { productDetails ->
+                            val subscriptionOfferDetails =
+                                productDetails.subscriptionOfferDetails?.firstOrNull()
+                            val pricingPhase =
+                                subscriptionOfferDetails?.pricingPhases?.pricingPhaseList?.firstOrNull()
+                            LogUtils.i(
+                                "  📦 商品ID: ${productDetails.productId}\n" +
+                                        "     标题: ${productDetails.title}\n" +
+                                        "     描述: ${productDetails.description}\n" +
+                                        "     原始价格: ${pricingPhase?.formattedPrice ?: "N/A"}\n" +
+                                        "     货币代码: ${pricingPhase?.priceCurrencyCode ?: "N/A"}\n" +
+                                        "     价格微单位: ${pricingPhase?.priceAmountMicros ?: 0L}\n" +
+                                        "     价格周期: ${pricingPhase?.billingPeriod ?: "N/A"}"
+                            )
+                        }
 
-                            // 在异步回调中重新获取最新的plansFlow，避免使用旧值
-                            val latestPlans = plansFlow.value
-                            LogUtils.d("Billing [价格查询] 开始更新本地计划价格，当前本地计划数量: ${latestPlans.size}")
-                            // 使用 SkuDetails 更新计划价格
-                            updateLocalPlans(latestPlans, detailsList)
-                        } else {
-                            LogUtils.w("Billing [价格查询] ⚠️ 查询成功但返回空商品列表")
-                            LogUtils.w("Billing [价格查询] 可能原因: 商品ID不存在或未在Google Play Console中激活")
-                            LogUtils.w("Billing [价格查询] 查询的商品ID: $subscriptionIds")
-                            // 发送查询失败事件
-                            eventScope.launch {
-                                eventFlow.emit(
-                                    BillingEvent.SkuDetailsQueryFailed(
-                                        BillingErrorCode.PRODUCT_DETAILS_QUERY_FAILED,
-                                        billingResult.responseCode,
-                                        "查询成功但返回空商品列表"
-                                    )
+                        // 在异步回调中重新获取最新的plansFlow，避免使用旧值
+                        val latestPlans = plansFlow.value
+                        LogUtils.d("Billing [价格查询] 开始更新本地计划价格，当前本地计划数量: ${latestPlans.size}")
+                        // 使用 ProductDetails 更新计划价格
+                        updateLocalPlans(latestPlans, detailsList)
+                    } else if (detailsList != null && detailsList.isEmpty()) {
+                        LogUtils.w("Billing [价格查询] ⚠️ 查询成功但返回空商品列表")
+                        LogUtils.w("Billing [价格查询] 可能原因: 商品ID不存在或未在Google Play Console中激活")
+                        LogUtils.w("Billing [价格查询] 查询的商品ID: $subscriptionIds")
+                        // 发送查询失败事件
+                        eventScope.launch {
+                            eventFlow.emit(
+                                BillingEvent.SkuDetailsQueryFailed(
+                                    BillingErrorCode.PRODUCT_DETAILS_QUERY_FAILED,
+                                    billingResult.responseCode,
+                                    "查询成功但返回空商品列表"
                                 )
-                            }
+                            )
+                        }
+                    } else {
+                        LogUtils.w("Billing [价格查询] ⚠️ Google Play返回的商品列表为null")
+                        LogUtils.w("Billing [价格查询] 查询的商品ID: $subscriptionIds")
+                        eventScope.launch {
+                            eventFlow.emit(
+                                BillingEvent.SkuDetailsQueryFailed(
+                                    BillingErrorCode.PRODUCT_DETAILS_QUERY_FAILED,
+                                    billingResult.responseCode,
+                                    "Google Play返回的商品列表为null"
+                                )
+                            )
                         }
                     }
-                        ?: run {
-                            LogUtils.w("Billing [价格查询] ⚠️ Google Play返回的商品列表为null")
-                            LogUtils.w("Billing [价格查询] 查询的商品ID: $subscriptionIds")
-                            eventScope.launch {
-                                eventFlow.emit(
-                                    BillingEvent.SkuDetailsQueryFailed(
-                                        BillingErrorCode.PRODUCT_DETAILS_QUERY_FAILED,
-                                        billingResult.responseCode,
-                                        "Google Play返回的商品列表为null"
-                                    )
-                                )
-                            }
-                        }
                 }
 
                 BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
-                    // 使用统一的错误处理
-                    BillingErrorHandler.handlePriceQueryError(billingResult)
+                    // 记录错误日志
+                    BillingErrorLogger.handlePriceQueryError(billingResult)
                     eventScope.launch {
                         eventFlow.emit(
                             BillingEvent.SkuDetailsQueryFailed(
@@ -135,7 +142,7 @@ internal class BillingPriceManager(
 
                 BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {
                     // 使用统一的错误处理
-                    BillingErrorHandler.handlePriceQueryError(billingResult)
+                    BillingErrorLogger.handlePriceQueryError(billingResult)
                     eventScope.launch {
                         eventFlow.emit(
                             BillingEvent.SkuDetailsQueryFailed(
@@ -149,7 +156,7 @@ internal class BillingPriceManager(
 
                 BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
                     // 使用统一的错误处理
-                    BillingErrorHandler.handlePriceQueryError(billingResult)
+                    BillingErrorLogger.handlePriceQueryError(billingResult)
                     eventScope.launch {
                         eventFlow.emit(
                             BillingEvent.SkuDetailsQueryFailed(
@@ -163,7 +170,7 @@ internal class BillingPriceManager(
 
                 BillingClient.BillingResponseCode.NETWORK_ERROR -> {
                     // 使用统一的错误处理
-                    BillingErrorHandler.handlePriceQueryError(billingResult)
+                    BillingErrorLogger.handlePriceQueryError(billingResult)
                     eventScope.launch {
                         eventFlow.emit(
                             BillingEvent.SkuDetailsQueryFailed(
@@ -177,7 +184,7 @@ internal class BillingPriceManager(
 
                 else -> {
                     // 使用统一的错误处理
-                    BillingErrorHandler.handlePriceQueryError(billingResult)
+                    BillingErrorLogger.handlePriceQueryError(billingResult)
 
                     eventScope.launch {
                         eventFlow.emit(
@@ -193,24 +200,38 @@ internal class BillingPriceManager(
         }
     }
 
-    /** 根据SkuDetails更新计划价格（旧API方法） */
-    private fun updateLocalPlans(currentPlans: List<VipPlan>, skuDetailsList: List<SkuDetails>) {
-        LogUtils.i("Billing [价格更新] 开始处理 ${skuDetailsList.size} 个商品的价格更新")
+    /** 根据ProductDetails更新计划价格（Billing Library 8.0+ API） */
+    private fun updateLocalPlans(
+        currentPlans: List<VipPlan>,
+        productDetailsList: List<ProductDetails>
+    ) {
+        LogUtils.i("Billing [价格更新] 开始处理 ${productDetailsList.size} 个商品的价格更新")
 
         val updatedPlans = currentPlans.toMutableList()
         var updatedCount = 0
 
-        skuDetailsList.forEach { skuDetails ->
-            val planId = skuDetails.sku
+        productDetailsList.forEach { productDetails ->
+            val planId = productDetails.productId
             val index = updatedPlans.indexOfFirst { it.googleProductId == planId }
 
             if (index >= 0) {
                 val currentPlan = updatedPlans[index]
 
-                // 从 SkuDetails 中提取价格信息
-                val formattedPrice = skuDetails.price
-                val currencyCode = skuDetails.priceCurrencyCode
-                val micros = skuDetails.priceAmountMicros
+                // 从 ProductDetails 中提取价格信息（订阅商品）
+                val subscriptionOfferDetails =
+                    productDetails.subscriptionOfferDetails?.firstOrNull()
+                val pricingPhase =
+                    subscriptionOfferDetails?.pricingPhases?.pricingPhaseList?.firstOrNull()
+
+                // 如果没有订阅优惠详情，跳过
+                if (pricingPhase == null) {
+                    LogUtils.w("Billing [价格更新] ⚠️ 商品 $planId 没有订阅优惠详情，跳过")
+                    return@forEach
+                }
+
+                val formattedPrice = pricingPhase.formattedPrice
+                val currencyCode = pricingPhase.priceCurrencyCode
+                val micros = pricingPhase.priceAmountMicros
                 val correctedPrice =
                     BillingUtils.correctCurrencySymbol(formattedPrice, currencyCode)
 
