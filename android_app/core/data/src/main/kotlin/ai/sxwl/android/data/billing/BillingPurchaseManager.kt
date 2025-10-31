@@ -47,8 +47,8 @@ internal class BillingPurchaseManager(
                     LogUtils.i("Billing 购买成功，处理 ${purchases.size} 个购买")
                     for (purchase in purchases) {
                         handlePurchase(purchase)
-                        // 发送购买成功事件
-                        eventScope.launch { eventFlow.emit(BillingEvent.PurchaseSuccess(purchase)) }
+                        // 不再在这里立即发送 PurchaseSuccess 事件，而是在验证成功后发送
+                        // 避免过早触发远程状态刷新，导致状态闪烁
                     }
                 } else {
                     LogUtils.w("Billing 购买成功但购买列表为空")
@@ -235,8 +235,8 @@ internal class BillingPurchaseManager(
         billingClient.acknowledgePurchase(acknowledgePurchaseParams) { billingResult ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 LogUtils.i("Billing 购买确认成功")
-                // 确认成功，通知购买成功事件
-                eventScope.launch { eventFlow.emit(BillingEvent.PurchaseSuccess(purchase)) }
+                // 确认成功，但不立即发送 PurchaseSuccess 事件
+                // 等待后端验证成功后再发送，避免过早触发远程状态刷新
             } else {
                 LogUtils.e("Billing 购买确认失败，回滚乐观更新状态: ${billingResult.debugMessage}")
 
@@ -289,6 +289,10 @@ internal class BillingPurchaseManager(
                                 )
                             vipStatusFlow.value = confirmedStatus
                             BillingStorage.saveLocalVipStatus(confirmedStatus)
+
+                            // 验证成功后再发送 PurchaseSuccess 事件，触发远程状态刷新
+                            // 此时后端已确认订阅，刷新不会导致状态回退
+                            eventFlow.emit(BillingEvent.PurchaseSuccess(purchase))
                         } else {
                             LogUtils.w("Billing ⚠️ 订阅验证失败，回滚乐观更新状态: ${response.message}")
                             // 验证失败，回滚乐观更新
