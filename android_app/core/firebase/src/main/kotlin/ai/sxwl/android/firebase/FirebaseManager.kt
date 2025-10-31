@@ -94,8 +94,8 @@ object FirebaseManager {
                     // 🔴 错误和失败事件 - 100%采样
                     "auth_failure" to 1.0, // 认证失败
                     "app_error" to 1.0, // 应用错误
-                    "message_send_failure" to 1.0, // 消息发送失败
-                    "message_send_exception" to 1.0, // 消息发送异常
+                    Events.MESSAGE_SEND_FAILURE to 1.0, // 消息发送失败
+                    Events.MESSAGE_SEND_EXCEPTION to 1.0, // 消息发送异常
                     "network_final_failure" to 1.0, // 网络请求最终失败
                     "request_failure" to 1.0, // 请求失败
                     "very_slow_request" to 1.0, // 极慢请求
@@ -103,9 +103,9 @@ object FirebaseManager {
                     // 🔴 页面追踪事件 - 100%采样
                     "page_leave" to 1.0, // 页面离开
                     "explore_page_view" to 1.0, // 探索页面访问
-                    "chat_session_start" to 1.0, // 聊天会话开始
-                    "chat_session_end" to 1.0, // 聊天会话结束
-                    "message_send_success" to 1.0, // 消息发送成功
+                    Events.CHAT_SESSION_START to 1.0, // 聊天会话开始
+                    Events.CHAT_SESSION_END to 1.0, // 聊天会话结束
+                    Events.MESSAGE_SEND_SUCCESS to 1.0, // 消息发送成功
                     "free_limit_reached" to 1.0, // 达到免费限制
 
                     // 🟡 性能相关事件 - 保持现有采样配置
@@ -411,6 +411,9 @@ object FirebaseManager {
         const val USER_LOGOUT = "user_logout"
         const val CHAT_STARTED = "chat_started"
         const val MESSAGE_SENT = "message_sent"
+        const val MESSAGE_SEND_SUCCESS = "message_send_success"
+        const val MESSAGE_SEND_FAILURE = "message_send_failure"
+        const val MESSAGE_SEND_EXCEPTION = "message_send_exception"
         const val AI_RESPONSE_RECEIVED = "ai_response_received"
         const val PROFILE_UPDATED = "profile_updated"
         const val SETTINGS_CHANGED = "settings_changed"
@@ -425,6 +428,8 @@ object FirebaseManager {
 
         // 业务关键事件
         const val AGENT_SWITCH = "agent_switch"
+        const val CHAT_SESSION_START = "chat_session_start"
+        const val CHAT_SESSION_END = "chat_session_end"
 
         // UI交互事件
         const val IMAGE_SHOW_SUCCESS = "image_show_success"

@@ -11,6 +11,38 @@ import java.util.concurrent.ConcurrentHashMap
 /** 页面追踪工具类 用于记录用户页面访问、交互流程和崩溃时的上下文信息 提供业务层友好的页面追踪功能 */
 object PageTrackingHelper {
 
+    /** 用户交互操作常量 - 用于性能追踪和用户行为分析
+     * 注意：这些是用户操作的 action 类型，不是 Firebase 事件名称
+     * 应该使用通用的操作动词，便于性能分析和用户行为统计
+     */
+    object UserActions {
+        // 基础交互操作
+        const val CLICK = "click" // 点击操作
+        const val TAP = "tap" // 轻触操作（移动端）
+        const val SWIPE = "swipe" // 滑动操作
+        const val LONG_PRESS = "long_press" // 长按操作
+
+        // 消息相关操作
+        const val SEND_MESSAGE = "send_message" // 发送消息（用户操作类型）
+        const val INPUT_TEXT = "input_text" // 输入文本
+
+        // 会话相关操作
+        const val START_SESSION = "start_session" // 开始会话（用户操作类型）
+        const val END_SESSION = "end_session" // 结束会话
+        const val SWITCH_AGENT = "switch_agent" // 切换Agent
+
+        // 媒体操作
+        const val PLAY_AUDIO = "play_audio" // 播放音频
+        const val PAUSE_AUDIO = "pause_audio" // 暂停音频
+        const val STOP_AUDIO = "stop_audio" // 停止音频
+
+        // UI操作
+        const val OPEN = "open" // 打开
+        const val CLOSE = "close" // 关闭
+        const val SHOW = "show" // 显示
+        const val HIDE = "hide" // 隐藏
+    }
+
     // 当前页面信息
     private var currentPage: String? = null
     private var currentPageClass: String? = null
@@ -216,7 +248,7 @@ object PageTrackingHelper {
         additionalParams: Map<String, Any> = emptyMap(),
     ) {
         trackUserInteraction(
-            "click",
+            UserActions.CLICK,
             buttonName,
             additionalParams + mapOf("page" to (pageName ?: "unknown")),
         )

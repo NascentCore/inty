@@ -110,7 +110,7 @@ class ChatViewModel : BaseVM() {
         // Firebase Analytics - 记录聊天会话开始
         agentInfo?.let { agent ->
             FirebaseManager.logEvent(
-                "chat_session_start",
+                FirebaseManager.Events.CHAT_SESSION_START,
                 mapOf(
                     "agent_id" to agent.id,
                     "agent_name" to agent.name,
@@ -124,9 +124,9 @@ class ChatViewModel : BaseVM() {
             FirebaseManager.setCustomKey("current_agent_id", agent.id)
             FirebaseManager.setCustomKey("current_agent_name", agent.name)
 
-            // 追踪聊天会话开始
+            // 追踪聊天会话开始（用户操作：开始会话）
             PageTrackingHelper.trackUserInteraction(
-                "chat_session_start",
+                PageTrackingHelper.UserActions.START_SESSION,
                 agent.name,
                 mapOf(
                     "agent_id" to agent.id,
@@ -147,7 +147,10 @@ class ChatViewModel : BaseVM() {
             audioManager?.stopAllPlayback()
 
             // Firebase Analytics - 记录聊天会话结束
-            FirebaseManager.logEvent("chat_session_end", mapOf("reason" to "agent_cleared"))
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.CHAT_SESSION_END,
+                mapOf("reason" to "agent_cleared")
+            )
             return
         }
 
@@ -334,9 +337,9 @@ class ChatViewModel : BaseVM() {
             FirebaseManager.setCustomKey("last_message_preview", inputMsg.take(50))
             FirebaseManager.setCustomKey("last_agent_id", agent.id)
 
-            // 追踪消息发送
+            // 追踪消息发送（用户操作：发送消息）
             PageTrackingHelper.trackUserInteraction(
-                "message_send",
+                PageTrackingHelper.UserActions.SEND_MESSAGE,
                 "chat_input",
                 FirebaseManager.safeEventParams(
                     "agent_id" to agent.id,
@@ -362,7 +365,7 @@ class ChatViewModel : BaseVM() {
 
                         // Firebase Analytics - 记录消息发送成功、AI响应时间和端到端时间
                         FirebaseManager.logEvent(
-                            "message_send_success",
+                            FirebaseManager.Events.MESSAGE_SEND_SUCCESS,
                             FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
@@ -438,7 +441,7 @@ class ChatViewModel : BaseVM() {
 
                         // Firebase Analytics - 记录消息发送失败（包含API响应时间和端到端时间）
                         FirebaseManager.logEvent(
-                            "message_send_failure",
+                            FirebaseManager.Events.MESSAGE_SEND_FAILURE,
                             FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
@@ -473,7 +476,7 @@ class ChatViewModel : BaseVM() {
 
                 // Firebase Analytics - 记录异常情况下的端到端时间
                 FirebaseManager.logEvent(
-                    "message_send_exception",
+                    FirebaseManager.Events.MESSAGE_SEND_EXCEPTION,
                     FirebaseManager.safeEventParams(
                         "agent_id" to agentId,
                         "agent_name" to (_agentInfo.value?.name),
