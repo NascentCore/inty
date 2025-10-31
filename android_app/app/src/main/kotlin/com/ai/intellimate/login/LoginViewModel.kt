@@ -7,9 +7,6 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
-import ai.sxwl.android.utils.Utils
-import android.content.Intent
-import com.ai.intellimate.MainActivity
 import com.ai.intellimate.R
 import com.ai.intellimate.ViewModelEvent
 import com.ai.intellimate.utils.NetworkErrorHandler
@@ -50,6 +47,9 @@ class LoginViewModel : BaseVM() {
                     IntySetting.login(false, userProfile.id, token) // false 表示不是游客用户
                     UserProfileManager.saveUserProfile(userProfile)
 
+                    // 通知MainViewModel更新登录状态（如果MainViewModel已初始化）
+                    // 注意：这里不直接引用MainViewModel，而是通过MainActivity来处理
+
                     // 上报用户登录事件
                     FirebaseManager.logEvent(
                         FirebaseManager.Events.USER_LOGIN,
@@ -78,16 +78,11 @@ class LoginViewModel : BaseVM() {
                             sendEvent(ViewModelEvent.NeedRegInfo)
                         } else {
                             // 用户信息完整，发送登录成功事件
+                            // 注意：不再重启MainActivity，因为MainActivity已经支持响应式登录状态
+                            // 如果是从MainActivity的SplashLoginUI登录，UI会自动切换到HomeScreen
+                            // 如果是从LoginActivity登录，LoginActivity会监听事件并finish
                             sendEvent(ViewModelEvent.LoginSuccess)
                         }
-
-                        // 重启 MainActivity
-                        val intent =
-                            Intent(Utils.getApp(), MainActivity::class.java).apply {
-                                flags =
-                                    Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                            }
-                        Utils.getApp().startActivity(intent)
                     }
                 }
                 is HttpResult.Failure -> {

@@ -29,6 +29,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -74,9 +75,21 @@ class MainViewModel : BaseVM() {
     private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile = _userProfile.asStateFlow()
 
+    // 登录状态StateFlow，用于UI响应登录状态变化
+    private val _isLoggedIn =
+        MutableStateFlow(IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty())
+    val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
+
     init {
         // 使用统一启动管理器的数据快速初始化UI
         loadStartupData()
+        // 初始化登录状态
+        updateLoginState()
+    }
+
+    /** 更新登录状态 */
+    fun updateLoginState() {
+        _isLoggedIn.value = IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
     }
 
     /** 加载启动数据（快速展示） 从统一启动管理器获取预加载的数据 */
@@ -383,12 +396,17 @@ class MainViewModel : BaseVM() {
         _userProfile.value = UserProfile()
         chatViewModel?.clearAllData()
 
-        // 清理统一启动管理器的数据（清空正式用户的数据）
+        // 清理统一启动管理器的数据
         UnifiedStartupManager.clearAllData()
 
-        // 清理本地存储（这会切换到游客模式）
-        IntySetting.logout()
+        // 清理本地存储
+        IntySetting.setToken("")
+        // 清除用户ID，通过 changeUser("") 来清空当前用户，这样 isLogin() 会返回 false
+        IntySetting.changeUser("")
         UserProfileManager.clearUserProfile()
+
+        // 更新登录状态，触发UI更新
+        updateLoginState()
 
         // 清除凭证状态 - 通知所有凭证提供者清除存储的凭证会话
         // 参考:
@@ -400,9 +418,6 @@ class MainViewModel : BaseVM() {
                 LogUtils.e("Failed to clear credential state during logout: ${e.message}")
             }
         }
-
-        // 切换到游客模式后，重新加载数据
-        loadGuestModeData()
     }
 
     // 游客模式数据加载，游客用户仍然可以访问推荐数据
