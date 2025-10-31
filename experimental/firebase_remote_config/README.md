@@ -134,6 +134,20 @@ cd experimental/firebase_remote_config
 3. **添加用户属性条件**: 基于用户属性（如地区、语言、用户等级）分配不同变体
 4. **集成 A/B Testing**: 使用 Firebase A/B Testing 功能进行更高级的测试和分析
 
+## 详细测试指南
+
+📖 **查看 [TESTING_GUIDE.md](./TESTING_GUIDE.md) 获取详细的测试步骤说明**
+
+测试指南包含：
+- ✅ 完整的环境准备步骤
+- ✅ Firebase 项目设置详细流程
+- ✅ Remote Config 参数配置说明
+- ✅ AB 测试条件设置步骤
+- ✅ 应用构建和运行指南
+- ✅ 不同变体测试方法
+- ✅ 故障排查指南
+- ✅ 测试场景清单
+
 ## 参考文档
 
 - [Firebase Remote Config 文档](https://firebase.google.com/docs/remote-config)
