@@ -403,6 +403,8 @@ class ChatViewModel : BaseVM() {
                         )
 
                         runCatching {
+                            // 向后兼容：后端可能仍返回 GUEST_NEED_LOGIN_CODE 错误码
+                            // 即使客户端已移除 guest 流程，也要处理此错误码，提示用户登录
                                 if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
                                     requestLogin.emit(true)
                                     return@runCatching
@@ -635,6 +637,8 @@ class ChatViewModel : BaseVM() {
                 when (result) {
                     is HttpResult.Success -> {
                         runCatching {
+                            // 向后兼容：后端可能仍返回 GUEST_NEED_LOGIN_CODE 错误码
+                            // 即使客户端已移除 guest 流程，也要处理此错误码，提示用户登录
                                 if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
                                     requestLogin.emit(true)
                                     return@runCatching

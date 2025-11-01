@@ -80,11 +80,25 @@ class MainViewModel : BaseVM() {
         MutableStateFlow(IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty())
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
 
+    // 显示设置界面状态
+    private val _showSettings = MutableStateFlow(false)
+    val showSettings: StateFlow<Boolean> = _showSettings.asStateFlow()
+
     init {
         // 使用统一启动管理器的数据快速初始化UI
         loadStartupData()
         // 初始化登录状态
         updateLoginState()
+    }
+
+    /** 显示设置界面 */
+    fun showSettings() {
+        _showSettings.value = true
+    }
+
+    /** 隐藏设置界面 */
+    fun hideSettings() {
+        _showSettings.value = false
     }
 
     /** 更新登录状态 */
@@ -399,6 +413,10 @@ class MainViewModel : BaseVM() {
         // 清理统一启动管理器的数据
         UnifiedStartupManager.clearAllData()
 
+        // 先隐藏设置界面，避免UI闪动
+        // 这样在状态切换时，UI会直接从 SettingContent 切换到 SplashLoginUI，而不是先显示 SettingContent
+        hideSettings()
+
         // 清理本地存储
         IntySetting.setToken("")
         // 清除用户ID，通过 changeUser("") 来清空当前用户，这样 isLogin() 会返回 false
@@ -406,6 +424,7 @@ class MainViewModel : BaseVM() {
         UserProfileManager.clearUserProfile()
 
         // 更新登录状态，触发UI更新
+        // 注意：hideSettings() 已经在上方调用，所以这里更新状态后，UI会直接从 SettingContent 切换到 SplashLoginUI
         updateLoginState()
 
         // 清除凭证状态 - 通知所有凭证提供者清除存储的凭证会话
@@ -420,7 +439,16 @@ class MainViewModel : BaseVM() {
         }
     }
 
-    // 游客模式数据加载，游客用户仍然可以访问推荐数据
+    /**
+     * 游客模式数据加载，游客用户仍然可以访问推荐数据
+     *
+     * @deprecated 已废弃：应用已移除 guest 账户流程，不再需要此方法
+     */
+    @Deprecated(
+        "已废弃：应用已移除 guest 账户流程",
+        ReplaceWith("无需替换，guest 功能已移除"),
+        DeprecationLevel.WARNING
+    )
     private fun loadGuestModeData() {
 
         viewModelScope.launch {
