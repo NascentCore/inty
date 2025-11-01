@@ -180,16 +180,6 @@ private class AuthInterceptor : Interceptor {
                     Exception("HTTP 401 Unauthorized: ${modifiedRequest.url}")
                 )
 
-                // 追踪认证失败
-                trackError(
-                    "HTTP 401 Unauthorized",
-                    "auth_failure",
-                    mapOf(
-                        "url" to modifiedRequest.url.toString(),
-                        "user_logged_out" to IntySetting.isLoggingOut(),
-                    ),
-                )
-
                 // 检查是否正在退出登录过程中，避免重复重启
                 if (IntySetting.isLoggingOut()) {
                     LogUtils.i("Ignoring 401 during logout process")

@@ -57,11 +57,24 @@ fun SettingContent(
     val context = LocalContext.current
     val dialogState by viewModel.dialogState.collectAsState()
 
+    // 每次打开设置界面时，重置删除账号结果状态和对话框状态，避免残留状态导致误触发
+    // 这可以防止在删除账号后，再次登录并打开设置界面时误触发 onLogout(true) 或显示对话框
+    LaunchedEffect(Unit) {
+        viewModel.resetDeleteAccountResult()
+        viewModel.resetDialogState()
+    }
+
     // 监听删除账号结果
     LaunchedEffect(viewModel) {
         viewModel.deleteAccountResultFlow.collectLatest { deleted ->
             if (deleted) {
-                // 账号删除成功
+                // 账号删除成功，先关闭对话框
+                viewModel.hideDeleteAccountDialog()
+                // 立即重置状态，避免残留导致下次打开设置界面时误触发
+                // 注意：SettingViewModel 的作用域是 MainActivity，如果不重置，
+                // 下次打开设置界面时会再次触发 onLogout(true)
+                viewModel.resetDeleteAccountResult()
+                // 触发登出流程
                 onLogout(true)
             }
         }
@@ -106,7 +119,9 @@ private fun SettingTopBar(onBack: () -> Unit) {
         },
         navigationIcon = {
             Image(
-                modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .noRippleClickable { onBack() },
                 painter = painterResource(R.drawable.back),
                 contentDescription = null,
             )
