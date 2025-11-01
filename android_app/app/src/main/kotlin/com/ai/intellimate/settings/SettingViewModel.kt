@@ -79,6 +79,16 @@ class SettingViewModel : BaseVM() {
     // 删除账号的结果
     val deleteAccountResultFlow = MutableStateFlow(false)
 
+    /** 重置删除账号结果状态 */
+    fun resetDeleteAccountResult() {
+        deleteAccountResultFlow.value = false
+    }
+
+    /** 重置所有对话框状态 */
+    fun resetDialogState() {
+        _dialogState.value = DialogState()
+    }
+
     /** 删除账号的接口 */
     private fun deleteUserAccount() {
         launchBackground {
