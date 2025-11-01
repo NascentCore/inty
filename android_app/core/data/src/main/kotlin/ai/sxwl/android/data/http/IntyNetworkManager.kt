@@ -11,10 +11,12 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import com.inty.api.client.IntyClient
-import com.inty.api.client.okhttp.IntyOkHttpClient
+import com.inty.api.client.IntyClientImpl
+import com.inty.api.client.okhttp.OkHttpClient
+import com.inty.api.core.ClientOptions
+import kotlinx.coroutines.withTimeout
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
-import kotlinx.coroutines.withTimeout
 
 /**
  * Inty网络管理器 - 企业级网络库封装 提供统一的网络管理和API服务入口
@@ -63,7 +65,64 @@ object IntyNetworkManager {
         LogUtils.d(
             "Creating new IntyClient: apiKey=${apiKey.take(8)}..., baseUrl=$baseUrl, environment=${NetworkConfig.getCurrentBuildType()}"
         )
-        return IntyOkHttpClient.builder().apiKey(apiKey).baseUrl(baseUrl).build()
+
+        // 使用统一的 OkHttpClient，包含所有必要的拦截器（包括动态 header 拦截器）
+        // 这样 SDK 的请求也会包含 requestId 和 timestamp
+        val unifiedOkHttpClient = UnifiedOkHttpClient.create()
+
+        // 创建 SDK 的 HttpClient，使用我们的统一 OkHttpClient
+        // SDK 的 OkHttpClient 类接受底层的 okhttp3.OkHttpClient
+        // 但 SDK 的 OkHttpClient 是 private 的，我们无法直接创建
+        // 所以我们通过 ClientOptions 直接设置 HttpClient
+        val sdkHttpClient = createSdkHttpClient(unifiedOkHttpClient, environmentConfig)
+
+        // 创建 ClientOptions，使用统一的 OkHttpClient
+        val clientOptions = ClientOptions.builder()
+            .apiKey(apiKey)
+            .baseUrl(baseUrl)
+            .httpClient(sdkHttpClient)
+            .build()
+
+        return IntyClientImpl(clientOptions)
+    }
+
+    /**
+     * 创建 SDK 的 HttpClient，使用统一的 OkHttpClient
+     * 通过反射创建 SDK 的 OkHttpClient 实例，传入我们的统一 OkHttpClient
+     */
+    private fun createSdkHttpClient(
+        okHttpClient: okhttp3.OkHttpClient,
+        environmentConfig: NetworkConfig.EnvironmentConfig
+    ): com.inty.api.core.http.HttpClient {
+        // SDK 的 OkHttpClient 类使用反射来创建实例
+        // 我们通过创建一个包装器 HttpClient 来实现
+        // 但由于 SDK 的复杂性，我们直接使用 SDK 的 OkHttpClient.builder()
+        // 并在 build() 时替换内部的 okhttp3.OkHttpClient
+
+        // 使用 SDK 的 OkHttpClient.Builder，但我们需要在内部使用我们的统一 OkHttpClient
+        // 由于 SDK 的 OkHttpClient 是 private 的，我们通过反射来创建
+        val timeout = com.inty.api.core.Timeout.builder()
+            .connect(java.time.Duration.ofMillis(environmentConfig.timeout.connectTimeoutMs))
+            .read(java.time.Duration.ofMillis(environmentConfig.timeout.readTimeoutMs))
+            .write(java.time.Duration.ofMillis(environmentConfig.timeout.writeTimeoutMs))
+            .build()
+
+        // 创建 SDK 的 HttpClient，使用我们的统一 OkHttpClient
+        // 通过反射创建 SDK 的 OkHttpClient 实例
+        try {
+            val sdkHttpClientClass = Class.forName("com.inty.api.client.okhttp.OkHttpClient")
+            val constructor =
+                sdkHttpClientClass.getDeclaredConstructor(okhttp3.OkHttpClient::class.java)
+            constructor.isAccessible = true
+            @Suppress("UNCHECKED_CAST")
+            return constructor.newInstance(okHttpClient) as com.inty.api.core.http.HttpClient
+        } catch (e: Exception) {
+            LogUtils.w("Failed to create SDK HttpClient with unified OkHttpClient: ${e.message}")
+            // 如果反射失败，使用 SDK 的默认方式
+            return OkHttpClient.builder()
+                .timeout(timeout)
+                .build()
+        }
     }
 
     /** 清除客户端缓存 当用户登录状态发生变化时调用 */

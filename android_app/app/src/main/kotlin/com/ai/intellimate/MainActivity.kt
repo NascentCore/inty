@@ -11,6 +11,7 @@ import android.view.MotionEvent
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -140,6 +141,7 @@ class MainActivity : BaseActivity() {
         super.ConfigComposeUI()
         // 直接使用ViewModel的StateFlow，实现响应式UI更新
         val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
+        val showSettings by mainViewModel.showSettings.collectAsState()
 
         // 实时检查登录状态变化（用于响应在其他Activity中的logout操作）
         LaunchedEffect(Unit) {
@@ -173,20 +175,50 @@ class MainActivity : BaseActivity() {
             } else if (!isLoggedIn) {
                 lastLoggedInState = false
                 hasInitialized = false // 重置，以便下次登录时重新初始化
+                // 注意：hideSettings() 应该在 logout() 方法内部调用，而不是在这里调用
+                // 这样可以确保状态更新的顺序正确，避免UI闪动
             }
         }
 
-        if (isLoggedIn) {
-            // 用户已登录，显示主界面
-            HomeScreen(
-                modifier = Modifier.fillMaxSize(),
-                mainViewModel = mainViewModel,
-                chatViewModel = chatViewModel,
-                viewModelFactory = defaultViewModelProviderFactory,
-            )
-        } else {
-            // 用户未登录，显示登录界面
-            SplashLoginUI(mainViewModel = mainViewModel)
+        when {
+            !isLoggedIn -> {
+                // 用户未登录，显示登录界面
+                SplashLoginUI(mainViewModel = mainViewModel)
+            }
+
+            showSettings -> {
+                // 显示设置界面
+                com.ai.intellimate.settings.SettingContent(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
+                    onBack = { mainViewModel.hideSettings() },
+                    onLogout = { isDelete ->
+                        // 使用MainViewModel的logout方法
+                        // logout() 内部已经会调用 hideSettings()，所以不需要在这里再次调用
+                        mainViewModel.logout()
+                        // 显示退出成功提示
+                        val str =
+                            if (isDelete) getString(R.string.delete_account_successfully)
+                            else getString(R.string.logout_successfully)
+                        ai.sxwl.android.utils.ToastUtils.showShort(str)
+                        // logout() 内部已经处理了状态更新：
+                        // 1. hideSettings() - 关闭设置界面
+                        // 2. updateLoginState() - 更新登录状态为false
+                        // 这会导致UI从 SettingContent 直接切换到 SplashLoginUI，无闪动
+                    },
+                )
+            }
+
+            else -> {
+                // 用户已登录，显示主界面
+                HomeScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    mainViewModel = mainViewModel,
+                    chatViewModel = chatViewModel,
+                    viewModelFactory = defaultViewModelProviderFactory,
+                )
+            }
         }
     }
 
@@ -254,6 +286,12 @@ class MainActivity : BaseActivity() {
 
     /** 处理返回事件（按键返回或手势返回） */
     private fun handleBackPress() {
+        // 如果显示设置界面，先关闭设置界面
+        if (mainViewModel.showSettings.value) {
+            mainViewModel.hideSettings()
+            return
+        }
+        // 否则按原来的逻辑处理（双击退出）
         backPressHandler.handleBackPress(onExit = { finish() }, onShowHint = { showExitHint() })
     }
 

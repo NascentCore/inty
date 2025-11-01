@@ -66,13 +66,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.R
-import com.ai.intellimate.settings.SettingActivity
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.AuthClickable
 import com.ai.intellimate.vip.VipCenterActivity
 
-/** “我的”页面 */
+/** "我的"页面 */
 @Composable
 internal fun ProfilePage(
     modifier: Modifier,
@@ -84,6 +84,7 @@ internal fun ProfilePage(
     isLoading: Boolean = false,
     isRefreshing: Boolean = false,
     onLoadMore: () -> Unit = {},
+    mainViewModel: MainViewModel? = null,
 ) {
     val context = LocalContext.current
 
@@ -113,7 +114,17 @@ internal fun ProfilePage(
 
                 Row {
                     Spacer(Modifier.weight(1f))
-                    AuthClickable(onClick = { SettingActivity.launch(context) }) { authModifier ->
+                    AuthClickable(
+                        onClick = {
+                            // 优先使用 mainViewModel 显示设置（在同一 Activity 内切换，无闪动）
+                            if (mainViewModel != null) {
+                                mainViewModel.showSettings()
+                            } else {
+                                // 兼容旧逻辑：如果没有传入 mainViewModel，使用 Activity 方式
+                                com.ai.intellimate.settings.SettingActivity.launch(context)
+                            }
+                        }
+                    ) { authModifier ->
                         AsyncImage(
                             modifier = authModifier.size(24.dp),
                             model = R.drawable.icon_setting,

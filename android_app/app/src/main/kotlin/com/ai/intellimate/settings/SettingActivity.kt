@@ -13,7 +13,16 @@ import androidx.compose.ui.Modifier
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.R
 
-/** 设置页面 */
+/**
+ * 设置页面
+ *
+ * @deprecated 已废弃：设置界面已整合到 MainActivity 中，使用 MainViewModel.showSettings() 在同一 Activity 内切换，避免 Activity 切换导致的 UI 闪动。
+ */
+@Deprecated(
+    message = "已废弃：设置界面已整合到 MainActivity 中，请使用 MainViewModel.showSettings()",
+    replaceWith = ReplaceWith("mainViewModel.showSettings()"),
+    level = DeprecationLevel.WARNING
+)
 class SettingActivity : BaseActivity() {
 
     companion object {
@@ -22,7 +31,13 @@ class SettingActivity : BaseActivity() {
          * 启动设置界面
          *
          * @param context 上下文context
+         * @deprecated 已废弃：请使用 MainViewModel.showSettings() 在同一 Activity 内切换设置界面
          */
+        @Deprecated(
+            "已废弃：请使用 MainViewModel.showSettings()",
+            ReplaceWith("mainViewModel.showSettings()"),
+            DeprecationLevel.WARNING
+        )
         fun launch(context: Context) {
             context.startActivity(Intent(context, SettingActivity::class.java))
         }

@@ -13,6 +13,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.ai.intellimate.login.LoginActivity
 
+/**
+ * 带认证检查的可点击组件
+ * 如果用户未登录，会跳转到登录页面
+ *
+ * @deprecated 已废弃：应用已移除 guest 账户流程，isGuestUser() 检查已不再需要。
+ * 现在只需要检查是否登录即可：IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+ */
 @Composable
 fun AuthClickable(
     modifier: Modifier = Modifier,
@@ -28,11 +35,11 @@ fun AuthClickable(
             val currentTime = System.currentTimeMillis()
             if (AntiClick.isValidClick(lastClickTime)) {
                 lastClickTime = currentTime
-                // 检查是否正式登录（非游客且已登录）
-                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                // 检查是否已登录（已移除 guest 用户检查，因为不再支持 guest 账户）
+                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                     onClick()
                 } else {
-                    // 未登录或游客时跳转到登录页面
+                    // 未登录时跳转到登录页面
                     context.startActivity(Intent(context, LoginActivity::class.java))
                 }
             }
