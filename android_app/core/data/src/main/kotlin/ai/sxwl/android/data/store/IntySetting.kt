@@ -79,6 +79,9 @@ object IntySetting {
         if (isGuest) {
             allUserSetting.putString("guest_uid", uid)
         }
+        // 清除 inty_sdk 客户端缓存，确保使用新的 token
+        // 因为 inty_sdk 的客户端会根据 apiKey（token）缓存，登录后 token 变化需要重新创建客户端
+        ai.sxwl.android.data.http.IntyNetworkManager.clearClientCache()
     }
 
     /** 用于业务标记消息已读的最后一条消息的判断 */

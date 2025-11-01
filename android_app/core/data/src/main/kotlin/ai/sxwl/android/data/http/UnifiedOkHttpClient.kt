@@ -123,6 +123,9 @@ private class DeviceInfoInterceptor : Interceptor {
 /**
  * 认证拦截器
  * 添加认证 token 并处理 401 响应
+ *
+ * 注意：对于 inty_sdk 的请求，SDK 会在 ClientOptions.build() 时添加 Authorization header
+ * 因此我们需要检查请求是否已有 Authorization header，避免重复添加
  */
 private class AuthInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -131,10 +134,24 @@ private class AuthInterceptor : Interceptor {
         val request = chain.request()
         val builder = request.newBuilder()
 
-        // 添加认证 token（如果存在）
+        // 添加认证 token（如果存在且请求中没有 Authorization header）
+        // inty_sdk 会在 ClientOptions 中自动添加 Authorization header，所以需要检查
+        val existingAuthHeader = request.header("Authorization")
         val token = IntySetting.getCurToken()
-        if (token.isNotEmpty()) {
+
+        if (token.isNotEmpty() && existingAuthHeader == null) {
             builder.addHeader("Authorization", "Bearer $token")
+            LogUtils.d("AuthInterceptor - Added Authorization header")
+        } else if (existingAuthHeader != null) {
+            LogUtils.d(
+                "AuthInterceptor - Authorization header already exists: ${
+                    existingAuthHeader.take(
+                        20
+                    )
+                }..."
+            )
+        } else {
+            LogUtils.w("AuthInterceptor - No token available")
         }
 
         val modifiedRequest = builder.build()
