@@ -46,19 +46,10 @@ def test_chat_completions_endpoint(integration_client: TestClient):
 
 
 def test_text_to_image_endpoint(integration_client: TestClient):
-    try:
-        image_urls = integration_client.text_to_image(
-            "A warm portrait of a friendly companion, soft lighting, vivid colors",
-            count=1,
-        )
+    image_urls = integration_client.text_to_image(
+        "A warm portrait of a friendly companion, soft lighting, vivid colors",
+        count=1,
+    )
 
-        assert image_urls
-        assert all(url.startswith("http") for url in image_urls)
-    except RuntimeError as e:
-        # Guest users are not allowed to generate images, skip test if limit reached
-        if "Image generation limit reached" in str(e):
-            pytest.skip(
-                f"Skipping test: Guest user image generation limit reached. "
-                f"Error: {e}"
-            )
-        raise
+    assert image_urls
+    assert all(url.startswith("http") for url in image_urls)
