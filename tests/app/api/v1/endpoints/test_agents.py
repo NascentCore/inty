@@ -3,29 +3,55 @@ import pytest
 from tests.app.api.test_client import TestClient
 
 
+API_BASE_URL = "http://localhost:8000"
+
+
+@pytest.fixture
+def integration_client():
+    client = TestClient(API_BASE_URL)
+    client.create_user()
+    try:
+        yield client
+    finally:
+        client.delete_user()
+        client.close()
+
+
 @pytest.mark.noci
-def test_create_and_delete_user():
-    """Test the simplest create user and delete user process."""
-    # Create test client with localhost server
-    test_client = TestClient("http://localhost:8000")
+def test_chat_completions_endpoint(integration_client: TestClient):
+    agent_id = integration_client.create_agent()
 
-    token = test_client.create_user()
-    assert token is not None
-    assert len(token) > 0
+    response = integration_client.chat_completions(
+        agent_id,
+        messages=[
+            {"role": "user", "content": "Tell me a fun fact about penguins."}
+        ],
+        language="en",
+    )
 
-    test_client.delete_user()
+    assert response["code"] == 200
+    data = response["data"]
+    assert data["model"] == "chatbot"
+    assert isinstance(data["created"], int)
 
-    # Close the HTTP client
-    test_client.close()
+    choices = data["choices"]
+    assert isinstance(choices, list) and choices
+
+    message = choices[0]["message"]
+    assert message["role"] == "assistant"
+    assert isinstance(message["content"], str)
+    assert message["content"].strip()
+
+    usage = data["usage"]
+    assert usage["total_tokens"] == usage["prompt_tokens"] + usage["completion_tokens"]
 
 
-def test_text_to_image():
-    """Test the text to image endpoint."""
-    test_client = TestClient("http://localhost:8000")
-    token = test_client.create_user()
-    assert token is not None
-    assert len(token) > 0
+@pytest.mark.noci
+def test_text_to_image_endpoint(integration_client: TestClient):
+    image_urls = integration_client.text_to_image(
+        "A warm portrait of a friendly companion, soft lighting, vivid colors",
+        count=1,
+    )
 
-    urls = test_client.text_to_image("Hello, world!")
-    assert len(urls) > 0
-    assert all(url.startswith("https://") for url in urls)
+    assert image_urls
+    assert all(url.startswith("http") for url in image_urls)
