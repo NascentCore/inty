@@ -274,7 +274,9 @@ async def agent_chat_completions(
 
 @router.post(
     "/images/{agent_id}",
-    response_model=schemas.APIResponse[schemas.ChatImageGenerationResponse],
+    response_model=schemas.APIResponse[
+        Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded]
+    ],
     summary="基于聊天消息及历史消息和其他相关信息（角色背景、用户 profile 等）生成图片",
     description=(
         "根据Agent角色、聊天历史和用户消息生成图片，并保存到聊天历史中。"
@@ -288,11 +290,9 @@ async def generate_chat_image(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     request: schemas.ChatImageGenerationRequest,
-    response_model=schemas.APIResponse[schemas.ChatImageGenerationResponse],
     current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> Union[
-    schemas.APIResponse[schemas.ChatImageGenerationResponse],
-    schemas.APIResponse[UsageLimitExceeded],
+) -> schemas.APIResponse[
+    Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded]
 ]:
     """
     基于聊天上下文生成图片
