@@ -49,66 +49,82 @@ class PaginationResponse(APIResponse[PaginationData]):
     pass
 
 
+class BizError(BaseModel):
+    code: int
+    error_code: str
+    message: str
+
+    class Config:
+        allow_mutation = False
+
+    def build_error_data(
+        self, extra_data: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        error_data: Dict[str, Any] = {
+            "error_code": self.error_code,
+            "description": self.message,
+        }
+        if extra_data:
+            error_data.update(extra_data)
+        return error_data
+
+    def to_api_response(
+        self, extra_data: Optional[Dict[str, Any]] = None
+    ) -> "APIResponse[Dict[str, Any]]":
+        return APIResponse.error(
+            message=self.message,
+            code=self.code,
+            data=self.build_error_data(extra_data),
+        )
+
+
 # 业务错误码定义
 class BusinessErrorCode:
-    SUBSCRIPTION_REQUIRED = {
-        "code": 10001001,
-        "error_code": "SUBSCRIPTION_REQUIRED",
-        "message": "Subscription required",
-    }
-    IMAGE_GENERATION_LIMIT_REACHED = {
-        "code": 10001002,
-        "error_code": "IMAGE_GENERATION_LIMIT_REACHED",
-        "message": "Image generation limit reached",
-    }
-    AGENT_CREATION_LIMIT_REACHED = {
-        "code": 10001003,
-        "error_code": "AGENT_CREATION_LIMIT_REACHED",
-        "message": "Character creation limit reached",
-    }
-    VOICE_GENERATION_LIMIT_REACHED = {
-        "code": 10001004,
-        "error_code": "VOICE_GENERATION_LIMIT_REACHED",
-        "message": "Voice generation limit reached",
-    }
-    GUEST_LOGIN_REQUIRED = {
-        "code": 10001005,
-        "error_code": "GUEST_LOGIN_REQUIRED",
-        "message": "Guest login required - Please sign in with Google",
-    }
+    SUBSCRIPTION_REQUIRED = BizError(
+        code=10001001,
+        error_code="SUBSCRIPTION_REQUIRED",
+        message="Subscription required",
+    )
+    IMAGE_GENERATION_LIMIT_REACHED = BizError(
+        code=10001002,
+        error_code="IMAGE_GENERATION_LIMIT_REACHED",
+        message="Image generation limit reached",
+    )
+    AGENT_CREATION_LIMIT_REACHED = BizError(
+        code=10001003,
+        error_code="AGENT_CREATION_LIMIT_REACHED",
+        message="Character creation limit reached",
+    )
+    VOICE_GENERATION_LIMIT_REACHED = BizError(
+        code=10001004,
+        error_code="VOICE_GENERATION_LIMIT_REACHED",
+        message="Voice generation limit reached",
+    )
+    GUEST_LOGIN_REQUIRED = BizError(
+        code=10001005,
+        error_code="GUEST_LOGIN_REQUIRED",
+        message="Guest login required - Please sign in with Google",
+    )
 
 
 # 业务错误消息定义
 BUSINESS_ERROR_MESSAGES = {
-    BusinessErrorCode.SUBSCRIPTION_REQUIRED[
-        "code"
-    ]: BusinessErrorCode.SUBSCRIPTION_REQUIRED["message"],
+    BusinessErrorCode.SUBSCRIPTION_REQUIRED.code:
+        BusinessErrorCode.SUBSCRIPTION_REQUIRED.message,
 }
 
 
 def create_business_error_response(
-    error_info: Dict[str, Any], extra_data: Optional[Dict[str, Any]] = None
+    error_info: BizError, extra_data: Optional[Dict[str, Any]] = None
 ) -> APIResponse[Dict[str, Any]]:
     """
     创建统一格式的业务错误响应
 
     Args:
-        error_info: 包含code, error_code, message的错误信息字典
+        error_info: BizError 实例
         extra_data: 额外数据
 
     Returns:
         APIResponse
     """
-    # 构建错误数据
-    error_data = {
-        "error_code": error_info["error_code"],
-        "description": error_info["message"],
-    }
-
-    # 添加额外数据
-    if extra_data:
-        error_data.update(extra_data)
-
-    return APIResponse.error(
-        message=error_info["message"], code=error_info["code"], data=error_data
-    )
+    return error_info.to_api_response(extra_data)
