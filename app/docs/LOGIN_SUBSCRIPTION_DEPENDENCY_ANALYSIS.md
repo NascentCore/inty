@@ -17,6 +17,27 @@
 - 统一业务错误处理：依赖层抛出结构化异常，由全局异常处理或标准装饰器转换为 `APIResponse`，端点只关注核心业务流程。
 - 评估服务层是否需要保留限额校验；若由依赖统一负责，可增加显式参数控制，避免重复查询。
 
+## 端点迁移清单
+
+### 权限依赖（超级管理员）
+
+| 优先级 | 接口路径 | 处理函数 (文件) | 当前依赖链 | 主要问题 |
+| --- | --- | --- | --- | --- |
+| P1 | `/api/v1/ai/agents/image-generation/config` (PUT) | `update_image_generation_config` (`app/api/v1/endpoints/agents.py`) | `Depends(get_current_superuser) → deps.get_current_active_user → get_current_user` | 各模块重复定义 `get_current_superuser`，难以统一审计与扩展 |
+| P1 | `/api/v1/admin/*` | `admin` 路由内全部处理函数 (`app/api/v1/endpoints/admin.py`) | 同上 | 整个路由复用本地依赖，后续扩展权限策略时需要集中改造 |
+
+### 订阅 / 用量拦截依赖
+
+| 优先级 | 接口路径 | 处理函数 (文件) | 当前依赖链 | 主要问题 |
+| --- | --- | --- | --- | --- |
+| P0 | `/api/v2/chat/completions/{agent_id}` (POST) | `agent_chat_completions` (`app/api/v2/endpoints/chat.py`) | `Depends(deps.get_current_active_user)` 后手动 `subscription_service.check_chat_limit` + `_handle_error` | 高频核心接口，限额逻辑散落且重复构建错误响应 |
+| P0 | `/api/v1/chat/completions/{agent_id}` (POST) | `agent_chat_completions` (`app/api/v1/endpoints/chat.py`) | 同上 | 旧客户端仍在使用，需要与 v2 同步改造 |
+| P0 | `/api/v1/chats/agents/{agent_id}/messages/{message_id}/voice` (POST) | `generate_message_voice` (`app/api/v1/endpoints/chats.py`) | `Depends(deps.get_current_active_user)` 后手动 `subscription_service.check_voice_generation_limit` | 语音生成限额判断在端点和 `voice_service` 双重存在，易产生不一致 |
+| P0 | `/api/v1/ai/agents` (POST) | `create_agent` (`app/api/v1/endpoints/agents.py`) | `Depends(deps.get_current_active_user)` 后手动 `check_agent_creation_limit` | 角色创建配额返回业务错误逻辑与其他接口不同步 |
+| P1 | `/api/v1/chat/images/{agent_id}` (POST) | `generate_chat_image` (`app/api/v1/endpoints/chat.py`) | 端点依赖 `chat_service.generate_chat_image`，服务层内部 `check_image_gen_limit` 并抛出 `HTTPException(499)` | 限额流程隐藏在服务层，端点无法复用统一依赖与错误格式 |
+| P1 | `/api/v1/ai/agents/text-to-image`、`/generate_background` (POST，已标记弃用) | `generate_background` (`app/api/v1/endpoints/agents.py`) | 与上类似 | 虽为旧接口，但仍应借机统一，避免历史代码残留 |
+| P1 | `/api/v1/chats/agents/{agent_id}/settings` (PUT) | `update_agent_chat_settings` (`app/api/v1/endpoints/chats.py`) | `Depends(deps.get_current_active_user)` 后手动获取订阅状态并调用 `is_eligible_for_premium` | Premium 功能开关依赖散落，适合封装为 `require_premium_user` |
+
 ## 后续行动
 - 梳理现有端点依赖链，列出需迁移的接口列表和优先级。
 - 调整测试用例或新增用例，覆盖依赖超限与正常流程。
