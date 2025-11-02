@@ -2,7 +2,6 @@ import pytest
 
 from tests.app.api.test_client import TestClient
 
-
 API_BASE_URL = "http://localhost:8000"
 
 
