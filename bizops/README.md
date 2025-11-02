@@ -7,6 +7,10 @@
 - Facebook page: https://www.facebook.com/profile.php?id=61579913877109#
 - X account: https://x.com/IntelliMate2025 (CPM 低、量大）
 
+## 市场推广计划
+
+- [菲律宾市场推广计划书](./PHILIPPINES_MARKETING_PLAN.md) - 3个月验证计划，目标$10,000营收
+
 ## Firebase 数据点位信息
 
 1. message_send_success是发送消息并且服务器正确返回的事件。（不区分是否触发次数限制，vip限制等）
