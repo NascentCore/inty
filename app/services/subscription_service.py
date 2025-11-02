@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app import schemas
-from app.core.config import global_config_loaded_from_config_yaml
+from app.core.config import Environment, global_config_loaded_from_config_yaml
 from app.core.user_privilege.superuser_check import (
     SUPERUSER_LIMIT_CHECK_RESULT,
     is_superuser,
@@ -38,6 +38,8 @@ from app.schemas.subscription import (
 )
 from app.schemas.subscription import UserSubscription as UserSubscriptionSchema
 from app.services.system_settings_service import system_settings_service
+
+TEST_ENVIRONMENT_LIMIT = 1_000_000
 
 
 class SubscriptionService:
@@ -854,6 +856,15 @@ class SubscriptionService:
             Tuple[bool, int, int]: (是否允许聊天, 已用次数, 限制次数)
         """
         try:
+            if (
+                global_config_loaded_from_config_yaml.app.environment
+                == Environment.TEST
+            ):
+                logger.debug(
+                    "TEST 环境下放宽聊天限额: user_id=%s", user.id
+                )
+                return True, 0, TEST_ENVIRONMENT_LIMIT
+
             if is_superuser(user):
                 logger.debug(f"Superuser {user.id} has unlimited chats")
                 return SUPERUSER_LIMIT_CHECK_RESULT
@@ -950,6 +961,15 @@ class SubscriptionService:
             Tuple[bool, int, int]: (是否允许生成, 已用次数, 限制次数)
         """
         try:
+            if (
+                global_config_loaded_from_config_yaml.app.environment
+                == Environment.TEST
+            ):
+                logger.debug(
+                    "TEST 环境下放宽语音生成限额: user_id=%s", user.id
+                )
+                return True, 0, TEST_ENVIRONMENT_LIMIT
+
             if is_superuser(user):
                 logger.debug(f"Superuser {user.id} has unlimited voice generation")
                 return SUPERUSER_LIMIT_CHECK_RESULT
@@ -1006,10 +1026,19 @@ class SubscriptionService:
         Returns:
             Tuple[bool, int, int]: (是否允许创建, 已创建数量, 限制数量)
         """
-        if is_superuser(user):
-            return SUPERUSER_LIMIT_CHECK_RESULT
-
         try:
+            if (
+                global_config_loaded_from_config_yaml.app.environment
+                == Environment.TEST
+            ):
+                logger.debug(
+                    "TEST 环境下放宽 Agent 创建限额: user_id=%s", user.id
+                )
+                return True, 0, TEST_ENVIRONMENT_LIMIT
+
+            if is_superuser(user):
+                return SUPERUSER_LIMIT_CHECK_RESULT
+
             # 获取订阅状态
             subscription_status = await self.get_user_subscription_status(db, user.id)
 
@@ -1066,6 +1095,15 @@ class SubscriptionService:
             Tuple[bool, int, int]: (是否允许生成, 已用次数, 限制次数)
         """
         try:
+            if (
+                global_config_loaded_from_config_yaml.app.environment
+                == Environment.TEST
+            ):
+                logger.debug(
+                    "TEST 环境下放宽图片生成限额: user_id=%s", user.id
+                )
+                return True, 0, TEST_ENVIRONMENT_LIMIT
+
             if is_superuser(user):
                 logger.debug(f"Superuser {user.id} has unlimited image generation")
                 return SUPERUSER_LIMIT_CHECK_RESULT
