@@ -1641,6 +1641,65 @@
                 }
             }
         },
+        "/api/v1/chat/images/{agent_id}": {
+            "post": {
+                "tags": [
+                    "chat",
+                    "inty-eval"
+                ],
+                "summary": "\u57fa\u4e8e\u804a\u5929\u4e0a\u4e0b\u6587\u751f\u6210\u56fe\u7247",
+                "description": "\u6839\u636eAgent\u89d2\u8272\u3001\u804a\u5929\u5386\u53f2\u548c\u7528\u6237\u6d88\u606f\u751f\u6210\u56fe\u7247\uff0c\u5e76\u4fdd\u5b58\u5230\u804a\u5929\u5386\u53f2\u4e2d\u3002\u6ce8\u610f\uff1a\u8def\u5f84\u53c2\u6570 `agent_id` \u4ec5\u4f5c\u4e3a\u76ee\u524d\u7684\u540d\u79f0\uff0c\u5b9e\u9645\u5e94\u4e3a `chat_id`\u3002\u672c API \u62f7\u8d1d\u81ea `app/api/v1/endpoints/chats.py::generate_chat_image`\uff08\u7b2c1170-1325\u884c\uff09\u3002",
+                "operationId": "generate_chat_image_api_v1_chat_images__agent_id__post",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "agent_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Agent Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChatImageGenerationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_ChatImageGenerationResponse_"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/images": {
             "post": {
                 "tags": [
