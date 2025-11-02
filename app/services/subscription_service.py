@@ -1,3 +1,4 @@
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
@@ -40,6 +41,21 @@ from app.schemas.subscription import UserSubscription as UserSubscriptionSchema
 from app.services.system_settings_service import system_settings_service
 
 TEST_ENVIRONMENT_LIMIT = 1_000_000
+
+
+def _should_override_limits_for_test_env() -> bool:
+    """仅在部署的 TEST 环境下放宽限额，避免干扰单元测试"""
+    if (
+        global_config_loaded_from_config_yaml.app.environment
+        != Environment.TEST
+    ):
+        return False
+
+    # Pytest 会自动设置该环境变量，检测到说明当前是测试用例，不做放宽
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return False
+
+    return True
 
 
 class SubscriptionService:
@@ -856,13 +872,8 @@ class SubscriptionService:
             Tuple[bool, int, int]: (是否允许聊天, 已用次数, 限制次数)
         """
         try:
-            if (
-                global_config_loaded_from_config_yaml.app.environment
-                == Environment.TEST
-            ):
-                logger.debug(
-                    "TEST 环境下放宽聊天限额: user_id=%s", user.id
-                )
+            if _should_override_limits_for_test_env():
+                logger.debug("TEST 环境下放宽聊天限额: user_id=%s", user.id)
                 return True, 0, TEST_ENVIRONMENT_LIMIT
 
             if is_superuser(user):
@@ -961,13 +972,8 @@ class SubscriptionService:
             Tuple[bool, int, int]: (是否允许生成, 已用次数, 限制次数)
         """
         try:
-            if (
-                global_config_loaded_from_config_yaml.app.environment
-                == Environment.TEST
-            ):
-                logger.debug(
-                    "TEST 环境下放宽语音生成限额: user_id=%s", user.id
-                )
+            if _should_override_limits_for_test_env():
+                logger.debug("TEST 环境下放宽语音生成限额: user_id=%s", user.id)
                 return True, 0, TEST_ENVIRONMENT_LIMIT
 
             if is_superuser(user):
@@ -1027,13 +1033,8 @@ class SubscriptionService:
             Tuple[bool, int, int]: (是否允许创建, 已创建数量, 限制数量)
         """
         try:
-            if (
-                global_config_loaded_from_config_yaml.app.environment
-                == Environment.TEST
-            ):
-                logger.debug(
-                    "TEST 环境下放宽 Agent 创建限额: user_id=%s", user.id
-                )
+            if _should_override_limits_for_test_env():
+                logger.debug("TEST 环境下放宽 Agent 创建限额: user_id=%s", user.id)
                 return True, 0, TEST_ENVIRONMENT_LIMIT
 
             if is_superuser(user):
@@ -1095,13 +1096,8 @@ class SubscriptionService:
             Tuple[bool, int, int]: (是否允许生成, 已用次数, 限制次数)
         """
         try:
-            if (
-                global_config_loaded_from_config_yaml.app.environment
-                == Environment.TEST
-            ):
-                logger.debug(
-                    "TEST 环境下放宽图片生成限额: user_id=%s", user.id
-                )
+            if _should_override_limits_for_test_env():
+                logger.debug("TEST 环境下放宽图片生成限额: user_id=%s", user.id)
                 return True, 0, TEST_ENVIRONMENT_LIMIT
 
             if is_superuser(user):
