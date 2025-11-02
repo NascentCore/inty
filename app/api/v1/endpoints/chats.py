@@ -1206,15 +1206,17 @@ async def generate_chat_image(
             history_count=request.history_count,
         )
 
-        # 检查是否是业务错误响应
-        if isinstance(result, dict) and result.get("_is_business_error"):
-            return result["response"]
+        return schemas.APIResponse.success(data=result)
 
-        return schemas.APIResponse.success(
-            data=schemas.ChatImageGenerationResponse(**result)
-        )
-
-    except HTTPException:
+    except HTTPException as e:
+        # 检查是否是业务错误响应（状态码 499）
+        if e.status_code == 499 and isinstance(e.detail, dict):
+            error_info = e.detail.get("error_info")
+            extra_data = e.detail.get("extra_data")
+            if error_info:
+                return create_business_error_response(
+                    error_info=error_info, extra_data=extra_data
+                )
         raise
     except Exception as e:
         logger.error(f"生成聊天图片失败 - Agent ID: {agent_id}, Error: {str(e)}")

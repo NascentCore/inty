@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 from app import models, schemas
 from app.models.user import AuthType
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
-from app.schemas.response import BusinessErrorCode, create_business_error_response
+from app.schemas.response import BusinessErrorCode
 from app.services import agent_service, chat_history_service
 from app.services.cache_service import cache_service
 from app.services.global_services import subscription_service
@@ -1115,7 +1115,7 @@ async def generate_chat_image(
     user_id: str,
     message_id: int,
     history_count: Optional[int] = None,
-) -> dict:
+) -> schemas.ChatImageGenerationResponse:
     """
     基于聊天上下文生成图片（公共函数）
 
@@ -1135,18 +1135,10 @@ async def generate_chat_image(
         history_count: 使用的历史消息数量
 
     Returns:
-        包含图片信息的字典，格式：
-        {
-            "message_id": int,
-            "image_url": str,
-            "image_metadata": dict,
-            "prompt": str,
-        }
-
-        如果达到限额，返回业务错误响应字典（需要端点层判断并直接返回）
+        成功时返回 `ChatImageGenerationResponse`
 
     Raises:
-        HTTPException: 各种业务错误情况
+        HTTPException: 各种业务错误情况（包括限额检查失败）
     """
     from app.services.image_generation_service import image_generation_service
 
@@ -1188,22 +1180,21 @@ async def generate_chat_image(
     if not is_allowed:
         logger.warning(f"用户 {user_id} 已达到图片生成限额: {used_count}/{daily_limit}")
 
-        if user.auth_type == AuthType.GUEST:
-            return {
-                "_is_business_error": True,
-                "response": create_business_error_response(
-                    error_info=BusinessErrorCode.GUEST_LOGIN_REQUIRED,
-                    extra_data={"used_count": used_count, "daily_limit": daily_limit},
-                ),
-            }
-        else:
-            return {
-                "_is_business_error": True,
-                "response": create_business_error_response(
-                    error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
-                    extra_data={"used_count": used_count, "daily_limit": daily_limit},
-                ),
-            }
+        # 抛出异常，包含业务错误信息，由端点层转换为业务错误响应
+        error_code = (
+            BusinessErrorCode.GUEST_LOGIN_REQUIRED
+            if user.auth_type == AuthType.GUEST
+            else BusinessErrorCode.SUBSCRIPTION_REQUIRED
+        )
+        # 使用特殊状态码 499 标识需要转换为业务错误响应的异常
+        raise HTTPException(
+            status_code=499,
+            detail={
+                "error_code": error_code["error_code"],
+                "error_info": error_code,
+                "extra_data": {"used_count": used_count, "daily_limit": daily_limit},
+            },
+        )
 
     # 获取Agent完整数据
     agent_data = await agent_service.get_agent_for_chat(db, agent_id=chat.agent_id)
@@ -1237,7 +1228,7 @@ async def generate_chat_image(
 
     # 调用图片生成服务（使用 Gemini 2.5 Flash Image）
     # 重复生成会直接覆盖 meta_data 中的 generated_image，无需删除旧数据
-    result = await image_generation_service.generate_chat_image_with_gemini(
+    image_generation_result = await image_generation_service.generate_chat_image_with_gemini(
         db=db,
         session_id=session_id,
         message_id=message_id,  # 传入要更新的消息ID
@@ -1262,8 +1253,10 @@ async def generate_chat_image(
     except Exception as e:
         logger.warning(f"记录图片生成用量失败: {str(e)}")
 
+    response = schemas.ChatImageGenerationResponse(**image_generation_result)
+
     logger.info(
-        f"聊天图片生成成功 - Agent ID: {agent_id}, Message ID: {result['message_id']}"
+        f"聊天图片生成成功 - Agent ID: {agent_id}, Message ID: {response.message_id}"
     )
 
-    return result
+    return response

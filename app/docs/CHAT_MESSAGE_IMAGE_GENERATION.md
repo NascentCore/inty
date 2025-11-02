@@ -218,7 +218,7 @@ async def generate_chat_image_with_gemini(
     - 如果更新失败，抛出 `ValueError`
 
 11. **返回结果**
-    - 返回包含 `message_id`、`image_url`（CDN URL）、`image_metadata`、`prompt` 的字典
+   - 返回 `ChatImageGenerationResponse` 模型，字段包括 `message_id`、`image_url`（CDN URL）、`image_metadata`、`prompt`
 
 ### 4. 消息元数据存储与检索
 
