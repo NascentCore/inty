@@ -1606,14 +1606,6 @@
                             "type": "string",
                             "title": "Agent Id"
                         }
-                    },
-                    {
-                        "name": "response_model",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "title": "Response Model"
-                        }
                     }
                 ],
                 "requestBody": {
@@ -1632,7 +1624,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_ChatImageGenerationResponse_"
+                                    "$ref": "#/components/schemas/APIResponse_Union_ChatImageGenerationResponse__UsageLimitExceeded__"
                                 }
                             }
                         }
@@ -2518,32 +2510,6 @@
                 "type": "object",
                 "title": "APIResponse[ChatCompletionResponse]"
             },
-            "APIResponse_ChatImageGenerationResponse_": {
-                "properties": {
-                    "code": {
-                        "type": "integer",
-                        "title": "Code",
-                        "default": 200
-                    },
-                    "message": {
-                        "type": "string",
-                        "title": "Message",
-                        "default": "success"
-                    },
-                    "data": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/components/schemas/ChatImageGenerationResponse"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ]
-                    }
-                },
-                "type": "object",
-                "title": "APIResponse[ChatImageGenerationResponse]"
-            },
             "APIResponse_ChatSettings_": {
                 "properties": {
                     "code": {
@@ -2948,6 +2914,36 @@
                 },
                 "type": "object",
                 "title": "APIResponse[Union[Agent, Dict[str, Any]]]"
+            },
+            "APIResponse_Union_ChatImageGenerationResponse__UsageLimitExceeded__": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/ChatImageGenerationResponse"
+                            },
+                            {
+                                "$ref": "#/components/schemas/UsageLimitExceeded"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Data"
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[Union[ChatImageGenerationResponse, UsageLimitExceeded]]"
             },
             "APIResponse_UsageStatisticsResponse_": {
                 "properties": {
@@ -6509,6 +6505,39 @@
                     "AGENT"
                 ],
                 "title": "TargetType"
+            },
+            "UsageLimitExceeded": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code"
+                    },
+                    "error_code": {
+                        "type": "string",
+                        "title": "Error Code"
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "used_count": {
+                        "type": "integer",
+                        "title": "Used Count"
+                    },
+                    "daily_limit": {
+                        "type": "integer",
+                        "title": "Daily Limit"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "code",
+                    "error_code",
+                    "message",
+                    "used_count",
+                    "daily_limit"
+                ],
+                "title": "UsageLimitExceeded"
             },
             "UsageStatisticsResponse": {
                 "properties": {
