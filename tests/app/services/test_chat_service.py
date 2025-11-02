@@ -13,6 +13,7 @@ from app import models
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
+from app.schemas.chat import ChatImageGenerationResponse
 from app.services import chat_service
 
 
@@ -150,12 +151,12 @@ class TestChatService:
         )
 
         # 验证结果
-        assert result == mock_image_result
-        assert "message_id" in result
-        assert "image_url" in result
-        assert "image_metadata" in result
-        assert "prompt" in result
-        assert result["message_id"] == message_id
+        assert isinstance(result, ChatImageGenerationResponse)
+        assert result.model_dump() == mock_image_result
+        assert result.message_id == message_id
+        assert result.image_url == mock_image_result["image_url"]
+        assert result.image_metadata == mock_image_result["image_metadata"]
+        assert result.prompt == mock_image_result["prompt"]
 
         # 验证调用
         # 验证限额检查

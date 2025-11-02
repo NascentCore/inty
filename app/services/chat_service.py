@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -1115,7 +1115,7 @@ async def generate_chat_image(
     user_id: str,
     message_id: int,
     history_count: Optional[int] = None,
-) -> dict:
+) -> Union[schemas.ChatImageGenerationResponse, dict]:
     """
     基于聊天上下文生成图片（公共函数）
 
@@ -1135,14 +1135,7 @@ async def generate_chat_image(
         history_count: 使用的历史消息数量
 
     Returns:
-        包含图片信息的字典，格式：
-        {
-            "message_id": int,
-            "image_url": str,
-            "image_metadata": dict,
-            "prompt": str,
-        }
-
+        成功时返回 `ChatImageGenerationResponse`，
         如果达到限额，返回业务错误响应字典（需要端点层判断并直接返回）
 
     Raises:
@@ -1237,7 +1230,7 @@ async def generate_chat_image(
 
     # 调用图片生成服务（使用 Gemini 2.5 Flash Image）
     # 重复生成会直接覆盖 meta_data 中的 generated_image，无需删除旧数据
-    result = await image_generation_service.generate_chat_image_with_gemini(
+    image_generation_result = await image_generation_service.generate_chat_image_with_gemini(
         db=db,
         session_id=session_id,
         message_id=message_id,  # 传入要更新的消息ID
@@ -1262,8 +1255,10 @@ async def generate_chat_image(
     except Exception as e:
         logger.warning(f"记录图片生成用量失败: {str(e)}")
 
+    response = schemas.ChatImageGenerationResponse(**image_generation_result)
+
     logger.info(
-        f"聊天图片生成成功 - Agent ID: {agent_id}, Message ID: {result['message_id']}"
+        f"聊天图片生成成功 - Agent ID: {agent_id}, Message ID: {response.message_id}"
     )
 
-    return result
+    return response

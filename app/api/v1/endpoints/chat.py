@@ -315,9 +315,7 @@ async def generate_chat_image(
         if isinstance(result, dict) and result.get("_is_business_error"):
             return result["response"]
 
-        return schemas.APIResponse.success(
-            data=schemas.ChatImageGenerationResponse(**result)
-        )
+        return schemas.APIResponse.success(data=result)
 
     except HTTPException:
         raise
