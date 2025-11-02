@@ -26,11 +26,11 @@ from app.api.constants import API_V1_PREFIX
 class Environment(str, Enum):
     """Environment enum for application deployment environments."""
 
-    DEV = "dev"
-    PROD = "prod"
-    TEST = "test"
-    LOCAL = "local"
-    UNSPECIFIED = "unspecified"
+    DEV = "dev"  # 集成开发环境，用于支持 app 开发、运营、等需要使用共享资源的场景
+    PROD = "prod"  # 生产环境
+    TEST = "test"  # 测试环境，用于 CI 和本地测试；与 Local 环境区别在于 TEST 环境都为虚假依赖如 fakegcs fakeopenai
+    LOCAL = "local"  # 本地开发环境，用于支持本地 app 开发、测试；与 TEST 环境区别在于 Local 环境都为真实依赖
+    UNSPECIFIED = "unspecified"  # 未指定环境，默认值
 
 
 from app.api.constants import API_V2_PREFIX
@@ -108,7 +108,7 @@ class AppConfig:
     api_v1_prefix: str = API_V1_PREFIX
     backend_cors_origins: List[AnyHttpUrl] = None
     version: str = "1.1.0"
-    environment: Environment = Environment.DEV
+    environment: Environment = Environment.UNSPECIFIED
     gcp_service_account_key: str = ".secrets/gcp-service-account-key.json"
 
     api_endpoints: APIEndpointsConfig = field(default_factory=APIEndpointsConfig)
