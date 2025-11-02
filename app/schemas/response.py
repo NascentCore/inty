@@ -49,6 +49,20 @@ class PaginationResponse(APIResponse[PaginationData]):
     pass
 
 
+class BizError(BaseModel):
+    """业务错误信息模型"""
+
+    code: int  # HTTP 状态码
+    error_code: str  # 业务错误码
+    message: str  # 业务错误消息
+
+
+class UsageLimitExceeded(BizError):
+    # 用来进一步解释错误信息的详细信息
+    used_count: int
+    daily_limit: int
+
+
 # 业务错误码定义
 class BusinessErrorCode:
     SUBSCRIPTION_REQUIRED = {

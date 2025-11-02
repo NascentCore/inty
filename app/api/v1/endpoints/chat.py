@@ -1,6 +1,6 @@
 import time
 import uuid
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException
 from langchain_core.messages import HumanMessage
@@ -14,7 +14,11 @@ from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.user import AuthType
 from app.schemas.chat import ChatCompletionRequest
-from app.schemas.response import BusinessErrorCode, create_business_error_response
+from app.schemas.response import (
+    BusinessErrorCode,
+    UsageLimitExceeded,
+    create_business_error_response,
+)
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
@@ -271,13 +275,13 @@ async def agent_chat_completions(
 @router.post(
     "/images/{agent_id}",
     response_model=schemas.APIResponse[schemas.ChatImageGenerationResponse],
-    summary="基于聊天上下文生成图片",
+    summary="基于聊天消息及历史消息和其他相关信息（角色背景、用户 profile 等）生成图片",
     description=(
         "根据Agent角色、聊天历史和用户消息生成图片，并保存到聊天历史中。"
-        "注意：路径参数 `agent_id` 仅作为目前的名称，实际应为 `chat_id`。"
-        "本 API 拷贝自 `app/api/v1/endpoints/chats.py::generate_chat_image`（第1170-1325行）。"
+        "注意：路径参数 `agent_id` 仅作为目前的名称，实际应为 `chat_id`。未来如需扩展可直接重命名。"
+        "agent id 则代表与该 agent 的*当前*会话的 id"
     ),
-    tags=["inty-eval"],
+    tags=["inty-eval", "android-app"],
 )
 async def generate_chat_image(
     *,
@@ -286,7 +290,10 @@ async def generate_chat_image(
     request: schemas.ChatImageGenerationRequest,
     response_model=schemas.APIResponse[schemas.ChatImageGenerationResponse],
     current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> schemas.APIResponse[schemas.ChatImageGenerationResponse]:
+) -> Union[
+    schemas.APIResponse[schemas.ChatImageGenerationResponse],
+    schemas.APIResponse[UsageLimitExceeded],
+]:
     """
     基于聊天上下文生成图片
 
@@ -304,6 +311,11 @@ async def generate_chat_image(
     - 核心逻辑已提取到 `chat_service.generate_chat_image`
     """
     try:
+        # 返回值：
+        # 1. 成功时返回 ChatImageGenerationResponse
+        # 2. 业务限制错误时返回 UsageLimitExceeded
+        # 3. 其他错误时返回 HTTPException
+        # 1，2 均显示为应用正常返回值、3 为 fastapi 返回值
         result = await chat_service.generate_chat_image(
             db=db,
             agent_id=agent_id,
@@ -312,17 +324,12 @@ async def generate_chat_image(
             history_count=request.history_count,
         )
 
+        if isinstance(result, UsageLimitExceeded):
+            return schemas.APIResponse.error(data=result)
+
         return schemas.APIResponse.success(data=result)
 
     except HTTPException as e:
-        # 检查是否是业务错误响应（状态码 499）
-        if e.status_code == 499 and isinstance(e.detail, dict):
-            error_info = e.detail.get("error_info")
-            extra_data = e.detail.get("extra_data")
-            if error_info:
-                return create_business_error_response(
-                    error_info=error_info, extra_data=extra_data
-                )
         raise
     except Exception as e:
         logger.error(f"生成聊天图片失败 - Agent ID: {agent_id}, Error: {str(e)}")
