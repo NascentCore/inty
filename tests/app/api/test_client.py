@@ -176,7 +176,15 @@ class TestClient:
         assert response.status_code == 200, response.text
         response_data = response.json()
 
-        return response_data["data"]["image_uris"]
+        code = response_data.get("code")
+        if code != 200:
+            error_msg = response_data.get("message", "Unknown error")
+            raise RuntimeError(
+                f"Image generation failed: code={code}, message={error_msg}, "
+                f"data={response_data.get('data')}"
+            )
+
+        return response_data["data"]["urls"]
 
     def close(self):
         """Close the HTTP client."""
