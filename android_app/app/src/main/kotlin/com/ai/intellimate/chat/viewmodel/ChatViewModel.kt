@@ -22,6 +22,7 @@ import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.utils.NetworkErrorHandler
+import com.ai.intellimate.utils.UnifiedStartupManager
 import com.ai.intellimate.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Collections
 
 // 操作什么数据，支持什么 UI？Model 是 beans
 // View 是各类 page/activity。
@@ -60,8 +62,35 @@ class ChatViewModel : BaseVM() {
     private val _conversations = MutableStateFlow<List<ConversationItem>>(emptyList())
     val conversations = _conversations.asStateFlow()
 
+    private val _conversationAgentInfos = MutableStateFlow<Map<String, AgentInfo>>(emptyMap())
+    val conversationAgentInfos = _conversationAgentInfos.asStateFlow()
+
+    private val pendingAgentIdRequests = Collections.synchronizedSet(mutableSetOf<String>())
+
     val inputData = MutableStateFlow<String>("")
     val inputSelection = MutableStateFlow<Int>(0)
+
+    init {
+        viewModelScope.launch {
+            UnifiedStartupManager.chatAgents.collect { agents ->
+                if (agents.isEmpty()) {
+                    _conversationAgentInfos.value = emptyMap()
+                    return@collect
+                }
+
+                val agentMap =
+                    agents
+                        .filter { it.id.isNotBlank() }
+                        .associateBy { it.id }
+
+                if (agentMap.isEmpty()) {
+                    return@collect
+                }
+
+                _conversationAgentInfos.update { current -> current + agentMap }
+            }
+        }
+    }
 
     // 用于标识当前是否在等待AI回复
     private val _isWaitingForReply = MutableStateFlow<Boolean>(false)
@@ -109,6 +138,7 @@ class ChatViewModel : BaseVM() {
 
         // Firebase Analytics - 记录聊天会话开始
         agentInfo?.let { agent ->
+            cacheAgentInfo(agent)
             FirebaseManager.logEvent(
                 FirebaseManager.Events.CHAT_SESSION_START,
                 mapOf(
@@ -754,6 +784,57 @@ class ChatViewModel : BaseVM() {
         }
     }
 
+    private fun cacheAgentInfo(agentInfo: AgentInfo?) {
+        if (agentInfo == null || agentInfo.id.isBlank()) {
+            return
+        }
+
+        _conversationAgentInfos.update { current ->
+            if (current[agentInfo.id] == agentInfo) {
+                current
+            } else {
+                current + (agentInfo.id to agentInfo)
+            }
+        }
+    }
+
+    private fun ensureAgentsForConversations(conversations: List<ConversationItem>) {
+        if (conversations.isEmpty()) return
+
+        conversations.forEach { conversation ->
+            val agentId = conversation.agentId
+            if (agentId.isBlank()) {
+                return@forEach
+            }
+
+            if (_conversationAgentInfos.value.containsKey(agentId)) {
+                return@forEach
+            }
+
+            if (!pendingAgentIdRequests.add(agentId)) {
+                return@forEach
+            }
+
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    when (val result = chatApi.getAgentInfo(agentId)) {
+                        is HttpResult.Success -> cacheAgentInfo(result.data)
+                        is HttpResult.Failure ->
+                            LogUtils.w(
+                                "ensureAgentsForConversations - getAgentInfo failed: ${result.message}"
+                            )
+                    }
+                } catch (e: Exception) {
+                    LogUtils.e(
+                        "ensureAgentsForConversations - getAgentInfo exception: ${e.message}"
+                    )
+                } finally {
+                    pendingAgentIdRequests.remove(agentId)
+                }
+            }
+        }
+    }
+
     private fun loadConversationsSilently() {
         if (_isLoadingConversations.value || _isRefreshingConversations.value) return
 
@@ -771,6 +852,7 @@ class ChatViewModel : BaseVM() {
                         } else {
                             // 静默更新数据，不显示loading
                             _conversations.value = userInitiatedConversations
+                            ensureAgentsForConversations(userInitiatedConversations)
                         }
                     }
                     is HttpResult.Failure -> {
@@ -816,10 +898,12 @@ class ChatViewModel : BaseVM() {
                             if (currentConversationsPage == 0) {
                                 // 第一页，直接替换（这里才清空并替换数据）
                                 _conversations.value = userInitiatedConversations
+                                ensureAgentsForConversations(userInitiatedConversations)
                             } else {
                                 // 后续页，追加到现有列表
                                 _conversations.value =
                                     _conversations.value + userInitiatedConversations
+                                ensureAgentsForConversations(userInitiatedConversations)
                             }
                         }
                     }
@@ -905,6 +989,9 @@ class ChatViewModel : BaseVM() {
         lastQueryAgentId = null
         lastQueryTime = 0L
         lastSendTime = 0L
+
+        pendingAgentIdRequests.clear()
+        _conversationAgentInfos.value = emptyMap()
 
         // 清理分页状态
         currentConversationsPage = 0

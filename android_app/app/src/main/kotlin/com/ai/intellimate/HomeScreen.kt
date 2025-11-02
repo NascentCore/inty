@@ -280,10 +280,12 @@ private fun ConversationsTabContent(chatViewModel: ChatViewModel, context: Conte
     val conversations by chatViewModel.conversations.collectAsState()
     val isLoadingConversations by chatViewModel.isLoadingConversations.collectAsState()
     val isRefreshingConversations by chatViewModel.isRefreshingConversations.collectAsState()
+    val conversationAgentInfos by chatViewModel.conversationAgentInfos.collectAsState()
 
     MessagesPage(
         modifier = Modifier,
         conversations = conversations,
+        agentInfoMap = conversationAgentInfos,
         onClickConversationItem = { conversation ->
             chatViewModel.setConversationReaded(conversation)
             // 从会话列表 跳转到聊天页面，使用 agentId 而不是转换后的 AgentInfo

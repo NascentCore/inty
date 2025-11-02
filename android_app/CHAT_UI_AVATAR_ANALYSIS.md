@@ -358,6 +358,7 @@ ChatTopBar 显示 agentInfo.avatar（已裁切）
 MessagesPage(
     modifier = Modifier,
     conversations = conversations,
+    agentInfoMap = conversationAgentInfos, // 新增：将缓存的 AgentInfo 传入 UI
     onClickConversationItem = { conversation ->
         chatViewModel.setConversationReaded(conversation)
         // 从会话列表 跳转到聊天页面，使用 agentId 而不是转换后的 AgentInfo
@@ -369,6 +370,12 @@ MessagesPage(
 )
 ```
 
+#### ChatHistoryItem 头像回退逻辑（2025-11 更新）
+
+- `ChatViewModel` 订阅 `UnifiedStartupManager.chatAgents`，维护 `agentId -> AgentInfo` 的内存缓存，并在加载会话列表时对缺失的 Agent 触发后台补拉。
+- `MessagesPage` 接收上述缓存，并将匹配的 `AgentInfo` 下发给 `ChatHistoryItem`。
+- `ChatHistoryItem` 优先使用 `agentInfo.avatar`（后端已裁剪），缺失时退回会话接口返回的 `conversation.agentAvatar`，保证界面在缓存未命中时仍有占位头像。
+
 ### 优势
 
 1. ✅ **统一数据源**: 两个入口都从服务器获取完整的 Agent 信息
@@ -376,6 +383,7 @@ MessagesPage(
 3. ✅ **代码简化**: 不再需要 `convertToAgentInfo()` 转换
 4. ✅ **数据完整性**: 确保所有字段（包括 `extensions`）都正确传递
 5. ✅ **向后兼容**: `ChatActivity` 支持两种参数方式，不影响其他调用
+6. ✅ **消息列表与聊天界面一致**：会话列表命中缓存后也能展示裁剪头像，视觉统一
 
 ### 注意事项
 
