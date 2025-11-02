@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import FastAPI, HTTPException
@@ -37,6 +38,24 @@ def _make_user(
     )
 
 
+def _create_mock_db_session():
+    """Create a mock database session that can handle v2 endpoint queries."""
+    mock_db = AsyncMock()
+    
+    # Mock result object for agent query
+    mock_result = MagicMock()
+    # Return a mock agent when first() is called
+    mock_agent = SimpleNamespace(id="agent-1", name="Test Agent")
+    mock_result.first = MagicMock(return_value=mock_agent)
+    mock_result.scalar_one_or_none = MagicMock(return_value=mock_agent)
+    
+    # Make execute return the mock result
+    mock_db.execute = AsyncMock(return_value=mock_result)
+    mock_db.scalar = AsyncMock(return_value=mock_agent)
+    
+    return mock_db
+
+
 @pytest.fixture
 def test_app() -> FastAPI:
     app = FastAPI()
@@ -46,7 +65,8 @@ def test_app() -> FastAPI:
     app.include_router(chat_v2.router, prefix="/api/v2")
 
     async def override_db():
-        yield None
+        mock_db = _create_mock_db_session()
+        yield mock_db
 
     app.dependency_overrides[deps.get_async_db] = override_db
 
