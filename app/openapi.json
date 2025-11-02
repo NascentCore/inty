@@ -968,84 +968,6 @@
                 }
             }
         },
-        "/api/v1/ai/agents/image-generation/config": {
-            "get": {
-                "tags": [
-                    "agents",
-                    "characters",
-                    "inty-eval"
-                ],
-                "summary": "\u83b7\u53d6\u56fe\u7247\u751f\u6210\u914d\u7f6e",
-                "description": "\u83b7\u53d6\u5f53\u524d\u56fe\u7247\u751f\u6210\u7684\u63d0\u793a\u8bcd\u6a21\u677f\u548c\u9ed8\u8ba4\u53c2\u6570\u914d\u7f6e",
-                "operationId": "get_image_generation_config_api_v1_ai_agents_image_generation_config_get",
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_Dict_str__Any__"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
-            },
-            "put": {
-                "tags": [
-                    "agents",
-                    "characters",
-                    "inty-eval"
-                ],
-                "summary": "\u66f4\u65b0\u56fe\u7247\u751f\u6210\u914d\u7f6e",
-                "description": "\u66f4\u65b0\u56fe\u7247\u751f\u6210\u7684\u63d0\u793a\u8bcd\u6a21\u677f\u548c\u9ed8\u8ba4\u53c2\u6570\u914d\u7f6e\uff08\u4ec5\u8d85\u7ea7\u7528\u6237\uff09",
-                "operationId": "update_image_generation_config_api_v1_ai_agents_image_generation_config_put",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "additionalProperties": true,
-                                "type": "object",
-                                "title": "Config"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_Dict_str__Any__"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
-            }
-        },
         "/api/v1/chats/": {
             "get": {
                 "tags": [
@@ -1506,65 +1428,6 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/ChatSettings"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/chats/agents/{agent_id}/generate-image": {
-            "post": {
-                "tags": [
-                    "chats",
-                    "inty-eval"
-                ],
-                "summary": "\u57fa\u4e8e\u804a\u5929\u4e0a\u4e0b\u6587\u751f\u6210\u56fe\u7247",
-                "description": "\u6839\u636eAgent\u89d2\u8272\u3001\u804a\u5929\u5386\u53f2\u548c\u7528\u6237\u6d88\u606f\u751f\u6210\u56fe\u7247\uff0c\u5e76\u4fdd\u5b58\u5230\u804a\u5929\u5386\u53f2\u4e2d",
-                "operationId": "generate_chat_image_api_v1_chats_agents__agent_id__generate_image_post",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "agent_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Agent Id"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ChatImageGenerationRequest"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_ChatImageGenerationResponse_"
                                 }
                             }
                         }
@@ -2509,32 +2372,6 @@
                 "type": "object",
                 "title": "APIResponse[ChatCompletionResponse]"
             },
-            "APIResponse_ChatImageGenerationResponse_": {
-                "properties": {
-                    "code": {
-                        "type": "integer",
-                        "title": "Code",
-                        "default": 200
-                    },
-                    "message": {
-                        "type": "string",
-                        "title": "Message",
-                        "default": "success"
-                    },
-                    "data": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/components/schemas/ChatImageGenerationResponse"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ]
-                    }
-                },
-                "type": "object",
-                "title": "APIResponse[ChatImageGenerationResponse]"
-            },
             "APIResponse_ChatSettings_": {
                 "properties": {
                     "code": {
@@ -2586,34 +2423,6 @@
                 },
                 "type": "object",
                 "title": "APIResponse[DeletionCheckResponse]"
-            },
-            "APIResponse_Dict_str__Any__": {
-                "properties": {
-                    "code": {
-                        "type": "integer",
-                        "title": "Code",
-                        "default": 200
-                    },
-                    "message": {
-                        "type": "string",
-                        "title": "Message",
-                        "default": "success"
-                    },
-                    "data": {
-                        "anyOf": [
-                            {
-                                "additionalProperties": true,
-                                "type": "object"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Data"
-                    }
-                },
-                "type": "object",
-                "title": "APIResponse[Dict[str, Any]]"
             },
             "APIResponse_GuestResponse_": {
                 "properties": {
@@ -4646,72 +4455,6 @@
                 ],
                 "title": "ChatCreate",
                 "description": "\u521b\u5efa\u804a\u5929"
-            },
-            "ChatImageGenerationRequest": {
-                "properties": {
-                    "message_id": {
-                        "type": "integer",
-                        "title": "Message Id"
-                    },
-                    "history_count": {
-                        "anyOf": [
-                            {
-                                "type": "integer"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "History Count"
-                    },
-                    "request_id": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Request Id"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "message_id"
-                ],
-                "title": "ChatImageGenerationRequest",
-                "description": "\u804a\u5929\u751f\u56fe\u8bf7\u6c42 - \u57fa\u4e8e\u5df2\u6709\u6d88\u606f\u751f\u6210\u56fe\u7247"
-            },
-            "ChatImageGenerationResponse": {
-                "properties": {
-                    "image_url": {
-                        "type": "string",
-                        "title": "Image Url"
-                    },
-                    "image_metadata": {
-                        "additionalProperties": true,
-                        "type": "object",
-                        "title": "Image Metadata"
-                    },
-                    "prompt": {
-                        "type": "string",
-                        "title": "Prompt"
-                    },
-                    "message_id": {
-                        "type": "integer",
-                        "title": "Message Id"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "image_url",
-                    "image_metadata",
-                    "prompt",
-                    "message_id"
-                ],
-                "title": "ChatImageGenerationResponse",
-                "description": "\u804a\u5929\u751f\u56fe\u54cd\u5e94"
             },
             "ChatMessage-Input": {
                 "properties": {
