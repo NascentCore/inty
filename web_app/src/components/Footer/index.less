@@ -1,0 +1,33 @@
+@import '@/styles/variables.less';
+
+.app-footer {
+  .footer-content {
+    max-width: @layout-max-width;
+    margin: 0 auto;
+    padding: @spacing-lg;
+    text-align: center;
+
+    .footer-links {
+      margin-bottom: @spacing-sm;
+
+      a {
+        display: inline-block;
+        margin: 0 @spacing-md;
+        color: @text-tertiary;
+        text-decoration: none;
+        font-size: @font-size-sm;
+        transition: color @transition-base;
+
+        &:hover {
+          color: @primary-color;
+        }
+      }
+    }
+
+    .footer-copyright {
+      color: @text-tertiary;
+      font-size: @font-size-sm;
+    }
+  }
+}
+

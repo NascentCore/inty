@@ -1,0 +1,67 @@
+@import '@/styles/variables.less';
+
+.chat-history-list-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  .chat-history-header {
+    padding: 20px 20px 12px;
+
+    h3 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: @dark-text-tertiary;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+  }
+
+  .chat-history-list {
+    flex: 1;
+    padding: 0 12px 12px;
+    overflow-y: auto;
+
+    // 加载状态
+    .chat-history-loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 20px;
+      color: @dark-text-tertiary;
+    }
+
+    // 空状态
+    .chat-history-empty {
+      text-align: center;
+      padding: 40px 20px;
+      
+      p {
+        margin: 0;
+        font-size: 13px;
+        color: @dark-text-tertiary;
+      }
+    }
+
+    // 滚动条样式
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+    }
+  }
+}
+

@@ -1,0 +1,55 @@
+/**
+ * 用户个人信息页面样式
+ */
+
+@import '@/styles/variables.less';
+
+.profile-page {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  background: @dark-bg-primary;
+
+  .profile-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+}
+
+// 公共卡片样式
+.profile-card {
+  padding: 20px;
+  background: @dark-bg-tertiary;
+  border-radius: 12px;
+  border: 1px solid @dark-border-color;
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: @dark-text-primary;
+    margin: 0 0 16px 0;
+  }
+}
+
+// 响应式适配
+@media (max-width: 600px) {
+  .profile-page {
+    .profile-container {
+      padding: 16px 12px;
+      gap: 16px;
+    }
+  }
+
+  .profile-card {
+    padding: 16px;
+
+    .card-title {
+      margin: 0 0 12px 0;
+    }
+  }
+}
+

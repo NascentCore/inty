@@ -1,0 +1,88 @@
+/**
+ * Loading 组件样式
+ * SpinKit 三点弹跳动画
+ */
+
+@import '@/styles/variables.less';
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+
+  &.fullscreen {
+    min-height: 400px;
+  }
+
+  .loading-spinner {
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    > div {
+      background-color: #667eea;
+      border-radius: 100%;
+      display: inline-block;
+      animation: sk-bouncedelay 1.4s infinite ease-in-out both;
+    }
+
+    .bounce1 {
+      animation-delay: -0.32s;
+    }
+
+    .bounce2 {
+      animation-delay: -0.16s;
+    }
+
+    // 小尺寸
+    &.loading-small {
+      gap: 4px;
+
+      > div {
+        width: 12px;
+        height: 12px;
+      }
+    }
+
+    // 默认尺寸
+    &.loading-default {
+      gap: 6px;
+
+      > div {
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    // 大尺寸
+    &.loading-large {
+      gap: 8px;
+
+      > div {
+        width: 24px;
+        height: 24px;
+      }
+    }
+  }
+
+  .loading-tip {
+    margin-top: 16px;
+    font-size: 14px;
+    color: @dark-text-secondary;
+  }
+}
+
+// SpinKit 弹跳动画
+@keyframes sk-bouncedelay {
+  0%, 80%, 100% { 
+    transform: scale(0);
+  }
+  40% { 
+    transform: scale(1.0);
+  }
+}
+

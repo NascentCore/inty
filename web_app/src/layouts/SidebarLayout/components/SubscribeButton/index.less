@@ -1,0 +1,59 @@
+/**
+ * 订阅按钮样式
+ */
+
+@import '@/styles/variables.less';
+
+// 独立模式 wrapper
+.subscribe-button-wrapper {
+  padding: 16px 20px;
+  border-top: 1px solid @dark-border-color;
+
+  .subscribe-btn {
+    width: 100%;
+  }
+}
+
+// 订阅按钮基础样式
+.subscribe-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: @dark-bg-tertiary;
+  border: 1px solid @dark-border-color;
+  border-radius: 8px;
+  color: #ffd700;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  .subscribe-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  // 内联模式：flex 布局中自适应
+  &.subscribe-btn-inline {
+    flex: 1;
+  }
+
+  &:hover:not(:disabled) {
+    background: @dark-bg-hover;
+    border-color: @dark-border-hover;
+    transform: translateY(-1px);
+    box-shadow: @dark-shadow-sm;
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

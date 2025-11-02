@@ -1,0 +1,67 @@
+/**
+ * 用户区域样式
+ */
+
+@import '@/styles/variables.less';
+
+.user-section-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid @dark-border-color;
+
+  // 用户头像容器
+  .user-avatar-container {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: @primary-color;
+      transform: scale(1.05);
+    }
+
+    // 用户头像图片
+    .user-avatar-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    // 用户头像占位符（首字母或图标）
+    .user-avatar-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+      color: @primary-color;
+      font-size: 16px;
+      font-weight: 600;
+
+      &.loading {
+        background: rgba(255, 255, 255, 0.05);
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+    }
+  }
+
+}
+
+// 脉冲动画（加载状态）
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+

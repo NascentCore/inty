@@ -1,0 +1,70 @@
+/**
+ * Chat 页面样式
+ * 三栏布局：左侧导航（SidebarLayout）| 中间聊天区 | 右侧角色详情
+ */
+
+@import '@/styles/variables.less';
+@import '@/styles/animations.less';
+
+.chat-page {
+  position: relative;
+  display: flex;
+  height: 100%;
+  background: @dark-bg-primary;
+  overflow: hidden;
+
+  /* 错误提示 - 固定在顶部中央 */
+  .chat-error-alert {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    max-width: 500px;
+    width: 90%;
+    animation: slideDown 0.3s ease-out;
+  }
+
+  /* ========== 左侧：聊天主区域 ========== */
+  .chat-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: @dark-bg-primary;
+    overflow: hidden;
+    border-right: 1px solid @dark-border-color;
+
+    /* ========== 消息内容区 ========== */
+    .chat-content {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0; /* 确保 flex 子元素可以正常滚动 */
+    }
+
+    /* ========== 底部输入区 ========== */
+    .chat-footer {
+      flex-shrink: 0;
+      background: @dark-bg-secondary;
+      border-top: 1px solid @dark-border-color;
+    }
+  }
+}
+
+/* ========== 响应式适配 ========== */
+@media (max-width: @screen-md) {
+  .chat-page {
+    flex-direction: column;
+
+    .chat-main {
+      border-right: none;
+    }
+
+    .chat-error-alert {
+      top: 10px;
+      max-width: 90%;
+    }
+  }
+}

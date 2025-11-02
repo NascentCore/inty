@@ -1,0 +1,92 @@
+@import '@/styles/variables.less';
+
+.not-found-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.not-found-container {
+  background: #fff;
+  border-radius: 16px;
+  padding: 60px 40px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+}
+
+.not-found-icon {
+  font-size: 72px;
+  font-weight: 700;
+  color: #667eea;
+  line-height: 1.2;
+  margin-bottom: 24px;
+}
+
+.not-found-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 16px 0;
+}
+
+.not-found-subtitle {
+  font-size: 18px;
+  color: #666;
+  margin: 0 0 32px 0;
+  line-height: 1.5;
+}
+
+.not-found-button {
+  height: 44px;
+  padding: 0 32px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .not-found-container {
+    padding: 40px 20px;
+  }
+
+  .not-found-icon {
+    font-size: 48px;
+  }
+
+  .not-found-title {
+    font-size: 20px;
+  }
+
+  .not-found-subtitle {
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  .not-found-button {
+    height: 40px;
+    padding: 0 24px;
+    font-size: 14px;
+  }
+}
+

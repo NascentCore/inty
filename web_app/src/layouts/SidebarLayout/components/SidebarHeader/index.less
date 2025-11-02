@@ -1,0 +1,62 @@
+/**
+ * SidebarHeader 样式
+ * 参考 Talkie 风格 - 简洁品牌展示
+ */
+
+@import '@/styles/variables.less';
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 70px;
+  flex-shrink: 0;
+  padding: 0 20px;
+  background: @dark-bg-secondary;
+  border-bottom: 1px solid @dark-border-color;
+
+  // 站点信息
+  .site-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    .site-logo {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .site-name {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      color: @dark-text-primary;
+      letter-spacing: -0.5px;
+    }
+  }
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .sidebar-header {
+    height: 70px;
+    padding: 0 12px;
+
+    .site-info {
+      .site-logo {
+        font-size: 20px;
+      }
+
+      .site-name {
+        font-size: 18px;
+      }
+    }
+  }
+}
+

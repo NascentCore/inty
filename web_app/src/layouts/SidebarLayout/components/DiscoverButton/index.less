@@ -1,0 +1,44 @@
+/**
+ * Discover 按钮样式
+ * 参考 Talkie 风格
+ */
+
+@import '@/styles/variables.less';
+
+.discover-button-wrapper {
+  padding: 12px 20px 16px;
+
+  .discover-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: @dark-bg-tertiary;
+    border: 1px solid @dark-border-color;
+    border-radius: 8px;
+    color: @dark-text-primary;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    .discover-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    &:hover {
+      background: @dark-bg-hover;
+      border-color: @dark-border-hover;
+      transform: translateY(-1px);
+      box-shadow: @dark-shadow-sm;
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+}

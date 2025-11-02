@@ -1,0 +1,488 @@
+---
+alwaysApply: true
+---
+
+# IntelliMate 项目开发规范
+
+## 项目概述
+
+IntelliMate 是一个基于 **UmiJS 4** 和 **React 19** 的 AI 角色对话应用，使用 TypeScript 进行类型安全开发，所有 UI 使用原生 HTML + Less 样式自行实现。
+
+## 技术栈
+
+- **框架**: UmiJS 4 + React 19 + TypeScript 5
+- **UI 库**: 原生 HTML/CSS + Less（不使用任何 UI 组件库）
+- **样式**: Less
+- **状态管理**: UmiJS useModel（内置轻量级状态管理）
+- **代码质量**: Biome（格式化 + Linting）
+- **SDK**: Inty TypeScript SDK（自研 AI 聊天 SDK）
+- **包管理器**: Yarn
+- **构建工具**: @umijs/max
+- **Node 版本**: >= 20.0.0
+- **图标库**: lucide-react
+
+### ⚠️ 重要说明
+- **禁止使用 Ant Design 组件**：项目中安装了 `antd` 和 `@ant-design/pro-components` 作为依赖，但仅用于兼容性目的，**不允许在实际代码中使用任何 Ant Design 组件**
+- **例外情况**：仅在 `dev-test` 页面（`src/pages/dev-test/`）中允许使用 Ant Design 组件用于开发和测试目的
+- **UI 实现方式**：所有 UI 必须使用原生 HTML 元素 + Less 样式自行实现
+- **图标库**：使用 `lucide-react` 作为图标库，**禁止使用其他图标库**
+- **包管理器**：项目使用 `yarn` 进行依赖管理，**禁止使用 npm 或 pnpm**
+- **自定义组件**：如需复用组件，应在 `src/components/` 目录下创建自定义组件
+
+## 项目结构
+
+```
+src/
+├── pages/           # 页面组件
+├── layouts/         # 布局组件
+├── components/      # 通用组件
+├── models/          # 数据模型（useModel）
+├── services/        # API 服务层
+├── types/           # TypeScript 类型定义
+├── utils/           # 工具函数
+├── hooks/           # 自定义 Hooks
+├── styles/          # 全局样式
+├── config/          # 应用配置
+├── locales/         # 国际化文件
+└── constants/       # 常量定义
+```
+
+## 协作与沟通规范
+
+### 修改前的确认机制
+
+当需要对代码进行修改时，必须遵循以下流程：
+
+1. **暂停操作**：先暂停具体的代码修改操作
+2. **描述方案**：以简洁、条理化的方式描述修改方案
+   - 包括大致思路和关键变更点
+   - 避免冗长描述，突出重点
+3. **等待确认**：等待明确的确认后再实施具体修改
+
+### 完成后的输出规范
+
+修改完成后，仅需在对话中生成一份最终总结：
+
+- **不提供**：详细的中间过程文档
+- **仅提供**：简洁的完成总结，包含关键修改点和结果
+
+### 1. TypeScript 规范
+
+#### 类型定义
+- **接口命名**：所有接口类型必须以大写字母 `I` 开头
+  ```typescript
+  // ✅ 正确
+  interface IUserData { ... }
+  interface IAgent { ... }
+  interface IChatMessage { ... }
+  
+  // ❌ 错误
+  interface UserData { ... }
+  interface Agent { ... }
+  ```
+
+- **类型声明**：优先使用 `interface` 而非 `type`，除非需要联合类型或高级类型特性
+- **严格模式**：项目启用 TypeScript strict 模式，必须显式声明所有类型
+- **路径别名**：使用 `@/` 作为 `src/` 的别名
+  ```typescript
+  import { IAgent } from '@/types';
+  import { createIntyClient } from '@/utils';
+  ```
+
+#### 函数参数和返回值
+- 必须明确声明函数参数类型和返回类型
+  ```typescript
+  // ✅ 正确
+  export async function getChatMessages(
+    params: IGetChatMessagesRequest,
+  ): Promise<IGetChatMessagesResponse> {
+    // ...
+  }
+  
+  // ❌ 错误：缺少类型声明
+  export async function getChatMessages(params) {
+    // ...
+  }
+  ```
+
+### 2. 代码风格
+
+#### 基本规范（遵循 Biome 配置）
+- **引号**：统一使用单引号 `'`
+- **缩进**：使用 2 个空格缩进
+- **分号**：可选，保持一致性
+- **JSX**：使用 React 19 的 JSX runtime（react-jsx）
+
+#### 命名规范
+- **变量/函数**：小驼峰 `camelCase`
+- **组件**：大驼峰 `PascalCase`
+- **常量**：全大写下划线 `UPPER_SNAKE_CASE`
+- **文件名**：
+  - 组件文件：`PascalCase.tsx`
+  - 工具/服务：`camelCase.ts`
+  - 样式文件：与对应组件同名 `.less`
+
+#### 组件规范
+- **函数式组件**：统一使用函数式组件 + Hooks
+  ```typescript
+  const HomePage: React.FC = () => {
+    // 组件逻辑
+    return <div>...</div>;
+  };
+  
+  export default HomePage;
+  ```
+
+- **组件 Props**：必须定义接口类型
+  ```typescript
+  interface ICharacterCardProps {
+    agent: IAgent;
+    onStartChat: (agent: IAgent) => void;
+  }
+  
+  const CharacterCard: React.FC<ICharacterCardProps> = ({ agent, onStartChat }) => {
+    // ...
+  };
+  ```
+
+### 3. 函数式编程规范
+
+本项目遵循函数式编程范式，优先使用纯函数和不可变数据结构。
+
+#### 核心原则
+
+##### 1. 优先使用纯函数
+- 相同输入始终产生相同输出，且无副作用
+- 避免修改外部状态，避免依赖外部可变数据
+
+##### 2. 保持数据不可变性
+- **数组操作**：使用 `map`、`filter`、`reduce`、展开运算符 `[...]`
+- **对象操作**：使用展开运算符 `{...}`
+- **禁止**：`push`、`splice`、直接修改属性等可变操作
+
+```typescript
+// ✅ 正确：不可变操作
+const newList = [...oldList, newItem];
+const updated = list.map(item => item.id === id ? { ...item, ...updates } : item);
+
+// ❌ 错误：直接修改
+list.push(newItem);
+item.name = 'new name';
+```
+
+##### 3. 隔离副作用
+- 将副作用（API 调用、DOM 操作）隔离到 `useEffect` 中
+- 业务逻辑函数保持纯净
+
+#### React 函数式编程要点
+
+##### 1. 使用函数式组件和 Hooks
+- **禁止使用类组件**
+- 使用 `useState`、`useEffect`、`useCallback`、`useMemo` 等 Hooks
+- 自定义 Hook 封装可复用逻辑（以 `use` 开头）
+
+##### 2. 性能优化
+- `useCallback`：缓存函数引用
+- `useMemo`：缓存计算结果
+- `React.memo`：避免不必要的组件重渲染
+
+##### 3. 组件设计原则
+- 保持组件单一职责
+- 使用组件组合而非继承
+- 通过 props 传递数据和回调
+
+### 4. 注释规范
+
+- **文件顶部**：每个文件必须包含文件说明注释
+- **函数注释**：所有导出函数必须包含 JSDoc 注释（`@param`、`@returns`）
+- **接口注释**：为接口字段添加清晰的注释（`/** 字段说明 */`）
+- **关键逻辑注释**：为复杂逻辑、业务规则添加行内注释
+
+### 5. 状态管理（UmiJS Model）
+
+- 使用 UmiJS 内置的 `useModel` 进行状态管理
+- Model 文件放在 `src/models/` 目录
+- 必须定义 Model 状态接口
+- 在组件中通过 `useModel('modelName')` 获取状态和方法
+
+### 6. API 服务层
+
+- 所有 API 调用必须封装在 `services/` 目录
+- 使用 Inty SDK 进行 API 调用（`createIntyClient`）
+- 统一 try-catch 错误处理和 logger 日志记录
+
+### 7. 错误处理
+
+- 使用 try-catch 包裹异步操作
+- 使用 `logger.error` 记录错误
+- 为用户提供友好的错误提示（通过状态管理或自定义 Toast 组件）
+- 错误类型使用 `err: unknown`，然后进行类型判断
+
+### 8. 样式规范
+
+- 组件样式与组件文件放在同一目录
+- 使用 BEM 命名规范或组件级作用域（如 `.home-page`）
+- 全局样式变量定义在 `src/styles/variables.less`
+- 使用 Less 嵌套语法组织样式
+- **盒模型**：项目全局使用 `box-sizing: border-box`，width/height 包含 padding 和 border
+
+#### 组件目录结构规范
+- **每个组件必须有独立目录**：所有组件（包括通用组件和页面子组件）都必须放在单独的目录中
+- 目录结构要求：
+  ```
+  ComponentName/
+  ├── index.tsx        # 组件逻辑
+  └── index.less       # 组件样式
+  ```
+- **禁止**：将组件直接定义为单个 `.tsx` 文件（如 `Component.tsx`）
+- **强制**：必须使用 `ComponentName/index.tsx` 的形式
+
+#### Less 样式编写规范
+- **按 DOM 层级组织样式**：Less 嵌套结构必须严格对应 JSX 的 DOM 层级结构
+  ```less
+  // ✅ 正确：样式层级对应 DOM 结构
+  .chat-page {
+    .chat-header {
+      .header-title {
+        // ...
+      }
+    }
+    .chat-content {
+      // ...
+    }
+  }
+  ```
+  
+- **外层容器 class 命名唯一性**：每个组件的最外层容器 class 必须具有唯一性，避免样式冲突
+  - 推荐命名方式：`组件名-组件类型`（如 `.chat-page`、`.agent-detail-panel`、`.message-input`）
+  - **禁止使用通用 class 名**：避免使用 `.container`、`.wrapper`、`.content` 等过于通用的名称作为最外层 class
+  
+  ```typescript
+  // ✅ 正确：使用具有描述性的唯一 class 名
+  <div className="agent-detail-panel">
+    <div className="panel-header">...</div>
+    <div className="panel-content">...</div>
+  </div>
+  
+  // ❌ 错误：使用过于通用的 class 名
+  <div className="panel">
+    <div className="header">...</div>
+    <div className="content">...</div>
+  </div>
+  ```
+
+- **保持样式作用域隔离**：通过唯一的外层 class 名，确保组件样式不会影响其他组件
+
+### 9. 路由配置
+
+- 路由配置在 `config/routes.ts`
+- 使用 `wrappers` 指定布局组件
+- 动态路由使用 `:param` 语法（如 `/chat/:agentId`）
+
+### 10. 代码组织规范
+
+- **函数设计**：单一职责、控制在 50 行以内、提取重复逻辑
+- **组件设计**：保持简洁、逻辑与 UI 分离、避免深层嵌套（最多 3-4 层）
+- **代码组织顺序**：导入 → 类型定义 → 组件定义（Hooks → 副作用 → 事件处理 → JSX）→ 导出
+
+### 11. 通用组件开发规范
+
+#### 组件注释规范
+通用组件开发完成后，必须在组件文件头部添加简洁的使用说明，格式如下：
+
+```typescript
+/**
+ * 组件名称
+ * 
+ * 用途：简要描述组件的主要功能
+ * 使用示例：
+ * ```tsx
+ * <ComponentName prop1="value" onEvent={handler} />
+ * ```
+ * 
+ * Props 说明：
+ * - prop1: 参数类型 - 用途说明
+ * - onEvent: 函数类型 - 事件处理说明
+ * 
+ * 注意事项：
+ * - 限制条件或使用要点
+ * - 依赖关系说明
+ */
+```
+
+#### 实际示例
+```typescript
+/**
+ * 消息气泡组件
+ * 
+ * 用途：显示聊天消息，支持不同发送者样式
+ * 使用示例：
+ * ```tsx
+ * <MessageBubble 
+ *   message={{ content: 'Hello', sender: 'user' }}
+ *   onReply={handleReply}
+ * />
+ * ```
+ * 
+ * Props 说明：
+ * - message: IMessage - 消息对象，包含内容和发送者信息
+ * - onReply: () => void - 回复按钮点击回调
+ * 
+ * 注意事项：
+ * - 组件自动根据 sender 字段显示不同样式
+ * - 只有用户发送的消息才显示回复按钮
+ */
+```
+
+### 12. 组件拆分规范
+
+当组件变得复杂时（超过 200 行或包含多个独立功能模块），应进行组件拆分，遵循以下原则：
+
+#### 拆分原则
+
+1. **单一职责**：每个组件只负责一个明确的功能
+2. **数据与 UI 分离**：
+   - 数据层：使用 `useModel` 管理全局状态
+   - 逻辑层：工具函数独立在 `utils/` 目录
+   - UI 层：子组件通过 props 接收数据
+   - 布局层：父组件仅负责组合和布局
+
+3. **组件粒度**：
+   - 独立功能模块提取为子组件
+   - 可复用的 UI 元素提取为独立组件
+   - 复杂逻辑提取为自定义 Hook
+
+#### 拆分步骤
+
+1. **提取工具函数**：将纯函数（格式化、判断、计算等）提取到 `utils/` 目录
+2. **创建子组件**：将独立的 UI 模块拆分为子组件，每个子组件包含：
+   - `index.tsx` - 组件逻辑
+   - `index.less` - 组件样式
+   - TypeScript 接口定义（`I` 前缀）
+3. **重构父组件**：简化为布局和组合逻辑
+4. **样式拆分**：每个子组件管理自己的样式
+
+#### 目录结构示例
+
+```
+ComponentName/
+├── index.tsx              # 主组件（仅负责布局和组合）
+├── index.less             # 主组件样式
+├── components/            # 子组件目录
+│   ├── index.ts           # 子组件统一导出
+│   ├── SubComponent1/
+│   │   ├── index.tsx
+│   │   └── index.less
+│   └── SubComponent2/
+│       ├── index.tsx
+│       └── index.less
+└── hooks/                 # 自定义 Hooks（可选）
+    └── useComponentLogic.ts
+```
+
+#### 拆分示例
+
+**拆分前**（188 行）：组件内包含工具函数、复杂 JSX、样式逻辑混杂
+
+**拆分后**（63 行）：
+- 工具函数 → `utils/sidebarHelpers.ts`
+- 子组件 → `components/ChatHistoryItem/`、`components/DiscoverButton/` 等
+- 主组件 → 仅负责布局和组合
+
+#### 拆分收益
+
+- ✅ **可维护性**：代码结构清晰，易于定位和修改
+- ✅ **可复用性**：子组件可在其他地方独立使用
+- ✅ **可测试性**：可以独立测试每个组件和工具函数
+- ✅ **可读性**：主组件简洁，职责明确
+- ✅ **协作友好**：多人可并行开发不同子组件
+
+### 12. UI 组件规范
+
+- **严格禁止**使用 Ant Design、Material-UI 等第三方 UI 组件库
+- 所有 UI 必须使用原生 HTML 元素（`<div>`, `<button>`, `<input>` 等）+ Less 样式
+- 复用组件创建在 `src/components/` 目录
+- **布局优先使用 Flexbox**：在大多数布局场景中优先使用 Flexbox 布局
+- 使用 CSS Variables 或 Less 变量管理主题
+
+#### 布局优先规则
+
+**优先级顺序**：Flexbox > Grid > 传统布局
+
+1. **Flexbox 优先适用场景**：
+   - 一维布局（横向或纵向排列）
+   - 弹性盒子布局（元素可伸缩）
+   - 居中布局（水平和垂直居中）
+   - 等分布局
+   - 导航栏、按钮组等线性排列
+
+2. **Grid 适用场景**：
+   - 二维网格布局（行和列都需要精确控制）
+   - 复杂的网格系统
+   - 卡片布局需要精确对齐
+
+3. **禁止使用传统布局**：
+   - 避免使用 `float` 进行布局
+   - 避免使用 `position: absolute` 进行主要布局
+   - 避免使用 `display: table` 进行布局
+
+#### Flexbox 布局最佳实践
+
+- **响应式布局**：使用 Flexbox 的 `flex-wrap` 实现响应式
+- **间距控制**：优先使用 `gap` 属性而非 `margin`
+- **对齐方式**：使用 `justify-content` 和 `align-items` 进行精确对齐
+- **弹性比例**：使用 `flex: 1` 实现弹性伸缩
+
+## 最佳实践
+
+### 性能优化
+- 使用 `React.memo` 优化组件重渲染
+- 使用 `useCallback` 和 `useMemo` 优化计算和函数
+
+### 代码审查要点
+- [ ] 是否遵循命名规范（接口 I 前缀）？
+- [ ] 是否添加了必要的注释？
+- [ ] 是否进行了类型检查？
+- [ ] 是否处理了错误情况？
+- [ ] 是否考虑了边界情况？
+- [ ] 代码是否易于理解和维护？
+- [ ] 组件是否过于复杂，需要拆分？（超过 150 行）
+- [ ] 是否将工具函数提取到 utils 目录？
+- [ ] 是否实现了数据与 UI 的分离？
+- [ ] 组件是否放在独立目录中（禁止单文件组件）？
+- [ ] Less 样式是否按 DOM 层级组织？
+- [ ] 组件外层容器 class 名是否唯一且具有描述性？
+
+## 常用工具函数
+
+项目提供以下工具函数（在 `src/utils/` 中）：
+- `createIntyClient`: 创建 Inty SDK 客户端
+- `logger`: 统一日志工具
+- 其他工具函数根据需要查看 utils 目录
+
+## 相关文档
+
+inty-typescript-sdk 文档位于 `docs/` 目录：
+
+### 核心功能文档
+- `README.md`: Inty SDK 主文档和使用指南
+- `配置与初始化.md`: 客户端配置和初始化说明
+- `错误处理与重试.md`: 错误处理和重试机制
+- `日志与调试.md`: 日志记录和调试指南
+
+### API 文档（位于 `docs/api/` 目录）
+- `认证.md`: 游客登录、Google 登录
+- `用户.md`: 用户信息、资料更新、账户删除
+- `AI代理.md`: 创建、更新、删除、搜索、关注 Agent
+- `聊天.md`: 创建会话、发送消息、消息历史、聊天设置
+- `订阅.md`: 订阅状态、使用统计、计划列表、购买验证
+- `设置.md`: 获取和更新用户设置
+- `举报.md`: 提交举报
+- `语音合成.md`: 获取可用语音列表
+- `版本检查.md`: 应用版本检查
+- `通知.md`: 获取通知列表
+- `文件上传.md`: 上传图片
+
+---
+
+**保持代码整洁、类型安全、易于维护是我们的核心目标。**
