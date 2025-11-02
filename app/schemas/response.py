@@ -49,6 +49,14 @@ class PaginationResponse(APIResponse[PaginationData]):
     pass
 
 
+class BizError(BaseModel):
+    """业务错误信息模型"""
+
+    code: int
+    error_code: str
+    message: str
+
+
 # 业务错误码定义
 class BusinessErrorCode:
     SUBSCRIPTION_REQUIRED = {

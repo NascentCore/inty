@@ -1,6 +1,6 @@
 import time
 import uuid
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException
 from langchain_core.messages import HumanMessage
@@ -14,7 +14,11 @@ from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.user import AuthType
 from app.schemas.chat import ChatCompletionRequest
-from app.schemas.response import BusinessErrorCode, create_business_error_response
+from app.schemas.response import (
+    BizError,
+    BusinessErrorCode,
+    create_business_error_response,
+)
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
@@ -271,11 +275,11 @@ async def agent_chat_completions(
 @router.post(
     "/images/{agent_id}",
     response_model=schemas.APIResponse[schemas.ChatImageGenerationResponse],
-    summary="基于聊天上下文生成图片",
+    summary="基于聊天消息及历史消息和其他相关信息（角色背景、用户 profile 等）生成图片",
     description=(
         "根据Agent角色、聊天历史和用户消息生成图片，并保存到聊天历史中。"
-        "注意：路径参数 `agent_id` 仅作为目前的名称，实际应为 `chat_id`。"
-        "本 API 拷贝自 `app/api/v1/endpoints/chats.py::generate_chat_image`（第1170-1325行）。"
+        "注意：路径参数 `agent_id` 仅作为目前的名称，实际应为 `chat_id`。未来如需扩展可直接重命名。"
+        "agent id 则代表与该 agent 的*当前*会话的 id"
     ),
     tags=["inty-eval"],
 )
@@ -286,7 +290,10 @@ async def generate_chat_image(
     request: schemas.ChatImageGenerationRequest,
     response_model=schemas.APIResponse[schemas.ChatImageGenerationResponse],
     current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> schemas.APIResponse[schemas.ChatImageGenerationResponse]:
+) -> Union[
+    schemas.APIResponse[schemas.ChatImageGenerationResponse],
+    schemas.APIResponse[BizError],
+]:
     """
     基于聊天上下文生成图片
 
