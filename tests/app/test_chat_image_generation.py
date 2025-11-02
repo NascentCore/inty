@@ -45,21 +45,26 @@ class TestImageGenerationService:
         assert "给我画一张你在咖啡厅的图片" in prompt
 
     @pytest.mark.asyncio
+    @patch("app.services.image_generation_service.image_transform_service")
     @patch("app.services.image_generation_service.get_genai_client")
     @patch("app.services.image_generation_service.upload_to_gcs")
     @patch("app.services.chat_history_service.get_messages_paginated")
-    @patch("app.services.chat_history_service.add_ai_image_message")
+    @patch("app.services.chat_history_service.update_message_metadata")
+    @patch("app.services.image_generation_service.PIL.Image")
     async def test_generate_chat_image_with_gemini(
         self,
-        mock_add_message: AsyncMock,
+        mock_pil_image: Mock,
+        mock_update_metadata: AsyncMock,
         mock_get_messages: Mock,
         mock_upload_gcs: Mock,
         mock_get_client: Mock,
+        mock_transform_service: Mock,
     ):
         """测试使用 Gemini 生成聊天图片"""
         # 准备测试数据
         mock_db = AsyncMock(spec=AsyncSession)
         session_id = "test_session_123"
+        message_id = 12345
         agent_data = {
             "id": "agent_123",
             "personality": "可爱的女孩",
@@ -110,15 +115,25 @@ class TestImageGenerationService:
         mock_get_client.return_value = mock_client_instance
 
         # Mock GCS upload
-        mock_upload_gcs.return_value = "gs://bucket/chat_images/test_image.jpg"
+        mock_upload_gcs.return_value = "https://storage.googleapis.com/bucket/chat_images/test_image.jpg"
 
-        # Mock 消息保存
-        mock_add_message.return_value = 12345
+        # Mock PIL Image
+        mock_image_instance = Mock()
+        mock_image_instance.size = (1024, 1792)
+        mock_image_instance.format = "JPEG"
+        mock_pil_image.open.return_value = mock_image_instance
+
+        # Mock CDN URL 转换
+        mock_transform_service.transform_desktop.return_value = "https://cdn.example.com/test_image.jpg"
+
+        # Mock 消息元数据更新
+        mock_update_metadata.return_value = True
 
         # 执行测试
         result = await image_generation_service.generate_chat_image_with_gemini(
             db=mock_db,
             session_id=session_id,
+            message_id=message_id,
             agent_data=agent_data,
             message_content=message_content,
             history_count=10,
@@ -135,7 +150,7 @@ class TestImageGenerationService:
         mock_get_messages.assert_called_once()
         mock_get_client.assert_called_once()
         mock_upload_gcs.assert_called_once()
-        mock_add_message.assert_called_once()
+        mock_update_metadata.assert_called_once()
 
 
 class TestChatHistoryService:
