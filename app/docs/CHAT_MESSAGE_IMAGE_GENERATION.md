@@ -16,13 +16,13 @@
 
 ### 生成聊天图片
 
-**端点**: `POST /api/v1/chats/agents/{agent_id}/generate-image`
+**主要端点**: `POST /api/v1/chat/images/{agent_id}`
 
 **请求参数**:
 
 - `agent_id` (路径参数): Agent ID
-- `message_id` (必填): 要生成图片的消息 ID（必须是最后一条 AI 回复）
-- `history_count` (可选): 使用的历史消息数量，默认 10 条
+- `message_id` (必填，请求体): 要生成图片的消息 ID（必须是最后一条 AI 回复）
+- `history_count` (可选，请求体): 使用的历史消息数量，默认 10 条
 
 **响应**:
 ```json
@@ -41,42 +41,59 @@
 }
 ```
 
+**废弃端点**: `POST /api/v1/chats/agents/{agent_id}/generate-image`（已标记为 `deprecated`，建议使用新端点）
+
 ## 实现细节
 
 ### 1. API 端点实现
 
-位置: `app/api/v1/endpoints/chats.py`
+**主要端点位置**: `app/api/v1/endpoints/chat.py::generate_chat_image`  
+**废弃端点位置**: `app/api/v1/endpoints/chats.py::generate_chat_image`（已标记为 deprecated）
 
-主要流程：
+两个端点都调用核心服务函数 `chat_service.generate_chat_image()`，端点层只负责：
+- 参数验证和解析
+- 用户认证（通过 `Depends(deps.get_current_active_user)`）
+- 响应格式化和错误处理
+
+### 2. 核心服务层实现
+
+位置: `app/services/chat_service.py::generate_chat_image()`
+
+核心服务函数实现完整的业务逻辑：
 
 1. **验证 Agent 和用户**
    - 验证 Agent 是否存在
    - 获取或创建聊天会话
    - 验证 Agent ID 一致性
+   - 获取用户对象用于限额检查
 
 2. **检查图片生成限额**
    - 超级用户无限制
-   - 游客用户不允许生成
+   - 游客用户不允许生成（返回 `GUEST_LOGIN_REQUIRED` 错误）
    - 付费/免费用户检查 24 小时内的生成次数
    - 限额配置在 `app.limits.free_user_image_gen_24h_limit` 和 `app.limits.subscribed_user_image_gen_24h_limit`
+   - 达到限额时返回业务错误响应（`IMAGE_GENERATION_LIMIT_REACHED`）
 
 3. **验证消息**
    - 确保只能对最后一条 AI 回复生成图片
    - 获取消息内容用于构建提示词
+   - 获取 Agent 数据（用于构建提示词和获取参考图）
 
 4. **调用图片生成服务**
-   - 传入消息 ID、Agent 数据、消息内容、历史数量
+   - 传入 `message_id`、Agent 数据、消息内容、历史数量
+   - 调用 `image_generation_service.generate_chat_image_with_gemini()`
 
 5. **记录用量**
    - 使用 `subscription_service.record_usage()` 记录图片生成用量
+   - 类型为 `image_generation`，数量为 1
 
-### 2. 图片生成服务
+### 3. 图片生成服务
 
 位置: `app/services/image_generation_service.py`
 
 核心类: `ImageGenerationService`
 
-#### 2.1 提示词构建
+#### 3.1 提示词构建
 
 `build_image_prompt()` 方法负责构建生图提示词：
 
@@ -117,9 +134,24 @@
 
 提示词模板可通过配置修改：`agent.image_generation_prompt_template`
 
-#### 2.2 图片生成流程
+#### 3.2 图片生成流程
 
 `generate_chat_image_with_gemini()` 方法实现完整的图片生成流程：
+
+**方法签名**:
+```python
+async def generate_chat_image_with_gemini(
+    self,
+    db: AsyncSession,
+    session_id: str,
+    message_id: int,  # 必需参数：要更新的消息ID
+    agent_data: dict,
+    message_content: str,
+    history_count: Optional[int] = None,
+) -> Dict
+```
+
+**流程步骤**:
 
 1. **确定历史消息数量**
    - 使用请求中的 `history_count`，或默认值（`agent.image_generation_default_history_count`，默认 10）
@@ -134,34 +166,38 @@
    - 优先使用 Agent 的 `background`（背景图）
    - 若无背景图，使用 `avatar`（头像）
    - 将参考图 URL 转换为完整 HTTP URL（支持 `gs://` 到 HTTPS 的转换）
+   - 如果两者都不存在，抛出 `ValueError`
 
 5. **调用 Gemini 2.5 Flash Image**
-   - 使用 `google.genai` SDK
+   - 使用 `google.genai` SDK（通过 `get_genai_client()` 获取客户端）
    - 模型：`gemini-2.5-flash-image`
    - 输入格式：
-     - 参考图（`types.Part.from_uri()`）
+     - 参考图（`types.Part.from_uri()`，MIME 类型为 `image/jpeg`）
      - 文字提示词（`types.Part.from_text()`）
    - 配置参数：
      - `temperature`: 1.0
      - `top_p`: 0.95
      - `max_output_tokens`: 8192
-     - `response_modalities`: ["IMAGE"]
+     - `response_modalities`: ["IMAGE"]（只返回图片）
      - 安全设置：各种有害内容类别设置为 `BLOCK_MEDIUM_AND_ABOVE`
 
 6. **提取图片数据**
    - 从响应中提取 `candidate.content.parts` 中的 `inline_data`
-   - 处理 base64 解码（如果数据是字符串格式）
-   - 验证数据格式（JPEG/PNG/GIF/WEBP）
+   - 处理 base64 解码（如果数据是字符串格式，自动解码为 bytes）
+   - 验证数据格式（JPEG/PNG/GIF/WEBP），通过检查魔术数字识别
 
 7. **解析图片尺寸**
-   - 使用 PIL 打开图片获取宽度、高度、格式
+   - 使用 PIL (`PIL.Image.open(io.BytesIO(image_data))`) 打开图片
+   - 获取宽度、高度、格式
+   - 如果解析失败，记录错误并抛出异常
 
 8. **上传到 GCS**
    - 生成唯一路径：`chat_images/{timestamp}_{uuid}.jpg`
-   - 上传到配置的 GCS bucket
-   - 获取公开 URL
+   - 上传到配置的 GCS bucket（通过 `upload_to_gcs()`）
+   - 返回公开 URL（但代码中不使用此 URL，而是自己构建 GCS URI）
 
 9. **转换为 CDN URL**
+   - 构建 GCS URI 格式：`gs://{bucket_name}/{gcs_path}`
    - 将 GCS URI 转换为 CDN URL（通过 `image_transform_service.transform_desktop()`）
 
 10. **更新消息 meta_data**
@@ -178,9 +214,13 @@
       }
       ```
 
-    - 调用 `chat_history_service.update_message_metadata()` 更新
+    - 调用 `chat_history_service.update_message_metadata()` 更新（合并现有 meta_data）
+    - 如果更新失败，抛出 `ValueError`
 
-### 3. 消息元数据存储与检索
+11. **返回结果**
+    - 返回包含 `message_id`、`image_url`（CDN URL）、`image_metadata`、`prompt` 的字典
+
+### 4. 消息元数据存储与检索
 
 位置: `app/services/chat_history_service.py`
 
@@ -203,7 +243,7 @@
 - 将 GCS URI 转换为 CDN URL 后返回给客户端
 - 返回的图片信息不包含 `prompt` 字段
 
-### 4. 用量记录
+### 5. 用量记录
 
 位置: `app/services/subscription_service.py`
 
@@ -225,7 +265,7 @@
 
 **注意**: 检查限额时查询的是 `background_generation` 类型，记录时使用的是 `image_generation`，存在不一致。
 
-### 5. CDN URL 转换
+### 6. CDN URL 转换
 
 位置: `app/services/image_transform_service.py`
 
@@ -235,7 +275,7 @@
 - 格式：`https://{domain}/{bucket/path}`
 - 如果 CDN 未启用或转换失败，回退到原始 URL
 
-### 6. 配置项
+### 7. 配置项
 
 位置: `app/core/config.py`
 
@@ -295,7 +335,9 @@ cloudflare:
 
 ## 相关文件
 
-- `app/api/v1/endpoints/chats.py`: API 端点实现
+- `app/api/v1/endpoints/chat.py`: 主要 API 端点实现（新）
+- `app/api/v1/endpoints/chats.py`: 废弃的 API 端点实现（标记为 deprecated）
+- `app/services/chat_service.py`: 核心服务层，包含 `generate_chat_image()` 函数
 - `app/services/image_generation_service.py`: 图片生成服务核心逻辑
 - `app/services/chat_history_service.py`: 消息历史服务（获取历史、更新元数据）
 - `app/services/subscription_service.py`: 订阅和用量服务
@@ -307,11 +349,13 @@ cloudflare:
 
 ## 注意事项
 
-1. **消息限制**: 只能对最后一条 AI 回复生成图片
-2. **历史数量**: 默认 10 条，可通过 `history_count` 参数调整
-3. **参考图要求**: Agent 必须至少有背景图或头像
+1. **消息限制**: 只能对最后一条 AI 回复生成图片，由 `chat_history_service.get_latest_ai_message_id()` 验证
+2. **历史数量**: 默认 10 条，可通过 `history_count` 参数调整，配置项为 `agent.image_generation_default_history_count`
+3. **参考图要求**: Agent 必须至少有背景图或头像，优先使用 `background`，否则使用 `avatar`
 4. **图片格式**: 统一为 JPEG，存储路径 `chat_images/{timestamp}_{uuid}.jpg`
-5. **用量类型不一致**: 检查限额使用 `background_generation`，记录使用 `image_generation`
+5. **用量类型不一致**: 检查限额时查询 `background_generation` 类型（`check_image_gen_limit()`），记录时使用 `image_generation` 类型（`record_usage()`）。这是一个已知问题，需要在未来统一
+6. **重复生成**: 对同一条消息重复生成图片会直接覆盖 `meta_data.generated_image` 字段，无需删除旧数据
+7. **核心逻辑位置**: API 端点的核心业务逻辑已提取到 `chat_service.generate_chat_image()`，便于复用和测试
 
 ## 未来改进
 
