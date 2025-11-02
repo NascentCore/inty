@@ -75,7 +75,6 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
             )
         }
         debug {
-            versionNameSuffix = "-${getGitCommitInfo(project)}-$name"
             signingConfig = signingConfigs.getByName("dev")
             isMinifyEnabled = false
             isShrinkResources = false
@@ -92,7 +91,6 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
 
         create("local") {
             initWith(getByName("debug"))
-            versionNameSuffix = "-${getGitCommitInfo(project)}-$name"
         }
     }
 
