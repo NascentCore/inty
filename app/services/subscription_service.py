@@ -51,10 +51,6 @@ def _should_override_limits_for_test_env() -> bool:
     ):
         return False
 
-    # Pytest 会自动设置该环境变量，检测到说明当前是测试用例，不做放宽
-    if os.getenv("PYTEST_CURRENT_TEST"):
-        return False
-
     return True
 
 
