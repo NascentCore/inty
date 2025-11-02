@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 from app import models, schemas
 from app.models.user import AuthType
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
-from app.schemas.response import BusinessErrorCode, create_business_error_response
+from app.schemas.response import BusinessErrorCode
 from app.services import agent_service, chat_history_service
 from app.services.cache_service import cache_service
 from app.services.global_services import subscription_service
@@ -1115,7 +1115,7 @@ async def generate_chat_image(
     user_id: str,
     message_id: int,
     history_count: Optional[int] = None,
-) -> Union[schemas.ChatImageGenerationResponse, dict]:
+) -> schemas.ChatImageGenerationResponse:
     """
     基于聊天上下文生成图片（公共函数）
 
@@ -1135,11 +1135,10 @@ async def generate_chat_image(
         history_count: 使用的历史消息数量
 
     Returns:
-        成功时返回 `ChatImageGenerationResponse`，
-        如果达到限额，返回业务错误响应字典（需要端点层判断并直接返回）
+        成功时返回 `ChatImageGenerationResponse`
 
     Raises:
-        HTTPException: 各种业务错误情况
+        HTTPException: 各种业务错误情况（包括限额检查失败）
     """
     from app.services.image_generation_service import image_generation_service
 
@@ -1181,22 +1180,21 @@ async def generate_chat_image(
     if not is_allowed:
         logger.warning(f"用户 {user_id} 已达到图片生成限额: {used_count}/{daily_limit}")
 
-        if user.auth_type == AuthType.GUEST:
-            return {
-                "_is_business_error": True,
-                "response": create_business_error_response(
-                    error_info=BusinessErrorCode.GUEST_LOGIN_REQUIRED,
-                    extra_data={"used_count": used_count, "daily_limit": daily_limit},
-                ),
-            }
-        else:
-            return {
-                "_is_business_error": True,
-                "response": create_business_error_response(
-                    error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
-                    extra_data={"used_count": used_count, "daily_limit": daily_limit},
-                ),
-            }
+        # 抛出异常，包含业务错误信息，由端点层转换为业务错误响应
+        error_code = (
+            BusinessErrorCode.GUEST_LOGIN_REQUIRED
+            if user.auth_type == AuthType.GUEST
+            else BusinessErrorCode.SUBSCRIPTION_REQUIRED
+        )
+        # 使用特殊状态码 499 标识需要转换为业务错误响应的异常
+        raise HTTPException(
+            status_code=499,
+            detail={
+                "error_code": error_code["error_code"],
+                "error_info": error_code,
+                "extra_data": {"used_count": used_count, "daily_limit": daily_limit},
+            },
+        )
 
     # 获取Agent完整数据
     agent_data = await agent_service.get_agent_for_chat(db, agent_id=chat.agent_id)
