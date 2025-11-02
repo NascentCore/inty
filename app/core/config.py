@@ -29,6 +29,7 @@ class Environment(str, Enum):
     DEV = "dev"
     PROD = "prod"
     TEST = "test"
+    LOCAL = "local"
     UNSPECIFIED = "unspecified"
 
 
