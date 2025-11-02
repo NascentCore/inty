@@ -45,7 +45,6 @@ def test_chat_completions_endpoint(integration_client: TestClient):
     assert usage["total_tokens"] == usage["prompt_tokens"] + usage["completion_tokens"]
 
 
-@pytest.mark.noci
 def test_text_to_image_endpoint(integration_client: TestClient):
     try:
         image_urls = integration_client.text_to_image(
