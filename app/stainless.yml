@@ -43,9 +43,7 @@ resources:
       v1:
         methods:
           list_notifications: get /api/v1/notifications/
-          upload_image:
-            endpoint: post /api/v1/images
-            tags: ["android-app"]
+          upload_image: post /api/v1/images
         subresources:
           auth:
             # Configure the methods defined in this resource. Each key in the object is the
@@ -58,14 +56,10 @@ resources:
             subresources:
               google:
                 methods:
-                  login:
-                    endpoint: post /api/v1/auth/google/login
-                    tags: ["android-app"]
+                  login: post /api/v1/auth/google/login
           users:
             methods:
-              delete_account:
-                endpoint: post /api/v1/users/delete-account
-                tags: ["android-app"]
+              delete_account: post /api/v1/users/delete-account
             subresources:
               profile:
                 # Configure the models--named types--defined in the resource. Each key in the
@@ -77,17 +71,11 @@ resources:
                   gender: "#/components/schemas/Gender"
                   user: "#/components/schemas/User"
                 methods:
-                  update:
-                    endpoint: put /api/v1/users/profile
-                    tags: ["android-app"]
-                  me:
-                    endpoint: get /api/v1/users/me
-                    tags: ["android-app"]
+                  update: put /api/v1/users/profile
+                  me: get /api/v1/users/me
               deletion:
                 methods:
-                  check_eligibility:
-                    endpoint: get /api/v1/users/deletion/check
-                    tags: ["android-app"]
+                  check_eligibility: get /api/v1/users/deletion/check
           report:
             models:
               api_response_dict: "#/components/schemas/APIResponse_dict_"
@@ -104,26 +92,14 @@ resources:
                   model_config: "#/components/schemas/ModelConfig"
                   agent_meta_data: "#/components/schemas/AgentMetaData"
                 methods:
-                  list:
-                    endpoint: get /api/v1/ai/agents/me
-                    tags: ["android-app"]
+                  list: get /api/v1/ai/agents/me
                   search: get /api/v1/ai/agents/search
-                  recommend:
-                    endpoint: get /api/v1/ai/agents/recommend
-                    tags: ["android-app"]
+                  recommend: get /api/v1/ai/agents/recommend
                   following: get /api/v1/ai/agents/following
-                  create:
-                    endpoint: post /api/v1/ai/agents
-                    tags: ["android-app"]
-                  retrieve:
-                    endpoint: get /api/v1/ai/agents/{agent_id}
-                    tags: ["android-app"]
-                  update:
-                    endpoint: put /api/v1/ai/agents/{agent_id}
-                    tags: ["android-app"]
-                  delete:
-                    endpoint: delete /api/v1/ai/agents/{agent_id}
-                    tags: ["android-app"]
+                  create: post /api/v1/ai/agents
+                  retrieve: get /api/v1/ai/agents/{agent_id}
+                  update: put /api/v1/ai/agents/{agent_id}
+                  delete: delete /api/v1/ai/agents/{agent_id}
                   follow_agent: post /api/v1/ai/agents/{agent_id}/follow
                   unfollow_agent: delete /api/v1/ai/agents/{agent_id}/follow
                 subresources:
@@ -145,14 +121,10 @@ resources:
               api_response_usage_statistics: "#/components/schemas/APIResponse_UsageStatisticsResponse_"
               user_subscription: "#/components/schemas/UserSubscription"
             methods:
-              list_plans:
-                endpoint: get /api/v1/subscription/plans
-                tags: ["android-app"]
+              list_plans: get /api/v1/subscription/plans
               get_status: get /api/v1/subscription/status
               get_usage: get /api/v1/subscription/usage
-              verify:
-                endpoint: post /api/v1/subscription/verify
-                tags: ["android-app"]
+              verify: post /api/v1/subscription/verify
               webhook: post /api/v1/subscription/webhook
             subresources:
               admin:
@@ -172,25 +144,15 @@ resources:
                       get_usage_statistics: get /api/v1/subscription/admin/users/{user_id}/usage
           version:
             methods:
-              check:
-                endpoint: post /api/v1/version/check
-                tags: ["android-app"]
+              check: post /api/v1/version/check
           chats:
             models:
               chat: "#/components/schemas/Chat"
             methods:
-              list:
-                endpoint: get /api/v1/chats/
-                tags: ["android-app"]
-              create:
-                endpoint: post /api/v1/chats/
-                tags: ["android-app"]
-              delete:
-                endpoint: delete /api/v1/chats/{chat_id}
-                tags: ["android-app"]
-              create_completion:
-                endpoint: post /api/v1/chat/completions/{agent_id}
-                tags: ["android-app"]
+              list: get /api/v1/chats/
+              create: post /api/v1/chats/
+              delete: delete /api/v1/chats/{chat_id}
+              create_completion: post /api/v1/chat/completions/{agent_id}
               retrieve_voice: get /api/v1/chats/voices/{voice_id}
               generate_image: post /api/v1/chat/images/{agent_id}
             subresources:
@@ -198,18 +160,10 @@ resources:
                 models:
                   chat_settings: "#/components/schemas/ChatSettings"
                 methods:
-                  get_messages:
-                    endpoint: get /api/v1/chats/agents/{agent_id}/messages
-                    tags: ["android-app"]
-                  generate_message_voice:
-                    endpoint: post /api/v1/chats/agents/{agent_id}/messages/{message_id}/voice
-                    tags: ["android-app"]
-                  update_settings:
-                    endpoint: put /api/v1/chats/agents/{agent_id}/settings
-                    tags: ["android-app"]
-                  get_settings:
-                    endpoint: get /api/v1/chats/agents/{agent_id}/settings
-                    tags: ["android-app"]
+                  get_messages: get /api/v1/chats/agents/{agent_id}/messages
+                  generate_message_voice: post /api/v1/chats/agents/{agent_id}/messages/{message_id}/voice
+                  update_settings: put /api/v1/chats/agents/{agent_id}/settings
+                  get_settings: get /api/v1/chats/agents/{agent_id}/settings
           text_to_speech:
             methods:
               list_voices: get /api/v1/text-to-speech/list-voices
@@ -239,9 +193,9 @@ client_settings:
         security_scheme: Bearer
       description: "
 
-        \            ?????: your_token
+        \            输入格式为: your_token
 
-        \            ??: ???Bearer??
+        \            注意: 不需要Bearer前缀
 
         \            "
       read_env: INTY_API_KEY
