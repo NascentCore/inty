@@ -1,23 +1,25 @@
 """
-Check both config.yaml.{dev,prod} are valid configs by loading them with config.py
+Check all config.yaml.* files are valid configs by loading them with config.py
 """
+
+from pathlib import Path
+
+import pytest
 
 from app.core.config import _validate_config, load_config
 
 
-def test_load_test_config():
-    """Test loading dev configuration file."""
-    config = load_config("devops/config.yaml.test")
-    _validate_config(config)
+def get_config_files():
+    """Discover all config.yaml.* files in devops directory, excluding template."""
+    devops_dir = Path(__file__).parent
+    config_files = sorted(devops_dir.glob("config.yaml.*"))
+    # Exclude template file as it's not a valid config
+    config_files = [f for f in config_files if f.name != "config.yaml.template"]
+    return [str(f) for f in config_files]
 
 
-def test_load_dev_config():
-    """Test loading dev configuration file."""
-    config = load_config("devops/config.yaml.dev")
-    _validate_config(config)
-
-
-def test_load_prod_config():
-    """Test loading dev configuration file."""
-    config = load_config("devops/config.yaml.prod")
+@pytest.mark.parametrize("config_path", get_config_files())
+def test_load_config(config_path):
+    """Test loading and validating configuration file."""
+    config = load_config(config_path)
     _validate_config(config)
