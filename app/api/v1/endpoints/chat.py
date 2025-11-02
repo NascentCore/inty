@@ -1,13 +1,13 @@
 import time
 import uuid
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from langchain_core.messages import HumanMessage
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import schemas
+from app import models, schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
@@ -266,3 +266,63 @@ async def agent_chat_completions(
         logger.error(f"聊天请求处理失败: {str(e)}")
         logger.exception("聊天请求异常详细信息:")
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+
+@router.post(
+    "/images/{agent_id}",
+    response_model=schemas.APIResponse[schemas.ChatImageGenerationResponse],
+    summary="基于聊天上下文生成图片",
+    description=(
+        "根据Agent角色、聊天历史和用户消息生成图片，并保存到聊天历史中。"
+        "注意：路径参数 `agent_id` 仅作为目前的名称，实际应为 `chat_id`。"
+        "本 API 拷贝自 `app/api/v1/endpoints/chats.py::generate_chat_image`（第1170-1325行）。"
+    ),
+    tags=["inty-eval"],
+)
+async def generate_chat_image(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    request: schemas.ChatImageGenerationRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    基于聊天上下文生成图片
+
+    流程：
+    1. 验证用户和Agent
+    2. 获取或创建聊天会话
+    3. 检查图片生成限额
+    4. 调用图片生成服务
+    5. 记录用量
+    6. 返回图片信息
+
+    注意：
+    - 路径参数 `agent_id` 仅作为目前的名称，实际应为 `chat_id`
+    - 本 API 拷贝自 `app/api/v1/endpoints/chats.py::generate_chat_image`（第1170-1325行）
+    - 核心逻辑已提取到 `chat_service.generate_chat_image`
+    """
+    try:
+        result = await chat_service.generate_chat_image(
+            db=db,
+            agent_id=agent_id,
+            user_id=current_user.id,
+            message_id=request.message_id,
+            history_count=request.history_count,
+        )
+
+        # 检查是否是业务错误响应
+        if isinstance(result, dict) and result.get("_is_business_error"):
+            return result["response"]
+
+        return schemas.APIResponse.success(
+            data=schemas.ChatImageGenerationResponse(**result)
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"生成聊天图片失败 - Agent ID: {agent_id}, Error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate image: {str(e)}"
+        )
