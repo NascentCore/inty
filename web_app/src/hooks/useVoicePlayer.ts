@@ -3,13 +3,15 @@
  * 封装语音播放逻辑
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { createIntyClient, logger } from '@/utils';
+import { generateMessageVoice, VoiceGenerationError } from "@/services/chat";
+import { logger } from "@/utils";
+import { useModel } from "@umijs/max";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * 语音播放状态类型
  */
-export type TVoiceStatus = 'idle' | 'loading' | 'playing';
+export type TVoiceStatus = "idle" | "loading" | "playing";
 
 /**
  * useVoicePlayer Hook 参数
@@ -35,7 +37,7 @@ interface IUseVoicePlayerReturn {
 
 /**
  * 语音播放 Hook
- * 
+ *
  * 用途：管理消息语音的生成和播放
  * 使用示例：
  * ```tsx
@@ -44,7 +46,7 @@ interface IUseVoicePlayerReturn {
  *   messageId: 'msg_456'
  * });
  * ```
- * 
+ *
  * 功能特性：
  * - 自动缓存音频 URL，避免重复请求
  * - 支持播放/停止控制
@@ -55,12 +57,15 @@ export const useVoicePlayer = ({
   agentId,
   messageId,
 }: IUseVoicePlayerParams): IUseVoicePlayerReturn => {
+  // 获取 Google 登录弹窗状态管理
+  const googleLoginModal = useModel("googleLoginModal");
+
   // 语音播放状态
-  const [voiceStatus, setVoiceStatus] = useState<TVoiceStatus>('idle');
-  
+  const [voiceStatus, setVoiceStatus] = useState<TVoiceStatus>("idle");
+
   // 音频 URL 缓存
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  
+
   // 音频播放器引用
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -69,61 +74,48 @@ export const useVoicePlayer = ({
    */
   const playVoice = useCallback(async () => {
     if (!agentId || !messageId) {
-      logger.warn('缺少 agentId 或 messageId，无法生成语音');
+      logger.warn("缺少 agentId 或 messageId，无法生成语音");
       return;
     }
 
     try {
       // 如果已有音频 URL，直接播放
       if (audioUrl && audioRef.current) {
-        setVoiceStatus('playing');
+        setVoiceStatus("playing");
         await audioRef.current.play();
         return;
       }
 
       // 生成语音
-      setVoiceStatus('loading');
-      const client = await createIntyClient(true);
-      
-      const response = await client.api.v1.chats.agents.generateMessageVoice(
-        String(messageId),
-        { agent_id: agentId },
-      );
+      setVoiceStatus("loading");
+      const voiceData = await generateMessageVoice(messageId, agentId);
 
-      // 从响应中提取 audio_url
-      let url: string | null = null;
-      
-      if (response && typeof response === 'object' && 'data' in response) {
-        // 响应格式：{ code, message, data: { audio_url } }
-        const data = (response as any).data;
-        if (data && typeof data === 'object' && 'audio_url' in data) {
-          url = data.audio_url;
-        }
-      }
-
-      if (!url) {
-        throw new Error('无法从响应中获取音频 URL');
-      }
-
-      setAudioUrl(url);
+      // 缓存音频 URL
+      setAudioUrl(voiceData.audio_url);
 
       // 创建并播放音频
-      const audio = new Audio(url);
+      const audio = new Audio(voiceData.audio_url);
       audioRef.current = audio;
 
-      audio.onplay = () => setVoiceStatus('playing');
-      audio.onended = () => setVoiceStatus('idle');
+      audio.onplay = () => setVoiceStatus("playing");
+      audio.onended = () => setVoiceStatus("idle");
       audio.onerror = () => {
-        logger.error('音频播放失败');
-        setVoiceStatus('idle');
+        logger.error("音频播放失败");
+        setVoiceStatus("idle");
       };
 
       await audio.play();
     } catch (err) {
-      logger.error('生成语音失败:', err);
-      setVoiceStatus('idle');
+      logger.error("生成语音失败:", err);
+      setVoiceStatus("idle");
+
+      // 处理 GUEST_LOGIN_REQUIRED 错误
+      if (err instanceof VoiceGenerationError && err.shouldLogin) {
+        logger.info("需要 Google 登录，打开登录弹窗");
+        googleLoginModal.show();
+      }
     }
-  }, [agentId, messageId, audioUrl]);
+  }, [agentId, messageId, audioUrl, googleLoginModal]);
 
   /**
    * 停止播放语音
@@ -132,7 +124,7 @@ export const useVoicePlayer = ({
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
-      setVoiceStatus('idle');
+      setVoiceStatus("idle");
     }
   }, []);
 
@@ -154,4 +146,3 @@ export const useVoicePlayer = ({
     stopVoice,
   };
 };
-

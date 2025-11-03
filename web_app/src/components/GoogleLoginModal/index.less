@@ -1,0 +1,161 @@
+/**
+ * Google 登录弹窗样式
+ * 采用暗色主题设计，与项目整体风格保持一致
+ */
+
+@import '@/styles/variables.less';
+
+.google-login-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: @z-index-modal;
+  animation: fadeIn 0.2s ease-in-out;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+.google-login-modal {
+  position: relative;
+  background: @dark-bg-tertiary;
+  border: 1px solid @dark-border-color;
+  border-radius: 16px;
+  box-shadow: @dark-shadow-lg;
+  width: 90%;
+  max-width: 420px;
+  padding: 40px 32px;
+  animation: slideUp 0.3s ease-out;
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .close-button {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    color: @dark-text-tertiary;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: @dark-bg-hover;
+      color: @dark-text-primary;
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  .modal-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: @dark-text-primary;
+      margin: 0 0 12px 0;
+    }
+
+    .modal-description {
+      font-size: 14px;
+      color: @dark-text-secondary;
+      line-height: 1.6;
+      margin: 0 0 32px 0;
+      max-width: 300px;
+    }
+
+    .google-login-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      padding: 14px 24px;
+      background: @dark-bg-primary;
+      border: 1px solid @dark-border-color;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      color: @dark-text-primary;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: @dark-bg-secondary;
+        border-color: @primary-color;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      &:active {
+        background: @dark-bg-active;
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      }
+
+      .google-icon {
+        flex-shrink: 0;
+      }
+
+      span {
+        flex: 1;
+        text-align: center;
+      }
+    }
+  }
+}
+
+// 响应式适配
+@media (max-width: @screen-sm) {
+  .google-login-modal {
+    max-width: 90%;
+    padding: 32px 24px;
+
+    .modal-content {
+      .modal-title {
+        font-size: 20px;
+      }
+
+      .modal-description {
+        font-size: 13px;
+      }
+
+      .google-login-button {
+        padding: 12px 20px;
+        font-size: 15px;
+      }
+    }
+  }
+}

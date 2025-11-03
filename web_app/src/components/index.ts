@@ -15,6 +15,7 @@ export { default as Icon } from './Icon';
 export { default as Loading } from './Loading';
 export { default as ErrorAlert } from './ErrorAlert';
 export { default as EmptyState } from './EmptyState';
+export { default as GoogleLoginModal } from './GoogleLoginModal';
 
 /**
  * 测试组件

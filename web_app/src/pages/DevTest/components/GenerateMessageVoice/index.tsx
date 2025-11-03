@@ -1,6 +1,6 @@
 import React from 'react';
 import TestWrapper from '@/components/TestWrapper';
-import { createIntyClient } from '@/utils';
+import { generateMessageVoice } from '@/services/chat';
 import { logger } from '@/utils/logger';
 
 /**
@@ -24,26 +24,14 @@ const GenerateMessageVoice: React.FC = () => {
           required: true,
           placeholder: '请输入 Message ID',
         },
-        {
-          name: 'language',
-          label: '语言代码',
-          required: false,
-          placeholder: 'zh-CN',
-        },
       ]}
       onTest={async (values) => {
-        const params = {
-          agent_id: values.agent_id,
-          language: values.language,
-        };
-
         logger.testDetail('Message ID', values.message_id);
-        logger.testDetail('请求参数', params);
+        logger.testDetail('Agent ID', values.agent_id);
 
-        const client = await createIntyClient(true);
-        const response = await client.api.v1.chats.agents.generateMessageVoice(
+        const response = await generateMessageVoice(
           values.message_id,
-          params,
+          values.agent_id,
         );
 
         logger.testDetail('语音生成结果', response);

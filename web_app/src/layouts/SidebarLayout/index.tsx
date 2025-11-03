@@ -5,6 +5,7 @@
 
 import { Outlet, useModel, history } from '@umijs/max';
 import React, { useEffect } from 'react';
+import { GoogleLoginModal } from '@/components';
 import SidebarHeader from './components/SidebarHeader';
 import DiscoverButton from './components/DiscoverButton';
 import ChatHistoryList from './components/ChatHistoryList';
@@ -49,34 +50,39 @@ const SidebarLayout: React.FC = () => {
   };
 
   return (
-    <div className="sidebar-layout">
-      {/* 左侧边栏 */}
-      <aside className="sidebar-layout-aside">
-        {/* 顶部 Header */}
-        <SidebarHeader />
+    <>
+      <div className="sidebar-layout">
+        {/* 左侧边栏 */}
+        <aside className="sidebar-layout-aside">
+          {/* 顶部 Header */}
+          <SidebarHeader />
 
-        {/* Discover 按钮 */}
-        <DiscoverButton onClick={handleDiscoverClick} />
+          {/* Discover 按钮 */}
+          <DiscoverButton onClick={handleDiscoverClick} />
 
-        {/* 聊天历史列表 */}
-        <ChatHistoryList chatList={chatList} loading={loading} />
+          {/* 聊天历史列表 */}
+          <ChatHistoryList chatList={chatList} loading={loading} />
 
-        {/* 用户区域 - 底部（头像 + 订阅按钮） */}
-        <UserSection
-          userProfile={userProfile}
-          isRegistered={isRegistered}
-          loading={profileLoading}
-          onSubscribeClick={handleSubscribeClick}
-        />
-      </aside>
+          {/* 用户区域 - 底部（头像 + 订阅按钮） */}
+          <UserSection
+            userProfile={userProfile}
+            isRegistered={isRegistered}
+            loading={profileLoading}
+            onSubscribeClick={handleSubscribeClick}
+          />
+        </aside>
 
-      {/* 右侧主体内容 */}
-      <main className="sidebar-layout-main">
-        <div className="main-content">
-          <Outlet />
-        </div>
-      </main>
-    </div>
+        {/* 右侧主体内容 */}
+        <main className="sidebar-layout-main">
+          <div className="main-content">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+
+      {/* 全局 Google 登录弹窗 */}
+      <GoogleLoginModal />
+    </>
   );
 };
 

@@ -15,8 +15,10 @@ import type {
 export interface ISendMessageResponse {
   /** AI 回复内容 */
   content: string;
-  /** 响应原始数据 */
-  data?: unknown;
+  /** 消息 ID */
+  messageId: number;
+  /** 音频 URL（如果有） */
+  audioUrl?: string | null;
 }
 
 /**
@@ -97,6 +99,20 @@ export async function getChatMessages(
 }
 
 /**
+ * 消息发送错误类型
+ */
+export class MessageSendError extends Error {
+  constructor(
+    message: string,
+    public errorCode?: string,
+    public shouldLogin?: boolean,
+  ) {
+    super(message);
+    this.name = 'MessageSendError';
+  }
+}
+
+/**
  * 发送消息（使用 V1 API）
  * @param agentId Agent ID
  * @param content 消息内容
@@ -119,47 +135,131 @@ export async function sendMessage(
     });
     logger.info('发送消息响应', response);
 
-    // 提取 AI 回复内容
-    const aiContent = extractAIResponse(response);
+    const responseData = response as any;
 
-    return {
-      content: aiContent,
-      data: response.data,
-    };
+    // 检查响应状态码
+    if (responseData.code === 200) {
+      // 成功响应，提取 AI 回复内容
+      const message = responseData.data?.choices?.[0]?.message;
+      
+      if (!message?.content) {
+        throw new MessageSendError('Invalid response: missing message content');
+      }
+
+      return {
+        content: message.content,
+        messageId: message.id,
+        audioUrl: message.audio_url,
+      };
+    }
+
+    // 错误响应
+    const errorCode = responseData.data?.error_code;
+    const errorMessage = responseData.message || 'Message send failed';
+
+    // GUEST_LOGIN_REQUIRED 错误，需要触发登录
+    if (errorCode === 'GUEST_LOGIN_REQUIRED') {
+      throw new MessageSendError(errorMessage, errorCode, true);
+    }
+
+    // 其他错误
+    throw new MessageSendError(errorMessage, errorCode, false);
   } catch (err: unknown) {
+    // 如果已经是 MessageSendError，直接抛出
+    if (err instanceof MessageSendError) {
+      throw err;
+    }
+    
     logger.error('发送消息失败', err);
-    throw new Error('发送消息失败，请稍后重试');
+    throw new MessageSendError('Failed to send message, please try again later');
   }
 }
 
 /**
- * 从 API 响应中提取 AI 回复内容
- * @param response API 响应
- * @returns AI 回复文本
+ * 语音生成响应接口
  */
-function extractAIResponse(response: any): string {
+export interface IGenerateVoiceResponse {
+  /** 音频 URL */
+  audio_url: string;
+  /** 消息 ID */
+  message_id: string;
+  /** 语音 ID */
+  voice_id: string;
+  /** 语言 */
+  language: string;
+  /** 音频时长（秒） */
+  audio_duration: number;
+  /** 是否命中缓存 */
+  cached: boolean;
+  /** 生成耗时 */
+  generation_time: number | null;
+}
+
+/**
+ * 语音生成错误类型
+ */
+export class VoiceGenerationError extends Error {
+  constructor(
+    message: string,
+    public errorCode?: string,
+    public shouldLogin?: boolean,
+  ) {
+    super(message);
+    this.name = 'VoiceGenerationError';
+  }
+}
+
+/**
+ * 生成消息语音
+ * @param messageId 消息 ID
+ * @param agentId Agent ID
+ * @returns 语音信息
+ */
+export async function generateMessageVoice(
+  messageId: string | number,
+  agentId: string,
+): Promise<IGenerateVoiceResponse> {
   try {
-    logger.info('提取 AI 回复内容', response);
-    // 尝试从不同可能的路径提取内容
-    if (response?.data?.content) {
-      return response.data.content;
+    // 获取已认证的客户端
+    const client = await createIntyClient(true);
+
+    logger.info('生成消息语音', { messageId, agentId });
+
+    // 调用 SDK 生成语音
+    const response = await client.api.v1.chats.agents.generateMessageVoice(
+      String(messageId),
+      { agent_id: agentId },
+    );
+    
+    logger.info('生成语音响应', response);
+
+    const responseData = response as any;
+
+    // 检查响应状态码
+    if (responseData.code === 200) {
+      // 成功响应，返回 data
+      return responseData.data;
     }
-    if (response?.data?.message) {
-      return response.data.message;
+
+    // 错误响应
+    const errorCode = responseData.data?.error_code;
+    const errorMessage = responseData.message || 'Voice generation failed';
+
+    // GUEST_LOGIN_REQUIRED 错误，需要触发登录
+    if (errorCode === 'GUEST_LOGIN_REQUIRED') {
+      throw new VoiceGenerationError(errorMessage, errorCode, true);
     }
-    if (response?.data?.choices?.[0]?.message?.content) {
-      return response.data.choices[0].message.content;
-    }
-    if (typeof response?.data === 'string') {
-      return response.data;
+
+    // 其他错误
+    throw new VoiceGenerationError(errorMessage, errorCode, false);
+  } catch (err: unknown) {
+    // 如果已经是 VoiceGenerationError，直接抛出
+    if (err instanceof VoiceGenerationError) {
+      throw err;
     }
     
-    // 如果找不到明确的回复内容，返回默认消息
-    logger.warn('无法提取 AI 回复内容', response);
-    return '收到回复，但无法解析内容';
-  } catch (err) {
-    logger.error('提取 AI 回复失败', err);
-    return '回复解析失败';
+    logger.error('生成消息语音失败', err);
+    throw new VoiceGenerationError('Failed to generate voice, please try again later');
   }
 }
 
