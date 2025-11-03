@@ -1,6 +1,6 @@
 import asyncio
 import uuid
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from langchain_core.messages import HumanMessage
@@ -64,7 +64,7 @@ class ChatCompletionResponse(BaseModel):
 
 @router.post(
     "/completions/{agent_id}",
-    response_model=schemas.APIResponse[Union[ChatCompletionResponse, dict]],
+    response_model=schemas.APIResponse[ChatCompletionResponse],
     deprecated=True,
     summary="【目前还未完成】返回与指定 Agent 聊天的下一条消息",
     description="可以处理包括图片在内的各种消息类型，媒体类型应该先上传，然后将 URL 作为索引发送到此 API",
