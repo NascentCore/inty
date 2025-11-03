@@ -27,8 +27,7 @@ export async function getAgentDetail(agentId: string): Promise<IAgent | null> {
 
     // 调用 SDK 的获取 Agent 详情接口
     const response = await client.api.v1.ai.agents.retrieve(agentId);
-
-    logger.info('获取 Agent 详情成功', response);
+    logger.info('获取 Agent 详情响应', response);
 
     return response as IAgent;
   } catch (err: unknown) {
@@ -67,6 +66,7 @@ export async function getRecommendAgents(
       ...(params.sort_seed ? { sort_seed: params.sort_seed } : {}),
       ...(sdkSort ? { sort: sdkSort } : {}),
     });
+    logger.info("获取推荐角色响应", response);
 
     // 转换为项目的统一格式
     const result: IApiResult<IAgentRecommendData> = {

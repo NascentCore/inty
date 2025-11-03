@@ -32,6 +32,8 @@ import './index.less';
 interface IUserSectionProps {
   /** 用户信息 */
   userProfile: IUserProfile | null;
+  /** 是否为注册用户 */
+  isRegistered?: boolean;
   /** 加载状态 */
   loading?: boolean;
   /** 订阅按钮点击回调 */
@@ -43,6 +45,7 @@ interface IUserSectionProps {
  */
 const UserSection: React.FC<IUserSectionProps> = ({
   userProfile,
+  isRegistered = false,
   loading = false,
   onSubscribeClick,
 }) => {
@@ -55,6 +58,15 @@ const UserSection: React.FC<IUserSectionProps> = ({
       return (
         <div className="user-avatar-placeholder loading">
           <Icon icon={User} size={20} color="#666" />
+        </div>
+      );
+    }
+
+    // 如果是非注册用户（访客），显示访客图标
+    if (!isRegistered) {
+      return (
+        <div className="user-avatar-placeholder guest">
+          <Icon icon={User} size={20} color="#999" />
         </div>
       );
     }

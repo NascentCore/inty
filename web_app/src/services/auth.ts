@@ -32,6 +32,7 @@ export async function guestLogin(
       age_group: params.age_group,
       request_id: params.request_id,
     });
+    logger.info("访客登录响应", response);
 
     // 转换为项目的统一格式
     const guestData: IGuestLoginData = {

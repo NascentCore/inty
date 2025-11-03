@@ -9,7 +9,7 @@ import { setDefaultTestToken } from '@/utils/token';
  */
 export async function getInitialState(): Promise<IInitialState> {
   // 【临时测试】设置默认 token（项目开发完成后需删除此调用）
-  await setDefaultTestToken();
+  // await setDefaultTestToken();
 
   return {
     name: 'IntelliMate',

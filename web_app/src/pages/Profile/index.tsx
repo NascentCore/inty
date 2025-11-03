@@ -3,22 +3,14 @@
  * 展示用户基础信息、账户信息
  */
 
-import React, { useEffect } from 'react';
-import { useModel } from '@umijs/max';
-import { Loading, EmptyState } from '@/components';
-import { ProfileHeader, BasicInfo, AccountInfo } from './components';
-import './index.less';
+import { EmptyState, Loading } from "@/components";
+import { useModel } from "@umijs/max";
+import React from "react";
+import { AccountInfo, BasicInfo, LoginPanel, ProfileHeader } from "./components";
+import "./index.less";
 
 const ProfilePage: React.FC = () => {
-  const { userProfile, profileLoading, error, fetchUserProfile } = useModel('user');
-
-  // 组件加载时获取用户信息
-  useEffect(() => {
-    if (!userProfile) {
-      fetchUserProfile();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 仅在组件首次加载时执行
+  const { userProfile, profileLoading, error, isRegistered } = useModel("user");
 
   // 加载状态
   if (profileLoading) {
@@ -30,14 +22,33 @@ const ProfilePage: React.FC = () => {
   }
 
   // 错误状态
-  if (error || !userProfile) {
+  if (error) {
     return (
       <div className="profile-page">
-        <EmptyState description={error || 'Unable to load profile'} />
+        <EmptyState description={error} />
       </div>
     );
   }
 
+  // 非注册用户（访客）- 显示登录面板
+  if (!isRegistered) {
+    return (
+      <div className="profile-page">
+        <LoginPanel />
+      </div>
+    );
+  }
+
+  // 注册用户但无用户信息
+  if (!userProfile) {
+    return (
+      <div className="profile-page">
+        <EmptyState description="Unable to load profile" />
+      </div>
+    );
+  }
+
+  // 注册用户 - 显示完整个人信息
   return (
     <div className="profile-page">
       <div className="profile-container">
@@ -55,4 +66,3 @@ const ProfilePage: React.FC = () => {
 };
 
 export default ProfilePage;
-

@@ -13,18 +13,17 @@ import type { IUserProfile } from '@/types';
 export interface IUserModelState {
   /** 用户详细信息 */
   userProfile: IUserProfile | null;
-  /** 是否已登录 */
-  isLoggedIn: boolean;
   /** 用户信息加载状态 */
   profileLoading: boolean;
   /** 错误信息 */
   error: string | null;
+  /** 是否为注册用户（非访客） */
+  isRegistered: boolean;
 }
 
 export default function useUserModel() {
   // 状态定义
   const [userProfile, setUserProfile] = useState<IUserProfile | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [profileLoading, setProfileLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +35,6 @@ export default function useUserModel() {
     try {
       // 重置状态
       setUserProfile(null);
-      setIsLoggedIn(false);
       setError(null);
     } catch (err) {
       console.error('退出登录失败:', err);
@@ -79,12 +77,15 @@ export default function useUserModel() {
     }
   }, []);
 
+  // 计算属性：是否为注册用户（非访客）
+  const isRegistered = userProfile?.auth_type !== 'GUEST' && !!userProfile;
+
   return {
     // 状态
     userProfile,
-    isLoggedIn,
     profileLoading,
     error,
+    isRegistered,
 
     // 方法
     logout,

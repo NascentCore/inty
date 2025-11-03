@@ -40,8 +40,7 @@ export async function getChatMessages(
       offset,
       order,
     });
-
-    logger.info('获取聊天消息成功', response);
+    logger.info('获取聊天消息响应', response);
 
     // SDK 返回的是包含 messages 数组的对象
     let messages: any[] = [];
@@ -118,8 +117,7 @@ export async function sendMessage(
       messages: [{ role: 'user', content }],
       stream: false,
     });
-
-    logger.info('发送消息成功', response);
+    logger.info('发送消息响应', response);
 
     // 提取 AI 回复内容
     const aiContent = extractAIResponse(response);
@@ -141,6 +139,7 @@ export async function sendMessage(
  */
 function extractAIResponse(response: any): string {
   try {
+    logger.info('提取 AI 回复内容', response);
     // 尝试从不同可能的路径提取内容
     if (response?.data?.content) {
       return response.data.content;

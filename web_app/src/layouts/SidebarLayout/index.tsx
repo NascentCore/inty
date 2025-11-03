@@ -16,7 +16,7 @@ const SidebarLayout: React.FC = () => {
   const { chatList, loading, loadChatList } = useModel('chatList');
   
   // 获取用户信息
-  const { userProfile, profileLoading, fetchUserProfile } = useModel('user');
+  const { userProfile, profileLoading, isRegistered, fetchUserProfile } = useModel('user');
 
   // 组件加载时获取聊天列表和用户信息
   // 只在数据为空时才加载，避免路由切换时重复请求
@@ -64,6 +64,7 @@ const SidebarLayout: React.FC = () => {
         {/* 用户区域 - 底部（头像 + 订阅按钮） */}
         <UserSection
           userProfile={userProfile}
+          isRegistered={isRegistered}
           loading={profileLoading}
           onSubscribeClick={handleSubscribeClick}
         />

@@ -100,8 +100,6 @@ export interface IUserProfile {
 export interface IInitialState {
   /** 应用名称 */
   name?: string;
-  /** 是否已登录 */
-  isLoggedIn?: boolean;
 }
 
 /**
