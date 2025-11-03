@@ -11,6 +11,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
+from app.api.tags import INTY_EVAL_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.db.session import get_async_db
 from app.schemas.response import APIResponse
@@ -234,7 +235,12 @@ async def delete_user_account(
 
 
 # TODO: Move this to admin router, and do not include the router in production.
-@router.get("", response_model=UserList, include_in_schema=False)
+@router.get(
+    "",
+    response_model=UserList,
+    include_in_schema=False,
+    tags=[INTY_EVAL_TAG],
+)
 async def get_all_users(
     *,
     db: AsyncSession = Depends(get_async_db),

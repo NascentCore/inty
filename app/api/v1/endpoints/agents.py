@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
+from app.api.tags import INTY_EVAL_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.character_card import (
@@ -59,7 +60,7 @@ async def get_current_superuser(
     response_model=schemas.APIResponse[List[schemas.Agent]],
     summary="Get list of user's created AI characters",
     description="This endpoint is used by an registered user to list their created AI characters (agents as a misnomer)",
-    tags=["android-app"],
+    tags=["android-app", INTY_EVAL_TAG],
 )
 async def list_agents(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -83,6 +84,7 @@ async def list_agents(
     "/search",
     response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
     summary="Used by inty-eval to list all public AI characters",
+    tags=[INTY_EVAL_TAG],
 )
 async def search_agents(
     q: str = Query(..., description="Search keyword"),
@@ -110,7 +112,7 @@ async def search_agents(
         "sort_seed is required when sort is random, "
         "which is used to ensure deterministic order for the random sort option"
     ),
-    tags=["android-app"],
+    tags=["android-app", INTY_EVAL_TAG],
 )
 async def recommend_agents(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -197,7 +199,7 @@ async def get_following_agents(
 @router.post(
     "",
     response_model=schemas.APIResponse[Union[schemas.Agent, Dict[str, Any]]],
-    tags=["app", "inty-eval", "android-app"],
+    tags=["app", INTY_EVAL_TAG, "android-app"],
     summary="Create new AI agent",
     description="Create new AI agent, used by app and inty-eval",
 )
@@ -247,7 +249,7 @@ async def create_agent(
     operation_id="get_public_agent_by_id",
     summary="Get public agent by ID",
     description="Get public agent by ID, include pre-generated agents and user-created public agents",
-    tags=["android-app"],
+    tags=["android-app", INTY_EVAL_TAG],
 )
 async def get_agent(
     *,
@@ -316,7 +318,7 @@ async def unfollow_agent(
         "更新任何图片，都会将图片全部记录在 background_images 字段中，用于保存历史记录"
         "如果没有提供 avatar，则会自动截取头像，并记录在 avatar 字段中"
     ),
-    tags=["android-app"],
+    tags=["android-app", INTY_EVAL_TAG],
 )
 async def update_agent(
     *,
@@ -336,7 +338,11 @@ async def update_agent(
     return agent
 
 
-@router.delete("/{agent_id}", response_model=schemas.APIResponse[schemas.Agent], tags=["android-app"])
+@router.delete(
+    "/{agent_id}",
+    response_model=schemas.APIResponse[schemas.Agent],
+    tags=["android-app", INTY_EVAL_TAG],
+)
 async def delete_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -407,6 +413,7 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
     summary="[Deprecated, use /api/v1/images/text-to-image instead] Generate images based on text description",
     deprecated=True,
     include_in_schema=False,
+    tags=[INTY_EVAL_TAG],
 )
 async def generate_background(
     request: schemas.TextToImageRequest,
@@ -606,7 +613,7 @@ async def get_creator_agent_stats(
     "/import-character-card",
     response_model=APIResponse[CharacterCardImportResponse],
     include_in_schema=False,
-    tags=["unknown", "inty-eval"],
+    tags=["unknown", INTY_EVAL_TAG],
 )
 async def import_character_card(
     request: CharacterCardImportRequest,
@@ -635,7 +642,7 @@ async def import_character_card(
     "/import-character-card-file",
     response_model=APIResponse[CharacterCardImportResponse],
     include_in_schema=False,
-    tags=["unknown", "inty-eval"],
+    tags=["unknown", INTY_EVAL_TAG],
 )
 async def import_character_card_file(
     file: UploadFile = File(...),
@@ -678,7 +685,7 @@ async def import_character_card_file(
     "/export-character-card",
     response_model=APIResponse[dict],
     include_in_schema=False,
-    tags=["unknown", "inty-eval"],
+    tags=["unknown", INTY_EVAL_TAG],
 )
 async def export_character_card(
     request: CharacterCardExportRequest,
@@ -711,7 +718,7 @@ async def export_character_card(
     "/{agent_id}/character-card",
     response_model=APIResponse[dict],
     include_in_schema=False,
-    tags=["unknown", "inty-eval"],
+    tags=["unknown", INTY_EVAL_TAG],
 )
 async def get_agent_character_card(
     agent_id: str,
@@ -747,7 +754,7 @@ async def get_agent_character_card(
     "/validate-character-card",
     response_model=APIResponse[CharacterCardValidationResponse],
     include_in_schema=False,
-    tags=["unknown", "inty-eval"],
+    tags=["unknown", INTY_EVAL_TAG],
 )
 async def validate_character_card(
     card_data: dict, current_user: schemas.User = Depends(deps.get_current_active_user)
@@ -768,7 +775,7 @@ async def validate_character_card(
     "/character-card/features",
     response_model=APIResponse[dict],
     include_in_schema=False,
-    tags=["unknown", "inty-eval"],
+    tags=["unknown", INTY_EVAL_TAG],
 )
 async def get_character_card_features(
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -803,7 +810,7 @@ async def get_character_card_features(
     include_in_schema=False,
     summary="Get OpenRouter models list",
     description="Get OpenRouter models, used by inty-eval to list all available models, so users can select models for evaluation",
-    tags=["inty-eval"],
+    tags=[INTY_EVAL_TAG],
 )
 async def get_openrouter_models(
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -867,7 +874,7 @@ async def get_openrouter_models(
     response_model=schemas.APIResponse[Dict[str, Any]],
     summary="获取图片生成配置",
     description="获取当前图片生成的提示词模板和默认参数配置",
-    tags=["inty-eval"],
+    tags=[INTY_EVAL_TAG],
 )
 async def get_image_generation_config(
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -892,7 +899,7 @@ async def get_image_generation_config(
     response_model=schemas.APIResponse[Dict[str, Any]],
     summary="更新图片生成配置",
     description="更新图片生成的提示词模板和默认参数配置（仅超级用户）",
-    tags=["inty-eval"],
+    tags=[INTY_EVAL_TAG],
 )
 async def update_image_generation_config(
     config: Dict[str, Any],

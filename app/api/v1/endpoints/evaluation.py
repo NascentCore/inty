@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
+from app.api.tags import INTY_EVAL_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.services.evaluation_service import EvaluationService
 from app.services.question_parser_service import QuestionParserService
@@ -18,7 +19,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/evaluation", route_class=LoggerRoute)
 
 
-@router.get("/sessions", response_model=List[schemas.EvaluationSessionResponse])
+@router.get(
+    "/sessions",
+    response_model=List[schemas.EvaluationSessionResponse],
+    tags=[INTY_EVAL_TAG],
+)
 async def get_evaluation_sessions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -49,7 +54,11 @@ async def get_evaluation_sessions(
         raise HTTPException(status_code=500, detail="获取评测会话列表失败")
 
 
-@router.post("/sessions", response_model=schemas.EvaluationSessionResponse)
+@router.post(
+    "/sessions",
+    response_model=schemas.EvaluationSessionResponse,
+    tags=[INTY_EVAL_TAG],
+)
 async def create_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -88,7 +97,10 @@ async def create_evaluation_session(
         raise HTTPException(status_code=500, detail="创建评测会话失败")
 
 
-@router.post("/sessions/{session_id}/start")
+@router.post(
+    "/sessions/{session_id}/start",
+    tags=[INTY_EVAL_TAG],
+)
 async def start_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -126,7 +138,11 @@ async def start_evaluation_session(
         raise HTTPException(status_code=500, detail="启动评测会话失败")
 
 
-@router.get("/sessions/{session_id}", response_model=schemas.EvaluationSessionDetail)
+@router.get(
+    "/sessions/{session_id}",
+    response_model=schemas.EvaluationSessionDetail,
+    tags=[INTY_EVAL_TAG],
+)
 async def get_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -161,6 +177,7 @@ async def get_evaluation_session(
 @router.get(
     "/sessions/{session_id}/results",
     response_model=List[schemas.EvaluationResultResponse],
+    tags=[INTY_EVAL_TAG],
 )
 async def get_evaluation_results(
     *,
@@ -195,7 +212,10 @@ async def get_evaluation_results(
         raise HTTPException(status_code=500, detail="获取评测结果失败")
 
 
-@router.post("/sessions/{session_id}/cancel")
+@router.post(
+    "/sessions/{session_id}/cancel",
+    tags=[INTY_EVAL_TAG],
+)
 async def cancel_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -231,7 +251,11 @@ async def cancel_evaluation_session(
         raise HTTPException(status_code=500, detail="取消评测会话失败")
 
 
-@router.post("/questions/parse", response_model=schemas.QuestionFileUpload)
+@router.post(
+    "/questions/parse",
+    response_model=schemas.QuestionFileUpload,
+    tags=[INTY_EVAL_TAG],
+)
 async def parse_questions_file(
     *,
     file: UploadFile = File(...),
@@ -282,7 +306,11 @@ async def parse_questions_file(
         raise HTTPException(status_code=400, detail=f"文件解析失败: {str(e)}")
 
 
-@router.get("/models", response_model=List[schemas.ScoringModelInfo])
+@router.get(
+    "/models",
+    response_model=List[schemas.ScoringModelInfo],
+    tags=[INTY_EVAL_TAG],
+)
 async def get_scoring_models(
     *,
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -303,7 +331,10 @@ async def get_scoring_models(
         raise HTTPException(status_code=500, detail="获取评分模型失败")
 
 
-@router.post("/scoring-criteria/validate")
+@router.post(
+    "/scoring-criteria/validate",
+    tags=[INTY_EVAL_TAG],
+)
 async def validate_scoring_criteria(
     *,
     criteria: str,
@@ -327,7 +358,11 @@ async def validate_scoring_criteria(
         raise HTTPException(status_code=500, detail="验证评分标准失败")
 
 
-@router.get("/stats", response_model=schemas.EvaluationStats)
+@router.get(
+    "/stats",
+    response_model=schemas.EvaluationStats,
+    tags=[INTY_EVAL_TAG],
+)
 async def get_evaluation_stats(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -423,7 +458,11 @@ async def monitor_evaluation_session(
 # =============================================================================
 
 
-@router.get("/agents", response_model=List[schemas.Agent])
+@router.get(
+    "/agents",
+    response_model=List[schemas.Agent],
+    tags=[INTY_EVAL_TAG],
+)
 async def get_evaluation_agents(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -462,7 +501,11 @@ async def get_evaluation_agents(
         raise HTTPException(status_code=500, detail="获取智能体列表失败")
 
 
-@router.post("/agents", response_model=schemas.Agent)
+@router.post(
+    "/agents",
+    response_model=schemas.Agent,
+    tags=[INTY_EVAL_TAG],
+)
 async def create_evaluation_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -492,7 +535,11 @@ async def create_evaluation_agent(
         raise HTTPException(status_code=500, detail="创建智能体失败")
 
 
-@router.put("/agents/{agent_id}", response_model=schemas.Agent)
+@router.put(
+    "/agents/{agent_id}",
+    response_model=schemas.Agent,
+    tags=[INTY_EVAL_TAG],
+)
 async def update_evaluation_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -533,7 +580,10 @@ async def update_evaluation_agent(
         raise HTTPException(status_code=500, detail="更新智能体失败")
 
 
-@router.delete("/agents/{agent_id}")
+@router.delete(
+    "/agents/{agent_id}",
+    tags=[INTY_EVAL_TAG],
+)
 async def delete_evaluation_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -571,7 +621,10 @@ async def delete_evaluation_agent(
         raise HTTPException(status_code=500, detail="删除智能体失败")
 
 
-@router.post("/agents/{agent_id}/deploy")
+@router.post(
+    "/agents/{agent_id}/deploy",
+    tags=[INTY_EVAL_TAG],
+)
 async def deploy_agent_to_production(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -609,7 +662,11 @@ async def deploy_agent_to_production(
 # =============================================================================
 
 
-@router.post("/templates", response_model=schemas.EvaluationTemplateResponse)
+@router.post(
+    "/templates",
+    response_model=schemas.EvaluationTemplateResponse,
+    tags=[INTY_EVAL_TAG],
+)
 async def create_evaluation_template(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -656,7 +713,11 @@ async def create_evaluation_template(
         raise HTTPException(status_code=500, detail="创建评测模板失败")
 
 
-@router.get("/templates", response_model=List[schemas.EvaluationTemplateResponse])
+@router.get(
+    "/templates",
+    response_model=List[schemas.EvaluationTemplateResponse],
+    tags=[INTY_EVAL_TAG],
+)
 async def get_evaluation_templates(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -702,7 +763,11 @@ async def get_evaluation_templates(
 # =============================================================================
 
 
-@router.post("/sessions/batch", response_model=List[schemas.EvaluationSessionResponse])
+@router.post(
+    "/sessions/batch",
+    response_model=List[schemas.EvaluationSessionResponse],
+    tags=[INTY_EVAL_TAG],
+)
 async def create_batch_evaluation(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -742,7 +807,10 @@ async def create_batch_evaluation(
         raise HTTPException(status_code=500, detail="批量创建评测失败")
 
 
-@router.post("/results/export")
+@router.post(
+    "/results/export",
+    tags=[INTY_EVAL_TAG],
+)
 async def export_evaluation_results(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -775,7 +843,11 @@ async def export_evaluation_results(
         raise HTTPException(status_code=500, detail="导出评测结果失败")
 
 
-@router.post("/sessions/compare", response_model=schemas.EvaluationComparison)
+@router.post(
+    "/sessions/compare",
+    response_model=schemas.EvaluationComparison,
+    tags=[INTY_EVAL_TAG],
+)
 async def compare_evaluation_sessions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),

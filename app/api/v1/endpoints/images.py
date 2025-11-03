@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from app import schemas
 from app.api import deps
+from app.api.tags import INTY_EVAL_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.schemas.response import APIResponse
 from app.utils.image_upload import process_image_upload
@@ -22,7 +23,7 @@ router = APIRouter(prefix="/images", route_class=LoggerRoute)
     response_model=APIResponse[dict],
     description="Upload image file with validation, compression, and GCS storage",
     summary="Upload image and get the URL of the image",
-    tags=["android-app"],
+    tags=["android-app", INTY_EVAL_TAG],
 )
 async def upload_image(
     file: UploadFile = File(...),
