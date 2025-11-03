@@ -41,6 +41,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -169,6 +170,8 @@ internal fun ChatPage(
     var showMorePanel by remember { mutableStateOf(false) }
     var morePanelHeight by remember { mutableStateOf(0.dp) }
     var showPremiumDialog by remember { mutableStateOf(false) }
+
+    val inputFocusRequester = remember(agentInfo?.id) { FocusRequester() }
 
     Box(
         modifier =
@@ -486,6 +489,7 @@ internal fun ChatPage(
                             onToggleMorePanel = { showMorePanel = !showMorePanel },
                             showMorePanel = showMorePanel,
                             bottomPadding = effectiveBottomPadding,
+                            focusRequester = inputFocusRequester,
                         )
                     }
                 }
@@ -518,6 +522,19 @@ internal fun ChatPage(
             // 如果未登录或为游客，则跳转登录
             LoginActivity.launch(context)
             chatViewModel.dismissLoginRequest()
+        }
+    }
+
+    LaunchedEffect(agentInfo?.id, isCurrentPage, showMorePanel) {
+        if (
+            isCurrentPage &&
+                !showMorePanel &&
+                agentInfo != null &&
+                IntySetting.needBlockInput().not()
+        ) {
+            // 等待一次帧同步，确保TextField已附着焦点请求者
+            delay(50)
+            inputFocusRequester.requestFocus()
         }
     }
 }
