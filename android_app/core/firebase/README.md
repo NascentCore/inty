@@ -33,7 +33,7 @@ FirebaseManager.logEvent(
 )
 
 // 使用预定义事件
-FirebaseManager.logEvent(FirebaseManager.Events.USER_LOGIN)
+FirebaseManager.logEvent(FirebaseManager.Events.LOGIN)
 ```
 
 ### 3. 设置用户属性
@@ -95,11 +95,11 @@ CrashlyticsTest.recordTestException(Exception("Test exception"))
 ## 预定义事件
 
 - `APP_OPEN`: 应用打开
-- `USER_LOGIN`: 用户登录
+- `LOGIN`: 用户登录（Firebase 内置事件）
 - `USER_LOGOUT`: 用户登出
-- `CHAT_STARTED`: 开始聊天
+- `chat_started`: 开始聊天（第一次发送消息时触发）
 - `MESSAGE_SENT`: 发送消息
-- `AI_RESPONSE_RECEIVED`: 收到AI回复
+- `MESSAGE_SEND_SUCCESS`: 消息发送成功
 - `PROFILE_UPDATED`: 更新资料
 - `SETTINGS_CHANGED`: 设置变更
 

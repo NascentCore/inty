@@ -20,12 +20,6 @@ experience your own imagination.
 - cmd+↑（放大模拟器设备界面）cmd+↓ （缩小模拟器设备界面）
 - [adb shell monkey](https://developer.android.com/studio/test/other-testing-tools/monkey)
 
-## 认证方案
-
-- 网络请求统一通过 `NetServiceMgr` 的 `AuthInterceptor` 注入 `Authorization: Bearer <token>` 头部，当前 token 由 `IntySetting.getCurToken()` 提供。
-- 登录或游客创建成功后，会调用 `IntySetting.login()` 将用户 ID 与 token 写入 MMKV，后续请求复用相同凭证；当服务端返回 401 时会触发自动登出与应用重启。
-- Inty SDK 网络栈通过 `IntyNetworkManager` 创建 `IntyClient` 时调用 `.apiKey(token)`，将同一 token 作为 API Key 传递，实现与 Retrofit 栈一致的 Bearer Token 认证。
-
 ## 运行脚本化点击测试（UIAutomator）
 
 前置条件：

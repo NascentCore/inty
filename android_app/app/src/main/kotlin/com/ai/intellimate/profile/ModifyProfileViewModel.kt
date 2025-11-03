@@ -15,7 +15,6 @@ import com.ai.intellimate.utils.IntyUserProfileSDK
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,8 +25,9 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
 
-class MySettingViewModel : BaseVM() {
+class ModifyProfileViewModel : BaseVM() {
 
     // 事件通知机制
     private val _events = MutableSharedFlow<ViewModelEvent>()

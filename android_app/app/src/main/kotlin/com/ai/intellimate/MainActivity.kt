@@ -382,9 +382,9 @@ private fun SplashLoginUI(
                                     userProfile
                                 )
 
-                                // 上报用户登录事件
+                                // 上报用户登录事件（使用 Firebase 内置 LOGIN 事件）
                                 ai.sxwl.android.firebase.FirebaseManager.logEvent(
-                                    ai.sxwl.android.firebase.FirebaseManager.Events.USER_LOGIN,
+                                    ai.sxwl.android.firebase.FirebaseManager.Events.LOGIN,
                                     ai.sxwl.android.firebase.FirebaseManager.safeEventParams(
                                         "user_id" to userProfile.id,
                                         "user_name" to (userProfile.nickname),

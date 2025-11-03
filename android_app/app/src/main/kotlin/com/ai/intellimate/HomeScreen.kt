@@ -280,18 +280,14 @@ private fun ConversationsTabContent(chatViewModel: ChatViewModel, context: Conte
     val conversations by chatViewModel.conversations.collectAsState()
     val isLoadingConversations by chatViewModel.isLoadingConversations.collectAsState()
     val isRefreshingConversations by chatViewModel.isRefreshingConversations.collectAsState()
-    val conversationAgentInfos by chatViewModel.conversationAgentInfos.collectAsState()
 
     MessagesPage(
         modifier = Modifier,
         conversations = conversations,
-        agentInfoMap = conversationAgentInfos,
         onClickConversationItem = { conversation ->
             chatViewModel.setConversationReaded(conversation)
-            // 从会话列表 跳转到聊天页面，使用 agentId 而不是转换后的 AgentInfo
-            // 这样 ChatActivity 会通过 setAgentID 从服务器获取完整的 Agent 信息（包括 extensions 字段）
-            // 确保显示正确的头像，与 explore-chat-ui 保持一致
-            ChatActivity.launch(context, agentId = conversation.agentId)
+            // 从会话列表 跳转到聊天页面，
+            ChatActivity.launch(context, conversation.convertToAgentInfo())
         },
         isLoadingConversations = isLoadingConversations,
         isRefreshingConversations = isRefreshingConversations,

@@ -45,11 +45,11 @@ import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.login.LoginActivity
-import com.ai.intellimate.profile.MySettingViewModel
+import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
-import com.ai.intellimate.ui.components.MySettingItem
+import com.ai.intellimate.ui.components.ProfileInfoItem
 
 /** 聊天设置抽屉组件 */
 @Composable
@@ -91,9 +91,9 @@ fun ChatSettingsDrawer(
     var editValue by rememberSaveable { mutableStateOf("") }
 
     // 复用 MySettingViewModel 的保存逻辑
-    val mySettingViewModel: MySettingViewModel = viewModel()
+    val modifyProfileViewModel: ModifyProfileViewModel = viewModel()
 
-    LaunchedEffect(userProfileState) { mySettingViewModel.init(userProfileState) }
+    LaunchedEffect(userProfileState) { modifyProfileViewModel.init(userProfileState) }
 
     // 移除TheRouter拦截器，使用其他方式处理用户信息更新
 
@@ -103,7 +103,8 @@ fun ChatSettingsDrawer(
         drawerContent = {
             Column(
                 modifier =
-                    Modifier.width(319.dp)
+                    Modifier
+                        .width(319.dp)
                         .fillMaxHeight()
                         .background(
                             brush =
@@ -124,7 +125,8 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier =
-                        Modifier.padding(horizontal = horizontalPadding.dp)
+                        Modifier
+                            .padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =
@@ -141,7 +143,7 @@ fun ChatSettingsDrawer(
                             )
                             .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
                 ) {
-                    MySettingItem(
+                    ProfileInfoItem(
                         key = stringResource(R.string.str_name),
                         value = userProfileState.nickname.ifEmpty { "Guest" },
                         horizontalPadding = horizontalPadding,
@@ -156,7 +158,7 @@ fun ChatSettingsDrawer(
                             }
                         },
                     )
-                    MySettingItem(
+                    ProfileInfoItem(
                         key = stringResource(R.string.str_pronouns),
                         value = userProfileState.pronouns(),
                         horizontalPadding = horizontalPadding,
@@ -171,7 +173,7 @@ fun ChatSettingsDrawer(
                             }
                         },
                     )
-                    MySettingItem(
+                    ProfileInfoItem(
                         key = stringResource(R.string.str_persona),
                         value = userProfileState.description ?: "Edit",
                         horizontalPadding = horizontalPadding,
@@ -202,7 +204,8 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier =
-                        Modifier.padding(horizontal = horizontalPadding.dp)
+                        Modifier
+                            .padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =
@@ -224,7 +227,8 @@ fun ChatSettingsDrawer(
                         // 举报入口
                         Row(
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .height(56.dp)
                                     .padding(horizontal = horizontalPadding.dp)
                                     .noRippleClickable {
@@ -267,10 +271,10 @@ fun ChatSettingsDrawer(
                     editValue = editValue,
                     onDismiss = { editKey = EditKey.None },
                     onSave = { key, value ->
-                        mySettingViewModel.changeUserProfile(key, value)
+                        modifyProfileViewModel.changeUserProfile(key, value)
                         editKey = EditKey.None
                         // 直接保存并刷新本地展示
-                        mySettingViewModel.onSave()
+                        modifyProfileViewModel.onSave()
                         chatViewModel.updateUserInfo()
                     },
                     onValueChange = { value -> editValue = value },
