@@ -62,6 +62,7 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
             chat.agent_background = chat.agent.background if chat.agent else None
+            chat.agent_extensions = chat.agent.extensions if chat.agent else None
             chat.agent_is_deleted = (
                 chat.agent.deleted_at is not None if chat.agent else None
             )
@@ -150,6 +151,7 @@ async def get_chats(
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
             chat.agent_background = chat.agent.background if chat.agent else None
+            chat.agent_extensions = chat.agent.extensions if chat.agent else None
             chat.agent_is_deleted = (
                 chat.agent.deleted_at is not None if chat.agent else None
             )
