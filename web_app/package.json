@@ -20,8 +20,8 @@
     "lint": "npm run biome:lint && npm run tsc",
     "prepare": "husky",
     "preview": "npm run build && max preview --port 8000",
-    "start": "cross-env UMI_ENV=dev max dev",
-    "start:dev": "cross-env REACT_APP_ENV=dev UMI_ENV=dev max dev",
+    "start": "cross-env PORT=6600 UMI_ENV=dev max dev",
+    "start:dev": "cross-env PORT=6600 REACT_APP_ENV=dev UMI_ENV=dev max dev",
     "tsc": "tsc --noEmit"
   },
   "browserslist": [
