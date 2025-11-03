@@ -21,7 +21,13 @@ from app.services import notification_service
 router = APIRouter(prefix="/notifications", route_class=LoggerRoute)
 
 
-@router.post("/", response_model=APIResponse, include_in_schema=False)
+@router.post(
+    "/",
+    response_model=APIResponse,
+    include_in_schema=False,
+    summary="发送通知消息",
+    description="向指定用户或全体用户发送系统通知，仅超级管理员可用",
+)
 async def send_notification(
     request: NotificationSendRequest,
     background_tasks: BackgroundTasks,
@@ -50,7 +56,12 @@ async def send_notification(
         )
 
 
-@router.get("/", response_model=APIResponse[NotificationList])
+@router.get(
+    "/",
+    response_model=APIResponse[NotificationList],
+    summary="分页获取通知列表",
+    description="按页返回当前用户收到的通知，可按已读状态筛选",
+)
 async def list_notifications(
     db: AsyncSession = Depends(deps.get_async_db),
     current_user=Depends(deps.get_current_active_user),
@@ -100,6 +111,8 @@ async def list_notifications(
     "/templates/types",
     response_model=APIResponse[Dict[str, int]],
     include_in_schema=False,
+    summary="获取通知模板类型映射",
+    description="返回模板类型与枚举值的映射关系，仅超级管理员可用",
 )
 async def get_template_types(
     current_user=Depends(deps.get_current_active_user),
@@ -125,6 +138,8 @@ async def get_template_types(
     "/templates",
     response_model=APIResponse[NotificationTemplateItem],
     include_in_schema=False,
+    summary="创建通知模板",
+    description="创建系统通知模板以复用标题与内容，仅超级管理员可用",
 )
 async def create_notification_template(
     template_data: NotificationTemplateCreate,
@@ -161,6 +176,8 @@ async def create_notification_template(
     "/templates",
     response_model=APIResponse[PaginationData[NotificationTemplateItem]],
     include_in_schema=False,
+    summary="分页获取通知模板列表",
+    description="分页返回通知模板信息，可按启用状态筛选，仅超级管理员可用",
 )
 async def list_templates(
     db: AsyncSession = Depends(deps.get_async_db),

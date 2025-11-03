@@ -11,7 +11,12 @@ from app.services import resource_service
 router = APIRouter(prefix="/resources", route_class=LoggerRoute)
 
 
-@router.get("/", response_model=List[schemas.Resource])
+@router.get(
+    "/",
+    response_model=List[schemas.Resource],
+    summary="??????",
+    description="???????????????",
+)
 def list_resources(
     db: Session = Depends(deps.get_db),
     skip: int = 0,
@@ -25,7 +30,12 @@ def list_resources(
     return resources
 
 
-@router.post("/", response_model=schemas.Resource)
+@router.post(
+    "/",
+    response_model=schemas.Resource,
+    summary="??????",
+    description="?????????????????????????",
+)
 def create_resource(
     *,
     db: Session = Depends(deps.get_db),
@@ -41,7 +51,12 @@ def create_resource(
     return resource
 
 
-@router.get("/{resource_id}", response_model=schemas.Resource)
+@router.get(
+    "/{resource_id}",
+    response_model=schemas.Resource,
+    summary="??????",
+    description="???? ID ?????????",
+)
 def get_resource(
     *,
     db: Session = Depends(deps.get_db),
@@ -57,7 +72,12 @@ def get_resource(
     return resource
 
 
-@router.put("/{resource_id}", response_model=schemas.Resource)
+@router.put(
+    "/{resource_id}",
+    response_model=schemas.Resource,
+    summary="??????",
+    description="????????????",
+)
 def update_resource(
     *,
     db: Session = Depends(deps.get_db),
@@ -77,7 +97,12 @@ def update_resource(
     return resource
 
 
-@router.delete("/{resource_id}", response_model=schemas.Resource)
+@router.delete(
+    "/{resource_id}",
+    response_model=schemas.Resource,
+    summary="??????",
+    description="????????????????",
+)
 def delete_resource(
     *,
     db: Session = Depends(deps.get_db),

@@ -39,6 +39,8 @@ async def get_current_superuser(
     response_model=APIResponse[SystemSettingsListResponse],
     deprecated=True,
     include_in_schema=False,
+    summary="获取所有系统配置（仅超级管理员）",
+    description="返回所有系统配置项及详细信息，接口已标记弃用，仅为历史兼容保留",
 )
 async def get_all_system_settings(
     db: AsyncSession = Depends(get_async_db),
@@ -84,6 +86,8 @@ async def get_all_system_settings(
     response_model=APIResponse[SystemSettingsListResponse],
     deprecated=True,
     include_in_schema=False,
+    summary="按分类获取系统配置（仅超级管理员）",
+    description="根据提供的分类返回对应的系统配置列表，接口已标记弃用，仅为历史兼容保留",
 )
 async def get_settings_by_category(
     category: SettingCategory,
@@ -130,6 +134,8 @@ async def get_settings_by_category(
     response_model=APIResponse[SystemSetting],
     deprecated=True,
     include_in_schema=False,
+    summary="更新指定系统配置（仅超级管理员）",
+    description="更新给定键的系统配置并返回最新配置内容，接口已标记弃用，仅为历史兼容保留",
 )
 async def update_system_setting(
     key: str,
@@ -188,6 +194,8 @@ async def update_system_setting(
     response_model=APIResponse[FreeUserLimitsResponse],
     deprecated=True,
     include_in_schema=False,
+    summary="获取免费用户使用限制（仅超级管理员）",
+    description="查看免费用户生成背景图、聊天次数等限制配置，接口已标记弃用，仅为历史兼容保留",
 )
 async def get_free_user_limits(
     db: AsyncSession = Depends(get_async_db),
@@ -217,6 +225,8 @@ async def get_free_user_limits(
     response_model=APIResponse[dict],
     deprecated=True,
     include_in_schema=False,
+    summary="清除系统配置缓存（仅超级管理员）",
+    description="清除单个或全部系统配置缓存，接口已标记弃用，仅为历史兼容保留",
 )
 async def clear_system_settings_cache(
     key: str = None, current_user: schemas.User = Depends(get_current_superuser)

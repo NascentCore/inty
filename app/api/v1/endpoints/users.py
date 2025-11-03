@@ -31,6 +31,7 @@ router = APIRouter(prefix="/users", route_class=LoggerRoute)
     deprecated=True,
     include_in_schema=False,
     summary="[Deprecated, use /me, kept for v1.0.3 compatibility]",
+    description="已弃用接口，返回当前用户资料以兼容早期客户端版本",
     response_model=User,
 )
 async def get_profile(
@@ -70,7 +71,13 @@ async def get_profile(
     return User(**user_dict)
 
 
-@router.get("/me", response_model=APIResponse[User], tags=["android-app"])
+@router.get(
+    "/me",
+    response_model=APIResponse[User],
+    tags=["android-app"],
+    summary="获取当前用户资料",
+    description="返回当前登录用户的基础信息与统计字段，供前端展示",
+)
 async def get_me(
     current_user: User = Depends(deps.get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
@@ -165,7 +172,13 @@ async def register_device_token(
         return APIResponse.error(message=str(e))
 
 
-@router.get("/deletion/check", response_model=APIResponse[DeletionCheckResponse], tags=["android-app"])
+@router.get(
+    "/deletion/check",
+    response_model=APIResponse[DeletionCheckResponse],
+    tags=["android-app"],
+    summary="检查账户删除条件",
+    description="判断当前用户是否满足删除账户的前置条件，并返回阻塞原因",
+)
 async def check_deletion_eligibility(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(deps.get_current_active_user),
@@ -192,7 +205,13 @@ async def check_deletion_eligibility(
         return APIResponse.error(message="Failed to check deletion permissions")
 
 
-@router.post("/delete-account", response_model=APIResponse[AccountDeletionResponse], tags=["android-app"])
+@router.post(
+    "/delete-account",
+    response_model=APIResponse[AccountDeletionResponse],
+    tags=["android-app"],
+    summary="删除用户账户",
+    description="执行账号删除流程并清理相关资源，返回删除结果",
+)
 async def delete_user_account(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(deps.get_current_active_user),
@@ -234,7 +253,13 @@ async def delete_user_account(
 
 
 # TODO: Move this to admin router, and do not include the router in production.
-@router.get("", response_model=UserList, include_in_schema=False)
+@router.get(
+    "",
+    response_model=UserList,
+    include_in_schema=False,
+    summary="获取用户列表（管理员）",
+    description="分页查询用户信息并支持关键字搜索，仅供内部管理工具使用",
+)
 async def get_all_users(
     *,
     db: AsyncSession = Depends(get_async_db),

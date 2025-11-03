@@ -18,7 +18,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/evaluation", route_class=LoggerRoute)
 
 
-@router.get("/sessions", response_model=List[schemas.EvaluationSessionResponse])
+@router.get(
+    "/sessions",
+    response_model=List[schemas.EvaluationSessionResponse],
+    summary="获取评测会话列表",
+    description="根据分页与状态参数返回当前用户创建的评测会话，仅超级管理员可用",
+)
 async def get_evaluation_sessions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -49,7 +54,12 @@ async def get_evaluation_sessions(
         raise HTTPException(status_code=500, detail="获取评测会话列表失败")
 
 
-@router.post("/sessions", response_model=schemas.EvaluationSessionResponse)
+@router.post(
+    "/sessions",
+    response_model=schemas.EvaluationSessionResponse,
+    summary="创建评测会话",
+    description="创建新的评测会话，配置问题集、候选智能体与评分模型，需超级管理员权限",
+)
 async def create_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -88,7 +98,11 @@ async def create_evaluation_session(
         raise HTTPException(status_code=500, detail="创建评测会话失败")
 
 
-@router.post("/sessions/{session_id}/start")
+@router.post(
+    "/sessions/{session_id}/start",
+    summary="启动评测会话",
+    description="校验会话归属后启动批量评测流程，将任务推送至后台执行",
+)
 async def start_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -126,7 +140,12 @@ async def start_evaluation_session(
         raise HTTPException(status_code=500, detail="启动评测会话失败")
 
 
-@router.get("/sessions/{session_id}", response_model=schemas.EvaluationSessionDetail)
+@router.get(
+    "/sessions/{session_id}",
+    response_model=schemas.EvaluationSessionDetail,
+    summary="获取评测会话详情",
+    description="返回指定评测会话的完整配置信息与当前执行状态，仅超级管理员可用",
+)
 async def get_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -161,6 +180,8 @@ async def get_evaluation_session(
 @router.get(
     "/sessions/{session_id}/results",
     response_model=List[schemas.EvaluationResultResponse],
+    summary="获取评测结果列表",
+    description="返回指定评测会话中所有测试的评分结果，仅超级管理员可用",
 )
 async def get_evaluation_results(
     *,
@@ -195,7 +216,11 @@ async def get_evaluation_results(
         raise HTTPException(status_code=500, detail="获取评测结果失败")
 
 
-@router.post("/sessions/{session_id}/cancel")
+@router.post(
+    "/sessions/{session_id}/cancel",
+    summary="取消评测会话",
+    description="终止正在运行的评测任务，释放相关资源，仅超级管理员可用",
+)
 async def cancel_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -231,7 +256,12 @@ async def cancel_evaluation_session(
         raise HTTPException(status_code=500, detail="取消评测会话失败")
 
 
-@router.post("/questions/parse", response_model=schemas.QuestionFileUpload)
+@router.post(
+    "/questions/parse",
+    response_model=schemas.QuestionFileUpload,
+    summary="解析评测题目文件",
+    description="上传题目文件并解析为标准结构，支持 JSON 等格式，仅超级管理员可用",
+)
 async def parse_questions_file(
     *,
     file: UploadFile = File(...),
@@ -282,7 +312,12 @@ async def parse_questions_file(
         raise HTTPException(status_code=400, detail=f"文件解析失败: {str(e)}")
 
 
-@router.get("/models", response_model=List[schemas.ScoringModelInfo])
+@router.get(
+    "/models",
+    response_model=List[schemas.ScoringModelInfo],
+    summary="获取可用评分模型",
+    description="列出可用于评测的模型信息，包含模型标识与说明，仅超级管理员可用",
+)
 async def get_scoring_models(
     *,
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -303,7 +338,11 @@ async def get_scoring_models(
         raise HTTPException(status_code=500, detail="获取评分模型失败")
 
 
-@router.post("/scoring-criteria/validate")
+@router.post(
+    "/scoring-criteria/validate",
+    summary="验证评分标准配置",
+    description="检查评分标准文本格式是否符合要求并返回校验结果，仅超级管理员可用",
+)
 async def validate_scoring_criteria(
     *,
     criteria: str,
@@ -327,7 +366,12 @@ async def validate_scoring_criteria(
         raise HTTPException(status_code=500, detail="验证评分标准失败")
 
 
-@router.get("/stats", response_model=schemas.EvaluationStats)
+@router.get(
+    "/stats",
+    response_model=schemas.EvaluationStats,
+    summary="获取评测统计信息",
+    description="按时间范围汇总评测会话数量、成功率等统计数据，仅超级管理员可用",
+)
 async def get_evaluation_stats(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -423,7 +467,12 @@ async def monitor_evaluation_session(
 # =============================================================================
 
 
-@router.get("/agents", response_model=List[schemas.Agent])
+@router.get(
+    "/agents",
+    response_model=List[schemas.Agent],
+    summary="获取评测智能体列表",
+    description="按公开或私有类型筛选可用于评测的智能体集合，仅超级管理员可用",
+)
 async def get_evaluation_agents(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -462,7 +511,12 @@ async def get_evaluation_agents(
         raise HTTPException(status_code=500, detail="获取智能体列表失败")
 
 
-@router.post("/agents", response_model=schemas.Agent)
+@router.post(
+    "/agents",
+    response_model=schemas.Agent,
+    summary="创建评测智能体",
+    description="创建评测系统专用的智能体配置，仅超级管理员可用",
+)
 async def create_evaluation_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -492,7 +546,12 @@ async def create_evaluation_agent(
         raise HTTPException(status_code=500, detail="创建智能体失败")
 
 
-@router.put("/agents/{agent_id}", response_model=schemas.Agent)
+@router.put(
+    "/agents/{agent_id}",
+    response_model=schemas.Agent,
+    summary="更新评测智能体",
+    description="修改指定评测智能体的提示词与配置，仅超级管理员可用",
+)
 async def update_evaluation_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -533,7 +592,11 @@ async def update_evaluation_agent(
         raise HTTPException(status_code=500, detail="更新智能体失败")
 
 
-@router.delete("/agents/{agent_id}")
+@router.delete(
+    "/agents/{agent_id}",
+    summary="删除评测智能体",
+    description="删除当前用户创建的评测智能体，仅超级管理员可用",
+)
 async def delete_evaluation_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -571,7 +634,11 @@ async def delete_evaluation_agent(
         raise HTTPException(status_code=500, detail="删除智能体失败")
 
 
-@router.post("/agents/{agent_id}/deploy")
+@router.post(
+    "/agents/{agent_id}/deploy",
+    summary="部署评测智能体到生产",
+    description="将评测环境内的智能体发布到生产环境，需要超级管理员并提供管理密钥",
+)
 async def deploy_agent_to_production(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -609,7 +676,12 @@ async def deploy_agent_to_production(
 # =============================================================================
 
 
-@router.post("/templates", response_model=schemas.EvaluationTemplateResponse)
+@router.post(
+    "/templates",
+    response_model=schemas.EvaluationTemplateResponse,
+    summary="创建评测模板",
+    description="保存常用题目集与评分配置为模板，供后续快速复用，仅超级管理员可用",
+)
 async def create_evaluation_template(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -656,7 +728,12 @@ async def create_evaluation_template(
         raise HTTPException(status_code=500, detail="创建评测模板失败")
 
 
-@router.get("/templates", response_model=List[schemas.EvaluationTemplateResponse])
+@router.get(
+    "/templates",
+    response_model=List[schemas.EvaluationTemplateResponse],
+    summary="获取评测模板列表",
+    description="分页返回当前用户的评测模板，并可选择附带公开模板",
+)
 async def get_evaluation_templates(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -702,7 +779,12 @@ async def get_evaluation_templates(
 # =============================================================================
 
 
-@router.post("/sessions/batch", response_model=List[schemas.EvaluationSessionResponse])
+@router.post(
+    "/sessions/batch",
+    response_model=List[schemas.EvaluationSessionResponse],
+    summary="批量创建评测会话",
+    description="一次性创建多个评测会话以加速测试，仅超级管理员可用",
+)
 async def create_batch_evaluation(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -742,7 +824,11 @@ async def create_batch_evaluation(
         raise HTTPException(status_code=500, detail="批量创建评测失败")
 
 
-@router.post("/results/export")
+@router.post(
+    "/results/export",
+    summary="导出评测结果",
+    description="根据会话 ID 导出评测结果为 CSV/JSON 等格式，仅超级管理员可用",
+)
 async def export_evaluation_results(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -775,7 +861,12 @@ async def export_evaluation_results(
         raise HTTPException(status_code=500, detail="导出评测结果失败")
 
 
-@router.post("/sessions/compare", response_model=schemas.EvaluationComparison)
+@router.post(
+    "/sessions/compare",
+    response_model=schemas.EvaluationComparison,
+    summary="对比评测会话结果",
+    description="对多个评测会话的指标进行对比分析，输出综合结论，仅超级管理员可用",
+)
 async def compare_evaluation_sessions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),

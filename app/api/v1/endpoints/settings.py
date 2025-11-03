@@ -15,7 +15,12 @@ from loguru import logger
 router = APIRouter(prefix="/settings", route_class=LoggerRoute)
 
 
-@router.get("/", response_model=schemas.Settings)
+@router.get(
+    "/",
+    response_model=schemas.Settings,
+    summary="??????",
+    description="????????????????????????",
+)
 def get_settings_endpoint(
     db: Session = Depends(deps.get_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -45,7 +50,12 @@ def get_settings_endpoint(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.put("/", response_model=schemas.Settings)
+@router.put(
+    "/",
+    response_model=schemas.Settings,
+    summary="??????",
+    description="???????????????????????",
+)
 def update_settings_endpoint(
     *,
     db: Session = Depends(deps.get_db),

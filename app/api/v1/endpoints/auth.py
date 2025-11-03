@@ -27,7 +27,12 @@ router = APIRouter(prefix="/auth", route_class=LoggerRoute)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{API_V1_PREFIX}/auth/login")
 
 
-@router.post("/guest", response_model=APIResponse[GuestResponse])
+@router.post(
+    "/guest",
+    response_model=APIResponse[GuestResponse],
+    summary="创建游客账号",
+    description="基于设备信息创建临时游客用户并返回访问令牌，用于首次体验应用",
+)
 async def create_guest(
     *,
     db: AsyncSession = Depends(get_async_db),
@@ -53,7 +58,13 @@ async def create_guest(
         return APIResponse.error(message=str(e))
 
 
-@router.post("/google/login", response_model=APIResponse[LoginResponse], tags=["android-app"])
+@router.post(
+    "/google/login",
+    response_model=APIResponse[LoginResponse],
+    tags=["android-app"],
+    summary="Google 登录并返回令牌",
+    description="校验 Google ID Token，自动创建或更新用户账号并返回访问令牌及用户信息",
+)
 async def google_login(
     *,
     db: AsyncSession = Depends(get_async_db),

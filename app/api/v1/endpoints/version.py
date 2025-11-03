@@ -13,7 +13,13 @@ from app.schemas.version import VersionCheckResponse
 router = APIRouter(prefix="/version", route_class=LoggerRoute)
 
 
-@router.post("/check", response_model=APIResponse[VersionCheckResponse], tags=["android-app"])
+@router.post(
+    "/check",
+    response_model=APIResponse[VersionCheckResponse],
+    tags=["android-app"],
+    summary="检查客户端版本更新",
+    description="根据客户端上报的版本号判断是否需要更新，并返回最新版本信息",
+)
 async def check_version(
     *,
     app_version_code: int = Header(

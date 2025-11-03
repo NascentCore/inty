@@ -81,7 +81,12 @@ async def upload_report_image(
         return APIResponse.error(message="Image upload failed")
 
 
-@router.post("/", response_model=APIResponse)
+@router.post(
+    "/",
+    response_model=APIResponse,
+    summary="??????",
+    description="?????????????????????????????",
+)
 async def create_report(
     report_in: ReportCreate,
     db: AsyncSession = Depends(get_async_db),

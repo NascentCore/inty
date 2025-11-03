@@ -53,6 +53,7 @@ async def get_current_superuser(
     deprecated=True,
     include_in_schema=False,
     summary="[Deprecated, use /me, kept for v1.0.3 compatibility]",
+    description="已弃用接口，返回当前用户创建的智能体列表，仅用于兼容 v1.0.3 客户端",
 )
 @router.get(
     "/me",
@@ -83,6 +84,7 @@ async def list_agents(
     "/search",
     response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
     summary="Used by inty-eval to list all public AI characters",
+    description="根据关键词分页查询公开的 AI 角色列表，支持名称、描述与分类模糊匹配",
 )
 async def search_agents(
     q: str = Query(..., description="Search keyword"),
@@ -153,6 +155,8 @@ async def recommend_agents(
 @router.get(
     "/following",
     response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
+    summary="获取我关注的智能体列表",
+    description="分页返回当前用户关注的智能体信息，包括关注时间、头像等概要数据",
 )
 async def get_following_agents(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -266,7 +270,12 @@ async def get_agent(
     return agent
 
 
-@router.post("/{agent_id}/follow", response_model=schemas.APIResponse[dict])
+@router.post(
+    "/{agent_id}/follow",
+    response_model=schemas.APIResponse[dict],
+    summary="关注指定智能体",
+    description="当前用户关注目标智能体，成功后返回确认消息，若已关注则返回对应错误信息",
+)
 async def follow_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -286,7 +295,12 @@ async def follow_agent(
         return schemas.APIResponse.error(message="Failed to follow")
 
 
-@router.delete("/{agent_id}/follow", response_model=schemas.APIResponse[dict])
+@router.delete(
+    "/{agent_id}/follow",
+    response_model=schemas.APIResponse[dict],
+    summary="取消关注指定智能体",
+    description="当前用户取消对目标智能体的关注关系，成功后返回确认消息",
+)
 async def unfollow_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -336,7 +350,13 @@ async def update_agent(
     return agent
 
 
-@router.delete("/{agent_id}", response_model=schemas.APIResponse[schemas.Agent], tags=["android-app"])
+@router.delete(
+    "/{agent_id}",
+    response_model=schemas.APIResponse[schemas.Agent],
+    tags=["android-app"],
+    summary="删除智能体",
+    description="仅智能体创建者可删除指定智能体，删除后返回删除的智能体信息",
+)
 async def delete_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -407,6 +427,7 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
     summary="[Deprecated, use /api/v1/images/text-to-image instead] Generate images based on text description",
     deprecated=True,
     include_in_schema=False,
+    description="旧版聊天图片生成功能，已迁移至 /api/v1/images/text-to-image，保留兼容性",
 )
 async def generate_background(
     request: schemas.TextToImageRequest,
@@ -578,6 +599,8 @@ async def generate_background(
     deprecated=True,
     include_in_schema=False,
     response_model=schemas.APIResponse[schemas.CreatorAgentStats],
+    summary="获取创作者公共智能体统计",
+    description="返回指定创作者的公共智能体数量及关注总数，接口已弃用，仅供内部历史使用",
 )
 async def get_creator_agent_stats(
     *,
@@ -607,6 +630,8 @@ async def get_creator_agent_stats(
     response_model=APIResponse[CharacterCardImportResponse],
     include_in_schema=False,
     tags=["unknown", "inty-eval"],
+    summary="导入角色卡（JSON 数据）",
+    description="接受角色卡 JSON 数据并创建或更新智能体，主要用于评测工具内部操作",
 )
 async def import_character_card(
     request: CharacterCardImportRequest,
@@ -636,6 +661,8 @@ async def import_character_card(
     response_model=APIResponse[CharacterCardImportResponse],
     include_in_schema=False,
     tags=["unknown", "inty-eval"],
+    summary="从文件导入角色卡",
+    description="上传 JSON 或 PNG 角色卡文件，支持覆盖现有角色及可选项控制角色书与问候语导入",
 )
 async def import_character_card_file(
     file: UploadFile = File(...),
@@ -679,6 +706,8 @@ async def import_character_card_file(
     response_model=APIResponse[dict],
     include_in_schema=False,
     tags=["unknown", "inty-eval"],
+    summary="导出角色卡 JSON 数据",
+    description="将指定智能体导出为角色卡结构，返回可供下载或存档的 JSON 数据",
 )
 async def export_character_card(
     request: CharacterCardExportRequest,
@@ -712,6 +741,8 @@ async def export_character_card(
     response_model=APIResponse[dict],
     include_in_schema=False,
     tags=["unknown", "inty-eval"],
+    summary="获取智能体角色卡详情",
+    description="按需加载角色书、替代问候语与扩展信息，返回完整的角色卡数据结构",
 )
 async def get_agent_character_card(
     agent_id: str,
@@ -748,6 +779,8 @@ async def get_agent_character_card(
     response_model=APIResponse[CharacterCardValidationResponse],
     include_in_schema=False,
     tags=["unknown", "inty-eval"],
+    summary="校验角色卡结构",
+    description="验证上传的角色卡 JSON 是否符合格式要求，返回详细校验结果",
 )
 async def validate_character_card(
     card_data: dict, current_user: schemas.User = Depends(deps.get_current_active_user)
@@ -769,6 +802,8 @@ async def validate_character_card(
     response_model=APIResponse[dict],
     include_in_schema=False,
     tags=["unknown", "inty-eval"],
+    summary="获取角色卡支持特性列表",
+    description="列出角色卡映射器支持的字段、版本号与扩展能力，供工具端快速读取",
 )
 async def get_character_card_features(
     current_user: schemas.User = Depends(deps.get_current_active_user),
