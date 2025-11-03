@@ -21,6 +21,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -51,6 +53,7 @@ fun IntySmallTextField(
     selection: Int = 0,
     maxLines: Int = Int.MAX_VALUE,
     maxLength: Int = 1000, // 输入文案默认最大1000个字符
+    focusRequester: FocusRequester? = null,
 ) {
 
     Row(modifier = modifier.wrapContentHeight(), verticalAlignment = Alignment.CenterVertically) {
@@ -99,11 +102,16 @@ fun IntySmallTextField(
                 textFieldValue = textFieldValue.copy(text = value, selection = TextRange(selection))
             }
             val scope = rememberCoroutineScope()
+            val textFieldModifier =
+                Modifier.fillMaxWidth()
+                    .onFocusChanged { focusState -> onFocusChanged?.invoke(focusState.isFocused) }
+                    .let { modifierWithFocus ->
+                        focusRequester?.let { modifierWithFocus.focusRequester(it) }
+                            ?: modifierWithFocus
+                    }
+
             TextField(
-                modifier =
-                    Modifier.fillMaxWidth().onFocusChanged { focusState ->
-                        onFocusChanged?.invoke(focusState.isFocused)
-                    },
+                modifier = textFieldModifier,
                 enabled = enabled,
                 singleLine = singleLine,
                 value = textFieldValue,
