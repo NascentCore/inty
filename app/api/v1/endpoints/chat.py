@@ -27,10 +27,6 @@ from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
-ChatImageResponse: TypeAlias = schemas.APIResponse[Union[
-    schemas.ChatImageGenerationResponse, UsageLimitExceeded
-]]
-
 
 def _handle_subscription_limit_error(
     session_id: str,
@@ -276,9 +272,14 @@ async def agent_chat_completions(
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
 
+ChatImageGenerationAPIResponse: TypeAlias = schemas.APIResponse[Union[
+    schemas.ChatImageGenerationResponse, UsageLimitExceeded
+]]
+
+
 @router.post(
     "/images/{agent_id}",
-    response_model=ChatImageResponse,
+    response_model=ChatImageGenerationAPIResponse,
     summary="基于聊天消息及历史消息和其他相关信息（角色背景、用户 profile 等）生成图片",
     description=(
         "根据Agent角色、聊天历史和用户消息生成图片，并保存到聊天历史中。"
@@ -293,7 +294,7 @@ async def generate_chat_image(
     agent_id: str,
     request: schemas.ChatImageGenerationRequest,
     current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> ChatImageResponse:
+) -> ChatImageGenerationAPIResponse:
     """
     基于聊天上下文生成图片
 
