@@ -21,6 +21,8 @@ interface IUseVoicePlayerParams {
   agentId?: string;
   /** Message ID */
   messageId: string | number;
+  /** 已有的音频 URL（如果有则直接使用，无需调用 API） */
+  audioUrl?: string | null;
 }
 
 /**
@@ -43,12 +45,14 @@ interface IUseVoicePlayerReturn {
  * ```tsx
  * const { voiceStatus, playVoice, stopVoice } = useVoicePlayer({
  *   agentId: 'agent_123',
- *   messageId: 'msg_456'
+ *   messageId: 'msg_456',
+ *   audioUrl: message.audio_url // 可选，如果有则直接使用
  * });
  * ```
  *
  * 功能特性：
- * - 自动缓存音频 URL，避免重复请求
+ * - 优先使用已有音频 URL，避免重复请求
+ * - 自动缓存音频 URL
  * - 支持播放/停止控制
  * - 自动资源清理
  * - 错误处理和日志记录
@@ -56,6 +60,7 @@ interface IUseVoicePlayerReturn {
 export const useVoicePlayer = ({
   agentId,
   messageId,
+  audioUrl: propsAudioUrl,
 }: IUseVoicePlayerParams): IUseVoicePlayerReturn => {
   // 获取 Google 登录弹窗状态管理
   const googleLoginModal = useModel("googleLoginModal");
@@ -63,8 +68,8 @@ export const useVoicePlayer = ({
   // 语音播放状态
   const [voiceStatus, setVoiceStatus] = useState<TVoiceStatus>("idle");
 
-  // 音频 URL 缓存
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  // 音频 URL 缓存（来自 API 生成）
+  const [cachedAudioUrl, setCachedAudioUrl] = useState<string | null>(null);
 
   // 音频播放器引用
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -73,16 +78,38 @@ export const useVoicePlayer = ({
    * 播放语音
    */
   const playVoice = useCallback(async () => {
-    if (!agentId || !messageId) {
-      logger.warn("缺少 agentId 或 messageId，无法生成语音");
-      return;
-    }
-
     try {
+      // 优先使用 props 传入的 audioUrl，其次使用缓存的 URL
+      const audioUrlToUse = propsAudioUrl || cachedAudioUrl;
+
       // 如果已有音频 URL，直接播放
-      if (audioUrl && audioRef.current) {
+      if (audioUrlToUse) {
+        // 如果已有播放器且 URL 相同，直接播放
+        if (audioRef.current && audioRef.current.src === audioUrlToUse) {
+          setVoiceStatus("playing");
+          await audioRef.current.play();
+          return;
+        }
+
+        // 创建新的播放器
+        const audio = new Audio(audioUrlToUse);
+        audioRef.current = audio;
+
+        audio.onplay = () => setVoiceStatus("playing");
+        audio.onended = () => setVoiceStatus("idle");
+        audio.onerror = () => {
+          logger.error("音频播放失败");
+          setVoiceStatus("idle");
+        };
+
         setVoiceStatus("playing");
-        await audioRef.current.play();
+        await audio.play();
+        return;
+      }
+
+      // 如果没有音频 URL，需要调用 API 生成
+      if (!agentId || !messageId) {
+        logger.warn("缺少 agentId 或 messageId，无法生成语音");
         return;
       }
 
@@ -91,7 +118,7 @@ export const useVoicePlayer = ({
       const voiceData = await generateMessageVoice(messageId, agentId);
 
       // 缓存音频 URL
-      setAudioUrl(voiceData.audio_url);
+      setCachedAudioUrl(voiceData.audio_url);
 
       // 创建并播放音频
       const audio = new Audio(voiceData.audio_url);
@@ -106,7 +133,7 @@ export const useVoicePlayer = ({
 
       await audio.play();
     } catch (err) {
-      logger.error("生成语音失败:", err);
+      logger.error("播放语音失败:", err);
       setVoiceStatus("idle");
 
       // 处理 GUEST_LOGIN_REQUIRED 错误
@@ -115,7 +142,7 @@ export const useVoicePlayer = ({
         googleLoginModal.show();
       }
     }
-  }, [agentId, messageId, audioUrl, googleLoginModal]);
+  }, [agentId, messageId, propsAudioUrl, cachedAudioUrl, googleLoginModal]);
 
   /**
    * 停止播放语音

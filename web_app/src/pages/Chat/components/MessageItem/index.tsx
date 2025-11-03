@@ -40,6 +40,7 @@ const MessageItem: React.FC<IMessageItemProps> = ({
   const { voiceStatus, playVoice, stopVoice } = useVoicePlayer({
     agentId,
     messageId: message.id,
+    audioUrl: message.audio_url, // 优先使用消息体中的音频 URL
   });
 
   return (
