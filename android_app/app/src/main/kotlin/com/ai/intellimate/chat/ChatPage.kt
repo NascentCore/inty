@@ -41,6 +41,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -84,17 +85,19 @@ internal fun ChatPage(
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val isQueryMsgsCompleted by chatViewModel.isQueryMsgsCompleted.collectAsState()
 
-    // 使用 PageTrackingHelper 进行页面跟踪
-    LaunchedEffect(Unit) {
-        PageTrackingHelper.trackPageView(
-            "ChatPage",
-            if (showBackButton) "ChatActivity" else "MainActivity",
-            mapOf(
-                "agent_id" to (agentInfo?.id ?: "unknown"),
-                "agent_name" to (agentInfo?.name ?: "unknown"),
-                "show_back_button" to showBackButton,
+    // 使用 PageTrackingHelper 进行页面跟踪（仅在页面可见时触发，避免 HorizontalPager 缓存机制导致的误触发）
+    LaunchedEffect(isCurrentPage, agentInfo?.id) {
+        if (isCurrentPage) {
+            PageTrackingHelper.trackPageView(
+                "ChatPage",
+                if (showBackButton) "ChatActivity" else "MainActivity",
+                mapOf(
+                    "agent_id" to (agentInfo?.id ?: "unknown"),
+                    "agent_name" to (agentInfo?.name ?: "unknown"),
+                    "show_back_button" to showBackButton,
+                )
             )
-        )
+        }
     }
 
     LaunchedEffect(chatViewModel) {
@@ -170,6 +173,8 @@ internal fun ChatPage(
     var morePanelHeight by remember { mutableStateOf(0.dp) }
     var showPremiumDialog by remember { mutableStateOf(false) }
 
+    val inputFocusRequester = remember(agentInfo?.id) { FocusRequester() }
+
     Box(
         modifier =
             modifier.pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
@@ -181,17 +186,25 @@ internal fun ChatPage(
         val scope = rememberCoroutineScope()
 
         Scaffold(
-            modifier = Modifier.fillMaxSize().background(Color.Transparent),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent),
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
         ) { innerPadding ->
-            Column(modifier = Modifier.padding(innerPadding).imePadding()) {
+            Column(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .imePadding()
+            ) {
                 Spacer(Modifier.height(48.dp))
 
                 // 立即显示TopBar和Premium标签（不等待数据加载）
                 agentInfo?.let { info ->
                     ChatTopBar(
-                        modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 18.dp),
                         agentInfo = info,
                         showBackButton = showBackButton,
                         onBack = onBack,
@@ -269,7 +282,9 @@ internal fun ChatPage(
                             (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
 
                 LazyColumn(
-                    modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 16.dp),
                     state = listState,
                     reverseLayout = true, // ⚠️此处使用了reverse，导致布局列表是反向的
                 ) {
@@ -311,7 +326,8 @@ internal fun ChatPage(
                                                 // 渲染失败时显示错误占位符
                                                 Box(
                                                     modifier =
-                                                        Modifier.fillMaxWidth()
+                                                        Modifier
+                                                            .fillMaxWidth()
                                                             .height(60.dp)
                                                             .background(
                                                                 Color.Red.copy(alpha = 0.1f)
@@ -334,7 +350,8 @@ internal fun ChatPage(
                             item {
                                 Box(
                                     modifier =
-                                        Modifier.fillMaxWidth()
+                                        Modifier
+                                            .fillMaxWidth()
                                             .height(100.dp)
                                             .background(Color.Red.copy(alpha = 0.1f))
                                 ) {
@@ -394,13 +411,17 @@ internal fun ChatPage(
                     if (showLoadMoreUi) {
                         item {
                             Box(
-                                modifier = Modifier.fillMaxWidth().height(60.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(60.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (isLoadingMore) {
                                     CircularProgressIndicator(
                                         color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.width(24.dp).height(24.dp),
+                                        modifier = Modifier
+                                            .width(24.dp)
+                                            .height(24.dp),
                                     )
                                 } else {
                                     Text(
@@ -459,7 +480,8 @@ internal fun ChatPage(
                     if (agentInfo?.isDeleted == true) {
                         Box(
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .height(48.dp)
                                     .padding(horizontal = 16.dp)
                                     .clip(RoundedCornerShape(24.dp))
@@ -486,6 +508,7 @@ internal fun ChatPage(
                             onToggleMorePanel = { showMorePanel = !showMorePanel },
                             showMorePanel = showMorePanel,
                             bottomPadding = effectiveBottomPadding,
+                            focusRequester = inputFocusRequester,
                         )
                     }
                 }
@@ -518,6 +541,19 @@ internal fun ChatPage(
             // 如果未登录或为游客，则跳转登录
             LoginActivity.launch(context)
             chatViewModel.dismissLoginRequest()
+        }
+    }
+
+    LaunchedEffect(agentInfo?.id, isCurrentPage, showMorePanel) {
+        if (
+            isCurrentPage &&
+                !showMorePanel &&
+                agentInfo != null &&
+                IntySetting.needBlockInput().not()
+        ) {
+            // 等待一次帧同步，确保TextField已附着焦点请求者
+            delay(50)
+            inputFocusRequester.requestFocus()
         }
     }
 }

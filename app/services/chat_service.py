@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 from app import models, schemas
 from app.models.user import AuthType
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
-from app.schemas.response import BusinessErrorCode
+from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
 from app.services import agent_service, chat_history_service
 from app.services.cache_service import cache_service
 from app.services.global_services import subscription_service
@@ -62,6 +62,7 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
             chat.agent_background = chat.agent.background if chat.agent else None
+            chat.agent_extensions = chat.agent.extensions if chat.agent else None
             chat.agent_is_deleted = (
                 chat.agent.deleted_at is not None if chat.agent else None
             )
@@ -150,6 +151,7 @@ async def get_chats(
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
             chat.agent_background = chat.agent.background if chat.agent else None
+            chat.agent_extensions = chat.agent.extensions if chat.agent else None
             chat.agent_is_deleted = (
                 chat.agent.deleted_at is not None if chat.agent else None
             )
@@ -1115,7 +1117,7 @@ async def generate_chat_image(
     user_id: str,
     message_id: int,
     history_count: Optional[int] = None,
-) -> schemas.ChatImageGenerationResponse:
+) -> Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded]:
     """
     基于聊天上下文生成图片（公共函数）
 
@@ -1135,10 +1137,10 @@ async def generate_chat_image(
         history_count: 使用的历史消息数量
 
     Returns:
-        成功时返回 `ChatImageGenerationResponse`
+        成功时返回 `ChatImageGenerationResponse`，业务限制错误时返回 `BizError`
 
     Raises:
-        HTTPException: 各种业务错误情况（包括限额检查失败）
+        HTTPException: 其他错误情况（Agent未找到、消息未找到等）
     """
     from app.services.image_generation_service import image_generation_service
 
@@ -1180,20 +1182,18 @@ async def generate_chat_image(
     if not is_allowed:
         logger.warning(f"用户 {user_id} 已达到图片生成限额: {used_count}/{daily_limit}")
 
-        # 抛出异常，包含业务错误信息，由端点层转换为业务错误响应
+        # 返回业务错误信息，而非抛出异常
         error_code = (
             BusinessErrorCode.GUEST_LOGIN_REQUIRED
             if user.auth_type == AuthType.GUEST
             else BusinessErrorCode.SUBSCRIPTION_REQUIRED
         )
-        # 使用特殊状态码 499 标识需要转换为业务错误响应的异常
-        raise HTTPException(
-            status_code=499,
-            detail={
-                "error_code": error_code["error_code"],
-                "error_info": error_code,
-                "extra_data": {"used_count": used_count, "daily_limit": daily_limit},
-            },
+        return UsageLimitExceeded(
+            code=error_code["code"],
+            error_code=error_code["error_code"],
+            message=error_code["message"],
+            used_count=used_count,
+            daily_limit=daily_limit,
         )
 
     # 获取Agent完整数据

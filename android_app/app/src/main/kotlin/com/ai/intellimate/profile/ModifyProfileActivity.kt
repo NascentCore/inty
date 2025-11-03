@@ -24,11 +24,11 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ViewModelEvent
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
-import com.ai.intellimate.ui.components.MySettingScreen
+import com.ai.intellimate.ui.components.ProfileInfoScreen
 import com.ai.intellimate.utils.UCropHelper
 import com.yalantis.ucrop.UCrop
-import java.util.Locale
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 /** 个人设置页面 */
 class ModifyProfileActivity : BaseActivity() {
@@ -51,7 +51,7 @@ class ModifyProfileActivity : BaseActivity() {
         }
     }
 
-    private val viewModel: MySettingViewModel by viewModels()
+    private val viewModel: ModifyProfileViewModel by viewModels()
 
     override fun initConfigData() {
         super.initConfigData()
@@ -136,7 +136,7 @@ class ModifyProfileActivity : BaseActivity() {
         var editValue by rememberSaveable { mutableStateOf("") }
 
         Box {
-            MySettingScreen(
+            ProfileInfoScreen(
                 userProfile = userProfile.value,
                 onBack = { finish() },
                 onClickName = {

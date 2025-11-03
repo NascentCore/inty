@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
@@ -50,6 +51,7 @@ fun ChatInput(
     onToggleMorePanel: () -> Unit,
     showMorePanel: Boolean,
     bottomPadding: Dp,
+    focusRequester: FocusRequester? = null,
 ) {
     val context = LocalContext.current
     val inputData = chatViewModel.inputData.collectAsState()
@@ -123,6 +125,7 @@ fun ChatInput(
                 selection = inputSelection.value,
                 maxLines = 4,
                 maxLength = 500,
+                focusRequester = focusRequester,
             )
 
             // 视觉上保持与底部 8.dp 的坚决，这样初始，只有一行输入时，其位置位于

@@ -11,6 +11,7 @@
 - 每个 Session 的具体对话内容和轮数
 - 热门角色排行
 - 对话轮数分布
+- 达到聊天限制的用户统计（按日统计，区分游客和 Google 登录用户）
 
 **重要说明**：
 - **总浏览数**：包含所有会话（包括仅浏览开场白的会话）
@@ -125,6 +126,11 @@ python analyze_user_activity.py --last-days 7 --dry-run
    - 列：用户 ID、认证类型、语音消息数量
    - 说明：统计每个用户使用语音功能的次数
 
+8. **`users_hitting_chat_limit.csv`** - 达到聊天限制的用户统计 ⭐ 新增
+   - 列：日期、用户 ID、认证类型、昵称、邮箱、当日24小时聊天次数、限制值
+   - 说明：按日统计哪些用户在当日达到或超过聊天次数限制（guest用户10条/24小时，google登录用户100条/24小时）
+   - 注意：统计使用24小时滑动窗口，即每一天统计过去24小时内的聊天次数
+
 ### 文本报告
 
 6. **`conversations_detail.txt`** - 对话详情文本报告 ⭐
@@ -147,7 +153,12 @@ python analyze_user_activity.py --last-days 7 --dry-run
      - 横轴：消息数区间（10条一档）
      - 纵轴：用户数量
      - 说明：展示不同活跃度的用户分布情况
-   - **图表 6：新增用户会话详情表**（交互式表格，显示每个新用户的会话记录）
+   - **图表 6：达到聊天限制的用户趋势**⭐ 新增
+     - 横轴：日期
+     - 纵轴：达到限制的用户数
+     - 说明：按日统计达到聊天限制的用户数量，区分游客和Google登录用户
+     - 游客用户限制：10条/24小时，Google登录用户限制：100条/24小时
+   - **图表 7：新增用户会话详情表**（交互式表格，显示每个新用户的会话记录）
      - 显示：用户 ID、认证类型、注册时间、会话 ID、角色名称、消息数
      - 支持滚动查看（显示前 100 条记录）
      - 可以查看每个新用户具体与哪些 AI 角色聊天
@@ -355,6 +366,9 @@ INFO | 分析完成！
   ✅ user_sessions_detail.csv
   ✅ popular_agents.csv
   ✅ conversation_rounds_distribution.csv
+  ✅ user_rounds_distribution.csv
+  ✅ user_voice_usage.csv
+  ✅ users_hitting_chat_limit.csv
   ✅ conversations_detail.txt
   ✅ user_analytics_report.html (图表)
   ✅ conversations_detailed.html (对话详情) ⭐ 推荐查看

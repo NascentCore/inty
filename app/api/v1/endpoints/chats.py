@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
 from app.api import deps
+from app.api.tags import INTY_EVAL_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
@@ -18,6 +19,7 @@ from app.schemas.chat import ChatCompletionRequest
 from app.schemas.response import (
     APIResponse,
     BusinessErrorCode,
+    UsageLimitExceeded,
     create_business_error_response,
 )
 from app.services import agent_service, chat_history_service, chat_service
@@ -34,6 +36,7 @@ router = APIRouter(prefix="/chats", route_class=LoggerRoute)
     response_model=List[schemas.Chat],
     summary="Get current user's chat list",
     description="Get current user's chat list",
+    tags=["android-app", INTY_EVAL_TAG],
 )
 async def list_chats(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -57,6 +60,7 @@ async def list_chats(
     response_model=schemas.Chat,
     summary="Create new chat",
     description="Create new chat",
+    tags=["android-app", INTY_EVAL_TAG],
 )
 async def create_chat(
     *,
@@ -76,6 +80,7 @@ async def create_chat(
     response_model=schemas.Chat,
     summary="Delete chat",
     description="Delete chat",
+    tags=["android-app", INTY_EVAL_TAG],
 )
 async def delete_chat(
     *,
@@ -234,7 +239,7 @@ async def get_chat_detail(
 
 @router.get(
     "/agents/{agent_id}/detail",
-    tags=["unknown", "inty-eval"],
+    tags=["unknown", INTY_EVAL_TAG],
     include_in_schema=False,
     deprecated=True,
     summary="Get Chat Detail for agent identified by agent_id",
@@ -310,7 +315,7 @@ async def get_agent_chat_detail(
 
 @router.get(
     "/agents/{agent_id}/messages",
-    tags=["inty-eval"],
+    tags=["android-app", INTY_EVAL_TAG],
     summary="Get Agent Chat Messages",
     description="Get only chat message records by Agent ID (lighter interface)",
 )
@@ -666,7 +671,7 @@ async def agent_chat_completions(
 
 @router.post(
     "/agents/{agent_id}/messages/{message_id}/voice",
-    tags=["inty", "voice"],
+    tags=["android-app", "inty", "voice", INTY_EVAL_TAG],
     summary="Generate Message Voice",
     description="Generate voice for a message",
 )
@@ -812,7 +817,7 @@ async def get_voice_info(
 
 @router.put(
     "/agents/{agent_id}/settings",
-    tags=["inty"],
+    tags=["android-app", "inty", INTY_EVAL_TAG],
     summary="Update Chat Settings by Agent ID",
     description=(
         "We do not use chat_id to get settings, because we only support 1 chat per agent."
@@ -909,7 +914,7 @@ async def update_agent_chat_settings(
 @router.get(
     "/agents/{agent_id}/settings",
     response_model=schemas.ChatSettings,
-    tags=["inty"],
+    tags=["android-app", "inty", INTY_EVAL_TAG],
     summary="Get Agent Chat Settings",
     description=(
         "[Deprecated, use /chats/{chat_id}/settings instead] Get chat settings by Agent ID, bause we only support 1 chat per agent, "
@@ -1020,7 +1025,7 @@ async def delete_agent_chats(
     "/agents/{agent_id}/debug-messages",
     deprecated=True,
     include_in_schema=False,
-    tags=["inty-eval"],
+    tags=[INTY_EVAL_TAG],
     summary="Get Agent Debug Messages",
     description="Get Agent Debug Messages by Agent ID",
 )
@@ -1086,7 +1091,7 @@ async def get_agent_debug_messages(
     "/agents/{agent_id}/clear-messages",
     response_model=schemas.ClearMessagesResponse,
     include_in_schema=False,
-    tags=["inty-eval"],
+    tags=[INTY_EVAL_TAG],
     summary="Clear Agent Chat Messages",
     description="Clear chat messages by Agent ID, currently used by inty-eval, probably will be used by inty app as well.",
 )
@@ -1171,10 +1176,10 @@ async def clear_agent_chat_messages(
     "/agents/{agent_id}/generate-image",
     deprecated=True,
     include_in_schema=False,
-    response_model=schemas.APIResponse[schemas.ChatImageGenerationResponse],
+    response_model=schemas.APIResponse,
     summary="[Deprecated, use /api/v1/chat/images/{agent_id} instead] 基于聊天上下文生成图片",
     description="[Deprecated, use /api/v1/chat/images/{agent_id} instead] 根据Agent角色、聊天历史和用户消息生成图片，并保存到聊天历史中",
-    tags=["inty-eval"],
+    tags=[INTY_EVAL_TAG],
 )
 async def generate_chat_image(
     *,
@@ -1206,17 +1211,24 @@ async def generate_chat_image(
             history_count=request.history_count,
         )
 
+        # 检查是否返回了业务限制错误
+        if isinstance(result, UsageLimitExceeded):
+            # 转换为兼容现有客户端的业务错误响应格式
+            return create_business_error_response(
+                error_info={
+                    "code": result.code,
+                    "error_code": result.error_code,
+                    "message": result.message,
+                },
+                extra_data={
+                    "used_count": result.used_count,
+                    "daily_limit": result.daily_limit,
+                },
+            )
+
         return schemas.APIResponse.success(data=result)
 
     except HTTPException as e:
-        # 检查是否是业务错误响应（状态码 499）
-        if e.status_code == 499 and isinstance(e.detail, dict):
-            error_info = e.detail.get("error_info")
-            extra_data = e.detail.get("extra_data")
-            if error_info:
-                return create_business_error_response(
-                    error_info=error_info, extra_data=extra_data
-                )
         raise
     except Exception as e:
         logger.error(f"生成聊天图片失败 - Agent ID: {agent_id}, Error: {str(e)}")

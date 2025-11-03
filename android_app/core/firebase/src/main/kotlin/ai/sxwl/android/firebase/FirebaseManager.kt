@@ -78,18 +78,19 @@ object FirebaseManager {
                     Events.SHARE to 1.0, // 分享功能
                     Events.SEARCH to 1.0, // 搜索功能
                     Events.PURCHASE to 1.0, // 购买事件
-                    Events.USER_LOGIN to 1.0, // 用户登录
                     Events.USER_LOGOUT to 1.0, // 用户登出
-                    Events.CHAT_STARTED to 1.0, // 聊天开始
+                    "chat_started" to 1.0, // 聊天开始（第一次发送消息时触发）
                     Events.MESSAGE_SENT to 1.0, // 消息发送
-                    Events.AI_RESPONSE_RECEIVED to 1.0, // AI回复接收
                     Events.PROFILE_UPDATED to 1.0, // 个人资料更新
                     Events.SETTINGS_CHANGED to 1.0, // 设置变更
                     Events.AGENT_SWITCH to 1.0, // Agent切换
                     Events.SUBSCRIPTION_START to 1.0, // 订阅开始
-                    Events.FREE_LIMIT_HIT to 1.0, // 达到免费限制
+                    Events.FREE_LIMIT_REACHED to 1.0, // 达到免费限制
                     Events.SUBSCRIPTION_PRICE_FETCHED to 1.0, // Google Play获取到的价格（100%采样）
                     Events.SUBSCRIPTION_PRICE_DISPLAYED to 1.0, // UI上显示的价格（100%采样）
+                    Events.EXPLORE_AGENTS_FETCH_SUCCESS to 1.0, // Explore接口请求成功（100%采样）
+                    Events.EXPLORE_AGENTS_FETCH_FAILURE to 1.0, // Explore接口请求失败（100%采样）
+                    Events.EXPLORE_AGENTS_FETCH_EXCEPTION to 1.0, // Explore接口请求异常（100%采样）
 
                     // 🔴 错误和失败事件 - 100%采样
                     "auth_failure" to 1.0, // 认证失败
@@ -103,10 +104,8 @@ object FirebaseManager {
                     // 🔴 页面追踪事件 - 100%采样
                     "page_leave" to 1.0, // 页面离开
                     "explore_page_view" to 1.0, // 探索页面访问
-                    Events.CHAT_SESSION_START to 1.0, // 聊天会话开始
                     Events.CHAT_SESSION_END to 1.0, // 聊天会话结束
                     Events.MESSAGE_SEND_SUCCESS to 1.0, // 消息发送成功
-                    "free_limit_reached" to 1.0, // 达到免费限制
 
                     // 🟡 性能相关事件 - 保持现有采样配置
                     "user_interaction" to if (AppUtils.isAppDebug()) 1.0 else 1.0, // 调试100%，发布100%
@@ -118,6 +117,7 @@ object FirebaseManager {
 
                     // 🔴 性能指标事件 - 100%采样（关键性能指标）
                     Events.AI_RESPONSE_TIME to 1.0, // AI响应时间（100%采样）
+                    Events.EXPLORE_RESPONSE_TIME to 1.0, // Explore接口响应时间（100%采样）
                     Events.TTS_GENERATION_TIME to
                         if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     Events.VOICE_PLAYBACK_TIME to
@@ -407,14 +407,11 @@ object FirebaseManager {
         const val PURCHASE = FirebaseAnalytics.Event.PURCHASE
 
         // 业务自定义事件
-        const val USER_LOGIN = "user_login"
         const val USER_LOGOUT = "user_logout"
-        const val CHAT_STARTED = "chat_started"
         const val MESSAGE_SENT = "message_sent"
         const val MESSAGE_SEND_SUCCESS = "message_send_success"
         const val MESSAGE_SEND_FAILURE = "message_send_failure"
         const val MESSAGE_SEND_EXCEPTION = "message_send_exception"
-        const val AI_RESPONSE_RECEIVED = "ai_response_received"
         const val PROFILE_UPDATED = "profile_updated"
         const val SETTINGS_CHANGED = "settings_changed"
 
@@ -428,7 +425,6 @@ object FirebaseManager {
 
         // 业务关键事件
         const val AGENT_SWITCH = "agent_switch"
-        const val CHAT_SESSION_START = "chat_session_start"
         const val CHAT_SESSION_END = "chat_session_end"
 
         // UI交互事件
@@ -438,11 +434,19 @@ object FirebaseManager {
         const val VOICE_PLAYBACK_START = "voice_playback_start"
         const val IMAGE_GENERATION_START = "image_generation_start"
         const val SUBSCRIPTION_START = "subscription_start"
-        const val FREE_LIMIT_HIT = "free_limit_hit"
+        const val FREE_LIMIT_REACHED = "free_limit_reached"
 
         // Billing价格相关事件
         const val SUBSCRIPTION_PRICE_FETCHED = "subscription_price_fetched" // Google Play获取到的价格
         const val SUBSCRIPTION_PRICE_DISPLAYED = "subscription_price_displayed" // UI上显示的价格
+
+        // Explore相关事件
+        const val EXPLORE_AGENTS_FETCH_SUCCESS = "explore_agents_fetch_success" // Explore接口请求成功
+        const val EXPLORE_AGENTS_FETCH_FAILURE = "explore_agents_fetch_failure" // Explore接口请求失败
+        const val EXPLORE_AGENTS_FETCH_EXCEPTION = "explore_agents_fetch_exception" // Explore接口请求异常
+
+        // Explore性能指标
+        const val EXPLORE_RESPONSE_TIME = "explore_response_time" // Explore接口响应时间
     }
 
     /** 预定义的用户属性常量 */

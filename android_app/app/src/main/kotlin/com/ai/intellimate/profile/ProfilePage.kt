@@ -9,12 +9,15 @@ import ai.sxwl.android.data.billing.VipStatus
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.TimeUtils
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,26 +45,35 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -71,6 +83,9 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.AuthClickable
 import com.ai.intellimate.vip.VipCenterActivity
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.min
 
 /** "我的"页面 */
 @Composable
@@ -87,6 +102,8 @@ internal fun ProfilePage(
     mainViewModel: MainViewModel? = null,
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
 
     // 使用 PageTrackingHelper 进行页面跟踪
     LaunchedEffect(Unit) {
@@ -95,6 +112,104 @@ internal fun ProfilePage(
             "MainActivity",
             mapOf("agent_count" to agents.size, "is_loading" to isLoading)
         )
+    }
+
+    // 折叠相关状态
+    val headerMaxHeight = 280.dp // Header 的完整高度
+    val headerMinHeight = 80.dp // 折叠后的最小高度
+    val maxCollapseOffset = with(density) { (headerMaxHeight - headerMinHeight).toPx() } // 最大折叠距离
+
+    val collapseOffset = remember { Animatable(0f) }
+
+    // 计算折叠比例 (0f = 完全展开, 1f = 完全折叠)
+    val collapseProgress by remember {
+        derivedStateOf {
+            (collapseOffset.value / maxCollapseOffset).coerceIn(0f, 1f)
+        }
+    }
+
+    // LazyGrid state - 需要在 nestedScrollConnection 之前创建
+    val listState = rememberLazyGridState()
+
+    // 嵌套滚动连接 - 处理折叠逻辑
+    val nestedScrollConnection = remember(listState) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                // 向上滚动 (available.y < 0) - 优先折叠 header
+                if (available.y < 0 && collapseOffset.value < maxCollapseOffset) {
+                    val remainingToCollapse = maxCollapseOffset - collapseOffset.value
+                    val toConsume = min(abs(available.y), remainingToCollapse)
+                    scope.launch {
+                        collapseOffset.snapTo(collapseOffset.value + toConsume)
+                    }
+                    // 返回消费的滚动量（负数表示向上滚动）
+                    return Offset(0f, -toConsume)
+                }
+
+                // 向下滚动 (available.y > 0) - 优先展开 header
+                if (available.y > 0 && collapseOffset.value > 0f) {
+                    // 检查 LazyGrid 是否已经滚动到顶部
+                    // 只有当 LazyGrid 在顶部时，才展开 header
+                    if (listState.firstVisibleItemIndex == 0 &&
+                        listState.firstVisibleItemScrollOffset == 0
+                    ) {
+                        val toConsume = min(available.y, collapseOffset.value)
+                        scope.launch {
+                            collapseOffset.snapTo(collapseOffset.value - toConsume)
+                        }
+                        // 返回消费的滚动量（正数表示向下滚动）
+                        return Offset(0f, toConsume)
+                    }
+                }
+
+                // 不消费滚动量，让 LazyGrid 处理
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                val currentVelocity = available.y
+
+                // 向上滑动 - 继续折叠到完全折叠状态
+                if (currentVelocity < 0 && collapseOffset.value < maxCollapseOffset) {
+                    scope.launch {
+                        collapseOffset.animateTo(
+                            maxCollapseOffset,
+                            animationSpec = tween(300)
+                        )
+                    }
+                    // 消费部分速度，剩余速度传递给 LazyGrid
+                    val remainingVelocity = Velocity(
+                        0f,
+                        currentVelocity * (1f - collapseProgress)
+                    )
+                    return remainingVelocity
+                }
+
+                // 向下滑动 - 继续展开到完全展开状态
+                if (currentVelocity > 0 && collapseOffset.value > 0f) {
+                    // 只有当 LazyGrid 在顶部时才展开
+                    if (listState.firstVisibleItemIndex == 0 &&
+                        listState.firstVisibleItemScrollOffset == 0
+                    ) {
+                        scope.launch {
+                            collapseOffset.animateTo(
+                                0f,
+                                animationSpec = tween(300)
+                            )
+                        }
+                        // 消费部分速度
+                        val remainingVelocity = Velocity(
+                            0f,
+                            currentVelocity * collapseProgress
+                        )
+                        return remainingVelocity
+                    }
+                }
+
+                // 不消费速度，让 LazyGrid 处理
+                return Velocity.Zero
+            }
+        }
     }
 
     Box(modifier = modifier) {
@@ -109,124 +224,22 @@ internal fun ProfilePage(
                 .background(Color.Transparent),
             containerColor = Color.Transparent,
         ) { innerPadding ->
-            Column(Modifier.fillMaxWidth()) {
-                Spacer(Modifier.height(innerPadding.calculateTopPadding() + 28.dp))
-
-                Row {
-                    Spacer(Modifier.weight(1f))
-                    AuthClickable(
-                        onClick = {
-                            // 优先使用 mainViewModel 显示设置（在同一 Activity 内切换，无闪动）
-                            if (mainViewModel != null) {
-                                mainViewModel.showSettings()
-                            } else {
-                                // 兼容旧逻辑：如果没有传入 mainViewModel，使用 Activity 方式
-                                com.ai.intellimate.settings.SettingActivity.launch(context)
-                            }
-                        }
-                    ) { authModifier ->
-                        AsyncImage(
-                            modifier = authModifier.size(24.dp),
-                            model = R.drawable.icon_setting,
-                            contentDescription = null,
-                        )
-                    }
-                    Spacer(Modifier.width(16.dp))
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(Modifier.width(16.dp))
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(120.dp)
-                                .background(color = Color.White, shape = CircleShape)
-                                .padding(4.dp)
-                    ) {
-                        AsyncImage(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape),
-                            model =
-                                ImageRequest.Builder(context)
-                                    .data(getCdnImageUrl(userProfile.avatar, width = 512))
-                                    .build(),
-                            placeholder = painterResource(R.drawable.app_icon),
-                            error = painterResource(R.drawable.app_icon),
-                            contentDescription = null,
-                        )
-                    }
-                    Spacer(Modifier.width(19.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = userProfile.nickname.ifEmpty { "Guest" },
-                            color = Color.White,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = stringResource(R.string.ID, userProfile.id),
-                            color = Color.White.copy(0.55f),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Light,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-
-                    Spacer(Modifier.width(16.dp))
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        modifier = Modifier.weight(1f),
-                        text =
-                            userProfile.description ?: stringResource(R.string.persona_placeholder),
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-
-                    Spacer(Modifier.width(8.dp))
-
-                    AuthClickable(
-                        onClick = { ModifyProfileActivity.launch(context, userProfile) }
-                    ) { authModifier ->
-                        AsyncImage(
-                            modifier = authModifier.size(40.dp),
-                            model = R.drawable.icon_edit,
-                            contentDescription = null,
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                // IntelliMate Premium 会员入口按钮
-                // VIP状态
-                val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
-                PremiumBanner(
-                    status = vipStatus.subscriptionStatus,
-                    purchaseTime = TimeUtils.formatTimestampToString(vipStatus.purchaseTime),
-                    expireTime = TimeUtils.formatTimestampToString(vipStatus.expiryTime),
-                    onClick = { VipCenterActivity.launch(context) },
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .nestedScroll(nestedScrollConnection)
+            ) {
+                // Header 区域 - 可折叠
+                ProfileHeader(
+                    modifier = Modifier,
+                    collapseProgress = collapseProgress,
+                    userProfile = userProfile,
+                    mainViewModel = mainViewModel,
+                    innerPadding = innerPadding,
+                    context = context,
                 )
 
-                Spacer(Modifier.height(8.dp))
-
+                // LazyGrid 区域
                 if (agents.isEmpty()) {
                     Spacer(Modifier.height(48.dp))
 
@@ -253,8 +266,6 @@ internal fun ProfilePage(
                 } else {
                     Spacer(Modifier.height(10.dp))
 
-                    val listState = rememberLazyGridState()
-
                     // Detect when user scrolls to bottom
                     LaunchedEffect(listState) {
                         snapshotFlow { listState.layoutInfo.visibleItemsInfo }
@@ -264,10 +275,10 @@ internal fun ProfilePage(
 
                                 if (
                                     lastVisibleItem != null &&
-                                        lastVisibleItem.index >=
-                                            totalItems - 3 && // Trigger 3 items before end
-                                        !isLoading &&
-                                        agents.isNotEmpty()
+                                    lastVisibleItem.index >=
+                                    totalItems - 3 && // Trigger 3 items before end
+                                    !isLoading &&
+                                    agents.isNotEmpty()
                                 ) {
                                     onLoadMore()
                                 }
@@ -278,27 +289,26 @@ internal fun ProfilePage(
                         state = listState,
                         modifier = Modifier.padding(horizontal = 16.dp),
                         columns = GridCells.Fixed(2),
+                        contentPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding() + 100.dp),
                         horizontalArrangement = Arrangement.spacedBy(13.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         runCatching {
-                                if (agents.isNotEmpty()) {
-                                    itemsIndexed(
-                                        items = agents,
-                                        key = { index, agent -> "${agent.id}_$index" },
-                                    ) { index, agent ->
-                                        MyAgentCard(
-                                            modifier =
-                                                Modifier.noRippleClickable { onClickAgent(agent) },
-                                            agentInfo = agent,
-                                            onEditAgent = onEditAgent,
-                                            onDeleteAgent = onDeleteAgent,
-                                        )
-                                    }
-                                    // 添加一个底部空白，便于更好操作交互
-                                    item { Spacer(Modifier.height(80.dp)) }
+                            if (agents.isNotEmpty()) {
+                                itemsIndexed(
+                                    items = agents,
+                                    key = { index, agent -> "${agent.id}_$index" },
+                                ) { index, agent ->
+                                    MyAgentCard(
+                                        modifier =
+                                            Modifier.noRippleClickable { onClickAgent(agent) },
+                                        agentInfo = agent,
+                                        onEditAgent = onEditAgent,
+                                        onDeleteAgent = onDeleteAgent,
+                                    )
                                 }
                             }
+                        }
                             .onFailure { it.printStackTrace() }
 
                         // Loading indicator when loading more (only show when there's no data)
@@ -315,12 +325,183 @@ internal fun ProfilePage(
                                 }
                             }
                         }
-
-                        item { Spacer(Modifier.height(16.dp)) }
                     }
                 }
             }
         }
+    }
+}
+
+/** Profile Header 可折叠区域 */
+@Composable
+private fun ProfileHeader(
+    modifier: Modifier,
+    collapseProgress: Float, // 0f = 展开, 1f = 折叠
+    userProfile: UserProfile,
+    mainViewModel: MainViewModel?,
+    innerPadding: PaddingValues,
+    context: android.content.Context,
+) {
+    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
+
+    // Settings 图标位置固定，不响应折叠状态
+    val topSpacerHeight = innerPadding.calculateTopPadding() + 28.dp
+
+    Column(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        // 顶部间距和设置按钮 - 始终显示，位置固定
+        Spacer(Modifier.height(topSpacerHeight))
+
+        // 设置按钮行 - 始终显示
+        Row {
+            Spacer(Modifier.weight(1f))
+            AuthClickable(
+                onClick = {
+                    if (mainViewModel != null) {
+                        mainViewModel.showSettings()
+                    } else {
+                        com.ai.intellimate.settings.SettingActivity.launch(context)
+                    }
+                }
+            ) { authModifier ->
+                AsyncImage(
+                    modifier = authModifier.size(24.dp),
+                    model = R.drawable.icon_setting,
+                    contentDescription = null,
+                )
+            }
+            Spacer(Modifier.width(16.dp))
+        }
+
+        // 头像和昵称之间的间距根据折叠状态调整
+        Spacer(Modifier.height(24.dp * (1f - collapseProgress * 0.5f)))
+
+        // 头像和昵称 - 始终显示，但大小会变化
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Spacer(Modifier.width(16.dp))
+
+            // 头像大小根据折叠状态调整：展开时 120.dp，折叠时 60.dp
+            val avatarSize = remember(collapseProgress) {
+                120.dp * (1f - collapseProgress * 0.5f)
+            }
+
+            Box(
+                modifier =
+                    Modifier
+                        .size(avatarSize)
+                        .background(color = Color.White, shape = CircleShape)
+                        .padding(4.dp)
+            ) {
+                AsyncImage(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    model =
+                        ImageRequest.Builder(context)
+                            .data(getCdnImageUrl(userProfile.avatar, width = 512))
+                            .build(),
+                    placeholder = painterResource(R.drawable.app_icon),
+                    error = painterResource(R.drawable.app_icon),
+                    contentDescription = null,
+                )
+            }
+
+            // 头像和昵称之间的间距根据折叠状态调整
+            Spacer(Modifier.width(19.dp * (1f - collapseProgress * 0.3f)))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = userProfile.nickname.ifEmpty { "Guest" },
+                    color = Color.White,
+                    fontSize = (20.sp.value * (1f - collapseProgress * 0.2f)).sp, // 折叠时稍微缩小
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = stringResource(R.string.ID, userProfile.id),
+                    color = Color.White.copy(0.55f),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Light,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            Spacer(Modifier.width(16.dp))
+        }
+
+        // Intro 和编辑按钮之间的间距 - 折叠时减少
+        Spacer(Modifier.height(24.dp * (1f - collapseProgress)))
+
+        // Intro 和编辑按钮 - 折叠时隐藏编辑按钮，但可以显示一行 intro
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .height(
+                    if (collapseProgress >= 1f) 40.dp // 折叠时只显示一行 intro 的高度
+                    else 60.dp * (1f - collapseProgress * 0.33f) // 展开时正常高度，折叠时逐渐减少
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Intro 文本 - 折叠时只显示一行，展开时显示两行
+            Text(
+                modifier = Modifier
+                    .weight(1f)
+                    .alpha(if (collapseProgress >= 1f) 0.7f else 1f), // 折叠时稍微变透明
+                text = userProfile.description ?: stringResource(R.string.persona_placeholder),
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = if (collapseProgress >= 1f) 1 else 2, // 完全折叠时只显示一行
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            Spacer(Modifier.width(8.dp))
+
+            // 编辑按钮 - 折叠时隐藏
+            Box(
+                modifier = Modifier.alpha(1f - collapseProgress)
+            ) {
+                AuthClickable(
+                    onClick = { ModifyProfileActivity.launch(context, userProfile) }
+                ) { authModifier ->
+                    AsyncImage(
+                        modifier = authModifier.size(40.dp),
+                        model = R.drawable.icon_edit,
+                        contentDescription = null,
+                    )
+                }
+            }
+        }
+
+        // Intro 和 VIP Banner 之间的间距 - 折叠时减少
+        Spacer(Modifier.height(24.dp * (1f - collapseProgress)))
+
+        // VIP Banner - 折叠时隐藏
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .alpha(1f - collapseProgress)
+                .height(
+                    if (collapseProgress >= 1f) 0.dp
+                    else 120.dp * (1f - collapseProgress)
+                )
+        ) {
+            PremiumBanner(
+                status = vipStatus.subscriptionStatus,
+                purchaseTime = TimeUtils.formatTimestampToString(vipStatus.purchaseTime),
+                expireTime = TimeUtils.formatTimestampToString(vipStatus.expiryTime),
+                onClick = { VipCenterActivity.launch(context) },
+            )
+        }
+
+        Spacer(Modifier.height(8.dp * (1f - collapseProgress)))
     }
 }
 
@@ -341,9 +522,11 @@ private fun MyAgentCard(
     // 图片加载状态
     var imageLoaded by remember { mutableStateOf(false) }
 
-    Box(modifier = modifier
-        .size(165.dp, 220.dp)
-        .clip(RoundedCornerShape(12.dp))) {
+    Box(
+        modifier = modifier
+            .size(165.dp, 220.dp)
+            .clip(RoundedCornerShape(12.dp))
+    ) {
         if (hasAvatarToLoad) {
             // 有头像需要加载时，使用 Shimmer 占位符
             if (!imageLoaded) {
@@ -406,9 +589,11 @@ private fun MyAgentCard(
 
         // 右下角的菜单按钮
         if (onEditAgent != null || onDeleteAgent != null) {
-            Box(modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(4.dp)) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(4.dp)
+            ) {
                 Box(
                     modifier =
                         Modifier

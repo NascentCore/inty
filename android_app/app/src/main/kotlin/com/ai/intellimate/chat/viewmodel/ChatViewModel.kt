@@ -22,7 +22,6 @@ import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.utils.NetworkErrorHandler
-import com.ai.intellimate.utils.UnifiedStartupManager
 import com.ai.intellimate.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +30,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.Collections
 
 // 操作什么数据，支持什么 UI？Model 是 beans
 // View 是各类 page/activity。
@@ -62,35 +60,8 @@ class ChatViewModel : BaseVM() {
     private val _conversations = MutableStateFlow<List<ConversationItem>>(emptyList())
     val conversations = _conversations.asStateFlow()
 
-    private val _conversationAgentInfos = MutableStateFlow<Map<String, AgentInfo>>(emptyMap())
-    val conversationAgentInfos = _conversationAgentInfos.asStateFlow()
-
-    private val pendingAgentIdRequests = Collections.synchronizedSet(mutableSetOf<String>())
-
     val inputData = MutableStateFlow<String>("")
     val inputSelection = MutableStateFlow<Int>(0)
-
-    init {
-        viewModelScope.launch {
-            UnifiedStartupManager.chatAgents.collect { agents ->
-                if (agents.isEmpty()) {
-                    _conversationAgentInfos.value = emptyMap()
-                    return@collect
-                }
-
-                val agentMap =
-                    agents
-                        .filter { it.id.isNotBlank() }
-                        .associateBy { it.id }
-
-                if (agentMap.isEmpty()) {
-                    return@collect
-                }
-
-                _conversationAgentInfos.update { current -> current + agentMap }
-            }
-        }
-    }
 
     // 用于标识当前是否在等待AI回复
     private val _isWaitingForReply = MutableStateFlow<Boolean>(false)
@@ -136,19 +107,8 @@ class ChatViewModel : BaseVM() {
 
     fun setAgentInfo(agentInfo: AgentInfo?) {
 
-        // Firebase Analytics - 记录聊天会话开始
+        // Firebase Analytics - Agent 信息已设置（不再记录 chat_session_start，避免 HorizontalPager 缓存机制导致的误触发）
         agentInfo?.let { agent ->
-            cacheAgentInfo(agent)
-            FirebaseManager.logEvent(
-                FirebaseManager.Events.CHAT_SESSION_START,
-                mapOf(
-                    "agent_id" to agent.id,
-                    "agent_name" to agent.name,
-                    "agent_category" to agent.category,
-                    "is_followed" to agent.isFollowed,
-                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                ),
-            )
 
             // Firebase Crashlytics - 设置自定义键
             FirebaseManager.setCustomKey("current_agent_id", agent.id)
@@ -328,28 +288,28 @@ class ChatViewModel : BaseVM() {
         inputData.value = ""
         _isWaitingForReply.value = true
 
+        // Firebase Analytics - 记录消息发送
+        // 记录端到端时间的起始点（用户点击发送按钮的时间）
+        val endToEndStartTime = System.currentTimeMillis()
+
         // 检查是否是第一次聊天（没有历史消息）
         val currentMessages = _msgs.value
         val hasChatHistory = currentMessages.any { it.role == "user" }
 
-        // 如果是第一次聊天，上报CHAT_STARTED事件
+        // 如果是第一次聊天，上报聊天开始事件（准确反映用户第一次发送消息的行为）
         if (!hasChatHistory) {
             _agentInfo.value?.let { agent ->
                 FirebaseManager.logEvent(
-                    FirebaseManager.Events.CHAT_STARTED,
+                    "chat_started",
                     FirebaseManager.safeEventParams(
                         "agent_id" to agent.id,
                         "agent_name" to agent.name,
                         "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                        "timestamp" to System.currentTimeMillis()
+                        "timestamp" to endToEndStartTime
                     )
                 )
             }
         }
-
-        // Firebase Analytics - 记录消息发送
-        // 记录端到端时间的起始点（用户点击发送按钮的时间）
-        val endToEndStartTime = System.currentTimeMillis()
         _agentInfo.value?.let { agent ->
             FirebaseManager.logEvent(
                 FirebaseManager.Events.MESSAGE_SENT,
@@ -418,20 +378,6 @@ class ChatViewModel : BaseVM() {
                             )
                         )
 
-                        // 上报AI回复接收事件（包含API响应时间和端到端时间）
-                        FirebaseManager.logEvent(
-                            FirebaseManager.Events.AI_RESPONSE_RECEIVED,
-                            FirebaseManager.safeEventParams(
-                                "agent_id" to agentId,
-                                "agent_name" to (_agentInfo.value?.name),
-                                "response_time" to responseTime,
-                                "end_to_end_time" to endToEndTime,
-                                "response_code" to (result.data.code ?: 0),
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                "timestamp" to System.currentTimeMillis()
-                            )
-                        )
-
                         runCatching {
                             // 向后兼容：后端可能仍返回 GUEST_NEED_LOGIN_CODE 错误码
                             // 即使客户端已移除 guest 流程，也要处理此错误码，提示用户登录
@@ -446,7 +392,7 @@ class ChatViewModel : BaseVM() {
                                 ) {
                                     // Firebase Analytics - 记录免费次数限制
                                     FirebaseManager.logEvent(
-                                        FirebaseManager.Events.FREE_LIMIT_HIT,
+                                        FirebaseManager.Events.FREE_LIMIT_REACHED,
                                         FirebaseManager.safeEventParams(
                                             "agent_id" to agentId,
                                             "agent_name" to (_agentInfo.value?.name ?: ""),
@@ -784,57 +730,6 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    private fun cacheAgentInfo(agentInfo: AgentInfo?) {
-        if (agentInfo == null || agentInfo.id.isBlank()) {
-            return
-        }
-
-        _conversationAgentInfos.update { current ->
-            if (current[agentInfo.id] == agentInfo) {
-                current
-            } else {
-                current + (agentInfo.id to agentInfo)
-            }
-        }
-    }
-
-    private fun ensureAgentsForConversations(conversations: List<ConversationItem>) {
-        if (conversations.isEmpty()) return
-
-        conversations.forEach { conversation ->
-            val agentId = conversation.agentId
-            if (agentId.isBlank()) {
-                return@forEach
-            }
-
-            if (_conversationAgentInfos.value.containsKey(agentId)) {
-                return@forEach
-            }
-
-            if (!pendingAgentIdRequests.add(agentId)) {
-                return@forEach
-            }
-
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    when (val result = chatApi.getAgentInfo(agentId)) {
-                        is HttpResult.Success -> cacheAgentInfo(result.data)
-                        is HttpResult.Failure ->
-                            LogUtils.w(
-                                "ensureAgentsForConversations - getAgentInfo failed: ${result.message}"
-                            )
-                    }
-                } catch (e: Exception) {
-                    LogUtils.e(
-                        "ensureAgentsForConversations - getAgentInfo exception: ${e.message}"
-                    )
-                } finally {
-                    pendingAgentIdRequests.remove(agentId)
-                }
-            }
-        }
-    }
-
     private fun loadConversationsSilently() {
         if (_isLoadingConversations.value || _isRefreshingConversations.value) return
 
@@ -852,7 +747,6 @@ class ChatViewModel : BaseVM() {
                         } else {
                             // 静默更新数据，不显示loading
                             _conversations.value = userInitiatedConversations
-                            ensureAgentsForConversations(userInitiatedConversations)
                         }
                     }
                     is HttpResult.Failure -> {
@@ -898,12 +792,10 @@ class ChatViewModel : BaseVM() {
                             if (currentConversationsPage == 0) {
                                 // 第一页，直接替换（这里才清空并替换数据）
                                 _conversations.value = userInitiatedConversations
-                                ensureAgentsForConversations(userInitiatedConversations)
                             } else {
                                 // 后续页，追加到现有列表
                                 _conversations.value =
                                     _conversations.value + userInitiatedConversations
-                                ensureAgentsForConversations(userInitiatedConversations)
                             }
                         }
                     }
@@ -989,9 +881,6 @@ class ChatViewModel : BaseVM() {
         lastQueryAgentId = null
         lastQueryTime = 0L
         lastSendTime = 0L
-
-        pendingAgentIdRequests.clear()
-        _conversationAgentInfos.value = emptyMap()
 
         // 清理分页状态
         currentConversationsPage = 0

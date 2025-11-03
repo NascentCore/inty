@@ -102,6 +102,13 @@ resources:
                   delete: delete /api/v1/ai/agents/{agent_id}
                   follow_agent: post /api/v1/ai/agents/{agent_id}/follow
                   unfollow_agent: delete /api/v1/ai/agents/{agent_id}/follow
+                subresources:
+                  image_generation:
+                    subresources:
+                      config:
+                        methods:
+                          retrieve: get /api/v1/ai/agents/image-generation/config
+                          update: put /api/v1/ai/agents/image-generation/config
           settings:
             models:
               settings: "#/components/schemas/Settings"
@@ -147,6 +154,7 @@ resources:
               delete: delete /api/v1/chats/{chat_id}
               create_completion: post /api/v1/chat/completions/{agent_id}
               retrieve_voice: get /api/v1/chats/voices/{voice_id}
+              generate_image: post /api/v1/chat/images/{agent_id}
             subresources:
               agents:
                 models:

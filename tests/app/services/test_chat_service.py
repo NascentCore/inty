@@ -14,6 +14,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
 from app.schemas.chat import ChatImageGenerationResponse
+from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
 from app.services import chat_service
 
 
@@ -194,3 +195,176 @@ class TestChatService:
         await db_session.delete(test_user)
         await db_session.commit()
 
+    @pytest.mark.asyncio
+    @patch("app.services.chat_service.subscription_service.check_image_gen_limit")
+    async def test_generate_chat_image_business_limit_guest(
+        self,
+        mock_check_limit: AsyncMock,
+        db_session: AsyncSession,
+    ):
+        """测试生成聊天图片 - Guest 用户业务限制错误"""
+        # 准备测试数据
+        user_id = f"test_user_{uuid.uuid4().hex[:8]}"
+        agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
+
+        # 创建测试用户（Guest 类型）
+        test_user = models.User(
+            id=user_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            auth_type=AuthType.GUEST,
+            nickname="Guest User",
+            email=None,
+            system_language="en",
+            is_active=True,
+        )
+        db_session.add(test_user)
+        await db_session.commit()
+        await db_session.refresh(test_user)
+
+        # 创建测试 Agent
+        test_agent = models.Agent(
+            id=agent_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            name="Test Agent",
+            gender=Gender.FEMALE,
+            avatar="https://example.com/avatar.jpg",
+            background="https://example.com/background.jpg",
+            personality="温柔善良的女孩",
+            scenario="在咖啡厅里与用户聊天",
+            intro="一个可爱的AI助手",
+            opening="你好！",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+        )
+        db_session.add(test_agent)
+        await db_session.commit()
+        await db_session.refresh(test_agent)
+
+        # 创建聊天会话
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user_id, agent_id=agent_id
+        )
+        await db_session.refresh(chat)
+
+        # Mock 限额检查 - 不允许生成（Guest 用户）
+        mock_check_limit.return_value = (
+            False,
+            0,
+            0,
+        )  # (is_allowed, used_count, daily_limit)
+
+        # 执行测试
+        result = await chat_service.generate_chat_image(
+            db=db_session,
+            agent_id=agent_id,
+            user_id=user_id,
+            message_id=123,  # 这个 ID 不会被用到，因为会在限额检查时返回
+            history_count=None,
+        )
+
+        # 验证返回的是 UsageLimitExceeded
+        assert isinstance(result, UsageLimitExceeded)
+        assert isinstance(result, BizError)  # UsageLimitExceeded 继承自 BizError
+        assert result.code == BusinessErrorCode.GUEST_LOGIN_REQUIRED["code"]
+        assert result.error_code == BusinessErrorCode.GUEST_LOGIN_REQUIRED["error_code"]
+        assert result.message == BusinessErrorCode.GUEST_LOGIN_REQUIRED["message"]
+        assert result.used_count == 0
+        assert result.daily_limit == 0
+
+        # 验证限额检查被调用
+        mock_check_limit.assert_called_once()
+
+        # 清理测试数据
+        await db_session.delete(chat)
+        await db_session.delete(test_agent)
+        await db_session.delete(test_user)
+        await db_session.commit()
+
+    @pytest.mark.asyncio
+    @patch("app.services.chat_service.subscription_service.check_image_gen_limit")
+    async def test_generate_chat_image_business_limit_subscription(
+        self,
+        mock_check_limit: AsyncMock,
+        db_session: AsyncSession,
+    ):
+        """测试生成聊天图片 - 非 Guest 用户业务限制错误（订阅限制）"""
+        # 准备测试数据
+        user_id = f"test_user_{uuid.uuid4().hex[:8]}"
+        agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
+
+        # 创建测试用户（非 Guest 类型）
+        test_user = models.User(
+            id=user_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            auth_type=AuthType.PHONE,
+            nickname="Test User",
+            email="test@example.com",
+            system_language="en",
+            is_active=True,
+        )
+        db_session.add(test_user)
+        await db_session.commit()
+        await db_session.refresh(test_user)
+
+        # 创建测试 Agent
+        test_agent = models.Agent(
+            id=agent_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            name="Test Agent",
+            gender=Gender.FEMALE,
+            avatar="https://example.com/avatar.jpg",
+            background="https://example.com/background.jpg",
+            personality="温柔善良的女孩",
+            scenario="在咖啡厅里与用户聊天",
+            intro="一个可爱的AI助手",
+            opening="你好！",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+        )
+        db_session.add(test_agent)
+        await db_session.commit()
+        await db_session.refresh(test_agent)
+
+        # 创建聊天会话
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user_id, agent_id=agent_id
+        )
+        await db_session.refresh(chat)
+
+        # Mock 限额检查 - 不允许生成（达到限额）
+        mock_check_limit.return_value = (
+            False,
+            10,
+            10,
+        )  # (is_allowed, used_count, daily_limit)
+
+        # 执行测试
+        result = await chat_service.generate_chat_image(
+            db=db_session,
+            agent_id=agent_id,
+            user_id=user_id,
+            message_id=123,  # 这个 ID 不会被用到，因为会在限额检查时返回
+            history_count=None,
+        )
+
+        # 验证返回的是 UsageLimitExceeded
+        assert isinstance(result, UsageLimitExceeded)
+        assert isinstance(result, BizError)  # UsageLimitExceeded 继承自 BizError
+        assert result.code == BusinessErrorCode.SUBSCRIPTION_REQUIRED["code"]
+        assert (
+            result.error_code == BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"]
+        )
+        assert result.message == BusinessErrorCode.SUBSCRIPTION_REQUIRED["message"]
+        assert result.used_count == 10
+        assert result.daily_limit == 10
+
+        # 验证限额检查被调用
+        mock_check_limit.assert_called_once()
+
+        # 清理测试数据
+        await db_session.delete(chat)
+        await db_session.delete(test_agent)
+        await db_session.delete(test_user)
+        await db_session.commit()

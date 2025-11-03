@@ -4,8 +4,8 @@ import com.ai.plugins.ProjectConfig
 import com.ai.plugins.SignKeyConfig
 import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.dsl.LibraryExtension
-import java.io.File
 import org.gradle.api.Project
+import java.io.File
 
 /** 获取git commit信息的函数 使用Provider来避免配置缓存问题 */
 private fun getGitCommitInfo(project: Project): String {
@@ -75,6 +75,7 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
             )
         }
         debug {
+            versionNameSuffix = "-${getGitCommitInfo(project)}-$name"
             signingConfig = signingConfigs.getByName("dev")
             isMinifyEnabled = false
             isShrinkResources = false
@@ -91,6 +92,7 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
 
         create("local") {
             initWith(getByName("debug"))
+            versionNameSuffix = "-${getGitCommitInfo(project)}-$name"
         }
     }
 

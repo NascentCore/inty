@@ -17,11 +17,42 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * Explore接口调用结果回调
+ * 用于将接口调用情况传递给ViewModel进行事件上报
+ */
+interface ExploreFetchCallback {
+    suspend fun onSuccess(
+        page: Int,
+        pageSize: Int,
+        responseTime: Long,
+        agentsCount: Int,
+        sortSeed: Int
+    )
+
+    suspend fun onFailure(
+        page: Int,
+        pageSize: Int,
+        responseTime: Long,
+        errorMessage: String,
+        sortSeed: Int
+    )
+
+    suspend fun onException(
+        page: Int,
+        pageSize: Int,
+        responseTime: Long,
+        exception: Exception,
+        sortSeed: Int
+    )
+}
+
 /** Explore页面的Paging数据源 负责处理推荐agents的分页加载、缓存管理 */
 class ExplorePagingSource(
     private val useCache: Boolean = true,
     private val sortSeed: Int = IntySetting.sortSeed(),
     private val cacheProvider: RecommendedAgentCacheProvider? = null,
+    private val fetchCallback: ExploreFetchCallback? = null,
 ) : PagingSource<Int, AgentInfo>() {
 
     private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
@@ -131,6 +162,7 @@ class ExplorePagingSource(
 
     /** 从网络加载数据 */
     private suspend fun loadFromNetwork(page: Int, pageSize: Int): NetworkResult {
+        val startTime = System.currentTimeMillis()
         return try {
             val result =
                 agentApi.exploreAgents(
@@ -139,15 +171,32 @@ class ExplorePagingSource(
                     sort_seed = sortSeed.toString(),
                 )
 
+            val responseTime = System.currentTimeMillis() - startTime
+
             when (result) {
                 is HttpResult.Success -> {
+                    val agents = result.data.list ?: emptyList()
+                    val validAgents = agents.filter { it.id.isNotEmpty() }
+                    val agentsCount = validAgents.size
+
+                    // 上报成功事件
+                    fetchCallback?.onSuccess(page, pageSize, responseTime, agentsCount, sortSeed)
+
                     NetworkResult.Success(result.data)
                 }
                 is HttpResult.Failure -> {
+                    // 上报失败事件
+                    fetchCallback?.onFailure(page, pageSize, responseTime, result.message, sortSeed)
+
                     NetworkResult.Error(result.message)
                 }
             }
         } catch (e: Exception) {
+            val responseTime = System.currentTimeMillis() - startTime
+
+            // 上报异常事件
+            fetchCallback?.onException(page, pageSize, responseTime, e, sortSeed)
+
             NetworkResult.Error(e.message ?: "Network error")
         }
     }

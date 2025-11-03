@@ -50,9 +50,9 @@ class LoginViewModel : BaseVM() {
                     // 通知MainViewModel更新登录状态（如果MainViewModel已初始化）
                     // 注意：这里不直接引用MainViewModel，而是通过MainActivity来处理
 
-                    // 上报用户登录事件
+                    // 上报用户登录事件（使用 Firebase 内置 LOGIN 事件）
                     FirebaseManager.logEvent(
-                        FirebaseManager.Events.USER_LOGIN,
+                        FirebaseManager.Events.LOGIN,
                         FirebaseManager.safeEventParams(
                             "user_id" to userProfile.id,
                             "user_name" to (userProfile.nickname),
