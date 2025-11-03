@@ -1,5 +1,9 @@
 # Android App
 
+## Release
+
+- Tagging: v<major>.<minor>.<fix>-android: 与后端区分
+
 ## 测试版本发布
 
 - Android Studio 内构建 signed AAB
