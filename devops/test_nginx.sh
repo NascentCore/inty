@@ -22,6 +22,13 @@ cat "$CONFIG_FILE" >> "$TEST_CONFIG"
 # 关闭 http 块
 echo "}" >> "$TEST_CONFIG"
 
+# 移除 Certbot 管理的文件引用（在 CI 环境中不存在）
+sed -i.bak \
+    -e '/include \/etc\/letsencrypt\/options-ssl-nginx.conf/d' \
+    -e '/ssl_dhparam \/etc\/letsencrypt\/ssl-dhparams.pem/d' \
+    "$TEST_CONFIG"
+rm -f "${TEST_CONFIG}.bak"
+
 # 测试配置
 echo "正在测试配置文件: $CONFIG_FILE"
 echo "临时测试文件: $TEST_CONFIG"
@@ -41,4 +48,3 @@ else
     rm -f "$TEST_CONFIG"
     exit 1
 fi
-

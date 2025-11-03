@@ -47,19 +47,10 @@ jobs:
           fi
 
       - name: Install nginx
-        if: steps.check_nginx.outputs.changed == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y nginx
 
       - name: Validate nginx config
-        if: steps.check_nginx.outputs.changed == 'true'
         run: |
-          chmod +x devops/test_nginx.sh
           ./devops/test_nginx.sh devops/nginx.conf
-
-      - name: Skip validation
-        if: steps.check_nginx.outputs.changed != 'true'
-        run: |
-          echo "nginx.conf was not modified, skipping validation"
-
