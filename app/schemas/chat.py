@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from loguru import logger
 from pydantic import BaseModel, field_serializer, model_validator
@@ -164,6 +164,7 @@ class Chat(ChatInDB):
     agent_name: Optional[str] = None
     agent_avatar: Optional[str] = None
     agent_background: Optional[str] = None
+    agent_extensions: Optional[Dict[str, Any]] = None
     agent_is_deleted: Optional[bool] = None
     agent_intro: Optional[str] = None
     agent_opening: Optional[str] = None
@@ -172,14 +173,78 @@ class Chat(ChatInDB):
 
     @field_serializer("agent_avatar")
     def serialize_agent_avatar(self, agent_avatar: Optional[str]) -> Optional[str]:
-        """转换agent_avatar URL为CDN URL"""
-        if not agent_avatar:
-            return agent_avatar
+        """转换agent_avatar URL为CDN URL，支持基于extension裁切数据的avatar生成"""
         try:
             from app.services.image_transform_service import image_transform_service
 
-            return image_transform_service.transform_mobile(agent_avatar)
-        except Exception:
+            # 优先检查是否存在裁切数据，如果存在则使用裁切数据而不是独立的avatar
+            if (
+                self.agent_background
+                and self.agent_extensions
+                and isinstance(self.agent_extensions, dict)
+                and "avatar_crop" in self.agent_extensions
+            ):
+
+                avatar_crop_data = self.agent_extensions["avatar_crop"]
+
+                # 验证裁切数据的完整性
+                if (
+                    isinstance(avatar_crop_data, dict)
+                    and all(
+                        key in avatar_crop_data
+                        for key in [
+                            "x",
+                            "y",
+                            "width",
+                            "height",
+                            "imageWidth",
+                            "imageHeight",
+                        ]
+                    )
+                    and all(
+                        isinstance(avatar_crop_data[key], (int, float))
+                        for key in [
+                            "x",
+                            "y",
+                            "width",
+                            "height",
+                            "imageWidth",
+                            "imageHeight",
+                        ]
+                    )
+                    and avatar_crop_data["width"] > 0
+                    and avatar_crop_data["height"] > 0
+                ):
+
+                    # 创建 CroppedArea 对象
+                    from app.services.image_transform_service import (
+                        ImageTransformService,
+                    )
+
+                    cropped_area = ImageTransformService.CroppedArea(
+                        x=int(avatar_crop_data["x"]),
+                        y=int(avatar_crop_data["y"]),
+                        width=int(avatar_crop_data["width"]),
+                        height=int(avatar_crop_data["height"]),
+                        image_width=int(avatar_crop_data["imageWidth"]),
+                        image_height=int(avatar_crop_data["imageHeight"]),
+                    )
+
+                    # 使用裁切功能生成avatar URL
+                    return image_transform_service.transform_cropped_avatar_url(
+                        self.agent_background, cropped_area
+                    )
+
+            # 如果没有裁切数据但有独立的avatar，使用常规转换
+            if agent_avatar:
+                return image_transform_service.transform_mobile(agent_avatar)
+
+            return agent_avatar
+
+        except Exception as e:
+            logger.warning(
+                f"Failed to serialize agent_avatar for chat {getattr(self, 'id', 'unknown')}: {str(e)}"
+            )
             return agent_avatar
 
     @field_serializer("agent_background")
