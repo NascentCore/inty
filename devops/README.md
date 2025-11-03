@@ -58,6 +58,8 @@ htpasswd:/etc/nginx/.htpasswd # Used by nginx.conf
 nginx.conf:/etc/nginx/conf.d/sxwl.ai.conf
 ```
 
+`/etc/nginx/conf.d` 下所有 `*.conf` 文件均被包含在 nginx 启动配置内。
+
 ## Inty prod & dev 部署
 
 - 公用同一数据库服务器 inty-prod，dev:inty-dev prod:inty
