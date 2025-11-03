@@ -47,6 +47,7 @@ async def get_subscription_plans(
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
+    """获取订阅计划、当前订阅状态及历史订阅信息"""
     try:
         # 获取所有激活的订阅计划
         plans = await subscription_service.get_subscription_plans(

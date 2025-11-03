@@ -1,8 +1,11 @@
+import inspect
+
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
+from fastapi.routing import APIRoute
 from jose.exceptions import JWTError
 from loguru import logger
 from pydantic import BaseModel, ValidationError
@@ -263,6 +266,7 @@ async def shutdown_event():
 
 
 def custom_openapi():
+    _ensure_route_metadata()
     if app.openapi_schema:
         return app.openapi_schema
 
@@ -327,3 +331,37 @@ async def root():
             version=global_config_loaded_from_config_yaml.app.version,
         )
     )
+
+
+def _ensure_route_metadata() -> None:
+    """Ensure all FastAPI routes have summary and description metadata."""
+
+    for route in app.routes:
+        if not isinstance(route, APIRoute):
+            continue
+
+        docstring = inspect.getdoc(route.endpoint)
+        summary = None
+        description = None
+
+        if docstring:
+            cleaned_doc = inspect.cleandoc(docstring)
+            summary_line, *rest = cleaned_doc.split("\n", 1)
+            summary = summary_line.strip()
+            description = cleaned_doc
+
+        if not summary:
+            summary = route.name.replace("_", " ").capitalize() if route.name else "接口"
+
+        if not description:
+            path = getattr(route, "path", getattr(route, "path_format", ""))
+            description = f"{summary} 接口，用于处理 {path} 路径的请求。"
+
+        if not route.summary:
+            route.summary = summary
+
+        if not route.description:
+            route.description = description
+
+
+_ensure_route_metadata()
