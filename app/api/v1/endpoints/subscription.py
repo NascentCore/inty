@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
     response_model=APIResponse[SubscriptionPlansResponse],
     summary="获取订阅计划列表及其他用户订阅信息",
     description="现有订阅计划、用户订阅的内容、以及其他与用户订阅状态相关的信息",
+    tags=["android-app"],
 )
 async def get_subscription_plans(
     *,
@@ -140,6 +141,7 @@ async def get_usage_statistics(
     response_model=APIResponse[PurchaseVerificationResponse],
     summary="Verify Google Play purchase",
     description="Used by app to prove user has purchased a subscription",
+    tags=["android-app"],
 )
 async def verify_purchase(
     *,

@@ -59,6 +59,7 @@ async def get_current_superuser(
     response_model=schemas.APIResponse[List[schemas.Agent]],
     summary="Get list of user's created AI characters",
     description="This endpoint is used by an registered user to list their created AI characters (agents as a misnomer)",
+    tags=["android-app"],
 )
 async def list_agents(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -109,6 +110,7 @@ async def search_agents(
         "sort_seed is required when sort is random, "
         "which is used to ensure deterministic order for the random sort option"
     ),
+    tags=["android-app"],
 )
 async def recommend_agents(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -195,7 +197,7 @@ async def get_following_agents(
 @router.post(
     "",
     response_model=schemas.APIResponse[Union[schemas.Agent, Dict[str, Any]]],
-    tags=["app", "inty-eval"],
+    tags=["app", "inty-eval", "android-app"],
     summary="Create new AI agent",
     description="Create new AI agent, used by app and inty-eval",
 )
@@ -245,6 +247,7 @@ async def create_agent(
     operation_id="get_public_agent_by_id",
     summary="Get public agent by ID",
     description="Get public agent by ID, include pre-generated agents and user-created public agents",
+    tags=["android-app"],
 )
 async def get_agent(
     *,
@@ -313,6 +316,7 @@ async def unfollow_agent(
         "更新任何图片，都会将图片全部记录在 background_images 字段中，用于保存历史记录"
         "如果没有提供 avatar，则会自动截取头像，并记录在 avatar 字段中"
     ),
+    tags=["android-app"],
 )
 async def update_agent(
     *,
@@ -332,7 +336,7 @@ async def update_agent(
     return agent
 
 
-@router.delete("/{agent_id}", response_model=schemas.APIResponse[schemas.Agent])
+@router.delete("/{agent_id}", response_model=schemas.APIResponse[schemas.Agent], tags=["android-app"])
 async def delete_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),

@@ -96,6 +96,7 @@ def _build_chat_response(
     deprecated=True,
     summary="[Deprecated use /api/v2/chat/completions/{agent_id} instead] 返回与指定 Agent 聊天的下一条消息",
     description="可以处理包括图片在内的各种消息类型，媒体类型应该先上传，然后将 URL 作为索引发送到此 API",
+    tags=["android-app"],
 )
 async def agent_chat_completions(
     *,
