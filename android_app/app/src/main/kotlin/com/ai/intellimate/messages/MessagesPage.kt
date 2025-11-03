@@ -1,6 +1,5 @@
 package com.ai.intellimate.messages
 
-import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.design.ui.HeartRedDot
@@ -28,6 +27,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -50,23 +50,16 @@ import com.ai.intellimate.utils.AuthClickable
 /** 主页面第二个tab，会话列表页面，包含关注和聊天列表 */
 @Composable
 fun MessagesPage(
-    modifier: Modifier,
-    conversations: List<ConversationItem>,
+    modifier: Modifier = Modifier,
+    viewModel: MessagesViewModel,
     onClickConversationItem: (ConversationItem) -> Unit,
-    isLoadingConversations: Boolean = false,
-    isRefreshingConversations: Boolean = false,
-    onLoadMoreConversations: (() -> Unit)? = null,
+    pageTrackingContext: String = "MessagesPage",
 ) {
-    // 使用 PageTrackingHelper 进行页面跟踪
-    LaunchedEffect(Unit) {
-        PageTrackingHelper.trackPageView(
-            "MessagesPage",
-            "MainActivity",
-            mapOf(
-                "conversation_count" to conversations.size,
-                "is_loading" to isLoadingConversations,
-            )
-        )
+    val uiState by viewModel.uiState.collectAsState()
+
+    // 页面跟踪（首次加载时）
+    LaunchedEffect(pageTrackingContext) {
+        viewModel.trackPageView(pageTrackingContext)
     }
 
     Box(modifier = modifier) {
@@ -76,11 +69,9 @@ fun MessagesPage(
             contentDescription = null
         )
         Content(
-            conversations = conversations,
+            uiState = uiState,
             onClickConversationItem = onClickConversationItem,
-            isLoadingConversations = isLoadingConversations,
-            isRefreshingConversations = isRefreshingConversations,
-            onLoadMoreConversations = onLoadMoreConversations,
+            onLoadMore = { viewModel.loadMoreConversations() },
         )
     }
 }
@@ -88,11 +79,9 @@ fun MessagesPage(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Content(
-    conversations: List<ConversationItem>,
+    uiState: MessagesUiState,
     onClickConversationItem: (ConversationItem) -> Unit,
-    isLoadingConversations: Boolean = false,
-    isRefreshingConversations: Boolean = false,
-    onLoadMoreConversations: (() -> Unit)? = null,
+    onLoadMore: () -> Unit,
 ) {
     Scaffold(
         modifier = Modifier
@@ -121,11 +110,9 @@ private fun Content(
             .fillMaxSize()
             .padding(innerPadding)) {
             MessageTabContent(
-                conversations = conversations,
+                uiState = uiState,
                 onClickConversationItem = onClickConversationItem,
-                isLoading = isLoadingConversations,
-                isRefreshing = isRefreshingConversations,
-                onLoadMore = onLoadMoreConversations,
+                onLoadMore = onLoadMore,
             )
         }
     }
@@ -134,11 +121,9 @@ private fun Content(
 /** 消息Tab内容 */
 @Composable
 private fun MessageTabContent(
-    conversations: List<ConversationItem>,
+    uiState: MessagesUiState,
     onClickConversationItem: (ConversationItem) -> Unit,
-    isLoading: Boolean = false,
-    isRefreshing: Boolean = false,
-    onLoadMore: (() -> Unit)? = null,
+    onLoadMore: () -> Unit,
 ) {
     val listState = rememberLazyListState()
 
@@ -150,21 +135,21 @@ private fun MessageTabContent(
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
             // 当滚动到倒数第3项时触发加载更多
-            totalItems > 0 && lastVisibleItem >= totalItems - 3 && !isLoading
+            totalItems > 0 && lastVisibleItem >= totalItems - 3 && !uiState.isLoading && uiState.hasMore
         }
     }
 
     // 监听滚动状态，触发加载更多
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore) {
-            onLoadMore?.invoke()
+            onLoadMore()
         }
     }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(state = listState, modifier = Modifier.matchParentSize()) {
             // 刷新指示器
-            if (isRefreshing) {
+            if (uiState.isRefreshing) {
                 item {
                     Box(
                         modifier = Modifier
@@ -181,10 +166,10 @@ private fun MessageTabContent(
             }
 
             // 会话列表
-            if (conversations.isNotEmpty()) {
+            if (uiState.conversations.isNotEmpty()) {
                 runCatching {
                         itemsIndexed(
-                            items = conversations,
+                            items = uiState.conversations,
                             key = { index, conversion -> "${conversion.agentId}_$index" },
                         ) { _, conversion ->
                             AuthClickable(onClick = { onClickConversationItem(conversion) }) {
@@ -201,7 +186,7 @@ private fun MessageTabContent(
             }
 
             // 加载更多指示器
-            if (isLoading) {
+            if (uiState.isLoading) {
                 item {
                     Box(
                         modifier = Modifier
@@ -218,7 +203,7 @@ private fun MessageTabContent(
             }
         }
 
-        if (conversations.isEmpty() && !isLoading && !isRefreshing) {
+        if (uiState.conversations.isEmpty() && !uiState.isLoading && !uiState.isRefreshing) {
             EmptyDataState(
                 subtitle = stringResource(R.string.empty_conversations),
                 modifier = Modifier.fillMaxSize(),

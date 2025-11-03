@@ -139,7 +139,8 @@ class MainViewModel : BaseVM() {
         _selectedTab.value = tabEntries[tab]
         when (_selectedTab.value) {
             HomeTabIndex.Conversation -> {
-                chatViewModel?.getConversations()
+                // 会话列表由 MessagesViewModel 在 ConversationsTabContent 中自动加载
+                // 无需在这里手动调用
             }
             HomeTabIndex.Profile -> {
                 // 使用refreshCreatedAgentsListIfOnTab()来避免重复请求
@@ -446,7 +447,7 @@ class MainViewModel : BaseVM() {
      */
     @Deprecated(
         "已废弃：应用已移除 guest 账户流程",
-        ReplaceWith("无需替换，guest 功能已移除"),
+        ReplaceWith("无需替换guest功能已移除"),
         DeprecationLevel.WARNING
     )
     private fun loadGuestModeData() {

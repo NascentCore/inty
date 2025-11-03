@@ -56,6 +56,7 @@ import com.ai.intellimate.explore.ExplorePage
 import com.ai.intellimate.explore.ExploreViewModel
 import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.messages.MessagesPage
+import com.ai.intellimate.messages.MessagesViewModel
 import com.ai.intellimate.profile.ProfilePage
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.ExpiredVipDialog
@@ -236,7 +237,7 @@ private fun HomeContent(
             )
         }
         HomeTabIndex.Conversation -> {
-            ConversationsTabContent(chatViewModel = chatViewModel, context = context)
+            ConversationsTabContent(context = context)
         }
         HomeTabIndex.Create -> {
             // Create tab is handled in handleTabSelection
@@ -276,22 +277,24 @@ private fun ChatTabContent(
 
 /** 会话Tab内容 */
 @Composable
-private fun ConversationsTabContent(chatViewModel: ChatViewModel, context: Context) {
-    val conversations by chatViewModel.conversations.collectAsState()
-    val isLoadingConversations by chatViewModel.isLoadingConversations.collectAsState()
-    val isRefreshingConversations by chatViewModel.isRefreshingConversations.collectAsState()
+private fun ConversationsTabContent(context: Context) {
+    // 创建 MessagesViewModel 实例，用于会话列表
+    val messagesViewModel: MessagesViewModel = viewModel()
+
+    // 初始化数据加载
+    LaunchedEffect(Unit) {
+        messagesViewModel.getConversations()
+    }
 
     MessagesPage(
         modifier = Modifier,
-        conversations = conversations,
+        viewModel = messagesViewModel,
         onClickConversationItem = { conversation ->
-            chatViewModel.setConversationReaded(conversation)
-            // 从会话列表 跳转到聊天页面，
+            messagesViewModel.setConversationReaded(conversation)
+            // 从会话列表 跳转到聊天页面
             ChatActivity.launch(context, conversation.convertToAgentInfo())
         },
-        isLoadingConversations = isLoadingConversations,
-        isRefreshingConversations = isRefreshingConversations,
-        onLoadMoreConversations = { chatViewModel.loadMoreConversations() },
+        pageTrackingContext = "MainActivity",
     )
 }
 
