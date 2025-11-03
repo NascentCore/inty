@@ -50,12 +50,15 @@ export const BREAKPOINTS = {
 
 // 本地存储键名
 export const STORAGE_KEYS = {
+  /** 用户信息 */
   USER_INFO: 'user_info',
+  /** 统一 Token（访客和正式用户共用） */
   TOKEN: 'token',
-  GUEST_TOKEN: 'guest_token',
-  GUEST_ID: 'guest_id',
+  /** 设备 ID */
   DEVICE_ID: 'device_id',
+  /** 语言设置 */
   LANGUAGE: 'language',
+  /** 主题设置 */
   THEME: 'theme',
 } as const;
 
