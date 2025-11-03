@@ -2,9 +2,9 @@ app:
   debug: true
   environment: dev
   limits:
-    free_user_chat_24h_limit: 1
+    free_user_chat_24h_limit: 3
     guest_user_chat_24h_limit: 1
-    free_user_voice_24h_limit: 1
+    free_user_voice_24h_limit: 3
     guest_user_voice_24h_limit: 1
     subscribed_user_voice_24h_limit: 2
     # guest（游客）无法生图，必须登录，因此没有对应的设置
