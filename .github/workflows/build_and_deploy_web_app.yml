@@ -85,12 +85,12 @@ jobs:
           script: |
             # 确保目标目录存在
             sudo mkdir -p /var/www/dev.intellimate.app
-            # 备份当前部署（可选，保留最近一次备份）
+            # 备份当前部署（可选，保留最近一次备份）会删除当前目录
             if [ -d /var/www/dev.intellimate.app ] && [ "$(ls -A /var/www/dev.intellimate.app)" ]; then
               sudo rm -rf /var/www/dev.intellimate.app.backup || true
               sudo mv /var/www/dev.intellimate.app /var/www/dev.intellimate.app.backup || true
             fi
-            # 创建新的部署目录
+            # 重新创建目标目录（备份后目录已被移动）
             sudo mkdir -p /var/www/dev.intellimate.app
             # 解压构建产物到目标目录
             sudo tar xzf /tmp/intellimate-app-dist.tar.gz -C /var/www/dev.intellimate.app

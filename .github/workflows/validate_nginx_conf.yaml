@@ -1,0 +1,65 @@
+name: Validate nginx config
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "devops/nginx.conf"
+      - "devops/test_nginx.sh"
+      - ".github/workflows/validate_nginx_conf.yaml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "devops/nginx.conf"
+      - "devops/test_nginx.sh"
+      - ".github/workflows/validate_nginx_conf.yaml"
+
+jobs:
+  validate_nginx:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for git diff
+
+      - name: Check if nginx.conf changed
+        id: check_nginx
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # For PRs, fetch base branch and check if nginx.conf is in changed files
+            git fetch origin ${{ github.base_ref }}:${{ github.base_ref }} 2>/dev/null || true
+            if git diff --name-only ${{ github.base_ref }}...HEAD | grep -q "^devops/nginx.conf$"; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            # For pushes, check if nginx.conf was modified
+            if git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -q "^devops/nginx.conf$"; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Install nginx
+        if: steps.check_nginx.outputs.changed == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx
+
+      - name: Validate nginx config
+        if: steps.check_nginx.outputs.changed == 'true'
+        run: |
+          chmod +x devops/test_nginx.sh
+          ./devops/test_nginx.sh devops/nginx.conf
+
+      - name: Skip validation
+        if: steps.check_nginx.outputs.changed != 'true'
+        run: |
+          echo "nginx.conf was not modified, skipping validation"
+
