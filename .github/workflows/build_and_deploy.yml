@@ -1,21 +1,6 @@
 name: Build and deploy inty backend
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      # 后端代码
-      - "app/**/*.py"
-      - "alembic/**/*"
-      # 开发环境配置文件
-      - "devops/config.yaml.dev"
-      # 评测系统
-      - "evaluation/**/*"
-      - "build_evaluation.sh"
-      - "Dockerfile"
-      - ".github/workflows/build_and_deploy.yml"
-
   workflow_dispatch:
     inputs:
       environment:
