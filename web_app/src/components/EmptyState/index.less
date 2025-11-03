@@ -1,0 +1,28 @@
+/**
+ * EmptyState 组件样式
+ */
+
+@import '@/styles/animations.less';
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+
+  .empty-state-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.6;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .empty-state-description {
+    font-size: 14px;
+    color: #999999;
+    margin: 0;
+  }
+}
+

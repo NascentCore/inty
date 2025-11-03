@@ -1,0 +1,120 @@
+/**
+ * Less 变量定义
+ * 包含颜色、尺寸、字体、阴影等设计变量
+ * 应与 src/constants/index.ts 中的常量保持一致
+ */
+
+// ==================== 主题色 ====================
+@primary-color: #1890ff;
+@primary-hover: #40a9ff;
+@primary-active: #096dd9;
+@success-color: #52c41a;
+@warning-color: #faad14;
+@error-color: #f5222d;
+
+// ==================== 暗色主题色彩系统 ====================
+// 背景色
+@dark-bg-primary: #0f0f0f;           // 主背景色
+@dark-bg-secondary: #1a1a1a;         // 次级背景色
+@dark-bg-tertiary: #242424;          // 三级背景色（卡片、面板）
+@dark-bg-hover: #2a2a2a;             // 悬停背景色
+@dark-bg-active: #333333;            // 激活背景色
+
+// 文本色
+@dark-text-primary: rgba(255, 255, 255, 0.95);    // 主文本
+@dark-text-secondary: rgba(255, 255, 255, 0.75);  // 次要文本
+@dark-text-tertiary: rgba(255, 255, 255, 0.55);   // 三级文本
+@dark-text-quaternary: rgba(255, 255, 255, 0.35); // 四级文本（占位符）
+
+// 边框色
+@dark-border-color: rgba(255, 255, 255, 0.08);
+@dark-border-hover: rgba(255, 255, 255, 0.15);
+
+// 阴影
+@dark-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+@dark-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+@dark-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+// 渐变
+@dark-gradient-primary: linear-gradient(180deg, #0f0f0f 0%, #1a1a1a 100%);
+@dark-gradient-card: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+
+// ==================== 背景色 ====================
+@bg-color: #f0f2f5;
+@bg-white: #fff;
+@bg-hover: #f5f5f5;
+@bg-active: #e6f7ff;
+
+// ==================== 文本色 ====================
+@text-primary: rgba(0, 0, 0, 0.85);
+@text-secondary: rgba(0, 0, 0, 0.65);
+@text-tertiary: rgba(0, 0, 0, 0.45);
+@text-quaternary: rgba(0, 0, 0, 0.88);
+
+// ==================== 边框 ====================
+@border-color-base: #f0f0f0;
+@border-color-light: #d9d9d9;
+@box-shadow-base: 0 2px 8px rgba(0, 0, 0, 0.06);
+@box-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.03);
+
+// ==================== 布局尺寸 ====================
+@layout-max-width: 1400px;
+@layout-header-height: 64px;
+@layout-footer-height: auto;
+
+// ==================== 间距系统 ====================
+@spacing-xs: 8px;
+@spacing-sm: 12px;
+@spacing-md: 16px;
+@spacing-lg: 24px;
+@spacing-xl: 32px;
+@spacing-xxl: 40px;
+
+// ==================== 字体 ====================
+@font-family-base: AlibabaSans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+@font-size-xs: 12px;
+@font-size-sm: 14px;
+@font-size-base: 16px;
+@font-size-lg: 20px;
+@font-size-xl: 24px;
+@font-size-xxl: 72px;
+@font-weight-normal: 400;
+@font-weight-medium: 500;
+@font-weight-semibold: 600;
+@font-weight-bold: 700;
+@line-height-base: 1.5;
+@line-height-lg: 1.8;
+
+// ==================== 圆角 ====================
+@border-radius-sm: 4px;
+@border-radius-base: 6px;
+@border-radius-lg: 8px;
+@border-radius-circle: 50%;
+
+// ==================== 过渡动画 ====================
+@transition-fast: 0.2s;
+@transition-base: 0.3s;
+@transition-slow: 0.5s;
+@ease-base: ease;
+@ease-in: ease-in;
+@ease-out: ease-out;
+@ease-in-out: ease-in-out;
+
+// ==================== 层级 ====================
+@z-index-dropdown: 1000;
+@z-index-modal: 1050;
+@z-index-popover: 1060;
+@z-index-tooltip: 1070;
+
+// ==================== 响应式断点 ====================
+@screen-xs: 480px;
+@screen-sm: 576px;
+@screen-md: 768px;
+@screen-lg: 992px;
+@screen-xl: 1200px;
+@screen-xxl: 1600px;
+
+// ==================== 其他 ====================
+@spinner-border-color: rgba(0, 0, 0, 0.1);
+@loading-color: @primary-color;
+

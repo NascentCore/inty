@@ -1,0 +1,167 @@
+/**
+ * MessageInput 样式
+ */
+
+@import '@/styles/animations.less';
+
+.message-input-container {
+  padding: 16px;
+  background: transparent;
+  border-top: none;
+
+  .message-input-wrapper {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    &:focus-within {
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+      border-color: rgba(102, 126, 234, 0.5);
+    }
+
+    .message-input {
+      flex: 1;
+      min-height: 24px;
+      max-height: 200px;
+      padding: 8px 0;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #ffffff;
+      resize: none;
+      font-family: inherit;
+
+      &::placeholder {
+        color: rgba(255, 255, 255, 0.4);
+      }
+
+      &:disabled {
+        color: rgba(255, 255, 255, 0.3);
+        cursor: not-allowed;
+      }
+    }
+
+    .send-button {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      transition: all 0.2s ease;
+      outline: none;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+
+      &:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.15);
+        transform: scale(1.05);
+      }
+
+      &:active:not(:disabled) {
+        transform: scale(0.95);
+      }
+
+      &.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: transparent;
+
+        &:hover {
+          background: linear-gradient(135deg, #5568d3 0%, #65408d 100%);
+        }
+      }
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      &.sending {
+        cursor: not-allowed;
+      }
+
+      .send-icon {
+        display: inline-block;
+      }
+
+      .sending-spinner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+
+        > div {
+          width: 6px;
+          height: 6px;
+          background-color: #ffffff;
+          border-radius: 100%;
+          display: inline-block;
+          animation: sk-bouncedelay 1.4s infinite ease-in-out both;
+        }
+
+        .bounce1 {
+          animation-delay: -0.32s;
+        }
+
+        .bounce2 {
+          animation-delay: -0.16s;
+        }
+      }
+    }
+  }
+
+  // SpinKit 弹跳动画（如果全局没有定义则在此定义）
+  @keyframes sk-bouncedelay {
+    0%, 80%, 100% { 
+      transform: scale(0);
+    }
+    40% { 
+      transform: scale(1.0);
+    }
+  }
+
+  .message-input-hint {
+    margin-top: 8px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    text-align: center;
+  }
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .message-input-container {
+    padding: 12px;
+
+    .message-input-wrapper {
+      padding: 10px;
+
+      .message-input {
+        font-size: 14px;
+      }
+
+      .send-button {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+      }
+    }
+
+    .message-input-hint {
+      font-size: 11px;
+    }
+  }
+}
+

@@ -1,0 +1,57 @@
+/**
+ * 账户信息样式
+ */
+
+@import '@/styles/variables.less';
+@import '../../index.less';
+
+.account-info-card {
+  .profile-card();
+
+  .account-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .account-info-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+
+      .account-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: @dark-text-secondary;
+        font-size: 14px;
+      }
+
+      .account-value {
+        color: @dark-text-primary;
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+// 响应式适配
+@media (max-width: 600px) {
+  .account-info-card {
+    .account-list {
+      gap: 10px;
+
+      .account-info-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 8px 0;
+
+        .account-value {
+          padding-left: 26px;
+        }
+      }
+    }
+  }
+}
+

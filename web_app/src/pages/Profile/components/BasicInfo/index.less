@@ -1,0 +1,65 @@
+/**
+ * 基础信息样式
+ */
+
+@import '@/styles/variables.less';
+@import '../../index.less';
+
+.basic-info-card {
+  .profile-card();
+
+  .info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 10px 0;
+
+      .info-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: @dark-text-secondary;
+        font-size: 14px;
+        min-width: 100px;
+      }
+
+      .info-value {
+        flex: 1;
+        text-align: right;
+        color: @dark-text-primary;
+        font-size: 14px;
+        word-break: break-word;
+      }
+    }
+  }
+}
+
+// 响应式适配
+@media (max-width: 600px) {
+  .basic-info-card {
+    .info-list {
+      gap: 10px;
+
+      .info-item {
+        flex-direction: column;
+        gap: 6px;
+        padding: 8px 0;
+
+        .info-label {
+          min-width: auto;
+        }
+
+        .info-value {
+          text-align: left;
+          padding-left: 26px;
+        }
+      }
+    }
+  }
+}
+

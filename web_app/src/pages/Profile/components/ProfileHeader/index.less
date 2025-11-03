@@ -1,0 +1,78 @@
+/**
+ * 个人信息头部样式
+ */
+
+@import '@/styles/variables.less';
+
+.profile-header-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: @dark-bg-tertiary;
+  border-radius: 12px;
+  border: 1px solid @dark-border-color;
+
+  // 头像容器
+  .profile-avatar-container {
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+
+    // 头像图片
+    .profile-avatar-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    // 头像占位符
+    .profile-avatar-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(99, 102, 241, 0.15);
+      color: @primary-color;
+      font-size: 32px;
+      font-weight: 700;
+    }
+  }
+
+  // 用户信息
+  .profile-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .profile-nickname {
+      font-size: 24px;
+      font-weight: 600;
+      color: @dark-text-primary;
+      margin: 0;
+    }
+
+    .profile-id {
+      font-size: 14px;
+      color: @dark-text-secondary;
+    }
+  }
+}
+
+// 响应式适配
+@media (max-width: 600px) {
+  .profile-header-card {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+
+    .profile-info {
+      align-items: center;
+    }
+  }
+}
+

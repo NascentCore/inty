@@ -1,0 +1,17 @@
+---
+alwaysApply: true
+---
+
+#### General Rules
+- All interactions must be conducted in Chinese.
+
+#### Core Coding Principles:
+- **Code Design**: Prioritize readability, maintainability, and extensibility. Avoid unnecessary complex encapsulation.
+- **Commenting Requirements**: Add concise comments to key logic, complex algorithms, or other important sections to explain their purpose.
+- **Naming Conventions**: Names of variables, functions, etc., must be self-explanatory. Type definitions (e.g., interfaces) should uniformly start with a capital letter "I" (for example, `IUserData`).
+- **Overall Goal**: Produce clean, easy-to-understand, and easily iterable code.
+
+#### Collaboration and Communication Process:
+- **Confirmation Before Modification**: When code modifications are needed, you must first pause and describe your plan in a concise and structured manner (including the general approach and key changes, avoiding lengthy descriptions). Wait for my explicit confirmation before implementing any specific modifications.
+- **Output After Completion**: Once modifications are finished, only generate a final summary in the conversation; there is no need to provide detailed intermediate process documentation.
+- **Git Integration (if applicable)**: If Git commits are involved, strictly follow standard commit message conventions. Ensure commit messages are brief, clear, and adhere to the agreed-upon format.

@@ -1,0 +1,73 @@
+{
+  "name": "intellimate",
+  "version": "1.0.0",
+  "private": true,
+  "description": "IntelliMate - A clean React project based on UmiJS",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/intellimate.git"
+  },
+  "author": "Your Name",
+  "license": "MIT",
+  "scripts": {
+    "analyze": "cross-env ANALYZE=1 max build",
+    "biome:lint": "npx @biomejs/biome lint",
+    "build": "max build",
+    "deploy": "npm run build && npm run gh-pages",
+    "dev": "npm run start:dev",
+    "gh-pages": "gh-pages -d dist",
+    "postinstall": "max setup",
+    "lint": "npm run biome:lint && npm run tsc",
+    "prepare": "husky",
+    "preview": "npm run build && max preview --port 8000",
+    "start": "cross-env UMI_ENV=dev max dev",
+    "start:dev": "cross-env REACT_APP_ENV=dev UMI_ENV=dev max dev",
+    "tsc": "tsc --noEmit"
+  },
+  "browserslist": [
+    "defaults"
+  ],
+  "dependencies": {
+    "@ant-design/icons": "^5.6.1",
+    "@ant-design/pro-components": "^2.7.19",
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "antd": "^5.25.4",
+    "classnames": "^2.5.1",
+    "dayjs": "^1.11.13",
+    "inty": "git+ssh://git@github.com:NascentCore/inty-typescript.git",
+    "localforage": "^1.10.0",
+    "lucide-react": "^0.552.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@ant-design/pro-cli": "^3.3.0",
+    "@biomejs/biome": "^2.0.6",
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.0.1",
+    "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
+    "@types/localforage": "^0.0.34",
+    "@types/lodash": "^4.17.10",
+    "@types/react": "^19.1.5",
+    "@types/react-dom": "^19.1.5",
+    "@types/react-helmet": "^6.1.11",
+    "@umijs/max": "^4.3.24",
+    "cross-env": "^7.0.3",
+    "express": "^4.21.1",
+    "gh-pages": "^6.1.1",
+    "husky": "^9.1.7",
+    "jest": "^30.0.4",
+    "jest-environment-jsdom": "^29.7.0",
+    "mockjs": "^1.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3",
+    "umi-presets-pro": "^2.0.3",
+    "umi-serve": "^1.9.11"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
