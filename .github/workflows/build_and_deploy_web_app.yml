@@ -1,0 +1,114 @@
+name: Build and deploy IntelliMate web app
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: environment
+        description: The environment to deploy to
+        required: true
+        default: dev
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.environment || 'dev' }}
+  # Do not cancel in-progress builds.
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      # Checkout repository
+      contents: read
+
+    # 自动运行的情况下，inputs.environment 为空，因此需要额外设置
+    environment: ${{ inputs.environment || 'dev' }}
+
+    steps:
+      - id: set-environment
+        run: |
+          echo "environment=${{ inputs.environment || 'dev' }}" >> $GITHUB_OUTPUT
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache yarn dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ steps.yarn-cache-dir-path.outputs.dir }}
+            web_app/node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('web_app/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies
+        working-directory: web_app
+        run: yarn install --frozen-lockfile
+
+      - name: Build web app
+        working-directory: web_app
+        run: yarn build
+
+      - name: Create deployment archive
+        run: |
+          cd web_app
+          tar czf ../intellimate-app-dist.tar.gz -C dist .
+
+      - name: Upload deployment archive
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          source: "intellimate-app-dist.tar.gz"
+          target: "/tmp/"
+
+      - name: Deploy to ${{ steps.set-environment.outputs.environment }}
+        uses: appleboy/ssh-action@master
+        timeout-minutes: 2
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            # 确保目标目录存在
+            sudo mkdir -p /var/www/dev.intellimate.app
+            # 备份当前部署（可选，保留最近一次备份）
+            if [ -d /var/www/dev.intellimate.app ] && [ "$(ls -A /var/www/dev.intellimate.app)" ]; then
+              sudo rm -rf /var/www/dev.intellimate.app.backup || true
+              sudo mv /var/www/dev.intellimate.app /var/www/dev.intellimate.app.backup || true
+            fi
+            # 创建新的部署目录
+            sudo mkdir -p /var/www/dev.intellimate.app
+            # 解压构建产物到目标目录
+            sudo tar xzf /tmp/intellimate-app-dist.tar.gz -C /var/www/dev.intellimate.app
+            # 设置正确的权限
+            sudo chown -R www-data:www-data /var/www/dev.intellimate.app
+            sudo chmod -R 755 /var/www/dev.intellimate.app
+            # 清理临时文件
+            sudo rm -f /tmp/intellimate-app-dist.tar.gz
+            # 重新加载 nginx 配置（如果配置有变更）
+            sudo nginx -t && sudo systemctl reload nginx || true
+
+      - name: Sanity check
+        run: |
+          curl --verbose --fail --retry 5 --retry-delay 5 https://dev.intellimate.app
+
+      - name: Write summary
+        run: |
+          echo "## Build and deploy web app" >> $GITHUB_STEP_SUMMARY
+          echo "GitHub ref: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "Deployed to ${{ steps.set-environment.outputs.environment }} for https://dev.intellimate.app" >> $GITHUB_STEP_SUMMARY
+
