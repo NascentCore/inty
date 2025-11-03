@@ -379,6 +379,96 @@ class UserAnalytics:
         finally:
             cursor.close()
 
+    def get_users_hitting_chat_limit(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        guest_limit: int,
+        google_limit: int,
+    ) -> pd.DataFrame:
+        """查询按日统计达到聊天限制的用户
+
+        对分析时间范围内的每一天，计算每个用户在过去24小时内的聊天次数，
+        筛选达到或超过限制的用户。
+
+        Args:
+            start_date: 开始日期
+            end_date: 结束日期
+            guest_limit: guest用户的聊天限制（24小时）
+            google_limit: google登录用户的聊天限制（24小时）
+
+        Returns:
+            DataFrame包含：日期、用户ID、认证类型、昵称、邮箱、当日24小时聊天次数、限制值
+        """
+        query = """
+            WITH date_series AS (
+                SELECT generate_series(
+                    DATE(%s),
+                    DATE(%s - interval '1 day'),
+                    interval '1 day'
+                )::date as check_date
+            ),
+            active_users AS (
+                SELECT DISTINCT su.user_id
+                FROM subscription_usage su
+                WHERE su.usage_type = 'chat'
+                  AND su.usage_date >= %s - interval '24 hours'
+                  AND su.usage_date < %s
+            ),
+            user_usage AS (
+                SELECT 
+                    ds.check_date,
+                    u.id as user_id,
+                    u.auth_type,
+                    u.nickname,
+                    u.email,
+                    COALESCE(SUM(su.usage_count), 0) as chat_count_24h,
+                    CASE 
+                        WHEN u.auth_type = 'GUEST' THEN %s
+                        ELSE %s
+                    END as limit_value
+                FROM date_series ds
+                CROSS JOIN active_users au
+                INNER JOIN users u ON u.id = au.user_id AND u.deleted_at IS NULL
+                LEFT JOIN subscription_usage su ON (
+                    su.user_id = u.id
+                    AND su.usage_type = 'chat'
+                    AND su.usage_date >= (ds.check_date::timestamp AT TIME ZONE 'UTC' - interval '24 hours')
+                    AND su.usage_date < (ds.check_date::timestamp AT TIME ZONE 'UTC' + interval '1 day')
+                )
+                GROUP BY ds.check_date, u.id, u.auth_type, u.nickname, u.email
+            )
+            SELECT 
+                check_date as date,
+                user_id,
+                auth_type,
+                nickname,
+                email,
+                chat_count_24h,
+                limit_value
+            FROM user_usage
+            WHERE chat_count_24h >= limit_value
+            ORDER BY check_date, user_id
+        """
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute(
+                query,
+                (
+                    start_date,
+                    end_date,
+                    start_date,
+                    end_date,
+                    guest_limit,
+                    google_limit,
+                ),
+            )
+            columns = [desc[0] for desc in cursor.description]
+            data = cursor.fetchall()
+            return pd.DataFrame(data, columns=columns)
+        finally:
+            cursor.close()
+
 
 class ReportGenerator:
     """报告生成类"""
@@ -408,11 +498,12 @@ class ReportGenerator:
         rounds_dist_df: pd.DataFrame,
         user_rounds_dist_df: pd.DataFrame,
         user_sessions_detail_df: pd.DataFrame,
+        users_hitting_limit_df: pd.DataFrame,
         date_range: Tuple[datetime, datetime],
     ):
         """生成 HTML 可视化报告"""
         fig = make_subplots(
-            rows=6,
+            rows=7,
             cols=1,
             subplot_titles=(
                 "每日新用户趋势",
@@ -420,12 +511,14 @@ class ReportGenerator:
                 "Top 20 热门聊天角色",
                 "对话轮数分布（按Session）",
                 "对话轮数分布（按用户）",
+                "达到聊天限制的用户趋势",
                 "新增用户会话详情表",
             ),
             vertical_spacing=0.05,
             specs=[
                 [{"type": "bar"}],
                 [{"type": "histogram"}],
+                [{"type": "bar"}],
                 [{"type": "bar"}],
                 [{"type": "bar"}],
                 [{"type": "bar"}],
@@ -515,7 +608,33 @@ class ReportGenerator:
                 col=1,
             )
 
-        # 图表 6: 新增用户会话详情表
+        # 图表 6: 达到聊天限制的用户趋势
+        if not users_hitting_limit_df.empty:
+            # 按日期和认证类型分组统计
+            daily_hitting_limit = (
+                users_hitting_limit_df.groupby(["date", "auth_type"])
+                .size()
+                .reset_index(name="count")
+            )
+
+            for auth_type in ["GUEST", "GOOGLE"]:
+                data = daily_hitting_limit[
+                    daily_hitting_limit["auth_type"] == auth_type
+                ]
+                if not data.empty:
+                    fig.add_trace(
+                        go.Bar(
+                            x=data["date"],
+                            y=data["count"],
+                            name=f"{auth_type} 达到限制",
+                            legendgroup="limit",
+                            marker_color="orange" if auth_type == "GUEST" else "red",
+                        ),
+                        row=6,
+                        col=1,
+                    )
+
+        # 图表 7: 新增用户会话详情表
         if not user_sessions_detail_df.empty:
             # 准备表格数据，限制显示前100条
             display_df = user_sessions_detail_df.head(100).copy()
@@ -524,7 +643,7 @@ class ReportGenerator:
             if "user_created_at" in display_df.columns:
                 display_df["user_created_at"] = pd.to_datetime(
                     display_df["user_created_at"]
-                ).dt.strftime("%Y-%m-%d %H:%M")
+                ).dt.strftime("%Y-%m-%d %H:%M:%S")
 
             # 截断过长的ID
             if "user_id" in display_df.columns:
@@ -565,13 +684,13 @@ class ReportGenerator:
                         height=25,
                     ),
                 ),
-                row=6,
+                row=7,
                 col=1,
             )
 
         # 更新布局
         fig.update_layout(
-            height=3200,  # 增加高度以容纳新图表
+            height=3700,  # 增加高度以容纳新图表
             title_text=f"用户行为分析报告 ({date_range[0].date()} 至 {date_range[1].date()})",
             showlegend=True,
         )
@@ -590,6 +709,9 @@ class ReportGenerator:
 
         fig.update_xaxes(title_text="消息数区间", row=5, col=1)
         fig.update_yaxes(title_text="用户数量", row=5, col=1)
+
+        fig.update_xaxes(title_text="日期", row=6, col=1)
+        fig.update_yaxes(title_text="达到限制的用户数", row=6, col=1)
 
         # 保存 HTML
         filepath = self.output_dir / "user_analytics_report.html"
@@ -1182,7 +1304,7 @@ class ReportGenerator:
                 user_info = user_sessions.iloc[0]
                 auth_type = user_info["auth_type"]
                 user_created_at = pd.to_datetime(user_info["user_created_at"]).strftime(
-                    "%Y-%m-%d %H:%M"
+                    "%Y-%m-%d %H:%M:%S"
                 )
                 session_count = len(user_sessions)
                 total_user_messages = user_message_counts[user_id]
@@ -1278,7 +1400,7 @@ class ReportGenerator:
                             msg_type = msg["message_type"]
                             content = msg["content"]
                             timestamp = pd.to_datetime(msg["created_at"]).strftime(
-                                "%H:%M:%S"
+                                "%Y-%m-%d %H:%M:%S"
                             )
 
                             role = "user" if msg_type == "human" else "assistant"
@@ -1416,7 +1538,11 @@ class ReportGenerator:
 
 
 def process_data(
-    analytics: UserAnalytics, start_date: datetime, end_date: datetime
+    analytics: UserAnalytics,
+    start_date: datetime,
+    end_date: datetime,
+    guest_limit: int = 10,
+    google_limit: int = 100,
 ) -> Dict[str, Any]:
     """处理数据并返回各种统计结果"""
     results = {}
@@ -1850,7 +1976,30 @@ def process_data(
             "avg_rounds_per_session": 0,
         }
 
-    # 7. 长对话会话列表（按轮数降序）
+    # 7. 查询达到聊天限制的用户
+    logger.info("查询达到聊天限制的用户...")
+    users_hitting_limit_df = analytics.get_users_hitting_chat_limit(
+        start_date, end_date, guest_limit, google_limit
+    )
+    results["users_hitting_chat_limit"] = users_hitting_limit_df
+
+    if not users_hitting_limit_df.empty:
+        total_hitting = len(users_hitting_limit_df)
+        guest_hitting = len(
+            users_hitting_limit_df[users_hitting_limit_df["auth_type"] == "GUEST"]
+        )
+        google_hitting = len(
+            users_hitting_limit_df[users_hitting_limit_df["auth_type"] == "GOOGLE"]
+        )
+        unique_users = users_hitting_limit_df["user_id"].nunique()
+        logger.info(
+            f"找到 {total_hitting} 条达到限制的记录 (游客: {guest_hitting}, Google: {google_hitting}), "
+            f"涉及 {unique_users} 个用户"
+        )
+    else:
+        logger.info("未找到达到聊天限制的用户")
+
+    # 8. 长对话会话列表（按轮数降序）
     if "user_sessions_detail" in results and not results["user_sessions_detail"].empty:
         if "messages" in results and not results["messages"].empty:
             user_messages_df = results["messages"][
@@ -1936,6 +2085,53 @@ def load_database_config(config_file: Optional[str] = None) -> Dict[str, Any]:
     db_config["dbname"] = os.getenv("DB_NAME", db_config.get("dbname", "inty"))
 
     return db_config
+
+
+def load_chat_limits(config_file: Optional[str] = None) -> Dict[str, int]:
+    """加载聊天限制配置
+
+    优先级：
+    1. 命令行指定的配置文件
+    2. 项目根目录的 config.yaml
+    3. 默认值（guest=10, google=100）
+
+    Returns:
+        Dict[str, int]: {"guest": 10, "google": 100}
+    """
+    default_limits = {
+        "guest": 10,
+        "google": 100,
+    }
+
+    # 尝试从配置文件加载
+    if config_file:
+        config_path = Path(config_file)
+    else:
+        # 尝试项目根目录的配置文件
+        config_path = Path(__file__).parent.parent.parent / "config.yaml"
+
+    if config_path.exists():
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = yaml.safe_load(f)
+                limits_section = config.get("app", {}).get("limits", {})
+                guest_limit = limits_section.get(
+                    "guest_user_chat_24h_limit", default_limits["guest"]
+                )
+                google_limit = limits_section.get(
+                    "free_user_chat_24h_limit", default_limits["google"]
+                )
+                return {
+                    "guest": int(guest_limit),
+                    "google": int(google_limit),
+                }
+        except Exception as e:
+            logger.warning(f"读取配置限制值失败: {e}，使用默认值")
+
+    logger.info(
+        f"聊天限制配置: guest={default_limits['guest']}, google={default_limits['google']}"
+    )
+    return default_limits
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -2071,6 +2267,11 @@ def main():
     start_date, end_date = calculate_date_range(args)
     logger.info(f"时间范围: {start_date.date()} 到 {end_date.date()}")
 
+    # 加载聊天限制配置
+    chat_limits = load_chat_limits(args.config)
+    guest_limit = chat_limits["guest"]
+    google_limit = chat_limits["google"]
+
     # 加载数据库配置
     db_config = load_database_config(args.config)
 
@@ -2100,7 +2301,9 @@ def main():
     try:
         # 分析数据
         analytics = UserAnalytics(conn)
-        results = process_data(analytics, start_date, end_date)
+        results = process_data(
+            analytics, start_date, end_date, guest_limit, google_limit
+        )
 
         if args.dry_run:
             logger.info("Dry-Run 模式，不生成报告文件")
@@ -2149,6 +2352,14 @@ def main():
         if "user_voice_usage" in results and not results["user_voice_usage"].empty:
             generator.save_csv(results["user_voice_usage"], "user_voice_usage.csv")
 
+        if (
+            "users_hitting_chat_limit" in results
+            and not results["users_hitting_chat_limit"].empty
+        ):
+            generator.save_csv(
+                results["users_hitting_chat_limit"], "users_hitting_chat_limit.csv"
+            )
+
         # 生成对话详情文本报告
         if (
             "messages" in results
@@ -2169,6 +2380,7 @@ def main():
             results.get("rounds_distribution", pd.DataFrame()),
             results.get("user_rounds_distribution", pd.DataFrame()),
             results.get("user_sessions_detail", pd.DataFrame()),
+            results.get("users_hitting_chat_limit", pd.DataFrame()),
             (start_date, end_date),
         )
 

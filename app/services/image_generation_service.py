@@ -195,15 +195,77 @@ class ImageGenerationService:
                 config=generate_config,
             )
 
+            # 记录完整的响应结构以便调试
             logger.debug(f"Gemini 响应: {response}")
+            if hasattr(response, "model_dump"):
+                logger.debug(f"Gemini 响应详情: {response.model_dump()}")
+
+            # 检查 prompt_feedback（响应级别的反馈）
+            if hasattr(response, "prompt_feedback") and response.prompt_feedback:
+                prompt_feedback = response.prompt_feedback
+                logger.warning(f"Prompt feedback: {prompt_feedback}")
+                if hasattr(prompt_feedback, "block_reason"):
+                    block_reason = prompt_feedback.block_reason
+                    logger.warning(f"请求被阻止，原因: {block_reason}")
+                    raise ValueError(
+                        f"图片生成请求被安全过滤器阻止: {block_reason}"
+                    )
 
             # 提取图片数据
             if not response.candidates or len(response.candidates) == 0:
+                logger.error("Gemini 未返回任何候选结果")
                 raise ValueError("Gemini 未返回任何候选结果")
 
             candidate = response.candidates[0]
+
+            # 检查 finish_reason（完成原因）
+            finish_reason = getattr(candidate, "finish_reason", None)
+            if finish_reason:
+                logger.warning(f"候选结果完成原因: {finish_reason}")
+                if finish_reason == "SAFETY":
+                    # 检查安全评级以获取详细信息
+                    safety_ratings = getattr(candidate, "safety_ratings", [])
+                    safety_details = []
+                    if safety_ratings:
+                        for rating in safety_ratings:
+                            category = getattr(rating, "category", "UNKNOWN")
+                            probability = getattr(rating, "probability", "UNKNOWN")
+                            severity = getattr(rating, "blocked", False)
+                            safety_details.append(
+                                f"{category}={probability}(blocked={severity})"
+                            )
+                    error_msg = "图片生成被安全过滤器阻止"
+                    if safety_details:
+                        error_msg += f"，原因: {', '.join(safety_details)}"
+                    logger.error(error_msg)
+                    raise ValueError(error_msg)
+                elif finish_reason not in ("STOP", None):
+                    logger.warning(
+                        f"候选结果以非正常原因结束: {finish_reason}"
+                    )
+
+            # 检查 safety_ratings（即使 finish_reason 不是 SAFETY，也可能有安全评级）
+            if hasattr(candidate, "safety_ratings") and candidate.safety_ratings:
+                blocked_ratings = []
+                for rating in candidate.safety_ratings:
+                    if hasattr(rating, "blocked") and rating.blocked:
+                        category = getattr(rating, "category", "UNKNOWN")
+                        probability = getattr(rating, "probability", "UNKNOWN")
+                        blocked_ratings.append(f"{category}={probability}")
+                if blocked_ratings:
+                    error_msg = f"图片生成被安全过滤器阻止: {', '.join(blocked_ratings)}"
+                    logger.error(error_msg)
+                    raise ValueError(error_msg)
+
+            # 检查 content 和 parts
             if not candidate.content or not candidate.content.parts:
-                raise ValueError("候选结果中没有内容")
+                logger.error(
+                    f"候选结果中没有内容，finish_reason={finish_reason}"
+                )
+                error_msg = "候选结果中没有内容"
+                if finish_reason:
+                    error_msg += f"（完成原因: {finish_reason}）"
+                raise ValueError(error_msg)
 
             # 查找图片部分
             image_part = None
