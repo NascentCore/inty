@@ -90,7 +90,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
-import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.SingleLineTextInputField
 import com.ai.intellimate.utils.AvatarManager
@@ -119,10 +118,10 @@ class CreateRoleActivity : BaseActivity() {
         private const val INTENT_KEY_AGENT_INFO = "intent_key_agent_info"
 
         /**
-         * 启动单独的聊天界面
+         * 启动创建/编辑角色界面
          *
          * @param context 上下文context
-         * @param agentInfo Agent的Info对象
+         * @param agentInfo Agent的Info对象，为null时表示创建新角色，否则表示编辑现有角色
          */
         fun launch(context: Context, agentInfo: AgentInfo? = null) {
             context.startActivity(
@@ -131,10 +130,23 @@ class CreateRoleActivity : BaseActivity() {
                 }
             )
         }
+
+        /**
+         * 获取创建/编辑角色界面的 Intent（用于 Activity Result）
+         *
+         * @param context 上下文context
+         * @param agentInfo Agent的Info对象，为null时表示创建新角色，否则表示编辑现有角色
+         * @return 配置好的 Intent
+         */
+        fun getIntent(context: Context, agentInfo: AgentInfo? = null): Intent {
+            return Intent(context, CreateRoleActivity::class.java).apply {
+                putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
+            }
+        }
     }
 
     private var agent: AgentInfo? = null
-    private val mainViewModel: MainViewModel by viewModels()
+    private val createRoleViewModel: CreateRoleViewModel by viewModels()
 
     override fun initConfigData() {
         super.initConfigData()
@@ -142,6 +154,7 @@ class CreateRoleActivity : BaseActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(INTENT_KEY_AGENT_INFO, AgentInfo::class.java)
             } else {
+                @Suppress("DEPRECATION")
                 intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
             }
     }
@@ -151,9 +164,12 @@ class CreateRoleActivity : BaseActivity() {
         super.ConfigComposeUI()
         CreateRolePage(
             modifier = Modifier.fillMaxSize(),
-            mainViewModel = mainViewModel,
+            createRoleViewModel = createRoleViewModel,
             onBack = { finish() },
-            onCreateSuccess = { finish() },
+            onCreateSuccess = {
+                setResult(Activity.RESULT_OK)
+                finish()
+            },
             onAvatarGenerateClick = { AvatarGenerateActivity.Companion.launch(this) },
             editAgent = agent,
         )
@@ -164,7 +180,7 @@ class CreateRoleActivity : BaseActivity() {
 @Composable
 private fun CreateRolePage(
     modifier: Modifier = Modifier,
-    mainViewModel: MainViewModel,
+    createRoleViewModel: CreateRoleViewModel,
     onBack: () -> Unit,
     onCreateSuccess: () -> Unit,
     onAvatarGenerateClick: () -> Unit,
@@ -241,11 +257,13 @@ private fun CreateRolePage(
                     LogUtils.i("Activity stopped - clearing AvatarManager data")
                     AvatarManager.clearAllAvatarData()
                 }
+
                 Lifecycle.Event.ON_DESTROY -> {
                     // Also clear when activity is destroyed
                     LogUtils.i("Activity destroyed - clearing AvatarManager data")
                     AvatarManager.clearAllAvatarData()
                 }
+
                 else -> {}
             }
         }
@@ -272,8 +290,8 @@ private fun CreateRolePage(
                                 MultipartBody.Part.createFormData("file", file.name, requestFile)
 
                             val agentApi = NetServiceMgr.getAgentApi()
-                            // Use the mainViewModel's scope to launch the coroutine
-                            mainViewModel.viewModelScope.launch(Dispatchers.IO) {
+                            // Use CreateRoleViewModel's scope to launch the coroutine
+                            createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
                                 try {
                                     val response = agentApi.uploadAvatar(body)
                                     when (response) {
@@ -289,6 +307,7 @@ private fun CreateRolePage(
                                                 )
                                             }
                                         }
+
                                         is HttpResult.Failure -> {
                                             LogUtils.e("Upload failed: ${response.message}")
                                             withContext(Dispatchers.Main) {
@@ -557,7 +576,7 @@ private fun CreateRolePage(
 
                             if (isValidUrl) {
                                 // Download image from web URL first using OkHttp
-                                mainViewModel.viewModelScope.launch(Dispatchers.IO) {
+                                createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
                                     try {
                                         // Download image to local cache using OkHttp
                                         val tempFile =
@@ -736,7 +755,7 @@ private fun CreateRolePage(
                             )
                         // Call API through ViewModel
                         if (isEditMode) {
-                            mainViewModel.updateAgent(
+                            createRoleViewModel.updateAgent(
                                 agentId = editAgent.id,
                                 request = request,
                                 onSuccess = { agentInfo ->
@@ -763,7 +782,7 @@ private fun CreateRolePage(
                                 },
                             )
                         } else {
-                            mainViewModel.createAgent(
+                            createRoleViewModel.createAgent(
                                 request = request,
                                 onSuccess = { agentInfo ->
                                     isLoading = false
@@ -883,11 +902,11 @@ private fun AvatarUploadSection(
         Box(
             modifier =
                 Modifier.then(
-                        if (isEmpty) Modifier.size(200.dp)
-                        else Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(9.div(16f))
-                    )
+                    if (isEmpty) Modifier.size(200.dp)
+                    else Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(9.div(16f))
+                )
                     .let { modifier ->
                         if (isEmpty) {
                             modifier
@@ -966,6 +985,7 @@ private fun AvatarUploadSection(
                         },
                     )
                 }
+
                 else -> {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Image(
@@ -1060,9 +1080,11 @@ private fun AvatarUploadSection(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Fixed Regen button on the left
-                Box(modifier = Modifier
-                    .width(88.dp)
-                    .aspectRatio(9 / 16f)) {
+                Box(
+                    modifier = Modifier
+                        .width(88.dp)
+                        .aspectRatio(9 / 16f)
+                ) {
                     RegenButton(
                         onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
                         enabled = !isGenerating,
@@ -1076,53 +1098,53 @@ private fun AvatarUploadSection(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     runCatching {
-                            if (avatarUrls.isNotEmpty()) {
-                                items(items = avatarUrls.indices.toList()) { index ->
-                                    val imageUrl = avatarUrls[index]
-                                    // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
-                                    val thumbnailUrl =
-                                        getCdnImageUrl(
-                                            imageUrl,
-                                            width = 80,
-                                            quality = 60,
-                                        )
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .width(88.dp)
-                                                .aspectRatio(9 / 16f)
-                                                .background(
-                                                    color = Color(0x1A78599A),
-                                                    shape = RoundedCornerShape(8.dp),
-                                                )
-                                                .border(
-                                                    width =
-                                                        if (index == selectedIndex) 3.dp else 1.dp,
-                                                    color =
-                                                        if (index == selectedIndex)
-                                                            Color(0xFFE91E63)
-                                                        else Color.Transparent,
-                                                    shape = RoundedCornerShape(8.dp),
-                                                )
-                                                .noRippleClickable { onImageSelected(index) },
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        AsyncImage(
-                                            model = thumbnailUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
-                                            contentDescription =
-                                                stringResource(
-                                                    R.string.content_desc_generated_avatar_index,
-                                                    index,
-                                                ),
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .clip(RoundedCornerShape(8.dp)),
-                                            contentScale = ContentScale.Crop,
-                                        )
-                                    }
+                        if (avatarUrls.isNotEmpty()) {
+                            items(items = avatarUrls.indices.toList()) { index ->
+                                val imageUrl = avatarUrls[index]
+                                // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
+                                val thumbnailUrl =
+                                    getCdnImageUrl(
+                                        imageUrl,
+                                        width = 80,
+                                        quality = 60,
+                                    )
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .width(88.dp)
+                                            .aspectRatio(9 / 16f)
+                                            .background(
+                                                color = Color(0x1A78599A),
+                                                shape = RoundedCornerShape(8.dp),
+                                            )
+                                            .border(
+                                                width =
+                                                    if (index == selectedIndex) 3.dp else 1.dp,
+                                                color =
+                                                    if (index == selectedIndex)
+                                                        Color(0xFFE91E63)
+                                                    else Color.Transparent,
+                                                shape = RoundedCornerShape(8.dp),
+                                            )
+                                            .noRippleClickable { onImageSelected(index) },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    AsyncImage(
+                                        model = thumbnailUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
+                                        contentDescription =
+                                            stringResource(
+                                                R.string.content_desc_generated_avatar_index,
+                                                index,
+                                            ),
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(8.dp)),
+                                        contentScale = ContentScale.Crop,
+                                    )
                                 }
                             }
                         }
+                    }
                         .onFailure { it.printStackTrace() }
                 }
             }
@@ -1291,6 +1313,7 @@ object Config {
         object Preview {
             /** Preview image width for CDN scaling */
             const val WIDTH = 400
+
             /** Preview image quality for CDN scaling (0-100) */
             const val QUALITY = 60
         }

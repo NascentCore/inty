@@ -78,7 +78,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.AuthClickable
@@ -97,9 +96,8 @@ internal fun ProfilePage(
     onEditAgent: ((AgentInfo) -> Unit)? = null,
     onDeleteAgent: ((AgentInfo) -> Unit)? = null,
     isLoading: Boolean = false,
-    isRefreshing: Boolean = false,
     onLoadMore: () -> Unit = {},
-    mainViewModel: MainViewModel? = null,
+    onShowSettings: () -> Unit,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -234,7 +232,7 @@ internal fun ProfilePage(
                     modifier = Modifier,
                     collapseProgress = collapseProgress,
                     userProfile = userProfile,
-                    mainViewModel = mainViewModel,
+                    onShowSettings = onShowSettings,
                     innerPadding = innerPadding,
                     context = context,
                 )
@@ -308,8 +306,7 @@ internal fun ProfilePage(
                                     )
                                 }
                             }
-                        }
-                            .onFailure { it.printStackTrace() }
+                        }.onFailure { it.printStackTrace() }
 
                         // Loading indicator when loading more (only show when there's no data)
                         if (isLoading && agents.isEmpty()) {
@@ -338,7 +335,7 @@ private fun ProfileHeader(
     modifier: Modifier,
     collapseProgress: Float, // 0f = 展开, 1f = 折叠
     userProfile: UserProfile,
-    mainViewModel: MainViewModel?,
+    onShowSettings: () -> Unit,
     innerPadding: PaddingValues,
     context: android.content.Context,
 ) {
@@ -357,13 +354,7 @@ private fun ProfileHeader(
         Row {
             Spacer(Modifier.weight(1f))
             AuthClickable(
-                onClick = {
-                    if (mainViewModel != null) {
-                        mainViewModel.showSettings()
-                    } else {
-                        com.ai.intellimate.settings.SettingActivity.launch(context)
-                    }
-                }
+                onClick = onShowSettings
             ) { authModifier ->
                 AsyncImage(
                     modifier = authModifier.size(24.dp),

@@ -80,7 +80,6 @@ class MainActivity : BaseActivity() {
         // 设置返回拦截功能
         setupBackInterception()
 
-        mainViewModel.setChatViewModel(chatViewModel)
 
         // 标记已初始化（但只标记基本设置，数据加载在登录成功后执行）
         hasInitializedConfig = true
@@ -105,9 +104,6 @@ class MainActivity : BaseActivity() {
             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                 // 加载业务数据（包括版本检查等）
                 mainViewModel.loadBusinessData()
-
-                // Load user created agents
-                mainViewModel.getUserCreatedAgents()
 
                 // 初始化 BillingRepository（在用户登录后）
                 delay(500) // 给登录流程一些时间
@@ -197,6 +193,8 @@ class MainActivity : BaseActivity() {
                         // 使用MainViewModel的logout方法
                         // logout() 内部已经会调用 hideSettings()，所以不需要在这里再次调用
                         mainViewModel.logout()
+                        // 清理 ChatViewModel 数据（在 logout 后）
+                        chatViewModel.clearAllData()
                         // 显示退出成功提示
                         val str =
                             if (isDelete) getString(R.string.delete_account_successfully)
@@ -215,7 +213,6 @@ class MainActivity : BaseActivity() {
                 HomeScreen(
                     modifier = Modifier.fillMaxSize(),
                     mainViewModel = mainViewModel,
-                    chatViewModel = chatViewModel,
                     viewModelFactory = defaultViewModelProviderFactory,
                 )
             }
@@ -314,8 +311,6 @@ class MainActivity : BaseActivity() {
 
         // 只有在已登录时才执行这些操作
         if (mainViewModel.isLoggedIn.value) {
-            // 刷新关注列表和创建的角色列表
-            mainViewModel.refreshCreatedAgentsListIfOnTab()
             // 应用恢复时通知billing系统刷新状态
             BillingRepository.notifyAppResumed()
             // 恢复音频播放（如果有正在播放的音频）

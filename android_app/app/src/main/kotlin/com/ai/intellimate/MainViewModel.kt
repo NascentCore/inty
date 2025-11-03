@@ -1,26 +1,20 @@
 package com.ai.intellimate
 
 import ai.sxwl.android.common.base.BaseVM
-import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.ICommonApi
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AppVersionRsp
-import ai.sxwl.android.data.api.model.CreateAgentRequest
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
-import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.audio.AudioManager
-import com.ai.intellimate.chat.viewmodel.ChatViewModel
-import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.CredentialManagerHelper.clearCredentialState
-import com.ai.intellimate.utils.HttpErrorHandler
 import com.ai.intellimate.utils.IntyUserProfileSDK
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.ai.intellimate.utils.UserProfileManager
@@ -31,10 +25,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import retrofit2.HttpException
 
 enum class HomeTabIndex {
     Chat,
@@ -46,30 +37,15 @@ enum class HomeTabIndex {
 
 class MainViewModel : BaseVM() {
 
-    private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
-
     private val commonApi: ICommonApi by lazy { NetServiceMgr.getCommonApi() }
 
     val followingAgents = mutableStateListOf<AgentInfo>() // 关注的agents列表数据
-    val userCreatedAgents = mutableStateListOf<AgentInfo>() // 用户自创建的agents数据
-
-    // Pagination state for user created agents
-    private var currentUserAgentsPage = 0
-    private var _isLoadingUserAgents = MutableStateFlow(false)
-    val isLoadingUserAgents = _isLoadingUserAgents.asStateFlow()
-    private var hasMoreUserAgents = true
-
-    // 刷新状态，用于区分首次加载和刷新操作
-    private var _isRefreshingUserAgents = MutableStateFlow(false)
-    val isRefreshingUserAgents = _isRefreshingUserAgents.asStateFlow()
 
     private val _selectedTab = MutableStateFlow(HomeTabIndex.Chat)
     val selectedTab = _selectedTab.asStateFlow()
 
     private val _currentChatPageIndex = MutableStateFlow(0)
     val currentChatPageIndex = _currentChatPageIndex.asStateFlow()
-
-    private var chatViewModel: ChatViewModel? = null
 
     // 使用flow数据流的形式，感知用户数据
     private val _userProfile = MutableStateFlow(UserProfile())
@@ -116,10 +92,6 @@ class MainViewModel : BaseVM() {
         }
     }
 
-    fun updateUserInfoLocal() {
-        _userProfile.update { UserProfileManager.getUserProfile() }
-    }
-
     fun loadBusinessData() {
         // 检查app版本更新
         checkAppVersion()
@@ -137,18 +109,6 @@ class MainViewModel : BaseVM() {
         stopAllAudioPlayback()
 
         _selectedTab.value = tabEntries[tab]
-        when (_selectedTab.value) {
-            HomeTabIndex.Conversation -> {
-                // 会话列表由 MessagesViewModel 在 ConversationsTabContent 中自动加载
-                // 无需在这里手动调用
-            }
-            HomeTabIndex.Profile -> {
-                // 使用refreshCreatedAgentsListIfOnTab()来避免重复请求
-                // 这样可以在一个地方统一管理Profile tab的数据刷新逻辑
-                refreshCreatedAgentsListIfOnTab()
-            }
-            else -> {}
-        }
     }
 
     /** 停止所有音频播放 用于tab切换时确保音频停止 */
@@ -162,9 +122,6 @@ class MainViewModel : BaseVM() {
         }
     }
 
-    fun setChatViewModel(chatViewModel: ChatViewModel) {
-        this.chatViewModel = chatViewModel
-    }
 
     fun updateCurrentChatPageIndex(index: Int) {
         _currentChatPageIndex.value = index
@@ -230,166 +187,7 @@ class MainViewModel : BaseVM() {
         }
     }
 
-    fun getUserCreatedAgents() {
-        currentUserAgentsPage = 0
-        hasMoreUserAgents = true
-
-        // 如果已经有数据，则使用静默刷新，不显示loading
-        if (userCreatedAgents.isNotEmpty()) {
-            loadUserCreatedAgentsSilently()
-        } else {
-            // 没有数据时才清空并显示loading
-            userCreatedAgents.clear()
-            loadUserCreatedAgents()
-        }
-    }
-
-    fun loadMoreUserCreatedAgents() {
-        if (!_isLoadingUserAgents.value && hasMoreUserAgents) {
-            currentUserAgentsPage++
-            loadUserCreatedAgents()
-        }
-    }
-
-    private fun loadUserCreatedAgentsSilently() {
-        if (_isRefreshingUserAgents.value) return
-
-        _isRefreshingUserAgents.value = true
-        val skip = currentUserAgentsPage * 10
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val result = agentApi.getUserCreatedAgents(skip, 10)
-
-                when (result) {
-                    is HttpResult.Success -> {
-                        if (result.data.isEmpty()) {
-                            hasMoreUserAgents = false
-                            LogUtils.d(
-                                "loadUserCreatedAgentsSilently - No more user created agents to load"
-                            )
-                        } else {
-                            // 静默更新数据，直接替换
-                            userCreatedAgents.clear()
-                            userCreatedAgents.addAll(result.data)
-                            LogUtils.d(
-                                "loadUserCreatedAgentsSilently - 静默更新数据: ${result.data.size}个"
-                            )
-                        }
-                    }
-                    is HttpResult.Failure -> {
-                        LogUtils.e("loadUserCreatedAgentsSilently - API failure: ${result.message}")
-                    }
-                }
-            } catch (e: Exception) {
-                LogUtils.e("loadUserCreatedAgentsSilently exception: ${e.message}")
-            } finally {
-                _isRefreshingUserAgents.value = false
-            }
-        }
-    }
-
-    private fun loadUserCreatedAgents() {
-        if (_isLoadingUserAgents.value) return
-
-        _isLoadingUserAgents.value = true
-        val skip = currentUserAgentsPage * 10
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val result = agentApi.getUserCreatedAgents(skip, 10)
-
-                when (result) {
-                    is HttpResult.Success -> {
-                        if (result.data.isEmpty()) {
-                            hasMoreUserAgents = false
-                        } else {
-                            if (currentUserAgentsPage == 0) {
-                                // 第一页，直接替换（这里才清空并替换数据）
-                                userCreatedAgents.clear()
-                                userCreatedAgents.addAll(result.data)
-                                LogUtils.i("loadUserCreatedAgents - 替换第一页数据: ${result.data.size}个")
-                            } else {
-                                // 后续页，追加到现有列表
-                                userCreatedAgents.addAll(result.data)
-                                LogUtils.d(
-                                    "loadUserCreatedAgents - 追加第${currentUserAgentsPage + 1}页数据: ${result.data.size}个，总计: ${userCreatedAgents.size}个"
-                                )
-                            }
-                        }
-                    }
-                    is HttpResult.Failure -> {
-                        LogUtils.e("loadUserCreatedAgents - API failure: ${result.message}")
-                        //                        showNetworkAwareError(result.message)
-                        // If loading failed, rollback page counter
-                        if (currentUserAgentsPage > 0) {
-                            currentUserAgentsPage--
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                LogUtils.e("loadUserCreatedAgents exception: ${e.message}")
-                // If loading failed, rollback page counter
-                if (currentUserAgentsPage > 0) {
-                    currentUserAgentsPage--
-                }
-            }
-            _isLoadingUserAgents.value = false
-        }
-    }
-
-    fun refreshCreatedAgentsListIfOnTab() {
-        if (_selectedTab.value == HomeTabIndex.Profile) {
-            // 如果已经在加载中，避免重复请求
-            if (!_isLoadingUserAgents.value && !_isRefreshingUserAgents.value) {
-                getUserCreatedAgents()
-            } else {
-                LogUtils.i("refreshCreatedAgentsListIfOnTab - 跳过刷新，正在加载中")
-            }
-        }
-    }
-
-    /** 创建Ai Agent的接口 */
-    fun createAgent(
-        request: CreateAgentRequest,
-        onSuccess: (AgentInfo) -> Unit,
-        onError: (String) -> Unit,
-    ) {
-        launchBackground {
-            try {
-                val result = agentApi.createAgent(request)
-
-                withContext(Dispatchers.Main) {
-                    when (result) {
-                        is HttpResult.Success -> {
-                            // 刷新用户创建的角色列表
-                            refreshCreatedAgentsListIfOnTab()
-                            onSuccess(result.data)
-                        }
-                        is HttpResult.Failure -> {
-                            LogUtils.e("createAgent error: $result")
-                            val errorMessage =
-                                result.message.ifBlank {
-                                    "Creation failed, please check network connection"
-                                }
-                            onError(errorMessage)
-                        }
-                    }
-                }
-            } catch (e: HttpException) {
-                // 专门处理HTTP异常
-                LogUtils.e("createAgent HTTP Exception: ${e.code()} - ${e.message()}")
-                val errorMessage = HttpErrorHandler.handleHttpException(e, "create")
-                withContext(Dispatchers.Main) { onError(errorMessage) }
-            } catch (e: Exception) {
-                LogUtils.e("createAgent exception: ${e.message}")
-                val errorMessage = HttpErrorHandler.handleGeneralException(e, "create")
-                withContext(Dispatchers.Main) { onError(errorMessage) }
-            }
-        }
-    }
-
-    // 新增：用户登出方法
+    /** 用户登出方法 */
     fun logout() {
         // 获取当前用户信息用于事件上报
         val currentUserProfile = _userProfile.value
@@ -407,9 +205,7 @@ class MainViewModel : BaseVM() {
 
         // 清理内存数据
         followingAgents.clear()
-        userCreatedAgents.clear()
         _userProfile.value = UserProfile()
-        chatViewModel?.clearAllData()
 
         // 清理统一启动管理器的数据
         UnifiedStartupManager.clearAllData()
@@ -478,127 +274,11 @@ class MainViewModel : BaseVM() {
         }
     }
 
-    fun deleteAgent(agentId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        launchBackground {
-            try {
-                val result = agentApi.deleteAgent(agentId)
-
-                withContext(Dispatchers.Main) {
-                    when (result) {
-                        is HttpResult.Success -> {
-                            // 从用户创建的角色列表中移除
-                            userCreatedAgents.removeAll { it.id == agentId }
-                            // 从关注列表中移除（如果存在）
-                            followingAgents.removeAll { it.id == agentId }
-
-                            // 同步更新缓存
-                            AgentCacheManager.removeAgent(agentId)
-
-                            ToastUtils.showShort(R.string.character_deleted_successfully)
-                            onSuccess()
-                        }
-                        is HttpResult.Failure -> {
-                            val errorMessage =
-                                result.message.ifBlank {
-                                    Utils.getApp()
-                                        .getString(
-                                            R.string.operation_failed_check_network,
-                                            Utils.getApp().getString(R.string.delete_failed),
-                                            Utils.getApp()
-                                                .getString(R.string.check_network_connection),
-                                        )
-                                }
-                            ToastUtils.showShort(
-                                Utils.getApp()
-                                    .getString(R.string.delete_failed_with_reason, errorMessage)
-                            )
-                            onError(errorMessage)
-                        }
-                    }
-                }
-            } catch (e: HttpException) {
-                // 专门处理HTTP异常
-                LogUtils.e("deleteAgent HTTP Exception: ${e.code()} - ${e.message()}")
-                val errorMessage = HttpErrorHandler.handleHttpException(e, "delete")
-                withContext(Dispatchers.Main) {
-                    ToastUtils.showShort(errorMessage)
-                    onError(errorMessage)
-                }
-            } catch (e: Exception) {
-                LogUtils.e("deleteAgent exception: ${e.message}")
-                val errorMessage = HttpErrorHandler.handleGeneralException(e, "delete")
-                withContext(Dispatchers.Main) {
-                    ToastUtils.showShort(errorMessage)
-                    onError(errorMessage)
-                }
-            }
-        }
-    }
-
-    fun updateAgent(
-        agentId: String,
-        request: CreateAgentRequest,
-        onSuccess: (AgentInfo) -> Unit,
-        onError: (String) -> Unit,
-    ) {
-        LogUtils.i("updateAgent: $agentId")
-        launchBackground {
-            try {
-                val result = agentApi.updateAgent(agentId, request)
-
-                withContext(Dispatchers.Main) {
-                    when (result) {
-                        is HttpResult.Success -> {
-                            // 刷新用户创建的角色列表
-                            refreshCreatedAgentsListIfOnTab()
-                            // Toast removed to avoid duplicate - handled by calling activity
-                            onSuccess(result.data)
-                        }
-                        is HttpResult.Failure -> {
-                            LogUtils.e("updateAgent error: $result")
-                            val errorMessage =
-                                result.message.ifBlank {
-                                    Utils.getApp()
-                                        .getString(
-                                            R.string.operation_failed_check_network,
-                                            Utils.getApp().getString(R.string.update_failed),
-                                            Utils.getApp()
-                                                .getString(R.string.check_network_connection),
-                                        )
-                                }
-                            ToastUtils.showShort(
-                                Utils.getApp()
-                                    .getString(R.string.update_failed_with_reason, errorMessage)
-                            )
-                            onError(errorMessage)
-                        }
-                    }
-                }
-            } catch (e: HttpException) {
-                // 专门处理HTTP异常
-                LogUtils.e("updateAgent HTTP Exception: ${e.code()} - ${e.message()}")
-                val errorMessage = HttpErrorHandler.handleHttpException(e, "update")
-                withContext(Dispatchers.Main) {
-                    ToastUtils.showShort(errorMessage)
-                    onError(errorMessage)
-                }
-            } catch (e: Exception) {
-                LogUtils.e("updateAgent exception: ${e.message}")
-                val errorMessage = HttpErrorHandler.handleGeneralException(e, "update")
-                withContext(Dispatchers.Main) {
-                    ToastUtils.showShort(errorMessage)
-                    onError(errorMessage)
-                }
-            }
-        }
-    }
-
     /** 检查app版本更新 */
     val needForceUpgrade = MutableStateFlow<AppVersionRsp.AppVersionData?>(null)
 
     private fun checkAppVersion() = launchBackground {
-        val result = commonApi.checkAppUpgrade()
-        when (result) {
+        when (val result = commonApi.checkAppUpgrade()) {
             is HttpResult.Success -> {
                 val rsp = result.data
                 if (rsp.update_required && rsp.force_update) {
@@ -608,6 +288,7 @@ class MainViewModel : BaseVM() {
                 IntySetting.setAppUpdateTips(rsp.update_required)
                 IntySetting.setAppGooglePlayUrl(rsp.download_url ?: "")
             }
+
             is HttpResult.Failure -> {
                 LogUtils.w("result.message")
             }
