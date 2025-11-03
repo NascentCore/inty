@@ -1175,7 +1175,7 @@ async def clear_agent_chat_messages(
     "/agents/{agent_id}/generate-image",
     deprecated=True,
     include_in_schema=False,
-    response_model=schemas.APIResponse[schemas.ChatImageGenerationResponse],
+    response_model=schemas.APIResponse,
     summary="[Deprecated, use /api/v1/chat/images/{agent_id} instead] 基于聊天上下文生成图片",
     description="[Deprecated, use /api/v1/chat/images/{agent_id} instead] 根据Agent角色、聊天历史和用户消息生成图片，并保存到聊天历史中",
     tags=["inty-eval"],
