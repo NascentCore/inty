@@ -92,7 +92,7 @@ export const INTY_SDK_CONFIG = {
   /** 默认超时时间 (毫秒) */
   TIMEOUT: 30000,
   /** 默认重试次数 */
-  MAX_RETRIES: 2,
+  MAX_RETRIES: 0,
   /** 日志级别 */
   LOG_LEVEL: 'warn' as const,
 } as const;

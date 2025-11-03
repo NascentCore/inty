@@ -23,7 +23,8 @@ const HomePage: React.FC = () => {
    */
   useEffect(() => {
     loadRecommendAgents({ page: 1, page_size: 100 });
-  }, [loadRecommendAgents]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 仅在页面首次加载时执行
 
   /**
    * 处理开始对话

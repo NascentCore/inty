@@ -30,7 +30,8 @@ const SidebarLayout: React.FC = () => {
     if (!userProfile && !profileLoading) {
       fetchUserProfile();
     }
-  }, [chatList.length, loading, userProfile, profileLoading, loadChatList, fetchUserProfile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 仅在组件首次加载时执行一次
 
   /**
    * 处理 Discover 按钮点击 - 跳转到首页

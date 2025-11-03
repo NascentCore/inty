@@ -17,7 +17,8 @@ const ProfilePage: React.FC = () => {
     if (!userProfile) {
       fetchUserProfile();
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 仅在组件首次加载时执行
 
   // 加载状态
   if (profileLoading) {
