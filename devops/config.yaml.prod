@@ -2,7 +2,7 @@ app:
   environment: prod
   limits:
     guest_user_chat_24h_limit: 10
-    free_user_chat_24h_limit: 100
+    free_user_chat_24h_limit: 1000
     guest_user_voice_24h_limit: 5
     free_user_voice_24h_limit: 50
     subscribed_user_voice_24h_limit: 500
