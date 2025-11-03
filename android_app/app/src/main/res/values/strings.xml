@@ -87,8 +87,8 @@
     <string name="url_user_agreement">https://app.termly.io/policy-viewer/policy.html?policyUUID=97416d63-aebb-4ea5-b990-eccc5aa6cff1</string>
     <string name="url_privacy_policy">https://app.termly.io/policy-viewer/policy.html?policyUUID=c82c3bfa-10a0-4075-a7f1-a98d5146d71c</string>
     <string name="str_expired_vip_dialog_content">Your Premium subscription has expired and you\'ll lose access to unlimited chat and other premium features. Resubscribe to resume the benefits!</string>
-    <string name="str_unlimit_dialog_content">Daily Free Chat Limit Reached! Go Premium for unlimited chats and exclusive features! Free chats refresh tomorrow — come back and keep chatting. ❤️</string>
-    <string name="str_unlimit_btn_text">Unlimited Chat and More! 🔥</string>
+    <string name="str_unlimit_dialog_content">You’ve used up today’s free chats.Go Premium forunlimited chats and exclusive features! Free chats refresh tomorrow — come back and keep chatting.❤️</string>
+    <string name="str_unlimit_btn_text">Unlimited Chat</string>
 
     <!-- Login and Registration -->
     <string name="welcome_to_intellimate">Welcome to IntelliMate</string>

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 /** Explore页面的Paging数据仓库 负责管理Paging数据流、配置和传统数据请求 集成了原ExploreRepository的所有功能 */
 class ExplorePagingRepository(
     private val cacheProvider: RecommendedAgentCacheProvider? = null,
+    private val fetchCallback: ExploreFetchCallback? = null,
 ) {
 
     companion object {
@@ -43,7 +44,8 @@ class ExplorePagingRepository(
                     ExplorePagingSource(
                         useCache = useCache,
                         sortSeed = sortSeed,
-                        cacheProvider = cacheProvider
+                        cacheProvider = cacheProvider,
+                        fetchCallback = fetchCallback
                     )
                 },
             )

@@ -2,7 +2,6 @@ package com.ai.intellimate.messages
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.getCdnImageUrl
-import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.design.ui.HeartRedDot
 import androidx.compose.foundation.Image
@@ -53,7 +52,6 @@ import com.ai.intellimate.utils.AuthClickable
 fun MessagesPage(
     modifier: Modifier,
     conversations: List<ConversationItem>,
-    agentInfoMap: Map<String, AgentInfo>,
     onClickConversationItem: (ConversationItem) -> Unit,
     isLoadingConversations: Boolean = false,
     isRefreshingConversations: Boolean = false,
@@ -79,7 +77,6 @@ fun MessagesPage(
         )
         Content(
             conversations = conversations,
-            agentInfoMap = agentInfoMap,
             onClickConversationItem = onClickConversationItem,
             isLoadingConversations = isLoadingConversations,
             isRefreshingConversations = isRefreshingConversations,
@@ -92,14 +89,15 @@ fun MessagesPage(
 @Composable
 private fun Content(
     conversations: List<ConversationItem>,
-    agentInfoMap: Map<String, AgentInfo>,
     onClickConversationItem: (ConversationItem) -> Unit,
     isLoadingConversations: Boolean = false,
     isRefreshingConversations: Boolean = false,
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
     Scaffold(
-        modifier = Modifier.fillMaxSize().background(Color.Transparent),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent),
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
@@ -107,7 +105,9 @@ private fun Content(
                     Image(
                         painter = painterResource(R.drawable.img_message_title),
                         contentDescription = null,
-                        modifier = Modifier.height(30.dp).fillMaxWidth(),
+                        modifier = Modifier
+                            .height(30.dp)
+                            .fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )
@@ -117,10 +117,11 @@ private fun Content(
             )
         },
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)) {
             MessageTabContent(
                 conversations = conversations,
-                agentInfoMap = agentInfoMap,
                 onClickConversationItem = onClickConversationItem,
                 isLoading = isLoadingConversations,
                 isRefreshing = isRefreshingConversations,
@@ -134,7 +135,6 @@ private fun Content(
 @Composable
 private fun MessageTabContent(
     conversations: List<ConversationItem>,
-    agentInfoMap: Map<String, AgentInfo>,
     onClickConversationItem: (ConversationItem) -> Unit,
     isLoading: Boolean = false,
     isRefreshing: Boolean = false,
@@ -167,7 +167,9 @@ private fun MessageTabContent(
             if (isRefreshing) {
                 item {
                     Box(
-                        modifier = Modifier.fillMaxWidth().height(80.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
@@ -190,7 +192,6 @@ private fun MessageTabContent(
                                 ChatHistoryItem(
                                     modifier = authModifier.fillMaxWidth(),
                                     conversation = conversion,
-                                    agentInfo = agentInfoMap[conversion.agentId],
                                 )
                             }
                         }
@@ -203,7 +204,9 @@ private fun MessageTabContent(
             if (isLoading) {
                 item {
                     Box(
-                        modifier = Modifier.fillMaxWidth().height(80.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
@@ -228,17 +231,17 @@ private fun MessageTabContent(
 private fun ChatHistoryItem(
     modifier: Modifier,
     conversation: ConversationItem,
-    agentInfo: AgentInfo?,
     placeholderID: Int = R.drawable.img_default_avatar,
 ) {
     Row(modifier = modifier.height(88.dp), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(16.dp))
 
         // 头像
-        val displayAvatar = agentInfo?.avatar?.takeIf { it.isNotBlank() } ?: conversation.agentAvatar
         AsyncImage(
-            modifier = Modifier.size(56.dp).clip(CircleShape),
-            model = getCdnImageUrl(displayAvatar, width = 128),
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape),
+            model = getCdnImageUrl(conversation.agentAvatar, width = 128),
             placeholder = painterResource(placeholderID),
             contentDescription = null,
             alignment = Alignment.TopCenter,

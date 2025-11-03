@@ -60,6 +60,13 @@ fun ExploreContent(
     val vm: ExploreViewModel = viewModel()
     val context = LocalContext.current
 
+    // 更新当前UI中显示的agents总数
+    LaunchedEffect(lazyPagingItems?.itemCount) {
+        lazyPagingItems?.itemCount?.let { count ->
+            vm.updateCurrentUiAgentsCount(count)
+        }
+    }
+
     val gridState =
         rememberLazyGridState(
             initialFirstVisibleItemIndex = vm.savedFirstVisibleIndex.collectAsState().value,
@@ -213,7 +220,8 @@ fun ExploreContent(
                         // 显示加载占位符
                         ShimmerPlaceholder(
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .height(200.dp)
                                     .clip(RoundedCornerShape(8.dp))
                         )
@@ -234,7 +242,11 @@ fun ExploreContent(
 /** 空状态指示器 */
 @Composable
 private fun EmptyStateIndicator() {
-    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .height(200.dp), contentAlignment = Alignment.Center
+    ) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
     }
 }

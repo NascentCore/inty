@@ -164,11 +164,13 @@ fun VipCenterContent(
                     } else null
 
                 selectedPlan?.let { plan ->
+                    // 处理价格显示：去掉 .00 后缀
+                    val displayPrice = plan.price.replace(".00", "")
                     SubscriptionDescriptionText(
                         text =
                             stringResource(
                                 R.string.subscription_description_fmt_str,
-                                plan.price,
+                                displayPrice,
                                 plan.name.lowercase(),
                             )
                     )
@@ -244,9 +246,11 @@ private fun VipCenterHeader() {
 /** 会员权益列表 */
 @Composable
 private fun VipCenterBenefits() {
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
         PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited_chat))
 
         PremiumBenefitItem(stringResource(R.string.premium_benefit_higher_other_limits))

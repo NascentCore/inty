@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -148,14 +149,32 @@ fun PremiumPlanCard(
                 modifier = subModifier,
             )
             Spacer(modifier = Modifier.height(4.dp))
+
+            // 处理价格显示：去掉 .00 后缀，并根据长度自适应字号
+            val displayPrice = remember(plan.price) {
+                plan.price.replace(".00", "")
+            }
+
+            // 根据价格长度自适应字号
+            val priceFontSize = remember(displayPrice) {
+                val priceLength =
+                    displayPrice.filter { it.isDigit() || it == '.' || it == ',' }.length
+                when {
+                    priceLength <= 3 -> 24.sp // 短价格（如 $9, $99）
+                    priceLength <= 5 -> 20.sp // 中等价格（如 $9.99, $99.99）
+                    priceLength <= 7 -> 18.sp // 较长价格（如 $999.99）
+                    else -> 16.sp // 很长价格（如 $9999.99）
+                }
+            }
+            
             Text(
-                text = plan.price,
+                text = displayPrice,
                 color =
                     when {
                         isSubscribed -> Color.White.copy(alpha = 0.5f)
                         else -> Color.White
                     },
-                fontSize = 24.sp,
+                fontSize = priceFontSize,
                 fontWeight = FontWeight.Normal,
                 modifier = subModifier,
             )
@@ -165,7 +184,9 @@ fun PremiumPlanCard(
         if (plan.discountRate < 1) {
             DiscountTag(
                 discountRate = plan.discountRate,
-                modifier = Modifier.then(subModifier).align(Alignment.BottomCenter),
+                modifier = Modifier
+                    .then(subModifier)
+                    .align(Alignment.BottomCenter),
             )
         }
     }
@@ -181,7 +202,10 @@ fun PremiumPlanList(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().height(132.dp).padding(horizontal = 16.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(132.dp)
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         plans.forEachIndexed { idx, plan ->
