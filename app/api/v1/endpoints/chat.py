@@ -327,7 +327,9 @@ async def generate_chat_image(
         )
 
         if isinstance(result, UsageLimitExceeded):
-            return schemas.APIResponse.error(data=result)
+            return schemas.APIResponse.error(
+                message=result.message, code=result.code, data=result
+            )
 
         return schemas.APIResponse.success(data=result)
 

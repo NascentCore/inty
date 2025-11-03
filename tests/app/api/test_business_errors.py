@@ -17,7 +17,7 @@ from app.api.v2.endpoints import chat as chat_v2
 from app.core.agent import agent as agent_module
 from app.models.user import AuthType
 from app.schemas import User
-from app.schemas.response import BusinessErrorCode
+from app.schemas.response import BusinessErrorCode, UsageLimitExceeded
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.global_services import subscription_service
 from app.services.voice_service import VoiceService
@@ -432,12 +432,12 @@ def test_v2_chat_completions_handles_business_error(
 
 def _stub_generate_chat_image(monkeypatch: pytest.MonkeyPatch):
     async def fake_generate_chat_image(*args, **kwargs):
-        raise HTTPException(
-            status_code=499,
-            detail={
-                "error_info": BusinessErrorCode.SUBSCRIPTION_REQUIRED,
-                "extra_data": {"used_count": 4, "limit": 4},
-            },
+        return UsageLimitExceeded(
+            code=BusinessErrorCode.SUBSCRIPTION_REQUIRED["code"],
+            error_code=BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"],
+            message=BusinessErrorCode.SUBSCRIPTION_REQUIRED["message"],
+            used_count=4,
+            daily_limit=4,
         )
 
     monkeypatch.setattr(chat_service, "generate_chat_image", fake_generate_chat_image)
@@ -465,7 +465,7 @@ def test_v1_chat_generate_image_wraps_business_error(
         == BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"]
     )
     assert body["data"]["used_count"] == 4
-    assert body["data"]["limit"] == 4
+    assert body["data"]["daily_limit"] == 4
 
 
 def test_v1_chats_generate_image_wraps_business_error(
@@ -490,4 +490,4 @@ def test_v1_chats_generate_image_wraps_business_error(
         == BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"]
     )
     assert body["data"]["used_count"] == 4
-    assert body["data"]["limit"] == 4
+    assert body["data"]["daily_limit"] == 4
