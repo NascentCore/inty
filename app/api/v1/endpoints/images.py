@@ -22,6 +22,7 @@ router = APIRouter(prefix="/images", route_class=LoggerRoute)
     response_model=APIResponse[dict],
     description="Upload image file with validation, compression, and GCS storage",
     summary="Upload image and get the URL of the image",
+    tags=["android-app"],
 )
 async def upload_image(
     file: UploadFile = File(...),

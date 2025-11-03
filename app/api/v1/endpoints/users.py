@@ -70,7 +70,7 @@ async def get_profile(
     return User(**user_dict)
 
 
-@router.get("/me", response_model=APIResponse[User])
+@router.get("/me", response_model=APIResponse[User], tags=["android-app"])
 async def get_me(
     current_user: User = Depends(deps.get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
@@ -115,6 +115,7 @@ async def get_me(
     response_model=APIResponse[User],
     summary="Update current user profile",
     description="Update current user profile, support avatar update",
+    tags=["android-app"],
 )
 async def update_profile(
     *,
@@ -164,7 +165,7 @@ async def register_device_token(
         return APIResponse.error(message=str(e))
 
 
-@router.get("/deletion/check", response_model=APIResponse[DeletionCheckResponse])
+@router.get("/deletion/check", response_model=APIResponse[DeletionCheckResponse], tags=["android-app"])
 async def check_deletion_eligibility(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(deps.get_current_active_user),
@@ -191,7 +192,7 @@ async def check_deletion_eligibility(
         return APIResponse.error(message="Failed to check deletion permissions")
 
 
-@router.post("/delete-account", response_model=APIResponse[AccountDeletionResponse])
+@router.post("/delete-account", response_model=APIResponse[AccountDeletionResponse], tags=["android-app"])
 async def delete_user_account(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(deps.get_current_active_user),

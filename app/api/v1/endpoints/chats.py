@@ -35,6 +35,7 @@ router = APIRouter(prefix="/chats", route_class=LoggerRoute)
     response_model=List[schemas.Chat],
     summary="Get current user's chat list",
     description="Get current user's chat list",
+    tags=["android-app"],
 )
 async def list_chats(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -58,6 +59,7 @@ async def list_chats(
     response_model=schemas.Chat,
     summary="Create new chat",
     description="Create new chat",
+    tags=["android-app"],
 )
 async def create_chat(
     *,
@@ -77,6 +79,7 @@ async def create_chat(
     response_model=schemas.Chat,
     summary="Delete chat",
     description="Delete chat",
+    tags=["android-app"],
 )
 async def delete_chat(
     *,
@@ -311,7 +314,7 @@ async def get_agent_chat_detail(
 
 @router.get(
     "/agents/{agent_id}/messages",
-    tags=["inty-eval"],
+    tags=["android-app", "inty-eval"],
     summary="Get Agent Chat Messages",
     description="Get only chat message records by Agent ID (lighter interface)",
 )
@@ -667,7 +670,7 @@ async def agent_chat_completions(
 
 @router.post(
     "/agents/{agent_id}/messages/{message_id}/voice",
-    tags=["inty", "voice"],
+    tags=["android-app", "inty", "voice"],
     summary="Generate Message Voice",
     description="Generate voice for a message",
 )
@@ -813,7 +816,7 @@ async def get_voice_info(
 
 @router.put(
     "/agents/{agent_id}/settings",
-    tags=["inty"],
+    tags=["android-app", "inty"],
     summary="Update Chat Settings by Agent ID",
     description=(
         "We do not use chat_id to get settings, because we only support 1 chat per agent."
@@ -910,7 +913,7 @@ async def update_agent_chat_settings(
 @router.get(
     "/agents/{agent_id}/settings",
     response_model=schemas.ChatSettings,
-    tags=["inty"],
+    tags=["android-app", "inty"],
     summary="Get Agent Chat Settings",
     description=(
         "[Deprecated, use /chats/{chat_id}/settings instead] Get chat settings by Agent ID, bause we only support 1 chat per agent, "
