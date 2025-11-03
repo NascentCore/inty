@@ -245,8 +245,8 @@ private fun SettingDialogs(
     // 高级模型对话框
     if (dialogState.showPremiumDialog) {
         val context = LocalContext.current
-        // 检查是否正式登录（非游客且已登录）
-        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+        // 检查是否已登录
+        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
             // 去会员中心
             VipCenterActivity.launch(context)
         } else {

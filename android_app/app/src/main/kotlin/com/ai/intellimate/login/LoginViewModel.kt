@@ -44,7 +44,7 @@ class LoginViewModel : BaseVM() {
                     LogUtils.i("Token: $token ,, UserProfile: $userProfile")
 
                     // 保存用户信息和 token
-                    IntySetting.login(false, userProfile.id, token) // false 表示不是游客用户
+                    IntySetting.login(userProfile.id, token)
                     UserProfileManager.saveUserProfile(userProfile)
 
                     // 通知MainViewModel更新登录状态（如果MainViewModel已初始化）
@@ -66,8 +66,8 @@ class LoginViewModel : BaseVM() {
                     // 检查用户信息是否完整（年龄和性别）
                     val needsRegInfo =
                         userProfile.gender.isNullOrEmpty() ||
-                            userProfile.ageGroup.isNullOrEmpty() ||
-                            userProfile.ageGroup == "<18"
+                                userProfile.ageGroup.isNullOrEmpty() ||
+                                userProfile.ageGroup == "<18"
 
                     withContext(Dispatchers.Main) {
                         // 显示登录成功提示
@@ -85,6 +85,7 @@ class LoginViewModel : BaseVM() {
                         }
                     }
                 }
+
                 is HttpResult.Failure -> {
                     LogUtils.e("Google login failed: ${result.message}")
                     withContext(Dispatchers.Main) {

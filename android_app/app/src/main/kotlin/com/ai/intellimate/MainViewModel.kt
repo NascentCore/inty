@@ -236,43 +236,6 @@ class MainViewModel : BaseVM() {
         }
     }
 
-    /**
-     * 游客模式数据加载，游客用户仍然可以访问推荐数据
-     *
-     * @deprecated 已废弃：应用已移除 guest 账户流程，不再需要此方法
-     */
-    @Deprecated(
-        "已废弃：应用已移除 guest 账户流程",
-        ReplaceWith("无需替换guest功能已移除"),
-        DeprecationLevel.WARNING
-    )
-    private fun loadGuestModeData() {
-
-        viewModelScope.launch {
-            try {
-                // 更新UI状态
-                _userProfile.value = UserProfile()
-
-                // 关键修复：确保用户账户状态正确恢复
-                // 游客用户切换后，需要重新设置账户就绪状态
-                UnifiedStartupManager.markUserAccountReady()
-
-                // 等待用户账户就绪（游客用户切换需要时间）
-                var waitTime = 0
-                while (!UnifiedStartupManager.isUserAccountReady() && waitTime < 3000) {
-                    delay(100)
-                    waitTime += 100
-                }
-
-                // 游客用户仍然有有效的token，可以重新加载数据
-                // 重新加载agents数据（游客模式也应该有推荐数据）
-                UnifiedStartupManager.refreshRecommendedAgents()
-                UnifiedStartupManager.refreshChatAgents()
-            } catch (e: Exception) {
-                LogUtils.e("Failed to load guest mode data: ${e.message}")
-            }
-        }
-    }
 
     /** 检查app版本更新 */
     val needForceUpgrade = MutableStateFlow<AppVersionRsp.AppVersionData?>(null)

@@ -77,7 +77,9 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                     navigationIcon = {
                         Image(
                             modifier =
-                                Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                                Modifier
+                                    .padding(horizontal = 12.dp)
+                                    .noRippleClickable { onBack() },
                             painter = painterResource(R.drawable.back),
                             contentDescription = null,
                         )
@@ -85,9 +87,11 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                     actions = {
                         Image(
                             modifier =
-                                Modifier.padding(horizontal = 12.dp).noRippleClickable {
-                                    showBottomSheet = true
-                                },
+                                Modifier
+                                    .padding(horizontal = 12.dp)
+                                    .noRippleClickable {
+                                        showBottomSheet = true
+                                    },
                             painter = painterResource(R.drawable.icon_more2),
                             contentDescription = null,
                         )
@@ -99,7 +103,8 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                 // 顶部渐变遮罩
                 Box(
                     modifier =
-                        Modifier.fillMaxWidth()
+                        Modifier
+                            .fillMaxWidth()
                             .height(160.dp)
                             .background(
                                 brush =
@@ -108,10 +113,15 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                                     )
                             )
                 )
-                Box(modifier = Modifier.fillMaxWidth().weight(1f))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                )
                 Box(
                     modifier =
-                        Modifier.fillMaxWidth()
+                        Modifier
+                            .fillMaxWidth()
                             .background(
                                 brush =
                                     Brush.verticalGradient(
@@ -129,7 +139,9 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                 ) {
                     Column(
                         modifier =
-                            Modifier.padding(innerPadding).verticalScroll(rememberScrollState())
+                            Modifier
+                                .padding(innerPadding)
+                                .verticalScroll(rememberScrollState())
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -165,7 +177,8 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
 
                         Column(
                             modifier =
-                                Modifier.padding(horizontal = 16.dp)
+                                Modifier
+                                    .padding(horizontal = 16.dp)
                                     .fillMaxWidth()
                                     .border(
                                         brush =
@@ -198,12 +211,12 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                                 // 使用智能 Tags 布局
                                 val gender =
                                     runCatching {
-                                            val tmpGender = agent.gender.lowercase()
-                                            tmpGender.replaceFirst(
-                                                tmpGender.first(),
-                                                tmpGender.first().uppercase().first(),
-                                            )
-                                        }
+                                        val tmpGender = agent.gender.lowercase()
+                                        tmpGender.replaceFirst(
+                                            tmpGender.first(),
+                                            tmpGender.first().uppercase().first(),
+                                        )
+                                    }
                                         .getOrNull() ?: ""
 
                                 val agentTags =
@@ -274,8 +287,8 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
             BottomSheetContent(
                 onReportClick = {
                     showBottomSheet = false
-                    // 检查是否正式登录（非游客且已登录）
-                    if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                    // 检查是否已登录
+                    if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                         ReportActivity.Companion.launch(context, agent.id, "AGENT")
                     } else {
                         // 未登录或游客时跳转到登录页面
@@ -293,7 +306,8 @@ private fun AgentSpacerLine() {
     Spacer(Modifier.height(4.dp))
     Box(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .height(1.dp)
                 .background(
                     brush =
@@ -308,11 +322,17 @@ private fun AgentSpacerLine() {
 
 @Composable
 private fun BottomSheetContent(onReportClick: () -> Unit, onCancelClick: () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 24.dp)
+    ) {
         // Report按钮
         Button(
             onClick = onReportClick,
-            modifier = Modifier.fillMaxWidth().height(60.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0x3378599A)),
             shape = RoundedCornerShape(16.dp),
         ) {
@@ -329,7 +349,9 @@ private fun BottomSheetContent(onReportClick: () -> Unit, onCancelClick: () -> U
         // Cancel按钮
         Button(
             onClick = onCancelClick,
-            modifier = Modifier.fillMaxWidth().height(60.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0x3378599A)),
             shape = RoundedCornerShape(16.dp),
         ) {

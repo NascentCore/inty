@@ -372,7 +372,7 @@ private fun SplashLoginUI(
                                 val userProfile = loginResult.data.user
 
                                 // 保存用户信息和 token
-                                IntySetting.login(false, userProfile.id, token)
+                                IntySetting.login(userProfile.id, token)
                                 com.ai.intellimate.utils.UserProfileManager.saveUserProfile(
                                     userProfile
                                 )

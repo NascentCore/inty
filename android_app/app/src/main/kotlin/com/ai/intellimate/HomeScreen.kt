@@ -155,7 +155,7 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
             if (
                 !IntySetting.hasTipsVipExpired() &&
                 IntySetting.isLogin() &&
-                !IntySetting.isGuestUser()
+                IntySetting.getCurToken().isNotEmpty()
             ) {
                 showExpiredDialog = true
             }
@@ -174,8 +174,8 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
             data,
             onCancel = { showExpiredDialog = false },
             onSure = {
-                // 检查是否正式登录（非游客且已登录）
-                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                // 检查是否已登录
+                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                     // 判断如果之前订阅的档位还在，则继续原订阅。如果没有了，则跳转到订阅中心
                     val plan =
                         vipPlan.find { plan -> plan.googleProductId == vipStatue.previous_plan_id }
@@ -211,7 +211,7 @@ private fun handleTabSelectionWithLauncher(
     createRoleLauncher: ActivityResultLauncher<Intent>,
 ) {
     if (tabIndex == HomeTabIndex.Create.ordinal) {
-        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
             // 使用 CreateRoleActivity 提供的方法获取 Intent
             val intent = CreateRoleActivity.getIntent(context, null)
             createRoleLauncher.launch(intent)
