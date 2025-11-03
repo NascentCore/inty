@@ -192,3 +192,7 @@ inty-firebase-key.json
 
 # Gradle temp dir
 .gradle/
+
+# 压缩包数据文件
+*.tar
+*.tar.gz
