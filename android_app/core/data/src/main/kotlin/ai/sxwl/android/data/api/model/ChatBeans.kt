@@ -111,6 +111,19 @@ data class ConversationItem(
     @Json(name = "agent_is_deleted") val isDeleted: Boolean = false, // 标记该agent是否已经被删除（针对自建agent场景）
     val isNew: Boolean = !IntySetting.isConversationReaded(agentId, lastMessage),
 ) {
+    // 本地状态（不序列化）
+    val isPinned: Boolean
+        get() = IntySetting.isConversationPinned(agentId)
+
+    val isHidden: Boolean
+        get() = IntySetting.isConversationHidden(agentId)
+
+    // 判断是否应该显示（有新消息时自动取消隐藏）
+    fun shouldShow(): Boolean {
+        if (!isHidden) return true
+        return IntySetting.hasNewMessageSinceHidden(agentId, lastMessageTime)
+    }
+
     fun getShowTime(): String {
         return TimeUtils.convertUtcToLocal(lastMessageTime)
     }

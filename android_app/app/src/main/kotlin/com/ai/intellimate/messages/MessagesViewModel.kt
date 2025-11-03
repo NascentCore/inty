@@ -103,8 +103,11 @@ class MessagesViewModel : BaseVM() {
                         if (userInitiatedConversations.isEmpty()) {
                             hasMoreConversations = false
                         } else {
+                            // 应用 Pin/Hide 逻辑：排序和过滤
+                            val processedConversations =
+                                processConversationsWithPinHide(userInitiatedConversations)
                             // 静默更新数据，不显示loading
-                            _uiState.update { it.copy(conversations = userInitiatedConversations) }
+                            _uiState.update { it.copy(conversations = processedConversations) }
                         }
                     }
 
@@ -153,16 +156,21 @@ class MessagesViewModel : BaseVM() {
                         if (userInitiatedConversations.isEmpty()) {
                             hasMoreConversations = false
                         } else {
+                            // 应用 Pin/Hide 逻辑：排序和过滤
+                            val processedConversations =
+                                processConversationsWithPinHide(userInitiatedConversations)
+
                             if (currentConversationsPage == 0) {
                                 // 第一页，直接替换
-                                _uiState.update { it.copy(conversations = userInitiatedConversations) }
+                                _uiState.update { it.copy(conversations = processedConversations) }
                             } else {
-                                // 后续页，追加到现有列表
+                                // 后续页，追加到现有列表（需要重新处理整个列表以保持排序）
                                 val currentConversations = _uiState.value.conversations
+                                val allConversations =
+                                    currentConversations + userInitiatedConversations
+                                val allProcessed = processConversationsWithPinHide(allConversations)
                                 _uiState.update {
-                                    it.copy(
-                                        conversations = currentConversations + userInitiatedConversations
-                                    )
+                                    it.copy(conversations = allProcessed)
                                 }
                             }
                         }
@@ -220,6 +228,90 @@ class MessagesViewModel : BaseVM() {
                     }
                 }
             )
+        }
+    }
+
+    /**
+     * 处理会话列表：排序（Pin在前）和过滤（隐藏的移除，除非有新消息）
+     */
+    private fun processConversationsWithPinHide(
+        rawConversations: List<ConversationItem>
+    ): List<ConversationItem> {
+        return rawConversations
+            .filter { conversation ->
+                // 过滤隐藏的会话，除非有新消息
+                !conversation.isHidden || conversation.shouldShow()
+            }
+            .sortedWith(
+                compareBy<ConversationItem> { !it.isPinned }
+                    .thenByDescending { conversation ->
+                        // 将 lastMessageTime（ISO 8601 格式）转换为时间戳进行比较
+                        ai.sxwl.android.utils.TimeUtils.parseIsoTimeToTimestamp(conversation.lastMessageTime)
+                            ?: 0L
+                    }
+            )
+    }
+
+    /**
+     * 置顶会话
+     */
+    fun pinConversation(agentId: String) {
+        IntySetting.setConversationPinned(agentId, true)
+        refreshConversationsWithPinHide()
+    }
+
+    /**
+     * 取消置顶
+     */
+    fun unpinConversation(agentId: String) {
+        IntySetting.setConversationPinned(agentId, false)
+        refreshConversationsWithPinHide()
+    }
+
+    /**
+     * 隐藏会话
+     */
+    fun hideConversation(agentId: String) {
+        IntySetting.setConversationHidden(agentId, true)
+        refreshConversationsWithPinHide()
+    }
+
+    /**
+     * 取消隐藏
+     */
+    fun unhideConversation(agentId: String) {
+        IntySetting.setConversationHidden(agentId, false)
+        refreshConversationsWithPinHide()
+    }
+
+    /**
+     * 刷新会话列表（应用Pin/Hide逻辑）
+     */
+    private fun refreshConversationsWithPinHide() {
+        _uiState.update { currentState ->
+            currentState.copy(
+                conversations = processConversationsWithPinHide(currentState.conversations)
+            )
+        }
+    }
+
+    /**
+     * 检查是否有新消息，自动取消隐藏
+     */
+    fun checkAndUnhideConversations() {
+        val currentConversations = _uiState.value.conversations
+        var needRefresh = false
+
+        currentConversations.forEach { conversation ->
+            if (conversation.isHidden && conversation.shouldShow()) {
+                // 有新消息，自动取消隐藏
+                IntySetting.setConversationHidden(conversation.agentId, false)
+                needRefresh = true
+            }
+        }
+
+        if (needRefresh) {
+            refreshConversationsWithPinHide()
         }
     }
 

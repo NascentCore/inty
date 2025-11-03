@@ -344,4 +344,54 @@ object IntySetting {
 
     // endregion
 
+    // region 会话Pin/Hide相关设置
+
+    /** 设置会话置顶状态 */
+    fun setConversationPinned(agentId: String, pinned: Boolean) {
+        curUserSetting.putBoolean("conversation_pinned_$agentId", pinned)
+    }
+
+    /** 获取会话置顶状态 */
+    fun isConversationPinned(agentId: String): Boolean {
+        return curUserSetting.decodeBool("conversation_pinned_$agentId", false)
+    }
+
+    /** 设置会话隐藏状态 */
+    fun setConversationHidden(agentId: String, hidden: Boolean) {
+        curUserSetting.putBoolean("conversation_hidden_$agentId", hidden)
+        if (hidden) {
+            // 记录隐藏时的时间戳，用于判断是否有新消息
+            curUserSetting.putLong("conversation_hidden_time_$agentId", System.currentTimeMillis())
+        } else {
+            curUserSetting.removeValueForKey("conversation_hidden_time_$agentId")
+        }
+    }
+
+    /** 获取会话隐藏状态 */
+    fun isConversationHidden(agentId: String): Boolean {
+        return curUserSetting.decodeBool("conversation_hidden_$agentId", false)
+    }
+
+    /** 获取会话隐藏时间（用于判断是否应该恢复显示） */
+    fun getConversationHiddenTime(agentId: String): Long {
+        return curUserSetting.decodeLong("conversation_hidden_time_$agentId", 0L)
+    }
+
+    /** 检查会话是否有新消息（用于自动取消隐藏） */
+    fun hasNewMessageSinceHidden(agentId: String, lastMessageTime: String): Boolean {
+        val hiddenTime = getConversationHiddenTime(agentId)
+        if (hiddenTime == 0L) return false
+
+        // 将 lastMessageTime（ISO 8601 格式）转换为时间戳进行比较
+        val messageTimeStamp =
+            ai.sxwl.android.utils.TimeUtils.parseIsoTimeToTimestamp(lastMessageTime)
+        return if (messageTimeStamp != null) {
+            messageTimeStamp > hiddenTime
+        } else {
+            false
+        }
+    }
+
+    // endregion
+
 }

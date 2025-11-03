@@ -37,6 +37,12 @@
     <string name="character_deleted_successfully">Deleted</string>
     <string name="saved_successfully">Saved</string>
 
+    <!-- Pin/Hide messages -->
+    <string name="pin">Pin</string>
+    <string name="unpin">Unpin</string>
+    <string name="hide">Hide</string>
+    <string name="unhide">Unhide</string>
+
     <!-- Error messages -->
     <string name="update_failed">Update failed</string>
     <string name="delete_failed">Delete failed</string>
