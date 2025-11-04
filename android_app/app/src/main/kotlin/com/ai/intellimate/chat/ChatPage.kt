@@ -195,11 +195,7 @@ internal fun ChatPage(
                 detectTapGestures(
                     onTap = {
                         suppressFocusCallback.value = true
-                        val cleared = focusManager.clearFocus(force = true)
-                        if (!cleared) {
-                            suppressFocusCallback.value = false
-                            return@detectTapGestures
-                        }
+                        focusManager.clearFocus()
                         if (isCurrentPage) {
                             onInputFocusChange(false)
                         }
@@ -585,10 +581,7 @@ internal fun ChatPage(
 
         if (showMorePanel || agentInfo == null) {
             suppressFocusCallback.value = true
-            val cleared = focusManager.clearFocus(force = true)
-            if (!cleared) {
-                suppressFocusCallback.value = false
-            }
+            focusManager.clearFocus()
             return@LaunchedEffect
         }
 
@@ -598,10 +591,7 @@ internal fun ChatPage(
             inputFocusRequester.requestFocus()
         } else {
             suppressFocusCallback.value = true
-            val cleared = focusManager.clearFocus(force = true)
-            if (!cleared) {
-                suppressFocusCallback.value = false
-            }
+            focusManager.clearFocus()
         }
     }
 }
