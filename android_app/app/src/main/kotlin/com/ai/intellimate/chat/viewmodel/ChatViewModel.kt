@@ -122,12 +122,6 @@ class ChatViewModel : BaseVM() {
             _isQueryMsgsCompleted.value = false
             // 停止语音播放
             audioManager?.stopAllPlayback()
-
-            // Firebase Analytics - 记录聊天会话结束
-            FirebaseManager.logEvent(
-                FirebaseManager.Events.CHAT_SESSION_END,
-                mapOf("reason" to "agent_cleared")
-            )
             return
         }
 

@@ -2,6 +2,7 @@ package ai.sxwl.android.data.billing
 
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.SubscriptionVerifyRequest
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.app.Activity
 import com.android.billingclient.api.AcknowledgePurchaseParams
@@ -289,6 +290,20 @@ internal class BillingPurchaseManager(
                                 )
                             vipStatusFlow.value = confirmedStatus
                             BillingStorage.saveLocalVipStatus(confirmedStatus)
+
+                            // 记录订阅开始事件
+                            val productId = purchase.products.firstOrNull() ?: ""
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.SUBSCRIPTION_START,
+                                FirebaseManager.safeEventParams(
+                                    "product_id" to productId,
+                                    "subscription_id" to productId,
+                                    "purchase_time" to purchase.purchaseTime,
+                                    "order_id" to (purchase.orderId ?: ""),
+                                    "user_type" to "vip",
+                                    "timestamp" to System.currentTimeMillis()
+                                )
+                            )
 
                             // 验证成功后再发送 PurchaseSuccess 事件，触发远程状态刷新
                             // 此时后端已确认订阅，刷新不会导致状态回退

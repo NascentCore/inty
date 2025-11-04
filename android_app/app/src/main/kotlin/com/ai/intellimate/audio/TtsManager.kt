@@ -2,6 +2,7 @@ package com.ai.intellimate.audio
 
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.http.BusinessErrorCodes
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
@@ -85,6 +86,9 @@ class TtsManager private constructor(private val context: Context) {
         // 添加到生成队列（用于UI状态）
         _isGeneratingTts.value = _isGeneratingTts.value + messageId
 
+        // 记录TTS生成开始时间
+        val ttsGenerationStartTime = System.currentTimeMillis()
+
         ioScope.launch {
             try {
                 if (agentId.isEmpty() || messageId.isEmpty()) {
@@ -125,6 +129,22 @@ class TtsManager private constructor(private val context: Context) {
                         } else {
                             val audioUrl = response.data.data?.audio_url
                             if (audioUrl != null && audioUrl.isNotEmpty()) {
+                                // 计算TTS生成耗时
+                                val ttsGenerationTime =
+                                    System.currentTimeMillis() - ttsGenerationStartTime
+
+                                // 记录TTS生成时间性能指标
+                                FirebaseManager.logPerformanceMetric(
+                                    FirebaseManager.Events.TTS_GENERATION_TIME,
+                                    ttsGenerationTime,
+                                    "ms",
+                                    FirebaseManager.safeEventParams(
+                                        "agent_id" to agentId,
+                                        "message_id" to messageId,
+                                        "timestamp" to System.currentTimeMillis()
+                                    )
+                                )
+
                                 completeWithSuccess(dedupKey, messageId, audioUrl, onSuccess)
                             } else {
                                 completeWithError(dedupKey, messageId, "TTS生成失败：返回空音频URL", onError)

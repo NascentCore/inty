@@ -104,7 +104,6 @@ object FirebaseManager {
                     // 🔴 页面追踪事件 - 100%采样
                     "page_leave" to 1.0, // 页面离开
                     "explore_page_view" to 1.0, // 探索页面访问
-                    Events.CHAT_SESSION_END to 1.0, // 聊天会话结束
                     Events.MESSAGE_SEND_SUCCESS to 1.0, // 消息发送成功
 
                     // 🟡 性能相关事件 - 保持现有采样配置
@@ -448,7 +447,6 @@ object FirebaseManager {
         // 业务关键事件
         const val CHAT_STARTED = "chat_started" // 聊天开始（第一次发送消息时触发）
         const val AGENT_SWITCH = "agent_switch"
-        const val CHAT_SESSION_END = "chat_session_end"
 
         // UI交互事件
         const val IMAGE_SHOW_SUCCESS = "image_show_success"

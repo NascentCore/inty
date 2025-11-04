@@ -3,7 +3,6 @@ package com.ai.intellimate.chat
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.theme.HeartColor
-import ai.sxwl.android.firebase.FirebaseManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -76,7 +75,8 @@ class ChatActivity : BaseActivity() {
         super.ConfigComposeUI()
         ChatPage(
             modifier =
-                Modifier.fillMaxSize()
+                Modifier
+                    .fillMaxSize()
                     .background(HeartColor.primaryColor)
                     .imePadding()
                     .navigationBarsPadding(),
@@ -84,14 +84,8 @@ class ChatActivity : BaseActivity() {
             showBackButton = true,
             onBack = { finish() },
         )
-        // 跟踪ChatActivity页面访问
-        val agentId = agent?.id ?: agentId ?: "unknown"
-        FirebaseManager.logScreenView(
-            screenName = "ChatScreen",
-            screenClass = "ChatActivity",
-            additionalParams =
-                mapOf("agent_id" to agentId, "agent_name" to (agent?.name ?: "unknown")),
-        )
+        // 注意：ChatPage 内部已通过 PageTrackingHelper.trackPageView() 统一跟踪页面访问
+        // 无需在此处重复记录，避免冗余统计
     }
 
     override fun onDestroy() {
