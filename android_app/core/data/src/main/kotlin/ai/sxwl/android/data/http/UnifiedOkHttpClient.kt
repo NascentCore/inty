@@ -128,30 +128,68 @@ private class DeviceInfoInterceptor : Interceptor {
  * 因此我们需要检查请求是否已有 Authorization header，避免重复添加
  */
 private class AuthInterceptor : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-        LogUtils.i("AuthInterceptor - getCurToken: ${IntySetting.getCurToken()}")
 
+    companion object {
+        /**
+         * 401错误白名单接口
+         * 这些接口的401错误不会触发全局logout，只记录日志
+         * 原因：这些接口可能在后台自动调用，401错误不应该影响用户当前的使用
+         *
+         * 注意：chat相关接口不再需要白名单，因为已修复token更新和客户端缓存的根本问题
+         */
+        private val authFailureWhitelist = setOf(
+            "/api/v1/version/check",   // 版本检查接口（后台自动调用）
+            "/api/v1/ai/agents/recommend",  // 推荐接口（后台自动调用）
+        )
+    }
+
+    /**
+     * 检查是否是白名单接口
+     * @param url 请求URL
+     * @return true 如果是白名单接口，false 否则
+     */
+    private fun isWhitelistedEndpoint(url: String): Boolean {
+        return authFailureWhitelist.any { url.contains(it) }
+    }
+
+    override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         val builder = request.newBuilder()
 
-        // 添加认证 token（如果存在且请求中没有 Authorization header）
-        // inty_sdk 会在 ClientOptions 中自动添加 Authorization header，所以需要检查
         val existingAuthHeader = request.header("Authorization")
-        val token = IntySetting.getCurToken()
+        val currentToken = IntySetting.getCurToken()  // 动态读取最新token
 
-        if (token.isNotEmpty() && existingAuthHeader == null) {
-            builder.addHeader("Authorization", "Bearer $token")
-            LogUtils.d("AuthInterceptor - Added Authorization header")
-        } else if (existingAuthHeader != null) {
-            LogUtils.d(
-                "AuthInterceptor - Authorization header already exists: ${
-                    existingAuthHeader.take(
-                        20
-                    )
-                }..."
-            )
+        if (currentToken.isNotEmpty()) {
+            // 检查SDK添加的token是否与最新token匹配
+            val sdkToken = existingAuthHeader?.removePrefix("Bearer ")?.trim()
+            if (sdkToken != null && sdkToken != currentToken) {
+                // Token不匹配，强制使用最新token（SDK可能使用了旧token）
+                builder.removeHeader("Authorization")
+                builder.addHeader("Authorization", "Bearer $currentToken")
+                LogUtils.w(
+                    "AuthInterceptor - Token mismatch detected, using latest token. " +
+                            "SDK token: ${sdkToken.take(8)}..., Current token: ${currentToken.take(8)}..."
+                )
+            } else if (existingAuthHeader == null) {
+                // 没有Authorization header，添加最新token
+                builder.addHeader("Authorization", "Bearer $currentToken")
+                LogUtils.d("AuthInterceptor - Added Authorization header with latest token")
+            } else {
+                // Token匹配，使用SDK添加的header
+                LogUtils.d(
+                    "AuthInterceptor - Authorization header already exists and matches: ${
+                        existingAuthHeader.take(20)
+                    }..."
+                )
+            }
         } else {
-            LogUtils.w("AuthInterceptor - No token available")
+            if (existingAuthHeader != null) {
+                // 有Authorization header但没有token，移除它（避免使用旧token）
+                builder.removeHeader("Authorization")
+                LogUtils.w("AuthInterceptor - Removed Authorization header (no current token)")
+            } else {
+                LogUtils.w("AuthInterceptor - No token available")
+            }
         }
 
         val modifiedRequest = builder.build()
@@ -162,22 +200,50 @@ private class AuthInterceptor : Interceptor {
         // 处理 401 未授权响应
         when (response.code) {
             401 -> {
-                LogUtils.e("http 401 for ${modifiedRequest.url}")
+                val requestUrl = modifiedRequest.url.toString()
+                LogUtils.e("http 401 for $requestUrl")
 
+                // 检查是否是白名单接口
+                if (isWhitelistedEndpoint(requestUrl)) {
+                    // 白名单接口的401错误，只记录日志，不触发logout
+                    LogUtils.w("401 for whitelisted endpoint, skipping logout: $requestUrl")
+
+                    // Firebase Analytics - 记录白名单接口的认证失败
+                    FirebaseManager.logEvent(
+                        "auth_failure_whitelisted",
+                        mapOf(
+                            "http_code" to 401,
+                            "url" to requestUrl,
+                            "user_logged_out" to false,
+                            "whitelisted" to true,
+                        ),
+                    )
+
+                    // Firebase Crashlytics - 记录认证失败（但不触发logout）
+                    FirebaseManager.setCustomKey("last_401_url", requestUrl)
+                    FirebaseManager.setCustomKey("last_401_whitelisted", true)
+
+                    // 直接返回401响应，不触发logout
+                    return response
+                }
+
+                // 非白名单接口的401错误，触发全局logout
                 // Firebase Analytics - 记录认证失败
                 FirebaseManager.logEvent(
                     "auth_failure",
                     mapOf(
                         "http_code" to 401,
-                        "url" to modifiedRequest.url.toString(),
+                        "url" to requestUrl,
                         "user_logged_out" to IntySetting.isLoggingOut(),
+                        "whitelisted" to false,
                     ),
                 )
 
                 // Firebase Crashlytics - 记录认证失败
-                FirebaseManager.setCustomKey("last_401_url", modifiedRequest.url.toString())
+                FirebaseManager.setCustomKey("last_401_url", requestUrl)
+                FirebaseManager.setCustomKey("last_401_whitelisted", false)
                 FirebaseManager.recordException(
-                    Exception("HTTP 401 Unauthorized: ${modifiedRequest.url}")
+                    Exception("HTTP 401 Unauthorized: $requestUrl")
                 )
 
                 // 检查是否正在退出登录过程中，避免重复重启

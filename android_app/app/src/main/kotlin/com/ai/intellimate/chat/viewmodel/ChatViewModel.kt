@@ -677,13 +677,60 @@ class ChatViewModel : BaseVM() {
     /** 生成图片消息 */
     fun generateImageForMessage(messageId: String) {
         val agentId = _agentInfo.value?.id ?: return
+        val agent = _agentInfo.value ?: return
+
+        val startTime = System.currentTimeMillis()
+
+        // Firebase Analytics - 记录图片生成开始
+        FirebaseManager.logEvent(
+            FirebaseManager.Events.IMAGE_GENERATION_START,
+            FirebaseManager.safeEventParams(
+                "agent_id" to agentId,
+                "agent_name" to agent.name,
+                "message_id" to messageId,
+                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                "timestamp" to startTime
+            )
+        )
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = generateImageUseCase(agentId, messageId)
+                val endTime = System.currentTimeMillis()
+                val generationTime = endTime - startTime
+
                 when (result) {
                     is HttpResult.Success -> {
                         LogUtils.i("Image generated successfully: ${result.data.imageUrl}")
+
+                        // Firebase Analytics - 记录图片生成成功
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.IMAGE_GENERATION_SUCCESS,
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to agentId,
+                                "agent_name" to agent.name,
+                                "message_id" to messageId,
+                                "image_url" to result.data.imageUrl,
+                                "image_width" to result.data.width,
+                                "image_height" to result.data.height,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "generation_time_ms" to generationTime,
+                                "timestamp" to endTime
+                            )
+                        )
+
+                        // Firebase Performance - 记录图片生成耗时
+                        FirebaseManager.logPerformanceMetric(
+                            FirebaseManager.Events.IMAGE_GENERATION_TIME,
+                            generationTime.toLong(),
+                            "ms",
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to agentId,
+                                "agent_name" to agent.name,
+                                "message_id" to messageId,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free"
+                            )
+                        )
                     }
 
                     is HttpResult.Failure -> {
@@ -693,16 +740,75 @@ class ChatViewModel : BaseVM() {
                         if (result.code == BusinessErrorCodes.IMAGE_GENERATION_LIMIT_REACHED_CODE ||
                             result.code == BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
                         ) {
+                            // Firebase Analytics - 记录图片生成限制达到
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.IMAGE_GENERATION_LIMIT_REACHED,
+                                FirebaseManager.safeEventParams(
+                                    "agent_id" to agentId,
+                                    "agent_name" to agent.name,
+                                    "message_id" to messageId,
+                                    "error_code" to result.code,
+                                    "error_message" to (result.message ?: "unknown"),
+                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "generation_time_ms" to generationTime,
+                                    "timestamp" to endTime
+                                )
+                            )
+
                             // 显示订阅弹窗（类似sendMsg的处理）
                             showLimitDialog.emit(true)
                         } else {
+                            // Firebase Analytics - 记录图片生成失败
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.IMAGE_GENERATION_FAILURE,
+                                FirebaseManager.safeEventParams(
+                                    "agent_id" to agentId,
+                                    "agent_name" to agent.name,
+                                    "message_id" to messageId,
+                                    "error_code" to result.code,
+                                    "error_message" to (result.message ?: "unknown"),
+                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "generation_time_ms" to generationTime,
+                                    "timestamp" to endTime
+                                )
+                            )
+
                             // 其他错误显示网络错误提示
                             NetworkErrorHandler.showNetworkAwareError(result.message)
                         }
                     }
                 }
             } catch (e: Exception) {
+                val endTime = System.currentTimeMillis()
+                val generationTime = endTime - startTime
                 LogUtils.e("Image generation error: ${e.message}")
+
+                // Firebase Analytics - 记录图片生成异常
+                FirebaseManager.logEvent(
+                    FirebaseManager.Events.IMAGE_GENERATION_FAILURE,
+                    FirebaseManager.safeEventParams(
+                        "agent_id" to agentId,
+                        "agent_name" to agent.name,
+                        "message_id" to messageId,
+                        "error_type" to e.javaClass.simpleName,
+                        "error_message" to (e.message ?: "unknown error"),
+                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                        "generation_time_ms" to generationTime,
+                        "timestamp" to endTime
+                    )
+                )
+
+                // Firebase Crashlytics - 记录异常
+                FirebaseManager.recordException(
+                    e,
+                    FirebaseManager.safeEventParams(
+                        "agent_id" to agentId,
+                        "agent_name" to agent.name,
+                        "message_id" to messageId,
+                        "generation_time_ms" to generationTime
+                    )
+                )
+
                 NetworkErrorHandler.showNetworkAwareError("Failed to generate image: ${e.message}")
             }
         }
