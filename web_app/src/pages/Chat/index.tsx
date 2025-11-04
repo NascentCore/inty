@@ -63,7 +63,8 @@ const ChatPage: React.FC = () => {
       offset: 0,
       order: 'asc',
     });
-  }, [agentId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentId]); // 仅在 agentId 变化时执行
 
   /**
    * 处理发送消息

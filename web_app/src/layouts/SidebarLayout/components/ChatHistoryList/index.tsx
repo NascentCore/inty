@@ -35,7 +35,7 @@ const ChatHistoryList: React.FC<IChatHistoryListProps> = ({
   return (
     <div className="chat-history-list-wrapper">
       <div className="chat-history-header">
-        <h3>最近对话</h3>
+        <h3>Recent Chats</h3>
       </div>
       <div className="chat-history-list">
         {loading ? (
@@ -53,7 +53,7 @@ const ChatHistoryList: React.FC<IChatHistoryListProps> = ({
           ))
         ) : (
           <div className="chat-history-empty">
-            <p>暂无对话记录</p>
+            <p>No chat history</p>
           </div>
         )}
       </div>

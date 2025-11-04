@@ -5,7 +5,7 @@
 
 import Inty from 'inty';
 import { INTY_SDK_CONFIG } from '@/constants';
-import { getGuestToken } from './token';
+import { getToken } from './token';
 import { logger } from './logger';
 
 /**
@@ -25,18 +25,18 @@ function getBaseURL(): string {
  * @throws 当 requireAuth 为 true 但没有 token 时抛出错误
  * 
  * @example
- * // 无需认证（如游客登录）
+ * // 无需认证（如访客登录）
  * const client = await createIntyClient();
  * 
  * // 需要认证（如获取用户信息）
  * const client = await createIntyClient(true);
  */
 export async function createIntyClient(requireAuth = false): Promise<Inty> {
-  const token = await getGuestToken();
+  const token = await getToken();
   
   // 如果必须要 token 但没有，抛出错误
   if (requireAuth && !token) {
-    throw new Error('未找到 Token，请先执行游客登录');
+    throw new Error('未找到 Token，请先登录');
   }
   
   return new Inty({

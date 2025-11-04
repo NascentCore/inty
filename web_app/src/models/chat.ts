@@ -4,7 +4,8 @@
  */
 
 import { useState, useCallback } from 'react';
-import { getChatMessages, sendMessage } from '@/services/chat';
+import { useModel } from '@umijs/max';
+import { getChatMessages, sendMessage, MessageSendError } from '@/services/chat';
 import type { IMessage, IGetChatMessagesRequest } from '@/types';
 
 /**
@@ -32,6 +33,9 @@ export interface IChatModelState {
 }
 
 export default function useChatModel() {
+  // 获取 Google 登录弹窗状态管理
+  const googleLoginModal = useModel('googleLoginModal');
+  
   // 状态定义
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
@@ -184,11 +188,12 @@ export default function useChatModel() {
         // 如果返回了 AI 回复，添加到消息列表
         if (response && response.content) {
           const assistantMessage: IMessage = {
-            id: `assistant-${Date.now()}`,
+            id: String(response.messageId),
             content: response.content,
             role: 'assistant',
             timestamp: new Date().toISOString(),
             created_at: new Date().toISOString(),
+            audio_url: response.audioUrl,
           };
 
           setMessages((prev) => [...prev, assistantMessage]);
@@ -196,6 +201,16 @@ export default function useChatModel() {
 
         return response;
       } catch (err) {
+        // 处理 GUEST_LOGIN_REQUIRED 错误
+        if (err instanceof MessageSendError && err.shouldLogin) {
+          console.log('需要 Google 登录，打开登录弹窗');
+          // 移除乐观添加的用户消息
+          setMessages((prev) => prev.slice(0, -1));
+          // 触发登录弹窗，不显示错误提示
+          googleLoginModal.show();
+          return null;
+        }
+        
         const errorMsg = err instanceof Error ? err.message : '发送消息失败';
         setError(errorMsg);
         console.error('发送消息失败:', err);
@@ -206,7 +221,7 @@ export default function useChatModel() {
         setSending(false);
       }
     },
-    [],
+    [googleLoginModal],
   );
 
   return {

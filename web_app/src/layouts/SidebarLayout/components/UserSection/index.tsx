@@ -6,6 +6,7 @@
  * ```tsx
  * <UserSection 
  *   userProfile={userProfile}
+ *   isRegistered={isRegistered}
  *   loading={loading}
  *   onSubscribeClick={handleSubscribe}
  * />
@@ -13,16 +14,17 @@
  * 
  * Props 说明：
  * - userProfile: IUserProfile | null - 用户信息对象
+ * - isRegistered: boolean - 是否为注册用户
  * - loading: boolean - 是否正在加载用户信息
  * - onSubscribeClick: () => void - 订阅按钮点击回调
  * 
  * 注意事项：
  * - 如果用户无头像，显示默认占位符（用户昵称首字母）
- * - 头像可点击，跳转个人中心（待实现）
+ * - 点击头像：非注册用户弹出登录弹窗，注册用户跳转个人中心
  */
 
 import React from 'react';
-import { history } from '@umijs/max';
+import { history, useModel } from '@umijs/max';
 import { User } from 'lucide-react';
 import { Icon } from '@/components';
 import { SubscribeButton } from '../index';
@@ -32,6 +34,8 @@ import './index.less';
 interface IUserSectionProps {
   /** 用户信息 */
   userProfile: IUserProfile | null;
+  /** 是否为注册用户 */
+  isRegistered?: boolean;
   /** 加载状态 */
   loading?: boolean;
   /** 订阅按钮点击回调 */
@@ -43,9 +47,12 @@ interface IUserSectionProps {
  */
 const UserSection: React.FC<IUserSectionProps> = ({
   userProfile,
+  isRegistered = false,
   loading = false,
   onSubscribeClick,
 }) => {
+  // 获取 Google 登录弹窗控制
+  const { show: showLoginModal } = useModel('googleLoginModal');
   /**
    * 渲染用户头像
    */
@@ -55,6 +62,15 @@ const UserSection: React.FC<IUserSectionProps> = ({
       return (
         <div className="user-avatar-placeholder loading">
           <Icon icon={User} size={20} color="#666" />
+        </div>
+      );
+    }
+
+    // 如果是非注册用户（访客），显示访客图标
+    if (!isRegistered) {
+      return (
+        <div className="user-avatar-placeholder guest">
+          <Icon icon={User} size={20} color="#999" />
         </div>
       );
     }
@@ -85,10 +101,18 @@ const UserSection: React.FC<IUserSectionProps> = ({
   };
 
   /**
-   * 处理头像点击 - 跳转到个人中心
+   * 处理头像点击
+   * - 如果是非注册用户（访客），弹出登录弹窗
+   * - 如果是注册用户，跳转到个人中心
    */
   const handleAvatarClick = () => {
-    history.push('/profile');
+    if (!isRegistered) {
+      // 非注册用户，显示登录弹窗
+      showLoginModal();
+    } else {
+      // 注册用户，跳转个人中心
+      history.push('/profile');
+    }
   };
 
   return (

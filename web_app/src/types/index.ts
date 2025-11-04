@@ -100,8 +100,6 @@ export interface IUserProfile {
 export interface IInitialState {
   /** 应用名称 */
   name?: string;
-  /** 是否已登录 */
-  isLoggedIn?: boolean;
 }
 
 /**
@@ -210,14 +208,14 @@ export interface IApiResult<T = unknown> {
  * 访客登录请求参数
  */
 export interface IGuestLoginRequest {
-  /** 设备 ID */
-  device_id: string;
-  /** 系统语言 */
-  system_language: string;
-  /** 年龄组 */
-  age_group: string;
-  /** 请求 ID */
-  request_id: string;
+  /** 设备 ID（可选） */
+  device_id?: string;
+  /** 系统语言（可选） */
+  system_language?: string;
+  /** 年龄组（可选） */
+  age_group?: string;
+  /** 请求 ID（可选） */
+  request_id?: string;
 }
 
 /**

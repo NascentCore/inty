@@ -1,0 +1,143 @@
+/**
+ * 登录面板样式
+ */
+
+@import '@/styles/variables.less';
+
+.login-panel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100%;
+  padding: 24px;
+
+  .login-card {
+    width: 100%;
+    max-width: 460px;
+    padding: 40px;
+    background: @dark-bg-tertiary;
+    border-radius: 16px;
+    border: 1px solid @dark-border-color;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 32px;
+
+      .login-title {
+        font-size: 28px;
+        font-weight: 600;
+        color: @dark-text-primary;
+        margin: 0 0 12px 0;
+      }
+
+      .login-subtitle {
+        font-size: 14px;
+        color: @dark-text-secondary;
+        margin: 0;
+      }
+    }
+
+    .login-content {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+
+      .google-login-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        width: 100%;
+        padding: 14px 24px;
+        background: @dark-bg-primary;
+        border: 1px solid @dark-border-color;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 16px;
+        font-weight: 500;
+        color: @dark-text-primary;
+
+        &:hover {
+          background: @dark-bg-secondary;
+          border-color: @primary-color;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+
+        .google-icon {
+          flex-shrink: 0;
+        }
+
+        .button-text {
+          flex: 1;
+          text-align: center;
+        }
+      }
+
+      .login-tips {
+        padding: 20px;
+        background: @dark-bg-secondary;
+        border-radius: 8px;
+        border: 1px solid @dark-border-color;
+
+        .tip-text {
+          font-size: 14px;
+          font-weight: 500;
+          color: @dark-text-primary;
+          margin: 0 0 12px 0;
+        }
+
+        .tip-list {
+          margin: 0;
+          padding-left: 20px;
+          list-style: disc;
+
+          li {
+            font-size: 14px;
+            color: @dark-text-secondary;
+            line-height: 1.8;
+
+            &::marker {
+              color: @primary-color;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// 响应式适配
+@media (max-width: 600px) {
+  .login-panel {
+    padding: 16px;
+
+    .login-card {
+      padding: 28px 20px;
+
+      .login-header {
+        margin-bottom: 24px;
+
+        .login-title {
+          font-size: 24px;
+        }
+      }
+
+      .login-content {
+        gap: 20px;
+
+        .google-login-button {
+          padding: 12px 20px;
+          font-size: 15px;
+        }
+      }
+    }
+  }
+}
+

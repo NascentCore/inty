@@ -37,7 +37,6 @@ export {
 // Token 相关导出
 export {
   clearToken,
-  getGuestToken,
   getToken,
   hasToken,
   saveToken,

@@ -1,6 +1,6 @@
 /**
  * Token 管理工具
- * 统一管理访客 Token 和用户 Token 的存储与获取
+ * 统一管理用户 Token 的存储与获取（包括访客和正式用户）
  */
 
 import { storage } from './storage';
@@ -8,30 +8,26 @@ import { STORAGE_KEYS } from '@/constants';
 import { logger } from './logger';
 
 /**
- * 获取访客 Token
- * @returns 访客 Token，如果未登录则返回空字符串
+ * 获取 Token
+ * @returns Token 字符串，如果未登录则返回空字符串
  */
-export async function getGuestToken(): Promise<string | null> {
+export async function getToken(): Promise<string | null> {
   try {
-    const token = await storage.get<string>(STORAGE_KEYS.GUEST_TOKEN);
+    const token = await storage.get<string>(STORAGE_KEYS.TOKEN);
     return token || '';
   } catch (err) {
-    logger.error('获取访客 Token 失败', err);
+    logger.error('获取 Token 失败', err);
     return '';
   }
 }
 
 /**
  * 保存 Token 到本地存储
- * 同时保存到 TOKEN 和 GUEST_TOKEN 两个 key（兼容性考虑）
- * @param token - API Token
+ * @param token - API Token（访客或正式用户）
  */
 export async function saveToken(token: string): Promise<void> {
   try {
-    await storage.setMultiple({
-      [STORAGE_KEYS.TOKEN]: token,
-      [STORAGE_KEYS.GUEST_TOKEN]: token,
-    });
+    await storage.set(STORAGE_KEYS.TOKEN, token);
     logger.info('Token 已保存到本地存储');
   } catch (err) {
     logger.error('保存 Token 失败', err);
@@ -40,14 +36,10 @@ export async function saveToken(token: string): Promise<void> {
 
 /**
  * 清除本地存储的 Token
- * 同时清除 TOKEN 和 GUEST_TOKEN
  */
 export async function clearToken(): Promise<void> {
   try {
-    await storage.removeMultiple([
-      STORAGE_KEYS.TOKEN,
-      STORAGE_KEYS.GUEST_TOKEN,
-    ]);
+    await storage.remove(STORAGE_KEYS.TOKEN);
     logger.info('Token 已从本地存储清除');
   } catch (err) {
     logger.error('清除 Token 失败', err);
@@ -60,20 +52,12 @@ export async function clearToken(): Promise<void> {
  */
 export async function hasToken(): Promise<boolean> {
   try {
-    const token = await getGuestToken();
+    const token = await getToken();
     return !!token && token.length > 0;
   } catch (err) {
     logger.error('检查 Token 存在性失败', err);
     return false;
   }
-}
-
-/**
- * 获取通用 Token（优先获取访客 Token）
- * @returns Token 字符串
- */
-export async function getToken(): Promise<string | null> {
-  return await getGuestToken();
 }
 
 /**

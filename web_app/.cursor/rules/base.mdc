@@ -122,6 +122,20 @@ src/
   - 工具/服务：`camelCase.ts`
   - 样式文件：与对应组件同名 `.less`
 
+#### 文案规范
+- **页面文案使用英文**：所有面向用户的界面文案（包括但不限于按钮文字、提示信息、标题、描述等）必须使用英文
+  ```typescript
+  // ✅ 正确：使用英文
+  <button>Sign in to IntelliMate</button>
+  <p>Sign in with your Google account to access all features</p>
+  
+  // ❌ 错误：使用中文
+  <button>登录 IntelliMate</button>
+  <p>使用 Google 账号登录以继续使用完整功能</p>
+  ```
+- **代码注释**：代码注释可以使用中文，便于团队协作和理解
+- **变量和函数命名**：遵循命名规范，使用英文命名
+
 #### 组件规范
 - **函数式组件**：统一使用函数式组件 + Hooks
   ```typescript

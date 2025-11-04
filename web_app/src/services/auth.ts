@@ -1,14 +1,11 @@
 /**
  * 认证相关 API 服务
  * 使用 Inty SDK 实现
- * 
- * ⚠️ 注意：以下访客登录相关函数仅供 dev-test 页面测试使用
- * 业务代码中不再使用访客登录逻辑
  */
 
 import { STORAGE_KEYS } from '@/constants';
 import { storage, createIntyClient, logger } from '@/utils';
-import { saveToken, getGuestToken } from '@/utils/token';
+import { saveToken } from '@/utils/token';
 import type {
   IApiResult,
   IGuestLoginData,
@@ -35,6 +32,7 @@ export async function guestLogin(
       age_group: params.age_group,
       request_id: params.request_id,
     });
+    logger.info("访客登录响应", response);
 
     // 转换为项目的统一格式
     const guestData: IGuestLoginData = {
@@ -49,15 +47,11 @@ export async function guestLogin(
       data: guestData,
     };
 
-    // 登录成功后自动保存 token 和 guest_id 到 IndexedDB
+    // 登录成功后自动保存 token 到 IndexedDB
     if (result.code === 200 && result.data) {
       await Promise.all([
-        saveToken(result.data.token), // 保存到 TOKEN key
-        storage.setMultiple({
-          [STORAGE_KEYS.GUEST_TOKEN]: result.data.token,
-          [STORAGE_KEYS.GUEST_ID]: result.data.guest_id,
-          guest_login_data: result.data,
-        }),
+        saveToken(result.data.token),
+        storage.set('guest_login_data', result.data),
       ]);
     }
 
@@ -88,21 +82,10 @@ export async function getGuestInfo(): Promise<IGuestLoginData | null> {
 }
 
 /**
- * 获取访客 Token（从 utils/token.ts 重新导出）
- * @deprecated 请直接从 @/utils/token 导入
- * @returns 访客 Token，如果未登录则返回 null
- */
-export { getGuestToken };
-
-/**
  * 清除访客登录信息
  * @returns 是否清除成功
  */
 export async function clearGuestInfo(): Promise<boolean> {
-  return await storage.removeMultiple([
-    STORAGE_KEYS.GUEST_TOKEN,
-    STORAGE_KEYS.GUEST_ID,
-    'guest_login_data',
-  ]);
+  return await storage.remove('guest_login_data');
 }
 
