@@ -69,6 +69,7 @@ import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.chat.ui.MessageActionBar
 import com.ai.intellimate.chat.ui.MessageCornerActions
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.ChatTextFormatter
 
 /** 复制文本到剪贴板；这是用于测试功能。 */
@@ -203,36 +204,87 @@ private fun ChatItemAI(
                     RoundedCornerShape(topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
                 else RoundedCornerShape(12.dp)
 
-            // 检查是否有生成的图片
+            // 检查是否有生成的图片（包括loading状态）
+            // 图片消息：content为空且meta_data中有generatedImage
+            // loading消息：content为"loading_animation"且localMsgId包含"loading_image"
             val hasGeneratedImage = item.hasGeneratedImage()
             val generatedImageUrl = item.getGeneratedImageUrl()
-
+            // 判断是否为图片loading状态：content为"loading_animation"且localMsgId包含"loading_image"
+            val isImageLoading = item.content == "loading_animation" &&
+                    item.localMsgId.contains("loading_image", ignoreCase = true)
+            // 判断是否为图片消息（纯图片，无文本）
+            val isImageOnlyMessage = item.content.isEmpty() && hasGeneratedImage
+            
             // 全屏图片查看器状态
             var showFullScreenImage by remember { mutableStateOf(false) }
+            // 图片加载错误状态
+            var imageLoadError by remember { mutableStateOf(false) }
 
-            if (hasGeneratedImage && generatedImageUrl != null) {
-                // 显示生成的图片消息
-                Column(
+            // 文本消息内容
+            // 图片loading时或纯图片消息时，不显示文本Box，只显示shimmer占位或图片
+            if (!isImageLoading && !isImageOnlyMessage) {
+                Box(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // 如果还有文本内容，先显示文本
-                    if (item.content.isNotEmpty()) {
-                        Row {
-                            val context = LocalContext.current
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .background(Color.Black.copy(alpha = 0.5f), msgShape)
-                                        .padding(12.dp, 13.dp)
-                                        .widthIn(1.dp, 300.dp)
-                                        .pointerInput(item.content) {
-                                            detectTapGestures(
-                                                onLongPress = {
-                                                    debugOnlyCopyToClipboard(context, item.content)
-                                                }
+                    Row {
+                        val context = LocalContext.current
+                        Box(
+                            modifier =
+                                Modifier
+                                    .background(Color.Black.copy(alpha = 0.5f), msgShape)
+                                    .padding(12.dp, 13.dp)
+                                    .widthIn(1.dp, 300.dp)
+                                    .then(
+                                        if (item.content == "图片生成失败" && item.localMsgId.contains(
+                                                "image_error",
+                                                ignoreCase = true
                                             )
+                                        ) {
+                                            // 图片生成失败的消息可点击删除
+                                            Modifier.noRippleClickable {
+                                                viewModel.deleteMessage(item.localMsgId)
+                                            }
+                                        } else {
+                                            Modifier.pointerInput(item.content) {
+                                                detectTapGestures(
+                                                    onLongPress = {
+                                                        debugOnlyCopyToClipboard(
+                                                            context,
+                                                            item.content
+                                                        )
+                                                    }
+                                                )
+                                            }
                                         }
+                                    )
+                        ) {
+                            if (item.content == "loading_animation" && !hasGeneratedImage) {
+                                // 普通消息loading动画（非图片loading）
+                                LoadingAnimation()
+                            } else if (item.content == "图片生成失败" && item.localMsgId.contains(
+                                    "image_error",
+                                    ignoreCase = true
+                                )
                             ) {
+                                // 图片生成失败的错误消息：显示文本文案并可点击删除
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_warning_voice),
+                                        contentDescription = "Image generation error",
+                                        tint = Color.White.copy(alpha = 0.6f),
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Text(
+                                        text = item.content,
+                                        color = Color.White.copy(alpha = 0.6f),
+                                        fontSize = 14.sp,
+                                    )
+                                }
+                            } else if (item.content.isNotEmpty()) {
+                                // 消息文本
                                 StyledMessageText(
                                     text = item.content,
                                     fontSize = 14.sp,
@@ -241,32 +293,120 @@ private fun ChatItemAI(
                                     actionColor = Color.White.copy(0.55f),
                                 )
                             }
-                            Spacer(
-                                modifier = Modifier
-                                    .widthIn(80.dp)
-                                    .weight(1f)
-                            )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(
+                            modifier = Modifier
+                                .widthIn(80.dp)
+                                .weight(1f)
+                        )
                     }
 
-                    // 显示生成的图片（宽度为消息列表宽度的1/3）
-                    val imageWidth = item.getGeneratedImageWidth() ?: 300
-                    val imageHeight = item.getGeneratedImageHeight() ?: 300
-                    val aspectRatio =
-                        if (imageHeight > 0) imageWidth.toFloat() / imageHeight.toFloat() else 1f
+                    // 右下角按钮（keep talking, image generate）
+                    // 如果有图片，隐藏所有按钮；否则仅在最后一条消息时显示
+                    if (!isImageOnlyMessage && !hasGeneratedImage && isLatestMessage) {
+                        MessageCornerActions(
+                            message = item,
+                            onKeepTalking = {
+                                viewModel.sendKeepTalkingMessage()
+                            },
+                            onImageGenerate = {
+                                viewModel.generateImageForMessage(item.id)
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 5.dp, bottom = 5.dp)
+                        )
+                    }
+                }
+            }
 
-                    // 使用固定的dp宽度（1/3屏幕宽度约120dp）
-                    val targetWidth = 360 // 约等于1/3屏幕宽度的像素值（假设360dp屏幕）
+            // 底部操作栏（like, dislike, recall）
+            // 如果有图片，隐藏所有按钮；否则仅在最后一条消息时显示
+            if (!isImageOnlyMessage && !hasGeneratedImage && isLatestMessage) {
+                Spacer(modifier = Modifier.height(2.dp))
+                MessageActionBar(
+                    message = item,
+                    onLike = {
+                        viewModel.likeMessage(item.localMsgId)
+                    },
+                    onDislike = {
+                        viewModel.dislikeMessage(item.localMsgId)
+                    },
+                    onRecall = {
+                        viewModel.recallMessage()
+                    },
+                )
+            }
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.CenterStart,
-                    ) {
+            // 生成的图片显示（在MessageActionBar下面）
+            // 包括两种情况：
+            // 1. 有generatedImage（图片消息）
+            // 2. 图片loading状态（content为"loading_animation"且localMsgId包含"loading_image"）
+            if (hasGeneratedImage || isImageLoading) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 对于loading状态，使用默认尺寸；对于有generatedImage的消息，使用实际尺寸
+                val imageWidth = if (isImageLoading) 300 else (item.getGeneratedImageWidth() ?: 300)
+                val imageHeight =
+                    if (isImageLoading) 300 else (item.getGeneratedImageHeight() ?: 300)
+                val aspectRatio =
+                    if (imageHeight > 0) imageWidth.toFloat() / imageHeight.toFloat() else 1f
+
+                // 使用固定的dp宽度（1/3屏幕宽度约120dp）
+                val targetWidth = 360 // 约等于1/3屏幕宽度的像素值（假设360dp屏幕）
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    if (isImageLoading) {
+                        // Loading状态：显示shimmer占位，内部有loading点点点效果
+                        ShimmerPlaceholder(
+                            modifier = Modifier
+                                .fillMaxWidth(0.35f)
+                                .aspectRatio(aspectRatio),
+                            cornerRadius = 12.dp,
+                            showLoadingDots = true, // 显示loading点点点
+                        )
+                    } else if (imageLoadError || (isImageLoading && generatedImageUrl.isNullOrEmpty())) {
+                        // 错误状态：显示错误文案并可点击删除
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.35f)
+                                .aspectRatio(aspectRatio)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.Black.copy(alpha = 0.3f))
+                                .padding(16.dp)
+                                .noRippleClickable {
+                                    // 点击删除图片生成失败的消息
+                                    viewModel.deleteMessage(item.localMsgId)
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_warning_voice),
+                                    contentDescription = "Image load error",
+                                    tint = Color.White.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(24.dp),
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "图片生成失败，点击删除",
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    fontSize = 12.sp,
+                                )
+                            }
+                        }
+                    } else if (generatedImageUrl != null && generatedImageUrl.isNotEmpty()) {
+                        // 正常显示图片
                         AsyncImage(
                             modifier = Modifier
-                                .fillMaxWidth(0.33f)
+                                .fillMaxWidth(0.35f)
                                 .aspectRatio(aspectRatio)
                                 .clip(RoundedCornerShape(12.dp))
                                 .pointerInput(Unit) {
@@ -289,100 +429,37 @@ private fun ChatItemAI(
                             contentDescription = "Generated image",
                             contentScale = ContentScale.Fit,
                             alignment = Alignment.CenterStart,
-                        )
-                    }
-
-                    // 全屏图片查看器
-                    if (showFullScreenImage) {
-                        Dialog(
-                            onDismissRequest = { showFullScreenImage = false },
-                            properties = DialogProperties(
-                                usePlatformDefaultWidth = false,
-                                dismissOnBackPress = true,
-                                dismissOnClickOutside = true,
-                            ),
-                        ) {
-                            FullScreenImageViewer(
-                                imageUrl = generatedImageUrl,
-                                onDismiss = { showFullScreenImage = false },
-                            )
-                        }
-                    }
-                }
-            } else {
-                // 普通文本消息
-                Box(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row {
-                        val context = LocalContext.current
-                        Box(
-                            modifier =
-                                Modifier
-                                    .background(Color.Black.copy(alpha = 0.5f), msgShape)
-                                    .padding(12.dp, 13.dp)
-                                    .widthIn(1.dp, 300.dp)
-                                    .pointerInput(item.content) {
-                                        detectTapGestures(
-                                            onLongPress = {
-                                                debugOnlyCopyToClipboard(context, item.content)
-                                            }
-                                        )
-                                    }
-                        ) {
-                            if (item.content == "loading_animation") {
-                                LoadingAnimation()
-                            } else {
-                                // 消息文本
-                                StyledMessageText(
-                                    text = item.content,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Normal,
-                                    normalColor = Color.White,
-                                    actionColor = Color.White.copy(0.55f),
-                                )
-                            }
-                        }
-                        Spacer(
-                            modifier = Modifier
-                                .widthIn(80.dp)
-                                .weight(1f)
-                        )
-                    }
-
-                    // 右下角按钮（keep talking, image generate）- 仅在最后一条消息且无操作时显示
-                    if (isLatestMessage) {
-                        MessageCornerActions(
-                            message = item,
-                            onKeepTalking = {
-                                viewModel.sendKeepTalkingMessage()
+                            onError = {
+                                imageLoadError = true
                             },
-                            onImageGenerate = {
-                                viewModel.generateImageForMessage(item.id)
-                            },
+                        )
+                    } else if (generatedImageUrl.isNullOrEmpty()) {
+                        // 有generatedImage但imageUrl为空，显示loading
+                        ShimmerPlaceholder(
                             modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(end = 5.dp, bottom = 5.dp)
+                                .fillMaxWidth(0.35f)
+                                .aspectRatio(aspectRatio),
+                            cornerRadius = 12.dp,
                         )
                     }
                 }
-            }
 
-            // 底部操作栏（like, dislike, recall）- 仅在最后一条消息时显示
-            if (isLatestMessage) {
-                Spacer(modifier = Modifier.height(2.dp))
-                MessageActionBar(
-                    message = item,
-                    onLike = {
-                        viewModel.likeMessage(item.localMsgId)
-                    },
-                    onDislike = {
-                        viewModel.dislikeMessage(item.localMsgId)
-                    },
-                    onRecall = {
-                        viewModel.recallMessage()
-                    },
-                )
+                // 全屏图片查看器
+                if (showFullScreenImage && generatedImageUrl != null && !imageLoadError) {
+                    Dialog(
+                        onDismissRequest = { showFullScreenImage = false },
+                        properties = DialogProperties(
+                            usePlatformDefaultWidth = false,
+                            dismissOnBackPress = true,
+                            dismissOnClickOutside = true,
+                        ),
+                    ) {
+                        FullScreenImageViewer(
+                            imageUrl = generatedImageUrl,
+                            onDismiss = { showFullScreenImage = false },
+                        )
+                    }
+                }
             }
         }
     }.onFailure { e ->

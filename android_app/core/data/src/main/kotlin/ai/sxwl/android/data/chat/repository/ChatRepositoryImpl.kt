@@ -351,6 +351,14 @@ class ChatRepositoryImpl(
 
             is HttpResult.Failure -> {
                 LogUtils.e("ChatRepositoryImpl.generateImageForMessage failure: ${result.message}")
+                // 生成失败时，添加错误消息（显示错误文案，可点击删除）
+                val errorMsg = MsgInfo(
+                    content = "图片生成失败",
+                    role = ROLE_ASSISTANT,
+                    meta_data = MsgInfo.MsgMetaData(agentId = agentId),
+                    localMsgId = "image_error_${System.nanoTime()}",
+                )
+                localDataSource.addMessage(agentId, errorMsg)
             }
         }
 

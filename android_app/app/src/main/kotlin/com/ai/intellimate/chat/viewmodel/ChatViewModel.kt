@@ -666,6 +666,14 @@ class ChatViewModel : BaseVM() {
         }
     }
 
+    /** 删除消息 */
+    fun deleteMessage(localMsgId: String) {
+        val agentId = _agentInfo.value?.id ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            chatRepository.removeMessage(agentId, localMsgId)
+        }
+    }
+
     /** 生成图片消息 */
     fun generateImageForMessage(messageId: String) {
         val agentId = _agentInfo.value?.id ?: return

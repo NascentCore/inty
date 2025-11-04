@@ -323,7 +323,9 @@ internal fun ChatPage(
                             val messagesCopy = filteredChatMessages.toList()
                             val items =
                                 messagesCopy.filter {
+                                    // 过滤掉用户continue消息
                                     !(it.role == "user" && it.content == "continue")
+                                    // 注意：图片loading消息不过滤，它们会在ChatItem中显示为shimmer占位
                                 }
                             if (items.isNotEmpty()) {
                                 itemsIndexed(
@@ -338,18 +340,23 @@ internal fun ChatPage(
                                     runCatching {
                                         // 明确数据边界
                                         if (index < items.size) {
-                                            // 判断是否为最后一条AI消息（在反向列表中，index=0是最后一条）
-                                            // 排除loading消息和用户消息
-                                            val isLatestAssistantMessage =
+                                            // 判断是否为最后一条AI文本消息（在反向列表中，index=0是最后一条）
+                                            // 排除loading消息、用户消息和图片消息
+                                            // 图片消息：content为空且有generatedImage
+                                            val hasGeneratedImage = item.hasGeneratedImage()
+                                            val isImageMessage =
+                                                item.content.isEmpty() && hasGeneratedImage
+                                            val isLatestAssistantTextMessage =
                                                 index == 0 &&
                                                         item.role == "assistant" &&
-                                                        item.content != "loading_animation"
+                                                        item.content != "loading_animation" &&
+                                                        !isImageMessage
                                             
                                             ChatItem(
                                                 item,
                                                 isCurrentPage = isCurrentPage,
                                                 chatViewModel = chatViewModel,
-                                                isLatestMessage = isLatestAssistantMessage,
+                                                isLatestMessage = isLatestAssistantTextMessage,
                                             )
                                         }
                                         Spacer(Modifier.height(16.dp))

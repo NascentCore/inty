@@ -143,52 +143,37 @@ internal fun MessageActionBar(
     val isLiked = message.userFeedback == MsgInfo.UserFeedback.LIKE
     val isDisliked = message.userFeedback == MsgInfo.UserFeedback.DISLIKE
 
-    // 如果已经执行了任何操作（like/dislike），则隐藏所有按钮
-    val hasAnyAction = isLiked || isDisliked
-
-    if (!hasAnyAction) {
-        Row(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(horizontal = 2.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            // Like 按钮
+    // like/dislike互斥，但不影响recall和keep talking的状态
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 2.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        // Like 按钮 - 如果已dislike则不显示
+        if (!isDisliked) {
             LikeButton(
-                isSelected = false,
-                onClick = onLike,
+                isSelected = isLiked,
+                onClick = if (isLiked) {
+                    {}
+                } else onLike, // 已选中状态，不可再次点击
             )
+        }
 
-            // Dislike 按钮
+        // Dislike 按钮 - 如果已like则不显示
+        if (!isLiked) {
             DislikeButton(
-                isSelected = false,
-                onClick = onDislike,
+                isSelected = isDisliked,
+                onClick = if (isDisliked) {
+                    {}
+                } else onDislike, // 已选中状态，不可再次点击
             )
-            Spacer(Modifier.weight(1f))
-            // Recall 按钮
-            RecallButton(onClick = onRecall)
         }
-    } else {
-        // 如果已经执行了操作，只显示对应的按钮（已选中状态）
-        Row(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(horizontal = 2.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (isLiked) {
-                LikeButton(
-                    isSelected = true,
-                    onClick = {}, // 已选中状态，不可再次点击
-                )
-            }
-            if (isDisliked) {
-                DislikeButton(
-                    isSelected = true,
-                    onClick = {}, // 已选中状态，不可再次点击
-                )
-            }
-        }
+
+        Spacer(Modifier.weight(1f))
+
+        // Recall 按钮 - 始终显示，不受like/dislike影响
+        RecallButton(onClick = onRecall)
     }
 }
 
@@ -200,20 +185,12 @@ internal fun MessageCornerActions(
     onImageGenerate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isLiked = message.userFeedback == MsgInfo.UserFeedback.LIKE
-    val isDisliked = message.userFeedback == MsgInfo.UserFeedback.DISLIKE
-
-    // 如果已经执行了任何操作（like/dislike），则隐藏所有按钮
-    val hasAnyAction = isLiked || isDisliked
-
-    if (!hasAnyAction) {
-        Row(
-            modifier = modifier,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            ImageGenerateButton(onClick = onImageGenerate)
-            KeepTalkingActionButton(onClick = onKeepTalking)
-        }
+    // keep talking和image generate不受like/dislike影响，始终显示
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        ImageGenerateButton(onClick = onImageGenerate)
+        KeepTalkingActionButton(onClick = onKeepTalking)
     }
-    // 如果有操作，不显示任何按钮
 }
