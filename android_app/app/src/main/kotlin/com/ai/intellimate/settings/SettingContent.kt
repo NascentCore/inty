@@ -204,7 +204,7 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
                 if (vipStatus.isSubscribed) {
                     SubsManageActivity.launch(context)
                 } else {
-                    VipCenterActivity.launch(context)
+                    VipCenterActivity.launch(context, VipCenterActivity.SETTINGS_SUBSCRIPTION)
                 }
             },
         )
@@ -248,7 +248,7 @@ private fun SettingDialogs(
         // 检查是否已登录
         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
             // 去会员中心
-            VipCenterActivity.launch(context)
+            VipCenterActivity.launch(context, VipCenterActivity.SETTINGS_PREMIUM_DIALOG)
         } else {
             // 如果未登录，要求先登录
             LoginActivity.launch(context)

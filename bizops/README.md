@@ -23,8 +23,12 @@
 1. **message_send_success** - 发送消息并且服务器正确返回的事件（不区分是否触发次数限制，vip限制等）
 2. **chat_started** - 第一次发送消息时触发（替换了原来的 chat_session_start）
 3. **free_limit_reached** - 免费用户发送消息后，触发了接口返回次数限制的时候上报
-4. **chat_session_end** - 退出聊天界面（时机可能不够精准）
-5. **message_sent** - 点击发送后，真正触发接口发送时的打点
-6. **message_send_failure** - 消息发送接口返回失败
-7. **explore_page_view** - Explore 页面的开始展示
-8. **app_start** - 启动 App 时触发
+4. **message_sent** - 点击发送后，真正触发接口发送时的打点
+5. **message_send_failure** - 消息发送接口返回失败
+6. **explore_page_view** - Explore 页面的开始展示
+7. **APP_OPEN** - 启动 App 时触发（Firebase内置事件）
+8. **SCREEN_VIEW** - 页面访问（Firebase内置事件，通过 `PageTrackingHelper.trackPageView()` 自动记录，包含 `page_source` 参数用于统计页面来源）
+
+**注意**：
+- `chat_session_end` 事件已删除。页面离开场景通过 `page_leave` 事件自动记录（包含停留时长等信息），无需额外的事件统计。
+- `SCREEN_VIEW` 事件包含 `page_source` 参数，用于统计用户从哪个入口进入页面（如 VipCenterActivity、ChatActivity 等），详见 [FIREBASE_BUSINESS_EVENTS.md](./FIREBASE_BUSINESS_EVENTS.md) 和 [FIREBASE_EVENTS_DOCUMENTATION.md](./FIREBASE_EVENTS_DOCUMENTATION.md)。

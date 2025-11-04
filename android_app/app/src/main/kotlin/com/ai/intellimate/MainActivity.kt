@@ -401,6 +401,9 @@ private fun SplashLoginUI(
                                 // 这会导致 UI 从 SplashLoginUI 切换到 HomeScreen
                                 mainViewModel.updateLoginState()
 
+                                // 标记用户账户已就绪，确保 Explore 等页面可以正常加载数据
+                                UnifiedStartupManager.markUserAccountReady()
+
                                 if (needsRegInfo) {
                                     // 需要完善注册信息，跳转到 RegInfo 页面
                                     // 注意：此时 MainActivity 已经显示 HomeScreen，跳转到 RegInfoActivity 后

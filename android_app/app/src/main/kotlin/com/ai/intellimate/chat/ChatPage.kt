@@ -72,6 +72,13 @@ val ChatInputBottomSpacerHeight = 8.dp
 private const val LOAD_MORE_NEAR_TOP_THRESHOLD = 3
 private const val LOAD_MORE_MIN_EXTRA_ITEMS = 5
 
+/** ChatPage 页面来源常量 - 用于统计曝光事件 */
+object ChatPageSource {
+    const val CHAT_ACTIVITY = "chat_activity" // 在 ChatActivity 中
+    const val MAIN_ACTIVITY_HOME_TAB =
+        "main_activity_home_tab" // 在 MainActivity 的 HorizontalPager 中
+}
+
 @Composable
 internal fun ChatPage(
     modifier: Modifier,
@@ -88,6 +95,9 @@ internal fun ChatPage(
     // 使用 PageTrackingHelper 进行页面跟踪（仅在页面可见时触发，避免 HorizontalPager 缓存机制导致的误触发）
     LaunchedEffect(isCurrentPage, agentInfo?.id) {
         if (isCurrentPage) {
+            // 根据 showBackButton 判断页面来源：true 表示在 ChatActivity 中，false 表示在 MainActivity 的 HorizontalPager 中
+            val pageSource =
+                if (showBackButton) ChatPageSource.CHAT_ACTIVITY else ChatPageSource.MAIN_ACTIVITY_HOME_TAB
             PageTrackingHelper.trackPageView(
                 "ChatPage",
                 if (showBackButton) "ChatActivity" else "MainActivity",
@@ -95,6 +105,7 @@ internal fun ChatPage(
                     "agent_id" to (agentInfo?.id ?: "unknown"),
                     "agent_name" to (agentInfo?.name ?: "unknown"),
                     "show_back_button" to showBackButton,
+                    "page_source" to pageSource,
                 )
             )
         }
@@ -248,7 +259,7 @@ internal fun ChatPage(
                         // 检查是否已登录
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                             // 去会员中心
-                            VipCenterActivity.launch(context)
+                            VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
                         } else {
                             // 如果未登录，要求先登录
                             LoginActivity.launch(context)
@@ -575,7 +586,7 @@ private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
                 // 检查是否已登录
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                     // 去会员中心
-                    VipCenterActivity.launch(context)
+                    VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
                 } else {
                     // 如果未登录，要求先登录
                     LoginActivity.launch(context)
@@ -586,7 +597,7 @@ private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
                 // 检查是否已登录
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                     // 去会员中心
-                    VipCenterActivity.launch(context)
+                    VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
                 } else {
                     // 如果未登录，要求先登录
                     LoginActivity.launch(context)

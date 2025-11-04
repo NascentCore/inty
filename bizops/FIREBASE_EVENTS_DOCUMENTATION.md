@@ -17,9 +17,9 @@
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
 | `APP_OPEN` | IntelliMateApp.kt | 无 | 应用启动事件 | 🔴 100% |
-| `LOGIN` | FirebaseManager.Events | 预留 | 用户登录 | 🔴 100% |
+| `LOGIN` | LoginViewModel.kt, MainActivity.kt | `user_id`, `user_type`, `timestamp` | 用户登录（Firebase内置事件） | 🔴 100% |
 | `SIGN_UP` | FirebaseManager.Events | 预留 | 用户注册 | 🔴 100% |
-| `SCREEN_VIEW` | FirebaseManager.Events | 预留 | 页面访问 | 🔴 100% |
+| `SCREEN_VIEW` | PageTrackingHelper.kt | `page_name`, `page_class`, `timestamp`, `page_source` (可选), 其他自定义参数 | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录） | 🔴 100% |
 | `SELECT_CONTENT` | FirebaseManager.Events | 预留 | 内容选择 | 🔴 100% |
 | `SHARE` | FirebaseManager.Events | 预留 | 分享功能 | 🔴 100% |
 | `SEARCH` | FirebaseManager.Events | 预留 | 搜索功能 | 🔴 100% |
@@ -29,16 +29,16 @@
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
-| `app_start` | IntelliMateApp.kt | 无 | 应用启动 | 🔴 100% |
-| `billing_release` | IntelliMateApp.kt | 无 | 计费系统释放 | 🔴 100% |
+| `APP_OPEN` | IntelliMateApp.kt | 无 | 应用启动（Firebase内置事件） | 🔴 100% |
+| `BILLING_RELEASE` | IntelliMateApp.kt | 无 | 计费系统释放 | 🔴 100% |
 
 ### 1.3 用户认证事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
-| `auth_failure` | NetServiceMgr.kt | `http_code`, `url`, `user_logged_out` | HTTP 401认证失败 | 🔴 100% |
-| `user_login` | FirebaseManager.Events | 预留 | 用户登录 | 🔴 100% |
-| `user_logout` | FirebaseManager.Events | 预留 | 用户登出 | 🔴 100% |
+| `auth_failure` | UnifiedOkHttpClient.kt | `http_code`, `url`, `user_logged_out` | HTTP 401认证失败 | 🔴 100% |
+| `LOGIN` | LoginViewModel.kt, MainActivity.kt | `user_id`, `user_type`, `timestamp` | 用户登录（Firebase内置事件） | 🔴 100% |
+| `user_logout` | MainViewModel.kt | `user_id`, `user_type`, `timestamp` | 用户登出 | 🔴 100% |
 
 ### 1.4 聊天相关事件
 
@@ -49,18 +49,24 @@
 | `message_send_success` | ChatViewModel.kt | `agent_id`, `agent_name`, `response_code`, `user_type`, `ai_response_time`, `end_to_end_time` | 消息发送成功（包含API响应时间和端到端时间） | 🔴 100% |
 | `message_send_failure` | ChatViewModel.kt | `agent_id`, `agent_name`, `error_message`, `user_type`, `ai_response_time`, `end_to_end_time` | 消息发送失败（包含API响应时间和端到端时间） | 🔴 100% |
 | `message_send_exception` | ChatViewModel.kt | `agent_id`, `agent_name`, `error_message`, `user_type`, `end_to_end_time` | 消息发送异常（包含端到端时间） | 🔴 100% |
-| `free_limit_reached` | ChatViewModel.kt | 预留 | 达到免费限制 | 🔴 100% |
-| `ai_response_received` | ChatViewModel.kt | `agent_id`, `agent_name`, `response_time`, `end_to_end_time`, `response_code`, `user_type`, `timestamp` | AI回复接收（包含API响应时间和端到端时间） | 🔴 100% |
+| `free_limit_reached` | ChatViewModel.kt | `agent_id`, `agent_name`, `user_type`, `timestamp` | 达到免费限制 | 🔴 100% |
 
 ### 1.5 页面追踪事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
+| `SCREEN_VIEW` | PageTrackingHelper.kt | `page_name`, `page_class`, `timestamp`, `page_source` (可选), 其他自定义参数 | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录） | 🔴 100% |
 | `page_leave` | PageTrackingHelper.kt | `page_name`, `page_class`, `time_spent`, `visible_time_spent`, `lifecycle_time_spent`, `timestamp` | 页面离开，记录停留时长 | 🔴 100% |
 | `page_visible` | PageTrackingHelper.kt | `page_name`, `page_class`, `timestamp` | 页面变为可见 | ⚪ 禁用 |
 | `page_hidden` | PageTrackingHelper.kt | `page_name`, `page_class`, `visible_time_spent`, `timestamp` | 页面变为不可见 | ⚪ 禁用 |
 | `page_lifecycle` | PageTrackingHelper.kt | `page_name`, `page_class`, `lifecycle_event`, `lifecycle_time_spent`, `timestamp` | 页面生命周期事件 | ⚪ 禁用 |
 | `explore_page_view` | ExploreViewModel.kt | `page_type` (recommendations), `is_initial_load` (true/false) | 探索页面访问 | 🔴 100% |
+
+**页面来源参数说明：**
+- `page_source`：页面来源标识，用于统计用户从哪个入口进入页面
+  - **VipCenterActivity**：`home_expired_dialog`（首页过期VIP对话框）、`chat_page`（聊天页面）、`chat_more_panel`（聊天更多面板）、`profile_upgrade`（个人中心升级按钮）、`settings_subscription`（设置页面订阅管理）、`settings_premium_dialog`（设置页面高级模型对话框）
+  - **ChatActivity**：`messages_tab`（消息列表Tab）、`explore_tab`（探索Tab）、`profile_tab`（个人中心Tab）
+  - **ChatPage**：`chat_activity`（在 ChatActivity 中）、`main_activity_home_tab`（在 MainActivity 的 HorizontalPager 中）
 
 ### 1.6 Explore 数据加载事件
 
@@ -74,14 +80,18 @@
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
-| `user_interaction` | PageTrackingHelper.kt | `action`, `target`, `current_page`, `timestamp` | 用户交互行为 | 🟡 调试100%，发布10% |
-| `agent_switch` | FirebaseManager.Events | 预留 | Agent切换 | 🔴 100% |
+| `user_interaction` | PageTrackingHelper.kt | `action`, `target`, `current_page`, `timestamp` | 用户交互行为 | 🟡 调试100%，发布100% |
+| `agent_switch` | ChatViewModel.kt | `from_agent_id`, `from_agent_name`, `to_agent_id`, `to_agent_name`, `switch_method`, `user_type`, `timestamp` | Agent切换 | 🔴 100% |
 | `voice_playback_start` | AudioManager.kt | `message_id`, `agent_id`, `agent_name`, `has_audio_url`, `auto_play`, `is_manual_click`, `timestamp` | 语音播放开始 | 🔴 100% |
+| `audio_play_end` | VoicePlayer.kt | `agent_id`, `agent_name`, `message_id`, `is_auto_play`, `play_status`, `play_duration`, `audio_url`, `timestamp` | 语音播放结束（播放完成或暂停时触发） | 🔴 100% |
+| `pull_up_input` | ChatInput.kt | `agent_id`, `agent_name`, `timestamp` | 拉起输入框（键盘弹出时触发） | 🔴 100% |
+| `image_show_success` | AgentBackground.kt | `agent_id`, `agent_name`, `image_url`, `image_width`, `image_height`, `content_scale`, `timestamp` | 图片显示成功 | 🔴 100% |
 
 ### 1.8 订阅与计费事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
+| `subscription_start` | BillingPurchaseManager.kt | `product_id`, `subscription_id`, `purchase_time`, `order_id`, `user_type`, `timestamp` | 订阅开始（订阅验证成功时触发） | 🔴 100% |
 | `subscription_price_fetched` | BillingPriceManager.kt | `product_id`, `product_name`, `plan_type`, `google_play_price`, `google_play_currency_code`, `google_play_price_micros`, `corrected_price`, `old_price`, `old_currency_code`, `old_price_micros`, `has_placeholder`, `price_changed`, `currency_changed`, `micros_changed` | 从Google Play获取到的订阅价格详细信息（包含价格变化对比） | 🔴 100% |
 | `subscription_price_displayed` | VipCenterContent.kt | `product_id`, `product_name`, `plan_type`, `displayed_price`, `currency_code`, `price_micros`, `discount_rate`, `original_price`, `is_selected`, `selected_plan_index`, `total_plans_count`, `is_subscribed`, `timestamp` | UI上显示的订阅价格详细信息（包含选择状态和订阅状态） | 🔴 100% |
 
@@ -90,17 +100,23 @@
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
 | `network_request` | PageTrackingHelper.kt | `url`, `method`, `success`, `response_time`, `current_page` | 网络请求（通用） | 🟡 调试100%，发布20% |
-| `network_retry` | NetServiceMgr.kt | `attempt`, `method`, `url`, `status_code`, `exception_type` | 网络请求重试 | 🟡 调试100%，发布50% |
-| `network_final_failure` | NetServiceMgr.kt | `max_retries`, `method`, `url`, `last_error`, `last_error_type` | 网络请求最终失败 | 🔴 100% |
-| `slow_request` | NetServiceMgr.kt | `duration_ms`, `method`, `url`, `successful` | 慢请求（>3秒） | 🟡 调试100%，发布30% |
-| `very_slow_request` | NetServiceMgr.kt | `duration_ms`, `method`, `url`, `successful` | 极慢请求（>10秒） | 🔴 100% |
-| `request_failure` | NetServiceMgr.kt | `duration_ms`, `method`, `url`, `error_type`, `error_message` | 请求失败 | 🔴 100% |
+| `network_retry` | UnifiedOkHttpClient.kt | 预留（配置中已定义，但代码中未使用） | 网络请求重试 | 🟡 调试100%，发布50% |
+| `network_final_failure` | UnifiedOkHttpClient.kt | `max_retries`, `method`, `url`, `last_error`, `last_error_type` | 网络请求最终失败 | 🔴 100% |
+| `slow_request` | UnifiedOkHttpClient.kt | `duration_ms`, `method`, `url`, `successful` | 慢请求（>3秒） | 🟡 调试100%，发布30% |
+| `very_slow_request` | UnifiedOkHttpClient.kt | `duration_ms`, `method`, `url`, `successful` | 极慢请求（>10秒） | 🔴 100% |
+| `request_failure` | UnifiedOkHttpClient.kt | `duration_ms`, `method`, `url`, `error_type`, `error_message` | 请求失败 | 🔴 100% |
 
 ### 1.10 错误监控事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
-| `app_error` | PageTrackingHelper.kt, NetServiceMgr.kt | `error`, `error_type`, `current_page`, `page_class`, `timestamp` | 应用错误 | 🔴 100% |
+| `app_error` | PageTrackingHelper.kt, UnifiedOkHttpClient.kt | `error`, `error_type`, `current_page`, `page_class`, `timestamp` | 应用错误 | 🔴 100% |
+
+### 1.11 性能指标事件
+
+| 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
+|---------|---------|------|---------|--------|
+| `performance_metric` | FirebaseManager.logPerformanceMetric() | `metric_name`, `metric_value`, `metric_unit`, `timestamp` | 性能指标（通用性能指标记录） | 🔴 100% |
 
 ## 2. Firebase Performance 性能监控
 
@@ -110,7 +126,7 @@
 |---------|---------|---------|--------|
 | `AI_RESPONSE_TIME` | ChatViewModel.kt | AI响应时间（API调用时间） | 🔴 100% |
 | `EXPLORE_RESPONSE_TIME` | ExploreViewModel.kt | Explore接口响应时间（API调用时间） | 🔴 100% |
-| `tts_generation_time` | FirebaseManager.Events | TTS生成时间（预留） | 🟡 调试100%，发布30% |
+| `TTS_GENERATION_TIME` | TtsManager.kt | TTS生成时间（从发起请求到收到音频URL的完整耗时） | 🟡 调试100%，发布30% |
 | `voice_playback_time` | FirebaseManager.Events | 语音播放时间（预留） | 🟡 调试100%，发布30% |
 | `image_load_time` | FirebaseManager.Events | 图片加载时间（预留） | 🟡 调试100%，发布20% |
 | `page_load_time` | FirebaseManager.Events | 页面加载时间（预留） | 🟡 调试100%，发布30% |
@@ -122,7 +138,8 @@
 |------|---------|---------|--------|
 | `logPerformanceMetric` | ChatViewModel.kt | 记录AI响应时间（API调用时间） | 🔴 100% |
 | `logPerformanceMetric` | ExploreViewModel.kt | 记录Explore接口响应时间（API调用时间） | 🔴 100% |
-| HTTP网络监控 | NetServiceMgr.kt | 自动监控网络请求性能 | 🟡 调试100%，发布30% |
+| `logPerformanceMetric` | TtsManager.kt | 记录TTS生成时间（从发起请求到收到音频URL的完整耗时） | 🟡 调试100%，发布30% |
+| HTTP网络监控 | UnifiedOkHttpClient.kt | 自动监控网络请求性能 | 🟡 调试100%，发布30% |
 | 自定义追踪 | FirebaseManager.kt | 自定义性能追踪 | 🟡 调试100%，发布20% |
 
 ## 3. Firebase 用户属性
@@ -200,14 +217,14 @@
 | `last_error` | PageTrackingHelper.kt | 最后错误信息 | 🔴 CRITICAL |
 | `last_error_type` | PageTrackingHelper.kt | 最后错误类型 | 🔴 CRITICAL |
 | `error_page` | PageTrackingHelper.kt | 错误发生页面 | 🔴 CRITICAL |
-| `last_401_url` | NetServiceMgr.kt | 最后401错误URL | 🔴 CRITICAL |
-| `network_failure_url` | NetServiceMgr.kt | 网络失败URL | 🔴 CRITICAL |
-| `network_failure_retries` | NetServiceMgr.kt | 网络失败重试次数 | 🔴 CRITICAL |
-| `network_failure_method` | NetServiceMgr.kt | 网络失败请求方法 | 🔴 CRITICAL |
-| `slow_request_url` | NetServiceMgr.kt | 慢请求URL | 🟡 HIGH |
-| `slow_request_duration` | NetServiceMgr.kt | 慢请求持续时间 | 🟡 HIGH |
-| `failed_request_url` | NetServiceMgr.kt | 失败请求URL | 🔴 CRITICAL |
-| `failed_request_duration` | NetServiceMgr.kt | 失败请求持续时间 | 🔴 CRITICAL |
+| `last_401_url` | UnifiedOkHttpClient.kt | 最后401错误URL | 🔴 CRITICAL |
+| `network_failure_url` | UnifiedOkHttpClient.kt | 网络失败URL | 🔴 CRITICAL |
+| `network_failure_retries` | UnifiedOkHttpClient.kt | 网络失败重试次数 | 🔴 CRITICAL |
+| `network_failure_method` | UnifiedOkHttpClient.kt | 网络失败请求方法 | 🔴 CRITICAL |
+| `slow_request_url` | UnifiedOkHttpClient.kt | 慢请求URL | 🟡 HIGH |
+| `slow_request_duration` | UnifiedOkHttpClient.kt | 慢请求持续时间 | 🟡 HIGH |
+| `failed_request_url` | UnifiedOkHttpClient.kt | 失败请求URL | 🔴 CRITICAL |
+| `failed_request_duration` | UnifiedOkHttpClient.kt | 失败请求持续时间 | 🔴 CRITICAL |
 
 ### 4.5 网络请求键
 
@@ -225,12 +242,15 @@
 - `ai_response_time`：AI响应时间（API调用时间，从发起网络请求到收到响应）
 - `end_to_end_time`：端到端时间（从用户点击发送按钮到收到响应的完整时间，包含UI处理、API调用等全部时间），用于衡量真实的用户体验
 - `timestamp`：事件时间戳，用于时序分析
+- `page_name`、`page_class`：页面名称和类名，用于页面追踪
+- `page_source`：页面来源标识，用于统计用户从哪个入口进入页面（详见页面追踪事件说明）
 - `page`、`page_size`：分页信息（Explore接口的分页参数）
 - `agents_count`：本次接口返回的agents数量（单次请求的数量）
 - `current_ui_agents_count`：当前UI中所有已加载的agents总数（累计数量，用于统计界面总agent数）
 - `sort_seed`：排序种子（用于Explore刷新时改变排序）
 - `response_time`：接口响应时间（Explore接口的API调用时间，毫秒）
 - `product_id`、`product_name`、`plan_type`：订阅商品信息，用于订阅分析
+- `subscription_id`、`order_id`、`purchase_time`：订阅订单信息（subscription_start事件），用于订阅转化分析
 - `google_play_price`、`google_play_currency_code`、`google_play_price_micros`：Google Play原始价格信息
 - `displayed_price`、`currency_code`、`price_micros`：UI显示的价格信息
 - `price_changed`、`currency_changed`、`micros_changed`：价格变化标识，用于监控价格更新

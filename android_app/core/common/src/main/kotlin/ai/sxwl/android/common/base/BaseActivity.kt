@@ -18,7 +18,17 @@ abstract class BaseActivity : ComponentActivity() {
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(scrim = Color.TRANSPARENT))
 
         // 页面追踪 - 记录页面访问
-        PageTrackingHelper.trackActivityLifecycle(this, getPageName())
+        // 如果有额外的追踪参数，使用 trackPageView 直接调用；否则使用 trackActivityLifecycle
+        val additionalParams = getAdditionalPageTrackingParams()
+        if (additionalParams.isNotEmpty()) {
+            // 使用 trackPageView 直接调用，传递额外参数
+            PageTrackingHelper.trackPageView(getPageName(), javaClass.simpleName, additionalParams)
+            // 注册生命周期监听器（不包含 trackPageView 调用）
+            PageTrackingHelper.trackActivityLifecycleWithoutPageView(this)
+        } else {
+            // 使用默认的 trackActivityLifecycle
+            PageTrackingHelper.trackActivityLifecycle(this, getPageName())
+        }
 
         // 非UI数据初始化
         initConfigData()
@@ -34,7 +44,14 @@ abstract class BaseActivity : ComponentActivity() {
         return this.javaClass.simpleName
     }
 
+    /** 获取额外的页面追踪参数，子类可以重写以提供额外的追踪参数（如 page_source） */
+    protected open fun getAdditionalPageTrackingParams(): Map<String, Any> {
+        return emptyMap()
+    }
+
     open fun initConfigData() {}
 
-    @Composable open fun ConfigComposeUI() {}
+    @Composable
+    open fun ConfigComposeUI() {
+    }
 }

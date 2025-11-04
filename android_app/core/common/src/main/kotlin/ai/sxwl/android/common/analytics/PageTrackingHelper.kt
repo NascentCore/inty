@@ -180,6 +180,7 @@ object PageTrackingHelper {
                         pageLifecycleStartTime = currentTime
                     }
                 }
+
                 "ondestroy",
                 "onstop" -> {
                     if (pageLifecycleStartTime > 0) {
@@ -319,9 +320,9 @@ object PageTrackingHelper {
             "page_lifecycle_start_time" to pageLifecycleStartTime,
             "time_on_page" to (currentTime - pageStartTime),
             "visible_time_on_page" to
-                if (pageVisibleTime > 0) (currentTime - pageVisibleTime) else 0L,
+                    if (pageVisibleTime > 0) (currentTime - pageVisibleTime) else 0L,
             "lifecycle_time_on_page" to
-                if (pageLifecycleStartTime > 0) (currentTime - pageLifecycleStartTime) else 0L,
+                    if (pageLifecycleStartTime > 0) (currentTime - pageLifecycleStartTime) else 0L,
             "interaction_history" to userInteractionHistory.toMap(),
             "page_history" to pageHistory.toList(),
         )
@@ -348,6 +349,17 @@ object PageTrackingHelper {
         trackPageView(pageName, activity.javaClass.simpleName)
 
         // 注册生命周期监听器
+        registerLifecycleObserver(activity)
+    }
+
+    /** 为 Activity 注册生命周期监听器（不包含 trackPageView 调用） */
+    fun trackActivityLifecycleWithoutPageView(activity: ComponentActivity) {
+        // 只注册生命周期监听器，不调用 trackPageView
+        registerLifecycleObserver(activity)
+    }
+
+    /** 注册生命周期监听器 */
+    private fun registerLifecycleObserver(activity: ComponentActivity) {
         activity.lifecycle.addObserver(
             object : LifecycleEventObserver {
                 override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
@@ -358,10 +370,12 @@ object PageTrackingHelper {
                             trackPageVisibility(true)
                             trackPageLifecycle("onResume")
                         }
+
                         Lifecycle.Event.ON_PAUSE -> {
                             trackPageVisibility(false)
                             trackPageLifecycle("onPause")
                         }
+
                         Lifecycle.Event.ON_STOP -> trackPageLifecycle("onStop")
                         Lifecycle.Event.ON_DESTROY -> trackPageLifecycle("onDestroy")
                         Lifecycle.Event.ON_ANY -> {
