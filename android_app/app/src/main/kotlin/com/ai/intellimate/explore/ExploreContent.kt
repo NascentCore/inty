@@ -42,7 +42,6 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.EmptyDataState
 import com.ai.intellimate.ui.components.NetworkErrorState
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
-import com.ai.intellimate.utils.GuestLoginLimiter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
@@ -132,19 +131,6 @@ fun ExploreContent(
         }
     }
 
-    // Guest用户拦截逻辑：当Spacer可见 + 向下滚动 + 到达第一页末尾时触发
-    LaunchedEffect(isSpacerVisible, isAtPageEnd, isScrollingDown) {
-        if (
-            isSpacerVisible &&
-                isAtPageEnd &&
-                isScrollingDown &&
-                hasUserScrolled &&
-                GuestLoginLimiter.shouldLimitGuest()
-        ) {
-            // 触发guest登录拦截
-            GuestLoginLimiter.checkAndNavigateToLogin(context)
-        }
-    }
 
     // 监听滚动到底部事件（用于显示loading指示器）
     LaunchedEffect(isSpacerVisible, lazyPagingItems?.loadState?.append) {
@@ -157,8 +143,8 @@ fun ExploreContent(
                 // 首次进入时使用缓存数据，不应该显示加载更多loading
                 if (
                     currentTime - lastScrollTime < 1000 &&
-                        lazyPagingItems.itemCount > 0 &&
-                        lazyPagingItems.loadState.refresh is LoadState.NotLoading
+                    lazyPagingItems.itemCount > 0 &&
+                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
                 ) {
                     showLoadMoreLoading = true
                     // 延迟隐藏loading

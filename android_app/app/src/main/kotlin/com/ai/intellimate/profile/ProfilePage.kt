@@ -6,14 +6,17 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatus
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.TimeUtils
+import android.content.Intent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,10 +81,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.R
+import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
-import com.ai.intellimate.utils.AuthClickable
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -97,9 +99,8 @@ internal fun ProfilePage(
     onEditAgent: ((AgentInfo) -> Unit)? = null,
     onDeleteAgent: ((AgentInfo) -> Unit)? = null,
     isLoading: Boolean = false,
-    isRefreshing: Boolean = false,
     onLoadMore: () -> Unit = {},
-    mainViewModel: MainViewModel? = null,
+    onShowSettings: () -> Unit,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -234,7 +235,7 @@ internal fun ProfilePage(
                     modifier = Modifier,
                     collapseProgress = collapseProgress,
                     userProfile = userProfile,
-                    mainViewModel = mainViewModel,
+                    onShowSettings = onShowSettings,
                     innerPadding = innerPadding,
                     context = context,
                 )
@@ -308,8 +309,7 @@ internal fun ProfilePage(
                                     )
                                 }
                             }
-                        }
-                            .onFailure { it.printStackTrace() }
+                        }.onFailure { it.printStackTrace() }
 
                         // Loading indicator when loading more (only show when there's no data)
                         if (isLoading && agents.isEmpty()) {
@@ -338,7 +338,7 @@ private fun ProfileHeader(
     modifier: Modifier,
     collapseProgress: Float, // 0f = 展开, 1f = 折叠
     userProfile: UserProfile,
-    mainViewModel: MainViewModel?,
+    onShowSettings: () -> Unit,
     innerPadding: PaddingValues,
     context: android.content.Context,
 ) {
@@ -356,21 +356,26 @@ private fun ProfileHeader(
         // 设置按钮行 - 始终显示
         Row {
             Spacer(Modifier.weight(1f))
-            AuthClickable(
-                onClick = {
-                    if (mainViewModel != null) {
-                        mainViewModel.showSettings()
-                    } else {
-                        com.ai.intellimate.settings.SettingActivity.launch(context)
-                    }
-                }
-            ) { authModifier ->
-                AsyncImage(
-                    modifier = authModifier.size(24.dp),
-                    model = R.drawable.icon_setting,
-                    contentDescription = null,
-                )
-            }
+            val context = LocalContext.current
+            var lastClickTime by remember { mutableLongStateOf(0L) }
+
+            AsyncImage(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable {
+                        val currentTime = System.currentTimeMillis()
+                        if (AntiClick.isValidClick(lastClickTime)) {
+                            lastClickTime = currentTime
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                                onShowSettings()
+                            } else {
+                                context.startActivity(Intent(context, LoginActivity::class.java))
+                            }
+                        }
+                    },
+                model = R.drawable.icon_setting,
+                contentDescription = null,
+            )
             Spacer(Modifier.width(16.dp))
         }
 
@@ -468,15 +473,32 @@ private fun ProfileHeader(
             Box(
                 modifier = Modifier.alpha(1f - collapseProgress)
             ) {
-                AuthClickable(
-                    onClick = { ModifyProfileActivity.launch(context, userProfile) }
-                ) { authModifier ->
-                    AsyncImage(
-                        modifier = authModifier.size(40.dp),
-                        model = R.drawable.icon_edit,
-                        contentDescription = null,
-                    )
-                }
+                var lastClickTimeEdit by remember { mutableLongStateOf(0L) }
+
+                AsyncImage(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clickable {
+                            val currentTime = System.currentTimeMillis()
+                            if (AntiClick.isValidClick(lastClickTimeEdit)) {
+                                lastClickTimeEdit = currentTime
+                                if (IntySetting.isLogin() && IntySetting.getCurToken()
+                                        .isNotEmpty()
+                                ) {
+                                    ModifyProfileActivity.launch(context, userProfile)
+                                } else {
+                                    context.startActivity(
+                                        Intent(
+                                            context,
+                                            LoginActivity::class.java
+                                        )
+                                    )
+                                }
+                            }
+                        },
+                    model = R.drawable.icon_edit,
+                    contentDescription = null,
+                )
             }
         }
 
@@ -717,49 +739,60 @@ private fun PremiumBanner(
     expireTime: String? = null, // 过期时间
     onClick: () -> Unit = {},
 ) {
-    AuthClickable(
+    val context = LocalContext.current
+    var lastClickTimePremium by remember { mutableLongStateOf(0L) }
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(120.dp)
-            .padding(horizontal = 12.dp),
-        onClick = onClick,
-    ) { authModifier ->
-        Box(modifier = authModifier) {
-            Image(
-                painter = painterResource(R.drawable.img_vip_banner),
-                contentDescription = "",
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Row(
-                Modifier
-                    .border(
-                        width = 0.5.dp,
-                        color = Color(0x61D523FF),
-                        shape = RoundedCornerShape(size = 12.dp),
-                    )
-                    .background(color = Color(0x33D216FF), shape = RoundedCornerShape(size = 12.dp))
-                    .padding(horizontal = 8.dp)
-                    .align(BiasAlignment(.95f, .1f)),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                // 三种UI状态显示，1. 无有效订阅 显示Activate Now；2. 有效订阅 显示Since 日期；3. 有订阅快过期 显示Expires ON 日期
-                val str =
-                    when (status) {
-                        VipStatus.UI_SUBSCRIBED -> "Since $purchaseTime"
-                        VipStatus.UI_SUBSCRIBED_EXPIRE_SOON -> "Expires on $expireTime"
-                        else -> "Activate now"
+            .padding(horizontal = 12.dp)
+            .clickable {
+                val currentTime = System.currentTimeMillis()
+                if (AntiClick.isValidClick(lastClickTimePremium)) {
+                    lastClickTimePremium = currentTime
+                    if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                        onClick()
+                    } else {
+                        context.startActivity(Intent(context, LoginActivity::class.java))
                     }
-
-                Text(
-                    text = str,
-                    fontSize = 16.sp,
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                )
+                }
             }
+    ) {
+        Image(
+            painter = painterResource(R.drawable.img_vip_banner),
+            contentDescription = "",
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Row(
+            Modifier
+                .border(
+                    width = 0.5.dp,
+                    color = Color(0x61D523FF),
+                    shape = RoundedCornerShape(size = 12.dp),
+                )
+                .background(color = Color(0x33D216FF), shape = RoundedCornerShape(size = 12.dp))
+                .padding(horizontal = 8.dp)
+                .align(BiasAlignment(.95f, .1f)),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            // 三种UI状态显示，1. 无有效订阅 显示Activate Now；2. 有效订阅 显示Since 日期；3. 有订阅快过期 显示Expires ON 日期
+            val str =
+                when (status) {
+                    VipStatus.UI_SUBSCRIBED -> "Since $purchaseTime"
+                    VipStatus.UI_SUBSCRIBED_EXPIRE_SOON -> "Expires on $expireTime"
+                    else -> "Activate now"
+                }
+
+            Text(
+                text = str,
+                fontSize = 16.sp,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

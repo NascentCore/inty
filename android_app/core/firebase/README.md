@@ -23,9 +23,10 @@ Firebase 服务会在应用启动时自动初始化，无需手动调用。
 // 记录简单事件
 FirebaseManager.logEvent("button_clicked")
 
-// 记录带参数的事件
+// 记录带参数的事件（推荐使用 safeEventParams）
 FirebaseManager.logEvent(
-    "purchase_completed", mapOf(
+    "purchase_completed",
+    FirebaseManager.safeEventParams(
         "product_id" to "premium_subscription",
         "price" to 9.99,
         "currency" to "USD"
@@ -34,6 +35,29 @@ FirebaseManager.logEvent(
 
 // 使用预定义事件
 FirebaseManager.logEvent(FirebaseManager.Events.LOGIN)
+```
+
+#### 参数验证和规范化
+
+`FirebaseManager` 自动验证和规范化事件参数：
+
+- ✅ **参数名验证**：自动验证参数名是否符合 Firebase 规范（字母开头，只包含字母、数字、下划线，长度 ≤ 40）
+- ✅ **参数名规范化**：不符合规范的参数名会被自动规范化（调试模式下会有警告）
+- ✅ **参数值长度限制**：字符串值自动截断为 100 字符（调试模式下会有警告）
+- ✅ **参数数量限制**：每个事件最多 25 个参数，超出部分会被忽略
+
+**推荐使用 `safeEventParams`**，它会自动处理参数验证和规范化：
+
+```kotlin
+FirebaseManager.logEvent(
+    "my_event",
+    FirebaseManager.safeEventParams(
+        "agent_id" to agent.id,
+        "agent_name" to agent.name,
+        "user_type" to if (isVip) "vip" else "free",
+        "timestamp" to System.currentTimeMillis()
+    )
+)
 ```
 
 ### 3. 设置用户属性
@@ -97,7 +121,7 @@ CrashlyticsTest.recordTestException(Exception("Test exception"))
 - `APP_OPEN`: 应用打开
 - `LOGIN`: 用户登录（Firebase 内置事件）
 - `USER_LOGOUT`: 用户登出
-- `chat_started`: 开始聊天（第一次发送消息时触发）
+- `CHAT_STARTED`: 开始聊天（第一次发送消息时触发）
 - `MESSAGE_SENT`: 发送消息
 - `MESSAGE_SEND_SUCCESS`: 消息发送成功
 - `PROFILE_UPDATED`: 更新资料
@@ -116,6 +140,17 @@ CrashlyticsTest.recordTestException(Exception("Test exception"))
 2. 在发布版本中移除测试崩溃代码
 3. 遵循隐私政策，合理收集用户数据
 4. 避免记录敏感信息
+5. **自定义参数需要在 Firebase 控制台注册**：未注册的参数不会在报告中显示
+    - 导航至：Analytics > 事件 > 管理自定义定义
+    - 注册后可能需要 24-48 小时数据才会显示
+    - 详细参数列表见：`bizops/FIREBASE_PARAMETERS_REGISTRATION.md`
+6. **参数命名规范**：
+    - 必须以字母开头
+    - 只能包含字母、数字、下划线
+    - 长度限制：最多 40 个字符
+7. **参数值限制**：
+    - 字符串值：最多 100 个字符（超长会被自动截断）
+    - 每个事件：最多 25 个参数
 
 ## 配置说明
 

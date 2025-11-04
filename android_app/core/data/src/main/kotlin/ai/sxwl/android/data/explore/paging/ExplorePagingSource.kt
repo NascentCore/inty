@@ -38,15 +38,6 @@ class ExplorePagingSource(
 
                 LogUtils.i("ExplorePagingSource - 加载第${page}页，页面大小: $pageSize")
 
-                // Guest用户限制：只允许加载第一页
-                if (IntySetting.isLogin() && IntySetting.isGuestUser() && page > INITIAL_PAGE) {
-                    LogUtils.d("ExplorePagingSource - Guest用户限制：不允许加载第${page}页")
-                    return@withContext LoadResult.Page(
-                        data = emptyList(),
-                        prevKey = null,
-                        nextKey = null,
-                    )
-                }
 
                 // 第一页特殊处理：优先使用缓存数据
                 if (page == INITIAL_PAGE && useCache && cacheProvider != null) {
@@ -62,13 +53,7 @@ class ExplorePagingSource(
                                 loadFromNetworkAsync(page, pageSize)
                             }
 
-                            // Guest用户限制：假设没有更多数据
-                            val hasMoreData =
-                                if (IntySetting.isLogin() && IntySetting.isGuestUser()) {
-                                    false // Guest用户没有更多数据
-                                } else {
-                                    validCachedAgents.isNotEmpty() // 正式用户假设有更多数据
-                                }
+                            val hasMoreData = validCachedAgents.isNotEmpty()
 
                             return@withContext LoadResult.Page(
                                 data = validCachedAgents,
@@ -97,19 +82,13 @@ class ExplorePagingSource(
                         // 过滤掉id为空的agent，避免key重复问题
                         val validAgents = agents.filter { it.id.isNotEmpty() }
 
-                        // Guest用户限制：只允许第一页有更多数据
-                        val hasMore =
-                            if (IntySetting.isLogin() && IntySetting.isGuestUser()) {
-                                false // Guest用户没有更多数据
-                            } else {
-                                validAgents.isNotEmpty() && validAgents.size >= pageSize
-                            }
+                        val hasMore = validAgents.isNotEmpty() && validAgents.size >= pageSize
 
                         // 缓存第一页数据
                         if (
                             page == INITIAL_PAGE &&
-                                validAgents.isNotEmpty() &&
-                                cacheProvider != null
+                            validAgents.isNotEmpty() &&
+                            cacheProvider != null
                         ) {
                             cacheProvider.cacheRecommendedAgents(validAgents)
                             cacheProvider.refreshRecommendedAgents()
@@ -121,6 +100,7 @@ class ExplorePagingSource(
                             nextKey = if (hasMore) page + 1 else null,
                         )
                     }
+
                     is NetworkResult.Error -> {
                         LogUtils.e("ExplorePagingSource - 网络加载失败: ${result.error}")
                         LoadResult.Error(Exception(result.error))
@@ -155,6 +135,7 @@ class ExplorePagingSource(
                 is HttpResult.Success -> {
                     NetworkResult.Success(result.data)
                 }
+
                 is HttpResult.Failure -> {
                     NetworkResult.Error(result.message)
                 }

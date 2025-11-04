@@ -35,7 +35,6 @@ import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
-import com.ai.intellimate.utils.GuestLoginLimiter
 import kotlinx.coroutines.delay
 
 /** Explore页面 - 推荐agents展示 */
@@ -79,13 +78,19 @@ fun ExplorePage(
             contentDescription = null
         )
 
-        Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent)
+        ) {
             TopAppBar(
                 title = {
                     Image(
                         painter = painterResource(R.drawable.img_explore_title),
                         contentDescription = null,
-                        modifier = Modifier.height(30.dp).fillMaxWidth(),
+                        modifier = Modifier
+                            .height(30.dp)
+                            .fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )
@@ -113,6 +118,7 @@ fun ExplorePage(
                             refreshStartTime = currentTime
                         }
                     }
+
                     is LoadState.NotLoading -> {
                         if (isRefreshing) {
                             // 刷新完成，但确保至少显示最小持续时间
@@ -127,6 +133,7 @@ fun ExplorePage(
                             }
                         }
                     }
+
                     is LoadState.Error -> {
                         if (isRefreshing) {
                             // 刷新失败，也要隐藏指示器，但确保至少显示最小持续时间
@@ -140,6 +147,7 @@ fun ExplorePage(
                             }
                         }
                     }
+
                     null -> {
                         // 无数据状态，如果正在刷新则停止
                         if (isRefreshing) {
@@ -159,12 +167,6 @@ fun ExplorePage(
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
                 onRefresh = {
-                    // Guest用户限制：下拉刷新时跳转到登录页面
-                    if (GuestLoginLimiter.shouldLimitGuest()) {
-                        GuestLoginLimiter.checkAndNavigateToLogin(context)
-                        return@PullToRefreshBox
-                    }
-
                     // 设置刷新开始时间
                     refreshStartTime = System.currentTimeMillis()
                     isRefreshing = true

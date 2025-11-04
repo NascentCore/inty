@@ -79,7 +79,7 @@ object FirebaseManager {
                     Events.SEARCH to 1.0, // 搜索功能
                     Events.PURCHASE to 1.0, // 购买事件
                     Events.USER_LOGOUT to 1.0, // 用户登出
-                    "chat_started" to 1.0, // 聊天开始（第一次发送消息时触发）
+                    Events.CHAT_STARTED to 1.0, // 聊天开始（第一次发送消息时触发）
                     Events.MESSAGE_SENT to 1.0, // 消息发送
                     Events.PROFILE_UPDATED to 1.0, // 个人资料更新
                     Events.SETTINGS_CHANGED to 1.0, // 设置变更
@@ -217,7 +217,8 @@ object FirebaseManager {
     fun logEvent(eventName: String, parameters: Map<String, Any> = emptyMap()) {
         // 调试模式下输出详细日志
         if (AppUtils.isAppDebug()) {
-            LogUtils.d("FirebaseManager", "尝试记录事件: $eventName, 参数: $parameters")
+            LogUtils.d("FirebaseManager", "尝试记录事件: $eventName, 参数数量: ${parameters.size}")
+            LogUtils.d("FirebaseManager", "参数详情: $parameters")
         }
 
         if (!shouldLogEvent(eventName)) {
@@ -227,6 +228,14 @@ object FirebaseManager {
             return
         }
 
+        // 验证参数数量
+        if (parameters.size > MAX_PARAMS_PER_EVENT) {
+            logError(
+                "logEvent",
+                "事件 '$eventName' 参数数量超过限制: ${parameters.size} > $MAX_PARAMS_PER_EVENT"
+            )
+        }
+
         try {
             val analytics = getAnalytics() ?: return
 
@@ -234,18 +243,31 @@ object FirebaseManager {
             firebaseScope.launch {
                 try {
                     val bundle = createBundle(parameters)
+
+                    // 调试模式下输出 Bundle 信息
+                    if (AppUtils.isAppDebug()) {
+                        val bundleSize = bundle.size()
+                        LogUtils.d(
+                            "FirebaseManager",
+                            "Bundle 创建成功: 事件=$eventName, 参数数量=${bundle.size()}, Bundle大小=$bundleSize"
+                        )
+                    }
+
                     analytics.logEvent(eventName, bundle)
 
                     // 调试模式下确认事件已发送
                     if (AppUtils.isAppDebug()) {
-                        LogUtils.d("FirebaseManager", "✅ 事件已发送: $eventName")
+                        LogUtils.d(
+                            "FirebaseManager",
+                            "✅ 事件已发送: $eventName (${parameters.size} 个参数)"
+                        )
                     }
                 } catch (e: Exception) {
-                    logError("logEvent", "Failed to log event: ${e.message}")
+                    logError("logEvent", "Failed to log event '$eventName': ${e.message}")
                 }
             }
         } catch (e: Exception) {
-            logError("logEvent", "Failed to create event: ${e.message}")
+            logError("logEvent", "Failed to create event '$eventName': ${e.message}")
         }
     }
 
@@ -424,6 +446,7 @@ object FirebaseManager {
         const val DATABASE_OPERATION_TIME = "database_operation_time"
 
         // 业务关键事件
+        const val CHAT_STARTED = "chat_started" // 聊天开始（第一次发送消息时触发）
         const val AGENT_SWITCH = "agent_switch"
         const val CHAT_SESSION_END = "chat_session_end"
 
@@ -439,6 +462,7 @@ object FirebaseManager {
         // Billing价格相关事件
         const val SUBSCRIPTION_PRICE_FETCHED = "subscription_price_fetched" // Google Play获取到的价格
         const val SUBSCRIPTION_PRICE_DISPLAYED = "subscription_price_displayed" // UI上显示的价格
+        const val BILLING_RELEASE = "billing_release" // 计费系统释放
 
         // Explore相关事件
         const val EXPLORE_AGENTS_FETCH_SUCCESS = "explore_agents_fetch_success" // Explore接口请求成功
@@ -547,14 +571,102 @@ object FirebaseManager {
         }
     }
 
-    /** 安全的事件参数处理 */
-    fun safeEventParam(key: String, value: Any?): Pair<String, String> {
-        return key to (value?.toString() ?: "unknown")
+    // Firebase Analytics 参数限制常量
+    private const val MAX_PARAM_NAME_LENGTH = 40
+    private const val MAX_PARAM_VALUE_LENGTH = 100
+    private const val MAX_PARAMS_PER_EVENT = 25
+
+    /** 验证参数名是否符合 Firebase 规范 */
+    private fun isValidParameterName(name: String): Boolean {
+        // Firebase 参数名规则：
+        // 1. 必须以字母开头
+        // 2. 只能包含字母、数字、下划线
+        // 3. 长度限制：最多 40 个字符
+        val pattern = "^[a-zA-Z][a-zA-Z0-9_]{0,${MAX_PARAM_NAME_LENGTH - 1}}$".toRegex()
+        return pattern.matches(name)
     }
 
-    /** 批量安全事件参数处理 */
+    /** 验证并规范化参数名 */
+    private fun sanitizeParameterName(name: String): String {
+        // 如果参数名不符合规范，尝试规范化
+        if (isValidParameterName(name)) {
+            return name
+        }
+
+        // 规范化：移除特殊字符，确保以字母开头
+        var sanitized = name
+            .replace(Regex("[^a-zA-Z0-9_]"), "_")  // 将特殊字符替换为下划线
+            .take(MAX_PARAM_NAME_LENGTH)  // 限制长度
+
+        // 如果规范化后以数字开头，添加前缀
+        if (sanitized.isNotEmpty() && sanitized[0].isDigit()) {
+            sanitized = "param_$sanitized"
+            sanitized = sanitized.take(MAX_PARAM_NAME_LENGTH)
+        }
+
+        // 如果仍然不符合规范，返回默认值
+        return if (isValidParameterName(sanitized)) {
+            sanitized
+        } else {
+            "invalid_param"
+        }
+    }
+
+    /** 验证并规范化参数值 */
+    private fun sanitizeParamValue(value: String): String {
+        // Firebase 参数值限制：字符串值最多 100 个字符
+        return if (value.length > MAX_PARAM_VALUE_LENGTH) {
+            // 超长时截断并添加省略号
+            value.take(MAX_PARAM_VALUE_LENGTH - 3) + "..."
+        } else {
+            value
+        }
+    }
+
+    /** 安全的事件参数处理 - 添加验证和规范化 */
+    fun safeEventParam(key: String, value: Any?): Pair<String, String> {
+        // 验证并规范化参数名
+        val sanitizedKey = sanitizeParameterName(key)
+
+        // 转换参数值
+        val stringValue = when (value) {
+            null -> "unknown"
+            is String -> sanitizeParamValue(value)
+            else -> sanitizeParamValue(value.toString())
+        }
+
+        // 如果参数名被规范化，记录警告（仅在调试模式）
+        if (sanitizedKey != key && AppUtils.isAppDebug()) {
+            LogUtils.w(
+                "FirebaseManager",
+                "参数名被规范化: '$key' -> '$sanitizedKey'"
+            )
+        }
+
+        // 如果参数值被截断，记录警告（仅在调试模式）
+        if (value is String && stringValue.length < value.length && AppUtils.isAppDebug()) {
+            LogUtils.w(
+                "FirebaseManager",
+                "参数值被截断: '$key' 原长度=${value.length}, 截断后=${stringValue.length}"
+            )
+        }
+
+        return sanitizedKey to stringValue
+    }
+
+    /** 批量安全事件参数处理 - 添加参数数量验证 */
     fun safeEventParams(vararg params: Pair<String, Any?>): Map<String, String> {
-        return params.associate { (key, value) -> safeEventParam(key, value) }
+        // 验证参数数量
+        if (params.size > MAX_PARAMS_PER_EVENT) {
+            logError(
+                "safeEventParams",
+                "参数数量超过限制: ${params.size} > $MAX_PARAMS_PER_EVENT，将只保留前 $MAX_PARAMS_PER_EVENT 个参数"
+            )
+        }
+
+        return params
+            .take(MAX_PARAMS_PER_EVENT)  // 限制参数数量
+            .associate { (key, value) -> safeEventParam(key, value) }
     }
 
     // region Performance Monitoring 相关方法
@@ -747,15 +859,73 @@ object FirebaseManager {
     }
 
     private fun putParamsToBundle(bundle: Bundle, parameters: Map<String, Any>) {
+        // 验证参数数量
+        if (parameters.size > MAX_PARAMS_PER_EVENT) {
+            logError(
+                "putParamsToBundle",
+                "参数数量超过限制: ${parameters.size} > $MAX_PARAMS_PER_EVENT"
+            )
+        }
+
+        var paramCount = 0
         parameters.forEach { (key, value) ->
-            when (value) {
-                is String -> bundle.putString(key, value)
-                is Long -> bundle.putLong(key, value)
-                is Int -> bundle.putLong(key, value.toLong())
-                is Double -> bundle.putDouble(key, value)
-                is Boolean -> bundle.putString(key, value.toString())
-                is Float -> bundle.putDouble(key, value.toDouble())
-                else -> bundle.putString(key, value.toString())
+            // 限制参数数量
+            if (paramCount >= MAX_PARAMS_PER_EVENT) {
+                if (AppUtils.isAppDebug()) {
+                    LogUtils.w(
+                        "FirebaseManager",
+                        "参数数量已达上限 ($MAX_PARAMS_PER_EVENT)，跳过参数: $key"
+                    )
+                }
+                return@forEach
+            }
+
+            try {
+                // 验证并规范化参数名
+                val finalKey = if (isValidParameterName(key)) {
+                    key
+                } else {
+                    val sanitizedKey = sanitizeParameterName(key)
+                    if (AppUtils.isAppDebug()) {
+                        LogUtils.w(
+                            "FirebaseManager",
+                            "参数名不符合规范: '$key'，已规范化: '$sanitizedKey'"
+                        )
+                    }
+                    sanitizedKey
+                }
+
+                when (value) {
+                    is String -> {
+                        val sanitizedValue = sanitizeParamValue(value)
+                        bundle.putString(finalKey, sanitizedValue)
+                        if (sanitizedValue.length < value.length && AppUtils.isAppDebug()) {
+                            LogUtils.d(
+                                "FirebaseManager",
+                                "参数值被截断: $finalKey (${value.length} -> ${sanitizedValue.length})"
+                            )
+                        }
+                    }
+
+                    is Long -> bundle.putLong(finalKey, value)
+                    is Int -> bundle.putLong(finalKey, value.toLong())
+                    is Double -> bundle.putDouble(finalKey, value)
+                    is Boolean -> {
+                        val boolValue = value.toString()
+                        bundle.putString(finalKey, boolValue)
+                    }
+
+                    is Float -> bundle.putDouble(finalKey, value.toDouble())
+                    else -> {
+                        // 其他类型转换为字符串并验证长度
+                        val stringValue = value.toString()
+                        val sanitizedValue = sanitizeParamValue(stringValue)
+                        bundle.putString(finalKey, sanitizedValue)
+                    }
+                }
+                paramCount++
+            } catch (e: Exception) {
+                logError("putParamsToBundle", "处理参数失败: $key = $value, 错误: ${e.message}")
             }
         }
     }

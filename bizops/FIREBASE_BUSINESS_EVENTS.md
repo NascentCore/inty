@@ -38,6 +38,13 @@
 | `page_leave` | PageTrackingHelper.kt | 页面离开（记录停留时长） |
 | `explore_page_view` | ExploreViewModel.kt | 探索页面访问 |
 
+### Explore 数据加载
+| 事件名称 | 使用位置 | 业务含义 |
+|---------|---------|---------|
+| `explore_agents_fetch_success` | ExploreViewModel.kt | Explore 接口请求成功（包含本次返回数量和当前UI总数） |
+| `explore_agents_fetch_failure` | ExploreViewModel.kt | Explore 接口请求失败 |
+| `explore_agents_fetch_exception` | ExploreViewModel.kt | Explore 接口请求异常 |
+
 ### 订阅与计费
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
@@ -104,6 +111,13 @@
 - `end_to_end_time`：端到端时间（从用户点击发送按钮到收到响应，包含UI处理、API调用等全部时间）
 - `timestamp`：事件时间戳
 
+### Explore 参数
+- `page`、`page_size`：分页信息（当前页码和每页大小）
+- `agents_count`：本次接口返回的agents数量（单次请求的数量）
+- `current_ui_agents_count`：当前UI中所有已加载的agents总数（累计数量，用于统计界面总agent数）
+- `sort_seed`：排序种子（用于刷新时改变排序）
+- `response_time`：接口响应时间（API调用时间，毫秒）
+
 ### 订阅价格参数
 - `product_id`、`product_name`、`plan_type`：订阅商品信息
 - `google_play_price`、`google_play_currency_code`、`google_play_price_micros`：Google Play原始价格信息
@@ -133,6 +147,7 @@
 - **聊天行为**：消息发送频率、Agent偏好、会话时长
 - **页面使用**：页面停留时长、访问路径
 - **功能使用**：语音播放、图片查看、输入交互
+- **Explore使用**：Explore页面访问频率、接口请求成功率、当前界面agents总数统计
 
 ### 商业决策支持
 - **用户转化**：免费用户转VIP的路径分析

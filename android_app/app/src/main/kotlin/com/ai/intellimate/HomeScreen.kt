@@ -9,9 +9,12 @@ import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -39,7 +42,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
@@ -51,12 +53,13 @@ import com.ai.intellimate.agent.generate.CreateRoleActivity
 import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.chat.ChatPageContainer
 import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
-import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.explore.ExplorePage
 import com.ai.intellimate.explore.ExploreViewModel
 import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.messages.MessagesPage
+import com.ai.intellimate.messages.MessagesViewModel
 import com.ai.intellimate.profile.ProfilePage
+import com.ai.intellimate.profile.ProfileViewModel
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.ExpiredVipDialog
 import com.ai.intellimate.ui.components.ForceUpgradeDialog
@@ -67,33 +70,26 @@ import com.ai.intellimate.vip.VipCenterActivity
 fun HomeScreen(
     modifier: Modifier = Modifier,
     mainViewModel: MainViewModel,
-    chatViewModel: ChatViewModel,
     viewModelFactory: ViewModelProvider.Factory,
 ) {
     val selectedTab = mainViewModel.selectedTab.collectAsState()
-    val context = LocalContext.current
 
-    // 创建ExploreViewModel实例，用于ExploreTab
-    val exploreViewModel: ExploreViewModel = viewModel()
-
-    // 创建ChatTabViewModel实例，用于ChatTab
-    val chatTabViewModel: ChatTabViewModel = viewModel()
-
-    // 初始化Paging数据
+    // 页面跟踪
     LaunchedEffect(Unit) {
-        exploreViewModel.initializePagingData()
-        chatTabViewModel.initializePagingData()
+        PageTrackingHelper.trackPageView("HomeScreen", "MainActivity")
     }
 
-    // 启动预加载数据监听
-    LaunchedEffect(Unit) {
-        exploreViewModel.startListeningPreloadUpdates()
-        chatTabViewModel.startListeningPreloadUpdates()
+    // 创建共享的 CreateRoleActivity launcher，用于处理从 Create Tab 创建后的刷新
+    // 当 CreateRoleActivity 返回成功时，如果当前在 Profile Tab，需要刷新列表
+    var shouldRefreshProfile by remember { mutableStateOf(false) }
+    val createRoleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            // 标记需要刷新 Profile 列表
+            shouldRefreshProfile = true
+        }
     }
-
-    // 跟踪HomeScreen页面访问
-    // 使用 PageTrackingHelper 进行页面跟踪
-    LaunchedEffect(Unit) { PageTrackingHelper.trackPageView("HomeScreen", "MainActivity") }
 
     Scaffold(
         modifier =
@@ -103,26 +99,31 @@ fun HomeScreen(
                 .navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
+            val context = LocalContext.current
             AppBottomNavigationBar(
                 modifier = Modifier,
                 selectedTab = selectedTab.value.ordinal,
-                onSelectTab = { tabIndex -> handleTabSelection(tabIndex, context, mainViewModel) },
+                onSelectTab = { tabIndex ->
+                    handleTabSelectionWithLauncher(
+                        tabIndex,
+                        context,
+                        mainViewModel,
+                        createRoleLauncher
+                    )
+                },
             )
         },
     ) { innerPadding ->
         HomeContent(
             selectedTab = selectedTab.value,
             mainViewModel = mainViewModel,
-            chatViewModel = chatViewModel,
-            exploreViewModel = exploreViewModel,
-            chatTabViewModel = chatTabViewModel,
             viewModelFactory = viewModelFactory,
-            context = context,
             innerPadding = innerPadding,
+            shouldRefreshProfile = shouldRefreshProfile,
+            onRefreshProfileHandled = { shouldRefreshProfile = false },
         )
 
         ExpiredDialogLogic(mainViewModel)
-
         AppVersionLogic(mainViewModel)
     }
 }
@@ -153,8 +154,8 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
             // 未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
             if (
                 !IntySetting.hasTipsVipExpired() &&
-                    IntySetting.isLogin() &&
-                    !IntySetting.isGuestUser()
+                IntySetting.isLogin() &&
+                IntySetting.getCurToken().isNotEmpty()
             ) {
                 showExpiredDialog = true
             }
@@ -173,8 +174,8 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
             data,
             onCancel = { showExpiredDialog = false },
             onSure = {
-                // 检查是否正式登录（非游客且已登录）
-                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                // 检查是否已登录
+                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                     // 判断如果之前订阅的档位还在，则继续原订阅。如果没有了，则跳转到订阅中心
                     val plan =
                         vipPlan.find { plan -> plan.googleProductId == vipStatue.previous_plan_id }
@@ -202,11 +203,18 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
     }
 }
 
-/** 处理Tab选择逻辑 */
-private fun handleTabSelection(tabIndex: Int, context: Context, mainViewModel: MainViewModel) {
+/** 处理Tab选择逻辑（带 launcher） */
+private fun handleTabSelectionWithLauncher(
+    tabIndex: Int,
+    context: Context,
+    mainViewModel: MainViewModel,
+    createRoleLauncher: ActivityResultLauncher<Intent>,
+) {
     if (tabIndex == HomeTabIndex.Create.ordinal) {
-        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-            CreateRoleActivity.launch(context)
+        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+            // 使用 CreateRoleActivity 提供的方法获取 Intent
+            val intent = CreateRoleActivity.getIntent(context, null)
+            createRoleLauncher.launch(intent)
         } else {
             LoginActivity.launch(context)
         }
@@ -220,36 +228,37 @@ private fun handleTabSelection(tabIndex: Int, context: Context, mainViewModel: M
 private fun HomeContent(
     selectedTab: HomeTabIndex,
     mainViewModel: MainViewModel,
-    chatViewModel: ChatViewModel,
-    exploreViewModel: ExploreViewModel,
-    chatTabViewModel: ChatTabViewModel,
     viewModelFactory: ViewModelProvider.Factory,
-    context: Context,
     innerPadding: PaddingValues,
+    shouldRefreshProfile: Boolean,
+    onRefreshProfileHandled: () -> Unit,
 ) {
     when (selectedTab) {
         HomeTabIndex.Chat -> {
             ChatTabContent(
                 mainViewModel = mainViewModel,
-                chatTabViewModel = chatTabViewModel,
                 viewModelFactory = viewModelFactory,
             )
         }
+
         HomeTabIndex.Conversation -> {
-            ConversationsTabContent(chatViewModel = chatViewModel, context = context)
+            ConversationsTabContent()
         }
+
         HomeTabIndex.Create -> {
-            // Create tab is handled in handleTabSelection
+            // Create tab 在 handleTabSelection 中处理，不显示内容
         }
+
         HomeTabIndex.Explore -> {
-            ExploreTabContent(
-                exploreViewModel = exploreViewModel,
-                context = context,
-                innerPadding = innerPadding,
-            )
+            ExploreTabContent(innerPadding = innerPadding)
         }
+
         HomeTabIndex.Profile -> {
-            ProfileTabContent(mainViewModel = mainViewModel, context = context)
+            ProfileTabContent(
+                onShowSettings = { mainViewModel.showSettings() },
+                shouldRefreshProfile = shouldRefreshProfile,
+                onRefreshProfileHandled = onRefreshProfileHandled,
+            )
         }
     }
 }
@@ -258,11 +267,17 @@ private fun HomeContent(
 @Composable
 private fun ChatTabContent(
     mainViewModel: MainViewModel,
-    chatTabViewModel: ChatTabViewModel,
     viewModelFactory: ViewModelProvider.Factory,
 ) {
+    val chatTabViewModel: ChatTabViewModel = viewModel()
     val userProfile = mainViewModel.userProfile.collectAsState()
     val currentChatPageIndex = mainViewModel.currentChatPageIndex.collectAsState()
+
+    // 初始化 ChatTab 数据
+    LaunchedEffect(Unit) {
+        chatTabViewModel.initializePagingData()
+        chatTabViewModel.startListeningPreloadUpdates()
+    }
 
     ChatPageContainer(
         modifier = Modifier,
@@ -276,32 +291,37 @@ private fun ChatTabContent(
 
 /** 会话Tab内容 */
 @Composable
-private fun ConversationsTabContent(chatViewModel: ChatViewModel, context: Context) {
-    val conversations by chatViewModel.conversations.collectAsState()
-    val isLoadingConversations by chatViewModel.isLoadingConversations.collectAsState()
-    val isRefreshingConversations by chatViewModel.isRefreshingConversations.collectAsState()
+private fun ConversationsTabContent() {
+    val context = LocalContext.current
+    val messagesViewModel: MessagesViewModel = viewModel()
+
+    LaunchedEffect(Unit) {
+        messagesViewModel.getConversations()
+    }
 
     MessagesPage(
         modifier = Modifier,
-        conversations = conversations,
+        viewModel = messagesViewModel,
         onClickConversationItem = { conversation ->
-            chatViewModel.setConversationReaded(conversation)
-            // 从会话列表 跳转到聊天页面，
+            messagesViewModel.setConversationReaded(conversation)
             ChatActivity.launch(context, conversation.convertToAgentInfo())
         },
-        isLoadingConversations = isLoadingConversations,
-        isRefreshingConversations = isRefreshingConversations,
-        onLoadMoreConversations = { chatViewModel.loadMoreConversations() },
+        pageTrackingContext = "MainActivity",
     )
 }
 
 /** 推荐Tab内容 */
 @Composable
-private fun ExploreTabContent(
-    exploreViewModel: ExploreViewModel,
-    context: Context,
-    innerPadding: PaddingValues,
-) {
+private fun ExploreTabContent(innerPadding: PaddingValues) {
+    val context = LocalContext.current
+    val exploreViewModel: ExploreViewModel = viewModel()
+
+    // 初始化 ExploreTab 数据
+    LaunchedEffect(Unit) {
+        exploreViewModel.initializePagingData()
+        exploreViewModel.startListeningPreloadUpdates()
+    }
+
     ExplorePage(
         modifier = Modifier,
         innerPadding = innerPadding,
@@ -312,55 +332,84 @@ private fun ExploreTabContent(
 
 /** 我的Tab内容 */
 @Composable
-private fun ProfileTabContent(mainViewModel: MainViewModel, context: Context) {
-    val userProfile by mainViewModel.userProfile.collectAsStateWithLifecycle()
-    val userCreatedAgents = mainViewModel.userCreatedAgents
-    val isLoadingUserAgents = mainViewModel.isLoadingUserAgents.collectAsState()
-    val isRefreshingUserAgents = mainViewModel.isRefreshingUserAgents.collectAsState()
+private fun ProfileTabContent(
+    onShowSettings: () -> Unit,
+    shouldRefreshProfile: Boolean,
+    onRefreshProfileHandled: () -> Unit,
+) {
+    val context = LocalContext.current
+    val profileViewModel: ProfileViewModel = viewModel()
+    val uiState by profileViewModel.uiState.collectAsStateWithLifecycle()
 
     // 确保用户信息有效，避免崩溃
-    val safeUserProfile =
-        userProfile.let { profile ->
-            if (profile.id.isEmpty()) {
-                UserProfile(
-                    id = "loading",
-                    nickname = "Loading...",
-                    avatar = null,
-                    description = "UserInfo Loading...",
-                )
-            } else {
-                profile
-            }
+    val safeUserProfile = if (uiState.userProfile.id.isEmpty()) {
+        UserProfile(
+            id = "loading",
+            nickname = "Loading...",
+            avatar = null,
+            description = "UserInfo Loading...",
+        )
+    } else {
+        uiState.userProfile
+    }
+
+    // 创建用于编辑的 launcher（独立于 Create Tab 的 launcher）
+    val editAgentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        // 编辑成功后刷新列表
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            profileViewModel.refreshCreatedAgents()
         }
-    LaunchedEffect(mainViewModel) { mainViewModel.updateUserInfoLocal() }
-    // 确保更新用户信息，处理切换账号后的信息同步
-    LifecycleResumeEffect(mainViewModel) {
-        mainViewModel.getUserProfile()
-        // 刷新订阅状态
+    }
+
+    // 初始化数据（仅首次加载）
+    var hasInitialized by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!hasInitialized) {
+            hasInitialized = true
+            profileViewModel.updateUserInfoLocal()
+            profileViewModel.getUserCreatedAgents()
+            profileViewModel.trackPageView("MainActivity")
+        }
+    }
+
+    // 监听从 Create Tab 创建成功后需要刷新的标志
+    LaunchedEffect(shouldRefreshProfile) {
+        if (shouldRefreshProfile) {
+            profileViewModel.refreshCreatedAgents()
+            onRefreshProfileHandled()
+        }
+    }
+
+    // 生命周期管理：页面恢复时刷新用户信息，但不频繁刷新列表
+    LifecycleResumeEffect(profileViewModel) {
+        profileViewModel.loadUserProfile()
         VipStatusHelper.refreshSubscriptionStatus()
+        // 不再频繁刷新列表，只在首次加载或从 CreateRoleActivity 返回时刷新
         onPauseOrDispose {}
     }
+
     ProfilePage(
         modifier = Modifier,
         userProfile = safeUserProfile,
-        agents = userCreatedAgents,
-        isLoading = isLoadingUserAgents.value,
-        isRefreshing = isRefreshingUserAgents.value,
+        agents = uiState.userCreatedAgents,
+        isLoading = uiState.isLoading,
         onClickAgent = { agent -> ChatActivity.launch(context, agent) },
-        onEditAgent = { agent -> CreateRoleActivity.launch(context, agent) },
+        onEditAgent = { agent ->
+            // 使用 CreateRoleActivity 提供的方法获取 Intent，并监听返回结果
+            val intent = CreateRoleActivity.getIntent(context, agent)
+            editAgentLauncher.launch(intent)
+        },
         onDeleteAgent = { agent ->
-            mainViewModel.deleteAgent(
+            profileViewModel.deleteAgent(
                 agentId = agent.id,
-                onSuccess = {
-                    // 删除成功，列表会自动更新
-                },
-                onError = { _ ->
-                    // 错误处理已在ViewModel中完成
-                },
+                onSuccess = { /* 删除成功，列表会自动更新 */ },
+                onError = { /* 错误处理已在ViewModel中完成 */ },
             )
         },
-        onLoadMore = { mainViewModel.loadMoreUserCreatedAgents() },
-        mainViewModel = mainViewModel,
+        onLoadMore = { profileViewModel.loadMoreUserCreatedAgents() },
+        onShowSettings = onShowSettings,
     )
 }
 
@@ -447,25 +496,6 @@ private fun BottomNavigationBarItem(modifier: Modifier, tabInfo: TabInfo, select
             fontSize = tabTextFontSize.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             color = if (selected) Color(0xFF9C27B0) else Color.White, // 选中时使用紫色，未选中时使用白色
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun AppBottomNavigationBarPreview() {
-    // Preview for the entire bottom navigation bar positioned in the middle
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black), // Dark background to match the app theme
-        contentAlignment = Alignment.Center,
-    ) {
-        AppBottomNavigationBar(
-            modifier = Modifier,
-            selectedTab = 0, // Home tab selected
-            onSelectTab = { /* Preview doesn't need actual functionality */ },
         )
     }
 }

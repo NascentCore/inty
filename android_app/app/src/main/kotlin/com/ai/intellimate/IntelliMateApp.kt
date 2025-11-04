@@ -71,7 +71,7 @@ class IntelliMateApp : Application() {
         if (BillingRepository.isInitialized()) {
             LogUtils.i("IntyApp - 应用退出，释放Billing连接")
             BillingRepository.release()
-            FirebaseManager.logEvent("billing_release")
+            FirebaseManager.logEvent(FirebaseManager.Events.BILLING_RELEASE)
         }
     }
 }

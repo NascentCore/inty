@@ -1,10 +1,8 @@
 package com.ai.intellimate.chat.ui
 
-import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.firebase.FirebaseManager
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,7 +38,6 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
-import com.ai.intellimate.login.RegInfoActivity
 import com.ai.intellimate.ui.IntySmallTextField
 
 /** 聊天输入框组件 */
@@ -87,7 +84,8 @@ fun ChatInput(
 
     Column(
         modifier =
-            Modifier.padding(
+            Modifier
+                .padding(
                     start = horizontalPadding,
                     top = topPadding,
                     end = horizontalPadding,
@@ -96,19 +94,16 @@ fun ChatInput(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(horizontalPadding))
                 .background(colorResource(id = R.color.dark_purple_60_percent))
-                .clickable(enabled = IntySetting.needBlockInput()) {
-                    // 游客 未登录的用户，需要弹出年龄段选择，18岁以下的，不让输入。
-                    RegInfoActivity.launch(context)
-                }
     ) {
         // 主输入区域
         Row(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
             IntySmallTextField(
                 modifier = Modifier.weight(1f),
-                enabled = IntySetting.needBlockInput().not(),
                 value = inputData.value,
                 singleLine = false,
                 onValueChange = { input -> chatViewModel.inputData.value = input },
@@ -296,13 +291,17 @@ private fun MultiUseAccessButton(
         // 有输入内容时，发送按钮显示
         if (hasInput) {
             AsyncImage(
-                modifier = Modifier.size(buttonSize).noRippleClickable { onSendMessage() },
+                modifier = Modifier
+                    .size(buttonSize)
+                    .noRippleClickable { onSendMessage() },
                 model = R.drawable.btn_send,
                 contentDescription = null,
             )
         } else {
             AsyncImage(
-                modifier = Modifier.size(buttonSize).noRippleClickable { onToggleMorePanel() },
+                modifier = Modifier
+                    .size(buttonSize)
+                    .noRippleClickable { onToggleMorePanel() },
                 model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2,
                 contentDescription = null,
             )

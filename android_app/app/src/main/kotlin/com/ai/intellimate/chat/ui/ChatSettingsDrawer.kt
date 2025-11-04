@@ -64,14 +64,14 @@ fun ChatSettingsDrawer(
 
     // Keep talking二状态设置：默认跟随全局设置
     var agentKeepTalking by
-        remember(agentInfo?.id) {
-            mutableStateOf(
-                agentInfo?.let {
-                    // 获取角色专用设置，如果不存在则使用全局设置
-                    IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
-                } ?: false
-            )
-        }
+    remember(agentInfo?.id) {
+        mutableStateOf(
+            agentInfo?.let {
+                // 获取角色专用设置，如果不存在则使用全局设置
+                IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
+            } ?: false
+        )
+    }
 
     val horizontalPadding = 16
 
@@ -148,8 +148,8 @@ fun ChatSettingsDrawer(
                         value = userProfileState.nickname.ifEmpty { "Guest" },
                         horizontalPadding = horizontalPadding,
                         onClick = {
-                            // 检查是否正式登录（非游客且已登录）
-                            if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                            // 检查是否已登录
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 editKey = EditKey.Name
                                 editValue = userProfileState.nickname
                             } else {
@@ -163,8 +163,8 @@ fun ChatSettingsDrawer(
                         value = userProfileState.pronouns(),
                         horizontalPadding = horizontalPadding,
                         onClick = {
-                            // 检查是否正式登录（非游客且已登录）
-                            if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                            // 检查是否已登录
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 editKey = EditKey.Pronouns
                                 editValue = userProfileState.gender ?: ""
                             } else {
@@ -178,8 +178,8 @@ fun ChatSettingsDrawer(
                         value = userProfileState.description ?: "Edit",
                         horizontalPadding = horizontalPadding,
                         onClick = {
-                            // 检查是否正式登录（非游客且已登录）
-                            if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                            // 检查是否已登录
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 editKey = EditKey.Persona
                                 editValue = userProfileState.description ?: ""
                             } else {
@@ -232,8 +232,10 @@ fun ChatSettingsDrawer(
                                     .height(56.dp)
                                     .padding(horizontal = horizontalPadding.dp)
                                     .noRippleClickable {
-                                        // 检查是否正式登录（非游客且已登录）
-                                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                        // 检查是否已登录
+                                        if (IntySetting.isLogin() && IntySetting.getCurToken()
+                                                .isNotEmpty()
+                                        ) {
                                             ReportActivity.launch(context, agent.id, "AGENT")
                                         } else {
                                             // 未登录或游客时跳转到登录页面

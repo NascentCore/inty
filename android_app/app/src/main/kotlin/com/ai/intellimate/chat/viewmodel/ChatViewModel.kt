@@ -6,7 +6,6 @@ import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ChatSettingsReq
 import ai.sxwl.android.data.api.model.ChatSettingsResponse
-import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.VipStatusHelper
@@ -57,8 +56,6 @@ class ChatViewModel : BaseVM() {
 
     private var currentOffset = 0
     private val PAGE_SIZE = 20
-    private val _conversations = MutableStateFlow<List<ConversationItem>>(emptyList())
-    val conversations = _conversations.asStateFlow()
 
     val inputData = MutableStateFlow<String>("")
     val inputSelection = MutableStateFlow<Int>(0)
@@ -85,16 +82,6 @@ class ChatViewModel : BaseVM() {
     // 消息查询完成状态，用于控制开场白自动播放时机
     private val _isQueryMsgsCompleted = MutableStateFlow<Boolean>(false)
     val isQueryMsgsCompleted = _isQueryMsgsCompleted.asStateFlow()
-
-    // 对话列表分页状态
-    private var currentConversationsPage = 0
-    private var _isLoadingConversations = MutableStateFlow(false)
-    val isLoadingConversations = _isLoadingConversations.asStateFlow()
-    private var hasMoreConversations = true
-
-    // 刷新状态，用于区分首次加载和刷新操作
-    private var _isRefreshingConversations = MutableStateFlow(false)
-    val isRefreshingConversations = _isRefreshingConversations.asStateFlow()
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val chatApi by lazy { NetServiceMgr.getChatApi() }
@@ -300,7 +287,7 @@ class ChatViewModel : BaseVM() {
         if (!hasChatHistory) {
             _agentInfo.value?.let { agent ->
                 FirebaseManager.logEvent(
-                    "chat_started",
+                    FirebaseManager.Events.CHAT_STARTED,
                     FirebaseManager.safeEventParams(
                         "agent_id" to agent.id,
                         "agent_name" to agent.name,
@@ -706,130 +693,6 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    fun getConversations() {
-        currentConversationsPage = 0
-        hasMoreConversations = true
-
-        // 如果已经有数据，则不显示loading，直接后台刷新
-        if (_conversations.value.isNotEmpty()) {
-            loadConversationsSilently()
-        } else {
-            // 没有数据时才显示loading
-            loadConversations()
-        }
-    }
-
-    fun loadMoreConversations() {
-        if (!_isLoadingConversations.value && hasMoreConversations) {
-            currentConversationsPage++
-            loadConversations()
-        } else {
-            LogUtils.d(
-                "loadMoreConversations - 跳过加载: isLoading=${_isLoadingConversations.value}, hasMoreData=$hasMoreConversations"
-            )
-        }
-    }
-
-    private fun loadConversationsSilently() {
-        if (_isLoadingConversations.value || _isRefreshingConversations.value) return
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val skip = currentConversationsPage * 20
-                val result = chatApi.getConversations(skip, 20)
-
-                when (result) {
-                    is HttpResult.Success -> {
-                        val userInitiatedConversations = result.data
-
-                        if (userInitiatedConversations.isEmpty()) {
-                            hasMoreConversations = false
-                        } else {
-                            // 静默更新数据，不显示loading
-                            _conversations.value = userInitiatedConversations
-                        }
-                    }
-                    is HttpResult.Failure -> {
-                        LogUtils.e(
-                            "loadConversationsSilently - 第${currentConversationsPage + 1}页加载失败: ${result.message}"
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                LogUtils.e(
-                    "loadConversationsSilently - 第${currentConversationsPage + 1}页加载异常: ${e.message}"
-                )
-            }
-        }
-    }
-
-    private fun loadConversations() {
-        if (_isLoadingConversations.value || _isRefreshingConversations.value) return
-
-        // 记录当前页码，用于后续状态重置
-        val isFirstPage = currentConversationsPage == 0
-
-        // 根据当前页码决定使用哪个loading状态
-        if (isFirstPage) {
-            // 第一页，使用刷新状态
-            _isRefreshingConversations.value = true
-        } else {
-            // 后续页，使用加载更多状态
-            _isLoadingConversations.value = true
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val skip = currentConversationsPage * 20
-                val result = chatApi.getConversations(skip, 20)
-
-                when (result) {
-                    is HttpResult.Success -> {
-                        val userInitiatedConversations = result.data
-
-                        if (userInitiatedConversations.isEmpty()) {
-                            hasMoreConversations = false
-                        } else {
-                            if (currentConversationsPage == 0) {
-                                // 第一页，直接替换（这里才清空并替换数据）
-                                _conversations.value = userInitiatedConversations
-                            } else {
-                                // 后续页，追加到现有列表
-                                _conversations.value =
-                                    _conversations.value + userInitiatedConversations
-                            }
-                        }
-                    }
-                    is HttpResult.Failure -> {
-                        LogUtils.e(
-                            "loadConversations - 第${currentConversationsPage + 1}页加载失败: ${result.message}"
-                        )
-                        // 如果加载失败，回退页码
-                        if (currentConversationsPage > 0) {
-                            currentConversationsPage--
-                            LogUtils.i("loadConversations - 页码回退到: $currentConversationsPage")
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                LogUtils.e(
-                    "loadConversations - 第${currentConversationsPage + 1}页加载异常: ${e.message}"
-                )
-                // 如果加载失败，回退页码
-                if (currentConversationsPage > 0) {
-                    currentConversationsPage--
-                    LogUtils.i("loadConversations - 页码回退到: $currentConversationsPage")
-                }
-            }
-
-            // 重置对应的loading状态
-            if (isFirstPage) {
-                _isRefreshingConversations.value = false
-            } else {
-                _isLoadingConversations.value = false
-            }
-        }
-    }
-
     fun setAgentID(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -850,28 +713,10 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    // 标记会话消息 已读
-    fun setConversationReaded(conversationItem: ConversationItem) {
-        IntySetting.setConversationReaded(conversationItem.agentId, conversationItem.lastMessage)
-
-        _conversations.update { currentConversations ->
-            currentConversations.map { conversation ->
-                if (
-                    conversation.id == conversationItem.id &&
-                        conversation.agentId == conversationItem.agentId
-                ) {
-                    conversation.copy(isNew = false)
-                } else {
-                    conversation
-                }
-            }
-        }
-    }
 
     // 新增：清理所有数据的方法
     fun clearAllData() {
         _msgs.update { emptyList() }
-        _conversations.value = emptyList()
         _agentInfo.value = null
         _userProfile.value = UserProfile()
         inputData.update { "" }
@@ -881,11 +726,6 @@ class ChatViewModel : BaseVM() {
         lastQueryAgentId = null
         lastQueryTime = 0L
         lastSendTime = 0L
-
-        // 清理分页状态
-        currentConversationsPage = 0
-        hasMoreConversations = true
-        _isLoadingConversations.value = false
 
         // 清理chatSettings
         _chatSettings.value = emptyMap()

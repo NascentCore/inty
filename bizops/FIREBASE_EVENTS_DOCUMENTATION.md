@@ -60,9 +60,17 @@
 | `page_visible` | PageTrackingHelper.kt | `page_name`, `page_class`, `timestamp` | 页面变为可见 | ⚪ 禁用 |
 | `page_hidden` | PageTrackingHelper.kt | `page_name`, `page_class`, `visible_time_spent`, `timestamp` | 页面变为不可见 | ⚪ 禁用 |
 | `page_lifecycle` | PageTrackingHelper.kt | `page_name`, `page_class`, `lifecycle_event`, `lifecycle_time_spent`, `timestamp` | 页面生命周期事件 | ⚪ 禁用 |
-| `explore_page_view` | ExploreViewModel.kt | 预留 | 探索页面访问 | 🔴 100% |
+| `explore_page_view` | ExploreViewModel.kt | `page_type` (recommendations), `is_initial_load` (true/false) | 探索页面访问 | 🔴 100% |
 
-### 1.6 用户交互事件
+### 1.6 Explore 数据加载事件
+
+| 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
+|---------|---------|------|---------|--------|
+| `explore_agents_fetch_success` | ExploreViewModel.kt | `page`, `page_size`, `response_time`, `agents_count`, `current_ui_agents_count`, `sort_seed`, `user_type`, `timestamp` | Explore接口请求成功（包含本次返回数量和当前UI累计总数） | 🔴 100% |
+| `explore_agents_fetch_failure` | ExploreViewModel.kt | `page`, `page_size`, `response_time`, `error_message`, `current_ui_agents_count`, `sort_seed`, `user_type`, `timestamp` | Explore接口请求失败 | 🔴 100% |
+| `explore_agents_fetch_exception` | ExploreViewModel.kt | `page`, `page_size`, `response_time`, `exception_type`, `exception_message`, `current_ui_agents_count`, `sort_seed`, `user_type`, `timestamp` | Explore接口请求异常 | 🔴 100% |
+
+### 1.7 用户交互事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
@@ -70,14 +78,14 @@
 | `agent_switch` | FirebaseManager.Events | 预留 | Agent切换 | 🔴 100% |
 | `voice_playback_start` | AudioManager.kt | `message_id`, `agent_id`, `agent_name`, `has_audio_url`, `auto_play`, `is_manual_click`, `timestamp` | 语音播放开始 | 🔴 100% |
 
-### 1.7 订阅与计费事件
+### 1.8 订阅与计费事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
 | `subscription_price_fetched` | BillingPriceManager.kt | `product_id`, `product_name`, `plan_type`, `google_play_price`, `google_play_currency_code`, `google_play_price_micros`, `corrected_price`, `old_price`, `old_currency_code`, `old_price_micros`, `has_placeholder`, `price_changed`, `currency_changed`, `micros_changed` | 从Google Play获取到的订阅价格详细信息（包含价格变化对比） | 🔴 100% |
 | `subscription_price_displayed` | VipCenterContent.kt | `product_id`, `product_name`, `plan_type`, `displayed_price`, `currency_code`, `price_micros`, `discount_rate`, `original_price`, `is_selected`, `selected_plan_index`, `total_plans_count`, `is_subscribed`, `timestamp` | UI上显示的订阅价格详细信息（包含选择状态和订阅状态） | 🔴 100% |
 
-### 1.8 网络请求事件
+### 1.9 网络请求事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
@@ -88,7 +96,7 @@
 | `very_slow_request` | NetServiceMgr.kt | `duration_ms`, `method`, `url`, `successful` | 极慢请求（>10秒） | 🔴 100% |
 | `request_failure` | NetServiceMgr.kt | `duration_ms`, `method`, `url`, `error_type`, `error_message` | 请求失败 | 🔴 100% |
 
-### 1.9 错误监控事件
+### 1.10 错误监控事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
@@ -100,7 +108,8 @@
 
 | 事件名称 | 使用位置 | 业务含义 | 采样率 |
 |---------|---------|---------|--------|
-| `ai_response_time` | ChatViewModel.kt | AI响应时间（API调用时间） | 🔴 100% |
+| `AI_RESPONSE_TIME` | ChatViewModel.kt | AI响应时间（API调用时间） | 🔴 100% |
+| `EXPLORE_RESPONSE_TIME` | ExploreViewModel.kt | Explore接口响应时间（API调用时间） | 🔴 100% |
 | `tts_generation_time` | FirebaseManager.Events | TTS生成时间（预留） | 🟡 调试100%，发布30% |
 | `voice_playback_time` | FirebaseManager.Events | 语音播放时间（预留） | 🟡 调试100%，发布30% |
 | `image_load_time` | FirebaseManager.Events | 图片加载时间（预留） | 🟡 调试100%，发布20% |
@@ -112,6 +121,7 @@
 | 功能 | 使用位置 | 业务含义 | 采样率 |
 |------|---------|---------|--------|
 | `logPerformanceMetric` | ChatViewModel.kt | 记录AI响应时间（API调用时间） | 🔴 100% |
+| `logPerformanceMetric` | ExploreViewModel.kt | 记录Explore接口响应时间（API调用时间） | 🔴 100% |
 | HTTP网络监控 | NetServiceMgr.kt | 自动监控网络请求性能 | 🟡 调试100%，发布30% |
 | 自定义追踪 | FirebaseManager.kt | 自定义性能追踪 | 🟡 调试100%，发布20% |
 
@@ -215,6 +225,11 @@
 - `ai_response_time`：AI响应时间（API调用时间，从发起网络请求到收到响应）
 - `end_to_end_time`：端到端时间（从用户点击发送按钮到收到响应的完整时间，包含UI处理、API调用等全部时间），用于衡量真实的用户体验
 - `timestamp`：事件时间戳，用于时序分析
+- `page`、`page_size`：分页信息（Explore接口的分页参数）
+- `agents_count`：本次接口返回的agents数量（单次请求的数量）
+- `current_ui_agents_count`：当前UI中所有已加载的agents总数（累计数量，用于统计界面总agent数）
+- `sort_seed`：排序种子（用于Explore刷新时改变排序）
+- `response_time`：接口响应时间（Explore接口的API调用时间，毫秒）
 - `product_id`、`product_name`、`plan_type`：订阅商品信息，用于订阅分析
 - `google_play_price`、`google_play_currency_code`、`google_play_price_micros`：Google Play原始价格信息
 - `displayed_price`、`currency_code`、`price_micros`：UI显示的价格信息
@@ -234,12 +249,13 @@
 ## 6. 业务价值分析
 
 ### 6.1 核心业务指标
-- **用户行为分析**：页面停留时长、用户交互模式、Agent偏好
+- **用户行为分析**：页面停留时长、用户交互模式、Agent偏好、Explore页面访问和接口使用情况
 - **聊天体验优化**：AI响应时间（API性能）、端到端时间（用户真实感知延迟）、消息发送成功率、语音播放体验
+- **Explore数据统计**：Explore接口请求成功率、当前界面agents总数、接口响应时间、分页加载情况
 - **性能分析**：通过对比API响应时间和端到端时间，可以识别UI处理、网络延迟、本地处理等各个环节的性能瓶颈
-- **商业决策支持**：用户转化路径、功能使用频率、订阅分析、订阅价格变化监控
+- **商业决策支持**：用户转化路径、功能使用频率、订阅分析、订阅价格变化监控、Explore内容推荐效果
 - **订阅定价分析**：Google Play价格获取情况、UI价格显示情况、价格变化对转化的影响
-- **问题快速发现**：错误监控、网络性能、应用稳定性、价格更新异常、性能瓶颈定位
+- **问题快速发现**：错误监控、网络性能、应用稳定性、价格更新异常、性能瓶颈定位、Explore接口异常
 
 ### 6.2 数据质量保证
 - **业务数据完整性**：关键业务事件100%采样，确保数据完整

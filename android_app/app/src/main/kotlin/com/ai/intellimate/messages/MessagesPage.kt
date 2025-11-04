@@ -1,11 +1,15 @@
 package com.ai.intellimate.messages
 
-import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.ConversationItem
+import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.ui.HeartRedDot
+import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,45 +33,48 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
+import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.ui.components.EmptyDataState
-import com.ai.intellimate.utils.AuthClickable
 
 /** 主页面第二个tab，会话列表页面，包含关注和聊天列表 */
 @Composable
 fun MessagesPage(
-    modifier: Modifier,
-    conversations: List<ConversationItem>,
+    modifier: Modifier = Modifier,
+    viewModel: MessagesViewModel,
     onClickConversationItem: (ConversationItem) -> Unit,
-    isLoadingConversations: Boolean = false,
-    isRefreshingConversations: Boolean = false,
-    onLoadMoreConversations: (() -> Unit)? = null,
+    pageTrackingContext: String = "MessagesPage",
 ) {
-    // 使用 PageTrackingHelper 进行页面跟踪
-    LaunchedEffect(Unit) {
-        PageTrackingHelper.trackPageView(
-            "MessagesPage",
-            "MainActivity",
-            mapOf(
-                "conversation_count" to conversations.size,
-                "is_loading" to isLoadingConversations,
-            )
-        )
+    val uiState by viewModel.uiState.collectAsState()
+
+    // 页面跟踪（首次加载时）
+    LaunchedEffect(pageTrackingContext) {
+        viewModel.trackPageView(pageTrackingContext)
+    }
+
+    // 监听会话列表更新，检查是否有新消息自动取消隐藏
+    LaunchedEffect(uiState.conversations) {
+        viewModel.checkAndUnhideConversations()
     }
 
     Box(modifier = modifier) {
@@ -76,11 +84,10 @@ fun MessagesPage(
             contentDescription = null
         )
         Content(
-            conversations = conversations,
+            uiState = uiState,
+            viewModel = viewModel,
             onClickConversationItem = onClickConversationItem,
-            isLoadingConversations = isLoadingConversations,
-            isRefreshingConversations = isRefreshingConversations,
-            onLoadMoreConversations = onLoadMoreConversations,
+            onLoadMore = { viewModel.loadMoreConversations() },
         )
     }
 }
@@ -88,11 +95,10 @@ fun MessagesPage(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Content(
-    conversations: List<ConversationItem>,
+    uiState: MessagesUiState,
+    viewModel: MessagesViewModel,
     onClickConversationItem: (ConversationItem) -> Unit,
-    isLoadingConversations: Boolean = false,
-    isRefreshingConversations: Boolean = false,
-    onLoadMoreConversations: (() -> Unit)? = null,
+    onLoadMore: () -> Unit,
 ) {
     Scaffold(
         modifier = Modifier
@@ -117,15 +123,16 @@ private fun Content(
             )
         },
     ) { innerPadding ->
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
             MessageTabContent(
-                conversations = conversations,
+                uiState = uiState,
+                viewModel = viewModel,
                 onClickConversationItem = onClickConversationItem,
-                isLoading = isLoadingConversations,
-                isRefreshing = isRefreshingConversations,
-                onLoadMore = onLoadMoreConversations,
+                onLoadMore = onLoadMore,
             )
         }
     }
@@ -134,11 +141,10 @@ private fun Content(
 /** 消息Tab内容 */
 @Composable
 private fun MessageTabContent(
-    conversations: List<ConversationItem>,
+    uiState: MessagesUiState,
+    viewModel: MessagesViewModel,
     onClickConversationItem: (ConversationItem) -> Unit,
-    isLoading: Boolean = false,
-    isRefreshing: Boolean = false,
-    onLoadMore: (() -> Unit)? = null,
+    onLoadMore: () -> Unit,
 ) {
     val listState = rememberLazyListState()
 
@@ -150,21 +156,25 @@ private fun MessageTabContent(
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
             // 当滚动到倒数第3项时触发加载更多
-            totalItems > 0 && lastVisibleItem >= totalItems - 3 && !isLoading
+            totalItems > 0 && lastVisibleItem >= totalItems - 3 && !uiState.isLoading && uiState.hasMore
         }
     }
 
     // 监听滚动状态，触发加载更多
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore) {
-            onLoadMore?.invoke()
+            onLoadMore()
         }
     }
+
+    // 菜单状态（移到 LazyColumn 外部）
+    var showMenuForConversationId by remember { mutableStateOf<String?>(null) }
+    var menuItemIndex by remember { mutableStateOf(-1) }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(state = listState, modifier = Modifier.matchParentSize()) {
             // 刷新指示器
-            if (isRefreshing) {
+            if (uiState.isRefreshing) {
                 item {
                     Box(
                         modifier = Modifier
@@ -181,27 +191,66 @@ private fun MessageTabContent(
             }
 
             // 会话列表
-            if (conversations.isNotEmpty()) {
+            if (uiState.conversations.isNotEmpty()) {
                 runCatching {
-                        itemsIndexed(
-                            items = conversations,
-                            key = { index, conversion -> "${conversion.agentId}_$index" },
-                        ) { _, conversion ->
-                            AuthClickable(onClick = { onClickConversationItem(conversion) }) {
-                                authModifier ->
-                                ChatHistoryItem(
-                                    modifier = authModifier.fillMaxWidth(),
-                                    conversation = conversion,
+                    itemsIndexed(
+                        items = uiState.conversations,
+                        key = { index, conversion -> "${conversion.agentId}_$index" },
+                    ) { index, conversion ->
+                        val context = LocalContext.current
+                        var lastClickTime by remember { mutableStateOf(0L) }
+
+                        // 使用 combinedClickable 同时处理点击和长按
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .combinedClickable(
+                                    onClick = {
+                                        // 正常点击：如果菜单未显示，则进入聊天
+                                        if (showMenuForConversationId != conversion.agentId) {
+                                            val currentTime = System.currentTimeMillis()
+                                            if (AntiClick.isValidClick(lastClickTime)) {
+                                                lastClickTime = currentTime
+                                                // 检查是否已登录
+                                                if (IntySetting.isLogin() && IntySetting.getCurToken()
+                                                        .isNotEmpty()
+                                                ) {
+                                                    onClickConversationItem(conversion)
+                                                } else {
+                                                    // 未登录时跳转到登录页面
+                                                    context.startActivity(
+                                                        Intent(
+                                                            context,
+                                                            LoginActivity::class.java
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            // 如果菜单显示，点击则关闭菜单
+                                            showMenuForConversationId = null
+                                        }
+                                    },
+                                    onLongClick = {
+                                        // 长按：显示菜单，记录 item 索引用于定位
+                                        showMenuForConversationId = conversion.agentId
+                                        menuItemIndex = index
+                                    }
                                 )
-                            }
+                        ) {
+                            ChatHistoryItem(
+                                modifier = Modifier.fillMaxWidth(),
+                                conversation = conversion,
+                            )
                         }
-                        item { Spacer(Modifier.height(60.dp)) }
                     }
+                    item { Spacer(Modifier.height(60.dp)) }
+                }
                     .onFailure { it.printStackTrace() }
             }
 
             // 加载更多指示器
-            if (isLoading) {
+            if (uiState.isLoading) {
                 item {
                     Box(
                         modifier = Modifier
@@ -218,7 +267,61 @@ private fun MessageTabContent(
             }
         }
 
-        if (conversations.isEmpty() && !isLoading && !isRefreshing) {
+        // 显示菜单（在 LazyColumn 外部）
+        if (showMenuForConversationId != null) {
+            val conversation =
+                uiState.conversations.find { it.agentId == showMenuForConversationId }
+            conversation?.let { conv ->
+                // 遮罩层，点击外部关闭菜单（全屏）
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Transparent)
+                        .clickable { showMenuForConversationId = null }
+                        .zIndex(999f)
+                )
+
+                // 菜单内容（显示在 item 位置附近）
+                // 计算菜单位置：基于 item 索引估算位置
+                val estimatedItemHeight = 88.dp
+                val menuY = (estimatedItemHeight * menuItemIndex) + estimatedItemHeight / 2
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(1000f),
+                    contentAlignment = Alignment.TopStart,
+                ) {
+                    ConversationItemMenu(
+                        conversation = conv,
+                        isPinned = conv.isPinned,
+                        isHidden = conv.isHidden,
+                        onPinClick = {
+                            if (conv.isPinned) {
+                                viewModel.unpinConversation(conv.agentId)
+                            } else {
+                                viewModel.pinConversation(conv.agentId)
+                            }
+                            showMenuForConversationId = null
+                        },
+                        onHideClick = {
+                            if (conv.isHidden) {
+                                viewModel.unhideConversation(conv.agentId)
+                            } else {
+                                viewModel.hideConversation(conv.agentId)
+                            }
+                            showMenuForConversationId = null
+                        },
+                        onDismiss = { showMenuForConversationId = null },
+                        modifier = Modifier
+                            .offset(x = 16.dp, y = menuY)
+                            .width(140.dp)
+                    )
+                }
+            }
+        }
+
+        if (uiState.conversations.isEmpty() && !uiState.isLoading && !uiState.isRefreshing) {
             EmptyDataState(
                 subtitle = stringResource(R.string.empty_conversations),
                 modifier = Modifier.fillMaxSize(),
@@ -262,6 +365,15 @@ private fun ChatHistoryItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                // Pin 状态图标
+                if (conversation.isPinned) {
+                    Spacer(Modifier.width(6.dp))
+                    Image(
+                        painter = painterResource(R.drawable.ic_pin),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
                 if (conversation.isDeleted) {
                     Spacer(Modifier.width(4.dp))
                     Text(text = "(deleted)", fontSize = 15.sp, color = Color(0x8CFFFFFF))

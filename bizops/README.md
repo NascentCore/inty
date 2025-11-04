@@ -13,10 +13,18 @@
 
 ## Firebase 数据点位信息
 
-1. message_send_success是发送消息并且服务器正确返回的事件。（不区分是否触发次数限制，vip限制等）
-1. chat_session_start在app端和后端都有打点。app端的用意是开始渲染当前聊天界面，但目前看上报时机会冗余，不够精准。
-1. free_limit_reached这个是免费用发送消息后，触发了接口返回次数限制的时候上报。1. 另有app_start（启动App时）
-1. chat_session_end退出聊天界面（时机可能不够精准）
-1. message_sent 是点击发送后，真正触发接口发送时的打点
-1. message_send_failure 消息发送接口返回失败
-1. explore_page_view 是Explore页面的开始展示以上是线上版本的一些点位。
+### 文档索引
+
+- **[业务事件文档](./FIREBASE_BUSINESS_EVENTS.md)** - 所有业务相关事件的详细说明
+- **[事件完整文档](./FIREBASE_EVENTS_DOCUMENTATION.md)** - Analytics 和 Performance 事件的完整列表
+
+### 核心事件说明
+
+1. **message_send_success** - 发送消息并且服务器正确返回的事件（不区分是否触发次数限制，vip限制等）
+2. **chat_started** - 第一次发送消息时触发（替换了原来的 chat_session_start）
+3. **free_limit_reached** - 免费用户发送消息后，触发了接口返回次数限制的时候上报
+4. **chat_session_end** - 退出聊天界面（时机可能不够精准）
+5. **message_sent** - 点击发送后，真正触发接口发送时的打点
+6. **message_send_failure** - 消息发送接口返回失败
+7. **explore_page_view** - Explore 页面的开始展示
+8. **app_start** - 启动 App 时触发

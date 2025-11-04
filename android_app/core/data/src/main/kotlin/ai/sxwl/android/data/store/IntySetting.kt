@@ -31,25 +31,6 @@ object IntySetting {
         return allUserSetting.decodeString("cur_uid") ?: ""
     }
 
-    private fun geGuestUserID(): String {
-        return allUserSetting.decodeString("guest_uid") ?: ""
-    }
-
-    /** 判断当前用户是否是 游客 */
-    fun isGuestUser(): Boolean {
-        return getCurUserID() == geGuestUserID()
-    }
-
-    /** 判断是否有年龄，当前业务逻辑，>18岁的选择，age_group就不会null，<18岁，无法进行选择交互，也不会存储到服务端 */
-    private fun userAgeYoung(): Boolean {
-        val ageGroup = getUserProfileData("age_group")
-        return ageGroup == null || ageGroup.trim() == "<18"
-    }
-
-    /** 游客状态，且年龄未设置（<18岁也不让设置，所以设置必然>18岁），则不能使用聊天 */
-    fun needBlockInput(): Boolean {
-        return isGuestUser() && userAgeYoung()
-    }
 
     /** 切换用户 对应Guest登录Google账户 Google账户退出登录，到Guest账户 */
     fun changeUser(uid: String) {
@@ -73,12 +54,9 @@ object IntySetting {
     }
 
     /** 登录接口后，本地处理登录业务的数据逻辑 */
-    fun login(isGuest: Boolean, uid: String, token: String) {
+    fun login(uid: String, token: String) {
         changeUser(uid)
         setToken(token)
-        if (isGuest) {
-            allUserSetting.putString("guest_uid", uid)
-        }
         // 清除 inty_sdk 客户端缓存，确保使用新的 token
         // 因为 inty_sdk 的客户端会根据 apiKey（token）缓存，登录后 token 变化需要重新创建客户端
         ai.sxwl.android.data.http.IntyNetworkManager.clearClientCache()
@@ -186,11 +164,6 @@ object IntySetting {
     fun logout() {
         isLoggingOut = true
         setToken("")
-        if (isGuestUser()) {
-            isLoggingOut = false
-            return
-        }
-        changeUser(geGuestUserID())
         // 延迟重置标志，确保401处理器有时间识别
         Handler(Looper.getMainLooper()).postDelayed({ isLoggingOut = false }, 2000)
     }
@@ -332,14 +305,64 @@ object IntySetting {
         keys?.forEach { key: String ->
             if (
                 key.startsWith("chat_messages_") ||
-                    key.startsWith("chat_offset_") ||
-                    key.startsWith("chat_has_more_") ||
-                    key.startsWith("chat_initial_loaded_")
+                key.startsWith("chat_offset_") ||
+                key.startsWith("chat_has_more_") ||
+                key.startsWith("chat_initial_loaded_")
             ) {
                 curUserSetting.removeValueForKey(key)
             }
         }
         LogUtils.d("Cleared all chat data")
+    }
+
+    // endregion
+
+    // region 会话Pin/Hide相关设置
+
+    /** 设置会话置顶状态 */
+    fun setConversationPinned(agentId: String, pinned: Boolean) {
+        curUserSetting.putBoolean("conversation_pinned_$agentId", pinned)
+    }
+
+    /** 获取会话置顶状态 */
+    fun isConversationPinned(agentId: String): Boolean {
+        return curUserSetting.decodeBool("conversation_pinned_$agentId", false)
+    }
+
+    /** 设置会话隐藏状态 */
+    fun setConversationHidden(agentId: String, hidden: Boolean) {
+        curUserSetting.putBoolean("conversation_hidden_$agentId", hidden)
+        if (hidden) {
+            // 记录隐藏时的时间戳，用于判断是否有新消息
+            curUserSetting.putLong("conversation_hidden_time_$agentId", System.currentTimeMillis())
+        } else {
+            curUserSetting.removeValueForKey("conversation_hidden_time_$agentId")
+        }
+    }
+
+    /** 获取会话隐藏状态 */
+    fun isConversationHidden(agentId: String): Boolean {
+        return curUserSetting.decodeBool("conversation_hidden_$agentId", false)
+    }
+
+    /** 获取会话隐藏时间（用于判断是否应该恢复显示） */
+    fun getConversationHiddenTime(agentId: String): Long {
+        return curUserSetting.decodeLong("conversation_hidden_time_$agentId", 0L)
+    }
+
+    /** 检查会话是否有新消息（用于自动取消隐藏） */
+    fun hasNewMessageSinceHidden(agentId: String, lastMessageTime: String): Boolean {
+        val hiddenTime = getConversationHiddenTime(agentId)
+        if (hiddenTime == 0L) return false
+
+        // 将 lastMessageTime（ISO 8601 格式）转换为时间戳进行比较
+        val messageTimeStamp =
+            ai.sxwl.android.utils.TimeUtils.parseIsoTimeToTimestamp(lastMessageTime)
+        return if (messageTimeStamp != null) {
+            messageTimeStamp > hiddenTime
+        } else {
+            false
+        }
     }
 
     // endregion
