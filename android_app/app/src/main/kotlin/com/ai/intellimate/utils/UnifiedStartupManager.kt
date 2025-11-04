@@ -145,6 +145,15 @@ object UnifiedStartupManager {
                             LogUtils.e("UnifiedStartupManager - 异步加载explore agents失败: ${e.message}")
                         }
                     }
+
+                    // 异步加载用户自建agents（非关键数据），不阻塞启动
+                    startupScope.launch {
+                        try {
+                            syncUserCreatedAgents()
+                        } catch (e: Exception) {
+                            LogUtils.e("UnifiedStartupManager - 异步加载用户自建agents失败: ${e.message}")
+                        }
+                    }
                 } else {
                     LogUtils.w("UnifiedStartupManager - 用户未登录或token无效，跳过数据加载")
                     // 如果 chatAgents 接口不需要 token，可以尝试预加载（但可能失败）
@@ -204,6 +213,7 @@ object UnifiedStartupManager {
         _userProfile.value = userProfileDeferred.await()
         _recommendedAgents.value = agentsDeferred.await()
         _chatAgents.value = chatAgentsDeferred.await()
+        // 用户自建agents缓存由ProfileViewModel管理，不需要在这里预加载
 
         _startupState.value = StartupState.EssentialReady
         _startupProgress.value = 0.3f
@@ -383,6 +393,30 @@ object UnifiedStartupManager {
             }
         } catch (e: Exception) {
             LogUtils.e("UnifiedStartupManager - 聊天agents同步异常: ${e.message}")
+        }
+    }
+
+    /** 同步用户自建agents */
+    suspend fun syncUserCreatedAgents() {
+        try {
+            val agentApi: IAgentApi =
+                NetServiceMgr.getAgentApi() ?: throw IllegalStateException("IAgentApi not found")
+
+            val result = agentApi.getUserCreatedAgents(skip = 0, limit = 20)
+
+            when (result) {
+                is HttpResult.Success -> {
+                    val agents = result.data
+                    AgentCacheManager.cacheUserCreatedAgents(agents)
+                    LogUtils.i("UnifiedStartupManager - 用户自建agents同步成功: ${agents.size}个")
+                }
+
+                is HttpResult.Failure -> {
+                    LogUtils.w("UnifiedStartupManager - 用户自建agents同步失败: ${result.message}")
+                }
+            }
+        } catch (e: Exception) {
+            LogUtils.e("UnifiedStartupManager - 用户自建agents同步异常: ${e.message}")
         }
     }
 
