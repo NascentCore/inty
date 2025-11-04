@@ -1,5 +1,6 @@
 package ai.sxwl.android.data.store
 
+import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
@@ -57,7 +58,7 @@ object IntySetting {
     fun login(uid: String, token: String) {
         // 先清除客户端缓存，确保旧客户端不会残留
         // 这样可以避免token更新和客户端获取之间的竞态条件
-        ai.sxwl.android.data.http.IntyNetworkManager.clearClientCache()
+        IntyNetworkManager.clearClientCache()
 
         // 然后更新token
         changeUser(uid)
@@ -65,7 +66,7 @@ object IntySetting {
 
         // 再次清除缓存，确保使用新token创建客户端
         // 虽然getClient()会清除旧token的缓存，但这里双重保险
-        ai.sxwl.android.data.http.IntyNetworkManager.clearClientCache()
+        IntyNetworkManager.clearClientCache()
     }
 
     /** 用于业务标记消息已读的最后一条消息的判断 */
@@ -81,61 +82,26 @@ object IntySetting {
         curUserSetting.putString("conversation_last_$agentID", lastMessage)
     }
 
-    /** 记录是否显示keepTalking按钮 */
+    /** 记录是否显示keepTalking按钮（全局设置） */
     fun setShowKeepTalking(show: Boolean) {
         curUserSetting.putBoolean("show_keep_talking", show)
-        // 当全局设置改变时，重置所有角色的keep talking设置为与全局一致
-        resetAllAgentKeepTalkingToGlobal(show)
     }
 
     fun isShowKeepTalking(): Boolean {
         return curUserSetting.decodeBool("show_keep_talking", false)
     }
 
+    /** 自动播放语音消息（全局设置，默认开启） */
     fun setAutoPlayAudio(play: Boolean) {
         curUserSetting.putBoolean("auto_play_audio", play)
     }
 
     fun isAutoPlayAudio(): Boolean {
-        return curUserSetting.decodeBool("auto_play_audio", false)
-    }
-
-    // 角色专用的keep talking设置 (二状态: true/false)
-    fun setAgentKeepTalking(agentId: String, show: Boolean) {
-        curUserSetting.putBoolean("agent_keep_talking_$agentId", show)
-    }
-
-    fun getAgentKeepTalking(agentId: String): Boolean? {
-        return if (curUserSetting.containsKey("agent_keep_talking_$agentId")) {
-            curUserSetting.decodeBool("agent_keep_talking_$agentId", false)
-        } else {
-            null // 没有专门设置时返回null，使用全局设置
-        }
-    }
-
-    // 获取最终的keep talking显示状态（有专门设置时使用专门设置，否则使用全局设置）
-    fun shouldShowKeepTalking(agentId: String): Boolean {
-        val agentSetting = getAgentKeepTalking(agentId)
-        return agentSetting ?: isShowKeepTalking()
-    }
-
-    // 重置所有角色的keep talking设置为与全局设置一致
-    private fun resetAllAgentKeepTalkingToGlobal(globalSetting: Boolean) {
-        // 获取所有以"agent_keep_talking_"开头的key
-        val allKeys = curUserSetting.allKeys()
-        allKeys?.forEach { key: String ->
-            if (key.startsWith("agent_keep_talking_")) {
-                curUserSetting.putBoolean(key, globalSetting)
-            }
-        }
+        // 默认值为true（开启）
+        return curUserSetting.decodeBool("auto_play_audio", true)
     }
 
     // region Premium model相关设置
-
-    /** 判断是否使用全局 高级vip模型 */
-    fun isShowPremiumModel(): Boolean {
-        return curUserSetting.decodeBool("show_premium_model", false)
-    }
 
     // endregion
 

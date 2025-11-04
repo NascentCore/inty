@@ -89,25 +89,14 @@ private fun RecallButton(
     }
 }
 
-/** Keep Talking 按钮 */
+/** Keep Talking 按钮 - 已移至ChatInput右上角悬浮，此处保留用于向后兼容 */
 @Composable
 private fun KeepTalkingActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .size(24.dp)
-            .noRippleClickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_keep_talking),
-            contentDescription = "Keep Talking",
-            modifier = Modifier.size(24.dp),
-            tint = Color.Unspecified
-        )
-    }
+    // 此函数已废弃，keep talking按钮已移至ChatInput右上角
+    // 保留函数签名以保持向后兼容
 }
 
 /** Image Generate 按钮 */
@@ -177,20 +166,19 @@ internal fun MessageActionBar(
     }
 }
 
-/** 消息卡片右下角操作按钮（keep talking, image generate） */
+/** 消息卡片右下角操作按钮（image generate） */
 @Composable
 internal fun MessageCornerActions(
     message: MsgInfo,
-    onKeepTalking: () -> Unit,
     onImageGenerate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // keep talking和image generate不受like/dislike影响，始终显示
+    // image generate不受like/dislike影响，始终显示
+    // keep talking按钮已移至ChatInput右上角悬浮
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ImageGenerateButton(onClick = onImageGenerate)
-        KeepTalkingActionButton(onClick = onKeepTalking)
     }
 }
