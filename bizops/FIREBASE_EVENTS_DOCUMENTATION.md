@@ -19,7 +19,7 @@
 | `APP_OPEN` | IntelliMateApp.kt | 无 | 应用启动事件 | 🔴 100% |
 | `LOGIN` | LoginViewModel.kt, MainActivity.kt | `user_id`, `user_type`, `timestamp` | 用户登录（Firebase内置事件） | 🔴 100% |
 | `SIGN_UP` | FirebaseManager.Events | 预留 | 用户注册 | 🔴 100% |
-| `SCREEN_VIEW` | PageTrackingHelper.kt | 通过 `trackPageView()` 自动记录 | 页面访问（Firebase内置事件，自动记录） | 🔴 100% |
+| `SCREEN_VIEW` | PageTrackingHelper.kt | `page_name`, `page_class`, `timestamp`, `page_source` (可选), 其他自定义参数 | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录） | 🔴 100% |
 | `SELECT_CONTENT` | FirebaseManager.Events | 预留 | 内容选择 | 🔴 100% |
 | `SHARE` | FirebaseManager.Events | 预留 | 分享功能 | 🔴 100% |
 | `SEARCH` | FirebaseManager.Events | 预留 | 搜索功能 | 🔴 100% |
@@ -55,11 +55,18 @@
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
+| `SCREEN_VIEW` | PageTrackingHelper.kt | `page_name`, `page_class`, `timestamp`, `page_source` (可选), 其他自定义参数 | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录） | 🔴 100% |
 | `page_leave` | PageTrackingHelper.kt | `page_name`, `page_class`, `time_spent`, `visible_time_spent`, `lifecycle_time_spent`, `timestamp` | 页面离开，记录停留时长 | 🔴 100% |
 | `page_visible` | PageTrackingHelper.kt | `page_name`, `page_class`, `timestamp` | 页面变为可见 | ⚪ 禁用 |
 | `page_hidden` | PageTrackingHelper.kt | `page_name`, `page_class`, `visible_time_spent`, `timestamp` | 页面变为不可见 | ⚪ 禁用 |
 | `page_lifecycle` | PageTrackingHelper.kt | `page_name`, `page_class`, `lifecycle_event`, `lifecycle_time_spent`, `timestamp` | 页面生命周期事件 | ⚪ 禁用 |
 | `explore_page_view` | ExploreViewModel.kt | `page_type` (recommendations), `is_initial_load` (true/false) | 探索页面访问 | 🔴 100% |
+
+**页面来源参数说明：**
+- `page_source`：页面来源标识，用于统计用户从哪个入口进入页面
+  - **VipCenterActivity**：`home_expired_dialog`（首页过期VIP对话框）、`chat_page`（聊天页面）、`chat_more_panel`（聊天更多面板）、`profile_upgrade`（个人中心升级按钮）、`settings_subscription`（设置页面订阅管理）、`settings_premium_dialog`（设置页面高级模型对话框）
+  - **ChatActivity**：`messages_tab`（消息列表Tab）、`explore_tab`（探索Tab）、`profile_tab`（个人中心Tab）
+  - **ChatPage**：`chat_activity`（在 ChatActivity 中）、`main_activity_home_tab`（在 MainActivity 的 HorizontalPager 中）
 
 ### 1.6 Explore 数据加载事件
 
@@ -235,6 +242,8 @@
 - `ai_response_time`：AI响应时间（API调用时间，从发起网络请求到收到响应）
 - `end_to_end_time`：端到端时间（从用户点击发送按钮到收到响应的完整时间，包含UI处理、API调用等全部时间），用于衡量真实的用户体验
 - `timestamp`：事件时间戳，用于时序分析
+- `page_name`、`page_class`：页面名称和类名，用于页面追踪
+- `page_source`：页面来源标识，用于统计用户从哪个入口进入页面（详见页面追踪事件说明）
 - `page`、`page_size`：分页信息（Explore接口的分页参数）
 - `agents_count`：本次接口返回的agents数量（单次请求的数量）
 - `current_ui_agents_count`：当前UI中所有已加载的agents总数（累计数量，用于统计界面总agent数）

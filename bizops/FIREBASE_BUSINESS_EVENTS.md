@@ -33,8 +33,15 @@
 ### 页面访问
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
+| `SCREEN_VIEW` | PageTrackingHelper.kt | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，包含 `page_source` 参数） |
 | `page_leave` | PageTrackingHelper.kt | 页面离开（记录停留时长） |
 | `explore_page_view` | ExploreViewModel.kt | 探索页面访问 |
+
+**页面来源参数说明：**
+- `page_source`：页面来源标识，用于统计用户从哪个入口进入页面
+  - **VipCenterActivity**：`home_expired_dialog`（首页过期VIP对话框）、`chat_page`（聊天页面）、`chat_more_panel`（聊天更多面板）、`profile_upgrade`（个人中心升级按钮）、`settings_subscription`（设置页面订阅管理）、`settings_premium_dialog`（设置页面高级模型对话框）
+  - **ChatActivity**：`messages_tab`（消息列表Tab）、`explore_tab`（探索Tab）、`profile_tab`（个人中心Tab）
+  - **ChatPage**：`chat_activity`（在 ChatActivity 中）、`main_activity_home_tab`（在 MainActivity 的 HorizontalPager 中）
 
 ### Explore 数据加载
 | 事件名称 | 使用位置 | 业务含义 |
@@ -110,6 +117,8 @@
 - `ai_response_time`：AI响应时间（API调用时间，从发起网络请求到收到响应）
 - `end_to_end_time`：端到端时间（从用户点击发送按钮到收到响应，包含UI处理、API调用等全部时间）
 - `timestamp`：事件时间戳
+- `page_name`、`page_class`：页面名称和类名，用于页面追踪
+- `page_source`：页面来源标识，用于统计用户从哪个入口进入页面（详见页面访问事件说明）
 
 ### Explore 参数
 - `page`、`page_size`：分页信息（当前页码和每页大小）

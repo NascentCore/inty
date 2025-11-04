@@ -27,5 +27,8 @@
 5. **message_send_failure** - 消息发送接口返回失败
 6. **explore_page_view** - Explore 页面的开始展示
 7. **APP_OPEN** - 启动 App 时触发（Firebase内置事件）
+8. **SCREEN_VIEW** - 页面访问（Firebase内置事件，通过 `PageTrackingHelper.trackPageView()` 自动记录，包含 `page_source` 参数用于统计页面来源）
 
-**注意**：`chat_session_end` 事件已删除。页面离开场景通过 `page_leave` 事件自动记录（包含停留时长等信息），无需额外的事件统计。
+**注意**：
+- `chat_session_end` 事件已删除。页面离开场景通过 `page_leave` 事件自动记录（包含停留时长等信息），无需额外的事件统计。
+- `SCREEN_VIEW` 事件包含 `page_source` 参数，用于统计用户从哪个入口进入页面（如 VipCenterActivity、ChatActivity 等），详见 [FIREBASE_BUSINESS_EVENTS.md](./FIREBASE_BUSINESS_EVENTS.md) 和 [FIREBASE_EVENTS_DOCUMENTATION.md](./FIREBASE_EVENTS_DOCUMENTATION.md)。

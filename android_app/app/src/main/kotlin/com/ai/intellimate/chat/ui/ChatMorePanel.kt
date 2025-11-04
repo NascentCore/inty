@@ -175,7 +175,7 @@ fun ChatMorePanel(
         // 检查是否已登录
         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
             // 去会员中心
-            VipCenterActivity.launch(context)
+            VipCenterActivity.launch(context, VipCenterActivity.CHAT_MORE_PANEL)
         } else {
             // 如果未登录，要求先登录
             LoginActivity.launch(context)

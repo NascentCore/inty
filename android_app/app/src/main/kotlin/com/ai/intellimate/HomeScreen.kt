@@ -188,7 +188,7 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
                             BillingRepository.launchBillingFlow(context, googleProductId)
                     } else {
                         // 跳转到订阅中心
-                        VipCenterActivity.launch(context)
+                        VipCenterActivity.launch(context, VipCenterActivity.HOME_EXPIRED_DIALOG)
                     }
                 } else {
                     // 如果未登录，要求先登录
@@ -304,7 +304,11 @@ private fun ConversationsTabContent() {
         viewModel = messagesViewModel,
         onClickConversationItem = { conversation ->
             messagesViewModel.setConversationReaded(conversation)
-            ChatActivity.launch(context, conversation.convertToAgentInfo())
+            ChatActivity.launch(
+                context,
+                conversation.convertToAgentInfo(),
+                pageSource = ChatActivity.MESSAGES_TAB
+            )
         },
         pageTrackingContext = "MainActivity",
     )
@@ -325,7 +329,13 @@ private fun ExploreTabContent(innerPadding: PaddingValues) {
     ExplorePage(
         modifier = Modifier,
         innerPadding = innerPadding,
-        onClickAgent = { agent -> ChatActivity.launch(context, agent) },
+        onClickAgent = { agent ->
+            ChatActivity.launch(
+                context,
+                agent,
+                pageSource = ChatActivity.EXPLORE_TAB
+            )
+        },
         viewModel = exploreViewModel,
     )
 }
@@ -395,7 +405,13 @@ private fun ProfileTabContent(
         userProfile = safeUserProfile,
         agents = uiState.userCreatedAgents,
         isLoading = uiState.isLoading,
-        onClickAgent = { agent -> ChatActivity.launch(context, agent) },
+        onClickAgent = { agent ->
+            ChatActivity.launch(
+                context,
+                agent,
+                pageSource = ChatActivity.PROFILE_TAB
+            )
+        },
         onEditAgent = { agent ->
             // 使用 CreateRoleActivity 提供的方法获取 Intent，并监听返回结果
             val intent = CreateRoleActivity.getIntent(context, agent)

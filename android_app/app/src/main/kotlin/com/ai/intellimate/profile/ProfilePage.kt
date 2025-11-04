@@ -519,7 +519,12 @@ private fun ProfileHeader(
                 status = vipStatus.subscriptionStatus,
                 purchaseTime = TimeUtils.formatTimestampToString(vipStatus.purchaseTime),
                 expireTime = TimeUtils.formatTimestampToString(vipStatus.expiryTime),
-                onClick = { VipCenterActivity.launch(context) },
+                onClick = {
+                    VipCenterActivity.launch(
+                        context,
+                        VipCenterActivity.PROFILE_UPGRADE
+                    )
+                },
             )
         }
 
