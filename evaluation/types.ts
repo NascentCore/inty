@@ -316,3 +316,127 @@ export interface ImageGenerationConfig {
   prompt_template: string;
   default_history_count: number;
 }
+
+// 用户数据分析相关类型
+export interface DailyNewUsers {
+  date: string;
+  auth_type: "GUEST" | "GOOGLE";
+  count: number;
+}
+
+export interface UserChatActivityItem {
+  user_id: string;
+  auth_type: string;
+  created_at: string | null;
+  nickname: string | null;
+  email: string | null;
+  chat_id: string | null;
+  agent_id: string | null;
+  agent_name: string | null;
+}
+
+export interface UserChatActivityResponse {
+  user_id: string;
+  auth_type: string;
+  created_at: string;
+  nickname: string | null;
+  email: string | null;
+  session_count: number;
+  agent_names: string[];
+  total_rounds: number;
+}
+
+export interface ConversationRoundsResponse {
+  chat_id: string;
+  message_count: number;
+  message_count_excluding_opening: number;
+}
+
+export interface UserRoundsDistributionItem {
+  user_id: string;
+  total_rounds: number;
+}
+
+export interface PopularAgentsResponse {
+  agent_name: string;
+  user_count: number;
+  total_rounds: number;
+  avg_rounds_per_user: number;
+  pct_sessions_ge_5: number;
+  pct_sessions_ge_10: number;
+}
+
+export interface UsersHittingLimitResponse {
+  date: string;
+  user_id: string;
+  auth_type: string;
+  nickname: string | null;
+  email: string | null;
+  chat_count_24h: number;
+  limit_value: number;
+}
+
+export interface AgentAnalyticsResponse {
+  agent_id: string;
+  agent_name: string;
+  chat_user_count: number;
+  total_sessions: number;
+  total_rounds: number;
+  avg_rounds_per_user: number;
+  sessions_ge_5_rounds: number;
+  sessions_ge_10_rounds: number;
+  ge_5_rounds_ratio: number;
+  ge_10_rounds_ratio: number;
+}
+
+export interface UserSessionsDetailResponse {
+  user_id: string;
+  auth_type: string;
+  user_created_at: string | null;
+  nickname: string | null;
+  email: string | null;
+  chat_id: string;
+  agent_name: string;
+  message_count: number;
+  voice_message_count: number;
+}
+
+export interface ChatMessageResponse {
+  chat_id: string;
+  message_type: string;
+  content: string | null;
+  created_at: string | null;
+  audio_url: string | null;
+}
+
+export interface ConversationsDetailSession {
+  chat_id: string;
+  agent_name: string;
+  message_count: number;
+  voice_message_count: number;
+  messages: ChatMessageResponse[];
+}
+
+export interface ConversationsDetailResponse {
+  user_id: string;
+  auth_type: string;
+  user_created_at: string | null;
+  nickname: string | null;
+  email: string | null;
+  sessions: ConversationsDetailSession[];
+}
+
+export interface UserAnalyticsStatsResponse {
+  // 统计类型
+  total_new_users: number;
+  total_chat_initiators: number;
+  total_user_messages: number;
+  total_active_sessions: number;
+  total_voice_requests: number;
+  // 用户维度（仅统计发送聊天的用户）
+  avg_messages_per_user: number;
+  avg_sessions_per_user: number;
+  avg_voice_requests_per_user: number;
+  // 会话维度（包含用户消息的会话）
+  avg_rounds_per_session: number;
+}

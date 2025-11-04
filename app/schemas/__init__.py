@@ -1,3 +1,4 @@
+from app.schemas import user_analytics
 from app.schemas.agent import Agent as Agent
 from app.schemas.agent import AgentCreate as AgentCreate
 from app.schemas.agent import AgentInDB as AgentInDB
