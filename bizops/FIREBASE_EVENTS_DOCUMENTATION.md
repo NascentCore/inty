@@ -19,7 +19,7 @@
 | `APP_OPEN` | IntelliMateApp.kt | 无 | 应用启动事件 | 🔴 100% |
 | `LOGIN` | LoginViewModel.kt, MainActivity.kt | `user_id`, `user_type`, `timestamp` | 用户登录（Firebase内置事件） | 🔴 100% |
 | `SIGN_UP` | FirebaseManager.Events | 预留 | 用户注册 | 🔴 100% |
-| `SCREEN_VIEW` | PageTrackingHelper.kt | 通过 `trackPageView()` 自动记录 | 页面访问（Firebase内置事件，自动记录） | 🔴 100% |
+| `SCREEN_VIEW` | PageTrackingHelper.kt | `page_name`, `page_class`, `timestamp`, `page_source` (可选), 其他自定义参数 | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录） | 🔴 100% |
 | `SELECT_CONTENT` | FirebaseManager.Events | 预留 | 内容选择 | 🔴 100% |
 | `SHARE` | FirebaseManager.Events | 预留 | 分享功能 | 🔴 100% |
 | `SEARCH` | FirebaseManager.Events | 预留 | 搜索功能 | 🔴 100% |
