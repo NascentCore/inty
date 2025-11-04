@@ -26,3 +26,34 @@ class SyncChatDataUseCase(private val chatRepository: ChatRepository) {
         chatRepository.syncLatestMessages(agentId, pageSize)
     }
 }
+
+/** 更新消息反馈用例 封装消息反馈的业务逻辑 */
+class UpdateMessageFeedbackUseCase(private val chatRepository: ChatRepository) {
+
+    operator fun invoke(
+        agentId: String,
+        messageId: String,
+        feedback: ai.sxwl.android.data.api.model.MsgInfo.UserFeedback?
+    ) {
+        chatRepository.updateMessageFeedback(agentId, messageId, feedback)
+    }
+}
+
+/** 重新生成消息用例 封装重新生成消息的业务逻辑 */
+class RecallMessageUseCase(private val chatRepository: ChatRepository) {
+
+    suspend operator fun invoke(agentId: String) {
+        chatRepository.recallLastAssistantMessage(agentId)
+    }
+}
+
+/** 生成图片消息用例 封装生成图片消息的业务逻辑 */
+class GenerateImageUseCase(private val chatRepository: ChatRepository) {
+
+    suspend operator fun invoke(
+        agentId: String,
+        messageId: String,
+    ): com.architecture.httplib.core.HttpResult<ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult> {
+        return chatRepository.generateImageForMessage(agentId, messageId)
+    }
+}

@@ -42,4 +42,46 @@ class ChatRemoteDataSource {
             HttpResult.Failure(e.message ?: "Network error", -1)
         }
     }
+
+    suspend fun generateImage(
+        agentId: String,
+        messageId: String,
+    ): HttpResult<ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult> {
+        return try {
+            LogUtils.i(
+                "ChatRemoteDataSource.generateImage: agentId=$agentId, messageId=$messageId"
+            )
+            val result =
+                ai.sxwl.android.data.http.services.ChatService.generateImage(agentId, messageId)
+            when (result) {
+                is ai.sxwl.android.data.http.ApiResult.Success -> {
+                    HttpResult.Success(result.data)
+                }
+
+                is ai.sxwl.android.data.http.ApiResult.Error -> {
+                    // 检查是否是业务错误（限制异常）
+                    val exception = result.exception
+                    if (exception is ai.sxwl.android.data.http.services.ChatImageGenerationLimitException) {
+                        // 返回业务错误，包含错误码信息
+                        HttpResult.Failure(
+                            exception.error.message ?: "Image generation limit reached",
+                            exception.error.code.toInt()
+                        )
+                    } else {
+                        HttpResult.Failure(result.message ?: "Unknown error", result.code)
+                    }
+                }
+            }
+        } catch (e: ai.sxwl.android.data.http.services.ChatImageGenerationLimitException) {
+            // 捕获业务错误，返回包含错误码的失败结果
+            LogUtils.e("ChatRemoteDataSource.generateImage limit exception: ${e.error.message}")
+            HttpResult.Failure(
+                e.error.message ?: "Image generation limit reached",
+                e.error.code.toInt()
+            )
+        } catch (e: Exception) {
+            LogUtils.e("ChatRemoteDataSource.generateImage exception: ${e.message}")
+            HttpResult.Failure(e.message ?: "Network error", -1)
+        }
+    }
 }

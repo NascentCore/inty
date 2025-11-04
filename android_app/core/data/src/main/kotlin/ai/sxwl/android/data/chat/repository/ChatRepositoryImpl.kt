@@ -254,6 +254,109 @@ class ChatRepositoryImpl(
         localDataSource.updateMessageAudioUrl(agentId, messageId, audioUrl)
     }
 
+    override fun updateMessageFeedback(
+        agentId: String,
+        messageId: String,
+        feedback: MsgInfo.UserFeedback?
+    ) {
+        LogUtils.d(
+            "ChatRepositoryImpl.updateMessageFeedback called for $agentId, messageId: $messageId, feedback: $feedback"
+        )
+        localDataSource.updateMessageFeedback(agentId, messageId, feedback)
+        // TODO: 后续对接接口上报反馈
+    }
+
+    override suspend fun removeMessage(agentId: String, messageId: String) {
+        LogUtils.d("ChatRepositoryImpl.removeMessage called for $agentId, messageId: $messageId")
+        localDataSource.removeMessage(agentId, messageId)
+    }
+
+    override suspend fun addMessage(agentId: String, message: MsgInfo) {
+        LogUtils.d("ChatRepositoryImpl.addMessage called for $agentId")
+        localDataSource.addMessage(agentId, message)
+    }
+
+    override suspend fun recallLastAssistantMessage(agentId: String) {
+        LogUtils.d("ChatRepositoryImpl.recallLastAssistantMessage called for $agentId")
+        val messages = localDataSource.getMessagesFlow(agentId).value
+
+        // 找到最后一条AI消息（排除loading）
+        val lastAssistantMessage =
+            messages.lastOrNull { it.role == ROLE_ASSISTANT && it.content != LOADING_PLACEHOLDER_CONTENT }
+
+        if (lastAssistantMessage == null) {
+            LogUtils.w("ChatRepositoryImpl.recallLastAssistantMessage: No assistant message to recall")
+            return
+        }
+
+        // 删除最后一条AI消息
+        localDataSource.removeMessage(agentId, lastAssistantMessage.localMsgId)
+
+        // 添加 loading 消息
+        val loadingMsg = MsgInfo(
+            content = LOADING_PLACEHOLDER_CONTENT,
+            role = ROLE_ASSISTANT,
+            meta_data = MsgInfo.MsgMetaData(agentId = agentId),
+            localMsgId = "loading_${System.nanoTime()}",
+        )
+        localDataSource.addMessage(agentId, loadingMsg)
+
+        // 找到最后一条用户消息，重新发送
+        val lastUserMessage = messages.lastOrNull { it.role == "user" }
+        if (lastUserMessage != null) {
+            // 重新发送消息
+            sendMessage(agentId, lastUserMessage.content)
+        }
+    }
+
+    override suspend fun generateImageForMessage(
+        agentId: String,
+        messageId: String,
+    ): com.architecture.httplib.core.HttpResult<ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult> {
+        LogUtils.d("ChatRepositoryImpl.generateImageForMessage called for $agentId, messageId: $messageId")
+
+        // 添加 loading 消息
+        val loadingMsg = MsgInfo(
+            content = LOADING_PLACEHOLDER_CONTENT,
+            role = ROLE_ASSISTANT,
+            meta_data = MsgInfo.MsgMetaData(agentId = agentId),
+            localMsgId = "loading_image_${System.nanoTime()}",
+        )
+        localDataSource.addMessage(agentId, loadingMsg)
+
+        val result = remoteDataSource.generateImage(agentId, messageId)
+
+        // 移除 loading 消息
+        localDataSource.removeMessage(agentId, loadingMsg.localMsgId)
+
+        when (result) {
+            is HttpResult.Success -> {
+                // 添加图片消息
+                val imageMsg = MsgInfo(
+                    content = "",
+                    role = ROLE_ASSISTANT,
+                    meta_data = MsgInfo.MsgMetaData(
+                        agentId = agentId,
+                        generatedImage = MsgInfo.MsgMetaData.GeneratedImage(
+                            imageUrl = result.data.imageUrl,
+                            width = result.data.width,
+                            height = result.data.height,
+                        ),
+                    ),
+                    localMsgId = "image_${System.nanoTime()}",
+                )
+                localDataSource.addMessage(agentId, imageMsg)
+                LogUtils.i("ChatRepositoryImpl.generateImageForMessage success: ${result.data.imageUrl}")
+            }
+
+            is HttpResult.Failure -> {
+                LogUtils.e("ChatRepositoryImpl.generateImageForMessage failure: ${result.message}")
+            }
+        }
+
+        return result
+    }
+
     override fun clearChatData(agentId: String) {
         LogUtils.d("ChatRepositoryImpl.clearChatData called for $agentId")
         localDataSource.clearChatData(agentId)

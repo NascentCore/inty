@@ -8,9 +8,12 @@ import ai.sxwl.android.data.cache.RecommendedAgentCacheProvider
 import ai.sxwl.android.data.chat.data.ChatLocalDataSource
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
+import ai.sxwl.android.data.chat.domain.GenerateImageUseCase
 import ai.sxwl.android.data.chat.domain.LoadChatHistoryUseCase
+import ai.sxwl.android.data.chat.domain.RecallMessageUseCase
 import ai.sxwl.android.data.chat.domain.SendMessageUseCase
 import ai.sxwl.android.data.chat.domain.SyncChatDataUseCase
+import ai.sxwl.android.data.chat.domain.UpdateMessageFeedbackUseCase
 import ai.sxwl.android.data.chat.repository.ChatRepositoryImpl
 import ai.sxwl.android.data.explore.domain.ExploreRepository
 import ai.sxwl.android.data.explore.domain.GetRecommendAgentsUseCase
@@ -48,6 +51,18 @@ object DataModule {
     val sendMessageUseCase: SendMessageUseCase by lazy { SendMessageUseCase(_chatRepository) }
 
     val syncChatDataUseCase: SyncChatDataUseCase by lazy { SyncChatDataUseCase(_chatRepository) }
+
+    val updateMessageFeedbackUseCase: UpdateMessageFeedbackUseCase by lazy {
+        UpdateMessageFeedbackUseCase(_chatRepository)
+    }
+
+    val recallMessageUseCase: RecallMessageUseCase by lazy {
+        RecallMessageUseCase(_chatRepository)
+    }
+
+    val generateImageUseCase: GenerateImageUseCase by lazy {
+        GenerateImageUseCase(_chatRepository)
+    }
 
     val getChatAgentsUseCase: GetChatAgentsUseCase by lazy {
         GetChatAgentsUseCase(_agentRepository)

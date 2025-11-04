@@ -96,6 +96,34 @@ class ChatLocalDataSource {
             }
     }
 
+    fun updateMessageFeedback(agentId: String, messageId: String, feedback: MsgInfo.UserFeedback?) {
+        val session = getSession(agentId)
+        session.messages.value =
+            session.messages.value.map { msg ->
+                if (msg.localMsgId == messageId) {
+                    msg.copy(userFeedback = feedback)
+                } else {
+                    msg
+                }
+            }
+    }
+
+    suspend fun removeMessage(agentId: String, messageId: String) {
+        val session = getSession(agentId)
+        session.lock.withLock {
+            session.messages.value = session.messages.value.filter { it.localMsgId != messageId }
+        }
+    }
+
+    suspend fun addMessage(agentId: String, message: MsgInfo) {
+        val session = getSession(agentId)
+        session.lock.withLock {
+            val combined = listOf(message) + session.messages.value
+            val unique = combined.distinctBy { keyFor(it) }
+            session.messages.value = unique
+        }
+    }
+
     fun clearChatData(agentId: String) {
         agentIdToSession.remove(agentId)
         IntySetting.clearChatData(agentId)

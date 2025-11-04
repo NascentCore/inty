@@ -39,6 +39,9 @@ class ChatViewModel : BaseVM() {
     private val sendMessageUseCase = DataModule.sendMessageUseCase
     private val loadChatHistoryUseCase = DataModule.loadChatHistoryUseCase
     private val syncChatDataUseCase = DataModule.syncChatDataUseCase
+    private val updateMessageFeedbackUseCase = DataModule.updateMessageFeedbackUseCase
+    private val recallMessageUseCase = DataModule.recallMessageUseCase
+    private val generateImageUseCase = DataModule.generateImageUseCase
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()
@@ -633,6 +636,67 @@ class ChatViewModel : BaseVM() {
                     _isWaitingForReply.value = false
                     LogUtils.e("No agent info available for keep talking")
                 }
+        }
+    }
+
+    /** Like 消息 - 通过 Repository 更新 */
+    fun likeMessage(localMsgId: String) {
+        val agentId = _agentInfo.value?.id ?: return
+        updateMessageFeedbackUseCase(agentId, localMsgId, MsgInfo.UserFeedback.LIKE)
+        LogUtils.i("Message liked: $localMsgId")
+    }
+
+    /** Dislike 消息 - 通过 Repository 更新 */
+    fun dislikeMessage(localMsgId: String) {
+        val agentId = _agentInfo.value?.id ?: return
+        updateMessageFeedbackUseCase(agentId, localMsgId, MsgInfo.UserFeedback.DISLIKE)
+        LogUtils.i("Message disliked: $localMsgId")
+    }
+
+    /** Recall 消息 - 重新生成最新消息 */
+    fun recallMessage() {
+        val agentId = _agentInfo.value?.id ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                recallMessageUseCase(agentId)
+            } catch (e: Exception) {
+                LogUtils.e("Recall message error: ${e.message}")
+                NetworkErrorHandler.showNetworkAwareError("Failed to recall message: ${e.message}")
+            }
+        }
+    }
+
+    /** 生成图片消息 */
+    fun generateImageForMessage(messageId: String) {
+        val agentId = _agentInfo.value?.id ?: return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = generateImageUseCase(agentId, messageId)
+                when (result) {
+                    is HttpResult.Success -> {
+                        LogUtils.i("Image generated successfully: ${result.data.imageUrl}")
+                    }
+
+                    is HttpResult.Failure -> {
+                        LogUtils.e("Image generation failed: code=${result.code}, message=${result.message}")
+
+                        // 检查是否是业务错误码（订阅限制）
+                        if (result.code == BusinessErrorCodes.IMAGE_GENERATION_LIMIT_REACHED_CODE ||
+                            result.code == BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                        ) {
+                            // 显示订阅弹窗（类似sendMsg的处理）
+                            showLimitDialog.emit(true)
+                        } else {
+                            // 其他错误显示网络错误提示
+                            NetworkErrorHandler.showNetworkAwareError(result.message)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                LogUtils.e("Image generation error: ${e.message}")
+                NetworkErrorHandler.showNetworkAwareError("Failed to generate image: ${e.message}")
+            }
         }
     }
 
