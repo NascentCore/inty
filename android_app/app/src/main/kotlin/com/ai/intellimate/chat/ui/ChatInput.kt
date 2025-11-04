@@ -106,6 +106,13 @@ fun ChatInput(
                 modifier = Modifier.weight(1f),
                 value = inputData.value,
                 singleLine = false,
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.chat_input_placeholder),
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.5f),
+                    )
+                },
                 onValueChange = { input -> chatViewModel.inputData.value = input },
                 keyboardOptions =
                     KeyboardOptions(
