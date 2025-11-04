@@ -104,10 +104,13 @@ class TestImageGenerationService:
         # Mock candidate
         mock_candidate = Mock()
         mock_candidate.content = mock_content
+        mock_candidate.finish_reason = None
+        mock_candidate.safety_ratings = []
 
         # Mock response
         mock_response = Mock()
         mock_response.candidates = [mock_candidate]
+        mock_response.prompt_feedback = None
 
         # Mock client - get_genai_client 返回一个配置好的客户端实例
         mock_client_instance = Mock()
