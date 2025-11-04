@@ -89,7 +89,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
 
         // Firebase Analytics - 记录探索页面访问
         FirebaseManager.logEvent(
-            "explore_page_view",
+            FirebaseManager.Events.EXPLORE_PAGE_VIEW,
             mapOf("page_type" to "recommendations", "is_initial_load" to true),
         )
 

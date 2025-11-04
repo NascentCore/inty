@@ -78,6 +78,8 @@ data class MsgInfo(
     val timestamp: String? = null, // 消息时间戳 2025-09-11T03:58:29.077875+00:00
     // 本地创建一个msgId，临时用于消息标记
     val localMsgId: String = "${System.nanoTime()}_${role}_${content.hashCode()}",
+    // 本地状态：用户反馈（like/dislike）- 不序列化
+    val userFeedback: UserFeedback? = null,
 ) {
 
     fun isOpening(): Boolean {
@@ -88,8 +90,41 @@ data class MsgInfo(
         return meta_data?.agentId
     }
 
+    fun hasGeneratedImage(): Boolean {
+        return meta_data?.generatedImage != null
+    }
+
+    fun getGeneratedImageUrl(): String? {
+        return meta_data?.generatedImage?.imageUrl
+    }
+
+    fun getGeneratedImageWidth(): Int? {
+        return meta_data?.generatedImage?.width
+    }
+
+    fun getGeneratedImageHeight(): Int? {
+        return meta_data?.generatedImage?.height
+    }
+
     @JsonClass(generateAdapter = true)
-    data class MsgMetaData(val agentId: String? = null, val isOpening: Boolean = false)
+    data class MsgMetaData(
+        val agentId: String? = null,
+        val isOpening: Boolean = false,
+        @Json(name = "generated_image") val generatedImage: GeneratedImage? = null,
+    ) {
+        @JsonClass(generateAdapter = true)
+        data class GeneratedImage(
+            @Json(name = "image_url") val imageUrl: String = "",
+            val width: Int = 0,
+            val height: Int = 0,
+        )
+    }
+
+    // 用户反馈状态（本地状态，不序列化）
+    enum class UserFeedback {
+        LIKE,
+        DISLIKE,
+    }
 }
 
 @JsonClass(generateAdapter = true)

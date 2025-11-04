@@ -56,7 +56,30 @@ object IntyNetworkManager {
         val currentBaseUrl = NetworkConfig.getBaseUrl()
         val cacheKey = "${currentApiKey}_$currentBaseUrl"
 
+        // 清除所有旧token的客户端缓存（避免旧token的客户端残留）
+        // 只保留当前token的客户端，确保使用最新token
+        clearOldTokenClients(currentApiKey, currentBaseUrl)
+
         return clientCache.getOrPut(cacheKey) { createClient(currentApiKey, currentBaseUrl) }
+    }
+
+    /**
+     * 清除旧token的客户端缓存
+     * 只保留当前token的客户端，确保使用最新token
+     */
+    private fun clearOldTokenClients(currentApiKey: String, currentBaseUrl: String) {
+        val currentCacheKey = "${currentApiKey}_$currentBaseUrl"
+        val entriesToRemove = clientCache.entries.filter { (key, _) ->
+            // 清除所有相同baseUrl但不同token的客户端
+            key != currentCacheKey && key.endsWith("_$currentBaseUrl")
+        }
+
+        if (entriesToRemove.isNotEmpty()) {
+            entriesToRemove.forEach { (key, _) ->
+                clientCache.remove(key)
+                LogUtils.d("IntyNetworkManager: Removed old token client cache: $key")
+            }
+        }
     }
 
     /** 创建新的客户端实例 使用新的配置系统 */

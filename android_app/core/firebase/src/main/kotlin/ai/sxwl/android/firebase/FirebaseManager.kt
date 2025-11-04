@@ -97,13 +97,12 @@ object FirebaseManager {
                     "app_error" to 1.0, // 应用错误
                     Events.MESSAGE_SEND_FAILURE to 1.0, // 消息发送失败
                     Events.MESSAGE_SEND_EXCEPTION to 1.0, // 消息发送异常
-                    "network_final_failure" to 1.0, // 网络请求最终失败
-                    "request_failure" to 1.0, // 请求失败
+                    "request_failure" to 1.0, // 请求失败（网络请求失败时触发）
                     "very_slow_request" to 1.0, // 极慢请求
 
                     // 🔴 页面追踪事件 - 100%采样
                     "page_leave" to 1.0, // 页面离开
-                    "explore_page_view" to 1.0, // 探索页面访问
+                    Events.EXPLORE_PAGE_VIEW to 1.0, // 探索页面访问
                     Events.MESSAGE_SEND_SUCCESS to 1.0, // 消息发送成功
 
                     // 🟡 性能相关事件 - 保持现有采样配置
@@ -123,10 +122,18 @@ object FirebaseManager {
                         if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     Events.IMAGE_LOAD_TIME to
                         if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
+                    Events.IMAGE_GENERATION_TIME to
+                            if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     Events.PAGE_LOAD_TIME to
                         if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     Events.DATABASE_OPERATION_TIME to
                         if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
+
+                    // 🔴 图片生成相关事件 - 100%采样
+                    Events.IMAGE_GENERATION_START to 1.0, // 图片生成开始
+                    Events.IMAGE_GENERATION_SUCCESS to 1.0, // 图片生成成功
+                    Events.IMAGE_GENERATION_FAILURE to 1.0, // 图片生成失败
+                    Events.IMAGE_GENERATION_LIMIT_REACHED to 1.0, // 图片生成限制达到
                 ),
             minIntervalMsPerEvent =
                 mapOf(
@@ -441,6 +448,7 @@ object FirebaseManager {
         const val TTS_GENERATION_TIME = "tts_generation_time"
         const val VOICE_PLAYBACK_TIME = "voice_playback_time"
         const val IMAGE_LOAD_TIME = "image_load_time"
+        const val IMAGE_GENERATION_TIME = "image_generation_time" // 图片生成耗时
         const val PAGE_LOAD_TIME = "page_load_time"
         const val DATABASE_OPERATION_TIME = "database_operation_time"
 
@@ -453,9 +461,14 @@ object FirebaseManager {
         const val AUDIO_PLAY_END = "audio_play_end"
         const val PULL_UP_INPUT = "pull_up_input"
         const val VOICE_PLAYBACK_START = "voice_playback_start"
-        const val IMAGE_GENERATION_START = "image_generation_start"
         const val SUBSCRIPTION_START = "subscription_start"
         const val FREE_LIMIT_REACHED = "free_limit_reached"
+
+        // 图片生成相关事件
+        const val IMAGE_GENERATION_START = "image_generation_start" // 图片生成开始
+        const val IMAGE_GENERATION_SUCCESS = "image_generation_success" // 图片生成成功
+        const val IMAGE_GENERATION_FAILURE = "image_generation_failure" // 图片生成失败
+        const val IMAGE_GENERATION_LIMIT_REACHED = "image_generation_limit_reached" // 图片生成限制达到
 
         // Billing价格相关事件
         const val SUBSCRIPTION_PRICE_FETCHED = "subscription_price_fetched" // Google Play获取到的价格
@@ -463,6 +476,7 @@ object FirebaseManager {
         const val BILLING_RELEASE = "billing_release" // 计费系统释放
 
         // Explore相关事件
+        const val EXPLORE_PAGE_VIEW = "explore_page_view" // 探索页面访问
         const val EXPLORE_AGENTS_FETCH_SUCCESS = "explore_agents_fetch_success" // Explore接口请求成功
         const val EXPLORE_AGENTS_FETCH_FAILURE = "explore_agents_fetch_failure" // Explore接口请求失败
         const val EXPLORE_AGENTS_FETCH_EXCEPTION = "explore_agents_fetch_exception" // Explore接口请求异常

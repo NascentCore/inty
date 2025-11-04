@@ -30,6 +30,14 @@
 | `message_send_exception` | ChatViewModel.kt | 消息发送异常（包含端到端时间） |
 | `free_limit_reached` | ChatViewModel.kt | 达到免费限制 |
 
+### 图片生成
+| 事件名称 | 使用位置 | 业务含义 |
+|---------|---------|---------|
+| `image_generation_start` | ChatViewModel.kt | 图片生成开始 |
+| `image_generation_success` | ChatViewModel.kt | 图片生成成功（包含图片信息和生成耗时） |
+| `image_generation_failure` | ChatViewModel.kt | 图片生成失败（包含错误信息和生成耗时） |
+| `image_generation_limit_reached` | ChatViewModel.kt | 图片生成限制达到（需要订阅） |
+
 ### 页面访问
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
@@ -69,8 +77,7 @@
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
 | `app_error` | PageTrackingHelper.kt, UnifiedOkHttpClient.kt | 应用错误 |
-| `network_final_failure` | UnifiedOkHttpClient.kt | 网络请求最终失败 |
-| `request_failure` | UnifiedOkHttpClient.kt | 请求失败 |
+| `request_failure` | UnifiedOkHttpClient.kt | 请求失败（网络请求失败时触发） |
 | `very_slow_request` | UnifiedOkHttpClient.kt | 极慢请求（>10秒） |
 
 ## 🟡 性能监控事件（适度采样）
@@ -103,7 +110,6 @@
 
 ### 业务预留事件
 - `profile_updated`、`settings_changed`
-- `image_generation_start`
 - `voice_playback_time`
 - `image_load_time`、`page_load_time`、`database_operation_time`
 - `network_retry`：配置中已定义，但代码中未使用
@@ -133,10 +139,16 @@
 - `google_play_price`、`google_play_currency_code`、`google_play_price_micros`：Google Play原始价格信息
 - `displayed_price`、`currency_code`、`price_micros`：UI显示的价格信息
 - `corrected_price`、`old_price`：价格变化对比
-- `discount_rate`、`original_price`：折扣和原价信息
-- `is_selected`、`selected_plan_index`、`total_plans_count`：选择状态和计划数量
-- `is_subscribed`：用户订阅状态
-- `price_changed`、`currency_changed`、`micros_changed`：价格变化标识
+
+### 图片生成参数
+- `agent_id`、`agent_name`：Agent信息
+- `message_id`：消息ID（要生成图片的消息）
+- `image_url`：生成的图片URL（成功时）
+- `image_width`、`image_height`：生成的图片尺寸（成功时）
+- `generation_time_ms`：图片生成耗时（毫秒）
+- `error_code`、`error_message`：错误码和错误消息（失败时）
+- `error_type`：异常类型（异常时）
+- `user_type`：用户类型（vip/free）
 
 ### 性能参数
 - `duration_ms`：持续时间

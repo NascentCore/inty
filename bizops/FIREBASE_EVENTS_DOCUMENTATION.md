@@ -51,7 +51,16 @@
 | `message_send_exception` | ChatViewModel.kt | `agent_id`, `agent_name`, `error_message`, `user_type`, `end_to_end_time` | 消息发送异常（包含端到端时间） | 🔴 100% |
 | `free_limit_reached` | ChatViewModel.kt | `agent_id`, `agent_name`, `user_type`, `timestamp` | 达到免费限制 | 🔴 100% |
 
-### 1.5 页面追踪事件
+### 1.5 图片生成事件
+
+| 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
+|---------|---------|------|---------|--------|
+| `image_generation_start` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `user_type`, `timestamp` | 图片生成开始 | 🔴 100% |
+| `image_generation_success` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `image_url`, `image_width`, `image_height`, `user_type`, `generation_time_ms`, `timestamp` | 图片生成成功（包含图片信息和生成耗时） | 🔴 100% |
+| `image_generation_failure` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `error_code`, `error_message`, `error_type`（异常时）, `user_type`, `generation_time_ms`, `timestamp` | 图片生成失败（包含错误信息和生成耗时） | 🔴 100% |
+| `image_generation_limit_reached` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `error_code`, `error_message`, `user_type`, `generation_time_ms`, `timestamp` | 图片生成限制达到（需要订阅） | 🔴 100% |
+
+### 1.6 页面追踪事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
@@ -68,7 +77,7 @@
   - **ChatActivity**：`messages_tab`（消息列表Tab）、`explore_tab`（探索Tab）、`profile_tab`（个人中心Tab）
   - **ChatPage**：`chat_activity`（在 ChatActivity 中）、`main_activity_home_tab`（在 MainActivity 的 HorizontalPager 中）
 
-### 1.6 Explore 数据加载事件
+### 1.7 Explore 数据加载事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
@@ -76,7 +85,7 @@
 | `explore_agents_fetch_failure` | ExploreViewModel.kt | `page`, `page_size`, `response_time`, `error_message`, `current_ui_agents_count`, `sort_seed`, `user_type`, `timestamp` | Explore接口请求失败 | 🔴 100% |
 | `explore_agents_fetch_exception` | ExploreViewModel.kt | `page`, `page_size`, `response_time`, `exception_type`, `exception_message`, `current_ui_agents_count`, `sort_seed`, `user_type`, `timestamp` | Explore接口请求异常 | 🔴 100% |
 
-### 1.7 用户交互事件
+### 1.8 用户交互事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
@@ -87,7 +96,7 @@
 | `pull_up_input` | ChatInput.kt | `agent_id`, `agent_name`, `timestamp` | 拉起输入框（键盘弹出时触发） | 🔴 100% |
 | `image_show_success` | AgentBackground.kt | `agent_id`, `agent_name`, `image_url`, `image_width`, `image_height`, `content_scale`, `timestamp` | 图片显示成功 | 🔴 100% |
 
-### 1.8 订阅与计费事件
+### 1.9 订阅与计费事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
@@ -95,24 +104,23 @@
 | `subscription_price_fetched` | BillingPriceManager.kt | `product_id`, `product_name`, `plan_type`, `google_play_price`, `google_play_currency_code`, `google_play_price_micros`, `corrected_price`, `old_price`, `old_currency_code`, `old_price_micros`, `has_placeholder`, `price_changed`, `currency_changed`, `micros_changed` | 从Google Play获取到的订阅价格详细信息（包含价格变化对比） | 🔴 100% |
 | `subscription_price_displayed` | VipCenterContent.kt | `product_id`, `product_name`, `plan_type`, `displayed_price`, `currency_code`, `price_micros`, `discount_rate`, `original_price`, `is_selected`, `selected_plan_index`, `total_plans_count`, `is_subscribed`, `timestamp` | UI上显示的订阅价格详细信息（包含选择状态和订阅状态） | 🔴 100% |
 
-### 1.9 网络请求事件
+### 1.10 网络请求事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
 | `network_request` | PageTrackingHelper.kt | `url`, `method`, `success`, `response_time`, `current_page` | 网络请求（通用） | 🟡 调试100%，发布20% |
 | `network_retry` | UnifiedOkHttpClient.kt | 预留（配置中已定义，但代码中未使用） | 网络请求重试 | 🟡 调试100%，发布50% |
-| `network_final_failure` | UnifiedOkHttpClient.kt | `max_retries`, `method`, `url`, `last_error`, `last_error_type` | 网络请求最终失败 | 🔴 100% |
 | `slow_request` | UnifiedOkHttpClient.kt | `duration_ms`, `method`, `url`, `successful` | 慢请求（>3秒） | 🟡 调试100%，发布30% |
 | `very_slow_request` | UnifiedOkHttpClient.kt | `duration_ms`, `method`, `url`, `successful` | 极慢请求（>10秒） | 🔴 100% |
-| `request_failure` | UnifiedOkHttpClient.kt | `duration_ms`, `method`, `url`, `error_type`, `error_message` | 请求失败 | 🔴 100% |
+| `request_failure` | UnifiedOkHttpClient.kt | `duration_ms`, `method`, `url`, `error_type`, `error_message` | 请求失败（网络请求失败时触发） | 🔴 100% |
 
-### 1.10 错误监控事件
+### 1.11 错误监控事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
 | `app_error` | PageTrackingHelper.kt, UnifiedOkHttpClient.kt | `error`, `error_type`, `current_page`, `page_class`, `timestamp` | 应用错误 | 🔴 100% |
 
-### 1.11 性能指标事件
+### 1.12 性能指标事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
@@ -127,6 +135,7 @@
 | `AI_RESPONSE_TIME` | ChatViewModel.kt | AI响应时间（API调用时间） | 🔴 100% |
 | `EXPLORE_RESPONSE_TIME` | ExploreViewModel.kt | Explore接口响应时间（API调用时间） | 🔴 100% |
 | `TTS_GENERATION_TIME` | TtsManager.kt | TTS生成时间（从发起请求到收到音频URL的完整耗时） | 🟡 调试100%，发布30% |
+| `IMAGE_GENERATION_TIME` | ChatViewModel.kt | 图片生成耗时（从发起请求到收到图片URL的完整耗时） | 🟡 调试100%，发布30% |
 | `voice_playback_time` | FirebaseManager.Events | 语音播放时间（预留） | 🟡 调试100%，发布30% |
 | `image_load_time` | FirebaseManager.Events | 图片加载时间（预留） | 🟡 调试100%，发布20% |
 | `page_load_time` | FirebaseManager.Events | 页面加载时间（预留） | 🟡 调试100%，发布30% |
@@ -139,6 +148,7 @@
 | `logPerformanceMetric` | ChatViewModel.kt | 记录AI响应时间（API调用时间） | 🔴 100% |
 | `logPerformanceMetric` | ExploreViewModel.kt | 记录Explore接口响应时间（API调用时间） | 🔴 100% |
 | `logPerformanceMetric` | TtsManager.kt | 记录TTS生成时间（从发起请求到收到音频URL的完整耗时） | 🟡 调试100%，发布30% |
+| `logPerformanceMetric` | ChatViewModel.kt | 记录图片生成耗时（从发起请求到收到图片URL的完整耗时） | 🟡 调试100%，发布30% |
 | HTTP网络监控 | UnifiedOkHttpClient.kt | 自动监控网络请求性能 | 🟡 调试100%，发布30% |
 | 自定义追踪 | FirebaseManager.kt | 自定义性能追踪 | 🟡 调试100%，发布20% |
 
@@ -218,13 +228,10 @@
 | `last_error_type` | PageTrackingHelper.kt | 最后错误类型 | 🔴 CRITICAL |
 | `error_page` | PageTrackingHelper.kt | 错误发生页面 | 🔴 CRITICAL |
 | `last_401_url` | UnifiedOkHttpClient.kt | 最后401错误URL | 🔴 CRITICAL |
-| `network_failure_url` | UnifiedOkHttpClient.kt | 网络失败URL | 🔴 CRITICAL |
-| `network_failure_retries` | UnifiedOkHttpClient.kt | 网络失败重试次数 | 🔴 CRITICAL |
-| `network_failure_method` | UnifiedOkHttpClient.kt | 网络失败请求方法 | 🔴 CRITICAL |
-| `slow_request_url` | UnifiedOkHttpClient.kt | 慢请求URL | 🟡 HIGH |
-| `slow_request_duration` | UnifiedOkHttpClient.kt | 慢请求持续时间 | 🟡 HIGH |
 | `failed_request_url` | UnifiedOkHttpClient.kt | 失败请求URL | 🔴 CRITICAL |
 | `failed_request_duration` | UnifiedOkHttpClient.kt | 失败请求持续时间 | 🔴 CRITICAL |
+| `slow_request_url` | UnifiedOkHttpClient.kt | 慢请求URL | 🟡 HIGH |
+| `slow_request_duration` | UnifiedOkHttpClient.kt | 慢请求持续时间 | 🟡 HIGH |
 
 ### 4.5 网络请求键
 
@@ -254,11 +261,16 @@
 - `google_play_price`、`google_play_currency_code`、`google_play_price_micros`：Google Play原始价格信息
 - `displayed_price`、`currency_code`、`price_micros`：UI显示的价格信息
 - `price_changed`、`currency_changed`、`micros_changed`：价格变化标识，用于监控价格更新
+- `message_id`：消息ID（图片生成相关事件）
+- `image_url`、`image_width`、`image_height`：生成的图片信息（成功时）
+- `generation_time_ms`：图片生成耗时（从发起请求到收到图片URL的完整耗时，毫秒）
+- `error_code`、`error_message`、`error_type`：错误信息（失败时）
 
 ### 5.2 性能监控参数
 - `duration_ms`、`response_time`：性能指标，用于优化
 - `ai_response_time`：AI响应时间（API调用时间，从发起网络请求到收到响应），用于API性能分析
 - `end_to_end_time`：端到端时间（从用户操作开始到收到响应的完整时间），用于真实的用户体验分析，比API响应时间更能反映用户感知的延迟
+- `generation_time_ms`：图片生成耗时（从发起请求到收到图片URL的完整耗时，毫秒），用于图片生成性能分析
 - `time_spent`：页面停留时长，用于用户体验分析
 - `success`、`response_code`：成功率和错误分析
 
