@@ -154,6 +154,7 @@
     <!-- Chat -->
     <string name="chat_settings_my_persona_title">My Persona</string>
     <string name="chat_settings_settings_title">Settings</string>
+    <string name="chat_input_placeholder">Write message to AI character, use () button to send instructions and write scenes</string>
 
     <!-- VIP Components -->
     <string name="discount_save">OFF</string>
