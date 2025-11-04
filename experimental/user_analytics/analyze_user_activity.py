@@ -469,6 +469,161 @@ class UserAnalytics:
         finally:
             cursor.close()
 
+    def get_agent_analytics(
+        self, start_date: datetime, end_date: datetime
+    ) -> pd.DataFrame:
+        """查询角色数据分析统计
+        统计指定日期范围内新注册用户与各角色的聊天数据
+        Args:
+            start_date: 开始日期
+            end_date: 结束日期
+        Returns:
+            DataFrame包含：
+            - agent_id: 角色ID
+            - agent_name: 角色名称
+            - chat_user_count: 聊天人数（发送了至少一条消息的用户数）
+            - total_sessions: 总会话数（有用户消息的会话）
+            - total_rounds: 总轮数（用户消息数）
+            - sessions_ge_5_rounds: ≥5轮的会话数
+            - sessions_ge_10_rounds: ≥10轮的会话数
+            - avg_rounds_per_user: 人均轮数
+            - ge_5_rounds_ratio: ≥5轮占比(%)
+            - ge_10_rounds_ratio: ≥10轮占比(%)
+        """
+        chats_query = """
+            SELECT
+                c.id as chat_id,
+                c.agent_id,
+                a.name as agent_name,
+                c.user_id
+            FROM chats c
+            INNER JOIN users u ON c.user_id = u.id
+            INNER JOIN agents a ON c.agent_id = a.id AND a.deleted_at IS NULL
+            WHERE u.created_at >= %s AND u.created_at < %s
+              AND u.deleted_at IS NULL
+              AND c.is_active = true
+        """
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute(chats_query, (start_date, end_date))
+            chat_records = cursor.fetchall()
+            logger.info(f"找到 {len(chat_records)} 个新用户聊天会话")
+
+            if not chat_records:
+                return pd.DataFrame()
+
+            chat_to_info = {}
+            for row in chat_records:
+                chat_id = row[0]
+                agent_id = row[1]
+                agent_name = row[2]
+                user_id = row[3]
+                chat_to_info[chat_id] = {
+                    "agent_id": agent_id,
+                    "agent_name": agent_name,
+                    "user_id": user_id,
+                }
+
+            chat_ids = list(chat_to_info.keys())
+
+            chat_to_session = {
+                chat_id: generate_session_id(chat_id) for chat_id in chat_ids
+            }
+            session_ids = list(chat_to_session.values())
+
+            placeholders = ",".join(["%s"] * len(session_ids))
+            messages_query = f"""
+                SELECT
+                    ch.session_id::text as session_id,
+                    COUNT(*) FILTER (
+                        WHERE ch.message->>'type' = 'human'
+                        AND (
+                            ch.meta_data IS NULL
+                            OR ch.meta_data->>'isOpening' IS NULL
+                            OR ch.meta_data->>'isOpening' != 'true'
+                        )
+                    ) as user_message_count
+                FROM chat_history ch
+                WHERE ch.session_id::text IN ({placeholders})
+                GROUP BY ch.session_id
+            """
+            cursor.execute(messages_query, tuple(session_ids))
+
+            session_to_user_msg_count = {}
+            for row in cursor.fetchall():
+                session_id_str = row[0]
+                user_msg_count = row[1]
+                session_to_user_msg_count[session_id_str] = user_msg_count
+
+            agent_stats = {}
+            for chat_id, session_id in chat_to_session.items():
+                info = chat_to_info[chat_id]
+                agent_id = info["agent_id"]
+                agent_name = info["agent_name"]
+                user_id = info["user_id"]
+
+                user_msg_count = session_to_user_msg_count.get(session_id, 0)
+
+                if agent_id not in agent_stats:
+                    agent_stats[agent_id] = {
+                        "agent_id": agent_id,
+                        "agent_name": agent_name,
+                        "chat_user_ids": set(),
+                        "total_sessions": 0,
+                        "total_rounds": 0,
+                        "sessions_ge_5_rounds": 0,
+                        "sessions_ge_10_rounds": 0,
+                    }
+
+                if user_msg_count > 0:
+                    agent_stats[agent_id]["chat_user_ids"].add(user_id)
+                    agent_stats[agent_id]["total_sessions"] += 1
+                    agent_stats[agent_id]["total_rounds"] += user_msg_count
+                    if user_msg_count >= 5:
+                        agent_stats[agent_id]["sessions_ge_5_rounds"] += 1
+                    if user_msg_count >= 10:
+                        agent_stats[agent_id]["sessions_ge_10_rounds"] += 1
+
+            result_data = []
+            for agent_id, stats in agent_stats.items():
+                chat_user_count = len(stats["chat_user_ids"])
+                total_sessions = stats["total_sessions"]
+                avg_rounds_per_user = (
+                    round(stats["total_rounds"] / chat_user_count, 4)
+                    if chat_user_count > 0
+                    else 0
+                )
+                ge_5_rounds_ratio = (
+                    stats["sessions_ge_5_rounds"] / total_sessions
+                    if total_sessions > 0
+                    else 0
+                )
+                ge_10_rounds_ratio = (
+                    stats["sessions_ge_10_rounds"] / total_sessions
+                    if total_sessions > 0
+                    else 0
+                )
+
+                result_data.append(
+                    {
+                        "agent_id": agent_id,
+                        "agent_name": stats["agent_name"],
+                        "chat_user_count": chat_user_count,
+                        "total_sessions": total_sessions,
+                        "total_rounds": stats["total_rounds"],
+                        "avg_rounds_per_user": avg_rounds_per_user,
+                        "sessions_ge_5_rounds": stats["sessions_ge_5_rounds"],
+                        "sessions_ge_10_rounds": stats["sessions_ge_10_rounds"],
+                        "ge_5_rounds_ratio": round(ge_5_rounds_ratio * 100, 2),
+                        "ge_10_rounds_ratio": round(ge_10_rounds_ratio * 100, 2),
+                    }
+                )
+
+            logger.info(f"统计了 {len(result_data)} 个角色的数据")
+            return pd.DataFrame(result_data)
+        finally:
+            cursor.close()
+
 
 class ReportGenerator:
     """报告生成类"""
@@ -1536,6 +1691,186 @@ class ReportGenerator:
             f.write(html_content)
         logger.info(f"已保存详细对话报告: {filepath}")
 
+    def generate_agent_analytics_html_report(
+        self,
+        agent_analytics_df: pd.DataFrame,
+        date_range: Tuple[datetime, datetime],
+    ):
+        """生成角色数据分析的独立HTML报告页面"""
+        if agent_analytics_df.empty:
+            logger.warning("角色分析数据为空，跳过生成HTML报告")
+            return
+
+        # 为每个图表准备排序后的数据（按各自指标降序排序，取Top 50）
+        # 保持降序排序，横向柱状图使用反转Y轴让最大值在顶部显示
+        df_chat_users = agent_analytics_df.sort_values(
+            "chat_user_count", ascending=False
+        ).head(50)
+        df_avg_rounds = agent_analytics_df.sort_values(
+            "avg_rounds_per_user", ascending=False
+        ).head(50)
+        df_ge_5_ratio = agent_analytics_df.sort_values(
+            "ge_5_rounds_ratio", ascending=False
+        ).head(50)
+        df_ge_10_ratio = agent_analytics_df.sort_values(
+            "ge_10_rounds_ratio", ascending=False
+        ).head(50)
+
+        # 添加数据验证日志
+        logger.info(
+            f"图表数据准备完成 - "
+            f"聊天人数图表: {len(df_chat_users)} 个角色, "
+            f"人均轮数图表: {len(df_avg_rounds)} 个角色, "
+            f"≥5轮占比图表: {len(df_ge_5_ratio)} 个角色, "
+            f"≥10轮占比图表: {len(df_ge_10_ratio)} 个角色"
+        )
+        if not df_chat_users.empty:
+            logger.info(
+                f"聊天人数Top 3: {df_chat_users.head(3)[['agent_name', 'chat_user_count']].to_dict('records')}"
+            )
+
+        # 创建图表 - 使用横向柱状图避免标签重叠
+        fig = make_subplots(
+            rows=4,
+            cols=1,
+            subplot_titles=(
+                "各角色聊天人数（Top 50）",
+                "各角色人均聊天轮数（Top 50）",
+                "各角色≥5轮聊天占比（Top 50）",
+                "各角色≥10轮聊天占比（Top 50）",
+            ),
+            vertical_spacing=0.10,
+            specs=[
+                [{"type": "bar"}],
+                [{"type": "bar"}],
+                [{"type": "bar"}],
+                [{"type": "bar"}],
+            ],
+        )
+
+        # 图表1: 聊天人数（横向）
+        fig.add_trace(
+            go.Bar(
+                y=df_chat_users["agent_name"],
+                x=df_chat_users["chat_user_count"],
+                name="聊天人数",
+                orientation="h",
+                showlegend=False,
+                marker_color="lightblue",
+            ),
+            row=1,
+            col=1,
+        )
+
+        # 图表2: 人均轮数（横向）
+        fig.add_trace(
+            go.Bar(
+                y=df_avg_rounds["agent_name"],
+                x=df_avg_rounds["avg_rounds_per_user"],
+                name="人均轮数",
+                orientation="h",
+                showlegend=False,
+                marker_color="lightcoral",
+            ),
+            row=2,
+            col=1,
+        )
+
+        # 图表3: ≥5轮占比（横向）
+        fig.add_trace(
+            go.Bar(
+                y=df_ge_5_ratio["agent_name"],
+                x=df_ge_5_ratio["ge_5_rounds_ratio"],
+                name="≥5轮占比(%)",
+                orientation="h",
+                showlegend=False,
+                marker_color="lightgreen",
+            ),
+            row=3,
+            col=1,
+        )
+
+        # 图表4: ≥10轮占比（横向）
+        fig.add_trace(
+            go.Bar(
+                y=df_ge_10_ratio["agent_name"],
+                x=df_ge_10_ratio["ge_10_rounds_ratio"],
+                name="≥10轮占比(%)",
+                orientation="h",
+                showlegend=False,
+                marker_color="lightsalmon",
+            ),
+            row=4,
+            col=1,
+        )
+
+        # 更新布局 - 增加高度以容纳50个角色（每个角色约需80px高度）
+        fig.update_layout(
+            height=4200,
+            title_text=f"角色数据分析报告 ({date_range[0].date()} 至 {date_range[1].date()})",
+            showlegend=False,
+        )
+
+        # 更新坐标轴标签（横向图表，Y轴是角色名称，X轴是数值）
+        # 数据按降序排序，使用反转Y轴让最大值显示在顶部
+        # 设置categoryorder和tickmode确保显示所有标签
+        fig.update_yaxes(
+            title_text="角色名称",
+            row=1,
+            col=1,
+            autorange="reversed",
+            categoryorder="total descending",
+            tickmode="linear",
+            dtick=1,
+        )
+        fig.update_xaxes(title_text="聊天人数", row=1, col=1)
+
+        fig.update_yaxes(
+            title_text="角色名称",
+            row=2,
+            col=1,
+            autorange="reversed",
+            categoryorder="total descending",
+            tickmode="linear",
+            dtick=1,
+        )
+        fig.update_xaxes(title_text="人均轮数", row=2, col=1)
+
+        fig.update_yaxes(
+            title_text="角色名称",
+            row=3,
+            col=1,
+            autorange="reversed",
+            categoryorder="total descending",
+            tickmode="linear",
+            dtick=1,
+        )
+        fig.update_xaxes(title_text="占比 (%)", row=3, col=1)
+
+        fig.update_yaxes(
+            title_text="角色名称",
+            row=4,
+            col=1,
+            autorange="reversed",
+            categoryorder="total descending",
+            tickmode="linear",
+            dtick=1,
+        )
+        fig.update_xaxes(title_text="占比 (%)", row=4, col=1)
+
+        # 保存 HTML
+        filepath = self.output_dir / "agent_analytics_report.html"
+        fig.write_html(str(filepath))
+        logger.info(f"已保存角色分析HTML报告: {filepath}")
+
+        # 同时保存CSV文件（按聊天人数排序）
+        csv_sorted_df = agent_analytics_df.sort_values(
+            "chat_user_count", ascending=False
+        )
+        csv_filepath = self.output_dir / "agent_analytics.csv"
+        csv_sorted_df.to_csv(csv_filepath, index=False, encoding="utf-8-sig")
+        logger.info(f"已保存角色分析CSV: {csv_filepath}")
+
 
 def process_data(
     analytics: UserAnalytics,
@@ -1689,6 +2024,18 @@ def process_data(
             results["popular_agents"] = popular_agents_df
         else:
             results["popular_agents"] = pd.DataFrame()
+
+        # 角色数据分析统计
+        logger.info("查询角色数据分析...")
+        agent_analytics_df = analytics.get_agent_analytics(start_date, end_date)
+        results["agent_analytics"] = agent_analytics_df
+        if not agent_analytics_df.empty:
+            logger.info(
+                f"统计了 {len(agent_analytics_df)} 个角色的数据，"
+                f"总聊天用户数: {agent_analytics_df['chat_user_count'].sum()}"
+            )
+        else:
+            logger.warning("未找到角色分析数据")
 
         # 对话轮数分布（排除开场白），按10条消息（约5轮对话）一档
         bins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, float("inf")]
@@ -2398,6 +2745,14 @@ def main():
                 (start_date, end_date),
                 results.get("stats"),
                 results.get("long_conversations"),
+            )
+
+        # 生成角色数据分析HTML报告
+        if "agent_analytics" in results and not results["agent_analytics"].empty:
+            logger.info("生成角色数据分析HTML报告...")
+            generator.generate_agent_analytics_html_report(
+                results["agent_analytics"],
+                (start_date, end_date),
             )
 
         logger.info(f"所有报告已保存到: {output_dir}")
