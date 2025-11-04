@@ -287,7 +287,7 @@ class ChatViewModel : BaseVM() {
         if (!hasChatHistory) {
             _agentInfo.value?.let { agent ->
                 FirebaseManager.logEvent(
-                    "chat_started",
+                    FirebaseManager.Events.CHAT_STARTED,
                     FirebaseManager.safeEventParams(
                         "agent_id" to agent.id,
                         "agent_name" to agent.name,

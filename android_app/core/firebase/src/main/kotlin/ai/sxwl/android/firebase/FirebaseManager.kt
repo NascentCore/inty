@@ -79,7 +79,7 @@ object FirebaseManager {
                     Events.SEARCH to 1.0, // 搜索功能
                     Events.PURCHASE to 1.0, // 购买事件
                     Events.USER_LOGOUT to 1.0, // 用户登出
-                    "chat_started" to 1.0, // 聊天开始（第一次发送消息时触发）
+                    Events.CHAT_STARTED to 1.0, // 聊天开始（第一次发送消息时触发）
                     Events.MESSAGE_SENT to 1.0, // 消息发送
                     Events.PROFILE_UPDATED to 1.0, // 个人资料更新
                     Events.SETTINGS_CHANGED to 1.0, // 设置变更
@@ -446,6 +446,7 @@ object FirebaseManager {
         const val DATABASE_OPERATION_TIME = "database_operation_time"
 
         // 业务关键事件
+        const val CHAT_STARTED = "chat_started" // 聊天开始（第一次发送消息时触发）
         const val AGENT_SWITCH = "agent_switch"
         const val CHAT_SESSION_END = "chat_session_end"
 
@@ -461,6 +462,7 @@ object FirebaseManager {
         // Billing价格相关事件
         const val SUBSCRIPTION_PRICE_FETCHED = "subscription_price_fetched" // Google Play获取到的价格
         const val SUBSCRIPTION_PRICE_DISPLAYED = "subscription_price_displayed" // UI上显示的价格
+        const val BILLING_RELEASE = "billing_release" // 计费系统释放
 
         // Explore相关事件
         const val EXPLORE_AGENTS_FETCH_SUCCESS = "explore_agents_fetch_success" // Explore接口请求成功

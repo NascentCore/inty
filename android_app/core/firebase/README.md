@@ -121,7 +121,7 @@ CrashlyticsTest.recordTestException(Exception("Test exception"))
 - `APP_OPEN`: 应用打开
 - `LOGIN`: 用户登录（Firebase 内置事件）
 - `USER_LOGOUT`: 用户登出
-- `chat_started`: 开始聊天（第一次发送消息时触发）
+- `CHAT_STARTED`: 开始聊天（第一次发送消息时触发）
 - `MESSAGE_SENT`: 发送消息
 - `MESSAGE_SEND_SUCCESS`: 消息发送成功
 - `PROFILE_UPDATED`: 更新资料
