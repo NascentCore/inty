@@ -49,6 +49,7 @@ fun ChatInput(
     showMorePanel: Boolean,
     bottomPadding: Dp,
     focusRequester: FocusRequester? = null,
+    onFocusChange: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
     val inputData = chatViewModel.inputData.collectAsState()
@@ -113,7 +114,10 @@ fun ChatInput(
                         capitalization = KeyboardCapitalization.Sentences,
                     ),
                 keyboardActions = KeyboardActions(),
-                onFocusChanged = { focused -> isInputFocused.value = focused },
+                onFocusChanged = { focused ->
+                    isInputFocused.value = focused
+                    onFocusChange(focused)
+                },
                 onSelectionChanged = { selection ->
                     chatViewModel.inputSelection.value = selection
                 },

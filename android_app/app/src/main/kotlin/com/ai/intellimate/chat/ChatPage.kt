@@ -86,6 +86,8 @@ internal fun ChatPage(
     showBackButton: Boolean = false,
     onBack: (() -> Unit)? = null,
     isCurrentPage: Boolean = true,
+    shouldAutoFocusInput: Boolean = true,
+    onInputFocusChange: (Boolean) -> Unit = {},
 ) {
 
     val context = LocalContext.current
@@ -144,6 +146,7 @@ internal fun ChatPage(
 
     val density = LocalDensity.current
     val focusManager = LocalFocusManager.current
+    val suppressFocusCallback = remember { mutableStateOf(false) }
 
     // 检测键盘状态
     val imeHeight = WindowInsets.ime.getBottom(density)
@@ -188,7 +191,21 @@ internal fun ChatPage(
 
     Box(
         modifier =
-            modifier.pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
+            modifier.pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        suppressFocusCallback.value = true
+                        val cleared = focusManager.clearFocus(force = true)
+                        if (!cleared) {
+                            suppressFocusCallback.value = false
+                            return@detectTapGestures
+                        }
+                        if (isCurrentPage) {
+                            onInputFocusChange(false)
+                        }
+                    }
+                )
+            }
     ) {
         // 背景
         AgentBackground(agentInfo = agentInfo, showGradients = true)
@@ -520,6 +537,14 @@ internal fun ChatPage(
                             showMorePanel = showMorePanel,
                             bottomPadding = effectiveBottomPadding,
                             focusRequester = inputFocusRequester,
+                            onFocusChange = { focused ->
+                                if (!isCurrentPage) return@ChatInput
+                                if (suppressFocusCallback.value) {
+                                    suppressFocusCallback.value = false
+                                    return@ChatInput
+                                }
+                                onInputFocusChange(focused)
+                            },
                         )
                     }
                 }
@@ -555,15 +580,28 @@ internal fun ChatPage(
         }
     }
 
-    LaunchedEffect(agentInfo?.id, isCurrentPage, showMorePanel) {
-        if (
-            isCurrentPage &&
-            !showMorePanel &&
-            agentInfo != null
-        ) {
+    LaunchedEffect(agentInfo?.id, isCurrentPage, showMorePanel, shouldAutoFocusInput) {
+        if (!isCurrentPage) return@LaunchedEffect
+
+        if (showMorePanel || agentInfo == null) {
+            suppressFocusCallback.value = true
+            val cleared = focusManager.clearFocus(force = true)
+            if (!cleared) {
+                suppressFocusCallback.value = false
+            }
+            return@LaunchedEffect
+        }
+
+        if (shouldAutoFocusInput) {
             // 等待一次帧同步，确保TextField已附着焦点请求者
             delay(50)
             inputFocusRequester.requestFocus()
+        } else {
+            suppressFocusCallback.value = true
+            val cleared = focusManager.clearFocus(force = true)
+            if (!cleared) {
+                suppressFocusCallback.value = false
+            }
         }
     }
 }

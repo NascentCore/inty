@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -101,6 +102,7 @@ fun ChatPageContainer(
     val prefetchThreshold = 5 // 距离本业末尾数据还有5个时，触发静默加载下一页
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    var autoFocusEnabled by rememberSaveable { mutableStateOf(false) }
 
     // 新用户引导状态
     var hasShowGuest by remember { mutableStateOf(IntySetting.hasShowGuest()) }
@@ -185,10 +187,18 @@ fun ChatPageContainer(
                 chatViewModel.setUserProfile(userProfile)
             }
 
+            val isPageCurrent = currentPage == pageState.currentPage
             ChatPage(
                 modifier = Modifier.fillMaxSize(),
                 chatViewModel = chatViewModel,
-                isCurrentPage = currentPage == pageState.currentPage,
+                isCurrentPage = isPageCurrent,
+                shouldAutoFocusInput = autoFocusEnabled,
+                onInputFocusChange = { focused ->
+                    if (!isPageCurrent) return@ChatPage
+                    if (focused != autoFocusEnabled) {
+                        autoFocusEnabled = focused
+                    }
+                },
             )
         }
 
