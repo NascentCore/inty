@@ -34,17 +34,22 @@ jobs:
           path: |
             ${{ steps.yarn-cache-dir-path.outputs.dir }}
             web_app/node_modules
-          key: ${{ runner.os }}-yarn-${{ hashFiles('web_app/yarn.lock') }}
+            evaluation/inty_sdk/node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('web_app/yarn.lock') }}-${{ hashFiles('evaluation/inty_sdk/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
 
+      - name: Build inty_sdk
+        working-directory: evaluation/inty_sdk
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
+
       - name: Install dependencies
         working-directory: web_app
-        run: yarn install --frozen-lockfile
-
-      - name: Build web app
-        working-directory: web_app
-        run: yarn build
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
 
       - name: Create deployment archive
         run: |
@@ -60,7 +65,7 @@ jobs:
           source: "intellimate-app-dist.tar.gz"
           target: "/tmp/"
 
-      - name: Deploy to ${{ steps.set-environment.outputs.environment }}
+      - name: Deploy to ${{ inputs.environment }}
         uses: appleboy/ssh-action@master
         timeout-minutes: 2
         with:
@@ -82,4 +87,4 @@ jobs:
         run: |
           echo "## Build and deploy web app" >> $GITHUB_STEP_SUMMARY
           echo "GitHub ref: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "Deployed to ${{ steps.set-environment.outputs.environment }} for https://dev.intellimate.app" >> $GITHUB_STEP_SUMMARY
+          echo "Deployed to ${{ inputs.environment }} for https://dev.intellimate.app" >> $GITHUB_STEP_SUMMARY
