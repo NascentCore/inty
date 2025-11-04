@@ -324,6 +324,7 @@ private fun ExploreTabContent(innerPadding: PaddingValues) {
     LaunchedEffect(Unit) {
         exploreViewModel.initializePagingData()
         exploreViewModel.startListeningPreloadUpdates()
+        exploreViewModel.startListeningUserAccountReady()
     }
 
     ExplorePage(

@@ -47,6 +47,9 @@ class LoginViewModel : BaseVM() {
                     IntySetting.login(userProfile.id, token)
                     UserProfileManager.saveUserProfile(userProfile)
 
+                    // 标记用户账户已就绪，确保 Explore 等页面可以正常加载数据
+                    com.ai.intellimate.utils.UnifiedStartupManager.markUserAccountReady()
+
                     // 通知MainViewModel更新登录状态（如果MainViewModel已初始化）
                     // 注意：这里不直接引用MainViewModel，而是通过MainActivity来处理
 

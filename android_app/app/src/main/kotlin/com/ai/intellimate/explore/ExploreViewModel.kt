@@ -253,6 +253,26 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         }
     }
 
+    /** 监听用户账户就绪状态，账户就绪时重新触发加载 */
+    fun startListeningUserAccountReady() {
+        viewModelScope.launch {
+            UnifiedStartupManager.userAccountReady.collect { isReady ->
+                if (isReady) {
+                    if (!isInitialized) {
+                        // 账户已就绪，但还未初始化，执行初始化
+                        LogUtils.i("ExploreViewModel - 用户账户已就绪，初始化数据流")
+                        initializePagingData()
+                    } else if (_agentsFlow.value == null) {
+                        // 账户已就绪，已初始化，但数据流为空，重新初始化
+                        LogUtils.i("ExploreViewModel - 用户账户已就绪，数据流为空，重新初始化")
+                        initializePagingData()
+                    }
+                    // 如果数据流已存在，说明可能正在加载或已加载成功，不需要额外操作
+                }
+            }
+        }
+    }
+
     /** 清空数据（用于用户登出等场景） */
     fun clearData() {
         _agentsFlow.value = null

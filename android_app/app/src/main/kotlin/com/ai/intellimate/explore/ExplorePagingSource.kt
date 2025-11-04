@@ -98,18 +98,21 @@ class ExplorePagingSource(
                 // 检查用户账户是否已就绪，如果未就绪则等待或返回空数据
                 if (!UnifiedStartupManager.isUserAccountReady()) {
 
-                    // 等待用户账户就绪，最多等待3秒
+                    // 等待用户账户就绪，最多等待5秒（增加等待时间，给登录流程更多时间）
                     var waitTime = 0
-                    while (!UnifiedStartupManager.isUserAccountReady() && waitTime < 3000) {
+                    while (!UnifiedStartupManager.isUserAccountReady() && waitTime < 5000) {
                         delay(100)
                         waitTime += 100
                     }
 
                     if (!UnifiedStartupManager.isUserAccountReady()) {
+                        // 如果账户仍未就绪，返回空数据，但设置 nextKey 以便后续重试
+                        // 这样当账户就绪后，Paging 可以自动重试加载
+                        LogUtils.w("ExplorePagingSource - 用户账户未就绪，返回空数据但允许重试")
                         return@withContext LoadResult.Page(
                             data = emptyList(),
                             prevKey = null,
-                            nextKey = null,
+                            nextKey = INITIAL_PAGE, // 设置 nextKey，允许后续重试
                         )
                     }
                 }
