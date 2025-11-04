@@ -38,13 +38,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
-      - name: Configure Git for private repository access
-        run: |
-          git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "git@github.com:"
-          git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "git+ssh://git@github.com:"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Install dependencies
         working-directory: web_app
         run: yarn install --frozen-lockfile
