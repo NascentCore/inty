@@ -18,13 +18,17 @@
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
     "@types/lodash": "^4.17.20",
+    "@types/plotly.js": "^2.12.29",
     "antd": "^5.12.0",
     "inty": "file:./inty_sdk/dist",
+    "dayjs": "^1.11.10",
     "lodash": "^4.17.21",
+    "plotly.js": "^2.27.1",
     "prettier": "^3.6.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-image-crop": "^11.0.10"
+    "react-image-crop": "^11.0.10",
+    "react-plotly.js": "^2.6.0"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",

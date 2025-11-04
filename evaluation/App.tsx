@@ -14,6 +14,7 @@ import {
   MenuUnfoldOutlined,
   BgColorsOutlined,
   SettingOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
@@ -21,6 +22,7 @@ import { ChatPage } from "./pages/ChatPage";
 import { Live2DEmotionChatDemo } from "./pages/Live2DEmotionChatDemo";
 import AgentManagePage from "./pages/AgentManagePage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { UserAnalyticsPage } from "./pages/UserAnalyticsPage";
 import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
 import { ApiKeyModal } from "./components/ApiKeyModal";
 import { UserInfo } from "./components/UserInfo";
@@ -34,7 +36,8 @@ type PageKey =
   | "chat"
   | "agents"
   | "live2d"
-  | "settings";
+  | "settings"
+  | "user-analytics";
 
 interface NavigationItem {
   key: PageKey;
@@ -164,6 +167,12 @@ const AppContent: React.FC = () => {
       label: "系统设置",
       description: "配置图片生成等系统参数",
     },
+    {
+      key: "user-analytics",
+      icon: <UserOutlined />,
+      label: "用户数据分析",
+      description: "查看用户注册和聊天行为数据",
+    },
   ];
 
   // 获取页面标题
@@ -181,6 +190,8 @@ const AppContent: React.FC = () => {
         return "智能体管理";
       case "settings":
         return "系统设置";
+      case "user-analytics":
+        return "用户数据分析";
       default:
         return "智能体评测系统";
     }
@@ -205,6 +216,8 @@ const AppContent: React.FC = () => {
         return <AgentManagePage />;
       case "settings":
         return <SettingsPage />;
+      case "user-analytics":
+        return <UserAnalyticsPage />;
 
       default:
         return null;

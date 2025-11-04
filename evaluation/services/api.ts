@@ -546,6 +546,94 @@ export const statsApi = {
 };
 
 // =============================================================================
+// 用户数据分析API
+// =============================================================================
+
+export const userAnalyticsApi = {
+  // 获取统计数据
+  getStats: (params?: {
+    start_date?: string;
+    end_date?: string;
+    last_days?: number;
+  }): Promise<import("../types").UserAnalyticsStatsResponse> =>
+    apiClient.get("/evaluation/user-analytics/stats", params),
+  // 获取每日新用户统计
+  getNewUsers: (params?: {
+    start_date?: string;
+    end_date?: string;
+    last_days?: number;
+  }): Promise<import("../types").DailyNewUsers[]> =>
+    apiClient.get("/evaluation/user-analytics/new-users", params),
+
+  // 获取用户聊天活动原始数据
+  getUserActivity: (params?: {
+    start_date?: string;
+    end_date?: string;
+    last_days?: number;
+  }): Promise<import("../types").UserChatActivityItem[]> =>
+    apiClient.get("/evaluation/user-analytics/user-activity", params),
+
+  // 获取对话轮数分布（按Session）- 只统计新用户发起的会话
+  getConversationRounds: (params?: {
+    start_date?: string;
+    end_date?: string;
+    last_days?: number;
+  }): Promise<import("../types").ConversationRoundsResponse[]> =>
+    apiClient.get("/evaluation/user-analytics/conversation-rounds", params),
+
+  // 获取对话轮数分布（按用户）
+  getUserRoundsDistribution: (params?: {
+    start_date?: string;
+    end_date?: string;
+    last_days?: number;
+  }): Promise<import("../types").UserRoundsDistributionItem[]> =>
+    apiClient.get(
+      "/evaluation/user-analytics/user-rounds-distribution",
+      params,
+    ),
+
+  // 获取热门角色排行
+  getPopularAgents: (params?: {
+    start_date?: string;
+    end_date?: string;
+    last_days?: number;
+  }): Promise<import("../types").PopularAgentsResponse[]> =>
+    apiClient.get("/evaluation/user-analytics/popular-agents", params),
+
+  // 获取达到聊天限制的用户
+  getUsersHittingLimit: (params?: {
+    start_date?: string;
+    end_date?: string;
+    last_days?: number;
+  }): Promise<import("../types").UsersHittingLimitResponse[]> =>
+    apiClient.get("/evaluation/user-analytics/users-hitting-limit", params),
+
+  // 获取角色数据分析
+  getAgentAnalytics: (params?: {
+    start_date?: string;
+    end_date?: string;
+    last_days?: number;
+  }): Promise<import("../types").AgentAnalyticsResponse[]> =>
+    apiClient.get("/evaluation/user-analytics/agent-analytics", params),
+
+  // 获取用户会话详情
+  getUserSessionsDetail: (params?: {
+    start_date?: string;
+    end_date?: string;
+    last_days?: number;
+  }): Promise<import("../types").UserSessionsDetailResponse[]> =>
+    apiClient.get("/evaluation/user-analytics/user-sessions-detail", params),
+
+  // 获取对话详情（包含消息内容）
+  getConversationsDetail: (params?: {
+    start_date?: string;
+    end_date?: string;
+    last_days?: number;
+  }): Promise<import("../types").ConversationsDetailResponse[]> =>
+    apiClient.get("/evaluation/user-analytics/conversations-detail", params),
+};
+
+// =============================================================================
 // WebSocket连接管理
 // =============================================================================
 
@@ -978,6 +1066,7 @@ export default {
   voices: voiceApi,
   images: imageApi,
   chatImage: chatImageApi,
+  userAnalytics: userAnalyticsApi,
   inty: intyClient,
   WebSocketManager,
   // 获取 Inty 客户端的函数，确保只有在有 API Key 时才返回客户端
