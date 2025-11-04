@@ -15,10 +15,10 @@ export default {
    * @doc https://github.com/chimurai/http-proxy-middleware
    */
   dev: {
-    "/api/": {
-      target: "https://dev.inty.sxwl.ai",
+    '/api/': {
+      target: 'https://dev.inty.sxwl.ai',
       changeOrigin: true,
-      pathRewrite: { "^/api": "/api" },
+      pathRewrite: { '^/api': '/api' },
     },
   },
 };

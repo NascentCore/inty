@@ -3,8 +3,8 @@
  * 替代 Ant Design 的 Empty 组件
  */
 
-import React from 'react';
 import { Inbox } from 'lucide-react';
+import React from 'react';
 import Icon from '../Icon';
 import './index.less';
 
@@ -39,4 +39,3 @@ const EmptyState: React.FC<IEmptyStateProps> = ({
 };
 
 export default EmptyState;
-

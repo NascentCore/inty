@@ -17,14 +17,14 @@ const MyAgentList: React.FC = () => {
           label: '跳过数量',
           required: false,
           type: 'number',
-          defaultValue: 0,
+          defaultValue: '0',
         },
         {
           name: 'limit',
           label: '返回数量',
           required: false,
           type: 'number',
-          defaultValue: 20,
+          defaultValue: '20',
         },
       ]}
       onTest={async (values) => {
@@ -58,4 +58,3 @@ const MyAgentList: React.FC = () => {
 };
 
 export default MyAgentList;
-

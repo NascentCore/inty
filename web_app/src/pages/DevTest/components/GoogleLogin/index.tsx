@@ -1,9 +1,8 @@
+import { message } from 'antd';
 import React from 'react';
 import TestWrapper from '@/components/TestWrapper';
-import { createIntyClient } from '@/utils';
+import { createIntyClient, saveToken } from '@/utils';
 import { logger } from '@/utils/logger';
-import { message } from 'antd';
-import { saveToken } from '@/utils';
 
 /**
  * Google 登录测试组件
@@ -85,4 +84,3 @@ const GoogleLogin: React.FC = () => {
 };
 
 export default GoogleLogin;
-

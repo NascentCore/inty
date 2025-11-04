@@ -41,12 +41,11 @@ export const isChatActive = (agentId: string, pathname: string): boolean => {
   // 匹配 /chat/:agentId 路径
   const chatPathRegex = /^\/chat\/(.+)$/;
   const match = pathname.match(chatPathRegex);
-  
+
   if (match?.[1]) {
     const currentAgentId = match[1];
     return agentId === currentAgentId;
   }
-  
+
   return false;
 };
-

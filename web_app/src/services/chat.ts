@@ -4,10 +4,7 @@
  */
 
 import { createIntyClient, logger } from '@/utils';
-import type {
-  IGetChatMessagesRequest,
-  IGetChatMessagesResponse,
-} from '@/types';
+import type { IGetChatMessagesRequest, IGetChatMessagesResponse } from '@/types';
 
 /**
  * 发送消息响应接口
@@ -33,7 +30,7 @@ export async function getChatMessages(
   try {
     // 获取已认证的客户端
     const client = await createIntyClient(true);
-    
+
     const { agent_id, limit = 100, offset = 0, order = 'asc' } = params;
 
     // 调用 SDK 获取消息列表，传递分页参数
@@ -48,31 +45,31 @@ export async function getChatMessages(
     let messages: any[] = [];
     let total = 0;
     let hasMore = false;
-    
+
     if (response && typeof response === 'object') {
       // 如果返回的是对象且包含 messages 字段
       if ('messages' in response && Array.isArray(response.messages)) {
         messages = response.messages;
-      } 
+      }
       // 如果返回的直接是数组
       else if (Array.isArray(response)) {
         messages = response;
       }
-      
+
       // 获取服务器返回的分页信息
       if ('total' in response && typeof response.total === 'number') {
         total = response.total;
       } else {
         total = messages.length;
       }
-      
+
       if ('has_more' in response && typeof response.has_more === 'boolean') {
         hasMore = response.has_more;
       } else {
         hasMore = false;
       }
     }
-    
+
     const currentPage = Math.floor(offset / limit) + 1;
 
     return {
@@ -85,7 +82,7 @@ export async function getChatMessages(
     };
   } catch (err: unknown) {
     logger.error('获取聊天消息失败', err);
-    
+
     // 返回错误结果
     return {
       has_more: false,
@@ -118,10 +115,7 @@ export class MessageSendError extends Error {
  * @param content 消息内容
  * @returns AI 回复
  */
-export async function sendMessage(
-  agentId: string,
-  content: string,
-): Promise<ISendMessageResponse> {
+export async function sendMessage(agentId: string, content: string): Promise<ISendMessageResponse> {
   try {
     // 获取已认证的客户端
     const client = await createIntyClient(true);
@@ -141,7 +135,7 @@ export async function sendMessage(
     if (responseData.code === 200) {
       // 成功响应，提取 AI 回复内容
       const message = responseData.data?.choices?.[0]?.message;
-      
+
       if (!message?.content) {
         throw new MessageSendError('Invalid response: missing message content');
       }
@@ -169,7 +163,7 @@ export async function sendMessage(
     if (err instanceof MessageSendError) {
       throw err;
     }
-    
+
     logger.error('发送消息失败', err);
     throw new MessageSendError('Failed to send message, please try again later');
   }
@@ -226,11 +220,10 @@ export async function generateMessageVoice(
     logger.info('生成消息语音', { messageId, agentId });
 
     // 调用 SDK 生成语音
-    const response = await client.api.v1.chats.agents.generateMessageVoice(
-      String(messageId),
-      { agent_id: agentId },
-    );
-    
+    const response = await client.api.v1.chats.agents.generateMessageVoice(String(messageId), {
+      agent_id: agentId,
+    });
+
     logger.info('生成语音响应', response);
 
     const responseData = response as any;
@@ -257,9 +250,8 @@ export async function generateMessageVoice(
     if (err instanceof VoiceGenerationError) {
       throw err;
     }
-    
+
     logger.error('生成消息语音失败', err);
     throw new VoiceGenerationError('Failed to generate voice, please try again later');
   }
 }
-

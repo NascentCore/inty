@@ -43,7 +43,7 @@ const UpdateAgent: React.FC = () => {
       ]}
       onTest={async (values) => {
         const { agent_id, ...updateParams } = values;
-        
+
         // 过滤空值
         const params: any = {};
         Object.entries(updateParams).forEach(([key, value]) => {
@@ -71,4 +71,3 @@ const UpdateAgent: React.FC = () => {
 };
 
 export default UpdateAgent;
-

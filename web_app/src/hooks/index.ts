@@ -3,5 +3,5 @@
  * 从各个 Hook 模块中导出
  */
 
-export { useVoicePlayer } from './useVoicePlayer';
 export type { TVoiceStatus } from './useVoicePlayer';
+export { useVoicePlayer } from './useVoicePlayer';

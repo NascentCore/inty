@@ -3,10 +3,10 @@
  * 聊天消息列表展示
  */
 
+import { Bot, MessageCircle } from 'lucide-react';
 import React, { useEffect, useRef } from 'react';
-import { MessageCircle, Bot } from 'lucide-react';
-import type { IMessage } from '@/types';
 import { Icon } from '@/components';
+import type { IMessage } from '@/types';
 import MessageItem from '../MessageItem';
 import './index.less';
 
@@ -88,10 +88,7 @@ const MessageList: React.FC<IMessageListProps> = ({
     return (
       <div className="message-sending">
         {agentAvatar ? (
-          <div
-            className="sending-avatar"
-            style={{ backgroundImage: `url(${agentAvatar})` }}
-          />
+          <div className="sending-avatar" style={{ backgroundImage: `url(${agentAvatar})` }} />
         ) : (
           <div className="sending-avatar">
             <Icon icon={Bot} size={20} />
@@ -138,4 +135,3 @@ const MessageList: React.FC<IMessageListProps> = ({
 };
 
 export default MessageList;
-

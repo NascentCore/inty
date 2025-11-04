@@ -3,9 +3,9 @@
  * 用于生成和管理设备唯一 ID，主要用于访客登录
  */
 
-import { storage } from './storage';
 import { STORAGE_KEYS } from '@/constants';
 import { logger } from './logger';
+import { storage } from './storage';
 
 /**
  * 生成 UUID v4
@@ -104,4 +104,3 @@ export async function clearDeviceId(): Promise<boolean> {
     return false;
   }
 }
-

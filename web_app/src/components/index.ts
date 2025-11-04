@@ -3,19 +3,18 @@
  * 目的是统一管理对外输出的组件，方便分类
  */
 
+export { default as EmptyState } from './EmptyState';
+export { default as ErrorAlert } from './ErrorAlert';
 /**
  * 布局组件
  */
 export { default as Footer } from './Footer';
-
+export { default as GoogleLoginModal } from './GoogleLoginModal';
 /**
  * 通用 UI 组件
  */
 export { default as Icon } from './Icon';
 export { default as Loading } from './Loading';
-export { default as ErrorAlert } from './ErrorAlert';
-export { default as EmptyState } from './EmptyState';
-export { default as GoogleLoginModal } from './GoogleLoginModal';
 
 /**
  * 测试组件

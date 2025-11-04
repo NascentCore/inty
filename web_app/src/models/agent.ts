@@ -3,13 +3,9 @@
  * 管理 AI 角色列表、推荐、收藏、关注等状态
  */
 
-import { useState, useCallback } from 'react';
-import { getRecommendAgents, getAgentDetail } from '@/services/agent';
-import type {
-  IAgent,
-  IAgentRecommendRequest,
-  IAgentRecommendData,
-} from '@/types';
+import { useCallback, useState } from 'react';
+import { getAgentDetail, getRecommendAgents } from '@/services/agent';
+import type { IAgent, IAgentRecommendData, IAgentRecommendRequest } from '@/types';
 
 /**
  * AI 角色 Model 状态接口
@@ -209,4 +205,3 @@ export default function useAgentModel() {
     reset,
   };
 }
-

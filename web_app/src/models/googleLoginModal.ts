@@ -1,6 +1,6 @@
 /**
  * Google 登录弹窗状态管理
- * 
+ *
  * 提供全局的 Google 登录弹窗显示/隐藏控制
  */
 
@@ -32,4 +32,3 @@ export default function useGoogleLoginModal(): IGoogleLoginModalState {
     hide,
   };
 }
-

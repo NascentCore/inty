@@ -3,10 +3,10 @@
  * 显示 Agent 信息和返回按钮
  */
 
-import React from 'react';
 import { ArrowLeft, Bot } from 'lucide-react';
-import type { IAgent } from '@/types';
+import React from 'react';
 import { Icon } from '@/components';
+import type { IAgent } from '@/types';
 import './index.less';
 
 /**
@@ -88,4 +88,3 @@ const ChatHeader: React.FC<IChatHeaderProps> = ({ agent, loading, onBack }) => {
 };
 
 export default ChatHeader;
-

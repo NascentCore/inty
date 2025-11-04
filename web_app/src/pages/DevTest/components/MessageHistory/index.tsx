@@ -32,9 +32,7 @@ const MessageHistory: React.FC = () => {
             response.slice(0, 5).forEach((msg: any, index: number) => {
               logger.info(`  ${index + 1}. 角色: ${msg.role}`);
               logger.info(
-                `     内容: ${msg.content?.substring(0, 50)}${
-                  msg.content?.length > 50 ? '...' : ''
-                }`,
+                `     内容: ${msg.content?.substring(0, 50)}${msg.content?.length > 50 ? '...' : ''}`,
               );
               logger.info(`     时间: ${msg.timestamp || 'N/A'}`);
             });
@@ -49,4 +47,3 @@ const MessageHistory: React.FC = () => {
 };
 
 export default MessageHistory;
-

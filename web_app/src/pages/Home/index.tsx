@@ -3,10 +3,10 @@
  * 展示推荐的 AI 角色卡片
  */
 
+import { history, useModel } from '@umijs/max';
 import React, { useEffect } from 'react';
-import { useModel, history } from '@umijs/max';
+import { EmptyState, ErrorAlert, Loading } from '@/components';
 import type { IAgent } from '@/types';
-import { Loading, ErrorAlert, EmptyState } from '@/components';
 import { CharacterCard } from './components';
 import './index.less';
 
@@ -15,8 +15,7 @@ import './index.less';
  */
 const HomePage: React.FC = () => {
   // 获取 agent model
-  const { recommendList, loading, error, loadRecommendAgents } =
-    useModel('agent');
+  const { recommendList, loading, error, loadRecommendAgents } = useModel('agent');
 
   /**
    * 页面加载时获取推荐角色列表
@@ -41,14 +40,7 @@ const HomePage: React.FC = () => {
       </div>
 
       {/* 错误提示 */}
-      {error && (
-        <ErrorAlert
-          message="Failed to load"
-          description={error}
-          type="error"
-          closable
-        />
-      )}
+      {error && <ErrorAlert message="Failed to load" description={error} type="error" closable />}
 
       {/* 加载状态 */}
       {loading && <Loading tip="Loading..." size="large" fullscreen />}
@@ -57,11 +49,7 @@ const HomePage: React.FC = () => {
       {!loading && recommendList.length > 0 && (
         <div className="character-grid">
           {recommendList.map((agent: IAgent) => (
-            <CharacterCard
-              key={agent.id}
-              agent={agent}
-              onStartChat={handleStartChat}
-            />
+            <CharacterCard key={agent.id} agent={agent} onStartChat={handleStartChat} />
           ))}
         </div>
       )}

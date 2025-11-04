@@ -14,16 +14,16 @@
 
 // ==================== 暗色主题色彩系统 ====================
 // 背景色
-@dark-bg-primary: #0f0f0f;           // 主背景色
-@dark-bg-secondary: #1a1a1a;         // 次级背景色
-@dark-bg-tertiary: #242424;          // 三级背景色（卡片、面板）
-@dark-bg-hover: #2a2a2a;             // 悬停背景色
-@dark-bg-active: #333333;            // 激活背景色
+@dark-bg-primary: #0f0f0f; // 主背景色
+@dark-bg-secondary: #1a1a1a; // 次级背景色
+@dark-bg-tertiary: #242424; // 三级背景色（卡片、面板）
+@dark-bg-hover: #2a2a2a; // 悬停背景色
+@dark-bg-active: #333333; // 激活背景色
 
 // 文本色
-@dark-text-primary: rgba(255, 255, 255, 0.95);    // 主文本
-@dark-text-secondary: rgba(255, 255, 255, 0.75);  // 次要文本
-@dark-text-tertiary: rgba(255, 255, 255, 0.55);   // 三级文本
+@dark-text-primary: rgba(255, 255, 255, 0.95); // 主文本
+@dark-text-secondary: rgba(255, 255, 255, 0.75); // 次要文本
+@dark-text-tertiary: rgba(255, 255, 255, 0.55); // 三级文本
 @dark-text-quaternary: rgba(255, 255, 255, 0.35); // 四级文本（占位符）
 
 // 边框色
@@ -37,7 +37,11 @@
 
 // 渐变
 @dark-gradient-primary: linear-gradient(180deg, #0f0f0f 0%, #1a1a1a 100%);
-@dark-gradient-card: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+@dark-gradient-card: linear-gradient(
+  135deg,
+  rgba(255, 255, 255, 0.05) 0%,
+  rgba(255, 255, 255, 0.01) 100%
+);
 
 // ==================== 背景色 ====================
 @bg-color: #f0f2f5;
@@ -71,7 +75,16 @@
 @spacing-xxl: 40px;
 
 // ==================== 字体 ====================
-@font-family-base: AlibabaSans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+@font-family-base:
+  AlibabaSans,
+  -apple-system,
+  BlinkMacSystemFont,
+  'Segoe UI',
+  Roboto,
+  'Helvetica Neue',
+  Arial,
+  'Noto Sans',
+  sans-serif;
 @font-size-xs: 12px;
 @font-size-sm: 14px;
 @font-size-base: 16px;
@@ -117,4 +130,3 @@
 // ==================== 其他 ====================
 @spinner-border-color: rgba(0, 0, 0, 0.1);
 @loading-color: @primary-color;
-

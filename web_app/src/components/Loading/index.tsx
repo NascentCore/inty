@@ -1,6 +1,6 @@
 /**
  * Loading 加载组件
- * 
+ *
  * 用途：显示加载状态，使用 SpinKit 三点弹跳动画
  * 使用示例：
  * ```tsx
@@ -8,7 +8,7 @@
  * <Loading size="default" tip="加载中..." />
  * <Loading size="large" fullscreen />
  * ```
- * 
+ *
  * Props 说明：
  * - tip: string - 加载提示文本（可选）
  * - size: 'small' | 'default' | 'large' - 尺寸大小，默认 'default'
@@ -33,11 +33,7 @@ interface ILoadingProps {
 /**
  * Loading 组件
  */
-const Loading: React.FC<ILoadingProps> = ({
-  tip,
-  size = 'default',
-  fullscreen = false,
-}) => {
+const Loading: React.FC<ILoadingProps> = ({ tip, size = 'default', fullscreen = false }) => {
   const sizeClass = `loading-${size}`;
   const containerClass = fullscreen ? 'loading-container fullscreen' : 'loading-container';
 
@@ -54,4 +50,3 @@ const Loading: React.FC<ILoadingProps> = ({
 };
 
 export default Loading;
-

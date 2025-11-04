@@ -3,8 +3,8 @@
  * 聊天消息输入框
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Send, Loader2 } from 'lucide-react';
+import { Send } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components';
 import './index.less';
 
@@ -37,12 +37,9 @@ const MessageInput: React.FC<IMessageInputProps> = ({
   /**
    * 处理输入变化
    */
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setInputValue(e.target.value);
-    },
-    [],
-  );
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValue(e.target.value);
+  }, []);
 
   /**
    * 自动调整输入框高度
@@ -132,12 +129,9 @@ const MessageInput: React.FC<IMessageInputProps> = ({
       </div>
 
       {/* 提示文本 */}
-      <div className="message-input-hint">
-        Press Enter to send, Shift + Enter for new line
-      </div>
+      <div className="message-input-hint">Press Enter to send, Shift + Enter for new line</div>
     </div>
   );
 };
 
 export default MessageInput;
-

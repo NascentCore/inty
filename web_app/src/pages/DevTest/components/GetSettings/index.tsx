@@ -30,4 +30,3 @@ const GetSettings: React.FC = () => {
 };
 
 export default GetSettings;
-

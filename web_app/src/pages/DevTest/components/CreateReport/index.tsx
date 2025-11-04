@@ -47,7 +47,7 @@ const CreateReport: React.FC = () => {
           target_id: values.target_id,
           reason_ids: values.reason_ids
             .split(',')
-            .map((id: string) => Number.parseInt(id.trim())),
+            .map((id: string) => Number.parseInt(id.trim(), 10)),
         };
 
         if (values.description) {
@@ -69,4 +69,3 @@ const CreateReport: React.FC = () => {
 };
 
 export default CreateReport;
-

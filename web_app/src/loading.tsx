@@ -6,8 +6,6 @@
 import React from 'react';
 import Loading from '@/components/Loading';
 
-const GlobalLoading: React.FC = () => (
-  <Loading tip="加载中..." fullscreen />
-);
+const GlobalLoading: React.FC = () => <Loading tip="加载中..." fullscreen />;
 
 export default GlobalLoading;

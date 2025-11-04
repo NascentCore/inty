@@ -1,5 +1,5 @@
-import React from 'react';
 import { Outlet } from '@umijs/max';
+import React from 'react';
 import { GoogleLoginModal } from '@/components';
 
 /**

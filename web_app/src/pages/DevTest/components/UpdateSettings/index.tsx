@@ -24,8 +24,8 @@ const UpdateSettings: React.FC = () => {
           required: false,
           type: 'select',
           options: [
-            { label: '启用', value: true },
-            { label: '禁用', value: false },
+            { label: '启用', value: 'true' },
+            { label: '禁用', value: 'false' },
           ],
         },
       ]}
@@ -53,4 +53,3 @@ const UpdateSettings: React.FC = () => {
 };
 
 export default UpdateSettings;
-

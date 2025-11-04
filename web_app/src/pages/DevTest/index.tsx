@@ -1,71 +1,71 @@
-import React, { useState } from 'react';
-import { Layout, Menu, Card, Typography, Input } from 'antd';
-import type { MenuProps } from 'antd';
 import {
-  LockOutlined,
-  UserOutlined,
-  RobotOutlined,
-  MessageOutlined,
-  CrownOutlined,
-  SettingOutlined,
-  WarningOutlined,
-  SoundOutlined,
-  MobileOutlined,
   BellOutlined,
-  UploadOutlined,
+  CrownOutlined,
+  LockOutlined,
+  MessageOutlined,
+  MobileOutlined,
+  RobotOutlined,
   SearchOutlined,
+  SettingOutlined,
+  SoundOutlined,
+  UploadOutlined,
+  UserOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
+import type { MenuProps } from 'antd';
+import { Card, Input, Layout, Menu, Typography } from 'antd';
+import React, { useState } from 'react';
 
 // 导入所有测试组件
 import {
-  // 认证模块
-  GuestLogin,
-  GoogleLogin,
-  TokenWriter,
-  // 用户模块
-  UserProfile,
-  UpdateProfile,
-  CheckDeletionEligibility,
-  DeleteAccount,
-  // AI代理模块
-  CreateAgent,
   AgentDetail,
-  UpdateAgent,
-  DeleteAgent,
-  MyAgentList,
-  SearchAgents,
-  RecommendAgents,
-  FollowAgent,
-  UnfollowAgent,
-  FollowingList,
   // 聊天模块
   ChatCreate,
-  ChatList,
   ChatDelete,
-  MessageHistory,
+  ChatList,
   ChatSettings,
-  UpdateChatSettings,
+  CheckDeletionEligibility,
+  // 版本检查模块
+  CheckVersion,
+  // AI代理模块
+  CreateAgent,
+  // 举报模块
+  CreateReport,
+  DeleteAccount,
+  DeleteAgent,
+  FollowAgent,
+  FollowingList,
   GenerateMessageVoice,
+  // 设置模块
+  GetSettings,
+  GoogleLogin,
+  // 认证模块
+  GuestLogin,
+  // 通知模块
+  ListNotifications,
+  // 语音合成模块
+  ListVoices,
+  MessageHistory,
+  MyAgentList,
+  RecommendAgents,
+  SearchAgents,
   SendMessageV1,
   SendMessageV2,
+  SubscriptionPlans,
   // 订阅模块
   SubscriptionStatus,
   SubscriptionUsage,
-  SubscriptionPlans,
-  VerifyPurchase,
-  // 设置模块
-  GetSettings,
+  TokenWriter,
+  UnfollowAgent,
+  UpdateAgent,
+  UpdateChatSettings,
+  UpdateProfile,
   UpdateSettings,
-  // 举报模块
-  CreateReport,
-  // 语音合成模块
-  ListVoices,
-  // 版本检查模块
-  CheckVersion,
-  // 通知模块
-  ListNotifications,
   // 文件上传模块
   UploadImage,
+  // 用户模块
+  UserProfile,
+  VerifyPurchase,
 } from './components';
 
 import './index.less';
@@ -312,9 +312,7 @@ const DevTestPage: React.FC = () => {
       {/* 页面标题 */}
       <div className="page-header">
         <Title level={2}>🛠 Inty SDK 开发测试</Title>
-        <Paragraph type="secondary">
-          测试 Inty SDK 各项功能，结果将在浏览器控制台输出
-        </Paragraph>
+        <Paragraph type="secondary">测试 Inty SDK 各项功能，结果将在浏览器控制台输出</Paragraph>
       </div>
 
       <Layout className="dev-test-layout">
@@ -355,4 +353,3 @@ const DevTestPage: React.FC = () => {
 };
 
 export default DevTestPage;
-

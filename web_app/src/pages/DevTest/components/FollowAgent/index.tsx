@@ -35,4 +35,3 @@ const FollowAgent: React.FC = () => {
 };
 
 export default FollowAgent;
-

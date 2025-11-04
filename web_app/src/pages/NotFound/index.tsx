@@ -1,5 +1,5 @@
-import React from 'react';
 import { useNavigate } from '@umijs/max';
+import React from 'react';
 import './index.less';
 
 /**
@@ -18,7 +18,7 @@ const NotFoundPage: React.FC = () => {
         <div className="not-found-icon">404</div>
         <h1 className="not-found-title">页面未找到</h1>
         <p className="not-found-subtitle">抱歉，您访问的页面不存在。</p>
-        <button className="not-found-button" onClick={handleBackHome}>
+        <button type="button" className="not-found-button" onClick={handleBackHome}>
           返回首页
         </button>
       </div>
@@ -27,4 +27,3 @@ const NotFoundPage: React.FC = () => {
 };
 
 export default NotFoundPage;
-

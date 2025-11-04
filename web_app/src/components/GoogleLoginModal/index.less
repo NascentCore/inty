@@ -96,41 +96,53 @@
       max-width: 300px;
     }
 
-    .google-login-button {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
+    .google-login-wrapper {
       width: 100%;
-      padding: 14px 24px;
-      background: @dark-bg-primary;
-      border: 1px solid @dark-border-color;
+      display: flex;
+      justify-content: center;
+    }
+
+    .login-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 0;
+
+      .spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid @dark-border-color;
+        border-top-color: @primary-color;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      }
+
+      p {
+        font-size: 14px;
+        color: @dark-text-secondary;
+        margin: 0;
+      }
+    }
+
+    .login-error {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
       border-radius: 8px;
-      font-size: 16px;
-      font-weight: 500;
-      color: @dark-text-primary;
-      cursor: pointer;
-      transition: all 0.2s ease;
+      margin-bottom: 16px;
 
-      &:hover {
-        background: @dark-bg-secondary;
-        border-color: @primary-color;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      }
-
-      &:active {
-        background: @dark-bg-active;
-        transform: translateY(0);
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-      }
-
-      .google-icon {
-        flex-shrink: 0;
-      }
-
-      span {
-        flex: 1;
+      p {
+        font-size: 14px;
+        color: #ef4444;
+        margin: 0;
         text-align: center;
       }
     }

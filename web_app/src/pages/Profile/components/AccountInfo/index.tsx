@@ -1,18 +1,18 @@
 /**
  * 账户信息组件
- * 
+ *
  * 用途：展示用户账户信息（认证类型、注册时间）
  * 使用示例：
  * ```tsx
  * <AccountInfo userProfile={userProfile} />
  * ```
- * 
+ *
  * Props 说明：
  * - userProfile: IUserProfile - 用户信息对象
  */
 
+import { Clock, Shield } from 'lucide-react';
 import React from 'react';
-import { Shield, Clock } from 'lucide-react';
 import { Icon } from '@/components';
 import type { IUserProfile } from '@/types';
 import './index.less';
@@ -75,23 +75,14 @@ const AccountInfo: React.FC<IAccountInfoProps> = ({ userProfile }) => {
   return (
     <div className="account-info-card">
       <h2 className="card-title">Account Information</h2>
-      
+
       <div className="account-list">
-        <InfoItem
-          icon={Shield}
-          label="Auth Type"
-          value={getAuthTypeText(userProfile.auth_type)}
-        />
-        
-        <InfoItem
-          icon={Clock}
-          label="Joined"
-          value={formatDate(userProfile.created_at)}
-        />
+        <InfoItem icon={Shield} label="Auth Type" value={getAuthTypeText(userProfile.auth_type)} />
+
+        <InfoItem icon={Clock} label="Joined" value={formatDate(userProfile.created_at)} />
       </div>
     </div>
   );
 };
 
 export default AccountInfo;
-

@@ -18,7 +18,7 @@ const CheckVersion: React.FC = () => {
           required: true,
           type: 'number',
           placeholder: '如: 100',
-          defaultValue: 100,
+          defaultValue: '100',
         },
         {
           name: 'appVersionName',
@@ -57,4 +57,3 @@ const CheckVersion: React.FC = () => {
 };
 
 export default CheckVersion;
-

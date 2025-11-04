@@ -93,4 +93,3 @@ const UpdateProfile: React.FC = () => {
 };
 
 export default UpdateProfile;
-

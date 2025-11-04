@@ -27,17 +27,6 @@ export const THEME_COLORS = {
   activeBackground: '#e6f7ff',
 } as const;
 
-// 路由路径
-export const ROUTES = {
-  HOME: '/',
-  ABOUT: '/about',
-  DEMO_HORIZONTAL: '/demo-horizontal',
-  DEMO_VERTICAL: '/demo-vertical',
-  CUSTOM_HORIZONTAL: '/custom-horizontal',
-  CUSTOM_VERTICAL: '/custom-vertical',
-  NOT_FOUND: '/404',
-} as const;
-
 // 响应式断点
 export const BREAKPOINTS = {
   xs: 480,
@@ -80,18 +69,10 @@ export const LOCALES = {
   EN_US: 'en-US',
 } as const;
 
-// API 相关
-export const API_CONFIG = {
-  TIMEOUT: 10000,
-  BASE_URL: '/api',
-  /** API 基础地址 - 开发环境使用代理，生产环境需配置实际地址 */
-  API_BASE_URL: '/api/v1',
-} as const;
-
 // Inty SDK 配置
 export const INTY_SDK_CONFIG = {
   /** Base URL - 统一使用相对路径，通过代理转发 */
-  BASE_URL: window.location.origin + '/',
+  BASE_URL: `${window.location.origin}/`,
   /** 默认超时时间 (毫秒) */
   TIMEOUT: 30000,
   /** 默认重试次数 */
@@ -100,11 +81,8 @@ export const INTY_SDK_CONFIG = {
   LOG_LEVEL: 'warn' as const,
 } as const;
 
-// API 端点
-export const API_ENDPOINTS = {
-  /** 访客登录（仅供 dev-test 测试使用） */
-  GUEST_LOGIN: '/auth/guest',
-  /** 推荐 AI 角色列表 */
-  AGENTS_RECOMMEND: '/ai/agents/recommend',
+// Google OAuth 配置
+export const GOOGLE_AUTH_CONFIG = {
+  /** Google OAuth Client ID */
+  CLIENT_ID: '1034291688895-4aajnset4lc3subled86dikpk92hi7hp.apps.googleusercontent.com',
 } as const;
-

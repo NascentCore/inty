@@ -18,9 +18,9 @@ const ListNotifications: React.FC = () => {
           required: false,
           type: 'select',
           options: [
-            { label: '全部', value: undefined },
-            { label: '未读', value: false },
-            { label: '已读', value: true },
+            { label: '全部', value: '' },
+            { label: '未读', value: 'false' },
+            { label: '已读', value: 'true' },
           ],
         },
         {
@@ -28,14 +28,14 @@ const ListNotifications: React.FC = () => {
           label: '页码',
           required: false,
           type: 'number',
-          defaultValue: 1,
+          defaultValue: '1',
         },
         {
           name: 'page_size',
           label: '每页数量',
           required: false,
           type: 'number',
-          defaultValue: 20,
+          defaultValue: '20',
         },
       ]}
       onTest={async (values) => {
@@ -75,4 +75,3 @@ const ListNotifications: React.FC = () => {
 };
 
 export default ListNotifications;
-

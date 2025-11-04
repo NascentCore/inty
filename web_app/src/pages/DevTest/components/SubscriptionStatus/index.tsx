@@ -34,4 +34,3 @@ const SubscriptionStatus: React.FC = () => {
 };
 
 export default SubscriptionStatus;
-

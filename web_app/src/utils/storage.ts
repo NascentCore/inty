@@ -155,9 +155,7 @@ export function driver(): string {
  */
 export async function setMultiple(items: Record<string, unknown>): Promise<boolean> {
   try {
-    const promises = Object.entries(items).map(([key, value]) =>
-      localforage.setItem(key, value),
-    );
+    const promises = Object.entries(items).map(([key, value]) => localforage.setItem(key, value));
     await Promise.all(promises);
     return true;
   } catch (error) {
@@ -231,4 +229,3 @@ export const storage = {
  * 默认导出
  */
 export default storage;
-

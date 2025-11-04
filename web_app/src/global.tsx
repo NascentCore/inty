@@ -57,9 +57,7 @@ if (pwa) {
     };
 
     // 使用原生确认对话框替代 antd notification
-    const shouldUpdate = window.confirm(
-      '发现新版本，是否立即更新？点击确定后页面将刷新。'
-    );
+    const shouldUpdate = window.confirm('发现新版本，是否立即更新？点击确定后页面将刷新。');
     if (shouldUpdate) {
       reloadSW();
     }

@@ -1,18 +1,18 @@
 /**
  * 个人信息头部组件
- * 
+ *
  * 用途：展示用户头像、昵称、用户 ID
  * 使用示例：
  * ```tsx
  * <ProfileHeader userProfile={userProfile} />
  * ```
- * 
+ *
  * Props 说明：
  * - userProfile: IUserProfile - 用户信息对象
  */
 
-import React from 'react';
 import { User } from 'lucide-react';
+import React from 'react';
 import { Icon } from '@/components';
 import type { IUserProfile } from '@/types';
 import './index.less';
@@ -62,9 +62,7 @@ const ProfileHeader: React.FC<IProfileHeaderProps> = ({ userProfile }) => {
 
       {/* 用户信息 */}
       <div className="profile-info">
-        <h1 className="profile-nickname">
-          {userProfile.nickname || 'No nickname set'}
-        </h1>
+        <h1 className="profile-nickname">{userProfile.nickname || 'No nickname set'}</h1>
         <div className="profile-id">ID: {userProfile.readable_id}</div>
       </div>
     </div>
@@ -72,4 +70,3 @@ const ProfileHeader: React.FC<IProfileHeaderProps> = ({ userProfile }) => {
 };
 
 export default ProfileHeader;
-

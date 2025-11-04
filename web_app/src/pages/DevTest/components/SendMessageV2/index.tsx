@@ -30,10 +30,10 @@ const SendMessageV2: React.FC = () => {
           required: false,
           type: 'select',
           options: [
-            { label: '否', value: false },
-            { label: '是', value: true },
+            { label: '否', value: 'false' },
+            { label: '是', value: 'true' },
           ],
-          defaultValue: false,
+          defaultValue: 'false',
         },
       ]}
       onTest={async (values) => {
@@ -68,4 +68,3 @@ const SendMessageV2: React.FC = () => {
 };
 
 export default SendMessageV2;
-

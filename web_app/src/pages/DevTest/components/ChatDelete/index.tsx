@@ -35,4 +35,3 @@ const ChatDelete: React.FC = () => {
 };
 
 export default ChatDelete;
-

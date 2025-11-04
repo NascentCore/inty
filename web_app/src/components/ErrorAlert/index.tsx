@@ -3,8 +3,8 @@
  * 替代 Ant Design 的 Alert 组件
  */
 
+import { AlertTriangle, CheckCircle, Info, X, XCircle } from 'lucide-react';
 import React, { useState } from 'react';
-import { XCircle, AlertTriangle, Info, CheckCircle, X } from 'lucide-react';
 import Icon from '../Icon';
 import './index.less';
 
@@ -78,4 +78,3 @@ const ErrorAlert: React.FC<IErrorAlertProps> = ({
 };
 
 export default ErrorAlert;
-

@@ -30,10 +30,10 @@ const SendMessageV1: React.FC = () => {
           required: false,
           type: 'select',
           options: [
-            { label: '否', value: false },
-            { label: '是', value: true },
+            { label: '否', value: 'false' },
+            { label: '是', value: 'true' },
           ],
-          defaultValue: false,
+          defaultValue: 'false',
         },
         {
           name: 'language',
@@ -70,10 +70,7 @@ const SendMessageV1: React.FC = () => {
         logger.testDetail('请求参数', params);
 
         const client = await createIntyClient(true);
-        const response = await client.api.v1.chats.createCompletion(
-          values.agent_id,
-          params,
-        );
+        const response = await client.api.v1.chats.createCompletion(values.agent_id, params);
 
         // 自定义成功日志
         if (response.data) {
@@ -88,4 +85,3 @@ const SendMessageV1: React.FC = () => {
 };
 
 export default SendMessageV1;
-

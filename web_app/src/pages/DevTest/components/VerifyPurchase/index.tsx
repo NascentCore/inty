@@ -60,4 +60,3 @@ const VerifyPurchase: React.FC = () => {
 };
 
 export default VerifyPurchase;
-

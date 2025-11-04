@@ -33,4 +33,3 @@ export const getGenderText = (gender: string): string => {
       return '未知';
   }
 };
-
