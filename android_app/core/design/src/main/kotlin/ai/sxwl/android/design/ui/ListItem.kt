@@ -1,6 +1,7 @@
 package ai.sxwl.android.design.ui
 
 import ai.sxwl.android.design.R
+import ai.sxwl.android.design.noRippleClickable
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -48,7 +49,8 @@ fun SettingsCheckBoxItem(
     val modifier =
         if (isInGroup) Modifier
         else
-            Modifier.clip(RoundedCornerShape(8.dp))
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
                 .background(Color(0x3378599A))
                 .border(
                     width = .05.dp,
@@ -66,7 +68,8 @@ fun SettingsCheckBoxItem(
 
     Row(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .height(56.dp)
                 .then(modifier)
                 .clickable { onCheckChanged(item.checked.not()) } // 让整个item可点击
@@ -87,7 +90,9 @@ fun SettingsCheckBoxItem(
         Image(
             painter = painterResource(iconRes),
             contentDescription = "",
-            modifier = Modifier.size(20.dp).clip(CircleShape)
+            modifier = Modifier
+                .size(20.dp)
+                .clip(CircleShape)
             // 移除checkbox的单独点击，因为整个item已经可点击了
         )
     }
@@ -99,12 +104,16 @@ fun SettingsSwitchItem(
     item: SettingsItemData.SwitchItemData,
     fontLight: Boolean = false, // 使用字重小一点
     isInGroup: Boolean = false,
+    horizontalPadding: Int = 12, // 支持自定义padding，默认12dp
+    @DrawableRes openedIconRes: Int? = null, // 开启状态的图标资源，由调用方传入
+    @DrawableRes closedIconRes: Int? = null, // 关闭状态的图标资源，由调用方传入
     onCheckChanged: (Boolean) -> Unit = {},
 ) {
     val modifier =
         if (isInGroup) Modifier
         else
-            Modifier.clip(RoundedCornerShape(8.dp))
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
                 .background(Color(0x3378599A))
                 .border(
                     width = .05.dp,
@@ -121,32 +130,49 @@ fun SettingsSwitchItem(
                 )
 
     Row(
-        modifier = Modifier.fillMaxWidth().height(56.dp).then(modifier).padding(horizontal = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .then(modifier)
+            .padding(horizontal = horizontalPadding.dp)
+            .noRippleClickable { onCheckChanged(item.checked.not()) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = item.title,
             fontSize = 14.sp,
-            lineHeight = 22.sp,
+            lineHeight = 24.sp, // 根据设计稿，lineHeight应该是24sp
             fontWeight = if (fontLight) FontWeight.Normal else FontWeight.Bold,
             color = Color.White,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.weight(1f))
-        Switch(
-            checked = item.checked,
-            onCheckedChange = onCheckChanged,
-            colors =
-                SwitchDefaults.colors()
-                    .copy(
-                        checkedTrackColor = Color(0xFF62C18E),
-                        uncheckedTrackColor = Color(0xFF43394F),
-                        uncheckedBorderColor = Color.Transparent,
-                        disabledCheckedBorderColor = Color.Transparent,
-                        disabledUncheckedBorderColor = Color.Transparent,
-                    )
-        )
+        // 如果提供了图标资源，使用Image；否则使用Switch
+        if (openedIconRes != null && closedIconRes != null) {
+            Image(
+                painter =
+                    painterResource(
+                        if (item.checked) openedIconRes
+                        else closedIconRes
+                    ),
+                contentDescription = null,
+            )
+        } else {
+            Switch(
+                checked = item.checked,
+                onCheckedChange = onCheckChanged,
+                colors =
+                    SwitchDefaults.colors()
+                        .copy(
+                            checkedTrackColor = Color(0xFF62C18E),
+                            uncheckedTrackColor = Color(0xFF43394F),
+                            uncheckedBorderColor = Color.Transparent,
+                            disabledCheckedBorderColor = Color.Transparent,
+                            disabledUncheckedBorderColor = Color.Transparent,
+                        )
+            )
+        }
     }
 }
 
@@ -196,13 +222,15 @@ fun SettingsArrowItem(
     item: SettingsItemData.CommonItemData,
     fontLight: Boolean = false, // 使用字重小一点
     isInGroup: Boolean = false,
+    horizontalPadding: Int = 12, // 支持自定义padding，默认12dp
     onItemClick: () -> Unit = {},
 ) {
 
     val modifier =
         if (isInGroup) Modifier
         else
-            Modifier.clip(RoundedCornerShape(8.dp))
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
                 .background(Color(0x3378599A))
                 .border(
                     width = .05.dp,
@@ -219,11 +247,12 @@ fun SettingsArrowItem(
                 )
     Row(
         modifier =
-            Modifier.fillMaxWidth()
-                .height(56.dp)
+            Modifier
+                .fillMaxWidth()
+                .height(48.dp)
                 .then(modifier)
                 .clickable(onClick = onItemClick)
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = horizontalPadding.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -277,7 +306,8 @@ fun SettingsIconArrowItem(
 
     Row(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .height(56.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color(0x3378599A))
@@ -347,7 +377,8 @@ fun SettingsItemGroup(
     contents: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
-        Modifier.clip(RoundedCornerShape(8.dp))
+        Modifier
+            .clip(RoundedCornerShape(8.dp))
             .background(Color(0x3378599A))
             .border(
                 width = .05.dp,
@@ -391,12 +422,14 @@ private fun 预览设置分组容器() {
     }
 }
 
-@Preview
 @Composable
-fun IntelliMateDivider() {
+fun IntelliMateDivider(
+    modifier: Modifier = Modifier,
+) {
     Box(
-        Modifier.fillMaxWidth()
-            .height(.2.dp)
+        modifier = modifier
+            .fillMaxWidth()
+            .height(1.dp)
             .background(
                 brush =
                     Brush.horizontalGradient(

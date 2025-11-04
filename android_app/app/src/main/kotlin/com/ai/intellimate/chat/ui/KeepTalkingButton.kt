@@ -1,57 +1,50 @@
 package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.design.noRippleClickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
 
-/** Keep Talking按钮组件 */
+/** Keep Talking悬浮按钮组件 - 固定在ChatInput上方，右侧紧贴屏幕 */
 @Composable
-fun KeepTalkingButton(visible: Boolean, onClick: () -> Unit) {
+fun KeepTalkingFloatingButton(
+    visible: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     if (!visible) return
 
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.Start,
+    Box(
+        modifier = modifier
+            .clip(
+                RoundedCornerShape(
+                    topStart = 20.dp,
+                    bottomStart = 20.dp
+                )
+            ) // 左侧半圆角，右侧直角
+            .background(
+                Color.Black.copy(alpha = 0.6f),
+                RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)
+            )
+            .noRippleClickable(onClick = onClick)
+            .padding(4.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier =
-                Modifier.width(80.dp)
-                    .height(32.dp)
-                    .background(Color.Black.copy(.3f), RoundedCornerShape(16.dp))
-                    .noRippleClickable { onClick() },
-            contentAlignment = Alignment.Center,
-        ) {
-            // 播放按钮图标 (>>)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.play_button_symbol),
-                    color = Color.White,
-                    fontSize = 12.sp,
-                )
-                Spacer(modifier = Modifier.width(0.dp))
-                Text(
-                    text = stringResource(R.string.play_button_symbol),
-                    color = Color.White,
-                    fontSize = 12.sp,
-                )
-            }
-        }
+        Image(
+            painter = painterResource(R.drawable.ic_keep_talking),
+            contentDescription = "Keep Talking",
+            modifier = Modifier.size(18.dp),
+        )
     }
 }

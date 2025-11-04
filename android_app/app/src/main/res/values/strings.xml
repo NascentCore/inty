@@ -155,6 +155,8 @@
     <!-- Chat -->
     <string name="chat_settings_my_persona_title">My Persona</string>
     <string name="chat_settings_settings_title">Settings</string>
+    <string name="chat_settings_show_keep_talking">Show \"Keep Talking\" button</string>
+    <string name="chat_settings_auto_play_voice">Auto-play voice messages</string>
     <string name="chat_input_placeholder">Write your message to AI character</string>
 
     <!-- VIP Components -->

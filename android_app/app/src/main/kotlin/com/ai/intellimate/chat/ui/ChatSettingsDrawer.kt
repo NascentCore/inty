@@ -3,12 +3,13 @@ package com.ai.intellimate.chat.ui
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
-import ai.sxwl.android.design.noRippleClickable
-import androidx.compose.foundation.Image
+import ai.sxwl.android.data.store.SettingStateManager
+import ai.sxwl.android.design.ui.SettingsArrowItem
+import ai.sxwl.android.design.ui.SettingsItemData
+import ai.sxwl.android.design.ui.SettingsSwitchItem
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,15 +25,12 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,16 +60,11 @@ fun ChatSettingsDrawer(
     val context = LocalContext.current
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
-    // Keep talking二状态设置：默认跟随全局设置
-    var agentKeepTalking by
-    remember(agentInfo?.id) {
-        mutableStateOf(
-            agentInfo?.let {
-                // 获取角色专用设置，如果不存在则使用全局设置
-                IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
-            } ?: false
-        )
-    }
+    // Keep talking全局设置 - 使用SettingStateManager的Flow来监听设置变化
+    val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState()
+
+    // Auto-play voice messages全局设置 - 使用SettingStateManager的Flow来监听设置变化
+    val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState()
 
     val horizontalPadding = 16
 
@@ -202,6 +195,7 @@ fun ChatSettingsDrawer(
 
                 Spacer(Modifier.height(14.dp))
 
+                // 参照My Persona的样式，使用Column包裹，外层padding，内层item也有padding
                 Column(
                     modifier =
                         Modifier
@@ -222,40 +216,62 @@ fun ChatSettingsDrawer(
                             )
                             .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
                 ) {
-                    agentInfo?.let { agent ->
-
-                        // 举报入口
-                        Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp)
-                                    .padding(horizontal = horizontalPadding.dp)
-                                    .noRippleClickable {
-                                        // 检查是否已登录
-                                        if (IntySetting.isLogin() && IntySetting.getCurToken()
-                                                .isNotEmpty()
-                                        ) {
-                                            ReportActivity.launch(context, agent.id, "AGENT")
-                                        } else {
-                                            // 未登录或游客时跳转到登录页面
-                                            LoginActivity.launch(context)
-                                        }
-                                    },
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.str_report),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = Color.White,
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Image(
-                                painter = painterResource(R.drawable.icon_next),
-                                contentDescription = null,
-                            )
+                    // Show "Keep Talking" button开关
+                    SettingsSwitchItem(
+                        item = SettingsItemData.SwitchItemData(
+                            title = stringResource(R.string.chat_settings_show_keep_talking),
+                            checked = showKeepTalking
+                        ),
+                        fontLight = true,
+                        isInGroup = true,
+                        horizontalPadding = horizontalPadding, // 使用与My Persona相同的padding
+                        openedIconRes = R.drawable.opened, // 传入app模块的资源
+                        closedIconRes = R.drawable.closed, // 传入app模块的资源
+                        onCheckChanged = { enabled ->
+                            SettingStateManager.updateShowKeepTalking(enabled)
+                            onKeepTalkingChange(enabled)
                         }
+                    )
+
+                    // Auto-play voice messages开关
+                    SettingsSwitchItem(
+                        item = SettingsItemData.SwitchItemData(
+                            title = stringResource(R.string.chat_settings_auto_play_voice),
+                            checked = autoPlayVoice
+                        ),
+                        fontLight = true,
+                        isInGroup = true,
+                        horizontalPadding = horizontalPadding, // 使用与My Persona相同的padding
+                        openedIconRes = R.drawable.opened, // 传入app模块的资源
+                        closedIconRes = R.drawable.closed, // 传入app模块的资源
+                        onCheckChanged = { enabled ->
+                            SettingStateManager.updateAutoPlayAudio(enabled)
+                        }
+                    )
+
+                    agentInfo?.let { agent ->
+                        // 举报入口
+                        SettingsArrowItem(
+                            item = SettingsItemData.CommonItemData(
+                                title = stringResource(R.string.str_report),
+                                content = "",
+                                arrow = true
+                            ),
+                            fontLight = true,
+                            isInGroup = true,
+                            horizontalPadding = horizontalPadding, // 使用与My Persona相同的padding
+                            onItemClick = {
+                                // 检查是否已登录
+                                if (IntySetting.isLogin() && IntySetting.getCurToken()
+                                        .isNotEmpty()
+                                ) {
+                                    ReportActivity.launch(context, agent.id, "AGENT")
+                                } else {
+                                    // 未登录或游客时跳转到登录页面
+                                    LoginActivity.launch(context)
+                                }
+                            }
+                        )
                     }
                 }
             }

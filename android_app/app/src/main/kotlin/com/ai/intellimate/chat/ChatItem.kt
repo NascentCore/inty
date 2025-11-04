@@ -2,6 +2,7 @@ package com.ai.intellimate.chat
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.LogUtils
 import android.content.ClipData
@@ -134,9 +135,7 @@ private fun ChatItemAI(
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
 
     runCatching {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        Column(modifier = Modifier.fillMaxWidth(.9f)) {
             // 播放器按钮
             if (item.content.isNotEmpty() && item.content != "loading_animation") {
                 val agentInfo by viewModel.agentInfo.collectAsState()
@@ -170,7 +169,7 @@ private fun ChatItemAI(
                 // 检查开场白是否已播放过
                 val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
 
-                // 开场白自动播放逻辑：只有开场白消息且未播放过，且queryMsgs已完成
+                // 开场白自动播放逻辑：只有开场白消息且未播放过，且queryMsgs已完成，且用户开启了自动播放
                 val shouldAutoPlay =
                     item.isOpening() &&
                             isOnlyOpeningMessage &&
@@ -178,7 +177,8 @@ private fun ChatItemAI(
                             isCurrentPage &&
                             isQueryMsgsCompleted &&
                             !(safeAgentId.isEmpty()) &&
-                            audioInfo.url.isNotEmpty()
+                            audioInfo.url.isNotEmpty() &&
+                            IntySetting.isAutoPlayAudio()
 
                 if (safeAgentId.isNotEmpty()) {
                     VoicePlayer(
@@ -214,7 +214,7 @@ private fun ChatItemAI(
                     item.localMsgId.contains("loading_image", ignoreCase = true)
             // 判断是否为图片消息（纯图片，无文本）
             val isImageOnlyMessage = item.content.isEmpty() && hasGeneratedImage
-            
+
             // 全屏图片查看器状态
             var showFullScreenImage by remember { mutableStateOf(false) }
             // 图片加载错误状态
@@ -301,14 +301,12 @@ private fun ChatItemAI(
                         )
                     }
 
-                    // 右下角按钮（keep talking, image generate）
+                    // 右下角按钮（image generate）
+                    // keep talking按钮已移至ChatInput右上角悬浮
                     // 如果有图片，隐藏所有按钮；否则仅在最后一条消息时显示
                     if (!isImageOnlyMessage && !hasGeneratedImage && isLatestMessage) {
                         MessageCornerActions(
                             message = item,
-                            onKeepTalking = {
-                                viewModel.sendKeepTalkingMessage()
-                            },
                             onImageGenerate = {
                                 viewModel.generateImageForMessage(item.id)
                             },

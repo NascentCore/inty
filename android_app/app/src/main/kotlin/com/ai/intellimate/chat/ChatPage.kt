@@ -4,6 +4,7 @@ import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
@@ -56,7 +57,7 @@ import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatMorePanel
 import com.ai.intellimate.chat.ui.ChatSettingsDrawer
 import com.ai.intellimate.chat.ui.ChatTopBar
-import com.ai.intellimate.chat.ui.KeepTalkingButton
+import com.ai.intellimate.chat.ui.KeepTalkingFloatingButton
 import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.login.LoginActivity
@@ -160,24 +161,12 @@ internal fun ChatPage(
             else -> BottomNavigationBarHeight + ChatInputBottomSpacerHeight // 首页聊天页面，无键盘时
         }
 
-    // Keep talking二状态设置：默认跟随全局设置
-    var agentKeepTalking by
-    remember(agentInfo?.id) {
-        mutableStateOf(
-            agentInfo?.let {
-                // 获取角色专用设置，如果不存在则使用全局设置
-                IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
-            } ?: false
-        )
-    }
-
-    // 用于实时更新按钮显示状态
-    var shouldShowButton by remember(agentInfo?.id) { mutableStateOf(agentKeepTalking) }
+    // Keep talking全局设置 - 使用SettingStateManager的Flow来监听设置变化
+    val shouldShowButton by SettingStateManager.showKeepTalkingFlow.collectAsState()
 
     // Keep talking状态变化回调
     fun onKeepTalkingChange(enabled: Boolean) {
-        agentKeepTalking = enabled
-        shouldShowButton = enabled
+        SettingStateManager.updateShowKeepTalking(enabled)
     }
 
     // VIP状态
@@ -216,273 +205,298 @@ internal fun ChatPage(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
         ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .imePadding()
-            ) {
-                Spacer(Modifier.height(48.dp))
+            // 判断是否有最后一条AI文本消息（用于显示keep talking按钮）
+            // 注意：chatMessages是反向列表，第一个元素是最后一条消息
+            val chatMessages by chatViewModel.msgs.collectAsState()
+            val hasLatestAssistantMessage = remember(chatMessages) {
+                chatMessages.firstOrNull()?.let { firstMsg ->
+                    val hasGeneratedImage = firstMsg.hasGeneratedImage()
+                    val isImageMessage = firstMsg.content.isEmpty() && hasGeneratedImage
+                    firstMsg.role == "assistant" &&
+                            firstMsg.content != "loading_animation" &&
+                            !isImageMessage
+                } ?: false
+            }
 
-                // 立即显示TopBar和Premium标签（不等待数据加载）
-                agentInfo?.let { info ->
-                    ChatTopBar(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 18.dp),
-                        agentInfo = info,
-                        showBackButton = showBackButton,
-                        onBack = onBack,
-                        onClickMore = {
-                            scope.launch {
-                                // 如果是已经删除的agent，则不可点击，并提示
-                                if (agentInfo?.isDeleted == true) {
-                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
-                                } else {
-                                    if (drawerState.value == DrawerValue.Closed) {
-                                        drawerState.value = DrawerValue.Open
-                                    } else {
-                                        drawerState.value = DrawerValue.Closed
-                                    }
-                                }
-                            }
-                        },
-                    )
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                // Premium model标签,非vip显示，vip隐藏（20251020的要求）
-                if (agentInfo != null && !vipStatus.isSubscribed) {
-                    PremiumModelTag(
-                        onClick = {
-                            scope.launch {
-                                // 如果是已经删除的agent，则不可点击，并提示
-                                if (agentInfo?.isDeleted == true) {
-                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
-                                } else {
-                                    // 如果不是VIP，显示高级模型的弹窗
-                                    showPremiumDialog = true
-                                }
-                            }
-                        },
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    // 高级模型弹窗
-                    if (showPremiumDialog) {
-                        // 检查是否已登录
-                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            // 去会员中心
-                            VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
-                        } else {
-                            // 如果未登录，要求先登录
-                            LoginActivity.launch(context)
-                        }
-                        showPremiumDialog = false
-                    }
-                }
-
-                // 消息列表区域 - 等待数据加载完成
-                val chatMessages by chatViewModel.msgs.collectAsState()
-                val isLoadingMore by chatViewModel.isLoadingMore.collectAsState()
-                val hasMoreMessages by chatViewModel.hasMoreMessages.collectAsState()
-                val listState = rememberLazyListState()
-
-                // 计算是否展示"加载更多"区域（仅在真正的 load more 场景出现）
-                val layoutInfo = listState.layoutInfo
-                val visibleItemsForUi = layoutInfo.visibleItemsInfo
-                val totalItemsForUi = layoutInfo.totalItemsCount
-                val lastVisibleIndexForUi = visibleItemsForUi.maxOfOrNull { it.index } ?: -1
-                val hasEnoughDataForUi =
-                    totalItemsForUi > visibleItemsForUi.size + LOAD_MORE_MIN_EXTRA_ITEMS
-                val isNearTopForUi =
-                    totalItemsForUi > 0 &&
-                            lastVisibleIndexForUi >= (totalItemsForUi - LOAD_MORE_NEAR_TOP_THRESHOLD)
-                val hasScrolledForUi =
-                    listState.firstVisibleItemIndex > 0 ||
-                            listState.firstVisibleItemScrollOffset > 0
-                val showLoadMoreUi =
-                    hasMoreMessages &&
-                            (isLoadingMore ||
-                                    (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
-
-                LazyColumn(
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 16.dp),
-                    state = listState,
-                    reverseLayout = true, // ⚠️此处使用了reverse，导致布局列表是反向的
+                        .padding(innerPadding)
+                        .imePadding()
                 ) {
-                    item { Spacer(Modifier.height(16.dp)) }
-                    // 1. 用户和 agent 的对话消息（显示在底部，因为是反向列表）
-                    // 过滤掉 chatMessages 中的开场白消息
-                    val filteredChatMessages = chatMessages.filter { !it.isOpening() }
-                    // 添加安全检查
-                    runCatching {
-                        if (filteredChatMessages.isNotEmpty()) {
-                            // 创建消息列表的副本以避免并发修改
-                            val messagesCopy = filteredChatMessages.toList()
-                            val items =
-                                messagesCopy.filter {
-                                    // 过滤掉用户continue消息
-                                    !(it.role == "user" && it.content == "continue")
-                                    // 注意：图片loading消息不过滤，它们会在ChatItem中显示为shimmer占位
-                                }
-                            if (items.isNotEmpty()) {
-                                itemsIndexed(
-                                    items,
-                                    key = { index, info ->
-                                        // 使用消息的唯一标识符作为 key，如果没有则使用索引和内容的组合
-                                        info.localMsgId.ifEmpty {
-                                            "${index}_${info.role}_${info.content.hashCode()}_${index}"
+                    Spacer(Modifier.height(48.dp))
+
+                    // 立即显示TopBar和Premium标签（不等待数据加载）
+                    agentInfo?.let { info ->
+                        ChatTopBar(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 18.dp),
+                            agentInfo = info,
+                            showBackButton = showBackButton,
+                            onBack = onBack,
+                            onClickMore = {
+                                scope.launch {
+                                    // 如果是已经删除的agent，则不可点击，并提示
+                                    if (agentInfo?.isDeleted == true) {
+                                        ToastUtils.showShort(R.string.str_agent_is_deleted)
+                                    } else {
+                                        if (drawerState.value == DrawerValue.Closed) {
+                                            drawerState.value = DrawerValue.Open
+                                        } else {
+                                            drawerState.value = DrawerValue.Closed
                                         }
-                                    },
-                                ) { index, item ->
-                                    runCatching {
-                                        // 明确数据边界
-                                        if (index < items.size) {
-                                            // 判断是否为最后一条AI文本消息（在反向列表中，index=0是最后一条）
-                                            // 排除loading消息、用户消息和图片消息
-                                            // 图片消息：content为空且有generatedImage
-                                            val hasGeneratedImage = item.hasGeneratedImage()
-                                            val isImageMessage =
-                                                item.content.isEmpty() && hasGeneratedImage
-                                            val isLatestAssistantTextMessage =
-                                                index == 0 &&
-                                                        item.role == "assistant" &&
-                                                        item.content != "loading_animation" &&
-                                                        !isImageMessage
-                                            
-                                            ChatItem(
-                                                item,
-                                                isCurrentPage = isCurrentPage,
-                                                chatViewModel = chatViewModel,
-                                                isLatestMessage = isLatestAssistantTextMessage,
-                                            )
-                                        }
-                                        Spacer(Modifier.height(16.dp))
                                     }
-                                        .onFailure { e ->
-                                            // 渲染失败时显示错误占位符
-                                            Box(
-                                                modifier =
-                                                    Modifier
-                                                        .fillMaxWidth()
-                                                        .height(60.dp)
-                                                        .background(
-                                                            Color.Red.copy(alpha = 0.1f)
-                                                        )
-                                            ) {
-                                                Text(
-                                                    text = "Message loading failed",
-                                                    color = Color.White,
-                                                    modifier = Modifier.align(Alignment.Center),
+                                }
+                            },
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Premium model标签,非vip显示，vip隐藏（20251020的要求）
+                    if (agentInfo != null && !vipStatus.isSubscribed) {
+                        PremiumModelTag(
+                            onClick = {
+                                scope.launch {
+                                    // 如果是已经删除的agent，则不可点击，并提示
+                                    if (agentInfo?.isDeleted == true) {
+                                        ToastUtils.showShort(R.string.str_agent_is_deleted)
+                                    } else {
+                                        // 如果不是VIP，显示高级模型的弹窗
+                                        showPremiumDialog = true
+                                    }
+                                }
+                            },
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        // 高级模型弹窗
+                        if (showPremiumDialog) {
+                            // 检查是否已登录
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                                // 去会员中心
+                                VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                            } else {
+                                // 如果未登录，要求先登录
+                                LoginActivity.launch(context)
+                            }
+                            showPremiumDialog = false
+                        }
+                    }
+
+                    // 消息列表区域 - 等待数据加载完成
+                    val chatMessages by chatViewModel.msgs.collectAsState()
+                    val isLoadingMore by chatViewModel.isLoadingMore.collectAsState()
+                    val hasMoreMessages by chatViewModel.hasMoreMessages.collectAsState()
+                    val listState = rememberLazyListState()
+
+                    // 判断是否有最后一条AI文本消息（用于显示keep talking按钮）
+                    // 注意：chatMessages是反向列表，第一个元素是最后一条消息
+                    val hasLatestAssistantMessage = remember(chatMessages) {
+                        chatMessages.firstOrNull()?.let { firstMsg ->
+                            val hasGeneratedImage = firstMsg.hasGeneratedImage()
+                            val isImageMessage = firstMsg.content.isEmpty() && hasGeneratedImage
+                            firstMsg.role == "assistant" &&
+                                    firstMsg.content != "loading_animation" &&
+                                    !isImageMessage
+                        } ?: false
+                    }
+
+                    // 计算是否展示"加载更多"区域（仅在真正的 load more 场景出现）
+                    val layoutInfo = listState.layoutInfo
+                    val visibleItemsForUi = layoutInfo.visibleItemsInfo
+                    val totalItemsForUi = layoutInfo.totalItemsCount
+                    val lastVisibleIndexForUi = visibleItemsForUi.maxOfOrNull { it.index } ?: -1
+                    val hasEnoughDataForUi =
+                        totalItemsForUi > visibleItemsForUi.size + LOAD_MORE_MIN_EXTRA_ITEMS
+                    val isNearTopForUi =
+                        totalItemsForUi > 0 &&
+                                lastVisibleIndexForUi >= (totalItemsForUi - LOAD_MORE_NEAR_TOP_THRESHOLD)
+                    val hasScrolledForUi =
+                        listState.firstVisibleItemIndex > 0 ||
+                                listState.firstVisibleItemScrollOffset > 0
+                    val showLoadMoreUi =
+                        hasMoreMessages &&
+                                (isLoadingMore ||
+                                        (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp),
+                        state = listState,
+                        reverseLayout = true, // ⚠️此处使用了reverse，导致布局列表是反向的
+                    ) {
+                        item { Spacer(Modifier.height(16.dp)) }
+                        // 1. 用户和 agent 的对话消息（显示在底部，因为是反向列表）
+                        // 过滤掉 chatMessages 中的开场白消息
+                        val filteredChatMessages = chatMessages.filter { !it.isOpening() }
+                        // 添加安全检查
+                        runCatching {
+                            if (filteredChatMessages.isNotEmpty()) {
+                                // 创建消息列表的副本以避免并发修改
+                                val messagesCopy = filteredChatMessages.toList()
+                                val items =
+                                    messagesCopy.filter {
+                                        // 过滤掉用户continue消息
+                                        !(it.role == "user" && it.content == "continue")
+                                        // 注意：图片loading消息不过滤，它们会在ChatItem中显示为shimmer占位
+                                    }
+                                if (items.isNotEmpty()) {
+                                    itemsIndexed(
+                                        items,
+                                        key = { index, info ->
+                                            // 使用消息的唯一标识符作为 key，如果没有则使用索引和内容的组合
+                                            info.localMsgId.ifEmpty {
+                                                "${index}_${info.role}_${info.content.hashCode()}_${index}"
+                                            }
+                                        },
+                                    ) { index, item ->
+                                        runCatching {
+                                            // 明确数据边界
+                                            if (index < items.size) {
+                                                // 判断是否为最后一条AI文本消息（在反向列表中，index=0是最后一条）
+                                                // 排除loading消息、用户消息和图片消息
+                                                // 图片消息：content为空且有generatedImage
+                                                val hasGeneratedImage = item.hasGeneratedImage()
+                                                val isImageMessage =
+                                                    item.content.isEmpty() && hasGeneratedImage
+                                                val isLatestAssistantTextMessage =
+                                                    index == 0 &&
+                                                            item.role == "assistant" &&
+                                                            item.content != "loading_animation" &&
+                                                            !isImageMessage
+
+                                                ChatItem(
+                                                    item,
+                                                    isCurrentPage = isCurrentPage,
+                                                    chatViewModel = chatViewModel,
+                                                    isLatestMessage = isLatestAssistantTextMessage,
                                                 )
                                             }
                                             Spacer(Modifier.height(16.dp))
                                         }
+                                            .onFailure { e ->
+                                                // 渲染失败时显示错误占位符
+                                                Box(
+                                                    modifier =
+                                                        Modifier
+                                                            .fillMaxWidth()
+                                                            .height(60.dp)
+                                                            .background(
+                                                                Color.Red.copy(alpha = 0.1f)
+                                                            )
+                                                ) {
+                                                    Text(
+                                                        text = "Message loading failed",
+                                                        color = Color.White,
+                                                        modifier = Modifier.align(Alignment.Center),
+                                                    )
+                                                }
+                                                Spacer(Modifier.height(16.dp))
+                                            }
+                                    }
                                 }
                             }
                         }
-                    }
-                        .onFailure { e ->
-                            // 如果整个列表渲染失败，显示错误信息
+                            .onFailure { e ->
+                                // 如果整个列表渲染失败，显示错误信息
+                                item {
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .height(100.dp)
+                                                .background(Color.Red.copy(alpha = 0.1f))
+                                    ) {
+                                        Text(
+                                            text = "Chat history loading failed, please retry",
+                                            color = Color.White,
+                                            modifier = Modifier.align(Alignment.Center),
+                                        )
+                                    }
+                                }
+                            }
+                        // 2/3. Agent Intro + Opening（等待getMsgs完成后再显示，仅在无更多分页或完全无消息时展示，位于顶部）
+                        // 优化：等待getMsgs完成，并且（没有更多消息 或 消息列表为空）时才显示
+                        val showIntroOpeningTop =
+                            isQueryMsgsCompleted && ((!hasMoreMessages) || chatMessages.isEmpty())
+                        LogUtils.d(
+                            "ChatPage: showIntroOpeningTop=$showIntroOpeningTop, isQueryMsgsCompleted=$isQueryMsgsCompleted, hasMoreMessages=$hasMoreMessages, chatMessages.size=${chatMessages.size}"
+                        )
+                        if (showIntroOpeningTop) {
+                            // Opening 消息（带音频自动播放逻辑，ChatItem 内部处理）
+                            item {
+                                agentInfo?.let { agent ->
+                                    val shouldShowOpening = agent.opening.isNotEmpty()
+                                    if (shouldShowOpening) {
+                                        val openingMessage =
+                                            MsgInfo(
+                                                content = agent.opening,
+                                                role = "assistant",
+                                                meta_data =
+                                                    MsgInfo.MsgMetaData(
+                                                        agentId = agent.id,
+                                                        isOpening = true,
+                                                    ),
+                                                audio_url = agent.opening_audio_url,
+                                            )
+                                        ChatItem(
+                                            openingMessage,
+                                            isCurrentPage = isCurrentPage,
+                                            chatViewModel = chatViewModel,
+                                        )
+                                        Spacer(Modifier.height(16.dp))
+                                    }
+                                }
+                            }
+                            // Intro 卡片优先
+                            item {
+                                agentInfo?.intro?.let { info ->
+                                    if (info.isNotEmpty()) {
+                                        AgentInfoChatCard(info)
+                                        Spacer(Modifier.height(16.dp))
+                                    }
+                                }
+                            }
+                        }
+
+                        // 4. 加载更多指示器（显示在列表顶部，因为是反向布局）
+                        if (showLoadMoreUi) {
                             item {
                                 Box(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .height(100.dp)
-                                            .background(Color.Red.copy(alpha = 0.1f))
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(60.dp),
+                                    contentAlignment = Alignment.Center,
                                 ) {
-                                    Text(
-                                        text = "Chat history loading failed, please retry",
-                                        color = Color.White,
-                                        modifier = Modifier.align(Alignment.Center),
-                                    )
-                                }
-                            }
-                        }
-                    // 2/3. Agent Intro + Opening（等待getMsgs完成后再显示，仅在无更多分页或完全无消息时展示，位于顶部）
-                    // 优化：等待getMsgs完成，并且（没有更多消息 或 消息列表为空）时才显示
-                    val showIntroOpeningTop =
-                        isQueryMsgsCompleted && ((!hasMoreMessages) || chatMessages.isEmpty())
-                    LogUtils.d(
-                        "ChatPage: showIntroOpeningTop=$showIntroOpeningTop, isQueryMsgsCompleted=$isQueryMsgsCompleted, hasMoreMessages=$hasMoreMessages, chatMessages.size=${chatMessages.size}"
-                    )
-                    if (showIntroOpeningTop) {
-                        // Opening 消息（带音频自动播放逻辑，ChatItem 内部处理）
-                        item {
-                            agentInfo?.let { agent ->
-                                val shouldShowOpening = agent.opening.isNotEmpty()
-                                if (shouldShowOpening) {
-                                    val openingMessage =
-                                        MsgInfo(
-                                            content = agent.opening,
-                                            role = "assistant",
-                                            meta_data =
-                                                MsgInfo.MsgMetaData(
-                                                    agentId = agent.id,
-                                                    isOpening = true,
-                                                ),
-                                            audio_url = agent.opening_audio_url,
+                                    if (isLoadingMore) {
+                                        CircularProgressIndicator(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier
+                                                .width(24.dp)
+                                                .height(24.dp),
                                         )
-                                    ChatItem(
-                                        openingMessage,
-                                        isCurrentPage = isCurrentPage,
-                                        chatViewModel = chatViewModel,
-                                    )
-                                    Spacer(Modifier.height(16.dp))
-                                }
-                            }
-                        }
-                        // Intro 卡片优先
-                        item {
-                            agentInfo?.intro?.let { info ->
-                                if (info.isNotEmpty()) {
-                                    AgentInfoChatCard(info)
-                                    Spacer(Modifier.height(16.dp))
+                                    } else {
+                                        Text(
+                                            text = "Pull to load more",
+                                            color =
+                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                            style = MaterialTheme.typography.bodySmall,
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
 
-                    // 4. 加载更多指示器（显示在列表顶部，因为是反向布局）
-                    if (showLoadMoreUi) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(60.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (isLoadingMore) {
-                                    CircularProgressIndicator(
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier
-                                            .width(24.dp)
-                                            .height(24.dp),
-                                    )
-                                } else {
-                                    Text(
-                                        text = "Pull to load more",
-                                        color =
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 监听滚动状态，实现智能加载更多
-                LaunchedEffect(hasMoreMessages, isLoadingMore, chatMessages.size) {
-                    // 使用 snapshotFlow 持续监听滚动状态变化
-                    snapshotFlow {
-                        listState.firstVisibleItemIndex to
-                                listState.firstVisibleItemScrollOffset
-                    }
-                        .collect { (firstVisibleIndex, scrollOffset) ->
+                    // 监听滚动状态，实现智能加载更多
+                    LaunchedEffect(hasMoreMessages, isLoadingMore, chatMessages.size) {
+                        // 使用 snapshotFlow 持续监听滚动状态变化
+                        snapshotFlow {
+                            listState.firstVisibleItemIndex to
+                                    listState.firstVisibleItemScrollOffset
+                        }.collect { (firstVisibleIndex, scrollOffset) ->
                             // 添加小延迟，确保首次加载完成后再开始监听
                             delay(100)
                             val layoutInfo = listState.layoutInfo
@@ -511,10 +525,9 @@ internal fun ChatPage(
                                 chatViewModel.loadMoreMessages()
                             }
                         }
-                }
+                    }
 
-                // 输入框区域 - 立即显示（不等待数据加载）
-                Column {
+                    // 输入框区域
                     // 如果是已经删除的agent，则不可点击，并提示
                     if (agentInfo?.isDeleted == true) {
                         Box(
@@ -533,14 +546,9 @@ internal fun ChatPage(
                             )
                         }
                     } else {
-                        // Keep talking 按钮
-                        KeepTalkingButton(
-                            visible = shouldShowButton,
-                            onClick = { chatViewModel.sendKeepTalkingMessage() },
-                        )
-                        // 输入框
                         val effectiveBottomPadding =
                             if (showMorePanel) morePanelHeight else bottomPadding
+
                         ChatInput(
                             chatViewModel = chatViewModel,
                             onSendMessage = { chatViewModel.sendMsg() },
@@ -559,6 +567,23 @@ internal fun ChatPage(
                         )
                     }
                 }
+
+                // Keep talking悬浮按钮 - 放在最外层Box，相对整个页面定位，在ChatInput上方，右侧对齐屏幕
+                // Keep talking按钮显示条件：设置开启 && 有最后一条AI消息
+                val showKeepTalkingButton = shouldShowButton && hasLatestAssistantMessage
+
+                val chatInputEstimatedHeight = 70.dp
+                val effectiveBottomPaddingForButton =
+                    if (showMorePanel) morePanelHeight else bottomPadding
+                val buttonBottomOffset = chatInputEstimatedHeight + effectiveBottomPaddingForButton
+
+                KeepTalkingFloatingButton(
+                    visible = showKeepTalkingButton,
+                    onClick = { chatViewModel.sendKeepTalkingMessage() },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = buttonBottomOffset) // 在输入框上方，右侧对齐屏幕
+                )
             }
         }
 
