@@ -365,6 +365,15 @@ private fun ChatHistoryItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                // Pin 状态图标
+                if (conversation.isPinned) {
+                    Spacer(Modifier.width(6.dp))
+                    Image(
+                        painter = painterResource(R.drawable.ic_pin),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
                 if (conversation.isDeleted) {
                     Spacer(Modifier.width(4.dp))
                     Text(text = "(deleted)", fontSize = 15.sp, color = Color(0x8CFFFFFF))
