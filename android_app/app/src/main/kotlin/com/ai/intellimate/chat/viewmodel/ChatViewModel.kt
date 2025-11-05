@@ -592,6 +592,19 @@ class ChatViewModel : BaseVM() {
         }
         lastSendTime = currentTime
 
+        // Firebase Analytics - 记录Keep Talking按钮点击
+        agentInfo.value?.let { agent ->
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.KEEP_TALKING_CLICKED,
+                FirebaseManager.safeEventParams(
+                    "agent_id" to agent.id,
+                    "agent_name" to agent.name,
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                    "timestamp" to currentTime
+                )
+            )
+        }
+
         launchBackground {
             val keepTalkingMsg = "continue"
             _isWaitingForReply.value = true
@@ -645,54 +658,86 @@ class ChatViewModel : BaseVM() {
     fun likeMessage(localMsgId: String) {
         val agent = _agentInfo.value ?: return
         val targetMessage = _msgs.value.firstOrNull { it.localMsgId == localMsgId }
-        val previousFeedback = targetMessage?.userFeedback?.name ?: "NONE"
 
-        updateMessageFeedbackUseCase(agent.id, localMsgId, MsgInfo.UserFeedback.LIKE)
+        // 如果找不到消息，记录日志但不发送事件
+        if (targetMessage == null) {
+            LogUtils.e("Cannot find message with localMsgId: $localMsgId")
+            return
+        }
 
+        val previousFeedback = targetMessage.userFeedback?.name ?: "NONE"
+
+        // 使用服务端id更新反馈（如果有服务端id，优先使用；否则使用localMsgId）
+        val messageIdForUpdate = targetMessage.id.ifEmpty {
+            localMsgId
+        }
+        updateMessageFeedbackUseCase(agent.id, messageIdForUpdate, MsgInfo.UserFeedback.LIKE)
+
+        // Firebase事件参数：优先使用服务端id（message_id），这是有意义的标识
+        // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
+        val messageIdForEvent = targetMessage.id.ifEmpty {
+            localMsgId
+        }
+        
         val eventParams = FirebaseManager.safeEventParams(
             "agent_id" to agent.id,
             "agent_name" to agent.name,
-            "message_id" to (targetMessage?.id ?: ""),
-            "local_message_id" to localMsgId,
-            "message_role" to (targetMessage?.role ?: ""),
-            "message_length" to (targetMessage?.content?.length ?: 0),
-            "has_generated_image" to (targetMessage?.hasGeneratedImage() == true),
-            "is_opening" to (targetMessage?.isOpening() == true),
+            "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
+            "message_role" to targetMessage.role,
+            "message_length" to targetMessage.content.length,
+            "has_generated_image" to targetMessage.hasGeneratedImage(),
+            "is_opening" to targetMessage.isOpening(),
             "previous_feedback" to previousFeedback,
             "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-            "message_timestamp" to (targetMessage?.timestamp ?: ""),
+            "message_timestamp" to (targetMessage.timestamp ?: ""),
             "timestamp" to System.currentTimeMillis()
         )
 
         FirebaseManager.logEvent(FirebaseManager.Events.MESSAGE_LIKE, eventParams)
-        LogUtils.i("Message liked: $localMsgId (remoteId=${targetMessage?.id})")
+        LogUtils.i("Message liked: localMsgId=$localMsgId, serviceId=${targetMessage.id}")
     }
 
     /** Dislike 消息 - 通过 Repository 更新并上报 Firebase 事件 */
     fun dislikeMessage(localMsgId: String) {
         val agent = _agentInfo.value ?: return
         val targetMessage = _msgs.value.firstOrNull { it.localMsgId == localMsgId }
-        val previousFeedback = targetMessage?.userFeedback?.name ?: "NONE"
 
-        updateMessageFeedbackUseCase(agent.id, localMsgId, MsgInfo.UserFeedback.DISLIKE)
+        // 如果找不到消息，记录日志但不发送事件
+        if (targetMessage == null) {
+            LogUtils.e("Cannot find message with localMsgId: $localMsgId")
+            return
+        }
 
+        val previousFeedback = targetMessage.userFeedback?.name ?: "NONE"
+
+        // 使用服务端id更新反馈（如果有服务端id，优先使用；否则使用localMsgId）
+        val messageIdForUpdate = targetMessage.id.ifEmpty {
+            localMsgId
+        }
+        updateMessageFeedbackUseCase(agent.id, messageIdForUpdate, MsgInfo.UserFeedback.DISLIKE)
+
+        // Firebase事件参数：优先使用服务端id（message_id），这是有意义的标识
+        // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
+        val messageIdForEvent = targetMessage.id.ifEmpty {
+            localMsgId
+        }
+        
         val eventParams = FirebaseManager.safeEventParams(
             "agent_id" to agent.id,
             "agent_name" to agent.name,
-            "message_id" to (targetMessage?.id ?: ""),
-            "local_message_id" to localMsgId,
-            "message_role" to (targetMessage?.role ?: ""),
-            "message_length" to (targetMessage?.content?.length ?: 0),
-            "has_generated_image" to (targetMessage?.hasGeneratedImage() == true),
-            "is_opening" to (targetMessage?.isOpening() == true),
+            "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
+            "message_role" to targetMessage.role,
+            "message_length" to targetMessage.content.length,
+            "has_generated_image" to targetMessage.hasGeneratedImage(),
+            "is_opening" to targetMessage.isOpening(),
             "previous_feedback" to previousFeedback,
             "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-            "message_timestamp" to (targetMessage?.timestamp ?: ""),
+            "message_timestamp" to (targetMessage.timestamp ?: ""),
             "timestamp" to System.currentTimeMillis()
         )
 
         FirebaseManager.logEvent(FirebaseManager.Events.MESSAGE_DISLIKE, eventParams)
-        LogUtils.i("Message disliked: $localMsgId (remoteId=${targetMessage?.id})")
+        LogUtils.i("Message disliked: localMsgId=$localMsgId, serviceId=${targetMessage.id}")
     }
 
     /** Recall 消息 - 重新生成最新消息（类似 keep talking 的实现） */
