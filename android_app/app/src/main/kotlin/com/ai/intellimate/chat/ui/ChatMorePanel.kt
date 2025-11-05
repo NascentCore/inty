@@ -114,7 +114,7 @@ fun ChatMorePanel(
                                 }
                             },
                         )
-                        Spacer(Modifier.width(16.dp))
+                        /*Spacer(Modifier.width(16.dp))
                         MorePanelItem(
                             icon = R.drawable.icon_reset_chat,
                             text = stringResource(R.string.str_reset),
@@ -131,7 +131,7 @@ fun ChatMorePanel(
                                     LoginActivity.launch(context)
                                 }
                             },
-                        )
+                        )*/
                         Spacer(Modifier.width(16.dp))
                         MorePanelItem(
                             icon = R.drawable.icon_report,

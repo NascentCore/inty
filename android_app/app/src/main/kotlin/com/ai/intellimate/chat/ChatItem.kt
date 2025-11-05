@@ -277,7 +277,6 @@ private fun ChatItemAI(
                     // 注意：!hasGeneratedImage 已隐含 !isImageOnlyMessage（因为 isImageOnlyMess age 要求 hasGeneratedImage 为 true）
                     if (!hasGeneratedImage && isLatestMessage) {
                         MessageCornerActions(
-                            message = item,
                             onImageGenerate = {
                                 viewModel.generateImageForMessage(item.id)
                             },
