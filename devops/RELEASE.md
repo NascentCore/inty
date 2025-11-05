@@ -1,5 +1,8 @@
 # 发布流程
 
+* 例行的测试版本发布到内测轨道，不再使用 internal app sharing
+* 个别共享仍然可以使用 internal app sharing
+
 需要至少 2 个人参与：1 个人操作、另 1 个人全程审查，查漏补缺；步骤如下：
 
 1. `git tagging`:
