@@ -464,6 +464,10 @@ object FirebaseManager {
         const val SUBSCRIPTION_START = "subscription_start"
         const val FREE_LIMIT_REACHED = "free_limit_reached"
 
+        // 消息反馈事件
+        const val MESSAGE_LIKE = "message_like"
+        const val MESSAGE_DISLIKE = "message_dislike"
+
         // 图片生成相关事件
         const val IMAGE_GENERATION_START = "image_generation_start" // 图片生成开始
         const val IMAGE_GENERATION_SUCCESS = "image_generation_success" // 图片生成成功
