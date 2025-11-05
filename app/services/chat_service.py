@@ -1183,11 +1183,18 @@ async def generate_chat_image(
         logger.warning(f"用户 {user_id} 已达到图片生成限额: {used_count}/{daily_limit}")
 
         # 返回业务错误信息，而非抛出异常
-        error_code = (
-            BusinessErrorCode.GUEST_LOGIN_REQUIRED
-            if user.auth_type == AuthType.GUEST
-            else BusinessErrorCode.SUBSCRIPTION_REQUIRED
-        )
+        if user.auth_type == AuthType.GUEST:
+            error_code = BusinessErrorCode.GUEST_LOGIN_REQUIRED
+        else:
+            # 获取订阅状态以判断错误码
+            subscription_status = (
+                await subscription_service.get_user_subscription_status(db, user.id)
+            )
+            if subscription_status.is_subscribed:
+                error_code = BusinessErrorCode.IMAGE_GENERATION_LIMIT_REACHED
+            else:
+                error_code = BusinessErrorCode.SUBSCRIPTION_REQUIRED
+
         return UsageLimitExceeded(
             code=error_code["code"],
             error_code=error_code["error_code"],
@@ -1228,13 +1235,15 @@ async def generate_chat_image(
 
     # 调用图片生成服务（使用 Gemini 2.5 Flash Image）
     # 重复生成会直接覆盖 meta_data 中的 generated_image，无需删除旧数据
-    image_generation_result = await image_generation_service.generate_chat_image_with_gemini(
-        db=db,
-        session_id=session_id,
-        message_id=message_id,  # 传入要更新的消息ID
-        agent_data=agent_data,
-        message_content=message_content,
-        history_count=history_count,
+    image_generation_result = (
+        await image_generation_service.generate_chat_image_with_gemini(
+            db=db,
+            session_id=session_id,
+            message_id=message_id,  # 传入要更新的消息ID
+            agent_data=agent_data,
+            message_content=message_content,
+            history_count=history_count,
+        )
     )
 
     # 记录用量
