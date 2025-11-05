@@ -156,9 +156,8 @@ private fun ChatItemAI(
             // 播放器按钮
             // 图片loading时不显示播放器按钮（但消息生图loading时，原消息的voice play应该显示）
             // 注意：只有当消息本身是图片loading消息（content == "loading_animation" 且 localMsgId 包含 "loading_image"）时才隐藏
-            val isImageLoadingMessage = item.content == "loading_animation" &&
-                    item.localMsgId.contains("loading_image", ignoreCase = true)
-            if (item.content.isNotEmpty() && item.content != "loading_animation" && !isImageLoadingMessage) {
+            // 由于条件中已有 content != "loading_animation"，所以不需要再检查 isImageLoadingMessage（它要求 content == "loading_animation"）
+            if (item.content.isNotEmpty() && item.content != "loading_animation") {
                 val agentInfo by viewModel.agentInfo.collectAsState()
 
                 // 解析agentId：优先使用chatViewModel.agentInfo.id，其次使用消息meta中的agentId
@@ -267,7 +266,7 @@ private fun ChatItemAI(
                 ) {
                     Row {
                         val context = LocalContext.current
-                        // 消息卡片Box，包含文本和右下角按钮
+                        // 消息卡片Box，包含文本
                         Box(
                             modifier =
                                 Modifier
@@ -295,27 +294,27 @@ private fun ChatItemAI(
                                     actionColor = Color.White.copy(0.55f),
                                 )
                             }
-
-                            // 右下角按钮（image generate）- 放在消息卡片内右下角
-                            // keep talking按钮已移至ChatInput右上角悬浮
-                            // 如果有图片（包括loading状态），隐藏所有按钮；否则仅在最后一条消息时显示
-                            // 注意：消息生图loading时（generatedImageUrl == "loading"），hasGeneratedImage = true，此时应该隐藏按钮
-                            // 注意：!hasGeneratedImage 已隐含 !isImageOnlyMessage（因为 isImageOnlyMessage 要求 hasGeneratedImage 为 true）
-                            if (!hasGeneratedImage && isLatestMessage) {
-                                MessageCornerActions(
-                                    onImageGenerate = {
-                                        viewModel.generateImageForMessage(item.id)
-                                    },
-                                    modifier = Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .padding(end = 5.dp, bottom = 5.dp)
-                                )
-                            }
                         }
                         Spacer(
                             modifier = Modifier
                                 .widthIn(80.dp)
                                 .weight(1f)
+                        )
+                    }
+
+                    // 右下角按钮（image generate）- 放在外层Box中，使用offset定位到消息卡片边缘
+                    // keep talking按钮已移至ChatInput右上角悬浮
+                    // 如果有图片（包括loading状态），隐藏所有按钮；否则仅在最后一条消息时显示
+                    // 注意：消息生图loading时（generatedImageUrl == "loading"），hasGeneratedImage = true，此时应该隐藏按钮
+                    // 注意：!hasGeneratedImage 已隐含 !isImageOnlyMessage（因为 isImageOnlyMessage 要求 hasGeneratedImage 为 true）
+                    if (!hasGeneratedImage && isLatestMessage) {
+                        MessageCornerActions(
+                            onImageGenerate = {
+                                viewModel.generateImageForMessage(item.id)
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(2.dp)
                         )
                     }
                 }

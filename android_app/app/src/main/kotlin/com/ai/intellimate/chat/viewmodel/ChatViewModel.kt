@@ -30,8 +30,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// 操作什么数据，支持什么 UI？Model 是 beans
-// View 是各类 page/activity。
+
 class ChatViewModel : BaseVM() {
 
     // 依赖注入 - 使用新的架构
@@ -363,34 +362,34 @@ class ChatViewModel : BaseVM() {
                         )
 
                         runCatching {
-                                // 有免费次数限制，需要vip订阅
-                                if (
-                                    result.data.code ==
-                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                                ) {
-                                    // Firebase Analytics - 记录免费次数限制
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.FREE_LIMIT_REACHED,
-                                        FirebaseManager.safeEventParams(
-                                            "agent_id" to agentId,
-                                            "agent_name" to (_agentInfo.value?.name ?: ""),
-                                            "user_type" to "free",
-                                            "timestamp" to System.currentTimeMillis()
-                                        )
+                            // 有免费次数限制，需要vip订阅
+                            if (
+                                result.data.code ==
+                                BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                            ) {
+                                // Firebase Analytics - 记录免费次数限制
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.FREE_LIMIT_REACHED,
+                                    FirebaseManager.safeEventParams(
+                                        "agent_id" to agentId,
+                                        "agent_name" to (_agentInfo.value?.name ?: ""),
+                                        "user_type" to "free",
+                                        "timestamp" to System.currentTimeMillis()
                                     )
-                                    showLimitDialog.emit(true)
-                                }
-                                result.data.data?.choices?.lastOrNull()?.message?.content?.let {
-                                    content ->
-                                    IntySetting.setConversationReaded(agentId, content)
-                                }
+                                )
+                                showLimitDialog.emit(true)
                             }
+                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { content ->
+                                IntySetting.setConversationReaded(agentId, content)
+                            }
+                        }
                             .onFailure {
                                 LogUtils.e("Error processing AI response: ${it.message}")
                                 it.printStackTrace()
                                 _isWaitingForReply.value = false
                             }
                     }
+
                     is HttpResult.Failure -> {
                         val responseTime = System.currentTimeMillis() - aiResponseStartTime
                         val endToEndTime = System.currentTimeMillis() - endToEndStartTime
@@ -618,18 +617,18 @@ class ChatViewModel : BaseVM() {
                 when (result) {
                     is HttpResult.Success -> {
                         runCatching {
-                                // 有免费次数限制，需要vip订阅
-                                if (
-                                    result.data.code ==
-                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                                ) {
-                                    showLimitDialog.emit(true)
-                                }
-                                result.data.data?.choices?.lastOrNull()?.message?.content?.let { str
-                                    ->
-                                    IntySetting.setConversationReaded(agent.id, str)
-                                }
+                            // 有免费次数限制，需要vip订阅
+                            if (
+                                result.data.code ==
+                                BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                            ) {
+                                showLimitDialog.emit(true)
                             }
+                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { str
+                                ->
+                                IntySetting.setConversationReaded(agent.id, str)
+                            }
+                        }
                             .onFailure {
                                 LogUtils.e(
                                     "Error processing keep talking AI response: ${it.message}"
@@ -639,6 +638,7 @@ class ChatViewModel : BaseVM() {
                                 _isWaitingForReply.value = false
                             }
                     }
+
                     is HttpResult.Failure -> {
                         NetworkErrorHandler.showNetworkAwareError(result.message)
                         // 错误恢复：确保状态正确
@@ -667,18 +667,13 @@ class ChatViewModel : BaseVM() {
 
         val previousFeedback = targetMessage.userFeedback?.name ?: "NONE"
 
-        // 使用服务端id更新反馈（如果有服务端id，优先使用；否则使用localMsgId）
-        val messageIdForUpdate = targetMessage.id.ifEmpty {
-            localMsgId
-        }
-        updateMessageFeedbackUseCase(agent.id, messageIdForUpdate, MsgInfo.UserFeedback.LIKE)
+        // 业务逻辑：本地状态更新始终使用localMsgId（这是本地标识符）
+        updateMessageFeedbackUseCase(agent.id, localMsgId, MsgInfo.UserFeedback.LIKE)
 
-        // Firebase事件参数：优先使用服务端id（message_id），这是有意义的标识
+        // Firebase事件统计：优先使用服务端id（message_id），这是有意义的标识
         // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
-        val messageIdForEvent = targetMessage.id.ifEmpty {
-            localMsgId
-        }
-        
+        val messageIdForEvent = targetMessage.id.ifEmpty { localMsgId }
+
         val eventParams = FirebaseManager.safeEventParams(
             "agent_id" to agent.id,
             "agent_name" to agent.name,
@@ -710,18 +705,13 @@ class ChatViewModel : BaseVM() {
 
         val previousFeedback = targetMessage.userFeedback?.name ?: "NONE"
 
-        // 使用服务端id更新反馈（如果有服务端id，优先使用；否则使用localMsgId）
-        val messageIdForUpdate = targetMessage.id.ifEmpty {
-            localMsgId
-        }
-        updateMessageFeedbackUseCase(agent.id, messageIdForUpdate, MsgInfo.UserFeedback.DISLIKE)
+        // 业务逻辑：本地状态更新始终使用localMsgId（这是本地标识符）
+        updateMessageFeedbackUseCase(agent.id, localMsgId, MsgInfo.UserFeedback.DISLIKE)
 
-        // Firebase事件参数：优先使用服务端id（message_id），这是有意义的标识
+        // Firebase事件统计：优先使用服务端id（message_id），这是有意义的标识
         // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
-        val messageIdForEvent = targetMessage.id.ifEmpty {
-            localMsgId
-        }
-        
+        val messageIdForEvent = targetMessage.id.ifEmpty { localMsgId }
+
         val eventParams = FirebaseManager.safeEventParams(
             "agent_id" to agent.id,
             "agent_name" to agent.name,
@@ -977,6 +967,7 @@ class ChatViewModel : BaseVM() {
                 LogUtils.e(result.message)
                 //                showNetworkAwareError(result.message)
             }
+
             is HttpResult.Success -> {
                 // 更新指定agent的设置，保持其他agent的设置不变
                 _chatSettings.update { currentSettings ->
@@ -1017,6 +1008,7 @@ class ChatViewModel : BaseVM() {
                     is HttpResult.Success -> {
                         setAgentInfo(result.data)
                     }
+
                     is HttpResult.Failure -> {
                         NetworkErrorHandler.showNetworkAwareError(result.message)
                     }
