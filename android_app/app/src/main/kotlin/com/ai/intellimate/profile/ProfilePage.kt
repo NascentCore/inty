@@ -444,7 +444,7 @@ private fun ProfileHeader(
                                     )
                                 )
                                 if (clipboard != null) {
-                                    ToastUtils.showShort(R.string.toast_agent_id_copied)
+                                    ToastUtils.showShort(R.string.toast_copied_to_clipboard)
                                 }
                             }
                         },

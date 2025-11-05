@@ -180,7 +180,7 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                                                 )
                                                 if (clipboard != null) {
                                                     ToastUtils.showShort(
-                                                        R.string.toast_agent_id_copied
+                                                        R.string.toast_copied_to_clipboard
                                                     )
                                                 }
                                             },
