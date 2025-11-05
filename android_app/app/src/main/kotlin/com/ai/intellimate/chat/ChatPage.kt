@@ -544,7 +544,7 @@ internal fun ChatPage(
                 }
 
                 // Keep talking悬浮按钮 - 放在最外层Box，相对整个页面定位，在ChatInput上方，右侧对齐屏幕
-                // Keep talking按钮显示条件：设置开启 && 有最后一条AI消息
+                // Keep talking按钮显示条件：设置开启 && 有最后一条AI消息 && 是真实消息（不能是intro或opening）
                 // 判断是否有最后一条AI文本消息（用于显示keep talking按钮）
                 // 注意：chatMessages是反向列表，第一个元素是最后一条消息
                 // 直接计算，不使用 remember，确保每次消息列表变化时都会重新计算
@@ -553,9 +553,15 @@ internal fun ChatPage(
                     chatMessagesForButton.firstOrNull()?.let { firstMsg ->
                         val hasGeneratedImage = firstMsg.hasGeneratedImage()
                         val isImageMessage = firstMsg.content.isEmpty() && hasGeneratedImage
+                        // 判断条件：
+                        // 1. 必须是 assistant 消息
+                        // 2. 不能是 loading 占位
+                        // 3. 不能是纯图片消息
+                        // 4. 不能是 opening 消息（真实消息，不是intro或opening）
                         firstMsg.role == "assistant" &&
                                 firstMsg.content != "loading_animation" &&
-                                !isImageMessage
+                                !isImageMessage &&
+                                !firstMsg.isOpening()
                     } ?: false
                 val showKeepTalkingButton = shouldShowButton && hasLatestAssistantMessage
 
@@ -563,9 +569,19 @@ internal fun ChatPage(
                 val effectiveBottomPaddingForButton =
                     if (showMorePanel) morePanelHeight else bottomPadding
                 // 键盘高度：键盘弹出时，按钮需要向上移动键盘高度
+                // 注意：在 ChatActivity（showBackButton = true）中，外部已经应用了 .imePadding()，
+                // 内部 Column 也应用了 .imePadding()，所以按钮计算时不应该再加 imeHeightDp，
+                // 否则会导致向上偏移两个键盘的 padding 距离
+                // 在 HorizontalPager 中（showBackButton = false），外部没有 .imePadding()，
+                // 只有内部 Column 的 .imePadding()，所以按钮计算时需要加 imeHeightDp
                 val imeHeightDp = with(LocalDensity.current) { imeHeight.toDp() }
-                val buttonBottomOffset =
+                val buttonBottomOffset = if (showBackButton) {
+                    // ChatActivity：外部和内部都应用了 .imePadding()，不需要再加键盘高度
+                    chatInputEstimatedHeight + effectiveBottomPaddingForButton
+                } else {
+                    // HorizontalPager：只有内部 Column 应用了 .imePadding()，需要再加键盘高度
                     chatInputEstimatedHeight + effectiveBottomPaddingForButton + imeHeightDp
+                }
 
                 KeepTalkingFloatingButton(
                     visible = showKeepTalkingButton,

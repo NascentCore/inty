@@ -203,6 +203,7 @@
     <string name="character_count_format_my">%d/400</string>
     <string name="str_report">Report</string>
     <string name="reply_style">Chat Style</string>
+    <string name="str_reset">Reset</string>
     <string name="cancel_button">Cancel</string>
     <string name="generate_avatar_title_full">Generate\nAvatar</string>
     <string name="gender_unmodified_full">Gender (Unmodified after Creation) *</string>

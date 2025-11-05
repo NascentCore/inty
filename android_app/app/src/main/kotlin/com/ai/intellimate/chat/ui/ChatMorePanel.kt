@@ -116,6 +116,24 @@ fun ChatMorePanel(
                         )
                         Spacer(Modifier.width(16.dp))
                         MorePanelItem(
+                            icon = R.drawable.icon_reset_chat,
+                            text = stringResource(R.string.str_reset),
+                            onClick = {
+                                // 检查是否已登录
+                                if (IntySetting.isLogin() && IntySetting.getCurToken()
+                                        .isNotEmpty()
+                                ) {
+                                    //清空当前chat的所有聊天消息，（保留intro和opening），然后给服务器发送reset消息
+                                    //相当于重新开始和agent初次聊天
+                                    //todo 需要接口
+                                } else {
+                                    // 未登录或游客时跳转到登录页面
+                                    LoginActivity.launch(context)
+                                }
+                            },
+                        )
+                        Spacer(Modifier.width(16.dp))
+                        MorePanelItem(
                             icon = R.drawable.icon_report,
                             text = stringResource(R.string.str_report),
                             onClick = {
