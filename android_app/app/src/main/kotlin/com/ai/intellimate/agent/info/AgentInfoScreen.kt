@@ -4,6 +4,9 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.utils.ToastUtils
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,11 +48,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.getSystemService
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
+
+private const val CLIPBOARD_LABEL_AGENT_ID = "Agent ID"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -156,7 +162,30 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                                     color = Color.White,
                                 )
                                 Spacer(Modifier.height(5.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .noRippleClickable {
+                                                if (agent.id.isBlank()) {
+                                                    return@noRippleClickable
+                                                }
+                                                val clipboard =
+                                                    context.getSystemService<ClipboardManager>()
+                                                clipboard?.setPrimaryClip(
+                                                    ClipData.newPlainText(
+                                                        CLIPBOARD_LABEL_AGENT_ID,
+                                                        agent.id,
+                                                    )
+                                                )
+                                                if (clipboard != null) {
+                                                    ToastUtils.showShort(
+                                                        R.string.toast_agent_id_copied
+                                                    )
+                                                }
+                                            },
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
                                     Spacer(Modifier.width(16.dp))
                                     Text(
                                         modifier = Modifier.fillMaxWidth(),
