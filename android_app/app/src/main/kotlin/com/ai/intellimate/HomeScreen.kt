@@ -374,13 +374,14 @@ private fun ProfileTabContent(
         }
     }
 
-    // 初始化数据（仅首次加载）
+    // 初始化数据：优先从缓存加载，避免闪现
     var hasInitialized by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         if (!hasInitialized) {
             hasInitialized = true
             profileViewModel.updateUserInfoLocal()
-            profileViewModel.getUserCreatedAgents()
+            // 优先从缓存加载，避免闪现
+            profileViewModel.loadUserCreatedAgentsFromCache()
             profileViewModel.trackPageView("MainActivity")
         }
     }

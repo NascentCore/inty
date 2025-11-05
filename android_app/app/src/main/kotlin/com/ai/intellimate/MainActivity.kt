@@ -126,6 +126,15 @@ class MainActivity : BaseActivity() {
                         )
                     }
                 }
+
+                // 异步加载用户自建agents（非关键数据），不阻塞启动
+                launch(Dispatchers.IO) {
+                    try {
+                        UnifiedStartupManager.syncUserCreatedAgents()
+                    } catch (e: Exception) {
+                        LogUtils.e("MainActivity - 加载用户自建agents失败: ${e.message}")
+                    }
+                }
             } else {
                 LogUtils.w("MainActivity - 用户未登录，跳过需要认证的数据加载")
             }
@@ -403,6 +412,15 @@ private fun SplashLoginUI(
 
                                 // 标记用户账户已就绪，确保 Explore 等页面可以正常加载数据
                                 UnifiedStartupManager.markUserAccountReady()
+
+                                // 异步加载用户自建agents（非关键数据），不阻塞启动
+                                coroutineScope.launch(Dispatchers.IO) {
+                                    try {
+                                        UnifiedStartupManager.syncUserCreatedAgents()
+                                    } catch (e: Exception) {
+                                        LogUtils.e("MainActivity - 登录成功后加载用户自建agents失败: ${e.message}")
+                                    }
+                                }
 
                                 if (needsRegInfo) {
                                     // 需要完善注册信息，跳转到 RegInfo 页面

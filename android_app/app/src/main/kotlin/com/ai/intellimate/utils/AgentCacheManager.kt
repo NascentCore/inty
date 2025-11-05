@@ -13,8 +13,10 @@ object AgentCacheManager {
     private const val KEY_RECOMMENDED_AGENTS = "cached_recommended_agents"
     private const val KEY_CHAT_AGENTS = "cached_chat_agents"
     private const val KEY_FOLLOWING_AGENTS = "cached_following_agents"
+    private const val KEY_USER_CREATED_AGENTS = "cached_user_created_agents"
     private const val KEY_CACHE_TIMESTAMP = "agents_cache_timestamp"
     private const val KEY_CHAT_CACHE_TIMESTAMP = "chat_agents_cache_timestamp"
+    private const val KEY_USER_CREATED_CACHE_TIMESTAMP = "user_created_agents_cache_timestamp"
     private const val CACHE_EXPIRY_TIME = 30 * 60 * 1000L // 30分钟缓存过期时间
 
     private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
@@ -105,6 +107,57 @@ object AgentCacheManager {
         }
     }
 
+    /** 缓存用户自建的agents */
+    fun cacheUserCreatedAgents(agents: List<AgentInfo>) {
+        try {
+            val agentsJson = agentListAdapter.toJson(agents)
+            IntySetting.setUserProfileData(KEY_USER_CREATED_AGENTS, agentsJson)
+            IntySetting.setUserProfileData(
+                KEY_USER_CREATED_CACHE_TIMESTAMP,
+                System.currentTimeMillis().toString(),
+            )
+            LogUtils.i("AgentCacheManager - 缓存用户自建agents成功: ${agents.size}个")
+        } catch (e: Exception) {
+            LogUtils.e("AgentCacheManager - 缓存用户自建agents失败: ${e.message}")
+        }
+    }
+
+    /** 获取缓存的用户自建agents */
+    fun getCachedUserCreatedAgents(): List<AgentInfo> {
+        return try {
+            val agentsJson = IntySetting.getUserProfileData(KEY_USER_CREATED_AGENTS)
+            if (agentsJson.isNullOrEmpty()) {
+                emptyList()
+            } else {
+                val agents = agentListAdapter.fromJson(agentsJson) ?: emptyList()
+                LogUtils.i("AgentCacheManager - 获取缓存用户自建agents: ${agents.size}个")
+                agents
+            }
+        } catch (e: Exception) {
+            LogUtils.e("AgentCacheManager - 获取缓存用户自建agents失败: ${e.message}")
+            emptyList()
+        }
+    }
+
+    /** 检查用户自建agents缓存是否过期 */
+    fun isUserCreatedCacheExpired(): Boolean {
+        val timestampStr = IntySetting.getUserProfileData(KEY_USER_CREATED_CACHE_TIMESTAMP)
+        if (timestampStr.isNullOrEmpty()) {
+            return true
+        }
+
+        return try {
+            val timestamp = timestampStr.toLong()
+            val currentTime = System.currentTimeMillis()
+            val isExpired = (currentTime - timestamp) > CACHE_EXPIRY_TIME
+            LogUtils.d("AgentCacheManager - 用户自建agents缓存过期检查: ${if (isExpired) "已过期" else "未过期"}")
+            isExpired
+        } catch (e: Exception) {
+            LogUtils.e("AgentCacheManager - 检查用户自建agents缓存过期失败: ${e.message}")
+            true
+        }
+    }
+
     /** 从缓存中删除agent */
     fun removeAgent(agentId: String) {
         try {
@@ -112,6 +165,12 @@ object AgentCacheManager {
             val recommendedAgents = getCachedAgents().toMutableList()
             recommendedAgents.removeAll { it.id == agentId }
             cacheAgents(recommendedAgents)
+
+            // 从用户自建列表移除
+            val userCreatedAgents = getCachedUserCreatedAgents().toMutableList()
+            userCreatedAgents.removeAll { it.id == agentId }
+            cacheUserCreatedAgents(userCreatedAgents)
+
             LogUtils.i("AgentCacheManager - 从缓存移除agent: $agentId")
         } catch (e: Exception) {
             LogUtils.e("AgentCacheManager - 从缓存移除agent失败: ${e.message}")
@@ -124,8 +183,10 @@ object AgentCacheManager {
             IntySetting.setUserProfileData(KEY_RECOMMENDED_AGENTS, "")
             IntySetting.setUserProfileData(KEY_CHAT_AGENTS, "")
             IntySetting.setUserProfileData(KEY_FOLLOWING_AGENTS, "")
+            IntySetting.setUserProfileData(KEY_USER_CREATED_AGENTS, "")
             IntySetting.setUserProfileData(KEY_CACHE_TIMESTAMP, "")
             IntySetting.setUserProfileData(KEY_CHAT_CACHE_TIMESTAMP, "")
+            IntySetting.setUserProfileData(KEY_USER_CREATED_CACHE_TIMESTAMP, "")
             LogUtils.i("AgentCacheManager - 缓存已清理")
         } catch (e: Exception) {
             LogUtils.e("AgentCacheManager - 清理缓存失败: ${e.message}")

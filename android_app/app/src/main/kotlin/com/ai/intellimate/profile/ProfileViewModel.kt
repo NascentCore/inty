@@ -65,18 +65,28 @@ class ProfileViewModel : BaseVM() {
         _uiState.update { it.copy(userProfile = UserProfileManager.getUserProfile()) }
     }
 
-    /** 获取用户创建的 Agents 列表 */
+    /** 获取用户创建的 Agents 列表（从网络加载） */
     fun getUserCreatedAgents() {
         currentPage = 0
         hasMore = true
 
-        // 如果已经有数据，则使用静默刷新，不显示loading
-        if (_uiState.value.userCreatedAgents.isNotEmpty()) {
-            loadUserCreatedAgentsSilently()
-        } else {
-            // 没有数据时才清空并显示loading
-            _uiState.update { it.copy(userCreatedAgents = emptyList(), isLoading = true) }
-            loadUserCreatedAgents()
+        // 清空列表并加载数据
+        _uiState.update {
+            it.copy(
+                userCreatedAgents = emptyList(),
+                isLoading = false,
+                error = null
+            )
+        }
+        loadUserCreatedAgents()
+    }
+
+    /** 从缓存加载用户创建的 Agents 列表 */
+    fun loadUserCreatedAgentsFromCache() {
+        val cachedAgents = AgentCacheManager.getCachedUserCreatedAgents()
+        if (cachedAgents.isNotEmpty()) {
+            _uiState.update { it.copy(userCreatedAgents = cachedAgents) }
+            LogUtils.i("ProfileViewModel - 从缓存加载用户自建agents: ${cachedAgents.size}个")
         }
     }
 
@@ -92,42 +102,6 @@ class ProfileViewModel : BaseVM() {
         }
     }
 
-    /** 静默刷新用户创建的 Agents 列表 */
-    private fun loadUserCreatedAgentsSilently() {
-        if (_uiState.value.isRefreshing) return
-
-        _uiState.update { it.copy(isRefreshing = true) }
-        val skip = currentPage * PAGE_SIZE
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                when (val result = agentApi.getUserCreatedAgents(skip, PAGE_SIZE)) {
-                    is HttpResult.Success -> {
-                        if (result.data.isEmpty()) {
-                            hasMore = false
-                            LogUtils.d(
-                                "ProfileViewModel - loadUserCreatedAgentsSilently - No more user created agents to load"
-                            )
-                        } else {
-                            // 静默更新数据，直接替换
-                            _uiState.update { it.copy(userCreatedAgents = result.data) }
-                            LogUtils.d(
-                                "ProfileViewModel - loadUserCreatedAgentsSilently - 静默更新数据: ${result.data.size}个"
-                            )
-                        }
-                    }
-
-                    is HttpResult.Failure -> {
-                        LogUtils.e("ProfileViewModel - loadUserCreatedAgentsSilently - API failure: ${result.message}")
-                    }
-                }
-            } catch (e: Exception) {
-                LogUtils.e("ProfileViewModel - loadUserCreatedAgentsSilently exception: ${e.message}")
-            } finally {
-                _uiState.update { it.copy(isRefreshing = false) }
-            }
-        }
-    }
 
     /** 加载用户创建的 Agents 列表 */
     private fun loadUserCreatedAgents() {
@@ -148,7 +122,8 @@ class ProfileViewModel : BaseVM() {
                         } else {
                             _uiState.update { current ->
                                 if (currentPage == 0) {
-                                    // 第一页，直接替换
+                                    // 第一页，直接替换并更新缓存
+                                    AgentCacheManager.cacheUserCreatedAgents(result.data)
                                     current.copy(userCreatedAgents = result.data, hasMore = true)
                                 } else {
                                     // 后续页，追加到现有列表
@@ -188,10 +163,10 @@ class ProfileViewModel : BaseVM() {
         }
     }
 
-    /** 刷新用户创建的 Agents 列表 */
+    /** 刷新用户创建的 Agents 列表（强制从网络加载） */
     fun refreshCreatedAgents() {
         // 如果已经在加载中，避免重复请求
-        if (!_uiState.value.isLoading && !_uiState.value.isRefreshing) {
+        if (!_uiState.value.isLoading) {
             getUserCreatedAgents()
         } else {
             LogUtils.i("ProfileViewModel - refreshCreatedAgents - 跳过刷新，正在加载中")
