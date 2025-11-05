@@ -364,6 +364,9 @@ export interface PopularAgentsResponse {
   avg_rounds_per_user: number;
   pct_sessions_ge_5: number;
   pct_sessions_ge_10: number;
+  total_sessions: number;
+  active_sessions: number;
+  open_rate: number;
 }
 
 export interface UsersHittingLimitResponse {
@@ -439,4 +442,6 @@ export interface UserAnalyticsStatsResponse {
   avg_voice_requests_per_user: number;
   // 会话维度（包含用户消息的会话）
   avg_rounds_per_session: number;
+  // 新增指标
+  new_user_open_rate: number;
 }
