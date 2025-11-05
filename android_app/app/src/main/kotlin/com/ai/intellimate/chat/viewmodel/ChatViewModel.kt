@@ -363,12 +363,6 @@ class ChatViewModel : BaseVM() {
                         )
 
                         runCatching {
-                            // 向后兼容：后端可能仍返回 GUEST_NEED_LOGIN_CODE 错误码
-                            // 即使客户端已移除 guest 流程，也要处理此错误码，提示用户登录
-                                if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
-                                    requestLogin.emit(true)
-                                    return@runCatching
-                                }
                                 // 有免费次数限制，需要vip订阅
                                 if (
                                     result.data.code ==
@@ -597,12 +591,6 @@ class ChatViewModel : BaseVM() {
                 when (result) {
                     is HttpResult.Success -> {
                         runCatching {
-                            // 向后兼容：后端可能仍返回 GUEST_NEED_LOGIN_CODE 错误码
-                            // 即使客户端已移除 guest 流程，也要处理此错误码，提示用户登录
-                                if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
-                                    requestLogin.emit(true)
-                                    return@runCatching
-                                }
                                 // 有免费次数限制，需要vip订阅
                                 if (
                                     result.data.code ==
@@ -653,15 +641,34 @@ class ChatViewModel : BaseVM() {
         LogUtils.i("Message disliked: $localMsgId")
     }
 
-    /** Recall 消息 - 重新生成最新消息 */
+    /** Recall 消息 - 重新生成最新消息（类似 keep talking 的实现） */
     fun recallMessage() {
+        // 防抖检查
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) {
+            LogUtils.i("Recall message debounced, ignoring rapid clicks")
+            return
+        }
+        lastSendTime = currentTime
+
+        // 确保状态正确
+        if (_isWaitingForReply.value) {
+            LogUtils.i("Already waiting for reply, ignoring recall request")
+            return
+        }
+
         val agentId = _agentInfo.value?.id ?: return
-        viewModelScope.launch(Dispatchers.IO) {
+        _isWaitingForReply.value = true
+
+        launchBackground {
             try {
                 recallMessageUseCase(agentId)
+                LogUtils.i("recallMessage to $agentId -> success")
+                _isWaitingForReply.value = false
             } catch (e: Exception) {
                 LogUtils.e("Recall message error: ${e.message}")
                 NetworkErrorHandler.showNetworkAwareError("Failed to recall message: ${e.message}")
+                _isWaitingForReply.value = false
             }
         }
     }

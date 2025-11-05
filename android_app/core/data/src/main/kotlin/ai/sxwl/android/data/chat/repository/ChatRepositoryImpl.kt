@@ -300,23 +300,44 @@ class ChatRepositoryImpl(
             return
         }
 
-        // 删除最后一条AI消息
+        // 删除最后一条AI消息，变成loading状态
         localDataSource.removeMessage(agentId, lastAssistantMessage.localMsgId)
 
-        // 添加 loading 消息
-        val loadingMsg = MsgInfo(
-            content = LOADING_PLACEHOLDER_CONTENT,
-            role = ROLE_ASSISTANT,
-            meta_data = MsgInfo.MsgMetaData(agentId = agentId),
-            localMsgId = "loading_${System.nanoTime()}",
-        )
-        localDataSource.addMessage(agentId, loadingMsg)
+        // 添加 loading 消息占位
+        val loadingMsg = MsgInfo(content = LOADING_PLACEHOLDER_CONTENT, role = ROLE_ASSISTANT)
+        localDataSource.prependMessages(agentId, listOf(loadingMsg))
 
-        // 找到最后一条用户消息，重新发送
-        val lastUserMessage = messages.lastOrNull { it.role == "user" }
-        if (lastUserMessage != null) {
-            // 重新发送消息
-            sendMessage(agentId, lastUserMessage.content)
+        // 发送 recall 消息给服务器（类似 keep talking 的实现）
+        // 服务器应该理解 "recall" 标记并重新生成最后一条AI消息
+        val recallMsg = MsgInfo(content = "recall", role = "user")
+        val result =
+            try {
+                remoteDataSource.sendMessage(agentId, listOf(recallMsg))
+            } catch (e: Exception) {
+                LogUtils.e("ChatRepositoryImpl.recallLastAssistantMessage exception: ${e.message}")
+                HttpResult.Failure(e.message ?: "unknown error", -1)
+            }
+
+        // 移除loading占位
+        val currentMessages = localDataSource.getMessagesFlow(agentId).value
+        val filteredMessages =
+            currentMessages.filterNot {
+                it.content == LOADING_PLACEHOLDER_CONTENT && it.role == ROLE_ASSISTANT
+            }
+        localDataSource.updateMessages(agentId, filteredMessages)
+
+        // 追加AI回复
+        if (result is HttpResult.Success) {
+            val choices = result.data.data?.choices ?: emptyList()
+            if (choices.isNotEmpty()) {
+                val assistantMsgs = choices.map { it.message }
+                localDataSource.prependMessages(agentId, assistantMsgs)
+
+                // 会话已读更新
+                choices.lastOrNull()?.message?.content?.let { lastContent ->
+                    IntySetting.setConversationReaded(agentId, lastContent)
+                }
+            }
         }
     }
 

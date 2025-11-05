@@ -205,19 +205,6 @@ internal fun ChatPage(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
         ) { innerPadding ->
-            // 判断是否有最后一条AI文本消息（用于显示keep talking按钮）
-            // 注意：chatMessages是反向列表，第一个元素是最后一条消息
-            val chatMessages by chatViewModel.msgs.collectAsState()
-            val hasLatestAssistantMessage = remember(chatMessages) {
-                chatMessages.firstOrNull()?.let { firstMsg ->
-                    val hasGeneratedImage = firstMsg.hasGeneratedImage()
-                    val isImageMessage = firstMsg.content.isEmpty() && hasGeneratedImage
-                    firstMsg.role == "assistant" &&
-                            firstMsg.content != "loading_animation" &&
-                            !isImageMessage
-                } ?: false
-            }
-
             Box(modifier = Modifier.fillMaxSize()) {
                 Column(
                     modifier = Modifier
@@ -289,18 +276,6 @@ internal fun ChatPage(
                     val isLoadingMore by chatViewModel.isLoadingMore.collectAsState()
                     val hasMoreMessages by chatViewModel.hasMoreMessages.collectAsState()
                     val listState = rememberLazyListState()
-
-                    // 判断是否有最后一条AI文本消息（用于显示keep talking按钮）
-                    // 注意：chatMessages是反向列表，第一个元素是最后一条消息
-                    val hasLatestAssistantMessage = remember(chatMessages) {
-                        chatMessages.firstOrNull()?.let { firstMsg ->
-                            val hasGeneratedImage = firstMsg.hasGeneratedImage()
-                            val isImageMessage = firstMsg.content.isEmpty() && hasGeneratedImage
-                            firstMsg.role == "assistant" &&
-                                    firstMsg.content != "loading_animation" &&
-                                    !isImageMessage
-                        } ?: false
-                    }
 
                     // 计算是否展示"加载更多"区域（仅在真正的 load more 场景出现）
                     val layoutInfo = listState.layoutInfo
@@ -570,19 +545,34 @@ internal fun ChatPage(
 
                 // Keep talking悬浮按钮 - 放在最外层Box，相对整个页面定位，在ChatInput上方，右侧对齐屏幕
                 // Keep talking按钮显示条件：设置开启 && 有最后一条AI消息
+                // 判断是否有最后一条AI文本消息（用于显示keep talking按钮）
+                // 注意：chatMessages是反向列表，第一个元素是最后一条消息
+                // 直接计算，不使用 remember，确保每次消息列表变化时都会重新计算
+                val chatMessagesForButton by chatViewModel.msgs.collectAsState()
+                val hasLatestAssistantMessage =
+                    chatMessagesForButton.firstOrNull()?.let { firstMsg ->
+                        val hasGeneratedImage = firstMsg.hasGeneratedImage()
+                        val isImageMessage = firstMsg.content.isEmpty() && hasGeneratedImage
+                        firstMsg.role == "assistant" &&
+                                firstMsg.content != "loading_animation" &&
+                                !isImageMessage
+                    } ?: false
                 val showKeepTalkingButton = shouldShowButton && hasLatestAssistantMessage
 
                 val chatInputEstimatedHeight = 70.dp
                 val effectiveBottomPaddingForButton =
                     if (showMorePanel) morePanelHeight else bottomPadding
-                val buttonBottomOffset = chatInputEstimatedHeight + effectiveBottomPaddingForButton
+                // 键盘高度：键盘弹出时，按钮需要向上移动键盘高度
+                val imeHeightDp = with(LocalDensity.current) { imeHeight.toDp() }
+                val buttonBottomOffset =
+                    chatInputEstimatedHeight + effectiveBottomPaddingForButton + imeHeightDp
 
                 KeepTalkingFloatingButton(
                     visible = showKeepTalkingButton,
                     onClick = { chatViewModel.sendKeepTalkingMessage() },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(bottom = buttonBottomOffset) // 在输入框上方，右侧对齐屏幕
+                        .padding(bottom = buttonBottomOffset) // 在输入框上方，右侧对齐屏幕，随键盘向上平移
                 )
             }
         }
