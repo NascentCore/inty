@@ -266,6 +266,17 @@ class ChatRepositoryImpl(
         // TODO: 后续对接接口上报反馈
     }
 
+    override fun updateMessageGeneratedImage(
+        agentId: String,
+        messageId: String,
+        generatedImage: MsgInfo.MsgMetaData.GeneratedImage?,
+    ) {
+        LogUtils.d(
+            "ChatRepositoryImpl.updateMessageGeneratedImage called for $agentId, messageId: $messageId, generatedImage: ${if (generatedImage != null) "set" else "null (remove)"}"
+        )
+        localDataSource.updateMessageGeneratedImage(agentId, messageId, generatedImage)
+    }
+
     override suspend fun removeMessage(agentId: String, messageId: String) {
         LogUtils.d("ChatRepositoryImpl.removeMessage called for $agentId, messageId: $messageId")
         localDataSource.removeMessage(agentId, messageId)
@@ -315,50 +326,42 @@ class ChatRepositoryImpl(
     ): com.architecture.httplib.core.HttpResult<ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult> {
         LogUtils.d("ChatRepositoryImpl.generateImageForMessage called for $agentId, messageId: $messageId")
 
-        // 添加 loading 消息
-        val loadingMsg = MsgInfo(
-            content = LOADING_PLACEHOLDER_CONTENT,
-            role = ROLE_ASSISTANT,
-            meta_data = MsgInfo.MsgMetaData(agentId = agentId),
-            localMsgId = "loading_image_${System.nanoTime()}",
+        // 找到触发消息生图的那条消息
+        val messages = localDataSource.getMessagesFlow(agentId).value
+        val sourceMessage = messages.find { it.id == messageId || it.localMsgId == messageId }
+
+        if (sourceMessage == null) {
+            LogUtils.e("ChatRepositoryImpl.generateImageForMessage: source message not found: $messageId")
+            return HttpResult.Failure("Source message not found", -1)
+        }
+
+        // 在触发消息上设置 loading 状态：通过设置一个临时的 generatedImage（imageUrl 为 "loading"）
+        // 这样图片会显示在触发消息的下方，而不是创建新消息
+        val loadingImage = MsgInfo.MsgMetaData.GeneratedImage(
+            imageUrl = "loading", // 特殊标记，表示正在生成图片
+            width = 300,
+            height = 300,
         )
-        localDataSource.addMessage(agentId, loadingMsg)
+        localDataSource.updateMessageGeneratedImage(agentId, messageId, loadingImage)
 
         val result = remoteDataSource.generateImage(agentId, messageId)
 
-        // 移除 loading 消息
-        localDataSource.removeMessage(agentId, loadingMsg.localMsgId)
-
         when (result) {
             is HttpResult.Success -> {
-                // 添加图片消息
-                val imageMsg = MsgInfo(
-                    content = "",
-                    role = ROLE_ASSISTANT,
-                    meta_data = MsgInfo.MsgMetaData(
-                        agentId = agentId,
-                        generatedImage = MsgInfo.MsgMetaData.GeneratedImage(
-                            imageUrl = result.data.imageUrl,
-                            width = result.data.width,
-                            height = result.data.height,
-                        ),
-                    ),
-                    localMsgId = "image_${System.nanoTime()}",
+                // 更新触发消息的 generatedImage 为实际图片
+                val generatedImage = MsgInfo.MsgMetaData.GeneratedImage(
+                    imageUrl = result.data.imageUrl,
+                    width = result.data.width,
+                    height = result.data.height,
                 )
-                localDataSource.addMessage(agentId, imageMsg)
+                localDataSource.updateMessageGeneratedImage(agentId, messageId, generatedImage)
                 LogUtils.i("ChatRepositoryImpl.generateImageForMessage success: ${result.data.imageUrl}")
             }
 
             is HttpResult.Failure -> {
                 LogUtils.e("ChatRepositoryImpl.generateImageForMessage failure: ${result.message}")
-                // 生成失败时，添加错误消息（显示错误文案，可点击删除）
-                val errorMsg = MsgInfo(
-                    content = "图片生成失败",
-                    role = ROLE_ASSISTANT,
-                    meta_data = MsgInfo.MsgMetaData(agentId = agentId),
-                    localMsgId = "image_error_${System.nanoTime()}",
-                )
-                localDataSource.addMessage(agentId, errorMsg)
+                // 生成失败时，移除 loading 状态
+                localDataSource.updateMessageGeneratedImage(agentId, messageId, null)
             }
         }
 

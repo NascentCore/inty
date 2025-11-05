@@ -36,6 +36,15 @@ interface ChatRepository {
     /** 更新消息反馈（like/dislike） */
     fun updateMessageFeedback(agentId: String, messageId: String, feedback: MsgInfo.UserFeedback?)
 
+    /** 更新消息的生成图片信息
+     * @param generatedImage 如果为 null，则移除 generatedImage
+     */
+    fun updateMessageGeneratedImage(
+        agentId: String,
+        messageId: String,
+        generatedImage: MsgInfo.MsgMetaData.GeneratedImage?,
+    )
+
     /** 删除消息 */
     suspend fun removeMessage(agentId: String, messageId: String)
 

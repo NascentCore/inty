@@ -269,6 +269,10 @@
     <string name="toast_submitted_successfully">Submitted successfully. We will review it soon.</string>
     <string name="toast_report_creation_failed">Report creation failed</string>
 
+    <!-- Image Generation Error Messages -->
+    <string name="image_generation_failed">Image generation failed</string>
+    <string name="image_generation_failed_tap_to_delete">Image generation failed, tap to delete</string>
+
     <!-- Billing Error Messages -->
     <!-- 购买相关错误 -->
     <string name="billing_error_purchases_empty">Purchase failed: purchases list is empty</string>
