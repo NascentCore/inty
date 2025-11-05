@@ -2,8 +2,10 @@ package com.ai.intellimate.agent.info
 
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,15 +33,18 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,6 +60,10 @@ import com.ai.intellimate.ui.components.SmartTagsLayout
 @Composable
 internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+    var lastClickTimeCopy by remember { mutableLongStateOf(0L) }
+    val copyLabel = stringResource(R.string.copy)
+    val copySuccessMessage = stringResource(R.string.copy_agent_id_success)
     var showBottomSheet by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState()
 
@@ -155,19 +164,43 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color.White,
                                 )
-                                Spacer(Modifier.height(5.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Spacer(Modifier.width(16.dp))
-                                    Text(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        text = stringResource(R.string.ID, agent.id),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Light,
-                                        color = Color.White.copy(0.55f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
+                                  Spacer(Modifier.height(5.dp))
+                                  Row(verticalAlignment = Alignment.CenterVertically) {
+                                      Spacer(Modifier.width(16.dp))
+                                      Text(
+                                          modifier = Modifier.weight(1f),
+                                          text = stringResource(R.string.ID, agent.id),
+                                          fontSize = 12.sp,
+                                          fontWeight = FontWeight.Light,
+                                          color = Color.White.copy(0.55f),
+                                          maxLines = 1,
+                                          overflow = TextOverflow.Ellipsis,
+                                      )
+                                      Spacer(Modifier.width(8.dp))
+                                      Box(
+                                          modifier =
+                                              Modifier
+                                                  .clip(RoundedCornerShape(12.dp))
+                                                  .background(Color.White.copy(alpha = 0.12f))
+                                                  .noRippleClickable {
+                                                      val currentTime = System.currentTimeMillis()
+                                                      if (AntiClick.isValidClick(lastClickTimeCopy)) {
+                                                          lastClickTimeCopy = currentTime
+                                                          clipboardManager.setText(AnnotatedString(agent.id))
+                                                          Toast.makeText(context, copySuccessMessage, Toast.LENGTH_SHORT)
+                                                              .show()
+                                                      }
+                                                  }
+                                                  .padding(horizontal = 8.dp, vertical = 4.dp)
+                                      ) {
+                                          Text(
+                                              text = copyLabel,
+                                              color = Color.White,
+                                              fontSize = 12.sp,
+                                              fontWeight = FontWeight.Medium,
+                                          )
+                                      }
+                                  }
                             }
 
                             Spacer(Modifier.width(16.dp))
