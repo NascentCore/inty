@@ -33,10 +33,10 @@
 ### 图片生成
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
-| `image_generation_start` | ChatViewModel.kt | 图片生成开始 |
+| `image_generation_start` | ChatViewModel.kt | 图片生成开始（请求发起时触发） |
 | `image_generation_success` | ChatViewModel.kt | 图片生成成功（包含图片信息和生成耗时） |
-| `image_generation_failure` | ChatViewModel.kt | 图片生成失败（包含错误信息和生成耗时） |
-| `image_generation_limit_reached` | ChatViewModel.kt | 图片生成限制达到（需要订阅） |
+| `image_generation_failure` | ChatViewModel.kt | 图片生成失败（包含错误信息和生成耗时，包括网络错误和异常） |
+| `image_generation_limit_reached` | ChatViewModel.kt | 图片生成限制达到（免费用户需要订阅或VIP用户达到每日限制） |
 
 ### 页面访问
 | 事件名称 | 使用位置 | 业务含义 |
@@ -72,6 +72,11 @@
 | `audio_play_end` | VoicePlayer.kt | 语音播放结束 |
 | `pull_up_input` | ChatInput.kt | 拉起输入框 |
 | `image_show_success` | AgentBackground.kt | 图片显示成功 |
+| `keep_talking_clicked` | ChatViewModel.kt | Keep Talking按钮点击 |
+| `message_like` | ChatViewModel.kt | 消息点赞 |
+| `message_dislike` | ChatViewModel.kt | 消息点踩 |
+| `settings_keep_talking_changed` | ChatSettingsDrawer.kt | Keep Talking开关变化 |
+| `settings_auto_play_voice_changed` | ChatSettingsDrawer.kt | Auto Play Voice开关变化 |
 
 ### 错误监控
 | 事件名称 | 使用位置 | 业务含义 |
@@ -145,10 +150,27 @@
 - `message_id`：消息ID（要生成图片的消息）
 - `image_url`：生成的图片URL（成功时）
 - `image_width`、`image_height`：生成的图片尺寸（成功时）
-- `generation_time_ms`：图片生成耗时（毫秒）
+- `generation_time_ms`：图片生成耗时（毫秒，从发起请求到收到响应）
 - `error_code`、`error_message`：错误码和错误消息（失败时）
-- `error_type`：异常类型（异常时）
+- `error_type`：异常类型（异常时，如`Exception`、`NetworkException`等）
 - `user_type`：用户类型（vip/free）
+
+### 消息反馈参数
+- `agent_id`、`agent_name`：Agent信息
+- `message_id`：消息ID（优先使用服务端id，如果为空则使用本地id作为fallback）
+- `message_role`：消息角色（user/assistant）
+- `message_length`：消息长度
+- `has_generated_image`：是否有生成的图片
+- `is_opening`：是否为开场消息
+- `previous_feedback`：之前的反馈状态（NONE/LIKE/DISLIKE）
+- `user_type`：用户类型（vip/free）
+- `message_timestamp`：消息时间戳
+
+### 设置开关参数
+- `enabled`：开关是否开启（true/false）
+- `agent_id`、`agent_name`：Agent信息
+- `user_type`：用户类型（vip/free）
+- `timestamp`：事件时间戳
 
 ### 性能参数
 - `duration_ms`：持续时间

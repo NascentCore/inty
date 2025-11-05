@@ -100,6 +100,7 @@ class ChatLocalDataSource {
         val session = getSession(agentId)
         session.messages.value =
             session.messages.value.map { msg ->
+                // 业务逻辑：使用localMsgId匹配（这是本地标识符）
                 if (msg.localMsgId == messageId) {
                     msg.copy(userFeedback = feedback)
                 } else {

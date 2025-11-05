@@ -55,10 +55,10 @@
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
-| `image_generation_start` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `user_type`, `timestamp` | 图片生成开始 | 🔴 100% |
+| `image_generation_start` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `user_type`, `timestamp` | 图片生成开始（请求发起时触发） | 🔴 100% |
 | `image_generation_success` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `image_url`, `image_width`, `image_height`, `user_type`, `generation_time_ms`, `timestamp` | 图片生成成功（包含图片信息和生成耗时） | 🔴 100% |
-| `image_generation_failure` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `error_code`, `error_message`, `error_type`（异常时）, `user_type`, `generation_time_ms`, `timestamp` | 图片生成失败（包含错误信息和生成耗时） | 🔴 100% |
-| `image_generation_limit_reached` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `error_code`, `error_message`, `user_type`, `generation_time_ms`, `timestamp` | 图片生成限制达到（需要订阅） | 🔴 100% |
+| `image_generation_failure` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `error_code`, `error_message`, `error_type`（异常时）, `user_type`, `generation_time_ms`, `timestamp` | 图片生成失败（包含错误信息和生成耗时，包括网络错误和异常） | 🔴 100% |
+| `image_generation_limit_reached` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `error_code`, `error_message`, `user_type`, `generation_time_ms`, `timestamp` | 图片生成限制达到（免费用户需要订阅或VIP用户达到每日限制） | 🔴 100% |
 
 ### 1.6 页面追踪事件
 
@@ -95,6 +95,11 @@
 | `audio_play_end` | VoicePlayer.kt | `agent_id`, `agent_name`, `message_id`, `is_auto_play`, `play_status`, `play_duration`, `audio_url`, `timestamp` | 语音播放结束（播放完成或暂停时触发） | 🔴 100% |
 | `pull_up_input` | ChatInput.kt | `agent_id`, `agent_name`, `timestamp` | 拉起输入框（键盘弹出时触发） | 🔴 100% |
 | `image_show_success` | AgentBackground.kt | `agent_id`, `agent_name`, `image_url`, `image_width`, `image_height`, `content_scale`, `timestamp` | 图片显示成功 | 🔴 100% |
+| `keep_talking_clicked` | ChatViewModel.kt | `agent_id`, `agent_name`, `user_type`, `timestamp` | Keep Talking按钮点击 | 🔴 100% |
+| `message_like` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`（优先使用服务端id）, `message_role`, `message_length`, `has_generated_image`, `is_opening`, `previous_feedback`, `user_type`, `message_timestamp`, `timestamp` | 消息点赞 | 🔴 100% |
+| `message_dislike` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`（优先使用服务端id）, `message_role`, `message_length`, `has_generated_image`, `is_opening`, `previous_feedback`, `user_type`, `message_timestamp`, `timestamp` | 消息点踩 | 🔴 100% |
+| `settings_keep_talking_changed` | ChatSettingsDrawer.kt | `enabled`, `agent_id`, `agent_name`, `user_type`, `timestamp` | Keep Talking开关变化 | 🔴 100% |
+| `settings_auto_play_voice_changed` | ChatSettingsDrawer.kt | `enabled`, `agent_id`, `agent_name`, `user_type`, `timestamp` | Auto Play Voice开关变化 | 🔴 100% |
 
 ### 1.9 订阅与计费事件
 

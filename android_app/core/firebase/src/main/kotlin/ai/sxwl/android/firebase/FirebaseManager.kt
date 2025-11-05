@@ -468,6 +468,15 @@ object FirebaseManager {
         const val MESSAGE_LIKE = "message_like"
         const val MESSAGE_DISLIKE = "message_dislike"
 
+        // Keep Talking相关事件
+        const val KEEP_TALKING_CLICKED = "keep_talking_clicked" // Keep Talking按钮点击
+
+        // 设置开关相关事件
+        const val SETTINGS_KEEP_TALKING_CHANGED =
+            "settings_keep_talking_changed" // Keep Talking开关变化
+        const val SETTINGS_AUTO_PLAY_VOICE_CHANGED =
+            "settings_auto_play_voice_changed" // Auto Play Voice开关变化
+
         // 图片生成相关事件
         const val IMAGE_GENERATION_START = "image_generation_start" // 图片生成开始
         const val IMAGE_GENERATION_SUCCESS = "image_generation_success" // 图片生成成功
