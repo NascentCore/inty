@@ -23,8 +23,8 @@ fun KeepTalkingFloatingButton(
     modifier: Modifier = Modifier,
 ) {
     if (!visible) return
-    val buttonSize = 28.dp
-    val buttonImageSize = 18.dp
+    val buttonSize = 24.dp // 与 like/dislike 按钮高度一致
+    val buttonImageSize = 16.dp
 
     Box(
         modifier = modifier
