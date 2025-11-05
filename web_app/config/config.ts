@@ -121,6 +121,17 @@ export default defineConfig({
    */
   request: {},
   /**
+   * @name <head> 中额外的 meta 标签
+   * @description 配置 <head> 中的 meta 标签
+   * @doc https://umijs.org/docs/api/config#metas
+   */
+  metas: [
+    // 禁用缓存 - 仅开发测试阶段使用
+    { 'http-equiv': 'Cache-Control', content: 'no-cache, no-store, must-revalidate' },
+    { 'http-equiv': 'Pragma', content: 'no-cache' },
+    { 'http-equiv': 'Expires', content: '0' },
+  ],
+  /**
    * @name <head> 中额外的 script
    * @description 配置 <head> 中额外的 script
    */

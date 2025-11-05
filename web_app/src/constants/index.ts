@@ -84,5 +84,5 @@ export const INTY_SDK_CONFIG = {
 // Google OAuth 配置
 export const GOOGLE_AUTH_CONFIG = {
   /** Google OAuth Client ID */
-  CLIENT_ID: '1034291688895-4aajnset4lc3subled86dikpk92hi7hp.apps.googleusercontent.com',
+  CLIENT_ID: '1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com',
 } as const;
