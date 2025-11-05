@@ -590,16 +590,11 @@ private fun ChatItemSystemTips(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Color.Black.copy(alpha = 0.3f),
-                    RoundedCornerShape(12.dp)
-                )
-                .padding(12.dp, 16.dp)
                 .noRippleClickable {
                     // 点击删除 tips 消息
                     viewModel.deleteMessage(item.localMsgId)
@@ -610,12 +605,11 @@ private fun ChatItemSystemTips(
             Text(
                 text = displayText,
                 color = Color.White.copy(alpha = 0.7f),
-                fontSize = 12.sp,
-                modifier = Modifier.weight(1f),
+                fontSize = 10.sp,
             )
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
-                painter = painterResource(R.drawable.ic_warning_voice),
+                painter = painterResource(ai.sxwl.android.design.R.drawable.ic_delete),
                 contentDescription = "Delete tip",
                 tint = Color.White.copy(alpha = 0.5f),
                 modifier = Modifier.size(16.dp),

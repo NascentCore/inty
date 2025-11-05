@@ -3,6 +3,7 @@ package com.ai.intellimate.chat.ui
 import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -11,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -25,17 +27,22 @@ fun KeepTalkingFloatingButton(
 ) {
     if (!visible) return
 
+    val cornerShape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)
     Box(
         modifier = modifier
-            .clip(
-                RoundedCornerShape(
-                    topStart = 20.dp,
-                    bottomStart = 20.dp
-                )
-            ) // 左侧半圆角，右侧直角
+            .clip(cornerShape)
+            .border(
+                1.dp, brush = Brush.horizontalGradient(
+                    colors =
+                        listOf(
+                            Color.White.copy(.7f),
+                            Color.White.copy(.2f),
+                        )
+                ), shape = cornerShape
+            )
             .background(
                 Color.Black.copy(alpha = 0.6f),
-                RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)
+                cornerShape
             )
             .noRippleClickable(onClick = onClick)
             .padding(4.dp),
@@ -44,7 +51,7 @@ fun KeepTalkingFloatingButton(
         Image(
             painter = painterResource(R.drawable.ic_keep_talking),
             contentDescription = "Keep Talking",
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(20.dp),
         )
     }
 }
