@@ -88,6 +88,20 @@ fun ChatSettingsDrawer(
 
     LaunchedEffect(userProfileState) { modifyProfileViewModel.init(userProfileState) }
 
+    // 监听用户信息更新事件，及时刷新UI
+    LaunchedEffect(modifyProfileViewModel) {
+        modifyProfileViewModel.events.collect { event ->
+            when (event) {
+                com.ai.intellimate.ViewModelEvent.UserProfileUpdated -> {
+                    // 用户信息更新后，立即刷新ChatViewModel中的用户信息
+                    chatViewModel.updateUserInfo()
+                }
+
+                else -> {}
+            }
+        }
+    }
+
     // 移除TheRouter拦截器，使用其他方式处理用户信息更新
 
     MyModalNavigationDrawer(
@@ -291,9 +305,8 @@ fun ChatSettingsDrawer(
                     onSave = { key, value ->
                         modifyProfileViewModel.changeUserProfile(key, value)
                         editKey = EditKey.None
-                        // 直接保存并刷新本地展示
+                        // 直接保存，事件监听会自动刷新UI
                         modifyProfileViewModel.onSave()
-                        chatViewModel.updateUserInfo()
                     },
                     onValueChange = { value -> editValue = value },
                 )

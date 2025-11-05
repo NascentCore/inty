@@ -545,24 +545,25 @@ internal fun ChatPage(
 
                 // Keep talking悬浮按钮 - 放在最外层Box，相对整个页面定位，在ChatInput上方，右侧对齐屏幕
                 // Keep talking按钮显示条件：设置开启 && 有最后一条AI消息 && 是真实消息（不能是intro或opening）
+                // 注意：即使最后一条是用户消息，也可以显示keep talking按钮（基于最后一条AI消息）
                 // 判断是否有最后一条AI文本消息（用于显示keep talking按钮）
                 // 注意：chatMessages是反向列表，第一个元素是最后一条消息
                 // 直接计算，不使用 remember，确保每次消息列表变化时都会重新计算
                 val chatMessagesForButton by chatViewModel.msgs.collectAsState()
                 val hasLatestAssistantMessage =
-                    chatMessagesForButton.firstOrNull()?.let { firstMsg ->
-                        val hasGeneratedImage = firstMsg.hasGeneratedImage()
-                        val isImageMessage = firstMsg.content.isEmpty() && hasGeneratedImage
+                    chatMessagesForButton.firstOrNull { msg ->
+                        val hasGeneratedImage = msg.hasGeneratedImage()
+                        val isImageMessage = msg.content.isEmpty() && hasGeneratedImage
                         // 判断条件：
                         // 1. 必须是 assistant 消息
                         // 2. 不能是 loading 占位
                         // 3. 不能是纯图片消息
                         // 4. 不能是 opening 消息（真实消息，不是intro或opening）
-                        firstMsg.role == "assistant" &&
-                                firstMsg.content != "loading_animation" &&
+                        msg.role == "assistant" &&
+                                msg.content != "loading_animation" &&
                                 !isImageMessage &&
-                                !firstMsg.isOpening()
-                    } ?: false
+                                !msg.isOpening()
+                    } != null
                 val showKeepTalkingButton = shouldShowButton && hasLatestAssistantMessage
 
                 val chatInputEstimatedHeight = 70.dp
