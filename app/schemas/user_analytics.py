@@ -65,6 +65,9 @@ class PopularAgentsResponse(BaseModel):
     avg_rounds_per_user: float = Field(description="人均聊天轮数（total_rounds / user_count）")
     pct_sessions_ge_5: float = Field(description=">=5轮会话百分比（0-100）")
     pct_sessions_ge_10: float = Field(description=">=10轮会话百分比（0-100）")
+    total_sessions: int = Field(description="浏览数（总的session数，包含没有用户发送消息的session）")
+    active_sessions: int = Field(description="真实发起聊天的session数（有用户消息的session）")
+    open_rate: float = Field(description="开口率（active_sessions / total_sessions，0-100）")
 
 
 class UsersHittingLimitResponse(BaseModel):
@@ -138,4 +141,6 @@ class UserAnalyticsStatsResponse(BaseModel):
     avg_voice_requests_per_user: float = Field(description="平均发起语音请求数")
     # 会话维度（包含用户消息的会话）
     avg_rounds_per_session: float = Field(description="每个会话平均轮数")
+    # 新增指标
+    new_user_open_rate: float = Field(description="新增用户开口率（total_chat_initiators / total_new_users，0-100）")
 

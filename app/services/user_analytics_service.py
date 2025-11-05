@@ -294,6 +294,9 @@ class UserAnalyticsService:
         # 2. 获取用户会话详情
         sessions_detail = await self.get_user_sessions_detail(start_date, end_date)
         if not sessions_detail:
+            new_user_open_rate = (
+                (0 / total_new_users * 100) if total_new_users > 0 else 0.0
+            )
             return {
                 "total_new_users": total_new_users,
                 "total_chat_initiators": 0,
@@ -304,6 +307,7 @@ class UserAnalyticsService:
                 "avg_sessions_per_user": 0.0,
                 "avg_voice_requests_per_user": 0.0,
                 "avg_rounds_per_session": 0.0,
+                "new_user_open_rate": round(new_user_open_rate, 2),
             }
 
         # 3. 获取有用户消息的会话（排除仅浏览开场白的）
@@ -318,6 +322,9 @@ class UserAnalyticsService:
         ]
 
         if not active_sessions:
+            new_user_open_rate = (
+                (0 / total_new_users * 100) if total_new_users > 0 else 0.0
+            )
             return {
                 "total_new_users": total_new_users,
                 "total_chat_initiators": 0,
@@ -328,6 +335,7 @@ class UserAnalyticsService:
                 "avg_sessions_per_user": 0.0,
                 "avg_voice_requests_per_user": 0.0,
                 "avg_rounds_per_session": 0.0,
+                "new_user_open_rate": round(new_user_open_rate, 2),
             }
 
         # 4. 计算统计指标
@@ -358,6 +366,11 @@ class UserAnalyticsService:
             else 0.0
         )
 
+        # 计算新增用户开口率
+        new_user_open_rate = (
+            (total_active_users / total_new_users * 100) if total_new_users > 0 else 0.0
+        )
+
         return {
             "total_new_users": total_new_users,
             "total_chat_initiators": total_active_users,
@@ -368,6 +381,7 @@ class UserAnalyticsService:
             "avg_sessions_per_user": round(avg_sessions_per_user, 2),
             "avg_voice_requests_per_user": round(avg_voice_requests_per_user, 2),
             "avg_rounds_per_session": round(avg_rounds_per_session, 2),
+            "new_user_open_rate": round(new_user_open_rate, 2),
         }
 
     async def get_chat_messages(

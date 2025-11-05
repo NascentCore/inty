@@ -1137,7 +1137,8 @@ async def get_popular_agents(
             lambda: {
                 "users": set(),
                 "rounds": 0,
-                "sessions": [],  # 存储每个会话的轮数
+                "sessions": [],  # 存储每个会话的轮数（仅包含有用户消息的）
+                "total_chats": set(),  # 存储所有 chats（包括只有开场白的）
             }
         )
         rounds_data = await service.get_conversation_rounds(
@@ -1148,21 +1149,31 @@ async def get_popular_agents(
             for item in rounds_data
         }
 
+        # 统计所有 chats（包括只有开场白的）
         for item in activity_data:
             if item["chat_id"] and item["agent_name"]:
                 agent_name = item["agent_name"]
-                agent_stats[agent_name]["users"].add(item["user_id"])
+                agent_stats[agent_name]["total_chats"].add(item["chat_id"])
+
+        # 统计有用户消息的 chats
+        for item in activity_data:
+            if item["chat_id"] and item["agent_name"]:
+                agent_name = item["agent_name"]
                 rounds = chat_to_rounds.get(item["chat_id"], 0)
-                agent_stats[agent_name]["rounds"] += rounds
-                # 记录会话的轮数（用于计算百分比）
-                agent_stats[agent_name]["sessions"].append(rounds)
+                # 只统计有用户消息的会话
+                if rounds > 0:
+                    agent_stats[agent_name]["users"].add(item["user_id"])
+                    agent_stats[agent_name]["rounds"] += rounds
+                    # 记录会话的轮数（用于计算百分比）
+                    agent_stats[agent_name]["sessions"].append(rounds)
 
         result = []
         for agent_name, stats in agent_stats.items():
             user_count = len(stats["users"])
             total_rounds = stats["rounds"]
             sessions = stats["sessions"]
-            total_sessions = len(sessions)
+            active_sessions = len(sessions)  # 有用户消息的 session 数
+            total_sessions = len(stats["total_chats"])  # 总的 session 数（浏览数）
 
             # 计算人均聊天轮数
             avg_rounds_per_user = total_rounds / user_count if user_count > 0 else 0.0
@@ -1173,10 +1184,15 @@ async def get_popular_agents(
 
             # 计算百分比
             pct_sessions_ge_5 = (
-                (sessions_ge_5 / total_sessions * 100) if total_sessions > 0 else 0.0
+                (sessions_ge_5 / active_sessions * 100) if active_sessions > 0 else 0.0
             )
             pct_sessions_ge_10 = (
-                (sessions_ge_10 / total_sessions * 100) if total_sessions > 0 else 0.0
+                (sessions_ge_10 / active_sessions * 100) if active_sessions > 0 else 0.0
+            )
+
+            # 计算开口率
+            open_rate = (
+                (active_sessions / total_sessions * 100) if total_sessions > 0 else 0.0
             )
 
             result.append(
@@ -1187,6 +1203,9 @@ async def get_popular_agents(
                     "avg_rounds_per_user": round(avg_rounds_per_user, 2),
                     "pct_sessions_ge_5": round(pct_sessions_ge_5, 2),
                     "pct_sessions_ge_10": round(pct_sessions_ge_10, 2),
+                    "total_sessions": total_sessions,
+                    "active_sessions": active_sessions,
+                    "open_rate": round(open_rate, 2),
                 }
             )
 

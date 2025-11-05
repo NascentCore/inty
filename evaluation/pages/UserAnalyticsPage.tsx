@@ -532,6 +532,18 @@ export const UserAnalyticsPage: React.FC = () => {
         </Col>
       </Row>
 
+      <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="新增用户开口率"
+              value={stats?.new_user_open_rate.toFixed(2) ?? "0.00"}
+              suffix="%"
+            />
+          </Card>
+        </Col>
+      </Row>
+
       {/* 图表区域 */}
       <Row gutter={[16, 16]}>
         {/* 图表1: 每日新用户趋势 */}
@@ -589,12 +601,28 @@ export const UserAnalyticsPage: React.FC = () => {
                     width: 200,
                   },
                   {
+                    title: "浏览数",
+                    dataIndex: "total_sessions",
+                    key: "total_sessions",
+                    width: 120,
+                    sorter: (a, b) => a.total_sessions - b.total_sessions,
+                    render: (value: number) => value,
+                  },
+                  {
                     title: "真实发起聊天人数",
                     dataIndex: "user_count",
                     key: "user_count",
                     width: 150,
                     sorter: (a, b) => a.user_count - b.user_count,
                     defaultSortOrder: "descend",
+                  },
+                  {
+                    title: "开口率",
+                    dataIndex: "open_rate",
+                    key: "open_rate",
+                    width: 120,
+                    sorter: (a, b) => a.open_rate - b.open_rate,
+                    render: (value: number) => `${value.toFixed(2)}%`,
                   },
                   {
                     title: "总聊天轮数",
