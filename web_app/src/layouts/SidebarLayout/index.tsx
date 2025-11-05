@@ -42,11 +42,10 @@ const SidebarLayout: React.FC = () => {
   };
 
   /**
-   * 处理订阅按钮点击
+   * 处理订阅按钮点击 - 跳转到订阅页面
    */
   const handleSubscribeClick = () => {
-    // TODO: 实现订阅功能
-    console.log('Subscribe clicked');
+    history.push('/subscribe');
   };
 
   return (

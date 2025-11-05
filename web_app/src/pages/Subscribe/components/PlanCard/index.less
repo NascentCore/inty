@@ -1,0 +1,223 @@
+/**
+ * PlanCard 订阅计划卡片样式
+ */
+
+@import '../../../../styles/variables.less';
+
+.plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: @spacing-lg;
+  background: @dark-bg-tertiary;
+  border: 1px solid @dark-border-color;
+  border-radius: @border-radius-lg;
+  transition: all @transition-base @ease-in-out;
+  overflow: hidden;
+
+  &:hover {
+    border-color: @dark-border-hover;
+    box-shadow: @dark-shadow-md;
+    transform: translateY(-4px);
+  }
+
+  // 当前订阅计划样式
+  &-current {
+    border-color: @primary-color;
+    background: linear-gradient(
+      135deg,
+      rgba(24, 144, 255, 0.1) 0%,
+      rgba(24, 144, 255, 0.05) 100%
+    );
+
+    &:hover {
+      transform: none;
+    }
+  }
+
+  // 推荐计划样式
+  &-recommended {
+    border-color: @warning-color;
+    box-shadow: @dark-shadow-md;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, @warning-color, @primary-color);
+    }
+  }
+
+  // 推荐标签
+  &-badge {
+    position: absolute;
+    top: @spacing-md;
+    right: -30px;
+    padding: 4px 32px;
+    background: @warning-color;
+    color: @dark-bg-primary;
+    font-size: @font-size-xs;
+    font-weight: @font-weight-semibold;
+    transform: rotate(45deg);
+    z-index: 1;
+  }
+
+  // 折扣标签
+  &-discount {
+    position: absolute;
+    top: @spacing-md;
+    left: @spacing-md;
+    padding: 4px 12px;
+    background: @success-color;
+    color: @dark-bg-primary;
+    font-size: @font-size-xs;
+    font-weight: @font-weight-semibold;
+    border-radius: @border-radius-sm;
+    z-index: 1;
+  }
+
+  // 计划头部
+  &-header {
+    margin-bottom: @spacing-lg;
+  }
+
+  &-title {
+    font-size: @font-size-lg;
+    font-weight: @font-weight-bold;
+    color: @dark-text-primary;
+    margin: 0 0 @spacing-xs 0;
+  }
+
+  &-type {
+    font-size: @font-size-sm;
+    color: @dark-text-tertiary;
+    margin: 0;
+  }
+
+  // 价格区域
+  &-price {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: @spacing-md;
+
+    &-currency {
+      font-size: @font-size-base;
+      font-weight: @font-weight-semibold;
+      color: @dark-text-secondary;
+      margin-right: 4px;
+    }
+
+    &-amount {
+      font-size: 36px;
+      font-weight: @font-weight-bold;
+      color: @dark-text-primary;
+      line-height: 1;
+    }
+
+    &-period {
+      font-size: @font-size-xs;
+      color: @dark-text-tertiary;
+      margin-left: 4px;
+    }
+  }
+
+  // 计划描述
+  &-description {
+    font-size: @font-size-xs;
+    color: @dark-text-secondary;
+    margin: 0 0 @spacing-md 0;
+    line-height: @line-height-base;
+  }
+
+  // 功能列表
+  &-features {
+    display: flex;
+    flex-direction: column;
+    gap: @spacing-xs;
+    margin-bottom: @spacing-lg;
+    flex: 1;
+  }
+
+  &-feature {
+    display: flex;
+    align-items: flex-start;
+    gap: @spacing-xs;
+
+    &-icon {
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    &-content {
+      display: flex;
+      align-items: center;
+      gap: @spacing-xs;
+      flex: 1;
+    }
+
+    &-icon-emoji {
+      font-size: @font-size-sm;
+    }
+
+    &-name {
+      font-size: @font-size-xs;
+      color: @dark-text-secondary;
+      line-height: @line-height-base;
+    }
+  }
+
+  // 选择按钮
+  &-button {
+    width: 100%;
+    padding: @spacing-sm @spacing-md;
+    background: @primary-color;
+    color: @dark-text-primary;
+    font-size: @font-size-sm;
+    font-weight: @font-weight-semibold;
+    border: none;
+    border-radius: @border-radius-base;
+    cursor: pointer;
+    transition: all @transition-fast @ease-in-out;
+
+    &:hover:not(:disabled) {
+      background: @primary-hover;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+    }
+
+    &:active:not(:disabled) {
+      background: @primary-active;
+      transform: translateY(0);
+    }
+
+    &:disabled {
+      background: @dark-bg-hover;
+      color: @dark-text-tertiary;
+      cursor: not-allowed;
+    }
+
+    // 当前计划按钮样式
+    &-current {
+      background: @dark-bg-hover;
+      color: @dark-text-secondary;
+      border: 1px solid @primary-color;
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: @screen-md) {
+  .plan-card {
+    padding: @spacing-md;
+
+    &-price {
+      &-amount {
+        font-size: 32px;
+      }
+    }
+  }
+}
+
