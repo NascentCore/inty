@@ -36,4 +36,3 @@ const DeleteAgent: React.FC = () => {
 };
 
 export default DeleteAgent;
-

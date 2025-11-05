@@ -29,10 +29,7 @@ const GenerateMessageVoice: React.FC = () => {
         logger.testDetail('Message ID', values.message_id);
         logger.testDetail('Agent ID', values.agent_id);
 
-        const response = await generateMessageVoice(
-          values.message_id,
-          values.agent_id,
-        );
+        const response = await generateMessageVoice(values.message_id, values.agent_id);
 
         logger.testDetail('语音生成结果', response);
 
@@ -44,4 +41,3 @@ const GenerateMessageVoice: React.FC = () => {
 };
 
 export default GenerateMessageVoice;
-

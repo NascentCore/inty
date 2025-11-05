@@ -3,7 +3,7 @@
  * 管理最近对话列表
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { getChatList } from '@/services';
 import type { IChatItem, IChatListRequest } from '@/types';
 
@@ -85,4 +85,3 @@ export default function useChatListModel() {
     reset,
   };
 }
-

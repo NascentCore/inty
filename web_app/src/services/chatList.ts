@@ -12,19 +12,17 @@ import type { IChatListRequest, IChatItem } from '@/types';
  * @param params 请求参数
  * @returns 聊天列表数组，失败时返回空数组
  */
-export async function getChatList(
-  params: IChatListRequest = {},
-): Promise<IChatItem[]> {
+export async function getChatList(params: IChatListRequest = {}): Promise<IChatItem[]> {
   try {
     // 获取已认证的客户端
     const client = await createIntyClient(true);
-    
+
     // 将 page/page_size 转换为 skip/limit
     const page = params.page || 1;
     const pageSize = params.page_size || 20;
     const skip = (page - 1) * pageSize;
     const limit = pageSize;
-    
+
     // 调用 SDK 的获取聊天列表接口
     const chatList = await client.api.v1.chats.list({
       skip,
@@ -36,9 +34,8 @@ export async function getChatList(
     return (chatList || []) as IChatItem[];
   } catch (err: unknown) {
     logger.error('获取聊天列表失败', err);
-    
+
     // 返回空数组
     return [];
   }
 }
-

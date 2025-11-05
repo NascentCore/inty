@@ -41,4 +41,3 @@ const AgentDetail: React.FC = () => {
 };
 
 export default AgentDetail;
-

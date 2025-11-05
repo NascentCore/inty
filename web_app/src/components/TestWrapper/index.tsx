@@ -3,8 +3,8 @@
  * 用于统一 DevTest 页面中的测试组件样式和逻辑
  */
 
-import React, { useState, useCallback } from 'react';
-import { Button, Input, Space, message } from 'antd';
+import { Button, Input, message, Space } from 'antd';
+import React, { useCallback, useState } from 'react';
 import { logger } from '@/utils/logger';
 import { handleTestError } from '@/utils/testError';
 import './index.less';
@@ -20,7 +20,7 @@ export interface ITestInput {
   /** 是否必填 */
   required?: boolean;
   /** 输入框类型 */
-  type?: 'text' | 'number' | 'password';
+  type?: 'text' | 'number' | 'password' | 'select';
   /** 占位提示文本 */
   placeholder?: string;
   /** 默认值 */
@@ -29,6 +29,8 @@ export interface ITestInput {
   multiline?: boolean;
   /** 多行输入行数 */
   rows?: number;
+  /** 下拉选项（仅 type='select' 时使用） */
+  options?: Array<{ label: string; value: string }>;
 }
 
 /**
@@ -163,35 +165,25 @@ function TestWrapper<T = Record<string, string>, R = unknown>(
     } finally {
       setLoading(false);
     }
-  }, [
-    title,
-    inputs,
-    values,
-    onTest,
-    onSuccess,
-    logParams,
-    logSuccess,
-    validateInputs,
-  ]);
+  }, [title, inputs, values, onTest, onSuccess, logParams, logSuccess, validateInputs]);
 
   return (
     <div className="test-wrapper">
       <h4 className="test-wrapper-title">{title}</h4>
 
-      {description && (
-        <p className="test-wrapper-description">{description}</p>
-      )}
+      {description && <p className="test-wrapper-description">{description}</p>}
 
       <Space direction="vertical" style={{ width: '100%' }} size="middle">
         {/* 渲染输入框 */}
         {inputs.map((input) => (
           <div key={input.name} className="test-wrapper-input-group">
-            <label className="test-wrapper-label">
+            <label htmlFor={input.name} className="test-wrapper-label">
               {input.label}
               {input.required ? ' (必填)' : ' (可选)'}:
             </label>
             {input.multiline ? (
               <Input.TextArea
+                id={input.name}
                 placeholder={input.placeholder || `请输入${input.label}`}
                 value={values[input.name] || ''}
                 onChange={(e) => handleInputChange(input.name, e.target.value)}
@@ -200,6 +192,7 @@ function TestWrapper<T = Record<string, string>, R = unknown>(
               />
             ) : (
               <Input
+                id={input.name}
                 placeholder={input.placeholder || `请输入${input.label}`}
                 value={values[input.name] || ''}
                 onChange={(e) => handleInputChange(input.name, e.target.value)}
@@ -231,4 +224,3 @@ function TestWrapper<T = Record<string, string>, R = unknown>(
 }
 
 export default TestWrapper;
-

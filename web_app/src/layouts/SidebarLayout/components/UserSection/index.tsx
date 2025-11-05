@@ -1,34 +1,34 @@
 /**
  * 用户区域组件
- * 
+ *
  * 用途：显示用户头像和订阅按钮，位于侧边栏底部
  * 使用示例：
  * ```tsx
- * <UserSection 
+ * <UserSection
  *   userProfile={userProfile}
  *   isRegistered={isRegistered}
  *   loading={loading}
  *   onSubscribeClick={handleSubscribe}
  * />
  * ```
- * 
+ *
  * Props 说明：
  * - userProfile: IUserProfile | null - 用户信息对象
  * - isRegistered: boolean - 是否为注册用户
  * - loading: boolean - 是否正在加载用户信息
  * - onSubscribeClick: () => void - 订阅按钮点击回调
- * 
+ *
  * 注意事项：
  * - 如果用户无头像，显示默认占位符（用户昵称首字母）
  * - 点击头像：非注册用户弹出登录弹窗，注册用户跳转个人中心
  */
 
-import React from 'react';
 import { history, useModel } from '@umijs/max';
 import { User } from 'lucide-react';
+import React from 'react';
 import { Icon } from '@/components';
-import { SubscribeButton } from '../index';
 import type { IUserProfile } from '@/types';
+import { SubscribeButton } from '../index';
 import './index.less';
 
 interface IUserSectionProps {
@@ -123,14 +123,9 @@ const UserSection: React.FC<IUserSectionProps> = ({
       </div>
 
       {/* 订阅按钮 */}
-      <SubscribeButton
-        inline
-        onClick={onSubscribeClick}
-        disabled={loading}
-      />
+      <SubscribeButton inline onClick={onSubscribeClick} disabled={loading} />
     </div>
   );
 };
 
 export default UserSection;
-

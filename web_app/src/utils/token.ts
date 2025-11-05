@@ -3,9 +3,9 @@
  * 统一管理用户 Token 的存储与获取（包括访客和正式用户）
  */
 
-import { storage } from './storage';
 import { STORAGE_KEYS } from '@/constants';
 import { logger } from './logger';
+import { storage } from './storage';
 
 /**
  * 获取 Token
@@ -63,14 +63,12 @@ export async function hasToken(): Promise<boolean> {
 /**
  * 【临时测试方法】设置默认测试 Token
  * ⚠️ 仅用于开发测试，项目开发完成后需要删除
- * 
+ *
  * 用途：在应用启动时自动设置一个默认 token，避免每次测试都需要手动登录
- * 
+ *
  * @param testToken - 测试用的 token 字符串（可选，默认使用预设值）
  */
-export async function setDefaultTestToken(
-  testToken?: string,
-): Promise<void> {
+export async function setDefaultTestToken(testToken?: string): Promise<void> {
   try {
     // 检查是否已存在 token
     const existingToken = await hasToken();
@@ -85,12 +83,8 @@ export async function setDefaultTestToken(
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM'; // TODO: 替换为实际的测试 token
 
     await saveToken(defaultToken);
-    logger.warn(
-      '⚠️ 已设置默认测试 Token（仅用于开发测试）',
-      defaultToken.substring(0, 20) + '...',
-    );
+    logger.warn('⚠️ 已设置默认测试 Token（仅用于开发测试）', `${defaultToken.substring(0, 20)}...`);
   } catch (err) {
     logger.error('设置默认测试 Token 失败', err);
   }
 }
-

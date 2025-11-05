@@ -2,10 +2,10 @@
  * 聊天历史列表组件
  */
 
-import type { IChatItem } from '@/types';
+import { useLocation, useNavigate } from '@umijs/max';
 import React from 'react';
 import Loading from '@/components/Loading';
-import { useLocation, useNavigate } from '@umijs/max';
+import type { IChatItem } from '@/types';
 import { isChatActive } from '@/utils/sidebarHelpers';
 import ChatHistoryItem from '../ChatHistoryItem';
 import './index.less';
@@ -18,10 +18,7 @@ interface IChatHistoryListProps {
 /**
  * 聊天历史列表
  */
-const ChatHistoryList: React.FC<IChatHistoryListProps> = ({ 
-  chatList, 
-  loading 
-}) => {
+const ChatHistoryList: React.FC<IChatHistoryListProps> = ({ chatList, loading }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -62,4 +59,3 @@ const ChatHistoryList: React.FC<IChatHistoryListProps> = ({
 };
 
 export default ChatHistoryList;
-

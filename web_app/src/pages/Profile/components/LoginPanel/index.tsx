@@ -1,12 +1,12 @@
 /**
  * 登录面板组件
- * 
+ *
  * 用途：为访客用户显示登录选项
  * 使用示例：
  * ```tsx
  * <LoginPanel />
  * ```
- * 
+ *
  * 注意事项：
  * - 目前仅显示 Google 登录按钮
  * - 登录功能暂未实现
@@ -30,17 +30,8 @@ const LoginPanel: React.FC = () => {
         </div>
 
         <div className="login-content">
-          <button 
-            type="button"
-            className="google-login-button"
-            onClick={handleGoogleLogin}
-          >
-            <svg 
-              className="google-icon" 
-              viewBox="0 0 24 24" 
-              width="20" 
-              height="20"
-            >
+          <button type="button" className="google-login-button" onClick={handleGoogleLogin}>
+            <svg className="google-icon" viewBox="0 0 24 24" width="20" height="20" role="img" aria-label="Google logo">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -76,4 +67,3 @@ const LoginPanel: React.FC = () => {
 };
 
 export default LoginPanel;
-

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
 import { Select } from 'antd';
+import React, { useState } from 'react';
 import TestWrapper from '@/components/TestWrapper';
 import { createIntyClient } from '@/utils';
 import { logger } from '@/utils/logger';
@@ -16,7 +16,7 @@ const RecommendAgents: React.FC = () => {
 
       {/* 排序方式下拉框 */}
       <div style={{ marginBottom: 16 }}>
-        <label style={{ display: 'block', marginBottom: 4 }}>排序方式 (可选):</label>
+        <div style={{ display: 'block', marginBottom: 4 }}>排序方式 (可选):</div>
         <Select
           value={sort}
           onChange={setSort}
@@ -58,8 +58,8 @@ const RecommendAgents: React.FC = () => {
             : []),
         ]}
         onTest={async (values) => {
-          const pageNum = Number.parseInt(values.page) || 1;
-          const size = Number.parseInt(values.page_size) || 20;
+          const pageNum = Number.parseInt(values.page, 10) || 1;
+          const size = Number.parseInt(values.page_size, 10) || 20;
 
           const params: Record<string, unknown> = {
             page: pageNum,
@@ -72,10 +72,7 @@ const RecommendAgents: React.FC = () => {
           }
 
           // 如果是随机排序，添加种子
-          if (
-            (sort === 'random' || sort === 'score_based_random') &&
-            values.sort_seed
-          ) {
+          if ((sort === 'random' || sort === 'score_based_random') && values.sort_seed) {
             params.sort_seed = values.sort_seed;
           }
 
@@ -97,9 +94,7 @@ const RecommendAgents: React.FC = () => {
                 logger.info(`     ID: ${agent.id}`);
                 logger.info(`     性别: ${agent.gender}`);
                 logger.info(`     分类: ${agent.category || 'N/A'}`);
-                logger.info(
-                  `     简介: ${agent.intro?.substring(0, 50) || 'N/A'}...`,
-                );
+                logger.info(`     简介: ${agent.intro?.substring(0, 50) || 'N/A'}...`);
               });
             }
           }
@@ -113,4 +108,3 @@ const RecommendAgents: React.FC = () => {
 };
 
 export default RecommendAgents;
-

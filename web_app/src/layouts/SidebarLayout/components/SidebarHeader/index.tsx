@@ -3,8 +3,8 @@
  * 显示站点名称
  */
 
-import React from 'react';
 import { Sparkles } from 'lucide-react';
+import React from 'react';
 import { Icon } from '@/components';
 import './index.less';
 
@@ -26,4 +26,3 @@ const SidebarHeader: React.FC = () => {
 };
 
 export default SidebarHeader;
-

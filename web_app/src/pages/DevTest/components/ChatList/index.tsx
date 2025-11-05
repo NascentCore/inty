@@ -27,8 +27,8 @@ const ChatList: React.FC = () => {
         },
       ]}
       onTest={async (values) => {
-        const pageNum = Number.parseInt(values.page) || 1;
-        const size = Number.parseInt(values.page_size) || 20;
+        const pageNum = Number.parseInt(values.page, 10) || 1;
+        const size = Number.parseInt(values.page_size, 10) || 20;
 
         const client = await createIntyClient(true);
         const response = await client.api.v1.chats.list({
@@ -60,4 +60,3 @@ const ChatList: React.FC = () => {
 };
 
 export default ChatList;
-

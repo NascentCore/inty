@@ -1,24 +1,24 @@
 /**
  * 订阅按钮组件
- * 
+ *
  * 用途：通用的订阅按钮组件，支持独立和内联两种使用模式
  * 使用示例：
  * ```tsx
  * // 独立使用（带 wrapper）
  * <SubscribeButton onClick={handleSubscribe} />
- * 
+ *
  * // 内联使用（不带 wrapper，适合在 flex 布局中）
  * <SubscribeButton inline onClick={handleSubscribe} disabled={loading} />
  * ```
- * 
+ *
  * Props 说明：
  * - onClick: () => void - 按钮点击回调
  * - inline: boolean - 是否内联模式（默认 false，带 wrapper）
  * - disabled: boolean - 是否禁用（默认 false）
  */
 
-import React from 'react';
 import { Crown } from 'lucide-react';
+import React from 'react';
 import { Icon } from '@/components';
 import './index.less';
 
@@ -59,10 +59,7 @@ const SubscribeButton: React.FC<ISubscribeButtonProps> = ({
   }
 
   // 独立模式带 wrapper
-  return (
-    <div className="subscribe-button-wrapper">{buttonElement}</div>
-  );
+  return <div className="subscribe-button-wrapper">{buttonElement}</div>;
 };
 
 export default SubscribeButton;
-

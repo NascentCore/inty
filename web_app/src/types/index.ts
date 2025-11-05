@@ -528,4 +528,3 @@ export interface IGetChatMessagesResponse {
   /** 消息列表 */
   messages: IMessage[];
 }
-

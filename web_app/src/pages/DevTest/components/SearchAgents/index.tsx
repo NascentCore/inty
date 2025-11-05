@@ -23,14 +23,14 @@ const SearchAgents: React.FC = () => {
           label: '页码',
           required: false,
           type: 'number',
-          defaultValue: 1,
+          defaultValue: '1',
         },
         {
           name: 'page_size',
           label: '每页数量',
           required: false,
           type: 'number',
-          defaultValue: 20,
+          defaultValue: '20',
         },
       ]}
       onTest={async (values) => {
@@ -64,4 +64,3 @@ const SearchAgents: React.FC = () => {
 };
 
 export default SearchAgents;
-

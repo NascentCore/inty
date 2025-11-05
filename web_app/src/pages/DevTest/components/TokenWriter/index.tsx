@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Button, Input, Space, message, Alert } from 'antd';
-import { saveToken, clearToken, getToken } from '@/utils/token';
+import { Alert, Button, Input, message, Space } from 'antd';
+import React, { useEffect, useState } from 'react';
 import { logger } from '@/utils/logger';
+import { clearToken, getToken, saveToken } from '@/utils/token';
 
 /**
  * Token 写入组件
@@ -83,9 +83,7 @@ const TokenWriter: React.FC = () => {
           <Alert
             message="当前已保存的 Token"
             description={
-              <div style={{ wordBreak: 'break-all', fontFamily: 'monospace' }}>
-                {currentToken}
-              </div>
+              <div style={{ wordBreak: 'break-all', fontFamily: 'monospace' }}>{currentToken}</div>
             }
             type="info"
             showIcon
@@ -94,7 +92,7 @@ const TokenWriter: React.FC = () => {
 
         {/* Token 输入框 */}
         <div>
-          <label>输入 Token:</label>
+          <div style={{ marginBottom: 4 }}>输入 Token:</div>
           <Input.TextArea
             placeholder="请输入 API Token"
             value={token}
@@ -114,12 +112,7 @@ const TokenWriter: React.FC = () => {
           >
             保存 Token
           </Button>
-          <Button
-            danger
-            onClick={handleClearToken}
-            loading={loading}
-            disabled={!currentToken}
-          >
+          <Button danger onClick={handleClearToken} loading={loading} disabled={!currentToken}>
             清除 Token
           </Button>
         </Space>
@@ -129,4 +122,3 @@ const TokenWriter: React.FC = () => {
 };
 
 export default TokenWriter;
-

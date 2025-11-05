@@ -1,7 +1,7 @@
 import '@ant-design/v5-patch-for-react-19';
-import type { IInitialState } from '@/types';
-import { hasToken, logger, getOrCreateDeviceId } from '@/utils';
 import { guestLogin } from '@/services/auth';
+import type { IInitialState } from '@/types';
+import { getOrCreateDeviceId, hasToken, logger } from '@/utils';
 
 /**
  * 获取应用初始状态
@@ -11,20 +11,20 @@ import { guestLogin } from '@/services/auth';
 export async function getInitialState(): Promise<IInitialState> {
   // 检查是否存在本地 token
   const tokenExists = await hasToken();
-  
+
   if (!tokenExists) {
     logger.info('未找到本地 token，开始自动访客登录');
-    
+
     try {
       // 获取或创建设备 ID
       const deviceId = await getOrCreateDeviceId();
-      
+
       // 自动访客登录
       const result = await guestLogin({
         device_id: deviceId,
         system_language: navigator.language || 'en-US',
       });
-      
+
       if (result.code === 200) {
         logger.info('访客登录成功', {
           guest_id: result.data.guest_id,

@@ -31,4 +31,3 @@ const CheckDeletionEligibility: React.FC = () => {
 };
 
 export default CheckDeletionEligibility;
-

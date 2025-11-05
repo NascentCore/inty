@@ -3,8 +3,9 @@
  * 统一处理测试组件中的错误，提供友好的错误提示
  */
 
-import Inty from 'inty';
 import { message } from 'antd';
+// @ts-expect-error - inty SDK is installed as a file dependency
+import Inty from 'inty';
 import { logger } from './logger';
 
 /**
@@ -48,11 +49,11 @@ export function getErrorType(error: unknown): ErrorType {
   // 处理普通错误对象
   if (error instanceof Error) {
     const message = error.message;
-    
+
     if (message.includes('未找到 Token') || message.includes('Token')) {
       return ErrorType.NO_TOKEN;
     }
-    
+
     if (message.includes('网络') || message.includes('Network')) {
       return ErrorType.NETWORK_ERROR;
     }
@@ -88,10 +89,10 @@ export function getErrorMessage(error: unknown): string {
  */
 export function handleTestError(error: unknown, testName: string): void {
   const errorMessage = getErrorMessage(error);
-  
+
   // 显示错误提示
   message.error(errorMessage);
-  
+
   // 输出错误日志
   logger.testError(`${testName}失败`, error);
 }
@@ -105,4 +106,3 @@ export function createTestErrorHandler(testName: string) {
     handleTestError(error, testName);
   };
 }
-

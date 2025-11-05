@@ -3,14 +3,14 @@
  * 展示用户基础信息、账户信息
  */
 
-import { EmptyState, Loading } from "@/components";
-import { useModel } from "@umijs/max";
-import React from "react";
-import { AccountInfo, BasicInfo, LoginPanel, ProfileHeader } from "./components";
-import "./index.less";
+import { useModel } from '@umijs/max';
+import React from 'react';
+import { EmptyState, Loading } from '@/components';
+import { AccountInfo, BasicInfo, LoginPanel, ProfileHeader } from './components';
+import './index.less';
 
 const ProfilePage: React.FC = () => {
-  const { userProfile, profileLoading, error, isRegistered } = useModel("user");
+  const { userProfile, profileLoading, error, isRegistered } = useModel('user');
 
   // 加载状态
   if (profileLoading) {

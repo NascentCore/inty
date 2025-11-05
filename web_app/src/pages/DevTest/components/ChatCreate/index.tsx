@@ -38,4 +38,3 @@ const ChatCreate: React.FC = () => {
 };
 
 export default ChatCreate;
-

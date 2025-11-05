@@ -1,22 +1,22 @@
 /**
  * Icon 组件
  * 基于 Lucide Icons 的通用图标组件
- * 
+ *
  * @example
  * ```tsx
  * import { Icon } from '@/components';
  * import { Send, Heart, Star } from 'lucide-react';
- * 
+ *
  * // 基本用法
  * <Icon icon={Send} />
- * 
+ *
  * // 自定义大小和颜色
  * <Icon icon={Heart} size={20} color="#ff4d4f" />
- * 
+ *
  * // 添加点击事件
  * <Icon icon={Star} onClick={handleClick} className="clickable" />
  * ```
- * 
+ *
  * 更多图标查看：https://lucide.dev/icons/
  */
 
@@ -62,14 +62,9 @@ const Icon: React.FC<IIconProps> = ({
         color: color,
       }}
     >
-      <LucideIcon
-        size={size}
-        strokeWidth={strokeWidth}
-        {...restProps}
-      />
+      <LucideIcon size={size} strokeWidth={strokeWidth} {...restProps} />
     </span>
   );
 };
 
 export default Icon;
-

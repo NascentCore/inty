@@ -3,7 +3,7 @@
  * 管理用户信息、登录状态等
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { getUserProfile } from '@/services/user';
 import type { IUserProfile } from '@/types';
 
@@ -93,4 +93,3 @@ export default function useUserModel() {
     fetchUserProfile,
   };
 }
-

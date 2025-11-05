@@ -3,12 +3,12 @@
  * 单条聊天消息展示
  */
 
+import { Bot, Loader2, User, Volume2, VolumeX } from 'lucide-react';
 import React from 'react';
-import { User, Bot, Volume2, VolumeX, Loader2 } from 'lucide-react';
-import type { IMessage } from '@/types';
-import { formatMessageTime } from '@/utils';
 import { Icon } from '@/components';
 import { useVoicePlayer } from '@/hooks';
+import type { IMessage } from '@/types';
+import { formatMessageTime } from '@/utils';
 import './index.less';
 
 /**
@@ -35,7 +35,7 @@ const MessageItem: React.FC<IMessageItemProps> = ({
   agentId,
 }) => {
   const isUser = message.role === 'user';
-  
+
   // 使用语音播放 Hook
   const { voiceStatus, playVoice, stopVoice } = useVoicePlayer({
     agentId,
@@ -53,10 +53,7 @@ const MessageItem: React.FC<IMessageItemProps> = ({
               <Icon icon={User} size={20} />
             </div>
           ) : agentAvatar ? (
-            <div
-              className="avatar-assistant"
-              style={{ backgroundImage: `url(${agentAvatar})` }}
-            />
+            <div className="avatar-assistant" style={{ backgroundImage: `url(${agentAvatar})` }} />
           ) : (
             <div className="avatar-assistant">
               <Icon icon={Bot} size={20} />
@@ -75,13 +72,12 @@ const MessageItem: React.FC<IMessageItemProps> = ({
         {/* 底部信息栏：时间戳 + 语音按钮 */}
         <div className="message-footer">
           {/* 时间戳 */}
-          <div className="message-time">
-            {formatMessageTime(message.timestamp)}
-          </div>
+          <div className="message-time">{formatMessageTime(message.timestamp)}</div>
 
           {/* 语音播放按钮（仅对 AI 消息显示） */}
           {!isUser && agentId && (
             <button
+              type="button"
               className={`voice-button voice-button-${voiceStatus}`}
               onClick={voiceStatus === 'playing' ? stopVoice : playVoice}
               disabled={voiceStatus === 'loading'}
@@ -99,4 +95,3 @@ const MessageItem: React.FC<IMessageItemProps> = ({
 };
 
 export default MessageItem;
-

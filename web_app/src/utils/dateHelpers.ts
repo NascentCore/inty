@@ -64,4 +64,3 @@ export const formatDateTime = (timestamp: string): string => {
     return '';
   }
 };
-

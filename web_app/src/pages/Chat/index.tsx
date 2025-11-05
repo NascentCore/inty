@@ -3,16 +3,10 @@
  * 实现与 AI Agent 的对话功能
  */
 
-import React, { useEffect, useCallback, useRef } from 'react';
-import { useParams, history } from '@umijs/max';
-import { useModel } from '@umijs/max';
+import { history, useModel, useParams } from '@umijs/max';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { ErrorAlert } from '@/components';
-import {
-  ChatHeader,
-  MessageList,
-  MessageInput,
-  AgentDetailPanel,
-} from './components';
+import { AgentDetailPanel, ChatHeader, MessageInput, MessageList } from './components';
 import './index.less';
 
 /**
@@ -30,11 +24,7 @@ const ChatPage: React.FC = () => {
     useModel('chat');
 
   // 获取 agent model（Agent 信息管理）
-  const {
-    currentAgent,
-    detailLoading: agentLoading,
-    loadAgentDetail,
-  } = useModel('agent');
+  const { currentAgent, detailLoading: agentLoading, loadAgentDetail } = useModel('agent');
 
   /**
    * 页面初始化：加载 Agent 详情和聊天历史
@@ -96,11 +86,7 @@ const ChatPage: React.FC = () => {
       {/* 左侧：聊天区域 */}
       <div className="chat-main">
         {/* 顶部 Agent 信息 */}
-        <ChatHeader
-          agent={currentAgent}
-          loading={agentLoading}
-          onBack={handleBack}
-        />
+        <ChatHeader agent={currentAgent} loading={agentLoading} onBack={handleBack} />
 
         {/* 消息列表 */}
         <div className="chat-content">
@@ -119,9 +105,7 @@ const ChatPage: React.FC = () => {
             onSend={handleSendMessage}
             sending={sending}
             disabled={!currentAgent || agentLoading}
-            placeholder={
-              currentAgent ? `Chat with ${currentAgent.name}...` : 'Type a message...'
-            }
+            placeholder={currentAgent ? `Chat with ${currentAgent.name}...` : 'Type a message...'}
           />
         </div>
       </div>

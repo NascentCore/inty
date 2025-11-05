@@ -35,4 +35,3 @@ const ChatSettings: React.FC = () => {
 };
 
 export default ChatSettings;
-

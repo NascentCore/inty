@@ -4,11 +4,7 @@
  */
 
 import { createIntyClient, logger } from '@/utils';
-import type {
-  IAgentRecommendData,
-  IAgentRecommendRequest,
-  IApiResult,
-} from '@/types';
+import type { IAgentRecommendData, IAgentRecommendRequest, IApiResult } from '@/types';
 import type { IAgent } from '@/types';
 
 // SDK 排序类型
@@ -48,7 +44,7 @@ export async function getRecommendAgents(
   try {
     // 获取已认证的客户端
     const client = await createIntyClient(true);
-    
+
     // 映射排序参数：项目 sort 类型 → SDK sort 类型
     let sdkSort: TSdkSort;
     if (params.sort === 'created_at') {
@@ -58,7 +54,7 @@ export async function getRecommendAgents(
     } else if (params.sort === 'score_based_random') {
       sdkSort = 'score_based_random';
     }
-    
+
     // 调用 SDK 的推荐角色接口
     const response = await client.api.v1.ai.agents.recommend({
       page: params.page,
@@ -66,7 +62,7 @@ export async function getRecommendAgents(
       ...(params.sort_seed ? { sort_seed: params.sort_seed } : {}),
       ...(sdkSort ? { sort: sdkSort } : {}),
     });
-    logger.info("获取推荐角色响应", response);
+    logger.info('获取推荐角色响应', response);
 
     // 转换为项目的统一格式
     const result: IApiResult<IAgentRecommendData> = {
@@ -77,14 +73,16 @@ export async function getRecommendAgents(
         total: response.data?.total || 0,
         page: response.data?.page || params.page,
         page_size: response.data?.page_size || params.page_size,
-        total_pages: Math.ceil((response.data?.total || 0) / (response.data?.page_size || params.page_size)),
+        total_pages: Math.ceil(
+          (response.data?.total || 0) / (response.data?.page_size || params.page_size),
+        ),
       },
     };
 
     return result;
   } catch (err: unknown) {
     logger.error('获取推荐角色失败', err);
-    
+
     // 返回错误结果
     const error = err as { status?: number; message?: string };
     return {
@@ -100,4 +98,3 @@ export async function getRecommendAgents(
     };
   }
 }
-

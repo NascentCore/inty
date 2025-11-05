@@ -3,19 +3,19 @@
  * 左侧：侧边栏菜单，右侧：主体内容区
  */
 
-import { Outlet, useModel, history } from '@umijs/max';
+import { history, Outlet, useModel } from '@umijs/max';
 import React, { useEffect } from 'react';
 import { GoogleLoginModal } from '@/components';
-import SidebarHeader from './components/SidebarHeader';
-import DiscoverButton from './components/DiscoverButton';
 import ChatHistoryList from './components/ChatHistoryList';
+import DiscoverButton from './components/DiscoverButton';
+import SidebarHeader from './components/SidebarHeader';
 import UserSection from './components/UserSection';
 import './index.less';
 
 const SidebarLayout: React.FC = () => {
   // 获取聊天列表数据
   const { chatList, loading, loadChatList } = useModel('chatList');
-  
+
   // 获取用户信息
   const { userProfile, profileLoading, isRegistered, fetchUserProfile } = useModel('user');
 
@@ -26,7 +26,7 @@ const SidebarLayout: React.FC = () => {
     if (chatList.length === 0 && !loading) {
       loadChatList({ page: 1, page_size: 10 });
     }
-    
+
     // 只在用户信息为空且未加载时才请求
     if (!userProfile && !profileLoading) {
       fetchUserProfile();

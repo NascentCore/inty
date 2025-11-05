@@ -77,4 +77,3 @@ export interface IChatListRequest {
   /** 每页数量 */
   page_size?: number;
 }
-

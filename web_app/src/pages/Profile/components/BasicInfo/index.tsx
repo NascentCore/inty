@@ -1,18 +1,18 @@
 /**
  * 基础信息组件
- * 
+ *
  * 用途：展示用户基础信息（邮箱、手机、性别、年龄段、简介）
  * 使用示例：
  * ```tsx
  * <BasicInfo userProfile={userProfile} />
  * ```
- * 
+ *
  * Props 说明：
  * - userProfile: IUserProfile - 用户信息对象
  */
 
+import { Calendar, FileText, Mail, Phone, User } from 'lucide-react';
 import React from 'react';
-import { Mail, Phone, User, Calendar, FileText } from 'lucide-react';
 import { Icon } from '@/components';
 import type { IUserProfile } from '@/types';
 import './index.less';
@@ -60,34 +60,16 @@ const BasicInfo: React.FC<IBasicInfoProps> = ({ userProfile }) => {
   return (
     <div className="basic-info-card">
       <h2 className="card-title">Basic Information</h2>
-      
+
       <div className="info-list">
-        <InfoItem
-          icon={Mail}
-          label="Email"
-          value={userProfile.email}
-          placeholder="No email set"
-        />
-        
-        <InfoItem
-          icon={Phone}
-          label="Phone"
-          value={userProfile.phone}
-          placeholder="No phone set"
-        />
-        
-        <InfoItem
-          icon={User}
-          label="Gender"
-          value={getGenderText(userProfile.gender)}
-        />
-        
-        <InfoItem
-          icon={Calendar}
-          label="Age Group"
-          value={userProfile.age_group}
-        />
-        
+        <InfoItem icon={Mail} label="Email" value={userProfile.email} placeholder="No email set" />
+
+        <InfoItem icon={Phone} label="Phone" value={userProfile.phone} placeholder="No phone set" />
+
+        <InfoItem icon={User} label="Gender" value={getGenderText(userProfile.gender)} />
+
+        <InfoItem icon={Calendar} label="Age Group" value={userProfile.age_group} />
+
         <InfoItem
           icon={FileText}
           label="Bio"
@@ -100,4 +82,3 @@ const BasicInfo: React.FC<IBasicInfoProps> = ({ userProfile }) => {
 };
 
 export default BasicInfo;
-

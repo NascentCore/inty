@@ -25,9 +25,7 @@ const AgentDetailPanel: React.FC<IAgentDetailPanelProps> = ({ agent }) => {
       <div
         className="agent-hero-image"
         style={{
-          backgroundImage: agent.background
-            ? `url(${agent.background})`
-            : `url(${agent.avatar})`,
+          backgroundImage: agent.background ? `url(${agent.background})` : `url(${agent.avatar})`,
         }}
       >
         <div className="hero-overlay" />
@@ -48,8 +46,8 @@ const AgentDetailPanel: React.FC<IAgentDetailPanelProps> = ({ agent }) => {
         {/* 标签 */}
         {agent.tags && agent.tags.length > 0 && (
           <div className="agent-tags">
-            {agent.tags.map((tag, index) => (
-              <span key={index} className="tag">
+            {agent.tags.map((tag) => (
+              <span key={tag} className="tag">
                 {tag}
               </span>
             ))}
@@ -61,4 +59,3 @@ const AgentDetailPanel: React.FC<IAgentDetailPanelProps> = ({ agent }) => {
 };
 
 export default AgentDetailPanel;
-

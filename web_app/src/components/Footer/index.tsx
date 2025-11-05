@@ -8,35 +8,20 @@ const Footer: React.FC = () => {
     <footer className="app-footer">
       <div className="footer-content">
         <div className="footer-links">
-          <a 
-            href="https://github.com" 
-            target="_blank" 
-            rel="noopener noreferrer"
-          >
+          <a href="https://github.com" target="_blank" rel="noopener noreferrer">
             GitHub
           </a>
-          <a 
-            href="https://umijs.org" 
-            target="_blank" 
-            rel="noopener noreferrer"
-          >
+          <a href="https://umijs.org" target="_blank" rel="noopener noreferrer">
             UmiJS
           </a>
-          <a 
-            href="https://react.dev" 
-            target="_blank" 
-            rel="noopener noreferrer"
-          >
+          <a href="https://react.dev" target="_blank" rel="noopener noreferrer">
             React
           </a>
         </div>
-        <div className="footer-copyright">
-          Copyright © {currentYear} My Chat App
-        </div>
+        <div className="footer-copyright">Copyright © {currentYear} My Chat App</div>
       </div>
     </footer>
   );
 };
 
 export default Footer;
-

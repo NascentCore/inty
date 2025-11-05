@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
 import { Switch } from 'antd';
+import React, { useState } from 'react';
 import TestWrapper from '@/components/TestWrapper';
 import { createIntyClient } from '@/utils';
 import { logger } from '@/utils/logger';
@@ -16,7 +16,7 @@ const UpdateChatSettings: React.FC = () => {
 
       {/* 自动语音开关 */}
       <div style={{ marginBottom: 16 }}>
-        <label style={{ display: 'block', marginBottom: 8 }}>自动语音:</label>
+        <div style={{ display: 'block', marginBottom: 8 }}>自动语音:</div>
         <Switch
           checked={autoVoice}
           onChange={setAutoVoice}
@@ -55,10 +55,7 @@ const UpdateChatSettings: React.FC = () => {
           });
 
           const client = await createIntyClient(true);
-          const response = await client.api.v1.chats.agents.updateSettings(
-            values.agent_id,
-            params,
-          );
+          const response = await client.api.v1.chats.agents.updateSettings(values.agent_id, params);
 
           logger.testDetail('更新后的设置', response.data);
 
@@ -71,4 +68,3 @@ const UpdateChatSettings: React.FC = () => {
 };
 
 export default UpdateChatSettings;
-

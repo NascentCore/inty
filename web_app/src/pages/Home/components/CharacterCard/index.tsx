@@ -59,9 +59,7 @@ const CharacterCard: React.FC<ICharacterCardProps> = ({ agent, onStartChat }) =>
       )}
 
       {/* 简介 - hover 时显示 */}
-      <p className="character-description">
-        {agent.intro || agent.opening || 'No description'}
-      </p>
+      <p className="character-description">{agent.intro || agent.opening || 'No description'}</p>
 
       {/* Chat Now 按钮 - hover 时显示 */}
       <button className="chat-button" type="button">
@@ -77,4 +75,3 @@ const CharacterCard: React.FC<ICharacterCardProps> = ({ agent, onStartChat }) =>
 };
 
 export default CharacterCard;
-

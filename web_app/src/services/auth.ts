@@ -6,11 +6,7 @@
 import { STORAGE_KEYS } from '@/constants';
 import { storage, createIntyClient, logger } from '@/utils';
 import { saveToken } from '@/utils/token';
-import type {
-  IApiResult,
-  IGuestLoginData,
-  IGuestLoginRequest,
-} from '@/types';
+import type { IApiResult, IGuestLoginData, IGuestLoginRequest } from '@/types';
 
 /**
  * 访客登录
@@ -18,13 +14,11 @@ import type {
  * @param params 访客登录参数
  * @returns 访客登录结果
  */
-export async function guestLogin(
-  params: IGuestLoginRequest,
-): Promise<IApiResult<IGuestLoginData>> {
+export async function guestLogin(params: IGuestLoginRequest): Promise<IApiResult<IGuestLoginData>> {
   try {
     // 创建 Inty 客户端（无需认证）
     const client = await createIntyClient();
-    
+
     // 调用 SDK 的游客登录接口
     const response = await client.api.v1.auth.createGuest({
       device_id: params.device_id,
@@ -32,7 +26,7 @@ export async function guestLogin(
       age_group: params.age_group,
       request_id: params.request_id,
     });
-    logger.info("访客登录响应", response);
+    logger.info('访客登录响应', response);
 
     // 转换为项目的统一格式
     const guestData: IGuestLoginData = {
@@ -58,7 +52,7 @@ export async function guestLogin(
     return result;
   } catch (err: unknown) {
     logger.error('访客登录失败', err);
-    
+
     // 返回错误结果（使用空数据而非 null）
     const error = err as { status?: number; message?: string };
     return {
@@ -88,4 +82,3 @@ export async function getGuestInfo(): Promise<IGuestLoginData | null> {
 export async function clearGuestInfo(): Promise<boolean> {
   return await storage.remove('guest_login_data');
 }
-

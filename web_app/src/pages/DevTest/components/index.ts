@@ -39,4 +39,3 @@ export { default as UpdateSettings } from './UpdateSettings';
 export { default as UploadImage } from './UploadImage';
 export { default as UserProfile } from './UserProfile';
 export { default as VerifyPurchase } from './VerifyPurchase';
-

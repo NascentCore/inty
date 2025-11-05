@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Button, Space, message, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
+import { Button, message, Space, Upload } from 'antd';
+import React, { useState } from 'react';
 import { createIntyClient } from '@/utils';
 import { logger } from '@/utils/logger';
 
@@ -19,7 +19,7 @@ const UploadImage: React.FC = () => {
     }
 
     setLoading(true);
-    logger.testStart('上传图片');
+    logger.test('上传图片');
 
     try {
       const file = fileList[0].originFileObj as File;
@@ -54,7 +54,7 @@ const UploadImage: React.FC = () => {
       <p className="test-tip">上传图片文件，支持验证、压缩和云存储</p>
       <Space direction="vertical" style={{ width: '100%' }} size="middle">
         <div>
-          <label>选择图片文件:</label>
+          <div style={{ marginBottom: 4 }}>选择图片文件:</div>
           <Upload
             beforeUpload={() => false}
             fileList={fileList}
@@ -77,4 +77,3 @@ const UploadImage: React.FC = () => {
 };
 
 export default UploadImage;
-

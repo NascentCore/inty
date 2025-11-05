@@ -52,20 +52,23 @@
       }
 
       &.guest {
-        background: linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(107, 114, 128, 0.15) 100%);
+        background: linear-gradient(
+          135deg,
+          rgba(156, 163, 175, 0.15) 0%,
+          rgba(107, 114, 128, 0.15) 100%
+        );
       }
     }
   }
-
 }
 
 // 脉冲动画（加载状态）
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
     opacity: 0.5;
   }
 }
-

@@ -3,10 +3,10 @@
  * 管理聊天消息、历史记录等
  */
 
-import { useState, useCallback } from 'react';
 import { useModel } from '@umijs/max';
-import { getChatMessages, sendMessage, MessageSendError } from '@/services/chat';
-import type { IMessage, IGetChatMessagesRequest } from '@/types';
+import { useCallback, useState } from 'react';
+import { getChatMessages, MessageSendError, sendMessage } from '@/services/chat';
+import type { IGetChatMessagesRequest, IMessage } from '@/types';
 
 /**
  * 聊天 Model 状态接口
@@ -35,7 +35,7 @@ export interface IChatModelState {
 export default function useChatModel() {
   // 获取 Google 登录弹窗状态管理
   const googleLoginModal = useModel('googleLoginModal');
-  
+
   // 状态定义
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
@@ -54,54 +54,51 @@ export default function useChatModel() {
    * 加载聊天消息
    * @param params 请求参数
    */
-  const loadMessages = useCallback(
-    async (params: IGetChatMessagesRequest) => {
-      setLoading(true);
-      setError(null);
+  const loadMessages = useCallback(async (params: IGetChatMessagesRequest) => {
+    setLoading(true);
+    setError(null);
 
-      try {
-        const data = await getChatMessages(params);
+    try {
+      const data = await getChatMessages(params);
 
-        // 如果是第一页，直接替换列表；否则追加到列表（用于加载更多）
-        if (params.offset === 0) {
-          setMessages(data.messages);
-        } else {
-          setMessages((prev) => [...prev, ...data.messages]);
-        }
-
-        // 更新分页信息
-        setPagination({
-          hasMore: data.has_more,
-          total: data.total,
-          page: data.page,
-          limit: data.limit,
-          offset: data.offset,
-        });
-
-        // 更新当前 Agent ID
-        setCurrentAgentId(params.agent_id);
-
-        // 输出到控制台
-        console.log('聊天消息加载成功:', {
-          agentId: params.agent_id,
-          messageCount: data.messages.length,
-          total: data.total,
-          hasMore: data.has_more,
-          messages: data.messages,
-        });
-
-        return data;
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : '加载消息失败';
-        setError(errorMsg);
-        console.error('加载聊天消息失败:', err);
-        return null;
-      } finally {
-        setLoading(false);
+      // 如果是第一页，直接替换列表；否则追加到列表（用于加载更多）
+      if (params.offset === 0) {
+        setMessages(data.messages);
+      } else {
+        setMessages((prev) => [...prev, ...data.messages]);
       }
-    },
-    [],
-  );
+
+      // 更新分页信息
+      setPagination({
+        hasMore: data.has_more,
+        total: data.total,
+        page: data.page,
+        limit: data.limit,
+        offset: data.offset,
+      });
+
+      // 更新当前 Agent ID
+      setCurrentAgentId(params.agent_id);
+
+      // 输出到控制台
+      console.log('聊天消息加载成功:', {
+        agentId: params.agent_id,
+        messageCount: data.messages.length,
+        total: data.total,
+        hasMore: data.has_more,
+        messages: data.messages,
+      });
+
+      return data;
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : '加载消息失败';
+      setError(errorMsg);
+      console.error('加载聊天消息失败:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   /**
    * 刷新消息列表
@@ -186,7 +183,7 @@ export default function useChatModel() {
         const response = await sendMessage(agentId, content);
 
         // 如果返回了 AI 回复，添加到消息列表
-        if (response && response.content) {
+        if (response?.content) {
           const assistantMessage: IMessage = {
             id: String(response.messageId),
             content: response.content,
@@ -210,7 +207,7 @@ export default function useChatModel() {
           googleLoginModal.show();
           return null;
         }
-        
+
         const errorMsg = err instanceof Error ? err.message : '发送消息失败';
         setError(errorMsg);
         console.error('发送消息失败:', err);
@@ -242,4 +239,3 @@ export default function useChatModel() {
     reset,
   };
 }
-

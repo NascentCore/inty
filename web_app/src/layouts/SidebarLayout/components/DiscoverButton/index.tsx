@@ -2,8 +2,8 @@
  * Discover 按钮组件
  */
 
-import React from 'react';
 import { Compass } from 'lucide-react';
+import React from 'react';
 import { Icon } from '@/components';
 import './index.less';
 
@@ -28,4 +28,3 @@ const DiscoverButton: React.FC<IDiscoverButtonProps> = ({ onClick }) => {
 };
 
 export default DiscoverButton;
-

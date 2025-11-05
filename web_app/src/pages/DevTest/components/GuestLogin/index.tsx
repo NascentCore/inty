@@ -1,7 +1,7 @@
+import { Button, Input, message, Space } from 'antd';
 import React, { useState } from 'react';
-import { Button, Input, Space, message } from 'antd';
 import TestWrapper from '@/components/TestWrapper';
-import { getOrCreateDeviceId, createIntyClient, saveToken } from '@/utils';
+import { createIntyClient, getOrCreateDeviceId, saveToken } from '@/utils';
 import { logger } from '@/utils/logger';
 
 /**
@@ -30,7 +30,7 @@ const GuestLogin: React.FC = () => {
       <h4>游客登录</h4>
       <Space direction="vertical" style={{ width: '100%' }} size="middle">
         <div>
-          <label>Device ID (可选):</label>
+          <div style={{ marginBottom: 4 }}>Device ID (可选):</div>
           <Space.Compact style={{ width: '100%', marginTop: 8 }}>
             <Input
               placeholder="留空将自动生成"
@@ -93,4 +93,3 @@ const GuestLogin: React.FC = () => {
 };
 
 export default GuestLogin;
-

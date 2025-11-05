@@ -71,4 +71,3 @@ const ListVoices: React.FC = () => {
 };
 
 export default ListVoices;
-
