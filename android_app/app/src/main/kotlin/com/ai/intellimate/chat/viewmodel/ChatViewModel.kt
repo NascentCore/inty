@@ -641,18 +641,58 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    /** Like 消息 - 通过 Repository 更新 */
+    /** Like 消息 - 通过 Repository 更新并上报 Firebase 事件 */
     fun likeMessage(localMsgId: String) {
-        val agentId = _agentInfo.value?.id ?: return
-        updateMessageFeedbackUseCase(agentId, localMsgId, MsgInfo.UserFeedback.LIKE)
-        LogUtils.i("Message liked: $localMsgId")
+        val agent = _agentInfo.value ?: return
+        val targetMessage = _msgs.value.firstOrNull { it.localMsgId == localMsgId }
+        val previousFeedback = targetMessage?.userFeedback?.name ?: "NONE"
+
+        updateMessageFeedbackUseCase(agent.id, localMsgId, MsgInfo.UserFeedback.LIKE)
+
+        val eventParams = FirebaseManager.safeEventParams(
+            "agent_id" to agent.id,
+            "agent_name" to agent.name,
+            "message_id" to (targetMessage?.id ?: ""),
+            "local_message_id" to localMsgId,
+            "message_role" to (targetMessage?.role ?: ""),
+            "message_length" to (targetMessage?.content?.length ?: 0),
+            "has_generated_image" to (targetMessage?.hasGeneratedImage() == true),
+            "is_opening" to (targetMessage?.isOpening() == true),
+            "previous_feedback" to previousFeedback,
+            "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+            "message_timestamp" to (targetMessage?.timestamp ?: ""),
+            "timestamp" to System.currentTimeMillis()
+        )
+
+        FirebaseManager.logEvent(FirebaseManager.Events.MESSAGE_LIKE, eventParams)
+        LogUtils.i("Message liked: $localMsgId (remoteId=${targetMessage?.id})")
     }
 
-    /** Dislike 消息 - 通过 Repository 更新 */
+    /** Dislike 消息 - 通过 Repository 更新并上报 Firebase 事件 */
     fun dislikeMessage(localMsgId: String) {
-        val agentId = _agentInfo.value?.id ?: return
-        updateMessageFeedbackUseCase(agentId, localMsgId, MsgInfo.UserFeedback.DISLIKE)
-        LogUtils.i("Message disliked: $localMsgId")
+        val agent = _agentInfo.value ?: return
+        val targetMessage = _msgs.value.firstOrNull { it.localMsgId == localMsgId }
+        val previousFeedback = targetMessage?.userFeedback?.name ?: "NONE"
+
+        updateMessageFeedbackUseCase(agent.id, localMsgId, MsgInfo.UserFeedback.DISLIKE)
+
+        val eventParams = FirebaseManager.safeEventParams(
+            "agent_id" to agent.id,
+            "agent_name" to agent.name,
+            "message_id" to (targetMessage?.id ?: ""),
+            "local_message_id" to localMsgId,
+            "message_role" to (targetMessage?.role ?: ""),
+            "message_length" to (targetMessage?.content?.length ?: 0),
+            "has_generated_image" to (targetMessage?.hasGeneratedImage() == true),
+            "is_opening" to (targetMessage?.isOpening() == true),
+            "previous_feedback" to previousFeedback,
+            "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+            "message_timestamp" to (targetMessage?.timestamp ?: ""),
+            "timestamp" to System.currentTimeMillis()
+        )
+
+        FirebaseManager.logEvent(FirebaseManager.Events.MESSAGE_DISLIKE, eventParams)
+        LogUtils.i("Message disliked: $localMsgId (remoteId=${targetMessage?.id})")
     }
 
     /** Recall 消息 - 重新生成最新消息（类似 keep talking 的实现） */
