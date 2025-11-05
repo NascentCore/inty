@@ -89,6 +89,31 @@ class UserAnalytics:
         finally:
             cursor.close()
 
+    def get_new_users_email_list(
+        self, start_date: datetime, end_date: datetime
+    ) -> pd.DataFrame:
+        """查询新用户邮箱列表（只包含有邮箱的用户）"""
+        query = """
+            SELECT 
+                id as user_id,
+                email,
+                created_at,
+                auth_type
+            FROM users
+            WHERE created_at >= %s AND created_at < %s
+              AND deleted_at IS NULL
+              AND email IS NOT NULL
+            ORDER BY created_at DESC
+        """
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute(query, (start_date, end_date))
+            columns = [desc[0] for desc in cursor.description]
+            data = cursor.fetchall()
+            return pd.DataFrame(data, columns=columns)
+        finally:
+            cursor.close()
+
     def get_conversation_rounds(self, start_date: datetime) -> pd.DataFrame:
         """查询对话轮数统计"""
         # 先检查 chat_history 表中是否有数据
@@ -1901,6 +1926,15 @@ def process_data(
     else:
         logger.warning("未找到新用户数据")
 
+    # 1.5. 新用户邮箱列表
+    logger.info("查询新用户邮箱列表...")
+    new_users_email_df = analytics.get_new_users_email_list(start_date, end_date)
+    results["new_users_email_list"] = new_users_email_df
+    if not new_users_email_df.empty:
+        logger.info(f"找到 {len(new_users_email_df)} 个有邮箱的新用户")
+    else:
+        logger.warning("未找到有邮箱的新用户")
+
     # 2. 用户聊天活动
     logger.info("查询用户聊天活动...")
     user_chat_df = analytics.get_user_chat_activity(start_date, end_date)
@@ -2705,6 +2739,14 @@ def main():
         ):
             generator.save_csv(
                 results["users_hitting_chat_limit"], "users_hitting_chat_limit.csv"
+            )
+
+        if (
+            "new_users_email_list" in results
+            and not results["new_users_email_list"].empty
+        ):
+            generator.save_csv(
+                results["new_users_email_list"], "new_users_email_list.csv"
             )
 
         # 生成对话详情文本报告
