@@ -1,0 +1,174 @@
+/**
+ * Subscribe 订阅页面样式
+ */
+
+@import '../../styles/variables.less';
+
+.subscribe-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: @spacing-xl @spacing-lg;
+  background: @dark-bg-primary;
+  overflow-y: auto;
+
+  // 页面头部
+  .subscribe-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: @spacing-xxl;
+  }
+
+  .subscribe-title {
+    font-size: 48px;
+    font-weight: @font-weight-bold;
+    color: @dark-text-primary;
+    margin: 0 0 @spacing-md 0;
+    line-height: 1.2;
+
+    @media (max-width: @screen-md) {
+      font-size: 36px;
+    }
+
+    @media (max-width: @screen-sm) {
+      font-size: 28px;
+    }
+  }
+
+  .subscribe-subtitle {
+    font-size: @font-size-base;
+    color: @dark-text-secondary;
+    margin: 0 0 @spacing-lg 0;
+    max-width: 600px;
+
+    @media (max-width: @screen-sm) {
+      font-size: @font-size-sm;
+    }
+  }
+
+  // 当前订阅状态提示
+  .subscribe-current-status {
+    display: flex;
+    align-items: center;
+    gap: @spacing-xs;
+    padding: @spacing-sm @spacing-lg;
+    background: rgba(24, 144, 255, 0.1);
+    border: 1px solid rgba(24, 144, 255, 0.3);
+    border-radius: @border-radius-base;
+    color: @dark-text-primary;
+    font-size: @font-size-sm;
+
+    strong {
+      color: @primary-color;
+      font-weight: @font-weight-semibold;
+    }
+  }
+
+  // 过期订阅提示
+  .subscribe-previous-status {
+    display: flex;
+    align-items: center;
+    gap: @spacing-xs;
+    padding: @spacing-sm @spacing-lg;
+    background: rgba(250, 173, 20, 0.1);
+    border: 1px solid rgba(250, 173, 20, 0.3);
+    border-radius: @border-radius-base;
+    color: @dark-text-primary;
+    font-size: @font-size-sm;
+  }
+
+  // 订阅计划列表
+  .subscribe-plans {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: @spacing-lg;
+    max-width: 1000px;
+    width: 100%;
+    margin: 0 auto @spacing-xxl auto;
+
+    @media (max-width: @screen-lg) {
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: @spacing-md;
+    }
+
+    @media (max-width: @screen-md) {
+      grid-template-columns: 1fr;
+      gap: @spacing-md;
+    }
+  }
+
+  // 错误状态
+  .subscribe-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: @spacing-md;
+    padding: @spacing-xxl;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .subscribe-retry-button {
+    padding: @spacing-sm @spacing-xl;
+    background: @primary-color;
+    color: @dark-text-primary;
+    font-size: @font-size-sm;
+    font-weight: @font-weight-semibold;
+    border: none;
+    border-radius: @border-radius-base;
+    cursor: pointer;
+    transition: all @transition-fast @ease-in-out;
+
+    &:hover {
+      background: @primary-hover;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+    }
+
+    &:active {
+      background: @primary-active;
+      transform: translateY(0);
+    }
+  }
+
+  // 页面底部说明
+  .subscribe-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: @spacing-xs;
+    padding: @spacing-lg 0;
+    border-top: 1px solid @dark-border-color;
+    max-width: 800px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .subscribe-footer-note {
+    font-size: @font-size-xs;
+    color: @dark-text-tertiary;
+    margin: 0;
+    text-align: center;
+
+    @media (max-width: @screen-sm) {
+      text-align: left;
+      width: 100%;
+    }
+  }
+}
+
+// 响应式布局调整
+@media (max-width: @screen-md) {
+  .subscribe-page {
+    padding: @spacing-lg @spacing-md;
+  }
+}
+
+@media (max-width: @screen-sm) {
+  .subscribe-page {
+    padding: @spacing-md @spacing-sm;
+  }
+}
+

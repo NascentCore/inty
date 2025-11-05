@@ -25,6 +25,11 @@ export default [
     wrappers: ['@/layouts/SidebarLayout'],
   },
   {
+    path: '/subscribe',
+    component: './Subscribe',
+    wrappers: ['@/layouts/SidebarLayout'],
+  },
+  {
     path: '/dev-test',
     component: './DevTest',
     wrappers: ['@/layouts/DefaultLayout'],
