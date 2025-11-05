@@ -152,10 +152,13 @@ private fun ChatItemAI(
             val isImageLoading = (item.content == "loading_animation" &&
                     item.localMsgId.contains("loading_image", ignoreCase = true)) ||
                     (generatedImageUrl == "loading")
-            
+
             // 播放器按钮
-            // 图片loading时不显示播放器按钮
-            if (item.content.isNotEmpty() && item.content != "loading_animation" && !isImageLoading) {
+            // 图片loading时不显示播放器按钮（但消息生图loading时，原消息的voice play应该显示）
+            // 注意：只有当消息本身是图片loading消息（content == "loading_animation" 且 localMsgId 包含 "loading_image"）时才隐藏
+            val isImageLoadingMessage = item.content == "loading_animation" &&
+                    item.localMsgId.contains("loading_image", ignoreCase = true)
+            if (item.content.isNotEmpty() && item.content != "loading_animation" && !isImageLoadingMessage) {
                 val agentInfo by viewModel.agentInfo.collectAsState()
 
                 // 解析agentId：优先使用chatViewModel.agentInfo.id，其次使用消息meta中的agentId
@@ -236,9 +239,29 @@ private fun ChatItemAI(
             // 只有以下情况不显示文本：
             // 1. 纯图片消息（isImageOnlyMessage）
             // 2. 普通消息 loading（content == "loading_animation" 且没有 generatedImage）
-            val shouldHideText = isImageOnlyMessage ||
-                    (item.content == "loading_animation" && !hasGeneratedImage)
-            if (!shouldHideText && item.content.isNotEmpty()) {
+            // 但是 loading 动画需要显示，所以需要单独处理
+
+            // 判断是否为普通消息loading（sendMsg/keep talking的loading）
+            // 注意：消息生图loading时（generatedImageUrl == "loading"），不是普通loading，所以不显示普通loading动画
+            val isNormalLoading = item.content == "loading_animation" &&
+                    !hasGeneratedImage &&
+                    generatedImageUrl != "loading"
+
+            // 判断是否应该隐藏文本
+            val shouldHideText = isImageOnlyMessage || isNormalLoading
+
+            if (isNormalLoading) {
+                // 显示 loading 动画（sendMsg 和 keep talking 的 loading）
+                Box(
+                    modifier =
+                        Modifier
+                            .background(Color.Black.copy(alpha = 0.5f), msgShape)
+                            .padding(12.dp, 13.dp)
+                            .widthIn(1.dp, 300.dp)
+                ) {
+                    LoadingAnimation()
+                }
+            } else if (!shouldHideText && item.content.isNotEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -261,11 +284,8 @@ private fun ChatItemAI(
                                         )
                                     }
                         ) {
-                            if (item.content == "loading_animation" && !hasGeneratedImage) {
-                                // 普通消息loading动画（非图片loading）
-                                LoadingAnimation()
-                            } else if (item.content.isNotEmpty()) {
-                                // 消息文本
+                            // 消息文本（loading 动画已经在外部单独处理）
+                            if (item.content.isNotEmpty()) {
                                 StyledMessageText(
                                     text = item.content,
                                     fontSize = 14.sp,
@@ -284,8 +304,9 @@ private fun ChatItemAI(
 
                     // 右下角按钮（image generate）
                     // keep talking按钮已移至ChatInput右上角悬浮
-                    // 如果有图片，隐藏所有按钮；否则仅在最后一条消息时显示
-                    // 注意：!hasGeneratedImage 已隐含 !isImageOnlyMessage（因为 isImageOnlyMess age 要求 hasGeneratedImage 为 true）
+                    // 如果有图片（包括loading状态），隐藏所有按钮；否则仅在最后一条消息时显示
+                    // 注意：消息生图loading时（generatedImageUrl == "loading"），hasGeneratedImage = true，此时应该隐藏按钮
+                    // 注意：!hasGeneratedImage 已隐含 !isImageOnlyMessage（因为 isImageOnlyMessage 要求 hasGeneratedImage 为 true）
                     if (!hasGeneratedImage && isLatestMessage) {
                         MessageCornerActions(
                             onImageGenerate = {
@@ -300,7 +321,8 @@ private fun ChatItemAI(
             }
 
             // 底部操作栏（like, dislike, recall）
-            // 如果有图片，隐藏所有按钮；否则仅在最后一条消息时显示
+            // 如果有图片（包括loading状态），隐藏所有按钮；否则仅在最后一条消息时显示
+            // 注意：消息生图loading时（generatedImageUrl == "loading"），hasGeneratedImage = true，此时应该隐藏MessageActionBar
             // 注意：!hasGeneratedImage 已隐含 !isImageOnlyMessage（因为 isImageOnlyMessage 要求 hasGeneratedImage 为 true）
             if (!hasGeneratedImage && isLatestMessage) {
                 Spacer(modifier = Modifier.height(2.dp))
@@ -404,8 +426,7 @@ private fun ChatItemAI(
                                         width = targetWidth,
                                         quality = 70
                                     )
-                                )
-                                .build(),
+                                ).build(),
                             contentDescription = "Generated image",
                             contentScale = ContentScale.Fit,
                             alignment = Alignment.CenterStart,
@@ -558,7 +579,6 @@ private fun ChatItemSystemTips(
     chatViewModel: ChatViewModel? = null,
 ) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
-    val context = LocalContext.current
 
     // 如果 content 是特殊标记，转换为实际文案
     val displayText = if (item.content == "image_generation_error_tip") {
