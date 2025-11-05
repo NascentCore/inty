@@ -363,12 +363,6 @@ class ChatViewModel : BaseVM() {
                         )
 
                         runCatching {
-                            // 向后兼容：后端可能仍返回 GUEST_NEED_LOGIN_CODE 错误码
-                            // 即使客户端已移除 guest 流程，也要处理此错误码，提示用户登录
-                                if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
-                                    requestLogin.emit(true)
-                                    return@runCatching
-                                }
                                 // 有免费次数限制，需要vip订阅
                                 if (
                                     result.data.code ==
@@ -570,8 +564,22 @@ class ChatViewModel : BaseVM() {
     val showLimitDialog = MutableStateFlow(false)
     val requestLogin = MutableStateFlow(false)
 
+    // 图片生成错误弹窗相关
+    enum class ImageGenerationErrorType {
+        FREE_USER_SUBSCRIPTION_REQUIRED, // 免费用户需要订阅
+        VIP_USER_LIMIT_REACHED, // 会员用户达到每日限制
+    }
+
+    data class ImageGenerationDialogData(
+        val errorType: ImageGenerationErrorType,
+    )
+
+    val showImageGenerationDialog = MutableStateFlow<ImageGenerationDialogData?>(null)
+
     // 关闭limit次数 拦截消息的弹窗
     fun dismissDialog() = viewModelScope.launch { showLimitDialog.emit(false) }
+    fun dismissImageGenerationDialog() =
+        viewModelScope.launch { showImageGenerationDialog.emit(null) }
 
     fun dismissLoginRequest() = viewModelScope.launch { requestLogin.emit(false) }
 
@@ -597,12 +605,6 @@ class ChatViewModel : BaseVM() {
                 when (result) {
                     is HttpResult.Success -> {
                         runCatching {
-                            // 向后兼容：后端可能仍返回 GUEST_NEED_LOGIN_CODE 错误码
-                            // 即使客户端已移除 guest 流程，也要处理此错误码，提示用户登录
-                                if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
-                                    requestLogin.emit(true)
-                                    return@runCatching
-                                }
                                 // 有免费次数限制，需要vip订阅
                                 if (
                                     result.data.code ==
@@ -653,15 +655,34 @@ class ChatViewModel : BaseVM() {
         LogUtils.i("Message disliked: $localMsgId")
     }
 
-    /** Recall 消息 - 重新生成最新消息 */
+    /** Recall 消息 - 重新生成最新消息（类似 keep talking 的实现） */
     fun recallMessage() {
+        // 防抖检查
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) {
+            LogUtils.i("Recall message debounced, ignoring rapid clicks")
+            return
+        }
+        lastSendTime = currentTime
+
+        // 确保状态正确
+        if (_isWaitingForReply.value) {
+            LogUtils.i("Already waiting for reply, ignoring recall request")
+            return
+        }
+
         val agentId = _agentInfo.value?.id ?: return
-        viewModelScope.launch(Dispatchers.IO) {
+        _isWaitingForReply.value = true
+
+        launchBackground {
             try {
                 recallMessageUseCase(agentId)
+                LogUtils.i("recallMessage to $agentId -> success")
+                _isWaitingForReply.value = false
             } catch (e: Exception) {
                 LogUtils.e("Recall message error: ${e.message}")
                 NetworkErrorHandler.showNetworkAwareError("Failed to recall message: ${e.message}")
+                _isWaitingForReply.value = false
             }
         }
     }
@@ -736,45 +757,82 @@ class ChatViewModel : BaseVM() {
                     is HttpResult.Failure -> {
                         LogUtils.e("Image generation failed: code=${result.code}, message=${result.message}")
 
-                        // 检查是否是业务错误码（订阅限制）
-                        if (result.code == BusinessErrorCodes.IMAGE_GENERATION_LIMIT_REACHED_CODE ||
-                            result.code == BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                        ) {
-                            // Firebase Analytics - 记录图片生成限制达到
-                            FirebaseManager.logEvent(
-                                FirebaseManager.Events.IMAGE_GENERATION_LIMIT_REACHED,
-                                FirebaseManager.safeEventParams(
-                                    "agent_id" to agentId,
-                                    "agent_name" to agent.name,
-                                    "message_id" to messageId,
-                                    "error_code" to result.code,
-                                    "error_message" to (result.message ?: "unknown"),
-                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                    "generation_time_ms" to generationTime,
-                                    "timestamp" to endTime
-                                )
-                            )
+                        val isVip = VipStatusHelper.isUserVip()
 
-                            // 显示订阅弹窗（类似sendMsg的处理）
-                            showLimitDialog.emit(true)
-                        } else {
-                            // Firebase Analytics - 记录图片生成失败
-                            FirebaseManager.logEvent(
-                                FirebaseManager.Events.IMAGE_GENERATION_FAILURE,
-                                FirebaseManager.safeEventParams(
-                                    "agent_id" to agentId,
-                                    "agent_name" to agent.name,
-                                    "message_id" to messageId,
-                                    "error_code" to result.code,
-                                    "error_message" to (result.message ?: "unknown"),
-                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                    "generation_time_ms" to generationTime,
-                                    "timestamp" to endTime
+                        // 检查是否是业务错误码
+                        when {
+                            // 免费用户的订阅限制：显示会员引导弹窗
+                            result.code == BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE -> {
+                                // Firebase Analytics - 记录图片生成限制达到
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.IMAGE_GENERATION_LIMIT_REACHED,
+                                    FirebaseManager.safeEventParams(
+                                        "agent_id" to agentId,
+                                        "agent_name" to agent.name,
+                                        "message_id" to messageId,
+                                        "error_code" to result.code,
+                                        "error_message" to (result.message ?: "unknown"),
+                                        "user_type" to "free",
+                                        "generation_time_ms" to generationTime,
+                                        "timestamp" to endTime
+                                    )
                                 )
-                            )
 
-                            // 其他错误显示网络错误提示
-                            NetworkErrorHandler.showNetworkAwareError(result.message)
+                                // 显示会员引导弹窗（使用 UnlimitChatDialog，但文案特殊）
+                                val dialogData = ImageGenerationDialogData(
+                                    errorType = ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED,
+                                )
+                                showImageGenerationDialog.emit(dialogData)
+                            }
+                            // 会员用户的每日限制：显示错误提示弹窗
+                            result.code == BusinessErrorCodes.IMAGE_GENERATION_LIMIT_REACHED_CODE && isVip -> {
+                                // Firebase Analytics - 记录图片生成限制达到
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.IMAGE_GENERATION_LIMIT_REACHED,
+                                    FirebaseManager.safeEventParams(
+                                        "agent_id" to agentId,
+                                        "agent_name" to agent.name,
+                                        "message_id" to messageId,
+                                        "error_code" to result.code,
+                                        "error_message" to (result.message ?: "unknown"),
+                                        "user_type" to "vip",
+                                        "generation_time_ms" to generationTime,
+                                        "timestamp" to endTime
+                                    )
+                                )
+
+                                // 显示会员用户的错误提示弹窗
+                                val dialogData = ImageGenerationDialogData(
+                                    errorType = ImageGenerationErrorType.VIP_USER_LIMIT_REACHED,
+                                )
+                                showImageGenerationDialog.emit(dialogData)
+                            }
+                            // 其他错误：在消息列表中显示 tips 消息
+                            else -> {
+                                // Firebase Analytics - 记录图片生成失败
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.IMAGE_GENERATION_FAILURE,
+                                    FirebaseManager.safeEventParams(
+                                        "agent_id" to agentId,
+                                        "agent_name" to agent.name,
+                                        "message_id" to messageId,
+                                        "error_code" to result.code,
+                                        "error_message" to (result.message ?: "unknown"),
+                                        "user_type" to if (isVip) "vip" else "free",
+                                        "generation_time_ms" to generationTime,
+                                        "timestamp" to endTime
+                                    )
+                                )
+
+                                // 在消息列表中添加 tips 消息（使用字符串常量，后续在 UI 层处理）
+                                val tipMessage = MsgInfo(
+                                    content = "image_generation_error_tip", // 特殊标记，UI 层会转换为实际文案
+                                    role = "system",
+                                    localMsgId = "image_generation_error_${System.nanoTime()}",
+                                    meta_data = MsgInfo.MsgMetaData(agentId = agentId),
+                                )
+                                chatRepository.addMessage(agentId, tipMessage)
+                            }
                         }
                     }
                 }

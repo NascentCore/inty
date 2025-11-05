@@ -205,19 +205,6 @@ internal fun ChatPage(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
         ) { innerPadding ->
-            // 判断是否有最后一条AI文本消息（用于显示keep talking按钮）
-            // 注意：chatMessages是反向列表，第一个元素是最后一条消息
-            val chatMessages by chatViewModel.msgs.collectAsState()
-            val hasLatestAssistantMessage = remember(chatMessages) {
-                chatMessages.firstOrNull()?.let { firstMsg ->
-                    val hasGeneratedImage = firstMsg.hasGeneratedImage()
-                    val isImageMessage = firstMsg.content.isEmpty() && hasGeneratedImage
-                    firstMsg.role == "assistant" &&
-                            firstMsg.content != "loading_animation" &&
-                            !isImageMessage
-                } ?: false
-            }
-
             Box(modifier = Modifier.fillMaxSize()) {
                 Column(
                     modifier = Modifier
@@ -289,18 +276,6 @@ internal fun ChatPage(
                     val isLoadingMore by chatViewModel.isLoadingMore.collectAsState()
                     val hasMoreMessages by chatViewModel.hasMoreMessages.collectAsState()
                     val listState = rememberLazyListState()
-
-                    // 判断是否有最后一条AI文本消息（用于显示keep talking按钮）
-                    // 注意：chatMessages是反向列表，第一个元素是最后一条消息
-                    val hasLatestAssistantMessage = remember(chatMessages) {
-                        chatMessages.firstOrNull()?.let { firstMsg ->
-                            val hasGeneratedImage = firstMsg.hasGeneratedImage()
-                            val isImageMessage = firstMsg.content.isEmpty() && hasGeneratedImage
-                            firstMsg.role == "assistant" &&
-                                    firstMsg.content != "loading_animation" &&
-                                    !isImageMessage
-                        } ?: false
-                    }
 
                     // 计算是否展示"加载更多"区域（仅在真正的 load more 场景出现）
                     val layoutInfo = listState.layoutInfo
@@ -569,20 +544,51 @@ internal fun ChatPage(
                 }
 
                 // Keep talking悬浮按钮 - 放在最外层Box，相对整个页面定位，在ChatInput上方，右侧对齐屏幕
-                // Keep talking按钮显示条件：设置开启 && 有最后一条AI消息
+                // Keep talking按钮显示条件：设置开启 && 有最后一条AI消息 && 是真实消息（不能是intro或opening）
+                // 判断是否有最后一条AI文本消息（用于显示keep talking按钮）
+                // 注意：chatMessages是反向列表，第一个元素是最后一条消息
+                // 直接计算，不使用 remember，确保每次消息列表变化时都会重新计算
+                val chatMessagesForButton by chatViewModel.msgs.collectAsState()
+                val hasLatestAssistantMessage =
+                    chatMessagesForButton.firstOrNull()?.let { firstMsg ->
+                        val hasGeneratedImage = firstMsg.hasGeneratedImage()
+                        val isImageMessage = firstMsg.content.isEmpty() && hasGeneratedImage
+                        // 判断条件：
+                        // 1. 必须是 assistant 消息
+                        // 2. 不能是 loading 占位
+                        // 3. 不能是纯图片消息
+                        // 4. 不能是 opening 消息（真实消息，不是intro或opening）
+                        firstMsg.role == "assistant" &&
+                                firstMsg.content != "loading_animation" &&
+                                !isImageMessage &&
+                                !firstMsg.isOpening()
+                    } ?: false
                 val showKeepTalkingButton = shouldShowButton && hasLatestAssistantMessage
 
                 val chatInputEstimatedHeight = 70.dp
                 val effectiveBottomPaddingForButton =
                     if (showMorePanel) morePanelHeight else bottomPadding
-                val buttonBottomOffset = chatInputEstimatedHeight + effectiveBottomPaddingForButton
+                // 键盘高度：键盘弹出时，按钮需要向上移动键盘高度
+                // 注意：在 ChatActivity（showBackButton = true）中，外部已经应用了 .imePadding()，
+                // 内部 Column 也应用了 .imePadding()，所以按钮计算时不应该再加 imeHeightDp，
+                // 否则会导致向上偏移两个键盘的 padding 距离
+                // 在 HorizontalPager 中（showBackButton = false），外部没有 .imePadding()，
+                // 只有内部 Column 的 .imePadding()，所以按钮计算时需要加 imeHeightDp
+                val imeHeightDp = with(LocalDensity.current) { imeHeight.toDp() }
+                val buttonBottomOffset = if (showBackButton) {
+                    // ChatActivity：外部和内部都应用了 .imePadding()，不需要再加键盘高度
+                    chatInputEstimatedHeight + effectiveBottomPaddingForButton
+                } else {
+                    // HorizontalPager：只有内部 Column 应用了 .imePadding()，需要再加键盘高度
+                    chatInputEstimatedHeight + effectiveBottomPaddingForButton + imeHeightDp
+                }
 
                 KeepTalkingFloatingButton(
                     visible = showKeepTalkingButton,
                     onClick = { chatViewModel.sendKeepTalkingMessage() },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(bottom = buttonBottomOffset) // 在输入框上方，右侧对齐屏幕
+                        .padding(bottom = buttonBottomOffset) // 在输入框上方，右侧对齐屏幕，随键盘向上平移
                 )
             }
         }
@@ -606,6 +612,9 @@ internal fun ChatPage(
 
         // 免费聊天次数限制的dialog
         ShowLimitDialog(chatViewModel)
+
+        // 图片生成错误弹窗
+        ShowImageGenerationDialog(chatViewModel)
 
         // 监听需要登录事件并跳转
         val needLogin by chatViewModel.requestLogin.collectAsState()
@@ -671,6 +680,69 @@ private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
                     LoginActivity.launch(context)
                 }
                 chatViewModel.dismissDialog()
+            },
+        )
+    }
+}
+
+@Composable
+private fun ShowImageGenerationDialog(chatViewModel: ChatViewModel) {
+    val context = LocalContext.current
+    val dialogData by chatViewModel.showImageGenerationDialog.collectAsState()
+
+    dialogData?.let { data ->
+        val content = when (data.errorType) {
+            ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
+                stringResource(R.string.image_generation_free_limit_content)
+            }
+
+            ChatViewModel.ImageGenerationErrorType.VIP_USER_LIMIT_REACHED -> {
+                stringResource(R.string.image_generation_vip_limit_content)
+            }
+        }
+
+        val dialogDataForUI = ChatDialogData(
+            R.drawable.img_unlimit_dialog_bg,
+            content,
+            stringResource(R.string.str_unlimit_btn_text),
+        )
+
+        UnlimitChatDialog(
+            dialogDataForUI,
+            onCancel = { chatViewModel.dismissImageGenerationDialog() },
+            onSure = {
+                when (data.errorType) {
+                    ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
+                        // 免费用户：去会员中心
+                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                            VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                        } else {
+                            LoginActivity.launch(context)
+                        }
+                    }
+
+                    ChatViewModel.ImageGenerationErrorType.VIP_USER_LIMIT_REACHED -> {
+                        // 会员用户：只是提示，关闭弹窗即可
+                    }
+                }
+                chatViewModel.dismissImageGenerationDialog()
+            },
+            onMoreInfo = {
+                when (data.errorType) {
+                    ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
+                        // 免费用户：去会员中心
+                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                            VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                        } else {
+                            LoginActivity.launch(context)
+                        }
+                    }
+
+                    ChatViewModel.ImageGenerationErrorType.VIP_USER_LIMIT_REACHED -> {
+                        // 会员用户：只是提示，关闭弹窗即可
+                    }
+                }
+                chatViewModel.dismissImageGenerationDialog()
             },
         )
     }

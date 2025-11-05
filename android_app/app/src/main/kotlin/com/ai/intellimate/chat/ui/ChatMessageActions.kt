@@ -89,16 +89,6 @@ private fun RecallButton(
     }
 }
 
-/** Keep Talking 按钮 - 已移至ChatInput右上角悬浮，此处保留用于向后兼容 */
-@Composable
-private fun KeepTalkingActionButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    // 此函数已废弃，keep talking按钮已移至ChatInput右上角
-    // 保留函数签名以保持向后兼容
-}
-
 /** Image Generate 按钮 */
 @Composable
 private fun ImageGenerateButton(
@@ -162,14 +152,13 @@ internal fun MessageActionBar(
         Spacer(Modifier.weight(1f))
 
         // Recall 按钮 - 始终显示，不受like/dislike影响
-        RecallButton(onClick = onRecall)
+//        RecallButton(onClick = onRecall)
     }
 }
 
 /** 消息卡片右下角操作按钮（image generate） */
 @Composable
 internal fun MessageCornerActions(
-    message: MsgInfo,
     onImageGenerate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {

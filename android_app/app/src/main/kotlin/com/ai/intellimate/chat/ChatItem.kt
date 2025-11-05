@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,6 +47,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -98,6 +100,11 @@ fun ChatItem(
                 ChatItemUser(item)
             }
 
+            "system" -> {
+                // system 消息：显示为 tips 消息，可点击删除
+                ChatItemSystemTips(item, chatViewModel)
+            }
+
             else -> {
                 LogUtils.i("unknown role: $item")
                 // 未知角色的消息显示为普通文本
@@ -136,8 +143,19 @@ private fun ChatItemAI(
 
     runCatching {
         Column(modifier = Modifier.fillMaxWidth(.9f)) {
+            // 检查是否有生成的图片（包括loading状态）
+            val hasGeneratedImage = item.hasGeneratedImage()
+            val generatedImageUrl = item.getGeneratedImageUrl()
+            // 判断是否为图片loading状态：
+            // 1. content为"loading_animation"且localMsgId包含"loading_image"（旧逻辑，兼容独立loading消息）
+            // 2. imageUrl为"loading"（新逻辑，在触发消息上显示loading）
+            val isImageLoading = (item.content == "loading_animation" &&
+                    item.localMsgId.contains("loading_image", ignoreCase = true)) ||
+                    (generatedImageUrl == "loading")
+            
             // 播放器按钮
-            if (item.content.isNotEmpty() && item.content != "loading_animation") {
+            // 图片loading时不显示播放器按钮
+            if (item.content.isNotEmpty() && item.content != "loading_animation" && !isImageLoading) {
                 val agentInfo by viewModel.agentInfo.collectAsState()
 
                 // 解析agentId：优先使用chatViewModel.agentInfo.id，其次使用消息meta中的agentId
@@ -204,16 +222,9 @@ private fun ChatItemAI(
                     RoundedCornerShape(topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
                 else RoundedCornerShape(12.dp)
 
-            // 检查是否有生成的图片（包括loading状态）
-            // 图片消息：content为空且meta_data中有generatedImage
-            // loading消息：content为"loading_animation"且localMsgId包含"loading_image"
-            val hasGeneratedImage = item.hasGeneratedImage()
-            val generatedImageUrl = item.getGeneratedImageUrl()
-            // 判断是否为图片loading状态：content为"loading_animation"且localMsgId包含"loading_image"
-            val isImageLoading = item.content == "loading_animation" &&
-                    item.localMsgId.contains("loading_image", ignoreCase = true)
             // 判断是否为图片消息（纯图片，无文本）
-            val isImageOnlyMessage = item.content.isEmpty() && hasGeneratedImage
+            val isImageOnlyMessage =
+                item.content.isEmpty() && hasGeneratedImage && generatedImageUrl != "loading"
 
             // 全屏图片查看器状态
             var showFullScreenImage by remember { mutableStateOf(false) }
@@ -221,8 +232,13 @@ private fun ChatItemAI(
             var imageLoadError by remember { mutableStateOf(false) }
 
             // 文本消息内容
-            // 图片loading时或纯图片消息时，不显示文本Box，只显示shimmer占位或图片
-            if (!isImageLoading && !isImageOnlyMessage) {
+            // 注意：消息生图 loading 时（generatedImageUrl == "loading"），原消息文本应该显示
+            // 只有以下情况不显示文本：
+            // 1. 纯图片消息（isImageOnlyMessage）
+            // 2. 普通消息 loading（content == "loading_animation" 且没有 generatedImage）
+            val shouldHideText = isImageOnlyMessage ||
+                    (item.content == "loading_animation" && !hasGeneratedImage)
+            if (!shouldHideText && item.content.isNotEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -234,55 +250,20 @@ private fun ChatItemAI(
                                     .background(Color.Black.copy(alpha = 0.5f), msgShape)
                                     .padding(12.dp, 13.dp)
                                     .widthIn(1.dp, 300.dp)
-                                    .then(
-                                        if (item.content == "图片生成失败" && item.localMsgId.contains(
-                                                "image_error",
-                                                ignoreCase = true
-                                            )
-                                        ) {
-                                            // 图片生成失败的消息可点击删除
-                                            Modifier.noRippleClickable {
-                                                viewModel.deleteMessage(item.localMsgId)
-                                            }
-                                        } else {
-                                            Modifier.pointerInput(item.content) {
-                                                detectTapGestures(
-                                                    onLongPress = {
-                                                        debugOnlyCopyToClipboard(
-                                                            context,
-                                                            item.content
-                                                        )
-                                                    }
+                                    .pointerInput(item.content) {
+                                        detectTapGestures(
+                                            onLongPress = {
+                                                debugOnlyCopyToClipboard(
+                                                    context,
+                                                    item.content
                                                 )
                                             }
-                                        }
-                                    )
+                                        )
+                                    }
                         ) {
                             if (item.content == "loading_animation" && !hasGeneratedImage) {
                                 // 普通消息loading动画（非图片loading）
                                 LoadingAnimation()
-                            } else if (item.content == "图片生成失败" && item.localMsgId.contains(
-                                    "image_error",
-                                    ignoreCase = true
-                                )
-                            ) {
-                                // 图片生成失败的错误消息：显示文本文案并可点击删除
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_warning_voice),
-                                        contentDescription = "Image generation error",
-                                        tint = Color.White.copy(alpha = 0.6f),
-                                        modifier = Modifier.size(16.dp),
-                                    )
-                                    Text(
-                                        text = item.content,
-                                        color = Color.White.copy(alpha = 0.6f),
-                                        fontSize = 14.sp,
-                                    )
-                                }
                             } else if (item.content.isNotEmpty()) {
                                 // 消息文本
                                 StyledMessageText(
@@ -304,9 +285,9 @@ private fun ChatItemAI(
                     // 右下角按钮（image generate）
                     // keep talking按钮已移至ChatInput右上角悬浮
                     // 如果有图片，隐藏所有按钮；否则仅在最后一条消息时显示
-                    if (!isImageOnlyMessage && !hasGeneratedImage && isLatestMessage) {
+                    // 注意：!hasGeneratedImage 已隐含 !isImageOnlyMessage（因为 isImageOnlyMess age 要求 hasGeneratedImage 为 true）
+                    if (!hasGeneratedImage && isLatestMessage) {
                         MessageCornerActions(
-                            message = item,
                             onImageGenerate = {
                                 viewModel.generateImageForMessage(item.id)
                             },
@@ -320,7 +301,8 @@ private fun ChatItemAI(
 
             // 底部操作栏（like, dislike, recall）
             // 如果有图片，隐藏所有按钮；否则仅在最后一条消息时显示
-            if (!isImageOnlyMessage && !hasGeneratedImage && isLatestMessage) {
+            // 注意：!hasGeneratedImage 已隐含 !isImageOnlyMessage（因为 isImageOnlyMessage 要求 hasGeneratedImage 为 true）
+            if (!hasGeneratedImage && isLatestMessage) {
                 Spacer(modifier = Modifier.height(2.dp))
                 MessageActionBar(
                     message = item,
@@ -367,7 +349,7 @@ private fun ChatItemAI(
                             cornerRadius = 12.dp,
                             showLoadingDots = true, // 显示loading点点点
                         )
-                    } else if (imageLoadError || (isImageLoading && generatedImageUrl.isNullOrEmpty())) {
+                    } else if (imageLoadError) {
                         // 错误状态：显示错误文案并可点击删除
                         Box(
                             modifier = Modifier
@@ -377,7 +359,7 @@ private fun ChatItemAI(
                                 .background(Color.Black.copy(alpha = 0.3f))
                                 .padding(16.dp)
                                 .noRippleClickable {
-                                    // 点击删除图片生成失败的消息
+                                    // 点击删除图片加载失败的消息
                                     viewModel.deleteMessage(item.localMsgId)
                                 },
                             contentAlignment = Alignment.Center,
@@ -394,14 +376,14 @@ private fun ChatItemAI(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "图片生成失败，点击删除",
+                                    text = stringResource(R.string.image_generation_failed_tap_to_delete),
                                     color = Color.White.copy(alpha = 0.6f),
                                     fontSize = 12.sp,
                                 )
                             }
                         }
-                    } else if (generatedImageUrl != null && generatedImageUrl.isNotEmpty()) {
-                        // 正常显示图片
+                    } else if (!generatedImageUrl.isNullOrEmpty()) {
+                        // 正常显示图片（前面的 else if 已经处理了 loading 和 error 状态）
                         AsyncImage(
                             modifier = Modifier
                                 .fillMaxWidth(0.35f)
@@ -565,6 +547,59 @@ private fun ChatItemUser(item: MsgInfo) {
                     fontSize = 14.sp,
                 )
             }
+        }
+    }
+}
+
+/** System 消息（tips）显示组件 */
+@Composable
+private fun ChatItemSystemTips(
+    item: MsgInfo,
+    chatViewModel: ChatViewModel? = null,
+) {
+    val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
+    val context = LocalContext.current
+
+    // 如果 content 是特殊标记，转换为实际文案
+    val displayText = if (item.content == "image_generation_error_tip") {
+        stringResource(R.string.image_generation_error_tip)
+    } else {
+        item.content
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Color.Black.copy(alpha = 0.3f),
+                    RoundedCornerShape(12.dp)
+                )
+                .padding(12.dp, 16.dp)
+                .noRippleClickable {
+                    // 点击删除 tips 消息
+                    viewModel.deleteMessage(item.localMsgId)
+                },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = displayText,
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 12.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                painter = painterResource(R.drawable.ic_warning_voice),
+                contentDescription = "Delete tip",
+                tint = Color.White.copy(alpha = 0.5f),
+                modifier = Modifier.size(16.dp),
+            )
         }
     }
 }
