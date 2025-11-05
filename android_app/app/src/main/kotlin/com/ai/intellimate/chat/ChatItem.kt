@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -97,6 +98,11 @@ fun ChatItem(
 
             "user" -> {
                 ChatItemUser(item)
+            }
+
+            "system" -> {
+                // system 消息：显示为 tips 消息，可点击删除
+                ChatItemSystemTips(item, chatViewModel)
             }
 
             else -> {
@@ -226,8 +232,13 @@ private fun ChatItemAI(
             var imageLoadError by remember { mutableStateOf(false) }
 
             // 文本消息内容
-            // 图片loading时或纯图片消息时，不显示文本Box，只显示shimmer占位或图片
-            if (!isImageLoading && !isImageOnlyMessage) {
+            // 注意：消息生图 loading 时（generatedImageUrl == "loading"），原消息文本应该显示
+            // 只有以下情况不显示文本：
+            // 1. 纯图片消息（isImageOnlyMessage）
+            // 2. 普通消息 loading（content == "loading_animation" 且没有 generatedImage）
+            val shouldHideText = isImageOnlyMessage ||
+                    (item.content == "loading_animation" && !hasGeneratedImage)
+            if (!shouldHideText && item.content.isNotEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -536,6 +547,59 @@ private fun ChatItemUser(item: MsgInfo) {
                     fontSize = 14.sp,
                 )
             }
+        }
+    }
+}
+
+/** System 消息（tips）显示组件 */
+@Composable
+private fun ChatItemSystemTips(
+    item: MsgInfo,
+    chatViewModel: ChatViewModel? = null,
+) {
+    val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
+    val context = LocalContext.current
+
+    // 如果 content 是特殊标记，转换为实际文案
+    val displayText = if (item.content == "image_generation_error_tip") {
+        stringResource(R.string.image_generation_error_tip)
+    } else {
+        item.content
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Color.Black.copy(alpha = 0.3f),
+                    RoundedCornerShape(12.dp)
+                )
+                .padding(12.dp, 16.dp)
+                .noRippleClickable {
+                    // 点击删除 tips 消息
+                    viewModel.deleteMessage(item.localMsgId)
+                },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = displayText,
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 12.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                painter = painterResource(R.drawable.ic_warning_voice),
+                contentDescription = "Delete tip",
+                tint = Color.White.copy(alpha = 0.5f),
+                modifier = Modifier.size(16.dp),
+            )
         }
     }
 }

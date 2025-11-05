@@ -613,6 +613,9 @@ internal fun ChatPage(
         // 免费聊天次数限制的dialog
         ShowLimitDialog(chatViewModel)
 
+        // 图片生成错误弹窗
+        ShowImageGenerationDialog(chatViewModel)
+
         // 监听需要登录事件并跳转
         val needLogin by chatViewModel.requestLogin.collectAsState()
         if (needLogin) {
@@ -677,6 +680,69 @@ private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
                     LoginActivity.launch(context)
                 }
                 chatViewModel.dismissDialog()
+            },
+        )
+    }
+}
+
+@Composable
+private fun ShowImageGenerationDialog(chatViewModel: ChatViewModel) {
+    val context = LocalContext.current
+    val dialogData by chatViewModel.showImageGenerationDialog.collectAsState()
+
+    dialogData?.let { data ->
+        val content = when (data.errorType) {
+            ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
+                stringResource(R.string.image_generation_free_limit_content)
+            }
+
+            ChatViewModel.ImageGenerationErrorType.VIP_USER_LIMIT_REACHED -> {
+                stringResource(R.string.image_generation_vip_limit_content)
+            }
+        }
+
+        val dialogDataForUI = ChatDialogData(
+            R.drawable.img_unlimit_dialog_bg,
+            content,
+            stringResource(R.string.str_unlimit_btn_text),
+        )
+
+        UnlimitChatDialog(
+            dialogDataForUI,
+            onCancel = { chatViewModel.dismissImageGenerationDialog() },
+            onSure = {
+                when (data.errorType) {
+                    ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
+                        // 免费用户：去会员中心
+                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                            VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                        } else {
+                            LoginActivity.launch(context)
+                        }
+                    }
+
+                    ChatViewModel.ImageGenerationErrorType.VIP_USER_LIMIT_REACHED -> {
+                        // 会员用户：只是提示，关闭弹窗即可
+                    }
+                }
+                chatViewModel.dismissImageGenerationDialog()
+            },
+            onMoreInfo = {
+                when (data.errorType) {
+                    ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
+                        // 免费用户：去会员中心
+                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                            VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                        } else {
+                            LoginActivity.launch(context)
+                        }
+                    }
+
+                    ChatViewModel.ImageGenerationErrorType.VIP_USER_LIMIT_REACHED -> {
+                        // 会员用户：只是提示，关闭弹窗即可
+                    }
+                }
+                chatViewModel.dismissImageGenerationDialog()
             },
         )
     }

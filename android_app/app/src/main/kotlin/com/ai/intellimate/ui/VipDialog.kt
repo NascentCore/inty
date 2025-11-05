@@ -107,22 +107,23 @@ private fun OpenChatDialog(
                 )
 
                 Spacer(Modifier.height(12.dp))
-                // 对 "Daily Free Chat Limit Reached!" 部分加粗
+                // 对文案中第一个 "!" 之前的语句进行加粗
                 val annotatedContent = buildAnnotatedString {
                     val content = dialogData.content
-                    val boldText = "Daily Free Chat Limit Reached!"
-                    val boldStartIndex = content.indexOf(boldText)
-                    if (boldStartIndex >= 0) {
-                        // 加粗部分之前的内容
-                        append(content.substring(0, boldStartIndex))
+                    val firstExclamationIndex = content.indexOf('!')
+                    if (firstExclamationIndex >= 0) {
+                        // 找到第一个 "!"，加粗从开头到 "!" 的部分（包含 "!"）
+                        val boldText = content.take(firstExclamationIndex + 1)
+                        val remainingText = content.substring(firstExclamationIndex + 1)
+                        
                         // 加粗部分
                         withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
                             append(boldText)
                         }
-                        // 加粗部分之后的内容
-                        append(content.substring(boldStartIndex + boldText.length))
+                        // 剩余部分
+                        append(remainingText)
                     } else {
-                        // 如果没有找到加粗文本，直接显示原文本
+                        // 如果没有找到 "!"，直接显示原文本
                         append(content)
                     }
                 }

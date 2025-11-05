@@ -95,6 +95,10 @@
     <string name="str_expired_vip_dialog_content">Your Premium subscription has expired and you\'ll lose access to unlimited chat and other premium features. Resubscribe to resume the benefits!</string>
     <string name="str_unlimit_dialog_content">Daily Free Chat Limit Reached! Go Premium for unlimited chats and exclusive features! Free chats refresh tomorrow — come back and keep chatting. ❤️</string>
     <string name="str_unlimit_btn_text">Unlimited Chat and More! 🔥</string>
+    <!-- Image Generation Error Messages -->
+    <string name="image_generation_free_limit_content">Daily Free Pic Limit Reached! Go Premium for more pics and exclusive features! Free pics refresh tomorrow - come back then.</string>
+    <string name="image_generation_vip_limit_content">Oops! Daily Pic Limit Reached! You\'ve used all available pics for today. Don\'t worry—your limit refreshes tomorrow! Can\'t wait to see what you\'ll create next!</string>
+    <string name="image_generation_error_tip">Sorry, the pic couldn\'t be created for this time.</string>
 
 
     <!-- Login and Registration -->
