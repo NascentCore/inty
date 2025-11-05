@@ -13,6 +13,8 @@
 <resources>
     <string name="app_name">IntelliMate</string>
     <string name="ID">ID:%s</string>
+    <string name="copy">Copy</string>
+    <string name="copy_success">Copied</string>
     <string name="no_agent">Create your own characters now!</string>
     <string name="settings">Settings</string>
     <string name="settings_email_support">Email Support</string>

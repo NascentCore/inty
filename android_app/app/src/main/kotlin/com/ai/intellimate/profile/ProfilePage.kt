@@ -10,6 +10,9 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.TimeUtils
+import ai.sxwl.android.utils.ToastUtils
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -79,6 +82,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.getSystemService
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
@@ -88,6 +92,8 @@ import com.ai.intellimate.vip.VipCenterActivity
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.min
+
+private const val CLIPBOARD_LABEL_USER_ID = "user_id"
 
 /** "我的"页面 */
 @Composable
@@ -427,14 +433,53 @@ private fun ProfileHeader(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.height(6.dp))
-                Text(
-                    text = stringResource(R.string.ID, userProfile.id),
-                    color = Color.White.copy(0.55f),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Light,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.ID, userProfile.id),
+                        color = Color.White.copy(0.55f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Light,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+
+                    if (userProfile.id.isNotEmpty()) {
+                        var lastCopyClickTime by remember(userProfile.id) { mutableLongStateOf(0L) }
+                        val chipShape = RoundedCornerShape(12.dp)
+
+                        Text(
+                            modifier =
+                                Modifier
+                                    .clip(chipShape)
+                                    .clickable {
+                                        val currentTime = System.currentTimeMillis()
+                                        if (AntiClick.isValidClick(lastCopyClickTime)) {
+                                            lastCopyClickTime = currentTime
+                                            val clipboard = context.getSystemService<ClipboardManager>()
+                                            val clip = ClipData.newPlainText(
+                                                CLIPBOARD_LABEL_USER_ID,
+                                                userProfile.id
+                                            )
+                                            clipboard?.setPrimaryClip(clip)
+                                            ToastUtils.showShort(R.string.copy_success)
+                                        }
+                                    }
+                                    .border(
+                                        width = 1.dp,
+                                        color = Color.White.copy(alpha = 0.3f),
+                                        shape = chipShape
+                                    )
+                                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                            text = stringResource(R.string.copy),
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.width(16.dp))
