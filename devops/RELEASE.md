@@ -3,6 +3,16 @@
 * 例行的测试版本发布到内测轨道，不再使用 internal app sharing
 * 个别共享仍然可以使用 internal app sharing
 
+## Android app 发布流程
+
+1. 在 GitHub 上创建 release（选择创建新的 tag）
+2. 在本地 git checkout 出对应的 tag，构建 aab
+3. 上传内测轨道
+   <img width="800" height="1614" alt="image" src="https://github.com/user-attachments/assets/07cc93c6-a573-40d8-98f2-f716fce5826a" />
+5. 测试
+6. 创建生产环境版本，选择前面测试的内测版本
+7. 提交审核
+
 需要至少 2 个人参与：1 个人操作、另 1 个人全程审查，查漏补缺；步骤如下：
 
 1. `git tagging`:
