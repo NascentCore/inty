@@ -88,7 +88,7 @@ object IntySetting {
     }
 
     fun isShowKeepTalking(): Boolean {
-        return curUserSetting.decodeBool("show_keep_talking", false)
+        return curUserSetting.decodeBool("show_keep_talking", true) // 默认开启
     }
 
     /** 自动播放语音消息（全局设置，默认开启） */
