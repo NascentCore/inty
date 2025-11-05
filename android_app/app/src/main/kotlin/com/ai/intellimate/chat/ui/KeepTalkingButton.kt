@@ -4,9 +4,8 @@ import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,7 +15,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
 
-/** Keep Talking悬浮按钮组件 - 固定在ChatInput上方，右侧紧贴屏幕 */
+/** Keep Talking悬浮按钮组件 - 圆形按钮 */
 @Composable
 fun KeepTalkingFloatingButton(
     visible: Boolean,
@@ -24,27 +23,24 @@ fun KeepTalkingFloatingButton(
     modifier: Modifier = Modifier,
 ) {
     if (!visible) return
+    val buttonSize = 28.dp
+    val buttonImageSize = 18.dp
 
     Box(
         modifier = modifier
-            .clip(
-                RoundedCornerShape(
-                    topStart = 20.dp,
-                    bottomStart = 20.dp
-                )
-            ) // 左侧半圆角，右侧直角
+            .size(buttonSize) // 固定尺寸确保圆形
+            .clip(CircleShape) // 圆形
             .background(
                 Color.Black.copy(alpha = 0.6f),
-                RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)
+                CircleShape
             )
-            .noRippleClickable(onClick = onClick)
-            .padding(4.dp),
+            .noRippleClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Image(
             painter = painterResource(R.drawable.ic_keep_talking),
             contentDescription = "Keep Talking",
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(buttonImageSize),
         )
     }
 }

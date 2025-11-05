@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
+import com.ai.intellimate.chat.ui.KeepTalkingFloatingButton
 
 /** Like 按钮 - 支持选中状态 */
 @Composable
@@ -110,13 +112,15 @@ private fun ImageGenerateButton(
     }
 }
 
-/** 消息卡片底部操作栏（like, dislike, recall） */
+/** 消息卡片底部操作栏（like, dislike, recall, keep talking） */
 @Composable
 internal fun MessageActionBar(
     message: MsgInfo,
     onLike: () -> Unit,
     onDislike: () -> Unit,
     onRecall: () -> Unit,
+    shouldShowKeepTalkingButton: Boolean = false,
+    onKeepTalkingClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val isLiked = message.userFeedback == MsgInfo.UserFeedback.LIKE
@@ -125,7 +129,7 @@ internal fun MessageActionBar(
     // like/dislike互斥，但不影响recall和keep talking的状态
     Row(
         modifier = modifier
-            .fillMaxWidth()
+            .widthIn(max = 300.dp)
             .padding(horizontal = 2.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -150,6 +154,14 @@ internal fun MessageActionBar(
         }
 
         Spacer(Modifier.weight(1f))
+
+        // Keep Talking 按钮 - 与 like/dislike 按钮水平对齐
+        if (shouldShowKeepTalkingButton) {
+            KeepTalkingFloatingButton(
+                visible = true,
+                onClick = onKeepTalkingClick,
+            )
+        }
 
         // Recall 按钮 - 始终显示，不受like/dislike影响
 //        RecallButton(onClick = onRecall)
