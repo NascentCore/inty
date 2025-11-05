@@ -184,6 +184,7 @@
     <string name="toast_cancel_subscription_first">Please cancel the subscription before proceeding</string>
     <string name="toast_check_account_deletion_error">Check Account Deletion Server Error !</string>
     <string name="toast_account_deletion_error">Account Deletion Server Error !</string>
+    <string name="toast_copied_to_clipboard">Copied to clipboard</string>
 
     <!-- Content Descriptions -->
     <string name="content_desc_google_login">Google Login</string>

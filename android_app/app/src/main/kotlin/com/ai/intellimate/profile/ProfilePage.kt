@@ -10,7 +10,11 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.TimeUtils
+import ai.sxwl.android.utils.ToastUtils
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
+import androidx.core.content.getSystemService
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -428,6 +432,22 @@ private fun ProfileHeader(
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .noRippleClickable {
+                            if (userProfile.id.isNotEmpty()) {
+                                val clipboard = context.getSystemService<ClipboardManager>()
+                                clipboard?.setPrimaryClip(
+                                    ClipData.newPlainText(
+                                        "User ID",
+                                        userProfile.id,
+                                    )
+                                )
+                                if (clipboard != null) {
+                                    ToastUtils.showShort(R.string.toast_copied_to_clipboard)
+                                }
+                            }
+                        },
                     text = stringResource(R.string.ID, userProfile.id),
                     color = Color.White.copy(0.55f),
                     fontSize = 12.sp,
