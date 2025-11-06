@@ -60,7 +60,6 @@ import com.ai.intellimate.chat.ui.ChatTopBar
 import com.ai.intellimate.chat.ui.KeepTalkingFloatingButton
 import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
-import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
@@ -263,9 +262,6 @@ internal fun ChatPage(
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 // 去会员中心
                                 VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
-                            } else {
-                                // 如果未登录，要求先登录
-                                LoginActivity.launch(context)
                             }
                             showPremiumDialog = false
                         }
@@ -564,7 +560,22 @@ internal fun ChatPage(
                                 !isImageMessage &&
                                 !msg.isOpening()
                     } != null
+
+                // 判断是否有消息正在loading（用于禁用keep talking按钮）
+                // 判断条件：消息content为"loading_animation"且不是图片loading
+                val hasLoadingMessage = chatMessagesForButton.any { msg ->
+                    val hasGeneratedImage = msg.hasGeneratedImage()
+                    val generatedImageUrl = msg.getGeneratedImageUrl()
+                    // 普通消息loading（sendMsg/keep talking的loading）
+                    // 排除图片loading（generatedImageUrl == "loading"）
+                    msg.content == "loading_animation" &&
+                            !hasGeneratedImage &&
+                            generatedImageUrl != "loading"
+                }
+                
                 val showKeepTalkingButton = shouldShowButton && hasLatestAssistantMessage
+                // 当有消息正在loading时，按钮禁用
+                val isKeepTalkingEnabled = !hasLoadingMessage
 
                 val chatInputEstimatedHeight = 70.dp
                 val effectiveBottomPaddingForButton =
@@ -585,11 +596,12 @@ internal fun ChatPage(
                 }
 
                 KeepTalkingFloatingButton(
-                    visible = showKeepTalkingButton,
-                    onClick = { chatViewModel.sendKeepTalkingMessage() },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(bottom = buttonBottomOffset) // 在输入框上方，右侧对齐屏幕，随键盘向上平移
+                        .padding(bottom = buttonBottomOffset), // 在输入框上方，右侧对齐屏幕，随键盘向上平移
+                    visible = showKeepTalkingButton,
+                    enabled = isKeepTalkingEnabled,
+                    onClick = { chatViewModel.sendKeepTalkingMessage() },
                 )
             }
         }
@@ -620,8 +632,7 @@ internal fun ChatPage(
         // 监听需要登录事件并跳转
         val needLogin by chatViewModel.requestLogin.collectAsState()
         if (needLogin) {
-            // 如果未登录或为游客，则跳转登录
-            LoginActivity.launch(context)
+            // 如果未登录或为游客，不执行操作（MainActivity已会显示登录界面）
             chatViewModel.dismissLoginRequest()
         }
     }
@@ -665,9 +676,6 @@ private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                     // 去会员中心
                     VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
-                } else {
-                    // 如果未登录，要求先登录
-                    LoginActivity.launch(context)
                 }
                 chatViewModel.dismissDialog()
             },
@@ -676,9 +684,6 @@ private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                     // 去会员中心
                     VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
-                } else {
-                    // 如果未登录，要求先登录
-                    LoginActivity.launch(context)
                 }
                 chatViewModel.dismissDialog()
             },
@@ -717,8 +722,6 @@ private fun ShowImageGenerationDialog(chatViewModel: ChatViewModel) {
                         // 免费用户：去会员中心
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                             VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
-                        } else {
-                            LoginActivity.launch(context)
                         }
                     }
 
@@ -734,8 +737,6 @@ private fun ShowImageGenerationDialog(chatViewModel: ChatViewModel) {
                         // 免费用户：去会员中心
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                             VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
-                        } else {
-                            LoginActivity.launch(context)
                         }
                     }
 

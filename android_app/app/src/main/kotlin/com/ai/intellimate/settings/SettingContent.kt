@@ -35,7 +35,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
-import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.ui.components.DeleteAccountDialog
 import com.ai.intellimate.ui.components.LogoutButton
 import com.ai.intellimate.ui.components.SettingDivider
@@ -240,19 +239,6 @@ private fun SettingDialogs(
     // 删除账号对话框
     if (dialogState.showDeleteAccountDialog) {
         DeleteAccountDialog(onDismiss = onHideDeleteDialog, onConfirm = onConfirmDelete)
-    }
-
-    // 高级模型对话框
-    if (dialogState.showPremiumDialog) {
-        val context = LocalContext.current
-        // 检查是否已登录
-        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-            // 去会员中心
-            VipCenterActivity.launch(context, VipCenterActivity.SETTINGS_PREMIUM_DIALOG)
-        } else {
-            // 如果未登录，要求先登录
-            LoginActivity.launch(context)
-        }
     }
 }
 

@@ -55,7 +55,6 @@ import com.ai.intellimate.chat.ChatPageContainer
 import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
 import com.ai.intellimate.explore.ExplorePage
 import com.ai.intellimate.explore.ExploreViewModel
-import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.messages.MessagesPage
 import com.ai.intellimate.messages.MessagesViewModel
 import com.ai.intellimate.profile.ProfilePage
@@ -190,9 +189,6 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
                         // 跳转到订阅中心
                         VipCenterActivity.launch(context, VipCenterActivity.HOME_EXPIRED_DIALOG)
                     }
-                } else {
-                    // 如果未登录，要求先登录
-                    LoginActivity.launch(context)
                 }
 
                 showExpiredDialog = false
@@ -215,8 +211,6 @@ private fun handleTabSelectionWithLauncher(
             // 使用 CreateRoleActivity 提供的方法获取 Intent
             val intent = CreateRoleActivity.getIntent(context, null)
             createRoleLauncher.launch(intent)
-        } else {
-            LoginActivity.launch(context)
         }
         return
     }

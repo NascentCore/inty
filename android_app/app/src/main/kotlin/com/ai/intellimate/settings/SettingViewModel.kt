@@ -55,6 +55,7 @@ class SettingViewModel : BaseVM() {
                                 )
                             }
                         }
+
                         is HttpResult.Failure -> {
                             ToastUtils.showShort(
                                 Utils.getApp()
@@ -100,6 +101,7 @@ class SettingViewModel : BaseVM() {
                         is HttpResult.Success -> {
                             deleteAccountResultFlow.emit(true)
                         }
+
                         is HttpResult.Failure -> {
                             ToastUtils.showShort(
                                 Utils.getApp().getString(R.string.toast_account_deletion_error)
@@ -124,5 +126,4 @@ class SettingViewModel : BaseVM() {
 /** 对话框状态数据类 */
 data class DialogState(
     val showDeleteAccountDialog: Boolean = false,
-    val showPremiumDialog: Boolean = false,
 )

@@ -81,10 +81,6 @@
             android:theme="@style/Theme.Inty"
             android:windowSoftInputMode="adjustResize" />
         <activity
-            android:name=".settings.SettingActivity"
-            android:launchMode="singleTop"
-            android:theme="@style/Theme.Inty.Popup" />
-        <activity
             android:name=".profile.ModifyProfileActivity"
             android:launchMode="singleTop"
             android:screenOrientation="portrait"
@@ -120,12 +116,10 @@
             android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Inty.UCrop" />
-        <activity
-            android:name=".login.LoginActivity"
-            android:launchMode="singleTop"
-            android:theme="@style/Theme.Inty.Login" />
 
-        <activity android:name=".vip.VipCenterActivity" />
+        <activity
+            android:name=".vip.VipCenterActivity"
+            android:launchMode="singleTop" />
         <activity
             android:name=".vip.SubsManageActivity"
             android:launchMode="singleTop"
