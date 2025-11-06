@@ -3,9 +3,11 @@
  * 管理用户信息、登录状态等
  */
 
+import { history } from '@umijs/max';
 import { useCallback, useState } from 'react';
 import { getUserProfile } from '@/services/user';
 import type { IUserProfile } from '@/types';
+import { clearToken } from '@/utils/token';
 
 /**
  * 用户 Model 状态接口
@@ -29,16 +31,23 @@ export default function useUserModel() {
 
   /**
    * 退出登录
-   * 清除用户信息
+   * 清除用户信息和 Token，然后跳转到首页
    */
   const logout = useCallback(async () => {
     try {
+      // 清除 Token
+      await clearToken();
+
       // 重置状态
-      setUserProfile(null);
-      setError(null);
+      // setUserProfile(null);
+      // setError(null);
+
+      // 跳转到首页
+      // history.push('/');
+      window.location.replace('/')
     } catch (err) {
       console.error('退出登录失败:', err);
-      setError('退出登录失败');
+      setError('Logout failed');
     }
   }, []);
 

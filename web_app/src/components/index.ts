@@ -15,6 +15,7 @@ export { default as GoogleLoginModal } from './GoogleLoginModal';
  */
 export { default as Icon } from './Icon';
 export { default as Loading } from './Loading';
+export { default as VersionBadge } from './VersionBadge';
 
 /**
  * 测试组件

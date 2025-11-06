@@ -1,7 +1,7 @@
 /**
  * 账户信息组件
  *
- * 用途：展示用户账户信息（认证类型、注册时间）
+ * 用途：展示用户账户信息（认证类型、注册时间）和退出登录功能
  * 使用示例：
  * ```tsx
  * <AccountInfo userProfile={userProfile} />
@@ -11,8 +11,9 @@
  * - userProfile: IUserProfile - 用户信息对象
  */
 
-import { Clock, Shield } from 'lucide-react';
-import React from 'react';
+import { useModel } from '@umijs/max';
+import { Clock, LogOut, Shield } from 'lucide-react';
+import React, { useState } from 'react';
 import { Icon } from '@/components';
 import type { IUserProfile } from '@/types';
 import './index.less';
@@ -26,6 +27,9 @@ interface IAccountInfoProps {
  * 账户信息组件
  */
 const AccountInfo: React.FC<IAccountInfoProps> = ({ userProfile }) => {
+  const { logout } = useModel('user');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   /**
    * 格式化认证类型显示
    */
@@ -37,6 +41,20 @@ const AccountInfo: React.FC<IAccountInfoProps> = ({ userProfile }) => {
       GUEST: 'Guest',
     };
     return authTypeMap[authType] || authType;
+  };
+
+  /**
+   * 处理退出登录
+   */
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } catch (error) {
+      console.error('退出登录失败:', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   /**
@@ -81,6 +99,17 @@ const AccountInfo: React.FC<IAccountInfoProps> = ({ userProfile }) => {
 
         <InfoItem icon={Clock} label="Joined" value={formatDate(userProfile.created_at)} />
       </div>
+
+      {/* 退出登录按钮 */}
+      <button
+        type="button"
+        className="logout-button"
+        onClick={handleLogout}
+        disabled={isLoggingOut}
+      >
+        <Icon icon={LogOut} size={18} />
+        <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
+      </button>
     </div>
   );
 };

@@ -23,6 +23,13 @@ export default defineConfig({
    */
   hash: true,
 
+  /**
+   * @name 禁用 sourcemap
+   * @description 生产环境不生成 sourcemap 文件，减小构建产物体积
+   * @doc https://umijs.org/docs/api/config#devtool
+   */
+  devtool: false,
+
   publicPath: PUBLIC_PATH,
 
   /**
@@ -152,5 +159,7 @@ export default defineConfig({
   exportStatic: {},
   define: {
     'process.env.CI': process.env.CI,
+    // 注入构建时间
+    BUILD_TIME: new Date().toISOString(),
   },
 });
