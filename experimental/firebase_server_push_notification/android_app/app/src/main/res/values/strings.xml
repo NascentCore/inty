@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">FirebaseServerPushDemo</string>
+    <string name="token_ready">FCM Token 已获取，点击提交开始任务</string>
+    <string name="token_failed">获取 Token 失败：%1$s</string>
+    <string name="token_missing">尚未获取到 FCM Token</string>
+    <string name="job_submitting">正在提交任务...</string>
+    <string name="job_submitted">任务已提交，等待服务器处理。ID=%1$s</string>
+    <string name="job_finished">任务 %1$s 完成: %2$s</string>
+</resources>
