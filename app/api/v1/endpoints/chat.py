@@ -16,6 +16,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.models.user import AuthType
 from app.schemas.chat import ChatCompletionRequest
 from app.schemas.response import (
+    BizError,
     BusinessErrorCode,
     UsageLimitExceeded,
     create_business_error_response,
@@ -274,9 +275,9 @@ async def agent_chat_completions(
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
 
-ChatImageGenerationAPIResponse: TypeAlias = schemas.APIResponse[Union[
-    schemas.ChatImageGenerationResponse, UsageLimitExceeded
-]]
+ChatImageGenerationAPIResponse: TypeAlias = schemas.APIResponse[
+    Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded, BizError]
+]
 
 
 @router.post(
@@ -316,7 +317,7 @@ async def generate_chat_image(
     try:
         # 返回值：
         # 1. 成功时返回 ChatImageGenerationResponse
-        # 2. 业务限制错误时返回 UsageLimitExceeded
+        # 2. 业务限制错误时返回 UsageLimitExceeded 或 BizError
         # 3. 其他错误时返回 HTTPException
         # 1，2 均显示为应用正常返回值、3 为 fastapi 返回值
         result = await chat_service.generate_chat_image(
@@ -330,6 +331,19 @@ async def generate_chat_image(
         if isinstance(result, UsageLimitExceeded):
             return schemas.APIResponse.error(
                 message=result.message, code=result.code, data=result
+            )
+
+        if isinstance(result, BizError):
+            # 返回业务错误响应，包含额外的错误信息
+            return create_business_error_response(
+                error_info={
+                    "code": result.code,
+                    "error_code": result.error_code,
+                    "message": result.message,
+                },
+                extra_data={
+                    "suggestion": "Please modify your prompt and try again.",
+                },
             )
 
         return schemas.APIResponse.success(data=result)

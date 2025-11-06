@@ -18,6 +18,7 @@ from app.core.user_privilege.premium_check import is_eligible_for_premium
 from app.schemas.chat import ChatCompletionRequest
 from app.schemas.response import (
     APIResponse,
+    BizError,
     BusinessErrorCode,
     UsageLimitExceeded,
     create_business_error_response,
@@ -1223,6 +1224,19 @@ async def generate_chat_image(
                 extra_data={
                     "used_count": result.used_count,
                     "daily_limit": result.daily_limit,
+                },
+            )
+
+        if isinstance(result, BizError):
+            # 返回业务错误响应，包含额外的错误信息
+            return create_business_error_response(
+                error_info={
+                    "code": result.code,
+                    "error_code": result.error_code,
+                    "message": result.message,
+                },
+                extra_data={
+                    "suggestion": "Please modify your prompt and try again.",
                 },
             )
 

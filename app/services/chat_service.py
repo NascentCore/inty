@@ -1117,7 +1117,7 @@ async def generate_chat_image(
     user_id: str,
     message_id: int,
     history_count: Optional[int] = None,
-) -> Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded]:
+) -> Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded, BizError]:
     """
     基于聊天上下文生成图片（公共函数）
 
@@ -1137,7 +1137,7 @@ async def generate_chat_image(
         history_count: 使用的历史消息数量
 
     Returns:
-        成功时返回 `ChatImageGenerationResponse`，业务限制错误时返回 `BizError`
+        成功时返回 `ChatImageGenerationResponse`，业务限制错误时返回 `UsageLimitExceeded` 或 `BizError`
 
     Raises:
         HTTPException: 其他错误情况（Agent未找到、消息未找到等）
@@ -1235,16 +1235,51 @@ async def generate_chat_image(
 
     # 调用图片生成服务（使用 Gemini 2.5 Flash Image）
     # 重复生成会直接覆盖 meta_data 中的 generated_image，无需删除旧数据
-    image_generation_result = (
-        await image_generation_service.generate_chat_image_with_gemini(
-            db=db,
-            session_id=session_id,
-            message_id=message_id,  # 传入要更新的消息ID
-            agent_data=agent_data,
-            message_content=message_content,
-            history_count=history_count,
+    try:
+        image_generation_result = (
+            await image_generation_service.generate_chat_image_with_gemini(
+                db=db,
+                session_id=session_id,
+                message_id=message_id,  # 传入要更新的消息ID
+                agent_data=agent_data,
+                message_content=message_content,
+                history_count=history_count,
+            )
         )
-    )
+    except ValueError as e:
+        error_message = str(e)
+        # 检查错误消息是否包含被阻止相关的关键词
+        if (
+            "被阻止" in error_message
+            or "安全过滤器" in error_message
+            or "blocked" in error_message.lower()
+            or "safety filter" in error_message.lower()
+        ):
+            # 提取阻止原因（如果错误消息中包含）
+            block_reason = None
+            if "原因:" in error_message:
+                # 提取冒号后的内容作为阻止原因
+                reason_part = error_message.split("原因:", 1)[1].strip()
+                if reason_part:
+                    block_reason = reason_part
+            elif ":" in error_message and "阻止" in error_message:
+                # 尝试提取冒号后的内容
+                parts = error_message.split(":", 1)
+                if len(parts) > 1:
+                    block_reason = parts[1].strip()
+
+            logger.warning(
+                f"图片生成被安全过滤器阻止 - Agent ID: {agent_id}, "
+                f"Message ID: {message_id}, Reason: {block_reason or error_message}"
+            )
+
+            return BizError(
+                code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["code"],
+                error_code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["error_code"],
+                message=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["message"],
+            )
+        # 其他 ValueError 继续抛出
+        raise
 
     # 记录用量
     try:
