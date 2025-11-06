@@ -95,13 +95,15 @@ async def process_image_upload(
         ImageFormat.JPEG,
         ImageFormat.PNG,
         ImageFormat.WEBP,
+        ImageFormat.GIF,
+        ImageFormat.AVIF,
     ]
     if file_ext not in allowed_extensions:
         logger.error(
             f"不支持的文件扩展名: {file_ext}，支持的格式: {allowed_extensions}"
         )
         return APIResponse.error(
-            message="Unsupported file type, only jpg, jpeg, png, webp formats are supported",
+            message="Unsupported file type, only jpg, jpeg, png, webp, gif, avif formats are supported",
             data={
                 "error_code": "UNSUPPORTED_FILE_TYPE",
                 "supported_formats": allowed_extensions,
@@ -115,6 +117,9 @@ async def process_image_upload(
     original_file_ext = file_ext
     original_content_type = f"image/{file_ext}"
 
+    # Animated formats (GIF and AVIF) should not be compressed
+    is_animated_format = file_ext in (ImageFormat.GIF, ImageFormat.AVIF)
+    
     # Compress PNG and large files
     # Always compress PNG, and also compress if file is > 500KB.
     # We might adjust the threshold value of 500KB in the future.
@@ -122,20 +127,25 @@ async def process_image_upload(
     # PNG is a lossless format, so we can compress it to JPEG to save space.
     # TODO: Explicitly add parameter compress_image in request body to control this.
     # Not always compress png files.
-    compression_threshold_size_bytes = (
-        global_config_loaded_from_config_yaml.app.limits.image_compression_threshold_size_kb
-        * 1024
-    )
     was_compressed = False
-    if file_ext == ImageFormat.PNG or len(file_data) > compression_threshold_size_bytes:
-        file_data = compress_png_to_jpeg(file_data)
-        file_ext = ImageFormat.JPEG
-        was_compressed = True
-        logger.debug(
-            f"Compressed PNG ({file_size} bytes) to JPEG ({len(file_data)} bytes)"
+    if not is_animated_format:
+        compression_threshold_size_bytes = (
+            global_config_loaded_from_config_yaml.app.limits.image_compression_threshold_size_kb
+            * 1024
         )
+        if file_ext == ImageFormat.PNG or len(file_data) > compression_threshold_size_bytes:
+            file_data = compress_png_to_jpeg(file_data)
+            file_ext = ImageFormat.JPEG
+            was_compressed = True
+            logger.debug(
+                f"Compressed PNG ({file_size} bytes) to JPEG ({len(file_data)} bytes)"
+            )
 
+    # Get image size - for GIF, use first frame if animated
     img = Image.open(io.BytesIO(original_file_data))
+    if file_ext == ImageFormat.GIF and hasattr(img, 'is_animated') and img.is_animated:
+        # For animated GIF, get size from first frame
+        img.seek(0)
     size = ImageSize(width=img.width, height=img.height)
     logger.debug(f"图片大小: {size}")
 

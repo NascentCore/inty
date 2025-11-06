@@ -141,6 +141,113 @@ class MimeType(StrEnum):
     JPEG = "image/jpeg"
 
 
+def generate_image_description(image_uri: str) -> str:
+    """
+    使用 Gemini Vision API 从图片生成描述
+
+    Args:
+        image_uri: 图片的 GCS URI（gs:// 格式）或 HTTPS URL
+
+    Returns:
+        图片的中文描述文本，适合作为视频生成提示词
+    """
+    try:
+        logger.debug(f"开始生成图片描述，图片 URI: {image_uri}")
+
+        client = get_genai_client()
+
+        # 将 GCS URI 转换为 HTTPS URL（如果需要）
+        # types.Part.from_uri() 可能支持 gs:// 格式，但为了兼容性，转换为 HTTPS
+        if image_uri.startswith("gs://"):
+            # 转换为 https://storage.googleapis.com/bucket/path 格式
+            gcs_path = image_uri[5:]  # 移除 "gs://" 前缀
+            image_uri = f"https://storage.googleapis.com/{gcs_path}"
+
+        # 准备输入：图片 + 文本提示词
+        image_part = types.Part.from_uri(
+            file_uri=image_uri,
+            mime_type="image/jpeg",  # 假设是 JPEG，实际可能是其他格式，但 API 通常会自动检测
+        )
+
+        prompt_text = """请用中文简洁地描述这张图片的内容，描述应该适合作为视频生成的提示词。
+要求：
+1. 描述图片中的主要人物、场景、动作和氛围
+2. 使用简洁的中文，长度控制在50字以内
+3. 描述应该能够指导视频生成，包含动态元素
+4. 如果图片中有角色，描述角色的外观和动作
+5. 如果图片是场景，描述场景的氛围和可能的动态效果
+
+只返回描述文本，不要包含其他解释。"""
+
+        contents = [
+            types.Content(
+                role="user",
+                parts=[
+                    image_part,
+                    types.Part.from_text(text=prompt_text),
+                ],
+            )
+        ]
+
+        # 配置生成参数
+        generate_config = types.GenerateContentConfig(
+            temperature=0.7,
+            top_p=0.95,
+            max_output_tokens=200,
+        )
+
+        # 调用 Gemini 生成描述
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=contents,
+            config=generate_config,
+        )
+
+        # 检查 prompt_feedback
+        if hasattr(response, "prompt_feedback") and response.prompt_feedback:
+            prompt_feedback = response.prompt_feedback
+            logger.warning(f"Prompt feedback: {prompt_feedback}")
+            if hasattr(prompt_feedback, "block_reason"):
+                block_reason = prompt_feedback.block_reason
+                logger.warning(f"请求被阻止，原因: {block_reason}")
+                raise ValueError(f"图片描述生成请求被安全过滤器阻止: {block_reason}")
+
+        # 提取文本描述
+        if not response.candidates or len(response.candidates) == 0:
+            logger.error("Gemini 未返回任何候选结果")
+            raise ValueError("Gemini 未返回任何候选结果")
+
+        candidate = response.candidates[0]
+
+        # 检查 finish_reason
+        finish_reason = getattr(candidate, "finish_reason", None)
+        if finish_reason and finish_reason != "STOP":
+            logger.warning(f"候选结果完成原因: {finish_reason}")
+            if finish_reason == "SAFETY":
+                raise ValueError("图片描述生成被安全过滤器阻止")
+
+        # 提取文本内容
+        if not candidate.content or not candidate.content.parts:
+            logger.error("候选结果中没有内容")
+            raise ValueError("候选结果中没有内容")
+
+        description_text = ""
+        for part in candidate.content.parts:
+            if hasattr(part, "text") and part.text:
+                description_text += part.text
+
+        if not description_text:
+            logger.error("无法从响应中提取文本描述")
+            raise ValueError("无法从响应中提取文本描述")
+
+        logger.info(f"图片描述生成成功: {description_text}")
+        return description_text.strip()
+
+    except Exception as e:
+        logger.error(f"生成图片描述失败: {str(e)}")
+        raise
+
+
 def text_to_image(
     prompt: str,
     negative_prompt: str,

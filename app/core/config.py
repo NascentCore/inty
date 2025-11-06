@@ -194,6 +194,13 @@ class AgentConfig:
         "- 画面中无文字、对白或身体畸形。"
     )
     image_generation_default_history_count: int = 10
+    # 视频生成配置
+    veo3_model: str = "veo-3.0-fast-generate-preview"  # Veo3 模型名称
+    # 动图配置
+    animated_image_max_size_mb: int = 10  # 动图文件大小限制（MB）
+    animated_image_fps: int = 15  # 动图帧率
+    animated_image_max_width: int = 720  # 动图最大宽度
+    preferred_animated_format: str = "avif"  # 首选格式：avif 或 gif
 
 
 @dataclass

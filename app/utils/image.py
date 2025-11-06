@@ -18,6 +18,8 @@ class ImageFormat(StrEnum):
     JPEG = "jpeg"
     PNG = "png"
     WEBP = "webp"
+    GIF = "gif"
+    AVIF = "avif"
 
 
 class AspectRatio(StrEnum):

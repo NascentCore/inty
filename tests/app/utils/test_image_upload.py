@@ -389,9 +389,10 @@ class TestImageUploadValidation:
             bind=async_engine, class_=AsyncSession, expire_on_commit=False
         )
 
-        file_obj = BytesIO(b"fake image data")
+        # 使用真正不支持的格式（.txt 而不是 .gif，因为现在支持 GIF 和 AVIF）
+        file_obj = BytesIO(b"fake text data")
         upload_file = UploadFile(
-            file=file_obj, filename="test.gif", headers={"content-type": "image/gif"}
+            file=file_obj, filename="test.txt", headers={"content-type": "text/plain"}
         )
 
         async with async_session() as async_db:

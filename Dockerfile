@@ -25,6 +25,7 @@ fi
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件

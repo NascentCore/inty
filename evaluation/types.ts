@@ -6,9 +6,10 @@ import type {
   AgentVisibility,
 } from "inty_sdk/src/resources/api/v1/ai/agents";
 
-// 扩展 Agent 类型以包含 meta_data 字段
+// 扩展 Agent 类型以包含 meta_data 和 background_animated 字段
 export interface Agent extends BaseAgent {
   meta_data?: AgentMetaData;
+  background_animated?: string; // AVIF或GIF格式的动图URL
 }
 
 export type { AgentVisibility };
@@ -52,6 +53,7 @@ export interface AgentCreateRequest {
   avatar?: string;
   background?: string;
   background_images?: string[];
+  background_animated?: string; // AVIF或GIF格式的动图URL
   voice_id?: string;
   llm_config?: LLMConfig;
   meta_data?: AgentMetaData;
@@ -71,11 +73,18 @@ export interface AgentUpdateRequest {
   avatar?: string;
   background?: string;
   background_images?: string[];
+  background_animated?: string; // AVIF或GIF格式的动图URL
   voice_id?: string;
   llm_config?: LLMConfig | null;
   meta_data?: AgentMetaData;
   extensions?: { [key: string]: unknown } | null;
   tags?: string[];
+}
+
+// 生成背景动图请求
+export interface GenerateBackgroundAnimatedRequest {
+  prompt?: string; // 视频生成提示词（可选，如果为空则从背景图自动生成）
+  format?: "avif" | "gif"; // 输出格式，默认为 avif
 }
 
 // 聊天消息
