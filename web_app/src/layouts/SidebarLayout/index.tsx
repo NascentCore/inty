@@ -5,7 +5,7 @@
 
 import { history, Outlet, useModel } from '@umijs/max';
 import React, { useEffect } from 'react';
-import { GoogleLoginModal } from '@/components';
+import { GoogleLoginModal, VersionBadge } from '@/components';
 import ChatHistoryList from './components/ChatHistoryList';
 import DiscoverButton from './components/DiscoverButton';
 import SidebarHeader from './components/SidebarHeader';
@@ -81,6 +81,9 @@ const SidebarLayout: React.FC = () => {
 
       {/* 全局 Google 登录弹窗 */}
       <GoogleLoginModal />
+
+      {/* 版本号徽章 - 开发测试用 */}
+      <VersionBadge />
     </>
   );
 };

@@ -1,0 +1,48 @@
+/**
+ * 版本号徽章样式
+ */
+
+@import '@/styles/variables.less';
+
+.version-badge {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  font-size: 10px;
+  font-family: 'Courier New', Courier, monospace;
+  color: rgba(255, 255, 255, 0.6);
+  pointer-events: auto;
+  cursor: default;
+  backdrop-filter: blur(8px);
+  user-select: none;
+
+  .version-label {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .version-time {
+    font-weight: 400;
+    letter-spacing: 0.5px;
+  }
+}
+
+// 响应式适配 - 移动端
+@media (max-width: 600px) {
+  .version-badge {
+    bottom: 12px;
+    right: 12px;
+    padding: 5px 8px;
+    font-size: 9px;
+    gap: 3px;
+  }
+}
+

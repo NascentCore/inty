@@ -16,3 +16,6 @@ declare module 'mockjs';
 declare module 'react-fittext';
 
 declare const REACT_APP_ENV: 'test' | 'dev' | 'pre' | false;
+
+// 构建时间（通过 define 注入）
+declare const BUILD_TIME: string;

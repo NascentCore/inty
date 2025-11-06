@@ -33,6 +33,40 @@
       }
     }
   }
+
+  // 退出登录按钮
+  .logout-button {
+    width: 100%;
+    margin-top: 16px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid #ef4444;
+    border-radius: 8px;
+    background: transparent;
+    color: #ef4444;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: #dc2626;
+      color: #dc2626;
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
 }
 
 // 响应式适配

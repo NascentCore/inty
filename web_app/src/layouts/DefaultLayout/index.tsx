@@ -1,6 +1,6 @@
 import { Outlet } from '@umijs/max';
 import React from 'react';
-import { GoogleLoginModal } from '@/components';
+import { GoogleLoginModal, VersionBadge } from '@/components';
 
 /**
  * 默认布局组件
@@ -12,6 +12,8 @@ const DefaultLayout: React.FC = () => {
       <Outlet />
       {/* 全局 Google 登录弹窗 */}
       <GoogleLoginModal />
+      {/* 版本号徽章 - 开发测试用 */}
+      <VersionBadge />
     </>
   );
 };
