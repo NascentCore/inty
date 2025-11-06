@@ -17,6 +17,7 @@
 2. 在本地 git checkout 出对应的 tag，构建 release aab（使用 release build type）
 3. 上传内测轨道
    <img width="800" height="1614" alt="image" src="https://github.com/user-attachments/assets/07cc93c6-a573-40d8-98f2-f716fce5826a" />
+   编写有价值的更新说明
 5. 从 Google Play 商店下载内测版本测试
 6. 创建生产环境发布版本，选择前面测试的内测版本
    <img width="800" height="1340" alt="image" src="https://github.com/user-attachments/assets/a3a327d1-70a7-4236-a4b0-02c15283ac49" />
