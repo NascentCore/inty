@@ -861,9 +861,7 @@ class SubscriptionService:
                 == Environment.TEST
                 and not global_config_loaded_from_config_yaml.app.debug
             ):
-                logger.debug(
-                    "TEST 环境下放宽聊天限额: user_id=%s", user.id
-                )
+                logger.debug("TEST 环境下放宽聊天限额: user_id=%s", user.id)
                 return True, 0, TEST_ENVIRONMENT_LIMIT
 
             if is_superuser(user):
@@ -967,9 +965,7 @@ class SubscriptionService:
                 == Environment.TEST
                 and not global_config_loaded_from_config_yaml.app.debug
             ):
-                logger.debug(
-                    "TEST 环境下放宽语音生成限额: user_id=%s", user.id
-                )
+                logger.debug("TEST 环境下放宽语音生成限额: user_id=%s", user.id)
                 return True, 0, TEST_ENVIRONMENT_LIMIT
 
             if is_superuser(user):
@@ -1034,9 +1030,7 @@ class SubscriptionService:
                 == Environment.TEST
                 and not global_config_loaded_from_config_yaml.app.debug
             ):
-                logger.debug(
-                    "TEST 环境下放宽 Agent 创建限额: user_id=%s", user.id
-                )
+                logger.debug("TEST 环境下放宽 Agent 创建限额: user_id=%s", user.id)
                 return True, 0, TEST_ENVIRONMENT_LIMIT
 
             if is_superuser(user):
@@ -1103,9 +1097,7 @@ class SubscriptionService:
                 == Environment.TEST
                 and not global_config_loaded_from_config_yaml.app.debug
             ):
-                logger.debug(
-                    "TEST 环境下放宽图片生成限额: user_id=%s", user.id
-                )
+                logger.debug("TEST 环境下放宽图片生成限额: user_id=%s", user.id)
                 return True, 0, TEST_ENVIRONMENT_LIMIT
 
             if is_superuser(user):
@@ -1137,6 +1129,7 @@ class SubscriptionService:
                 return True, 0, -1
 
             # 获取过去24小时内的图片生成次数
+            # 统计所有图片生成类型：background_generation（背景图生成）和 image_generation（聊天图片生成）
             now = datetime.now(timezone.utc)
             hours_24_ago = now - timedelta(hours=24)
 
@@ -1144,7 +1137,9 @@ class SubscriptionService:
                 select(func.sum(SubscriptionUsage.usage_count)).where(
                     and_(
                         SubscriptionUsage.user_id == user.id,
-                        SubscriptionUsage.usage_type == "background_generation",
+                        SubscriptionUsage.usage_type.in_(
+                            ["background_generation", "image_generation"]
+                        ),
                         SubscriptionUsage.usage_date >= hours_24_ago,
                     )
                 )
