@@ -90,6 +90,11 @@ class BusinessErrorCode:
         "error_code": "GUEST_LOGIN_REQUIRED",
         "message": "Guest login required - Please sign in with Google",
     }
+    IMAGE_GENERATION_BLOCKED = {
+        "code": 10001006,
+        "error_code": "IMAGE_GENERATION_BLOCKED",
+        "message": "Image generation was blocked by safety filter",
+    }
 
 
 # 业务错误消息定义
