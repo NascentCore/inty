@@ -1,16 +1,32 @@
-## Firebase Remote Config A/B 测试示例
+## Firebase Remote Config 分层 A/B 测试 Demo
 
-- **目标**：演示如何在 Android 客户端通过 Firebase Remote Config 控制实验分组，并使用 Firebase Analytics 记录曝光与点击事件。
-- **文件结构**：
-  - `FirebaseAbTestSample.kt`：核心示例代码，展示 Remote Config 初始化、参数读取与事件埋点。
-  - `gradle_dependencies.gradle`：参考依赖清单，可复制到项目 `build.gradle`。
-- **使用方式**：
-  1. 在 Firebase 控制台创建 Remote Config 参数，例如 `new_feature_enabled`（布尔）与 `cta_button_color`（字符串）。
-  2. 将 `gradle_dependencies.gradle` 内容合并到现有 Android 模块的 `build.gradle`。
-  3. 将 `FirebaseAbTestSample.kt` 中的逻辑嵌入应用启动流程与界面代码，并按需调整包名。
-  4. 在 Firebase A/B Testing 面板启动实验，分配变体并设置指标（如 `cta_clicked` 事件）。
-  5. 使用 Android Studio 的 Firebase DebugView 验证事件是否带有实验参数。
-- **注意事项**：
-  - 为防止默认值缺失导致的空指针，示例中通过 `setDefaultsAsync` 提供兜底配置。
-  - 在正式实验前，可将 `minimumFetchIntervalInSeconds` 设置为较小数值（如 0）以便调试；上线前再调回安全值。
-  - Analytics 事件建议在参数中附带实验分组，便于后续在 BigQuery 或控制台中进行分组分析。
+本示例展示如何在 Android 应用中使用 Firebase Remote Config，基于本地随机生成的用户 Profile 设置 Firebase Analytics User Property，从而在 Firebase 控制台中为不同分层用户下发差异化配置。
+
+### 目标
+- 在应用启动时生成用于分层的随机用户画像（如性别、年龄段、付费类型）。
+- 将画像信息写入 Firebase Analytics User Property，供 Remote Config 条件匹配。
+- 拉取 Remote Config 参数，根据配置决定界面或逻辑分支。
+
+### 必备依赖
+在模块级 `build.gradle` 中引入：
+
+```
+implementation(platform("com.google.firebase:firebase-bom:33.4.0"))
+implementation("com.google.firebase:firebase-analytics")
+implementation("com.google.firebase:firebase-config")
+implementation("com.google.firebase:firebase-installations")
+```
+
+项目级 `build.gradle` 需启用 Google Services 插件，并在模块级脚本中添加 `apply plugin: "com.google.gms.google-services"`。
+
+### 使用方式
+1. 将 `FirebaseAbTestDemo.initialize(applicationContext)` 放入 `Application.onCreate()` 或首页 `Activity` 的 `onCreate()`。
+2. 首次运行会初始化 Firebase、生成用户画像并设置 Analytics User Property。
+3. Remote Config 拉取成功后，可通过 `FirebaseAbTestDemo.observeFeatureFlag()` 查看当前生效的实验配置。
+4. 在 Firebase Console > Remote Config 中，创建参数并基于 Analytics User Property（如 `profile_gender`、`profile_age_bracket`、`profile_segment`）定义条件，即可针对不同用户配置差异化值。
+
+### 目录结构
+- `FirebaseAbTestDemo.kt`：核心示例代码，完成画像生成、属性上报与 Remote Config 拉取。
+- `README.md`：当前说明文件。
+
+> **提示**：Remote Config 条件依赖 Analytics User Property 生效，Analytics 需要一定时间（通常数分钟）才能在控制台中展示新用户属性。测试阶段可借助 Debug View (`adb shell setprop debug.firebase.analytics.app <package>`) 即时验证。
