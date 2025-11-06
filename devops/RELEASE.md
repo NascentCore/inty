@@ -3,6 +3,14 @@
 * 例行的测试版本发布到内测轨道，不再使用 internal app sharing
 * 个别共享仍然可以使用 internal app sharing
 
+## Backend 发布流程
+
+1. GitHub 创建 release（选择创建新的 tag）
+   <img width="800" height="996" alt="image" src="https://github.com/user-attachments/assets/cb58a6d5-79cb-4772-8736-814c585bb165" />
+2. [Build and deploy Inty backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
+   选择刚刚创建的 tag，环境选择 prod
+   <img width="800" height="1210" alt="image" src="https://github.com/user-attachments/assets/3e0fe7de-abf5-4eb8-b81d-ae9f31fa6399" />
+
 ## Android app 发布流程
 
 1. 在 GitHub 上创建 release（选择创建新的 tag）
