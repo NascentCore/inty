@@ -110,7 +110,11 @@ fun VipCenterContent(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(ai.sxwl.android.design.theme.HeartColor.primaryColor)
+    ) {
         // 全屏视频播放器
         BackgroundVideoPlayer()
 

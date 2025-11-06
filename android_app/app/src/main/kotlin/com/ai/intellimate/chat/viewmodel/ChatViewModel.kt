@@ -885,6 +885,11 @@ class ChatViewModel : BaseVM() {
                             // 其他错误：在消息列表中显示 tips 消息
                             else -> {
                                 // Firebase Analytics - 记录图片生成失败
+                                LogUtils.i(
+                                    "ChatViewModel: 记录 image_generation_failure 事件, " +
+                                            "code=${result.code}, message=${result.message}, " +
+                                            "generation_time_ms=$generationTime"
+                                )
                                 FirebaseManager.logEvent(
                                     FirebaseManager.Events.IMAGE_GENERATION_FAILURE,
                                     FirebaseManager.safeEventParams(
@@ -917,6 +922,11 @@ class ChatViewModel : BaseVM() {
                 LogUtils.e("Image generation error: ${e.message}")
 
                 // Firebase Analytics - 记录图片生成异常
+                LogUtils.i(
+                    "ChatViewModel: 记录 image_generation_failure 事件（异常）, " +
+                            "error_type=${e.javaClass.simpleName}, message=${e.message}, " +
+                            "generation_time_ms=$generationTime"
+                )
                 FirebaseManager.logEvent(
                     FirebaseManager.Events.IMAGE_GENERATION_FAILURE,
                     FirebaseManager.safeEventParams(

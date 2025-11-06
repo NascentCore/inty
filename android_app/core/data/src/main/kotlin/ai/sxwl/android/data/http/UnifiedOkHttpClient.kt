@@ -208,9 +208,9 @@ private class AuthInterceptor : Interceptor {
                     // 白名单接口的401错误，只记录日志，不触发logout
                     LogUtils.w("401 for whitelisted endpoint, skipping logout: $requestUrl")
 
-                    // Firebase Analytics - 记录白名单接口的认证失败
+                    // Firebase Analytics - 记录认证失败（通过 whitelisted 参数区分白名单接口）
                     FirebaseManager.logEvent(
-                        "auth_failure_whitelisted",
+                        FirebaseManager.Events.AUTH_FAILURE,
                         mapOf(
                             "http_code" to 401,
                             "url" to requestUrl,
@@ -230,7 +230,7 @@ private class AuthInterceptor : Interceptor {
                 // 非白名单接口的401错误，触发全局logout
                 // Firebase Analytics - 记录认证失败
                 FirebaseManager.logEvent(
-                    "auth_failure",
+                    FirebaseManager.Events.AUTH_FAILURE,
                     mapOf(
                         "http_code" to 401,
                         "url" to requestUrl,
@@ -271,7 +271,7 @@ private fun trackError(
 ) {
     try {
         FirebaseManager.logEvent(
-            "app_error",
+            FirebaseManager.Events.APP_ERROR,
             mapOf(
                 "error" to error,
                 "error_type" to errorType,
@@ -361,12 +361,12 @@ private class PerformanceInterceptor : Interceptor {
 
                         // 使用 Firebase Analytics 记录慢请求
                         FirebaseManager.logEvent(
-                            "slow_request",
+                            FirebaseManager.Events.SLOW_REQUEST,
                             mapOf(
                                 "duration_ms" to duration,
                                 "method" to request.method,
                                 "url" to request.url.toString(),
-                                "successful" to isSuccessful
+                                "success" to isSuccessful
                             )
                         )
                     }
@@ -378,12 +378,12 @@ private class PerformanceInterceptor : Interceptor {
 
                         // 使用 Firebase Analytics 记录极慢请求
                         FirebaseManager.logEvent(
-                            "very_slow_request",
+                            FirebaseManager.Events.VERY_SLOW_REQUEST,
                             mapOf(
                                 "duration_ms" to duration,
                                 "method" to request.method,
                                 "url" to request.url.toString(),
-                                "successful" to isSuccessful
+                                "success" to isSuccessful
                             )
                         )
 
@@ -413,7 +413,7 @@ private class PerformanceInterceptor : Interceptor {
 
                 // 使用 Firebase Analytics 记录请求失败
                 FirebaseManager.logEvent(
-                    "request_failure",
+                    FirebaseManager.Events.REQUEST_FAILURE,
                     mapOf(
                         "duration_ms" to duration,
                         "method" to request.method,

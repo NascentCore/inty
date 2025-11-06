@@ -1,13 +1,11 @@
 package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.ui.SettingsArrowItem
 import ai.sxwl.android.design.ui.SettingsItemData
 import ai.sxwl.android.design.ui.SettingsSwitchItem
-import ai.sxwl.android.firebase.FirebaseManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -233,18 +231,6 @@ fun ChatSettingsDrawer(
                         onCheckChanged = { enabled ->
                             SettingStateManager.updateShowKeepTalking(enabled)
                             onKeepTalkingChange(enabled)
-
-                            // Firebase Analytics - 记录Keep Talking开关变化
-                            FirebaseManager.logEvent(
-                                FirebaseManager.Events.SETTINGS_KEEP_TALKING_CHANGED,
-                                FirebaseManager.safeEventParams(
-                                    "enabled" to enabled,
-                                    "agent_id" to (agentInfo?.id ?: ""),
-                                    "agent_name" to (agentInfo?.name ?: ""),
-                                    "user_type" to if (BillingRepository.vipStatusFlow.value.isSubscribed) "vip" else "free",
-                                    "timestamp" to System.currentTimeMillis()
-                                )
-                            )
                         }
                     )
 
@@ -261,18 +247,6 @@ fun ChatSettingsDrawer(
                         closedIconRes = R.drawable.closed, // 传入app模块的资源
                         onCheckChanged = { enabled ->
                             SettingStateManager.updateAutoPlayAudio(enabled)
-
-                            // Firebase Analytics - 记录Auto Play Voice开关变化
-                            FirebaseManager.logEvent(
-                                FirebaseManager.Events.SETTINGS_AUTO_PLAY_VOICE_CHANGED,
-                                FirebaseManager.safeEventParams(
-                                    "enabled" to enabled,
-                                    "agent_id" to (agentInfo?.id ?: ""),
-                                    "agent_name" to (agentInfo?.name ?: ""),
-                                    "user_type" to if (BillingRepository.vipStatusFlow.value.isSubscribed) "vip" else "free",
-                                    "timestamp" to System.currentTimeMillis()
-                                )
-                            )
                         }
                     )
 

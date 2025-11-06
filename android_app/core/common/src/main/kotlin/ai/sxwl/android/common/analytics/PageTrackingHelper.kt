@@ -81,7 +81,7 @@ object PageTrackingHelper {
 
                 // 记录页面离开事件
                 FirebaseManager.logEvent(
-                    "page_leave",
+                    FirebaseManager.Events.PAGE_LEAVE,
                     FirebaseManager.safeEventParams(
                         "page_name" to currentPage,
                         "page_class" to (currentPageClass ?: "unknown"),
@@ -138,7 +138,7 @@ object PageTrackingHelper {
                 LogUtils.i("页面可见性追踪: $currentPage 变为可见")
 
                 FirebaseManager.logEvent(
-                    "page_visible",
+                    FirebaseManager.Events.PAGE_VISIBLE,
                     FirebaseManager.safeEventParams(
                         "page_name" to (currentPage ?: "unknown"),
                         "page_class" to (currentPageClass ?: "unknown"),
@@ -152,7 +152,7 @@ object PageTrackingHelper {
                     LogUtils.i("页面可见性追踪: $currentPage 变为不可见，可见时长=${visibleTimeSpent}ms")
 
                     FirebaseManager.logEvent(
-                        "page_hidden",
+                        FirebaseManager.Events.PAGE_HIDDEN,
                         FirebaseManager.safeEventParams(
                             "page_name" to (currentPage ?: "unknown"),
                             "page_class" to (currentPageClass ?: "unknown"),
@@ -190,7 +190,7 @@ object PageTrackingHelper {
                         )
 
                         FirebaseManager.logEvent(
-                            "page_lifecycle",
+                            FirebaseManager.Events.PAGE_LIFECYCLE,
                             FirebaseManager.safeEventParams(
                                 "page_name" to (currentPage ?: "unknown"),
                                 "page_class" to (currentPageClass ?: "unknown"),
@@ -226,17 +226,6 @@ object PageTrackingHelper {
             // 设置 Crashlytics 自定义键
             FirebaseManager.setCustomKey("last_interaction", "$action on $target")
             FirebaseManager.setCustomKey("last_interaction_time", timestamp.toString())
-
-            // 记录 Analytics 事件
-            FirebaseManager.logEvent(
-                "user_interaction",
-                mapOf(
-                    "action" to action,
-                    "target" to target,
-                    "current_page" to (currentPage ?: "unknown"),
-                    "timestamp" to timestamp,
-                ) + additionalParams,
-            )
         } catch (e: Exception) {
             LogUtils.e("Failed to track user interaction: ${e.message}")
         }
@@ -263,17 +252,6 @@ object PageTrackingHelper {
         responseTime: Long = 0L,
     ) {
         try {
-            FirebaseManager.logEvent(
-                "network_request",
-                mapOf(
-                    "url" to url,
-                    "method" to method,
-                    "success" to success,
-                    "response_time" to responseTime,
-                    "current_page" to (currentPage ?: "unknown"),
-                ),
-            )
-
             // 设置 Crashlytics 自定义键
             FirebaseManager.setCustomKey("last_network_request", "$method $url")
             FirebaseManager.setCustomKey("last_network_success", success.toString())
@@ -290,7 +268,7 @@ object PageTrackingHelper {
     ) {
         try {
             FirebaseManager.logEvent(
-                "app_error",
+                FirebaseManager.Events.APP_ERROR,
                 mapOf(
                     "error" to error,
                     "error_type" to errorType,

@@ -17,7 +17,7 @@
 |---------|---------|---------|
 | `LOGIN` | LoginViewModel.kt, MainActivity.kt | 用户登录（Firebase内置事件） |
 | `user_logout` | MainViewModel.kt | 用户登出 |
-| `auth_failure` | UnifiedOkHttpClient.kt | HTTP 401认证失败 |
+| `auth_failure` | UnifiedOkHttpClient.kt | HTTP 401认证失败（包含白名单接口，通过 `whitelisted` 参数区分） |
 
 ### 聊天核心功能
 | 事件名称 | 使用位置 | 业务含义 |
@@ -70,13 +70,9 @@
 |---------|---------|---------|
 | `voice_playback_start` | AudioManager.kt | 语音播放开始 |
 | `audio_play_end` | VoicePlayer.kt | 语音播放结束 |
-| `pull_up_input` | ChatInput.kt | 拉起输入框 |
-| `image_show_success` | AgentBackground.kt | 图片显示成功 |
 | `keep_talking_clicked` | ChatViewModel.kt | Keep Talking按钮点击 |
 | `message_like` | ChatViewModel.kt | 消息点赞 |
 | `message_dislike` | ChatViewModel.kt | 消息点踩 |
-| `settings_keep_talking_changed` | ChatSettingsDrawer.kt | Keep Talking开关变化 |
-| `settings_auto_play_voice_changed` | ChatSettingsDrawer.kt | Auto Play Voice开关变化 |
 
 ### 错误监控
 | 事件名称 | 使用位置 | 业务含义 |
@@ -90,14 +86,7 @@
 ### 网络性能
 | 事件名称 | 使用位置 | 采样率 |
 |---------|---------|--------|
-| `network_request` | PageTrackingHelper.kt | 调试100%，发布20% |
-| `network_retry` | UnifiedOkHttpClient.kt | 调试100%，发布50%（预留，代码中未使用） |
 | `slow_request` | UnifiedOkHttpClient.kt | 调试100%，发布30% |
-
-### 用户行为
-| 事件名称 | 使用位置 | 采样率 |
-|---------|---------|--------|
-| `user_interaction` | PageTrackingHelper.kt | 调试100%，发布100% |
 
 ## ⚪ 禁用事件
 
@@ -113,11 +102,10 @@
 - `SIGN_UP`、`SELECT_CONTENT`、`SHARE`、`SEARCH`、`PURCHASE`
 - `SCREEN_VIEW`：通过 `PageTrackingHelper.trackPageView()` 自动记录，无需手动调用
 
-### 业务预留事件
-- `profile_updated`、`settings_changed`
-- `voice_playback_time`
-- `image_load_time`、`page_load_time`、`database_operation_time`
-- `network_retry`：配置中已定义，但代码中未使用
+### 业务预留事件（未实际使用）
+- `PROFILE_UPDATED`、`SETTINGS_CHANGED`：已从代码中移除（未使用）
+- `VOICE_PLAYBACK_TIME`：性能指标，预留
+- `IMAGE_LOAD_TIME`、`PAGE_LOAD_TIME`、`DATABASE_OPERATION_TIME`：性能指标，预留
 
 ## 关键参数
 

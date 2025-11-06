@@ -590,15 +590,14 @@ private fun ChatItemSystemTips(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .noRippleClickable {
-                    // 点击删除 tips 消息
-                    viewModel.deleteMessage(item.localMsgId)
-                },
+            modifier = Modifier.noRippleClickable {
+                // 点击删除 tips 消息
+                viewModel.deleteMessage(item.localMsgId)
+            },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {

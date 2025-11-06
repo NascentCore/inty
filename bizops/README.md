@@ -17,6 +17,9 @@
 
 - **[业务事件文档](./FIREBASE_BUSINESS_EVENTS.md)** - 所有业务相关事件的详细说明
 - **[事件完整文档](./FIREBASE_EVENTS_DOCUMENTATION.md)** - Analytics 和 Performance 事件的完整列表
+- **[事件参数核对报告](./FIREBASE_EVENTS_PARAMETERS_VERIFICATION.md)** - 代码与文档一致性核对结果
+- **[Firebase 后台配置指南](./FIREBASE_BACKEND_CONFIGURATION.md)** - Firebase 后台事件和参数配置指南
+- **[Firebase DebugView 启用指南](./FIREBASE_DEBUGVIEW_SETUP.md)** - 如何启用 DebugView 实时查看事件
 
 ### 核心事件说明
 
