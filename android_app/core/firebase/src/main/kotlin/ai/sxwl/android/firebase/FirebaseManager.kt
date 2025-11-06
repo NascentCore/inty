@@ -87,20 +87,17 @@ object FirebaseManager {
                     Events.SUBSCRIPTION_PRICE_FETCHED to 1.0, // Google Play获取到的价格（100%采样）
                     Events.SUBSCRIPTION_PRICE_DISPLAYED to 1.0, // UI上显示的价格（100%采样）
                     Events.EXPLORE_AGENTS_FETCH_SUCCESS to 1.0, // Explore接口请求成功（100%采样）
-                    Events.EXPLORE_AGENTS_FETCH_FAILURE to 1.0, // Explore接口请求失败（100%采样）
-                    Events.EXPLORE_AGENTS_FETCH_EXCEPTION to 1.0, // Explore接口请求异常（100%采样）
+                    Events.EXPLORE_AGENTS_FETCH_ERROR to 1.0, // Explore接口请求错误（100%采样）
 
                     // 🔴 错误和失败事件 - 100%采样
                     Events.AUTH_FAILURE to 1.0, // 认证失败
                     Events.APP_ERROR to 1.0, // 应用错误
-                    Events.MESSAGE_SEND_FAILURE to 1.0, // 消息发送失败
-                    Events.MESSAGE_SEND_EXCEPTION to 1.0, // 消息发送异常
+                    Events.MESSAGE_SEND_ERROR to 1.0, // 消息发送错误（合并 failure 和 exception）
                     Events.REQUEST_FAILURE to 1.0, // 请求失败（网络请求失败时触发）
                     Events.VERY_SLOW_REQUEST to 1.0, // 极慢请求
 
                     // 🔴 页面追踪事件 - 100%采样
                     Events.PAGE_LEAVE to 1.0, // 页面离开
-                    Events.EXPLORE_PAGE_VIEW to 1.0, // 探索页面访问
                     Events.MESSAGE_SEND_SUCCESS to 1.0, // 消息发送成功
 
                     // 🟡 性能相关事件 - 保持现有采样配置
@@ -135,6 +132,8 @@ object FirebaseManager {
                     // 🔴 业务数据点 - 无限制或很宽松的限频
                     Events.MESSAGE_SENT to
                         if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
+                    Events.MESSAGE_SEND_ERROR to
+                            if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
                     Events.VOICE_PLAYBACK_START to
                         if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
 
@@ -225,8 +224,7 @@ object FirebaseManager {
                 // 关键事件即使非调试模式也输出警告，便于排查问题
                 if (eventName in listOf(
                         Events.IMAGE_GENERATION_FAILURE,
-                        Events.MESSAGE_SEND_FAILURE,
-                        Events.MESSAGE_SEND_EXCEPTION
+                        Events.MESSAGE_SEND_ERROR
                     )
                 ) {
                     LogUtils.w("FirebaseManager", "事件被过滤: $eventName（非调试模式）")
@@ -279,8 +277,7 @@ object FirebaseManager {
                         // 关键事件即使非调试模式也输出确认日志，便于排查问题
                         if (eventName in listOf(
                                 Events.IMAGE_GENERATION_FAILURE,
-                                Events.MESSAGE_SEND_FAILURE,
-                                Events.MESSAGE_SEND_EXCEPTION
+                                Events.MESSAGE_SEND_ERROR
                             )
                         ) {
                             LogUtils.i(
@@ -459,8 +456,7 @@ object FirebaseManager {
         const val USER_LOGOUT = "user_logout"
         const val MESSAGE_SENT = "message_sent"
         const val MESSAGE_SEND_SUCCESS = "message_send_success"
-        const val MESSAGE_SEND_FAILURE = "message_send_failure"
-        const val MESSAGE_SEND_EXCEPTION = "message_send_exception"
+        const val MESSAGE_SEND_ERROR = "message_send_error" // 消息发送错误（合并 failure 和 exception）
 
         // 性能相关事件
         const val AI_RESPONSE_TIME = "ai_response_time"
@@ -497,19 +493,17 @@ object FirebaseManager {
         // Billing价格相关事件
         const val SUBSCRIPTION_PRICE_FETCHED = "subscription_price_fetched" // Google Play获取到的价格
         const val SUBSCRIPTION_PRICE_DISPLAYED = "subscription_price_displayed" // UI上显示的价格
-        const val BILLING_RELEASE = "billing_release" // 计费系统释放
 
         // Explore相关事件
-        const val EXPLORE_PAGE_VIEW = "explore_page_view" // 探索页面访问
         const val EXPLORE_AGENTS_FETCH_SUCCESS = "explore_agents_fetch_success" // Explore接口请求成功
-        const val EXPLORE_AGENTS_FETCH_FAILURE = "explore_agents_fetch_failure" // Explore接口请求失败
-        const val EXPLORE_AGENTS_FETCH_EXCEPTION = "explore_agents_fetch_exception" // Explore接口请求异常
+        const val EXPLORE_AGENTS_FETCH_ERROR =
+            "explore_agents_fetch_error" // Explore接口请求错误（合并 failure 和 exception）
 
         // Explore性能指标
         const val EXPLORE_RESPONSE_TIME = "explore_response_time" // Explore接口响应时间
 
         // 认证相关事件
-        const val AUTH_FAILURE = "auth_failure" // HTTP 401认证失败（包含白名单接口，通过 whitelisted 参数区分）
+        const val AUTH_FAILURE = "auth_failure" // HTTP 401认证失败（在 error_message 中注明白名单接口）
 
         // 错误相关事件
         const val APP_ERROR = "app_error" // 应用错误

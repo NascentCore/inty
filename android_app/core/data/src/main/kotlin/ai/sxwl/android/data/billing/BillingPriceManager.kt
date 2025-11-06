@@ -306,7 +306,6 @@ internal class BillingPriceManager(
                                 "old_price" to (oldPrice ?: "-"),
                                 "old_currency_code" to (oldCurrency ?: ""),
                                 "old_price_micros" to oldMicros,
-                                "has_placeholder" to hasPlaceholder,
                                 "price_changed" to priceChanged,
                                 "currency_changed" to currencyChanged,
                                 "micros_changed" to microsChanged,

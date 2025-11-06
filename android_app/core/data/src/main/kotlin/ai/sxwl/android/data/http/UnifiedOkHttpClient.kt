@@ -204,18 +204,19 @@ private class AuthInterceptor : Interceptor {
                 LogUtils.e("http 401 for $requestUrl")
 
                 // 检查是否是白名单接口
-                if (isWhitelistedEndpoint(requestUrl)) {
+                val isWhitelisted = isWhitelistedEndpoint(requestUrl)
+                if (isWhitelisted) {
                     // 白名单接口的401错误，只记录日志，不触发logout
                     LogUtils.w("401 for whitelisted endpoint, skipping logout: $requestUrl")
 
-                    // Firebase Analytics - 记录认证失败（通过 whitelisted 参数区分白名单接口）
+                    // Firebase Analytics - 记录认证失败（在 error_message 中注明是白名单接口）
                     FirebaseManager.logEvent(
                         FirebaseManager.Events.AUTH_FAILURE,
                         mapOf(
-                            "http_code" to 401,
+                            "error_code" to 401,
                             "url" to requestUrl,
                             "user_logged_out" to false,
-                            "whitelisted" to true,
+                            "error_message" to "HTTP 401 (whitelisted endpoint): $requestUrl",
                         ),
                     )
 
@@ -232,10 +233,10 @@ private class AuthInterceptor : Interceptor {
                 FirebaseManager.logEvent(
                     FirebaseManager.Events.AUTH_FAILURE,
                     mapOf(
-                        "http_code" to 401,
+                        "error_code" to 401,
                         "url" to requestUrl,
                         "user_logged_out" to IntySetting.isLoggingOut(),
-                        "whitelisted" to false,
+                        "error_message" to "HTTP 401: $requestUrl",
                     ),
                 )
 
@@ -273,8 +274,7 @@ private fun trackError(
         FirebaseManager.logEvent(
             FirebaseManager.Events.APP_ERROR,
             mapOf(
-                "error" to error,
-                "error_type" to errorType,
+                "error" to "$errorType: $error",
                 "timestamp" to System.currentTimeMillis(),
             ) + additionalParams,
         )
@@ -418,8 +418,7 @@ private class PerformanceInterceptor : Interceptor {
                         "duration_ms" to duration,
                         "method" to request.method,
                         "url" to request.url.toString(),
-                        "error_type" to exception.javaClass.simpleName,
-                        "error_message" to (exception.message ?: "unknown")
+                        "error_message" to "exception: ${exception.javaClass.simpleName}, ${exception.message ?: "unknown"}"
                     )
                 )
 

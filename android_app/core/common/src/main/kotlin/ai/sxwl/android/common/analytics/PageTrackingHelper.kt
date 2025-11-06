@@ -270,8 +270,7 @@ object PageTrackingHelper {
             FirebaseManager.logEvent(
                 FirebaseManager.Events.APP_ERROR,
                 mapOf(
-                    "error" to error,
-                    "error_type" to errorType,
+                    "error" to "$errorType: $error",
                     "current_page" to (currentPage ?: "unknown"),
                     "page_class" to (currentPageClass ?: "unknown"),
                     "timestamp" to System.currentTimeMillis(),
