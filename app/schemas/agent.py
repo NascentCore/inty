@@ -99,6 +99,7 @@ class AgentBase(BaseModel):
     avatar: Optional[str] = None
     background: Optional[str] = None
     background_images: Optional[List[str]] = None
+    background_animated: Optional[str] = None  # AVIF或GIF格式的动图URL
     voice_id: Optional[str] = None
     settings: Optional[Dict[str, Any]] = None
     intro: Optional[str] = None
@@ -143,6 +144,17 @@ class AgentBase(BaseModel):
     )
 
 
+class GenerateBackgroundAnimatedRequest(BaseModel):
+    """生成背景动图请求"""
+
+    prompt: Optional[str] = Field(
+        default=None, description="视频生成提示词（可选，如果为空则从背景图自动生成）"
+    )
+    format: str = Field(
+        default="avif", description="输出格式：avif 或 gif", pattern="^(avif|gif)$"
+    )
+
+
 class AgentCreate(AgentBase):
     """创建AI角色
 
@@ -152,8 +164,8 @@ class AgentCreate(AgentBase):
     3. 可选添加message_example展示对话风格
 
     兼容性说明：
-    - 仍支持使用prompt字段 (legacy模式)
-    - 优先级：角色卡字段 > prompt字段
+     - 仍支持使用prompt字段 (legacy模式)
+     - 优先级：角色卡字段 > prompt字段
     """
 
     request_id: Optional[str] = None
@@ -396,6 +408,20 @@ class Agent(AgentInDB):
             )
         except Exception:
             return background_images
+
+    @field_serializer("background_animated")
+    def serialize_background_animated(
+        self, background_animated: Optional[str]
+    ) -> Optional[str]:
+        """转换background_animated URL为CDN URL"""
+        if not background_animated:
+            return background_animated
+        try:
+            from app.services.image_transform_service import image_transform_service
+
+            return image_transform_service.transform_desktop(background_animated)
+        except Exception:
+            return background_animated
 
     @field_serializer("photos")
     def serialize_photos(self, photos: Optional[List[str]]) -> Optional[List[str]]:

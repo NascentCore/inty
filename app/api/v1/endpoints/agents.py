@@ -364,6 +364,153 @@ async def delete_agent(
     return schemas.APIResponse.success(data=deleted_agent)
 
 
+@router.post(
+    "/{agent_id}/generate-background-animated",
+    response_model=schemas.APIResponse[schemas.Agent],
+    summary="生成背景动图",
+    description="通过 Google Veo3 API 生成视频并转换为 AVIF 或 GIF 动图",
+    tags=["android-app", INTY_EVAL_TAG],
+)
+async def generate_background_animated(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    request: schemas.GenerateBackgroundAnimatedRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    生成背景动图并更新到 Agent
+    """
+    # 验证 Agent 存在且用户有权限
+    agent = await agent_service.get_agent(db, agent_id=agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    if agent.creator_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Permission denied")
+
+    # 验证背景图是否存在
+    if not agent.background:
+        raise HTTPException(status_code=400, detail="请先上传背景图")
+
+    try:
+        from app.services.image_transform_service import image_transform_service
+        from app.services.video_generation_service import video_generation_service
+        from app.utils.gemini import generate_image_description
+        from app.utils.video_to_animated_image import (
+            convert_video_to_animated_image_and_upload,
+        )
+
+        # 1. 将背景图 URL 转换为 GCS URI 格式
+        background_url = agent.background
+        background_gcs_uri = None
+
+        # 如果是 CDN URL，先转换为 GCS URL
+        if image_transform_service.is_cloudflare_url(background_url):
+            gcs_url = image_transform_service.cloudflare_to_gcs(background_url)
+            if gcs_url:
+                # 转换为 gs:// 格式
+                gcs_path = image_transform_service.extract_gcs_path(gcs_url)
+                if gcs_path:
+                    background_gcs_uri = f"gs://{gcs_path}"
+        elif image_transform_service.is_gcs_url(background_url):
+            # 已经是 GCS URL，转换为 gs:// 格式
+            gcs_path = image_transform_service.extract_gcs_path(background_url)
+            if gcs_path:
+                background_gcs_uri = f"gs://{gcs_path}"
+        else:
+            # 如果无法转换，尝试直接使用（可能是 HTTPS URL）
+            background_gcs_uri = background_url
+
+        if not background_gcs_uri:
+            logger.warning(
+                f"无法将背景图 URL 转换为 GCS URI: {background_url}，将直接使用原 URL"
+            )
+            background_gcs_uri = background_url
+
+        # 2. 生成默认提示词（如果请求中没有提供）
+        prompt = request.prompt
+        if not prompt or not prompt.strip():
+            try:
+                logger.info(f"开始从背景图生成默认提示词: {background_gcs_uri}")
+                prompt = generate_image_description(background_gcs_uri)
+                logger.info(f"生成的默认提示词: {prompt}")
+            except Exception as e:
+                logger.error(f"生成默认提示词失败: {str(e)}")
+                # 如果生成失败，使用 Agent 的 intro 或 scenario 作为回退
+                if agent.intro:
+                    prompt = agent.intro
+                elif agent.scenario:
+                    prompt = agent.scenario
+                else:
+                    prompt = "一个美丽的场景"
+                logger.warning(f"使用回退提示词: {prompt}")
+
+        # 3. 调用 Veo3 生成视频（使用背景图作为输入图片）
+        logger.info(
+            f"开始为 Agent {agent_id} 生成视频，提示词: {prompt}, "
+            f"输入图片: {background_gcs_uri}"
+        )
+        video_url = await video_generation_service.generate_video_with_veo3(
+            prompt=prompt,
+            duration=4,
+            image_uri=background_gcs_uri,
+        )
+
+        # 4. 转换为动图并上传
+        output_format = request.format or "avif"
+        logger.info(f"开始转换视频为 {output_format} 格式: {video_url}")
+        animated_url = await convert_video_to_animated_image_and_upload(
+            video_url=video_url,
+            user_id=current_user.id,
+            output_format=output_format,
+            duration=4,
+        )
+
+        # 5. 更新 Agent 的 background_animated 字段
+        from app.schemas.agent import AgentUpdate
+
+        agent_update = AgentUpdate(background_animated=animated_url)
+        updated_agent = await agent_service.update_agent(
+            db, db_agent=agent, agent_in=agent_update
+        )
+
+        logger.info(f"背景动图生成成功，URL: {animated_url}")
+        return schemas.APIResponse.success(data=updated_agent)
+
+    except HTTPException:
+        raise
+    except NotImplementedError as e:
+        logger.error(f"Veo3 API 调用失败: {str(e)}")
+        raise HTTPException(
+            status_code=501,
+            detail=f"视频生成功能暂未实现或 API 配置错误: {str(e)}",
+        )
+    except ValueError as e:
+        logger.error(f"参数验证失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        error_msg = str(e)
+        # 检查是否是 ffmpeg 相关错误
+        if "ffmpeg" in error_msg.lower():
+            logger.error(f"FFmpeg 相关错误: {error_msg}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"视频转换失败: {error_msg}。"
+                "请参考文档 docs/FFMPEG_INSTALLATION.md 了解安装方法。",
+            )
+        raise HTTPException(status_code=500, detail=error_msg)
+    except Exception as e:
+        import traceback
+
+        error_trace = traceback.format_exc()
+        logger.error(f"生成背景动图失败: {str(e)}\n{error_trace}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"生成背景动图失败: {str(e)}",
+        )
+
+
 def get_opposite_gender(gender: str) -> str:
     gender_mapping = {
         "male": "female",

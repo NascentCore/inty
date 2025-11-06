@@ -37,6 +37,7 @@ class Agent(Base):
     avatar = Column(String)
     background = Column(String)
     background_images = Column(JSON)  # 存储背景图列表
+    background_animated = Column(String, nullable=True)  # 存储AVIF或GIF格式的动图URL
     voice_id = Column(String)
     settings = Column(JSON)
     intro = Column(String)

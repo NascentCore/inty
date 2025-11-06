@@ -141,6 +141,14 @@ export const AgentManagePage: React.FC = () => {
   );
   const [modelsLoading, setModelsLoading] = useState(false);
 
+  // 背景动图相关状态
+  const [backgroundAnimatedFile, setBackgroundAnimatedFile] = useState<File | null>(null);
+  const [backgroundAnimatedPreview, setBackgroundAnimatedPreview] = useState<string>("");
+  const [generateAnimatedModalVisible, setGenerateAnimatedModalVisible] = useState(false);
+  const [generateAnimatedLoading, setGenerateAnimatedLoading] = useState(false);
+  const [generateAnimatedPrompt, setGenerateAnimatedPrompt] = useState("");
+  const [generateAnimatedFormat, setGenerateAnimatedFormat] = useState<"avif" | "gif">("avif");
+
   // 加载智能体列表
   const loadAgents = useCallback(
     async (reset = false) => {
@@ -320,6 +328,74 @@ export const AgentManagePage: React.FC = () => {
     setCurrentAgentForAvatar(null);
   };
 
+  // 处理生成背景动图
+  const handleGenerateBackgroundAnimated = async () => {
+    console.log("handleGenerateBackgroundAnimated 被调用", {
+      currentAgent: currentAgent?.id,
+      hasBackground: !!currentAgent?.background,
+      prompt: generateAnimatedPrompt,
+      format: generateAnimatedFormat,
+    });
+
+    if (!currentAgent) {
+      console.warn("currentAgent 为空");
+      message.warning("请先选择要编辑的角色");
+      return false; // 阻止 Modal 关闭
+    }
+
+    // 验证背景图是否存在
+    if (!currentAgent.background) {
+      console.warn("背景图为空");
+      message.warning("请先上传背景图");
+      return false; // 阻止 Modal 关闭
+    }
+
+    try {
+      setGenerateAnimatedLoading(true);
+      console.log("开始调用 API", {
+        agentId: currentAgent.id,
+        prompt: generateAnimatedPrompt.trim() || undefined,
+        format: generateAnimatedFormat,
+      });
+
+      // prompt 可以为空，后端会自动生成
+      const updatedAgent = await api.agents.generateBackgroundAnimated(
+        currentAgent.id,
+        generateAnimatedPrompt.trim() || undefined,
+        generateAnimatedFormat,
+      );
+
+      console.log("API 调用成功", updatedAgent);
+
+      if (updatedAgent && updatedAgent.background_animated) {
+        // 更新 agent_copy
+        if (agentCopy) {
+          setAgentCopy({
+            ...agentCopy,
+            background_animated: updatedAgent.background_animated,
+          });
+        }
+        message.success("背景动图生成成功");
+        setGenerateAnimatedModalVisible(false);
+        setGenerateAnimatedPrompt("");
+        return true; // 允许 Modal 关闭
+      } else {
+        message.error("背景动图生成失败");
+        return false; // 阻止 Modal 关闭
+      }
+    } catch (error) {
+      console.error("生成背景动图失败:", error);
+      message.error(
+        `生成背景动图失败: ${
+          error instanceof Error ? error.message : "未知错误"
+        }`
+      );
+      return false; // 阻止 Modal 关闭
+    } finally {
+      setGenerateAnimatedLoading(false);
+    }
+  };
+
   // 创建智能体
   const handleCreateAgent = async () => {
     try {
@@ -359,6 +435,18 @@ export const AgentManagePage: React.FC = () => {
       // 处理头像文件
       if (avatarFile) {
         agentData.avatar = avatarFile;
+      }
+
+      // 处理背景动图文件
+      if (backgroundAnimatedFile) {
+        // 上传动图文件
+        const uploadResult = await api.agents.uploadAvatar(
+          backgroundAnimatedFile,
+          false,
+        );
+        if (uploadResult && uploadResult.url) {
+          agentData.background_animated = uploadResult.url;
+        }
       }
 
       // 使用 useAgents hook 的 createAgent 进行优化创建
@@ -431,6 +519,23 @@ export const AgentManagePage: React.FC = () => {
       // 处理头像文件
       if (editAvatarFile) {
         updateData.avatar = editAvatarFile;
+      }
+
+      // 处理背景动图文件
+      if (backgroundAnimatedFile) {
+        // 上传动图文件
+        const uploadResult = await api.agents.uploadAvatar(
+          backgroundAnimatedFile,
+          false,
+        );
+        if (uploadResult && uploadResult.url) {
+          updateData.background_animated = uploadResult.url;
+        }
+      }
+
+      // 如果 agent_copy 中有 background_animated，使用它（可能是直接设置的 URL）
+      if (agentCopy?.background_animated) {
+        updateData.background_animated = agentCopy.background_animated;
       }
 
       // 使用 useAgents hook 的 updateAgent 进行优化更新
@@ -516,6 +621,7 @@ export const AgentManagePage: React.FC = () => {
     setAgentCopy({
       ...agent,
       extensions: agent.extensions ? { ...agent.extensions } : undefined,
+      background_animated: agent.background_animated,
     });
 
     // 预填表单 - 使用 setTimeout 确保 Modal 完全渲染后再设置表单值
@@ -705,6 +811,109 @@ export const AgentManagePage: React.FC = () => {
           rules={[{ max: 5000, message: "开场白长度不能超过5000个字符" }]}
         >
           <TextArea rows={3} placeholder="请输入开场白（可选）" />
+        </Form.Item>
+
+        {/* 背景动图设置 */}
+        <Divider>背景动图设置</Divider>
+
+        <Form.Item label="背景动图">
+          <Space direction="vertical" style={{ width: "100%" }}>
+            <Upload
+              beforeUpload={(file) => {
+                const isAnimatedImage =
+                  file.type === "image/gif" || file.type === "image/avif";
+                if (!isAnimatedImage) {
+                  message.error("只能上传 GIF 或 AVIF 格式的动图文件!");
+                  return false;
+                }
+                if (isEdit) {
+                  // 编辑模式：直接更新 agent_copy
+                  setBackgroundAnimatedFile(file);
+                  const reader = new FileReader();
+                  reader.onload = (e) => {
+                    const imageUrl = e.target?.result as string;
+                    if (agentCopy) {
+                      setAgentCopy({
+                        ...agentCopy,
+                        background_animated: imageUrl,
+                      });
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                } else {
+                  // 创建模式：保存文件用于后续上传
+                  setBackgroundAnimatedFile(file);
+                  const reader = new FileReader();
+                  reader.onload = (e) => {
+                    const result = e.target?.result as string;
+                    setBackgroundAnimatedPreview(result);
+                  };
+                  reader.readAsDataURL(file);
+                }
+                return false;
+              }}
+              showUploadList={false}
+              accept="image/gif,image/avif"
+            >
+              <Button icon={<CameraOutlined />}>上传动图 (GIF/AVIF)</Button>
+            </Upload>
+            {isEdit && currentAgent && (
+              <Button
+                type="dashed"
+                onClick={() => {
+                  if (!currentAgent?.background) {
+                    message.warning("请先上传背景图");
+                    return;
+                  }
+                  setGenerateAnimatedModalVisible(true);
+                  setGenerateAnimatedPrompt("");
+                  setGenerateAnimatedFormat("avif");
+                }}
+                style={{ width: "100%" }}
+                disabled={!currentAgent?.background}
+              >
+                生成背景动图
+              </Button>
+            )}
+            {((isEdit && agentCopy?.background_animated) ||
+              (!isEdit && backgroundAnimatedPreview)) && (
+              <div style={{ marginTop: 8 }}>
+                <img
+                  src={
+                    isEdit
+                      ? agentCopy?.background_animated || ""
+                      : backgroundAnimatedPreview
+                  }
+                  alt="背景动图预览"
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "200px",
+                    borderRadius: 4,
+                  }}
+                />
+                <Button
+                  type="link"
+                  danger
+                  size="small"
+                  onClick={() => {
+                    if (isEdit && agentCopy) {
+                      setAgentCopy({
+                        ...agentCopy,
+                        background_animated: undefined,
+                      });
+                      setBackgroundAnimatedFile(null);
+                    } else {
+                      setBackgroundAnimatedFile(null);
+                      setBackgroundAnimatedPreview("");
+                    }
+                  }}
+                  style={{ marginTop: 4 }}
+                >
+                  删除
+                </Button>
+              </div>
+            )}
+          </Space>
         </Form.Item>
 
         {/* 音色设置 */}
@@ -1097,6 +1306,8 @@ export const AgentManagePage: React.FC = () => {
           createForm.resetFields();
           setAvatarFile(null);
           setAvatarPreview("");
+          setBackgroundAnimatedFile(null);
+          setBackgroundAnimatedPreview("");
         }}
         afterOpenChange={(open) => {
           if (open) {
@@ -1123,6 +1334,8 @@ export const AgentManagePage: React.FC = () => {
           setAgentCopy(null);
           editForm.resetFields();
           setEditAvatarFile(null);
+          setBackgroundAnimatedFile(null);
+          setBackgroundAnimatedPreview("");
         }}
         confirmLoading={saveLoading}
         okButtonProps={{
@@ -1167,6 +1380,94 @@ export const AgentManagePage: React.FC = () => {
         width={800}
       >
         {currentAgent && <AgentInfoDisplay agent={currentAgent} />}
+      </Modal>
+
+      {/* 生成背景动图模态框 */}
+      <Modal
+        title="生成背景动图"
+        open={generateAnimatedModalVisible}
+        onOk={async () => {
+          const result = await handleGenerateBackgroundAnimated();
+          // 如果返回 false，不关闭模态框（错误已在函数内处理）
+          if (result === false) {
+            return;
+          }
+          // 如果返回 true 或 undefined，关闭模态框
+          setGenerateAnimatedModalVisible(false);
+          setGenerateAnimatedPrompt("");
+        }}
+        onCancel={() => {
+          setGenerateAnimatedModalVisible(false);
+          setGenerateAnimatedPrompt("");
+        }}
+        confirmLoading={generateAnimatedLoading}
+        width={600}
+        okButtonProps={{
+          disabled: !currentAgent?.background || generateAnimatedLoading,
+        }}
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="large">
+          {!currentAgent?.background ? (
+            <div style={{ color: "#ff4d4f", marginBottom: 16 }}>
+              <strong>警告：</strong>请先上传背景图才能生成动图
+            </div>
+          ) : (
+            <>
+              <div>
+                <div style={{ marginBottom: 8 }}>参考图：</div>
+                <div
+                  style={{
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 4,
+                    padding: 8,
+                    textAlign: "center",
+                    backgroundColor: "#fafafa",
+                  }}
+                >
+                  <img
+                    src={currentAgent.background}
+                    alt="背景图预览"
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "200px",
+                      borderRadius: 4,
+                    }}
+                  />
+                  <div style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
+                    将使用此背景图作为视频生成的输入图片
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div style={{ marginBottom: 8 }}>视频生成提示词：</div>
+                <TextArea
+                  rows={4}
+                  placeholder="将从背景图自动生成提示词（可编辑）"
+                  value={generateAnimatedPrompt}
+                  onChange={(e) => setGenerateAnimatedPrompt(e.target.value)}
+                />
+                <div style={{ marginTop: 4, fontSize: 12, color: "#666" }}>
+                  提示：如果留空，系统将自动从背景图生成提示词
+                </div>
+              </div>
+            </>
+          )}
+          <div>
+            <div style={{ marginBottom: 8 }}>输出格式：</div>
+            <Radio.Group
+              value={generateAnimatedFormat}
+              onChange={(e) =>
+                setGenerateAnimatedFormat(e.target.value as "avif" | "gif")
+              }
+            >
+              <Radio value="avif">AVIF（推荐，文件更小）</Radio>
+              <Radio value="gif">GIF（兼容性更好）</Radio>
+            </Radio.Group>
+          </div>
+          <div style={{ fontSize: 12, color: "#666" }}>
+            提示：将使用 Google Veo3 生成 4 秒视频，然后转换为动图格式
+          </div>
+        </Space>
       </Modal>
 
       {/* 修改头像截取模态框 */}
