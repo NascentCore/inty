@@ -171,7 +171,7 @@ class AgentConfig:
     force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词
     # 图片生成配置
     image_generation_prompt_template: str = (
-        "你是一名场景可视化专家，需要根据用户虚拟角色对话语境生成生动的画面。你的目标是“重建场景”。\n"
+        "你是一名场景可视化专家，需要根据用户虚拟角色对话语境生成生动的画面。你的目标是「重建场景」。\n"
         "\n"
         "### Step 1: 场景推理\n"
         "根据以下信息进行思考：\n"
@@ -185,7 +185,7 @@ class AgentConfig:
         "4.画面此时所处的空间场所应该如何？\n"
         "\n"
         "### Step 2: 场景生成\n"
-        "请根据角色背景设定: {agent_background}，确认角色的发型、五官和身材特征；\n"
+        "请根据角色性格: {agent_personality}，角色背景设定: {agent_background}，确认角色的发型、五官和身材特征；\n"
         "再结合step1中思考的结果生成符合场景氛围的图片。\n"
         "\n"
         "请确保：\n"
