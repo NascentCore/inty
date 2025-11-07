@@ -1,6 +1,15 @@
 # 用户行为分析脚本 - 数据分析
 
+## 脚本列表
+
+本目录包含两个分析脚本：
+
+1. **`analyze_user_activity.py`** - 批量分析用户行为数据，生成综合报告
+2. **`query_user_daily_messages.py`** - 通过邮箱查询单个用户每日聊天消息统计 ⭐ 新增
+
 ## 功能说明
+
+### analyze_user_activity.py
 
 本脚本用于分析 Inty 后端数据库中的用户行为数据，生成按天统计的用户活动报告。
 
@@ -215,13 +224,53 @@ python analyze_user_activity.py --last-days 7 --dry-run
    - **统计范围**：只统计指定日期范围内新注册的用户
    - 💡 **使用场景**：角色运营分析、角色受欢迎程度评估、用户参与度分析
 
+### query_user_daily_messages.py
+
+通过邮箱查询某个用户每日的聊天消息统计。
+
+#### 使用方法
+
+```bash
+# 基本用法：查询用户所有历史消息
+python query_user_daily_messages.py --email user@example.com
+
+# 指定日期范围
+python query_user_daily_messages.py --email user@example.com \
+  --start-date 2025-01-01 \
+  --end-date 2025-01-31
+
+# 输出到 CSV 文件
+python query_user_daily_messages.py --email user@example.com \
+  --output ./user_messages.csv
+
+# 使用数据库配置参数
+python query_user_daily_messages.py --email user@example.com \
+  --db-host localhost \
+  --db-port 5432 \
+  --db-user postgres \
+  --db-password yourpassword \
+  --db-name inty
+```
+
+#### 输出说明
+
+- **命令行输出**：表格形式显示用户信息和每日消息数统计
+- **CSV 输出**（可选）：包含用户ID、邮箱、昵称、认证类型、日期、消息数等列
+
+#### 功能特点
+
+- 自动排除开场白消息（`meta_data.isOpening = 'true'`）
+- 只统计用户发送的消息（`message.type = 'human'`）
+- 支持按日期范围过滤
+- 支持输出 CSV 文件便于进一步分析
+
 ## 注意事项
 
 1. **数据库连接**：确保数据库配置正确，可通过配置文件、环境变量或命令行参数设置
 2. **性能考虑**：分析大时间范围的数据可能需要较长时间
-3. **推荐做法**：建议先使用 `--dry-run` 查看数据量再正式运行
+3. **推荐做法**：建议先使用 `--dry-run` 查看数据量再正式运行（仅适用于 `analyze_user_activity.py`）
 4. **文件编码**：CSV 文件使用 UTF-8-BOM 编码，可用 Excel 直接打开（中文不乱码）
-5. **交互报告**：HTML 报告使用 Plotly 生成，可在浏览器中交互式查看图表
+5. **交互报告**：HTML 报告使用 Plotly 生成，可在浏览器中交互式查看图表（仅适用于 `analyze_user_activity.py`）
 6. **独立运行**：脚本可独立运行，不依赖主项目的其他模块
 
 ## 特色功能
