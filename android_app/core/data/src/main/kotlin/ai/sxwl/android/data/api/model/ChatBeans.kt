@@ -133,6 +133,7 @@ data class ConversationItem(
     @Json(name = "agent_name") val agentName: String = "",
     @Json(name = "agent_avatar") val agentAvatar: String = "",
     @Json(name = "agent_background") val agentBackground: String = "",
+    @Json(name = "agent_background_animated") val agentBackgroundGif: String = "",
     @Json(name = "agent_intro") val agentIntro: String = "",
     @Json(name = "agent_opening") val agentOpening: String = "",
     @Json(name = "agent_opening_audio_url") val agentOpeningAudioUrl: String = "",
