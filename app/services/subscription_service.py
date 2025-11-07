@@ -361,20 +361,44 @@ class SubscriptionService:
                 )
 
             # 检查是否已经存在相同的购买令牌
-            existing_subscription = await db.execute(
-                select(UserSubscription).where(
+            existing_subscription_result = await db.execute(
+                select(UserSubscription)
+                .options(selectinload(UserSubscription.plan))
+                .where(
                     UserSubscription.google_play_purchase_token
                     == purchase_request.purchase_token
                 )
             )
+            existing_subscription = existing_subscription_result.scalar_one_or_none()
 
-            if existing_subscription.scalar_one_or_none():
-                return PurchaseVerificationResponse(
-                    is_verified=False,
-                    subscription=None,
-                    message="该购买令牌已被使用",
-                    error_code="DUPLICATE_PURCHASE_TOKEN",
-                )
+            if existing_subscription:
+                # 检查是否属于当前用户
+                if existing_subscription.user_id == user_id:
+                    # 属于当前用户，返回成功（webhook 可能已经创建了订阅记录）
+                    logger.info(
+                        f"订阅已存在，返回现有订阅记录 - 用户: {user_id}, 订阅: {existing_subscription.id}"
+                    )
+                    subscription_schema = UserSubscriptionSchema.model_validate(
+                        existing_subscription
+                    )
+                    return PurchaseVerificationResponse(
+                        is_verified=True,
+                        subscription=subscription_schema,
+                        message="订阅已验证（已存在）",
+                    )
+                else:
+                    # 不属于当前用户，返回错误（安全考虑）
+                    logger.warning(
+                        f"购买令牌已被其他用户使用 - 当前用户: {user_id}, "
+                        f"订阅用户: {existing_subscription.user_id}, "
+                        f"购买令牌: {purchase_request.purchase_token[:10]}..."
+                    )
+                    return PurchaseVerificationResponse(
+                        is_verified=False,
+                        subscription=None,
+                        message="该购买令牌已被其他用户使用",
+                        error_code="DUPLICATE_PURCHASE_TOKEN_DIFFERENT_USER",
+                    )
 
             # 检查用户是否有已取消但未到期的订阅
             current_subscription = await self.get_user_current_subscription(db, user_id)
@@ -1195,16 +1219,16 @@ class SubscriptionService:
                 )
 
                 if not subscription:
-                    # 对于类型4 (SUBSCRIPTION_PURCHASED)，无法创建订阅记录是正常情况
-                    # 由 app 端 verify 接口创建订阅记录，这里记录 INFO 日志并返回 True
+                    # 对于类型4 (SUBSCRIPTION_PURCHASED)，如果无法创建订阅记录（无法推断用户ID），
+                    # 这是正常情况，由 app 端 verify 接口创建订阅记录
                     if notification_type == 4:
                         logger.info(
                             f"首次购买通知 (类型4) - 购买令牌: {purchase_token[:10]}...，"
-                            f"等待 app 端 verify 接口创建订阅记录"
+                            f"无法推断用户ID，等待 app 端 verify 接口创建订阅记录"
                         )
                         return True
 
-                    # 对于其他类型，无法创建订阅记录是错误情况
+                    # 对于其他类型（续费、恢复），无法创建订阅记录是错误情况
                     logger.warning(
                         f"未找到对应的订阅记录且无法创建: {purchase_token}, 通知类型: {notification_type}"
                     )
@@ -1244,17 +1268,10 @@ class SubscriptionService:
             Optional[UserSubscription]: 创建的订阅记录或None
         """
         try:
-            # 类型4 (SUBSCRIPTION_PURCHASED) 无法推断用户ID，由 app 端 verify 接口创建订阅记录
-            # 因此对于类型4直接返回 None，不进行任何验证和遍历操作
-            if notification_type == 4:
-                logger.debug(
-                    f"通知类型 {notification_type} (SUBSCRIPTION_PURCHASED) 由 app 端 verify 接口处理，跳过创建订阅记录"
-                )
-                return None
-
             # 只在特定通知类型下尝试创建订阅记录
-            # 1: SUBSCRIPTION_RECOVERED, 2: SUBSCRIPTION_RENEWED
-            if notification_type not in [1, 2]:
+            # 1: SUBSCRIPTION_RECOVERED, 2: SUBSCRIPTION_RENEWED, 4: SUBSCRIPTION_PURCHASED
+            # 对于类型4，如果能够推断用户ID（通过 ObfuscatedAccountId），则可以创建订阅记录
+            if notification_type not in [1, 2, 4]:
                 logger.debug(f"通知类型 {notification_type} 不适合创建订阅记录")
                 return None
 
@@ -1336,11 +1353,31 @@ class SubscriptionService:
         """
         try:
             # 尝试从购买信息中获取用户标识
+            obfuscated_account_id = purchase_info.get("obfuscated_external_account_id")
             email_address = purchase_info.get("email_address")
             profile_id = purchase_info.get("profile_id")
             order_id = purchase_info.get("order_id")
 
-            # 首先尝试通过邮箱查找用户
+            # 优先级1：通过 ObfuscatedAccountId 查找用户
+            # 如果 app 端设置的是用户ID，可以直接使用；否则需要在数据库中存储映射关系
+            # 这里假设 ObfuscatedAccountId 就是用户ID（app 端会设置用户ID）
+            if obfuscated_account_id:
+                # 方案A：直接使用 ObfuscatedAccountId 作为用户ID（如果 app 端设置的就是用户ID）
+                # 先尝试直接作为用户ID查找
+                result = await db.execute(
+                    select(User).where(User.id == obfuscated_account_id)
+                )
+                user = result.scalar_one_or_none()
+                if user:
+                    logger.debug(
+                        f"通过 ObfuscatedAccountId 找到用户: {obfuscated_account_id}"
+                    )
+                    return user.id
+
+                # 方案B：如果 ObfuscatedAccountId 不是用户ID，可以在用户表中添加字段存储映射
+                # 或者创建单独的映射表（暂时不实现，等待实际需求）
+
+            # 优先级2：通过邮箱查找用户
             if email_address:
                 result = await db.execute(
                     select(User).where(User.email == email_address)
@@ -1349,7 +1386,7 @@ class SubscriptionService:
                 if user:
                     return user.id
 
-            # 尝试通过Google用户ID查找
+            # 优先级3：通过Google用户ID查找
             if profile_id:
                 result = await db.execute(
                     select(User).where(User.google_id == profile_id)
@@ -1358,7 +1395,7 @@ class SubscriptionService:
                 if user:
                     return user.id
 
-            # 尝试通过已有的订阅交易记录查找
+            # 优先级4：通过已有的订阅交易记录查找
             if order_id:
                 result = await db.execute(
                     select(SubscriptionTransaction).where(
@@ -1370,7 +1407,8 @@ class SubscriptionService:
                     return transaction.user_id
 
             logger.warning(
-                f"无法从购买信息中推断用户ID: email={email_address}, profile_id={profile_id}, order_id={order_id}"
+                f"无法从购买信息中推断用户ID: obfuscated_account_id={obfuscated_account_id}, "
+                f"email={email_address}, profile_id={profile_id}, order_id={order_id}"
             )
             logger.debug(f"完整购买信息: {purchase_info}")
             return None

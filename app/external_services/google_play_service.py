@@ -234,6 +234,16 @@ class GooglePlayService:
                 "given_name": result.get("givenName"),
                 "family_name": result.get("familyName"),
                 "profile_id": result.get("profileId"),
+                # ObfuscatedAccountId 相关字段（如果 app 端设置了 setObfuscatedAccountId）
+                # 注意：字段名称可能因 API 版本而异，需要根据实际响应调整
+                "obfuscated_external_account_id": result.get(
+                    "obfuscatedExternalAccountId"
+                )
+                or result.get("obfuscatedAccountId"),
+                "obfuscated_external_profile_id": result.get(
+                    "obfuscatedExternalProfileId"
+                )
+                or result.get("obfuscatedProfileId"),
                 "raw_response": result,
             }
 
