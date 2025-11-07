@@ -10,24 +10,22 @@
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
 | `APP_OPEN` | IntelliMateApp.kt | 应用启动（Firebase内置事件） |
-| `BILLING_RELEASE` | IntelliMateApp.kt | 计费系统释放 |
 
 ### 用户认证
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
 | `LOGIN` | LoginViewModel.kt, MainActivity.kt | 用户登录（Firebase内置事件） |
 | `user_logout` | MainViewModel.kt | 用户登出 |
-| `auth_failure` | UnifiedOkHttpClient.kt | HTTP 401认证失败 |
+| `auth_failure` | UnifiedOkHttpClient.kt | HTTP 401认证失败（`error_code` 为 401，`error_message` 中注明白名单接口） |
 
 ### 聊天核心功能
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
 | `chat_started` | ChatViewModel.kt | 聊天会话开始（第一次发送消息时触发） |
 | `agent_switch` | ChatViewModel.kt | Agent切换 |
-| `message_sent` | ChatViewModel.kt | 消息发送 |
-| `message_send_success` | ChatViewModel.kt | 消息发送成功（包含API响应时间和端到端时间） |
-| `message_send_failure` | ChatViewModel.kt | 消息发送失败（包含API响应时间和端到端时间） |
-| `message_send_exception` | ChatViewModel.kt | 消息发送异常（包含端到端时间） |
+| `message_sent` | ChatViewModel.kt | 消息发送（用户点击发送时触发，理论上等于 `message_send_success` + `message_send_error` 的总和） |
+| `message_send_success` | ChatViewModel.kt | 消息发送成功（包含API响应时间和端到端时间，通过 `message_type` 参数区分普通消息和 Keep Talking） |
+| `message_send_error` | ChatViewModel.kt | 消息发送错误（合并 failure 和 exception，错误类型信息在 `error_message` 中，通过 `message_type` 参数区分普通消息和 Keep Talking） |
 | `free_limit_reached` | ChatViewModel.kt | 达到免费限制 |
 
 ### 图片生成
@@ -41,9 +39,8 @@
 ### 页面访问
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
-| `SCREEN_VIEW` | PageTrackingHelper.kt | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，包含 `page_source` 参数） |
+| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，Explore 页面通过 `page_name`="explore" 标识，包含 `page_source` 参数） |
 | `page_leave` | PageTrackingHelper.kt | 页面离开（记录停留时长） |
-| `explore_page_view` | ExploreViewModel.kt | 探索页面访问 |
 
 **页面来源参数说明：**
 - `page_source`：页面来源标识，用于统计用户从哪个入口进入页面
@@ -55,8 +52,7 @@
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
 | `explore_agents_fetch_success` | ExploreViewModel.kt | Explore 接口请求成功（包含本次返回数量和当前UI总数） |
-| `explore_agents_fetch_failure` | ExploreViewModel.kt | Explore 接口请求失败 |
-| `explore_agents_fetch_exception` | ExploreViewModel.kt | Explore 接口请求异常 |
+| `explore_agents_fetch_error` | ExploreViewModel.kt | Explore 接口请求错误（合并 failure 和 exception，错误类型和异常类型信息在 `error_message` 中） |
 
 ### 订阅与计费
 | 事件名称 | 使用位置 | 业务含义 |
@@ -70,13 +66,9 @@
 |---------|---------|---------|
 | `voice_playback_start` | AudioManager.kt | 语音播放开始 |
 | `audio_play_end` | VoicePlayer.kt | 语音播放结束 |
-| `pull_up_input` | ChatInput.kt | 拉起输入框 |
-| `image_show_success` | AgentBackground.kt | 图片显示成功 |
-| `keep_talking_clicked` | ChatViewModel.kt | Keep Talking按钮点击 |
+| `keep_talking_clicked` | ChatViewModel.kt | Keep Talking按钮点击（按钮点击意图，接口成功/失败通过 `message_send_success`/`message_send_error` 事件记录，通过 `message_type`="keep_talking" 参数区分） |
 | `message_like` | ChatViewModel.kt | 消息点赞 |
 | `message_dislike` | ChatViewModel.kt | 消息点踩 |
-| `settings_keep_talking_changed` | ChatSettingsDrawer.kt | Keep Talking开关变化 |
-| `settings_auto_play_voice_changed` | ChatSettingsDrawer.kt | Auto Play Voice开关变化 |
 
 ### 错误监控
 | 事件名称 | 使用位置 | 业务含义 |
@@ -90,14 +82,7 @@
 ### 网络性能
 | 事件名称 | 使用位置 | 采样率 |
 |---------|---------|--------|
-| `network_request` | PageTrackingHelper.kt | 调试100%，发布20% |
-| `network_retry` | UnifiedOkHttpClient.kt | 调试100%，发布50%（预留，代码中未使用） |
 | `slow_request` | UnifiedOkHttpClient.kt | 调试100%，发布30% |
-
-### 用户行为
-| 事件名称 | 使用位置 | 采样率 |
-|---------|---------|--------|
-| `user_interaction` | PageTrackingHelper.kt | 调试100%，发布100% |
 
 ## ⚪ 禁用事件
 
@@ -113,11 +98,10 @@
 - `SIGN_UP`、`SELECT_CONTENT`、`SHARE`、`SEARCH`、`PURCHASE`
 - `SCREEN_VIEW`：通过 `PageTrackingHelper.trackPageView()` 自动记录，无需手动调用
 
-### 业务预留事件
-- `profile_updated`、`settings_changed`
-- `voice_playback_time`
-- `image_load_time`、`page_load_time`、`database_operation_time`
-- `network_retry`：配置中已定义，但代码中未使用
+### 业务预留事件（未实际使用）
+- `PROFILE_UPDATED`、`SETTINGS_CHANGED`：已从代码中移除（未使用）
+- `VOICE_PLAYBACK_TIME`：性能指标，预留
+- `IMAGE_LOAD_TIME`、`PAGE_LOAD_TIME`、`DATABASE_OPERATION_TIME`：性能指标，预留
 
 ## 关键参数
 
@@ -151,18 +135,15 @@
 - `image_url`：生成的图片URL（成功时）
 - `image_width`、`image_height`：生成的图片尺寸（成功时）
 - `generation_time_ms`：图片生成耗时（毫秒，从发起请求到收到响应）
-- `error_code`、`error_message`：错误码和错误消息（失败时）
-- `error_type`：异常类型（异常时，如`Exception`、`NetworkException`等）
+- `error_code`、`error_message`：错误码和错误消息（失败时，异常类型信息在 `error_message` 中，格式：`exception: ClassName, ...`）
 - `user_type`：用户类型（vip/free）
 
 ### 消息反馈参数
 - `agent_id`、`agent_name`：Agent信息
 - `message_id`：消息ID（优先使用服务端id，如果为空则使用本地id作为fallback）
-- `message_role`：消息角色（user/assistant）
 - `message_length`：消息长度
 - `has_generated_image`：是否有生成的图片
 - `is_opening`：是否为开场消息
-- `previous_feedback`：之前的反馈状态（NONE/LIKE/DISLIKE）
 - `user_type`：用户类型（vip/free）
 - `message_timestamp`：消息时间戳
 
@@ -181,7 +162,9 @@
 - `success`：操作是否成功
 
 ### 错误参数
-- `error`、`error_type`：错误信息
+- `error`：错误信息（包含错误类型信息，格式：`errorType: error`）
+- `error_code`：错误代码（HTTP错误时使用，如401）
+- `error_message`：错误消息（包含错误类型和异常类型信息，格式：`failure: ...` 或 `exception: ClassName, ...`）
 - `url`、`method`：网络请求信息
 - `response_code`：响应码
 

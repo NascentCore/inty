@@ -47,7 +47,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
-import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.ui.ReplyStyleSheet
 import com.ai.intellimate.vip.VipCenterActivity
 
@@ -108,9 +107,6 @@ fun ChatMorePanel(
                                     } else {
                                         showDialog = true
                                     }
-                                } else {
-                                    // 未登录或游客时跳转到登录页面
-                                    LoginActivity.launch(context)
                                 }
                             },
                         )
@@ -127,8 +123,7 @@ fun ChatMorePanel(
                                     //相当于重新开始和agent初次聊天
                                     //todo 需要接口
                                 } else {
-                                    // 未登录或游客时跳转到登录页面
-                                    LoginActivity.launch(context)
+                                    // 未登录或游客时不执行操作（MainActivity已会显示登录界面）
                                 }
                             },
                         )*/
@@ -142,9 +137,6 @@ fun ChatMorePanel(
                                         .isNotEmpty()
                                 ) {
                                     ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
-                                } else {
-                                    // 未登录或游客时跳转到登录页面
-                                    LoginActivity.launch(context)
                                 }
                             },
                         )
@@ -194,9 +186,6 @@ fun ChatMorePanel(
         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
             // 去会员中心
             VipCenterActivity.launch(context, VipCenterActivity.CHAT_MORE_PANEL)
-        } else {
-            // 如果未登录，要求先登录
-            LoginActivity.launch(context)
         }
         showDialog = false
     }

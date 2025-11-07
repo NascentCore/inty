@@ -84,7 +84,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                 "agent_id" to agentId,
                 "agent_name" to agentName,
                 "has_audio_url" to (!audioUrl.isNullOrEmpty()),
-                "auto_play" to autoPlay,
+                "is_auto_play" to autoPlay,
                 "is_manual_click" to isManualClick,
                 "timestamp" to playbackStartTime
             )

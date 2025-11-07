@@ -19,7 +19,6 @@ class VipCenterActivity : BaseActivity() {
         const val CHAT_MORE_PANEL = "chat_more_panel" // 聊天更多面板
         const val PROFILE_UPGRADE = "profile_upgrade" // 个人中心升级按钮
         const val SETTINGS_SUBSCRIPTION = "settings_subscription" // 设置页面订阅管理
-        const val SETTINGS_PREMIUM_DIALOG = "settings_premium_dialog" // 设置页面高级模型对话框
 
         /**
          * 启动订阅中心界面

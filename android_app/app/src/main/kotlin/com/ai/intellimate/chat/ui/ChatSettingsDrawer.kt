@@ -1,13 +1,11 @@
 package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.ui.SettingsArrowItem
 import ai.sxwl.android.design.ui.SettingsItemData
 import ai.sxwl.android.design.ui.SettingsSwitchItem
-import ai.sxwl.android.firebase.FirebaseManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -43,7 +41,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
-import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
@@ -59,8 +56,6 @@ fun ChatSettingsDrawer(
     onKeepTalkingChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
-    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
-
     // Keep talking全局设置 - 使用SettingStateManager的Flow来监听设置变化
     val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState()
 
@@ -160,9 +155,6 @@ fun ChatSettingsDrawer(
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 editKey = EditKey.Name
                                 editValue = userProfileState.nickname
-                            } else {
-                                // 未登录或游客时跳转到登录页面
-                                LoginActivity.launch(context)
                             }
                         },
                     )
@@ -175,9 +167,6 @@ fun ChatSettingsDrawer(
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 editKey = EditKey.Pronouns
                                 editValue = userProfileState.gender ?: ""
-                            } else {
-                                // 未登录或游客时跳转到登录页面
-                                LoginActivity.launch(context)
                             }
                         },
                     )
@@ -190,9 +179,6 @@ fun ChatSettingsDrawer(
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 editKey = EditKey.Persona
                                 editValue = userProfileState.description ?: ""
-                            } else {
-                                // 未登录或游客时跳转到登录页面
-                                LoginActivity.launch(context)
                             }
                         },
                     )
@@ -245,18 +231,6 @@ fun ChatSettingsDrawer(
                         onCheckChanged = { enabled ->
                             SettingStateManager.updateShowKeepTalking(enabled)
                             onKeepTalkingChange(enabled)
-
-                            // Firebase Analytics - 记录Keep Talking开关变化
-                            FirebaseManager.logEvent(
-                                FirebaseManager.Events.SETTINGS_KEEP_TALKING_CHANGED,
-                                FirebaseManager.safeEventParams(
-                                    "enabled" to enabled,
-                                    "agent_id" to (agentInfo?.id ?: ""),
-                                    "agent_name" to (agentInfo?.name ?: ""),
-                                    "user_type" to if (BillingRepository.vipStatusFlow.value.isSubscribed) "vip" else "free",
-                                    "timestamp" to System.currentTimeMillis()
-                                )
-                            )
                         }
                     )
 
@@ -273,18 +247,6 @@ fun ChatSettingsDrawer(
                         closedIconRes = R.drawable.closed, // 传入app模块的资源
                         onCheckChanged = { enabled ->
                             SettingStateManager.updateAutoPlayAudio(enabled)
-
-                            // Firebase Analytics - 记录Auto Play Voice开关变化
-                            FirebaseManager.logEvent(
-                                FirebaseManager.Events.SETTINGS_AUTO_PLAY_VOICE_CHANGED,
-                                FirebaseManager.safeEventParams(
-                                    "enabled" to enabled,
-                                    "agent_id" to (agentInfo?.id ?: ""),
-                                    "agent_name" to (agentInfo?.name ?: ""),
-                                    "user_type" to if (BillingRepository.vipStatusFlow.value.isSubscribed) "vip" else "free",
-                                    "timestamp" to System.currentTimeMillis()
-                                )
-                            )
                         }
                     )
 
@@ -305,9 +267,6 @@ fun ChatSettingsDrawer(
                                         .isNotEmpty()
                                 ) {
                                     ReportActivity.launch(context, agent.id, "AGENT")
-                                } else {
-                                    // 未登录或游客时跳转到登录页面
-                                    LoginActivity.launch(context)
                                 }
                             }
                         )

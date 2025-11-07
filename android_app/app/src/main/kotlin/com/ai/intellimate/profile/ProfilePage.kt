@@ -13,8 +13,6 @@ import ai.sxwl.android.utils.TimeUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.Intent
-import androidx.core.content.getSystemService
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -83,10 +81,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.getSystemService
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
-import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlinx.coroutines.launch
@@ -373,7 +371,7 @@ private fun ProfileHeader(
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 onShowSettings()
                             } else {
-                                context.startActivity(Intent(context, LoginActivity::class.java))
+                                // 未登录时不执行操作（MainActivity已会显示登录界面）
                             }
                         }
                     },
@@ -506,13 +504,6 @@ private fun ProfileHeader(
                                         .isNotEmpty()
                                 ) {
                                     ModifyProfileActivity.launch(context, userProfile)
-                                } else {
-                                    context.startActivity(
-                                        Intent(
-                                            context,
-                                            LoginActivity::class.java
-                                        )
-                                    )
                                 }
                             }
                         },
@@ -779,7 +770,7 @@ private fun PremiumBanner(
                     if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                         onClick()
                     } else {
-                        context.startActivity(Intent(context, LoginActivity::class.java))
+                        // 未登录时不执行操作（MainActivity已会显示登录界面）
                     }
                 }
             }

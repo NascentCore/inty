@@ -63,18 +63,6 @@ interface AnalyticsMixin {
         trackEvent("error_occurred", errorParams)
     }
 
-    /** 跟踪性能指标 */
-    fun trackPerformance(metric: String, value: Number, unit: String = "") {
-        val params =
-            mapOf(
-                "metric_name" to metric,
-                "metric_value" to value,
-                "metric_unit" to unit,
-                "screen_name" to screenName,
-                "screen_class" to screenClass,
-            )
-        trackEvent("performance_metric", params)
-    }
 
     /** 跟踪用户操作 */
     fun trackUserAction(

@@ -17,6 +17,7 @@
 
 - **[业务事件文档](./FIREBASE_BUSINESS_EVENTS.md)** - 所有业务相关事件的详细说明
 - **[事件完整文档](./FIREBASE_EVENTS_DOCUMENTATION.md)** - Analytics 和 Performance 事件的完整列表
+- **[Firebase 参数类型指南](./FIREBASE_PARAMETER_TYPES_GUIDE.md)** - 自定义维度、自定义指标、计算指标的区别和项目参数分类
 
 ### 核心事件说明
 

@@ -1,5 +1,6 @@
 package com.ai.intellimate.explore
 
+import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.VipStatusHelper
@@ -70,7 +71,15 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         errorMessage: String,
         sortSeed: Int
     ) {
-        reportExploreFetchFailure(page, pageSize, responseTime, errorMessage, sortSeed)
+        reportExploreFetchError(
+            page = page,
+            pageSize = pageSize,
+            responseTime = responseTime,
+            errorType = "failure",
+            errorMessage = errorMessage,
+            errorException = null,
+            sortSeed = sortSeed
+        )
     }
 
     override suspend fun onException(
@@ -80,17 +89,29 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         exception: Exception,
         sortSeed: Int
     ) {
-        reportExploreFetchException(page, pageSize, responseTime, exception, sortSeed)
+        reportExploreFetchError(
+            page = page,
+            pageSize = pageSize,
+            responseTime = responseTime,
+            errorType = "exception",
+            errorMessage = exception.message ?: "unknown",
+            errorException = exception,
+            sortSeed = sortSeed
+        )
     }
 
     /** 初始化Paging数据流 */
     fun initializePagingData() {
         if (isInitialized) return
 
-        // Firebase Analytics - 记录探索页面访问
-        FirebaseManager.logEvent(
-            FirebaseManager.Events.EXPLORE_PAGE_VIEW,
-            mapOf("page_type" to "recommendations", "is_initial_load" to true),
+        // Firebase Analytics - 记录探索页面访问（使用 SCREEN_VIEW 事件）
+        PageTrackingHelper.trackPageView(
+            pageName = "explore",
+            pageClass = "ExploreViewModel",
+            additionalParams = mapOf(
+                "page_type" to "recommendations",
+                "is_initial_load" to true
+            )
         )
 
         // 使用app层的ExplorePagingRepository，支持事件回调
@@ -176,64 +197,51 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         }
     }
 
-    /** 上报Explore接口请求失败事件 */
-    fun reportExploreFetchFailure(
+    /** 上报Explore接口请求错误事件（合并 failure 和 exception） */
+    fun reportExploreFetchError(
         page: Int,
         pageSize: Int,
         responseTime: Long,
+        errorType: String, // "failure" 或 "exception"
         errorMessage: String,
+        errorException: Exception? = null, // 异常时提供
         sortSeed: Int,
     ) {
         viewModelScope.launch {
-            FirebaseManager.logEvent(
-                FirebaseManager.Events.EXPLORE_AGENTS_FETCH_FAILURE,
-                FirebaseManager.safeEventParams(
-                    "page" to page,
-                    "page_size" to pageSize,
-                    "response_time" to responseTime,
-                    "error_message" to errorMessage,
-                    "current_ui_agents_count" to _currentUiAgentsCount.value,
-                    "sort_seed" to sortSeed,
-                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                    "timestamp" to System.currentTimeMillis(),
-                ),
-            )
-        }
-    }
+            // 构建完整的错误消息，包含错误类型和异常类型信息
+            val fullErrorMessage = if (errorException != null) {
+                "$errorType: ${errorException.javaClass.simpleName}, $errorMessage"
+            } else {
+                "$errorType: $errorMessage"
+            }
 
-    /** 上报Explore接口请求异常事件 */
-    fun reportExploreFetchException(
-        page: Int,
-        pageSize: Int,
-        responseTime: Long,
-        exception: Exception,
-        sortSeed: Int,
-    ) {
-        viewModelScope.launch {
-            FirebaseManager.logEvent(
-                FirebaseManager.Events.EXPLORE_AGENTS_FETCH_EXCEPTION,
-                FirebaseManager.safeEventParams(
-                    "page" to page,
-                    "page_size" to pageSize,
-                    "response_time" to responseTime,
-                    "exception_type" to exception.javaClass.simpleName,
-                    "exception_message" to (exception.message ?: "unknown"),
-                    "current_ui_agents_count" to _currentUiAgentsCount.value,
-                    "sort_seed" to sortSeed,
-                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                    "timestamp" to System.currentTimeMillis(),
-                ),
+            val params = mutableMapOf<String, Any>(
+                "page" to page,
+                "page_size" to pageSize,
+                "response_time" to responseTime,
+                "error_message" to fullErrorMessage,
+                "current_ui_agents_count" to _currentUiAgentsCount.value,
+                "sort_seed" to sortSeed,
+                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                "timestamp" to System.currentTimeMillis(),
             )
 
-            // 记录异常到Crashlytics
-            FirebaseManager.recordException(
-                exception,
-                mapOf(
-                    "page" to page.toString(),
-                    "page_size" to pageSize.toString(),
-                    "sort_seed" to sortSeed.toString(),
-                ),
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.EXPLORE_AGENTS_FETCH_ERROR,
+                FirebaseManager.safeEventParams(*params.map { (k, v) -> k to v }.toTypedArray()),
             )
+
+            // 如果是异常，记录到Crashlytics
+            errorException?.let {
+                FirebaseManager.recordException(
+                    it,
+                    mapOf(
+                        "page" to page.toString(),
+                        "page_size" to pageSize.toString(),
+                        "sort_seed" to sortSeed.toString(),
+                    ),
+                )
+            }
         }
     }
 

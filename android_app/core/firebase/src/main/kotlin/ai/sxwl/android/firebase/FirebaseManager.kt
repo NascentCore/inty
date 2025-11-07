@@ -63,9 +63,9 @@ object FirebaseManager {
             disabledEvents =
                 setOf(
                     // 完全禁用低价值事件
-                    "page_visible", // 页面可见性变化过于频繁
-                    "page_hidden", // 页面隐藏事件价值较低
-                    "page_lifecycle", // 生命周期事件过于详细
+                    Events.PAGE_VISIBLE, // 页面可见性变化过于频繁
+                    Events.PAGE_HIDDEN, // 页面隐藏事件价值较低
+                    Events.PAGE_LIFECYCLE, // 生命周期事件过于详细
                 ),
             samplingRates =
                 mapOf(
@@ -81,37 +81,29 @@ object FirebaseManager {
                     Events.USER_LOGOUT to 1.0, // 用户登出
                     Events.CHAT_STARTED to 1.0, // 聊天开始（第一次发送消息时触发）
                     Events.MESSAGE_SENT to 1.0, // 消息发送
-                    Events.PROFILE_UPDATED to 1.0, // 个人资料更新
-                    Events.SETTINGS_CHANGED to 1.0, // 设置变更
                     Events.AGENT_SWITCH to 1.0, // Agent切换
                     Events.SUBSCRIPTION_START to 1.0, // 订阅开始
                     Events.FREE_LIMIT_REACHED to 1.0, // 达到免费限制
                     Events.SUBSCRIPTION_PRICE_FETCHED to 1.0, // Google Play获取到的价格（100%采样）
                     Events.SUBSCRIPTION_PRICE_DISPLAYED to 1.0, // UI上显示的价格（100%采样）
                     Events.EXPLORE_AGENTS_FETCH_SUCCESS to 1.0, // Explore接口请求成功（100%采样）
-                    Events.EXPLORE_AGENTS_FETCH_FAILURE to 1.0, // Explore接口请求失败（100%采样）
-                    Events.EXPLORE_AGENTS_FETCH_EXCEPTION to 1.0, // Explore接口请求异常（100%采样）
+                    Events.EXPLORE_AGENTS_FETCH_ERROR to 1.0, // Explore接口请求错误（100%采样）
 
                     // 🔴 错误和失败事件 - 100%采样
-                    "auth_failure" to 1.0, // 认证失败
-                    "app_error" to 1.0, // 应用错误
-                    Events.MESSAGE_SEND_FAILURE to 1.0, // 消息发送失败
-                    Events.MESSAGE_SEND_EXCEPTION to 1.0, // 消息发送异常
-                    "request_failure" to 1.0, // 请求失败（网络请求失败时触发）
-                    "very_slow_request" to 1.0, // 极慢请求
+                    Events.AUTH_FAILURE to 1.0, // 认证失败
+                    Events.APP_ERROR to 1.0, // 应用错误
+                    Events.MESSAGE_SEND_ERROR to 1.0, // 消息发送错误（合并 failure 和 exception）
+                    Events.REQUEST_FAILURE to 1.0, // 请求失败（网络请求失败时触发）
+                    Events.VERY_SLOW_REQUEST to 1.0, // 极慢请求
 
                     // 🔴 页面追踪事件 - 100%采样
-                    "page_leave" to 1.0, // 页面离开
-                    Events.EXPLORE_PAGE_VIEW to 1.0, // 探索页面访问
+                    Events.PAGE_LEAVE to 1.0, // 页面离开
                     Events.MESSAGE_SEND_SUCCESS to 1.0, // 消息发送成功
 
                     // 🟡 性能相关事件 - 保持现有采样配置
-                    "user_interaction" to if (AppUtils.isAppDebug()) 1.0 else 1.0, // 调试100%，发布100%
                     Events.VOICE_PLAYBACK_START to
                         if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
-                    "slow_request" to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
-                    "network_retry" to if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
-                    "network_request" to if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
+                    Events.SLOW_REQUEST to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
 
                     // 🔴 性能指标事件 - 100%采样（关键性能指标）
                     Events.AI_RESPONSE_TIME to 1.0, // AI响应时间（100%采样）
@@ -140,15 +132,13 @@ object FirebaseManager {
                     // 🔴 业务数据点 - 无限制或很宽松的限频
                     Events.MESSAGE_SENT to
                         if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
+                    Events.MESSAGE_SEND_ERROR to
+                            if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
                     Events.VOICE_PLAYBACK_START to
                         if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
 
                     // 🟡 性能相关事件 - 保持现有限频配置
-                    "user_interaction" to
-                        if (AppUtils.isAppDebug()) 1_000L else 10_000L, // 调试1秒，发布10秒
-                    "slow_request" to if (AppUtils.isAppDebug()) 2_000L else 5_000L, // 调试2秒，发布5秒
-                    "network_retry" to if (AppUtils.isAppDebug()) 1_000L else 3_000L, // 调试1秒，发布3秒
-                    "network_request" to if (AppUtils.isAppDebug()) 500L else 2_000L, // 调试0.5秒，发布2秒
+                    Events.SLOW_REQUEST to if (AppUtils.isAppDebug()) 2_000L else 5_000L, // 调试2秒，发布5秒
                 ),
         )
 
@@ -230,6 +220,15 @@ object FirebaseManager {
         if (!shouldLogEvent(eventName)) {
             if (AppUtils.isAppDebug()) {
                 LogUtils.d("FirebaseManager", "事件被过滤: $eventName")
+            } else {
+                // 关键事件即使非调试模式也输出警告，便于排查问题
+                if (eventName in listOf(
+                        Events.IMAGE_GENERATION_FAILURE,
+                        Events.MESSAGE_SEND_ERROR
+                    )
+                ) {
+                    LogUtils.w("FirebaseManager", "事件被过滤: $eventName（非调试模式）")
+                }
             }
             return
         }
@@ -257,8 +256,15 @@ object FirebaseManager {
                             "FirebaseManager",
                             "Bundle 创建成功: 事件=$eventName, 参数数量=${bundle.size()}, Bundle大小=$bundleSize"
                         )
+                        // 输出每个参数的键值对，便于调试
+                        bundle.keySet().forEach { key ->
+                            val value = bundle.get(key)
+                            LogUtils.d(
+                                "FirebaseManager",
+                                "  参数: $key = $value (类型: ${value?.javaClass?.simpleName})"
+                            )
+                        }
                     }
-
                     analytics.logEvent(eventName, bundle)
 
                     // 调试模式下确认事件已发送
@@ -267,6 +273,18 @@ object FirebaseManager {
                             "FirebaseManager",
                             "✅ 事件已发送: $eventName (${parameters.size} 个参数)"
                         )
+                    } else {
+                        // 关键事件即使非调试模式也输出确认日志，便于排查问题
+                        if (eventName in listOf(
+                                Events.IMAGE_GENERATION_FAILURE,
+                                Events.MESSAGE_SEND_ERROR
+                            )
+                        ) {
+                            LogUtils.i(
+                                "FirebaseManager",
+                                "✅ 事件已发送: $eventName (${parameters.size} 个参数)"
+                            )
+                        }
                     }
                 } catch (e: Exception) {
                     logError("logEvent", "Failed to log event '$eventName': ${e.message}")
@@ -438,10 +456,7 @@ object FirebaseManager {
         const val USER_LOGOUT = "user_logout"
         const val MESSAGE_SENT = "message_sent"
         const val MESSAGE_SEND_SUCCESS = "message_send_success"
-        const val MESSAGE_SEND_FAILURE = "message_send_failure"
-        const val MESSAGE_SEND_EXCEPTION = "message_send_exception"
-        const val PROFILE_UPDATED = "profile_updated"
-        const val SETTINGS_CHANGED = "settings_changed"
+        const val MESSAGE_SEND_ERROR = "message_send_error" // 消息发送错误（合并 failure 和 exception）
 
         // 性能相关事件
         const val AI_RESPONSE_TIME = "ai_response_time"
@@ -457,9 +472,7 @@ object FirebaseManager {
         const val AGENT_SWITCH = "agent_switch"
 
         // UI交互事件
-        const val IMAGE_SHOW_SUCCESS = "image_show_success"
         const val AUDIO_PLAY_END = "audio_play_end"
-        const val PULL_UP_INPUT = "pull_up_input"
         const val VOICE_PLAYBACK_START = "voice_playback_start"
         const val SUBSCRIPTION_START = "subscription_start"
         const val FREE_LIMIT_REACHED = "free_limit_reached"
@@ -471,12 +484,6 @@ object FirebaseManager {
         // Keep Talking相关事件
         const val KEEP_TALKING_CLICKED = "keep_talking_clicked" // Keep Talking按钮点击
 
-        // 设置开关相关事件
-        const val SETTINGS_KEEP_TALKING_CHANGED =
-            "settings_keep_talking_changed" // Keep Talking开关变化
-        const val SETTINGS_AUTO_PLAY_VOICE_CHANGED =
-            "settings_auto_play_voice_changed" // Auto Play Voice开关变化
-
         // 图片生成相关事件
         const val IMAGE_GENERATION_START = "image_generation_start" // 图片生成开始
         const val IMAGE_GENERATION_SUCCESS = "image_generation_success" // 图片生成成功
@@ -486,16 +493,31 @@ object FirebaseManager {
         // Billing价格相关事件
         const val SUBSCRIPTION_PRICE_FETCHED = "subscription_price_fetched" // Google Play获取到的价格
         const val SUBSCRIPTION_PRICE_DISPLAYED = "subscription_price_displayed" // UI上显示的价格
-        const val BILLING_RELEASE = "billing_release" // 计费系统释放
 
         // Explore相关事件
-        const val EXPLORE_PAGE_VIEW = "explore_page_view" // 探索页面访问
         const val EXPLORE_AGENTS_FETCH_SUCCESS = "explore_agents_fetch_success" // Explore接口请求成功
-        const val EXPLORE_AGENTS_FETCH_FAILURE = "explore_agents_fetch_failure" // Explore接口请求失败
-        const val EXPLORE_AGENTS_FETCH_EXCEPTION = "explore_agents_fetch_exception" // Explore接口请求异常
+        const val EXPLORE_AGENTS_FETCH_ERROR =
+            "explore_agents_fetch_error" // Explore接口请求错误（合并 failure 和 exception）
 
         // Explore性能指标
         const val EXPLORE_RESPONSE_TIME = "explore_response_time" // Explore接口响应时间
+
+        // 认证相关事件
+        const val AUTH_FAILURE = "auth_failure" // HTTP 401认证失败（在 error_message 中注明白名单接口）
+
+        // 错误相关事件
+        const val APP_ERROR = "app_error" // 应用错误
+        const val REQUEST_FAILURE = "request_failure" // 请求失败（网络请求失败时触发）
+
+        // 性能相关事件
+        const val SLOW_REQUEST = "slow_request" // 慢请求（>3秒）
+        const val VERY_SLOW_REQUEST = "very_slow_request" // 极慢请求（>10秒）
+
+        // 页面追踪相关事件
+        const val PAGE_LEAVE = "page_leave" // 页面离开，记录停留时长
+        const val PAGE_VISIBLE = "page_visible" // 页面变为可见（已禁用）
+        const val PAGE_HIDDEN = "page_hidden" // 页面变为不可见（已禁用）
+        const val PAGE_LIFECYCLE = "page_lifecycle" // 页面生命周期事件（已禁用）
     }
 
     /** 预定义的用户属性常量 */
@@ -584,22 +606,23 @@ object FirebaseManager {
         try {
             val params =
                 mapOf(
-                    "metric_name" to metricName,
                     "metric_value" to value,
                     "metric_unit" to unit,
                     "timestamp" to System.currentTimeMillis()
                 ) + additionalParams
 
-            logEvent("performance_metric", params)
+            // 使用指定的事件名称记录性能指标
+            logEvent(metricName, params)
         } catch (e: Exception) {
             logError("logPerformanceMetric", "Failed to log performance metric: ${e.message}")
         }
     }
 
-    // Firebase Analytics 参数限制常量
-    private const val MAX_PARAM_NAME_LENGTH = 40
-    private const val MAX_PARAM_VALUE_LENGTH = 100
-    private const val MAX_PARAMS_PER_EVENT = 25
+    // Firebase Analytics 参数限制常量（根据 Firebase 官方文档）
+    // 参考: https://firebase.google.com/docs/analytics/events
+    private const val MAX_PARAM_NAME_LENGTH = 40  // Firebase 官方限制：参数名最多 40 个字符
+    private const val MAX_PARAM_VALUE_LENGTH = 100  // Firebase 官方限制：参数值最多 100 个字符
+    private const val MAX_PARAMS_PER_EVENT = 25  // Firebase 官方限制：每个事件最多 25 个参数
 
     /** 验证参数名是否符合 Firebase 规范 */
     private fun isValidParameterName(name: String): Boolean {
@@ -639,7 +662,9 @@ object FirebaseManager {
 
     /** 验证并规范化参数值 */
     private fun sanitizeParamValue(value: String): String {
-        // Firebase 参数值限制：字符串值最多 100 个字符
+        // Firebase 官方限制：字符串参数值最多 100 个字符
+        // 对于超长值（如 URL），截断并添加省略号
+        // 注意：如果参数值对业务很重要，建议在发送前进行哈希或拆分处理
         return if (value.length > MAX_PARAM_VALUE_LENGTH) {
             // 超长时截断并添加省略号
             value.take(MAX_PARAM_VALUE_LENGTH - 3) + "..."

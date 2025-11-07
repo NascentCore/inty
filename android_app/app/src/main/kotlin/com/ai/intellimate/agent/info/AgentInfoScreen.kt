@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.getSystemService
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
-import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
 
@@ -319,9 +318,6 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                     // 检查是否已登录
                     if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                         ReportActivity.Companion.launch(context, agent.id, "AGENT")
-                    } else {
-                        // 未登录或游客时跳转到登录页面
-                        LoginActivity.launch(context)
                     }
                 },
                 onCancelClick = { showBottomSheet = false },

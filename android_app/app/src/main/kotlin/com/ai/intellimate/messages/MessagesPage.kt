@@ -5,7 +5,6 @@ import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.ui.HeartRedDot
-import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -44,7 +43,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -54,7 +52,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
-import com.ai.intellimate.login.LoginActivity
 import com.ai.intellimate.ui.components.EmptyDataState
 
 /** 主页面第二个tab，会话列表页面，包含关注和聊天列表 */
@@ -197,7 +194,6 @@ private fun MessageTabContent(
                         items = uiState.conversations,
                         key = { index, conversion -> "${conversion.agentId}_$index" },
                     ) { index, conversion ->
-                        val context = LocalContext.current
                         var lastClickTime by remember { mutableStateOf(0L) }
 
                         // 使用 combinedClickable 同时处理点击和长按
@@ -216,14 +212,6 @@ private fun MessageTabContent(
                                                         .isNotEmpty()
                                                 ) {
                                                     onClickConversationItem(conversion)
-                                                } else {
-                                                    // 未登录时跳转到登录页面
-                                                    context.startActivity(
-                                                        Intent(
-                                                            context,
-                                                            LoginActivity::class.java
-                                                        )
-                                                    )
                                                 }
                                             }
                                         } else {

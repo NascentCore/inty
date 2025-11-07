@@ -204,18 +204,19 @@ private class AuthInterceptor : Interceptor {
                 LogUtils.e("http 401 for $requestUrl")
 
                 // 检查是否是白名单接口
-                if (isWhitelistedEndpoint(requestUrl)) {
+                val isWhitelisted = isWhitelistedEndpoint(requestUrl)
+                if (isWhitelisted) {
                     // 白名单接口的401错误，只记录日志，不触发logout
                     LogUtils.w("401 for whitelisted endpoint, skipping logout: $requestUrl")
 
-                    // Firebase Analytics - 记录白名单接口的认证失败
+                    // Firebase Analytics - 记录认证失败（在 error_message 中注明是白名单接口）
                     FirebaseManager.logEvent(
-                        "auth_failure_whitelisted",
+                        FirebaseManager.Events.AUTH_FAILURE,
                         mapOf(
-                            "http_code" to 401,
+                            "error_code" to 401,
                             "url" to requestUrl,
                             "user_logged_out" to false,
-                            "whitelisted" to true,
+                            "error_message" to "HTTP 401 (whitelisted endpoint): $requestUrl",
                         ),
                     )
 
@@ -230,12 +231,12 @@ private class AuthInterceptor : Interceptor {
                 // 非白名单接口的401错误，触发全局logout
                 // Firebase Analytics - 记录认证失败
                 FirebaseManager.logEvent(
-                    "auth_failure",
+                    FirebaseManager.Events.AUTH_FAILURE,
                     mapOf(
-                        "http_code" to 401,
+                        "error_code" to 401,
                         "url" to requestUrl,
                         "user_logged_out" to IntySetting.isLoggingOut(),
-                        "whitelisted" to false,
+                        "error_message" to "HTTP 401: $requestUrl",
                     ),
                 )
 
@@ -271,10 +272,9 @@ private fun trackError(
 ) {
     try {
         FirebaseManager.logEvent(
-            "app_error",
+            FirebaseManager.Events.APP_ERROR,
             mapOf(
-                "error" to error,
-                "error_type" to errorType,
+                "error" to "$errorType: $error",
                 "timestamp" to System.currentTimeMillis(),
             ) + additionalParams,
         )
@@ -361,12 +361,12 @@ private class PerformanceInterceptor : Interceptor {
 
                         // 使用 Firebase Analytics 记录慢请求
                         FirebaseManager.logEvent(
-                            "slow_request",
+                            FirebaseManager.Events.SLOW_REQUEST,
                             mapOf(
                                 "duration_ms" to duration,
                                 "method" to request.method,
                                 "url" to request.url.toString(),
-                                "successful" to isSuccessful
+                                "success" to isSuccessful
                             )
                         )
                     }
@@ -378,12 +378,12 @@ private class PerformanceInterceptor : Interceptor {
 
                         // 使用 Firebase Analytics 记录极慢请求
                         FirebaseManager.logEvent(
-                            "very_slow_request",
+                            FirebaseManager.Events.VERY_SLOW_REQUEST,
                             mapOf(
                                 "duration_ms" to duration,
                                 "method" to request.method,
                                 "url" to request.url.toString(),
-                                "successful" to isSuccessful
+                                "success" to isSuccessful
                             )
                         )
 
@@ -413,13 +413,12 @@ private class PerformanceInterceptor : Interceptor {
 
                 // 使用 Firebase Analytics 记录请求失败
                 FirebaseManager.logEvent(
-                    "request_failure",
+                    FirebaseManager.Events.REQUEST_FAILURE,
                     mapOf(
                         "duration_ms" to duration,
                         "method" to request.method,
                         "url" to request.url.toString(),
-                        "error_type" to exception.javaClass.simpleName,
-                        "error_message" to (exception.message ?: "unknown")
+                        "error_message" to "exception: ${exception.javaClass.simpleName}, ${exception.message ?: "unknown"}"
                     )
                 )
 

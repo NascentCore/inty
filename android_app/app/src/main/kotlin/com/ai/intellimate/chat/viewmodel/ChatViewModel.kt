@@ -342,6 +342,7 @@ class ChatViewModel : BaseVM() {
                             FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
+                                "message_type" to "normal",
                                 "response_code" to (result.data.code ?: 0),
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "ai_response_time" to responseTime,
@@ -394,13 +395,14 @@ class ChatViewModel : BaseVM() {
                         val responseTime = System.currentTimeMillis() - aiResponseStartTime
                         val endToEndTime = System.currentTimeMillis() - endToEndStartTime
 
-                        // Firebase Analytics - 记录消息发送失败（包含API响应时间和端到端时间）
+                        // Firebase Analytics - 记录消息发送错误（包含API响应时间和端到端时间）
                         FirebaseManager.logEvent(
-                            FirebaseManager.Events.MESSAGE_SEND_FAILURE,
+                            FirebaseManager.Events.MESSAGE_SEND_ERROR,
                             FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
-                                "error_message" to result.message,
+                                "message_type" to "normal",
+                                "error_message" to "failure: ${result.message}",
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "ai_response_time" to responseTime,
                                 "end_to_end_time" to endToEndTime
@@ -431,11 +433,12 @@ class ChatViewModel : BaseVM() {
 
                 // Firebase Analytics - 记录异常情况下的端到端时间
                 FirebaseManager.logEvent(
-                    FirebaseManager.Events.MESSAGE_SEND_EXCEPTION,
+                    FirebaseManager.Events.MESSAGE_SEND_ERROR,
                     FirebaseManager.safeEventParams(
                         "agent_id" to agentId,
                         "agent_name" to (_agentInfo.value?.name),
-                        "error_message" to (e.message ?: "unknown error"),
+                        "message_type" to "normal",
+                        "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
                         "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                         "end_to_end_time" to endToEndTime
                     )
@@ -606,44 +609,103 @@ class ChatViewModel : BaseVM() {
 
         launchBackground {
             val keepTalkingMsg = "continue"
+            val keepTalkingStartTime = System.currentTimeMillis()
             _isWaitingForReply.value = true
 
             agentInfo.value?.let { agent ->
-                val result = sendMessageUseCase(agent.id, keepTalkingMsg)
+                try {
+                    val aiResponseStartTime = System.currentTimeMillis()
+                    val result = sendMessageUseCase(agent.id, keepTalkingMsg)
 
-                LogUtils.i("sendKeepTalkingMessage to ${agent.id} -> $result")
-                _isWaitingForReply.value = false
+                    LogUtils.i("sendKeepTalkingMessage to ${agent.id} -> $result")
+                    _isWaitingForReply.value = false
 
-                when (result) {
-                    is HttpResult.Success -> {
-                        runCatching {
-                            // 有免费次数限制，需要vip订阅
-                            if (
-                                result.data.code ==
-                                BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                            ) {
-                                showLimitDialog.emit(true)
-                            }
-                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { str
-                                ->
-                                IntySetting.setConversationReaded(agent.id, str)
-                            }
-                        }
-                            .onFailure {
-                                LogUtils.e(
-                                    "Error processing keep talking AI response: ${it.message}"
+                    when (result) {
+                        is HttpResult.Success -> {
+                            val responseTime = System.currentTimeMillis() - aiResponseStartTime
+                            val endToEndTime = System.currentTimeMillis() - keepTalkingStartTime
+
+                            // Firebase Analytics - 记录 Keep Talking 消息发送成功
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.MESSAGE_SEND_SUCCESS,
+                                FirebaseManager.safeEventParams(
+                                    "agent_id" to agent.id,
+                                    "agent_name" to agent.name,
+                                    "message_type" to "keep_talking",
+                                    "response_code" to (result.data.code ?: 0),
+                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "ai_response_time" to responseTime,
+                                    "end_to_end_time" to endToEndTime
                                 )
-                                it.printStackTrace()
-                                // 错误恢复：确保状态正确
-                                _isWaitingForReply.value = false
-                            }
-                    }
+                            )
 
-                    is HttpResult.Failure -> {
-                        NetworkErrorHandler.showNetworkAwareError(result.message)
-                        // 错误恢复：确保状态正确
-                        _isWaitingForReply.value = false
+                            runCatching {
+                                // 有免费次数限制，需要vip订阅
+                                if (
+                                    result.data.code ==
+                                    BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                ) {
+                                    showLimitDialog.emit(true)
+                                }
+                                result.data.data?.choices?.lastOrNull()?.message?.content?.let { str
+                                    ->
+                                    IntySetting.setConversationReaded(agent.id, str)
+                                }
+                            }
+                                .onFailure {
+                                    LogUtils.e(
+                                        "Error processing keep talking AI response: ${it.message}"
+                                    )
+                                    it.printStackTrace()
+                                    // 错误恢复：确保状态正确
+                                    _isWaitingForReply.value = false
+                                }
+                        }
+
+                        is HttpResult.Failure -> {
+                            val responseTime = System.currentTimeMillis() - aiResponseStartTime
+                            val endToEndTime = System.currentTimeMillis() - keepTalkingStartTime
+
+                            // Firebase Analytics - 记录 Keep Talking 消息发送错误
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.MESSAGE_SEND_ERROR,
+                                FirebaseManager.safeEventParams(
+                                    "agent_id" to agent.id,
+                                    "agent_name" to agent.name,
+                                    "message_type" to "keep_talking",
+                                    "error_message" to "failure: ${result.message}",
+                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "ai_response_time" to responseTime,
+                                    "end_to_end_time" to endToEndTime
+                                )
+                            )
+
+                            NetworkErrorHandler.showNetworkAwareError(result.message)
+                            // 错误恢复：确保状态正确
+                            _isWaitingForReply.value = false
+                        }
                     }
+                } catch (e: Exception) {
+                    val endToEndTime = System.currentTimeMillis() - keepTalkingStartTime
+                    LogUtils.e("Unexpected error in sendKeepTalkingMessage: ${e.message}")
+
+                    // Firebase Analytics - 记录 Keep Talking 消息发送异常
+                    FirebaseManager.logEvent(
+                        FirebaseManager.Events.MESSAGE_SEND_ERROR,
+                        FirebaseManager.safeEventParams(
+                            "agent_id" to agent.id,
+                            "agent_name" to agent.name,
+                            "message_type" to "keep_talking",
+                            "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
+                            "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                            "end_to_end_time" to endToEndTime
+                        )
+                    )
+
+                    NetworkErrorHandler.showNetworkAwareError(
+                        "An unexpected error occurred while sending keep talking message"
+                    )
+                    _isWaitingForReply.value = false
                 }
             }
                 ?: run {
@@ -665,8 +727,6 @@ class ChatViewModel : BaseVM() {
             return
         }
 
-        val previousFeedback = targetMessage.userFeedback?.name ?: "NONE"
-
         // 业务逻辑：本地状态更新始终使用localMsgId（这是本地标识符）
         updateMessageFeedbackUseCase(agent.id, localMsgId, MsgInfo.UserFeedback.LIKE)
 
@@ -678,11 +738,9 @@ class ChatViewModel : BaseVM() {
             "agent_id" to agent.id,
             "agent_name" to agent.name,
             "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
-            "message_role" to targetMessage.role,
             "message_length" to targetMessage.content.length,
             "has_generated_image" to targetMessage.hasGeneratedImage(),
             "is_opening" to targetMessage.isOpening(),
-            "previous_feedback" to previousFeedback,
             "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
             "message_timestamp" to (targetMessage.timestamp ?: ""),
             "timestamp" to System.currentTimeMillis()
@@ -716,11 +774,9 @@ class ChatViewModel : BaseVM() {
             "agent_id" to agent.id,
             "agent_name" to agent.name,
             "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
-            "message_role" to targetMessage.role,
             "message_length" to targetMessage.content.length,
             "has_generated_image" to targetMessage.hasGeneratedImage(),
             "is_opening" to targetMessage.isOpening(),
-            "previous_feedback" to previousFeedback,
             "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
             "message_timestamp" to (targetMessage.timestamp ?: ""),
             "timestamp" to System.currentTimeMillis()
@@ -885,6 +941,11 @@ class ChatViewModel : BaseVM() {
                             // 其他错误：在消息列表中显示 tips 消息
                             else -> {
                                 // Firebase Analytics - 记录图片生成失败
+                                LogUtils.i(
+                                    "ChatViewModel: 记录 image_generation_failure 事件, " +
+                                            "code=${result.code}, message=${result.message}, " +
+                                            "generation_time_ms=$generationTime"
+                                )
                                 FirebaseManager.logEvent(
                                     FirebaseManager.Events.IMAGE_GENERATION_FAILURE,
                                     FirebaseManager.safeEventParams(
@@ -917,14 +978,18 @@ class ChatViewModel : BaseVM() {
                 LogUtils.e("Image generation error: ${e.message}")
 
                 // Firebase Analytics - 记录图片生成异常
+                LogUtils.i(
+                    "ChatViewModel: 记录 image_generation_failure 事件（异常）, " +
+                            "error_type=${e.javaClass.simpleName}, message=${e.message}, " +
+                            "generation_time_ms=$generationTime"
+                )
                 FirebaseManager.logEvent(
                     FirebaseManager.Events.IMAGE_GENERATION_FAILURE,
                     FirebaseManager.safeEventParams(
                         "agent_id" to agentId,
                         "agent_name" to agent.name,
                         "message_id" to messageId,
-                        "error_type" to e.javaClass.simpleName,
-                        "error_message" to (e.message ?: "unknown error"),
+                        "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
                         "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                         "generation_time_ms" to generationTime,
                         "timestamp" to endTime
