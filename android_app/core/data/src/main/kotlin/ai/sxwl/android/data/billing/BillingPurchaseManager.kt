@@ -38,6 +38,9 @@ internal class BillingPurchaseManager(
 
     private val api = NetServiceMgr.getSubscriptionApi()
 
+    // 保存用户选择的 productId，用于验证时使用
+    private var pendingPurchaseProductId: String? = null
+
     /** 处理购买更新 */
     fun onPurchasesUpdated(billingResult: BillingResult, purchases: MutableList<Purchase>?) {
         LogUtils.d("Billing 购买更新回调: 响应码=${billingResult.responseCode}")
@@ -261,22 +264,28 @@ internal class BillingPurchaseManager(
     private fun verifySubscriptionWithServer(purchase: Purchase) {
         eventScope.launch {
             try {
+                // 优先使用用户选择的 productId，如果不存在则使用 purchase.products 中的第一个
+                // 这样可以确保传递给服务端的 productId 与用户实际选择的一致
+                val productIdFromPurchase = purchase.products.firstOrNull() ?: ""
+                val productIdToUse = pendingPurchaseProductId ?: productIdFromPurchase
+                
                 // 构建验证请求
                 val verifyRequest =
                     SubscriptionVerifyRequest(
-                        productId = purchase.products.firstOrNull() ?: "",
+                        productId = productIdToUse,
                         purchaseToken = purchase.purchaseToken,
                         orderId = purchase.orderId ?: "",
                     )
 
                 LogUtils.d(
-                    "Billing 验证订阅: productId=${verifyRequest.productId}, purchaseToken=${verifyRequest.purchaseToken}, orderId=${verifyRequest.orderId}"
+                    "Billing 验证订阅: productId=${verifyRequest.productId} (用户选择: $pendingPurchaseProductId, Purchase返回: $productIdFromPurchase), purchaseToken=${verifyRequest.purchaseToken}, orderId=${verifyRequest.orderId}"
                 )
 
-                // 调用验证接口
-                val result = api.verifySubscription(verifyRequest)
+                // 验证完成后清除保存的 productId
+                pendingPurchaseProductId = null
 
-                when (result) {
+                // 调用验证接口
+                when (val result = api.verifySubscription(verifyRequest)) {
                     is HttpResult.Success -> {
                         val response = result.data
                         if (response.isVerified) {
@@ -312,6 +321,8 @@ internal class BillingPurchaseManager(
                             LogUtils.w("Billing ⚠️ 订阅验证失败，回滚乐观更新状态: ${response.message}")
                             // 验证失败，回滚乐观更新
                             rollbackOptimisticStatus()
+                            // 验证失败时也清除保存的 productId
+                            pendingPurchaseProductId = null
                             eventScope.launch {
                                 eventFlow.emit(
                                     BillingEvent.ShowError(
@@ -327,6 +338,8 @@ internal class BillingPurchaseManager(
                         LogUtils.e("Billing ❌ 订阅验证失败，回滚乐观更新状态: ${result.message}")
                         // 验证失败，回滚乐观更新
                         rollbackOptimisticStatus()
+                        // 验证失败时也清除保存的 productId
+                        pendingPurchaseProductId = null
                         eventScope.launch {
                             eventFlow.emit(
                                 BillingEvent.ShowError(
@@ -341,6 +354,8 @@ internal class BillingPurchaseManager(
                 LogUtils.e("Billing ❌ 订阅验证异常，回滚乐观更新状态: ${e.message}")
                 // 验证异常，回滚乐观更新
                 rollbackOptimisticStatus()
+                // 验证失败时也清除保存的 productId
+                pendingPurchaseProductId = null
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.ShowError(
@@ -502,6 +517,9 @@ internal class BillingPurchaseManager(
         }
 
         LogUtils.i("Billing 开始启动购买流程，商品ID: $productId")
+
+        // 保存用户选择的 productId，用于验证时使用
+        pendingPurchaseProductId = productId
 
         // 执行购买流程
         launchBillingFlowInternal(activity, productId)
