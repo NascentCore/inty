@@ -96,7 +96,8 @@
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
-| `subscription_start` | BillingPurchaseManager.kt | `product_id`, `subscription_id`, `purchase_time`, `order_id`, `user_type`, `timestamp` | 订阅开始（订阅验证成功时触发） | 🔴 100% |
+| `subscription_success` | BillingPurchaseManager.kt | `product_id`, `order_id`, `purchase_token`, `purchase_time`, `user_type`, `timestamp` | 订阅验证成功（服务端验证成功后触发） | 🔴 100% |
+| `subscription_failure` | BillingPurchaseManager.kt | `product_id`, `order_id`, `purchase_token`, `error_code`（可选）, `error_message`, `purchase_time`, `user_type`, `timestamp` | 订阅验证失败（服务端验证失败、网络请求失败或异常时触发） | 🔴 100% |
 | `subscription_price_fetched` | BillingPriceManager.kt | `product_id`, `product_name`, `plan_type`, `google_play_price`, `google_play_currency_code`, `google_play_price_micros`, `corrected_price`, `old_price`, `old_currency_code`, `old_price_micros`, `price_changed`, `currency_changed`, `micros_changed` | 从Google Play获取到的订阅价格详细信息（包含价格变化对比） | 🔴 100% |
 | `subscription_price_displayed` | VipCenterContent.kt | `product_id`, `product_name`, `plan_type`, `displayed_price`, `currency_code`, `price_micros`, `discount_rate`, `original_price`, `is_selected`, `selected_plan_index`, `total_plans_count`, `is_subscribed`, `timestamp` | UI上显示的订阅价格详细信息（包含选择状态和订阅状态） | 🔴 100% |
 
@@ -245,7 +246,7 @@
 - `sort_seed`：排序种子（用于Explore刷新时改变排序）
 - `response_time`：接口响应时间（API调用时间，毫秒），用于Explore接口和网络请求
 - `product_id`、`product_name`、`plan_type`：订阅商品信息，用于订阅分析
-- `subscription_id`、`order_id`、`purchase_time`：订阅订单信息（subscription_start事件），用于订阅转化分析
+- `order_id`、`purchase_token`、`purchase_time`：订阅订单信息（subscription_success/subscription_failure事件），用于订阅转化分析和问题排查
 - `google_play_price`、`google_play_currency_code`、`google_play_price_micros`：Google Play原始价格信息
 - `displayed_price`、`currency_code`、`price_micros`：UI显示的价格信息
 - `price_changed`、`currency_changed`、`micros_changed`：价格变化标识，用于监控价格更新

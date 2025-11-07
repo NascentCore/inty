@@ -270,6 +270,7 @@ internal class BillingPurchaseManager(
     /** 调用后端验证订阅信息 */
     private fun verifySubscriptionWithServer(purchase: Purchase) {
         eventScope.launch {
+            val purchaseProductsFirstId = purchase.products.firstOrNull() ?: ""
             try {
                 // 重要：必须使用 purchase.products 中的 productId
                 // 原因：
@@ -280,8 +281,7 @@ internal class BillingPurchaseManager(
                 // 构建验证请求
                 val verifyRequest =
                     SubscriptionVerifyRequest(
-                        productId = purchase.products.firstOrNull()
-                            ?: "", // 必须使用 purchase.products 中的 productId
+                        productId = purchaseProductsFirstId, // 必须使用 purchase.products 中的 productId
                         purchaseToken = purchase.purchaseToken,
                         orderId = purchase.orderId ?: "",
                     )
@@ -308,15 +308,15 @@ internal class BillingPurchaseManager(
                             vipStatusFlow.value = confirmedStatus
                             BillingStorage.saveLocalVipStatus(confirmedStatus)
 
-                            // 记录订阅开始事件
-                            val productId = purchase.products.firstOrNull() ?: ""
+                            // 记录订阅验证成功事件
+                            val productId = purchaseProductsFirstId
                             FirebaseManager.logEvent(
-                                FirebaseManager.Events.SUBSCRIPTION_START,
+                                FirebaseManager.Events.SUBSCRIPTION_SUCCESS,
                                 FirebaseManager.safeEventParams(
                                     "product_id" to productId,
-                                    "subscription_id" to productId,
-                                    "purchase_time" to purchase.purchaseTime,
                                     "order_id" to (purchase.orderId ?: ""),
+                                    "purchase_token" to purchase.purchaseToken,
+                                    "purchase_time" to purchase.purchaseTime,
                                     "user_type" to "vip",
                                     "timestamp" to System.currentTimeMillis()
                                 )
@@ -329,6 +329,23 @@ internal class BillingPurchaseManager(
                             LogUtils.w("Billing ⚠️ 订阅验证失败，回滚乐观更新状态: ${response.message}")
                             // 验证失败，回滚乐观更新
                             rollbackOptimisticStatus()
+
+                            // 记录订阅验证失败事件
+                            val productId = purchaseProductsFirstId
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.SUBSCRIPTION_FAILURE,
+                                FirebaseManager.safeEventParams(
+                                    "product_id" to productId,
+                                    "order_id" to (purchase.orderId ?: ""),
+                                    "purchase_token" to purchase.purchaseToken,
+                                    "error_code" to (response.errorCode ?: ""),
+                                    "error_message" to (response.message ?: ""),
+                                    "purchase_time" to purchase.purchaseTime,
+                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "timestamp" to System.currentTimeMillis()
+                                )
+                            )
+                            
                             eventScope.launch {
                                 eventFlow.emit(
                                     BillingEvent.ShowError(
@@ -344,6 +361,22 @@ internal class BillingPurchaseManager(
                         LogUtils.e("Billing ❌ 订阅验证失败，回滚乐观更新状态: ${result.message}")
                         // 验证失败，回滚乐观更新
                         rollbackOptimisticStatus()
+
+                        // 记录订阅验证失败事件
+                        val productId = purchaseProductsFirstId
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.SUBSCRIPTION_FAILURE,
+                            FirebaseManager.safeEventParams(
+                                "product_id" to productId,
+                                "order_id" to (purchase.orderId ?: ""),
+                                "purchase_token" to purchase.purchaseToken,
+                                "error_message" to (result.message ?: ""),
+                                "purchase_time" to purchase.purchaseTime,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "timestamp" to System.currentTimeMillis()
+                            )
+                        )
+                        
                         eventScope.launch {
                             eventFlow.emit(
                                 BillingEvent.ShowError(
@@ -358,6 +391,23 @@ internal class BillingPurchaseManager(
                 LogUtils.e("Billing ❌ 订阅验证异常，回滚乐观更新状态: ${e.message}")
                 // 验证异常，回滚乐观更新
                 rollbackOptimisticStatus()
+
+                // 记录订阅验证失败事件
+                val productId = purchaseProductsFirstId
+                val errorMessage = "${e.javaClass.simpleName}: ${e.message ?: ""}"
+                FirebaseManager.logEvent(
+                    FirebaseManager.Events.SUBSCRIPTION_FAILURE,
+                    FirebaseManager.safeEventParams(
+                        "product_id" to productId,
+                        "order_id" to (purchase.orderId ?: ""),
+                        "purchase_token" to purchase.purchaseToken,
+                        "error_message" to errorMessage,
+                        "purchase_time" to purchase.purchaseTime,
+                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                        "timestamp" to System.currentTimeMillis()
+                    )
+                )
+                
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.ShowError(

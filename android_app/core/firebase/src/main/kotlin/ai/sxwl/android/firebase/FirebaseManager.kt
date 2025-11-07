@@ -82,7 +82,8 @@ object FirebaseManager {
                     Events.CHAT_STARTED to 1.0, // 聊天开始（第一次发送消息时触发）
                     Events.MESSAGE_SENT to 1.0, // 消息发送
                     Events.AGENT_SWITCH to 1.0, // Agent切换
-                    Events.SUBSCRIPTION_START to 1.0, // 订阅开始
+                    Events.SUBSCRIPTION_SUCCESS to 1.0, // 订阅验证成功
+                    Events.SUBSCRIPTION_FAILURE to 1.0, // 订阅验证失败
                     Events.FREE_LIMIT_REACHED to 1.0, // 达到免费限制
                     Events.SUBSCRIPTION_PRICE_FETCHED to 1.0, // Google Play获取到的价格（100%采样）
                     Events.SUBSCRIPTION_PRICE_DISPLAYED to 1.0, // UI上显示的价格（100%采样）
@@ -474,7 +475,8 @@ object FirebaseManager {
         // UI交互事件
         const val AUDIO_PLAY_END = "audio_play_end"
         const val VOICE_PLAYBACK_START = "voice_playback_start"
-        const val SUBSCRIPTION_START = "subscription_start"
+        const val SUBSCRIPTION_SUCCESS = "subscription_success" // 订阅验证成功
+        const val SUBSCRIPTION_FAILURE = "subscription_failure" // 订阅验证失败
         const val FREE_LIMIT_REACHED = "free_limit_reached"
 
         // 消息反馈事件
