@@ -1,5 +1,5 @@
 app:
-  debug: false
+  debug: true
   environment: dev
   limits:
     free_user_chat_24h_limit: 3
