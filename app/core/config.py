@@ -104,6 +104,8 @@ class AppConfig:
     debug: bool = False
     # DEPRECATED: Do not use.
     debug_messages: bool = True
+    # Use JSON format for request/response logging. Default is True (JSON format).
+    use_json_log_format: bool = True
     # DEPRECATED: Do not use.
     api_v1_prefix: str = API_V1_PREFIX
     backend_cors_origins: List[AnyHttpUrl] = None
