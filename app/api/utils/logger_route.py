@@ -43,8 +43,10 @@ class LoggerRoute(APIRoute):
             with logger.contextualize(request_id=request_id):
                 request_body = None
 
-                # Determine log format based on debug mode
-                use_json_format = not global_config_loaded_from_config_yaml.app.debug
+                # Determine log format based on configuration
+                use_json_format = (
+                    global_config_loaded_from_config_yaml.app.use_json_log_format
+                )
 
                 # Log request body for POST/PUT requests
                 if request.method in ["POST", "PUT", "PATCH"]:

@@ -1189,16 +1189,25 @@ class SubscriptionService:
             subscription = result.scalar_one_or_none()
 
             if not subscription:
-                logger.warning(
-                    f"未找到对应的订阅记录: {purchase_token}, 通知类型: {notification_type}"
-                )
-
                 # 尝试自动创建订阅记录
                 subscription = await self._try_create_subscription_from_notification(
                     db, purchase_token, notification_type, notification_data
                 )
 
                 if not subscription:
+                    # 对于类型4 (SUBSCRIPTION_PURCHASED)，无法创建订阅记录是正常情况
+                    # 由 app 端 verify 接口创建订阅记录，这里记录 INFO 日志并返回 True
+                    if notification_type == 4:
+                        logger.info(
+                            f"首次购买通知 (类型4) - 购买令牌: {purchase_token[:10]}...，"
+                            f"等待 app 端 verify 接口创建订阅记录"
+                        )
+                        return True
+
+                    # 对于其他类型，无法创建订阅记录是错误情况
+                    logger.warning(
+                        f"未找到对应的订阅记录且无法创建: {purchase_token}, 通知类型: {notification_type}"
+                    )
                     logger.error(f"无法为购买令牌创建订阅记录: {purchase_token}")
                     return False
 
@@ -1235,9 +1244,17 @@ class SubscriptionService:
             Optional[UserSubscription]: 创建的订阅记录或None
         """
         try:
+            # 类型4 (SUBSCRIPTION_PURCHASED) 无法推断用户ID，由 app 端 verify 接口创建订阅记录
+            # 因此对于类型4直接返回 None，不进行任何验证和遍历操作
+            if notification_type == 4:
+                logger.debug(
+                    f"通知类型 {notification_type} (SUBSCRIPTION_PURCHASED) 由 app 端 verify 接口处理，跳过创建订阅记录"
+                )
+                return None
+
             # 只在特定通知类型下尝试创建订阅记录
-            # 1: SUBSCRIPTION_RECOVERED, 2: SUBSCRIPTION_RENEWED, 4: SUBSCRIPTION_PURCHASED
-            if notification_type not in [1, 2, 4]:
+            # 1: SUBSCRIPTION_RECOVERED, 2: SUBSCRIPTION_RENEWED
+            if notification_type not in [1, 2]:
                 logger.debug(f"通知类型 {notification_type} 不适合创建订阅记录")
                 return None
 
