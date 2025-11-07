@@ -57,7 +57,8 @@
 ### 订阅与计费
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
-| `subscription_start` | BillingPurchaseManager.kt | 订阅开始（订阅验证成功时触发） |
+| `subscription_success` | BillingPurchaseManager.kt | 订阅验证成功（服务端验证成功后触发） |
+| `subscription_failure` | BillingPurchaseManager.kt | 订阅验证失败（服务端验证失败、网络请求失败或异常时触发） |
 | `subscription_price_fetched` | BillingPriceManager.kt | 从Google Play获取到的订阅价格 |
 | `subscription_price_displayed` | VipCenterContent.kt | UI上显示的订阅价格 |
 
@@ -124,7 +125,7 @@
 
 ### 订阅价格参数
 - `product_id`、`product_name`、`plan_type`：订阅商品信息
-- `subscription_id`、`order_id`、`purchase_time`：订阅订单信息（subscription_start事件）
+- `order_id`、`purchase_token`、`purchase_time`：订阅订单信息（subscription_success/subscription_failure事件）
 - `google_play_price`、`google_play_currency_code`、`google_play_price_micros`：Google Play原始价格信息
 - `displayed_price`、`currency_code`、`price_micros`：UI显示的价格信息
 - `corrected_price`、`old_price`：价格变化对比
