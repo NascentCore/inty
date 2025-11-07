@@ -635,9 +635,23 @@ internal class BillingPurchaseManager(
                                 .setOfferToken(offerToken)
                                 .build()
 
-                        val billingFlowParams = BillingFlowParams.newBuilder()
+                        // 获取当前用户ID，用于设置 ObfuscatedAccountId
+                        // 这样 webhook 可以通过 ObfuscatedAccountId 关联用户并创建订阅记录
+                        val currentUserId = ai.sxwl.android.data.store.IntySetting.getCurUserID()
+                        
+                        val billingFlowParamsBuilder = BillingFlowParams.newBuilder()
                             .setProductDetailsParamsList(listOf(productDetailsParams))
-                            .build()
+                        
+                        // 设置 ObfuscatedAccountId（如果用户已登录）
+                        // 这允许 webhook 通过 Google Play API 响应中的 obfuscatedExternalAccountId 字段关联用户
+                        if (currentUserId.isNotEmpty()) {
+                            billingFlowParamsBuilder.setObfuscatedAccountId(currentUserId)
+                            LogUtils.d("Billing [购买流程] 设置 ObfuscatedAccountId: $currentUserId")
+                        } else {
+                            LogUtils.w("Billing [购买流程] 用户未登录，无法设置 ObfuscatedAccountId")
+                        }
+                        
+                        val billingFlowParams = billingFlowParamsBuilder.build()
 
                         val launchResult =
                             billingClient.launchBillingFlow(activity, billingFlowParams)
