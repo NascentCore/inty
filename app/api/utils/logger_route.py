@@ -7,9 +7,10 @@ import json
 import time
 import uuid
 from datetime import datetime
-from typing import Callable
+from typing import Any, Callable
 
 from fastapi import Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from loguru import logger
 
@@ -87,17 +88,9 @@ class LoggerRoute(APIRoute):
                     duration = time.time() - start_time
 
                     # Extract response body
-                    try:
-                        if hasattr(response, "body"):
-                            body_bytes = response.body
-                            if body_bytes:
-                                body_str = body_bytes.decode("utf-8")
-                                try:
-                                    response_body = json.loads(body_str)
-                                except Exception:
-                                    response_body = body_str
-                    except Exception:
-                        pass
+                    response_body = await self._extract_response_body(
+                        response, request_id, request.method, request.url.path
+                    )
 
                     # Log response
                     if use_json_format:
@@ -144,6 +137,123 @@ class LoggerRoute(APIRoute):
                     raise
 
         return custom_route_handler
+
+    async def _extract_response_body(
+        self, response: Response, request_id: str, method: str, path: str
+    ) -> Any:
+        """
+        Extract response body from various FastAPI response types.
+        Supports JSONResponse, regular Response, and un-serialized responses.
+        """
+        response_type = type(response).__name__
+        response_body = None
+        extraction_error = None
+
+        try:
+            # Try method 1: For JSONResponse, try to access the underlying content
+            # FastAPI's JSONResponse stores the content before serialization
+            if isinstance(response, JSONResponse):
+                try:
+                    # JSONResponse may store content in different attributes
+                    # Try _content first (internal attribute used by Starlette)
+                    if hasattr(response, "_content") and response._content is not None:
+                        try:
+                            if isinstance(response._content, (dict, list)):
+                                response_body = response._content
+                                return response_body
+                        except Exception:
+                            pass
+
+                    # Try content attribute (some versions of Starlette/FastAPI)
+                    if hasattr(response, "content") and response.content is not None:
+                        try:
+                            # content might be a dict, list, or already serialized string
+                            if isinstance(response.content, (dict, list)):
+                                response_body = response.content
+                                return response_body
+                            elif isinstance(response.content, str):
+                                try:
+                                    response_body = json.loads(response.content)
+                                except (json.JSONDecodeError, ValueError):
+                                    response_body = response.content
+                                return response_body
+                        except Exception as e:
+                            extraction_error = (
+                                f"Failed to read JSONResponse.content: {e}"
+                            )
+
+                    # Fall through to try body attribute
+                except Exception as e:
+                    extraction_error = f"Failed to access JSONResponse attributes: {e}"
+
+            # Try method 2: Direct body access (for responses that are already serialized)
+            if hasattr(response, "body") and response.body is not None:
+                try:
+                    body_bytes = response.body
+                    if body_bytes:
+                        body_str = body_bytes.decode("utf-8")
+                        try:
+                            response_body = json.loads(body_str)
+                        except (json.JSONDecodeError, ValueError):
+                            response_body = body_str
+                        return response_body
+                except (AttributeError, UnicodeDecodeError, TypeError) as e:
+                    if not extraction_error:
+                        extraction_error = f"Failed to read response.body: {e}"
+
+            # Try method 3: Read from body_iterator (for streaming responses)
+            # Note: This consumes the iterator, so we need to recreate it
+            if (
+                hasattr(response, "body_iterator")
+                and response.body_iterator is not None
+            ):
+                try:
+                    # Check if it's already an async iterator
+                    body_chunks = []
+                    iterator = response.body_iterator
+                    if hasattr(iterator, "__aiter__"):
+                        async for chunk in iterator:
+                            body_chunks.append(chunk)
+                    elif hasattr(iterator, "__iter__"):
+                        for chunk in iterator:
+                            body_chunks.append(chunk)
+
+                    if body_chunks:
+                        body_bytes = b"".join(body_chunks)
+                        body_str = body_bytes.decode("utf-8")
+                        try:
+                            response_body = json.loads(body_str)
+                        except (json.JSONDecodeError, ValueError):
+                            response_body = body_str
+
+                        # Recreate body_iterator for the actual response
+                        async def recreate_iterator():
+                            yield body_bytes
+
+                        response.body_iterator = recreate_iterator()
+                        return response_body
+                except (StopIteration, StopAsyncIteration):
+                    # Iterator was already consumed, that's okay
+                    pass
+                except Exception as e:
+                    if not extraction_error:
+                        extraction_error = f"Failed to read from body_iterator: {e}"
+
+        except Exception as e:
+            extraction_error = f"Unexpected error: {e}"
+
+        # Log warning if we couldn't extract the body
+        if response_body is None and extraction_error:
+            logger.warning(
+                f"[{request_id}] Failed to extract response body: {extraction_error}, "
+                f"method={method}, path={path}, "
+                f"status={response.status_code}, response_type={response_type}, "
+                f"has_body={hasattr(response, 'body')}, "
+                f"has_body_iterator={hasattr(response, 'body_iterator')}, "
+                f"is_jsonresponse={isinstance(response, JSONResponse)}"
+            )
+
+        return response_body
 
     def _log_request_json(
         self, request_id: str, method: str, path: str, client: str, body
