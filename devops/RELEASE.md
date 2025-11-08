@@ -18,7 +18,8 @@
 2. 在 GitHub 上创建 release（选择创建新的 tag）添加`-android` 后缀
    <img width="900" height="402" alt="image" src="https://github.com/user-attachments/assets/090663da-e86a-4b8f-a8a5-dd98a34f1c9c" />
    <img width="900" height="984" alt="image" src="https://github.com/user-attachments/assets/95438de0-8c3c-4aad-8d12-0591395b8d5e" />
-3. 在本地 git checkout 出对应的 tag，构建 release aab（使用 release build type）
+3. 在本地 git checkout 出对应的 tag，构建 release aab（使用 release build type）并确认其 versionName
+   <img width="480" height="208" alt="image" src="https://github.com/user-attachments/assets/433d8afe-911f-4494-8e0f-39a666653afc" />
 4. 上传内测轨道
    <img width="800" height="1614" alt="image" src="https://github.com/user-attachments/assets/07cc93c6-a573-40d8-98f2-f716fce5826a" />
    编写有价值的更新说明
