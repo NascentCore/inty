@@ -15,7 +15,9 @@
 
 1. 修改代码中的 versionName 到新的版本号，如 https://github.com/NascentCore/inty/commit/0c18b413401dedc48efe9c1bcc67e2ba999065be
    <img width="900" height="400" alt="image" src="https://github.com/user-attachments/assets/186335c0-fc96-4520-b8da-d89f0f892a23" />
-2. 在 GitHub 上创建 release（选择创建新的 tag）
+2. 在 GitHub 上创建 release（选择创建新的 tag）添加`-android` 后缀
+   <img width="900" height="402" alt="image" src="https://github.com/user-attachments/assets/090663da-e86a-4b8f-a8a5-dd98a34f1c9c" />
+   <img width="900" height="984" alt="image" src="https://github.com/user-attachments/assets/95438de0-8c3c-4aad-8d12-0591395b8d5e" />
 3. 在本地 git checkout 出对应的 tag，构建 release aab（使用 release build type）
 4. 上传内测轨道
    <img width="800" height="1614" alt="image" src="https://github.com/user-attachments/assets/07cc93c6-a573-40d8-98f2-f716fce5826a" />
