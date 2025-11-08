@@ -113,10 +113,12 @@ fun ChatInput(
 
             // 视觉上保持与底部 8.dp 的坚决，这样初始，只有一行输入时，其位置位于
             // 输入框垂直方向中央位置。增加输入行数，则位置不变。
-            val bottomPadding = 8.dp
+            val verticalPadding = 16.dp
+            val rightPadding = 8.dp
             // 发送/更多按钮区域
             MultiUseAccessButton(
-                modifier = Modifier.padding(bottom = bottomPadding),
+                modifier = Modifier.padding(end = rightPadding, top = verticalPadding, bottom = verticalPadding),
+                buttonSize = 30.dp,
                 hasInput = inputData.value.isNotEmpty(),
                 showMorePanel = showMorePanel,
                 onSendMessage = onSendMessage,
@@ -130,6 +132,7 @@ fun ChatInput(
  * 多功能访问按钮组件（发送/更多按钮）
  *
  * @param modifier 修饰符
+ * @param buttonSize 按钮大小
  * @param hasInput 是否有输入内容
  * @param showMorePanel 是否显示更多面板
  * @param onSendMessage 发送消息回调
@@ -138,16 +141,16 @@ fun ChatInput(
 @Composable
 private fun MultiUseAccessButton(
     modifier: Modifier = Modifier,
+    buttonSize: Dp,
     hasInput: Boolean,
     showMorePanel: Boolean,
     onSendMessage: () -> Unit,
     onToggleMorePanel: () -> Unit,
 ) {
     Box(
-        modifier = modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center,
+        modifier = modifier,
+        contentAlignment = Alignment.BottomStart,
     ) {
-        val buttonSize = 24.dp
         // 有输入内容时，发送按钮显示
         if (hasInput) {
             AsyncImage(
