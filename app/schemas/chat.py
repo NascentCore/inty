@@ -164,6 +164,7 @@ class Chat(ChatInDB):
     agent_name: Optional[str] = None
     agent_avatar: Optional[str] = None
     agent_background: Optional[str] = None
+    agent_background_animated: Optional[str] = None
     agent_extensions: Optional[Dict[str, Any]] = None
     agent_is_deleted: Optional[bool] = None
     agent_intro: Optional[str] = None
@@ -260,6 +261,20 @@ class Chat(ChatInDB):
             return image_transform_service.transform_desktop(agent_background)
         except Exception:
             return agent_background
+
+    @field_serializer("agent_background_animated")
+    def serialize_agent_background_animated(
+        self, agent_background_animated: Optional[str]
+    ) -> Optional[str]:
+        """转换agent_background_animated URL为CDN URL"""
+        if not agent_background_animated:
+            return agent_background_animated
+        try:
+            from app.services.image_transform_service import image_transform_service
+
+            return image_transform_service.transform_desktop(agent_background_animated)
+        except Exception:
+            return agent_background_animated
 
 
 # OpenAI style message model

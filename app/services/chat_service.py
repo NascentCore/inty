@@ -62,6 +62,9 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
             chat.agent_background = chat.agent.background if chat.agent else None
+            chat.agent_background_animated = (
+                chat.agent.background_animated if chat.agent else None
+            )
             chat.agent_extensions = chat.agent.extensions if chat.agent else None
             chat.agent_is_deleted = (
                 chat.agent.deleted_at is not None if chat.agent else None
@@ -151,6 +154,9 @@ async def get_chats(
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
             chat.agent_background = chat.agent.background if chat.agent else None
+            chat.agent_background_animated = (
+                chat.agent.background_animated if chat.agent else None
+            )
             chat.agent_extensions = chat.agent.extensions if chat.agent else None
             chat.agent_is_deleted = (
                 chat.agent.deleted_at is not None if chat.agent else None
@@ -268,6 +274,9 @@ async def create_chat(
             chat.last_message_time = None
         chat.agent_name = chat.agent.name if chat.agent else None
         chat.agent_avatar = chat.agent.avatar if chat.agent else None
+        chat.agent_background_animated = (
+            chat.agent.background_animated if chat.agent else None
+        )
         chat.agent_is_deleted = (
             chat.agent.deleted_at is not None if chat.agent else None
         )
@@ -399,6 +408,7 @@ async def get_or_create_chat_by_agent(
             chat.agent_name = cached_session.get("agent_name")
             chat.agent_avatar = cached_session.get("agent_avatar")
             chat.agent_background = cached_session.get("agent_background")
+            chat.agent_background_animated = cached_session.get("agent_background_animated")
             chat.agent_intro = cached_session.get("agent_intro")
             chat.agent_opening = cached_session.get("agent_opening")
             chat.agent_opening_audio_url = cached_session.get("agent_opening_audio_url")
@@ -437,6 +447,9 @@ async def get_or_create_chat_by_agent(
                 if cached_agent:
                     existing_chat.agent_name = cached_agent.get("name")
                     existing_chat.agent_avatar = cached_agent.get("avatar")
+                    existing_chat.agent_background_animated = cached_agent.get(
+                        "background_animated"
+                    )
                     existing_chat.agent_intro = cached_agent.get("intro")
                     existing_chat.agent_opening = cached_agent.get("opening")
                     existing_chat.agent_opening_audio_url = cached_agent.get(
@@ -459,6 +472,7 @@ async def get_or_create_chat_by_agent(
                         select(
                             models.Agent.name,
                             models.Agent.avatar,
+                            models.Agent.background_animated,
                             models.Agent.intro,
                             models.Agent.opening,
                             models.Agent.opening_audio_url,
@@ -469,19 +483,21 @@ async def get_or_create_chat_by_agent(
                     if agent_info:
                         existing_chat.agent_name = agent_info[0]
                         existing_chat.agent_avatar = agent_info[1]
-                        existing_chat.agent_intro = agent_info[2]
-                        existing_chat.agent_opening = agent_info[3]
-                        existing_chat.agent_opening_audio_url = agent_info[4]
-                        existing_chat.agent_is_deleted = agent_info[5] is not None
+                        existing_chat.agent_background_animated = agent_info[2]
+                        existing_chat.agent_intro = agent_info[3]
+                        existing_chat.agent_opening = agent_info[4]
+                        existing_chat.agent_opening_audio_url = agent_info[5]
+                        existing_chat.agent_is_deleted = agent_info[6] is not None
                         # 缓存Agent信息
                         cache_service.set_agent_config(
                             agent_id,
                             {
                                 "name": agent_info[0],
                                 "avatar": agent_info[1],
-                                "intro": agent_info[2],
-                                "opening": agent_info[3],
-                                "opening_audio_url": agent_info[4],
+                                "background_animated": agent_info[2],
+                                "intro": agent_info[3],
+                                "opening": agent_info[4],
+                                "opening_audio_url": agent_info[5],
                             },
                         )
                     else:
@@ -589,6 +605,7 @@ async def get_or_create_chat_by_agent(
         if cached_agent:
             agent_name = cached_agent.get("name")
             agent_avatar = cached_agent.get("avatar")
+            agent_background_animated = cached_agent.get("background_animated")
             agent_intro = cached_agent.get("intro")
             agent_opening = cached_agent.get("opening")
             opening_audio_url = cached_agent.get("opening_audio_url")
@@ -599,6 +616,7 @@ async def get_or_create_chat_by_agent(
                 select(
                     models.Agent.name,
                     models.Agent.avatar,
+                    models.Agent.background_animated,
                     models.Agent.intro,
                     models.Agent.opening,
                     models.Agent.opening_audio_url,
@@ -613,6 +631,7 @@ async def get_or_create_chat_by_agent(
             (
                 agent_name,
                 agent_avatar,
+                agent_background_animated,
                 agent_intro,
                 agent_opening,
                 opening_audio_url,
@@ -624,6 +643,7 @@ async def get_or_create_chat_by_agent(
                 {
                     "name": agent_name,
                     "avatar": agent_avatar,
+                    "background_animated": agent_background_animated,
                     "intro": agent_intro,
                     "opening": agent_opening,
                     "opening_audio_url": opening_audio_url,
@@ -688,6 +708,11 @@ async def get_or_create_chat_by_agent(
         # 10. 设置Agent信息并缓存会话（优化：避免重复查询）
         db_chat.agent_name = agent_name
         db_chat.agent_avatar = agent_avatar
+        db_chat.agent_background_animated = (
+            cached_agent.get("background_animated")
+            if cached_agent
+            else agent_background_animated
+        )
         db_chat.agent_intro = cached_agent.get("intro") if cached_agent else agent_intro
         db_chat.agent_opening = (
             cached_agent.get("opening") if cached_agent else agent_opening
@@ -715,6 +740,11 @@ async def get_or_create_chat_by_agent(
             "agent_id": agent_id,
             "agent_name": agent_name,
             "agent_avatar": agent_avatar,
+            "agent_background_animated": (
+                cached_agent.get("background_animated")
+                if cached_agent
+                else agent_background_animated
+            ),
             "agent_intro": cached_agent.get("intro") if cached_agent else agent_intro,
             "agent_opening": (
                 cached_agent.get("opening") if cached_agent else agent_opening

@@ -274,6 +274,7 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
             models.Agent.intro,
             models.Agent.avatar,
             models.Agent.background,
+            models.Agent.background_animated,
             models.Agent.opening,
             models.Agent.voice_id,
             models.Agent.opening_audio_url,
@@ -306,11 +307,12 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
             "intro": row[13] or "",
             "avatar": row[14],
             "background": row[15],
-            "opening": row[16],
-            "voice_id": row[17],
-            "opening_audio_url": row[18],
-            "created_at": row[19],
-            "updated_at": row[20],
+            "background_animated": row[16],
+            "opening": row[17],
+            "voice_id": row[18],
+            "opening_audio_url": row[19],
+            "created_at": row[20],
+            "updated_at": row[21],
             "_complete_data": True,  # 标记为完整数据
         }
 
