@@ -17,6 +17,7 @@
 
 ## Kotlin/Compose UI 规范
 
+- 不要使用裸写的数值如 10.dp 而应该定义常量如：const val boxHeight = 10.dp
 - 组件 UI 配置通过入参传递（提供合理默认值）；严禁在组件内部写 10.dp/10.sp/10.pt 等魔法值。
 - 默认值应来自 `core/design` 的设计令牌（如 `Spacing`、`Radii`、`Elevation`、`IconSize`、`AnimationDurations`、`TextStyleTokens`）或 `MaterialTheme`。
 - 优先使用 `MaterialTheme.colorScheme/typography`；需要扩展时通过 `CompositionLocal` 暴露自定义 tokens。
