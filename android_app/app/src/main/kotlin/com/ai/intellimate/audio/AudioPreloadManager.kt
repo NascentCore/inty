@@ -47,7 +47,7 @@ object AudioPreloadManager {
                 if (audioUrls.isNotEmpty()) {
                     // 使用并发预加载，提高效率
                     preloadAudioUrls(audioUrls, maxConcurrent)
-                    LogUtils.i("AudioPreloadManager - 批量预加载${audioUrls.size}个音频完成")
+//                    LogUtils.i("AudioPreloadManager - 批量预加载${audioUrls.size}个音频完成")
                 }
             }
         } catch (e: Exception) {
@@ -122,7 +122,7 @@ object AudioPreloadManager {
                                 // 检查是否已经缓存
                                 if (!audioCacheManager.isCached(url)) {
                                     audioCacheManager.preloadAudio(url)
-                                    LogUtils.i("AudioPreloadManager - 预加载音频成功: $url")
+//                                    LogUtils.i("AudioPreloadManager - 预加载音频成功: $url")
                                 } else {
                                     LogUtils.i("AudioPreloadManager - 音频已缓存，跳过: $url")
                                 }

@@ -93,6 +93,28 @@ internal fun ChatPage(
     val context = LocalContext.current
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val isQueryMsgsCompleted by chatViewModel.isQueryMsgsCompleted.collectAsState()
+    val chatMessages by chatViewModel.msgs.collectAsState()
+
+    // 判断是否是首次进入（没有实际聊天消息，只有 opening 或空）
+    val isFirstEnter = remember(agentInfo?.id, chatMessages) {
+        val actualChatMessages = chatMessages.filter {
+            !it.isOpening() && it.role != "system" && it.content != "loading_animation"
+        }
+        actualChatMessages.isEmpty()
+    }
+
+    // 判断是否有消息正在 loading（普通消息 loading，不是图片生成 loading）
+    val hasLoadingMessage = remember(chatMessages) {
+        chatMessages.any { msg ->
+            val hasGeneratedImage = msg.hasGeneratedImage()
+            val generatedImageUrl = msg.getGeneratedImageUrl()
+            // 普通消息loading（sendMsg/keep talking的loading）
+            // 排除图片loading（generatedImageUrl == "loading"）
+            msg.content == "loading_animation" &&
+                    !hasGeneratedImage &&
+                    generatedImageUrl != "loading"
+        }
+    }
 
     // 使用 PageTrackingHelper 进行页面跟踪（仅在页面可见时触发，避免 HorizontalPager 缓存机制导致的误触发）
     LaunchedEffect(isCurrentPage, agentInfo?.id) {
@@ -192,7 +214,12 @@ internal fun ChatPage(
             }
     ) {
         // 背景
-        AgentBackground(agentInfo = agentInfo, showGradients = true)
+        AgentBackground(
+            agentInfo = agentInfo,
+            showGradients = true,
+            isFirstEnter = isFirstEnter && isQueryMsgsCompleted,
+            isLoading = hasLoadingMessage,
+        )
 
         val drawerState = remember { mutableStateOf(DrawerValue.Closed) }
         val scope = rememberCoroutineScope()
@@ -392,9 +419,6 @@ internal fun ChatPage(
                         // 优化：等待getMsgs完成，并且（没有更多消息 或 消息列表为空）时才显示
                         val showIntroOpeningTop =
                             isQueryMsgsCompleted && ((!hasMoreMessages) || chatMessages.isEmpty())
-                        LogUtils.d(
-                            "ChatPage: showIntroOpeningTop=$showIntroOpeningTop, isQueryMsgsCompleted=$isQueryMsgsCompleted, hasMoreMessages=$hasMoreMessages, chatMessages.size=${chatMessages.size}"
-                        )
                         if (showIntroOpeningTop) {
                             // Opening 消息（带音频自动播放逻辑，ChatItem 内部处理）
                             item {
@@ -572,7 +596,7 @@ internal fun ChatPage(
                             !hasGeneratedImage &&
                             generatedImageUrl != "loading"
                 }
-                
+
                 val showKeepTalkingButton = shouldShowButton && hasLatestAssistantMessage
                 // 当有消息正在loading时，按钮禁用
                 val isKeepTalkingEnabled = !hasLoadingMessage

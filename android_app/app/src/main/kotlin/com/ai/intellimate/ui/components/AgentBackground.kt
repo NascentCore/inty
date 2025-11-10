@@ -2,6 +2,7 @@ package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.utils.LogUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,9 @@ fun AgentBackground(
     agentInfo: AgentInfo?,
     modifier: Modifier = Modifier,
     showGradients: Boolean = true,
+    isFirstEnter: Boolean = false,
+    isLoading: Boolean = false,
+    onPlayComplete: () -> Unit = {},
 ) {
     val density = LocalDensity.current
     val containerSize = LocalWindowInfo.current.containerSize
@@ -105,30 +109,60 @@ fun AgentBackground(
     }
 
     val context = LocalContext.current
-    val imageUrl = agentInfo?.backgroundGifUrl?.ifEmpty { agentInfo?.getAlbumImage() }
+    val backgroundGifUrl = agentInfo?.backgroundGifUrl?.takeIf { it.isNotBlank() }
+    val staticImageUrl = agentInfo?.getAlbumImage()?.takeIf { it.isNotBlank() }
 
-    // 构建图片请求，使用 CDN 优化和尺寸限制
-    val imageRequest = remember(imageUrl, containerWidthDp, containerHeightDp, density) {
-        if (imageUrl != null) {
-            // 将容器尺寸转换为像素，用于 CDN 参数和 Coil 尺寸限制
-            val containerWidthPx = with(density) { containerWidthDp.dp.toPx().toInt() }
-            val containerHeightPx = with(density) { containerHeightDp.dp.toPx().toInt() }
+    // 调试日志
+    LaunchedEffect(agentInfo?.id, backgroundGifUrl, staticImageUrl) {
+        LogUtils.d("AgentBackground - agentId: ${agentInfo?.id}, backgroundGifUrl: $backgroundGifUrl, staticImageUrl: $staticImageUrl")
+    }
 
-            ImageRequest.Builder(context)
-                .data(
-                    getCdnImageUrl(
-                        imageUrl,
-                        width = containerWidthPx,
-                        quality = CDN_IMAGE_QUALITY
-                    ) ?: imageUrl
-                )
-                .size(Size(containerWidthPx, containerHeightPx))
-                .crossfade(true)
-                .build()
-        } else {
-            null
+    // 播放控制逻辑
+    var shouldPlay by remember { mutableStateOf(false) }
+    var playCount by remember { mutableIntStateOf(1) }
+    var hasPlayedFirstTime by remember { mutableStateOf(false) }
+
+    // 首次进入：播放2次
+    LaunchedEffect(isFirstEnter, backgroundGifUrl) {
+        if (isFirstEnter && backgroundGifUrl != null && !hasPlayedFirstTime) {
+            hasPlayedFirstTime = true
+            playCount = 2
+            shouldPlay = true
         }
     }
+
+    // Loading 时：播放1次
+    LaunchedEffect(isLoading, backgroundGifUrl) {
+        if (isLoading && backgroundGifUrl != null) {
+            playCount = 1
+            shouldPlay = true
+        } else if (!isLoading) {
+            shouldPlay = false
+        }
+    }
+
+    // 构建静态图片请求（用于首次加载优化）
+    val staticImageRequest =
+        remember(staticImageUrl, containerWidthDp, containerHeightDp, density) {
+            if (staticImageUrl != null) {
+                val containerWidthPx = with(density) { containerWidthDp.dp.toPx().toInt() }
+                val containerHeightPx = with(density) { containerHeightDp.dp.toPx().toInt() }
+
+                ImageRequest.Builder(context)
+                    .data(
+                        getCdnImageUrl(
+                            staticImageUrl,
+                            width = containerWidthPx,
+                            quality = CDN_IMAGE_QUALITY
+                        ) ?: staticImageUrl
+                    )
+                    .size(Size(containerWidthPx, containerHeightPx))
+                    .crossfade(true)
+                    .build()
+            } else {
+                null
+            }
+        }
 
     Box(modifier = modifier) {
         Column(
@@ -143,19 +177,48 @@ fun AgentBackground(
                         }
                     }
         ) {
-            AsyncImage(
-                modifier = Modifier.size(containerWidthDp.dp, containerHeightDp.dp),
-                model = imageRequest,
-                contentDescription = null,
-                alignment = Alignment.TopCenter,
-                contentScale = optimalContentScale,
-                onSuccess = { state ->
-                    // 获取图片原始尺寸（像素），用于计算 ContentScale
-                    val drawable = state.painter
-                    imageWidthPx = drawable.intrinsicSize.width.toInt()
-                    imageHeightPx = drawable.intrinsicSize.height.toInt()
-                },
-            )
+            // 如果有动图/视频，使用 AnimatedBackground
+            if (backgroundGifUrl != null) {
+                LogUtils.d("测试，agent背景图gifUrl : $backgroundGifUrl")
+                AnimatedBackground(
+                    videoUrl = backgroundGifUrl,
+                    staticImageUrl = staticImageUrl,
+                    modifier = Modifier.size(containerWidthDp.dp, containerHeightDp.dp),
+                    contentScale = optimalContentScale,
+                    shouldPlay = shouldPlay,
+                    playCount = playCount,
+                    onPlayComplete = {
+                        shouldPlay = false
+                        onPlayComplete()
+                    },
+                    onStaticImageLoaded = {
+                        // 静态图加载完成，可以开始加载动图/视频
+                    },
+                )
+            } else {
+                // 没有动图/视频，显示静态图
+                if (staticImageUrl != null && staticImageRequest != null) {
+                    LogUtils.d("AgentBackground - 显示静态图: $staticImageUrl")
+                    AsyncImage(
+                        modifier = Modifier.size(containerWidthDp.dp, containerHeightDp.dp),
+                        model = staticImageRequest,
+                        contentDescription = null,
+                        alignment = Alignment.TopCenter,
+                        contentScale = optimalContentScale,
+                        onSuccess = { state ->
+                            // 获取图片原始尺寸（像素），用于计算 ContentScale
+                            val drawable = state.painter
+                            imageWidthPx = drawable.intrinsicSize.width.toInt()
+                            imageHeightPx = drawable.intrinsicSize.height.toInt()
+                        },
+                        onError = {
+                            LogUtils.e("AgentBackground - 静态图加载失败: $staticImageUrl")
+                        },
+                    )
+                } else {
+                    LogUtils.w("AgentBackground - 静态图URL为空，无法显示背景")
+                }
+            }
         }
 
         // 渐变遮罩 - 仅在需要时显示
