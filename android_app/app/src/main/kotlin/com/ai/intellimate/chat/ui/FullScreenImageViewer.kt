@@ -1,6 +1,7 @@
 package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.getCdnImageUrl
+import ai.sxwl.android.design.ImageLoaderUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -27,7 +28,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
 
 /** 全屏图片查看器 */
 @Composable
@@ -137,9 +137,12 @@ internal fun FullScreenImageViewer(
                     translationY = offsetY,
                 )
                 .transformable(state = transformableState),
-            model = ImageRequest.Builder(context)
-                .data(getCdnImageUrl(imageUrl, width = 1920, quality = 85))
-                .build(),
+            model = ImageLoaderUtils.createDeviceAdaptiveImageRequest(
+                context = context,
+                imageUrl = getCdnImageUrl(imageUrl, width = 1920, quality = 85),
+                maxWidth = 1920,
+                maxHeight = 1920,
+            ),
             contentDescription = "Full screen image",
             contentScale = ContentScale.Fit,
             alignment = Alignment.Center,
