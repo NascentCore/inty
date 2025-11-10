@@ -17,8 +17,8 @@ object ImageLoaderUtils {
      *
      * @param context 上下文
      * @param imageUrl 图片URL
-     * @param placeholder 占位图资源ID
-     * @param error 错误图资源ID
+     * @param placeholder 占位图资源ID，null表示不设置占位图
+     * @param error 错误图资源ID，null表示不设置错误图
      * @param maxWidth 最大宽度，null表示使用屏幕宽度
      * @param maxHeight 最大高度，null表示使用屏幕高度
      * @return 优化后的ImageRequest
@@ -26,8 +26,8 @@ object ImageLoaderUtils {
     fun createDeviceAdaptiveImageRequest(
         context: Context,
         imageUrl: String?,
-        @DrawableRes placeholder: Int = R.drawable.img_girl_lite,
-        @DrawableRes error: Int = R.drawable.img_girl_lite,
+        @DrawableRes placeholder: Int? = null,
+        @DrawableRes error: Int? = null,
         maxWidth: Int? = null,
         maxHeight: Int? = null
     ): ImageRequest {
@@ -39,14 +39,17 @@ object ImageLoaderUtils {
         val targetWidth = screenWidth
         val targetHeight = screenHeight
 
-        return ImageRequest.Builder(context)
+        val builder = ImageRequest.Builder(context)
             .data(imageUrl)
             .size(Size(targetWidth, targetHeight)) // 设备适配的尺寸
             .crossfade(true)
             .crossfade(300) // 300ms的交叉淡入淡出
-            .placeholder(placeholder)
-            .error(error)
-            .build()
+
+        // 只有在明确传入时才设置 placeholder 和 error
+        placeholder?.let { builder.placeholder(it) }
+        error?.let { builder.error(it) }
+
+        return builder.build()
     }
 
     /**
@@ -54,24 +57,27 @@ object ImageLoaderUtils {
      *
      * @param context 上下文
      * @param imageUrl 图片URL
-     * @param placeholder 占位图资源ID
-     * @param error 错误图资源ID
+     * @param placeholder 占位图资源ID，null表示不设置占位图
+     * @param error 错误图资源ID，null表示不设置错误图
      * @return 优化后的ImageRequest
      */
     fun createLargeImageRequest(
         context: Context,
         imageUrl: String?,
-        @DrawableRes placeholder: Int = R.drawable.img_girl_lite,
-        @DrawableRes error: Int = R.drawable.img_girl_lite
+        @DrawableRes placeholder: Int? = null,
+        @DrawableRes error: Int? = null
     ): ImageRequest {
-        return ImageRequest.Builder(context)
+        val builder = ImageRequest.Builder(context)
             .data(imageUrl)
             .size(Size.ORIGINAL) // 使用原始尺寸，让Coil自动处理
             .crossfade(true)
             .crossfade(300) // 300ms的交叉淡入淡出
-            .placeholder(placeholder)
-            .error(error)
-            .build()
+
+        // 只有在明确传入时才设置 placeholder 和 error
+        placeholder?.let { builder.placeholder(it) }
+        error?.let { builder.error(it) }
+
+        return builder.build()
     }
 
     /**
@@ -123,24 +129,27 @@ object ImageLoaderUtils {
      *
      * @param context 上下文
      * @param imageUrl 图片URL
-     * @param placeholder 占位图
-     * @param error 错误图
+     * @param placeholder 占位图资源ID，null表示不设置占位图
+     * @param error 错误图资源ID，null表示不设置错误图
      * @return 优化后的ImageRequest
      */
     fun createProgressiveImageRequest(
         context: Context,
         imageUrl: String?,
-        @DrawableRes placeholder: Int = R.drawable.img_girl_lite,
-        @DrawableRes error: Int = R.drawable.img_girl_lite
+        @DrawableRes placeholder: Int? = null,
+        @DrawableRes error: Int? = null
     ): ImageRequest {
-        return ImageRequest.Builder(context)
+        val builder = ImageRequest.Builder(context)
             .data(imageUrl)
             .size(Size.ORIGINAL)
             .crossfade(true)
             .crossfade(500) // 更长的交叉淡入淡出时间
-            .placeholder(placeholder)
-            .error(error)
-            .build()
+
+        // 只有在明确传入时才设置 placeholder 和 error
+        placeholder?.let { builder.placeholder(it) }
+        error?.let { builder.error(it) }
+
+        return builder.build()
     }
 
     /**
