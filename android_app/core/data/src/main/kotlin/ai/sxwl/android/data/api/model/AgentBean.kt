@@ -12,6 +12,8 @@ import kotlinx.parcelize.RawValue
 data class AgentInfo(
     val avatar: String = "", // 头像
     val background: String = "", // 背景图
+    @Json(name = "background_animated")
+    val backgroundGifUrl: String = "", // 背景动图
     @Json(name = "background_images") val backgroundImages: List<String> = emptyList(),
     val category: String = "",
     val gender: String = "",

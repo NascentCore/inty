@@ -76,7 +76,7 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
             topBar = {
                 CenterAlignedTopAppBar(
                     colors =
-                        TopAppBarDefaults.centerAlignedTopAppBarColors()
+                        TopAppBarDefaults.topAppBarColors()
                             .copy(containerColor = Color.Transparent),
                     title = {},
                     navigationIcon = {

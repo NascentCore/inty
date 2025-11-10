@@ -18,9 +18,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalWindowInfo
 import kotlin.math.absoluteValue
 
 @Composable
@@ -30,9 +28,8 @@ fun MyModalNavigationDrawer(
     drawerState: MutableState<DrawerValue> = remember { mutableStateOf(DrawerValue.Closed) },
     content: @Composable () -> Unit,
 ) {
-    val configuration = LocalConfiguration.current
-    val screenWidthDp = configuration.screenWidthDp
-    val screenWidthPx = with(LocalDensity.current) { screenWidthDp.dp.toPx() }
+    val containerSize = LocalWindowInfo.current.containerSize
+    val screenWidthPx = containerSize.width.toFloat()
 
     Box(modifier.fillMaxSize()) {
         // 是否显示遮罩层
@@ -60,7 +57,8 @@ fun MyModalNavigationDrawer(
         if (showMask.value || drawerState.value == DrawerValue.Open) {
             Box(
                 modifier =
-                    Modifier.fillMaxSize()
+                    Modifier
+                        .fillMaxSize()
                         .alpha(maskLayerAlpha)
                         .background(color = Color(0xff000000))
                         .clickable { drawerState.value = DrawerValue.Closed }
@@ -68,7 +66,8 @@ fun MyModalNavigationDrawer(
             // 抽屉
             Box(
                 modifier =
-                    Modifier.onSizeChanged { drawerWidth.intValue = it.width }
+                    Modifier
+                        .onSizeChanged { drawerWidth.intValue = it.width }
                         .graphicsLayer { translationX = xOffset }
             ) {
                 drawerContent()
