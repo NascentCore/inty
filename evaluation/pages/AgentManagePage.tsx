@@ -141,13 +141,47 @@ export const AgentManagePage: React.FC = () => {
   );
   const [modelsLoading, setModelsLoading] = useState(false);
 
-  // 背景动图相关状态
+  // 背景视频相关状态
   const [backgroundAnimatedFile, setBackgroundAnimatedFile] = useState<File | null>(null);
   const [backgroundAnimatedPreview, setBackgroundAnimatedPreview] = useState<string>("");
   const [generateAnimatedModalVisible, setGenerateAnimatedModalVisible] = useState(false);
   const [generateAnimatedLoading, setGenerateAnimatedLoading] = useState(false);
   const [generateAnimatedPrompt, setGenerateAnimatedPrompt] = useState("");
-  const [generateAnimatedFormat, setGenerateAnimatedFormat] = useState<"avif" | "gif">("avif");
+
+  // 判断URL是否为视频格式
+  const isVideoUrl = (url: string | undefined): boolean => {
+    if (!url) return false;
+    const urlLower = url.toLowerCase();
+    
+    // 检查是否为data URL，如果是video类型
+    if (urlLower.startsWith("data:video/")) {
+      return true;
+    }
+    
+    // 检查文件扩展名（更精确的匹配）
+    const videoExtensions = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".flv", ".wmv", ".m4v"];
+    const imageExtensions = [".gif", ".avif", ".jpg", ".jpeg", ".png", ".webp", ".bmp", ".svg"];
+    
+    // 先检查是否为图片格式（向后兼容）
+    // 使用更精确的匹配，检查扩展名是否在URL末尾或后面跟着查询参数
+    const urlWithoutQuery = urlLower.split("?")[0];
+    if (imageExtensions.some(ext => urlWithoutQuery.endsWith(ext))) {
+      return false;
+    }
+    
+    // 检查是否为视频格式
+    if (videoExtensions.some(ext => urlWithoutQuery.endsWith(ext))) {
+      return true;
+    }
+    
+    // 检查URL路径中是否包含视频相关路径（更精确）
+    if (urlLower.includes("/videos/") || urlLower.includes("/video/")) {
+      return true;
+    }
+    
+    // 默认返回false，保持向后兼容
+    return false;
+  };
 
   // 加载智能体列表
   const loadAgents = useCallback(
@@ -328,13 +362,12 @@ export const AgentManagePage: React.FC = () => {
     setCurrentAgentForAvatar(null);
   };
 
-  // 处理生成背景动图
+  // 处理生成背景视频
   const handleGenerateBackgroundAnimated = async () => {
     console.log("handleGenerateBackgroundAnimated 被调用", {
       currentAgent: currentAgent?.id,
       hasBackground: !!currentAgent?.background,
       prompt: generateAnimatedPrompt,
-      format: generateAnimatedFormat,
     });
 
     if (!currentAgent) {
@@ -355,14 +388,12 @@ export const AgentManagePage: React.FC = () => {
       console.log("开始调用 API", {
         agentId: currentAgent.id,
         prompt: generateAnimatedPrompt.trim() || undefined,
-        format: generateAnimatedFormat,
       });
 
       // prompt 可以为空，后端会自动生成
       const updatedAgent = await api.agents.generateBackgroundAnimated(
         currentAgent.id,
         generateAnimatedPrompt.trim() || undefined,
-        generateAnimatedFormat,
       );
 
       console.log("API 调用成功", updatedAgent);
@@ -375,18 +406,18 @@ export const AgentManagePage: React.FC = () => {
             background_animated: updatedAgent.background_animated,
           });
         }
-        message.success("背景动图生成成功");
+        message.success("背景视频生成成功");
         setGenerateAnimatedModalVisible(false);
         setGenerateAnimatedPrompt("");
         return true; // 允许 Modal 关闭
       } else {
-        message.error("背景动图生成失败");
+        message.error("背景视频生成失败");
         return false; // 阻止 Modal 关闭
       }
     } catch (error) {
-      console.error("生成背景动图失败:", error);
+      console.error("生成背景视频失败:", error);
       message.error(
-        `生成背景动图失败: ${
+        `生成背景视频失败: ${
           error instanceof Error ? error.message : "未知错误"
         }`
       );
@@ -437,9 +468,9 @@ export const AgentManagePage: React.FC = () => {
         agentData.avatar = avatarFile;
       }
 
-      // 处理背景动图文件
+      // 处理背景视频文件
       if (backgroundAnimatedFile) {
-        // 上传动图文件
+        // 上传视频文件
         const uploadResult = await api.agents.uploadAvatar(
           backgroundAnimatedFile,
           false,
@@ -521,9 +552,9 @@ export const AgentManagePage: React.FC = () => {
         updateData.avatar = editAvatarFile;
       }
 
-      // 处理背景动图文件
+      // 处理背景视频文件
       if (backgroundAnimatedFile) {
-        // 上传动图文件
+        // 上传视频文件
         const uploadResult = await api.agents.uploadAvatar(
           backgroundAnimatedFile,
           false,
@@ -813,17 +844,21 @@ export const AgentManagePage: React.FC = () => {
           <TextArea rows={3} placeholder="请输入开场白（可选）" />
         </Form.Item>
 
-        {/* 背景动图设置 */}
-        <Divider>背景动图设置</Divider>
+        {/* 背景视频设置 */}
+        <Divider>背景视频设置</Divider>
 
-        <Form.Item label="背景动图">
+        <Form.Item label="背景视频">
           <Space direction="vertical" style={{ width: "100%" }}>
             <Upload
               beforeUpload={(file) => {
-                const isAnimatedImage =
-                  file.type === "image/gif" || file.type === "image/avif";
-                if (!isAnimatedImage) {
-                  message.error("只能上传 GIF 或 AVIF 格式的动图文件!");
+                const isVideo =
+                  file.type.startsWith("video/") ||
+                  file.type === "video/mp4" ||
+                  file.type === "video/webm" ||
+                  file.type === "video/quicktime" ||
+                  file.type === "video/x-msvideo";
+                if (!isVideo) {
+                  message.error("只能上传视频文件（MP4、WebM、MOV等格式）!");
                   return false;
                 }
                 if (isEdit) {
@@ -831,11 +866,11 @@ export const AgentManagePage: React.FC = () => {
                   setBackgroundAnimatedFile(file);
                   const reader = new FileReader();
                   reader.onload = (e) => {
-                    const imageUrl = e.target?.result as string;
+                    const videoUrl = e.target?.result as string;
                     if (agentCopy) {
                       setAgentCopy({
                         ...agentCopy,
-                        background_animated: imageUrl,
+                        background_animated: videoUrl,
                       });
                     }
                   };
@@ -853,9 +888,9 @@ export const AgentManagePage: React.FC = () => {
                 return false;
               }}
               showUploadList={false}
-              accept="image/gif,image/avif"
+              accept="video/mp4,video/webm,video/quicktime,video/x-msvideo"
             >
-              <Button icon={<CameraOutlined />}>上传动图 (GIF/AVIF)</Button>
+              <Button icon={<CameraOutlined />}>上传视频</Button>
             </Upload>
             {isEdit && currentAgent && (
               <Button
@@ -867,30 +902,52 @@ export const AgentManagePage: React.FC = () => {
                   }
                   setGenerateAnimatedModalVisible(true);
                   setGenerateAnimatedPrompt("");
-                  setGenerateAnimatedFormat("avif");
                 }}
                 style={{ width: "100%" }}
                 disabled={!currentAgent?.background}
               >
-                生成背景动图
+                生成背景视频
               </Button>
             )}
             {((isEdit && agentCopy?.background_animated) ||
               (!isEdit && backgroundAnimatedPreview)) && (
               <div style={{ marginTop: 8 }}>
-                <img
-                  src={
-                    isEdit
-                      ? agentCopy?.background_animated || ""
-                      : backgroundAnimatedPreview
+                {(() => {
+                  const previewUrl = isEdit
+                    ? agentCopy?.background_animated || ""
+                    : backgroundAnimatedPreview;
+                  const isVideo = isVideoUrl(previewUrl);
+                  
+                  if (isVideo) {
+                    return (
+                      <video
+                        src={previewUrl}
+                        controls
+                        autoPlay
+                        loop
+                        muted
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "200px",
+                          borderRadius: 4,
+                          display: "block",
+                        }}
+                      />
+                    );
+                  } else {
+                    return (
+                      <img
+                        src={previewUrl}
+                        alt="背景视频预览"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "200px",
+                          borderRadius: 4,
+                        }}
+                      />
+                    );
                   }
-                  alt="背景动图预览"
-                  style={{
-                    maxWidth: "100%",
-                    maxHeight: "200px",
-                    borderRadius: 4,
-                  }}
-                />
+                })()}
                 <Button
                   type="link"
                   danger
@@ -1382,9 +1439,9 @@ export const AgentManagePage: React.FC = () => {
         {currentAgent && <AgentInfoDisplay agent={currentAgent} />}
       </Modal>
 
-      {/* 生成背景动图模态框 */}
+      {/* 生成背景视频模态框 */}
       <Modal
-        title="生成背景动图"
+        title="生成背景视频"
         open={generateAnimatedModalVisible}
         onOk={async () => {
           const result = await handleGenerateBackgroundAnimated();
@@ -1452,20 +1509,8 @@ export const AgentManagePage: React.FC = () => {
               </div>
             </>
           )}
-          <div>
-            <div style={{ marginBottom: 8 }}>输出格式：</div>
-            <Radio.Group
-              value={generateAnimatedFormat}
-              onChange={(e) =>
-                setGenerateAnimatedFormat(e.target.value as "avif" | "gif")
-              }
-            >
-              <Radio value="avif">AVIF（推荐，文件更小）</Radio>
-              <Radio value="gif">GIF（兼容性更好）</Radio>
-            </Radio.Group>
-          </div>
           <div style={{ fontSize: 12, color: "#666" }}>
-            提示：将使用 Google Veo3 生成 4 秒视频，然后转换为动图格式
+            提示：将使用 Google Veo3 生成 4 秒视频，直接存储视频地址
           </div>
         </Space>
       </Modal>

@@ -368,15 +368,13 @@ export const agentApi = {
   uploadAvatar: (file: File, croppingAvatar: boolean = true): Promise<any> =>
     apiClient.upload("/images", file, { cropping_avatar: croppingAvatar }),
 
-  // 生成背景动图
+  // 生成背景视频
   generateBackgroundAnimated: (
     agentId: string,
     prompt?: string,
-    format: "avif" | "gif" = "avif",
   ): Promise<Agent> =>
     apiClient.post(`/ai/agents/${agentId}/generate-background-animated`, {
       prompt: prompt || undefined, // 如果为空字符串，发送 undefined
-      format,
     }),
 };
 

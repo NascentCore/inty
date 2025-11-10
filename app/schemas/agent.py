@@ -99,7 +99,7 @@ class AgentBase(BaseModel):
     avatar: Optional[str] = None
     background: Optional[str] = None
     background_images: Optional[List[str]] = None
-    background_animated: Optional[str] = None  # AVIF或GIF格式的动图URL
+    background_animated: Optional[str] = None  # 视频URL
     voice_id: Optional[str] = None
     settings: Optional[Dict[str, Any]] = None
     intro: Optional[str] = None
@@ -145,13 +145,10 @@ class AgentBase(BaseModel):
 
 
 class GenerateBackgroundAnimatedRequest(BaseModel):
-    """生成背景动图请求"""
+    """生成背景视频请求"""
 
     prompt: Optional[str] = Field(
         default=None, description="视频生成提示词（可选，如果为空则从背景图自动生成）"
-    )
-    format: str = Field(
-        default="avif", description="输出格式：avif 或 gif", pattern="^(avif|gif)$"
     )
 
 

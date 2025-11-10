@@ -367,8 +367,8 @@ async def delete_agent(
 @router.post(
     "/{agent_id}/generate-background-animated",
     response_model=schemas.APIResponse[schemas.Agent],
-    summary="生成背景动图",
-    description="通过 Google Veo3 API 生成视频并转换为 AVIF 或 GIF 动图",
+    summary="生成背景视频",
+    description="通过 Google Veo3 API 生成视频并直接存储视频地址",
     tags=["android-app", INTY_EVAL_TAG],
 )
 async def generate_background_animated(
@@ -379,7 +379,7 @@ async def generate_background_animated(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    生成背景动图并更新到 Agent
+    生成背景视频并更新到 Agent
     """
     # 验证 Agent 存在且用户有权限
     agent = await agent_service.get_agent(db, agent_id=agent_id)
@@ -397,9 +397,6 @@ async def generate_background_animated(
         from app.services.image_transform_service import image_transform_service
         from app.services.video_generation_service import video_generation_service
         from app.utils.gemini import generate_image_description
-        from app.utils.video_to_animated_image import (
-            convert_video_to_animated_image_and_upload,
-        )
 
         # 1. 将背景图 URL 转换为 GCS URI 格式
         background_url = agent.background
@@ -451,31 +448,25 @@ async def generate_background_animated(
             f"开始为 Agent {agent_id} 生成视频，提示词: {prompt}, "
             f"输入图片: {background_gcs_uri}"
         )
-        video_url = await video_generation_service.generate_video_with_veo3(
+        video_gcs_uri = await video_generation_service.generate_video_with_veo3(
             prompt=prompt,
             duration=4,
             image_uri=background_gcs_uri,
         )
 
-        # 4. 转换为动图并上传
-        output_format = request.format or "avif"
-        logger.info(f"开始转换视频为 {output_format} 格式: {video_url}")
-        animated_url = await convert_video_to_animated_image_and_upload(
-            video_url=video_url,
-            user_id=current_user.id,
-            output_format=output_format,
-            duration=4,
-        )
+        # 4. 将 GCS URI 转换为 CDN URL
+        logger.info(f"开始转换视频 GCS URI 为 CDN URL: {video_gcs_uri}")
+        video_url = image_transform_service.transform_desktop(video_gcs_uri)
 
         # 5. 更新 Agent 的 background_animated 字段
         from app.schemas.agent import AgentUpdate
 
-        agent_update = AgentUpdate(background_animated=animated_url)
+        agent_update = AgentUpdate(background_animated=video_url)
         updated_agent = await agent_service.update_agent(
             db, db_agent=agent, agent_in=agent_update
         )
 
-        logger.info(f"背景动图生成成功，URL: {animated_url}")
+        logger.info(f"背景视频生成成功，URL: {video_url}")
         return schemas.APIResponse.success(data=updated_agent)
 
     except HTTPException:
