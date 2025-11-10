@@ -123,7 +123,7 @@ fun IntySmallTextField(
                     if (maxLength > 0 && nextText.length > maxLength) {
                         // 仅在首次超过时提示
                         scope.launch { ToastUtils.showShort(R.string.str_message_is_too_long) }
-                        nextText = nextText.substring(0, maxLength)
+                        nextText = nextText.take(maxLength)
                         val sel = nextSelection.start.coerceAtMost(maxLength)
                         nextSelection = TextRange(sel)
                     }
@@ -204,7 +204,10 @@ fun IntySmallTextField2(
 
         Box(
             modifier =
-                Modifier.fillMaxHeight().weight(1f).padding(horizontal = 8.dp, vertical = 4.dp),
+                Modifier
+                    .fillMaxHeight()
+                    .weight(1f)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
             contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
         ) {
             BasicTextField(

@@ -1,5 +1,6 @@
 package com.ai.intellimate.ui.components
 
+import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -29,8 +30,15 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.size.Size
 import kotlin.math.abs
 import kotlin.math.roundToInt
+
+private const val CDN_IMAGE_QUALITY = 75
+private const val ASPECT_RATIO_THRESHOLD = 0.05f
+private const val TOP_GRADIENT_HEIGHT_DP = 120
+private const val BOTTOM_GRADIENT_HEIGHT_DP = 300
 
 /** 通用角色背景组件 可用于聊天页面、角色主页等需要角色背景的地方 */
 @Composable
@@ -42,48 +50,85 @@ fun AgentBackground(
     val density = LocalDensity.current
     val containerSize = LocalWindowInfo.current.containerSize
 
-    var imageWidthDp by remember {
+    // 容器尺寸（dp），用于图片显示和 ContentScale 计算
+    var containerWidthDp by remember {
         mutableIntStateOf(with(density) { containerSize.width.toDp().value.roundToInt() })
     }
-    var imageHeightDp by remember {
+    var containerHeightDp by remember {
         mutableIntStateOf(with(density) { containerSize.height.toDp().value.roundToInt() })
     }
 
-    LaunchedEffect(containerSize.width, containerSize.height) {
+    // 监听窗口尺寸变化，更新容器尺寸（只增大，不减小）
+    LaunchedEffect(containerSize.width, containerSize.height, density) {
         val currentWidthDp = with(density) { containerSize.width.toDp().value.roundToInt() }
         val currentHeightDp = with(density) { containerSize.height.toDp().value.roundToInt() }
 
-        if (currentWidthDp > imageWidthDp) {
-            imageWidthDp = currentWidthDp
+        if (currentWidthDp > containerWidthDp) {
+            containerWidthDp = currentWidthDp
         }
-        if (currentHeightDp > imageHeightDp) {
-            imageHeightDp = currentHeightDp
+        if (currentHeightDp > containerHeightDp) {
+            containerHeightDp = currentHeightDp
         }
     }
 
-    // 状态来存储图片尺寸
-    var imageWidth by remember { mutableStateOf<Int?>(null) }
-    var imageHeight by remember { mutableStateOf<Int?>(null) }
+    // 图片原始尺寸（像素），用于计算 ContentScale
+    var imageWidthPx by remember { mutableStateOf<Int?>(null) }
+    var imageHeightPx by remember { mutableStateOf<Int?>(null) }
 
-    // 计算最佳的 ContentScale
-    val currentImageWidth = imageWidth
-    val currentImageHeight = imageHeight
-    val optimalContentScale =
+    // 计算最佳的 ContentScale（单位统一为 dp）
+    val optimalContentScale = remember(
+        imageWidthPx,
+        imageHeightPx,
+        containerWidthDp,
+        containerHeightDp,
+        density
+    ) {
         if (
-            currentImageWidth != null &&
-                currentImageHeight != null &&
-                currentImageWidth > 0 &&
-                currentImageHeight > 0
+            imageWidthPx != null &&
+            imageHeightPx != null &&
+            imageWidthPx!! > 0 &&
+            imageHeightPx!! > 0
         ) {
+            // 将图片尺寸从像素转换为 dp，确保单位一致
+            val imageWidthDpValue = with(density) { imageWidthPx!!.toFloat().toDp().value }
+            val imageHeightDpValue = with(density) { imageHeightPx!!.toFloat().toDp().value }
+
             calculateOptimalContentScale(
-                containerWidth = imageWidthDp,
-                containerHeight = imageHeightDp,
-                imageWidth = currentImageWidth,
-                imageHeight = currentImageHeight,
+                containerWidthDp = containerWidthDp,
+                containerHeightDp = containerHeightDp,
+                imageWidthDp = imageWidthDpValue,
+                imageHeightDp = imageHeightDpValue,
             )
         } else {
-            ContentScale.Crop // 默认值，当图片尺寸未知时
+            ContentScale.Crop
         }
+    }
+
+    val context = LocalContext.current
+    val imageUrl = agentInfo?.backgroundGifUrl?.ifEmpty { agentInfo?.getAlbumImage() }
+
+    // 构建图片请求，使用 CDN 优化和尺寸限制
+    val imageRequest = remember(imageUrl, containerWidthDp, containerHeightDp, density) {
+        if (imageUrl != null) {
+            // 将容器尺寸转换为像素，用于 CDN 参数和 Coil 尺寸限制
+            val containerWidthPx = with(density) { containerWidthDp.dp.toPx().toInt() }
+            val containerHeightPx = with(density) { containerHeightDp.dp.toPx().toInt() }
+
+            ImageRequest.Builder(context)
+                .data(
+                    getCdnImageUrl(
+                        imageUrl,
+                        width = containerWidthPx,
+                        quality = CDN_IMAGE_QUALITY
+                    ) ?: imageUrl
+                )
+                .size(Size(containerWidthPx, containerHeightPx))
+                .crossfade(true)
+                .build()
+        } else {
+            null
+        }
+    }
 
     Box(modifier = modifier) {
         Column(
@@ -92,51 +137,53 @@ fun AgentBackground(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState(), false)
                     .onSizeChanged {
-                        val newHeight = with(density) { it.height.toDp().value.roundToInt() }
-                        if (newHeight > imageHeightDp) {
-                            imageHeightDp = newHeight
+                        val newHeightDp = with(density) { it.height.toDp().value.roundToInt() }
+                        if (newHeightDp > containerHeightDp) {
+                            containerHeightDp = newHeightDp
                         }
                     }
         ) {
             AsyncImage(
-                modifier = Modifier.size(imageWidthDp.dp, imageHeightDp.dp),
-                model =
-                    ImageRequest.Builder(LocalContext.current)
-                        .data(agentInfo?.getAlbumImage())
-                        .build(),
+                modifier = Modifier.size(containerWidthDp.dp, containerHeightDp.dp),
+                model = imageRequest,
                 contentDescription = null,
                 alignment = Alignment.TopCenter,
                 contentScale = optimalContentScale,
                 onSuccess = { state ->
-                    // 当图片加载成功时，获取图片尺寸
+                    // 获取图片原始尺寸（像素），用于计算 ContentScale
                     val drawable = state.painter
-                    imageWidth = drawable.intrinsicSize.width.toInt()
-                    imageHeight = drawable.intrinsicSize.height.toInt()
-
+                    imageWidthPx = drawable.intrinsicSize.width.toInt()
+                    imageHeightPx = drawable.intrinsicSize.height.toInt()
                 },
             )
         }
 
         // 渐变遮罩 - 仅在需要时显示
         if (showGradients) {
-            // 顶部渐变遮罩 - 固定位置
-            val colors = listOf(Color(0xFF000000), Color(0x00000000))
+            // 顶部渐变遮罩
             Box(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(120.dp)
-                        .background(brush = Brush.verticalGradient(colors))
+                        .height(TOP_GRADIENT_HEIGHT_DP.dp)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                listOf(Color(0xFF000000), Color(0x00000000))
+                            )
+                        )
             )
 
-            // 底部渐变遮罩 - 固定位置
-            val bottomColors = listOf(Color(0x001C1523), Color(0xFF1C1523))
+            // 底部渐变遮罩
             Box(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(300.dp)
-                        .background(brush = Brush.verticalGradient(bottomColors))
+                        .height(BOTTOM_GRADIENT_HEIGHT_DP.dp)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                listOf(Color(0x001C1523), Color(0xFF1C1523))
+                            )
+                        )
                         .align(Alignment.BottomCenter)
             )
         }
@@ -144,34 +191,37 @@ fun AgentBackground(
 }
 
 /**
- * 根据容器和图片的宽高比计算最佳的 ContentScale 只支持人像模式屏幕显示，即尽量不留左右两侧空白。 当容器高宽比大于图片高宽比时，使用 FillHeight 填充高度，否则使用
- * FillWidth 填充宽度。
+ * 根据容器和图片的宽高比计算最佳的 ContentScale
+ * 只支持人像模式屏幕显示，即尽量不留左右两侧空白。
+ * 当容器高宽比大于图片高宽比时，使用 FillHeight 填充高度，否则使用 FillWidth 填充宽度。
  *
- * @param containerWidth 容器宽度（dp）
- * @param containerHeight 容器高度（dp）
- * @param imageWidth 图片宽度（像素）
- * @param imageHeight 图片高度（像素）
+ * @param containerWidthDp 容器宽度（dp）
+ * @param containerHeightDp 容器高度（dp）
+ * @param imageWidthDp 图片宽度（dp）
+ * @param imageHeightDp 图片高度（dp）
  * @return 最佳的 ContentScale
  */
-fun calculateOptimalContentScale(
-    containerWidth: Int,
-    containerHeight: Int,
-    imageWidth: Int,
-    imageHeight: Int,
+private fun calculateOptimalContentScale(
+    containerWidthDp: Int,
+    containerHeightDp: Int,
+    imageWidthDp: Float,
+    imageHeightDp: Float,
 ): ContentScale {
-    val screenAspectRatio = containerWidth.toFloat() / containerHeight.toFloat()
-    val imageAspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
+    val containerAspectRatio = containerWidthDp.toFloat() / containerHeightDp.toFloat()
+    val imageAspectRatio = imageWidthDp / imageHeightDp
+    val aspectRatioDiff = abs(containerAspectRatio - imageAspectRatio) / imageAspectRatio
+
     return when {
-        // 如果屏幕和图片宽高比非常接近（差异小于5%），使用 Fit 显示完整图片
-        // 例如：屏幕 9:16 (0.5625)，图片 9:16 (0.5625) → 使用 Fit
-        abs(screenAspectRatio - imageAspectRatio) / imageAspectRatio < 0.05f -> ContentScale.Fit
+        // 如果容器和图片宽高比非常接近（差异小于阈值），使用 Fit 显示完整图片
+        // 例如：容器 9:16 (0.5625)，图片 9:16 (0.5625) → 使用 Fit
+        aspectRatioDiff < ASPECT_RATIO_THRESHOLD -> ContentScale.Fit
 
-        // 如果屏幕比图片更宽（屏幕宽高比 > 图片宽高比），图片相对较窄，使用 FillWidth
-        // 例如：屏幕 16:9 (1.78)，图片 9:16 (0.5625) → 使用 FillWidth
-        screenAspectRatio > imageAspectRatio -> ContentScale.FillWidth
+        // 如果容器比图片更宽（容器宽高比 > 图片宽高比），图片相对较窄，使用 FillWidth
+        // 例如：容器 16:9 (1.78)，图片 9:16 (0.5625) → 使用 FillWidth
+        containerAspectRatio > imageAspectRatio -> ContentScale.FillWidth
 
-        // 如果屏幕比图片更窄（屏幕宽高比 < 图片宽高比），图片相对较宽，使用 FillHeight
-        // 例如：屏幕 9:16 (0.5625)，图片 16:9 (1.78) → 使用 FillHeight
+        // 如果容器比图片更窄（容器宽高比 < 图片宽高比），图片相对较宽，使用 FillHeight
+        // 例如：容器 9:16 (0.5625)，图片 16:9 (1.78) → 使用 FillHeight
         else -> ContentScale.FillHeight
     }
 }
