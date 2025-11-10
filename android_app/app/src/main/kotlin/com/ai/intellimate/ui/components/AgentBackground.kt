@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -22,9 +23,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -39,16 +40,25 @@ fun AgentBackground(
     showGradients: Boolean = true,
 ) {
     val density = LocalDensity.current
-    val configuration = LocalConfiguration.current
+    val containerSize = LocalWindowInfo.current.containerSize
 
-    var imageWidthDp by remember { mutableIntStateOf(configuration.screenWidthDp) }
-    var imageHeightDp by remember { mutableIntStateOf(configuration.screenHeightDp) }
-
-    if (configuration.screenWidthDp > imageWidthDp) {
-        imageWidthDp = configuration.screenWidthDp
+    var imageWidthDp by remember {
+        mutableIntStateOf(with(density) { containerSize.width.toDp().value.roundToInt() })
     }
-    if (configuration.screenHeightDp > imageHeightDp) {
-        imageHeightDp = configuration.screenHeightDp
+    var imageHeightDp by remember {
+        mutableIntStateOf(with(density) { containerSize.height.toDp().value.roundToInt() })
+    }
+
+    LaunchedEffect(containerSize.width, containerSize.height) {
+        val currentWidthDp = with(density) { containerSize.width.toDp().value.roundToInt() }
+        val currentHeightDp = with(density) { containerSize.height.toDp().value.roundToInt() }
+
+        if (currentWidthDp > imageWidthDp) {
+            imageWidthDp = currentWidthDp
+        }
+        if (currentHeightDp > imageHeightDp) {
+            imageHeightDp = currentHeightDp
+        }
     }
 
     // 状态来存储图片尺寸
@@ -78,12 +88,15 @@ fun AgentBackground(
     Box(modifier = modifier) {
         Column(
             modifier =
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState(), false).onSizeChanged {
-                    val newHeight = with(density) { it.height.toDp().value.roundToInt() }
-                    if (newHeight > imageHeightDp) {
-                        imageHeightDp = newHeight
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState(), false)
+                    .onSizeChanged {
+                        val newHeight = with(density) { it.height.toDp().value.roundToInt() }
+                        if (newHeight > imageHeightDp) {
+                            imageHeightDp = newHeight
+                        }
                     }
-                }
         ) {
             AsyncImage(
                 modifier = Modifier.size(imageWidthDp.dp, imageHeightDp.dp),
@@ -110,7 +123,8 @@ fun AgentBackground(
             val colors = listOf(Color(0xFF000000), Color(0x00000000))
             Box(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .height(120.dp)
                         .background(brush = Brush.verticalGradient(colors))
             )
@@ -119,7 +133,8 @@ fun AgentBackground(
             val bottomColors = listOf(Color(0x001C1523), Color(0xFF1C1523))
             Box(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .height(300.dp)
                         .background(brush = Brush.verticalGradient(bottomColors))
                         .align(Alignment.BottomCenter)
