@@ -11,11 +11,11 @@ import random
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import yaml
 from loguru import logger
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -45,41 +45,118 @@ def create_db_url(db_config: dict) -> str:
     )
 
 
+def get_engine_kwargs(db_config: dict) -> dict:
+    """从配置中提取引擎参数"""
+    kwargs = {}
+
+    if "pool_size" in db_config:
+        kwargs["pool_size"] = db_config["pool_size"]
+    if "max_overflow" in db_config:
+        kwargs["max_overflow"] = db_config["max_overflow"]
+    if "pool_timeout" in db_config:
+        kwargs["pool_timeout"] = db_config["pool_timeout"]
+    if "pool_recycle" in db_config:
+        kwargs["pool_recycle"] = db_config["pool_recycle"]
+    if "pool_pre_ping" in db_config:
+        kwargs["pool_pre_ping"] = db_config["pool_pre_ping"]
+
+    # 配置 asyncpg 连接参数
+    connect_args = {}
+    if "command_timeout" in db_config:
+        connect_args["command_timeout"] = db_config["command_timeout"]
+    if "connect_timeout" in db_config:
+        connect_args["timeout"] = db_config["connect_timeout"]
+
+    # 设置应用名称
+    connect_args["server_settings"] = {
+        "application_name": "sync_agents_dev_to_prod",
+    }
+
+    if connect_args:
+        kwargs["connect_args"] = connect_args
+
+    return kwargs
+
+
+async def test_connection(engine, db_name: str) -> bool:
+    """测试数据库连接"""
+    try:
+        async with engine.connect() as conn:
+            result = await conn.execute(text("SELECT 1"))
+            result.scalar()
+            logger.info(f"✓ {db_name} 数据库连接测试成功")
+            return True
+    except Exception as e:
+        logger.error(f"✗ {db_name} 数据库连接测试失败: {e}")
+        return False
+
+
 def generate_readable_id() -> str:
     """生成8位随机数字ID"""
     return "".join(str(random.randint(0, 9)) for _ in range(8))
 
 
 async def get_next_readable_id(session: AsyncSession) -> str:
-    """获取下一个可用的 readable_id（自增）"""
-    result = await session.execute(
-        select(Agent.readable_id)
-        .where(Agent.readable_id.regexp_match(r"^\d{8}$"))
-        .order_by(Agent.readable_id.desc())
-        .limit(1)
-    )
-    max_id = result.scalar_one_or_none()
-
-    if max_id:
-        next_id = int(max_id) + 1
-        return str(next_id).zfill(8)
-    else:
-        return "10000000"
-
-
-async def ensure_unique_readable_id(session: AsyncSession, readable_id: str) -> str:
-    """确保 readable_id 唯一，如果冲突则生成新的自增 ID"""
-    result = await session.execute(
-        select(Agent).where(Agent.readable_id == readable_id)
-    )
-    existing = result.scalar_one_or_none()
-
-    if existing:
-        new_id = await get_next_readable_id(session)
-        logger.warning(
-            f"⚠️  readable_id 冲突: {readable_id} 已存在，使用新 ID: {new_id}"
+    """获取下一个可用的 readable_id（自增），确保唯一性"""
+    # 使用 no_autoflush 避免在查询时触发 autoflush（同步上下文管理器）
+    with session.no_autoflush:
+        result = await session.execute(
+            select(Agent.readable_id)
+            .where(Agent.readable_id.regexp_match(r"^\d{8}$"))
+            .order_by(Agent.readable_id.desc())
+            .limit(1)
         )
-        return new_id
+        max_id = result.scalar_one_or_none()
+
+        if max_id:
+            next_id = int(max_id) + 1
+        else:
+            next_id = 10000000
+
+        # 确保生成的 ID 是唯一的（循环检查直到找到可用的）
+        max_attempts = 1000
+        for _ in range(max_attempts):
+            candidate_id = str(next_id).zfill(8)
+            check_result = await session.execute(
+                select(Agent).where(Agent.readable_id == candidate_id)
+            )
+            if check_result.scalar_one_or_none() is None:
+                return candidate_id
+            next_id += 1
+
+        # 如果循环了 1000 次还没找到，抛出异常
+        raise RuntimeError(f"无法生成唯一的 readable_id，已尝试 {max_attempts} 次")
+
+
+async def ensure_unique_readable_id(
+    session: AsyncSession, readable_id: str, exclude_agent_id: Optional[str] = None
+) -> str:
+    """确保 readable_id 唯一，如果冲突则使用自增 ID
+
+    Args:
+        session: 数据库会话
+        readable_id: 要检查的 readable_id
+        exclude_agent_id: 排除的 agent ID（用于更新场景，排除当前 agent）
+
+    Returns:
+        唯一的 readable_id，如果冲突则返回自增的新 ID
+    """
+    # 使用 no_autoflush 避免在查询时触发 autoflush，防止冲突（同步上下文管理器）
+    with session.no_autoflush:
+        query = select(Agent).where(Agent.readable_id == readable_id)
+        if exclude_agent_id:
+            query = query.where(Agent.id != exclude_agent_id)
+
+        result = await session.execute(query)
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            new_id = await get_next_readable_id(session)
+            logger.warning(
+                f"⚠️  readable_id 冲突: {readable_id} 已被其他 agent 使用，"
+                f"使用自增 ID: {new_id}"
+            )
+            return new_id
 
     return readable_id
 
@@ -136,6 +213,7 @@ def compare_agents(agent1: Agent, agent2: Agent) -> bool:
         "avatar",
         "background",
         "background_images",
+        "background_animated",
         "voice_id",
         "settings",
         "intro",
@@ -182,6 +260,7 @@ def copy_agent_fields(source: Agent, target: Agent) -> None:
         "avatar",
         "background",
         "background_images",
+        "background_animated",
         "voice_id",
         "settings",
         "intro",
@@ -343,6 +422,12 @@ async def sync_agents(
                 prod_agent = result.scalar_one()
 
                 copy_agent_fields(source_agent, prod_agent)
+
+                # 确保 readable_id 唯一（排除当前 agent）
+                prod_agent.readable_id = await ensure_unique_readable_id(
+                    prod_session, prod_agent.readable_id, exclude_agent_id=agent_id
+                )
+
                 await prod_session.flush()
 
                 updated_count += 1
@@ -413,11 +498,24 @@ async def main():
     logger.remove()
     logger.add(sys.stderr, level=log_level)
 
-    dev_url = create_db_url(config["dev_database"])
-    prod_url = create_db_url(config["prod_database"])
+    dev_db_config = config["dev_database"]
+    prod_db_config = config["prod_database"]
 
-    dev_engine = create_async_engine(dev_url, echo=False)
-    prod_engine = create_async_engine(prod_url, echo=False)
+    dev_url = create_db_url(dev_db_config)
+    prod_url = create_db_url(prod_db_config)
+
+    dev_engine_kwargs = get_engine_kwargs(dev_db_config)
+    prod_engine_kwargs = get_engine_kwargs(prod_db_config)
+
+    logger.info(
+        f"正在连接 Dev 数据库: {dev_db_config['host']}:{dev_db_config['port']}/{dev_db_config['db']}"
+    )
+    dev_engine = create_async_engine(dev_url, echo=False, **dev_engine_kwargs)
+
+    logger.info(
+        f"正在连接 Prod 数据库: {prod_db_config['host']}:{prod_db_config['port']}/{prod_db_config['db']}"
+    )
+    prod_engine = create_async_engine(prod_url, echo=False, **prod_engine_kwargs)
 
     DevSession = sessionmaker(
         bind=dev_engine, class_=AsyncSession, expire_on_commit=False
@@ -427,8 +525,21 @@ async def main():
     )
 
     try:
+        # 先测试连接
+        logger.info("正在测试数据库连接...")
+        dev_ok = await test_connection(dev_engine, "Dev")
+        prod_ok = await test_connection(prod_engine, "Prod")
+
+        if not dev_ok:
+            logger.error("Dev 数据库连接失败，请检查配置和网络连接")
+            sys.exit(1)
+        if not prod_ok:
+            logger.error("Prod 数据库连接失败，请检查配置和网络连接")
+            sys.exit(1)
+
+        logger.info("")
         async with DevSession() as dev_session, ProdSession() as prod_session:
-            logger.info("数据库连接成功")
+            logger.info("数据库会话创建成功")
 
             user_config = config["operator_user"]
             user_id = user_config["id"]
@@ -446,8 +557,20 @@ async def main():
 
             await sync_agents(dev_session, prod_session, user_id, args.dry_run)
 
+    except ConnectionResetError as e:
+        logger.error("数据库连接被重置，可能的原因：")
+        logger.error("  1. 数据库服务器拒绝连接")
+        logger.error("  2. 网络连接不稳定")
+        logger.error("  3. 防火墙或安全组配置问题")
+        logger.error("  4. SSL/TLS 配置问题")
+        logger.error(f"详细错误: {e}")
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)
     except Exception as e:
         logger.error(f"同步过程中发生错误: {e}")
+        logger.error(f"错误类型: {type(e).__name__}")
         import traceback
 
         traceback.print_exc()
