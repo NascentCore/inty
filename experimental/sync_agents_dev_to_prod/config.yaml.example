@@ -1,0 +1,46 @@
+# 同步角色配置文件示例
+# 复制此文件为 config.yaml 并修改相应配置
+
+# Dev环境数据库配置
+dev_database:
+  host: 10.148.0.2
+  port: 5432
+  user: postgres
+  password: postgres
+  db: devdb
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 10
+  pool_recycle: 3600
+  pool_pre_ping: true
+  connect_timeout: 5
+  command_timeout: 30
+
+# Prod环境数据库配置
+prod_database:
+  host: 10.41.177.3
+  port: 5432
+  user: postgres
+  password: sxwl666A!
+  db: inty
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 10
+  pool_recycle: 3600
+  pool_pre_ping: true
+  connect_timeout: 5
+  command_timeout: 30
+
+# 运营用户配置
+operator_user:
+  id: user-01JWZ34Y4D1C92GD86A5R6EWYJ
+  nickname: admin
+  email: admin@sxwl.ai
+  gender: MALE
+  age_group: 18-24
+  description: An admin user
+
+# 日志配置
+logging:
+  level: INFO
+
