@@ -108,11 +108,10 @@ intellimate/
 
 ## 🧭 架构概览
 
-- **Umi Max**: 基于 React 19 + UmiJS 4，`config/config.ts` 启用 umi-presets-pro、hash 构建、moment2dayjs、mako，并在构建时注入 `BUILD_TIME`。
-- **自动访客登录**: `src/app.tsx` 在缺少 Token 时调用 `guestLogin`，结合 `getOrCreateDeviceId` 创建设备 ID 并保存访客凭证。
-- **状态模型**: `useModel` 驱动的 `chat`、`agent`、`chatList`、`user`、`googleLoginModal` 负责分页、错误重置和懒加载。
-- **Inty SDK**: `utils/intyClient.ts` 提供统一客户端，`services/*` 通过 `client.api.v1` 接口完成推荐、消息、语音、用户等调用。
-- **本地能力**: `utils/storage.ts` 基于 localForage 存储 IndexedDB，`utils/logger.ts` 只在开发期输出调试日志。
+- **框架与构建**: 基于 React 19 + UmiJS 4，`config/config.ts` 启用 umi-presets-pro、hash 构建、moment2dayjs、mako，并在构建时注入 `BUILD_TIME`。
+- **状态模型**: `useModel` 驱动的 `chat`、`agent`、`chatList`、`user`、`googleLoginModal` 负责懒加载、分页管理与错误重置。
+- **API 客户端**: `utils/intyClient.ts` 统一创建 Inty SDK 实例，`services/*` 通过 `client.api.v1` 访问推荐、消息、语音、用户等接口。
+- **本地设施**: `utils/storage.ts` 抽象 IndexedDB，本地保存 token 与设备 ID；`utils/logger.ts` 在开发期输出调试日志。
 
 ---
 
@@ -137,7 +136,7 @@ intellimate/
 
 ## 🔐 认证与登录
 
-- **访客模式**: `services/auth.guestLogin` 请求 `client.api.v1.auth.createGuest`，成功后同时保存 Token 与访客信息。
+- **访客模式**: `src/app.tsx` 的 `getInitialState` 在缺少 Token 时调用 `guestLogin`，依赖 `getOrCreateDeviceId` 生成设备 ID，并通过 `services/auth.guestLogin` 写入访客凭证。
 - **Google 登录**: `components/GoogleLoginModal` 基于 `@react-oauth/google` 登录主账号，完成后刷新聊天列表与用户资料并重定向首页。
 - **Token 管理**: `utils/token.ts` 暴露 `getToken/saveToken/hasToken`，`createIntyClient(true)` 在缺少凭证时直接抛错。
 - **设备标识**: `utils/device.ts` 负责生成、缓存、重置设备 ID，确保访客登录参数一致。
