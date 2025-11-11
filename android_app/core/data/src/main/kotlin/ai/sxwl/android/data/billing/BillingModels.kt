@@ -69,18 +69,23 @@ sealed class BillingEvent {
 
     data class PurchaseSuccess(val purchase: Purchase) : BillingEvent()
 
+    /** 用户取消购买事件 */
+    object UserCanceled : BillingEvent()
+
     /** 购买失败事件 - 包含错误码和可选的详细消息 */
     data class PurchaseFailed(
         val errorCode: BillingErrorCode,
         val billingResponseCode: Int,
-        val detailMessage: String? = null
+        val detailMessage: String? = null,
+        val isUserInitiated: Boolean = true // 默认为用户主动操作
     ) : BillingEvent()
 
     /** 商品详情查询失败事件 - 包含错误码和可选的详细消息 */
     data class SkuDetailsQueryFailed(
         val errorCode: BillingErrorCode,
         val billingResponseCode: Int,
-        val detailMessage: String? = null
+        val detailMessage: String? = null,
+        val isUserInitiated: Boolean = false // 默认为后台自动操作
     ) : BillingEvent()
 
     /** 初始化失败事件 - 包含错误码和原因 */
@@ -97,14 +102,16 @@ sealed class BillingEvent {
     /** UI 错误事件 - 需要显示 toast 的错误 */
     data class ShowError(
         val errorCode: BillingErrorCode,
-        val detailMessage: String? = null
+        val detailMessage: String? = null,
+        val isUserInitiated: Boolean = false // 默认为后台自动操作
     ) : BillingEvent()
 
     /** Google Play 服务错误 - 需要显示系统 Dialog */
     data class GooglePlayServiceError(
         val errorCode: BillingErrorCode,
         val connectionResult: Int,
-        val requestCode: Int = 1001
+        val requestCode: Int = 1001,
+        val isUserInitiated: Boolean = false // 默认为后台自动操作
     ) : BillingEvent()
 }
 

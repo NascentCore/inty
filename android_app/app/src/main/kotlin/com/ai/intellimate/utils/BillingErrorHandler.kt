@@ -80,14 +80,23 @@ object BillingErrorHandler {
                 message
             }
 
-            ToastUtils.showShort(finalMessage)
-            LogUtils.d("BillingErrorHandler - 显示错误提示: $finalMessage")
+            // 只对用户主动操作显示 toast，后台自动操作只记录 log
+            if (event.isUserInitiated) {
+                ToastUtils.showShort(finalMessage)
+                LogUtils.d("BillingErrorHandler - 显示错误提示: $finalMessage")
+            } else {
+                LogUtils.d("BillingErrorHandler - 后台自动操作错误（不显示 toast）: $finalMessage")
+            }
         } catch (e: Exception) {
-            LogUtils.e("BillingErrorHandler - 显示错误提示失败: ${e.message}")
-            // 降级处理：直接显示详细消息或默认消息
-            val fallbackMessage = event.detailMessage
-                ?: context.getString(R.string.billing_error_fallback_generic)
-            ToastUtils.showShort(fallbackMessage)
+            LogUtils.e("BillingErrorHandler - 处理错误事件失败: ${e.message}")
+            // 只对用户主动操作显示 toast
+            if (event.isUserInitiated) {
+                val fallbackMessage = event.detailMessage
+                    ?: context.getString(R.string.billing_error_fallback_generic)
+                ToastUtils.showShort(fallbackMessage)
+            } else {
+                LogUtils.d("BillingErrorHandler - 后台自动操作错误（不显示 toast）: ${event.detailMessage}")
+            }
         }
     }
 
@@ -107,13 +116,23 @@ object BillingErrorHandler {
                 message
             }
 
-            ToastUtils.showShort(finalMessage)
-            LogUtils.d("BillingErrorHandler - 购买失败: $finalMessage")
+            // 只对用户主动操作显示 toast，后台自动操作只记录 log
+            if (event.isUserInitiated) {
+                ToastUtils.showShort(finalMessage)
+                LogUtils.d("BillingErrorHandler - 购买失败: $finalMessage")
+            } else {
+                LogUtils.d("BillingErrorHandler - 后台自动操作购买失败（不显示 toast）: $finalMessage")
+            }
         } catch (e: Exception) {
             LogUtils.e("BillingErrorHandler - 处理购买失败事件失败: ${e.message}")
-            val fallbackMessage = event.detailMessage
-                ?: context.getString(R.string.billing_error_fallback_purchase)
-            ToastUtils.showShort(fallbackMessage)
+            // 只对用户主动操作显示 toast
+            if (event.isUserInitiated) {
+                val fallbackMessage = event.detailMessage
+                    ?: context.getString(R.string.billing_error_fallback_purchase)
+                ToastUtils.showShort(fallbackMessage)
+            } else {
+                LogUtils.d("BillingErrorHandler - 后台自动操作购买失败（不显示 toast）: ${event.detailMessage}")
+            }
         }
     }
 
@@ -133,13 +152,23 @@ object BillingErrorHandler {
                 message
             }
 
-            ToastUtils.showShort(finalMessage)
-            LogUtils.d("BillingErrorHandler - 商品查询失败: $finalMessage")
+            // 只对用户主动操作显示 toast，后台自动操作只记录 log
+            if (event.isUserInitiated) {
+                ToastUtils.showShort(finalMessage)
+                LogUtils.d("BillingErrorHandler - 商品查询失败: $finalMessage")
+            } else {
+                LogUtils.d("BillingErrorHandler - 后台自动操作商品查询失败（不显示 toast）: $finalMessage")
+            }
         } catch (e: Exception) {
             LogUtils.e("BillingErrorHandler - 处理商品查询失败事件失败: ${e.message}")
-            val fallbackMessage = event.detailMessage
-                ?: context.getString(R.string.billing_error_fallback_product_details)
-            ToastUtils.showShort(fallbackMessage)
+            // 只对用户主动操作显示 toast
+            if (event.isUserInitiated) {
+                val fallbackMessage = event.detailMessage
+                    ?: context.getString(R.string.billing_error_fallback_product_details)
+                ToastUtils.showShort(fallbackMessage)
+            } else {
+                LogUtils.d("BillingErrorHandler - 后台自动操作商品查询失败（不显示 toast）: ${event.detailMessage}")
+            }
         }
     }
 
@@ -149,6 +178,12 @@ object BillingErrorHandler {
         activity: Activity
     ) {
         try {
+            // 只对用户主动操作显示 Dialog/toast，后台自动操作只记录 log
+            if (!event.isUserInitiated) {
+                LogUtils.d("BillingErrorHandler - 后台自动操作 Google Play 服务错误（不显示 Dialog）: ${event.errorCode}")
+                return
+            }
+
             when (event.errorCode) {
                 BillingErrorCode.GOOGLE_PLAY_SERVICE_UPDATE_REQUIRED -> {
                     // 显示 Google Play Services 更新 Dialog
@@ -172,8 +207,13 @@ object BillingErrorHandler {
             }
         } catch (e: Exception) {
             LogUtils.e("BillingErrorHandler - 处理 Google Play 服务错误失败: ${e.message}")
-            val context = activity.applicationContext
-            ToastUtils.showShort(context.getString(R.string.billing_error_fallback_google_play_service))
+            // 只对用户主动操作显示 toast
+            if (event.isUserInitiated) {
+                val context = activity.applicationContext
+                ToastUtils.showShort(context.getString(R.string.billing_error_fallback_google_play_service))
+            } else {
+                LogUtils.d("BillingErrorHandler - 后台自动操作 Google Play 服务错误（不显示 toast）")
+            }
         }
     }
 
@@ -182,15 +222,12 @@ object BillingErrorHandler {
         try {
             val messageResId = getErrorMessageResId(event.errorCode)
             val message = context.getString(messageResId)
-            ToastUtils.showShort(message)
-            LogUtils.d("BillingErrorHandler - 初始化失败: $message")
+            // 初始化失败是后台自动操作，只记录 log，不显示 toast
+            LogUtils.d("BillingErrorHandler - 初始化失败（不显示 toast）: $message, reason: ${event.reason}")
         } catch (e: Exception) {
             LogUtils.e("BillingErrorHandler - 处理初始化失败事件失败: ${e.message}")
-            // 降级处理：如果获取字符串资源失败，使用通用错误消息
-            // 注意：event.reason 可能包含中文，不应该直接显示给用户
-            // 我们应该使用对应的错误码消息（已在上面尝试获取）
-            // 如果都失败了，使用通用的英文错误消息
-            ToastUtils.showShort(context.getString(R.string.billing_error_fallback_generic))
+            // 初始化失败是后台自动操作，不显示 toast
+            LogUtils.d("BillingErrorHandler - 初始化失败（不显示 toast）: ${event.reason}")
         }
     }
 
@@ -215,7 +252,10 @@ object BillingErrorHandler {
                 } ?: run {
                     LogUtils.w("BillingErrorHandler - GooglePlayServiceError 需要 Activity，但未提供")
                     handleShowError(
-                        BillingEvent.ShowError(event.errorCode),
+                        BillingEvent.ShowError(
+                            event.errorCode,
+                            isUserInitiated = event.isUserInitiated
+                        ),
                         context
                     )
                 }

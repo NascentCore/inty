@@ -68,6 +68,7 @@ fun VipCenterContent(
     val plans by viewModel.plansFlow.collectAsState()
     val selectedPlanIndex by viewModel.selectedPlanIndex.collectAsState()
     val vipStatus by viewModel.vipStatusFlow.collectAsState()
+    val isPurchasing by viewModel.isPurchasing.collectAsState()
 
     // 当UI显示价格时，上报Firebase事件（100%采样）
     // 使用plans的key来避免重复上报相同的价格信息
@@ -191,6 +192,7 @@ fun VipCenterContent(
                     isSubscribed = vipStatus.isSubscribed,
                     hasSelectedPlan = viewModel.hasSelectedPlan(),
                     onPurchase = onPurchase,
+                    isLoading = isPurchasing,
                 )
             } else {
                 EmptyPlanState()

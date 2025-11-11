@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -226,6 +228,7 @@ fun PurchaseButton(
     isSubscribed: Boolean,
     hasSelectedPlan: Boolean,
     onPurchase: () -> Unit,
+    isLoading: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -242,21 +245,39 @@ fun PurchaseButton(
                         )
                 )
                 .alpha(if (isSubscribed) .4f else 1f)
-                .clickable(enabled = !isSubscribed && hasSelectedPlan, onClick = onPurchase),
+                .clickable(
+                    enabled = !isSubscribed && hasSelectedPlan && !isLoading,
+                    onClick = onPurchase
+                ),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text =
-                if (isSubscribed) {
-                    stringResource(R.string.premium_subscribed)
-                } else {
-                    stringResource(R.string.premium_subscribe)
-                },
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            modifier = Modifier.alpha(if (isSubscribed) .7f else 1f),
-        )
+        if (isLoading) {
+            // Loading 状态：显示透明背景的 CircularProgressIndicator
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(28.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        } else {
+            Text(
+                text =
+                    if (isSubscribed) {
+                        stringResource(R.string.premium_subscribed)
+                    } else {
+                        stringResource(R.string.premium_subscribe)
+                    },
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.alpha(if (isSubscribed) .7f else 1f),
+            )
+        }
     }
 }
 
@@ -302,5 +323,5 @@ private fun PremiumBenefitItemPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun PurchaseButtonPreview() {
-    PurchaseButton(isSubscribed = false, hasSelectedPlan = true, onPurchase = {})
+    PurchaseButton(isSubscribed = false, hasSelectedPlan = true, onPurchase = {}, isLoading = false)
 }
