@@ -2,7 +2,6 @@ package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.utils.LogUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -114,11 +113,6 @@ fun AgentBackground(
     val backgroundGifUrl = agentInfo?.backgroundGifUrl?.takeIf { it.isNotBlank() }
     val staticImageUrl = agentInfo?.getAlbumImage()?.takeIf { it.isNotBlank() }
 
-    // 调试日志
-    LaunchedEffect(agentInfo?.id, backgroundGifUrl, staticImageUrl) {
-        LogUtils.d("AgentBackground - agentId: ${agentInfo?.id}, backgroundGifUrl: $backgroundGifUrl, staticImageUrl: $staticImageUrl")
-    }
-
     // 播放控制逻辑
     var shouldPlay by remember { mutableStateOf(false) }
     var playCount by remember { mutableIntStateOf(1) }
@@ -126,44 +120,33 @@ fun AgentBackground(
     var lastPlayedPageState by remember { mutableStateOf(false) }
     var lastPlayedTimestamp by remember { mutableLongStateOf(0L) }
 
-    // 每次进入页面时：播放2次
-    // 基于页面可见性（isCurrentPage）和 agent 变化来触发
-    // 注意：这里不依赖 isFirstEnter，因为用户需求是每次进入页面都播放
     LaunchedEffect(isCurrentPage, agentInfo?.id, backgroundGifUrl) {
-        // 当页面变为可见且有背景动图时，触发播放
         if (isCurrentPage && backgroundGifUrl != null) {
             val currentAgentId = agentInfo?.id
             val currentTime = System.currentTimeMillis()
-            // 如果 agent 变化了，或者页面从不可见变为可见，或者距离上次播放超过1秒，则播放
-            // 这样可以确保每次进入 Activity 时都能播放（即使 agent 相同）
             val shouldTriggerPlay = currentAgentId != null && (
                     currentAgentId != lastPlayedAgentId ||
-                            (isCurrentPage && !lastPlayedPageState) ||
-                            (currentTime - lastPlayedTimestamp > 1000) // 距离上次播放超过1秒
+                            !lastPlayedPageState ||
+                            (currentTime - lastPlayedTimestamp > 1000)
                     )
 
             if (shouldTriggerPlay) {
-                LogUtils.d("AgentBackground - 触发页面进入播放: agentId=$currentAgentId, isCurrentPage=$isCurrentPage, lastPlayedAgentId=$lastPlayedAgentId, lastPlayedPageState=$lastPlayedPageState, timeSinceLastPlay=${currentTime - lastPlayedTimestamp}ms")
                 lastPlayedAgentId = currentAgentId
-                lastPlayedPageState = isCurrentPage
+                lastPlayedPageState = true
                 lastPlayedTimestamp = currentTime
                 playCount = 2
                 shouldPlay = true
             }
         } else if (!isCurrentPage) {
-            // 页面不可见时，更新状态但不播放
             lastPlayedPageState = false
         }
     }
 
-    // Loading 时：播放1次
-    // 注意：只在 Loading 时设置 shouldPlay，不主动设置为 false，避免覆盖页面进入时的播放
     LaunchedEffect(isLoading, backgroundGifUrl) {
         if (isLoading && backgroundGifUrl != null) {
             playCount = 1
             shouldPlay = true
         }
-        // 不在 !isLoading 时设置 shouldPlay = false，让播放完成回调来处理
     }
 
     // 构建静态图片请求（用于首次加载优化）
@@ -202,9 +185,7 @@ fun AgentBackground(
                         }
                     }
         ) {
-            // 如果有动图/视频，使用 AnimatedBackground
             if (backgroundGifUrl != null) {
-                LogUtils.d("测试，agent背景图gifUrl : $backgroundGifUrl")
                 AnimatedBackground(
                     videoUrl = backgroundGifUrl,
                     staticImageUrl = staticImageUrl,
@@ -216,33 +197,20 @@ fun AgentBackground(
                         shouldPlay = false
                         onPlayComplete()
                     },
-                    onStaticImageLoaded = {
-                        // 静态图加载完成，可以开始加载动图/视频
+                )
+            } else if (staticImageUrl != null && staticImageRequest != null) {
+                AsyncImage(
+                    modifier = Modifier.size(containerWidthDp.dp, containerHeightDp.dp),
+                    model = staticImageRequest,
+                    contentDescription = null,
+                    alignment = Alignment.TopCenter,
+                    contentScale = optimalContentScale,
+                    onSuccess = { state ->
+                        val drawable = state.painter
+                        imageWidthPx = drawable.intrinsicSize.width.toInt()
+                        imageHeightPx = drawable.intrinsicSize.height.toInt()
                     },
                 )
-            } else {
-                // 没有动图/视频，显示静态图
-                if (staticImageUrl != null && staticImageRequest != null) {
-                    LogUtils.d("AgentBackground - 显示静态图: $staticImageUrl")
-                    AsyncImage(
-                        modifier = Modifier.size(containerWidthDp.dp, containerHeightDp.dp),
-                        model = staticImageRequest,
-                        contentDescription = null,
-                        alignment = Alignment.TopCenter,
-                        contentScale = optimalContentScale,
-                        onSuccess = { state ->
-                            // 获取图片原始尺寸（像素），用于计算 ContentScale
-                            val drawable = state.painter
-                            imageWidthPx = drawable.intrinsicSize.width.toInt()
-                            imageHeightPx = drawable.intrinsicSize.height.toInt()
-                        },
-                        onError = {
-                            LogUtils.e("AgentBackground - 静态图加载失败: $staticImageUrl")
-                        },
-                    )
-                } else {
-                    LogUtils.w("AgentBackground - 静态图URL为空，无法显示背景")
-                }
             }
         }
 
