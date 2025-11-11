@@ -1,5 +1,6 @@
 package com.ai.intellimate.ui.components
 
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.util.LruCache
@@ -32,6 +33,7 @@ class VideoCacheManager private constructor(private val context: Context) {
         private const val CACHE_DIR_NAME = "video_cache"
         private const val MAX_CACHE_SIZE = 100 * 1024 * 1024L // 100MB
         private const val MAX_MEMORY_CACHE_SIZE = 5 // 最多缓存5个视频文件路径
+        private const val APP_DATA_KEY_PREFIX = "video_cache_" // 应用数据键前缀
     }
 
     private val httpClient =
@@ -52,6 +54,11 @@ class VideoCacheManager private constructor(private val context: Context) {
                 mkdirs()
             }
         }
+    }
+
+    init {
+        // 初始化时，从持久化存储恢复内存缓存
+        restoreCacheFromStorage()
     }
 
     /**
@@ -79,11 +86,27 @@ class VideoCacheManager private constructor(private val context: Context) {
             LogUtils.d("VideoCacheManager - [getVideoPath] 内存缓存未命中")
         }
 
+        // 检查持久化缓存（通过 IntySetting）
+        val storedPath = IntySetting.getAppData("${APP_DATA_KEY_PREFIX}$cacheKey")
+        if (storedPath != null) {
+            val storedFile = File(storedPath)
+            if (storedFile.exists()) {
+                memoryCache.put(cacheKey, storedPath)
+                LogUtils.d("VideoCacheManager - [getVideoPath] ✓ 使用持久化缓存: $url -> $storedPath, size=${storedFile.length()}")
+                return@withContext storedPath
+            } else {
+                LogUtils.w("VideoCacheManager - [getVideoPath] 持久化缓存路径不存在，移除: $storedPath")
+                IntySetting.clearAppData("${APP_DATA_KEY_PREFIX}$cacheKey")
+            }
+        }
+
         // 检查文件缓存
         val cachedFile = getCachedFile(cacheKey)
         LogUtils.d("VideoCacheManager - [getVideoPath] 检查文件缓存: ${cachedFile.absolutePath}, exists=${cachedFile.exists()}")
         if (cachedFile.exists()) {
             memoryCache.put(cacheKey, cachedFile.absolutePath)
+            // 保存到持久化存储以便下次快速访问
+            saveToStorage(cacheKey, cachedFile.absolutePath)
             LogUtils.d("VideoCacheManager - [getVideoPath] ✓ 使用文件缓存: $url -> ${cachedFile.absolutePath}, size=${cachedFile.length()}")
             return@withContext cachedFile.absolutePath
         }
@@ -162,6 +185,8 @@ class VideoCacheManager private constructor(private val context: Context) {
                     val downloadTime = System.currentTimeMillis() - downloadStartTime
                     val totalTime = System.currentTimeMillis() - startTime
                     memoryCache.put(cacheKey, cachedFile.absolutePath)
+                    // 保存到持久化存储以便下次快速访问
+                    saveToStorage(cacheKey, cachedFile.absolutePath)
                     LogUtils.d("VideoCacheManager - [preloadVideo] ✓ 视频预加载完成: $url")
                     LogUtils.d("VideoCacheManager - [preloadVideo] 文件大小: ${cachedFile.length()} bytes")
                     LogUtils.d("VideoCacheManager - [preloadVideo] 下载时间: ${downloadTime}ms, 总时间: ${totalTime}ms")
@@ -241,5 +266,46 @@ class VideoCacheManager private constructor(private val context: Context) {
         // 根据 URL 判断文件扩展名
         val extension = if (cacheKey.contains(".mp4")) ".mp4" else ".video"
         return File(cacheDir, "$cacheKey$extension")
+    }
+
+    /**
+     * 保存缓存路径到持久化存储（通过 IntySetting）
+     */
+    private fun saveToStorage(cacheKey: String, filePath: String) {
+        try {
+            IntySetting.setAppData("${APP_DATA_KEY_PREFIX}$cacheKey", filePath)
+            LogUtils.d("VideoCacheManager - [saveToStorage] 保存缓存路径: $cacheKey -> $filePath")
+        } catch (e: Exception) {
+            LogUtils.e("VideoCacheManager - [saveToStorage] 保存失败: ${e.message}")
+        }
+    }
+
+    /**
+     * 从持久化存储恢复缓存到内存
+     */
+    private fun restoreCacheFromStorage() {
+        try {
+            val allKeys = IntySetting.getAllAppDataKeys()
+            var restoredCount = 0
+            for (key in allKeys) {
+                if (key.startsWith(APP_DATA_KEY_PREFIX)) {
+                    val filePath = IntySetting.getAppData(key)
+                    if (filePath != null) {
+                        val file = File(filePath)
+                        if (file.exists()) {
+                            val cacheKey = key.removePrefix(APP_DATA_KEY_PREFIX)
+                            memoryCache.put(cacheKey, filePath)
+                            restoredCount++
+                        } else {
+                            // 文件不存在，移除持久化记录
+                            IntySetting.clearAppData(key)
+                        }
+                    }
+                }
+            }
+            LogUtils.d("VideoCacheManager - [restoreCacheFromStorage] 恢复缓存: $restoredCount 个")
+        } catch (e: Exception) {
+            LogUtils.e("VideoCacheManager - [restoreCacheFromStorage] 恢复失败: ${e.message}")
+        }
     }
 }

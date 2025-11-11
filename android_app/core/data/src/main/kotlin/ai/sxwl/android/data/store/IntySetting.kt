@@ -214,6 +214,35 @@ object IntySetting {
         allUserSetting.putBoolean("show_guest", true)
     }
 
+    // region 应用级别的通用存储方法（不依赖用户）
+    /** 设置应用级别的数据（所有用户共享） */
+    fun setAppData(key: String, value: String) {
+        allUserSetting.putString("app_data_$key", value)
+    }
+
+    /** 获取应用级别的数据 */
+    fun getAppData(key: String): String? {
+        return allUserSetting.decodeString("app_data_$key")
+    }
+
+    /** 检查应用级别的数据是否存在 */
+    fun hasAppData(key: String): Boolean {
+        return allUserSetting.decodeString("app_data_$key")?.isNotEmpty() == true
+    }
+
+    /** 清除应用级别的数据 */
+    fun clearAppData(key: String) {
+        allUserSetting.removeValueForKey("app_data_$key")
+    }
+
+    /** 获取所有应用级别的数据键（用于批量操作） */
+    fun getAllAppDataKeys(): Set<String> {
+        val allKeys = allUserSetting.allKeys()
+        return allKeys?.filter { it.startsWith("app_data_") }?.toSet() ?: emptySet()
+    }
+
+    // endregion
+
     // endregion
 
     // region 聊天数据持久化相关方法
