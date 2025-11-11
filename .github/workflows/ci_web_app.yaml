@@ -1,0 +1,61 @@
+name: CI - Web App
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - web_app/**
+      - evaluation/inty_sdk/**
+      - .github/workflows/ci_web_app.yaml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache yarn dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.yarn-cache-dir-path.outputs.dir }}
+            evaluation/inty_sdk/node_modules
+            web_app/node_modules
+          key: ${{ runner.os }}-webapp-yarn-${{ hashFiles('evaluation/inty_sdk/yarn.lock', 'web_app/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-webapp-yarn-
+
+      - name: Install and build inty SDK
+        working-directory: evaluation/inty_sdk
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
+
+      - name: Install web app dependencies
+        working-directory: web_app
+        run: yarn install --frozen-lockfile
+
+      - name: Run Biome lint
+        working-directory: web_app
+        run: yarn biome:lint
+
+      - name: Run TypeScript checks
+        working-directory: web_app
+        run: yarn tsc
