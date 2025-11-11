@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -517,26 +516,25 @@ private fun ProfileHeader(
         Spacer(Modifier.height(24.dp * (1f - collapseProgress)))
 
         // VIP Banner - 折叠时隐藏
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .alpha(1f - collapseProgress)
-                .height(
-                    if (collapseProgress >= 1f) 0.dp
-                    else 120.dp * (1f - collapseProgress)
+        if (collapseProgress < 1f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .alpha(1f - collapseProgress)
+                    .height(150.dp * (1f - collapseProgress))
+            ) {
+                PremiumBanner(
+                    status = vipStatus.subscriptionStatus,
+                    purchaseTime = TimeUtils.formatTimestampToString(vipStatus.purchaseTime),
+                    expireTime = TimeUtils.formatTimestampToString(vipStatus.expiryTime),
+                    onClick = {
+                        VipCenterActivity.launch(
+                            context,
+                            VipCenterActivity.PROFILE_UPGRADE
+                        )
+                    },
                 )
-        ) {
-            PremiumBanner(
-                status = vipStatus.subscriptionStatus,
-                purchaseTime = TimeUtils.formatTimestampToString(vipStatus.purchaseTime),
-                expireTime = TimeUtils.formatTimestampToString(vipStatus.expiryTime),
-                onClick = {
-                    VipCenterActivity.launch(
-                        context,
-                        VipCenterActivity.PROFILE_UPGRADE
-                    )
-                },
-            )
+            }
         }
 
         Spacer(Modifier.height(8.dp * (1f - collapseProgress)))
@@ -760,8 +758,7 @@ private fun PremiumBanner(
 
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(120.dp)
+            .fillMaxSize()
             .padding(horizontal = 12.dp)
             .clickable {
                 val currentTime = System.currentTimeMillis()
@@ -778,8 +775,8 @@ private fun PremiumBanner(
         Image(
             painter = painterResource(R.drawable.img_vip_banner),
             contentDescription = "",
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier.fillMaxWidth(),
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.fillMaxSize(),
         )
 
         Row(
