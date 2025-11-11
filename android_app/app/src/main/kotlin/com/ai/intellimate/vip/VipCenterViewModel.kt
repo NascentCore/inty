@@ -58,6 +58,14 @@ class VipCenterViewModel : BaseVM() {
                         }
                     }
 
+                    is BillingEvent.ShowError -> {
+                        // 如果是用户主动操作导致的错误，停止 loading
+                        if (event.isUserInitiated) {
+                            _isPurchasing.value = false
+                            LogUtils.d("VipCenterViewModel - 显示错误（用户操作），停止 loading: ${event.errorCode}")
+                        }
+                    }
+
                     else -> {
                         // 其他事件不影响 loading 状态
                     }
