@@ -123,9 +123,9 @@ object FirebaseManager {
                         if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
 
                     // 🔴 图片生成相关事件 - 100%采样
-                    Events.IMAGE_GENERATION_START to 1.0, // 图片生成开始
-                    Events.IMAGE_GENERATION_SUCCESS to 1.0, // 图片生成成功
-                    Events.IMAGE_GENERATION_FAILURE to 1.0, // 图片生成失败
+                    Events.MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED to 1.0, // 图片生成开始
+                    Events.MESSAGE_TO_IMAGE_GENERATION_SUCCESS to 1.0, // 图片生成成功
+                    Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE to 1.0, // 图片生成失败
                     Events.IMAGE_GENERATION_LIMIT_REACHED to 1.0, // 图片生成限制达到
                 ),
             minIntervalMsPerEvent =
@@ -224,7 +224,7 @@ object FirebaseManager {
             } else {
                 // 关键事件即使非调试模式也输出警告，便于排查问题
                 if (eventName in listOf(
-                        Events.IMAGE_GENERATION_FAILURE,
+                        Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
                         Events.MESSAGE_SEND_ERROR
                     )
                 ) {
@@ -277,7 +277,7 @@ object FirebaseManager {
                     } else {
                         // 关键事件即使非调试模式也输出确认日志，便于排查问题
                         if (eventName in listOf(
-                                Events.IMAGE_GENERATION_FAILURE,
+                                Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
                                 Events.MESSAGE_SEND_ERROR
                             )
                         ) {
@@ -487,10 +487,12 @@ object FirebaseManager {
         const val KEEP_TALKING_CLICKED = "keep_talking_clicked" // Keep Talking按钮点击
 
         // 图片生成相关事件
-        const val IMAGE_GENERATION_START = "image_generation_start" // 图片生成开始
-        const val IMAGE_GENERATION_SUCCESS = "image_generation_success" // 图片生成成功
-        const val IMAGE_GENERATION_FAILURE = "image_generation_failure" // 图片生成失败
-        const val IMAGE_GENERATION_LIMIT_REACHED = "image_generation_limit_reached" // 图片生成限制达到
+        const val MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED = "message_to_image_generation_button_clicked"
+        const val MESSAGE_TO_IMAGE_GENERATION_SUCCESS = "message_to_image_generation_success"
+        // 图片生成失败，除生成数量上线超标以外的错误
+        const val MESSAGE_TO_IMAGE_GENERATION_FAILURE = "message_to_image_generation_failure"
+        // 图片生成限制达到，这个限制与其他生图操作（如创建角色时生图）累加到一起的
+        const val IMAGE_GENERATION_LIMIT_REACHED = "image_generation_limit_reached"
 
         // Billing价格相关事件
         const val SUBSCRIPTION_PRICE_FETCHED = "subscription_price_fetched" // Google Play获取到的价格

@@ -31,9 +31,9 @@
 ### 图片生成
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
-| `image_generation_start` | ChatViewModel.kt | 图片生成开始（请求发起时触发） |
-| `image_generation_success` | ChatViewModel.kt | 图片生成成功（包含图片信息和生成耗时） |
-| `image_generation_failure` | ChatViewModel.kt | 图片生成失败（包含错误信息和生成耗时，包括网络错误和异常） |
+| `message_to_image_generation_button_clicked` | ChatViewModel.kt | 图片生成开始（请求发起时触发） |
+| `message_to_image_generation_success` | ChatViewModel.kt | 图片生成成功（包含图片信息和生成耗时） |
+| `message_to_image_generation_failure` | ChatViewModel.kt | 图片生成失败（包含错误信息和生成耗时，包括网络错误和异常） |
 | `image_generation_limit_reached` | ChatViewModel.kt | 图片生成限制达到（免费用户需要订阅或VIP用户达到每日限制） |
 
 ### 页面访问

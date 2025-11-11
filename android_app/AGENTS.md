@@ -23,3 +23,21 @@
 - 优先使用 `MaterialTheme.colorScheme/typography`；需要扩展时通过 `CompositionLocal` 暴露自定义 tokens。
 - 容器组件需转发子项常用样式参数（内边距/圆角/间距等），避免写死。
 - 示例与推荐签名见根目录 `AGENTS.md` 的“Compose UI 规范”。
+
+## Firebase 事件（events）
+
+关联到用户行为的事件以行为命名，如
+
+```kotlin
+const val MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED = "message_to_image_generation_button_clicked"
+```
+
+没有关联的事件以语义命名：
+
+```kotlin
+const val MESSAGE_TO_IMAGE_GENERATION_SUCCESS = "message_to_image_generation_success"
+const val MESSAGE_TO_IMAGE_GENERATION_FAILURE = "message_to_image_generation_failure"
+const val IMAGE_GENERATION_LIMIT_REACHED = "image_generation_limit_reached"
+```
+
+如果事件名修改，则需要同时更新 ../bizops/FIREBASE_BUSINESS_EVENTS.md

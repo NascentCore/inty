@@ -818,7 +818,6 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    /** 删除消息 */
     fun deleteMessage(localMsgId: String) {
         val agentId = _agentInfo.value?.id ?: return
         viewModelScope.launch(Dispatchers.IO) {
@@ -826,16 +825,14 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    /** 生成图片消息 */
     fun generateImageForMessage(messageId: String) {
         val agentId = _agentInfo.value?.id ?: return
         val agent = _agentInfo.value ?: return
 
         val startTime = System.currentTimeMillis()
 
-        // Firebase Analytics - 记录图片生成开始
         FirebaseManager.logEvent(
-            FirebaseManager.Events.IMAGE_GENERATION_START,
+            FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED,
             FirebaseManager.safeEventParams(
                 "agent_id" to agentId,
                 "agent_name" to agent.name,
@@ -857,7 +854,7 @@ class ChatViewModel : BaseVM() {
 
                         // Firebase Analytics - 记录图片生成成功
                         FirebaseManager.logEvent(
-                            FirebaseManager.Events.IMAGE_GENERATION_SUCCESS,
+                            FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_SUCCESS,
                             FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
                                 "agent_name" to agent.name,
@@ -947,7 +944,7 @@ class ChatViewModel : BaseVM() {
                                             "generation_time_ms=$generationTime"
                                 )
                                 FirebaseManager.logEvent(
-                                    FirebaseManager.Events.IMAGE_GENERATION_FAILURE,
+                                    FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
                                     FirebaseManager.safeEventParams(
                                         "agent_id" to agentId,
                                         "agent_name" to agent.name,
@@ -984,7 +981,7 @@ class ChatViewModel : BaseVM() {
                             "generation_time_ms=$generationTime"
                 )
                 FirebaseManager.logEvent(
-                    FirebaseManager.Events.IMAGE_GENERATION_FAILURE,
+                    FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
                     FirebaseManager.safeEventParams(
                         "agent_id" to agentId,
                         "agent_name" to agent.name,
