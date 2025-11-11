@@ -49,6 +49,8 @@ pip install -r experimental/firebase_events_params/requirements.txt
 python experimental/firebase_events_params/fetch_button_clicked_params.py \
   --property-id 123456789 \
   --event-name button_clicked \
+  --start-date 7daysAgo \
+  --end-date today \
   --limit 20
 ```
 

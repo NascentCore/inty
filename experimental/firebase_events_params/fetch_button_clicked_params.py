@@ -54,11 +54,16 @@ def build_credentials():
 
 
 def fetch_event_parameters(
-    property_id: str, event_name: str, limit: int = 20
+    property_id: str,
+    event_name: str,
+    start_date: str,
+    end_date: str,
+    limit: int = 20,
 ) -> List[Tuple[str, str, str, str]]:
     try:
         from google.analytics.data_v1beta import BetaAnalyticsDataClient
         from google.analytics.data_v1beta.types import (
+            DateRange,
             Dimension,
             Filter,
             FilterExpression,
@@ -75,6 +80,7 @@ def fetch_event_parameters(
 
     request = RunReportRequest(
         property=f"properties/{property_id}",
+        date_ranges=[DateRange(start_date=start_date, end_date=end_date)],
         dimensions=[
             Dimension(name="eventName"),
             Dimension(name="eventParameterName"),
@@ -136,6 +142,16 @@ def parse_args() -> argparse.Namespace:
         help="需要查询的事件名称，默认为 button_clicked。",
     )
     parser.add_argument(
+        "--start-date",
+        default="7daysAgo",
+        help="查询起始日期，支持相对日期（如 7daysAgo）或 YYYY-MM-DD。",
+    )
+    parser.add_argument(
+        "--end-date",
+        default="today",
+        help="查询结束日期，支持相对日期（如 today）或 YYYY-MM-DD。",
+    )
+    parser.add_argument(
         "--limit",
         type=int,
         default=20,
@@ -157,9 +173,21 @@ def main() -> None:
         print(f"[Dry-Run] 服务账号路径：{account_path}")
         return
 
-    rows = fetch_event_parameters(args.property_id, args.event_name, args.limit)
+    rows = fetch_event_parameters(
+        property_id=args.property_id,
+        event_name=args.event_name,
+        start_date=args.start_date,
+        end_date=args.end_date,
+        limit=args.limit,
+    )
     print(
-        f"查询成功：property={args.property_id}, event={args.event_name}, returned={len(rows)}"
+        "查询成功：property={property}, event={event}, start={start}, end={end}, returned={count}".format(
+            property=args.property_id,
+            event=args.event_name,
+            start=args.start_date,
+            end=args.end_date,
+            count=len(rows),
+        )
     )
     print_rows(rows)
 
