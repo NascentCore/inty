@@ -38,3 +38,5 @@ const val MESSAGE_TO_IMAGE_GENERATION_SUCCESS = "message_to_image_generation_suc
 const val MESSAGE_TO_IMAGE_GENERATION_FAILURE = "message_to_image_generation_failure"
 const val IMAGE_GENERATION_LIMIT_REACHED = "image_generation_limit_reached"
 ```
+
+如果事件名修改，则需要同时更新 ../bizops/FIREBASE_BUSINESS_EVENTS.md
