@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Firebase Events Params</string>
+    <string name="send_event">发送事件</string>
+    <string name="event_result_placeholder">尚未发送事件</string>
+    <string name="event_title">最近一次发送的参数</string>
+</resources>
