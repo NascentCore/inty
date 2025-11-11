@@ -66,7 +66,8 @@ internal class BillingPurchaseManager(
                     eventScope.launch {
                         eventFlow.emit(
                             BillingEvent.ShowError(
-                                BillingErrorCode.PURCHASES_EMPTY
+                                BillingErrorCode.PURCHASES_EMPTY,
+                                isUserInitiated = true // 购买流程是用户主动操作
                             )
                         )
                     }
@@ -75,7 +76,10 @@ internal class BillingPurchaseManager(
 
             BillingClient.BillingResponseCode.USER_CANCELED -> {
                 LogUtils.i("Billing 用户取消购买")
-                // 用户取消不发送失败事件
+                // 发送用户取消事件，让 UI 层知道可以停止 loading
+                eventScope.launch {
+                    eventFlow.emit(BillingEvent.UserCanceled)
+                }
             }
 
             BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> {
@@ -85,7 +89,8 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             BillingErrorCode.ITEM_ALREADY_OWNED,
                             billingResult.responseCode,
-                            "Item already owned"
+                            "Item already owned",
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -98,7 +103,8 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             BillingErrorCode.ITEM_NOT_OWNED,
                             billingResult.responseCode,
-                            "Item not owned"
+                            "Item not owned",
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -111,7 +117,8 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             BillingErrorCode.ITEM_UNAVAILABLE,
                             billingResult.responseCode,
-                            "Item is not available in current region"
+                            "Item is not available in current region",
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -126,7 +133,8 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             BillingErrorCode.DEVELOPER_ERROR,
                             billingResult.responseCode,
-                            "Developer error"
+                            "Developer error",
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -139,7 +147,8 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             BillingErrorCode.SERVICE_UNAVAILABLE,
                             billingResult.responseCode,
-                            "Service unavailable"
+                            "Service unavailable",
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -152,7 +161,8 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             BillingErrorCode.BILLING_NOT_SUPPORTED,
                             billingResult.responseCode,
-                            "Device does not support Google Play billing"
+                            "Device does not support Google Play billing",
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -165,7 +175,8 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             BillingErrorCode.NETWORK_ERROR,
                             billingResult.responseCode,
-                            "Network error"
+                            "Network error",
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -178,7 +189,8 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             BillingErrorCode.BILLING_FEATURE_NOT_SUPPORTED,
                             billingResult.responseCode,
-                            "Feature not supported"
+                            "Feature not supported",
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -191,7 +203,8 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             BillingErrorCode.UNKNOWN_ERROR,
                             billingResult.responseCode,
-                            "General error"
+                            "General error",
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -206,7 +219,8 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             BillingErrorCode.PURCHASE_FAILED,
                             billingResult.responseCode,
-                            billingResult.debugMessage
+                            billingResult.debugMessage,
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -259,7 +273,8 @@ internal class BillingPurchaseManager(
                         BillingEvent.PurchaseFailed(
                             BillingErrorCode.PURCHASE_ACKNOWLEDGMENT_FAILED,
                             billingResult.responseCode,
-                            billingResult.debugMessage
+                            billingResult.debugMessage,
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -412,7 +427,8 @@ internal class BillingPurchaseManager(
                     eventFlow.emit(
                         BillingEvent.ShowError(
                             BillingErrorCode.SUBSCRIPTION_VERIFICATION_EXCEPTION,
-                            e.message
+                            e.message,
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -449,7 +465,8 @@ internal class BillingPurchaseManager(
                         BillingEvent.GooglePlayServiceError(
                             BillingErrorCode.GOOGLE_PLAY_SERVICE_UPDATE_REQUIRED,
                             resultCode,
-                            1001
+                            1001,
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -461,7 +478,8 @@ internal class BillingPurchaseManager(
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.ShowError(
-                            BillingErrorCode.GOOGLE_PLAY_SERVICE_DISABLED
+                            BillingErrorCode.GOOGLE_PLAY_SERVICE_DISABLED,
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -473,7 +491,8 @@ internal class BillingPurchaseManager(
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.ShowError(
-                            BillingErrorCode.GOOGLE_PLAY_SERVICE_MISSING
+                            BillingErrorCode.GOOGLE_PLAY_SERVICE_MISSING,
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -485,7 +504,8 @@ internal class BillingPurchaseManager(
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.ShowError(
-                            BillingErrorCode.GOOGLE_PLAY_SERVICE_INVALID
+                            BillingErrorCode.GOOGLE_PLAY_SERVICE_INVALID,
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -497,7 +517,8 @@ internal class BillingPurchaseManager(
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.ShowError(
-                            BillingErrorCode.GOOGLE_PLAY_SERVICE_UNAVAILABLE
+                            BillingErrorCode.GOOGLE_PLAY_SERVICE_UNAVAILABLE,
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -511,7 +532,8 @@ internal class BillingPurchaseManager(
             eventScope.launch {
                 eventFlow.emit(
                     BillingEvent.ShowError(
-                        BillingErrorCode.BILLING_NOT_SUPPORTED
+                        BillingErrorCode.BILLING_NOT_SUPPORTED,
+                        isUserInitiated = true // 购买流程是用户主动操作
                     )
                 )
             }
@@ -534,7 +556,8 @@ internal class BillingPurchaseManager(
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.ShowError(
-                            BillingErrorCode.BILLING_FEATURE_NOT_SUPPORTED
+                            BillingErrorCode.BILLING_FEATURE_NOT_SUPPORTED,
+                            isUserInitiated = true // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -546,7 +569,8 @@ internal class BillingPurchaseManager(
                 eventFlow.emit(
                     BillingEvent.ShowError(
                         BillingErrorCode.BILLING_SUPPORT_CHECK_ERROR,
-                        e.message
+                        e.message,
+                        isUserInitiated = true // 购买流程是用户主动操作
                     )
                 )
             }
@@ -561,7 +585,8 @@ internal class BillingPurchaseManager(
             eventScope.launch {
                 eventFlow.emit(
                     BillingEvent.ShowError(
-                        BillingErrorCode.PURCHASE_PRECONDITIONS_CHECK_FAILED
+                        BillingErrorCode.PURCHASE_PRECONDITIONS_CHECK_FAILED,
+                        isUserInitiated = true // 购买流程是用户主动操作
                     )
                 )
             }
@@ -607,7 +632,8 @@ internal class BillingPurchaseManager(
                                     BillingEvent.SkuDetailsQueryFailed(
                                         BillingErrorCode.PRODUCT_DETAILS_NOT_FOUND,
                                         BillingClient.BillingResponseCode.OK,
-                                        "No subscription offer details found for $productId"
+                                        "No subscription offer details found for $productId",
+                                        isUserInitiated = true // 购买流程是用户主动操作
                                     )
                                 )
                             }
@@ -664,7 +690,8 @@ internal class BillingPurchaseManager(
                                     BillingEvent.SkuDetailsQueryFailed(
                                         BillingErrorCode.PRODUCT_DETAILS_NOT_FOUND,
                                         BillingClient.BillingResponseCode.OK,
-                                        productId
+                                        productId,
+                                        isUserInitiated = true // 购买流程是用户主动操作
                                     )
                                 )
                             }
@@ -678,7 +705,8 @@ internal class BillingPurchaseManager(
                             BillingEvent.SkuDetailsQueryFailed(
                                 BillingErrorCode.DEVELOPER_ERROR,
                                 billingResult.responseCode,
-                                "Please check product ID configuration, app signature, test user settings"
+                                "Please check product ID configuration, app signature, test user settings",
+                                isUserInitiated = true // 购买流程是用户主动操作
                             )
                         )
                     }
@@ -691,7 +719,8 @@ internal class BillingPurchaseManager(
                             BillingEvent.SkuDetailsQueryFailed(
                                 BillingErrorCode.SERVICE_UNAVAILABLE,
                                 billingResult.responseCode,
-                                "Google Play services temporarily unavailable"
+                                "Google Play services temporarily unavailable",
+                                isUserInitiated = true // 购买流程是用户主动操作
                             )
                         )
                     }
@@ -704,7 +733,8 @@ internal class BillingPurchaseManager(
                             BillingEvent.SkuDetailsQueryFailed(
                                 BillingErrorCode.BILLING_NOT_SUPPORTED,
                                 billingResult.responseCode,
-                                "Device does not support Google Play billing"
+                                "Device does not support Google Play billing",
+                                isUserInitiated = true // 购买流程是用户主动操作
                             )
                         )
                     }
@@ -717,7 +747,8 @@ internal class BillingPurchaseManager(
                             BillingEvent.SkuDetailsQueryFailed(
                                 BillingErrorCode.ITEM_UNAVAILABLE,
                                 billingResult.responseCode,
-                                "Item is not available in current region"
+                                "Item is not available in current region",
+                                isUserInitiated = true // 购买流程是用户主动操作
                             )
                         )
                     }
@@ -730,7 +761,8 @@ internal class BillingPurchaseManager(
                             BillingEvent.SkuDetailsQueryFailed(
                                 BillingErrorCode.NETWORK_ERROR,
                                 billingResult.responseCode,
-                                "Network connection issue"
+                                "Network connection issue",
+                                isUserInitiated = true // 购买流程是用户主动操作
                             )
                         )
                     }
@@ -745,7 +777,8 @@ internal class BillingPurchaseManager(
                             BillingEvent.SkuDetailsQueryFailed(
                                 BillingErrorCode.PRODUCT_DETAILS_QUERY_FAILED,
                                 billingResult.responseCode,
-                                billingResult.debugMessage
+                                billingResult.debugMessage,
+                                isUserInitiated = true // 购买流程是用户主动操作
                             )
                         )
                     }

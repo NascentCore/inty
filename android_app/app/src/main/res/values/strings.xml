@@ -305,7 +305,7 @@
 
     <!-- 服务相关错误 -->
     <string name="billing_error_service_unavailable">Google Play services are temporarily unavailable. Please try again later</string>
-    <string name="billing_error_network_error">Network connection error. Please check your connection and try again</string>
+    <string name="billing_error_network_error">Cannot connect to Google Play Billing. Check network and retry</string>
     <string name="billing_error_developer_error">Configuration error. Please contact support</string>
 
     <!-- 商品查询相关错误 -->
