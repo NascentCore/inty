@@ -1267,6 +1267,10 @@ async def generate_chat_image(
 
     # 调用图片生成服务（使用 Gemini 2.5 Flash Image）
     # 重复生成会直接覆盖 meta_data 中的 generated_image，无需删除旧数据
+    image_generation_result = None
+    failure_reason = None
+    failure_type = None
+
     try:
         image_generation_result = (
             await image_generation_service.generate_chat_image_with_gemini(
@@ -1300,20 +1304,82 @@ async def generate_chat_image(
                 if len(parts) > 1:
                     block_reason = parts[1].strip()
 
+            failure_reason = block_reason or error_message
+            failure_type = "safety_filter"
+
             logger.warning(
                 f"图片生成被安全过滤器阻止 - Agent ID: {agent_id}, "
-                f"Message ID: {message_id}, Reason: {block_reason or error_message}"
+                f"Message ID: {message_id}, Reason: {failure_reason}"
             )
+
+            # 记录失败信息（不计入用量，usage_count=0）
+            try:
+                await subscription_service.record_usage(
+                    db,
+                    user_id,
+                    "image_generation",
+                    0,  # 失败不计入用量
+                    extra_data={
+                        "agent_id": agent_id,
+                        "message_content": message_content[:100],  # 只记录前100个字符
+                        "success": False,
+                        "failure_reason": failure_reason,
+                        "failure_type": failure_type,
+                        "session_id": session_id,
+                        "message_id": message_id,
+                    },
+                )
+                logger.debug(f"图片生成失败记录成功: user_id={user_id}")
+            except Exception as e:
+                logger.warning(f"记录图片生成失败信息失败: {str(e)}")
 
             return BizError(
                 code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["code"],
                 error_code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["error_code"],
                 message=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["message"],
             )
-        # 其他 ValueError 继续抛出
+        else:
+            # 其他 ValueError 异常
+            failure_reason = error_message
+            failure_type = "value_error"
+            raise
+    except Exception as e:
+        # 捕获所有其他异常（网络错误、超时等）
+        error_message = str(e)
+        failure_reason = error_message
+        failure_type = type(e).__name__.lower()
+
+        logger.error(
+            f"图片生成失败 - Agent ID: {agent_id}, "
+            f"Message ID: {message_id}, Error Type: {failure_type}, "
+            f"Reason: {failure_reason}"
+        )
+
+        # 记录失败信息（不计入用量，usage_count=0）
+        try:
+            await subscription_service.record_usage(
+                db,
+                user_id,
+                "image_generation",
+                0,  # 失败不计入用量
+                extra_data={
+                    "agent_id": agent_id,
+                    "message_content": message_content[:100],  # 只记录前100个字符
+                    "success": False,
+                    "failure_reason": failure_reason,
+                    "failure_type": failure_type,
+                    "session_id": session_id,
+                    "message_id": message_id,
+                },
+            )
+            logger.debug(f"图片生成失败记录成功: user_id={user_id}")
+        except Exception as e:
+            logger.warning(f"记录图片生成失败信息失败: {str(e)}")
+
+        # 重新抛出异常，让上层处理
         raise
 
-    # 记录用量
+    # 记录成功用量
     try:
         await subscription_service.record_usage(
             db,
@@ -1323,6 +1389,9 @@ async def generate_chat_image(
             extra_data={
                 "agent_id": agent_id,
                 "message_content": message_content[:100],  # 只记录前100个字符
+                "success": True,
+                "session_id": session_id,
+                "message_id": message_id,
             },
         )
         logger.debug(f"图片生成用量记录成功: user_id={user_id}")

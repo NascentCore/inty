@@ -143,6 +143,16 @@ class AgentBase(BaseModel):
         None, description="Agent 元数据，包含评分等信息"
     )
 
+    @field_validator(
+        "background_images", "photos", "alternate_greetings", "tags", mode="before"
+    )
+    @classmethod
+    def convert_empty_string_to_none(cls, v):
+        """将空字符串转换为 None，兼容 Dify 模板变量替换将 null 序列化为空字符串的行为"""
+        if v == "":
+            return None
+        return v
+
 
 class GenerateBackgroundAnimatedRequest(BaseModel):
     """生成背景视频请求"""

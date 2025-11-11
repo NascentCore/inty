@@ -452,4 +452,9 @@ export interface UserAnalyticsStatsResponse {
   avg_rounds_per_session: number;
   // 新增指标
   new_user_open_rate: number;
+  // 生图统计
+  total_image_generation_requests: number;
+  total_image_generation_success: number;
+  total_image_generation_failures: number;
+  image_generation_success_rate: number;
 }

@@ -170,3 +170,10 @@ class UserAnalyticsStatsResponse(BaseModel):
     new_user_open_rate: float = Field(
         description="新增用户开口率（total_chat_initiators / total_new_users，0-100）"
     )
+    # 生图统计
+    total_image_generation_requests: int = Field(description="总生图请求数", default=0)
+    total_image_generation_success: int = Field(description="成功次数", default=0)
+    total_image_generation_failures: int = Field(description="失败次数", default=0)
+    image_generation_success_rate: float = Field(
+        description="成功率（百分比，0-100）", default=0.0
+    )

@@ -28,6 +28,7 @@ import {
   UserOutlined,
   MessageOutlined,
   BarChartOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
 import Plot from "react-plotly.js";
 import type { ColumnsType } from "antd/es/table";
@@ -562,6 +563,57 @@ export const UserAnalyticsPage: React.FC = () => {
               title="新增用户开口率"
               value={stats?.new_user_open_rate.toFixed(2) ?? "0.00"}
               suffix="%"
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 生图统计 */}
+      <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="总生图请求数"
+              value={stats?.total_image_generation_requests ?? 0}
+              prefix={<PictureOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="生图成功次数"
+              value={stats?.total_image_generation_success ?? 0}
+              prefix={<PictureOutlined />}
+              valueStyle={{ color: "#3f8600" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="生图失败次数"
+              value={stats?.total_image_generation_failures ?? 0}
+              prefix={<PictureOutlined />}
+              valueStyle={{ color: "#cf1322" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="生图成功率"
+              value={stats?.image_generation_success_rate.toFixed(2) ?? "0.00"}
+              suffix="%"
+              prefix={<PictureOutlined />}
+              valueStyle={{
+                color:
+                  (stats?.image_generation_success_rate ?? 0) >= 80
+                    ? "#3f8600"
+                    : (stats?.image_generation_success_rate ?? 0) >= 50
+                    ? "#faad14"
+                    : "#cf1322",
+              }}
             />
           </Card>
         </Col>

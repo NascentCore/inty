@@ -584,12 +584,12 @@ class Agent:
                     f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                all_messages = recent_history + messages["messages"]
+                all_messages = recent_history + messages
                 logger.debug(f"all_messages: {all_messages}")
 
                 # 保存原始用户消息到历史记录
                 save_msg_start = time.time()
-                history.add_messages(messages["messages"])
+                history.add_messages(messages)
                 save_msg_time = time.time() - save_msg_start
                 logger.debug(
                     f"用户消息保存耗时: {save_msg_time:.3f}秒 - Agent: {self.agent_id}"
@@ -694,6 +694,208 @@ class Agent:
                     f"聊天处理失败（优化版） - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}"
                 )
                 raise
+
+    def _generate_message_without_user_save_sync(
+        self,
+        user_id: str,
+        session_id: str,
+        messages: List[HumanMessage],
+        user_profile: str = None,
+        chat_settings: models.chat_settings.ChatSettings = None,
+    ) -> str:
+        """
+        生成消息但不保存用户消息到历史记录（用于推送消息）
+        
+        与 _chat_sync_optimized 的区别：
+        - 不保存用户消息到历史记录
+        - 不保存AI响应到历史记录（由调用方通过 add_ai_message 保存）
+        
+        Args:
+            user_id: 用户ID
+            session_id: 会话ID
+            messages: 用户消息列表（用于生成AI回复，但不会保存）
+            user_profile: 用户信息
+            chat_settings: 聊天设置
+            
+        Returns:
+            生成的AI消息内容
+        """
+        # 从连接池获取连接
+        pool_start = time.time()
+        pool = get_connection_pool()
+        pool_time = time.time() - pool_start
+        logger.debug(f"连接池获取耗时: {pool_time:.3f}秒 - Agent: {self.agent_id}")
+
+        with pool.connection() as conn_local:
+            try:
+                # 创建历史记录对象（仅用于读取历史消息，不保存新消息）
+                history_start = time.time()
+                history = PostgresChatMessageHistory(
+                    chat_history.TABLE_NAME, session_id, sync_connection=conn_local
+                )
+                history_init_time = time.time() - history_start
+                logger.debug(
+                    f"历史记录初始化耗时: {history_init_time:.3f}秒 - Agent: {self.agent_id}"
+                )
+
+                # 获取相关的历史消息
+                get_history_start = time.time()
+                recent_history = self._get_relevant_history(history.messages)
+                get_history_time = time.time() - get_history_start
+                logger.debug(
+                    f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
+                )
+
+                # 注意：这里不保存用户消息到历史记录
+                all_messages = recent_history + messages
+                logger.debug(f"all_messages: {all_messages}")
+
+                # 如果 user_profile 为 None，自动获取
+                if user_profile is None:
+                    user_profile = self._get_user_profile_sync(user_id)
+
+                input_build_start = time.time()
+                user_name = self._extract_user_name_from_profile(user_profile)
+                labels = {
+                    "user_id": user_id,
+                    "user_name": user_name,
+                    "agent_id": self.agent_id,
+                    "agent_name": self.name,
+                    "chat_settings": chat_settings,
+                }
+
+                system_messages = self.build_system_messages(
+                    user_profile, chat_settings
+                )
+
+                messages_list: list[BaseMessage] = system_messages + all_messages
+
+                openai_messages = [
+                    langchain_message_to_openai_message(message, user_name, self.name)
+                    for message in messages_list
+                ]
+                logger.debug(f"openai_messages: {openai_messages}")
+
+                input_build_time = time.time() - input_build_start
+                logger.debug(
+                    f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}"
+                )
+
+                # 调用agent进行对话
+                agent_invoke_start = time.time()
+                logger.debug(f"开始Agent推理（推送消息） - Agent: {self.agent_id}")
+
+                chat_name = f"{user_name}:{self.name}"
+                default_model = global_config_loaded_from_config_yaml.agent.model
+                default_temperature = (
+                    global_config_loaded_from_config_yaml.agent.temperature
+                )
+                default_max_tokens = (
+                    global_config_loaded_from_config_yaml.agent.max_tokens
+                )
+                default_top_p = global_config_loaded_from_config_yaml.agent.top_p
+
+                # 获取或创建wrapped client（性能优化：复用客户端）
+                client_start = time.time()
+                client = self._get_wrapped_client(chat_name, labels)
+                client_time = time.time() - client_start
+                logger.debug(
+                    f"客户端获取耗时: {client_time:.3f}秒 - Agent: {self.agent_id}"
+                )
+
+                # API调用
+                api_start = time.time()
+                response = client.chat.completions.create(
+                    messages=openai_messages,
+                    model=self.model_config.get("model", default_model),
+                    temperature=self.model_config.get(
+                        "temperature", default_temperature
+                    ),
+                    max_tokens=self.model_config.get("max_tokens", default_max_tokens),
+                    top_p=self.model_config.get("top_p", default_top_p),
+                    extra_body={
+                        # This only works for Gemini models.
+                        "generation_config": {
+                            "thinking_budget": 0,
+                        },
+                        # This appears on Open Router Client User ID field.
+                        # can be used to track end user's usage.
+                        "user": user_id,
+                    },
+                )
+                api_time = time.time() - api_start
+                logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
+
+                agent_invoke_time = time.time() - agent_invoke_start
+                logger.debug(
+                    f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
+                )
+
+                # 处理响应
+                response_process_start = time.time()
+                response_text = response.choices[0].message.content
+                response_process_time = time.time() - response_process_start
+                logger.debug(
+                    f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
+                )
+
+                # 注意：这里不保存AI响应到历史记录，由调用方通过 add_ai_message 保存
+                logger.debug(
+                    f"推送消息生成完成（未保存到历史记录） - Agent: {self.agent_id}, Session: {session_id}"
+                )
+
+                return response_text
+            except Exception as e:
+                logger.error(
+                    f"推送消息生成失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}"
+                )
+                raise
+
+    async def generate_message_without_user_save(
+        self,
+        user_id: str,
+        session_id: str,
+        messages: List[HumanMessage],
+        user_profile: str = None,
+        chat_settings: models.chat_settings.ChatSettings = None,
+    ) -> str:
+        """
+        异步封装：生成消息但不保存用户消息到历史记录（用于推送消息）
+        
+        Args:
+            user_id: 用户ID
+            session_id: 会话ID
+            messages: 用户消息列表（用于生成AI回复，但不会保存）
+            user_profile: 用户信息
+            chat_settings: 聊天设置
+            
+        Returns:
+            生成的AI消息内容
+        """
+        logger.debug(
+            f"开始推送消息生成 - Agent: {self.agent_id}, Session: {session_id}"
+        )
+
+        self._update_last_used()
+
+        # 在线程池中执行同步生成逻辑
+        loop = asyncio.get_event_loop()
+        try:
+            result = await loop.run_in_executor(
+                self._executor,
+                self._generate_message_without_user_save_sync,
+                user_id,
+                session_id,
+                messages,
+                user_profile,
+                chat_settings,
+            )
+            return result
+        except Exception as e:
+            logger.error(
+                f"异步推送消息生成失败 - Agent: {self.agent_id}, Error: {str(e)}"
+            )
+            raise
 
     @deprecated("替换为流式消息输出，需要调整大模型 API 调用，输出方式等")
     async def chat(

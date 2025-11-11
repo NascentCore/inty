@@ -24,6 +24,9 @@ from app.schemas.response import (
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
+from app.services.push_notification_service import (
+    mark_user_push_notifications_as_read,
+)
 from app.services.voice_service import voice_service
 from app.utils.timing import Timer, log_time
 
@@ -191,6 +194,21 @@ async def agent_chat_completions(
                 )
 
             logger.debug(f"Agent聊天响应成功: {response_content[:100]}...")
+
+            # 用户发送消息后，标记该用户的所有未读推送为已读
+            try:
+                read_count = await mark_user_push_notifications_as_read(
+                    db, current_user.id
+                )
+                if read_count > 0:
+                    logger.debug(
+                        f"标记用户推送为已读: user_id={current_user.id}, count={read_count}"
+                    )
+            except Exception as e:
+                # 标记已读失败不应该影响聊天流程，只记录日志
+                logger.warning(
+                    f"标记用户推送为已读失败: user_id={current_user.id}, error={str(e)}"
+                )
 
         except Exception as e:
             logger.error(f"Agent聊天处理失败: {str(e)}")
