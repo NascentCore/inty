@@ -487,7 +487,7 @@ object FirebaseManager {
         const val KEEP_TALKING_CLICKED = "keep_talking_clicked" // Keep Talking按钮点击
 
         // 图片生成相关事件
-        const val MESSAGE_TO_IMAGE_GENERATION_START = "message_to_image_generation_start"
+        const val MESSAGE_TO_IMAGE_GENERATION_START = "message_to_image_generation_button_clicked"
         const val MESSAGE_TO_IMAGE_GENERATION_SUCCESS = "message_to_image_generation_success"
         // 图片生成失败，除生成数量上线超标以外的错误
         const val MESSAGE_TO_IMAGE_GENERATION_FAILURE = "message_to_image_generation_failure"
