@@ -366,23 +366,39 @@ fun AnimatedBackground(
     }
 
     // 当 shouldPlay 变化时，触发播放
-    LaunchedEffect(shouldPlay, playCount, videoUrl, isVideo, isGif, videoPath, controlledPlayer) {
+    // 注意：如果视频还没准备好，会在视频准备完成后通过 update 块触发播放
+    LaunchedEffect(
+        shouldPlay,
+        playCount,
+        videoUrl,
+        isVideo,
+        isGif,
+        videoPath,
+        controlledPlayer,
+        videoPrepared
+    ) {
         if (shouldPlay && (isVideo || isGif)) {
             currentPlayCount = playCount
-            LogUtils.d("AnimatedBackground - [LaunchedEffect: shouldPlay] 触发播放: shouldPlay=$shouldPlay, playCount=$playCount, isVideo=$isVideo, isGif=$isGif, videoPath=$videoPath")
+            LogUtils.d("AnimatedBackground - [LaunchedEffect: shouldPlay] 触发播放: shouldPlay=$shouldPlay, playCount=$playCount, isVideo=$isVideo, isGif=$isGif, videoPath=$videoPath, videoPrepared=$videoPrepared")
 
-            if (isVideo && videoPath != null) {
+            if (isVideo && videoPath != null && controlledPlayer != null) {
                 // 视频：延迟一下确保视图已准备好
                 delay(500)
-                if (controlledPlayer != null) {
-                    LogUtils.d("AnimatedBackground - [LaunchedEffect: shouldPlay] 设置播放次数: $playCount")
+                if (videoPrepared) {
+                    LogUtils.d("AnimatedBackground - [LaunchedEffect: shouldPlay] 视频已准备好，设置播放次数: $playCount")
                     controlledPlayer?.setPlayCount(playCount)
                     controlledPlayer?.startPlayback()
                 } else {
-                    LogUtils.w("AnimatedBackground - [LaunchedEffect: shouldPlay] controlledPlayer 为 null，无法播放")
+                    LogUtils.w("AnimatedBackground - [LaunchedEffect: shouldPlay] 视频未准备好，等待视频准备完成后再播放")
+                    // 视频准备完成后会在 update 块中触发播放
                 }
             } else if (isVideo) {
-                LogUtils.w("AnimatedBackground - [LaunchedEffect: shouldPlay] videoPath 为 null，等待视频路径准备")
+                if (videoPath == null) {
+                    LogUtils.w("AnimatedBackground - [LaunchedEffect: shouldPlay] videoPath 为 null，等待视频路径准备")
+                }
+                if (controlledPlayer == null) {
+                    LogUtils.w("AnimatedBackground - [LaunchedEffect: shouldPlay] controlledPlayer 为 null，等待视频控件创建")
+                }
             }
             // GIF 由 Coil 自动处理，播放完成后需要手动回调
             // 注意：GIF 无法精确控制播放次数，这里使用延时来模拟
@@ -392,21 +408,33 @@ fun AnimatedBackground(
                 delay(estimatedDuration)
                 onPlayComplete()
             }
-        } else if (!shouldPlay && isVideo) {
+        } else if (!shouldPlay && isVideo && controlledPlayer != null) {
             // 停止播放
             LogUtils.d("AnimatedBackground - [LaunchedEffect: shouldPlay] 停止播放")
             controlledPlayer?.resetPlayback()
         }
     }
 
+    // 当视频准备完成时，如果 shouldPlay 为 true，触发播放
+    // 这个 LaunchedEffect 确保视频准备完成后能立即触发播放
+    LaunchedEffect(videoPrepared, shouldPlay, currentPlayCount, controlledPlayer) {
+        if (videoPrepared && shouldPlay && currentPlayCount > 0 && controlledPlayer != null && isVideo) {
+            LogUtils.d("AnimatedBackground - [LaunchedEffect: videoPrepared] 视频准备完成且 shouldPlay=true，触发播放: playCount=$currentPlayCount")
+            delay(100) // 小延迟确保状态同步
+            controlledPlayer?.setPlayCount(currentPlayCount)
+            controlledPlayer?.startPlayback()
+        }
+    }
+
     // 当视频 URL 变化时，重置状态
+    // 注意：不重置 currentPlayCount，因为它可能已经在 shouldPlay 的 LaunchedEffect 中被设置了
     LaunchedEffect(videoUrl, staticImageUrl) {
         LogUtils.d("AnimatedBackground - [LaunchedEffect: reset] ========== 重置状态 ==========")
         LogUtils.d("AnimatedBackground - [LaunchedEffect: reset] videoUrl=$videoUrl, staticImageUrl=$staticImageUrl")
         showStaticImage = staticImageUrl != null
         staticImageLoaded = false
         videoPrepared = false
-        currentPlayCount = 0
+        // 不重置 currentPlayCount，保持 shouldPlay 设置的播放次数
         videoUriSet = false
         videoError = null
         LogUtils.d("AnimatedBackground - [LaunchedEffect: reset] showStaticImage=$showStaticImage, staticImageLoaded=$staticImageLoaded, videoPrepared=$videoPrepared")
@@ -580,6 +608,8 @@ fun AnimatedBackground(
                                     LogUtils.d("AnimatedBackground - [ExoPlayer: factory: onPrepared] videoUrl: $videoUrl")
                                     LogUtils.d("AnimatedBackground - [ExoPlayer: factory: onPrepared] 设置 videoPrepared=true")
                                     videoPrepared = true
+                                    // 视频准备完成后，通过 LaunchedEffect 触发播放
+                                    // 因为 shouldPlay 和 currentPlayCount 是 Compose 状态，需要在 Compose 作用域中访问
                                     LogUtils.d("AnimatedBackground - [ExoPlayer: factory: onPrepared] ========== 准备完成 ==========")
                                 },
                                 onError = { errorMsg ->

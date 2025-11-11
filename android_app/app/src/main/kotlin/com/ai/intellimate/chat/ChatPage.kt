@@ -219,6 +219,7 @@ internal fun ChatPage(
             showGradients = true,
             isFirstEnter = isFirstEnter && isQueryMsgsCompleted,
             isLoading = hasLoadingMessage,
+            isCurrentPage = isCurrentPage,
         )
 
         val drawerState = remember { mutableStateOf(DrawerValue.Closed) }

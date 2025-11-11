@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,6 +50,7 @@ fun AgentBackground(
     showGradients: Boolean = true,
     isFirstEnter: Boolean = false,
     isLoading: Boolean = false,
+    isCurrentPage: Boolean = true,
     onPlayComplete: () -> Unit = {},
 ) {
     val density = LocalDensity.current
@@ -120,25 +122,48 @@ fun AgentBackground(
     // 播放控制逻辑
     var shouldPlay by remember { mutableStateOf(false) }
     var playCount by remember { mutableIntStateOf(1) }
-    var hasPlayedFirstTime by remember { mutableStateOf(false) }
+    var lastPlayedAgentId by remember { mutableStateOf<String?>(null) }
+    var lastPlayedPageState by remember { mutableStateOf(false) }
+    var lastPlayedTimestamp by remember { mutableLongStateOf(0L) }
 
-    // 首次进入：播放2次
-    LaunchedEffect(isFirstEnter, backgroundGifUrl) {
-        if (isFirstEnter && backgroundGifUrl != null && !hasPlayedFirstTime) {
-            hasPlayedFirstTime = true
-            playCount = 2
-            shouldPlay = true
+    // 每次进入页面时：播放2次
+    // 基于页面可见性（isCurrentPage）和 agent 变化来触发
+    // 注意：这里不依赖 isFirstEnter，因为用户需求是每次进入页面都播放
+    LaunchedEffect(isCurrentPage, agentInfo?.id, backgroundGifUrl) {
+        // 当页面变为可见且有背景动图时，触发播放
+        if (isCurrentPage && backgroundGifUrl != null) {
+            val currentAgentId = agentInfo?.id
+            val currentTime = System.currentTimeMillis()
+            // 如果 agent 变化了，或者页面从不可见变为可见，或者距离上次播放超过1秒，则播放
+            // 这样可以确保每次进入 Activity 时都能播放（即使 agent 相同）
+            val shouldTriggerPlay = currentAgentId != null && (
+                    currentAgentId != lastPlayedAgentId ||
+                            (isCurrentPage && !lastPlayedPageState) ||
+                            (currentTime - lastPlayedTimestamp > 1000) // 距离上次播放超过1秒
+                    )
+
+            if (shouldTriggerPlay) {
+                LogUtils.d("AgentBackground - 触发页面进入播放: agentId=$currentAgentId, isCurrentPage=$isCurrentPage, lastPlayedAgentId=$lastPlayedAgentId, lastPlayedPageState=$lastPlayedPageState, timeSinceLastPlay=${currentTime - lastPlayedTimestamp}ms")
+                lastPlayedAgentId = currentAgentId
+                lastPlayedPageState = isCurrentPage
+                lastPlayedTimestamp = currentTime
+                playCount = 2
+                shouldPlay = true
+            }
+        } else if (!isCurrentPage) {
+            // 页面不可见时，更新状态但不播放
+            lastPlayedPageState = false
         }
     }
 
     // Loading 时：播放1次
+    // 注意：只在 Loading 时设置 shouldPlay，不主动设置为 false，避免覆盖页面进入时的播放
     LaunchedEffect(isLoading, backgroundGifUrl) {
         if (isLoading && backgroundGifUrl != null) {
             playCount = 1
             shouldPlay = true
-        } else if (!isLoading) {
-            shouldPlay = false
         }
+        // 不在 !isLoading 时设置 shouldPlay = false，让播放完成回调来处理
     }
 
     // 构建静态图片请求（用于首次加载优化）
