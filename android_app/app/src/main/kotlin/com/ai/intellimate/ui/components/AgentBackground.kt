@@ -47,7 +47,6 @@ fun AgentBackground(
     agentInfo: AgentInfo?,
     modifier: Modifier = Modifier,
     showGradients: Boolean = true,
-    isFirstEnter: Boolean = false,
     isLoading: Boolean = false,
     isCurrentPage: Boolean = true,
     onPlayComplete: () -> Unit = {},
