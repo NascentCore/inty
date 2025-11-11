@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -261,62 +262,57 @@ private fun ChatItemAI(
                     LoadingAnimation()
                 }
             } else if (!shouldHideText && item.content.isNotEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row {
-                        val context = LocalContext.current
-                        // 消息卡片Box，包含文本
-                        Box(
-                            modifier =
-                                Modifier
-                                    .background(Color.Black.copy(alpha = 0.5f), msgShape)
-                                    .padding(12.dp, 13.dp)
-                                    .widthIn(1.dp, 300.dp)
-                                    .pointerInput(item.content) {
-                                        detectTapGestures(
-                                            onLongPress = {
-                                                debugOnlyCopyToClipboard(
-                                                    context,
-                                                    item.content
-                                                )
-                                            }
-                                        )
-                                    }
-                        ) {
-                            // 消息文本（loading 动画已经在外部单独处理）
-                            if (item.content.isNotEmpty()) {
-                                StyledMessageText(
-                                    text = item.content,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Normal,
-                                    normalColor = Color.White,
-                                    actionColor = Color.White.copy(0.55f),
-                                )
-                            }
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    val context = LocalContext.current
+                    // 消息卡片Box，包含文本
+                    Box(
+                        modifier =
+                            Modifier
+                                .background(Color.Black.copy(alpha = 0.5f), msgShape)
+                                .padding(12.dp, 13.dp)
+                                .widthIn(1.dp, 300.dp)
+                                .pointerInput(item.content) {
+                                    detectTapGestures(
+                                        onLongPress = {
+                                            debugOnlyCopyToClipboard(
+                                                context,
+                                                item.content
+                                            )
+                                        }
+                                    )
+                                }
+                    ) {
+                        // 消息文本（loading 动画已经在外部单独处理）
+                        if (item.content.isNotEmpty()) {
+                            StyledMessageText(
+                                text = item.content,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Normal,
+                                normalColor = Color.White,
+                                actionColor = Color.White.copy(0.55f),
+                            )
                         }
-                        Spacer(
-                            modifier = Modifier
-                                .widthIn(80.dp)
-                                .weight(1f)
-                        )
-                    }
 
-                    // 右下角按钮（image generate）- 放在外层Box中，使用offset定位到消息卡片边缘
-                    // keep talking按钮已移至ChatInput右上角悬浮
-                    // 如果有图片（包括loading状态），隐藏所有按钮；否则仅在最后一条消息时显示
-                    // 注意：消息生图loading时（generatedImageUrl == "loading"），hasGeneratedImage = true，此时应该隐藏按钮
-                    // 注意：!hasGeneratedImage 已隐含 !isImageOnlyMessage（因为 isImageOnlyMessage 要求 hasGeneratedImage 为 true）
-                    if (!hasGeneratedImage && isLatestMessage) {
-                        MessageCornerActions(
-                            onImageGenerate = {
-                                viewModel.generateImageForMessage(item.id)
-                            },
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(2.dp)
-                        )
+                        // 右下角按钮（image generate）
+                        // 如果有图片（包括loading状态），隐藏所有按钮；否则仅在最后一条消息时显示
+                        // 注意：消息生图loading时（generatedImageUrl == "loading"），hasGeneratedImage = true，此时应该隐藏按钮
+                        // 注意：!hasGeneratedImage 已隐含 !isImageOnlyMessage（因为 isImageOnlyMessage 要求 hasGeneratedImage 为 true）
+                        if (!hasGeneratedImage && isLatestMessage) {
+                            MessageCornerActions(
+                                onImageGenerate = {
+                                    viewModel.generateImageForMessage(item.id)
+                                },
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .offset(10.dp, 10.dp)
+                            )
+                        }
                     }
+                    Spacer(
+                        modifier = Modifier
+                            .widthIn(80.dp)
+                            .weight(1f)
+                    )
                 }
             }
 
