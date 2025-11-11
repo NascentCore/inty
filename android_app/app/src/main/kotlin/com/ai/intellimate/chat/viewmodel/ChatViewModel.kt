@@ -832,7 +832,7 @@ class ChatViewModel : BaseVM() {
         val startTime = System.currentTimeMillis()
 
         FirebaseManager.logEvent(
-            FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_START,
+            FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED,
             FirebaseManager.safeEventParams(
                 "agent_id" to agentId,
                 "agent_name" to agent.name,
