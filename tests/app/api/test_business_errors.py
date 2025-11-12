@@ -120,6 +120,59 @@ def test_create_agent_limit_returns_business_error(monkeypatch: pytest.MonkeyPat
     assert body["data"]["feature"] == "agent_creation"
 
 
+def test_create_agent_allows_empty_background(
+    monkeypatch: pytest.MonkeyPatch, test_app: FastAPI
+):
+    async def fake_check_agent_creation_limit(db, current_user):
+        return True, 0, 6
+
+    captured_data: dict = {}
+
+    async def fake_create_agent(db, agent_in, user_id):
+        from app.services.agent_service import process_agent_image_urls
+        from app.schemas.exclude_fields import EXCLUDE_FIELDS
+
+        captured_data["raw_background"] = agent_in.background
+        processed_agent_data = process_agent_image_urls(
+            agent_in.model_dump(exclude=EXCLUDE_FIELDS)
+        )
+        captured_data["processed_background"] = processed_agent_data.get("background")
+        return {
+            "id": "agent-123",
+            "name": agent_in.name,
+            "background": processed_agent_data.get("background"),
+        }
+
+    monkeypatch.setattr(
+        subscription_service,
+        "check_agent_creation_limit",
+        fake_check_agent_creation_limit,
+    )
+    monkeypatch.setattr(agent_service, "create_agent", fake_create_agent)
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    with _client_with_user(test_app, user) as client:
+        response = client.post(
+            "/api/v1/ai/agents",
+            json={
+                "name": "Empty Background Agent",
+                "gender": "FEMALE",
+                "visibility": "PUBLIC",
+                "background": "",
+            },
+        )
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["code"] == 200
+    assert body["data"]["id"] == "agent-123"
+    assert body["data"]["background"] is None
+    assert captured_data["raw_background"] == ""
+    assert captured_data["processed_background"] is None
+
+
 def test_text_to_image_limit_returns_business_error(monkeypatch: pytest.MonkeyPatch, test_app: FastAPI):
     async def fake_check_image_gen_limit(db, current_user):
         return False, 3, 3

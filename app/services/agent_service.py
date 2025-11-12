@@ -1151,6 +1151,27 @@ def process_agent_image_urls(agent_data: dict) -> dict:
         agent_data
     )
 
+    # 允许前端传入空字符串，转换为 None 以便后续逻辑统一处理
+    for key in ("avatar", "background"):
+        value = processed_data.get(key)
+        if isinstance(value, str) and not value.strip():
+            logger.debug(f"{key} 字段为空字符串，将按 None 处理")
+            processed_data[key] = None
+
+    # 清理图片列表中的空白项
+    for key in ("background_images", "photos"):
+        if key not in processed_data or not isinstance(
+            processed_data[key], list
+        ):
+            continue
+        filtered_urls = []
+        for url in processed_data[key]:
+            if isinstance(url, str) and url.strip():
+                filtered_urls.append(url)
+            else:
+                logger.debug(f"{key} 中包含空值或空字符串，已忽略")
+        processed_data[key] = filtered_urls
+
     logger.debug(
         f"URL转换完成 - 转换后数据: avatar={processed_data.get('avatar')}, background={processed_data.get('background')}, background_images={processed_data.get('background_images')}"
     )
