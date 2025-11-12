@@ -16,6 +16,7 @@ def integration_client():
         client.close()
 
 
+@pytest.mark.noci
 def test_chat_completions_endpoint(integration_client: TestClient):
     agent_id = integration_client.create_agent()
 
