@@ -318,7 +318,7 @@ object UnifiedStartupManager {
     private suspend fun syncRecommendedAgents() {
         try {
             val agentApi: IAgentApi =
-                NetServiceMgr.getAgentApi() ?: throw IllegalStateException("IAgentApi not found")
+                NetServiceMgr.getAgentApi()
 
             val sortSeed = IntySetting.sortSeed()
             val result =
@@ -368,9 +368,10 @@ object UnifiedStartupManager {
     private suspend fun syncChatAgents() {
         try {
             val agentApi: IAgentApi =
-                NetServiceMgr.getAgentApi() ?: throw IllegalStateException("IAgentApi not found")
+                NetServiceMgr.getAgentApi()
 
             val sortSeed = IntySetting.randomSortSeed()
+            LogUtils.i("UnifiedStartupManager.syncChatAgents - 使用 sortSeed: $sortSeed")
             val result =
                 agentApi.chatAgents(
                     page = 1,
@@ -418,11 +419,9 @@ object UnifiedStartupManager {
     suspend fun syncUserCreatedAgents() {
         try {
             val agentApi: IAgentApi =
-                NetServiceMgr.getAgentApi() ?: throw IllegalStateException("IAgentApi not found")
+                NetServiceMgr.getAgentApi()
 
-            val result = agentApi.getUserCreatedAgents(skip = 0, limit = 20)
-
-            when (result) {
+            when (val result = agentApi.getUserCreatedAgents(skip = 0, limit = 20)) {
                 is HttpResult.Success -> {
                     val agents = result.data
                     AgentCacheManager.cacheUserCreatedAgents(agents)

@@ -65,13 +65,25 @@ fun ChatPageContainer(
     val agentsFlow = chatTabViewModel.getChatAgentsFlow()
     val agentsPagingItems = agentsFlow?.collectAsLazyPagingItems() ?: return
 
-    // 获取当前加载的agents列表
+    // 获取当前加载的agents列表（去重处理，防止重复数据）
     val agentList =
         remember(agentsPagingItems.itemCount) {
             val list = mutableListOf<AgentInfo>()
+            val seenIds = mutableSetOf<String>()
             try {
                 for (i in 0 until agentsPagingItems.itemCount) {
-                    agentsPagingItems[i]?.let { agent -> list.add(agent) }
+                    agentsPagingItems[i]?.let { agent ->
+                        // 基于 agent.id 进行去重，确保列表中不会有重复的 agent
+                        if (agent.id.isNotEmpty() && seenIds.add(agent.id)) {
+                            list.add(agent)
+                        } else if (agent.id.isEmpty()) {
+                            // id 为空的情况，使用其他字段组合作为唯一标识
+                            val fallbackKey = "${agent.name}_${agent.avatar}_${agent.createdAt}"
+                            if (seenIds.add(fallbackKey)) {
+                                list.add(agent)
+                            }
+                        }
+                    }
                 }
             } catch (e: IndexOutOfBoundsException) {
                 LogUtils.w("ChatPageContainer - 构建agentList时索引越界: ${e.message}")

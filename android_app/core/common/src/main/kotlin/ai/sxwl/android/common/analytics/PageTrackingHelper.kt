@@ -69,25 +69,18 @@ object PageTrackingHelper {
 
             // 记录上一个页面的停留时长（如果有）
             if (currentPage != null) {
-                val timeSpent = currentTime - pageStartTime
-                val visibleTimeSpent =
-                    if (pageVisibleTime > 0) currentTime - pageVisibleTime else 0L
-                val lifecycleTimeSpent =
-                    if (pageLifecycleStartTime > 0) currentTime - pageLifecycleStartTime else 0L
+                val duration = currentTime - pageStartTime
 
                 LogUtils.i(
-                    "页面访问追踪: $currentPage 停留时长=${timeSpent}ms, 可见时长=${visibleTimeSpent}ms, 生命周期时长=${lifecycleTimeSpent}ms"
+                    "页面访问追踪: $currentPage 停留时长=${duration}ms"
                 )
 
-                // 记录页面离开事件
+                // 记录页面停留时长事件
                 FirebaseManager.logEvent(
-                    FirebaseManager.Events.PAGE_LEAVE,
+                    FirebaseManager.Events.DURATION,
                     FirebaseManager.safeEventParams(
                         "page_name" to currentPage,
-                        "page_class" to (currentPageClass ?: "unknown"),
-                        "time_spent" to timeSpent,
-                        "visible_time_spent" to visibleTimeSpent,
-                        "lifecycle_time_spent" to lifecycleTimeSpent,
+                        "duration" to duration,
                         "timestamp" to currentTime
                     )
                 )

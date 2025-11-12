@@ -75,7 +75,7 @@ fun HomeScreen(
 
     // 页面跟踪
     LaunchedEffect(Unit) {
-        PageTrackingHelper.trackPageView("HomeScreen", "MainActivity")
+        PageTrackingHelper.trackPageView("HomePage", "MainActivity")
     }
 
     // 创建共享的 CreateRoleActivity launcher，用于处理从 Create Tab 创建后的刷新
@@ -376,7 +376,7 @@ private fun ProfileTabContent(
             profileViewModel.updateUserInfoLocal()
             // 优先从缓存加载，避免闪现
             profileViewModel.loadUserCreatedAgentsFromCache()
-            profileViewModel.trackPageView("MainActivity")
+            profileViewModel.trackPageView("MainPage")
         }
     }
 

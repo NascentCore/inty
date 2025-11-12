@@ -34,6 +34,7 @@ internal class BillingPurchaseManager(
     private val eventScope: CoroutineScope,
     private val eventFlow: MutableSharedFlow<BillingEvent>,
     private val vipStatusFlow: MutableStateFlow<VipStatus>,
+    private val plansFlow: MutableStateFlow<List<VipPlan>>,
 ) {
 
     private val api = NetServiceMgr.getSubscriptionApi()
@@ -325,16 +326,26 @@ internal class BillingPurchaseManager(
 
                             // 记录订阅验证成功事件
                             val productId = purchaseProductsFirstId
+                            val plan =
+                                plansFlow.value.firstOrNull { it.googleProductId == productId }
+                            val eventParams = mutableMapOf<String, Any>(
+                                "product_id" to productId,
+                                "order_id" to (purchase.orderId ?: ""),
+                                "purchase_token" to purchase.purchaseToken,
+                                "purchase_time" to purchase.purchaseTime,
+                                "user_type" to "vip",
+                                "timestamp" to System.currentTimeMillis()
+                            )
+                            // 添加价格参数
+                            plan?.let {
+                                eventParams["price"] = it.price
+                                eventParams["currency_code"] = it.currencyCode
+                                eventParams["price_micros"] = it.priceAmountMicros
+                            }
                             FirebaseManager.logEvent(
                                 FirebaseManager.Events.SUBSCRIPTION_SUCCESS,
-                                FirebaseManager.safeEventParams(
-                                    "product_id" to productId,
-                                    "order_id" to (purchase.orderId ?: ""),
-                                    "purchase_token" to purchase.purchaseToken,
-                                    "purchase_time" to purchase.purchaseTime,
-                                    "user_type" to "vip",
-                                    "timestamp" to System.currentTimeMillis()
-                                )
+                                FirebaseManager.safeEventParams(*eventParams.map { it.key to it.value }
+                                    .toTypedArray())
                             )
 
                             // 验证成功后再发送 PurchaseSuccess 事件，触发远程状态刷新
@@ -347,18 +358,28 @@ internal class BillingPurchaseManager(
 
                             // 记录订阅验证失败事件
                             val productId = purchaseProductsFirstId
+                            val plan =
+                                plansFlow.value.firstOrNull { it.googleProductId == productId }
+                            val eventParams = mutableMapOf<String, Any>(
+                                "product_id" to productId,
+                                "order_id" to (purchase.orderId ?: ""),
+                                "purchase_token" to purchase.purchaseToken,
+                                "error_code" to (response.errorCode ?: ""),
+                                "error_message" to (response.message ?: ""),
+                                "purchase_time" to purchase.purchaseTime,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "timestamp" to System.currentTimeMillis()
+                            )
+                            // 添加价格参数
+                            plan?.let {
+                                eventParams["price"] = it.price
+                                eventParams["currency_code"] = it.currencyCode
+                                eventParams["price_micros"] = it.priceAmountMicros
+                            }
                             FirebaseManager.logEvent(
                                 FirebaseManager.Events.SUBSCRIPTION_FAILURE,
-                                FirebaseManager.safeEventParams(
-                                    "product_id" to productId,
-                                    "order_id" to (purchase.orderId ?: ""),
-                                    "purchase_token" to purchase.purchaseToken,
-                                    "error_code" to (response.errorCode ?: ""),
-                                    "error_message" to (response.message ?: ""),
-                                    "purchase_time" to purchase.purchaseTime,
-                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                    "timestamp" to System.currentTimeMillis()
-                                )
+                                FirebaseManager.safeEventParams(*eventParams.map { it.key to it.value }
+                                    .toTypedArray())
                             )
                             
                             eventScope.launch {
@@ -379,17 +400,25 @@ internal class BillingPurchaseManager(
 
                         // 记录订阅验证失败事件
                         val productId = purchaseProductsFirstId
+                        val plan = plansFlow.value.firstOrNull { it.googleProductId == productId }
+                        val eventParams = mutableMapOf<String, Any>(
+                            "product_id" to productId,
+                            "order_id" to (purchase.orderId ?: ""),
+                            "purchase_token" to purchase.purchaseToken,
+                            "error_message" to (result.message ?: ""),
+                            "purchase_time" to purchase.purchaseTime,
+                            "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                            "timestamp" to System.currentTimeMillis()
+                        )
+                        // 添加价格参数
+                        plan?.let {
+                            eventParams["price"] = it.price
+                            eventParams["currency_code"] = it.currencyCode
+                            eventParams["price_micros"] = it.priceAmountMicros
+                        }
                         FirebaseManager.logEvent(
                             FirebaseManager.Events.SUBSCRIPTION_FAILURE,
-                            FirebaseManager.safeEventParams(
-                                "product_id" to productId,
-                                "order_id" to (purchase.orderId ?: ""),
-                                "purchase_token" to purchase.purchaseToken,
-                                "error_message" to (result.message ?: ""),
-                                "purchase_time" to purchase.purchaseTime,
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                "timestamp" to System.currentTimeMillis()
-                            )
+                            FirebaseManager.safeEventParams(*eventParams.toList().toTypedArray())
                         )
                         
                         eventScope.launch {
@@ -409,18 +438,26 @@ internal class BillingPurchaseManager(
 
                 // 记录订阅验证失败事件
                 val productId = purchaseProductsFirstId
+                val plan = plansFlow.value.firstOrNull { it.googleProductId == productId }
                 val errorMessage = "${e.javaClass.simpleName}: ${e.message ?: ""}"
+                val eventParams = mutableMapOf<String, Any>(
+                    "product_id" to productId,
+                    "order_id" to (purchase.orderId ?: ""),
+                    "purchase_token" to purchase.purchaseToken,
+                    "error_message" to errorMessage,
+                    "purchase_time" to purchase.purchaseTime,
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                    "timestamp" to System.currentTimeMillis()
+                )
+                // 添加价格参数
+                plan?.let {
+                    eventParams["price"] = it.price
+                    eventParams["currency_code"] = it.currencyCode
+                    eventParams["price_micros"] = it.priceAmountMicros
+                }
                 FirebaseManager.logEvent(
                     FirebaseManager.Events.SUBSCRIPTION_FAILURE,
-                    FirebaseManager.safeEventParams(
-                        "product_id" to productId,
-                        "order_id" to (purchase.orderId ?: ""),
-                        "purchase_token" to purchase.purchaseToken,
-                        "error_message" to errorMessage,
-                        "purchase_time" to purchase.purchaseTime,
-                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                        "timestamp" to System.currentTimeMillis()
-                    )
+                    FirebaseManager.safeEventParams(*eventParams.toList().toTypedArray())
                 )
                 
                 eventScope.launch {

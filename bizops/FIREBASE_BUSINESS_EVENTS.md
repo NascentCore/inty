@@ -39,13 +39,12 @@
 ### 页面访问
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
-| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，Explore 页面通过 `page_name`="explore" 标识，包含 `page_source` 参数） |
-| `page_leave` | PageTrackingHelper.kt | 页面离开（记录停留时长） |
+| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，`page_name` 统一为 xxxPage 格式，如 ChatPage、ExplorePage、subscriptionPage 等，包含 `page_source` 参数） |
+| `duration` | PageTrackingHelper.kt | 页面停留时长（页面离开时上报，记录 `page_name` 和 `duration`） |
 
 **页面来源参数说明：**
 - `page_source`：页面来源标识，用于统计用户从哪个入口进入页面
-  - **VipCenterActivity**：`home_expired_dialog`（首页过期VIP对话框）、`chat_page`（聊天页面）、`chat_more_panel`（聊天更多面板）、`profile_upgrade`（个人中心升级按钮）、`settings_subscription`（设置页面订阅管理）、`settings_premium_dialog`（设置页面高级模型对话框）
-  - **ChatActivity**：`messages_tab`（消息列表Tab）、`explore_tab`（探索Tab）、`profile_tab`（个人中心Tab）
+  - **subscriptionPage**：`home_expired_dialog`（首页过期VIP对话框）、`chat_page`（聊天页面）、`chat_more_panel`（聊天更多面板）、`profile_upgrade`（个人中心升级按钮）、`settings_subscription`（设置页面订阅管理）、`settings_premium_dialog`（设置页面高级模型对话框）
   - **ChatPage**：`chat_activity`（在 ChatActivity 中）、`main_activity_home_tab`（在 MainActivity 的 HorizontalPager 中）
 
 ### Explore 数据加载
@@ -57,19 +56,16 @@
 ### 订阅与计费
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
-| `subscription_success` | BillingPurchaseManager.kt | 订阅验证成功（服务端验证成功后触发） |
-| `subscription_failure` | BillingPurchaseManager.kt | 订阅验证失败（服务端验证失败、网络请求失败或异常时触发） |
-| `subscription_price_fetched` | BillingPriceManager.kt | 从Google Play获取到的订阅价格 |
-| `subscription_price_displayed` | VipCenterContent.kt | UI上显示的订阅价格 |
+| `subscription_success` | BillingPurchaseManager.kt | 订阅验证成功（服务端验证成功后触发，包含价格参数：`price`、`currency_code`、`price_micros`） |
+| `subscription_failure` | BillingPurchaseManager.kt | 订阅验证失败（服务端验证失败、网络请求失败或异常时触发，包含价格参数：`price`、`currency_code`、`price_micros`） |
+| `subscription_price_view` | VipCenterContent.kt | 订阅价格查看（在 vipcenter 界面显示订阅产品价格时触发） |
 
 ### 用户交互
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
-| `voice_playback_start` | AudioManager.kt | 语音播放开始 |
-| `audio_play_end` | VoicePlayer.kt | 语音播放结束 |
-| `keep_talking_clicked` | ChatViewModel.kt | Keep Talking按钮点击（按钮点击意图，接口成功/失败通过 `message_send_success`/`message_send_error` 事件记录，通过 `message_type`="keep_talking" 参数区分） |
-| `message_like` | ChatViewModel.kt | 消息点赞 |
-| `message_dislike` | ChatViewModel.kt | 消息点踩 |
+| `chat_page_click` | ChatViewModel.kt, AudioManager.kt | 聊天页面点击（通过 `click_type` 区分：`voice_play`、`keep_talking`、`message_like`、`message_dislike`） |
+| `chat_sidebar_click` | ChatSettingsDrawer.kt | 聊天侧边栏点击（通过 `click_type` 区分：`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`report`） |
+| `chat_more_click` | ChatMorePanel.kt | 聊天更多面板点击（通过 `click_type` 区分：`reply_style`、`report`） |
 
 ### 错误监控
 | 事件名称 | 使用位置 | 业务含义 |
@@ -126,9 +122,7 @@
 ### 订阅价格参数
 - `product_id`、`product_name`、`plan_type`：订阅商品信息
 - `order_id`、`purchase_token`、`purchase_time`：订阅订单信息（subscription_success/subscription_failure事件）
-- `google_play_price`、`google_play_currency_code`、`google_play_price_micros`：Google Play原始价格信息
-- `displayed_price`、`currency_code`、`price_micros`：UI显示的价格信息
-- `corrected_price`、`old_price`：价格变化对比
+- `price`、`currency_code`、`price_micros`：订阅价格信息（subscription_success/subscription_failure/subscription_price_view事件）
 
 ### 图片生成参数
 - `agent_id`、`agent_name`：Agent信息
@@ -139,7 +133,11 @@
 - `error_code`、`error_message`：错误码和错误消息（失败时，异常类型信息在 `error_message` 中，格式：`exception: ClassName, ...`）
 - `user_type`：用户类型（vip/free）
 
-### 消息反馈参数
+### 用户交互参数
+- `click_type`：点击类型（chat_page_click/chat_sidebar_click/chat_more_click事件）
+  - chat_page_click：`voice_play`、`keep_talking`、`message_like`、`message_dislike`
+  - chat_sidebar_click：`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`report`
+  - chat_more_click：`reply_style`、`report`
 - `agent_id`、`agent_name`：Agent信息
 - `message_id`：消息ID（优先使用服务端id，如果为空则使用本地id作为fallback）
 - `message_length`：消息长度
@@ -147,19 +145,14 @@
 - `is_opening`：是否为开场消息
 - `user_type`：用户类型（vip/free）
 - `message_timestamp`：消息时间戳
-
-### 设置开关参数
-- `enabled`：开关是否开启（true/false）
-- `agent_id`、`agent_name`：Agent信息
-- `user_type`：用户类型（vip/free）
-- `timestamp`：事件时间戳
+- `enabled`：开关状态（chat_sidebar_click事件中的开关操作）
 
 ### 性能参数
 - `duration_ms`：持续时间
+- `duration`：页面停留时长（duration事件）
 - `response_time`：响应时间（API调用时间）
 - `ai_response_time`：AI响应时间（API调用时间，从发起网络请求到收到响应）
 - `end_to_end_time`：端到端时间（从用户操作开始到收到响应的完整时间，包含UI处理、API调用等全部时间）
-- `time_spent`：页面停留时长
 - `success`：操作是否成功
 
 ### 错误参数

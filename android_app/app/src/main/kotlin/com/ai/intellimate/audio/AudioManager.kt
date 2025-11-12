@@ -77,18 +77,20 @@ private constructor(private val context: Context, private var scope: CoroutineSc
         }
 
         // 记录语音播放开始事件
-        FirebaseManager.logEvent(
-            FirebaseManager.Events.VOICE_PLAYBACK_START,
-            FirebaseManager.safeEventParams(
-                "message_id" to messageId,
-                "agent_id" to agentId,
-                "agent_name" to agentName,
-                "has_audio_url" to (!audioUrl.isNullOrEmpty()),
-                "is_auto_play" to autoPlay,
-                "is_manual_click" to isManualClick,
-                "timestamp" to playbackStartTime
+        if (isManualClick) {
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.CHAT_PAGE_CLICK,
+                FirebaseManager.safeEventParams(
+                    "click_type" to "voice_play",
+                    "message_id" to messageId,
+                    "agent_id" to agentId,
+                    "agent_name" to agentName,
+                    "has_audio_url" to (!audioUrl.isNullOrEmpty()),
+                    "is_auto_play" to autoPlay,
+                    "timestamp" to playbackStartTime
+                )
             )
-        )
+        }
 
         // 检查是否启用自动播放
         // 手动点击时不受自动播放设置影响

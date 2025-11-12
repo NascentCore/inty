@@ -187,12 +187,15 @@ internal fun ChatPage(
                 )
             }
     ) {
-        AgentBackground(
-            agentInfo = agentInfo,
-            showGradients = true,
-            isLoading = hasLoadingMessage,
-            isCurrentPage = isCurrentPage,
-        )
+        // 只在非 ChatActivity 场景显示背景图（ChatActivity 中背景图已在外层显示）
+        if (!showBackButton) {
+            AgentBackground(
+                agentInfo = agentInfo,
+                showGradients = true,
+                isLoading = hasLoadingMessage,
+                isCurrentPage = isCurrentPage,
+            )
+        }
 
         val drawerState = remember { mutableStateOf(DrawerValue.Closed) }
         val scope = rememberCoroutineScope()

@@ -76,32 +76,26 @@ fun VipCenterContent(
         plans.joinToString("|") { "${it.googleProductId}:${it.price}:${it.currencyCode}:${it.priceAmountMicros}" }
     }
 
-    LaunchedEffect(plansKey, selectedPlanIndex, vipStatus.isSubscribed) {
+    LaunchedEffect(plansKey) {
         if (plans.isNotEmpty()) {
             try {
-                // 为每个计划上报价格显示事件
-                plans.forEachIndexed { index, plan ->
+                // 为每个计划上报价格查看事件
+                plans.forEach { plan ->
                     FirebaseManager.logEvent(
-                        FirebaseManager.Events.SUBSCRIPTION_PRICE_DISPLAYED,
-                        mapOf(
+                        FirebaseManager.Events.SUBSCRIPTION_PRICE_VIEW,
+                        FirebaseManager.safeEventParams(
                             "product_id" to plan.googleProductId,
                             "product_name" to (plan.name ?: ""),
                             "plan_type" to (plan.planType ?: ""),
-                            "displayed_price" to (plan.price ?: "-"),
+                            "price" to (plan.price ?: "-"),
                             "currency_code" to (plan.currencyCode ?: ""),
                             "price_micros" to plan.priceAmountMicros,
-                            "discount_rate" to plan.discountRate,
-                            "original_price" to (plan.originalPrice ?: "-"),
-                            "is_selected" to (index == selectedPlanIndex),
-                            "selected_plan_index" to selectedPlanIndex,
-                            "total_plans_count" to plans.size,
-                            "is_subscribed" to vipStatus.isSubscribed,
-                            "timestamp" to System.currentTimeMillis(),
+                            "timestamp" to System.currentTimeMillis()
                         )
                     )
                 }
                 LogUtils.d(
-                    "Billing VipCenterContent - ✅ Firebase事件已上报: SUBSCRIPTION_PRICE_DISPLAYED, 计划数量: ${plans.size}"
+                    "Billing VipCenterContent - ✅ Firebase事件已上报: SUBSCRIPTION_PRICE_VIEW, 计划数量: ${plans.size}"
                 )
             } catch (e: Exception) {
                 LogUtils.e(

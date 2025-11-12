@@ -8,12 +8,16 @@ import android.content.Intent
 import android.os.Build
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.ui.components.AgentBackground
 
 /** 私聊的聊天页面 */
 class ChatActivity : BaseActivity() {
@@ -60,7 +64,7 @@ class ChatActivity : BaseActivity() {
         intent.getStringExtra(INTENT_KEY_PAGE_SOURCE) ?: DEFAULT_PAGE_SOURCE
     }
 
-    override fun getPageName(): String = "ChatActivity"
+    override fun getPageName(): String = "ChatPage"
 
     /** 重写以提供额外的页面追踪参数（页面来源） */
     override fun getAdditionalPageTrackingParams(): Map<String, Any> {
@@ -97,17 +101,39 @@ class ChatActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
-        ChatPage(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(HeartColor.primaryColor)
-                    .imePadding()
-                    .navigationBarsPadding(),
-            chatViewModel = chatViewModel,
-            showBackButton = true,
-            onBack = { finish() },
-        )
+        val agentInfo by chatViewModel.agentInfo.collectAsState()
+        val chatMessages by chatViewModel.msgs.collectAsState()
+        val hasLoadingMessage = chatMessages.any { msg ->
+            val hasGeneratedImage = msg.hasGeneratedImage()
+            val generatedImageUrl = msg.getGeneratedImageUrl()
+            msg.content == "loading_animation" &&
+                    !hasGeneratedImage &&
+                    generatedImageUrl != "loading"
+        }
+
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .background(HeartColor.primaryColor)) {
+            // 背景图放在最底层，不受 imePadding 影响
+            AgentBackground(
+                agentInfo = agentInfo,
+                showGradients = true,
+                isLoading = hasLoadingMessage,
+                isCurrentPage = true,
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            ChatPage(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .imePadding()
+                        .navigationBarsPadding(),
+                chatViewModel = chatViewModel,
+                showBackButton = true,
+                onBack = { finish() },
+            )
+        }
     }
 
     override fun onDestroy() {

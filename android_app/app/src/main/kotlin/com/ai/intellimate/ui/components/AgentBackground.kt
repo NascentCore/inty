@@ -21,15 +21,14 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
-import kotlin.math.roundToInt
 
 private const val CDN_IMAGE_QUALITY = 75
 private const val ASPECT_RATIO_THRESHOLD = 0.05f
@@ -51,20 +50,14 @@ fun AgentBackground(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    val containerSize = LocalWindowInfo.current.containerSize
+    val configuration = LocalConfiguration.current
 
-    // 容器尺寸（dp），用于图片显示和 ContentScale 计算
-    val containerWidthDp = remember(containerSize.width, density) {
-        with(density) { containerSize.width.toDp().value.roundToInt() }
+    // 容器尺寸（dp），使用 LocalConfiguration 获取屏幕物理尺寸，不受键盘影响
+    val containerWidthDp = remember(configuration.screenWidthDp) {
+        configuration.screenWidthDp
     }
-    var containerHeightDp by remember {
-        mutableIntStateOf(with(density) { containerSize.height.toDp().value.roundToInt() })
-    }
-
-    // 监听窗口尺寸变化，更新容器高度
-    LaunchedEffect(containerSize.height, density) {
-        val currentHeightDp = with(density) { containerSize.height.toDp().value.roundToInt() }
-        containerHeightDp = currentHeightDp
+    val containerHeightDp = remember(configuration.screenHeightDp) {
+        configuration.screenHeightDp
     }
 
     // 图片原始尺寸（像素），用于计算 ContentScale

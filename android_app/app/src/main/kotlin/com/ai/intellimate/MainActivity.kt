@@ -54,7 +54,7 @@ class MainActivity : BaseActivity() {
 
     val mainViewModel: MainViewModel by viewModels()
 
-    override fun getPageName(): String = "MainActivity"
+    override fun getPageName(): String = "MainPage"
 
     val chatViewModel: ChatViewModel by viewModels()
 
@@ -75,7 +75,7 @@ class MainActivity : BaseActivity() {
         }
 
         // 追踪页面访问
-        PageTrackingHelper.trackPageView("MainActivity", "MainActivity")
+        PageTrackingHelper.trackPageView("MainPage", "MainActivity")
 
         // 设置返回拦截功能
         setupBackInterception()
