@@ -73,7 +73,7 @@
 ## P1 文档中心（`docs/`）
 
 - [ ] `docs/AGENTS.md`
-- [ ] `docs/AGENT_CHARACTER_CARD_INTEGRATION.md`
+- [x] `docs/AGENT_CHARACTER_CARD_INTEGRATION.md`（2025-11-12 已审查）
 - [ ] `docs/AGENT_EXTENSIONS_SYSTEM.md`
 - [ ] `docs/AI_VOICE_SYSTEM.md`
 - [ ] `docs/CHARACTER_CARD_SYSTEM.md`
