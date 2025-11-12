@@ -44,7 +44,7 @@ export default function useUserModel() {
 
       // 跳转到首页
       // history.push('/');
-      window.location.replace('/')
+      window.location.replace('/');
     } catch (err) {
       console.error('退出登录失败:', err);
       setError('Logout failed');

@@ -74,14 +74,10 @@ const PlanCard: React.FC<IPlanCardProps> = ({
       }`}
     >
       {/* 推荐标签 */}
-      {isRecommended && !isCurrentPlan && (
-        <div className="plan-card-badge">Most Popular</div>
-      )}
+      {isRecommended && !isCurrentPlan && <div className="plan-card-badge">Most Popular</div>}
 
       {/* 折扣标签 */}
-      {discountPercent > 0 && (
-        <div className="plan-card-discount">Save {discountPercent}%</div>
-      )}
+      {discountPercent > 0 && <div className="plan-card-discount">Save {discountPercent}%</div>}
 
       {/* 计划头部 */}
       <div className="plan-card-header">
@@ -94,14 +90,17 @@ const PlanCard: React.FC<IPlanCardProps> = ({
         <span className="plan-card-price-currency">{plan.currency}</span>
         <span className="plan-card-price-amount">{plan.price.toFixed(2)}</span>
         <span className="plan-card-price-period">
-          /{plan.plan_type === 'MONTHLY' ? 'month' : plan.plan_type === 'QUARTERLY' ? 'quarter' : 'year'}
+          /
+          {plan.plan_type === 'MONTHLY'
+            ? 'month'
+            : plan.plan_type === 'QUARTERLY'
+              ? 'quarter'
+              : 'year'}
         </span>
       </div>
 
       {/* 计划描述 */}
-      {plan.description && (
-        <p className="plan-card-description">{plan.description}</p>
-      )}
+      {plan.description && <p className="plan-card-description">{plan.description}</p>}
 
       {/* 功能列表 */}
       <div className="plan-card-features">
@@ -136,4 +135,3 @@ const PlanCard: React.FC<IPlanCardProps> = ({
 };
 
 export default PlanCard;
-

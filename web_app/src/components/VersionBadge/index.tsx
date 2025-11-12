@@ -63,4 +63,3 @@ const VersionBadge: React.FC = () => {
 };
 
 export default VersionBadge;
-
