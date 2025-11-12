@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -55,24 +54,18 @@ fun AgentBackground(
     val containerSize = LocalWindowInfo.current.containerSize
 
     // 容器尺寸（dp），用于图片显示和 ContentScale 计算
-    var containerWidthDp by remember {
-        mutableIntStateOf(with(density) { containerSize.width.toDp().value.roundToInt() })
+    // 始终使用当前窗口尺寸，确保内容不超出屏幕
+    val containerWidthDp = remember(containerSize.width, density) {
+        with(density) { containerSize.width.toDp().value.roundToInt() }
     }
     var containerHeightDp by remember {
         mutableIntStateOf(with(density) { containerSize.height.toDp().value.roundToInt() })
     }
 
-    // 监听窗口尺寸变化，更新容器尺寸（只增大，不减小）
-    LaunchedEffect(containerSize.width, containerSize.height, density) {
-        val currentWidthDp = with(density) { containerSize.width.toDp().value.roundToInt() }
+    // 监听窗口尺寸变化，更新容器高度（宽度始终跟随窗口宽度）
+    LaunchedEffect(containerSize.height, density) {
         val currentHeightDp = with(density) { containerSize.height.toDp().value.roundToInt() }
-
-        if (currentWidthDp > containerWidthDp) {
-            containerWidthDp = currentWidthDp
-        }
-        if (currentHeightDp > containerHeightDp) {
-            containerHeightDp = currentHeightDp
-        }
+        containerHeightDp = currentHeightDp
     }
 
     // 图片原始尺寸（像素），用于计算 ContentScale
@@ -177,12 +170,6 @@ fun AgentBackground(
                 Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState(), false)
-                    .onSizeChanged {
-                        val newHeightDp = with(density) { it.height.toDp().value.roundToInt() }
-                        if (newHeightDp > containerHeightDp) {
-                            containerHeightDp = newHeightDp
-                        }
-                    }
         ) {
             if (backgroundGifUrl != null) {
                 AnimatedBackground(

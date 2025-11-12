@@ -155,23 +155,19 @@ private class ControlledExoPlayer(
     }
 
     override fun onPlaybackStateChanged(playbackState: Int) {
-        when (playbackState) {
-            Player.STATE_READY -> {
-                if (!isPrepared) {
-                    isPrepared = true
-                    onPrepared()
-                }
+        if (playbackState == Player.STATE_READY) {
+            if (!isPrepared) {
+                isPrepared = true
+                onPrepared()
             }
-
-            Player.STATE_ENDED -> {
-                playCount++
-                if (playCount >= targetPlayCount) {
-                    resetPlayback()
-                    onPlayComplete()
-                } else {
-                    exoPlayer?.seekTo(0)
-                    exoPlayer?.playWhenReady = true
-                }
+        } else if (playbackState == Player.STATE_ENDED) {
+            playCount++
+            if (playCount >= targetPlayCount) {
+                resetPlayback()
+                onPlayComplete()
+            } else {
+                exoPlayer?.seekTo(0)
+                exoPlayer?.playWhenReady = true
             }
         }
     }
@@ -340,22 +336,20 @@ fun AnimatedBackground(
                             )
 
                             controlledPlayer = player
-                            player.setVideoUrl(videoUrl ?: "")
+                            player.setVideoUrl(videoUrl)
 
                             val exoPlayerInstance = player.getPlayer()
                             PlayerView(ctx).apply {
                                 this.player = exoPlayerInstance
                                 useController = false
                                 resizeMode =
-                                    androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                    androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
                                 visibility = android.view.View.VISIBLE
                                 alpha = if (!shouldShowVideo) 0f else 1f
 
                                 val pathToUse = videoPath ?: videoUrl
-                                if (pathToUse != null) {
-                                    player.setMediaItem(pathToUse)
-                                    videoUriSet = true
-                                }
+                                player.setMediaItem(pathToUse)
+                                videoUriSet = true
                             }
                         },
                         modifier = Modifier.fillMaxSize(),
@@ -363,7 +357,7 @@ fun AnimatedBackground(
                             val player = controlledPlayer
                             if (player != null) {
                                 val pathToUse = videoPath ?: videoUrl
-                                if (pathToUse != null && !videoUriSet) {
+                                if (!videoUriSet) {
                                     try {
                                         player.setMediaItem(pathToUse)
                                         videoUriSet = true

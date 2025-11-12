@@ -108,8 +108,6 @@ class ChatActivity : BaseActivity() {
             showBackButton = true,
             onBack = { finish() },
         )
-        // 注意：ChatPage 内部已通过 PageTrackingHelper.trackPageView() 统一跟踪页面访问
-        // 无需在此处重复记录，避免冗余统计
     }
 
     override fun onDestroy() {
