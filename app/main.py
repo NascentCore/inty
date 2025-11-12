@@ -63,6 +63,8 @@ def init_sentry():
             release=global_config_loaded_from_config_yaml.app.version,
             # 禁用自动集成发现，避免与不兼容的库冲突
             auto_enabling_integrations=False,
+            # 启用性能监控 traces
+            traces_sample_rate=sentry_config.traces_sample_rate,
         )
 
         logger.info(

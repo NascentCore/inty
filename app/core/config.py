@@ -276,6 +276,9 @@ class SentryConfig:
     dsn: str = ""
     # 是否启用 Sentry
     enabled: bool = True
+    # Traces 采样率，0.0-1.0，用于性能监控
+    # 1.0 表示 100% 采样，0.1 表示 10% 采样
+    traces_sample_rate: float = 1.0
 
 
 @dataclass

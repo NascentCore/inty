@@ -18,6 +18,7 @@ app:
 sentry:
   dsn: "https://35871471ace10dd7da9a7e26fe516fa4@o4510350447411200.ingest.us.sentry.io/4510350448459776"
   enabled: true
+  traces_sample_rate: 1.0  # 本地开发环境使用 100% 采样率以便调试
 
 security:
   secret_key: "your-secret-key-here"
