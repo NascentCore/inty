@@ -24,6 +24,7 @@ class ServerPushMessagingService : FirebaseMessagingService() {
 
     private val fetcher by lazy { ResultFetcher(client) }
 
+    // 在前台接收数据消息的回调详见: https://firebase.google.com/docs/cloud-messaging/android/receive?hl=zh-cn#override
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
         val jobId = message.data["job_id"]
@@ -43,6 +44,7 @@ class ServerPushMessagingService : FirebaseMessagingService() {
         }
     }
 
+    // 监听令牌刷新流程详见: https://firebase.google.com/docs/cloud-messaging/android/client?hl=zh-cn#monitor-token
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.i(TAG, "FCM token 刷新: $token")

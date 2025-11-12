@@ -93,6 +93,7 @@ class FirebaseNotifier:
             logger.warning("未配置 FIREBASE_SERVICE_ACCOUNT_FILE，推送不会生效")
             return
 
+        # 参考 Firebase Admin 初始化文档: https://firebase.google.com/docs/admin/setup?hl=zh-cn
         cred = credentials.Certificate(cred_path)
         self._app = firebase_admin.initialize_app(cred)
         logger.info("Firebase Admin 已初始化")
@@ -102,6 +103,7 @@ class FirebaseNotifier:
             logger.warning("Firebase 未初始化，跳过推送 job_id=%s", job_id)
             return
 
+        # 构造消息的字段说明见官方文档: https://firebase.google.com/docs/cloud-messaging/send-message?hl=zh-cn#admin
         message = messaging.Message(
             token=device_token,
             data={"job_id": job_id, "result_ready": "true"},
