@@ -1,6 +1,8 @@
 package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.utils.LogUtils
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -12,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -60,6 +63,8 @@ fun AnimatedBackground(
     val context = LocalContext.current
     val videoCacheManager = remember { VideoCacheManager.getInstance(context) }
 
+    var showStaticImage by remember { mutableStateOf(false) }
+    var staticImageLoaded by remember { mutableStateOf(false) }
     var videoPrepared by remember { mutableStateOf(false) }
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
     var currentPlayCount by remember { mutableIntStateOf(0) }
@@ -107,8 +112,11 @@ fun AnimatedBackground(
 
     // 当 videoUrl 变化时，重置状态
     // 注意：不在这里释放播放器，让 DisposableEffect 处理，避免黑屏
-    LaunchedEffect(videoUrl) {
-        LogUtils.d("AnimatedBackground - 视频URL变化，重置状态: videoUrl=$videoUrl")
+    LaunchedEffect(videoUrl, staticImageUrl) {
+        LogUtils.d("AnimatedBackground - 视频URL变化，重置状态: videoUrl=$videoUrl, staticImageUrl=$staticImageUrl")
+        // 如果有视频URL且有静态图，先显示静态图
+        showStaticImage = videoUrl != null && staticImageUrl != null
+        staticImageLoaded = false
         videoPrepared = false
         actualPlayCount = 0
         // 暂停播放，但不释放播放器（由 DisposableEffect 处理）
@@ -116,8 +124,68 @@ fun AnimatedBackground(
         exoPlayer?.seekTo(0)
     }
 
+    // 处理静态图和视频的切换逻辑：视频准备好后切换到视频
+    LaunchedEffect(
+        staticImageLoaded,
+        videoPrepared,
+        isVideo,
+        videoUrl,
+        staticImageUrl,
+        isVideoCached
+    ) {
+        if (videoUrl != null && staticImageUrl != null && showStaticImage) {
+            // 如果视频已准备好且已缓存，切换到视频
+            val shouldSwitch = isVideo && staticImageLoaded && videoPrepared && isVideoCached
+            if (shouldSwitch) {
+                showStaticImage = false
+                LogUtils.d("AnimatedBackground - 从静态图切换到视频")
+            }
+        } else if (videoUrl != null && staticImageUrl == null) {
+            // 没有静态图，直接显示视频
+            showStaticImage = false
+        } else if (videoUrl == null && staticImageUrl != null) {
+            // 没有视频，显示静态图
+            showStaticImage = true
+        }
+    }
+
+    // 判断是否应该显示视频
+    val shouldShowVideo = when {
+        staticImageUrl == null -> true // 没有静态图，直接显示视频
+        isVideo -> !showStaticImage && videoPrepared && isVideoCached
+        else -> false
+    }
+
+    // 静态图和视频的渐变动画
+    val staticImageAlpha by animateFloatAsState(
+        targetValue = if (showStaticImage && staticImageUrl != null) 1f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "staticImageAlpha"
+    )
+
+    val videoAlpha by animateFloatAsState(
+        targetValue = if (shouldShowVideo) 1f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "videoAlpha"
+    )
+
     Box(modifier = modifier.fillMaxSize()) {
-        // 如果有视频URL，直接显示视频，不显示静态图
+        // 显示静态图片（如果有且需要显示，在视频准备好之前显示）
+        if (staticImageUrl != null && staticImageAlpha > 0f) {
+            AsyncImage(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(staticImageAlpha),
+                model = ImageRequest.Builder(context).data(staticImageUrl).build(),
+                contentDescription = null,
+                contentScale = contentScale,
+                onSuccess = {
+                    staticImageLoaded = true
+                },
+            )
+        }
+
+        // 如果有视频URL，创建视频视图
         if (videoUrl != null && isVideo) {
             AndroidView(
                 factory = { ctx ->
@@ -175,15 +243,28 @@ fun AnimatedBackground(
 
                     exoPlayer = player
 
+                    // 使用 FrameLayout 包裹 PlayerView，确保 crop 模式不会超出容器边界
+                    val frameLayout = android.widget.FrameLayout(ctx).apply {
+                        layoutParams = android.view.ViewGroup.LayoutParams(
+                            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                            android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        // 关键：启用裁剪，防止视频超出容器边界影响相邻页面
+                        clipChildren = true
+                        clipToPadding = true
+                    }
+                    
                     val view = PlayerView(ctx).apply {
                         this.player = player
                         useController = false
-                        resizeMode =
-                            androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
+                        // 使用 ZOOM 模式（crop），填充整个容器，超出部分裁剪
+                        resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                         visibility = android.view.View.VISIBLE
-                        alpha = 1f
+                        alpha = 0f // 初始透明，通过动画控制
                     }
 
+                    frameLayout.addView(view)
+                    
                     // 设置媒体项：优先使用缓存的本地路径，否则使用原始URL
                     // 如果 isVideoCached 为 true，videoPath 应该已经同步获取到了
                     val pathToUse = if (isVideoCached) {
@@ -199,10 +280,18 @@ fun AnimatedBackground(
                         LogUtils.w("AnimatedBackground - 视频路径为空，无法设置媒体项")
                     }
 
-                    view
+                    frameLayout
                 },
                 modifier = Modifier.fillMaxSize(),
-                update = { view ->
+                update = { frameLayout ->
+                    // 获取 PlayerView（FrameLayout 的第一个子视图）
+                    val playerView = frameLayout.getChildAt(0) as? PlayerView
+
+                    // 更新视频视图的透明度（使用动画值）
+                    playerView?.alpha = videoAlpha
+                    playerView?.visibility =
+                        if (videoAlpha > 0f) android.view.View.VISIBLE else android.view.View.VISIBLE
+                    
                     // 更新视频路径（如果变化）：当 videoPath 准备好后，从 URL 切换到缓存路径
                     val pathToUse = videoPath ?: videoUrl
                     if (pathToUse != null && exoPlayer != null) {
