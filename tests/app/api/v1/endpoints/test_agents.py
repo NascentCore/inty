@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 
 from tests.app.api.test_client import TestClient
@@ -52,3 +54,41 @@ def test_text_to_image_endpoint(integration_client: TestClient):
 
     assert image_urls
     assert all(url.startswith("http") for url in image_urls)
+
+
+def test_create_agent_without_background_returns_null(integration_client: TestClient):
+    payload = {
+        "name": f"No Background Agent {uuid.uuid4().hex[:6]}",
+        "gender": "FEMALE",
+        "visibility": "PRIVATE",
+        "personality": "Keeps conversation light and fun",
+        "scenario": "Helps with background-free testing",
+    }
+
+    response = integration_client.client.post(
+        f"{API_BASE_URL}/api/v1/ai/agents",
+        json=payload,
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body.get("code") == 200, body
+
+    agent_data = body.get("data") or {}
+    agent_id = agent_data.get("id")
+    assert agent_id, "agent id should be present in create response"
+
+    try:
+        assert agent_data.get("background") is None
+        assert agent_data.get("background_images") == []
+
+        detail_response = integration_client.client.get(
+            f"{API_BASE_URL}/api/v1/ai/agents/{agent_id}"
+        )
+        assert detail_response.status_code == 200, detail_response.text
+        detail_data = detail_response.json()
+
+        assert detail_data.get("background") is None
+        assert detail_data.get("background_images") == []
+    finally:
+        integration_client.delete_agent(agent_id)

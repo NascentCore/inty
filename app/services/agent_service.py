@@ -1151,6 +1151,15 @@ def process_agent_image_urls(agent_data: dict) -> dict:
         agent_data
     )
 
+    # 规范化空字符串为 None，避免存储空值字符串导致后续序列化出现空字符串
+    for field in ("avatar", "background"):
+        if field in processed_data:
+            value = processed_data[field]
+            if isinstance(value, str) and not value.strip():
+                processed_data[field] = None
+            elif value is None:
+                processed_data[field] = None
+
     logger.debug(
         f"URL转换完成 - 转换后数据: avatar={processed_data.get('avatar')}, background={processed_data.get('background')}, background_images={processed_data.get('background_images')}"
     )
@@ -1190,9 +1199,15 @@ def process_agent_image_urls(agent_data: dict) -> dict:
 
     # 验证相册图片URLs，但不添加到images_urls（避免重复）
     valid_bg_images = []
-    if processed_data.get("background_images") and isinstance(
-        processed_data["background_images"], list
-    ):
+    if isinstance(processed_data.get("background_images"), list):
+        cleaned_images = []
+        for photo_url in processed_data["background_images"]:
+            if not photo_url:
+                continue
+            if isinstance(photo_url, str) and not photo_url.strip():
+                continue
+            cleaned_images.append(photo_url)
+        processed_data["background_images"] = cleaned_images
         for photo_url in processed_data["background_images"]:
             if is_valid_gcs_url(photo_url):
                 valid_bg_images.append(photo_url)

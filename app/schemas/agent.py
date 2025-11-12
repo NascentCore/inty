@@ -381,8 +381,10 @@ class Agent(AgentInDB):
     @field_serializer("background")
     def serialize_background(self, background: Optional[str]) -> Optional[str]:
         """转换background URL为CDN URL"""
-        if not background:
-            return background
+        if background is None:
+            return None
+        if isinstance(background, str) and not background.strip():
+            return None
         try:
             from app.services.image_transform_service import image_transform_service
 
@@ -395,14 +397,19 @@ class Agent(AgentInDB):
         self, background_images: Optional[List[str]]
     ) -> Optional[List[str]]:
         """转换background_images URL列表为CDN URL"""
+        if background_images is None:
+            return None
         if not background_images:
-            return background_images
+            return []
         try:
             from app.services.image_transform_service import image_transform_service
 
-            return image_transform_service.transform_url_list(
-                background_images, "desktop"
-            )
+            sanitized = [
+                url for url in background_images if isinstance(url, str) and url.strip()
+            ]
+            if not sanitized:
+                return []
+            return image_transform_service.transform_url_list(sanitized, "desktop")
         except Exception:
             return background_images
 
