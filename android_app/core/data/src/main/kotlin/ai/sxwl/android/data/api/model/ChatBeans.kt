@@ -133,7 +133,7 @@ data class ConversationItem(
     @Json(name = "agent_name") val agentName: String = "",
     @Json(name = "agent_avatar") val agentAvatar: String = "",
     @Json(name = "agent_background") val agentBackground: String = "",
-    @Json(name = "agent_background_animated") val agentBackgroundGif: String = "",
+    @Json(name = "agent_background_animated") val agentBackgroundAnimated: String = "",
     @Json(name = "agent_intro") val agentIntro: String = "",
     @Json(name = "agent_opening") val agentOpening: String = "",
     @Json(name = "agent_opening_audio_url") val agentOpeningAudioUrl: String = "",
@@ -173,7 +173,7 @@ data class ConversationItem(
             intro = agentIntro,
             opening = agentOpening,
             opening_audio_url = agentOpeningAudioUrl,
-            backgroundGifUrl = agentBackgroundGif,
+            backgroundAnimatedUrl = agentBackgroundAnimated,
         ).also { info -> info.isDeleted = this.isDeleted }
     }
 }

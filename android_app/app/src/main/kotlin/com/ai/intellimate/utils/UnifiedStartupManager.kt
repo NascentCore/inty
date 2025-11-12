@@ -12,11 +12,13 @@ import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import com.ai.intellimate.audio.AudioPreloadManager
 import com.ai.intellimate.explore.ExploreConstants
+import com.ai.intellimate.ui.components.VideoCacheManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +28,7 @@ import kotlinx.coroutines.launch
 object UnifiedStartupManager {
 
     private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var applicationContext: Context? = null
 
     // 启动状态
     private val _startupState = MutableStateFlow(StartupState.Initializing)
@@ -168,6 +171,9 @@ object UnifiedStartupManager {
     /** 阶段0：初始化预加载管理器 */
     private suspend fun initializePreloadManagers(context: Context) {
         try {
+            // 保存 applicationContext 用于后续预加载
+            applicationContext = context.applicationContext
+
             // 初始化图片预加载管理器
             ImagePreloadManager.init(context)
 
@@ -330,16 +336,22 @@ object UnifiedStartupManager {
                     LogUtils.i("UnifiedStartupManager - 推荐agents同步成功: ${agents.size}个")
 
                     // 异步预加载资源，不阻塞启动流程
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            // 预加载关键音频
-                            AudioPreloadManager.preloadCriticalOpeningAudios(agents, 5)
+                    val contextForPreload = applicationContext
+                    if (contextForPreload != null) {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                // 预加载关键音频
+                                AudioPreloadManager.preloadCriticalOpeningAudios(agents, 5)
 
-                            // 最后预加载所有资源，优化后续页面渲染
-                            ImagePreloadManager.preloadAgentsImages(agents, 5)
-                            AudioPreloadManager.preloadAgentsOpeningAudios(agents, 3)
-                        } catch (e: Exception) {
-                            LogUtils.e("UnifiedStartupManager - 资源预加载异常: ${e.message}")
+                                // 预加载背景视频（backgroundAnimatedUrl）
+                                preloadBackgroundVideos(contextForPreload, agents, 5)
+
+                                // 最后预加载所有资源，优化后续页面渲染
+                                ImagePreloadManager.preloadAgentsImages(agents, 5)
+                                AudioPreloadManager.preloadAgentsOpeningAudios(agents, 3)
+                            } catch (e: Exception) {
+                                LogUtils.e("UnifiedStartupManager - 资源预加载异常: ${e.message}")
+                            }
                         }
                     }
                 }
@@ -374,16 +386,22 @@ object UnifiedStartupManager {
                     LogUtils.i("UnifiedStartupManager - 聊天agents同步成功: ${agents.size}个")
 
                     // 异步预加载资源，不阻塞启动流程
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            // 预加载关键音频
-                            AudioPreloadManager.preloadCriticalOpeningAudios(agents, 5)
+                    val contextForPreload = applicationContext
+                    if (contextForPreload != null) {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                // 预加载关键音频
+                                AudioPreloadManager.preloadCriticalOpeningAudios(agents, 5)
 
-                            // 最后预加载所有资源，优化后续页面渲染
-                            ImagePreloadManager.preloadAgentsImages(agents, 5)
-                            AudioPreloadManager.preloadAgentsOpeningAudios(agents, 3)
-                        } catch (e: Exception) {
-                            LogUtils.e("UnifiedStartupManager - 聊天agents资源预加载异常: ${e.message}")
+                                // 预加载背景视频（backgroundAnimatedUrl）
+                                preloadBackgroundVideos(contextForPreload, agents, 5)
+
+                                // 最后预加载所有资源，优化后续页面渲染
+                                ImagePreloadManager.preloadAgentsImages(agents, 5)
+                                AudioPreloadManager.preloadAgentsOpeningAudios(agents, 3)
+                            } catch (e: Exception) {
+                                LogUtils.e("UnifiedStartupManager - 聊天agents资源预加载异常: ${e.message}")
+                            }
                         }
                     }
                 }
@@ -500,5 +518,63 @@ object UnifiedStartupManager {
     fun markUserAccountReady() {
         _userAccountReady.value = true
         LogUtils.i("UnifiedStartupManager - 标记用户账户已就绪")
+    }
+
+    /**
+     * 预加载背景视频（backgroundAnimatedUrl）
+     *
+     * @param context 上下文
+     * @param agents 需要预加载的agents列表
+     * @param maxConcurrent 最大并发预加载数量
+     */
+    private suspend fun preloadBackgroundVideos(
+        context: Context,
+        agents: List<AgentInfo>,
+        maxConcurrent: Int = 5
+    ) {
+        try {
+            val videoCacheManager = VideoCacheManager.getInstance(context)
+            val videoUrls = agents
+                .mapNotNull { it.backgroundAnimatedUrl?.takeIf { url -> url.isNotBlank() } }
+                .distinct()
+
+            if (videoUrls.isEmpty()) {
+                LogUtils.d("UnifiedStartupManager - 没有需要预加载的背景视频")
+                return
+            }
+
+            LogUtils.i("UnifiedStartupManager - 开始预加载 ${videoUrls.size} 个背景视频")
+
+            // 将URL列表分组，每组最多maxConcurrent个
+            val chunks = videoUrls.chunked(maxConcurrent)
+
+            coroutineScope {
+                chunks.forEach { chunk ->
+                    // 并发预加载当前组的所有视频
+                    val jobs = chunk.map { url ->
+                        async {
+                            try {
+                                // 检查是否已经缓存
+                                if (!videoCacheManager.isCached(url)) {
+                                    videoCacheManager.preloadVideo(url)
+                                    LogUtils.d("UnifiedStartupManager - 预加载背景视频成功: $url")
+                                } else {
+                                    LogUtils.d("UnifiedStartupManager - 背景视频已缓存，跳过: $url")
+                                }
+                            } catch (e: Exception) {
+                                LogUtils.e("UnifiedStartupManager - 预加载背景视频失败: $url, 错误: ${e.message}")
+                            }
+                        }
+                    }
+
+                    // 等待当前组的所有任务完成
+                    jobs.forEach { it.await() }
+                }
+            }
+
+            LogUtils.i("UnifiedStartupManager - 背景视频预加载完成")
+        } catch (e: Exception) {
+            LogUtils.e("UnifiedStartupManager - 背景视频预加载异常: ${e.message}")
+        }
     }
 }
