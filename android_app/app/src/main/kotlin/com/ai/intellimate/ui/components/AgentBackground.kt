@@ -36,6 +36,9 @@ private const val ASPECT_RATIO_THRESHOLD = 0.05f
 private const val TOP_GRADIENT_HEIGHT_DP = 120
 private const val BOTTOM_GRADIENT_HEIGHT_DP = 300
 
+private const val VIDEO_FIRST_PLAY_COUNT = 2 //首次进入界面播放次数
+private const val VIDEO_MESSAGE_PLAY_COUNT = 1 //发送消息播放次数
+
 /** 通用角色背景组件 可用于聊天页面、角色主页等需要角色背景的地方 */
 @Composable
 fun AgentBackground(
@@ -150,7 +153,10 @@ fun AgentBackground(
 
     // 合并播放状态：页面切换播放优先于加载播放
     val shouldPlay = (shouldPlayPageSwitch || shouldPlayLoading) && isCurrentPage
-    val finalPlayCount = if (shouldPlayPageSwitch) 2 else if (shouldPlayLoading) 1 else 1
+    val finalPlayCount =
+        if (shouldPlayPageSwitch) VIDEO_FIRST_PLAY_COUNT
+        else if (shouldPlayLoading) VIDEO_MESSAGE_PLAY_COUNT
+        else VIDEO_MESSAGE_PLAY_COUNT
 
     // 构建静态图片请求
     val staticImageRequest =

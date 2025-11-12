@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,7 +70,7 @@ fun AnimatedBackground(
     var showStaticImage by remember { mutableStateOf(false) }
     var videoPrepared by remember { mutableStateOf(false) }
     var videoFirstFrameRendered by remember { mutableStateOf(false) } // 视频第一帧是否已渲染
-    var targetStaticImageAlpha by remember { mutableStateOf(1f) } // 静态图目标透明度，用于动画
+    var targetStaticImageAlpha by remember { mutableFloatStateOf(1f) } // 静态图目标透明度，用于动画
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
     var currentPlayCount by remember { mutableIntStateOf(0) }
     var actualPlayCount by remember { mutableIntStateOf(0) }
@@ -288,23 +289,19 @@ fun AnimatedBackground(
                     } else {
                         videoUrl // 未缓存时先使用 URL，等缓存准备好后再切换
                     }
-                    if (pathToUse != null) {
-                        player.setMediaItem(MediaItem.fromUri(pathToUse))
-                        player.prepare()
-                        LogUtils.d("AnimatedBackground - 设置视频路径: $pathToUse (factory, isVideoCached=$isVideoCached)")
-                    } else {
-                        LogUtils.w("AnimatedBackground - 视频路径为空，无法设置媒体项")
-                    }
+                    player.setMediaItem(MediaItem.fromUri(pathToUse))
+                    player.prepare()
+                    LogUtils.d("AnimatedBackground - 设置视频路径: $pathToUse (factory, isVideoCached=$isVideoCached)")
 
                     frameLayout
                 },
                 modifier = Modifier
                     .fillMaxSize()
                     .clipToBounds(),
-                update = { frameLayout ->
+                update = {
                     // 更新视频路径（如果变化）：当 videoPath 准备好后，从 URL 切换到缓存路径
                     val pathToUse = videoPath ?: videoUrl
-                    if (pathToUse != null && exoPlayer != null) {
+                    if (exoPlayer != null) {
                         val currentMediaItem = exoPlayer?.currentMediaItem
                         val currentMediaId = currentMediaItem?.mediaId
                         // 如果路径变化了（比如从 URL 切换到缓存路径），需要更新
