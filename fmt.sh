@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 
 # Check for --all flag and CI commit behavior
 FORMAT_ALL=false
@@ -14,10 +14,10 @@ if [ "$FORMAT_ALL" = true ]; then
     # Format all Python files
     black app/ scripts/ experimental/
     # Format all other files
-    npx prettier --write evaluation/
+    npx prettier --write evaluation/ web_app/
     echo "Formatting complete!"
     echo
-    
+
     if [ "$FMT_NO_COMMIT" = true ]; then
         echo "Skipping commit in CI (FMT_NO_COMMIT=true)."
     else
