@@ -2,20 +2,16 @@ package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.utils.LogUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,7 +28,6 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private const val CDN_IMAGE_QUALITY = 75
@@ -50,11 +45,11 @@ fun AgentBackground(
     isCurrentPage: Boolean = true,
     onPlayComplete: () -> Unit = {},
 ) {
+    val context = LocalContext.current
     val density = LocalDensity.current
     val containerSize = LocalWindowInfo.current.containerSize
 
     // 容器尺寸（dp），用于图片显示和 ContentScale 计算
-    // 始终使用当前窗口尺寸，确保内容不超出屏幕
     val containerWidthDp = remember(containerSize.width, density) {
         with(density) { containerSize.width.toDp().value.roundToInt() }
     }
@@ -62,7 +57,7 @@ fun AgentBackground(
         mutableIntStateOf(with(density) { containerSize.height.toDp().value.roundToInt() })
     }
 
-    // 监听窗口尺寸变化，更新容器高度（宽度始终跟随窗口宽度）
+    // 监听窗口尺寸变化，更新容器高度
     LaunchedEffect(containerSize.height, density) {
         val currentHeightDp = with(density) { containerSize.height.toDp().value.roundToInt() }
         containerHeightDp = currentHeightDp
@@ -72,7 +67,7 @@ fun AgentBackground(
     var imageWidthPx by remember { mutableStateOf<Int?>(null) }
     var imageHeightPx by remember { mutableStateOf<Int?>(null) }
 
-    // 计算最佳的 ContentScale（单位统一为 dp）
+    // 计算最佳的 ContentScale
     val optimalContentScale = remember(
         imageWidthPx,
         imageHeightPx,
@@ -86,7 +81,6 @@ fun AgentBackground(
             imageWidthPx!! > 0 &&
             imageHeightPx!! > 0
         ) {
-            // 将图片尺寸从像素转换为 dp，确保单位一致
             val imageWidthDpValue = with(density) { imageWidthPx!!.toFloat().toDp().value }
             val imageHeightDpValue = with(density) { imageHeightPx!!.toFloat().toDp().value }
 
@@ -101,47 +95,63 @@ fun AgentBackground(
         }
     }
 
-    val context = LocalContext.current
-    val backgroundGifUrl = agentInfo?.backgroundGifUrl?.takeIf { it.isNotBlank() }
+    val backgroundAnimatedUrl = agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
     val staticImageUrl = agentInfo?.getAlbumImage()?.takeIf { it.isNotBlank() }
 
-    // 播放控制逻辑
-    var shouldPlay by remember { mutableStateOf(false) }
+    // 视频缓存管理器
+    val videoCacheManager = remember { VideoCacheManager.getInstance(context) }
+
+    // 视频缓存状态
+    var isVideoCached by remember { mutableStateOf(false) }
+
+    // 播放控制：页面切换时播放2次，加载状态时播放1次
+    var shouldPlayPageSwitch by remember { mutableStateOf(false) }
+    var shouldPlayLoading by remember { mutableStateOf(false) }
     var playCount by remember { mutableIntStateOf(1) }
-    var lastPlayedAgentId by remember { mutableStateOf<String?>(null) }
-    var lastPlayedPageState by remember { mutableStateOf(false) }
-    var lastPlayedTimestamp by remember { mutableLongStateOf(0L) }
 
-    LaunchedEffect(isCurrentPage, agentInfo?.id, backgroundGifUrl) {
-        if (isCurrentPage && backgroundGifUrl != null) {
-            val currentAgentId = agentInfo?.id
-            val currentTime = System.currentTimeMillis()
-            val shouldTriggerPlay = currentAgentId != null && (
-                    currentAgentId != lastPlayedAgentId ||
-                            !lastPlayedPageState ||
-                            (currentTime - lastPlayedTimestamp > 1000)
-                    )
+    // 检查视频缓存状态 - 每次进入页面时都重新检查
+    // 优化：同步检查缓存状态，避免延迟
+    LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage) {
+        LogUtils.d("AgentBackground - LaunchedEffect触发: agentId=${agentInfo?.id}, backgroundAnimatedUrl=$backgroundAnimatedUrl, isCurrentPage=$isCurrentPage")
 
-            if (shouldTriggerPlay) {
-                lastPlayedAgentId = currentAgentId
-                lastPlayedPageState = true
-                lastPlayedTimestamp = currentTime
+        // 重置状态
+        shouldPlayPageSwitch = false
+
+        if (backgroundAnimatedUrl != null && isCurrentPage) {
+            // 同步检查缓存状态（快速响应）
+            val cached = videoCacheManager.isCached(backgroundAnimatedUrl)
+            isVideoCached = cached
+            LogUtils.d("AgentBackground - 视频缓存状态: $cached, URL: $backgroundAnimatedUrl")
+
+            // 如果已缓存，立即触发页面切换播放（2次）
+            if (cached) {
                 playCount = 2
-                shouldPlay = true
+                shouldPlayPageSwitch = true
+                LogUtils.d("AgentBackground - 设置页面切换播放: playCount=2, shouldPlayPageSwitch=true")
+            } else {
+                isVideoCached = false
             }
-        } else if (!isCurrentPage) {
-            lastPlayedPageState = false
+        } else {
+            isVideoCached = false
         }
     }
 
-    LaunchedEffect(isLoading, backgroundGifUrl) {
-        if (isLoading && backgroundGifUrl != null) {
+    // 加载状态时播放视频（1次）- 仅在普通loading时触发，不包含图片生成loading
+    LaunchedEffect(isLoading, backgroundAnimatedUrl, isVideoCached, isCurrentPage) {
+        if (isLoading && backgroundAnimatedUrl != null && isVideoCached && isCurrentPage) {
             playCount = 1
-            shouldPlay = true
+            shouldPlayLoading = true
+            LogUtils.d("AgentBackground - 设置加载播放: playCount=1, shouldPlayLoading=true")
+        } else {
+            shouldPlayLoading = false
         }
     }
 
-    // 构建静态图片请求（用于首次加载优化）
+    // 合并播放状态：页面切换播放优先于加载播放
+    val shouldPlay = (shouldPlayPageSwitch || shouldPlayLoading) && isCurrentPage
+    val finalPlayCount = if (shouldPlayPageSwitch) 2 else if (shouldPlayLoading) 1 else 1
+
+    // 构建静态图片请求
     val staticImageRequest =
         remember(staticImageUrl, containerWidthDp, containerHeightDp, density) {
             if (staticImageUrl != null) {
@@ -165,39 +175,37 @@ fun AgentBackground(
         }
 
     Box(modifier = modifier) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState(), false)
-        ) {
-            if (backgroundGifUrl != null) {
-                AnimatedBackground(
-                    videoUrl = backgroundGifUrl,
-                    staticImageUrl = staticImageUrl,
-                    modifier = Modifier.size(containerWidthDp.dp, containerHeightDp.dp),
-                    contentScale = optimalContentScale,
-                    shouldPlay = shouldPlay,
-                    playCount = playCount,
-                    onPlayComplete = {
-                        shouldPlay = false
-                        onPlayComplete()
-                    },
-                )
-            } else if (staticImageUrl != null && staticImageRequest != null) {
-                AsyncImage(
-                    modifier = Modifier.size(containerWidthDp.dp, containerHeightDp.dp),
-                    model = staticImageRequest,
-                    contentDescription = null,
-                    alignment = Alignment.TopCenter,
-                    contentScale = optimalContentScale,
-                    onSuccess = { state ->
-                        val drawable = state.painter
-                        imageWidthPx = drawable.intrinsicSize.width.toInt()
-                        imageHeightPx = drawable.intrinsicSize.height.toInt()
-                    },
-                )
-            }
+        // 如果有背景视频URL，始终渲染 AnimatedBackground
+        if (backgroundAnimatedUrl != null) {
+            AnimatedBackground(
+                videoUrl = backgroundAnimatedUrl,
+                staticImageUrl = staticImageUrl,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = optimalContentScale,
+                shouldPlay = shouldPlay,
+                playCount = finalPlayCount,
+                isVideoCached = isVideoCached,
+                isCurrentPage = isCurrentPage,
+                onPlayComplete = {
+                    shouldPlayPageSwitch = false
+                    shouldPlayLoading = false
+                    onPlayComplete()
+                },
+            )
+        } else if (staticImageUrl != null && staticImageRequest != null) {
+            // 没有背景视频，只显示静态图片
+            AsyncImage(
+                modifier = Modifier.fillMaxSize(),
+                model = staticImageRequest,
+                contentDescription = null,
+                alignment = Alignment.TopCenter,
+                contentScale = optimalContentScale,
+                onSuccess = { state ->
+                    val drawable = state.painter
+                    imageWidthPx = drawable.intrinsicSize.width.toInt()
+                    imageHeightPx = drawable.intrinsicSize.height.toInt()
+                },
+            )
         }
 
         // 渐变遮罩 - 仅在需要时显示
@@ -251,19 +259,17 @@ private fun calculateOptimalContentScale(
 ): ContentScale {
     val containerAspectRatio = containerWidthDp.toFloat() / containerHeightDp.toFloat()
     val imageAspectRatio = imageWidthDp / imageHeightDp
-    val aspectRatioDiff = abs(containerAspectRatio - imageAspectRatio) / imageAspectRatio
+    val aspectRatioDiff =
+        kotlin.math.abs(containerAspectRatio - imageAspectRatio) / imageAspectRatio
 
     return when {
         // 如果容器和图片宽高比非常接近（差异小于阈值），使用 Fit 显示完整图片
-        // 例如：容器 9:16 (0.5625)，图片 9:16 (0.5625) → 使用 Fit
         aspectRatioDiff < ASPECT_RATIO_THRESHOLD -> ContentScale.Fit
 
         // 如果容器比图片更宽（容器宽高比 > 图片宽高比），图片相对较窄，使用 FillWidth
-        // 例如：容器 16:9 (1.78)，图片 9:16 (0.5625) → 使用 FillWidth
         containerAspectRatio > imageAspectRatio -> ContentScale.FillWidth
 
         // 如果容器比图片更窄（容器宽高比 < 图片宽高比），图片相对较宽，使用 FillHeight
-        // 例如：容器 9:16 (0.5625)，图片 16:9 (1.78) → 使用 FillHeight
         else -> ContentScale.FillHeight
     }
 }
