@@ -37,6 +37,7 @@ class MainActivity : AppCompatActivity() {
         val tokenText = findViewById<TextView>(R.id.token_text)
         val submitButton = findViewById<Button>(R.id.submit_button)
 
+        // 获取注册令牌的流程详见官方文档: https://firebase.google.com/docs/cloud-messaging/android/client?hl=zh-cn#retrieve-the-current-registration-token
         FirebaseMessaging.getInstance().token
             .addOnSuccessListener { token ->
                 deviceToken = token
