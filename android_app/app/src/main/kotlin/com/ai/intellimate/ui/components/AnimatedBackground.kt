@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -169,7 +170,10 @@ fun AnimatedBackground(
         label = "videoAlpha"
     )
 
-    Box(modifier = modifier.fillMaxSize()) {
+    // 关键：在 Compose 层面添加裁剪，防止视频超出容器边界
+    Box(modifier = modifier
+        .fillMaxSize()
+        .clipToBounds()) {
         // 显示静态图片（如果有且需要显示，在视频准备好之前显示）
         if (staticImageUrl != null && staticImageAlpha > 0f) {
             AsyncImage(
@@ -261,6 +265,12 @@ fun AnimatedBackground(
                         resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                         visibility = android.view.View.VISIBLE
                         alpha = 0f // 初始透明，通过动画控制
+
+                        // 确保 PlayerView 的布局参数不会超出父容器
+                        layoutParams = android.widget.FrameLayout.LayoutParams(
+                            android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                            android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+                        )
                     }
 
                     frameLayout.addView(view)
@@ -282,15 +292,16 @@ fun AnimatedBackground(
 
                     frameLayout
                 },
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clipToBounds(),
                 update = { frameLayout ->
                     // 获取 PlayerView（FrameLayout 的第一个子视图）
                     val playerView = frameLayout.getChildAt(0) as? PlayerView
 
                     // 更新视频视图的透明度（使用动画值）
                     playerView?.alpha = videoAlpha
-                    playerView?.visibility =
-                        if (videoAlpha > 0f) android.view.View.VISIBLE else android.view.View.VISIBLE
+                    // visibility 保持 VISIBLE，通过 alpha 控制显示/隐藏
                     
                     // 更新视频路径（如果变化）：当 videoPath 准备好后，从 URL 切换到缓存路径
                     val pathToUse = videoPath ?: videoUrl

@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -174,7 +175,8 @@ fun AgentBackground(
             }
         }
 
-    Box(modifier = modifier) {
+    // 关键：在 Compose 层面添加裁剪，防止视频超出容器边界
+    Box(modifier = modifier.clipToBounds()) {
         // 如果有背景视频URL，始终渲染 AnimatedBackground
         if (backgroundAnimatedUrl != null) {
             AnimatedBackground(

@@ -28,10 +28,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -188,18 +189,23 @@ fun ChatPageContainer(
             }
 
             val isPageCurrent = currentPage == pageState.currentPage
-            ChatPage(
-                modifier = Modifier.fillMaxSize(),
-                chatViewModel = chatViewModel,
-                isCurrentPage = isPageCurrent,
-                shouldAutoFocusInput = autoFocusEnabled,
-                onInputFocusChange = { focused ->
-                    if (!isPageCurrent) return@ChatPage
-                    if (focused != autoFocusEnabled) {
-                        autoFocusEnabled = focused
-                    }
-                },
-            )
+            // 关键：为每个页面添加裁剪，防止视频超出边界影响相邻页面
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .clipToBounds()) {
+                ChatPage(
+                    modifier = Modifier.fillMaxSize(),
+                    chatViewModel = chatViewModel,
+                    isCurrentPage = isPageCurrent,
+                    shouldAutoFocusInput = autoFocusEnabled,
+                    onInputFocusChange = { focused ->
+                        if (!isPageCurrent) return@ChatPage
+                        if (focused != autoFocusEnabled) {
+                            autoFocusEnabled = focused
+                        }
+                    },
+                )
+            }
         }
 
         // 新用户聊天滑动引导
