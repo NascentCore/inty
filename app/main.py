@@ -1,3 +1,4 @@
+import sentry_sdk
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +7,9 @@ from fastapi.staticfiles import StaticFiles
 from jose.exceptions import JWTError
 from loguru import logger
 from pydantic import BaseModel, ValidationError
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+from sentry_sdk.integrations.starlette import StarletteIntegration
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +33,51 @@ from app.middleware.error_handler import (
 from app.schemas.response import APIResponse
 
 init_logger()
+
+
+def init_sentry():
+    """初始化 Sentry 错误监控"""
+    try:
+        sentry_config = global_config_loaded_from_config_yaml.sentry
+
+        if not sentry_config.enabled:
+            logger.info("Sentry 监控未启用")
+            return
+
+        if not sentry_config.dsn:
+            logger.warning("Sentry DSN 未配置，跳过初始化")
+            return
+
+        logger.info("正在初始化 Sentry 错误监控...")
+
+        sentry_sdk.init(
+            dsn=sentry_config.dsn,
+            environment=global_config_loaded_from_config_yaml.app.environment.value,
+            send_default_pii=False,  # 默认不发送个人身份信息
+            integrations=[
+                FastApiIntegration(),
+                StarletteIntegration(transaction_style="endpoint"),
+                SqlalchemyIntegration(),
+            ],
+            # 设置服务名称和版本
+            server_name=global_config_loaded_from_config_yaml.app.name,
+            release=global_config_loaded_from_config_yaml.app.version,
+            # 禁用自动集成发现，避免与不兼容的库冲突
+            auto_enabling_integrations=False,
+            # 启用性能监控 traces
+            traces_sample_rate=sentry_config.traces_sample_rate,
+        )
+
+        logger.info(
+            f"Sentry 错误监控初始化完成 (项目: {global_config_loaded_from_config_yaml.app.name}, 环境: {global_config_loaded_from_config_yaml.app.environment.value})"
+        )
+
+    except Exception as e:
+        logger.error(f"初始化 Sentry 错误监控失败: {str(e)}")
+        # 不抛出异常，让应用继续启动
+
+
+init_sentry()
 
 # 根据debug模式决定是否开启OpenAPI docs
 app = FastAPI(
@@ -327,3 +376,9 @@ async def root():
             version=global_config_loaded_from_config_yaml.app.version,
         )
     )
+
+
+@app.get("/sentry-debug", include_in_schema=False)
+async def trigger_error():
+    """测试 Sentry 错误捕获的调试端点"""
+    division_by_zero = 1 / 0

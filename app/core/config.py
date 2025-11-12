@@ -269,6 +269,19 @@ class ElevenLabsConfig:
 
 
 @dataclass
+class SentryConfig:
+    """Sentry 错误监控配置"""
+
+    # Sentry DSN，例如: "https://examplePublicKey@o0.ingest.sentry.io/0"
+    dsn: str = ""
+    # 是否启用 Sentry
+    enabled: bool = True
+    # Traces 采样率，0.0-1.0，用于性能监控
+    # 1.0 表示 100% 采样，0.1 表示 10% 采样
+    traces_sample_rate: float = 1.0
+
+
+@dataclass
 class Config:
     app: AppConfig
     security: SecurityConfig
@@ -283,6 +296,7 @@ class Config:
     google_play: GooglePlayConfig
     elevenlabs: ElevenLabsConfig
     cloudflare: CloudflareConfig
+    sentry: SentryConfig
 
 
 def load_config(path: str) -> Config:
@@ -318,6 +332,7 @@ def load_config(path: str) -> Config:
         google_play=GooglePlayConfig(**data.get("google_play", {})),
         elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {})),
         cloudflare=CloudflareConfig(**data.get("cloudflare", {})),
+        sentry=SentryConfig(**data.get("sentry", {})),
     )
 
 

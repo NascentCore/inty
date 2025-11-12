@@ -15,6 +15,7 @@ from app.core.config import (
     GooglePlayConfig,
     LoggingConfig,
     SecurityConfig,
+    SentryConfig,
     VerificationConfig,
     _validate_config,
 )
@@ -42,6 +43,7 @@ def config():
         google_play=GooglePlayConfig(),
         elevenlabs=ElevenLabsConfig(api_key="test"),
         cloudflare=CloudflareConfig(),
+        sentry=SentryConfig(),
     )
 
 
@@ -69,6 +71,7 @@ def test_guest_voice_auto_correction():
         google_play=GooglePlayConfig(),
         elevenlabs=ElevenLabsConfig(api_key="test"),
         cloudflare=CloudflareConfig(),
+        sentry=SentryConfig(),
     )
 
     _validate_config(config)
@@ -101,6 +104,7 @@ def test_free_user_voice_auto_correction():
         google_play=GooglePlayConfig(),
         elevenlabs=ElevenLabsConfig(api_key="test"),
         cloudflare=CloudflareConfig(),
+        sentry=SentryConfig(),
     )
 
     _validate_config(config)
@@ -132,6 +136,7 @@ def test_guest_greater_than_free_auto_correction():
         google_play=GooglePlayConfig(),
         elevenlabs=ElevenLabsConfig(api_key="test"),
         cloudflare=CloudflareConfig(),
+        sentry=SentryConfig(),
     )
 
     _validate_config(config)
@@ -167,6 +172,7 @@ def test_valid_config_no_changes():
         google_play=GooglePlayConfig(),
         elevenlabs=ElevenLabsConfig(api_key="test"),
         cloudflare=CloudflareConfig(),
+        sentry=SentryConfig(),
     )
 
     _validate_config(config)
@@ -202,6 +208,7 @@ def test_guest_equals_free_is_valid():
         google_play=GooglePlayConfig(),
         elevenlabs=ElevenLabsConfig(api_key="test"),
         cloudflare=CloudflareConfig(),
+        sentry=SentryConfig(),
     )
 
     _validate_config(config)

@@ -14,6 +14,11 @@ app:
     subscribed_user_agent_creation_24h_limit: 2
   gcp_service_account_key: "inty-backend-key.json"
 
+sentry:
+  dsn: "https://35871471ace10dd7da9a7e26fe516fa4@o4510350447411200.ingest.us.sentry.io/4510350448459776"
+  enabled: true
+  traces_sample_rate: 1.0  # 开发环境使用 100% 采样率以便调试
+
 security:
   secret_key: "your-secret-key-here"
   algorithm: "HS256"
