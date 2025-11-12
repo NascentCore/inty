@@ -105,6 +105,8 @@ fun AgentBackground(
     var shouldPlayPageSwitch by remember { mutableStateOf(false) }
     var shouldPlayLoading by remember { mutableStateOf(false) }
     var playCount by remember { mutableIntStateOf(1) }
+    var isVideoPlaying by remember { mutableStateOf(false) } // 视频是否正在播放
+    var isLoadingTriggeredPlay by remember { mutableStateOf(false) } // 是否因为 loading 触发的播放
 
     // 检查视频缓存状态 - 每次进入页面时都重新检查
     // 优化：同步检查缓存状态，避免延迟
@@ -134,21 +136,30 @@ fun AgentBackground(
     }
 
     // 加载状态时播放视频（1次）- 仅在普通loading时触发，不包含图片生成loading
-    LaunchedEffect(isLoading, backgroundAnimatedUrl, isVideoCached, isCurrentPage) {
+    // 优化：如果视频正在播放中，则不处理；如果视频未播放，则触发播放，并让视频播放完整到结束
+    LaunchedEffect(isLoading, backgroundAnimatedUrl, isVideoCached, isCurrentPage, isVideoPlaying) {
         if (isLoading && backgroundAnimatedUrl != null && isVideoCached && isCurrentPage) {
-            playCount = 1
-            shouldPlayLoading = true
-            LogUtils.d("AgentBackground - 设置加载播放: playCount=1, shouldPlayLoading=true")
-        } else {
-            shouldPlayLoading = false
+            // 如果视频正在播放中，则不处理
+            if (!isVideoPlaying) {
+                playCount = 1
+                shouldPlayLoading = true
+                isLoadingTriggeredPlay = true
+                LogUtils.d("AgentBackground - 设置加载播放: playCount=1, shouldPlayLoading=true, isLoadingTriggeredPlay=true")
+            } else {
+                LogUtils.d("AgentBackground - 视频正在播放中，跳过加载播放")
+            }
         }
+        // 注意：loading 结束时，不立即停止播放，让视频播放到结束
+        // 状态重置在 onPlayComplete 中处理
     }
 
     // 合并播放状态：页面切换播放优先于加载播放
-    val shouldPlay = (shouldPlayPageSwitch || shouldPlayLoading) && isCurrentPage
+    // 注意：如果是因为 loading 触发的播放，即使 loading 结束，也继续播放到结束
+    val shouldPlay =
+        (shouldPlayPageSwitch || shouldPlayLoading || (isLoadingTriggeredPlay && isVideoPlaying)) && isCurrentPage
     val finalPlayCount =
         if (shouldPlayPageSwitch) VIDEO_FIRST_PLAY_COUNT
-        else if (shouldPlayLoading) VIDEO_MESSAGE_PLAY_COUNT
+        else if (shouldPlayLoading || isLoadingTriggeredPlay) VIDEO_MESSAGE_PLAY_COUNT
         else VIDEO_MESSAGE_PLAY_COUNT
 
     // 构建静态图片请求
@@ -191,7 +202,13 @@ fun AgentBackground(
                 onPlayComplete = {
                     shouldPlayPageSwitch = false
                     shouldPlayLoading = false
+                    if (isLoadingTriggeredPlay) {
+                        isLoadingTriggeredPlay = false
+                    }
                     onPlayComplete()
+                },
+                onIsPlayingChange = { playing ->
+                    isVideoPlaying = playing
                 },
             )
         } else if (staticImageUrl != null && staticImageRequest != null) {
