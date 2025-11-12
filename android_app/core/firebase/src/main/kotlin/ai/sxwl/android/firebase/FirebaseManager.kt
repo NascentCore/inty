@@ -85,33 +85,41 @@ object FirebaseManager {
                     Events.SUBSCRIPTION_SUCCESS to 1.0, // 订阅验证成功
                     Events.SUBSCRIPTION_FAILURE to 1.0, // 订阅验证失败
                     Events.FREE_LIMIT_REACHED to 1.0, // 达到免费限制
-                    Events.SUBSCRIPTION_PRICE_FETCHED to 1.0, // Google Play获取到的价格（100%采样）
-                    Events.SUBSCRIPTION_PRICE_DISPLAYED to 1.0, // UI上显示的价格（100%采样）
+                    Events.SUBSCRIPTION_PRICE_VIEW to 1.0, // 订阅价格查看（100%采样）
                     Events.EXPLORE_AGENTS_FETCH_SUCCESS to 1.0, // Explore接口请求成功（100%采样）
                     Events.EXPLORE_AGENTS_FETCH_ERROR to 1.0, // Explore接口请求错误（100%采样）
 
                     // 🔴 错误和失败事件 - 100%采样
                     Events.AUTH_FAILURE to 1.0, // 认证失败
                     Events.APP_ERROR to 1.0, // 应用错误
-                    Events.MESSAGE_SEND_ERROR to 1.0, // 消息发送错误（合并 failure 和 exception）
+                    Events.MESSAGE_SEND_FAILURE to 1.0, // 消息发送错误（合并 failure 和 exception）
                     Events.REQUEST_FAILURE to 1.0, // 请求失败（网络请求失败时触发）
                     Events.VERY_SLOW_REQUEST to 1.0, // 极慢请求
 
                     // 🔴 页面追踪事件 - 100%采样
-                    Events.PAGE_LEAVE to 1.0, // 页面离开
+                    Events.DURATION to 1.0, // 页面停留时长
                     Events.MESSAGE_SEND_SUCCESS to 1.0, // 消息发送成功
 
+                    // 🔴 用户交互事件 - 100%采样
+                    Events.CHAT_PAGE_CLICK to 1.0, // 聊天页面点击
+                    Events.CHAT_SIDEBAR_CLICK to 1.0, // 聊天侧边栏点击
+                    Events.CHAT_MORE_CLICK to 1.0, // 聊天更多面板点击
+
+                    // 🔴 图片生成相关事件 - 100%采样
+                    Events.MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED to 1.0, // 图片生成开始
+                    Events.MESSAGE_TO_IMAGE_GENERATION_SUCCESS to 1.0, // 图片生成成功
+                    Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE to 1.0, // 图片生成失败
+                    Events.IMAGE_GENERATION_LIMIT_REACHED to 1.0, // 图片生成限制达到
+
                     // 🟡 性能相关事件 - 保持现有采样配置
-                    Events.VOICE_PLAYBACK_START to
-                        if (AppUtils.isAppDebug()) 1.0 else 0.5, // 调试100%，发布50%
                     Events.SLOW_REQUEST to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
 
-                    // 🔴 性能指标事件 - 100%采样（关键性能指标）
-                    Events.AI_RESPONSE_TIME to 1.0, // AI响应时间（100%采样）
-                    Events.EXPLORE_RESPONSE_TIME to 1.0, // Explore接口响应时间（100%采样）
+                    // 🟡 性能指标事件 - 保持原有采样配置
+                    Events.AI_RESPONSE_TIME to
+                            if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                    Events.EXPLORE_RESPONSE_TIME to
+                            if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     Events.TTS_GENERATION_TIME to
-                        if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
-                    Events.VOICE_PLAYBACK_TIME to
                         if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     Events.IMAGE_LOAD_TIME to
                         if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
@@ -122,20 +130,15 @@ object FirebaseManager {
                     Events.DATABASE_OPERATION_TIME to
                         if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
 
-                    // 🔴 图片生成相关事件 - 100%采样
-                    Events.MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED to 1.0, // 图片生成开始
-                    Events.MESSAGE_TO_IMAGE_GENERATION_SUCCESS to 1.0, // 图片生成成功
-                    Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE to 1.0, // 图片生成失败
-                    Events.IMAGE_GENERATION_LIMIT_REACHED to 1.0, // 图片生成限制达到
                 ),
             minIntervalMsPerEvent =
                 mapOf(
                     // 🔴 业务数据点 - 无限制或很宽松的限频
                     Events.MESSAGE_SENT to
                         if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
-                    Events.MESSAGE_SEND_ERROR to
+                    Events.MESSAGE_SEND_FAILURE to
                             if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
-                    Events.VOICE_PLAYBACK_START to
+                    Events.CHAT_PAGE_CLICK to
                         if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
 
                     // 🟡 性能相关事件 - 保持现有限频配置
@@ -225,7 +228,7 @@ object FirebaseManager {
                 // 关键事件即使非调试模式也输出警告，便于排查问题
                 if (eventName in listOf(
                         Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
-                        Events.MESSAGE_SEND_ERROR
+                        Events.MESSAGE_SEND_FAILURE
                     )
                 ) {
                     LogUtils.w("FirebaseManager", "事件被过滤: $eventName（非调试模式）")
@@ -278,7 +281,7 @@ object FirebaseManager {
                         // 关键事件即使非调试模式也输出确认日志，便于排查问题
                         if (eventName in listOf(
                                 Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
-                                Events.MESSAGE_SEND_ERROR
+                                Events.MESSAGE_SEND_FAILURE
                             )
                         ) {
                             LogUtils.i(
@@ -457,7 +460,7 @@ object FirebaseManager {
         const val USER_LOGOUT = "user_logout"
         const val MESSAGE_SENT = "message_sent"
         const val MESSAGE_SEND_SUCCESS = "message_send_success"
-        const val MESSAGE_SEND_ERROR = "message_send_error" // 消息发送错误（合并 failure 和 exception）
+        const val MESSAGE_SEND_FAILURE = "message_send_failure" // 消息发送错误（合并 failure 和 exception）
 
         // 性能相关事件
         const val AI_RESPONSE_TIME = "ai_response_time"
@@ -472,19 +475,16 @@ object FirebaseManager {
         const val CHAT_STARTED = "chat_started" // 聊天开始（第一次发送消息时触发）
         const val AGENT_SWITCH = "agent_switch"
 
-        // UI交互事件
-        const val AUDIO_PLAY_END = "audio_play_end"
-        const val VOICE_PLAYBACK_START = "voice_playback_start"
+        // 订阅相关事件
         const val SUBSCRIPTION_SUCCESS = "subscription_success" // 订阅验证成功
         const val SUBSCRIPTION_FAILURE = "subscription_failure" // 订阅验证失败
+        const val SUBSCRIPTION_PRICE_VIEW = "subscription_price_view" // 订阅价格查看
         const val FREE_LIMIT_REACHED = "free_limit_reached"
 
-        // 消息反馈事件
-        const val MESSAGE_LIKE = "message_like"
-        const val MESSAGE_DISLIKE = "message_dislike"
-
-        // Keep Talking相关事件
-        const val KEEP_TALKING_CLICKED = "keep_talking_clicked" // Keep Talking按钮点击
+        // 用户交互事件
+        const val CHAT_PAGE_CLICK = "chat_page_click" // 聊天页面点击
+        const val CHAT_SIDEBAR_CLICK = "chat_sidebar_click" // 聊天侧边栏点击
+        const val CHAT_MORE_CLICK = "chat_more_click" // 聊天更多面板点击
 
         // 图片生成相关事件
         const val MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED = "message_to_image_generation_button_clicked"
@@ -494,9 +494,6 @@ object FirebaseManager {
         // 图片生成限制达到，这个限制与其他生图操作（如创建角色时生图）累加到一起的
         const val IMAGE_GENERATION_LIMIT_REACHED = "image_generation_limit_reached"
 
-        // Billing价格相关事件
-        const val SUBSCRIPTION_PRICE_FETCHED = "subscription_price_fetched" // Google Play获取到的价格
-        const val SUBSCRIPTION_PRICE_DISPLAYED = "subscription_price_displayed" // UI上显示的价格
 
         // Explore相关事件
         const val EXPLORE_AGENTS_FETCH_SUCCESS = "explore_agents_fetch_success" // Explore接口请求成功
@@ -518,7 +515,7 @@ object FirebaseManager {
         const val VERY_SLOW_REQUEST = "very_slow_request" // 极慢请求（>10秒）
 
         // 页面追踪相关事件
-        const val PAGE_LEAVE = "page_leave" // 页面离开，记录停留时长
+        const val DURATION = "duration" // 页面停留时长
         const val PAGE_VISIBLE = "page_visible" // 页面变为可见（已禁用）
         const val PAGE_HIDDEN = "page_hidden" // 页面变为不可见（已禁用）
         const val PAGE_LIFECYCLE = "page_lifecycle" // 页面生命周期事件（已禁用）

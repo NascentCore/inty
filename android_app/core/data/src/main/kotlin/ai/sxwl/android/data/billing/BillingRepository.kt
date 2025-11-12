@@ -118,7 +118,13 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     private fun initializeManagers() {
         priceManager = BillingPriceManager(billingClient, eventScope, _eventFlow, _plansFlow)
         purchaseManager =
-            BillingPurchaseManager(billingClient, eventScope, _eventFlow, _vipStatusFlow)
+            BillingPurchaseManager(
+                billingClient,
+                eventScope,
+                _eventFlow,
+                _vipStatusFlow,
+                _plansFlow
+            )
         remoteManager = BillingRemoteManager(_vipStatusFlow, _plansFlow, priceManager)
     }
 

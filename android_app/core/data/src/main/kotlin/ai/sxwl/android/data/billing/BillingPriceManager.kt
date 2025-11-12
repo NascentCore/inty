@@ -1,6 +1,5 @@
 package ai.sxwl.android.data.billing
 
-import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
@@ -291,30 +290,6 @@ internal class BillingPriceManager(
                                 "  微单位变化: $oldMicros -> $micros"
                     )
 
-                    // 上报Firebase：从Google Play获取到的订阅价格详细信息（100%采样）
-                    try {
-                        FirebaseManager.logEvent(
-                            FirebaseManager.Events.SUBSCRIPTION_PRICE_FETCHED,
-                            mapOf(
-                                "product_id" to planId,
-                                "product_name" to (currentPlan.name ?: ""),
-                                "plan_type" to (currentPlan.planType ?: ""),
-                                "google_play_price" to formattedPrice,
-                                "google_play_currency_code" to currencyCode,
-                                "google_play_price_micros" to micros,
-                                "corrected_price" to correctedPrice,
-                                "old_price" to (oldPrice ?: "-"),
-                                "old_currency_code" to (oldCurrency ?: ""),
-                                "old_price_micros" to oldMicros,
-                                "price_changed" to priceChanged,
-                                "currency_changed" to currencyChanged,
-                                "micros_changed" to microsChanged,
-                            )
-                        )
-                        LogUtils.d("Billing [价格更新] ✅ Firebase事件已上报: SUBSCRIPTION_PRICE_FETCHED")
-                    } catch (e: Exception) {
-                        LogUtils.e("Billing [价格更新] ⚠️ Firebase事件上报失败: ${e.message}")
-                    }
                 } else {
                     LogUtils.d("Billing [价格更新] ℹ️ 价格无变化，跳过: $planId (${currentPlan.name})")
                 }

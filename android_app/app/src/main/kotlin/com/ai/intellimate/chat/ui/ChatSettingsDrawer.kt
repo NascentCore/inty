@@ -6,6 +6,7 @@ import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.ui.SettingsArrowItem
 import ai.sxwl.android.design.ui.SettingsItemData
 import ai.sxwl.android.design.ui.SettingsSwitchItem
+import ai.sxwl.android.firebase.FirebaseManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -153,6 +154,13 @@ fun ChatSettingsDrawer(
                         onClick = {
                             // 检查是否已登录
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "edit_name",
+                                        "timestamp" to System.currentTimeMillis()
+                                    )
+                                )
                                 editKey = EditKey.Name
                                 editValue = userProfileState.nickname
                             }
@@ -165,6 +173,13 @@ fun ChatSettingsDrawer(
                         onClick = {
                             // 检查是否已登录
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "edit_pronouns",
+                                        "timestamp" to System.currentTimeMillis()
+                                    )
+                                )
                                 editKey = EditKey.Pronouns
                                 editValue = userProfileState.gender ?: ""
                             }
@@ -177,6 +192,13 @@ fun ChatSettingsDrawer(
                         onClick = {
                             // 检查是否已登录
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "edit_persona",
+                                        "timestamp" to System.currentTimeMillis()
+                                    )
+                                )
                                 editKey = EditKey.Persona
                                 editValue = userProfileState.description ?: ""
                             }
@@ -229,6 +251,14 @@ fun ChatSettingsDrawer(
                         openedIconRes = R.drawable.opened, // 传入app模块的资源
                         closedIconRes = R.drawable.closed, // 传入app模块的资源
                         onCheckChanged = { enabled ->
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                FirebaseManager.safeEventParams(
+                                    "click_type" to "toggle_keep_talking",
+                                    "enabled" to enabled,
+                                    "timestamp" to System.currentTimeMillis()
+                                )
+                            )
                             SettingStateManager.updateShowKeepTalking(enabled)
                             onKeepTalkingChange(enabled)
                         }
@@ -246,6 +276,14 @@ fun ChatSettingsDrawer(
                         openedIconRes = R.drawable.opened, // 传入app模块的资源
                         closedIconRes = R.drawable.closed, // 传入app模块的资源
                         onCheckChanged = { enabled ->
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                FirebaseManager.safeEventParams(
+                                    "click_type" to "toggle_auto_play_voice",
+                                    "enabled" to enabled,
+                                    "timestamp" to System.currentTimeMillis()
+                                )
+                            )
                             SettingStateManager.updateAutoPlayAudio(enabled)
                         }
                     )
@@ -266,6 +304,14 @@ fun ChatSettingsDrawer(
                                 if (IntySetting.isLogin() && IntySetting.getCurToken()
                                         .isNotEmpty()
                                 ) {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "report",
+                                            "agent_id" to agent.id,
+                                            "timestamp" to System.currentTimeMillis()
+                                        )
+                                    )
                                     ReportActivity.launch(context, agent.id, "AGENT")
                                 }
                             }

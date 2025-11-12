@@ -62,16 +62,15 @@
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
-| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | `page_name`, `page_class`, `timestamp`, `page_source` (可选), `page_type` (可选), `is_initial_load` (可选), 其他自定义参数 | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，Explore 页面通过 `page_name`="explore" 标识） | 🔴 100% |
-| `page_leave` | PageTrackingHelper.kt | `page_name`, `page_class`, `time_spent`, `visible_time_spent`, `lifecycle_time_spent`, `timestamp` | 页面离开，记录停留时长 | 🔴 100% |
+| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | `page_name`, `page_class`, `timestamp`, `page_source` (可选), `page_type` (可选), `is_initial_load` (可选), 其他自定义参数 | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，`page_name` 统一为 xxxPage 格式，如 ChatPage、ExplorePage、subscriptionPage 等） | 🔴 100% |
+| `duration` | PageTrackingHelper.kt | `page_name`, `duration`, `timestamp` | 页面停留时长（页面离开时上报） | 🔴 100% |
 | `page_visible` | PageTrackingHelper.kt | `page_name`, `page_class`, `timestamp` | 页面变为可见 | ⚪ 禁用 |
 | `page_hidden` | PageTrackingHelper.kt | `page_name`, `page_class`, `visible_time_spent`, `timestamp` | 页面变为不可见 | ⚪ 禁用 |
 | `page_lifecycle` | PageTrackingHelper.kt | `page_name`, `page_class`, `lifecycle_event`, `lifecycle_time_spent`, `timestamp` | 页面生命周期事件 | ⚪ 禁用 |
 
 **页面来源参数说明：**
 - `page_source`：页面来源标识，用于统计用户从哪个入口进入页面
-  - **VipCenterActivity**：`home_expired_dialog`（首页过期VIP对话框）、`chat_page`（聊天页面）、`chat_more_panel`（聊天更多面板）、`profile_upgrade`（个人中心升级按钮）、`settings_subscription`（设置页面订阅管理）、`settings_premium_dialog`（设置页面高级模型对话框）
-  - **ChatActivity**：`messages_tab`（消息列表Tab）、`explore_tab`（探索Tab）、`profile_tab`（个人中心Tab）
+  - **subscriptionPage**：`home_expired_dialog`（首页过期VIP对话框）、`chat_page`（聊天页面）、`chat_more_panel`（聊天更多面板）、`profile_upgrade`（个人中心升级按钮）、`settings_subscription`（设置页面订阅管理）、`settings_premium_dialog`（设置页面高级模型对话框）
   - **ChatPage**：`chat_activity`（在 ChatActivity 中）、`main_activity_home_tab`（在 MainActivity 的 HorizontalPager 中）
 
 ### 1.7 Explore 数据加载事件
@@ -86,20 +85,17 @@
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
 | `agent_switch` | ChatViewModel.kt | `from_agent_id`, `from_agent_name`, `to_agent_id`, `to_agent_name`, `switch_method`, `user_type`, `timestamp` | Agent切换 | 🔴 100% |
-| `voice_playback_start` | AudioManager.kt | `message_id`, `agent_id`, `agent_name`, `has_audio_url`, `is_auto_play`, `is_manual_click`, `timestamp` | 语音播放开始 | 🔴 100% |
-| `audio_play_end` | VoicePlayer.kt | `agent_id`, `agent_name`, `message_id`, `is_auto_play`, `play_status`, `play_duration`, `audio_url`, `timestamp` | 语音播放结束（播放完成或暂停时触发） | 🔴 100% |
-| `keep_talking_clicked` | ChatViewModel.kt | `agent_id`, `agent_name`, `user_type`, `timestamp` | Keep Talking按钮点击（按钮点击意图） | 🔴 100% |
-| `message_like` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`（优先使用服务端id）, `message_length`, `has_generated_image`, `is_opening`, `user_type`, `message_timestamp`, `timestamp` | 消息点赞 | 🔴 100% |
-| `message_dislike` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`（优先使用服务端id）, `message_length`, `has_generated_image`, `is_opening`, `user_type`, `message_timestamp`, `timestamp` | 消息点踩 | 🔴 100% |
+| `chat_page_click` | ChatViewModel.kt, AudioManager.kt | `click_type`（`voice_play`、`keep_talking`、`message_like`、`message_dislike`）, `agent_id`, `agent_name`, `message_id`（可选）, `message_length`（可选）, `has_generated_image`（可选）, `is_opening`（可选）, `user_type`（可选）, `message_timestamp`（可选）, `has_audio_url`（可选）, `is_auto_play`（可选）, `timestamp` | 聊天页面点击 | 🔴 100% |
+| `chat_sidebar_click` | ChatSettingsDrawer.kt | `click_type`（`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`report`）, `agent_id`（可选）, `enabled`（可选，开关操作时）, `timestamp` | 聊天侧边栏点击 | 🔴 100% |
+| `chat_more_click` | ChatMorePanel.kt | `click_type`（`reply_style`、`report`）, `agent_id`, `timestamp` | 聊天更多面板点击 | 🔴 100% |
 
 ### 1.9 订阅与计费事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
-| `subscription_success` | BillingPurchaseManager.kt | `product_id`, `order_id`, `purchase_token`, `purchase_time`, `user_type`, `timestamp` | 订阅验证成功（服务端验证成功后触发） | 🔴 100% |
-| `subscription_failure` | BillingPurchaseManager.kt | `product_id`, `order_id`, `purchase_token`, `error_code`（可选）, `error_message`, `purchase_time`, `user_type`, `timestamp` | 订阅验证失败（服务端验证失败、网络请求失败或异常时触发） | 🔴 100% |
-| `subscription_price_fetched` | BillingPriceManager.kt | `product_id`, `product_name`, `plan_type`, `google_play_price`, `google_play_currency_code`, `google_play_price_micros`, `corrected_price`, `old_price`, `old_currency_code`, `old_price_micros`, `price_changed`, `currency_changed`, `micros_changed` | 从Google Play获取到的订阅价格详细信息（包含价格变化对比） | 🔴 100% |
-| `subscription_price_displayed` | VipCenterContent.kt | `product_id`, `product_name`, `plan_type`, `displayed_price`, `currency_code`, `price_micros`, `discount_rate`, `original_price`, `is_selected`, `selected_plan_index`, `total_plans_count`, `is_subscribed`, `timestamp` | UI上显示的订阅价格详细信息（包含选择状态和订阅状态） | 🔴 100% |
+| `subscription_success` | BillingPurchaseManager.kt | `product_id`, `order_id`, `purchase_token`, `purchase_time`, `user_type`, `price`（可选）, `currency_code`（可选）, `price_micros`（可选）, `timestamp` | 订阅验证成功（服务端验证成功后触发，包含价格参数） | 🔴 100% |
+| `subscription_failure` | BillingPurchaseManager.kt | `product_id`, `order_id`, `purchase_token`, `error_code`（可选）, `error_message`, `purchase_time`, `user_type`, `price`（可选）, `currency_code`（可选）, `price_micros`（可选）, `timestamp` | 订阅验证失败（服务端验证失败、网络请求失败或异常时触发，包含价格参数） | 🔴 100% |
+| `subscription_price_view` | VipCenterContent.kt | `product_id`, `product_name`, `plan_type`, `price`, `currency_code`, `price_micros`, `timestamp` | 订阅价格查看（在 vipcenter 界面显示订阅产品价格时触发） | 🔴 100% |
 
 ### 1.10 网络请求事件
 
@@ -122,8 +118,8 @@
 
 | 事件名称 | 使用位置 | 业务含义 | 采样率 |
 |---------|---------|---------|--------|
-| `AI_RESPONSE_TIME` | ChatViewModel.kt | AI响应时间（API调用时间） | 🔴 100% |
-| `EXPLORE_RESPONSE_TIME` | ExploreViewModel.kt | Explore接口响应时间（API调用时间） | 🔴 100% |
+| `AI_RESPONSE_TIME` | ChatViewModel.kt | AI响应时间（API调用时间） | 🟡 调试100%，发布30% |
+| `EXPLORE_RESPONSE_TIME` | ExploreViewModel.kt | Explore接口响应时间（API调用时间） | 🟡 调试100%，发布30% |
 | `TTS_GENERATION_TIME` | TtsManager.kt | TTS生成时间（从发起请求到收到音频URL的完整耗时） | 🟡 调试100%，发布30% |
 | `IMAGE_GENERATION_TIME` | ChatViewModel.kt | 图片生成耗时（从发起请求到收到图片URL的完整耗时） | 🟡 调试100%，发布30% |
 | `voice_playback_time` | FirebaseManager.Events | 语音播放时间（预留） | 🟡 调试100%，发布30% |
@@ -135,8 +131,8 @@
 
 | 功能 | 使用位置 | 业务含义 | 采样率 |
 |------|---------|---------|--------|
-| `logPerformanceMetric` | ChatViewModel.kt | 记录AI响应时间（API调用时间） | 🔴 100% |
-| `logPerformanceMetric` | ExploreViewModel.kt | 记录Explore接口响应时间（API调用时间） | 🔴 100% |
+| `logPerformanceMetric` | ChatViewModel.kt | 记录AI响应时间（API调用时间） | 🟡 调试100%，发布30% |
+| `logPerformanceMetric` | ExploreViewModel.kt | 记录Explore接口响应时间（API调用时间） | 🟡 调试100%，发布30% |
 | `logPerformanceMetric` | TtsManager.kt | 记录TTS生成时间（从发起请求到收到音频URL的完整耗时） | 🟡 调试100%，发布30% |
 | `logPerformanceMetric` | ChatViewModel.kt | 记录图片生成耗时（从发起请求到收到图片URL的完整耗时） | 🟡 调试100%，发布30% |
 | HTTP网络监控 | UnifiedOkHttpClient.kt | 自动监控网络请求性能 | 🟡 调试100%，发布30% |
@@ -247,9 +243,7 @@
 - `response_time`：接口响应时间（API调用时间，毫秒），用于Explore接口和网络请求
 - `product_id`、`product_name`、`plan_type`：订阅商品信息，用于订阅分析
 - `order_id`、`purchase_token`、`purchase_time`：订阅订单信息（subscription_success/subscription_failure事件），用于订阅转化分析和问题排查
-- `google_play_price`、`google_play_currency_code`、`google_play_price_micros`：Google Play原始价格信息
-- `displayed_price`、`currency_code`、`price_micros`：UI显示的价格信息
-- `price_changed`、`currency_changed`、`micros_changed`：价格变化标识，用于监控价格更新
+- `price`、`currency_code`、`price_micros`：订阅价格信息（subscription_success/subscription_failure/subscription_price_view事件）
 - `message_id`：消息ID（图片生成相关事件）
 - `image_url`、`image_width`、`image_height`：生成的图片信息（成功时）
 - `generation_time_ms`：图片生成耗时（从发起请求到收到图片URL的完整耗时，毫秒）
@@ -260,7 +254,7 @@
 - `ai_response_time`：AI响应时间（API调用时间，从发起网络请求到收到响应），用于API性能分析
 - `end_to_end_time`：端到端时间（从用户操作开始到收到响应的完整时间），用于真实的用户体验分析，比API响应时间更能反映用户感知的延迟
 - `generation_time_ms`：图片生成耗时（从发起请求到收到图片URL的完整耗时，毫秒），用于图片生成性能分析
-- `time_spent`：页面停留时长，用于用户体验分析
+- `duration`：页面停留时长（duration事件），用于用户体验分析
 - `success`：操作是否成功（布尔值），统一使用 `success` 而非 `successful`
 - `response_code`：响应码（数字），用于网络请求和消息发送成功事件
 

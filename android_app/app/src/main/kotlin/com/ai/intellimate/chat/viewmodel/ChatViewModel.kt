@@ -397,12 +397,12 @@ class ChatViewModel : BaseVM() {
 
                         // Firebase Analytics - 记录消息发送错误（包含API响应时间和端到端时间）
                         FirebaseManager.logEvent(
-                            FirebaseManager.Events.MESSAGE_SEND_ERROR,
+                            FirebaseManager.Events.MESSAGE_SEND_FAILURE,
                             FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
                                 "message_type" to "normal",
-                                "error_message" to "failure: ${result.message}",
+                                "error_message" to "failure: ${result.message.take(100)}",
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "ai_response_time" to responseTime,
                                 "end_to_end_time" to endToEndTime
@@ -433,12 +433,16 @@ class ChatViewModel : BaseVM() {
 
                 // Firebase Analytics - 记录异常情况下的端到端时间
                 FirebaseManager.logEvent(
-                    FirebaseManager.Events.MESSAGE_SEND_ERROR,
+                    FirebaseManager.Events.MESSAGE_SEND_FAILURE,
                     FirebaseManager.safeEventParams(
                         "agent_id" to agentId,
                         "agent_name" to (_agentInfo.value?.name),
                         "message_type" to "normal",
-                        "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
+                        "error_message" to "exception: ${e.javaClass.simpleName}, ${
+                            e.message?.take(
+                                100
+                            ) ?: "unknown error"
+                        }",
                         "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                         "end_to_end_time" to endToEndTime
                     )
@@ -597,8 +601,9 @@ class ChatViewModel : BaseVM() {
         // Firebase Analytics - 记录Keep Talking按钮点击
         agentInfo.value?.let { agent ->
             FirebaseManager.logEvent(
-                FirebaseManager.Events.KEEP_TALKING_CLICKED,
+                FirebaseManager.Events.CHAT_PAGE_CLICK,
                 FirebaseManager.safeEventParams(
+                    "click_type" to "keep_talking",
                     "agent_id" to agent.id,
                     "agent_name" to agent.name,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
@@ -668,12 +673,12 @@ class ChatViewModel : BaseVM() {
 
                             // Firebase Analytics - 记录 Keep Talking 消息发送错误
                             FirebaseManager.logEvent(
-                                FirebaseManager.Events.MESSAGE_SEND_ERROR,
+                                FirebaseManager.Events.MESSAGE_SEND_FAILURE,
                                 FirebaseManager.safeEventParams(
                                     "agent_id" to agent.id,
                                     "agent_name" to agent.name,
                                     "message_type" to "keep_talking",
-                                    "error_message" to "failure: ${result.message}",
+                                    "error_message" to "failure: ${result.message.take(100)}",
                                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                     "ai_response_time" to responseTime,
                                     "end_to_end_time" to endToEndTime
@@ -691,12 +696,16 @@ class ChatViewModel : BaseVM() {
 
                     // Firebase Analytics - 记录 Keep Talking 消息发送异常
                     FirebaseManager.logEvent(
-                        FirebaseManager.Events.MESSAGE_SEND_ERROR,
+                        FirebaseManager.Events.MESSAGE_SEND_FAILURE,
                         FirebaseManager.safeEventParams(
                             "agent_id" to agent.id,
                             "agent_name" to agent.name,
                             "message_type" to "keep_talking",
-                            "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
+                            "error_message" to "exception: ${e.javaClass.simpleName}, ${
+                                e.message?.take(
+                                    100
+                                ) ?: "unknown error"
+                            }",
                             "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                             "end_to_end_time" to endToEndTime
                         )
@@ -735,6 +744,7 @@ class ChatViewModel : BaseVM() {
         val messageIdForEvent = targetMessage.id.ifEmpty { localMsgId }
 
         val eventParams = FirebaseManager.safeEventParams(
+            "click_type" to "message_like",
             "agent_id" to agent.id,
             "agent_name" to agent.name,
             "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
@@ -746,7 +756,7 @@ class ChatViewModel : BaseVM() {
             "timestamp" to System.currentTimeMillis()
         )
 
-        FirebaseManager.logEvent(FirebaseManager.Events.MESSAGE_LIKE, eventParams)
+        FirebaseManager.logEvent(FirebaseManager.Events.CHAT_PAGE_CLICK, eventParams)
         LogUtils.i("Message liked: localMsgId=$localMsgId, serviceId=${targetMessage.id}")
     }
 
@@ -771,6 +781,7 @@ class ChatViewModel : BaseVM() {
         val messageIdForEvent = targetMessage.id.ifEmpty { localMsgId }
 
         val eventParams = FirebaseManager.safeEventParams(
+            "click_type" to "message_dislike",
             "agent_id" to agent.id,
             "agent_name" to agent.name,
             "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
@@ -782,7 +793,7 @@ class ChatViewModel : BaseVM() {
             "timestamp" to System.currentTimeMillis()
         )
 
-        FirebaseManager.logEvent(FirebaseManager.Events.MESSAGE_DISLIKE, eventParams)
+        FirebaseManager.logEvent(FirebaseManager.Events.CHAT_PAGE_CLICK, eventParams)
         LogUtils.i("Message disliked: localMsgId=$localMsgId, serviceId=${targetMessage.id}")
     }
 
@@ -899,7 +910,7 @@ class ChatViewModel : BaseVM() {
                                         "agent_name" to agent.name,
                                         "message_id" to messageId,
                                         "error_code" to result.code,
-                                        "error_message" to (result.message ?: "unknown"),
+                                        "error_message" to result.message,
                                         "user_type" to "free",
                                         "generation_time_ms" to generationTime,
                                         "timestamp" to endTime
@@ -922,7 +933,7 @@ class ChatViewModel : BaseVM() {
                                         "agent_name" to agent.name,
                                         "message_id" to messageId,
                                         "error_code" to result.code,
-                                        "error_message" to (result.message ?: "unknown"),
+                                        "error_message" to result.message,
                                         "user_type" to "vip",
                                         "generation_time_ms" to generationTime,
                                         "timestamp" to endTime
@@ -950,7 +961,7 @@ class ChatViewModel : BaseVM() {
                                         "agent_name" to agent.name,
                                         "message_id" to messageId,
                                         "error_code" to result.code,
-                                        "error_message" to (result.message ?: "unknown"),
+                                        "error_message" to result.message,
                                         "user_type" to if (isVip) "vip" else "free",
                                         "generation_time_ms" to generationTime,
                                         "timestamp" to endTime

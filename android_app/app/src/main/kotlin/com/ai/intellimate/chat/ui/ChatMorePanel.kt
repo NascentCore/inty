@@ -7,6 +7,7 @@ import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.tmp.BottomSheetDialog
 import ai.sxwl.android.design.tmp.DiaAmountLayout
+import ai.sxwl.android.firebase.FirebaseManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -101,6 +102,14 @@ fun ChatMorePanel(
                                 if (IntySetting.isLogin() && IntySetting.getCurToken()
                                         .isNotEmpty()
                                 ) {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_MORE_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "reply_style",
+                                            "agent_id" to (agentInfo?.id ?: ""),
+                                            "timestamp" to System.currentTimeMillis()
+                                        )
+                                    )
                                     // 已经登录，判断是否vip，是则弹出输入框sheet，否则弹拦截弹窗
                                     if (vipStatus.isSubscribed) {
                                         showSheet = true
@@ -136,6 +145,14 @@ fun ChatMorePanel(
                                 if (IntySetting.isLogin() && IntySetting.getCurToken()
                                         .isNotEmpty()
                                 ) {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_MORE_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "report",
+                                            "agent_id" to (agentInfo?.id ?: ""),
+                                            "timestamp" to System.currentTimeMillis()
+                                        )
+                                    )
                                     ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
                                 }
                             },

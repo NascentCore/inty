@@ -60,7 +60,7 @@ class ChatActivity : BaseActivity() {
         intent.getStringExtra(INTENT_KEY_PAGE_SOURCE) ?: DEFAULT_PAGE_SOURCE
     }
 
-    override fun getPageName(): String = "ChatActivity"
+    override fun getPageName(): String = "ChatPage"
 
     /** 重写以提供额外的页面追踪参数（页面来源） */
     override fun getAdditionalPageTrackingParams(): Map<String, Any> {

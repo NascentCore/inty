@@ -106,7 +106,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
 
         // Firebase Analytics - 记录探索页面访问（使用 SCREEN_VIEW 事件）
         PageTrackingHelper.trackPageView(
-            pageName = "explore",
+            pageName = "ExplorePage",
             pageClass = "ExploreViewModel",
             additionalParams = mapOf(
                 "page_type" to "recommendations",

@@ -41,6 +41,11 @@ class VipCenterActivity : BaseActivity() {
 
     private val viewModel: VipCenterViewModel by viewModels()
 
+    /** 重写以提供自定义页面名称 */
+    override fun getPageName(): String {
+        return "subscriptionPage"
+    }
+
     /** 重写以提供额外的页面追踪参数（页面来源） */
     override fun getAdditionalPageTrackingParams(): Map<String, Any> {
         return mapOf("page_source" to pageSource)
