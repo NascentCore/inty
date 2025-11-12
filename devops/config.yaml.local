@@ -15,6 +15,10 @@ app:
     subscribed_user_agent_creation_24h_limit: 2
   gcp_service_account_key: ".secrets/gcp-service-account-key.json"
 
+sentry:
+  dsn: "https://35871471ace10dd7da9a7e26fe516fa4@o4510350447411200.ingest.us.sentry.io/4510350448459776"
+  enabled: true
+
 security:
   secret_key: "your-secret-key-here"
   algorithm: "HS256"

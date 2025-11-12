@@ -16,6 +16,7 @@ app:
 
 sentry:
   dsn: "https://35871471ace10dd7da9a7e26fe516fa4@o4510350447411200.ingest.us.sentry.io/4510350448459776"
+  enabled: true
 
 security:
   secret_key: "your-secret-key-here"
