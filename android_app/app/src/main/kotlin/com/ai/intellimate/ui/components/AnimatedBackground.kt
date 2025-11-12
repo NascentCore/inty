@@ -347,7 +347,7 @@ fun AnimatedBackground(
                                 this.player = exoPlayerInstance
                                 useController = false
                                 resizeMode =
-                                    androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                    androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
                                 visibility = android.view.View.VISIBLE
                                 alpha = if (!shouldShowVideo) 0f else 1f
 
