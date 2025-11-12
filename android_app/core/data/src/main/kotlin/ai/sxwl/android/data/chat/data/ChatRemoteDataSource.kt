@@ -43,7 +43,10 @@ class ChatRemoteDataSource {
         }
     }
 
-    suspend fun generateImage(
+    /**
+     * 消息生图的接口请求
+     */
+    suspend fun messageGenerateImage(
         agentId: String,
         messageId: String,
     ): HttpResult<ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult> {

@@ -365,7 +365,7 @@ class ChatRepositoryImpl(
         )
         localDataSource.updateMessageGeneratedImage(agentId, messageId, loadingImage)
 
-        val result = remoteDataSource.generateImage(agentId, messageId)
+        val result = remoteDataSource.messageGenerateImage(agentId, messageId)
 
         when (result) {
             is HttpResult.Success -> {
