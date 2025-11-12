@@ -55,23 +55,10 @@ def test_text_to_image_endpoint(integration_client: TestClient):
     assert all(url.startswith("http") for url in image_urls)
 
 
-@pytest.mark.noci
-def test_create_agent_with_empty_background(integration_client: TestClient):
-    """测试当 background 字段为空字符串时创建 agent 的行为
-
-    验证行为：
-    1. Agent 应该成功创建
-    2. 空字符串的 background 会被保留（不会转换为 None）
-    3. 其他字段应该正常保存
-    
-    技术细节：
-    - process_agent_image_urls 中的 `if processed_data.get("background"):` 
-      对空字符串返回 False，导致验证代码块被跳过
-    - 因此空字符串直接保留，不经过 GCS URL 验证
-
-    注意：此测试需要后端服务运行在 localhost:8000
-    运行方式：./start.sh --dev（开发模式）
-    """
+@pytest.mark.parametrize("background", ["", None])
+def test_create_agent_with_empty_background(
+    integration_client: TestClient, background: str
+):
 
     # 测试数据：background 为空字符串
     agent_data = {
@@ -82,7 +69,7 @@ def test_create_agent_with_empty_background(integration_client: TestClient):
         "scenario": "用于测试空背景字段的场景",
         "intro": "这是一个测试角色",
         "opening": "你好！我是用来测试空背景的角色。",
-        "background": "",  # 空字符串
+        "background": background,
     }
 
     # 发送创建请求
@@ -107,9 +94,11 @@ def test_create_agent_with_empty_background(integration_client: TestClient):
     assert agent["scenario"] == agent_data["scenario"]
 
     # 关键验证：background 为空字符串时的实际行为
-    # 由于 process_agent_image_urls 中的条件 `if processed_data.get("background"):` 
+    # 由于 process_agent_image_urls 中的条件 `if processed_data.get("background"):`
     # 对空字符串返回 False，验证代码块被跳过，空字符串被保留
-    assert agent["background"] == "", f"Expected background to be empty string, but got: {agent['background']}"
+    assert (
+        agent["background"] == background
+    ), f"Expected background to be {background}, but got: {agent['background']}"
 
     # 验证 agent 有唯一 ID
     assert agent["id"]
