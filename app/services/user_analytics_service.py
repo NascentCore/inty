@@ -1,5 +1,6 @@
 """用户数据分析服务 - 将脚本查询逻辑重构为异步服务"""
 
+import json
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -403,10 +404,10 @@ class UserAnalyticsService:
         query = text(f"""
             SELECT
                 ch.session_id::text as session_id,
-                ch.message->>'type' as message_type,
-                ch.message->>'content' as content,
+                ch.message,
                 ch.created_at,
-                ch.audio_url
+                ch.audio_url,
+                ch.meta_data
             FROM chat_history ch
             WHERE ch.session_id::text IN ({placeholders})
             ORDER BY ch.created_at
@@ -420,16 +421,73 @@ class UserAnalyticsService:
         for row in rows:
             session_id = row[0]
             chat_id = session_to_chat.get(session_id)
-            if chat_id:
-                data.append(
-                    {
-                        "chat_id": chat_id,
-                        "message_type": row[1],
-                        "content": row[2],
-                        "created_at": row[3].isoformat() if row[3] else None,
-                        "audio_url": row[4],
-                    }
+            if not chat_id:
+                continue
+
+            raw_message = row[1]
+            created_at = row[2]
+            audio_url = row[3]
+            meta_data = row[4]
+
+            message_dict: Dict[str, Any] = {}
+            if isinstance(raw_message, dict):
+                message_dict = raw_message
+            elif isinstance(raw_message, str):
+                try:
+                    message_dict = json.loads(raw_message)
+                except json.JSONDecodeError:
+                    message_dict = {}
+
+            raw_type = message_dict.get("type")
+            if not raw_type and isinstance(message_dict.get("data"), dict):
+                raw_type = message_dict["data"].get("type")
+
+            message_type = (raw_type or "").lower()
+            if message_type in {"human", "user", "humanmessage"}:
+                message_type = "human"
+            elif message_type in {"ai", "assistant", "aimessage"}:
+                message_type = "ai"
+            elif message_type == "system":
+                message_type = "system"
+            else:
+                message_type = "unknown"
+
+            content = None
+            if isinstance(message_dict.get("data"), dict):
+                content = message_dict["data"].get("content") or message_dict["data"].get(
+                    "text"
                 )
+            if not content:
+                content = message_dict.get("content") or message_dict.get("text")
+
+            if content is None and message_type == "image":
+                # 图片消息内容为空时，尝试提供提示词或URL
+                if isinstance(message_dict.get("data"), dict):
+                    content = (
+                        message_dict["data"].get("prompt")
+                        or message_dict["data"].get("image_url")
+                    )
+
+            # 最后兜底为原始JSON字符串，保证前端可见
+            if content is None:
+                content = (
+                    raw_message
+                    if isinstance(raw_message, str)
+                    else json.dumps(raw_message, ensure_ascii=False)
+                    if raw_message is not None
+                    else ""
+                )
+
+            data.append(
+                {
+                    "chat_id": chat_id,
+                    "message_type": message_type,
+                    "content": content,
+                    "created_at": created_at.isoformat() if created_at else None,
+                    "audio_url": audio_url,
+                    "meta_data": meta_data,
+                }
+            )
 
         return data
 
