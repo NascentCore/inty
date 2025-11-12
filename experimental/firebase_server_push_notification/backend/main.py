@@ -59,7 +59,9 @@ class ResultStore:
     async def set_result(self, job_id: str, data: Dict[str, Any]) -> None:
         async with self._lock:
             if job_id not in self._results:
-                self._results[job_id] = JobResult(job_id=job_id, status=JobStatus.FINISHED, result=data)
+                self._results[job_id] = JobResult(
+                    job_id=job_id, status=JobStatus.FINISHED, result=data
+                )
                 return
             self._results[job_id].status = JobStatus.FINISHED
             self._results[job_id].result = data
@@ -123,7 +125,9 @@ notifier = FirebaseNotifier()
 app = FastAPI(title="Firebase Server Push Demo")
 
 
-async def process_job(job_id: str, device_token: str, payload: Optional[Dict[str, Any]]) -> None:
+async def process_job(
+    job_id: str, device_token: str, payload: Optional[Dict[str, Any]]
+) -> None:
     """模拟耗时任务：等待 5 秒并生成结果。"""
 
     logger.info("开始处理 job_id=%s", job_id)
@@ -140,10 +144,14 @@ async def process_job(job_id: str, device_token: str, payload: Optional[Dict[str
 
 
 @app.post("/process", response_model=JobResult)
-async def submit_process(request: ProcessRequest, background_tasks: BackgroundTasks) -> JobResult:
+async def submit_process(
+    request: ProcessRequest, background_tasks: BackgroundTasks
+) -> JobResult:
     job_id = uuid.uuid4().hex
     await result_store.create_job(job_id)
-    background_tasks.add_task(process_job, job_id, request.device_token, request.payload)
+    background_tasks.add_task(
+        process_job, job_id, request.device_token, request.payload
+    )
     logger.info("收到新任务 job_id=%s", job_id)
     return JobResult(job_id=job_id, status=JobStatus.PENDING)
 

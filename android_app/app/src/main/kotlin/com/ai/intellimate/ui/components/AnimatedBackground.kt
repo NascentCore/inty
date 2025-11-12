@@ -25,40 +25,35 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 
-/**
- * 判断 URL 是否为视频格式
- */
+/** 判断 URL 是否为视频格式 */
 private fun isVideoUrl(url: String?): Boolean {
     if (url.isNullOrBlank()) return false
     val lowerUrl = url.lowercase()
-    return lowerUrl.endsWith(".mp4") || lowerUrl.endsWith(".webm") || lowerUrl.contains(".mp4?") || lowerUrl.contains(
-        ".webm?"
-    )
+    return lowerUrl.endsWith(".mp4") ||
+        lowerUrl.endsWith(".webm") ||
+        lowerUrl.contains(".mp4?") ||
+        lowerUrl.contains(".webm?")
 }
 
-/**
- * 判断 URL 是否为 GIF 格式
- */
+/** 判断 URL 是否为 GIF 格式 */
 private fun isGifUrl(url: String?): Boolean {
     if (url.isNullOrBlank()) return false
     val lowerUrl = url.lowercase()
     return lowerUrl.endsWith(".gif") || lowerUrl.contains(".gif?")
 }
 
-/**
- * 基于 ExoPlayer 的视频播放器，支持播放次数控制和错误处理
- */
+/** 基于 ExoPlayer 的视频播放器，支持播放次数控制和错误处理 */
 private class ControlledExoPlayer(
     context: Context,
     private val onPrepared: () -> Unit,
     private val onError: (String) -> Unit,
-    private val onPlayComplete: () -> Unit
+    private val onPlayComplete: () -> Unit,
 ) : Player.Listener {
     private var exoPlayer: ExoPlayer? = null
     private var playCount = 0
@@ -72,24 +67,21 @@ private class ControlledExoPlayer(
 
     private fun initializePlayer(context: Context) {
         try {
-            val okHttpClient = OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .writeTimeout(30, TimeUnit.SECONDS)
-                .retryOnConnectionFailure(true)
-                .build()
+            val okHttpClient =
+                OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .writeTimeout(30, TimeUnit.SECONDS)
+                    .retryOnConnectionFailure(true)
+                    .build()
 
-            val dataSourceFactory = DefaultDataSource.Factory(
-                context,
-                OkHttpDataSource.Factory(okHttpClient)
-            )
+            val dataSourceFactory =
+                DefaultDataSource.Factory(context, OkHttpDataSource.Factory(okHttpClient))
 
             val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
 
-            exoPlayer = ExoPlayer.Builder(context)
-                .setMediaSourceFactory(mediaSourceFactory)
-                .build()
-                .apply {
+            exoPlayer =
+                ExoPlayer.Builder(context).setMediaSourceFactory(mediaSourceFactory).build().apply {
                     addListener(this@ControlledExoPlayer)
                     playWhenReady = false
                     volume = 0f
@@ -183,9 +175,7 @@ private class ControlledExoPlayer(
     }
 }
 
-/**
- * 动图/视频背景播放组件
- */
+/** 动图/视频背景播放组件 */
 @Composable
 fun AnimatedBackground(
     videoUrl: String?,
@@ -215,9 +205,7 @@ fun AnimatedBackground(
         if (isVideo && videoUrl != null) {
             videoPath = videoCacheManager.getVideoPath(videoUrl)
             if (!videoCacheManager.isCached(videoUrl)) {
-                launch(Dispatchers.IO) {
-                    videoCacheManager.preloadVideo(videoUrl)
-                }
+                launch(Dispatchers.IO) { videoCacheManager.preloadVideo(videoUrl) }
             }
         } else {
             videoPath = null
@@ -232,7 +220,7 @@ fun AnimatedBackground(
         isGif,
         videoPath,
         controlledPlayer,
-        videoPrepared
+        videoPrepared,
     ) {
         if (shouldPlay && (isVideo || isGif)) {
             currentPlayCount = playCount
@@ -254,7 +242,13 @@ fun AnimatedBackground(
     }
 
     LaunchedEffect(videoPrepared, shouldPlay, currentPlayCount, controlledPlayer) {
-        if (videoPrepared && shouldPlay && currentPlayCount > 0 && controlledPlayer != null && isVideo) {
+        if (
+            videoPrepared &&
+                shouldPlay &&
+                currentPlayCount > 0 &&
+                controlledPlayer != null &&
+                isVideo
+        ) {
             delay(100)
             controlledPlayer?.setPlayCount(currentPlayCount)
             controlledPlayer?.startPlayback()
@@ -277,14 +271,15 @@ fun AnimatedBackground(
         isGif,
         videoError,
         videoUrl,
-        staticImageUrl
+        staticImageUrl,
     ) {
         if (videoUrl != null && staticImageUrl != null && showStaticImage) {
-            val shouldSwitch = when {
-                isVideo -> staticImageLoaded && videoPrepared && videoError == null
-                isGif -> staticImageLoaded
-                else -> false
-            }
+            val shouldSwitch =
+                when {
+                    isVideo -> staticImageLoaded && videoPrepared && videoError == null
+                    isGif -> staticImageLoaded
+                    else -> false
+                }
 
             if (shouldSwitch) {
                 delay(300)
@@ -302,18 +297,17 @@ fun AnimatedBackground(
                 model = ImageRequest.Builder(context).data(staticImageUrl).build(),
                 contentDescription = null,
                 contentScale = contentScale,
-                onSuccess = {
-                    staticImageLoaded = true
-                },
+                onSuccess = { staticImageLoaded = true },
             )
         }
 
-        val shouldShowVideo = when {
-            staticImageUrl == null -> true
-            isVideo -> !showStaticImage && videoPrepared && videoError == null
-            isGif -> !showStaticImage && staticImageLoaded
-            else -> false
-        }
+        val shouldShowVideo =
+            when {
+                staticImageUrl == null -> true
+                isVideo -> !showStaticImage && videoPrepared && videoError == null
+                isGif -> !showStaticImage && staticImageLoaded
+                else -> false
+            }
 
         val shouldLoadVideo =
             videoUrl != null && isVideo && (staticImageUrl == null || staticImageLoaded)
@@ -325,19 +319,16 @@ fun AnimatedBackground(
                 isVideo -> {
                     AndroidView(
                         factory = { ctx ->
-                            val player = ControlledExoPlayer(
-                                context = ctx,
-                                onPrepared = {
-                                    videoPrepared = true
-                                },
-                                onError = { errorMsg ->
-                                    videoError = errorMsg
-                                    videoPrepared = false
-                                },
-                                onPlayComplete = {
-                                    onPlayComplete()
-                                }
-                            )
+                            val player =
+                                ControlledExoPlayer(
+                                    context = ctx,
+                                    onPrepared = { videoPrepared = true },
+                                    onError = { errorMsg ->
+                                        videoError = errorMsg
+                                        videoPrepared = false
+                                    },
+                                    onPlayComplete = { onPlayComplete() },
+                                )
 
                             controlledPlayer = player
                             player.setVideoUrl(videoUrl ?: "")
@@ -384,12 +375,17 @@ fun AnimatedBackground(
                                     playerView.visibility = android.view.View.VISIBLE
                                 }
 
-                                if (shouldPlay && currentPlayCount > 0 && videoPath != null && shouldShowVideo) {
+                                if (
+                                    shouldPlay &&
+                                        currentPlayCount > 0 &&
+                                        videoPath != null &&
+                                        shouldShowVideo
+                                ) {
                                     player.setPlayCount(currentPlayCount)
                                     player.startPlayback()
                                 }
                             }
-                        }
+                        },
                     )
 
                     DisposableEffect(videoUrl) {

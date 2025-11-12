@@ -94,20 +94,22 @@ internal fun ChatPage(
     val isQueryMsgsCompleted by chatViewModel.isQueryMsgsCompleted.collectAsState()
     val chatMessages by chatViewModel.msgs.collectAsState()
 
-    val hasLoadingMessage = remember(chatMessages) {
-        chatMessages.any { msg ->
-            val hasGeneratedImage = msg.hasGeneratedImage()
-            val generatedImageUrl = msg.getGeneratedImageUrl()
-            msg.content == "loading_animation" &&
+    val hasLoadingMessage =
+        remember(chatMessages) {
+            chatMessages.any { msg ->
+                val hasGeneratedImage = msg.hasGeneratedImage()
+                val generatedImageUrl = msg.getGeneratedImageUrl()
+                msg.content == "loading_animation" &&
                     !hasGeneratedImage &&
                     generatedImageUrl != "loading"
+            }
         }
-    }
 
     LaunchedEffect(isCurrentPage, agentInfo?.id) {
         if (isCurrentPage) {
             val pageSource =
-                if (showBackButton) ChatPageSource.CHAT_ACTIVITY else ChatPageSource.MAIN_ACTIVITY_HOME_TAB
+                if (showBackButton) ChatPageSource.CHAT_ACTIVITY
+                else ChatPageSource.MAIN_ACTIVITY_HOME_TAB
             PageTrackingHelper.trackPageView(
                 "ChatPage",
                 if (showBackButton) "ChatActivity" else "MainActivity",
@@ -116,7 +118,7 @@ internal fun ChatPage(
                     "agent_name" to (agentInfo?.name ?: "unknown"),
                     "show_back_button" to showBackButton,
                     "page_source" to pageSource,
-                )
+                ),
             )
         }
     }
@@ -198,25 +200,17 @@ internal fun ChatPage(
         val scope = rememberCoroutineScope()
 
         Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent),
+            modifier = Modifier.fillMaxSize().background(Color.Transparent),
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
         ) { innerPadding ->
             Box(modifier = Modifier.fillMaxSize()) {
-                Column(
-                    modifier = Modifier
-                        .padding(innerPadding)
-                        .imePadding()
-                ) {
+                Column(modifier = Modifier.padding(innerPadding).imePadding()) {
                     Spacer(Modifier.height(48.dp))
 
                     agentInfo?.let { info ->
                         ChatTopBar(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 18.dp),
+                            modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
                             agentInfo = info,
                             showBackButton = showBackButton,
                             onBack = onBack,
@@ -248,7 +242,7 @@ internal fun ChatPage(
                                         showPremiumDialog = true
                                     }
                                 }
-                            },
+                            }
                         )
                         Spacer(Modifier.height(8.dp))
                         if (showPremiumDialog) {
@@ -272,89 +266,91 @@ internal fun ChatPage(
                         totalItemsForUi > visibleItemsForUi.size + LOAD_MORE_MIN_EXTRA_ITEMS
                     val isNearTopForUi =
                         totalItemsForUi > 0 &&
-                                lastVisibleIndexForUi >= (totalItemsForUi - LOAD_MORE_NEAR_TOP_THRESHOLD)
+                            lastVisibleIndexForUi >=
+                                (totalItemsForUi - LOAD_MORE_NEAR_TOP_THRESHOLD)
                     val hasScrolledForUi =
                         listState.firstVisibleItemIndex > 0 ||
-                                listState.firstVisibleItemScrollOffset > 0
+                            listState.firstVisibleItemScrollOffset > 0
                     val showLoadMoreUi =
                         hasMoreMessages &&
-                                (isLoadingMore ||
-                                        (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
+                            (isLoadingMore ||
+                                (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
 
                     LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 16.dp),
+                        modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
                         state = listState,
                         reverseLayout = true,
                     ) {
                         item { Spacer(Modifier.height(16.dp)) }
                         val filteredChatMessages = chatMessages.filter { !it.isOpening() }
                         runCatching {
-                            if (filteredChatMessages.isNotEmpty()) {
-                                val messagesCopy = filteredChatMessages.toList()
-                                val items =
-                                    messagesCopy.filter {
-                                        !(it.role == "user" && it.content == "continue")
-                                    }
-                                if (items.isNotEmpty()) {
-                                    itemsIndexed(
-                                        items,
-                                        key = { index, info ->
-                                            info.localMsgId.ifEmpty {
-                                                "${index}_${info.role}_${info.content.hashCode()}_${index}"
-                                            }
-                                        },
-                                    ) { index, item ->
-                                        runCatching {
-                                            if (index < items.size) {
-                                                val hasGeneratedImage = item.hasGeneratedImage()
-                                                val isImageMessage =
-                                                    item.content.isEmpty() && hasGeneratedImage
-                                                val isLatestAssistantTextMessage =
-                                                    index == 0 &&
-                                                            item.role == "assistant" &&
-                                                            item.content != "loading_animation" &&
-                                                            !isImageMessage
-
-                                                ChatItem(
-                                                    item,
-                                                    isCurrentPage = isCurrentPage,
-                                                    chatViewModel = chatViewModel,
-                                                    isLatestMessage = isLatestAssistantTextMessage,
-                                                )
-                                            }
-                                            Spacer(Modifier.height(16.dp))
+                                if (filteredChatMessages.isNotEmpty()) {
+                                    val messagesCopy = filteredChatMessages.toList()
+                                    val items =
+                                        messagesCopy.filter {
+                                            !(it.role == "user" && it.content == "continue")
                                         }
-                                            .onFailure { e ->
-                                                // 渲染失败时显示错误占位符
-                                                Box(
-                                                    modifier =
-                                                        Modifier
-                                                            .fillMaxWidth()
-                                                            .height(60.dp)
-                                                            .background(
-                                                                Color.Red.copy(alpha = 0.1f)
-                                                            )
-                                                ) {
-                                                    Text(
-                                                        text = "Message loading failed",
-                                                        color = Color.White,
-                                                        modifier = Modifier.align(Alignment.Center),
-                                                    )
+                                    if (items.isNotEmpty()) {
+                                        itemsIndexed(
+                                            items,
+                                            key = { index, info ->
+                                                info.localMsgId.ifEmpty {
+                                                    "${index}_${info.role}_${info.content.hashCode()}_${index}"
                                                 }
-                                                Spacer(Modifier.height(16.dp))
-                                            }
+                                            },
+                                        ) { index, item ->
+                                            runCatching {
+                                                    if (index < items.size) {
+                                                        val hasGeneratedImage =
+                                                            item.hasGeneratedImage()
+                                                        val isImageMessage =
+                                                            item.content.isEmpty() &&
+                                                                hasGeneratedImage
+                                                        val isLatestAssistantTextMessage =
+                                                            index == 0 &&
+                                                                item.role == "assistant" &&
+                                                                item.content !=
+                                                                    "loading_animation" &&
+                                                                !isImageMessage
+
+                                                        ChatItem(
+                                                            item,
+                                                            isCurrentPage = isCurrentPage,
+                                                            chatViewModel = chatViewModel,
+                                                            isLatestMessage =
+                                                                isLatestAssistantTextMessage,
+                                                        )
+                                                    }
+                                                    Spacer(Modifier.height(16.dp))
+                                                }
+                                                .onFailure { e ->
+                                                    // 渲染失败时显示错误占位符
+                                                    Box(
+                                                        modifier =
+                                                            Modifier.fillMaxWidth()
+                                                                .height(60.dp)
+                                                                .background(
+                                                                    Color.Red.copy(alpha = 0.1f)
+                                                                )
+                                                    ) {
+                                                        Text(
+                                                            text = "Message loading failed",
+                                                            color = Color.White,
+                                                            modifier =
+                                                                Modifier.align(Alignment.Center),
+                                                        )
+                                                    }
+                                                    Spacer(Modifier.height(16.dp))
+                                                }
+                                        }
                                     }
                                 }
                             }
-                        }
                             .onFailure { e ->
                                 item {
                                     Box(
                                         modifier =
-                                            Modifier
-                                                .fillMaxWidth()
+                                            Modifier.fillMaxWidth()
                                                 .height(100.dp)
                                                 .background(Color.Red.copy(alpha = 0.1f))
                                     ) {
@@ -406,23 +402,21 @@ internal fun ChatPage(
                         if (showLoadMoreUi) {
                             item {
                                 Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(60.dp),
+                                    modifier = Modifier.fillMaxWidth().height(60.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     if (isLoadingMore) {
                                         CircularProgressIndicator(
                                             color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier
-                                                .width(24.dp)
-                                                .height(24.dp),
+                                            modifier = Modifier.width(24.dp).height(24.dp),
                                         )
                                     } else {
                                         Text(
                                             text = "Pull to load more",
                                             color =
-                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                                MaterialTheme.colorScheme.onSurface.copy(
+                                                    alpha = 0.6f
+                                                ),
                                             style = MaterialTheme.typography.bodySmall,
                                         )
                                     }
@@ -433,35 +427,35 @@ internal fun ChatPage(
 
                     LaunchedEffect(hasMoreMessages, isLoadingMore, chatMessages.size) {
                         snapshotFlow {
-                            listState.firstVisibleItemIndex to
+                                listState.firstVisibleItemIndex to
                                     listState.firstVisibleItemScrollOffset
-                        }.collect { (firstVisibleIndex, scrollOffset) ->
-                            delay(100)
-                            val layoutInfo = listState.layoutInfo
-                            val visibleItems = layoutInfo.visibleItemsInfo
-                            val totalItemsCount = layoutInfo.totalItemsCount
-                            val lastVisibleIndex = visibleItems.maxOfOrNull { it.index } ?: 0
-
-                            val hasEnoughData =
-                                totalItemsCount > visibleItems.size + LOAD_MORE_MIN_EXTRA_ITEMS
-                            val isNearTop =
-                                totalItemsCount > 0 &&
-                                        lastVisibleIndex >=
-                                        (totalItemsCount - LOAD_MORE_NEAR_TOP_THRESHOLD)
-                            val hasScrolled = firstVisibleIndex > 0 || scrollOffset > 0
-                            val shouldLoadMore = hasEnoughData && isNearTop && hasScrolled
-
-                            if (shouldLoadMore && hasMoreMessages && !isLoadingMore) {
-                                chatViewModel.loadMoreMessages()
                             }
-                        }
+                            .collect { (firstVisibleIndex, scrollOffset) ->
+                                delay(100)
+                                val layoutInfo = listState.layoutInfo
+                                val visibleItems = layoutInfo.visibleItemsInfo
+                                val totalItemsCount = layoutInfo.totalItemsCount
+                                val lastVisibleIndex = visibleItems.maxOfOrNull { it.index } ?: 0
+
+                                val hasEnoughData =
+                                    totalItemsCount > visibleItems.size + LOAD_MORE_MIN_EXTRA_ITEMS
+                                val isNearTop =
+                                    totalItemsCount > 0 &&
+                                        lastVisibleIndex >=
+                                            (totalItemsCount - LOAD_MORE_NEAR_TOP_THRESHOLD)
+                                val hasScrolled = firstVisibleIndex > 0 || scrollOffset > 0
+                                val shouldLoadMore = hasEnoughData && isNearTop && hasScrolled
+
+                                if (shouldLoadMore && hasMoreMessages && !isLoadingMore) {
+                                    chatViewModel.loadMoreMessages()
+                                }
+                            }
                     }
 
                     if (agentInfo?.isDeleted == true) {
                         Box(
                             modifier =
-                                Modifier
-                                    .fillMaxWidth()
+                                Modifier.fillMaxWidth()
                                     .height(48.dp)
                                     .padding(horizontal = 16.dp)
                                     .clip(RoundedCornerShape(24.dp))
@@ -502,18 +496,19 @@ internal fun ChatPage(
                         val hasGeneratedImage = msg.hasGeneratedImage()
                         val isImageMessage = msg.content.isEmpty() && hasGeneratedImage
                         msg.role == "assistant" &&
-                                msg.content != "loading_animation" &&
-                                !isImageMessage &&
-                                !msg.isOpening()
+                            msg.content != "loading_animation" &&
+                            !isImageMessage &&
+                            !msg.isOpening()
                     } != null
 
-                val hasLoadingMessageForButton = chatMessagesForButton.any { msg ->
-                    val hasGeneratedImage = msg.hasGeneratedImage()
-                    val generatedImageUrl = msg.getGeneratedImageUrl()
-                    msg.content == "loading_animation" &&
+                val hasLoadingMessageForButton =
+                    chatMessagesForButton.any { msg ->
+                        val hasGeneratedImage = msg.hasGeneratedImage()
+                        val generatedImageUrl = msg.getGeneratedImageUrl()
+                        msg.content == "loading_animation" &&
                             !hasGeneratedImage &&
                             generatedImageUrl != "loading"
-                }
+                    }
 
                 val showKeepTalkingButton = shouldShowButton && hasLatestAssistantMessage
                 val isKeepTalkingEnabled = !hasLoadingMessageForButton
@@ -522,16 +517,16 @@ internal fun ChatPage(
                 val effectiveBottomPaddingForButton =
                     if (showMorePanel) morePanelHeight else bottomPadding
                 val imeHeightDp = with(LocalDensity.current) { imeHeight.toDp() }
-                val buttonBottomOffset = if (showBackButton) {
-                    chatInputEstimatedHeight + effectiveBottomPaddingForButton
-                } else {
-                    chatInputEstimatedHeight + effectiveBottomPaddingForButton + imeHeightDp
-                }
+                val buttonBottomOffset =
+                    if (showBackButton) {
+                        chatInputEstimatedHeight + effectiveBottomPaddingForButton
+                    } else {
+                        chatInputEstimatedHeight + effectiveBottomPaddingForButton + imeHeightDp
+                    }
 
                 KeepTalkingFloatingButton(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(bottom = buttonBottomOffset),
+                    modifier =
+                        Modifier.align(Alignment.BottomEnd).padding(bottom = buttonBottomOffset),
                     visible = showKeepTalkingButton,
                     enabled = isKeepTalkingEnabled,
                     onClick = { chatViewModel.sendKeepTalkingMessage() },
@@ -618,21 +613,23 @@ private fun ShowImageGenerationDialog(chatViewModel: ChatViewModel) {
     val dialogData by chatViewModel.showImageGenerationDialog.collectAsState()
 
     dialogData?.let { data ->
-        val content = when (data.errorType) {
-            ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
-                stringResource(R.string.image_generation_free_limit_content)
+        val content =
+            when (data.errorType) {
+                ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
+                    stringResource(R.string.image_generation_free_limit_content)
+                }
+
+                ChatViewModel.ImageGenerationErrorType.VIP_USER_LIMIT_REACHED -> {
+                    stringResource(R.string.image_generation_vip_limit_content)
+                }
             }
 
-            ChatViewModel.ImageGenerationErrorType.VIP_USER_LIMIT_REACHED -> {
-                stringResource(R.string.image_generation_vip_limit_content)
-            }
-        }
-
-        val dialogDataForUI = ChatDialogData(
-            R.drawable.img_unlimit_dialog_bg,
-            content,
-            stringResource(R.string.str_unlimit_btn_text),
-        )
+        val dialogDataForUI =
+            ChatDialogData(
+                R.drawable.img_unlimit_dialog_bg,
+                content,
+                stringResource(R.string.str_unlimit_btn_text),
+            )
 
         UnlimitChatDialog(
             dialogDataForUI,
@@ -645,8 +642,7 @@ private fun ShowImageGenerationDialog(chatViewModel: ChatViewModel) {
                         }
                     }
 
-                    ChatViewModel.ImageGenerationErrorType.VIP_USER_LIMIT_REACHED -> {
-                    }
+                    ChatViewModel.ImageGenerationErrorType.VIP_USER_LIMIT_REACHED -> {}
                 }
                 chatViewModel.dismissImageGenerationDialog()
             },
@@ -658,8 +654,7 @@ private fun ShowImageGenerationDialog(chatViewModel: ChatViewModel) {
                         }
                     }
 
-                    ChatViewModel.ImageGenerationErrorType.VIP_USER_LIMIT_REACHED -> {
-                    }
+                    ChatViewModel.ImageGenerationErrorType.VIP_USER_LIMIT_REACHED -> {}
                 }
                 chatViewModel.dismissImageGenerationDialog()
             },

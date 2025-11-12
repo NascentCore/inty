@@ -96,7 +96,7 @@ class AvatarGenerateViewModel : BaseVM() {
                     val errorMessage =
                         NetworkErrorHandler.handleNetworkException(
                             exception = e,
-                            operation = "generate avatar"
+                            operation = "generate avatar",
                         )
                     AvatarManager.setGenerationError(errorMessage)
                     _errorMessage.value = errorMessage

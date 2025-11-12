@@ -5,10 +5,10 @@ import android.content.Context
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingResult
 
-/** Billing错误日志记录工具类 - 仅用于记录日志，不涉及UI
+/**
+ * Billing错误日志记录工具类 - 仅用于记录日志，不涉及UI
  *
- * 注意：此工具类仅负责在 data 模块内部记录错误日志。
- * UI 层面的错误处理请使用 app 模块中的 BillingErrorHandler。
+ * 注意：此工具类仅负责在 data 模块内部记录错误日志。 UI 层面的错误处理请使用 app 模块中的 BillingErrorHandler。
  */
 object BillingErrorLogger {
 
@@ -127,30 +127,15 @@ object BillingErrorLogger {
                 }
 
                 BillingClient.BillingResponseCode.NETWORK_ERROR -> {
-                    listOf(
-                        "1. 检查网络连接",
-                        "2. 尝试切换WiFi/移动网络",
-                        "3. 检查防火墙设置",
-                        "4. 等待网络稳定后重试"
-                    )
+                    listOf("1. 检查网络连接", "2. 尝试切换WiFi/移动网络", "3. 检查防火墙设置", "4. 等待网络稳定后重试")
                 }
 
                 BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {
-                    listOf(
-                        "1. 检查商品ID配置是否正确",
-                        "2. 确认应用签名是否匹配",
-                        "3. 检查测试用户设置",
-                        "4. 联系开发者支持"
-                    )
+                    listOf("1. 检查商品ID配置是否正确", "2. 确认应用签名是否匹配", "3. 检查测试用户设置", "4. 联系开发者支持")
                 }
 
                 else -> {
-                    listOf(
-                        "1. 尝试重启应用",
-                        "2. 检查设备状态",
-                        "3. 等待一段时间后重试",
-                        "4. 联系客服支持"
-                    )
+                    listOf("1. 尝试重启应用", "2. 检查设备状态", "3. 等待一段时间后重试", "4. 联系客服支持")
                 }
             }
 

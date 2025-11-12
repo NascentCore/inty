@@ -80,33 +80,28 @@ fun AgentBackground(
     var imageHeightPx by remember { mutableStateOf<Int?>(null) }
 
     // 计算最佳的 ContentScale（单位统一为 dp）
-    val optimalContentScale = remember(
-        imageWidthPx,
-        imageHeightPx,
-        containerWidthDp,
-        containerHeightDp,
-        density
-    ) {
-        if (
-            imageWidthPx != null &&
-            imageHeightPx != null &&
-            imageWidthPx!! > 0 &&
-            imageHeightPx!! > 0
-        ) {
-            // 将图片尺寸从像素转换为 dp，确保单位一致
-            val imageWidthDpValue = with(density) { imageWidthPx!!.toFloat().toDp().value }
-            val imageHeightDpValue = with(density) { imageHeightPx!!.toFloat().toDp().value }
+    val optimalContentScale =
+        remember(imageWidthPx, imageHeightPx, containerWidthDp, containerHeightDp, density) {
+            if (
+                imageWidthPx != null &&
+                    imageHeightPx != null &&
+                    imageWidthPx!! > 0 &&
+                    imageHeightPx!! > 0
+            ) {
+                // 将图片尺寸从像素转换为 dp，确保单位一致
+                val imageWidthDpValue = with(density) { imageWidthPx!!.toFloat().toDp().value }
+                val imageHeightDpValue = with(density) { imageHeightPx!!.toFloat().toDp().value }
 
-            calculateOptimalContentScale(
-                containerWidthDp = containerWidthDp,
-                containerHeightDp = containerHeightDp,
-                imageWidthDp = imageWidthDpValue,
-                imageHeightDp = imageHeightDpValue,
-            )
-        } else {
-            ContentScale.Crop
+                calculateOptimalContentScale(
+                    containerWidthDp = containerWidthDp,
+                    containerHeightDp = containerHeightDp,
+                    imageWidthDp = imageWidthDpValue,
+                    imageHeightDp = imageHeightDpValue,
+                )
+            } else {
+                ContentScale.Crop
+            }
         }
-    }
 
     val context = LocalContext.current
     val backgroundGifUrl = agentInfo?.backgroundGifUrl?.takeIf { it.isNotBlank() }
@@ -123,11 +118,11 @@ fun AgentBackground(
         if (isCurrentPage && backgroundGifUrl != null) {
             val currentAgentId = agentInfo?.id
             val currentTime = System.currentTimeMillis()
-            val shouldTriggerPlay = currentAgentId != null && (
-                    currentAgentId != lastPlayedAgentId ||
-                            !lastPlayedPageState ||
-                            (currentTime - lastPlayedTimestamp > 1000)
-                    )
+            val shouldTriggerPlay =
+                currentAgentId != null &&
+                    (currentAgentId != lastPlayedAgentId ||
+                        !lastPlayedPageState ||
+                        (currentTime - lastPlayedTimestamp > 1000))
 
             if (shouldTriggerPlay) {
                 lastPlayedAgentId = currentAgentId
@@ -160,7 +155,7 @@ fun AgentBackground(
                         getCdnImageUrl(
                             staticImageUrl,
                             width = containerWidthPx,
-                            quality = CDN_IMAGE_QUALITY
+                            quality = CDN_IMAGE_QUALITY,
                         ) ?: staticImageUrl
                     )
                     .size(Size(containerWidthPx, containerHeightPx))
@@ -174,15 +169,12 @@ fun AgentBackground(
     Box(modifier = modifier) {
         Column(
             modifier =
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState(), false)
-                    .onSizeChanged {
-                        val newHeightDp = with(density) { it.height.toDp().value.roundToInt() }
-                        if (newHeightDp > containerHeightDp) {
-                            containerHeightDp = newHeightDp
-                        }
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState(), false).onSizeChanged {
+                    val newHeightDp = with(density) { it.height.toDp().value.roundToInt() }
+                    if (newHeightDp > containerHeightDp) {
+                        containerHeightDp = newHeightDp
                     }
+                }
         ) {
             if (backgroundGifUrl != null) {
                 AnimatedBackground(
@@ -218,26 +210,22 @@ fun AgentBackground(
             // 顶部渐变遮罩
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .height(TOP_GRADIENT_HEIGHT_DP.dp)
                         .background(
-                            brush = Brush.verticalGradient(
-                                listOf(Color(0xFF000000), Color(0x00000000))
-                            )
+                            brush =
+                                Brush.verticalGradient(listOf(Color(0xFF000000), Color(0x00000000)))
                         )
             )
 
             // 底部渐变遮罩
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .height(BOTTOM_GRADIENT_HEIGHT_DP.dp)
                         .background(
-                            brush = Brush.verticalGradient(
-                                listOf(Color(0x001C1523), Color(0xFF1C1523))
-                            )
+                            brush =
+                                Brush.verticalGradient(listOf(Color(0x001C1523), Color(0xFF1C1523)))
                         )
                         .align(Alignment.BottomCenter)
             )
@@ -246,9 +234,8 @@ fun AgentBackground(
 }
 
 /**
- * 根据容器和图片的宽高比计算最佳的 ContentScale
- * 只支持人像模式屏幕显示，即尽量不留左右两侧空白。
- * 当容器高宽比大于图片高宽比时，使用 FillHeight 填充高度，否则使用 FillWidth 填充宽度。
+ * 根据容器和图片的宽高比计算最佳的 ContentScale 只支持人像模式屏幕显示，即尽量不留左右两侧空白。 当容器高宽比大于图片高宽比时，使用 FillHeight 填充高度，否则使用
+ * FillWidth 填充宽度。
  *
  * @param containerWidthDp 容器宽度（dp）
  * @param containerHeightDp 容器高度（dp）

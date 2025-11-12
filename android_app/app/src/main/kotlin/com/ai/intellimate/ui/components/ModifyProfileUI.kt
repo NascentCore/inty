@@ -102,9 +102,7 @@ fun ProfileInfoScreen(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier
-                                .padding(horizontal = 12.dp)
-                                .noRippleClickable { onBack() },
+                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
                         painter = painterResource(R.drawable.back),
                         contentDescription = null,
                     )
@@ -164,16 +162,13 @@ fun ProfileInfoScreen(
 private fun AvatarSection(avatar: String, onSelectAvatar: () -> Unit) {
     Box(
         modifier =
-            Modifier
-                .size(120.dp)
+            Modifier.size(120.dp)
                 .background(color = Color.White, shape = CircleShape)
                 .padding(4.dp),
         contentAlignment = Alignment.Center,
     ) {
         AsyncImage(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(CircleShape),
+            modifier = Modifier.fillMaxSize().clip(CircleShape),
             model = ImageRequest.Builder(LocalContext.current).data(avatar).build(),
             placeholder = painterResource(R.drawable.app_icon),
             error = painterResource(R.drawable.app_icon),
@@ -181,12 +176,9 @@ private fun AvatarSection(avatar: String, onSelectAvatar: () -> Unit) {
         )
         Image(
             modifier =
-                Modifier
-                    .size(40.dp)
-                    .align(Alignment.BottomEnd)
-                    .noRippleClickable {
-                        onSelectAvatar()
-                    },
+                Modifier.size(40.dp).align(Alignment.BottomEnd).noRippleClickable {
+                    onSelectAvatar()
+                },
             painter = painterResource(R.drawable.icon_camera),
             contentDescription = null,
         )
@@ -233,15 +225,12 @@ fun ProfileInfoItem(
 fun SaveButton(onSave: () -> Unit, isSaving: Boolean = false) {
     Box(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .height(50.dp)
                 .background(
                     brush =
-                        Brush.linearGradient(
-                            colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))
-                        ),
+                        Brush.linearGradient(colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))),
                     shape = RoundedCornerShape(25.dp),
                 )
                 .noRippleClickable {
@@ -253,9 +242,7 @@ fun SaveButton(onSave: () -> Unit, isSaving: Boolean = false) {
         if (isSaving) {
             // 显示加载动画
             CircularProgressIndicator(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(24.dp),
+                modifier = Modifier.align(Alignment.Center).size(24.dp),
                 color = Color.White,
                 strokeWidth = 2.dp,
             )
@@ -280,15 +267,10 @@ fun EditDialog(
     onSave: (EditKey, String) -> Unit,
     onValueChange: (String) -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .imePadding()
-            .noRippleClickable { onDismiss() }) {
+    Box(modifier = Modifier.fillMaxSize().imePadding().noRippleClickable { onDismiss() }) {
         Column(
             modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
+                Modifier.align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .background(
                         brush =
@@ -304,10 +286,7 @@ fun EditDialog(
                 painter = painterResource(R.drawable.close),
                 contentDescription = null,
                 modifier =
-                    Modifier
-                        .padding(16.dp)
-                        .align(Alignment.End)
-                        .noRippleClickable { onDismiss() },
+                    Modifier.padding(16.dp).align(Alignment.End).noRippleClickable { onDismiss() },
             )
 
             // 标题
@@ -361,8 +340,7 @@ private fun EditContent(editKey: EditKey, editValue: String, onValueChange: (Str
 private fun NameEditField(value: String, onValueChange: (String) -> Unit) {
     Row(
         modifier =
-            Modifier
-                .padding(horizontal = 16.dp, vertical = 0.dp)
+            Modifier.padding(horizontal = 16.dp, vertical = 0.dp)
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
                 .background(Color.White.copy(0.1f), RoundedCornerShape(8.dp))
@@ -389,8 +367,7 @@ private fun PersonaEditField(value: String, onValueChange: (String) -> Unit) {
     val focusRequester = remember { FocusRequester() }
     Box(
         modifier =
-            Modifier
-                .padding(horizontal = 16.dp, vertical = 0.dp)
+            Modifier.padding(horizontal = 16.dp, vertical = 0.dp)
                 .fillMaxWidth()
                 .height(112.dp)
                 .background(Color.White.copy(0.1f), RoundedCornerShape(8.dp))
@@ -402,9 +379,7 @@ private fun PersonaEditField(value: String, onValueChange: (String) -> Unit) {
                 .clickable { focusRequester.requestFocus() }
     ) {
         IntySmallTextField2(
-            modifier = Modifier
-                .fillMaxSize()
-                .focusRequester(focusRequester),
+            modifier = Modifier.fillMaxSize().focusRequester(focusRequester),
             value = value,
             onValueChange = onValueChange,
             maxLength = 400,
@@ -419,9 +394,7 @@ private fun PersonaEditField(value: String, onValueChange: (String) -> Unit) {
             },
         )
         Text(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(12.dp, 8.dp),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp, 8.dp),
             text = stringResource(R.string.character_count_format_my, value.length),
             color = Color.White.copy(0.55f),
             fontSize = 12.sp,
@@ -435,10 +408,7 @@ private fun PersonaEditField(value: String, onValueChange: (String) -> Unit) {
 private fun PronounsEditField(value: String, onValueChange: (String) -> Unit) {
     Row(
         modifier =
-            Modifier
-                .padding(horizontal = 16.dp, vertical = 0.dp)
-                .fillMaxWidth()
-                .height(48.dp),
+            Modifier.padding(horizontal = 16.dp, vertical = 0.dp).fillMaxWidth().height(48.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PronounsItem(
@@ -470,8 +440,7 @@ private fun RowScope.PronounsItem(
 ) {
     Box(
         modifier =
-            Modifier
-                .weight(1f)
+            Modifier.weight(1f)
                 .fillMaxHeight()
                 .background(color = Color(0x3378599A), shape = RoundedCornerShape(24.dp))
                 .then(

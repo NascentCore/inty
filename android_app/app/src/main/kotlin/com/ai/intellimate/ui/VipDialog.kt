@@ -70,8 +70,7 @@ private fun OpenChatDialog(
     ) {
         Box(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .heightIn(430.dp)
                     .padding(horizontal = 24.dp)
                     .clip(RoundedCornerShape(8.dp))
@@ -83,9 +82,7 @@ private fun OpenChatDialog(
                 modifier = Modifier.matchParentSize(),
             )
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
@@ -115,7 +112,7 @@ private fun OpenChatDialog(
                         // 找到第一个 "!"，加粗从开头到 "!" 的部分（包含 "!"）
                         val boldText = content.take(firstExclamationIndex + 1)
                         val remainingText = content.substring(firstExclamationIndex + 1)
-                        
+
                         // 加粗部分
                         withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
                             append(boldText)
@@ -133,9 +130,7 @@ private fun OpenChatDialog(
                     fontWeight = FontWeight.Normal,
                     color = Color(0x8CFFFFFF),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 )
 
                 Spacer(Modifier.height(40.dp))
@@ -196,8 +191,7 @@ internal fun HeartPrimaryButton(btnText: String, enable: Boolean = true, onClick
 
     Box(
         modifier =
-            Modifier
-                .fillMaxWidth(.95f)
+            Modifier.fillMaxWidth(.95f)
                 .height(50.dp)
                 .clip(RoundedCornerShape(25.dp))
                 .alpha(if (enable) 1f else .4f)
@@ -227,10 +221,7 @@ internal fun HeartPrimaryButton(btnText: String, enable: Boolean = true, onClick
 internal fun BePremiumDialog(onDismiss: () -> Unit = {}) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 300.dp)
-                .padding(vertical = 20.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 300.dp).padding(vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -271,9 +262,7 @@ internal fun ExpiredVipDialog(
                 modifier = Modifier.matchParentSize(),
             )
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Image(
@@ -350,8 +339,7 @@ internal fun ReplyStyleSheet(
     ) {
         Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                     .background(
                         brush =
@@ -375,8 +363,7 @@ internal fun ReplyStyleSheet(
             )
             Spacer(Modifier.height(20.dp))
             HeartMultiLineEditor(
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .height(168.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(Color(0x1AFFFFFF)),

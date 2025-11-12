@@ -28,8 +28,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -138,10 +138,10 @@ fun ChatPageContainer(
             // 预取加载：当滑到倒数第5个左右时，触发下一页加载
             if (
                 IntySetting.isLogin() &&
-                IntySetting.getCurToken().isNotEmpty() &&
-                pageState.currentPage >= thresholdIndex &&
-                notEnd &&
-                canPrefetch
+                    IntySetting.getCurToken().isNotEmpty() &&
+                    pageState.currentPage >= thresholdIndex &&
+                    notEnd &&
+                    canPrefetch
             ) {
                 // 修复：使用更安全的预取方式
                 // 通过访问最后一个有效索引来触发Paging的append加载
@@ -244,34 +244,31 @@ private fun NewUserGuide(
             visible = showHand,
             enter =
                 fadeIn() +
-                        slideInHorizontally(
-                            initialOffsetX = { fullWidth -> fullWidth / 6 } // 从屏幕右侧1/6处出现
-                        ),
+                    slideInHorizontally(
+                        initialOffsetX = { fullWidth -> fullWidth / 6 } // 从屏幕右侧1/6处出现
+                    ),
             exit = fadeOut(targetAlpha = 0.01f) + slideOutHorizontally(targetOffsetX = { it }),
         ) {
             val scope = rememberCoroutineScope()
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .noRippleClickable {
-                            // 只有在引导期间才响应点击
-                            if (isGuideActive) {
-                                scope.launch {
-                                    showHand = false
-                                    pageState.animateScrollToPage(initialPageIndex)
-                                    IntySetting.setShowGuested()
-                                    onGuideCompleted()
-                                    isGuideActive = false
-                                }
+                    Modifier.fillMaxSize().noRippleClickable {
+                        // 只有在引导期间才响应点击
+                        if (isGuideActive) {
+                            scope.launch {
+                                showHand = false
+                                pageState.animateScrollToPage(initialPageIndex)
+                                IntySetting.setShowGuested()
+                                onGuideCompleted()
+                                isGuideActive = false
                             }
                         }
+                    }
             ) {
                 // 背景渐变框
                 Box(
                     modifier =
-                        Modifier
-                            .align(Alignment.TopEnd)
+                        Modifier.align(Alignment.TopEnd)
                             .padding(top = 340.dp)
                             .size(210.dp, 40.dp)
                             .background(
@@ -287,8 +284,7 @@ private fun NewUserGuide(
                 // 手势图标
                 Image(
                     modifier =
-                        Modifier
-                            .align(Alignment.TopEnd)
+                        Modifier.align(Alignment.TopEnd)
                             .padding(top = 340.dp, end = 92.dp)
                             .size(112.dp),
                     painter = painterResource(R.drawable.scroll_hand),

@@ -284,7 +284,6 @@ object UnifiedStartupManager {
         }
     }
 
-
     /** 同步用户信息 */
     private suspend fun syncUserProfile() {
         try {

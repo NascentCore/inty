@@ -74,28 +74,24 @@ fun HomeScreen(
     val selectedTab = mainViewModel.selectedTab.collectAsState()
 
     // 页面跟踪
-    LaunchedEffect(Unit) {
-        PageTrackingHelper.trackPageView("HomeScreen", "MainActivity")
-    }
+    LaunchedEffect(Unit) { PageTrackingHelper.trackPageView("HomeScreen", "MainActivity") }
 
     // 创建共享的 CreateRoleActivity launcher，用于处理从 Create Tab 创建后的刷新
     // 当 CreateRoleActivity 返回成功时，如果当前在 Profile Tab，需要刷新列表
     var shouldRefreshProfile by remember { mutableStateOf(false) }
-    val createRoleLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            // 标记需要刷新 Profile 列表
-            shouldRefreshProfile = true
+    val createRoleLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                // 标记需要刷新 Profile 列表
+                shouldRefreshProfile = true
+            }
         }
-    }
 
     Scaffold(
         modifier =
-            modifier
-                .fillMaxSize()
-                .background(HeartColor.primaryColor)
-                .navigationBarsPadding(),
+            modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
             val context = LocalContext.current
@@ -107,7 +103,7 @@ fun HomeScreen(
                         tabIndex,
                         context,
                         mainViewModel,
-                        createRoleLauncher
+                        createRoleLauncher,
                     )
                 },
             )
@@ -153,8 +149,8 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
             // 未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
             if (
                 !IntySetting.hasTipsVipExpired() &&
-                IntySetting.isLogin() &&
-                IntySetting.getCurToken().isNotEmpty()
+                    IntySetting.isLogin() &&
+                    IntySetting.getCurToken().isNotEmpty()
             ) {
                 showExpiredDialog = true
             }
@@ -229,10 +225,7 @@ private fun HomeContent(
 ) {
     when (selectedTab) {
         HomeTabIndex.Chat -> {
-            ChatTabContent(
-                mainViewModel = mainViewModel,
-                viewModelFactory = viewModelFactory,
-            )
+            ChatTabContent(mainViewModel = mainViewModel, viewModelFactory = viewModelFactory)
         }
 
         HomeTabIndex.Conversation -> {
@@ -289,9 +282,7 @@ private fun ConversationsTabContent() {
     val context = LocalContext.current
     val messagesViewModel: MessagesViewModel = viewModel()
 
-    LaunchedEffect(Unit) {
-        messagesViewModel.getConversations()
-    }
+    LaunchedEffect(Unit) { messagesViewModel.getConversations() }
 
     MessagesPage(
         modifier = Modifier,
@@ -301,7 +292,7 @@ private fun ConversationsTabContent() {
             ChatActivity.launch(
                 context,
                 conversation.convertToAgentInfo(),
-                pageSource = ChatActivity.MESSAGES_TAB
+                pageSource = ChatActivity.MESSAGES_TAB,
             )
         },
         pageTrackingContext = "MainActivity",
@@ -325,11 +316,7 @@ private fun ExploreTabContent(innerPadding: PaddingValues) {
         modifier = Modifier,
         innerPadding = innerPadding,
         onClickAgent = { agent ->
-            ChatActivity.launch(
-                context,
-                agent,
-                pageSource = ChatActivity.EXPLORE_TAB
-            )
+            ChatActivity.launch(context, agent, pageSource = ChatActivity.EXPLORE_TAB)
         },
         viewModel = exploreViewModel,
     )
@@ -347,26 +334,28 @@ private fun ProfileTabContent(
     val uiState by profileViewModel.uiState.collectAsStateWithLifecycle()
 
     // 确保用户信息有效，避免崩溃
-    val safeUserProfile = if (uiState.userProfile.id.isEmpty()) {
-        UserProfile(
-            id = "loading",
-            nickname = "Loading...",
-            avatar = null,
-            description = "UserInfo Loading...",
-        )
-    } else {
-        uiState.userProfile
-    }
+    val safeUserProfile =
+        if (uiState.userProfile.id.isEmpty()) {
+            UserProfile(
+                id = "loading",
+                nickname = "Loading...",
+                avatar = null,
+                description = "UserInfo Loading...",
+            )
+        } else {
+            uiState.userProfile
+        }
 
     // 创建用于编辑的 launcher（独立于 Create Tab 的 launcher）
-    val editAgentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        // 编辑成功后刷新列表
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            profileViewModel.refreshCreatedAgents()
+    val editAgentLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            // 编辑成功后刷新列表
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                profileViewModel.refreshCreatedAgents()
+            }
         }
-    }
 
     // 初始化数据：优先从缓存加载，避免闪现
     var hasInitialized by remember { mutableStateOf(false) }
@@ -402,11 +391,7 @@ private fun ProfileTabContent(
         agents = uiState.userCreatedAgents,
         isLoading = uiState.isLoading,
         onClickAgent = { agent ->
-            ChatActivity.launch(
-                context,
-                agent,
-                pageSource = ChatActivity.PROFILE_TAB
-            )
+            ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
         },
         onEditAgent = { agent ->
             // 使用 CreateRoleActivity 提供的方法获取 Intent，并监听返回结果
@@ -467,10 +452,7 @@ private fun AppBottomNavigationBar(
         MAIN_TAB_LIST.forEachIndexed { index, tab ->
             BottomNavigationBarItem(
                 modifier =
-                    Modifier
-                        .fillMaxHeight()
-                        .weight(1f)
-                        .noRippleClickable { onSelectTab(index) },
+                    Modifier.fillMaxHeight().weight(1f).noRippleClickable { onSelectTab(index) },
                 tabInfo = tab,
                 selected = (index == selectedTab),
             )

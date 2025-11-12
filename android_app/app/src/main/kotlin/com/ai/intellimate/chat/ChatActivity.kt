@@ -99,8 +99,7 @@ class ChatActivity : BaseActivity() {
         super.ConfigComposeUI()
         ChatPage(
             modifier =
-                Modifier
-                    .fillMaxSize()
+                Modifier.fillMaxSize()
                     .background(HeartColor.primaryColor)
                     .imePadding()
                     .navigationBarsPadding(),

@@ -69,14 +69,15 @@ export const UserAnalyticsPage: React.FC = () => {
   // 数据状态
   const [newUsers, setNewUsers] = useState<DailyNewUsers[]>([]);
   const [userActivity, setUserActivity] = useState<UserChatActivityItem[]>([]);
-  const [conversationRounds, setConversationRounds] =
-    useState<ConversationRoundsResponse[]>([]);
+  const [conversationRounds, setConversationRounds] = useState<
+    ConversationRoundsResponse[]
+  >([]);
   const [userRoundsDistribution, setUserRoundsDistribution] = useState<
     UserRoundsDistributionItem[]
   >([]);
-  const [popularAgents, setPopularAgents] = useState<
-    PopularAgentsResponse[]
-  >([]);
+  const [popularAgents, setPopularAgents] = useState<PopularAgentsResponse[]>(
+    [],
+  );
   const [usersHittingLimit, setUsersHittingLimit] = useState<
     UsersHittingLimitResponse[]
   >([]);
@@ -89,10 +90,11 @@ export const UserAnalyticsPage: React.FC = () => {
   const [stats, setStats] = useState<UserAnalyticsStatsResponse | null>(null);
 
   // 对话详情查看器状态
-  const [showConversationsDetail, setShowConversationsDetail] =
-    useState(false);
+  const [showConversationsDetail, setShowConversationsDetail] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [authTypeFilter, setAuthTypeFilter] = useState<"all" | "GUEST" | "GOOGLE">("all");
+  const [authTypeFilter, setAuthTypeFilter] = useState<
+    "all" | "GUEST" | "GOOGLE"
+  >("all");
   const [sessionTypeFilter, setSessionTypeFilter] = useState<
     "all" | "with_messages" | "opening_only"
   >("all");
@@ -189,51 +191,63 @@ export const UserAnalyticsPage: React.FC = () => {
   // 所以：[0, 10] -> "1-10", (10, 20] -> "11-20", (20, 30] -> "21-30", ...
   const roundsDistributionBySession = React.useMemo(() => {
     const buckets: Record<string, number> = {};
-    const labels = ["1-10", "11-20", "21-30", "31-40", "41-50", "51-60", "61-70", "71-80", "81-90", "91-100", "100+"];
-    
+    const labels = [
+      "1-10",
+      "11-20",
+      "21-30",
+      "31-40",
+      "41-50",
+      "51-60",
+      "61-70",
+      "71-80",
+      "81-90",
+      "91-100",
+      "100+",
+    ];
+
     conversationRounds.forEach((item) => {
       const rounds = item.message_count_excluding_opening;
       let bucketKey: string;
-      
+
       // 按照 pd.cut(..., right=True) 的逻辑
       // 第一个区间 [0, 10]：包含 0 和 10
       // 其他区间 (a, b]：不包含 a，包含 b
       if (rounds >= 0 && rounds <= 10) {
-        bucketKey = "1-10";  // [0, 10]
+        bucketKey = "1-10"; // [0, 10]
       } else if (rounds > 10 && rounds <= 20) {
-        bucketKey = "11-20";  // (10, 20]
+        bucketKey = "11-20"; // (10, 20]
       } else if (rounds > 20 && rounds <= 30) {
-        bucketKey = "21-30";  // (20, 30]
+        bucketKey = "21-30"; // (20, 30]
       } else if (rounds > 30 && rounds <= 40) {
-        bucketKey = "31-40";  // (30, 40]
+        bucketKey = "31-40"; // (30, 40]
       } else if (rounds > 40 && rounds <= 50) {
-        bucketKey = "41-50";  // (40, 50]
+        bucketKey = "41-50"; // (40, 50]
       } else if (rounds > 50 && rounds <= 60) {
-        bucketKey = "51-60";  // (50, 60]
+        bucketKey = "51-60"; // (50, 60]
       } else if (rounds > 60 && rounds <= 70) {
-        bucketKey = "61-70";  // (60, 70]
+        bucketKey = "61-70"; // (60, 70]
       } else if (rounds > 70 && rounds <= 80) {
-        bucketKey = "71-80";  // (70, 80]
+        bucketKey = "71-80"; // (70, 80]
       } else if (rounds > 80 && rounds <= 90) {
-        bucketKey = "81-90";  // (80, 90]
+        bucketKey = "81-90"; // (80, 90]
       } else if (rounds > 90 && rounds <= 100) {
-        bucketKey = "91-100";  // (90, 100]
+        bucketKey = "91-100"; // (90, 100]
       } else if (rounds > 100) {
-        bucketKey = "100+";  // (100, inf)
+        bucketKey = "100+"; // (100, inf)
       } else {
         // 负数或无效值，跳过
         return;
       }
-      
+
       buckets[bucketKey] = (buckets[bucketKey] || 0) + 1;
     });
-    
+
     // 确保所有区间都存在（即使为0）
-    const result = labels.map(label => ({
+    const result = labels.map((label) => ({
       rounds_range: label,
       count: buckets[label] || 0,
     }));
-    
+
     return result;
   }, [conversationRounds]);
 
@@ -244,55 +258,67 @@ export const UserAnalyticsPage: React.FC = () => {
   // 只统计有对话的用户（total_rounds > 0）
   const roundsDistributionByUser = React.useMemo(() => {
     const buckets: Record<string, number> = {};
-    const labels = ["1-10", "11-20", "21-30", "31-40", "41-50", "51-60", "61-70", "71-80", "81-90", "91-100", "100+"];
-    
+    const labels = [
+      "1-10",
+      "11-20",
+      "21-30",
+      "31-40",
+      "41-50",
+      "51-60",
+      "61-70",
+      "71-80",
+      "81-90",
+      "91-100",
+      "100+",
+    ];
+
     userRoundsDistribution.forEach((item) => {
       const rounds = item.total_rounds;
       // 只统计有对话的用户（与原始脚本一致）
       if (rounds <= 0) {
         return;
       }
-      
+
       let bucketKey: string;
       // 按照 pd.cut(..., right=True) 的逻辑
       // 第一个区间 [0, 10]：包含 0 和 10
       // 其他区间 (a, b]：不包含 a，包含 b
       if (rounds >= 0 && rounds <= 10) {
-        bucketKey = "1-10";  // [0, 10]
+        bucketKey = "1-10"; // [0, 10]
       } else if (rounds > 10 && rounds <= 20) {
-        bucketKey = "11-20";  // (10, 20]
+        bucketKey = "11-20"; // (10, 20]
       } else if (rounds > 20 && rounds <= 30) {
-        bucketKey = "21-30";  // (20, 30]
+        bucketKey = "21-30"; // (20, 30]
       } else if (rounds > 30 && rounds <= 40) {
-        bucketKey = "31-40";  // (30, 40]
+        bucketKey = "31-40"; // (30, 40]
       } else if (rounds > 40 && rounds <= 50) {
-        bucketKey = "41-50";  // (40, 50]
+        bucketKey = "41-50"; // (40, 50]
       } else if (rounds > 50 && rounds <= 60) {
-        bucketKey = "51-60";  // (50, 60]
+        bucketKey = "51-60"; // (50, 60]
       } else if (rounds > 60 && rounds <= 70) {
-        bucketKey = "61-70";  // (60, 70]
+        bucketKey = "61-70"; // (60, 70]
       } else if (rounds > 70 && rounds <= 80) {
-        bucketKey = "71-80";  // (70, 80]
+        bucketKey = "71-80"; // (70, 80]
       } else if (rounds > 80 && rounds <= 90) {
-        bucketKey = "81-90";  // (80, 90]
+        bucketKey = "81-90"; // (80, 90]
       } else if (rounds > 90 && rounds <= 100) {
-        bucketKey = "91-100";  // (90, 100]
+        bucketKey = "91-100"; // (90, 100]
       } else if (rounds > 100) {
-        bucketKey = "100+";  // (100, inf)
+        bucketKey = "100+"; // (100, inf)
       } else {
         // 负数或无效值，跳过
         return;
       }
-      
+
       buckets[bucketKey] = (buckets[bucketKey] || 0) + 1;
     });
-    
+
     // 确保所有区间都存在（即使为0）
-    const result = labels.map(label => ({
+    const result = labels.map((label) => ({
       rounds_range: label,
       user_count: buckets[label] || 0,
     }));
-    
+
     return result;
   }, [userRoundsDistribution]);
 
@@ -354,12 +380,7 @@ export const UserAnalyticsPage: React.FC = () => {
       const bTotal = b.sessions.reduce((sum, s) => sum + s.message_count, 0);
       return bTotal - aTotal;
     });
-  }, [
-    conversationsDetail,
-    authTypeFilter,
-    sessionTypeFilter,
-    searchKeyword,
-  ]);
+  }, [conversationsDetail, authTypeFilter, sessionTypeFilter, searchKeyword]);
 
   // 表格列定义
   const columns: ColumnsType<UserSessionsDetailResponse> = [
@@ -438,7 +459,9 @@ export const UserAnalyticsPage: React.FC = () => {
             ) : (
               <RangePicker
                 value={customRange}
-                onChange={(dates) => setCustomRange(dates as [Dayjs, Dayjs] | null)}
+                onChange={(dates) =>
+                  setCustomRange(dates as [Dayjs, Dayjs] | null)
+                }
                 format="YYYY-MM-DD"
               />
             )}
@@ -636,7 +659,8 @@ export const UserAnalyticsPage: React.FC = () => {
                     dataIndex: "avg_rounds_per_user",
                     key: "avg_rounds_per_user",
                     width: 130,
-                    sorter: (a, b) => a.avg_rounds_per_user - b.avg_rounds_per_user,
+                    sorter: (a, b) =>
+                      a.avg_rounds_per_user - b.avg_rounds_per_user,
                     render: (value: number) => value.toFixed(2),
                   },
                   {
@@ -652,7 +676,8 @@ export const UserAnalyticsPage: React.FC = () => {
                     dataIndex: "pct_sessions_ge_10",
                     key: "pct_sessions_ge_10",
                     width: 160,
-                    sorter: (a, b) => a.pct_sessions_ge_10 - b.pct_sessions_ge_10,
+                    sorter: (a, b) =>
+                      a.pct_sessions_ge_10 - b.pct_sessions_ge_10,
                     render: (value: number) => `${value.toFixed(2)}%`,
                   },
                 ]}
@@ -724,10 +749,7 @@ export const UserAnalyticsPage: React.FC = () => {
 
         {/* 图表5: 达到聊天限制的用户趋势 */}
         <Col xs={24} lg={12}>
-          <Card
-            title="达到聊天限制的用户趋势"
-            style={{ height: "400px" }}
-          >
+          <Card title="达到聊天限制的用户趋势" style={{ height: "400px" }}>
             {usersHittingLimitTrend.length > 0 ? (
               <Plot
                 data={[
@@ -791,12 +813,12 @@ export const UserAnalyticsPage: React.FC = () => {
 
       {/* 对话详情查看器 */}
       {showConversationsDetail && (
-        <Card
-          title="对话详情查看器"
-          style={{ marginTop: "24px" }}
-        >
+        <Card title="对话详情查看器" style={{ marginTop: "24px" }}>
           {/* 过滤和搜索 */}
-          <Space direction="vertical" style={{ width: "100%", marginBottom: 16 }}>
+          <Space
+            direction="vertical"
+            style={{ width: "100%", marginBottom: 16 }}
+          >
             <Space>
               <span>按认证类型筛选：</span>
               <Button
@@ -827,13 +849,17 @@ export const UserAnalyticsPage: React.FC = () => {
                 全部
               </Button>
               <Button
-                type={sessionTypeFilter === "with_messages" ? "primary" : "default"}
+                type={
+                  sessionTypeFilter === "with_messages" ? "primary" : "default"
+                }
                 onClick={() => setSessionTypeFilter("with_messages")}
               >
                 有用户消息
               </Button>
               <Button
-                type={sessionTypeFilter === "opening_only" ? "primary" : "default"}
+                type={
+                  sessionTypeFilter === "opening_only" ? "primary" : "default"
+                }
                 onClick={() => setSessionTypeFilter("opening_only")}
               >
                 仅浏览开场白
@@ -857,13 +883,23 @@ export const UserAnalyticsPage: React.FC = () => {
                 items={filteredConversationsDetail.map((user) => ({
                   key: user.user_id,
                   label: (
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
                       <Space>
                         <span>
                           {user.user_id.substring(0, 20)}...
                           {user.nickname && ` (${user.nickname})`}
                         </span>
-                        <Tag color={user.auth_type === "GOOGLE" ? "blue" : "orange"}>
+                        <Tag
+                          color={
+                            user.auth_type === "GOOGLE" ? "blue" : "orange"
+                          }
+                        >
                           {user.auth_type}
                         </Tag>
                         {user.email && <span>{user.email}</span>}
@@ -889,7 +925,9 @@ export const UserAnalyticsPage: React.FC = () => {
                           style={{ marginBottom: 16 }}
                           title={
                             <Space>
-                              <span>会话 {idx + 1}: {session.agent_name}</span>
+                              <span>
+                                会话 {idx + 1}: {session.agent_name}
+                              </span>
                               <Tag>{session.message_count} 条消息</Tag>
                               {session.voice_message_count > 0 && (
                                 <Tag color="purple">
@@ -918,8 +956,17 @@ export const UserAnalyticsPage: React.FC = () => {
                                         : "left",
                                   }}
                                 >
-                                  <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
-                                    {msg.message_type === "human" ? "👤 用户" : "🤖 AI"} •{" "}
+                                  <div
+                                    style={{
+                                      fontSize: 12,
+                                      color: "#666",
+                                      marginBottom: 4,
+                                    }}
+                                  >
+                                    {msg.message_type === "human"
+                                      ? "👤 用户"
+                                      : "🤖 AI"}{" "}
+                                    •{" "}
                                     {msg.created_at
                                       ? dayjs(msg.created_at).format("HH:mm:ss")
                                       : ""}
@@ -948,4 +995,3 @@ export const UserAnalyticsPage: React.FC = () => {
     </div>
   );
 };
-

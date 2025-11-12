@@ -40,7 +40,7 @@ object TimeUtils {
 
     private fun getFormatter(
         pattern: String,
-        locale: Locale = Locale.getDefault()
+        locale: Locale = Locale.getDefault(),
     ): SimpleDateFormat {
         val key = "${pattern}_${locale}"
         return formatterCache.getOrPut(key) { SimpleDateFormat(pattern, locale) }
@@ -302,7 +302,7 @@ object TimeUtils {
                         "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
                         "yyyy-MM-dd'T'HH:mm:ss",
                         "yyyy-MM-dd HH:mm:ss",
-                        "yyyy-MM-dd"
+                        "yyyy-MM-dd",
                     )
 
                 for (pattern in patterns) {

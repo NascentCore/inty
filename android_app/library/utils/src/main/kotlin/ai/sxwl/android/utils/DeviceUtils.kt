@@ -21,7 +21,7 @@ object DeviceUtils {
             "/data/local/",
             "/system/sbin/",
             "/usr/bin/",
-            "/vendor/bin/"
+            "/vendor/bin/",
         )
 
     /** 判断设备是否已root */

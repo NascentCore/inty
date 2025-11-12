@@ -106,8 +106,7 @@ fun ChatSettingsDrawer(
         drawerContent = {
             Column(
                 modifier =
-                    Modifier
-                        .width(319.dp)
+                    Modifier.width(319.dp)
                         .fillMaxHeight()
                         .background(
                             brush =
@@ -128,8 +127,7 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier =
-                        Modifier
-                            .padding(horizontal = horizontalPadding.dp)
+                        Modifier.padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =
@@ -199,8 +197,7 @@ fun ChatSettingsDrawer(
                 // 参照My Persona的样式，使用Column包裹，外层padding，内层item也有padding
                 Column(
                     modifier =
-                        Modifier
-                            .padding(horizontal = horizontalPadding.dp)
+                        Modifier.padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =
@@ -219,10 +216,11 @@ fun ChatSettingsDrawer(
                 ) {
                     // Show "Keep Talking" button开关
                     SettingsSwitchItem(
-                        item = SettingsItemData.SwitchItemData(
-                            title = stringResource(R.string.chat_settings_show_keep_talking),
-                            checked = showKeepTalking
-                        ),
+                        item =
+                            SettingsItemData.SwitchItemData(
+                                title = stringResource(R.string.chat_settings_show_keep_talking),
+                                checked = showKeepTalking,
+                            ),
                         fontLight = true,
                         isInGroup = true,
                         horizontalPadding = horizontalPadding, // 使用与My Persona相同的padding
@@ -231,15 +229,16 @@ fun ChatSettingsDrawer(
                         onCheckChanged = { enabled ->
                             SettingStateManager.updateShowKeepTalking(enabled)
                             onKeepTalkingChange(enabled)
-                        }
+                        },
                     )
 
                     // Auto-play voice messages开关
                     SettingsSwitchItem(
-                        item = SettingsItemData.SwitchItemData(
-                            title = stringResource(R.string.chat_settings_auto_play_voice),
-                            checked = autoPlayVoice
-                        ),
+                        item =
+                            SettingsItemData.SwitchItemData(
+                                title = stringResource(R.string.chat_settings_auto_play_voice),
+                                checked = autoPlayVoice,
+                            ),
                         fontLight = true,
                         isInGroup = true,
                         horizontalPadding = horizontalPadding, // 使用与My Persona相同的padding
@@ -247,28 +246,29 @@ fun ChatSettingsDrawer(
                         closedIconRes = R.drawable.closed, // 传入app模块的资源
                         onCheckChanged = { enabled ->
                             SettingStateManager.updateAutoPlayAudio(enabled)
-                        }
+                        },
                     )
 
                     agentInfo?.let { agent ->
                         // 举报入口
                         SettingsArrowItem(
-                            item = SettingsItemData.CommonItemData(
-                                title = stringResource(R.string.str_report),
-                                content = "",
-                                arrow = true
-                            ),
+                            item =
+                                SettingsItemData.CommonItemData(
+                                    title = stringResource(R.string.str_report),
+                                    content = "",
+                                    arrow = true,
+                                ),
                             fontLight = true,
                             isInGroup = true,
                             horizontalPadding = horizontalPadding, // 使用与My Persona相同的padding
                             onItemClick = {
                                 // 检查是否已登录
-                                if (IntySetting.isLogin() && IntySetting.getCurToken()
-                                        .isNotEmpty()
+                                if (
+                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
                                 ) {
                                     ReportActivity.launch(context, agent.id, "AGENT")
                                 }
-                            }
+                            },
                         )
                     }
                 }

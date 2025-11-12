@@ -12,9 +12,8 @@ import androidx.paging.PagingData
 import kotlinx.coroutines.flow.Flow
 
 /** Explore仓库实现 作为Domain层和Data层之间的桥梁 遵循Clean Architecture的Repository模式 */
-class ExploreRepositoryImpl(
-    private val cacheProvider: RecommendedAgentCacheProvider? = null,
-) : ExploreRepository {
+class ExploreRepositoryImpl(private val cacheProvider: RecommendedAgentCacheProvider? = null) :
+    ExploreRepository {
 
     companion object {
         private const val PAGE_SIZE = 20
@@ -25,7 +24,7 @@ class ExploreRepositoryImpl(
 
     override fun getRecommendAgentsFlow(
         useCache: Boolean,
-        sortSeed: Int
+        sortSeed: Int,
     ): Flow<PagingData<AgentInfo>> {
         LogUtils.d(
             "ExploreRepositoryImpl.getRecommendAgentsFlow: useCache=$useCache, sortSeed=$sortSeed"
@@ -44,7 +43,7 @@ class ExploreRepositoryImpl(
                     ExplorePagingSource(
                         useCache = useCache,
                         sortSeed = sortSeed,
-                        cacheProvider = cacheProvider
+                        cacheProvider = cacheProvider,
                     )
                 },
             )
@@ -55,10 +54,7 @@ class ExploreRepositoryImpl(
         LogUtils.d("ExploreRepositoryImpl.refreshRecommendAgents")
         val newSortSeed = IntySetting.sortSeed() + 1
         IntySetting.updateSortSeed(newSortSeed)
-        return getRecommendAgentsFlow(
-            useCache = false,
-            sortSeed = newSortSeed,
-        )
+        return getRecommendAgentsFlow(useCache = false, sortSeed = newSortSeed)
     }
 
     override fun getInitialRecommendAgents(): Flow<PagingData<AgentInfo>> {

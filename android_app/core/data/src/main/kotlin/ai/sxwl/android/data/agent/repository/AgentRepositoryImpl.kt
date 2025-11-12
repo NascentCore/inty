@@ -12,9 +12,7 @@ import androidx.paging.PagingData
 import kotlinx.coroutines.flow.Flow
 
 /** Agent仓库实现 作为Domain层和Data层之间的桥梁 遵循Clean Architecture的Repository模式 */
-class AgentRepositoryImpl(
-    private val cacheProvider: AgentCacheProvider? = null,
-) : AgentRepository {
+class AgentRepositoryImpl(private val cacheProvider: AgentCacheProvider? = null) : AgentRepository {
 
     companion object {
         private const val PAGE_SIZE = 20
@@ -37,7 +35,7 @@ class AgentRepositoryImpl(
                     AgentPagingSource(
                         useCache = useCache,
                         sortSeed = sortSeed,
-                        cacheProvider = cacheProvider
+                        cacheProvider = cacheProvider,
                     )
                 },
             )

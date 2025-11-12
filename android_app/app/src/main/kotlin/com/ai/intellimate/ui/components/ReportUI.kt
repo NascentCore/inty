@@ -197,7 +197,7 @@ fun ReportImageEvidenceContainer(title: String, images: List<String>, onClickAdd
                         ImageRequest.Builder(LocalContext.current)
                             .data(images.firstOrNull())
                             .build(),
-                    contentDescription = null
+                    contentDescription = null,
                 )
             } else {
                 Image(

@@ -135,7 +135,7 @@ object ImagePreloadManager {
                                 val request =
                                     ImageLoaderUtils.createDeviceAdaptiveImageRequest(
                                         context = Utils.getApp(),
-                                        imageUrl = imageUrl
+                                        imageUrl = imageUrl,
                                     )
                                 // 执行预加载，图片会被缓存到全局ImageLoader的内存和磁盘缓存中
                                 SingletonImageLoader.get(Utils.getApp()).execute(request)
@@ -171,7 +171,7 @@ object ImagePreloadManager {
                     if (size == Size.ORIGINAL) {
                         ImageLoaderUtils.createDeviceAdaptiveImageRequest(
                             context = Utils.getApp(),
-                            imageUrl = imageUrl
+                            imageUrl = imageUrl,
                         )
                     } else {
                         ImageRequest.Builder(Utils.getApp()).data(imageUrl).size(size).build()
@@ -247,7 +247,7 @@ object ImagePreloadManager {
                     ImageLoaderUtils.createAvatarImageRequest(
                         context = Utils.getApp(),
                         imageUrl = avatarUrl,
-                        size = size
+                        size = size,
                     )
                 SingletonImageLoader.get(Utils.getApp()).execute(request)
                 LogUtils.d("ImagePreloadManager - 预加载 Agent 头像: $avatarUrl (${size}x${size})")
@@ -275,7 +275,7 @@ object ImagePreloadManager {
                         context = Utils.getApp(),
                         imageUrl = backgroundUrl,
                         width = width,
-                        height = height
+                        height = height,
                     )
                 SingletonImageLoader.get(Utils.getApp()).execute(request)
                 LogUtils.d(

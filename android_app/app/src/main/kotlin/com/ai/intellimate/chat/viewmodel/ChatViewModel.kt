@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-
 class ChatViewModel : BaseVM() {
 
     // 依赖注入 - 使用新的架构
@@ -146,8 +145,8 @@ class ChatViewModel : BaseVM() {
                 "to_agent_name" to agentInfo.name,
                 "switch_method" to "manual",
                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                "timestamp" to System.currentTimeMillis()
-            )
+                "timestamp" to System.currentTimeMillis(),
+            ),
         )
 
         _agentInfo.value = agentInfo
@@ -288,8 +287,8 @@ class ChatViewModel : BaseVM() {
                         "agent_id" to agent.id,
                         "agent_name" to agent.name,
                         "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                        "timestamp" to endToEndStartTime
-                    )
+                        "timestamp" to endToEndStartTime,
+                    ),
                 )
             }
         }
@@ -301,8 +300,8 @@ class ChatViewModel : BaseVM() {
                     "agent_name" to agent.name,
                     "message_length" to inputMsg.length,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                    "timestamp" to endToEndStartTime
-                )
+                    "timestamp" to endToEndStartTime,
+                ),
             )
 
             // Firebase Crashlytics - 记录消息发送上下文
@@ -319,8 +318,8 @@ class ChatViewModel : BaseVM() {
                     "agent_name" to agent.name,
                     "message_length" to inputMsg.length,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                    "timestamp" to endToEndStartTime
-                )
+                    "timestamp" to endToEndStartTime,
+                ),
             )
         }
 
@@ -346,8 +345,8 @@ class ChatViewModel : BaseVM() {
                                 "response_code" to (result.data.code ?: 0),
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "ai_response_time" to responseTime,
-                                "end_to_end_time" to endToEndTime
-                            )
+                                "end_to_end_time" to endToEndTime,
+                            ),
                         )
 
                         // 记录AI响应时间性能指标（API调用时间）
@@ -358,32 +357,33 @@ class ChatViewModel : BaseVM() {
                             FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free"
-                            )
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                            ),
                         )
 
                         runCatching {
-                            // 有免费次数限制，需要vip订阅
-                            if (
-                                result.data.code ==
-                                BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                            ) {
-                                // Firebase Analytics - 记录免费次数限制
-                                FirebaseManager.logEvent(
-                                    FirebaseManager.Events.FREE_LIMIT_REACHED,
-                                    FirebaseManager.safeEventParams(
-                                        "agent_id" to agentId,
-                                        "agent_name" to (_agentInfo.value?.name ?: ""),
-                                        "user_type" to "free",
-                                        "timestamp" to System.currentTimeMillis()
+                                // 有免费次数限制，需要vip订阅
+                                if (
+                                    result.data.code ==
+                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                ) {
+                                    // Firebase Analytics - 记录免费次数限制
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.FREE_LIMIT_REACHED,
+                                        FirebaseManager.safeEventParams(
+                                            "agent_id" to agentId,
+                                            "agent_name" to (_agentInfo.value?.name ?: ""),
+                                            "user_type" to "free",
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
                                     )
-                                )
-                                showLimitDialog.emit(true)
+                                    showLimitDialog.emit(true)
+                                }
+                                result.data.data?.choices?.lastOrNull()?.message?.content?.let {
+                                    content ->
+                                    IntySetting.setConversationReaded(agentId, content)
+                                }
                             }
-                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { content ->
-                                IntySetting.setConversationReaded(agentId, content)
-                            }
-                        }
                             .onFailure {
                                 LogUtils.e("Error processing AI response: ${it.message}")
                                 it.printStackTrace()
@@ -405,8 +405,8 @@ class ChatViewModel : BaseVM() {
                                 "error_message" to "failure: ${result.message}",
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "ai_response_time" to responseTime,
-                                "end_to_end_time" to endToEndTime
-                            )
+                                "end_to_end_time" to endToEndTime,
+                            ),
                         )
 
                         // Firebase Crashlytics - 记录非致命错误
@@ -416,8 +416,8 @@ class ChatViewModel : BaseVM() {
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
                                 "response_time" to responseTime,
-                                "end_to_end_time" to endToEndTime
-                            )
+                                "end_to_end_time" to endToEndTime,
+                            ),
                         )
 
                         // 显示网络错误
@@ -438,10 +438,11 @@ class ChatViewModel : BaseVM() {
                         "agent_id" to agentId,
                         "agent_name" to (_agentInfo.value?.name),
                         "message_type" to "normal",
-                        "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
+                        "error_message" to
+                            "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
                         "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                        "end_to_end_time" to endToEndTime
-                    )
+                        "end_to_end_time" to endToEndTime,
+                    ),
                 )
 
                 // Firebase Crashlytics - 记录异常
@@ -450,8 +451,8 @@ class ChatViewModel : BaseVM() {
                     FirebaseManager.safeEventParams(
                         "agent_id" to agentId,
                         "agent_name" to (_agentInfo.value?.name),
-                        "end_to_end_time" to endToEndTime
-                    )
+                        "end_to_end_time" to endToEndTime,
+                    ),
                 )
 
                 NetworkErrorHandler.showNetworkAwareError(
@@ -572,14 +573,13 @@ class ChatViewModel : BaseVM() {
         VIP_USER_LIMIT_REACHED, // 会员用户达到每日限制
     }
 
-    data class ImageGenerationDialogData(
-        val errorType: ImageGenerationErrorType,
-    )
+    data class ImageGenerationDialogData(val errorType: ImageGenerationErrorType)
 
     val showImageGenerationDialog = MutableStateFlow<ImageGenerationDialogData?>(null)
 
     // 关闭limit次数 拦截消息的弹窗
     fun dismissDialog() = viewModelScope.launch { showLimitDialog.emit(false) }
+
     fun dismissImageGenerationDialog() =
         viewModelScope.launch { showImageGenerationDialog.emit(null) }
 
@@ -602,8 +602,8 @@ class ChatViewModel : BaseVM() {
                     "agent_id" to agent.id,
                     "agent_name" to agent.name,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                    "timestamp" to currentTime
-                )
+                    "timestamp" to currentTime,
+                ),
             )
         }
 
@@ -633,25 +633,30 @@ class ChatViewModel : BaseVM() {
                                     "agent_name" to agent.name,
                                     "message_type" to "keep_talking",
                                     "response_code" to (result.data.code ?: 0),
-                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "user_type" to
+                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
                                     "ai_response_time" to responseTime,
-                                    "end_to_end_time" to endToEndTime
-                                )
+                                    "end_to_end_time" to endToEndTime,
+                                ),
                             )
 
                             runCatching {
-                                // 有免费次数限制，需要vip订阅
-                                if (
-                                    result.data.code ==
-                                    BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                                ) {
-                                    showLimitDialog.emit(true)
+                                    // 有免费次数限制，需要vip订阅
+                                    if (
+                                        result.data.code ==
+                                            BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                    ) {
+                                        showLimitDialog.emit(true)
+                                    }
+                                    result.data.data
+                                        ?.choices
+                                        ?.lastOrNull()
+                                        ?.message
+                                        ?.content
+                                        ?.let { str ->
+                                            IntySetting.setConversationReaded(agent.id, str)
+                                        }
                                 }
-                                result.data.data?.choices?.lastOrNull()?.message?.content?.let { str
-                                    ->
-                                    IntySetting.setConversationReaded(agent.id, str)
-                                }
-                            }
                                 .onFailure {
                                     LogUtils.e(
                                         "Error processing keep talking AI response: ${it.message}"
@@ -674,10 +679,11 @@ class ChatViewModel : BaseVM() {
                                     "agent_name" to agent.name,
                                     "message_type" to "keep_talking",
                                     "error_message" to "failure: ${result.message}",
-                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "user_type" to
+                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
                                     "ai_response_time" to responseTime,
-                                    "end_to_end_time" to endToEndTime
-                                )
+                                    "end_to_end_time" to endToEndTime,
+                                ),
                             )
 
                             NetworkErrorHandler.showNetworkAwareError(result.message)
@@ -696,10 +702,11 @@ class ChatViewModel : BaseVM() {
                             "agent_id" to agent.id,
                             "agent_name" to agent.name,
                             "message_type" to "keep_talking",
-                            "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
+                            "error_message" to
+                                "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
                             "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                            "end_to_end_time" to endToEndTime
-                        )
+                            "end_to_end_time" to endToEndTime,
+                        ),
                     )
 
                     NetworkErrorHandler.showNetworkAwareError(
@@ -734,17 +741,18 @@ class ChatViewModel : BaseVM() {
         // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
         val messageIdForEvent = targetMessage.id.ifEmpty { localMsgId }
 
-        val eventParams = FirebaseManager.safeEventParams(
-            "agent_id" to agent.id,
-            "agent_name" to agent.name,
-            "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
-            "message_length" to targetMessage.content.length,
-            "has_generated_image" to targetMessage.hasGeneratedImage(),
-            "is_opening" to targetMessage.isOpening(),
-            "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-            "message_timestamp" to (targetMessage.timestamp ?: ""),
-            "timestamp" to System.currentTimeMillis()
-        )
+        val eventParams =
+            FirebaseManager.safeEventParams(
+                "agent_id" to agent.id,
+                "agent_name" to agent.name,
+                "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
+                "message_length" to targetMessage.content.length,
+                "has_generated_image" to targetMessage.hasGeneratedImage(),
+                "is_opening" to targetMessage.isOpening(),
+                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                "message_timestamp" to (targetMessage.timestamp ?: ""),
+                "timestamp" to System.currentTimeMillis(),
+            )
 
         FirebaseManager.logEvent(FirebaseManager.Events.MESSAGE_LIKE, eventParams)
         LogUtils.i("Message liked: localMsgId=$localMsgId, serviceId=${targetMessage.id}")
@@ -770,17 +778,18 @@ class ChatViewModel : BaseVM() {
         // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
         val messageIdForEvent = targetMessage.id.ifEmpty { localMsgId }
 
-        val eventParams = FirebaseManager.safeEventParams(
-            "agent_id" to agent.id,
-            "agent_name" to agent.name,
-            "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
-            "message_length" to targetMessage.content.length,
-            "has_generated_image" to targetMessage.hasGeneratedImage(),
-            "is_opening" to targetMessage.isOpening(),
-            "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-            "message_timestamp" to (targetMessage.timestamp ?: ""),
-            "timestamp" to System.currentTimeMillis()
-        )
+        val eventParams =
+            FirebaseManager.safeEventParams(
+                "agent_id" to agent.id,
+                "agent_name" to agent.name,
+                "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
+                "message_length" to targetMessage.content.length,
+                "has_generated_image" to targetMessage.hasGeneratedImage(),
+                "is_opening" to targetMessage.isOpening(),
+                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                "message_timestamp" to (targetMessage.timestamp ?: ""),
+                "timestamp" to System.currentTimeMillis(),
+            )
 
         FirebaseManager.logEvent(FirebaseManager.Events.MESSAGE_DISLIKE, eventParams)
         LogUtils.i("Message disliked: localMsgId=$localMsgId, serviceId=${targetMessage.id}")
@@ -820,9 +829,7 @@ class ChatViewModel : BaseVM() {
 
     fun deleteMessage(localMsgId: String) {
         val agentId = _agentInfo.value?.id ?: return
-        viewModelScope.launch(Dispatchers.IO) {
-            chatRepository.removeMessage(agentId, localMsgId)
-        }
+        viewModelScope.launch(Dispatchers.IO) { chatRepository.removeMessage(agentId, localMsgId) }
     }
 
     fun generateImageForMessage(messageId: String) {
@@ -838,8 +845,8 @@ class ChatViewModel : BaseVM() {
                 "agent_name" to agent.name,
                 "message_id" to messageId,
                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                "timestamp" to startTime
-            )
+                "timestamp" to startTime,
+            ),
         )
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -864,8 +871,8 @@ class ChatViewModel : BaseVM() {
                                 "image_height" to result.data.height,
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "generation_time_ms" to generationTime,
-                                "timestamp" to endTime
-                            )
+                                "timestamp" to endTime,
+                            ),
                         )
 
                         // Firebase Performance - 记录图片生成耗时
@@ -877,13 +884,15 @@ class ChatViewModel : BaseVM() {
                                 "agent_id" to agentId,
                                 "agent_name" to agent.name,
                                 "message_id" to messageId,
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free"
-                            )
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                            ),
                         )
                     }
 
                     is HttpResult.Failure -> {
-                        LogUtils.e("Image generation failed: code=${result.code}, message=${result.message}")
+                        LogUtils.e(
+                            "Image generation failed: code=${result.code}, message=${result.message}"
+                        )
 
                         val isVip = VipStatusHelper.isUserVip()
 
@@ -902,18 +911,21 @@ class ChatViewModel : BaseVM() {
                                         "error_message" to (result.message ?: "unknown"),
                                         "user_type" to "free",
                                         "generation_time_ms" to generationTime,
-                                        "timestamp" to endTime
-                                    )
+                                        "timestamp" to endTime,
+                                    ),
                                 )
 
                                 // 显示会员引导弹窗（使用 UnlimitChatDialog，但文案特殊）
-                                val dialogData = ImageGenerationDialogData(
-                                    errorType = ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED,
-                                )
+                                val dialogData =
+                                    ImageGenerationDialogData(
+                                        errorType =
+                                            ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED
+                                    )
                                 showImageGenerationDialog.emit(dialogData)
                             }
                             // 会员用户的每日限制：显示错误提示弹窗
-                            result.code == BusinessErrorCodes.IMAGE_GENERATION_LIMIT_REACHED_CODE && isVip -> {
+                            result.code == BusinessErrorCodes.IMAGE_GENERATION_LIMIT_REACHED_CODE &&
+                                isVip -> {
                                 // Firebase Analytics - 记录图片生成限制达到
                                 FirebaseManager.logEvent(
                                     FirebaseManager.Events.IMAGE_GENERATION_LIMIT_REACHED,
@@ -925,14 +937,15 @@ class ChatViewModel : BaseVM() {
                                         "error_message" to (result.message ?: "unknown"),
                                         "user_type" to "vip",
                                         "generation_time_ms" to generationTime,
-                                        "timestamp" to endTime
-                                    )
+                                        "timestamp" to endTime,
+                                    ),
                                 )
 
                                 // 显示会员用户的错误提示弹窗
-                                val dialogData = ImageGenerationDialogData(
-                                    errorType = ImageGenerationErrorType.VIP_USER_LIMIT_REACHED,
-                                )
+                                val dialogData =
+                                    ImageGenerationDialogData(
+                                        errorType = ImageGenerationErrorType.VIP_USER_LIMIT_REACHED
+                                    )
                                 showImageGenerationDialog.emit(dialogData)
                             }
                             // 其他错误：在消息列表中显示 tips 消息
@@ -940,8 +953,8 @@ class ChatViewModel : BaseVM() {
                                 // Firebase Analytics - 记录图片生成失败
                                 LogUtils.i(
                                     "ChatViewModel: 记录 image_generation_failure 事件, " +
-                                            "code=${result.code}, message=${result.message}, " +
-                                            "generation_time_ms=$generationTime"
+                                        "code=${result.code}, message=${result.message}, " +
+                                        "generation_time_ms=$generationTime"
                                 )
                                 FirebaseManager.logEvent(
                                     FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
@@ -953,17 +966,18 @@ class ChatViewModel : BaseVM() {
                                         "error_message" to (result.message ?: "unknown"),
                                         "user_type" to if (isVip) "vip" else "free",
                                         "generation_time_ms" to generationTime,
-                                        "timestamp" to endTime
-                                    )
+                                        "timestamp" to endTime,
+                                    ),
                                 )
 
                                 // 在消息列表中添加 tips 消息（使用字符串常量，后续在 UI 层处理）
-                                val tipMessage = MsgInfo(
-                                    content = "image_generation_error_tip", // 特殊标记，UI 层会转换为实际文案
-                                    role = "system",
-                                    localMsgId = "image_generation_error_${System.nanoTime()}",
-                                    meta_data = MsgInfo.MsgMetaData(agentId = agentId),
-                                )
+                                val tipMessage =
+                                    MsgInfo(
+                                        content = "image_generation_error_tip", // 特殊标记，UI 层会转换为实际文案
+                                        role = "system",
+                                        localMsgId = "image_generation_error_${System.nanoTime()}",
+                                        meta_data = MsgInfo.MsgMetaData(agentId = agentId),
+                                    )
                                 chatRepository.addMessage(agentId, tipMessage)
                             }
                         }
@@ -977,8 +991,8 @@ class ChatViewModel : BaseVM() {
                 // Firebase Analytics - 记录图片生成异常
                 LogUtils.i(
                     "ChatViewModel: 记录 image_generation_failure 事件（异常）, " +
-                            "error_type=${e.javaClass.simpleName}, message=${e.message}, " +
-                            "generation_time_ms=$generationTime"
+                        "error_type=${e.javaClass.simpleName}, message=${e.message}, " +
+                        "generation_time_ms=$generationTime"
                 )
                 FirebaseManager.logEvent(
                     FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
@@ -986,11 +1000,12 @@ class ChatViewModel : BaseVM() {
                         "agent_id" to agentId,
                         "agent_name" to agent.name,
                         "message_id" to messageId,
-                        "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
+                        "error_message" to
+                            "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
                         "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                         "generation_time_ms" to generationTime,
-                        "timestamp" to endTime
-                    )
+                        "timestamp" to endTime,
+                    ),
                 )
 
                 // Firebase Crashlytics - 记录异常
@@ -1000,8 +1015,8 @@ class ChatViewModel : BaseVM() {
                         "agent_id" to agentId,
                         "agent_name" to agent.name,
                         "message_id" to messageId,
-                        "generation_time_ms" to generationTime
-                    )
+                        "generation_time_ms" to generationTime,
+                    ),
                 )
 
                 NetworkErrorHandler.showNetworkAwareError("Failed to generate image: ${e.message}")
@@ -1081,7 +1096,6 @@ class ChatViewModel : BaseVM() {
             }
         }
     }
-
 
     // 新增：清理所有数据的方法
     fun clearAllData() {

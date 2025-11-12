@@ -10,14 +10,14 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.perf.FirebasePerformance
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics和Performance的初始化和使用
@@ -116,7 +116,7 @@ object FirebaseManager {
                     Events.IMAGE_LOAD_TIME to
                         if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
                     Events.IMAGE_GENERATION_TIME to
-                            if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                        if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     Events.PAGE_LOAD_TIME to
                         if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     Events.DATABASE_OPERATION_TIME to
@@ -134,12 +134,13 @@ object FirebaseManager {
                     Events.MESSAGE_SENT to
                         if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
                     Events.MESSAGE_SEND_ERROR to
-                            if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
+                        if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
                     Events.VOICE_PLAYBACK_START to
                         if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
 
                     // 🟡 性能相关事件 - 保持现有限频配置
-                    Events.SLOW_REQUEST to if (AppUtils.isAppDebug()) 2_000L else 5_000L, // 调试2秒，发布5秒
+                    Events.SLOW_REQUEST to
+                        if (AppUtils.isAppDebug()) 2_000L else 5_000L, // 调试2秒，发布5秒
                 ),
         )
 
@@ -223,10 +224,12 @@ object FirebaseManager {
                 LogUtils.d("FirebaseManager", "事件被过滤: $eventName")
             } else {
                 // 关键事件即使非调试模式也输出警告，便于排查问题
-                if (eventName in listOf(
-                        Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
-                        Events.MESSAGE_SEND_ERROR
-                    )
+                if (
+                    eventName in
+                        listOf(
+                            Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
+                            Events.MESSAGE_SEND_ERROR,
+                        )
                 ) {
                     LogUtils.w("FirebaseManager", "事件被过滤: $eventName（非调试模式）")
                 }
@@ -238,7 +241,7 @@ object FirebaseManager {
         if (parameters.size > MAX_PARAMS_PER_EVENT) {
             logError(
                 "logEvent",
-                "事件 '$eventName' 参数数量超过限制: ${parameters.size} > $MAX_PARAMS_PER_EVENT"
+                "事件 '$eventName' 参数数量超过限制: ${parameters.size} > $MAX_PARAMS_PER_EVENT",
             )
         }
 
@@ -255,14 +258,14 @@ object FirebaseManager {
                         val bundleSize = bundle.size()
                         LogUtils.d(
                             "FirebaseManager",
-                            "Bundle 创建成功: 事件=$eventName, 参数数量=${bundle.size()}, Bundle大小=$bundleSize"
+                            "Bundle 创建成功: 事件=$eventName, 参数数量=${bundle.size()}, Bundle大小=$bundleSize",
                         )
                         // 输出每个参数的键值对，便于调试
                         bundle.keySet().forEach { key ->
                             val value = bundle.get(key)
                             LogUtils.d(
                                 "FirebaseManager",
-                                "  参数: $key = $value (类型: ${value?.javaClass?.simpleName})"
+                                "  参数: $key = $value (类型: ${value?.javaClass?.simpleName})",
                             )
                         }
                     }
@@ -272,18 +275,20 @@ object FirebaseManager {
                     if (AppUtils.isAppDebug()) {
                         LogUtils.d(
                             "FirebaseManager",
-                            "✅ 事件已发送: $eventName (${parameters.size} 个参数)"
+                            "✅ 事件已发送: $eventName (${parameters.size} 个参数)",
                         )
                     } else {
                         // 关键事件即使非调试模式也输出确认日志，便于排查问题
-                        if (eventName in listOf(
-                                Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
-                                Events.MESSAGE_SEND_ERROR
-                            )
+                        if (
+                            eventName in
+                                listOf(
+                                    Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
+                                    Events.MESSAGE_SEND_ERROR,
+                                )
                         ) {
                             LogUtils.i(
                                 "FirebaseManager",
-                                "✅ 事件已发送: $eventName (${parameters.size} 个参数)"
+                                "✅ 事件已发送: $eventName (${parameters.size} 个参数)",
                             )
                         }
                     }
@@ -487,7 +492,8 @@ object FirebaseManager {
         const val KEEP_TALKING_CLICKED = "keep_talking_clicked" // Keep Talking按钮点击
 
         // 图片生成相关事件
-        const val MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED = "message_to_image_generation_button_clicked"
+        const val MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED =
+            "message_to_image_generation_button_clicked"
         const val MESSAGE_TO_IMAGE_GENERATION_SUCCESS = "message_to_image_generation_success"
         // 图片生成失败，除生成数量上线超标以外的错误
         const val MESSAGE_TO_IMAGE_GENERATION_FAILURE = "message_to_image_generation_failure"
@@ -605,14 +611,14 @@ object FirebaseManager {
         metricName: String,
         value: Long,
         unit: String = "ms",
-        additionalParams: Map<String, Any> = emptyMap()
+        additionalParams: Map<String, Any> = emptyMap(),
     ) {
         try {
             val params =
                 mapOf(
                     "metric_value" to value,
                     "metric_unit" to unit,
-                    "timestamp" to System.currentTimeMillis()
+                    "timestamp" to System.currentTimeMillis(),
                 ) + additionalParams
 
             // 使用指定的事件名称记录性能指标
@@ -624,9 +630,9 @@ object FirebaseManager {
 
     // Firebase Analytics 参数限制常量（根据 Firebase 官方文档）
     // 参考: https://firebase.google.com/docs/analytics/events
-    private const val MAX_PARAM_NAME_LENGTH = 40  // Firebase 官方限制：参数名最多 40 个字符
-    private const val MAX_PARAM_VALUE_LENGTH = 100  // Firebase 官方限制：参数值最多 100 个字符
-    private const val MAX_PARAMS_PER_EVENT = 25  // Firebase 官方限制：每个事件最多 25 个参数
+    private const val MAX_PARAM_NAME_LENGTH = 40 // Firebase 官方限制：参数名最多 40 个字符
+    private const val MAX_PARAM_VALUE_LENGTH = 100 // Firebase 官方限制：参数值最多 100 个字符
+    private const val MAX_PARAMS_PER_EVENT = 25 // Firebase 官方限制：每个事件最多 25 个参数
 
     /** 验证参数名是否符合 Firebase 规范 */
     private fun isValidParameterName(name: String): Boolean {
@@ -646,9 +652,10 @@ object FirebaseManager {
         }
 
         // 规范化：移除特殊字符，确保以字母开头
-        var sanitized = name
-            .replace(Regex("[^a-zA-Z0-9_]"), "_")  // 将特殊字符替换为下划线
-            .take(MAX_PARAM_NAME_LENGTH)  // 限制长度
+        var sanitized =
+            name
+                .replace(Regex("[^a-zA-Z0-9_]"), "_") // 将特殊字符替换为下划线
+                .take(MAX_PARAM_NAME_LENGTH) // 限制长度
 
         // 如果规范化后以数字开头，添加前缀
         if (sanitized.isNotEmpty() && sanitized[0].isDigit()) {
@@ -683,25 +690,23 @@ object FirebaseManager {
         val sanitizedKey = sanitizeParameterName(key)
 
         // 转换参数值
-        val stringValue = when (value) {
-            null -> "unknown"
-            is String -> sanitizeParamValue(value)
-            else -> sanitizeParamValue(value.toString())
-        }
+        val stringValue =
+            when (value) {
+                null -> "unknown"
+                is String -> sanitizeParamValue(value)
+                else -> sanitizeParamValue(value.toString())
+            }
 
         // 如果参数名被规范化，记录警告（仅在调试模式）
         if (sanitizedKey != key && AppUtils.isAppDebug()) {
-            LogUtils.w(
-                "FirebaseManager",
-                "参数名被规范化: '$key' -> '$sanitizedKey'"
-            )
+            LogUtils.w("FirebaseManager", "参数名被规范化: '$key' -> '$sanitizedKey'")
         }
 
         // 如果参数值被截断，记录警告（仅在调试模式）
         if (value is String && stringValue.length < value.length && AppUtils.isAppDebug()) {
             LogUtils.w(
                 "FirebaseManager",
-                "参数值被截断: '$key' 原长度=${value.length}, 截断后=${stringValue.length}"
+                "参数值被截断: '$key' 原长度=${value.length}, 截断后=${stringValue.length}",
             )
         }
 
@@ -714,12 +719,12 @@ object FirebaseManager {
         if (params.size > MAX_PARAMS_PER_EVENT) {
             logError(
                 "safeEventParams",
-                "参数数量超过限制: ${params.size} > $MAX_PARAMS_PER_EVENT，将只保留前 $MAX_PARAMS_PER_EVENT 个参数"
+                "参数数量超过限制: ${params.size} > $MAX_PARAMS_PER_EVENT，将只保留前 $MAX_PARAMS_PER_EVENT 个参数",
             )
         }
 
         return params
-            .take(MAX_PARAMS_PER_EVENT)  // 限制参数数量
+            .take(MAX_PARAMS_PER_EVENT) // 限制参数数量
             .associate { (key, value) -> safeEventParam(key, value) }
     }
 
@@ -751,7 +756,7 @@ object FirebaseManager {
     fun putTraceAttribute(
         trace: com.google.firebase.perf.metrics.Trace?,
         attributeName: String,
-        value: String
+        value: String,
     ) {
         try {
             trace?.putAttribute(attributeName, value)
@@ -764,7 +769,7 @@ object FirebaseManager {
     fun putTraceMetric(
         trace: com.google.firebase.perf.metrics.Trace?,
         metricName: String,
-        value: Long
+        value: Long,
     ) {
         try {
             trace?.putMetric(metricName, value)
@@ -811,7 +816,7 @@ object FirebaseManager {
     /** 便捷方法：执行带性能监控的操作 */
     inline fun <T> trace(
         traceName: String,
-        operation: (com.google.firebase.perf.metrics.Trace?) -> T
+        operation: (com.google.firebase.perf.metrics.Trace?) -> T,
     ): T {
         val trace = startTrace(traceName)
         return try {
@@ -880,7 +885,7 @@ object FirebaseManager {
                 if (AppUtils.isAppDebug()) {
                     LogUtils.d(
                         "FirebaseManager",
-                        "事件被限频: $eventName (间隔: ${currentTime - lastTime}ms < ${minInterval}ms)"
+                        "事件被限频: $eventName (间隔: ${currentTime - lastTime}ms < ${minInterval}ms)",
                     )
                 }
                 return false
@@ -896,7 +901,7 @@ object FirebaseManager {
                 if (AppUtils.isAppDebug()) {
                     LogUtils.d(
                         "FirebaseManager",
-                        "事件被采样过滤: $eventName (随机值: $random > 采样率: $samplingRate)"
+                        "事件被采样过滤: $eventName (随机值: $random > 采样率: $samplingRate)",
                     )
                 }
                 return false
@@ -915,10 +920,7 @@ object FirebaseManager {
     private fun putParamsToBundle(bundle: Bundle, parameters: Map<String, Any>) {
         // 验证参数数量
         if (parameters.size > MAX_PARAMS_PER_EVENT) {
-            logError(
-                "putParamsToBundle",
-                "参数数量超过限制: ${parameters.size} > $MAX_PARAMS_PER_EVENT"
-            )
+            logError("putParamsToBundle", "参数数量超过限制: ${parameters.size} > $MAX_PARAMS_PER_EVENT")
         }
 
         var paramCount = 0
@@ -926,28 +928,23 @@ object FirebaseManager {
             // 限制参数数量
             if (paramCount >= MAX_PARAMS_PER_EVENT) {
                 if (AppUtils.isAppDebug()) {
-                    LogUtils.w(
-                        "FirebaseManager",
-                        "参数数量已达上限 ($MAX_PARAMS_PER_EVENT)，跳过参数: $key"
-                    )
+                    LogUtils.w("FirebaseManager", "参数数量已达上限 ($MAX_PARAMS_PER_EVENT)，跳过参数: $key")
                 }
                 return@forEach
             }
 
             try {
                 // 验证并规范化参数名
-                val finalKey = if (isValidParameterName(key)) {
-                    key
-                } else {
-                    val sanitizedKey = sanitizeParameterName(key)
-                    if (AppUtils.isAppDebug()) {
-                        LogUtils.w(
-                            "FirebaseManager",
-                            "参数名不符合规范: '$key'，已规范化: '$sanitizedKey'"
-                        )
+                val finalKey =
+                    if (isValidParameterName(key)) {
+                        key
+                    } else {
+                        val sanitizedKey = sanitizeParameterName(key)
+                        if (AppUtils.isAppDebug()) {
+                            LogUtils.w("FirebaseManager", "参数名不符合规范: '$key'，已规范化: '$sanitizedKey'")
+                        }
+                        sanitizedKey
                     }
-                    sanitizedKey
-                }
 
                 when (value) {
                     is String -> {
@@ -956,7 +953,7 @@ object FirebaseManager {
                         if (sanitizedValue.length < value.length && AppUtils.isAppDebug()) {
                             LogUtils.d(
                                 "FirebaseManager",
-                                "参数值被截断: $finalKey (${value.length} -> ${sanitizedValue.length})"
+                                "参数值被截断: $finalKey (${value.length} -> ${sanitizedValue.length})",
                             )
                         }
                     }

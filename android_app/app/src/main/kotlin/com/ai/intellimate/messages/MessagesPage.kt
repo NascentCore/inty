@@ -65,20 +65,16 @@ fun MessagesPage(
     val uiState by viewModel.uiState.collectAsState()
 
     // 页面跟踪（首次加载时）
-    LaunchedEffect(pageTrackingContext) {
-        viewModel.trackPageView(pageTrackingContext)
-    }
+    LaunchedEffect(pageTrackingContext) { viewModel.trackPageView(pageTrackingContext) }
 
     // 监听会话列表更新，检查是否有新消息自动取消隐藏
-    LaunchedEffect(uiState.conversations) {
-        viewModel.checkAndUnhideConversations()
-    }
+    LaunchedEffect(uiState.conversations) { viewModel.checkAndUnhideConversations() }
 
     Box(modifier = modifier) {
         AsyncImage(
             modifier = Modifier.align(Alignment.TopEnd),
             model = R.drawable.notify_header_bg,
-            contentDescription = null
+            contentDescription = null,
         )
         Content(
             uiState = uiState,
@@ -98,9 +94,7 @@ private fun Content(
     onLoadMore: () -> Unit,
 ) {
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Transparent),
+        modifier = Modifier.fillMaxSize().background(Color.Transparent),
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
@@ -108,9 +102,7 @@ private fun Content(
                     Image(
                         painter = painterResource(R.drawable.img_message_title),
                         contentDescription = null,
-                        modifier = Modifier
-                            .height(30.dp)
-                            .fillMaxWidth(),
+                        modifier = Modifier.height(30.dp).fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )
@@ -120,11 +112,7 @@ private fun Content(
             )
         },
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             MessageTabContent(
                 uiState = uiState,
                 viewModel = viewModel,
@@ -153,7 +141,10 @@ private fun MessageTabContent(
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
             // 当滚动到倒数第3项时触发加载更多
-            totalItems > 0 && lastVisibleItem >= totalItems - 3 && !uiState.isLoading && uiState.hasMore
+            totalItems > 0 &&
+                lastVisibleItem >= totalItems - 3 &&
+                !uiState.isLoading &&
+                uiState.hasMore
         }
     }
 
@@ -174,9 +165,7 @@ private fun MessageTabContent(
             if (uiState.isRefreshing) {
                 item {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp),
+                        modifier = Modifier.fillMaxWidth().height(80.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
@@ -190,50 +179,54 @@ private fun MessageTabContent(
             // 会话列表
             if (uiState.conversations.isNotEmpty()) {
                 runCatching {
-                    itemsIndexed(
-                        items = uiState.conversations,
-                        key = { index, conversion -> "${conversion.agentId}_$index" },
-                    ) { index, conversion ->
-                        var lastClickTime by remember { mutableStateOf(0L) }
+                        itemsIndexed(
+                            items = uiState.conversations,
+                            key = { index, conversion -> "${conversion.agentId}_$index" },
+                        ) { index, conversion ->
+                            var lastClickTime by remember { mutableStateOf(0L) }
 
-                        // 使用 combinedClickable 同时处理点击和长按
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .combinedClickable(
-                                    onClick = {
-                                        // 正常点击：如果菜单未显示，则进入聊天
-                                        if (showMenuForConversationId != conversion.agentId) {
-                                            val currentTime = System.currentTimeMillis()
-                                            if (AntiClick.isValidClick(lastClickTime)) {
-                                                lastClickTime = currentTime
-                                                // 检查是否已登录
-                                                if (IntySetting.isLogin() && IntySetting.getCurToken()
-                                                        .isNotEmpty()
+                            // 使用 combinedClickable 同时处理点击和长按
+                            Box(
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .combinedClickable(
+                                            onClick = {
+                                                // 正常点击：如果菜单未显示，则进入聊天
+                                                if (
+                                                    showMenuForConversationId != conversion.agentId
                                                 ) {
-                                                    onClickConversationItem(conversion)
+                                                    val currentTime = System.currentTimeMillis()
+                                                    if (AntiClick.isValidClick(lastClickTime)) {
+                                                        lastClickTime = currentTime
+                                                        // 检查是否已登录
+                                                        if (
+                                                            IntySetting.isLogin() &&
+                                                                IntySetting.getCurToken()
+                                                                    .isNotEmpty()
+                                                        ) {
+                                                            onClickConversationItem(conversion)
+                                                        }
+                                                    }
+                                                } else {
+                                                    // 如果菜单显示，点击则关闭菜单
+                                                    showMenuForConversationId = null
                                                 }
-                                            }
-                                        } else {
-                                            // 如果菜单显示，点击则关闭菜单
-                                            showMenuForConversationId = null
-                                        }
-                                    },
-                                    onLongClick = {
-                                        // 长按：显示菜单，记录 item 索引用于定位
-                                        showMenuForConversationId = conversion.agentId
-                                        menuItemIndex = index
-                                    }
+                                            },
+                                            onLongClick = {
+                                                // 长按：显示菜单，记录 item 索引用于定位
+                                                showMenuForConversationId = conversion.agentId
+                                                menuItemIndex = index
+                                            },
+                                        )
+                            ) {
+                                ChatHistoryItem(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    conversation = conversion,
                                 )
-                        ) {
-                            ChatHistoryItem(
-                                modifier = Modifier.fillMaxWidth(),
-                                conversation = conversion,
-                            )
+                            }
                         }
+                        item { Spacer(Modifier.height(60.dp)) }
                     }
-                    item { Spacer(Modifier.height(60.dp)) }
-                }
                     .onFailure { it.printStackTrace() }
             }
 
@@ -241,9 +234,7 @@ private fun MessageTabContent(
             if (uiState.isLoading) {
                 item {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp),
+                        modifier = Modifier.fillMaxWidth().height(80.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
@@ -262,11 +253,11 @@ private fun MessageTabContent(
             conversation?.let { conv ->
                 // 遮罩层，点击外部关闭菜单（全屏）
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Transparent)
-                        .clickable { showMenuForConversationId = null }
-                        .zIndex(999f)
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .background(Color.Transparent)
+                            .clickable { showMenuForConversationId = null }
+                            .zIndex(999f)
                 )
 
                 // 菜单内容（显示在 item 位置附近）
@@ -275,9 +266,7 @@ private fun MessageTabContent(
                 val menuY = (estimatedItemHeight * menuItemIndex) + estimatedItemHeight / 2
 
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .zIndex(1000f),
+                    modifier = Modifier.fillMaxSize().zIndex(1000f),
                     contentAlignment = Alignment.TopStart,
                 ) {
                     ConversationItemMenu(
@@ -301,9 +290,7 @@ private fun MessageTabContent(
                             showMenuForConversationId = null
                         },
                         onDismiss = { showMenuForConversationId = null },
-                        modifier = Modifier
-                            .offset(x = 16.dp, y = menuY)
-                            .width(140.dp)
+                        modifier = Modifier.offset(x = 16.dp, y = menuY).width(140.dp),
                     )
                 }
             }
@@ -329,14 +316,12 @@ private fun ChatHistoryItem(
 
         // 头像
         AsyncImage(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape),
+            modifier = Modifier.size(56.dp).clip(CircleShape),
             model = getCdnImageUrl(conversation.agentAvatar, width = 128),
             placeholder = painterResource(placeholderID),
             contentDescription = null,
             alignment = Alignment.TopCenter,
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
         )
 
         Spacer(Modifier.width(14.dp))

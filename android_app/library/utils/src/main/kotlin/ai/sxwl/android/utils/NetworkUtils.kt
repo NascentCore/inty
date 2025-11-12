@@ -28,7 +28,7 @@ object NetworkUtils {
         MOBILE, // 移动网络
         ETHERNET, // 以太网
         VPN, // VPN网络
-        UNKNOWN // 未知网络类型
+        UNKNOWN, // 未知网络类型
     }
 
     /** 网络状态数据类 */
@@ -36,7 +36,7 @@ object NetworkUtils {
         val isConnected: Boolean,
         val networkType: NetworkType,
         val isMetered: Boolean = false,
-        val isRoaming: Boolean = false
+        val isRoaming: Boolean = false,
     )
 
     // ==================== 基础网络检测 ====================

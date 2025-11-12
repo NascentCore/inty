@@ -55,9 +55,6 @@ class RegInfoActivity : BaseActivity() {
 
 /** 注册信息内容组件 */
 @Composable
-private fun RegInfoContent(
-    onClose: () -> Unit,
-    onSave: (gender: GENDER, age: String) -> Unit,
-) {
+private fun RegInfoContent(onClose: () -> Unit, onSave: (gender: GENDER, age: String) -> Unit) {
     RegInfoScreen(onClose = onClose, onSave = onSave)
 }

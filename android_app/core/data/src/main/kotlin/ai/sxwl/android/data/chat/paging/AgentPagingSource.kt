@@ -37,7 +37,6 @@ class AgentPagingSource(
 
                 LogUtils.i("AgentPagingSource - 加载第${page}页，页面大小: $pageSize")
 
-
                 // 第一页特殊处理：优先使用缓存数据
                 if (page == INITIAL_PAGE && useCache && cacheProvider != null) {
                     val cachedAgents = cacheProvider.getCachedChatAgents()
@@ -99,8 +98,8 @@ class AgentPagingSource(
                         // 缓存第一页数据
                         if (
                             page == INITIAL_PAGE &&
-                            validAgents.isNotEmpty() &&
-                            cacheProvider != null
+                                validAgents.isNotEmpty() &&
+                                cacheProvider != null
                         ) {
                             cacheProvider.cacheChatAgents(validAgents)
                             cacheProvider.refreshChatAgents()

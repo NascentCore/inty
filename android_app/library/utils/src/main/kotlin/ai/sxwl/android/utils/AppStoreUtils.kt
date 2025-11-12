@@ -17,7 +17,7 @@ object AppStoreUtils {
     data class AppStoreConfig(
         val packageName: String = Utils.getApp()?.packageName ?: "",
         val includeGooglePlay: Boolean = false,
-        val preferredStore: String? = null
+        val preferredStore: String? = null,
     )
 
     /**

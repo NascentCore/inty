@@ -207,7 +207,7 @@ object LogUtils {
                     targetElement.className,
                     targetElement.methodName,
                     fileName,
-                    targetElement.lineNumber
+                    targetElement.lineNumber,
                 )
             val fileHead = " [$head]: "
 
@@ -235,7 +235,7 @@ object LogUtils {
                             element.className,
                             element.methodName,
                             getFileName(element),
-                            element.lineNumber
+                            element.lineNumber,
                         )
                 }
                 return TagHead(finalTag, consoleHead, fileHead)
@@ -301,7 +301,8 @@ object LogUtils {
         if (I_FORMATTER_MAP.isEmpty().not()) {
             val iFormatter = I_FORMATTER_MAP[getClassFromObject(obj)]
             if (iFormatter != null) {
-                @Suppress("UNCHECKED_CAST") return (iFormatter as IFormatter<Any>).format(obj)
+                @Suppress("UNCHECKED_CAST")
+                return (iFormatter as IFormatter<Any>).format(obj)
             }
         }
 
@@ -370,7 +371,7 @@ object LogUtils {
         type: Int,
         tag: String,
         head: Array<String>?,
-        msg: String
+        msg: String,
     ): String {
         val sb = kotlin.text.StringBuilder()
         if (CONFIG.logBorderSwitch) {
@@ -423,7 +424,7 @@ object LogUtils {
                             LEFT_BORDER +
                             msg.substring(index, endIndex) +
                             LINE_SEP +
-                            BOTTOM_BORDER
+                            BOTTOM_BORDER,
                     )
                     index += MAX_LEN
                 }
@@ -436,7 +437,7 @@ object LogUtils {
                             TOP_BORDER +
                             LINE_SEP +
                             LEFT_BORDER +
-                            msg.substring(index, len)
+                            msg.substring(index, len),
                     )
                 }
             } else {
@@ -448,7 +449,7 @@ object LogUtils {
                     print2Console(
                         type,
                         tag,
-                        PLACEHOLDER + LINE_SEP + msg.substring(index, endIndex)
+                        PLACEHOLDER + LINE_SEP + msg.substring(index, endIndex),
                     )
                     index += MAX_LEN
                 }
@@ -883,7 +884,7 @@ object LogUtils {
     private data class TagHead(
         val tag: String,
         val consoleHead: Array<String>?,
-        val fileHead: String
+        val fileHead: String,
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true

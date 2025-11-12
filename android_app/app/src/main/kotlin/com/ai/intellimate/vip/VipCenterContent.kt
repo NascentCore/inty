@@ -72,9 +72,12 @@ fun VipCenterContent(
 
     // 当UI显示价格时，上报Firebase事件（100%采样）
     // 使用plans的key来避免重复上报相同的价格信息
-    val plansKey = remember(plans) {
-        plans.joinToString("|") { "${it.googleProductId}:${it.price}:${it.currencyCode}:${it.priceAmountMicros}" }
-    }
+    val plansKey =
+        remember(plans) {
+            plans.joinToString("|") {
+                "${it.googleProductId}:${it.price}:${it.currencyCode}:${it.priceAmountMicros}"
+            }
+        }
 
     LaunchedEffect(plansKey, selectedPlanIndex, vipStatus.isSubscribed) {
         if (plans.isNotEmpty()) {
@@ -97,24 +100,21 @@ fun VipCenterContent(
                             "total_plans_count" to plans.size,
                             "is_subscribed" to vipStatus.isSubscribed,
                             "timestamp" to System.currentTimeMillis(),
-                        )
+                        ),
                     )
                 }
                 LogUtils.d(
                     "Billing VipCenterContent - ✅ Firebase事件已上报: SUBSCRIPTION_PRICE_DISPLAYED, 计划数量: ${plans.size}"
                 )
             } catch (e: Exception) {
-                LogUtils.e(
-                    "Billing VipCenterContent - ⚠️ Firebase事件上报失败: ${e.message}"
-                )
+                LogUtils.e("Billing VipCenterContent - ⚠️ Firebase事件上报失败: ${e.message}")
             }
         }
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(ai.sxwl.android.design.theme.HeartColor.primaryColor)
+        modifier =
+            Modifier.fillMaxSize().background(ai.sxwl.android.design.theme.HeartColor.primaryColor)
     ) {
         // 全屏视频播放器
         BackgroundVideoPlayer()
@@ -122,8 +122,7 @@ fun VipCenterContent(
         // 半透明遮罩层，确保内容可读性
         Box(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .fillMaxHeight(.77f)
                     .align(Alignment.BottomCenter)
                     .background(
@@ -252,11 +251,7 @@ private fun VipCenterHeader() {
 /** 会员权益列表 */
 @Composable
 private fun VipCenterBenefits() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited_chat))
 
         PremiumBenefitItem(stringResource(R.string.premium_benefit_higher_other_limits))

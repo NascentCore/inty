@@ -86,8 +86,8 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                 "has_audio_url" to (!audioUrl.isNullOrEmpty()),
                 "is_auto_play" to autoPlay,
                 "is_manual_click" to isManualClick,
-                "timestamp" to playbackStartTime
-            )
+                "timestamp" to playbackStartTime,
+            ),
         )
 
         // 检查是否启用自动播放
@@ -148,7 +148,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                 artist = "AI",
                 messageId = messageId,
                 agentId = agentId,
-                agentName = agentName
+                agentName = agentName,
             )
 
         // 始终在主线程调用ExoPlayer相关API

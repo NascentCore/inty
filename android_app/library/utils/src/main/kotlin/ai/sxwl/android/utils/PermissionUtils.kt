@@ -137,7 +137,7 @@ object PermissionUtils {
     fun hasStoragePermission(): Boolean {
         return isGranted(
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.READ_EXTERNAL_STORAGE
+            Manifest.permission.READ_EXTERNAL_STORAGE,
         )
     }
 
@@ -146,7 +146,7 @@ object PermissionUtils {
         return isGranted(
             context,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.READ_EXTERNAL_STORAGE
+            Manifest.permission.READ_EXTERNAL_STORAGE,
         )
     }
 
@@ -154,7 +154,7 @@ object PermissionUtils {
     fun hasLocationPermission(): Boolean {
         return isGranted(
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
+            Manifest.permission.ACCESS_COARSE_LOCATION,
         )
     }
 
@@ -163,7 +163,7 @@ object PermissionUtils {
         return isGranted(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
+            Manifest.permission.ACCESS_COARSE_LOCATION,
         )
     }
 
@@ -177,7 +177,7 @@ object PermissionUtils {
         return isGranted(
             context,
             Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.CALL_PHONE
+            Manifest.permission.CALL_PHONE,
         )
     }
 
@@ -211,7 +211,7 @@ object PermissionUtils {
         return isGranted(
             context,
             Manifest.permission.READ_CONTACTS,
-            Manifest.permission.WRITE_CONTACTS
+            Manifest.permission.WRITE_CONTACTS,
         )
     }
 
@@ -225,7 +225,7 @@ object PermissionUtils {
         return isGranted(
             context,
             Manifest.permission.READ_CALENDAR,
-            Manifest.permission.WRITE_CALENDAR
+            Manifest.permission.WRITE_CALENDAR,
         )
     }
 
@@ -269,7 +269,7 @@ object PermissionUtils {
         return isGranted(
             context,
             Manifest.permission.BLUETOOTH,
-            Manifest.permission.BLUETOOTH_ADMIN
+            Manifest.permission.BLUETOOTH_ADMIN,
         )
     }
 

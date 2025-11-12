@@ -14,9 +14,8 @@ data class ChatImageGenerationError(
 )
 
 /** 图片生成限制异常 */
-class ChatImageGenerationLimitException(
-    val error: ChatImageGenerationError
-) : Exception(error.message ?: "Image generation limit reached")
+class ChatImageGenerationLimitException(val error: ChatImageGenerationError) :
+    Exception(error.message ?: "Image generation limit reached")
 
 /** 聊天服务 封装所有聊天相关的API调用 替换原有的 IChatApi */
 object ChatService {
@@ -128,16 +127,16 @@ object ChatService {
     ): ApiResult<ChatImageGenerationResult> {
         return IntyNetworkManager.executeRequest("Generate Chat Image") {
             val client = IntyNetworkManager.getClient()
-            val params = com.inty.api.models.api.v1.chats.ChatGenerateImageParams
-                .builder()
-                .agentId(agentId)
-                .messageId(messageId.toLongOrNull() ?: 0L)
-                .build()
+            val params =
+                com.inty.api.models.api.v1.chats.ChatGenerateImageParams.builder()
+                    .agentId(agentId)
+                    .messageId(messageId.toLongOrNull() ?: 0L)
+                    .build()
 
             val response = client.api().v1().chats().generateImage(params)
 
-            if (response.code() == 200L && response.data()
-                    ?.isChatImageGenerationResponse() == true
+            if (
+                response.code() == 200L && response.data()?.isChatImageGenerationResponse() == true
             ) {
                 val imageData = response.data()?.asChatImageGenerationResponse()!!
                 val imageUrl = imageData.imageUrl()
@@ -159,24 +158,29 @@ object ChatService {
                 val errorCodeStr = errorData.errorCode()
 
                 // 将errorCode映射到业务错误码
-                val businessCode = when (errorCodeStr) {
-                    "IMAGE_GENERATION_LIMIT_REACHED" -> ai.sxwl.android.data.http.BusinessErrorCodes.IMAGE_GENERATION_LIMIT_REACHED_CODE.toLong()
-                    "SUBSCRIPTION_REQUIRED" -> ai.sxwl.android.data.http.BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE.toLong()
-                    else -> errorData.code()
-                }
+                val businessCode =
+                    when (errorCodeStr) {
+                        "IMAGE_GENERATION_LIMIT_REACHED" ->
+                            ai.sxwl.android.data.http.BusinessErrorCodes
+                                .IMAGE_GENERATION_LIMIT_REACHED_CODE
+                                .toLong()
+                        "SUBSCRIPTION_REQUIRED" ->
+                            ai.sxwl.android.data.http.BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                .toLong()
+                        else -> errorData.code()
+                    }
 
-                val error = ChatImageGenerationError(
-                    code = businessCode,
-                    errorCode = errorCodeStr,
-                    message = errorData.message(),
-                    dailyLimit = errorData.dailyLimit(),
-                    usedCount = errorData.usedCount(),
-                )
+                val error =
+                    ChatImageGenerationError(
+                        code = businessCode,
+                        errorCode = errorCodeStr,
+                        message = errorData.message(),
+                        dailyLimit = errorData.dailyLimit(),
+                        usedCount = errorData.usedCount(),
+                    )
                 throw ChatImageGenerationLimitException(error)
             } else {
-                val errorMessage =
-                    response.message()
-                        ?: "Failed to generate image"
+                val errorMessage = response.message() ?: "Failed to generate image"
                 throw Exception(errorMessage)
             }
         }

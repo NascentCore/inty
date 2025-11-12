@@ -183,8 +183,8 @@ fun VoicePlayer(
                             "play_status" to "completed",
                             "play_duration" to playDuration,
                             "audio_url" to audioInfo.url,
-                            "timestamp" to System.currentTimeMillis()
-                        )
+                            "timestamp" to System.currentTimeMillis(),
+                        ),
                     )
                 }
 
@@ -203,8 +203,8 @@ fun VoicePlayer(
                             "play_status" to "paused",
                             "play_duration" to playDuration,
                             "audio_url" to audioInfo.url,
-                            "timestamp" to System.currentTimeMillis()
-                        )
+                            "timestamp" to System.currentTimeMillis(),
+                        ),
                     )
                 }
 
@@ -223,8 +223,8 @@ fun VoicePlayer(
                             "play_status" to "error",
                             "play_duration" to playDuration,
                             "audio_url" to audioInfo.url,
-                            "timestamp" to System.currentTimeMillis()
-                        )
+                            "timestamp" to System.currentTimeMillis(),
+                        ),
                     )
                 }
 
@@ -258,8 +258,8 @@ fun VoicePlayer(
                             "play_status" to "stopped",
                             "play_duration" to playDuration,
                             "audio_url" to audioInfo.url,
-                            "timestamp" to System.currentTimeMillis()
-                        )
+                            "timestamp" to System.currentTimeMillis(),
+                        ),
                     )
                 }
 
