@@ -55,7 +55,10 @@ class ChatRemoteDataSource {
                 "ChatRemoteDataSource.generateImage: agentId=$agentId, messageId=$messageId"
             )
             val result =
-                ai.sxwl.android.data.http.services.ChatService.generateImage(agentId, messageId)
+                ai.sxwl.android.data.http.services.ChatService.messageGenerateImage(
+                    agentId,
+                    messageId
+                )
             when (result) {
                 is ai.sxwl.android.data.http.ApiResult.Success -> {
                     HttpResult.Success(result.data)

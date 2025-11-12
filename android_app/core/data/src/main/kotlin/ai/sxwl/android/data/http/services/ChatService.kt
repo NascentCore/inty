@@ -121,8 +121,8 @@ object ChatService {
         }
     }
 
-    /** 生成聊天图片 */
-    suspend fun generateImage(
+    /** 消息生图 */
+    suspend fun messageGenerateImage(
         agentId: String,
         messageId: String,
     ): ApiResult<ChatImageGenerationResult> {
