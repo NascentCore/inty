@@ -6,6 +6,7 @@ on:
     branches:
       - main
     paths:
+      - "pytest.ini"
       - "alembic/versions/**/*.py"
       - "start.sh"
       - "app/**/*.py"
