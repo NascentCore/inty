@@ -188,6 +188,7 @@ fun AgentBackground(
                 playCount = finalPlayCount,
                 isVideoCached = isVideoCached,
                 isCurrentPage = isCurrentPage,
+                staticImageRequest = staticImageRequest, // 传递已优化的图片请求
                 onPlayComplete = {
                     shouldPlayPageSwitch = false
                     shouldPlayLoading = false

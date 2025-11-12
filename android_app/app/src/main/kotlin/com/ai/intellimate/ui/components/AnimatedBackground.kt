@@ -1,6 +1,7 @@
 package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.utils.LogUtils
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
@@ -59,14 +60,16 @@ fun AnimatedBackground(
     playCount: Int = 1,
     isVideoCached: Boolean = false,
     isCurrentPage: Boolean = true,
+    staticImageRequest: ImageRequest? = null, // 可选的预构建图片请求，用于优化性能
     onPlayComplete: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val videoCacheManager = remember { VideoCacheManager.getInstance(context) }
 
     var showStaticImage by remember { mutableStateOf(false) }
-    var staticImageLoaded by remember { mutableStateOf(false) }
     var videoPrepared by remember { mutableStateOf(false) }
+    var videoFirstFrameRendered by remember { mutableStateOf(false) } // 视频第一帧是否已渲染
+    var targetStaticImageAlpha by remember { mutableStateOf(1f) } // 静态图目标透明度，用于动画
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
     var currentPlayCount by remember { mutableIntStateOf(0) }
     var actualPlayCount by remember { mutableIntStateOf(0) }
@@ -117,77 +120,80 @@ fun AnimatedBackground(
         LogUtils.d("AnimatedBackground - 视频URL变化，重置状态: videoUrl=$videoUrl, staticImageUrl=$staticImageUrl")
         // 如果有视频URL且有静态图，先显示静态图
         showStaticImage = videoUrl != null && staticImageUrl != null
-        staticImageLoaded = false
+        targetStaticImageAlpha = 1f // 重置目标透明度
         videoPrepared = false
+        videoFirstFrameRendered = false
         actualPlayCount = 0
         // 暂停播放，但不释放播放器（由 DisposableEffect 处理）
         exoPlayer?.pause()
         exoPlayer?.seekTo(0)
     }
 
-    // 处理静态图和视频的切换逻辑：视频准备好后切换到视频
-    LaunchedEffect(
-        staticImageLoaded,
-        videoPrepared,
-        isVideo,
-        videoUrl,
-        staticImageUrl,
-        isVideoCached
-    ) {
+    // 确保视频第一帧已渲染：视频准备好后，等待第一帧渲染完成
+    LaunchedEffect(videoPrepared, exoPlayer) {
+        if (videoPrepared && exoPlayer != null) {
+            // 确保视频显示第一帧（不播放）
+            exoPlayer?.seekTo(0)
+            exoPlayer?.playWhenReady = false
+
+            // 等待更长时间，确保第一帧已完全渲染到屏幕上
+            kotlinx.coroutines.delay(200)
+            videoFirstFrameRendered = true
+            LogUtils.d("AnimatedBackground - 视频第一帧已渲染完成")
+        } else {
+            videoFirstFrameRendered = false
+        }
+    }
+
+    // 处理静态图和视频的切换逻辑：视频第一帧渲染完成后，触发动画隐藏静态图
+    LaunchedEffect(videoFirstFrameRendered, isVideo, videoUrl, staticImageUrl, isVideoCached) {
         if (videoUrl != null && staticImageUrl != null && showStaticImage) {
-            // 如果视频已准备好且已缓存，切换到视频
-            val shouldSwitch = isVideo && staticImageLoaded && videoPrepared && isVideoCached
-            if (shouldSwitch) {
-                showStaticImage = false
-                LogUtils.d("AnimatedBackground - 从静态图切换到视频")
+            // 如果视频第一帧已渲染且已缓存，触发动画隐藏静态图
+            if (isVideo && videoFirstFrameRendered && isVideoCached) {
+                // 等待一小段时间，确保视频第一帧完全稳定
+                kotlinx.coroutines.delay(50)
+                // 设置目标透明度为 0，触发 Compose 动画
+                targetStaticImageAlpha = 0f
+                LogUtils.d("AnimatedBackground - 触发静态图淡出动画")
             }
         } else if (videoUrl != null && staticImageUrl == null) {
             // 没有静态图，直接显示视频
             showStaticImage = false
+            targetStaticImageAlpha = 0f
         } else if (videoUrl == null && staticImageUrl != null) {
             // 没有视频，显示静态图
             showStaticImage = true
+            targetStaticImageAlpha = 1f
         }
     }
 
-    // 判断是否应该显示视频
-    val shouldShowVideo = when {
-        staticImageUrl == null -> true // 没有静态图，直接显示视频
-        isVideo -> !showStaticImage && videoPrepared && isVideoCached
-        else -> false
-    }
-
-    // 静态图和视频的渐变动画
-    val staticImageAlpha by animateFloatAsState(
-        targetValue = if (showStaticImage && staticImageUrl != null) 1f else 0f,
-        animationSpec = tween(durationMillis = 300),
+    // 使用 Compose 动画 API 实现平滑的 alpha 过渡
+    // 当 targetStaticImageAlpha 变化时，自动执行动画
+    val animatedAlpha by animateFloatAsState(
+        targetValue = if (showStaticImage) targetStaticImageAlpha else 0f,
+        animationSpec = tween(
+            durationMillis = 300, // 300ms 的淡出动画
+            easing = FastOutSlowInEasing
+        ),
         label = "staticImageAlpha"
     )
 
-    val videoAlpha by animateFloatAsState(
-        targetValue = if (shouldShowVideo) 1f else 0f,
-        animationSpec = tween(durationMillis = 300),
-        label = "videoAlpha"
-    )
+    // 当动画完成后，如果 alpha 为 0，则隐藏静态图组件
+    LaunchedEffect(animatedAlpha) {
+        if (animatedAlpha <= 0f && showStaticImage) {
+            // 延迟一小段时间再隐藏，确保动画完全完成
+            kotlinx.coroutines.delay(50)
+            showStaticImage = false
+            LogUtils.d("AnimatedBackground - 静态图淡出动画完成，隐藏组件")
+        }
+    }
 
     // 关键：在 Compose 层面添加裁剪，防止视频超出容器边界
-    Box(modifier = modifier
-        .fillMaxSize()
-        .clipToBounds()) {
-        // 显示静态图片（如果有且需要显示，在视频准备好之前显示）
-        if (staticImageUrl != null && staticImageAlpha > 0f) {
-            AsyncImage(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .alpha(staticImageAlpha),
-                model = ImageRequest.Builder(context).data(staticImageUrl).build(),
-                contentDescription = null,
-                contentScale = contentScale,
-                onSuccess = {
-                    staticImageLoaded = true
-                },
-            )
-        }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .clipToBounds()
+    ) {
 
         // 如果有视频URL，创建视频视图
         if (videoUrl != null && isVideo) {
@@ -257,14 +263,14 @@ fun AnimatedBackground(
                         clipChildren = true
                         clipToPadding = true
                     }
-                    
+
                     val view = PlayerView(ctx).apply {
                         this.player = player
                         useController = false
                         // 使用 ZOOM 模式（crop），填充整个容器，超出部分裁剪
                         resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                         visibility = android.view.View.VISIBLE
-                        alpha = 0f // 初始透明，通过动画控制
+                        alpha = 1f // 始终可见
 
                         // 确保 PlayerView 的布局参数不会超出父容器
                         layoutParams = android.widget.FrameLayout.LayoutParams(
@@ -274,7 +280,7 @@ fun AnimatedBackground(
                     }
 
                     frameLayout.addView(view)
-                    
+
                     // 设置媒体项：优先使用缓存的本地路径，否则使用原始URL
                     // 如果 isVideoCached 为 true，videoPath 应该已经同步获取到了
                     val pathToUse = if (isVideoCached) {
@@ -296,13 +302,6 @@ fun AnimatedBackground(
                     .fillMaxSize()
                     .clipToBounds(),
                 update = { frameLayout ->
-                    // 获取 PlayerView（FrameLayout 的第一个子视图）
-                    val playerView = frameLayout.getChildAt(0) as? PlayerView
-
-                    // 更新视频视图的透明度（使用动画值）
-                    playerView?.alpha = videoAlpha
-                    // visibility 保持 VISIBLE，通过 alpha 控制显示/隐藏
-                    
                     // 更新视频路径（如果变化）：当 videoPath 准备好后，从 URL 切换到缓存路径
                     val pathToUse = videoPath ?: videoUrl
                     if (pathToUse != null && exoPlayer != null) {
@@ -363,11 +362,27 @@ fun AnimatedBackground(
                     exoPlayer = null
                 }
             }
+
+            // 在 Compose 层覆盖静态图，使用 Compose 动画实现平滑过渡
+            if (showStaticImage && staticImageUrl != null) {
+                val imageRequest = staticImageRequest
+                    ?: ImageRequest.Builder(context).data(staticImageUrl).build()
+                AsyncImage(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(animatedAlpha), // 使用动画的 alpha 值
+                    model = imageRequest,
+                    contentDescription = null,
+                    contentScale = contentScale,
+                )
+            }
         } else if (staticImageUrl != null) {
             // 没有视频URL，显示静态图片
+            val imageRequest = staticImageRequest
+                ?: ImageRequest.Builder(context).data(staticImageUrl).build()
             AsyncImage(
                 modifier = Modifier.fillMaxSize(),
-                model = ImageRequest.Builder(context).data(staticImageUrl).build(),
+                model = imageRequest,
                 contentDescription = null,
                 contentScale = contentScale,
             )
