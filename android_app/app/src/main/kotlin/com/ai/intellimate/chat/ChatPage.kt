@@ -348,24 +348,23 @@ internal fun ChatPage(
                                     }
                                 }
                             }
-                        }
-                            .onFailure { e ->
-                                item {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .height(100.dp)
-                                                .background(Color.Red.copy(alpha = 0.1f))
-                                    ) {
-                                        Text(
-                                            text = "Chat history loading failed, please retry",
-                                            color = Color.White,
-                                            modifier = Modifier.align(Alignment.Center),
-                                        )
-                                    }
+                        }.onFailure { e ->
+                            item {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(100.dp)
+                                            .background(Color.Red.copy(alpha = 0.1f))
+                                ) {
+                                    Text(
+                                        text = "Chat history loading failed, please retry",
+                                        color = Color.White,
+                                        modifier = Modifier.align(Alignment.Center),
+                                    )
                                 }
                             }
+                        }
                         val showIntroOpeningTop =
                             isQueryMsgsCompleted && ((!hasMoreMessages) || chatMessages.isEmpty())
                         if (showIntroOpeningTop) {
@@ -582,6 +581,9 @@ internal fun ChatPage(
     }
 }
 
+/**
+ * 聊天消息受限的dialog
+ */
 @Composable
 private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
     val showDialog by chatViewModel.showLimitDialog.collectAsState()
@@ -612,6 +614,9 @@ private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
     }
 }
 
+/**
+ * 消息生图接口受限时候的弹窗dialog
+ */
 @Composable
 private fun ShowImageGenerationDialog(chatViewModel: ChatViewModel) {
     val context = LocalContext.current
