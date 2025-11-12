@@ -51,7 +51,8 @@ class AgentRepositoryImpl(
     }
 
     override fun getInitialChatAgents(): Flow<PagingData<AgentInfo>> {
-        LogUtils.d("AgentRepositoryImpl.getInitialChatAgents")
-        return getChatAgentsFlow(useCache = true, sortSeed = IntySetting.randomSortSeed())
+        val sortSeed = IntySetting.randomSortSeed()
+        LogUtils.i("AgentRepositoryImpl.getInitialChatAgents - 使用 sortSeed: $sortSeed")
+        return getChatAgentsFlow(useCache = true, sortSeed = sortSeed)
     }
 }
