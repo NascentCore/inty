@@ -495,6 +495,13 @@ class TextToImageRequest(BaseModel):
             "As a wrapper, we'll not want to apply enhancement to the prompt. "
         ),
     )
+    background_url: Optional[str] = Field(
+        default=None,
+        description=(
+            "Existing background image URL to reuse as the storage prefix for generated images. "
+            "Supports Cloudflare CDN and GCS URLs. Leave empty to create a new background."
+        ),
+    )
     count: int = Field(
         default=1,
         ge=1,
@@ -512,6 +519,16 @@ class TextToImageRequest(BaseModel):
                 "count": 2,
             }
         }
+
+    @field_validator("background_url", mode="before")
+    @classmethod
+    def normalize_background_url(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            stripped = value.strip()
+            return stripped or None
+        return value
 
 
 class CreatorAgentStats(BaseModel):

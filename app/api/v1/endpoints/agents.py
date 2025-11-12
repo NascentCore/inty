@@ -4,7 +4,7 @@ Agents endpoints for accessing agents for interactions.
 
 import traceback
 import uuid
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from loguru import logger
@@ -30,6 +30,7 @@ from app.services import agent_service
 from app.services.character_card_service import character_card_service
 from app.services.global_services import subscription_service
 from app.services.resource_service import async_create_image_resource
+from app.services.image_transform_service import image_transform_service
 from app.utils.gemini import ImagenGeneratedImage, text_to_image
 from app.utils.image import AspectRatio, ImageFormat
 
@@ -394,7 +395,6 @@ async def generate_background_animated(
         raise HTTPException(status_code=400, detail="请先上传背景图")
 
     try:
-        from app.services.image_transform_service import image_transform_service
         from app.services.video_generation_service import video_generation_service
         from app.utils.gemini import generate_image_description
 
@@ -580,11 +580,62 @@ async def generate_background(
                 },
             )
 
-        # Construct GCS base path - use unified directory instead of tmp
-        gcs_base_path = f"backgrounds/{current_user.id}/{uuid.uuid4().hex}"
-        gcs_uri_base = (
-            f"gs://{global_config_loaded_from_config_yaml.gcs.bucket}/{gcs_base_path}"
-        )
+        # Determine storage base path for generated images
+        gcs_uri_base: Optional[str] = None
+        if request.background_url:
+            try:
+                normalized_background_url = (
+                    image_transform_service.normalize_image_url_for_storage(
+                        request.background_url
+                    )
+                )
+                if normalized_background_url and image_transform_service.is_gcs_url(
+                    normalized_background_url
+                ):
+                    gcs_path = image_transform_service.extract_gcs_path(
+                        normalized_background_url
+                    )
+                    if gcs_path:
+                        trimmed_path = gcs_path.rstrip("/")
+                        if not trimmed_path:
+                            logger.warning(
+                                "Provided background_url is invalid after trimming: "
+                                f"{normalized_background_url}"
+                            )
+                        else:
+                            if normalized_background_url.endswith("/"):
+                                directory_path = trimmed_path
+                            elif "/" in trimmed_path:
+                                directory_path = trimmed_path.rsplit("/", 1)[0]
+                            else:
+                                directory_path = trimmed_path
+
+                            if directory_path:
+                                gcs_uri_base = f"gs://{directory_path}"
+                                logger.debug(
+                                    "Using provided background_url as storage base: "
+                                    f"{normalized_background_url} -> {gcs_uri_base}"
+                                )
+                else:
+                    logger.debug(
+                        "Provided background_url is not a GCS/Cloudflare URL, "
+                        "fallback to default storage path."
+                    )
+            except Exception as background_error:
+                logger.warning(
+                    "Failed to derive storage path from background_url '%s': %s",
+                    request.background_url,
+                    background_error,
+                )
+
+        if not gcs_uri_base:
+            default_base_path = f"backgrounds/{current_user.id}/{uuid.uuid4().hex}"
+            gcs_uri_base = (
+                f"gs://{global_config_loaded_from_config_yaml.gcs.bucket}/{default_base_path}"
+            )
+            logger.debug(
+                "Using default storage base for generated images: %s", gcs_uri_base
+            )
 
         # 获取用户性别信息并转换为相应格式
         user_gender = None
@@ -621,8 +672,6 @@ async def generate_background(
         rai_reasons = result["rai_reasons"]
 
         # Convert GCS URLs to CDN URLs
-        from app.services.image_transform_service import image_transform_service
-
         cdn_urls = []
         cdn_url_to_img_dict = {}
         for gcs_url in gcs_urls:

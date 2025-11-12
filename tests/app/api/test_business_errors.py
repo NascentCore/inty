@@ -21,6 +21,8 @@ from app.schemas.response import BusinessErrorCode, UsageLimitExceeded
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.global_services import subscription_service
 from app.services.voice_service import VoiceService
+from app.utils.gemini import ImagenGeneratedImage
+from app.utils.image import ImageFormat, ImageSize
 
 
 def _make_user(
@@ -153,6 +155,87 @@ def test_text_to_image_limit_returns_business_error(monkeypatch: pytest.MonkeyPa
     assert body["data"]["used_count"] == 3
     assert body["data"]["limit"] == 3
     assert body["data"]["feature"] == "background_generation"
+
+
+def test_text_to_image_allows_empty_background_url(
+    monkeypatch: pytest.MonkeyPatch, test_app: FastAPI
+):
+    async def fake_check_image_gen_limit(db, current_user):
+        return True, 0, 5
+
+    async def fake_record_usage(db, user_id, feature, count):
+        return None
+
+    captured = {}
+
+    def fake_text_to_image(
+        prompt,
+        negative_prompt,
+        enhance_prompt,
+        gender,
+        aspect_ratio,
+        gcs_uri_base,
+        count,
+    ):
+        captured["prompt"] = prompt
+        captured["gcs_uri_base"] = gcs_uri_base
+        return [
+            ImagenGeneratedImage(
+                gcs_uri="https://storage.googleapis.com/test-bucket/background.jpg",
+                size=ImageSize(width=1024, height=1792),
+                byte_size=2048,
+                format=ImageFormat.JPEG,
+                rai_filtered_reason=None,
+                enhanced_prompt="enhanced prompt",
+            )
+        ]
+
+    async def fake_async_create_image_resource(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(
+        subscription_service,
+        "check_image_gen_limit",
+        fake_check_image_gen_limit,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "record_usage",
+        fake_record_usage,
+    )
+    monkeypatch.setattr(agents_v1, "text_to_image", fake_text_to_image)
+    monkeypatch.setattr(
+        agents_v1,
+        "async_create_image_resource",
+        fake_async_create_image_resource,
+    )
+
+    from app.services.image_transform_service import image_transform_service
+
+    monkeypatch.setattr(
+        image_transform_service,
+        "transform_desktop",
+        lambda url: url,
+    )
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    with _client_with_user(test_app, user) as client:
+        response = client.post(
+            "/api/v1/ai/agents/text-to-image",
+            json={"prompt": "generate image", "count": 1, "background_url": ""},
+        )
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["code"] == 200
+    assert body["data"]["urls"] == [
+        "https://storage.googleapis.com/test-bucket/background.jpg"
+    ]
+    assert body["data"]["count"] == 1
+    assert captured["gcs_uri_base"].startswith("gs://")
+    assert "backgrounds/" in captured["gcs_uri_base"]
 
 
 def _stub_voice_generation_dependencies(monkeypatch: pytest.MonkeyPatch):
