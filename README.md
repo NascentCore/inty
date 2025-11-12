@@ -17,64 +17,63 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
 
 ## 快速开始
 
+1. 克隆仓库并初始化子模块：
+
 ```bash
-git clone ...
-cd ...
+git clone git@github.com:NascentCore/inty-backend.git
+cd inty-backend
 git submodule update --init --recursive
 ```
 
-如果搞坏了 git submodule，比如下面这样 submodule 里有了改动，可以重置 git submodule：
+> 没有 SSH 权限的开发者可以改用 `https://github.com/NascentCore/inty-backend.git`。
+
+2. 如需本地开发，请继续阅读后文的「在本地开发环境启动 App」章节获取依赖安装与环境配置步骤。
+
+如果子模块出现脏数据（如下图所示），可以按照下面的流程重置：
 
 <img width="480" height="436" alt="image" src="https://github.com/user-attachments/assets/23852e45-cfe6-4686-9282-c138d40bf96f" />
 
 ```bash
-# 删除已有的 submodule
+# 清理子模块的缓存配置
 git submodule deinit -f .
 
-# 重新拉取 submodule 代码
+# 重新拉取子模块代码
 git submodule update --init --recursive
 ```
 
-### Git Submodule 回滚
+### Git submodule 常用操作
 
-找到修改的 commit，然后在 submodule 目录内 checkout 该 commit
+- **回滚到指定提交**：进入目标子模块目录后执行 `git checkout <commit-hash>`。
+- **拉取子模块最新代码**：在仓库根目录执行 `git submodule update --remote --recursive`。
+- **同步子模块远程信息**：在仓库根目录执行 `git submodule sync`
 
 <img width="960" height="236" alt="image" src="https://github.com/user-attachments/assets/a3b34dad-45f4-43d0-b1fb-c066f8397bd2" />
 
-```
-
-[Git Module 使用指南](https://www.atlassian.com/git/articles/core-concept-workflows-and-tips)
-
-### 更新 Git submodule 到最新的代码分支
-
-```
-
-### 同步 git submodules
-
-`git submodule sync`
+更多进阶技巧可参考 [Git Submodule 使用指南](https://www.atlassian.com/git/articles/core-concept-workflows-and-tips)。
 
 ## 使用 Docker 容器本地运行后端服务和 Android app（适用于 app 开发者）
 
 1. 访问 <https://docs.docker.com/desktop/setup/install/mac-install/> 安装 Docker Desktop。
-1. 拷贝配置文件（config.yaml）及密钥文件到 inty-backend 代码库顶层目录。
+2. 拷贝配置文件（config.yaml）及密钥文件到 inty-backend 代码库顶层目录。
 
-   ```bash
-   git clone git@github.com:NascentCore/inty-backend.git
-   cd inty-backend
+    ```bash
+    git clone git@github.com:NascentCore/inty-backend.git
+    cd inty-backend
 
-   # 拷贝 config.yaml 文件到代码库顶层目录下
-   # 拷贝 cosmic-gizmo-424300-t1-6499a9d5bd94.json inty-firebase-key.json inty-backend-key.json
-   # 这三个文件到代码库顶层目录下 .secrets/ 目录下
-   # 然后运行下面的命令，服务在 http://localhost:8000
-   docker compose up --build --detach
+    mkdir -p .secrets
 
-   # 删除所有容器和其挂在的存储卷
-   # 数据库存储卷如果不删除，则会使用旧的景象，如果修改了数据库默认数据库，
-   # 老得存储卷会导致数据库启动失败
-   docker compose down --volume
-   ```
+    # 拷贝 config.yaml 文件到代码库顶层目录下
+    # 拷贝 cosmic-gizmo-424300-t1-6499a9d5bd94.json inty-firebase-key.json inty-backend-key.json
+    # 这三个文件到代码库顶层目录下 .secrets/ 目录下
+    # 然后运行下面的命令，服务在 http://localhost:8000
+    docker compose up --build --detach
 
-1. 然后在按照下面的步骤创建端口映射，然后选择 local build type 构建 Android app
+    # 删除所有容器及其挂载的存储卷
+    # 如果不删除数据库卷，旧数据可能导致数据库 schema 不兼容而无法启动
+    docker compose down --volumes
+    ```
+
+3. 创建端口映射后选择 local build type 构建 Android app：
 
    ```bash
    adb devices
@@ -83,11 +82,18 @@ git submodule update --init --recursive
 
    <img width="600" height="1850" alt="image" src="https://github.com/user-attachments/assets/9dc4e50d-91b5-4fbf-b04c-2c154db42b29" />
 
-## 使用 uvicorn 运行后端服务（面向后端开发者）
+## 本地启动后端服务（面向后端开发者）
+
+使用仓库自带脚本可以一键完成数据库迁移与开发模式下的启动：
 
 ```bash
-# 使用脚本启动，提供代码文件热加载
 ./start.sh --dev
+```
+
+脚本会执行 Alembic 迁移、初始化订阅计划，并以热加载模式启动 Uvicorn。如果只需要最小化启动流程，也可以直接运行：
+
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ## 更新 openapi.json
@@ -173,6 +179,7 @@ Get your GCP credential key json file to allow backend access to your GCS bucket
 ## 在本地开发环境启动 App
 
 ```bash
+# 若已在前文完成仓库克隆，可跳过本段
 git clone https://github.com/NascentCore/inty-backend.git
 cd inty-backend
 
@@ -180,11 +187,10 @@ python -m venv venv
 source venv/bin/activate
 
 pip install -r requirements.txt
+pip install -r test_requirements.txt
 
-# Copy the sample config file to the actual file name
-# And edit config.yaml to set the correct settings.
-# You only need to do this once to have a working config.yaml file.
-cp config.yaml.example config.yaml
+# 复制示例配置并根据实际需求修改
+cp devops/config.yaml.local config.yaml
 ```
 
 ### 环境要求
@@ -204,30 +210,23 @@ config.yaml 指明依赖服务的配置选项
 数据库结构见 [app/models](app/models) 下各个 python 代码文件中表结构定义数据结构
 
 ```bash
-# Install createdb cli, used below
+# 安装 createdb（Mac 用户示例）
 brew install postgresql
 
-# Launch postgres with vector extensions
+# 启动带有 pgvector 扩展的 PostgreSQL 容器
 PG_PORT=15432
 docker run --rm --name pg-vec-inty -p $PG_PORT:5432 \
     -e POSTGRES_PASSWORD=sxwl666! -d pgvector/pgvector:pg16
 createdb -h localhost -p 15432 -U postgres inty_db
 
-# Update database schemas using alembic
+# 使用 Alembic 同步数据库 schema
 alembic upgrade head
 
 # 初始化订阅计划（可选）
 python scripts/init_subscription_plans.py
 ```
 
-### 启动服务
-
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-服务器将在 <http://localhost:8000> 运行
-启动服务器后，可以访问以下地址查看 API 文档：
+使用上述命令启动服务后，服务器会在 <http://localhost:8000> 运行，可通过以下地址查看 API 文档：
 
 - **Swagger UI**: <http://localhost:8000/docs>
 - **ReDoc**: <http://localhost:8000/redoc>
@@ -236,32 +235,28 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ### 开发
 
 ```bash
-# 启动开发服务器
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
 # 数据库迁移
 alembic revision --autogenerate -m "描述"
 alembic upgrade head
 
-# Setting python path when running tests
-PYTHONPATH=/Users/yzhao/Workspace/NascentCore/inty-backend \
-    pytest app/core/agent/agent_test.py -v
+# 运行单元测试示例
+PYTHONPATH=$(pwd) pytest app/core/agent/agent_test.py -v
 ```
 
 ## 部署
 
 ### 生产环境部署
 
-TODO: 只保留一种就够了！
+> TODO：整理本节内容，仅保留一种推荐部署流程。
 
 1. **配置生产环境**
 
 ```bash
 # 设置生产配置；编辑生产环境配置
-cp config.yaml.example config.yaml
+cp devops/config.yaml.prod config.yaml
 ```
 
-1. **使用 Docker 部署**
+2. **使用 Docker 部署**
 
 ```bash
 # 构建镜像

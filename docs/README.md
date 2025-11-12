@@ -4,7 +4,7 @@
 
 ## P0 核心项目总览
 
-- [ ] `README.md`
+- [x] `README.md`（2025-11-12 已审查）
 - [ ] `DEV.md`
 - [ ] `IMPLEMENTATION_COMPLETE.md`
 - [ ] `FEATURE_IDEAS.md`
