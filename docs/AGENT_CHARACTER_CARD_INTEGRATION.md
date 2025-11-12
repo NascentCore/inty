@@ -2,415 +2,202 @@
 
 ## 概述
 
-本文档描述如何改造现有的Agent聊天系统以支持角色卡功能，重点关注personality、scenario、first_message、message_example等字段的集成。
+本文档说明 InTy 后端如何将 SillyTavern V2 角色卡字段无缝集成到聊天系统中，覆盖数据落库、提示词组装、实例缓存与导入导出流程。目标是为开发者提供一份与当前代码实现保持同步的参考，避免沿用已经废弃的字段（如 `first_message` 列）或早期的 LangGraph 示意代码。
 
-名词定义：
+## 术语与关键字段
 
-- user/用户：app 使用者，使用 app 各项功能，此处指使用 app 与角色聊天
-- character/角色：指用户对谈的对象，LLM 驱动的对话智能体（conversational agent）
-- character card/角色卡：指酒馆定义的角色信息描述存储格式，JSON 格式，同时内嵌在 PNG 图片内，因此得名角色卡
-- prompt/提示词：统称，泛指所有作为输入提供给大语言模型，并让大模型接续生成内容的数据；
-  常被滥用，使用时应区分具体所指的提示词；提示词常分为 3 类：system prompt/系统提示词、
-  character prompt/角色提示词、chats prompt/聊天提示词，以下详述：
-  - system prompt/系统提示词：指影响模型、对用户不可见的提示词；比如酒馆中用于说明沟通方式的主提示词（main prompt）：
-    <img width="400" alt="image" src="https://github.com/user-attachments/assets/31d8f25e-25a6-4ba2-a773-9f2ae5301961" />
-  - character prompt/角色提示词：指描述角色信息的提示词；是角色卡中的主要内容，比如：
-    - Persona/角色画像：性别、年龄、性别、外貌、职业、等等
-    - Personality/角色性格：？？？
-    - Description/角色描述：？？？
-  - chats prompt/聊天提示词：一般叫消息历史、指聊天的过程一来一回用户与角色之间的消息记录；
-    过于久远的消息历史会经过处理、以记忆（memory）的形式呈现到历史记录中
-  - memory/记忆：chats prompt 经过处理，缩小数据量，可以以记忆的方式动态加载到提示词中
-- dynamic prompting/提示词动态调整：指在上述提示词内容框架中，通过动态调整提示词内容，
-  来达到某种更高级、复杂、更有价值的聊天体验的技术手段
+- **用户（user）**：发起聊天的终端用户。
+- **角色（agent）**：用户聊天的 LLM 智能体，存储于 `agents` 表。
+- **角色卡（character card）**：SillyTavern 定义的角色描述规范，支持 JSON 与嵌入 PNG。
+- **主提示词（main_prompt）**：系统级提示词，位于第一条 system message。
+- **模式提示词（mode_prompt）**：用于普通/会员模式切换的系统提示词。
+- **角色性格与场景（personality/scenario）**：角色卡核心上下文，作为额外 system message 注入。
+- **对话示例（message_example）**：角色对话风格示例，在提示词中以 system message 提供参考。
+- **角色介绍（intro）**：展示于前端，同时在聊天时尾部追加为 system message。
+- **开场白（opening）**：面向用户的首句文本，并驱动开场白语音生成；不再注入系统提示词。
+- **替代问候语（alternate_greetings）**：角色卡中额外问候语，存储在 JSON 字段内。
 
-## 当前架构分析
+> ⚠️ `first_message` 数据仅保留在角色卡原始 JSON 内，数据库字段已在 2025-07 中移除；所有需要的开场白请使用 `opening` 或 `alternate_greetings`。
 
-### 现有Agent类结构
+## 架构总览
 
-```python
-class Agent:
-    def __init__(self, agent_id, name, model_config, system_prompt, description, template_name):
-        # 基础属性
-        self.agent_id = agent_id
-        self.name = name
-        self.system_prompt = system_prompt
-        self.description = description
+1. **数据写入**：创建/导入角色时，Pydantic 层（`app/schemas/agent.py`）接收角色卡字段，持久化到 `agents` 表对应列或 `settings`/`character_card_data` JSON。
+2. **实例缓存**：`AgentManager` 根据数据库数据实例化 `Agent` 对象，并缓存以降低后端压力。
+3. **提示词组装**：`Agent.build_system_messages` 将主提示词、角色卡上下文、模式提示词、用户信息与 `intro` 依次拼装成系统消息列表。
+4. **聊天执行**：`Agent._chat_sync_optimized` 结合聊天历史与最新用户消息调用 OpenAI/OpenRouter 接口，返回回复并写入历史。
+5. **导入导出**：`CharacterCardService` 负责角色卡与 Agent 数据的互相转换，保持 SillyTavern V2 兼容。
 
-        # LangGraph agent
-        self.agent = create_react_agent(
-            name=name,
-            model=model,
-            tools=[...],
-            prompt=self.final_prompt,
-            store=postgres_store,
-            checkpointer=self.checkpointer
+## 数据存储与字段映射
+
+`app/models/agent.py` 定义了角色卡相关列：`personality`、`scenario`、`message_example`、`creator_notes`、`post_history_instructions`、`alternate_greetings`、`character_book`、`tags`、`character_version`、`extensions` 及角色基础信息等，同时保留 `character_card_data` 以原样持久化导入的 JSON。
+
+角色卡字段与后端字段映射如下：
+
+| SillyTavern 字段 | 后端字段 | 说明 |
+| --- | --- | --- |
+| `name` | `agents.name` | 角色名（≤30 字符） |
+| `description` | `agents.intro` | 角色简介，同时参与系统消息构建 |
+| `personality` | `agents.personality` | 角色性格 system message |
+| `scenario` | `agents.scenario` | 场景设定 system message |
+| `mes_example` | `agents.message_example` | 对话示例 system message |
+| `creator_notes` | `agents.creator_notes` | 创作者备注 |
+| `post_history_instructions` | `agents.post_history_instructions` | 历史后指令 |
+| `alternate_greetings` | `agents.alternate_greetings` | 备用问候 |
+| `character_book` | `agents.character_book` | 世界设定（JSON） |
+| `tags` | `agents.tags` | 标签数组 |
+| `character_version` | `agents.character_version` | 版本标识 |
+| `extensions` | `agents.extensions` | 前后端约定的扩展容器 |
+| `first_mes` | `agents.opening` + `character_card_data.data.first_mes` | 作为开场白文本，不再单独存列 |
+
+## 提示词组装流程
+
+实例化后的 `Agent` 会在聊天前调用 `build_system_messages`，生成系统消息序列。字段注入顺序如下：
+
+1. 主提示词：若配置强制使用全局默认则使用 `PURITY_ROLEPLAY_PROMPT`，否则按角色自定义或 `ROMANTIC_ROLEPLAY_PROMPT`。
+2. 角色卡上下文：`personality` → `scenario` → `message_example`，逐条渲染 `{{ char }}` 与 `{{ user }}`。
+3. 模式提示词：根据 `chat_settings.premium_mode` 选择 premium/normal 模式提示词，并进行模板渲染。
+4. 样式提示词（可选）：如果聊天设置存在 `style_prompt`，直接追加。
+5. 用户画像：`_get_user_profile_sync` 从数据库与缓存中拼接 `Name/Gender/Age/Description` 信息。
+6. 角色介绍：`intro` 作为系统消息末尾补充角色语气设置。
+
+核心实现位于 `app/core/agent/agent.py`：
+
+```300:329:app/core/agent/agent.py
+        system_messages.append(SystemMessage(content=rendered_main_prompt))
+        character_messages = self._build_character_context(user_name=user_name)
+        system_messages.extend(character_messages)
+
+        if chat_settings and chat_settings.premium_mode:
+            mode_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
+        else:
+            mode_prompt = self._get_effective_mode_prompt()
+        rendered_mode_prompt = prompt_template.render_prompt_jinja2_template(
+            tmpl=mode_prompt, char=self.name, user=user_name
         )
+        system_messages.append(SystemMessage(content=rendered_mode_prompt))
+
+        if chat_settings and chat_settings.style_prompt:
+            system_messages.append(SystemMessage(content=chat_settings.style_prompt))
+        if user_profile:
+            system_messages.append(SystemMessage(content=user_profile))
+        if self.intro:
+            system_messages.append(SystemMessage(content=self.intro))
 ```
 
-### 当前提示词生成流程
+## 聊天执行流程
 
-1. 从数据库加载Agent配置
-2. 通过`prompt_template_manager`渲染模板
-3. 注入用户信息上下文
-4. 传递给LangGraph agent
+`Agent.chat`（现标记为 deprecated，核心逻辑在 `_chat_sync_optimized`）负责将系统消息、历史消息与最新请求拼装后调用 OpenAI 客户端。
 
-## 改造方案
+主要步骤：
 
-### 1. Agent构造函数扩展
+1. 通过 `AgentManager.get_agent` 获取实例并更新最后使用时间。
+2. 利用 `PostgresChatMessageHistory` 读取历史消息，并在必要时做截断（默认保留全部）。
+3. 将系统消息与历史、用户消息拼接为 LangChain `BaseMessage` 列表，再转换为 OpenAI 格式。
+4. 通过复用的 `OpenAI` 客户端发起 `chat.completions.create` 请求，同时附带 `user` 字段用于用量追踪。
+5. 将模型回复写入历史表，并返回文本内容。
 
-```python
-class Agent:
-    def __init__(self,
-                 agent_id: str,
-                 name: str,
-                 model_config: dict,
-                 system_prompt: str,
-                 description: str = "",
-                 template_name: str = "default",
-                 # 新增角色卡相关参数
-                 personality: str = "",
-                 scenario: str = "",
-                 first_message: str = "",
-                 message_example: str = "",
-                 creator_notes: str = "",
-                 tags: List[str] = None,
-                 character_version: str = "1.0",
-                 extensions: Dict[str, Any] = None):
+历史与提示词拼接逻辑位于：
 
-        # 现有属性
-        self.agent_id = agent_id
-        self.name = name
-        self.system_prompt = system_prompt
-        self.description = description
-        self.template_name = template_name
+```546:692:app/core/agent/agent.py
+        recent_history = self._get_relevant_history(history.messages)
+        all_messages = recent_history + messages["messages"]
+        history.add_messages(messages["messages"])
 
-        # 角色卡相关属性
-        self.personality = personality
-        self.scenario = scenario
-        self.first_message = first_message
-        self.message_example = message_example
-        self.creator_notes = creator_notes
-        self.tags = tags or []
-        self.character_version = character_version
-        self.extensions = extensions or {}
-
-        # 更新agent_data以包含角色卡信息
-        self._agent_data = {
-            'id': agent_id,
-            'name': name,
-            'prompt': system_prompt,
-            'description': description,
-            'model_config': model_config,
-            'personality': personality,
-            'scenario': scenario,
-            'first_message': first_message,
-            'message_example': message_example,
-            'creator_notes': creator_notes,
-            'tags': tags,
-            'character_version': character_version,
-            'extensions': extensions
-        }
-
-        # 使用增强的提示词生成
-        self.final_prompt = self._build_enhanced_prompt()
-```
-
-### 2. 增强的提示词生成
-
-```python
-def _build_enhanced_prompt(self) -> str:
-    """
-    构建包含角色卡信息的增强提示词
-    """
-    # 基础模板渲染
-    base_prompt = prompt_template_manager.render_prompt(
-        agent_data=self._agent_data,
-        template_name=self.template_name
-    )
-
-    # 角色卡信息增强
-    character_context = self._build_character_context()
-
-    if character_context:
-        # 将角色卡上下文与基础提示词结合
-        enhanced_prompt = f"{base_prompt}\n\n{character_context}"
-    else:
-        enhanced_prompt = base_prompt
-
-    return enhanced_prompt
-
-def _build_character_context(self) -> str:
-    """
-    构建角色卡上下文信息
-    """
-    context_parts = []
-
-    # 性格特征
-    if self.personality:
-        context_parts.append(f"[角色性格]\n{self.personality}")
-
-    # 场景设定
-    if self.scenario:
-        context_parts.append(f"[场景背景]\n{self.scenario}")
-
-    # 对话示例
-    if self.message_example:
-        context_parts.append(f"[对话风格参考]\n{self.message_example}")
-
-    # 标签信息（用于角色行为指导）
-    if self.tags:
-        context_parts.append(f"[角色标签]\n{', '.join(self.tags)}")
-
-    if context_parts:
-        return "\n\n".join(context_parts)
-
-    return ""
-```
-
-### 3. 会话开始逻辑改造
-
-```python
-def _chat_sync(self, user_id: str, session_id: str, messages: dict[str, Any]) -> str:
-    """同步聊天方法，支持角色卡功能"""
-    self._update_last_used()
-
-    # 获取用户信息上下文
-    user_info_context = self._get_user_info_context_sync(user_id)
-
-    # 检查是否是新会话的第一条消息
-    is_first_message = self._is_first_message_in_session(session_id)
-
-    pool = get_connection_pool()
-    with pool.connection() as conn_local:
-        try:
-            history = PostgresChatMessageHistory(
-                table_name,
-                session_id,
-                sync_connection=conn_local
-            )
-
-            # 构建增强消息
-            enhanced_messages = messages["messages"].copy()
-
-            # 注入用户信息
-            if user_info_context:
-                context_message = SystemMessage(content=user_info_context)
-                enhanced_messages.insert(0, context_message)
-
-            # 如果是第一条消息且有开场白，优先使用角色卡的first_message
-            if is_first_message and self.first_message:
-                # 添加角色的开场白作为系统消息
-                greeting_message = SystemMessage(
-                    content=f"[角色开场白]\n{self.first_message}\n请以此作为对话的开始。"
-                )
-                enhanced_messages.insert(0, greeting_message)
-
-            # 保存原始用户消息到历史记录
-            history.add_messages(messages["messages"])
-
-            # 执行对话
-            thread_id = f"{user_id}_{self.agent_id}"
-            config = {'configurable': {'user_id': user_id, 'thread_id': thread_id}}
-
-            enhanced_messages_dict = {"messages": enhanced_messages}
-            response = self.agent.invoke(enhanced_messages_dict, config)
-
-            # 处理响应
-            ai_messages = [message for message in response.get("messages", [])
-                          if isinstance(message, AIMessage)]
-            response_text = ai_messages[-1].content if ai_messages else "抱歉，我无法理解您的消息。请再试一次。"
-
-            # 保存AI响应到历史记录
-            history.add_messages([AIMessage(content=response_text)])
-
-            return response_text
-
-        except Exception as e:
-            logger.error(f"聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
-            raise
-
-def _is_first_message_in_session(self, session_id: str) -> bool:
-    """
-    检查是否是会话中的第一条消息
-    """
-    try:
-        pool = get_connection_pool()
-        with pool.connection() as conn:
-            # 检查session_id对应的历史记录数量
-            from psycopg import sql
-            query = sql.SQL("""
-                SELECT COUNT(*)
-                FROM chat_history
-                WHERE session_id = %s
-            """)
-            result = conn.execute(query, (session_id,))
-            count = result.fetchone()[0]
-            return count == 0
-    except Exception as e:
-        logger.error(f"检查首次消息失败: {str(e)}")
-        return False
-```
-
-### 4. AgentManager改造
-
-```python
-async def get_agent(self, agent_data: dict) -> Agent:
-    """
-    获取或创建Agent实例（支持角色卡）
-    """
-    # ... 现有逻辑 ...
-
-    # 创建新的Agent实例时传递角色卡数据
-    try:
-        agent = Agent(
-            agent_id=agent_id,
-            name=agent_data['name'],
-            model_config=model_config,
-            system_prompt=system_prompt,
-            description=description,
-            template_name=template_name,
-            # 角色卡相关参数
-            personality=agent_data.get('personality', ''),
-            scenario=agent_data.get('scenario', ''),
-            first_message=agent_data.get('first_message', ''),
-            message_example=agent_data.get('message_example', ''),
-            creator_notes=agent_data.get('creator_notes', ''),
-            tags=agent_data.get('tags', []),
-            character_version=agent_data.get('character_version', '1.0'),
-            extensions=agent_data.get('extensions', {})
+        system_messages = self.build_system_messages(user_profile, chat_settings)
+        messages: list[BaseMessage] = system_messages + all_messages
+        openai_messages = [
+            langchain_message_to_openai_message(message, user_name, self.name)
+            for message in messages
+        ]
+        response = client.chat.completions.create(
+            messages=openai_messages,
+            model=self.model_config.get("model", default_model),
+            temperature=self.model_config.get("temperature", default_temperature),
+            max_tokens=self.model_config.get("max_tokens", default_max_tokens),
+            top_p=self.model_config.get("top_p", default_top_p),
+            extra_body={"generation_config": {"thinking_budget": 0}, "user": user_id},
         )
-
-        # ... 其余逻辑 ...
-
-    except Exception as e:
-        logger.error(f"创建Agent实例失败 - Agent ID: {agent_id}, 错误: {str(e)}")
-        raise
+        history.add_messages([AIMessage(content=response_text)])
 ```
 
-### 5. 流式聊天改造
+## AgentManager 缓存策略
 
-```python
-async def chat_stream(self, user_id: str, session_id: str, messages: dict[str, Any], db_session=None):
-    """异步流式聊天方法（支持角色卡）"""
-    self._update_last_used()
+`AgentManager` 负责实例复用、并发安全以及闲置清理：
 
-    def _stream_generator():
-        # 获取用户信息上下文
-        user_info_context = self._get_user_info_context_sync(user_id)
+- 使用读写锁与 `agent_id` 维度的互斥锁避免重复创建；
+- 超过缓存上限时淘汰最久未使用实例；
+- 每小时异步清理超过 `max_idle_time` 的 Agent；
+- 提供 `reload_agent` 与 `initialize_popular_agents` 满足热加载与预热需求。
 
-        # 检查是否是第一条消息
-        is_first_message = self._is_first_message_in_session(session_id)
+实例化时会注入角色卡字段与提示词配置：
 
-        pool = get_connection_pool()
-        with pool.connection() as conn_local:
-            try:
-                history = PostgresChatMessageHistory(
-                    table_name,
-                    session_id,
-                    sync_connection=conn_local
-                )
-
-                # 构建增强消息（与同步版本相同的逻辑）
-                enhanced_messages = messages["messages"].copy()
-
-                if user_info_context:
-                    context_message = SystemMessage(content=user_info_context)
-                    enhanced_messages.insert(0, context_message)
-
-                # 处理开场白
-                if is_first_message and self.first_message:
-                    greeting_message = SystemMessage(
-                        content=f"[角色开场白]\n{self.first_message}\n请以此作为对话的开始。"
+```928:967:app/core/agent/agent.py
+                    agent = Agent(
+                        agent_id=agent_id,
+                        name=agent_name,
+                        model_config=model_config,
+                        description=description,
+                        main_prompt=agent_data.get("main_prompt", ""),
+                        mode_prompt=agent_data.get("mode_prompt", ""),
+                        personality=agent_data.get("personality", ""),
+                        scenario=agent_data.get("scenario", ""),
+                        message_example=agent_data.get("message_example", ""),
+                        creator_notes=agent_data.get("creator_notes", ""),
+                        tags=agent_data.get("tags", []),
+                        character_version=agent_data.get("character_version", "1.0"),
+                        extensions=agent_data.get("extensions", {}),
+                        intro=agent_data.get("intro", ""),
                     )
-                    enhanced_messages.insert(0, greeting_message)
-
-                # 执行流式对话
-                thread_id = f"{user_id}_{self.agent_id}"
-                config = {'configurable': {'user_id': user_id, 'thread_id': thread_id}}
-
-                enhanced_messages_dict = {"messages": enhanced_messages}
-
-                all_messages = []
-                for message_chunk, metadata in self.agent.stream(enhanced_messages_dict, config, stream_mode="messages"):
-                    all_messages.append(message_chunk)
-                    yield message_chunk, metadata
-
-                # 保存调试信息
-                if settings.agent.enable_debug_logging:
-                    stream_response = {"messages": all_messages}
-                    self._save_debug_messages(user_id, session_id, stream_response, conn_local)
-
-            except Exception as e:
-                logger.error(f"流式聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
-                raise
-
-    # ... 其余异步处理逻辑 ...
+                    self.agents[agent_id] = agent
 ```
 
-## 实现细节
+## 角色卡导入与导出
 
-### 1. 提示词优先级
+`CharacterCardService` 和 `CharacterCardMapper` 负责角色卡和 Agent 之间的转换：
 
-1. **系统提示词** (最高优先级)
-2. **角色卡上下文** (personality, scenario, message_example)
-3. **用户信息上下文**
-4. **对话历史**
+- **导入**：解析 JSON/PNG→`CharacterCardV2`→`map_card_to_agent`→按需剥离 `character_book`、`alternate_greetings`→写入数据库。
+- **导出**：从数据库读取 Agent→按请求过滤可选字段→`map_agent_to_card`→返回标准 V2 结构。
+- 导入时生成 `opening` 与 `intro`，并保留原始角色卡 JSON 以便无损导出。
 
-### 2. 开场白处理
+```51:82:app/services/character_card_mapper.py
+        agent_data = {
+            "id": agent_id,
+            "name": data.name[:30],
+            "gender": self._infer_gender(data),
+            "intro": data.description,
+            "opening": (
+                data.first_mes or data.alternate_greetings[0]
+                if data.alternate_greetings
+                else ""
+            ),
+            "prompt": self._build_system_prompt(data),
+            "character_card_spec": card_data.spec.value,
+            "character_card_data": card_data.dict(),
+            "personality": data.personality,
+            "scenario": data.scenario,
+            "message_example": data.mes_example,
+            "creator_notes": data.creator_notes,
+            "post_history_instructions": data.post_history_instructions,
+            "alternate_greetings": data.alternate_greetings,
+            "character_book": (
+                data.character_book.dict() if data.character_book else None
+            ),
+            "tags": data.tags,
+            "character_version": data.character_version,
+            "extensions": data.extensions,
+        }
+```
 
-- 检测会话是否为首次对话
-- 如果是首次且有`first_message`，注入为系统消息
-- 不直接作为AI回复，而是指导AI的第一次回应
+## 测试与验证建议
 
-### 3. 对话风格指导
+- **单元测试**：覆盖 `CharacterCardMapper` 映射、提示词模板渲染（含变量替换）、用户信息解析。
+- **集成测试**：验证 `import-character-card`、`export-character-card`、`character-card/features` 接口，以及聊天流程中系统消息顺序是否符合预期。
+- **回归测试**：确保无角色卡字段的旧 Agent 仍能成功聊天，缓存命中后配置变更可通过 `reload_agent` 生效。
+- **监控**：关注 token 消耗、缓存命中率、`AgentManager` 清理日志与异常。
 
-- `message_example`作为风格参考注入到提示词中
-- 不强制复制，而是作为对话风格的示例
-- 通过`personality`进一步强化角色特征
+## 已知约束与后续工作
 
-### 4. 性能优化
-
-- 角色卡信息在Agent初始化时构建，避免每次对话重新构建
-- 缓存用户信息上下文，减少数据库查询
-- 首次消息检测使用简单的计数查询
-
-### 5. 错误处理
-
-- 角色卡字段缺失时使用默认值
-- 提示词构建失败时回退到基础模板
-- 保持与现有Agent的完全兼容性
-
-## 测试策略
-
-### 1. 单元测试
-
-- 提示词生成逻辑
-- 角色卡字段解析
-- 首次消息检测
-
-### 2. 集成测试
-
-- 完整的对话流程
-- 角色卡导入后的对话测试
-- 流式聊天功能
-
-### 3. 兼容性测试
-
-- 现有Agent不受影响
-- 无角色卡数据的Agent正常工作
-- 部分角色卡字段缺失的处理
-
-## 部署注意事项
-
-1. **数据库兼容**: 新字段已通过迁移添加，现有数据不受影响
-2. **性能影响**: 提示词长度可能增加，需要监控token使用量
-3. **缓存策略**: Agent实例缓存包含角色卡信息，内存使用略有增加
-4. **日志记录**: 增加角色卡相关的调试信息
-
-## 后续扩展
-
-1. **动态提示词**: 根据对话上下文动态调整角色表现
-2. **情境感知**: 基于scenario字段实现情境感知对话
-3. **风格学习**: 基于message_example训练个性化对话模型
-4. **标签驱动**: 使用tags实现更精细的行为控制
+- `first_message` 字段已移除；若仍需在数据库中持久化该信息，需要评估是否放入 `extensions` 或 `character_card_data`。
+- 聊天流程仍是同步阻塞 OpenAI API，后续可在 `_chat_sync_optimized` 中接入流式接口或重构为 Runnable 管线。
+- `Agent.get_final_prompt` 仍引用 `self.prompt_runnable`（尚未完全实现），如需调试完整提示词可进一步补强该逻辑。
+- 语音系统依赖 `opening` 文本，在导入角色卡后建议触发 `generate_agent_opening_voice` 以保持体验一致。
