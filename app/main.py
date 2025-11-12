@@ -60,6 +60,7 @@ def init_sentry():
                 SqlalchemyIntegration(),
             ],
             # 设置服务名称和版本
+            server_name=global_config_loaded_from_config_yaml.app.name,
             release=global_config_loaded_from_config_yaml.app.version,
             # 禁用自动集成发现，避免与不兼容的库冲突
             auto_enabling_integrations=False,
@@ -68,7 +69,7 @@ def init_sentry():
         )
 
         logger.info(
-            f"Sentry 错误监控初始化完成 (环境: {global_config_loaded_from_config_yaml.app.environment.value})"
+            f"Sentry 错误监控初始化完成 (项目: {global_config_loaded_from_config_yaml.app.name}, 环境: {global_config_loaded_from_config_yaml.app.environment.value})"
         )
 
     except Exception as e:
