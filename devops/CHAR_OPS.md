@@ -1,5 +1,12 @@
 # 管理预置角色
 
+## 角色同步定时工作流
+
+[GitHub 同步角色定时工作流](../.github/workflows/sync_ai_chars.yaml)
+
+https://github.com/NascentCore/inty/settings/actions/runners
+<img width="3022" height="700" alt="image" src="https://github.com/user-attachments/assets/6a9eafa4-9b03-4e8f-8309-b8a4ac58d0fc" />
+
 ## 删除角色
 
 ```
