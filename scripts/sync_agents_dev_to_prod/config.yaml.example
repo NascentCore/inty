@@ -43,4 +43,3 @@ operator_user:
 # 日志配置
 logging:
   level: INFO
-
