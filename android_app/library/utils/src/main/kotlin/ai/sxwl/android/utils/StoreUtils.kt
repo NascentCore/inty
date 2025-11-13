@@ -74,7 +74,7 @@ object StoreUtils {
             if (availableBlocks < 0 || blockSize < 0) {
                 Log.w(
                     "StoreUtils",
-                    "StatFs返回异常值: availableBlocks=$availableBlocks, blockSize=$blockSize"
+                    "StatFs返回异常值: availableBlocks=$availableBlocks, blockSize=$blockSize",
                 )
                 return 0L
             }

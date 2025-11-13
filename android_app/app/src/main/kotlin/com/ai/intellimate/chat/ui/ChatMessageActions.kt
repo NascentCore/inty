@@ -26,19 +26,18 @@ private fun LikeButton(
     modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier
-            .size(24.dp)
-            .noRippleClickable(onClick = onClick),
+        modifier = modifier.size(24.dp).noRippleClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         // 选中状态使用 ic_like_light（带渐变色），未选中状态使用 ic_like_normal
         Icon(
-            painter = painterResource(
-                if (isSelected) R.drawable.ic_like_light else R.drawable.ic_like_normal
-            ),
+            painter =
+                painterResource(
+                    if (isSelected) R.drawable.ic_like_light else R.drawable.ic_like_normal
+                ),
             contentDescription = "Like",
             modifier = Modifier.size(24.dp),
-            tint = Color.Unspecified
+            tint = Color.Unspecified,
         )
     }
 }
@@ -51,61 +50,50 @@ private fun DislikeButton(
     modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier
-            .size(24.dp)
-            .noRippleClickable(onClick = onClick),
+        modifier = modifier.size(24.dp).noRippleClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         // 选中状态使用 ic_dislike_light（带渐变色），未选中状态使用 ic_dislike_normal
         Icon(
-            painter = painterResource(
-                if (isSelected) R.drawable.ic_dislike_light else R.drawable.ic_dislike_normal
-            ),
+            painter =
+                painterResource(
+                    if (isSelected) R.drawable.ic_dislike_light else R.drawable.ic_dislike_normal
+                ),
             contentDescription = "Dislike",
             modifier = Modifier.size(24.dp),
-            tint = Color.Unspecified
+            tint = Color.Unspecified,
         )
     }
 }
 
 /** Recall 按钮 */
 @Composable
-private fun RecallButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun RecallButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
-            .size(24.dp)
-            .noRippleClickable(onClick = onClick),
+        modifier = modifier.size(24.dp).noRippleClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_recall),
             contentDescription = "Recall",
             modifier = Modifier.size(24.dp),
-            tint = Color.Unspecified
+            tint = Color.Unspecified,
         )
     }
 }
 
 /** Image Generate 按钮 */
 @Composable
-private fun ImageGenerateButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun ImageGenerateButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
-            .size(24.dp)
-            .noRippleClickable(onClick = onClick),
+        modifier = modifier.size(24.dp).noRippleClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_image_star),
             contentDescription = "Generate Image",
             modifier = Modifier.size(24.dp),
-            tint = Color.Unspecified
+            tint = Color.Unspecified,
         )
     }
 }
@@ -124,18 +112,17 @@ internal fun MessageActionBar(
 
     // like/dislike互斥，但不影响recall和keep talking的状态
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 2.dp, vertical = 2.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Like 按钮 - 如果已dislike则不显示
         if (!isDisliked) {
             LikeButton(
                 isSelected = isLiked,
-                onClick = if (isLiked) {
-                    {}
-                } else onLike, // 已选中状态，不可再次点击
+                onClick =
+                    if (isLiked) {
+                        {}
+                    } else onLike, // 已选中状态，不可再次点击
             )
         }
 
@@ -143,31 +130,26 @@ internal fun MessageActionBar(
         if (!isLiked) {
             DislikeButton(
                 isSelected = isDisliked,
-                onClick = if (isDisliked) {
-                    {}
-                } else onDislike, // 已选中状态，不可再次点击
+                onClick =
+                    if (isDisliked) {
+                        {}
+                    } else onDislike, // 已选中状态，不可再次点击
             )
         }
 
         Spacer(Modifier.weight(1f))
 
         // Recall 按钮 - 始终显示，不受like/dislike影响
-//        RecallButton(onClick = onRecall)
+        //        RecallButton(onClick = onRecall)
     }
 }
 
 /** 消息卡片右下角操作按钮（image generate） */
 @Composable
-internal fun MessageCornerActions(
-    onImageGenerate: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+internal fun MessageCornerActions(onImageGenerate: () -> Unit, modifier: Modifier = Modifier) {
     // image generate不受like/dislike影响，始终显示
     // keep talking按钮已移至ChatInput右上角悬浮
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         ImageGenerateButton(onClick = onImageGenerate)
     }
 }

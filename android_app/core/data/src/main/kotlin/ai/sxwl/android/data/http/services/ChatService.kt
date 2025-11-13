@@ -17,9 +17,8 @@ data class ChatImageGenerationError(
 )
 
 /** 图片生成限制异常 */
-class ChatImageGenerationLimitException(
-    val error: ChatImageGenerationError
-) : Exception(error.message ?: "Image generation limit reached")
+class ChatImageGenerationLimitException(val error: ChatImageGenerationError) :
+    Exception(error.message ?: "Image generation limit reached")
 
 /** 聊天服务 封装所有聊天相关的API调用 替换原有的 IChatApi */
 object ChatService {
@@ -42,7 +41,9 @@ object ChatService {
                                 com.inty.api.models.v2.chat.ChatSendMessageParams.Body.builder()
                                     .messages(
                                         listOf(
-                                            com.inty.api.models.v2.chat.ChatSendMessageParams.Message.builder()
+                                            com.inty.api.models.v2.chat.ChatSendMessageParams
+                                                .Message
+                                                .builder()
                                                 .role("user")
                                                 .content(message)
                                                 .build()
@@ -51,7 +52,7 @@ object ChatService {
                                     .stream(false)
                                     .build()
                             )
-                            .build()
+                            .build(),
                     )
 
             val data = response.data()
@@ -86,21 +87,23 @@ object ChatService {
                     )
 
             val additionalProperties = response._additionalProperties()
-            val messagesArray = additionalProperties["messages"]?.asArray()
-                ?: additionalProperties["list"]?.asArray()
-                ?: emptyList()
+            val messagesArray =
+                additionalProperties["messages"]?.asArray()
+                    ?: additionalProperties["list"]?.asArray()
+                    ?: emptyList()
 
             messagesArray.mapNotNull { jsonValue ->
                 val messageObject = jsonValue.asObject()
                 if (messageObject != null) {
-                    val messageMap = messageObject.mapValues { (_, value) ->
-                        when {
-                            value.asString() != null -> value.asString()!!
-                            value.asNumber() != null -> value.asNumber()!!
-                            value.asBoolean() != null -> value.asBoolean()!!
-                            else -> value.toString()
+                    val messageMap =
+                        messageObject.mapValues { (_, value) ->
+                            when {
+                                value.asString() != null -> value.asString()!!
+                                value.asNumber() != null -> value.asNumber()!!
+                                value.asBoolean() != null -> value.asBoolean()!!
+                                else -> value.toString()
+                            }
                         }
-                    }
                     messageMap.toMsgInfo(agentId)
                 } else {
                     null
@@ -108,7 +111,6 @@ object ChatService {
             }
         }
     }
-
 
     /** 删除对话 替换: IChatApi.deleteConversation() */
     suspend fun deleteConversation(conversationId: String): ApiResult<Unit> {
@@ -158,13 +160,14 @@ object ChatService {
                             .builder()
                             .agentId(agentId)
                             .language(language)
-                            .build()
+                            .build(),
                     )
 
             val additionalProperties = response._additionalProperties()
-            val audioUrl = additionalProperties["audio_url"]?.asString()
-                ?: additionalProperties["audioUrl"]?.asString()
-                ?: throw IllegalStateException("Audio URL not found in response")
+            val audioUrl =
+                additionalProperties["audio_url"]?.asString()
+                    ?: additionalProperties["audioUrl"]?.asString()
+                    ?: throw IllegalStateException("Audio URL not found in response")
             audioUrl
         }
     }
@@ -173,12 +176,7 @@ object ChatService {
     suspend fun getSettings(agentId: String): ApiResult<ChatSettings> {
         return IntyNetworkManager.executeRequest("Get Chat Settings") {
             val response =
-                IntyNetworkManager.getClient()
-                    .api()
-                    .v1()
-                    .chats()
-                    .agents()
-                    .getSettings(agentId)
+                IntyNetworkManager.getClient().api().v1().chats().agents().getSettings(agentId)
 
             ChatSettings(
                 language = response.language(),
@@ -190,10 +188,7 @@ object ChatService {
     }
 
     /** 更新聊天设置 */
-    suspend fun updateSettings(
-        agentId: String,
-        settings: ChatSettings,
-    ): ApiResult<ChatSettings> {
+    suspend fun updateSettings(agentId: String, settings: ChatSettings): ApiResult<ChatSettings> {
         return IntyNetworkManager.executeRequest("Update Chat Settings") {
             val paramsBuilder =
                 com.inty.api.models.api.v1.chats.agents.AgentUpdateSettingsParams.builder()
@@ -219,11 +214,12 @@ object ChatService {
                     .agents()
                     .updateSettings(agentId, paramsBuilder.build())
 
-            val updatedSettings = if (response.isApiResponseChatSettings()) {
-                response.asApiResponseChatSettings().data()
-            } else {
-                null
-            }
+            val updatedSettings =
+                if (response.isApiResponseChatSettings()) {
+                    response.asApiResponseChatSettings().data()
+                } else {
+                    null
+                }
             ChatSettings(
                 language = updatedSettings?.language(),
                 voiceEnabled = updatedSettings?.voiceEnabled(),
@@ -240,16 +236,16 @@ object ChatService {
     ): ApiResult<ChatImageGenerationResult> {
         return IntyNetworkManager.executeRequest("Generate Chat Image") {
             val client = IntyNetworkManager.getClient()
-            val params = com.inty.api.models.api.v1.chats.ChatGenerateImageParams
-                .builder()
-                .agentId(agentId)
-                .messageId(messageId.toLongOrNull() ?: 0L)
-                .build()
+            val params =
+                com.inty.api.models.api.v1.chats.ChatGenerateImageParams.builder()
+                    .agentId(agentId)
+                    .messageId(messageId.toLongOrNull() ?: 0L)
+                    .build()
 
             val response = client.api().v1().chats().generateImage(params)
 
-            if (response.code() == 200L && response.data()
-                    ?.isChatImageGenerationResponse() == true
+            if (
+                response.code() == 200L && response.data()?.isChatImageGenerationResponse() == true
             ) {
                 val imageData = response.data()?.asChatImageGenerationResponse()!!
                 val imageUrl = imageData.imageUrl()
@@ -271,24 +267,29 @@ object ChatService {
                 val errorCodeStr = errorData.errorCode()
 
                 // 将errorCode映射到业务错误码
-                val businessCode = when (errorCodeStr) {
-                    "IMAGE_GENERATION_LIMIT_REACHED" -> ai.sxwl.android.data.http.BusinessErrorCodes.IMAGE_GENERATION_LIMIT_REACHED_CODE.toLong()
-                    "SUBSCRIPTION_REQUIRED" -> ai.sxwl.android.data.http.BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE.toLong()
-                    else -> errorData.code()
-                }
+                val businessCode =
+                    when (errorCodeStr) {
+                        "IMAGE_GENERATION_LIMIT_REACHED" ->
+                            ai.sxwl.android.data.http.BusinessErrorCodes
+                                .IMAGE_GENERATION_LIMIT_REACHED_CODE
+                                .toLong()
+                        "SUBSCRIPTION_REQUIRED" ->
+                            ai.sxwl.android.data.http.BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                .toLong()
+                        else -> errorData.code()
+                    }
 
-                val error = ChatImageGenerationError(
-                    code = businessCode,
-                    errorCode = errorCodeStr,
-                    message = errorData.message(),
-                    dailyLimit = errorData.dailyLimit(),
-                    usedCount = errorData.usedCount(),
-                )
+                val error =
+                    ChatImageGenerationError(
+                        code = businessCode,
+                        errorCode = errorCodeStr,
+                        message = errorData.message(),
+                        dailyLimit = errorData.dailyLimit(),
+                        usedCount = errorData.usedCount(),
+                    )
                 throw ChatImageGenerationLimitException(error)
             } else {
-                val errorMessage =
-                    response.message()
-                        ?: "Failed to generate image"
+                val errorMessage = response.message() ?: "Failed to generate image"
                 throw Exception(errorMessage)
             }
         }

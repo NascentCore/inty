@@ -35,7 +35,7 @@ object TextParser {
                                 style =
                                     SpanStyle(
                                         fontStyle = FontStyle.Companion.Italic,
-                                        color = Color(0x8CFFFFFF) // 浅色
+                                        color = Color(0x8CFFFFFF), // 浅色
                                     )
                             ) {
                                 append(char.toString())
@@ -50,7 +50,7 @@ object TextParser {
                                 style =
                                     SpanStyle(
                                         fontStyle = FontStyle.Companion.Italic,
-                                        color = Color(0x8CFFFFFF) // 浅色
+                                        color = Color(0x8CFFFFFF), // 浅色
                                     )
                             ) {
                                 append(char.toString())
@@ -62,7 +62,7 @@ object TextParser {
                                 style =
                                     SpanStyle(
                                         fontStyle = FontStyle.Companion.Italic,
-                                        color = Color(0x8CFFFFFF) // 浅色
+                                        color = Color(0x8CFFFFFF), // 浅色
                                     )
                             ) {
                                 append(char.toString())

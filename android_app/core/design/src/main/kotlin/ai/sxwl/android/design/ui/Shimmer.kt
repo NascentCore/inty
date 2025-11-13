@@ -42,9 +42,9 @@ fun ShimmerBox(modifier: Modifier = Modifier, shape: Shape = RoundedCornerShape(
             animationSpec =
                 infiniteRepeatable(
                     animation = tween(durationMillis = 1200, easing = LinearEasing),
-                    repeatMode = RepeatMode.Restart
+                    repeatMode = RepeatMode.Restart,
                 ),
-            label = "shimmer"
+            label = "shimmer",
         )
 
     val shimmerColors =
@@ -58,7 +58,7 @@ fun ShimmerBox(modifier: Modifier = Modifier, shape: Shape = RoundedCornerShape(
         Brush.linearGradient(
             colors = shimmerColors,
             start = Offset.Zero,
-            end = Offset(x = translateAnim, y = translateAnim)
+            end = Offset(x = translateAnim, y = translateAnim),
         )
 
     Box(modifier = modifier.clip(shape).background(brush))
@@ -82,7 +82,7 @@ fun AgentCardShimmer(modifier: Modifier = Modifier) {
                                     listOf(
                                         Color.Transparent,
                                         Color.Black.copy(alpha = 0.3f),
-                                        Color.Black.copy(alpha = 0.7f)
+                                        Color.Black.copy(alpha = 0.7f),
                                     )
                             )
                     )
@@ -93,7 +93,7 @@ fun AgentCardShimmer(modifier: Modifier = Modifier) {
             // Agent名称和关注按钮
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 // 名称
                 ShimmerBox(modifier = Modifier.weight(1f).height(16.dp))
@@ -116,7 +116,7 @@ fun AgentCardShimmer(modifier: Modifier = Modifier) {
             // 统计信息
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 ShimmerBox(modifier = Modifier.width(60.dp).height(10.dp))
 
@@ -149,7 +149,7 @@ fun AgentsScreenShimmer(modifier: Modifier = Modifier) {
         Box(modifier = Modifier.fillMaxWidth().height(112.dp).padding(horizontal = 16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 repeat(5) { index -> AgentAvatarCardShimmer(modifier = Modifier.size(88.dp)) }
             }

@@ -48,11 +48,12 @@ private class AspectRatioVideoView(context: Context) : VideoView(context) {
                 finalWidth = containerWidth
                 finalHeight = (containerWidth / aspectRatio).toInt()
             }
-        } ?: run {
-            // 如果没有视频宽高比，填充整个容器
-            finalWidth = containerWidth
-            finalHeight = containerHeight
         }
+            ?: run {
+                // 如果没有视频宽高比，填充整个容器
+                finalWidth = containerWidth
+                finalHeight = containerHeight
+            }
 
         setMeasuredDimension(finalWidth, finalHeight)
     }

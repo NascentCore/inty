@@ -31,11 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun HeartPrimaryButton(
-    btnText: String,
-    enable: Boolean = true,
-    onClick: () -> Unit = {},
-) {
+fun HeartPrimaryButton(btnText: String, enable: Boolean = true, onClick: () -> Unit = {}) {
 
     Box(
         modifier =
@@ -45,7 +41,7 @@ fun HeartPrimaryButton(
                 .alpha(if (enable) 1f else .4f)
                 .background(brush = primaryBtnBrush)
                 .clickable(enabled = enable, onClick = onClick),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = btnText,
@@ -74,10 +70,7 @@ private fun 按钮效果预览() {
 }
 
 @Composable
-fun HeartFollowButton(
-    isFollowing: Boolean = false,
-    onClick: () -> Unit = {},
-) {
+fun HeartFollowButton(isFollowing: Boolean = false, onClick: () -> Unit = {}) {
     Box(
         modifier =
             Modifier.size(98.dp, 40.dp)
@@ -85,7 +78,7 @@ fun HeartFollowButton(
                 .border(width = 1.dp, brush = heartDivBrush, shape = RoundedCornerShape(20.dp))
                 .background(brush = if (isFollowing) commonBtnBrush else primaryBtnBrush)
                 .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = if (isFollowing) "Following" else "Follow",
@@ -112,7 +105,7 @@ fun VoiceBubble(modifier: Modifier = Modifier, seconds: Int = 0) {
         Image(
             painter = painterResource(R.drawable.ic_voice),
             contentDescription = "",
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
         )
         Spacer(Modifier.width(2.dp))
         Text(

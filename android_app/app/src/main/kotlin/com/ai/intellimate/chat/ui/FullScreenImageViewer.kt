@@ -55,7 +55,7 @@ internal fun FullScreenImageViewer(
         panChange: Float,
         containerSize: Float,
         imageSize: Float,
-        currentScale: Float
+        currentScale: Float,
     ): Float {
         if (currentScale <= 1f) return 0f // 缩放为1时，不允许平移
 
@@ -65,11 +65,12 @@ internal fun FullScreenImageViewer(
         // 计算可平移的范围
         // 图片中心在容器中心，所以可平移的最大范围是图片超出容器的部分的一半
         // 如果缩放后图片小于容器，则不可平移
-        val maxOffset = if (scaledImageSize > containerSize) {
-            (scaledImageSize - containerSize) / 2f
-        } else {
-            0f
-        }
+        val maxOffset =
+            if (scaledImageSize > containerSize) {
+                (scaledImageSize - containerSize) / 2f
+            } else {
+                0f
+            }
 
         // 计算新的偏移量
         val newOffset = currentOffset + panChange
@@ -80,69 +81,78 @@ internal fun FullScreenImageViewer(
 
     // 使用transformable手势处理缩放和平移（不允许旋转）
     // 注意：zoomChange 是相对于上一次调用的变化量，不是累积值
-    val transformableState = rememberTransformableState(
-        onTransformation = { zoomChange: Float, panChange: Offset, rotationChange: Float ->
-            // 缩放：最小1倍，最大5倍（不可缩小）
-            val newScale = (scale * zoomChange).coerceIn(1f, 5f)
-            scale = newScale
+    val transformableState =
+        rememberTransformableState(
+            onTransformation = { zoomChange: Float, panChange: Offset, rotationChange: Float ->
+                // 缩放：最小1倍，最大5倍（不可缩小）
+                val newScale = (scale * zoomChange).coerceIn(1f, 5f)
+                scale = newScale
 
-            // 平移：只在缩放大于1倍时允许平移，并应用边界约束
-            if (newScale > 1f && containerSize.width > 0 && containerSize.height > 0 && imageSize.width > 0 && imageSize.height > 0) {
-                // 计算约束后的平移偏移
-                offsetX = calculateConstrainedOffset(
-                    currentOffset = offsetX,
-                    panChange = panChange.x,
-                    containerSize = containerSize.width.toFloat(),
-                    imageSize = imageSize.width.toFloat(),
-                    currentScale = newScale
-                )
-                offsetY = calculateConstrainedOffset(
-                    currentOffset = offsetY,
-                    panChange = panChange.y,
-                    containerSize = containerSize.height.toFloat(),
-                    imageSize = imageSize.height.toFloat(),
-                    currentScale = newScale
-                )
-            } else {
-                // 如果缩放回到1倍，重置平移
-                offsetX = 0f
-                offsetY = 0f
+                // 平移：只在缩放大于1倍时允许平移，并应用边界约束
+                if (
+                    newScale > 1f &&
+                        containerSize.width > 0 &&
+                        containerSize.height > 0 &&
+                        imageSize.width > 0 &&
+                        imageSize.height > 0
+                ) {
+                    // 计算约束后的平移偏移
+                    offsetX =
+                        calculateConstrainedOffset(
+                            currentOffset = offsetX,
+                            panChange = panChange.x,
+                            containerSize = containerSize.width.toFloat(),
+                            imageSize = imageSize.width.toFloat(),
+                            currentScale = newScale,
+                        )
+                    offsetY =
+                        calculateConstrainedOffset(
+                            currentOffset = offsetY,
+                            panChange = panChange.y,
+                            containerSize = containerSize.height.toFloat(),
+                            imageSize = imageSize.height.toFloat(),
+                            currentScale = newScale,
+                        )
+                } else {
+                    // 如果缩放回到1倍，重置平移
+                    offsetX = 0f
+                    offsetY = 0f
+                }
+
+                // 忽略旋转（rotationChange）
             }
-
-            // 忽略旋转（rotationChange）
-        }
-    )
+        )
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.95f))
-            .onGloballyPositioned { coordinates ->
-                containerSize = coordinates.size
-            },
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.95f))
+                .onGloballyPositioned { coordinates -> containerSize = coordinates.size },
         contentAlignment = Alignment.Center,
     ) {
         // 图片
         AsyncImage(
-            modifier = Modifier
-                .fillMaxSize()
-                .onGloballyPositioned { coordinates ->
-                    // 记录图片的实际显示尺寸（使用ContentScale.Fit后的尺寸）
-                    imageSize = coordinates.size
-                }
-                .graphicsLayer(
-                    scaleX = scale,
-                    scaleY = scale,
-                    translationX = offsetX,
-                    translationY = offsetY,
-                )
-                .transformable(state = transformableState),
-            model = ImageLoaderUtils.createDeviceAdaptiveImageRequest(
-                context = context,
-                imageUrl = getCdnImageUrl(imageUrl, width = 1920, quality = 85),
-                maxWidth = 1920,
-                maxHeight = 1920,
-            ),
+            modifier =
+                Modifier.fillMaxSize()
+                    .onGloballyPositioned { coordinates ->
+                        // 记录图片的实际显示尺寸（使用ContentScale.Fit后的尺寸）
+                        imageSize = coordinates.size
+                    }
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offsetX,
+                        translationY = offsetY,
+                    )
+                    .transformable(state = transformableState),
+            model =
+                ImageLoaderUtils.createDeviceAdaptiveImageRequest(
+                    context = context,
+                    imageUrl = getCdnImageUrl(imageUrl, width = 1920, quality = 85),
+                    maxWidth = 1920,
+                    maxHeight = 1920,
+                ),
             contentDescription = "Full screen image",
             contentScale = ContentScale.Fit,
             alignment = Alignment.Center,
@@ -151,9 +161,7 @@ internal fun FullScreenImageViewer(
         // 左上角关闭按钮（使用X符号）
         IconButton(
             onClick = { onDismiss() },
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp),
+            modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
         ) {
             androidx.compose.material3.Text(
                 text = "✕",

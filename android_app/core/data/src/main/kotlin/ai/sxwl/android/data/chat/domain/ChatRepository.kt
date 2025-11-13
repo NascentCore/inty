@@ -36,7 +36,9 @@ interface ChatRepository {
     /** 更新消息反馈（like/dislike） */
     fun updateMessageFeedback(agentId: String, messageId: String, feedback: MsgInfo.UserFeedback?)
 
-    /** 更新消息的生成图片信息
+    /**
+     * 更新消息的生成图片信息
+     *
      * @param generatedImage 如果为 null，则移除 generatedImage
      */
     fun updateMessageGeneratedImage(
@@ -54,9 +56,12 @@ interface ChatRepository {
     /** 重新生成最后一条AI消息 */
     suspend fun recallLastAssistantMessage(agentId: String)
 
-    /** 生成图片消息
+    /**
+     * 生成图片消息
+     *
      * @return HttpResult.Success 成功
-     * @return HttpResult.Failure 失败，code为业务错误码（如BusinessErrorCodes.IMAGE_GENERATION_LIMIT_REACHED_CODE）
+     * @return HttpResult.Failure
+     *   失败，code为业务错误码（如BusinessErrorCodes.IMAGE_GENERATION_LIMIT_REACHED_CODE）
      */
     suspend fun generateImageForMessage(
         agentId: String,

@@ -53,7 +53,7 @@ private fun IntelliWebView(url: String, onBack: () -> Unit) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(text = webTitle, fontSize = 18.sp)
                 }
@@ -66,7 +66,7 @@ private fun IntelliWebView(url: String, onBack: () -> Unit) {
                     )
                 }
             },
-            actions = { IconButton(onClick = {}, enabled = false) {} }
+            actions = { IconButton(onClick = {}, enabled = false) {} },
         )
         ProgressIndicator(progress)
         WebViewer(
@@ -153,7 +153,7 @@ private fun WebViewer(
                 setRefreshed()
             }
             webView = wv
-        }
+        },
     )
 }
 

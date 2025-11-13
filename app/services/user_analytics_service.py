@@ -26,7 +26,8 @@ class UserAnalyticsService:
         self, start_date: datetime, end_date: datetime
     ) -> List[Dict[str, Any]]:
         """查询新用户统计"""
-        query = text("""
+        query = text(
+            """
             SELECT 
                 DATE(created_at AT TIME ZONE 'UTC') as date,
                 auth_type,
@@ -36,13 +37,20 @@ class UserAnalyticsService:
               AND deleted_at IS NULL
             GROUP BY DATE(created_at AT TIME ZONE 'UTC'), auth_type
             ORDER BY date, auth_type
-        """)
+        """
+        )
         result = await self.db.execute(
             query, {"start_date": start_date, "end_date": end_date}
         )
         rows = result.fetchall()
         return [
-            {"date": row[0].isoformat() if isinstance(row[0], datetime) else str(row[0]), "auth_type": row[1], "count": row[2]}
+            {
+                "date": (
+                    row[0].isoformat() if isinstance(row[0], datetime) else str(row[0])
+                ),
+                "auth_type": row[1],
+                "count": row[2],
+            }
             for row in rows
         ]
 
@@ -50,7 +58,8 @@ class UserAnalyticsService:
         self, start_date: datetime, end_date: datetime
     ) -> List[Dict[str, Any]]:
         """查询用户聊天活动（原始数据，需要前端聚合）"""
-        query = text("""
+        query = text(
+            """
             SELECT 
                 u.id as user_id,
                 u.auth_type,
@@ -66,7 +75,8 @@ class UserAnalyticsService:
             WHERE u.created_at >= :start_date AND u.created_at < :end_date
               AND u.deleted_at IS NULL
             ORDER BY u.id, c.created_at
-        """)
+        """
+        )
         result = await self.db.execute(
             query, {"start_date": start_date, "end_date": end_date}
         )
@@ -89,13 +99,14 @@ class UserAnalyticsService:
         self, start_date: datetime, end_date: datetime
     ) -> List[Dict[str, Any]]:
         """查询对话轮数统计（按Session）- 只统计新用户发起的会话
-        
+
         与原始脚本逻辑一致：查询新用户的所有会话（不限制 chat 创建时间）
         因为新用户可能在注册后的任意时间创建会话
         """
         # 只统计新用户（在 start_date 到 end_date 之间注册的用户）的所有会话
         # 注意：不限制 chat 的创建时间，因为新用户可能在注册后任意时间创建会话
-        chats_query = text("""
+        chats_query = text(
+            """
             SELECT c.id
             FROM chats c
             INNER JOIN users u ON c.user_id = u.id
@@ -103,12 +114,13 @@ class UserAnalyticsService:
               AND u.created_at < :end_date
               AND u.deleted_at IS NULL
               AND c.is_active = true
-        """)
+        """
+        )
         result = await self.db.execute(
             chats_query, {"start_date": start_date, "end_date": end_date}
         )
         chat_ids = [row[0] for row in result.fetchall()]
-        
+
         logger.info(f"get_conversation_rounds: 找到 {len(chat_ids)} 个新用户的会话")
 
         if not chat_ids:
@@ -125,7 +137,8 @@ class UserAnalyticsService:
             return []
 
         placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
-        history_query = text(f"""
+        history_query = text(
+            f"""
             SELECT 
                 session_id::text as session_id,
                 COUNT(*) as message_count,
@@ -135,7 +148,8 @@ class UserAnalyticsService:
             FROM chat_history
             WHERE session_id::text IN ({placeholders})
             GROUP BY session_id
-        """)
+        """
+        )
         params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
         result = await self.db.execute(history_query, params)
 
@@ -161,11 +175,12 @@ class UserAnalyticsService:
                             "message_count_excluding_opening": message_count_excluding_opening,
                         }
                     )
-        
+
         # 统计消息数分布
         message_counts = [d["message_count_excluding_opening"] for d in data]
         if message_counts:
             from collections import Counter
+
             count_distribution = Counter(message_counts)
             logger.info(
                 f"get_conversation_rounds: 返回 {len(data)} 个有用户消息的会话（已排除仅开场白的会话），"
@@ -180,7 +195,8 @@ class UserAnalyticsService:
         self, start_date: datetime, end_date: datetime
     ) -> List[Dict[str, Any]]:
         """查询对话轮数分布（按用户）"""
-        chats_query = text("""
+        chats_query = text(
+            """
             SELECT
                 c.user_id,
                 c.id as chat_id
@@ -189,7 +205,8 @@ class UserAnalyticsService:
             WHERE u.created_at >= :start_date AND u.created_at < :end_date
               AND u.deleted_at IS NULL
               AND c.is_active = true
-        """)
+        """
+        )
         result = await self.db.execute(
             chats_query, {"start_date": start_date, "end_date": end_date}
         )
@@ -208,7 +225,8 @@ class UserAnalyticsService:
             return []
 
         placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
-        messages_query = text(f"""
+        messages_query = text(
+            f"""
             SELECT
                 ch.session_id::text as session_id,
                 COUNT(*) FILTER (
@@ -222,7 +240,8 @@ class UserAnalyticsService:
             FROM chat_history ch
             WHERE ch.session_id::text IN ({placeholders})
             GROUP BY ch.session_id
-        """)
+        """
+        )
         params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
         result = await self.db.execute(messages_query, params)
 
@@ -255,7 +274,8 @@ class UserAnalyticsService:
             return []
 
         placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
-        query = text(f"""
+        query = text(
+            f"""
             SELECT 
                 ch.session_id::text as session_id,
                 COUNT(*) FILTER (
@@ -269,7 +289,8 @@ class UserAnalyticsService:
             FROM chat_history ch
             WHERE ch.session_id::text IN ({placeholders})
             GROUP BY ch.session_id
-        """)
+        """
+        )
         params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
         result = await self.db.execute(query, params)
 
@@ -313,9 +334,7 @@ class UserAnalyticsService:
         # 3. 获取有用户消息的会话（排除仅浏览开场白的）
         # message_count 已经在 get_user_sessions_detail 中统计了用户消息数（排除开场白）
         active_chat_ids = [
-            item["chat_id"]
-            for item in sessions_detail
-            if item["message_count"] > 0
+            item["chat_id"] for item in sessions_detail if item["message_count"] > 0
         ]
         active_sessions = [
             item for item in sessions_detail if item["chat_id"] in active_chat_ids
@@ -356,9 +375,7 @@ class UserAnalyticsService:
             else 0.0
         )
         avg_voice_requests_per_user = (
-            total_voice_requests / total_active_users
-            if total_active_users > 0
-            else 0.0
+            total_voice_requests / total_active_users if total_active_users > 0 else 0.0
         )
         avg_rounds_per_session = (
             total_user_messages / total_active_sessions
@@ -384,9 +401,7 @@ class UserAnalyticsService:
             "new_user_open_rate": round(new_user_open_rate, 2),
         }
 
-    async def get_chat_messages(
-        self, chat_ids: List[str]
-    ) -> List[Dict[str, Any]]:
+    async def get_chat_messages(self, chat_ids: List[str]) -> List[Dict[str, Any]]:
         """查询聊天会话的具体消息"""
         if not chat_ids:
             return []
@@ -400,7 +415,8 @@ class UserAnalyticsService:
             return []
 
         placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
-        query = text(f"""
+        query = text(
+            f"""
             SELECT
                 ch.session_id::text as session_id,
                 ch.message->>'type' as message_type,
@@ -410,7 +426,8 @@ class UserAnalyticsService:
             FROM chat_history ch
             WHERE ch.session_id::text IN ({placeholders})
             ORDER BY ch.created_at
-        """)
+        """
+        )
         params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
         result = await self.db.execute(query, params)
         rows = result.fetchall()
@@ -444,9 +461,13 @@ class UserAnalyticsService:
         from datetime import timedelta
 
         if guest_limit is None:
-            guest_limit = global_config_loaded_from_config_yaml.app.limits.guest_user_chat_24h_limit
+            guest_limit = (
+                global_config_loaded_from_config_yaml.app.limits.guest_user_chat_24h_limit
+            )
         if google_limit is None:
-            google_limit = global_config_loaded_from_config_yaml.app.limits.free_user_chat_24h_limit
+            google_limit = (
+                global_config_loaded_from_config_yaml.app.limits.free_user_chat_24h_limit
+            )
 
         # 计算查询范围：需要提前24小时来获取活跃用户
         query_start_date = start_date - timedelta(hours=24)
@@ -457,13 +478,15 @@ class UserAnalyticsService:
         end_date_minus_one_day_str = end_date_minus_one_day.date().isoformat()
 
         # 先检查 subscription_usage 表中是否有数据
-        check_query = text("""
+        check_query = text(
+            """
             SELECT COUNT(*) as count
             FROM subscription_usage
             WHERE usage_type = 'chat'
               AND usage_date >= :query_start_date
               AND usage_date < :end_date
-        """)
+        """
+        )
         check_result = await self.db.execute(
             check_query,
             {
@@ -475,11 +498,14 @@ class UserAnalyticsService:
         logger.debug(f"subscription_usage 表中符合条件的记录数: {usage_count}")
 
         if usage_count == 0:
-            logger.info(f"subscription_usage 表中没有符合条件的聊天使用记录，返回空结果")
+            logger.info(
+                f"subscription_usage 表中没有符合条件的聊天使用记录，返回空结果"
+            )
             return []
 
         # 构建 SQL 查询，将日期字符串和整数限制直接嵌入（已验证是安全的）
-        query = text(f"""
+        query = text(
+            f"""
             WITH date_series AS (
                 SELECT generate_series(
                     '{start_date_str}'::date,
@@ -528,7 +554,8 @@ class UserAnalyticsService:
             FROM user_usage
             WHERE chat_count_24h >= limit_value
             ORDER BY check_date, user_id
-        """)
+        """
+        )
         try:
             result = await self.db.execute(
                 query,
@@ -541,7 +568,11 @@ class UserAnalyticsService:
             logger.debug(f"查询到 {len(rows)} 个达到限制的用户记录")
             return [
                 {
-                    "date": row[0].isoformat() if isinstance(row[0], datetime) else str(row[0]),
+                    "date": (
+                        row[0].isoformat()
+                        if isinstance(row[0], datetime)
+                        else str(row[0])
+                    ),
                     "user_id": row[1],
                     "auth_type": row[2],
                     "nickname": row[3],
@@ -553,7 +584,9 @@ class UserAnalyticsService:
             ]
         except Exception as e:
             logger.error(f"查询达到限制的用户失败: {str(e)}")
-            logger.error(f"查询参数: start_date={start_date}, end_date={end_date}, guest_limit={guest_limit}, google_limit={google_limit}")
+            logger.error(
+                f"查询参数: start_date={start_date}, end_date={end_date}, guest_limit={guest_limit}, google_limit={google_limit}"
+            )
             logger.exception(e)
             # 如果查询失败，返回空列表而不是抛出异常，避免影响其他功能
             return []
@@ -562,7 +595,8 @@ class UserAnalyticsService:
         self, start_date: datetime, end_date: datetime
     ) -> List[Dict[str, Any]]:
         """查询角色数据分析统计"""
-        chats_query = text("""
+        chats_query = text(
+            """
             SELECT
                 c.id as chat_id,
                 c.agent_id,
@@ -574,7 +608,8 @@ class UserAnalyticsService:
             WHERE u.created_at >= :start_date AND u.created_at < :end_date
               AND u.deleted_at IS NULL
               AND c.is_active = true
-        """)
+        """
+        )
         result = await self.db.execute(
             chats_query, {"start_date": start_date, "end_date": end_date}
         )
@@ -605,7 +640,8 @@ class UserAnalyticsService:
             return []
 
         placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
-        messages_query = text(f"""
+        messages_query = text(
+            f"""
             SELECT
                 ch.session_id::text as session_id,
                 COUNT(*) FILTER (
@@ -619,7 +655,8 @@ class UserAnalyticsService:
             FROM chat_history ch
             WHERE ch.session_id::text IN ({placeholders})
             GROUP BY ch.session_id
-        """)
+        """
+        )
         params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
         result = await self.db.execute(messages_query, params)
 
@@ -695,7 +732,8 @@ class UserAnalyticsService:
         self, start_date: datetime, end_date: datetime
     ) -> List[Dict[str, Any]]:
         """查询用户会话详情（聚合数据）"""
-        chats_query = text("""
+        chats_query = text(
+            """
             SELECT
                 u.id as user_id,
                 u.auth_type,
@@ -710,7 +748,8 @@ class UserAnalyticsService:
             WHERE u.created_at >= :start_date AND u.created_at < :end_date
               AND u.deleted_at IS NULL
             ORDER BY u.id, c.created_at
-        """)
+        """
+        )
         result = await self.db.execute(
             chats_query, {"start_date": start_date, "end_date": end_date}
         )
@@ -729,7 +768,8 @@ class UserAnalyticsService:
             return []
 
         placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
-        messages_query = text(f"""
+        messages_query = text(
+            f"""
             SELECT
                 ch.session_id::text as session_id,
                 COUNT(*) FILTER (
@@ -751,7 +791,8 @@ class UserAnalyticsService:
             FROM chat_history ch
             WHERE ch.session_id::text IN ({placeholders})
             GROUP BY ch.session_id
-        """)
+        """
+        )
         params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
         result = await self.db.execute(messages_query, params)
 
@@ -784,4 +825,3 @@ class UserAnalyticsService:
             )
 
         return data
-

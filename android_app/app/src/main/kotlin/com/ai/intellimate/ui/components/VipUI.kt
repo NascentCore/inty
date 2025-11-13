@@ -153,22 +153,21 @@ fun PremiumPlanCard(
             Spacer(modifier = Modifier.height(4.dp))
 
             // 处理价格显示：去掉 .00 后缀，并根据长度自适应字号
-            val displayPrice = remember(plan.price) {
-                plan.price.replace(".00", "")
-            }
+            val displayPrice = remember(plan.price) { plan.price.replace(".00", "") }
 
             // 根据价格长度自适应字号
-            val priceFontSize = remember(displayPrice) {
-                val priceLength =
-                    displayPrice.filter { it.isDigit() || it == '.' || it == ',' }.length
-                when {
-                    priceLength <= 3 -> 24.sp // 短价格（如 $9, $99）
-                    priceLength <= 5 -> 20.sp // 中等价格（如 $9.99, $99.99）
-                    priceLength <= 7 -> 18.sp // 较长价格（如 $999.99）
-                    else -> 16.sp // 很长价格（如 $9999.99）
+            val priceFontSize =
+                remember(displayPrice) {
+                    val priceLength =
+                        displayPrice.filter { it.isDigit() || it == '.' || it == ',' }.length
+                    when {
+                        priceLength <= 3 -> 24.sp // 短价格（如 $9, $99）
+                        priceLength <= 5 -> 20.sp // 中等价格（如 $9.99, $99.99）
+                        priceLength <= 7 -> 18.sp // 较长价格（如 $999.99）
+                        else -> 16.sp // 很长价格（如 $9999.99）
+                    }
                 }
-            }
-            
+
             Text(
                 text = displayPrice,
                 color =
@@ -186,9 +185,7 @@ fun PremiumPlanCard(
         if (plan.discountRate < 1) {
             DiscountTag(
                 discountRate = plan.discountRate,
-                modifier = Modifier
-                    .then(subModifier)
-                    .align(Alignment.BottomCenter),
+                modifier = Modifier.then(subModifier).align(Alignment.BottomCenter),
             )
         }
     }
@@ -204,10 +201,7 @@ fun PremiumPlanList(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(132.dp)
-            .padding(horizontal = 16.dp),
+        modifier = modifier.fillMaxWidth().height(132.dp).padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         plans.forEachIndexed { idx, plan ->
@@ -247,22 +241,19 @@ fun PurchaseButton(
                 .alpha(if (isSubscribed) .4f else 1f)
                 .clickable(
                     enabled = !isSubscribed && hasSelectedPlan && !isLoading,
-                    onClick = onPurchase
+                    onClick = onPurchase,
                 ),
         contentAlignment = Alignment.Center,
     ) {
         if (isLoading) {
             // Loading 状态：显示透明背景的 CircularProgressIndicator
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(28.dp)),
+                modifier =
+                    Modifier.fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(28.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(
-                    color = Color.White,
-                    modifier = Modifier.size(24.dp),
-                )
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
             }
         } else {
             Text(

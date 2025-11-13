@@ -10,27 +10,23 @@ object SubscriptionService {
     /** 获取订阅计划列表 替换: ISubscriptionApi.getSubscriptionPlans() */
     suspend fun getSubscriptionPlans(): ApiResult<List<SubscriptionPlan>> {
         return IntyNetworkManager.executeRequest("Get Subscription Plans") {
-            val response =
-                IntyNetworkManager.getClient()
-                    .api()
-                    .v1()
-                    .subscription()
-                    .listPlans()
+            val response = IntyNetworkManager.getClient().api().v1().subscription().listPlans()
 
             val plans = response.data()?.plans() ?: emptyList()
             plans.map { plan ->
-                val featuresMap = plan.features()?.let { features ->
-                    val map = mutableMapOf<String, Any>()
-                    features._additionalProperties().forEach { (key, value) ->
-                        when {
-                            value.asString() != null -> map[key] = value.asString()!!
-                            value.asNumber() != null -> map[key] = value.asNumber()!!
-                            value.asBoolean() != null -> map[key] = value.asBoolean()!!
-                            else -> map[key] = value.toString()
+                val featuresMap =
+                    plan.features()?.let { features ->
+                        val map = mutableMapOf<String, Any>()
+                        features._additionalProperties().forEach { (key, value) ->
+                            when {
+                                value.asString() != null -> map[key] = value.asString()!!
+                                value.asNumber() != null -> map[key] = value.asNumber()!!
+                                value.asBoolean() != null -> map[key] = value.asBoolean()!!
+                                else -> map[key] = value.toString()
+                            }
                         }
+                        map
                     }
-                    map
-                }
                 SubscriptionPlan(
                     id = plan.id(),
                     name = plan.name(),
@@ -55,12 +51,7 @@ object SubscriptionService {
     /** 获取用户订阅信息 替换: ISubscriptionApi.getUserSubscription() */
     suspend fun getUserSubscription(): ApiResult<UserSubscription> {
         return IntyNetworkManager.executeRequest("Get User Subscription") {
-            val response =
-                IntyNetworkManager.getClient()
-                    .api()
-                    .v1()
-                    .subscription()
-                    .getStatus()
+            val response = IntyNetworkManager.getClient().api().v1().subscription().getStatus()
 
             val data = response.data()
             val subscription = data?.subscription()
@@ -75,12 +66,8 @@ object SubscriptionService {
         }
     }
 
-
     /** 验证订阅状态 替换: ISubscriptionApi.validateSubscription() */
-    suspend fun validateSubscription(
-        purchaseToken: String,
-        productId: String,
-    ): ApiResult<Boolean> {
+    suspend fun validateSubscription(purchaseToken: String, productId: String): ApiResult<Boolean> {
         return IntyNetworkManager.executeRequest("Validate Subscription") {
             val response =
                 IntyNetworkManager.getClient()

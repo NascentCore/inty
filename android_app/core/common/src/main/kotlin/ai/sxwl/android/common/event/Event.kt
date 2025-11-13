@@ -19,11 +19,8 @@ sealed class UserEvent : BaseEvent() {
 
 /** 聊天相关事件 */
 sealed class ChatEvent : BaseEvent() {
-    data class MessageReceived(
-        val messageId: String,
-        val content: String,
-        val senderId: String,
-    ) : ChatEvent()
+    data class MessageReceived(val messageId: String, val content: String, val senderId: String) :
+        ChatEvent()
 
     data class MessageSent(val messageId: String, val content: String) : ChatEvent()
 

@@ -38,6 +38,7 @@ class MessagesViewModel : BaseVM() {
 
     /**
      * 跟踪页面访问
+     *
      * @param contextName 上下文名称，默认为 "MessagesViewModel"
      */
     fun trackPageView(contextName: String = "MessagesViewModel") {
@@ -49,13 +50,11 @@ class MessagesViewModel : BaseVM() {
             mapOf(
                 "conversation_count" to currentState.conversations.size,
                 "is_loading" to currentState.isLoading,
-            )
+            ),
         )
     }
 
-    /**
-     * 获取会话列表（首次加载或刷新）
-     */
+    /** 获取会话列表（首次加载或刷新） */
     fun getConversations() {
         currentConversationsPage = 0
         hasMoreConversations = true
@@ -69,9 +68,7 @@ class MessagesViewModel : BaseVM() {
         }
     }
 
-    /**
-     * 加载更多会话
-     */
+    /** 加载更多会话 */
     fun loadMoreConversations() {
         val currentState = _uiState.value
         if (!currentState.isLoading && hasMoreConversations) {
@@ -84,9 +81,7 @@ class MessagesViewModel : BaseVM() {
         }
     }
 
-    /**
-     * 静默加载会话（后台刷新，不显示loading）
-     */
+    /** 静默加载会话（后台刷新，不显示loading） */
     private fun loadConversationsSilently() {
         val currentState = _uiState.value
         if (currentState.isLoading || currentState.isRefreshing) return
@@ -125,9 +120,7 @@ class MessagesViewModel : BaseVM() {
         }
     }
 
-    /**
-     * 加载会话列表（显示loading）
-     */
+    /** 加载会话列表（显示loading） */
     private fun loadConversations() {
         val currentState = _uiState.value
         if (currentState.isLoading || currentState.isRefreshing) return
@@ -169,9 +162,7 @@ class MessagesViewModel : BaseVM() {
                                 val allConversations =
                                     currentConversations + userInitiatedConversations
                                 val allProcessed = processConversationsWithPinHide(allConversations)
-                                _uiState.update {
-                                    it.copy(conversations = allProcessed)
-                                }
+                                _uiState.update { it.copy(conversations = allProcessed) }
                             }
                         }
                     }
@@ -209,31 +200,28 @@ class MessagesViewModel : BaseVM() {
         }
     }
 
-    /**
-     * 标记会话消息已读
-     */
+    /** 标记会话消息已读 */
     fun setConversationReaded(conversationItem: ConversationItem) {
         IntySetting.setConversationReaded(conversationItem.agentId, conversationItem.lastMessage)
 
         _uiState.update { currentState ->
             currentState.copy(
-                conversations = currentState.conversations.map { conversation ->
-                    if (
-                        conversation.id == conversationItem.id &&
-                        conversation.agentId == conversationItem.agentId
-                    ) {
-                        conversation.copy(isNew = false)
-                    } else {
-                        conversation
+                conversations =
+                    currentState.conversations.map { conversation ->
+                        if (
+                            conversation.id == conversationItem.id &&
+                                conversation.agentId == conversationItem.agentId
+                        ) {
+                            conversation.copy(isNew = false)
+                        } else {
+                            conversation
+                        }
                     }
-                }
             )
         }
     }
 
-    /**
-     * 处理会话列表：排序（Pin在前）和过滤（隐藏的移除，除非有新消息）
-     */
+    /** 处理会话列表：排序（Pin在前）和过滤（隐藏的移除，除非有新消息） */
     private fun processConversationsWithPinHide(
         rawConversations: List<ConversationItem>
     ): List<ConversationItem> {
@@ -246,47 +234,38 @@ class MessagesViewModel : BaseVM() {
                 compareBy<ConversationItem> { !it.isPinned }
                     .thenByDescending { conversation ->
                         // 将 lastMessageTime（ISO 8601 格式）转换为时间戳进行比较
-                        ai.sxwl.android.utils.TimeUtils.parseIsoTimeToTimestamp(conversation.lastMessageTime)
-                            ?: 0L
+                        ai.sxwl.android.utils.TimeUtils.parseIsoTimeToTimestamp(
+                            conversation.lastMessageTime
+                        ) ?: 0L
                     }
             )
     }
 
-    /**
-     * 置顶会话
-     */
+    /** 置顶会话 */
     fun pinConversation(agentId: String) {
         IntySetting.setConversationPinned(agentId, true)
         refreshConversationsWithPinHide()
     }
 
-    /**
-     * 取消置顶
-     */
+    /** 取消置顶 */
     fun unpinConversation(agentId: String) {
         IntySetting.setConversationPinned(agentId, false)
         refreshConversationsWithPinHide()
     }
 
-    /**
-     * 隐藏会话
-     */
+    /** 隐藏会话 */
     fun hideConversation(agentId: String) {
         IntySetting.setConversationHidden(agentId, true)
         refreshConversationsWithPinHide()
     }
 
-    /**
-     * 取消隐藏
-     */
+    /** 取消隐藏 */
     fun unhideConversation(agentId: String) {
         IntySetting.setConversationHidden(agentId, false)
         refreshConversationsWithPinHide()
     }
 
-    /**
-     * 刷新会话列表（应用Pin/Hide逻辑）
-     */
+    /** 刷新会话列表（应用Pin/Hide逻辑） */
     private fun refreshConversationsWithPinHide() {
         _uiState.update { currentState ->
             currentState.copy(
@@ -295,9 +274,7 @@ class MessagesViewModel : BaseVM() {
         }
     }
 
-    /**
-     * 检查是否有新消息，自动取消隐藏
-     */
+    /** 检查是否有新消息，自动取消隐藏 */
     fun checkAndUnhideConversations() {
         val currentConversations = _uiState.value.conversations
         var needRefresh = false
@@ -315,9 +292,7 @@ class MessagesViewModel : BaseVM() {
         }
     }
 
-    /**
-     * 清理所有数据
-     */
+    /** 清理所有数据 */
     fun clearAllData() {
         currentConversationsPage = 0
         hasMoreConversations = true

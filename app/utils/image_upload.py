@@ -119,7 +119,7 @@ async def process_image_upload(
 
     # Animated formats (GIF and AVIF) should not be compressed
     is_animated_format = file_ext in (ImageFormat.GIF, ImageFormat.AVIF)
-    
+
     # Compress PNG and large files
     # Always compress PNG, and also compress if file is > 500KB.
     # We might adjust the threshold value of 500KB in the future.
@@ -133,7 +133,10 @@ async def process_image_upload(
             global_config_loaded_from_config_yaml.app.limits.image_compression_threshold_size_kb
             * 1024
         )
-        if file_ext == ImageFormat.PNG or len(file_data) > compression_threshold_size_bytes:
+        if (
+            file_ext == ImageFormat.PNG
+            or len(file_data) > compression_threshold_size_bytes
+        ):
             file_data = compress_png_to_jpeg(file_data)
             file_ext = ImageFormat.JPEG
             was_compressed = True
@@ -143,7 +146,7 @@ async def process_image_upload(
 
     # Get image size - for GIF, use first frame if animated
     img = Image.open(io.BytesIO(original_file_data))
-    if file_ext == ImageFormat.GIF and hasattr(img, 'is_animated') and img.is_animated:
+    if file_ext == ImageFormat.GIF and hasattr(img, "is_animated") and img.is_animated:
         # For animated GIF, get size from first frame
         img.seek(0)
     size = ImageSize(width=img.width, height=img.height)

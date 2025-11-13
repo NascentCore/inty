@@ -94,7 +94,7 @@ object CrashUtils {
 
     private fun getUncaughtExceptionHandler(
         dirPath: String,
-        onCrashListener: OnCrashListener?
+        onCrashListener: OnCrashListener?,
     ): UncaughtExceptionHandler {
         return UncaughtExceptionHandler { t, e ->
             val time = SimpleDateFormat("yyyy_MM_dd-HH_mm_ss", Locale.getDefault()).format(Date())
