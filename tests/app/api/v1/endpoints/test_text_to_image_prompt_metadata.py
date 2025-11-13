@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import uuid
 
 import pytest
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import delete, select
 
 from app import models, schemas
 from app.api.v1.endpoints.agents import generate_background
+from app.db.session import AsyncSessionLocal
 from app.services.global_services import subscription_service
 from app.utils import gemini as gemini_utils
 from tests.fakes.gemini import FakeGeminiClient
@@ -16,19 +16,12 @@ from tests.fakes.gemini import FakeGeminiClient
 
 @pytest.mark.asyncio
 async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pytest.MonkeyPatch):
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True)
+    user_id = f"user-text-image-{uuid.uuid4().hex}"
+    readable_id = uuid.uuid4().hex[:8]
+    urls: list[str] = []
+
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(models.Base.metadata.create_all)
-
-        async_session_factory = sessionmaker(
-            bind=engine, class_=AsyncSession, expire_on_commit=False
-        )
-
-        user_id = "user-text-image"
-        readable_id = "87654321"
-
-        async with async_session_factory() as session:
+        async with AsyncSessionLocal() as session:
             user = models.User(
                 id=user_id,
                 readable_id=readable_id,
@@ -78,20 +71,22 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
             created_at=datetime.now(timezone.utc),
         )
 
-        async with async_session_factory() as session:
+        async with AsyncSessionLocal() as session:
             response = await generate_background(request, db=session, current_user=current_user)
 
         assert response.code == 200
         assert response.data is not None
         assert response.data["count"] == 2
-        urls = response.data["urls"]
+        urls = list(response.data["urls"])
         assert len(urls) == 2
 
-        async with async_session_factory() as session:
-            result = await session.execute(select(models.Resource))
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(models.Resource).where(models.Resource.url.in_(urls))
+            )
             resources = result.scalars().all()
 
-        assert len(resources) == 2
+        assert len(resources) == len(urls)
         stored_urls = sorted(resource.url for resource in resources)
         assert stored_urls == sorted(urls)
 
@@ -101,4 +96,8 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
         assert stored_prompts == {request_prompt}
 
     finally:
-        await engine.dispose()
+        async with AsyncSessionLocal() as session:
+            if urls:
+                await session.execute(delete(models.Resource).where(models.Resource.url.in_(urls)))
+            await session.execute(delete(models.User).where(models.User.id == user_id))
+            await session.commit()
