@@ -549,18 +549,12 @@ class GooglePlayService:
             force_update_reasons = []
 
             # 1. 检查是否低于最低支持版本
-            try:
-                min_supported_version_code = int(
-                    global_config_loaded_from_config_yaml.google_play.min_supported_version
-                )
-            except (ValueError, TypeError):
-                logger.warning(
-                    f"最低支持版本配置无效: {global_config_loaded_from_config_yaml.google_play.min_supported_version}, 使用默认值 1"
-                )
-                min_supported_version_code = 1
-
-            if client_version_code < min_supported_version_code:
-                reason = f"Version code below minimum supported version: {client_version_code} < {min_supported_version_code}"
+            version_code_diff_limit = (
+                global_config_loaded_from_config_yaml.google_play.android_app_version_code_diff_limit
+            )
+            oldest_version_code = latest_version_code - version_code_diff_limit
+            if client_version_code < oldest_version_code:
+                reason = f"Version code older than the oldest supported version: {client_version_code} < {oldest_version_code}"
                 force_update_reasons.append(reason)
                 logger.info(f"最低版本检查触发强制更新: {reason}")
 
@@ -582,7 +576,7 @@ class GooglePlayService:
                 "latest_version_code": latest_version_code,
                 "update_required": update_required,
                 "force_update": force_update,
-                "minimum_version": str(min_supported_version_code),
+                "minimum_version": str(oldest_version_code),
                 "changelog": version_info.get("release_notes"),
                 "download_url": f"https://play.google.com/store/apps/details?id={self.package_name}",
             }
@@ -601,7 +595,7 @@ class GooglePlayService:
             # 详细日志记录
             log_msg = (
                 f"版本检查完成: 客户端={client_version_code}, 最新={latest_version_code}, "
-                f"最低支持={min_supported_version_code}, "
+                f"支持最老版本={oldest_version_code}, "
                 f"需要更新={update_required}, 强制更新={force_update}"
             )
 

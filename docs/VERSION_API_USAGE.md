@@ -68,7 +68,7 @@ google_play:
   package_name: com.ai.intellimate
   service_account_key: inty-backend-key.json
   enable_version_check: true
-  min_supported_version: "1.0.0"
+  android_app_version_code_diff_limit: 10
   force_update_versions: ["1.0.5", "1.1.2"] # Versions that require force update
   release_track: internal # Track to query: internal/closed/open/production
   fallback_tracks: [production, internal] # Fallback tracks if primary fails

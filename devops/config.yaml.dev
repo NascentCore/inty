@@ -66,6 +66,7 @@ google_play:
   webhook_secret: ""
   enable_version_check: true
   min_supported_version: 10
+  android_app_version_code_diff_limit: 10
   release_track: internal
   fallback_tracks: [internal]
 
