@@ -40,19 +40,29 @@ object ReportService {
         }
     }
 
-    /**
-     * 上传图片 注意: 当前 IntySDK 的图片上传 API 解析复杂，暂时返回占位符
-     *
-     * TODO: 等 IntySDK 完善图片上传 API 后再实现真实上传
-     */
+    /** 上传图片 */
     suspend fun uploadImage(
         inputStream: InputStream,
         filename: String = "report-image.jpg",
     ): ApiResult<String> {
         return IntyNetworkManager.executeRequest("Upload Image") {
-            // 暂时返回基于时间戳的占位符 URL
-            // 等 IntySDK 图片上传 API 完善后再实现真实上传
-            "https://placeholder.com/uploaded-image-${System.currentTimeMillis()}.jpg"
+            val response =
+                IntyNetworkManager.getClient()
+                    .api()
+                    .v1()
+                    .uploadImage(
+                        com.inty.api.models.api.v1.V1UploadImageParams.builder()
+                            .file(inputStream.readBytes())
+                            .build()
+                    )
+
+            val data = response.data()
+            val additionalProperties = data?._additionalProperties() ?: emptyMap()
+            val imageUrl = additionalProperties["url"]?.asString()
+                ?: additionalProperties["image_url"]?.asString()
+                ?: throw IllegalStateException("Image URL not found in response")
+
+            imageUrl
         }
     }
 }
