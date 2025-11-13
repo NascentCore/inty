@@ -75,35 +75,6 @@ object SubscriptionService {
         }
     }
 
-    /** 创建订阅 替换: ISubscriptionApi.createSubscription() */
-    suspend fun createSubscription(planId: String): ApiResult<SubscriptionResult> {
-        return IntyNetworkManager.executeRequest("Create Subscription") {
-            // 当前 IntySDK 没有直接的 subscription creation API
-            // 等 API 完善后再实现
-            throw Exception("Subscription creation not supported, check API documentation")
-        }
-    }
-
-    /** 取消订阅 替换: ISubscriptionApi.cancelSubscription() */
-    suspend fun cancelSubscription(subscriptionId: String): ApiResult<Unit> {
-        return IntyNetworkManager.executeRequest("Cancel Subscription") {
-            // 当前 IntySDK 没有直接的 cancel subscription API
-            // 等 API 完善后再实现
-            throw Exception("Cancel subscription not supported, check API documentation")
-        }
-    }
-
-    /** 更新订阅 替换: ISubscriptionApi.updateSubscription() */
-    suspend fun updateSubscription(
-        subscriptionId: String,
-        planId: String,
-    ): ApiResult<SubscriptionResult> {
-        return IntyNetworkManager.executeRequest("Update Subscription") {
-            // 当前 IntySDK 没有直接的 subscription update API
-            // 等 API 完善后再实现
-            throw Exception("Subscription update not supported, check API documentation")
-        }
-    }
 
     /** 验证订阅状态 替换: ISubscriptionApi.validateSubscription() */
     suspend fun validateSubscription(
@@ -127,26 +98,6 @@ object SubscriptionService {
         }
     }
 
-    /** 获取使用统计 */
-    suspend fun getUsage(): ApiResult<UsageStatistics> {
-        return IntyNetworkManager.executeRequest("Get Usage Statistics") {
-            val response =
-                IntyNetworkManager.getClient()
-                    .api()
-                    .v1()
-                    .subscription()
-                    .getUsage()
-
-            val usage = response.data()
-            UsageStatistics(
-                imageGenerationCount = 0, // SDK中没有直接的imageGenerationCount字段
-                imageGenerationLimit = 0, // SDK中没有直接的imageGenerationLimit字段
-                voiceGenerationCount = 0, // SDK中没有直接的voiceGenerationCount字段
-                voiceGenerationLimit = 0, // SDK中没有直接的voiceGenerationLimit字段
-            )
-        }
-    }
-
     /** 用户订阅信息数据类 */
     data class UserSubscription(
         val id: String,
@@ -155,20 +106,5 @@ object SubscriptionService {
         val startDate: Long,
         val endDate: Long,
         val isActive: Boolean,
-    )
-
-    /** 订阅结果数据类 */
-    data class SubscriptionResult(
-        val subscriptionId: String,
-        val status: String,
-        val paymentUrl: String?,
-    )
-
-    /** 使用统计数据类 */
-    data class UsageStatistics(
-        val imageGenerationCount: Int,
-        val imageGenerationLimit: Int,
-        val voiceGenerationCount: Int,
-        val voiceGenerationLimit: Int,
     )
 }

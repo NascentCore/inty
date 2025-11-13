@@ -17,7 +17,5 @@ class Constant {
         // an Android emulator. Used for local development.
         // https://stackoverflow.com/a/6310592
         const val USER_HOST_LOCAL = "localhost:8000"
-
-        const val SYS_NOTIFICATION_ID = "SYS_NOTIFICATION_ID_888"
     }
 }
