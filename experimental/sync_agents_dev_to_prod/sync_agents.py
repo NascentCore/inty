@@ -19,8 +19,6 @@ from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-sys.path.append(str(Path(__file__).parent.parent.parent))
-
 from app.models.agent import Agent
 from app.models.user import AuthType, Gender, User
 
@@ -207,6 +205,7 @@ def compare_agents(agent1: Agent, agent2: Agent) -> bool:
     返回True表示不同需要更新，False表示相同不需要更新
     """
     fields_to_compare = [
+        # 基础字段
         "readable_id",
         "name",
         "gender",
@@ -223,8 +222,10 @@ def compare_agents(agent1: Agent, agent2: Agent) -> bool:
         "category",
         "status",
         "prompt",
+        # 主提示词和模式提示词字段
         "main_prompt",
         "mode_prompt",
+        # 角色卡相关字段
         "character_card_spec",
         "character_card_data",
         "personality",
@@ -238,7 +239,9 @@ def compare_agents(agent1: Agent, agent2: Agent) -> bool:
         "character_version",
         "extensions",
         "meta_data",
+        # 语音相关字段
         "opening_audio_url",
+        # 外键
         "creator_id",
     ]
 
@@ -254,6 +257,7 @@ def compare_agents(agent1: Agent, agent2: Agent) -> bool:
 def copy_agent_fields(source: Agent, target: Agent) -> None:
     """将源Agent的字段复制到目标Agent"""
     fields_to_copy = [
+        # 基础字段
         "readable_id",
         "name",
         "gender",
@@ -270,8 +274,10 @@ def copy_agent_fields(source: Agent, target: Agent) -> None:
         "category",
         "status",
         "prompt",
+        # 主提示词和模式提示词字段
         "main_prompt",
         "mode_prompt",
+        # 角色卡相关字段
         "character_card_spec",
         "character_card_data",
         "personality",
@@ -285,7 +291,9 @@ def copy_agent_fields(source: Agent, target: Agent) -> None:
         "character_version",
         "extensions",
         "meta_data",
+        # 语音相关字段
         "opening_audio_url",
+        # 外键
         "creator_id",
     ]
 
@@ -531,10 +539,10 @@ async def main():
         prod_ok = await test_connection(prod_engine, "Prod")
 
         if not dev_ok:
-            logger.error("Dev 数据库连接失败，请检查配置和网络连接")
+            logger.error("Dev 数据库连接失败，请检查配置和网络连接，需要运行在 GCP 上")
             sys.exit(1)
         if not prod_ok:
-            logger.error("Prod 数据库连接失败，请检查配置和网络连接")
+            logger.error("Prod 数据库连接失败，请检查配置和网络连接，需要运行在 GCP 上")
             sys.exit(1)
 
         logger.info("")
