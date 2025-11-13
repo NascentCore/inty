@@ -36,27 +36,18 @@ fun ConversationItemMenu(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .zIndex(1000f)
-            .background(
-                Color(0xCC000000),
-                RoundedCornerShape(8.dp)
-            ),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
+    Box(modifier = modifier.zIndex(1000f).background(Color(0xCC000000), RoundedCornerShape(8.dp))) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             // Pin/Unpin 选项
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .clickable {
-                        onPinClick()
-                        onDismiss()
-                    }
-                    .padding(horizontal = 16.dp),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .height(48.dp)
+                        .clickable {
+                            onPinClick()
+                            onDismiss()
+                        }
+                        .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start,
             ) {
@@ -67,7 +58,9 @@ fun ConversationItemMenu(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = if (isPinned) stringResource(R.string.unpin) else stringResource(R.string.pin),
+                    text =
+                        if (isPinned) stringResource(R.string.unpin)
+                        else stringResource(R.string.pin),
                     color = Color.White,
                     fontSize = 14.sp,
                 )
@@ -75,22 +68,20 @@ fun ConversationItemMenu(
 
             // 分隔线
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(Color.White.copy(alpha = 0.2f)),
+                modifier =
+                    Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.2f))
             )
 
             // Hide/Unhide 选项
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .clickable {
-                        onHideClick()
-                        onDismiss()
-                    }
-                    .padding(horizontal = 16.dp),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .height(48.dp)
+                        .clickable {
+                            onHideClick()
+                            onDismiss()
+                        }
+                        .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start,
             ) {
@@ -101,7 +92,9 @@ fun ConversationItemMenu(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = if (isHidden) stringResource(R.string.unhide) else stringResource(R.string.hide),
+                    text =
+                        if (isHidden) stringResource(R.string.unhide)
+                        else stringResource(R.string.hide),
                     color = Color.White,
                     fontSize = 14.sp,
                 )
@@ -109,4 +102,3 @@ fun ConversationItemMenu(
         }
     }
 }
-

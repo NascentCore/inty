@@ -32,7 +32,6 @@ object IntySetting {
         return allUserSetting.decodeString("cur_uid") ?: ""
     }
 
-
     /** 切换用户 对应Guest登录Google账户 Google账户退出登录，到Guest账户 */
     fun changeUser(uid: String) {
         curUserSetting
@@ -273,7 +272,7 @@ object IntySetting {
         agentId: String,
         offset: Int,
         hasMore: Boolean,
-        isInitialLoaded: Boolean
+        isInitialLoaded: Boolean,
     ) {
         curUserSetting.putInt("chat_offset_$agentId", offset)
         curUserSetting.putBoolean("chat_has_more_$agentId", hasMore)
@@ -306,9 +305,9 @@ object IntySetting {
         keys?.forEach { key: String ->
             if (
                 key.startsWith("chat_messages_") ||
-                key.startsWith("chat_offset_") ||
-                key.startsWith("chat_has_more_") ||
-                key.startsWith("chat_initial_loaded_")
+                    key.startsWith("chat_offset_") ||
+                    key.startsWith("chat_has_more_") ||
+                    key.startsWith("chat_initial_loaded_")
             ) {
                 curUserSetting.removeValueForKey(key)
             }

@@ -8,22 +8,19 @@ import ai.sxwl.android.utils.DeviceUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import com.chuckerteam.chucker.api.ChuckerInterceptor
+import java.net.InetAddress
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
-import java.net.InetAddress
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
-/**
- * 统一的 OkHttpClient 工厂
- * 提供统一的网络客户端配置，包含所有必要的拦截器和配置
- */
+/** 统一的 OkHttpClient 工厂 提供统一的网络客户端配置，包含所有必要的拦截器和配置 */
 object UnifiedOkHttpClient {
 
     // 性能监控专用线程池
@@ -32,33 +29,21 @@ object UnifiedOkHttpClient {
             Thread(r, "PerformanceMonitor").apply { isDaemon = true }
         }
 
-    /**
-     * 创建统一的 OkHttpClient 实例
-     * 包含所有必要的拦截器：设备信息、认证、性能监控、调试等
-     */
+    /** 创建统一的 OkHttpClient 实例 包含所有必要的拦截器：设备信息、认证、性能监控、调试等 */
     fun create(): OkHttpClient {
         val environmentConfig = NetworkConfig.getCurrentEnvironmentConfig()
 
         return OkHttpClient.Builder()
             // 超时配置（根据环境配置）
-            .connectTimeout(
-                environmentConfig.timeout.connectTimeoutMs,
-                TimeUnit.MILLISECONDS
-            )
-            .writeTimeout(
-                environmentConfig.timeout.writeTimeoutMs,
-                TimeUnit.MILLISECONDS
-            )
-            .readTimeout(
-                environmentConfig.timeout.readTimeoutMs,
-                TimeUnit.MILLISECONDS
-            )
+            .connectTimeout(environmentConfig.timeout.connectTimeoutMs, TimeUnit.MILLISECONDS)
+            .writeTimeout(environmentConfig.timeout.writeTimeoutMs, TimeUnit.MILLISECONDS)
+            .readTimeout(environmentConfig.timeout.readTimeoutMs, TimeUnit.MILLISECONDS)
             // 连接池配置
             .connectionPool(
                 ConnectionPool(
                     environmentConfig.connection.maxConnections,
                     environmentConfig.connection.keepAliveDurationMs,
-                    TimeUnit.MILLISECONDS
+                    TimeUnit.MILLISECONDS,
                 )
             )
             // DNS缓存（如果启用）
@@ -77,10 +62,7 @@ object UnifiedOkHttpClient {
     }
 }
 
-/**
- * 设备信息拦截器
- * 添加应用版本、设备信息、请求ID、时间戳等 header，便于后端数据分析和请求统计
- */
+/** 设备信息拦截器 添加应用版本、设备信息、请求ID、时间戳等 header，便于后端数据分析和请求统计 */
 private class DeviceInfoInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
@@ -121,30 +103,29 @@ private class DeviceInfoInterceptor : Interceptor {
 }
 
 /**
- * 认证拦截器
- * 添加认证 token 并处理 401 响应
+ * 认证拦截器 添加认证 token 并处理 401 响应
  *
- * 注意：对于 inty_sdk 的请求，SDK 会在 ClientOptions.build() 时添加 Authorization header
- * 因此我们需要检查请求是否已有 Authorization header，避免重复添加
+ * 注意：对于 inty_sdk 的请求，SDK 会在 ClientOptions.build() 时添加 Authorization header 因此我们需要检查请求是否已有
+ * Authorization header，避免重复添加
  */
 private class AuthInterceptor : Interceptor {
 
     companion object {
         /**
-         * 401错误白名单接口
-         * 这些接口的401错误不会触发全局logout，只记录日志
-         * 原因：这些接口可能在后台自动调用，401错误不应该影响用户当前的使用
+         * 401错误白名单接口 这些接口的401错误不会触发全局logout，只记录日志 原因：这些接口可能在后台自动调用，401错误不应该影响用户当前的使用
          *
          * 注意：chat相关接口不再需要白名单，因为已修复token更新和客户端缓存的根本问题
          */
-        private val authFailureWhitelist = setOf(
-            "/api/v1/version/check",   // 版本检查接口（后台自动调用）
-            "/api/v1/ai/agents/recommend",  // 推荐接口（后台自动调用）
-        )
+        private val authFailureWhitelist =
+            setOf(
+                "/api/v1/version/check", // 版本检查接口（后台自动调用）
+                "/api/v1/ai/agents/recommend", // 推荐接口（后台自动调用）
+            )
     }
 
     /**
      * 检查是否是白名单接口
+     *
      * @param url 请求URL
      * @return true 如果是白名单接口，false 否则
      */
@@ -157,7 +138,7 @@ private class AuthInterceptor : Interceptor {
         val builder = request.newBuilder()
 
         val existingAuthHeader = request.header("Authorization")
-        val currentToken = IntySetting.getCurToken()  // 动态读取最新token
+        val currentToken = IntySetting.getCurToken() // 动态读取最新token
 
         if (currentToken.isNotEmpty()) {
             // 检查SDK添加的token是否与最新token匹配
@@ -168,7 +149,7 @@ private class AuthInterceptor : Interceptor {
                 builder.addHeader("Authorization", "Bearer $currentToken")
                 LogUtils.w(
                     "AuthInterceptor - Token mismatch detected, using latest token. " +
-                            "SDK token: ${sdkToken.take(8)}..., Current token: ${currentToken.take(8)}..."
+                        "SDK token: ${sdkToken.take(8)}..., Current token: ${currentToken.take(8)}..."
                 )
             } else if (existingAuthHeader == null) {
                 // 没有Authorization header，添加最新token
@@ -243,9 +224,7 @@ private class AuthInterceptor : Interceptor {
                 // Firebase Crashlytics - 记录认证失败
                 FirebaseManager.setCustomKey("last_401_url", requestUrl)
                 FirebaseManager.setCustomKey("last_401_whitelisted", false)
-                FirebaseManager.recordException(
-                    Exception("HTTP 401 Unauthorized: $requestUrl")
-                )
+                FirebaseManager.recordException(Exception("HTTP 401 Unauthorized: $requestUrl"))
 
                 // 检查是否正在退出登录过程中，避免重复重启
                 if (IntySetting.isLoggingOut()) {
@@ -262,9 +241,7 @@ private class AuthInterceptor : Interceptor {
     }
 }
 
-/**
- * 记录错误和异常
- */
+/** 记录错误和异常 */
 private fun trackError(
     error: String,
     errorType: String = "unknown",
@@ -273,20 +250,15 @@ private fun trackError(
     try {
         FirebaseManager.logEvent(
             FirebaseManager.Events.APP_ERROR,
-            mapOf(
-                "error" to "$errorType: $error",
-                "timestamp" to System.currentTimeMillis(),
-            ) + additionalParams,
+            mapOf("error" to "$errorType: $error", "timestamp" to System.currentTimeMillis()) +
+                additionalParams,
         )
     } catch (e: Exception) {
         LogUtils.e("Failed to track error: ${e.message}")
     }
 }
 
-/**
- * 网络性能监控拦截器
- * 使用 Firebase Performance 监控请求性能
- */
+/** 网络性能监控拦截器 使用 Firebase Performance 监控请求性能 */
 private class PerformanceInterceptor : Interceptor {
 
     private companion object {
@@ -337,11 +309,7 @@ private class PerformanceInterceptor : Interceptor {
     }
 
     /** 记录性能指标（异步执行，不阻塞请求） */
-    private fun recordPerformanceMetrics(
-        request: Request,
-        duration: Long,
-        isSuccessful: Boolean
-    ) {
+    private fun recordPerformanceMetrics(request: Request, duration: Long, isSuccessful: Boolean) {
         try {
             // 使用线程池异步记录性能指标，避免阻塞主线程
             UnifiedOkHttpClient.performanceExecutor.execute {
@@ -366,8 +334,8 @@ private class PerformanceInterceptor : Interceptor {
                                 "duration_ms" to duration,
                                 "method" to request.method,
                                 "url" to request.url.toString(),
-                                "success" to isSuccessful
-                            )
+                                "success" to isSuccessful,
+                            ),
                         )
                     }
 
@@ -383,16 +351,13 @@ private class PerformanceInterceptor : Interceptor {
                                 "duration_ms" to duration,
                                 "method" to request.method,
                                 "url" to request.url.toString(),
-                                "success" to isSuccessful
-                            )
+                                "success" to isSuccessful,
+                            ),
                         )
 
                         // 使用 Firebase Crashlytics 记录性能问题
                         FirebaseManager.setCustomKey("slow_request_url", request.url.toString())
-                        FirebaseManager.setCustomKey(
-                            "slow_request_duration",
-                            duration.toString()
-                        )
+                        FirebaseManager.setCustomKey("slow_request_duration", duration.toString())
                     }
                 }
             }
@@ -418,16 +383,14 @@ private class PerformanceInterceptor : Interceptor {
                         "duration_ms" to duration,
                         "method" to request.method,
                         "url" to request.url.toString(),
-                        "error_message" to "exception: ${exception.javaClass.simpleName}, ${exception.message ?: "unknown"}"
-                    )
+                        "error_message" to
+                            "exception: ${exception.javaClass.simpleName}, ${exception.message ?: "unknown"}",
+                    ),
                 )
 
                 // 使用 Firebase Crashlytics 记录网络错误
                 FirebaseManager.setCustomKey("failed_request_url", request.url.toString())
-                FirebaseManager.setCustomKey(
-                    "failed_request_duration",
-                    duration.toString()
-                )
+                FirebaseManager.setCustomKey("failed_request_duration", duration.toString())
                 FirebaseManager.recordException(exception)
             }
         } catch (e: Exception) {
@@ -437,9 +400,7 @@ private class PerformanceInterceptor : Interceptor {
     }
 }
 
-/**
- * 自定义 DNS 解析器，支持缓存
- */
+/** 自定义 DNS 解析器，支持缓存 */
 private class CachedDns : Dns {
     // 使用线程安全的 ConcurrentHashMap
     private val cache = ConcurrentHashMap<String, List<InetAddress>>()

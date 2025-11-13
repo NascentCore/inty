@@ -28,5 +28,4 @@ object AuthService {
             Pair(userId, token)
         }
     }
-
 }

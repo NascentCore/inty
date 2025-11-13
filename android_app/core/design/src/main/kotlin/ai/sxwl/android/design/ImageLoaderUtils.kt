@@ -29,7 +29,7 @@ object ImageLoaderUtils {
         @DrawableRes placeholder: Int? = null,
         @DrawableRes error: Int? = null,
         maxWidth: Int? = null,
-        maxHeight: Int? = null
+        maxHeight: Int? = null,
     ): ImageRequest {
         val displayMetrics = context.resources.displayMetrics
         val screenWidth = maxWidth ?: displayMetrics.widthPixels
@@ -39,11 +39,12 @@ object ImageLoaderUtils {
         val targetWidth = screenWidth
         val targetHeight = screenHeight
 
-        val builder = ImageRequest.Builder(context)
-            .data(imageUrl)
-            .size(Size(targetWidth, targetHeight)) // 设备适配的尺寸
-            .crossfade(true)
-            .crossfade(300) // 300ms的交叉淡入淡出
+        val builder =
+            ImageRequest.Builder(context)
+                .data(imageUrl)
+                .size(Size(targetWidth, targetHeight)) // 设备适配的尺寸
+                .crossfade(true)
+                .crossfade(300) // 300ms的交叉淡入淡出
 
         // 只有在明确传入时才设置 placeholder 和 error
         placeholder?.let { builder.placeholder(it) }
@@ -65,13 +66,14 @@ object ImageLoaderUtils {
         context: Context,
         imageUrl: String?,
         @DrawableRes placeholder: Int? = null,
-        @DrawableRes error: Int? = null
+        @DrawableRes error: Int? = null,
     ): ImageRequest {
-        val builder = ImageRequest.Builder(context)
-            .data(imageUrl)
-            .size(Size.ORIGINAL) // 使用原始尺寸，让Coil自动处理
-            .crossfade(true)
-            .crossfade(300) // 300ms的交叉淡入淡出
+        val builder =
+            ImageRequest.Builder(context)
+                .data(imageUrl)
+                .size(Size.ORIGINAL) // 使用原始尺寸，让Coil自动处理
+                .crossfade(true)
+                .crossfade(300) // 300ms的交叉淡入淡出
 
         // 只有在明确传入时才设置 placeholder 和 error
         placeholder?.let { builder.placeholder(it) }
@@ -91,7 +93,7 @@ object ImageLoaderUtils {
     fun createAvatarImageRequest(
         context: Context,
         imageUrl: String?,
-        size: Int = 120
+        size: Int = 120,
     ): ImageRequest {
         return ImageRequest.Builder(context)
             .data(imageUrl)
@@ -114,7 +116,7 @@ object ImageLoaderUtils {
         context: Context,
         imageUrl: String?,
         width: Int = 300,
-        height: Int = 200
+        height: Int = 200,
     ): ImageRequest {
         return ImageRequest.Builder(context)
             .data(imageUrl)
@@ -137,13 +139,14 @@ object ImageLoaderUtils {
         context: Context,
         imageUrl: String?,
         @DrawableRes placeholder: Int? = null,
-        @DrawableRes error: Int? = null
+        @DrawableRes error: Int? = null,
     ): ImageRequest {
-        val builder = ImageRequest.Builder(context)
-            .data(imageUrl)
-            .size(Size.ORIGINAL)
-            .crossfade(true)
-            .crossfade(500) // 更长的交叉淡入淡出时间
+        val builder =
+            ImageRequest.Builder(context)
+                .data(imageUrl)
+                .size(Size.ORIGINAL)
+                .crossfade(true)
+                .crossfade(500) // 更长的交叉淡入淡出时间
 
         // 只有在明确传入时才设置 placeholder 和 error
         placeholder?.let { builder.placeholder(it) }

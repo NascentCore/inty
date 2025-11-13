@@ -48,7 +48,9 @@ class ProfileViewModel : BaseVM() {
                     UserProfileManager.saveUserProfile(userProfile)
                     LogUtils.i("ProfileViewModel - Updated user profile from server: $userProfile")
                 } else {
-                    LogUtils.e("ProfileViewModel - getUserProfile failure: Failed to get user profile")
+                    LogUtils.e(
+                        "ProfileViewModel - getUserProfile failure: Failed to get user profile"
+                    )
                     // 使用本地缓存的用户信息
                     _uiState.update { it.copy(userProfile = UserProfileManager.getUserProfile()) }
                 }
@@ -72,11 +74,7 @@ class ProfileViewModel : BaseVM() {
 
         // 清空列表并加载数据
         _uiState.update {
-            it.copy(
-                userCreatedAgents = emptyList(),
-                isLoading = false,
-                error = null
-            )
+            it.copy(userCreatedAgents = emptyList(), isLoading = false, error = null)
         }
         loadUserCreatedAgents()
     }
@@ -101,7 +99,6 @@ class ProfileViewModel : BaseVM() {
             )
         }
     }
-
 
     /** 加载用户创建的 Agents 列表 */
     private fun loadUserCreatedAgents() {
@@ -129,7 +126,7 @@ class ProfileViewModel : BaseVM() {
                                     // 后续页，追加到现有列表
                                     current.copy(
                                         userCreatedAgents = current.userCreatedAgents + result.data,
-                                        hasMore = true
+                                        hasMore = true,
                                     )
                                 }
                             }
@@ -140,12 +137,16 @@ class ProfileViewModel : BaseVM() {
                     }
 
                     is HttpResult.Failure -> {
-                        LogUtils.e("ProfileViewModel - loadUserCreatedAgents - API failure: ${result.message}")
+                        LogUtils.e(
+                            "ProfileViewModel - loadUserCreatedAgents - API failure: ${result.message}"
+                        )
                         _uiState.update { it.copy(error = result.message) }
                         // If loading failed, rollback page counter
                         if (currentPage > 0) {
                             currentPage--
-                            LogUtils.i("ProfileViewModel - loadUserCreatedAgents - 页码回退到: $currentPage")
+                            LogUtils.i(
+                                "ProfileViewModel - loadUserCreatedAgents - 页码回退到: $currentPage"
+                            )
                         }
                     }
                 }
@@ -185,7 +186,8 @@ class ProfileViewModel : BaseVM() {
                             // 从用户创建的角色列表中移除
                             _uiState.update { current ->
                                 current.copy(
-                                    userCreatedAgents = current.userCreatedAgents.filter { it.id != agentId }
+                                    userCreatedAgents =
+                                        current.userCreatedAgents.filter { it.id != agentId }
                                 )
                             }
 
@@ -216,7 +218,9 @@ class ProfileViewModel : BaseVM() {
                     }
                 }
             } catch (e: HttpException) {
-                LogUtils.e("ProfileViewModel - deleteAgent HTTP Exception: ${e.code()} - ${e.message()}")
+                LogUtils.e(
+                    "ProfileViewModel - deleteAgent HTTP Exception: ${e.code()} - ${e.message()}"
+                )
                 val errorMessage = HttpErrorHandler.handleHttpException(e, "delete")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(errorMessage)
@@ -241,7 +245,7 @@ class ProfileViewModel : BaseVM() {
             mapOf(
                 "agent_count" to _uiState.value.userCreatedAgents.size,
                 "is_loading" to _uiState.value.isLoading,
-            )
+            ),
         )
     }
 

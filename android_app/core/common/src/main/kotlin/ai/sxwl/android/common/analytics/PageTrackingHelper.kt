@@ -11,10 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
 /** 页面追踪工具类 用于记录用户页面访问、交互流程和崩溃时的上下文信息 提供业务层友好的页面追踪功能 */
 object PageTrackingHelper {
 
-    /** 用户交互操作常量 - 用于性能追踪和用户行为分析
-     * 注意：这些是用户操作的 action 类型，不是 Firebase 事件名称
-     * 应该使用通用的操作动词，便于性能分析和用户行为统计
-     */
+    /** 用户交互操作常量 - 用于性能追踪和用户行为分析 注意：这些是用户操作的 action 类型，不是 Firebase 事件名称 应该使用通用的操作动词，便于性能分析和用户行为统计 */
     object UserActions {
         // 基础交互操作
         const val CLICK = "click" // 点击操作
@@ -71,9 +68,7 @@ object PageTrackingHelper {
             if (currentPage != null) {
                 val duration = currentTime - pageStartTime
 
-                LogUtils.i(
-                    "页面访问追踪: $currentPage 停留时长=${duration}ms"
-                )
+                LogUtils.i("页面访问追踪: $currentPage 停留时长=${duration}ms")
 
                 // 记录页面停留时长事件
                 FirebaseManager.logEvent(
@@ -81,8 +76,8 @@ object PageTrackingHelper {
                     FirebaseManager.safeEventParams(
                         "page_name" to currentPage,
                         "duration" to duration,
-                        "timestamp" to currentTime
-                    )
+                        "timestamp" to currentTime,
+                    ),
                 )
             }
 
@@ -103,7 +98,7 @@ object PageTrackingHelper {
             FirebaseManager.setCustomKey("page_visible_time", pageVisibleTime.toString())
             FirebaseManager.setCustomKey(
                 "page_lifecycle_start_time",
-                pageLifecycleStartTime.toString()
+                pageLifecycleStartTime.toString(),
             )
 
             // 记录 Analytics 事件 - 使用安全参数处理
@@ -111,7 +106,7 @@ object PageTrackingHelper {
                 FirebaseManager.safeEventParams(
                     "timestamp" to currentTime,
                     "page_name" to pageName,
-                    "page_class" to pageClass
+                    "page_class" to pageClass,
                 ) + additionalParams.mapValues { it.value?.toString() ?: "unknown" }
 
             FirebaseManager.logScreenView(pageName, pageClass, safeParams)
@@ -135,8 +130,8 @@ object PageTrackingHelper {
                     FirebaseManager.safeEventParams(
                         "page_name" to (currentPage ?: "unknown"),
                         "page_class" to (currentPageClass ?: "unknown"),
-                        "timestamp" to currentTime
-                    )
+                        "timestamp" to currentTime,
+                    ),
                 )
             } else {
                 // 页面变为不可见
@@ -150,8 +145,8 @@ object PageTrackingHelper {
                             "page_name" to (currentPage ?: "unknown"),
                             "page_class" to (currentPageClass ?: "unknown"),
                             "visible_time_spent" to visibleTimeSpent,
-                            "timestamp" to currentTime
-                        )
+                            "timestamp" to currentTime,
+                        ),
                     )
                 }
                 pageVisibleTime = 0L // 重置可见时间
@@ -189,8 +184,8 @@ object PageTrackingHelper {
                                 "page_class" to (currentPageClass ?: "unknown"),
                                 "lifecycle_event" to lifecycleEvent,
                                 "lifecycle_time_spent" to lifecycleTimeSpent,
-                                "timestamp" to currentTime
-                            )
+                                "timestamp" to currentTime,
+                            ),
                         )
 
                         // 重置生命周期开始时间
@@ -290,9 +285,9 @@ object PageTrackingHelper {
             "page_lifecycle_start_time" to pageLifecycleStartTime,
             "time_on_page" to (currentTime - pageStartTime),
             "visible_time_on_page" to
-                    if (pageVisibleTime > 0) (currentTime - pageVisibleTime) else 0L,
+                if (pageVisibleTime > 0) (currentTime - pageVisibleTime) else 0L,
             "lifecycle_time_on_page" to
-                    if (pageLifecycleStartTime > 0) (currentTime - pageLifecycleStartTime) else 0L,
+                if (pageLifecycleStartTime > 0) (currentTime - pageLifecycleStartTime) else 0L,
             "interaction_history" to userInteractionHistory.toMap(),
             "page_history" to pageHistory.toList(),
         )

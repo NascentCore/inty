@@ -17,17 +17,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * Explore接口调用结果回调
- * 用于将接口调用情况传递给ViewModel进行事件上报
- */
+/** Explore接口调用结果回调 用于将接口调用情况传递给ViewModel进行事件上报 */
 interface ExploreFetchCallback {
     suspend fun onSuccess(
         page: Int,
         pageSize: Int,
         responseTime: Long,
         agentsCount: Int,
-        sortSeed: Int
+        sortSeed: Int,
     )
 
     suspend fun onFailure(
@@ -35,7 +32,7 @@ interface ExploreFetchCallback {
         pageSize: Int,
         responseTime: Long,
         errorMessage: String,
-        sortSeed: Int
+        sortSeed: Int,
     )
 
     suspend fun onException(
@@ -43,7 +40,7 @@ interface ExploreFetchCallback {
         pageSize: Int,
         responseTime: Long,
         exception: Exception,
-        sortSeed: Int
+        sortSeed: Int,
     )
 }
 

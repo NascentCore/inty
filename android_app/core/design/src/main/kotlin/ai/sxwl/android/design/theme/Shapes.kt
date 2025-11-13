@@ -12,7 +12,7 @@ internal val heartShapes =
         small = ShapeDefaults.Small,
         medium = ShapeDefaults.Medium,
         large = ShapeDefaults.Large,
-        extraLarge = ShapeDefaults.ExtraLarge
+        extraLarge = ShapeDefaults.ExtraLarge,
     )
 
 /** 封装一些用户整个项目配置的shape的圆角，便于统一 */

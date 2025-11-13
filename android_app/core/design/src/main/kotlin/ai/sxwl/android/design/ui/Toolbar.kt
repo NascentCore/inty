@@ -68,14 +68,14 @@ fun HeartTopAppBar(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (title.isNotEmpty()) {
                     Text(
                         text = title,
                         fontSize = 20.sp,
                         color = Color.White,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
             }
@@ -87,7 +87,7 @@ fun HeartTopAppBar(
                     Icon(
                         painter = painterResource(navIcon),
                         contentDescription = "",
-                        tint = Color.White
+                        tint = Color.White,
                     )
                 }
             }
@@ -98,12 +98,12 @@ fun HeartTopAppBar(
                     Icon(
                         painter = painterResource(moreIcon),
                         contentDescription = "",
-                        tint = Color.White
+                        tint = Color.White,
                     )
                 }
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
     )
 }
 
@@ -118,7 +118,7 @@ private fun 预览普通封装的状态栏() {
         HeartTopAppBar(
             title = "",
             navIcon = R.drawable.ic_arrow_back,
-            moreIcon = R.drawable.ic_more
+            moreIcon = R.drawable.ic_more,
         ) {}
     }
 }
@@ -139,11 +139,11 @@ fun HeartStarTopAppBar(
                     },
                 fontSize = 24.sp,
                 lineHeight = 28.sp,
-                fontWeight = FontWeight.Black
+                fontWeight = FontWeight.Black,
             )
         },
         modifier = modifier,
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
     )
 }
 
@@ -183,14 +183,14 @@ fun HeartChatTopAppBar(
                         .clickable(onClick = onBarClick)
                         .padding(horizontal = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 val avatar = if (isInPreview) R.drawable.img_girl_lite else chatTopData.avatarUrl
                 AsyncImage(
                     model = avatar,
                     contentDescription = "avatar",
                     modifier = Modifier.size(36.dp).clip(CircleShape),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
                 )
 
                 val nickName = if (isInPreview) "Emma Ai Bot" else chatTopData.nickName ?: ""
@@ -203,7 +203,7 @@ fun HeartChatTopAppBar(
                     color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(min = 20.dp, max = 70.dp)
+                    modifier = Modifier.widthIn(min = 20.dp, max = 70.dp),
                 )
 
                 if (!(chatTopData.hasFollowed)) {
@@ -234,7 +234,7 @@ fun HeartChatTopAppBar(
                     Icon(
                         painter = painterResource(R.drawable.ic_arrow_back),
                         contentDescription = "",
-                        tint = Color.White
+                        tint = Color.White,
                     )
                 }
             }
@@ -246,20 +246,20 @@ fun HeartChatTopAppBar(
                         .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
                         .background(
                             Color.Black.copy(.4f),
-                            shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+                            shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
                         )
                         .clickable(onClick = onMenuClick),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_top_right_menu),
                     contentDescription = "",
                     tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(20.dp),
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
     )
 }
 
@@ -268,7 +268,7 @@ fun HeartChatTopAppBar(
 private fun 预览聊天顶部标题栏() {
     HeartChatTopAppBar(
         modifier = Modifier.background(Color.White),
-        chatTopData = HeartChatTopAppBarData()
+        chatTopData = HeartChatTopAppBarData(),
     )
 }
 
@@ -294,17 +294,17 @@ fun HeartTabTopAppBar(
                         Box(
                             modifier =
                                 Modifier.offset(x = tabPositions[selectedTabIndex].left, y = 0.dp),
-                            contentAlignment = Alignment.BottomStart
+                            contentAlignment = Alignment.BottomStart,
                         ) {
                             Image(
                                 painter = painterResource(R.drawable.icon_indicator_messages),
                                 contentDescription = "",
-                                modifier = Modifier.width(tabPositions[selectedTabIndex].width)
+                                modifier = Modifier.width(tabPositions[selectedTabIndex].width),
                             )
                         }
                     }
                 },
-                divider = {} // 移除默认分割线
+                divider = {}, // 移除默认分割线
             ) {
                 tabs.forEachIndexed { index, tabTitle ->
                     Tab(
@@ -337,13 +337,13 @@ fun HeartTabTopAppBar(
                                     textAlign = TextAlign.Center,
                                 )
                             }
-                        }
+                        },
                     )
                 }
             }
         },
         modifier = modifier,
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
     )
 }
 
@@ -378,7 +378,7 @@ fun HeartTopAppBarBackground(modifier: Modifier = Modifier) {
         painter = painterResource(R.drawable.img_profile_bg_top),
         contentDescription = "",
         contentScale = ContentScale.Crop,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -390,6 +390,6 @@ private fun 预览头像裁剪() {
         navIcon = R.drawable.ic_delete,
         moreIcon = R.drawable.ic_done,
         onClickMore = {},
-        onBack = {}
+        onBack = {},
     )
 }

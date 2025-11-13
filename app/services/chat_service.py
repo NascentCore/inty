@@ -408,7 +408,9 @@ async def get_or_create_chat_by_agent(
             chat.agent_name = cached_session.get("agent_name")
             chat.agent_avatar = cached_session.get("agent_avatar")
             chat.agent_background = cached_session.get("agent_background")
-            chat.agent_background_animated = cached_session.get("agent_background_animated")
+            chat.agent_background_animated = cached_session.get(
+                "agent_background_animated"
+            )
             chat.agent_intro = cached_session.get("agent_intro")
             chat.agent_opening = cached_session.get("agent_opening")
             chat.agent_opening_audio_url = cached_session.get("agent_opening_audio_url")

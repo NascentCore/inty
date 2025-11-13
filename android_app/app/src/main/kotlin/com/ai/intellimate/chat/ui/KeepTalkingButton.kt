@@ -31,37 +31,38 @@ fun KeepTalkingFloatingButton(
 
     val cornerShape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)
     Box(
-        modifier = modifier
-            .clip(cornerShape)
-            .border(
-                1.dp, brush = Brush.horizontalGradient(
-                    colors =
-                        listOf(
-                            Color.White.copy(if (enabled) .7f else .3f),
-                            Color.White.copy(.2f),
-                        )
-                ), shape = cornerShape
-            )
-            .background(
-                Color.Black.copy(alpha = 0.6f),
-                cornerShape
-            )
-            .alpha(if (enabled) 1f else 0.5f)
-            .then(
-                if (enabled) {
-                    Modifier.noRippleClickable(onClick = onClick)
-                } else {
-                    Modifier
-                }
-            )
-            .padding(4.dp),
+        modifier =
+            modifier
+                .clip(cornerShape)
+                .border(
+                    1.dp,
+                    brush =
+                        Brush.horizontalGradient(
+                            colors =
+                                listOf(
+                                    Color.White.copy(if (enabled) .7f else .3f),
+                                    Color.White.copy(.2f),
+                                )
+                        ),
+                    shape = cornerShape,
+                )
+                .background(Color.Black.copy(alpha = 0.6f), cornerShape)
+                .alpha(if (enabled) 1f else 0.5f)
+                .then(
+                    if (enabled) {
+                        Modifier.noRippleClickable(onClick = onClick)
+                    } else {
+                        Modifier
+                    }
+                )
+                .padding(4.dp),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_keep_talking),
             contentDescription = "Keep Talking",
             modifier = Modifier.size(20.dp),
-            tint = if (enabled) Color.White else Color.LightGray
+            tint = if (enabled) Color.White else Color.LightGray,
         )
     }
 }

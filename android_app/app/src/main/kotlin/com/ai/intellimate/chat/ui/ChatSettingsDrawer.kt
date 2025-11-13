@@ -107,8 +107,7 @@ fun ChatSettingsDrawer(
         drawerContent = {
             Column(
                 modifier =
-                    Modifier
-                        .width(319.dp)
+                    Modifier.width(319.dp)
                         .fillMaxHeight()
                         .background(
                             brush =
@@ -129,8 +128,7 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier =
-                        Modifier
-                            .padding(horizontal = horizontalPadding.dp)
+                        Modifier.padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =
@@ -158,8 +156,8 @@ fun ChatSettingsDrawer(
                                     FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
                                     FirebaseManager.safeEventParams(
                                         "click_type" to "edit_name",
-                                        "timestamp" to System.currentTimeMillis()
-                                    )
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
                                 )
                                 editKey = EditKey.Name
                                 editValue = userProfileState.nickname
@@ -177,8 +175,8 @@ fun ChatSettingsDrawer(
                                     FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
                                     FirebaseManager.safeEventParams(
                                         "click_type" to "edit_pronouns",
-                                        "timestamp" to System.currentTimeMillis()
-                                    )
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
                                 )
                                 editKey = EditKey.Pronouns
                                 editValue = userProfileState.gender ?: ""
@@ -196,8 +194,8 @@ fun ChatSettingsDrawer(
                                     FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
                                     FirebaseManager.safeEventParams(
                                         "click_type" to "edit_persona",
-                                        "timestamp" to System.currentTimeMillis()
-                                    )
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
                                 )
                                 editKey = EditKey.Persona
                                 editValue = userProfileState.description ?: ""
@@ -221,8 +219,7 @@ fun ChatSettingsDrawer(
                 // 参照My Persona的样式，使用Column包裹，外层padding，内层item也有padding
                 Column(
                     modifier =
-                        Modifier
-                            .padding(horizontal = horizontalPadding.dp)
+                        Modifier.padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =
@@ -241,10 +238,11 @@ fun ChatSettingsDrawer(
                 ) {
                     // Show "Keep Talking" button开关
                     SettingsSwitchItem(
-                        item = SettingsItemData.SwitchItemData(
-                            title = stringResource(R.string.chat_settings_show_keep_talking),
-                            checked = showKeepTalking
-                        ),
+                        item =
+                            SettingsItemData.SwitchItemData(
+                                title = stringResource(R.string.chat_settings_show_keep_talking),
+                                checked = showKeepTalking,
+                            ),
                         fontLight = true,
                         isInGroup = true,
                         horizontalPadding = horizontalPadding, // 使用与My Persona相同的padding
@@ -256,20 +254,21 @@ fun ChatSettingsDrawer(
                                 FirebaseManager.safeEventParams(
                                     "click_type" to "toggle_keep_talking",
                                     "enabled" to enabled,
-                                    "timestamp" to System.currentTimeMillis()
-                                )
+                                    "timestamp" to System.currentTimeMillis(),
+                                ),
                             )
                             SettingStateManager.updateShowKeepTalking(enabled)
                             onKeepTalkingChange(enabled)
-                        }
+                        },
                     )
 
                     // Auto-play voice messages开关
                     SettingsSwitchItem(
-                        item = SettingsItemData.SwitchItemData(
-                            title = stringResource(R.string.chat_settings_auto_play_voice),
-                            checked = autoPlayVoice
-                        ),
+                        item =
+                            SettingsItemData.SwitchItemData(
+                                title = stringResource(R.string.chat_settings_auto_play_voice),
+                                checked = autoPlayVoice,
+                            ),
                         fontLight = true,
                         isInGroup = true,
                         horizontalPadding = horizontalPadding, // 使用与My Persona相同的padding
@@ -281,40 +280,41 @@ fun ChatSettingsDrawer(
                                 FirebaseManager.safeEventParams(
                                     "click_type" to "toggle_auto_play_voice",
                                     "enabled" to enabled,
-                                    "timestamp" to System.currentTimeMillis()
-                                )
+                                    "timestamp" to System.currentTimeMillis(),
+                                ),
                             )
                             SettingStateManager.updateAutoPlayAudio(enabled)
-                        }
+                        },
                     )
 
                     agentInfo?.let { agent ->
                         // 举报入口
                         SettingsArrowItem(
-                            item = SettingsItemData.CommonItemData(
-                                title = stringResource(R.string.str_report),
-                                content = "",
-                                arrow = true
-                            ),
+                            item =
+                                SettingsItemData.CommonItemData(
+                                    title = stringResource(R.string.str_report),
+                                    content = "",
+                                    arrow = true,
+                                ),
                             fontLight = true,
                             isInGroup = true,
                             horizontalPadding = horizontalPadding, // 使用与My Persona相同的padding
                             onItemClick = {
                                 // 检查是否已登录
-                                if (IntySetting.isLogin() && IntySetting.getCurToken()
-                                        .isNotEmpty()
+                                if (
+                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
                                 ) {
                                     FirebaseManager.logEvent(
                                         FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
                                         FirebaseManager.safeEventParams(
                                             "click_type" to "report",
                                             "agent_id" to agent.id,
-                                            "timestamp" to System.currentTimeMillis()
-                                        )
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
                                     )
                                     ReportActivity.launch(context, agent.id, "AGENT")
                                 }
-                            }
+                            },
                         )
                     }
                 }

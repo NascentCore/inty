@@ -61,7 +61,7 @@ fun ExplorePage(
             mapOf(
                 "agent_count" to (lazyPagingItems?.itemCount ?: 0),
                 "is_loading" to (lazyPagingItems?.loadState?.refresh is LoadState.Loading),
-            )
+            ),
         )
     }
 
@@ -75,22 +75,16 @@ fun ExplorePage(
         AsyncImage(
             modifier = Modifier.align(Alignment.TopEnd),
             model = R.drawable.notify_header_bg,
-            contentDescription = null
+            contentDescription = null,
         )
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
             TopAppBar(
                 title = {
                     Image(
                         painter = painterResource(R.drawable.img_explore_title),
                         contentDescription = null,
-                        modifier = Modifier
-                            .height(30.dp)
-                            .fillMaxWidth(),
+                        modifier = Modifier.height(30.dp).fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )

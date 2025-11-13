@@ -4,8 +4,8 @@ import com.ai.plugins.ProjectConfig
 import com.ai.plugins.SignKeyConfig
 import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.dsl.LibraryExtension
-import org.gradle.api.Project
 import java.io.File
+import org.gradle.api.Project
 
 /** 获取git commit信息的函数 使用Provider来避免配置缓存问题 */
 private fun getGitCommitInfo(project: Project): String {

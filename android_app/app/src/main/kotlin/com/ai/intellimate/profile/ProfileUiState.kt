@@ -12,4 +12,3 @@ data class ProfileUiState(
     val hasMore: Boolean = true,
     val error: String? = null,
 )
-

@@ -106,7 +106,7 @@ object BarUtils {
                 (alpha * 255).toInt(),
                 Color.red(color),
                 Color.green(color),
-                Color.blue(color)
+                Color.blue(color),
             )
         setStatusBarColor(window, alphaColor)
     }
@@ -333,7 +333,7 @@ object BarUtils {
         val statusBarVisible: Boolean = true,
         val navBarColor: Int = Color.TRANSPARENT,
         val navBarLightMode: Boolean = false,
-        val navBarVisible: Boolean = true
+        val navBarVisible: Boolean = true,
     )
 
     /** 设置系统栏配置 */
@@ -366,8 +366,8 @@ object BarUtils {
             SystemBarConfig(
                 statusBarColor = Color.TRANSPARENT,
                 statusBarLightMode = false,
-                statusBarVisible = true
-            )
+                statusBarVisible = true,
+            ),
         )
     }
 
@@ -383,8 +383,8 @@ object BarUtils {
             SystemBarConfig(
                 navBarColor = Color.TRANSPARENT,
                 navBarLightMode = false,
-                navBarVisible = true
-            )
+                navBarVisible = true,
+            ),
         )
     }
 

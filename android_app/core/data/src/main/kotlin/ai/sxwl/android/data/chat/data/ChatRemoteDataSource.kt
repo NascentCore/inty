@@ -17,7 +17,7 @@ class ChatRemoteDataSource {
     suspend fun getMessages(
         agentId: String,
         pageSize: Int,
-        offset: Int
+        offset: Int,
     ): HttpResult<QueryMsgsResponse> {
         return try {
             LogUtils.i(
@@ -43,21 +43,17 @@ class ChatRemoteDataSource {
         }
     }
 
-    /**
-     * 消息生图的接口请求
-     */
+    /** 消息生图的接口请求 */
     suspend fun messageGenerateImage(
         agentId: String,
         messageId: String,
     ): HttpResult<ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult> {
         return try {
-            LogUtils.i(
-                "ChatRemoteDataSource.generateImage: agentId=$agentId, messageId=$messageId"
-            )
+            LogUtils.i("ChatRemoteDataSource.generateImage: agentId=$agentId, messageId=$messageId")
             val result =
                 ai.sxwl.android.data.http.services.ChatService.messageGenerateImage(
                     agentId,
-                    messageId
+                    messageId,
                 )
             when (result) {
                 is ai.sxwl.android.data.http.ApiResult.Success -> {
@@ -67,11 +63,14 @@ class ChatRemoteDataSource {
                 is ai.sxwl.android.data.http.ApiResult.Error -> {
                     // 检查是否是业务错误（限制异常）
                     val exception = result.exception
-                    if (exception is ai.sxwl.android.data.http.services.ChatImageGenerationLimitException) {
+                    if (
+                        exception
+                            is ai.sxwl.android.data.http.services.ChatImageGenerationLimitException
+                    ) {
                         // 返回业务错误，包含错误码信息
                         HttpResult.Failure(
                             exception.error.message ?: "Image generation limit reached",
-                            exception.error.code.toInt()
+                            exception.error.code.toInt(),
                         )
                     } else {
                         HttpResult.Failure(result.message ?: "Unknown error", result.code)
@@ -83,7 +82,7 @@ class ChatRemoteDataSource {
             LogUtils.e("ChatRemoteDataSource.generateImage limit exception: ${e.error.message}")
             HttpResult.Failure(
                 e.error.message ?: "Image generation limit reached",
-                e.error.code.toInt()
+                e.error.code.toInt(),
             )
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.generateImage exception: ${e.message}")

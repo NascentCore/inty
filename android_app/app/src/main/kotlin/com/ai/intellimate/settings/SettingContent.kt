@@ -118,9 +118,7 @@ private fun SettingTopBar(onBack: () -> Unit) {
         },
         navigationIcon = {
             Image(
-                modifier = Modifier
-                    .padding(horizontal = 12.dp)
-                    .noRippleClickable { onBack() },
+                modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
                 painter = painterResource(R.drawable.back),
                 contentDescription = null,
             )

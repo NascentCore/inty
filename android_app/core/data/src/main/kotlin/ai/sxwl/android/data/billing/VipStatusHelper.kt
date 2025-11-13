@@ -44,7 +44,7 @@ object VipStatusHelper {
             FirebaseManager.setUserProperty(FirebaseManager.UserProperties.USER_TYPE, userType)
             FirebaseManager.setUserProperty(
                 FirebaseManager.UserProperties.SUBSCRIPTION_LEVEL,
-                subscriptionLevel
+                subscriptionLevel,
             )
 
             LogUtils.i(

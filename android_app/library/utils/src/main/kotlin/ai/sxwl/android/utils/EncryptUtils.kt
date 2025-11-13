@@ -75,7 +75,7 @@ object EncryptUtils {
         data: ByteArray,
         key: ByteArray,
         transformation: String,
-        iv: ByteArray?
+        iv: ByteArray?,
     ): ByteArray? {
         return try {
             val encrypted = desTemplate(data, key, "AES", transformation, iv, true)
@@ -102,7 +102,7 @@ object EncryptUtils {
         data: ByteArray,
         key: ByteArray,
         transformation: String,
-        iv: ByteArray?
+        iv: ByteArray?,
     ): ByteArray? {
         return try {
             val decoded = EncodeUtils.base64Decode(data)
@@ -372,7 +372,7 @@ object EncryptUtils {
         algorithm: String,
         transformation: String,
         iv: ByteArray?,
-        isEncrypt: Boolean
+        isEncrypt: Boolean,
     ): ByteArray {
         if (data == null || data.isEmpty() || key == null || key.isEmpty()) return ByteArray(0)
 
@@ -399,7 +399,7 @@ object EncryptUtils {
                 cipher.init(
                     if (isEncrypt) Cipher.ENCRYPT_MODE else Cipher.DECRYPT_MODE,
                     keySpec,
-                    ivSpec
+                    ivSpec,
                 )
             } else {
                 cipher.init(if (isEncrypt) Cipher.ENCRYPT_MODE else Cipher.DECRYPT_MODE, keySpec)

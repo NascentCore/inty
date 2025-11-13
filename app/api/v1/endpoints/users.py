@@ -166,7 +166,11 @@ async def register_device_token(
         return APIResponse.error(message=str(e))
 
 
-@router.get("/deletion/check", response_model=APIResponse[DeletionCheckResponse], tags=["android-app"])
+@router.get(
+    "/deletion/check",
+    response_model=APIResponse[DeletionCheckResponse],
+    tags=["android-app"],
+)
 async def check_deletion_eligibility(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(deps.get_current_active_user),
@@ -193,7 +197,11 @@ async def check_deletion_eligibility(
         return APIResponse.error(message="Failed to check deletion permissions")
 
 
-@router.post("/delete-account", response_model=APIResponse[AccountDeletionResponse], tags=["android-app"])
+@router.post(
+    "/delete-account",
+    response_model=APIResponse[AccountDeletionResponse],
+    tags=["android-app"],
+)
 async def delete_user_account(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(deps.get_current_active_user),

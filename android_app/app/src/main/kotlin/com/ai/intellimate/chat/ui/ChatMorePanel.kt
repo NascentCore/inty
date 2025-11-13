@@ -83,8 +83,7 @@ fun ChatMorePanel(
                 val density = LocalDensity.current
                 Column(
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
+                        Modifier.fillMaxWidth()
                             .background(color = HeartColor.primaryColor)
                             .onGloballyPositioned { coords ->
                                 val h = with(density) { coords.size.height.toDp() }
@@ -99,16 +98,16 @@ fun ChatMorePanel(
                             isVip = true,
                             onClick = {
                                 // 检查是否已登录
-                                if (IntySetting.isLogin() && IntySetting.getCurToken()
-                                        .isNotEmpty()
+                                if (
+                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
                                 ) {
                                     FirebaseManager.logEvent(
                                         FirebaseManager.Events.CHAT_MORE_CLICK,
                                         FirebaseManager.safeEventParams(
                                             "click_type" to "reply_style",
                                             "agent_id" to (agentInfo?.id ?: ""),
-                                            "timestamp" to System.currentTimeMillis()
-                                        )
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
                                     )
                                     // 已经登录，判断是否vip，是则弹出输入框sheet，否则弹拦截弹窗
                                     if (vipStatus.isSubscribed) {
@@ -142,16 +141,16 @@ fun ChatMorePanel(
                             text = stringResource(R.string.str_report),
                             onClick = {
                                 // 检查是否已登录
-                                if (IntySetting.isLogin() && IntySetting.getCurToken()
-                                        .isNotEmpty()
+                                if (
+                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
                                 ) {
                                     FirebaseManager.logEvent(
                                         FirebaseManager.Events.CHAT_MORE_CLICK,
                                         FirebaseManager.safeEventParams(
                                             "click_type" to "report",
                                             "agent_id" to (agentInfo?.id ?: ""),
-                                            "timestamp" to System.currentTimeMillis()
-                                        )
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
                                     )
                                     ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
                                 }
@@ -174,16 +173,16 @@ fun ChatMorePanel(
 
     // 获取当前agent的聊天设置，确保按agent隔离，并监听chatSettings变化
     val currentChatSetting by
-    remember(agentInfo?.id, chatSettings) {
-        derivedStateOf {
-            agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
+        remember(agentInfo?.id, chatSettings) {
+            derivedStateOf {
+                agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
+            }
         }
-    }
 
     val replyStr by
-    remember(agentInfo?.id, currentChatSetting) {
-        derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
-    }
+        remember(agentInfo?.id, currentChatSetting) {
+            derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
+        }
     if (showSheet) {
         ReplyStyleSheet(
             sheetState = sheetState,
@@ -218,22 +217,17 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
         Spacer(Modifier.height(20.dp))
         Box(
             modifier =
-                Modifier
-                    .size(64.dp)
+                Modifier.size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier
-                    .size(36.dp)
-                    .align(Alignment.Center),
+                modifier = Modifier.size(36.dp).align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )
             if (isVip) {
                 Image(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )

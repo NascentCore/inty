@@ -56,13 +56,9 @@ object DataModule {
         UpdateMessageFeedbackUseCase(_chatRepository)
     }
 
-    val recallMessageUseCase: RecallMessageUseCase by lazy {
-        RecallMessageUseCase(_chatRepository)
-    }
+    val recallMessageUseCase: RecallMessageUseCase by lazy { RecallMessageUseCase(_chatRepository) }
 
-    val generateImageUseCase: GenerateImageUseCase by lazy {
-        GenerateImageUseCase(_chatRepository)
-    }
+    val generateImageUseCase: GenerateImageUseCase by lazy { GenerateImageUseCase(_chatRepository) }
 
     val getChatAgentsUseCase: GetChatAgentsUseCase by lazy {
         GetChatAgentsUseCase(_agentRepository)

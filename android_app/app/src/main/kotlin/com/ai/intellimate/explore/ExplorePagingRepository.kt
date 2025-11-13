@@ -45,7 +45,7 @@ class ExplorePagingRepository(
                         useCache = useCache,
                         sortSeed = sortSeed,
                         cacheProvider = cacheProvider,
-                        fetchCallback = fetchCallback
+                        fetchCallback = fetchCallback,
                     )
                 },
             )

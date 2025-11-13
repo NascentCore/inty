@@ -31,26 +31,22 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 
-/**
- * 判断 URL 是否为视频格式
- */
+/** 判断 URL 是否为视频格式 */
 private fun isVideoUrl(url: String?): Boolean {
     if (url.isNullOrBlank()) return false
     val lowerUrl = url.lowercase()
-    return lowerUrl.endsWith(".mp4") || lowerUrl.endsWith(".webm") || lowerUrl.contains(".mp4?") || lowerUrl.contains(
-        ".webm?"
-    )
+    return lowerUrl.endsWith(".mp4") ||
+        lowerUrl.endsWith(".webm") ||
+        lowerUrl.contains(".mp4?") ||
+        lowerUrl.contains(".webm?")
 }
 
-/**
- * 视频背景播放组件
- * 简化实现：有视频URL时直接显示视频，不等待静态图
- */
+/** 视频背景播放组件 简化实现：有视频URL时直接显示视频，不等待静态图 */
 @Composable
 fun AnimatedBackground(
     videoUrl: String?,
@@ -123,7 +119,9 @@ fun AnimatedBackground(
     // 当 videoUrl 变化时，重置状态
     // 注意：不在这里释放播放器，让 DisposableEffect 处理，避免黑屏
     LaunchedEffect(videoUrl, staticImageUrl) {
-        LogUtils.d("AnimatedBackground - 视频URL变化，重置状态: videoUrl=$videoUrl, staticImageUrl=$staticImageUrl")
+        LogUtils.d(
+            "AnimatedBackground - 视频URL变化，重置状态: videoUrl=$videoUrl, staticImageUrl=$staticImageUrl"
+        )
         // 如果有视频URL且有静态图，先显示静态图
         showStaticImage = videoUrl != null && staticImageUrl != null
         targetStaticImageAlpha = 1f // 重置目标透明度
@@ -176,14 +174,16 @@ fun AnimatedBackground(
 
     // 使用 Compose 动画 API 实现平滑的 alpha 过渡
     // 当 targetStaticImageAlpha 变化时，自动执行动画
-    val animatedAlpha by animateFloatAsState(
-        targetValue = if (showStaticImage) targetStaticImageAlpha else 0f,
-        animationSpec = tween(
-            durationMillis = 300, // 300ms 的淡出动画
-            easing = FastOutSlowInEasing
-        ),
-        label = "staticImageAlpha"
-    )
+    val animatedAlpha by
+        animateFloatAsState(
+            targetValue = if (showStaticImage) targetStaticImageAlpha else 0f,
+            animationSpec =
+                tween(
+                    durationMillis = 300, // 300ms 的淡出动画
+                    easing = FastOutSlowInEasing,
+                ),
+            label = "staticImageAlpha",
+        )
 
     // 当动画完成后，如果 alpha 为 0，则隐藏静态图组件
     LaunchedEffect(animatedAlpha) {
@@ -196,11 +196,7 @@ fun AnimatedBackground(
     }
 
     // 关键：在 Compose 层面添加裁剪，防止视频超出容器边界
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .clipToBounds()
-    ) {
+    Box(modifier = modifier.fillMaxSize().clipToBounds()) {
 
         // 如果有视频URL，创建视频视图
         if (videoUrl != null && isVideo) {
@@ -208,114 +204,129 @@ fun AnimatedBackground(
                 factory = { ctx ->
                     LogUtils.d("AnimatedBackground - 创建新的播放器实例")
 
-                    val okHttpClient = OkHttpClient.Builder()
-                        .connectTimeout(30, TimeUnit.SECONDS)
-                        .readTimeout(60, TimeUnit.SECONDS)
-                        .writeTimeout(30, TimeUnit.SECONDS)
-                        .retryOnConnectionFailure(true)
-                        .build()
+                    val okHttpClient =
+                        OkHttpClient.Builder()
+                            .connectTimeout(30, TimeUnit.SECONDS)
+                            .readTimeout(60, TimeUnit.SECONDS)
+                            .writeTimeout(30, TimeUnit.SECONDS)
+                            .retryOnConnectionFailure(true)
+                            .build()
 
-                    val dataSourceFactory = DefaultDataSource.Factory(
-                        ctx,
-                        OkHttpDataSource.Factory(okHttpClient)
-                    )
+                    val dataSourceFactory =
+                        DefaultDataSource.Factory(ctx, OkHttpDataSource.Factory(okHttpClient))
 
                     val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
 
-                    val player = ExoPlayer.Builder(ctx)
-                        .setMediaSourceFactory(mediaSourceFactory)
-                        .build()
-                        .apply {
-                            playWhenReady = false
-                            volume = 0f
-                            repeatMode = Player.REPEAT_MODE_OFF
-                            addListener(object : Player.Listener {
-                                override fun onPlaybackStateChanged(playbackState: Int) {
-                                    if (playbackState == Player.STATE_READY) {
-                                        if (!videoPrepared) {
-                                            videoPrepared = true
-                                            LogUtils.d("AnimatedBackground - 视频准备完成")
+                    val player =
+                        ExoPlayer.Builder(ctx)
+                            .setMediaSourceFactory(mediaSourceFactory)
+                            .build()
+                            .apply {
+                                playWhenReady = false
+                                volume = 0f
+                                repeatMode = Player.REPEAT_MODE_OFF
+                                addListener(
+                                    object : Player.Listener {
+                                        override fun onPlaybackStateChanged(playbackState: Int) {
+                                            if (playbackState == Player.STATE_READY) {
+                                                if (!videoPrepared) {
+                                                    videoPrepared = true
+                                                    LogUtils.d("AnimatedBackground - 视频准备完成")
+                                                }
+                                            } else if (playbackState == Player.STATE_ENDED) {
+                                                isPlaying = false
+                                                onIsPlayingChange?.invoke(false)
+                                                actualPlayCount++
+                                                LogUtils.d(
+                                                    "AnimatedBackground - 视频播放结束，已播放次数: $actualPlayCount, 目标次数: $currentPlayCount"
+                                                )
+                                                if (actualPlayCount >= currentPlayCount) {
+                                                    pause()
+                                                    seekTo(0)
+                                                    actualPlayCount = 0
+                                                    hasPlayCompleted = true // 标记播放完成
+                                                    onPlayComplete()
+                                                    LogUtils.d(
+                                                        "AnimatedBackground - 播放完成，已达到目标次数: $currentPlayCount"
+                                                    )
+                                                } else {
+                                                    seekTo(0)
+                                                    playWhenReady = true
+                                                }
+                                            } else if (playbackState == Player.STATE_IDLE) {
+                                                isPlaying = false
+                                                onIsPlayingChange?.invoke(false)
+                                            }
                                         }
-                                    } else if (playbackState == Player.STATE_ENDED) {
-                                        isPlaying = false
-                                        onIsPlayingChange?.invoke(false)
-                                        actualPlayCount++
-                                        LogUtils.d("AnimatedBackground - 视频播放结束，已播放次数: $actualPlayCount, 目标次数: $currentPlayCount")
-                                        if (actualPlayCount >= currentPlayCount) {
-                                            pause()
-                                            seekTo(0)
-                                            actualPlayCount = 0
-                                            hasPlayCompleted = true // 标记播放完成
-                                            onPlayComplete()
-                                            LogUtils.d("AnimatedBackground - 播放完成，已达到目标次数: $currentPlayCount")
-                                        } else {
-                                            seekTo(0)
-                                            playWhenReady = true
+
+                                        override fun onIsPlayingChanged(playing: Boolean) {
+                                            isPlaying = playing
+                                            onIsPlayingChange?.invoke(playing)
                                         }
-                                    } else if (playbackState == Player.STATE_IDLE) {
-                                        isPlaying = false
-                                        onIsPlayingChange?.invoke(false)
+
+                                        override fun onPlayerError(
+                                            error: androidx.media3.common.PlaybackException
+                                        ) {
+                                            LogUtils.e(
+                                                "AnimatedBackground - 视频播放错误: ${error.message}"
+                                            )
+                                            videoPrepared = false
+                                        }
                                     }
-                                }
-
-                                override fun onIsPlayingChanged(playing: Boolean) {
-                                    isPlaying = playing
-                                    onIsPlayingChange?.invoke(playing)
-                                }
-
-                                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                                    LogUtils.e("AnimatedBackground - 视频播放错误: ${error.message}")
-                                    videoPrepared = false
-                                }
-                            })
-                        }
+                                )
+                            }
 
                     exoPlayer = player
 
                     // 使用 FrameLayout 包裹 PlayerView，确保 crop 模式不会超出容器边界
-                    val frameLayout = android.widget.FrameLayout(ctx).apply {
-                        layoutParams = android.view.ViewGroup.LayoutParams(
-                            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                            android.view.ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                        // 关键：启用裁剪，防止视频超出容器边界影响相邻页面
-                        clipChildren = true
-                        clipToPadding = true
-                    }
+                    val frameLayout =
+                        android.widget.FrameLayout(ctx).apply {
+                            layoutParams =
+                                android.view.ViewGroup.LayoutParams(
+                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                )
+                            // 关键：启用裁剪，防止视频超出容器边界影响相邻页面
+                            clipChildren = true
+                            clipToPadding = true
+                        }
 
-                    val view = PlayerView(ctx).apply {
-                        this.player = player
-                        useController = false
-                        // 使用 ZOOM 模式（crop），填充整个容器，超出部分裁剪
-                        resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                        visibility = android.view.View.VISIBLE
-                        alpha = 1f // 始终可见
+                    val view =
+                        PlayerView(ctx).apply {
+                            this.player = player
+                            useController = false
+                            // 使用 ZOOM 模式（crop），填充整个容器，超出部分裁剪
+                            resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                            visibility = android.view.View.VISIBLE
+                            alpha = 1f // 始终可见
 
-                        // 确保 PlayerView 的布局参数不会超出父容器
-                        layoutParams = android.widget.FrameLayout.LayoutParams(
-                            android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                            android.widget.FrameLayout.LayoutParams.MATCH_PARENT
-                        )
-                    }
+                            // 确保 PlayerView 的布局参数不会超出父容器
+                            layoutParams =
+                                android.widget.FrameLayout.LayoutParams(
+                                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                                )
+                        }
 
                     frameLayout.addView(view)
 
                     // 设置媒体项：优先使用缓存的本地路径，否则使用原始URL
                     // 如果 isVideoCached 为 true，videoPath 应该已经同步获取到了
-                    val pathToUse = if (isVideoCached) {
-                        videoPath ?: videoUrl
-                    } else {
-                        videoUrl // 未缓存时先使用 URL，等缓存准备好后再切换
-                    }
+                    val pathToUse =
+                        if (isVideoCached) {
+                            videoPath ?: videoUrl
+                        } else {
+                            videoUrl // 未缓存时先使用 URL，等缓存准备好后再切换
+                        }
                     player.setMediaItem(MediaItem.fromUri(pathToUse))
                     player.prepare()
-                    LogUtils.d("AnimatedBackground - 设置视频路径: $pathToUse (factory, isVideoCached=$isVideoCached)")
+                    LogUtils.d(
+                        "AnimatedBackground - 设置视频路径: $pathToUse (factory, isVideoCached=$isVideoCached)"
+                    )
 
                     frameLayout
                 },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clipToBounds(),
+                modifier = Modifier.fillMaxSize().clipToBounds(),
                 update = {
                     // 更新视频路径（如果变化）：当 videoPath 准备好后，从 URL 切换到缓存路径
                     val pathToUse = videoPath ?: videoUrl
@@ -329,14 +340,23 @@ fun AnimatedBackground(
                             LogUtils.d("AnimatedBackground - 更新视频路径: $pathToUse (update)")
                         }
                     }
-                }
+                },
             )
 
             // 播放控制：当需要播放时，直接播放
             // 注意：如果 shouldPlay 为 false，但视频正在播放中（由 loading 触发），则继续播放到结束
             LaunchedEffect(shouldPlay, videoPrepared, currentPlayCount, isCurrentPage, exoPlayer) {
-                LogUtils.d("AnimatedBackground - 播放控制检查: shouldPlay=$shouldPlay, videoPrepared=$videoPrepared, currentPlayCount=$currentPlayCount, isCurrentPage=$isCurrentPage, exoPlayer=${exoPlayer != null}, isPlaying=$isPlaying, hasPlayCompleted=$hasPlayCompleted")
-                if (isCurrentPage && shouldPlay && videoPrepared && currentPlayCount > 0 && exoPlayer != null && !hasPlayCompleted) {
+                LogUtils.d(
+                    "AnimatedBackground - 播放控制检查: shouldPlay=$shouldPlay, videoPrepared=$videoPrepared, currentPlayCount=$currentPlayCount, isCurrentPage=$isCurrentPage, exoPlayer=${exoPlayer != null}, isPlaying=$isPlaying, hasPlayCompleted=$hasPlayCompleted"
+                )
+                if (
+                    isCurrentPage &&
+                        shouldPlay &&
+                        videoPrepared &&
+                        currentPlayCount > 0 &&
+                        exoPlayer != null &&
+                        !hasPlayCompleted
+                ) {
                     // 如果视频正在播放中，则不处理（避免打断正在播放的视频）
                     if (!isPlaying) {
                         LogUtils.d("AnimatedBackground - 开始播放视频，次数: $currentPlayCount")
@@ -356,20 +376,40 @@ fun AnimatedBackground(
                 } else if (hasPlayCompleted) {
                     LogUtils.d("AnimatedBackground - 播放已完成，不再重复播放")
                 } else {
-                    LogUtils.d("AnimatedBackground - 播放条件不满足: shouldPlay=$shouldPlay, videoPrepared=$videoPrepared, currentPlayCount=$currentPlayCount, isCurrentPage=$isCurrentPage, isPlaying=$isPlaying")
+                    LogUtils.d(
+                        "AnimatedBackground - 播放条件不满足: shouldPlay=$shouldPlay, videoPrepared=$videoPrepared, currentPlayCount=$currentPlayCount, isCurrentPage=$isCurrentPage, isPlaying=$isPlaying"
+                    )
                 }
             }
 
             // 生命周期监听：页面恢复时强制播放（关键：每次 onResume 都会触发）
             // 使用 Unit 作为 key，确保每次 onResume 都会执行，参考 BackgroundVideoPlayer 的实现
             LifecycleResumeEffect(Unit) {
-                LogUtils.d("AnimatedBackground - LifecycleResumeEffect触发: isCurrentPage=$isCurrentPage, shouldPlay=$shouldPlay, videoPrepared=$videoPrepared, currentPlayCount=$currentPlayCount, exoPlayer=${exoPlayer != null}, hasPlayCompleted=$hasPlayCompleted")
-                if (isCurrentPage && shouldPlay && videoPrepared && currentPlayCount > 0 && exoPlayer != null && !hasPlayCompleted && !isPlaying) {
-                    LogUtils.d("AnimatedBackground - LifecycleResumeEffect: 强制播放视频，次数: $currentPlayCount")
+                LogUtils.d(
+                    "AnimatedBackground - LifecycleResumeEffect触发: isCurrentPage=$isCurrentPage, shouldPlay=$shouldPlay, videoPrepared=$videoPrepared, currentPlayCount=$currentPlayCount, exoPlayer=${exoPlayer != null}, hasPlayCompleted=$hasPlayCompleted"
+                )
+                if (
+                    isCurrentPage &&
+                        shouldPlay &&
+                        videoPrepared &&
+                        currentPlayCount > 0 &&
+                        exoPlayer != null &&
+                        !hasPlayCompleted &&
+                        !isPlaying
+                ) {
+                    LogUtils.d(
+                        "AnimatedBackground - LifecycleResumeEffect: 强制播放视频，次数: $currentPlayCount"
+                    )
                     actualPlayCount = 0
                     exoPlayer?.seekTo(0)
                     exoPlayer?.playWhenReady = true
-                } else if (isCurrentPage && shouldPlay && currentPlayCount > 0 && exoPlayer != null && !videoPrepared) {
+                } else if (
+                    isCurrentPage &&
+                        shouldPlay &&
+                        currentPlayCount > 0 &&
+                        exoPlayer != null &&
+                        !videoPrepared
+                ) {
                     // 如果视频还没准备好，等待一下再尝试
                     LogUtils.d("AnimatedBackground - LifecycleResumeEffect: 视频未准备好，等待...")
                 } else if (hasPlayCompleted) {
@@ -392,12 +432,10 @@ fun AnimatedBackground(
 
             // 在 Compose 层覆盖静态图，使用 Compose 动画实现平滑过渡
             if (showStaticImage && staticImageUrl != null) {
-                val imageRequest = staticImageRequest
-                    ?: ImageRequest.Builder(context).data(staticImageUrl).build()
+                val imageRequest =
+                    staticImageRequest ?: ImageRequest.Builder(context).data(staticImageUrl).build()
                 AsyncImage(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .alpha(animatedAlpha), // 使用动画的 alpha 值
+                    modifier = Modifier.fillMaxSize().alpha(animatedAlpha), // 使用动画的 alpha 值
                     model = imageRequest,
                     contentDescription = null,
                     contentScale = contentScale,
@@ -405,8 +443,8 @@ fun AnimatedBackground(
             }
         } else if (staticImageUrl != null) {
             // 没有视频URL，显示静态图片
-            val imageRequest = staticImageRequest
-                ?: ImageRequest.Builder(context).data(staticImageUrl).build()
+            val imageRequest =
+                staticImageRequest ?: ImageRequest.Builder(context).data(staticImageUrl).build()
             AsyncImage(
                 modifier = Modifier.fillMaxSize(),
                 model = imageRequest,
