@@ -71,33 +71,36 @@ class IntelliMateApp : Application() {
     /**
      * Setup FCM token upload callback
      *
-     * Connects infrastructure layer (core/firebase) with data layer (core/data)
-     * This avoids circular dependency between modules
+     * Connects infrastructure layer (core/firebase) with data layer (core/data) This avoids
+     * circular dependency between modules
      */
     private fun setupFCMTokenUploadCallback() {
-        FirebaseManager.setTokenUploadCallback(object : FCMTokenUploadCallback {
-            override suspend fun uploadToken(token: String) {
-                // Check if user is logged in before uploading token
-                // This avoids 401 errors when token is obtained before login
-                if (!ai.sxwl.android.data.store.IntySetting.isLogin() ||
-                    ai.sxwl.android.data.store.IntySetting.getCurToken().isEmpty()
-                ) {
-                    LogUtils.w("IntelliMateApp", "用户未登录，跳过 FCM Token 上传。登录后将自动上传。")
-                    return
-                }
-
-                // Delegate to UserService in data layer
-                when (val result = UserService.registerDeviceToken(token)) {
-                    is ai.sxwl.android.data.http.ApiResult.Success -> {
-                        LogUtils.i("IntelliMateApp", "FCM Token 上传成功")
+        FirebaseManager.setTokenUploadCallback(
+            object : FCMTokenUploadCallback {
+                override suspend fun uploadToken(token: String) {
+                    // Check if user is logged in before uploading token
+                    // This avoids 401 errors when token is obtained before login
+                    if (
+                        !ai.sxwl.android.data.store.IntySetting.isLogin() ||
+                            ai.sxwl.android.data.store.IntySetting.getCurToken().isEmpty()
+                    ) {
+                        LogUtils.w("IntelliMateApp", "用户未登录，跳过 FCM Token 上传。登录后将自动上传。")
+                        return
                     }
 
-                    is ai.sxwl.android.data.http.ApiResult.Error -> {
-                        LogUtils.e("IntelliMateApp", "FCM Token 上传失败: ${result.message}")
+                    // Delegate to UserService in data layer
+                    when (val result = UserService.registerDeviceToken(token)) {
+                        is ai.sxwl.android.data.http.ApiResult.Success -> {
+                            LogUtils.i("IntelliMateApp", "FCM Token 上传成功")
+                        }
+
+                        is ai.sxwl.android.data.http.ApiResult.Error -> {
+                            LogUtils.e("IntelliMateApp", "FCM Token 上传失败: ${result.message}")
+                        }
                     }
                 }
             }
-        })
+        )
         LogUtils.d("IntelliMateApp", "FCM Token 上传回调已设置")
     }
 

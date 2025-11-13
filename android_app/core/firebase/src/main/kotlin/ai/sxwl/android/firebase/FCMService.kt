@@ -26,47 +26,30 @@ import kotlinx.coroutines.launch
 class FCMService : FirebaseMessagingService() {
 
     companion object {
-        /**
-         * 通知渠道 ID
-         * 用于 Firebase Cloud Messaging 推送通知
-         */
+        /** 通知渠道 ID 用于 Firebase Cloud Messaging 推送通知 */
         const val NOTIFICATION_CHANNEL_ID = "fcm_default_channel"
 
-        /**
-         * Notification channel name
-         */
+        /** Notification channel name */
         private const val NOTIFICATION_CHANNEL_NAME = "Push Notifications"
 
-        /**
-         * Notification channel description
-         */
+        /** Notification channel description */
         private const val NOTIFICATION_CHANNEL_DESCRIPTION =
             "Receive push notifications and messages"
 
-        /**
-         * 消息类型键名
-         */
+        /** 消息类型键名 */
         private const val DATA_KEY_TYPE = "type"
 
-        /**
-         * Agent ID 键名（用于跳转到聊天页面）
-         */
+        /** Agent ID 键名（用于跳转到聊天页面） */
         private const val DATA_KEY_AGENT_ID = "agent_id"
 
-        /**
-         * 消息类型：聊天消息
-         */
+        /** 消息类型：聊天消息 */
         private const val TYPE_CHAT = "chat"
 
-        /**
-         * 消息类型：系统通知
-         */
+        /** 消息类型：系统通知 */
         private const val TYPE_SYSTEM = "system"
     }
 
-    /**
-     * 协程作用域，用于异步操作
-     */
+    /** 协程作用域，用于异步操作 */
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
@@ -75,8 +58,8 @@ class FCMService : FirebaseMessagingService() {
      * 注意：
      * - 数据消息（data message）：应用前后台均会触发此方法
      * - 通知消息（notification message）：
-     *   - 应用在前台：会触发此方法，需要手动显示通知
-     *   - 应用在后台：系统会自动显示通知，不会触发此方法
+     *     - 应用在前台：会触发此方法，需要手动显示通知
+     *     - 应用在后台：系统会自动显示通知，不会触发此方法
      */
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
@@ -84,10 +67,7 @@ class FCMService : FirebaseMessagingService() {
         LogUtils.d("FCMService", "收到 FCM 推送消息")
         LogUtils.d("FCMService", "消息 ID: ${remoteMessage.messageId}")
         LogUtils.d("FCMService", "消息来源: ${remoteMessage.from}")
-        LogUtils.d(
-            "FCMService",
-            "消息类型: ${if (remoteMessage.data.isNotEmpty()) "数据消息" else "通知消息"}"
-        )
+        LogUtils.d("FCMService", "消息类型: ${if (remoteMessage.data.isNotEmpty()) "数据消息" else "通知消息"}")
 
         // 1. 处理数据消息（应用前后台均会触发）
         if (remoteMessage.data.isNotEmpty()) {
@@ -127,9 +107,7 @@ class FCMService : FirebaseMessagingService() {
         uploadTokenToServer(token)
     }
 
-    /**
-     * 处理数据消息
-     */
+    /** 处理数据消息 */
     private fun handleDataMessage(data: Map<String, String>) {
         // 根据业务需求处理数据消息
         // 例如：更新应用状态、触发特定操作等
@@ -146,7 +124,7 @@ class FCMService : FirebaseMessagingService() {
     private fun showNotification(
         title: String,
         body: String,
-        data: Map<String, String> = emptyMap()
+        data: Map<String, String> = emptyMap(),
     ) {
         try {
             // 确保通知渠道已创建
@@ -158,13 +136,14 @@ class FCMService : FirebaseMessagingService() {
             val iconResId = getNotificationIconResId()
 
             // 构建通知
-            val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-                .setSmallIcon(iconResId)
-                .setContentTitle(title)
-                .setContentText(body)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setAutoCancel(true)
-                .setDefaults(NotificationCompat.DEFAULT_ALL)
+            val builder =
+                NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                    .setSmallIcon(iconResId)
+                    .setContentTitle(title)
+                    .setContentText(body)
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                    .setAutoCancel(true)
+                    .setDefaults(NotificationCompat.DEFAULT_ALL)
 
             // 根据 data 中的信息设置点击通知后的跳转 Intent
             val pendingIntent = createNotificationIntent(data)
@@ -176,10 +155,7 @@ class FCMService : FirebaseMessagingService() {
                 notificationManager.notify(System.currentTimeMillis().toInt(), builder.build())
                 LogUtils.d("FCMService", "通知已显示: $title")
             } else {
-                LogUtils.w(
-                    "FCMService",
-                    "通知权限未授予，无法显示通知"
-                )
+                LogUtils.w("FCMService", "通知权限未授予，无法显示通知")
             }
         } catch (e: Exception) {
             LogUtils.e("FCMService", "显示通知失败", e)
@@ -197,16 +173,18 @@ class FCMService : FirebaseMessagingService() {
 
             // 检查渠道是否已存在
             if (notificationManager.getNotificationChannel(NOTIFICATION_CHANNEL_ID) == null) {
-                val channel = NotificationChannel(
-                    NOTIFICATION_CHANNEL_ID,
-                    NOTIFICATION_CHANNEL_NAME,
-                    NotificationManager.IMPORTANCE_DEFAULT
-                ).apply {
-                    description = NOTIFICATION_CHANNEL_DESCRIPTION
-                    enableVibration(true)
-                    vibrationPattern = longArrayOf(0, 250, 250, 250)
-                    enableLights(true)
-                }
+                val channel =
+                    NotificationChannel(
+                            NOTIFICATION_CHANNEL_ID,
+                            NOTIFICATION_CHANNEL_NAME,
+                            NotificationManager.IMPORTANCE_DEFAULT,
+                        )
+                        .apply {
+                            description = NOTIFICATION_CHANNEL_DESCRIPTION
+                            enableVibration(true)
+                            vibrationPattern = longArrayOf(0, 250, 250, 250)
+                            enableLights(true)
+                        }
 
                 notificationManager.createNotificationChannel(channel)
                 LogUtils.d("FCMService", "通知渠道已创建: $NOTIFICATION_CHANNEL_ID")
@@ -217,20 +195,21 @@ class FCMService : FirebaseMessagingService() {
     /**
      * 获取通知图标资源 ID
      *
-     * 优先使用 AndroidManifest 中配置的 default_notification_icon
-     * 如果未配置，则使用系统默认图标
+     * 优先使用 AndroidManifest 中配置的 default_notification_icon 如果未配置，则使用系统默认图标
      */
     private fun getNotificationIconResId(): Int {
         return try {
             // 尝试从 AndroidManifest 的 meta-data 中获取图标资源 ID
-            val appInfo = packageManager.getApplicationInfo(
-                packageName,
-                android.content.pm.PackageManager.GET_META_DATA
-            )
-            val iconResId = appInfo.metaData?.getInt(
-                "com.google.firebase.messaging.default_notification_icon",
-                0
-            )
+            val appInfo =
+                packageManager.getApplicationInfo(
+                    packageName,
+                    android.content.pm.PackageManager.GET_META_DATA,
+                )
+            val iconResId =
+                appInfo.metaData?.getInt(
+                    "com.google.firebase.messaging.default_notification_icon",
+                    0,
+                )
 
             if (iconResId != null && iconResId != 0) {
                 iconResId
@@ -253,69 +232,62 @@ class FCMService : FirebaseMessagingService() {
      * - 其他: 跳转到主页面
      */
     private fun createNotificationIntent(data: Map<String, String>): PendingIntent {
-        val intent = when (val messageType = data[DATA_KEY_TYPE]) {
-            TYPE_CHAT -> {
-                // 聊天消息：跳转到聊天页面
-                val agentId = data[DATA_KEY_AGENT_ID]
-                if (!agentId.isNullOrEmpty()) {
-                    // 使用反射调用 ChatActivity.launch，避免直接依赖 app 模块
-                    try {
-                        val chatActivityClass =
-                            Class.forName("com.ai.intellimate.chat.ChatActivity")
-                        val launchMethod = chatActivityClass.getMethod(
-                            "launch",
-                            android.content.Context::class.java,
-                            String::class.java
-                        )
-                        // 创建 Intent 用于启动 ChatActivity
-                        Intent(this, chatActivityClass).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                            putExtra("intent_key_agent_id", agentId)
-                            putExtra("intent_key_page_source", "push_notification")
+        val intent =
+            when (val messageType = data[DATA_KEY_TYPE]) {
+                TYPE_CHAT -> {
+                    // 聊天消息：跳转到聊天页面
+                    val agentId = data[DATA_KEY_AGENT_ID]
+                    if (!agentId.isNullOrEmpty()) {
+                        // 使用反射调用 ChatActivity.launch，避免直接依赖 app 模块
+                        try {
+                            val chatActivityClass =
+                                Class.forName("com.ai.intellimate.chat.ChatActivity")
+                            val launchMethod =
+                                chatActivityClass.getMethod(
+                                    "launch",
+                                    android.content.Context::class.java,
+                                    String::class.java,
+                                )
+                            // 创建 Intent 用于启动 ChatActivity
+                            Intent(this, chatActivityClass).apply {
+                                flags =
+                                    Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                putExtra("intent_key_agent_id", agentId)
+                                putExtra("intent_key_page_source", "push_notification")
+                            }
+                        } catch (e: Exception) {
+                            LogUtils.w("FCMService", "启动 ChatActivity 失败，使用 MainActivity", e)
+                            createMainActivityIntent()
                         }
-                    } catch (e: Exception) {
-                        LogUtils.w(
-                            "FCMService",
-                            "启动 ChatActivity 失败，使用 MainActivity",
-                            e
-                        )
+                    } else {
+                        LogUtils.w("FCMService", "聊天消息缺少 agent_id，跳转到主页面")
                         createMainActivityIntent()
                     }
-                } else {
-                    LogUtils.w(
-                        "FCMService",
-                        "聊天消息缺少 agent_id，跳转到主页面"
-                    )
+                }
+
+                TYPE_SYSTEM,
+                null -> {
+                    // System notification or other: navigate to main page
+                    createMainActivityIntent()
+                }
+
+                else -> {
+                    LogUtils.d("FCMService", "未知消息类型: $messageType，跳转到主页面")
                     createMainActivityIntent()
                 }
             }
 
-            TYPE_SYSTEM, null -> {
-                // System notification or other: navigate to main page
-                createMainActivityIntent()
+        val flags =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
             }
-
-            else -> {
-                LogUtils.d(
-                    "FCMService",
-                    "未知消息类型: $messageType，跳转到主页面"
-                )
-                createMainActivityIntent()
-            }
-        }
-
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        } else {
-            PendingIntent.FLAG_UPDATE_CURRENT
-        }
 
         return PendingIntent.getActivity(this, 0, intent, flags)
     }
 
-    /**
-     * 创建跳转到主页面的 Intent
-     */
+    /** 创建跳转到主页面的 Intent */
     private fun createMainActivityIntent(): Intent {
         return try {
             val mainActivityClass = Class.forName("com.ai.intellimate.MainActivity")
@@ -327,11 +299,12 @@ class FCMService : FirebaseMessagingService() {
             // Fallback to launcher Intent
             packageManager.getLaunchIntentForPackage(packageName)?.apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            } ?: Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
-                setPackage(packageName)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
+                ?: Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                    setPackage(packageName)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
         }
     }
 

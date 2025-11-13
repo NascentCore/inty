@@ -85,7 +85,11 @@ const Subscribe: React.FC = () => {
     return (
       <div className="subscribe-page">
         <div className="subscribe-error">
-          <ErrorAlert message="Failed to load subscription plans" description={error} type="error" />
+          <ErrorAlert
+            message="Failed to load subscription plans"
+            description={error}
+            type="error"
+          />
           <button type="button" className="subscribe-retry-button" onClick={fetchPlans}>
             Retry
           </button>
@@ -129,7 +133,9 @@ const Subscribe: React.FC = () => {
         {!plansData.current_subscription && plansData.has_ever_subscribed && (
           <div className="subscribe-previous-status">
             <Icon icon={AlertCircle} size={16} color="rgba(250, 173, 20, 1)" />
-            <span>Your previous subscription has expired. Renew to continue enjoying premium features.</span>
+            <span>
+              Your previous subscription has expired. Renew to continue enjoying premium features.
+            </span>
           </div>
         )}
       </div>
@@ -154,16 +160,11 @@ const Subscribe: React.FC = () => {
         <p className="subscribe-footer-note">
           • All plans include unlimited chat messages and premium AI models
         </p>
-        <p className="subscribe-footer-note">
-          • Subscriptions automatically renew unless canceled
-        </p>
-        <p className="subscribe-footer-note">
-          • Cancel anytime from your account settings
-        </p>
+        <p className="subscribe-footer-note">• Subscriptions automatically renew unless canceled</p>
+        <p className="subscribe-footer-note">• Cancel anytime from your account settings</p>
       </div>
     </div>
   );
 };
 
 export default Subscribe;
-

@@ -113,6 +113,7 @@ intellimate/
 The project follows unified code standards.
 
 **Core Standards:**
+
 - All interface names start with capital `I` (e.g., `IUserInfo`)
 - Prohibited use of `any` type
 - Use `@/` alias for importing project modules
@@ -146,9 +147,9 @@ The project has unified style management using Less variables:
 @import '@/styles/variables.less';
 
 .my-component {
-  color: @primary-color;        // Use theme color
-  padding: @spacing-lg;         // Use spacing variable
-  font-size: @font-size-base;   // Use font size variable
+  color: @primary-color; // Use theme color
+  padding: @spacing-lg; // Use spacing variable
+  font-size: @font-size-base; // Use font size variable
 }
 ```
 
@@ -160,7 +161,6 @@ Available style variables can be found in `src/styles/variables.less`.
 
 - [Inty SDK Documentation](./docs/README.md) - Inty TypeScript SDK usage guide
 - [API Documentation](./docs/api/) - API interface documentation
-
 
 ## 📄 License
 

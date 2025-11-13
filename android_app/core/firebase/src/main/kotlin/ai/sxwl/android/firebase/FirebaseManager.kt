@@ -538,23 +538,15 @@ object FirebaseManager {
         const val LANGUAGE = "language"
     }
 
-    /**
-     * FCM Token upload callback
-     * Set by application layer to handle token upload to server
-     */
-    @Volatile
-    private var tokenUploadCallback: FCMTokenUploadCallback? = null
+    /** FCM Token upload callback Set by application layer to handle token upload to server */
+    @Volatile private var tokenUploadCallback: FCMTokenUploadCallback? = null
 
     /**
-     * Set FCM token upload callback
-     * Should be called from application layer (e.g., IntelliMateApp)
+     * Set FCM token upload callback Should be called from application layer (e.g., IntelliMateApp)
      */
     fun setTokenUploadCallback(callback: FCMTokenUploadCallback?) {
         tokenUploadCallback = callback
-        LogUtils.d(
-            "FirebaseManager",
-            "FCM Token 上传回调已${if (callback != null) "设置" else "清除"}"
-        )
+        LogUtils.d("FirebaseManager", "FCM Token 上传回调已${if (callback != null) "设置" else "清除"}")
     }
 
     /**
@@ -571,8 +563,8 @@ object FirebaseManager {
     /**
      * Upload FCM Token to server
      *
-     * Delegates to the callback provided by application layer
-     * This avoids circular dependency between core/firebase and core/data modules
+     * Delegates to the callback provided by application layer This avoids circular dependency
+     * between core/firebase and core/data modules
      */
     suspend fun uploadFCMToken(token: String) {
         val callback = tokenUploadCallback
