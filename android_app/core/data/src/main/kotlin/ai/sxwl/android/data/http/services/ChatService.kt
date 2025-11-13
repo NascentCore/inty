@@ -1,8 +1,11 @@
 package ai.sxwl.android.data.http.services
 
+import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.IntyNetworkManager
+import ai.sxwl.android.data.http.models.toConversationItem
+import ai.sxwl.android.data.http.models.toMsgInfo
 
 /** 图片生成错误信息 */
 data class ChatImageGenerationError(
@@ -30,28 +33,40 @@ object ChatService {
         return IntyNetworkManager.executeRequest("Send Message") {
             val response =
                 IntyNetworkManager.getClient()
-                    .api()
-                    .v1()
-                    .chats()
-                    .agents()
-                    .generateMessageVoice(
-                        com.inty.api.models.api.v1.chats.agents.AgentGenerateMessageVoiceParams
-                            .builder()
-                            .agentId(agentId)
-                            .messageId("temp_message_id") // 这里需要根据实际情况处理
-                            .language("en") // 这里需要根据实际情况处理
+                    .v2()
+                    .chat()
+                    .sendMessage(
+                        agentId,
+                        com.inty.api.models.v2.chat.ChatSendMessageParams.builder()
+                            .body(
+                                com.inty.api.models.v2.chat.ChatSendMessageParams.Body.builder()
+                                    .messages(
+                                        listOf(
+                                            com.inty.api.models.v2.chat.ChatSendMessageParams.Message.builder()
+                                                .role("user")
+                                                .content(message)
+                                                .build()
+                                        )
+                                    )
+                                    .stream(false)
+                                    .build()
+                            )
                             .build()
                     )
 
-            // 当前 IntySDK 的 Chat 数据结构与业务层不匹配
-            // 需要根据实际返回结构进行数据转换
-            throw Exception("Chat message conversion not implemented, need data mapping")
+            val data = response.data()
+            val choices = data?.choices()
+            if (choices.isNullOrEmpty()) {
+                throw IllegalStateException("No choices in response")
+            }
+            val firstChoice = choices.first()
+            firstChoice.message().toMsgInfo(agentId)
         }
     }
 
     /** 获取聊天历史 替换: IChatApi.getChatHistory() */
     suspend fun getChatHistory(
-        conversationId: String,
+        agentId: String,
         page: Int = 1,
         pageSize: Int = 20,
     ): ApiResult<List<MsgInfo>> {
@@ -64,12 +79,33 @@ object ChatService {
                     .agents()
                     .getMessages(
                         com.inty.api.models.api.v1.chats.agents.AgentGetMessagesParams.builder()
-                            .agentId("temp_agent_id") // 这里需要根据实际情况处理
+                            .agentId(agentId)
+                            .limit(pageSize.toLong())
+                            .offset(((page - 1) * pageSize).toLong())
                             .build()
                     )
 
-            // 这里需要根据实际的IntySDK返回结构进行转换
-            emptyList<MsgInfo>()
+            val additionalProperties = response._additionalProperties()
+            val messagesArray = additionalProperties["messages"]?.asArray()
+                ?: additionalProperties["list"]?.asArray()
+                ?: emptyList()
+
+            messagesArray.mapNotNull { jsonValue ->
+                val messageObject = jsonValue.asObject()
+                if (messageObject != null) {
+                    val messageMap = messageObject.mapValues { (_, value) ->
+                        when {
+                            value.asString() != null -> value.asString()!!
+                            value.asNumber() != null -> value.asNumber()!!
+                            value.asBoolean() != null -> value.asBoolean()!!
+                            else -> value.toString()
+                        }
+                    }
+                    messageMap.toMsgInfo(agentId)
+                } else {
+                    null
+                }
+            }
         }
     }
 
@@ -102,7 +138,7 @@ object ChatService {
     suspend fun getConversations(
         page: Int = 1,
         pageSize: Int = 20,
-    ): ApiResult<List<ConversationInfo>> {
+    ): ApiResult<List<ConversationItem>> {
         return IntyNetworkManager.executeRequest("Get Conversations") {
             val response =
                 IntyNetworkManager.getClient()
@@ -116,8 +152,101 @@ object ChatService {
                             .build()
                     )
 
-            // 这里需要根据实际的IntySDK返回结构进行转换
-            emptyList<ConversationInfo>()
+            response.map { it.toConversationItem() }
+        }
+    }
+
+    /** 生成消息语音 */
+    suspend fun generateMessageVoice(
+        agentId: String,
+        messageId: String,
+        language: String = "en",
+    ): ApiResult<String> {
+        return IntyNetworkManager.executeRequest("Generate Message Voice") {
+            val response =
+                IntyNetworkManager.getClient()
+                    .api()
+                    .v1()
+                    .chats()
+                    .agents()
+                    .generateMessageVoice(
+                        messageId,
+                        com.inty.api.models.api.v1.chats.agents.AgentGenerateMessageVoiceParams
+                            .builder()
+                            .agentId(agentId)
+                            .language(language)
+                            .build()
+                    )
+
+            val additionalProperties = response._additionalProperties()
+            val audioUrl = additionalProperties["audio_url"]?.asString()
+                ?: additionalProperties["audioUrl"]?.asString()
+                ?: throw IllegalStateException("Audio URL not found in response")
+            audioUrl
+        }
+    }
+
+    /** 获取聊天设置 */
+    suspend fun getSettings(agentId: String): ApiResult<ChatSettings> {
+        return IntyNetworkManager.executeRequest("Get Chat Settings") {
+            val response =
+                IntyNetworkManager.getClient()
+                    .api()
+                    .v1()
+                    .chats()
+                    .agents()
+                    .getSettings(agentId)
+
+            ChatSettings(
+                language = response.language(),
+                voiceEnabled = response.voiceEnabled() ?: false,
+                premiumMode = response.premiumMode() ?: false,
+                stylePrompt = response.stylePrompt(),
+            )
+        }
+    }
+
+    /** 更新聊天设置 */
+    suspend fun updateSettings(
+        agentId: String,
+        settings: ChatSettings,
+    ): ApiResult<ChatSettings> {
+        return IntyNetworkManager.executeRequest("Update Chat Settings") {
+            val paramsBuilder =
+                com.inty.api.models.api.v1.chats.agents.AgentUpdateSettingsParams.builder()
+
+            if (settings.language != null) {
+                paramsBuilder.language(settings.language)
+            }
+            if (settings.voiceEnabled != null) {
+                paramsBuilder.voiceEnabled(settings.voiceEnabled)
+            }
+            if (settings.premiumMode != null) {
+                paramsBuilder.premiumMode(settings.premiumMode)
+            }
+            if (settings.stylePrompt != null) {
+                paramsBuilder.stylePrompt(settings.stylePrompt)
+            }
+
+            val response =
+                IntyNetworkManager.getClient()
+                    .api()
+                    .v1()
+                    .chats()
+                    .agents()
+                    .updateSettings(agentId, paramsBuilder.build())
+
+            val updatedSettings = if (response.isApiResponseChatSettings()) {
+                response.asApiResponseChatSettings().data()
+            } else {
+                null
+            }
+            ChatSettings(
+                language = updatedSettings?.language(),
+                voiceEnabled = updatedSettings?.voiceEnabled(),
+                premiumMode = updatedSettings?.premiumMode(),
+                stylePrompt = updatedSettings?.stylePrompt(),
+            )
         }
     }
 
@@ -182,14 +311,12 @@ object ChatService {
         }
     }
 
-    /** 对话信息数据类 */
-    data class ConversationInfo(
-        val id: String,
-        val agentId: String,
-        val agentName: String,
-        val lastMessage: String?,
-        val lastMessageTime: Long,
-        val messageCount: Int,
+    /** 聊天设置数据类 */
+    data class ChatSettings(
+        val language: String? = null,
+        val voiceEnabled: Boolean? = null,
+        val premiumMode: Boolean? = null,
+        val stylePrompt: String? = null,
     )
 
     /** 图片生成结果 */

@@ -56,21 +56,41 @@ object UserService {
         }
     }
 
-    /** 上传头像 替换: IUserApi.uploadAvatar() 注意: 当前 IntySDK 没有直接的头像上传 API，需要通过通用图片上传实现 */
-    suspend fun uploadAvatar(filePath: String): ApiResult<String> {
+    /** 上传头像 替换: IUserApi.uploadAvatar() */
+    suspend fun uploadAvatar(
+        inputStream: java.io.InputStream,
+        filename: String = "avatar.jpg"
+    ): ApiResult<String> {
         return IntyNetworkManager.executeRequest("Upload Avatar") {
-            // 当前 IntySDK 没有直接的头像上传 API
-            // 可以通过通用图片上传 API 实现，然后更新用户头像字段
-            throw Exception("Avatar upload not supported, use image upload API instead")
+            val response =
+                IntyNetworkManager.getClient()
+                    .api()
+                    .v1()
+                    .uploadImage(
+                        com.inty.api.models.api.v1.V1UploadImageParams.builder()
+                            .file(inputStream.readBytes())
+                            .build()
+                    )
+
+            val data = response.data()
+            val additionalProperties = data?._additionalProperties() ?: emptyMap()
+            val imageUrl = additionalProperties["url"]?.asString()
+                ?: additionalProperties["image_url"]?.asString()
+                ?: additionalProperties["avatar_url"]?.asString()
+                ?: throw IllegalStateException("Image URL not found in response")
+
+            imageUrl
         }
     }
 
-    /** 删除用户账户 替换: IUserApi.deleteUser() 注意: 当前 IntySDK 没有直接的 delete user API */
+    /** 删除用户账户 替换: IUserApi.deleteUser() */
     suspend fun deleteUser(): ApiResult<Unit> {
         return IntyNetworkManager.executeRequest("Delete User") {
-            // 当前 IntySDK 没有直接的 delete user API
-            // 可能需要通过其他方式实现，比如联系管理员
-            throw Exception("Delete user not supported, contact administrator")
+            IntyNetworkManager.getClient()
+                .api()
+                .v1()
+                .users()
+                .deleteAccount()
         }
     }
 
