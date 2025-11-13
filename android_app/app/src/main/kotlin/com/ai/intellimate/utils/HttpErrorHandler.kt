@@ -12,10 +12,7 @@ object HttpErrorHandler {
      * @param operation 操作名称，用于自定义错误消息
      * @return 用户友好的错误消息
      */
-    fun handleHttpException(
-        e: HttpException,
-        operation: String = "operation",
-    ): String {
+    fun handleHttpException(e: HttpException, operation: String = "operation"): String {
         return when (e.code()) {
             400 -> "Invalid request parameters, please check your input"
             401 -> "Session expired, please login again"

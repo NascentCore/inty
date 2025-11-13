@@ -69,33 +69,15 @@ fun Int.not(): Int {
 
 // 主题按钮 渐变色
 val primaryBtnBrush =
-    Brush.horizontalGradient(
-        colors =
-            listOf(
-                Color(0xFFC122FF),
-                Color(0xFFFF905D),
-            )
-    )
+    Brush.horizontalGradient(colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D)))
 
 // 常规按钮 渐变色
-val commonBtnBrush =
-    Brush.horizontalGradient(
-        colors =
-            listOf(
-                Color(0XFF2D213A),
-                Color(0XFF2D213A),
-            )
-    )
+val commonBtnBrush = Brush.horizontalGradient(colors = listOf(Color(0XFF2D213A), Color(0XFF2D213A)))
 
 // 分隔符渐变色
 val heartDivBrush =
     Brush.horizontalGradient(
-        colors =
-            listOf(
-                Color.White.copy(0f),
-                Color.White.copy(.09f),
-                Color.White.copy(0f),
-            )
+        colors = listOf(Color.White.copy(0f), Color.White.copy(.09f), Color.White.copy(0f))
     )
 
 /** 空状态页面 */
@@ -105,13 +87,13 @@ fun HeartEmptyUI(modifier: Modifier = Modifier, tips: String = "No relevant cont
     Column(
         modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Image(
             painter = painterResource(R.drawable.img_empty_content),
             contentDescription = "",
             contentScale = ContentScale.Crop,
-            modifier = Modifier
+            modifier = Modifier,
         )
         Text(
             text = tips,
@@ -130,14 +112,14 @@ fun PoundTagText(textStr: String) {
             Modifier.border(
                     width = 1.dp,
                     brush = heartDivBrush,
-                    shape = RoundedCornerShape(size = 4.dp)
+                    shape = RoundedCornerShape(size = 4.dp),
                 )
                 .background(
                     color = HeartColor.primaryColor,
-                    shape = RoundedCornerShape(size = 4.dp)
+                    shape = RoundedCornerShape(size = 4.dp),
                 )
                 .padding(horizontal = 6.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = textStr,
@@ -160,10 +142,7 @@ private fun PreviewPoundText() {
 
 /** 可滑动删除的列表容器 要求itemContent不能透明 */
 @Composable
-fun SwipeableListItem(
-    onDelete: () -> Unit = {},
-    itemContent: @Composable RowScope.() -> Unit,
-) {
+fun SwipeableListItem(onDelete: () -> Unit = {}, itemContent: @Composable RowScope.() -> Unit) {
     var isDeleting by remember { mutableStateOf(false) }
     val swipeToDismissBoxState = rememberSwipeToDismissBoxState()
 
@@ -189,7 +168,7 @@ fun SwipeableListItem(
                     when (swipeToDismissBoxState.targetValue) {
                         SwipeToDismissBoxValue.EndToStart -> Color.Red
                         SwipeToDismissBoxValue.Settled,
-                        SwipeToDismissBoxValue.StartToEnd, -> Color.Transparent
+                        SwipeToDismissBoxValue.StartToEnd -> Color.Transparent
                     }
                 )
             val show = swipeToDismissBoxState.targetValue == SwipeToDismissBoxValue.EndToStart
@@ -205,25 +184,25 @@ fun SwipeableListItem(
                             .width(boxWidth)
                             .background(color)
                             .padding(horizontal = 20.dp),
-                    contentAlignment = Alignment.CenterEnd
+                    contentAlignment = Alignment.CenterEnd,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             painter = painterResource(R.drawable.icon_trash),
                             contentDescription = "Delete",
-                            tint = Color.White
+                            tint = Color.White,
                         )
                         if (swipeToDismissBoxState.progress > 0.5f) {
                             Text(
                                 text = "松开删除",
                                 color = Color.White,
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.bodySmall,
                             )
                         }
                     }
                 }
             }
         },
-        content = itemContent
+        content = itemContent,
     )
 }

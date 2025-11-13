@@ -58,9 +58,10 @@ object ReportService {
 
             val data = response.data()
             val additionalProperties = data?._additionalProperties() ?: emptyMap()
-            val imageUrl = additionalProperties["url"]?.asString()
-                ?: additionalProperties["image_url"]?.asString()
-                ?: throw IllegalStateException("Image URL not found in response")
+            val imageUrl =
+                additionalProperties["url"]?.asString()
+                    ?: additionalProperties["image_url"]?.asString()
+                    ?: throw IllegalStateException("Image URL not found in response")
 
             imageUrl
         }

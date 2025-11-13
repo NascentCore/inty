@@ -233,12 +233,7 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
             }
             imageUrl != null -> {
                 // 使用 CDN 裁切获取预览图，使用配置的宽度和质量
-                val previewUrl =
-                    getCdnImageUrl(
-                        imageUrl,
-                        width = 400,
-                        quality = 60,
-                    )
+                val previewUrl = getCdnImageUrl(imageUrl, width = 400, quality = 60)
                 AsyncImage(
                     model = previewUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
                     contentDescription = stringResource(R.string.content_desc_generated_avatar),
@@ -277,11 +272,7 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
                 drawRoundRect(
                     color = Color.Gray,
                     topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
-                    size =
-                        Size(
-                            size.width - strokeWidth,
-                            size.height - strokeWidth,
-                        ),
+                    size = Size(size.width - strokeWidth, size.height - strokeWidth),
                     cornerRadius = CornerRadius(cornerRadius),
                     style =
                         Stroke(
@@ -446,12 +437,7 @@ private fun AvatarGridSection(
         ) {
             imageUrls.take(4).forEachIndexed { index, imageUrl ->
                 // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
-                val thumbnailUrl =
-                    getCdnImageUrl(
-                        imageUrl,
-                        width = 80,
-                        quality = 60,
-                    )
+                val thumbnailUrl = getCdnImageUrl(imageUrl, width = 80, quality = 60)
                 Box(
                     modifier =
                         Modifier.weight(1f)

@@ -53,7 +53,9 @@ async def create_guest(
         return APIResponse.error(message=str(e))
 
 
-@router.post("/google/login", response_model=APIResponse[LoginResponse], tags=["android-app"])
+@router.post(
+    "/google/login", response_model=APIResponse[LoginResponse], tags=["android-app"]
+)
 async def google_login(
     *,
     db: AsyncSession = Depends(get_async_db),

@@ -151,7 +151,7 @@ object LanguageUtils {
                         AppUtils.relaunchApp()
                     }
                 }
-            }
+            },
         )
     }
 
@@ -177,13 +177,13 @@ object LanguageUtils {
                             Log.e(
                                 "LanguageUtils",
                                 "Activity is in invalid state: ${activity.javaClass.simpleName}",
-                                e
+                                e,
                             )
                         } catch (e: Exception) {
                             Log.e(
                                 "LanguageUtils",
                                 "Failed to recreate activity: ${activity.javaClass.simpleName}",
-                                e
+                                e,
                             )
                         }
                     }

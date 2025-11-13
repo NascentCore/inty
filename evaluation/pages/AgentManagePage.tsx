@@ -142,9 +142,12 @@ export const AgentManagePage: React.FC = () => {
   const [modelsLoading, setModelsLoading] = useState(false);
 
   // 背景视频相关状态
-  const [backgroundAnimatedFile, setBackgroundAnimatedFile] = useState<File | null>(null);
-  const [backgroundAnimatedPreview, setBackgroundAnimatedPreview] = useState<string>("");
-  const [generateAnimatedModalVisible, setGenerateAnimatedModalVisible] = useState(false);
+  const [backgroundAnimatedFile, setBackgroundAnimatedFile] =
+    useState<File | null>(null);
+  const [backgroundAnimatedPreview, setBackgroundAnimatedPreview] =
+    useState<string>("");
+  const [generateAnimatedModalVisible, setGenerateAnimatedModalVisible] =
+    useState(false);
   const [generateAnimatedLoading, setGenerateAnimatedLoading] = useState(false);
   const [generateAnimatedPrompt, setGenerateAnimatedPrompt] = useState("");
 
@@ -152,33 +155,51 @@ export const AgentManagePage: React.FC = () => {
   const isVideoUrl = (url: string | undefined): boolean => {
     if (!url) return false;
     const urlLower = url.toLowerCase();
-    
+
     // 检查是否为data URL，如果是video类型
     if (urlLower.startsWith("data:video/")) {
       return true;
     }
-    
+
     // 检查文件扩展名（更精确的匹配）
-    const videoExtensions = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".flv", ".wmv", ".m4v"];
-    const imageExtensions = [".gif", ".avif", ".jpg", ".jpeg", ".png", ".webp", ".bmp", ".svg"];
-    
+    const videoExtensions = [
+      ".mp4",
+      ".webm",
+      ".mov",
+      ".avi",
+      ".mkv",
+      ".flv",
+      ".wmv",
+      ".m4v",
+    ];
+    const imageExtensions = [
+      ".gif",
+      ".avif",
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".webp",
+      ".bmp",
+      ".svg",
+    ];
+
     // 先检查是否为图片格式（向后兼容）
     // 使用更精确的匹配，检查扩展名是否在URL末尾或后面跟着查询参数
     const urlWithoutQuery = urlLower.split("?")[0];
-    if (imageExtensions.some(ext => urlWithoutQuery.endsWith(ext))) {
+    if (imageExtensions.some((ext) => urlWithoutQuery.endsWith(ext))) {
       return false;
     }
-    
+
     // 检查是否为视频格式
-    if (videoExtensions.some(ext => urlWithoutQuery.endsWith(ext))) {
+    if (videoExtensions.some((ext) => urlWithoutQuery.endsWith(ext))) {
       return true;
     }
-    
+
     // 检查URL路径中是否包含视频相关路径（更精确）
     if (urlLower.includes("/videos/") || urlLower.includes("/video/")) {
       return true;
     }
-    
+
     // 默认返回false，保持向后兼容
     return false;
   };
@@ -419,7 +440,7 @@ export const AgentManagePage: React.FC = () => {
       message.error(
         `生成背景视频失败: ${
           error instanceof Error ? error.message : "未知错误"
-        }`
+        }`,
       );
       return false; // 阻止 Modal 关闭
     } finally {
@@ -917,7 +938,7 @@ export const AgentManagePage: React.FC = () => {
                     ? agentCopy?.background_animated || ""
                     : backgroundAnimatedPreview;
                   const isVideo = isVideoUrl(previewUrl);
-                  
+
                   if (isVideo) {
                     return (
                       <video

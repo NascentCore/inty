@@ -57,8 +57,7 @@ fun MyModalNavigationDrawer(
         if (showMask.value || drawerState.value == DrawerValue.Open) {
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxSize()
+                    Modifier.fillMaxSize()
                         .alpha(maskLayerAlpha)
                         .background(color = Color(0xff000000))
                         .clickable { drawerState.value = DrawerValue.Closed }
@@ -66,8 +65,7 @@ fun MyModalNavigationDrawer(
             // 抽屉
             Box(
                 modifier =
-                    Modifier
-                        .onSizeChanged { drawerWidth.intValue = it.width }
+                    Modifier.onSizeChanged { drawerWidth.intValue = it.width }
                         .graphicsLayer { translationX = xOffset }
             ) {
                 drawerContent()

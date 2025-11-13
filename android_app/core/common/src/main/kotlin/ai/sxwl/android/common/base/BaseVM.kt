@@ -46,7 +46,7 @@ abstract class BaseVM : ViewModel() {
             scope = viewModelScope,
             context = context,
             jobList = uiJobs,
-            block = block
+            block = block,
         )
     }
 
@@ -59,7 +59,7 @@ abstract class BaseVM : ViewModel() {
             scope = backgroundScope,
             context = context,
             jobList = backgroundJobs,
-            block = block
+            block = block,
         )
     }
 
@@ -83,7 +83,7 @@ abstract class BaseVM : ViewModel() {
             context = context,
             jobList = uiJobs,
             onError = onError,
-            block = block
+            block = block,
         )
     }
 
@@ -136,7 +136,7 @@ abstract class BaseVM : ViewModel() {
     private suspend fun CoroutineScope.executeBlock(
         block: suspend CoroutineScope.() -> Unit,
         contextName: String,
-        onError: (Exception) -> Unit = {}
+        onError: (Exception) -> Unit = {},
     ) {
         try {
             block.invoke(this)

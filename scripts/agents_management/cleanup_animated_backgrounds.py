@@ -190,9 +190,7 @@ async def main():
 
     # 确认操作
     print("\n" + "=" * 60)
-    confirmation = input(
-        "请输入 'CLEANUP' 来确认清理操作（其他任何输入都会取消）: "
-    )
+    confirmation = input("请输入 'CLEANUP' 来确认清理操作（其他任何输入都会取消）: ")
 
     if confirmation != "CLEANUP":
         logger.info("操作已取消")
@@ -233,4 +231,3 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"执行过程中发生错误: {str(e)}")
         raise
-

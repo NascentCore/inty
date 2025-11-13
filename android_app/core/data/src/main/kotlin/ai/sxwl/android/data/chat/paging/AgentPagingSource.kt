@@ -47,7 +47,7 @@ class AgentPagingSource(
                         if (validCachedAgents.isNotEmpty()) {
                             // 去重：对缓存数据也进行去重，防止重复数据
                             val uniqueCachedAgents = validCachedAgents.distinctBy { it.id }
-                            
+
                             // 如果有缓存数据，返回缓存数据，同时后台加载网络数据
                             if (cacheProvider.shouldUpdateFromNetwork()) {
                                 // 后台静默刷新，不阻塞UI
@@ -103,8 +103,8 @@ class AgentPagingSource(
                         // 缓存第一页数据
                         if (
                             page == INITIAL_PAGE &&
-                            uniqueAgents.isNotEmpty() &&
-                            cacheProvider != null
+                                uniqueAgents.isNotEmpty() &&
+                                cacheProvider != null
                         ) {
                             cacheProvider.cacheChatAgents(uniqueAgents)
                             cacheProvider.refreshChatAgents()
@@ -167,7 +167,9 @@ class AgentPagingSource(
         // 在后台协程中执行，不阻塞当前加载
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                LogUtils.i("AgentPagingSource.loadFromNetworkAsync - 后台加载第${page}页，sortSeed: $sortSeed")
+                LogUtils.i(
+                    "AgentPagingSource.loadFromNetworkAsync - 后台加载第${page}页，sortSeed: $sortSeed"
+                )
                 val result = loadFromNetwork(page, pageSize)
                 if (result is NetworkResult.Success) {
                     val agents = result.data.list ?: emptyList()

@@ -204,10 +204,7 @@ fun IntySmallTextField2(
 
         Box(
             modifier =
-                Modifier
-                    .fillMaxHeight()
-                    .weight(1f)
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                Modifier.fillMaxHeight().weight(1f).padding(horizontal = 8.dp, vertical = 4.dp),
             contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
         ) {
             BasicTextField(

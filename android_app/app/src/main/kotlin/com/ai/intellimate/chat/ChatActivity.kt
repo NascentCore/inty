@@ -103,17 +103,16 @@ class ChatActivity : BaseActivity() {
         super.ConfigComposeUI()
         val agentInfo by chatViewModel.agentInfo.collectAsState()
         val chatMessages by chatViewModel.msgs.collectAsState()
-        val hasLoadingMessage = chatMessages.any { msg ->
-            val hasGeneratedImage = msg.hasGeneratedImage()
-            val generatedImageUrl = msg.getGeneratedImageUrl()
-            msg.content == "loading_animation" &&
+        val hasLoadingMessage =
+            chatMessages.any { msg ->
+                val hasGeneratedImage = msg.hasGeneratedImage()
+                val generatedImageUrl = msg.getGeneratedImageUrl()
+                msg.content == "loading_animation" &&
                     !hasGeneratedImage &&
                     generatedImageUrl != "loading"
-        }
+            }
 
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .background(HeartColor.primaryColor)) {
+        Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
             // 背景图放在最底层，不受 imePadding 影响
             AgentBackground(
                 agentInfo = agentInfo,
@@ -124,11 +123,7 @@ class ChatActivity : BaseActivity() {
             )
 
             ChatPage(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .imePadding()
-                        .navigationBarsPadding(),
+                modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
                 chatViewModel = chatViewModel,
                 showBackButton = true,
                 onBack = { finish() },

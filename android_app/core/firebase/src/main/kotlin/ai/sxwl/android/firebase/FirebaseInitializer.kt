@@ -40,8 +40,8 @@ class FirebaseInitializer : Initializer<FirebaseManager> {
     /**
      * 启用 Firebase DebugView
      *
-     * 注意：DebugView 也可以通过 adb 命令启用：
-     * adb shell setprop debug.firebase.analytics.app com.ai.intellimate
+     * 注意：DebugView 也可以通过 adb 命令启用： adb shell setprop debug.firebase.analytics.app
+     * com.ai.intellimate
      *
      * 或者在 Firebase 控制台启用：
      * 1. 登录 Firebase 控制台
@@ -62,15 +62,13 @@ class FirebaseInitializer : Initializer<FirebaseManager> {
             LogUtils.w(TAG, "⚠️ 无法通过代码启用 DebugView，请使用 adb 命令：")
             LogUtils.w(
                 TAG,
-                "   adb shell setprop debug.firebase.analytics.app ${context.packageName}"
+                "   adb shell setprop debug.firebase.analytics.app ${context.packageName}",
             )
             LogUtils.w(TAG, "   错误: ${e.message}")
         }
     }
 
-    /**
-     * 设置系统属性（用于启用 DebugView）
-     */
+    /** 设置系统属性（用于启用 DebugView） */
     private fun setSystemProperty(key: String, value: String) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {

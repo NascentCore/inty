@@ -24,17 +24,15 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     // 注意：这会使用不同的缓存策略，但可以支持事件上报
     private val explorePagingRepository by lazy {
         // 创建新的cacheProvider实例，因为它使用静态的AgentCacheManager，所以新实例也可以正常工作
-        val cacheProvider = try {
-            // RecommendedAgentCacheProviderImpl 使用静态的 AgentCacheManager，所以创建新实例是安全的
-            com.ai.intellimate.utils.RecommendedAgentCacheProviderImpl()
-        } catch (e: Exception) {
-            LogUtils.e("ExploreViewModel - 创建cacheProvider失败: ${e.message}")
-            null
-        }
-        ExplorePagingRepository(
-            cacheProvider = cacheProvider,
-            fetchCallback = this
-        )
+        val cacheProvider =
+            try {
+                // RecommendedAgentCacheProviderImpl 使用静态的 AgentCacheManager，所以创建新实例是安全的
+                com.ai.intellimate.utils.RecommendedAgentCacheProviderImpl()
+            } catch (e: Exception) {
+                LogUtils.e("ExploreViewModel - 创建cacheProvider失败: ${e.message}")
+                null
+            }
+        ExplorePagingRepository(cacheProvider = cacheProvider, fetchCallback = this)
     }
 
     // Paging数据流
@@ -59,7 +57,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         pageSize: Int,
         responseTime: Long,
         agentsCount: Int,
-        sortSeed: Int
+        sortSeed: Int,
     ) {
         reportExploreFetchSuccess(page, pageSize, responseTime, agentsCount, sortSeed)
     }
@@ -69,7 +67,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         pageSize: Int,
         responseTime: Long,
         errorMessage: String,
-        sortSeed: Int
+        sortSeed: Int,
     ) {
         reportExploreFetchError(
             page = page,
@@ -78,7 +76,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
             errorType = "failure",
             errorMessage = errorMessage,
             errorException = null,
-            sortSeed = sortSeed
+            sortSeed = sortSeed,
         )
     }
 
@@ -87,7 +85,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         pageSize: Int,
         responseTime: Long,
         exception: Exception,
-        sortSeed: Int
+        sortSeed: Int,
     ) {
         reportExploreFetchError(
             page = page,
@@ -96,7 +94,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
             errorType = "exception",
             errorMessage = exception.message ?: "unknown",
             errorException = exception,
-            sortSeed = sortSeed
+            sortSeed = sortSeed,
         )
     }
 
@@ -108,16 +106,12 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         PageTrackingHelper.trackPageView(
             pageName = "ExplorePage",
             pageClass = "ExploreViewModel",
-            additionalParams = mapOf(
-                "page_type" to "recommendations",
-                "is_initial_load" to true
-            )
+            additionalParams = mapOf("page_type" to "recommendations", "is_initial_load" to true),
         )
 
         // 使用app层的ExplorePagingRepository，支持事件回调
-        val initialFlow = explorePagingRepository.getRecommendAgentsFlow(
-            useCache = true,
-        ).cachedIn(viewModelScope)
+        val initialFlow =
+            explorePagingRepository.getRecommendAgentsFlow(useCache = true).cachedIn(viewModelScope)
 
         _agentsFlow.value = initialFlow
         isInitialized = true
@@ -209,22 +203,24 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     ) {
         viewModelScope.launch {
             // 构建完整的错误消息，包含错误类型和异常类型信息
-            val fullErrorMessage = if (errorException != null) {
-                "$errorType: ${errorException.javaClass.simpleName}, $errorMessage"
-            } else {
-                "$errorType: $errorMessage"
-            }
+            val fullErrorMessage =
+                if (errorException != null) {
+                    "$errorType: ${errorException.javaClass.simpleName}, $errorMessage"
+                } else {
+                    "$errorType: $errorMessage"
+                }
 
-            val params = mutableMapOf<String, Any>(
-                "page" to page,
-                "page_size" to pageSize,
-                "response_time" to responseTime,
-                "error_message" to fullErrorMessage,
-                "current_ui_agents_count" to _currentUiAgentsCount.value,
-                "sort_seed" to sortSeed,
-                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                "timestamp" to System.currentTimeMillis(),
-            )
+            val params =
+                mutableMapOf<String, Any>(
+                    "page" to page,
+                    "page_size" to pageSize,
+                    "response_time" to responseTime,
+                    "error_message" to fullErrorMessage,
+                    "current_ui_agents_count" to _currentUiAgentsCount.value,
+                    "sort_seed" to sortSeed,
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                    "timestamp" to System.currentTimeMillis(),
+                )
 
             FirebaseManager.logEvent(
                 FirebaseManager.Events.EXPLORE_AGENTS_FETCH_ERROR,

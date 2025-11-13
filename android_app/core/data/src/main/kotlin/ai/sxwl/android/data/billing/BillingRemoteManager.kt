@@ -51,14 +51,16 @@ internal class BillingRemoteManager(
                                 // CANCELLED是"subscribed_expiring" 已取消但未到期
                                 // null 认为是未订阅
                                 subscriptionStatus =
-                                    when (currentSubscription?.status) {
-                                        "ACTIVE" if currentSubscription.autoRenew == true ->
+                                    when {
+                                        currentSubscription?.status == "ACTIVE" &&
+                                            currentSubscription.autoRenew == true ->
                                             VipStatus.UI_SUBSCRIBED
 
-                                        "ACTIVE" if currentSubscription.autoRenew == false ->
+                                        currentSubscription?.status == "ACTIVE" &&
+                                            currentSubscription.autoRenew == false ->
                                             VipStatus.UI_SUBSCRIBED_EXPIRE_SOON
 
-                                        "CANCELLED" ->
+                                        currentSubscription?.status == "CANCELLED" ->
                                             VipStatus.UI_SUBSCRIBED_EXPIRE_SOON
 
                                         else -> VipStatus.UI_UNSUBSCRIBED
@@ -76,7 +78,9 @@ internal class BillingRemoteManager(
                         val existingPlans = plansFlow.value.associateBy { it.googleProductId }
                         LogUtils.d("Billing [远程数据] 当前本地计划数量: ${existingPlans.size}")
                         existingPlans.values.forEach { plan ->
-                            LogUtils.d("  - ${plan.googleProductId}: ${plan.name}, 价格=${plan.price}, 货币=${plan.currencyCode}")
+                            LogUtils.d(
+                                "  - ${plan.googleProductId}: ${plan.name}, 价格=${plan.price}, 货币=${plan.currencyCode}"
+                            )
                         }
 
                         val vipPlans =
@@ -86,30 +90,33 @@ internal class BillingRemoteManager(
                                     existingPlans[productId]?.let { existingPlan ->
                                         LogUtils.d(
                                             "Billing [远程数据] 保留现有计划的价格信息: $productId\n" +
-                                                    "  保留的价格: ${existingPlan.price}\n" +
-                                                    "  保留的货币: ${existingPlan.currencyCode}\n" +
-                                                    "  保留的微单位: ${existingPlan.priceAmountMicros}"
+                                                "  保留的价格: ${existingPlan.price}\n" +
+                                                "  保留的货币: ${existingPlan.currencyCode}\n" +
+                                                "  保留的微单位: ${existingPlan.priceAmountMicros}"
                                         )
                                         // 更新计划的基础信息，但保留价格信息
                                         existingPlan.copy(
-                                            discountRate = plan.discountRate
-                                                ?: existingPlan.discountRate,
+                                            discountRate =
+                                                plan.discountRate ?: existingPlan.discountRate,
                                             name = plan.name ?: existingPlan.name,
                                             planType = plan.planType ?: existingPlan.planType,
-                                            description = plan.description
-                                                ?: existingPlan.description,
-                                        )
-                                    } ?: run {
-                                        LogUtils.d("Billing [远程数据] 新计划（无价格信息）: $productId, ${plan.name}")
-                                        VipPlan(
-                                            // 新计划，使用默认值
-                                            googleProductId = productId,
-                                            discountRate = plan.discountRate ?: 1.0,
-                                            name = plan.name ?: "",
-                                            planType = plan.planType ?: "",
-                                            description = plan.description ?: "",
+                                            description =
+                                                plan.description ?: existingPlan.description,
                                         )
                                     }
+                                        ?: run {
+                                            LogUtils.d(
+                                                "Billing [远程数据] 新计划（无价格信息）: $productId, ${plan.name}"
+                                            )
+                                            VipPlan(
+                                                // 新计划，使用默认值
+                                                googleProductId = productId,
+                                                discountRate = plan.discountRate ?: 1.0,
+                                                name = plan.name ?: "",
+                                                planType = plan.planType ?: "",
+                                                description = plan.description ?: "",
+                                            )
+                                        }
                                 }
                             }
 

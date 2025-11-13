@@ -8,5 +8,5 @@ data class MessagesUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val hasMore: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
 )

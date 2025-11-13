@@ -45,7 +45,7 @@ fun HeartBottomAppBar(
     NavigationBar(
         modifier = modifier.fillMaxWidth(),
         containerColor = HeartColor.primaryColor,
-        tonalElevation = 8.dp
+        tonalElevation = 8.dp,
     ) {
         tabItems.forEach { tab ->
             val isSelected = selectedTab == tab.index
@@ -74,7 +74,7 @@ fun HeartBottomAppBar(
                         )
                     }
                 },
-                colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent)
+                colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent),
             )
         }
     }
@@ -95,33 +95,33 @@ private val bottomTabItems =
             index = 0,
             selectedIcon = R.drawable.ic_tab_chat_selected,
             unselectedIcon = R.drawable.ic_tab_chat_unselected,
-            label = "聊天"
+            label = "聊天",
         ),
         HeartBottomTabItem(
             index = 1,
             selectedIcon = R.drawable.ic_tab_notification_selected,
             unselectedIcon = R.drawable.ic_tab_notification_unselected,
             label = "消息",
-            hasRedDot = true
+            hasRedDot = true,
         ),
         HeartBottomTabItem(
             index = 2,
             selectedIcon = R.drawable.ic_tab_ai,
             unselectedIcon = R.drawable.ic_tab_ai,
-            label = "" // Create tab 不需要文字标签
+            label = "", // Create tab 不需要文字标签
         ),
         HeartBottomTabItem(
             index = 3,
             selectedIcon = R.drawable.ic_tab_recommend_selected,
             unselectedIcon = R.drawable.ic_tab_recommend_unselected,
-            label = "推荐"
+            label = "推荐",
         ),
         HeartBottomTabItem(
             index = 4,
             selectedIcon = R.drawable.ic_tab_profile_selected,
             unselectedIcon = R.drawable.ic_tab_profile_unselected,
-            label = "我的"
-        )
+            label = "我的",
+        ),
     )
 
 @Preview
@@ -133,7 +133,7 @@ private fun 预览底部导航栏() {
         HeartBottomAppBar(
             modifier = Modifier.fillMaxWidth(),
             selectedTab = checkedIndex,
-            tabItems = bottomTabItems
+            tabItems = bottomTabItems,
         ) {
             checkedIndex = it
         }
@@ -169,14 +169,14 @@ fun HeartRedNum(
                     .clip(CircleShape)
                     .background(Color.Red)
                     .padding(horizontal = 2.dp, vertical = 1.dp),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = numberStr,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Normal,
                 color = Color.White,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
         }
     }

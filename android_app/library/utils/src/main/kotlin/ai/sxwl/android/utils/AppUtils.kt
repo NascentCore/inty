@@ -186,7 +186,7 @@ object AppUtils {
                             Log.e("AppUtils", "强制退出失败", e)
                         }
                     },
-                    100
+                    100,
                 )
         } catch (e: Exception) {
             Log.e("AppUtils", "退出应用失败", e)
@@ -306,7 +306,7 @@ object AppUtils {
     fun openAppDetailsSettings(
         activity: Activity,
         requestCode: Int,
-        packageName: String = Utils.getApp()?.packageName ?: ""
+        packageName: String = Utils.getApp()?.packageName ?: "",
     ) {
         if (UtilsBridge.isSpace(packageName)) return
 
@@ -378,7 +378,7 @@ object AppUtils {
         val versionName: String,
         val versionCode: Int,
         val isSystem: Boolean,
-        val isDebug: Boolean
+        val isDebug: Boolean,
     ) {
         override fun toString(): String {
             return "AppInfo{" +
@@ -408,7 +408,7 @@ object AppUtils {
                     versionName = pi.versionName ?: "",
                     versionCode = pi.versionCode,
                     isSystem = (ai.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
-                    isDebug = (ai.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+                    isDebug = (ai.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0,
                 )
             }
         } catch (e: PackageManager.NameNotFoundException) {
@@ -436,7 +436,7 @@ object AppUtils {
                             versionName = pi.versionName ?: "",
                             versionCode = pi.versionCode,
                             isSystem = (ai.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
-                            isDebug = (ai.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+                            isDebug = (ai.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0,
                         )
                     }
                 } catch (e: Exception) {

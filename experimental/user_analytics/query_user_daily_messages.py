@@ -71,7 +71,9 @@ def load_database_config(config_file: Optional[str] = None) -> Dict[str, Any]:
     return db_config
 
 
-def find_user_by_email(conn: psycopg2.extensions.connection, email: str) -> Optional[Dict[str, Any]]:
+def find_user_by_email(
+    conn: psycopg2.extensions.connection, email: str
+) -> Optional[Dict[str, Any]]:
     """通过邮箱查找用户"""
     query = """
         SELECT id, email, nickname, auth_type, created_at
@@ -201,9 +203,7 @@ def format_table_output(df: pd.DataFrame, user_info: Dict[str, Any]) -> str:
 
 def parse_arguments() -> argparse.Namespace:
     """解析命令行参数"""
-    parser = argparse.ArgumentParser(
-        description="通过邮箱查询用户每日聊天消息统计"
-    )
+    parser = argparse.ArgumentParser(description="通过邮箱查询用户每日聊天消息统计")
 
     parser.add_argument(
         "--email",
@@ -265,7 +265,9 @@ def parse_date_range(
             tzinfo=timezone.utc
         )
         # 包含结束日期的全天
-        end_date = end_date.replace(hour=23, minute=59, second=59) + timedelta(seconds=1)
+        end_date = end_date.replace(hour=23, minute=59, second=59) + timedelta(
+            seconds=1
+        )
 
     return start_date, end_date
 
@@ -319,9 +321,7 @@ def main():
             logger.error(f"未找到邮箱为 {args.email} 的用户")
             sys.exit(1)
 
-        logger.info(
-            f"找到用户: {user_info['id']} ({user_info.get('nickname', 'N/A')})"
-        )
+        logger.info(f"找到用户: {user_info['id']} ({user_info.get('nickname', 'N/A')})")
 
         # 获取用户的 chat_id
         logger.info("查询用户的聊天会话...")
@@ -394,4 +394,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

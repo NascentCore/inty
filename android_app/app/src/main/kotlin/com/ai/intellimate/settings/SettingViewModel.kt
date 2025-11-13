@@ -124,6 +124,4 @@ class SettingViewModel : BaseVM() {
 }
 
 /** 对话框状态数据类 */
-data class DialogState(
-    val showDeleteAccountDialog: Boolean = false,
-)
+data class DialogState(val showDeleteAccountDialog: Boolean = false)

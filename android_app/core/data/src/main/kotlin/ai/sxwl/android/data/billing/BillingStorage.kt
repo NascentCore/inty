@@ -55,11 +55,7 @@ internal object BillingStorage {
             emptyList()
         } else {
             try {
-                val type =
-                    Types.newParameterizedType(
-                        List::class.java,
-                        VipPlan::class.java,
-                    )
+                val type = Types.newParameterizedType(List::class.java, VipPlan::class.java)
                 val adapter = MoshiUtils.moshiBuild.adapter<List<VipPlan>>(type)
                 adapter.fromJson(plansStr) ?: emptyList()
             } catch (e: Exception) {

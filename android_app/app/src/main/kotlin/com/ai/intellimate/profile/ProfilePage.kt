@@ -86,9 +86,9 @@ import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.vip.VipCenterActivity
-import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.min
+import kotlinx.coroutines.launch
 
 /** "我的"页面 */
 @Composable
@@ -112,7 +112,7 @@ internal fun ProfilePage(
         PageTrackingHelper.trackPageView(
             "ProfilePage",
             "MainActivity",
-            mapOf("agent_count" to agents.size, "is_loading" to isLoading)
+            mapOf("agent_count" to agents.size, "is_loading" to isLoading),
         )
     }
 
@@ -125,112 +125,92 @@ internal fun ProfilePage(
 
     // 计算折叠比例 (0f = 完全展开, 1f = 完全折叠)
     val collapseProgress by remember {
-        derivedStateOf {
-            (collapseOffset.value / maxCollapseOffset).coerceIn(0f, 1f)
-        }
+        derivedStateOf { (collapseOffset.value / maxCollapseOffset).coerceIn(0f, 1f) }
     }
 
     // LazyGrid state - 需要在 nestedScrollConnection 之前创建
     val listState = rememberLazyGridState()
 
     // 嵌套滚动连接 - 处理折叠逻辑
-    val nestedScrollConnection = remember(listState) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                // 向上滚动 (available.y < 0) - 优先折叠 header
-                if (available.y < 0 && collapseOffset.value < maxCollapseOffset) {
-                    val remainingToCollapse = maxCollapseOffset - collapseOffset.value
-                    val toConsume = min(abs(available.y), remainingToCollapse)
-                    scope.launch {
-                        collapseOffset.snapTo(collapseOffset.value + toConsume)
+    val nestedScrollConnection =
+        remember(listState) {
+            object : NestedScrollConnection {
+                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                    // 向上滚动 (available.y < 0) - 优先折叠 header
+                    if (available.y < 0 && collapseOffset.value < maxCollapseOffset) {
+                        val remainingToCollapse = maxCollapseOffset - collapseOffset.value
+                        val toConsume = min(abs(available.y), remainingToCollapse)
+                        scope.launch { collapseOffset.snapTo(collapseOffset.value + toConsume) }
+                        // 返回消费的滚动量（负数表示向上滚动）
+                        return Offset(0f, -toConsume)
                     }
-                    // 返回消费的滚动量（负数表示向上滚动）
-                    return Offset(0f, -toConsume)
-                }
 
-                // 向下滚动 (available.y > 0) - 优先展开 header
-                if (available.y > 0 && collapseOffset.value > 0f) {
-                    // 检查 LazyGrid 是否已经滚动到顶部
-                    // 只有当 LazyGrid 在顶部时，才展开 header
-                    if (listState.firstVisibleItemIndex == 0 &&
-                        listState.firstVisibleItemScrollOffset == 0
-                    ) {
-                        val toConsume = min(available.y, collapseOffset.value)
-                        scope.launch {
-                            collapseOffset.snapTo(collapseOffset.value - toConsume)
+                    // 向下滚动 (available.y > 0) - 优先展开 header
+                    if (available.y > 0 && collapseOffset.value > 0f) {
+                        // 检查 LazyGrid 是否已经滚动到顶部
+                        // 只有当 LazyGrid 在顶部时，才展开 header
+                        if (
+                            listState.firstVisibleItemIndex == 0 &&
+                                listState.firstVisibleItemScrollOffset == 0
+                        ) {
+                            val toConsume = min(available.y, collapseOffset.value)
+                            scope.launch { collapseOffset.snapTo(collapseOffset.value - toConsume) }
+                            // 返回消费的滚动量（正数表示向下滚动）
+                            return Offset(0f, toConsume)
                         }
-                        // 返回消费的滚动量（正数表示向下滚动）
-                        return Offset(0f, toConsume)
                     }
+
+                    // 不消费滚动量，让 LazyGrid 处理
+                    return Offset.Zero
                 }
 
-                // 不消费滚动量，让 LazyGrid 处理
-                return Offset.Zero
-            }
+                override suspend fun onPreFling(available: Velocity): Velocity {
+                    val currentVelocity = available.y
 
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                val currentVelocity = available.y
-
-                // 向上滑动 - 继续折叠到完全折叠状态
-                if (currentVelocity < 0 && collapseOffset.value < maxCollapseOffset) {
-                    scope.launch {
-                        collapseOffset.animateTo(
-                            maxCollapseOffset,
-                            animationSpec = tween(300)
-                        )
-                    }
-                    // 消费部分速度，剩余速度传递给 LazyGrid
-                    val remainingVelocity = Velocity(
-                        0f,
-                        currentVelocity * (1f - collapseProgress)
-                    )
-                    return remainingVelocity
-                }
-
-                // 向下滑动 - 继续展开到完全展开状态
-                if (currentVelocity > 0 && collapseOffset.value > 0f) {
-                    // 只有当 LazyGrid 在顶部时才展开
-                    if (listState.firstVisibleItemIndex == 0 &&
-                        listState.firstVisibleItemScrollOffset == 0
-                    ) {
+                    // 向上滑动 - 继续折叠到完全折叠状态
+                    if (currentVelocity < 0 && collapseOffset.value < maxCollapseOffset) {
                         scope.launch {
-                            collapseOffset.animateTo(
-                                0f,
-                                animationSpec = tween(300)
-                            )
+                            collapseOffset.animateTo(maxCollapseOffset, animationSpec = tween(300))
                         }
-                        // 消费部分速度
-                        val remainingVelocity = Velocity(
-                            0f,
-                            currentVelocity * collapseProgress
-                        )
+                        // 消费部分速度，剩余速度传递给 LazyGrid
+                        val remainingVelocity =
+                            Velocity(0f, currentVelocity * (1f - collapseProgress))
                         return remainingVelocity
                     }
-                }
 
-                // 不消费速度，让 LazyGrid 处理
-                return Velocity.Zero
+                    // 向下滑动 - 继续展开到完全展开状态
+                    if (currentVelocity > 0 && collapseOffset.value > 0f) {
+                        // 只有当 LazyGrid 在顶部时才展开
+                        if (
+                            listState.firstVisibleItemIndex == 0 &&
+                                listState.firstVisibleItemScrollOffset == 0
+                        ) {
+                            scope.launch {
+                                collapseOffset.animateTo(0f, animationSpec = tween(300))
+                            }
+                            // 消费部分速度
+                            val remainingVelocity = Velocity(0f, currentVelocity * collapseProgress)
+                            return remainingVelocity
+                        }
+                    }
+
+                    // 不消费速度，让 LazyGrid 处理
+                    return Velocity.Zero
+                }
             }
         }
-    }
 
     Box(modifier = modifier) {
         AsyncImage(
             modifier = Modifier.align(Alignment.TopEnd),
             model = R.drawable.notify_header_bg,
-            contentDescription = null
+            contentDescription = null,
         )
         Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent),
+            modifier = Modifier.fillMaxSize().background(Color.Transparent),
             containerColor = Color.Transparent,
         ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .nestedScroll(nestedScrollConnection)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().nestedScroll(nestedScrollConnection)) {
                 // Header 区域 - 可折叠
                 ProfileHeader(
                     modifier = Modifier,
@@ -255,8 +235,7 @@ internal fun ProfilePage(
 
                     Text(
                         modifier =
-                            Modifier
-                                .padding(horizontal = 16.dp)
+                            Modifier.padding(horizontal = 16.dp)
                                 .align(Alignment.CenterHorizontally),
                         text = stringResource(R.string.no_agent),
                         color = Color.White.copy(0.55f),
@@ -277,10 +256,10 @@ internal fun ProfilePage(
 
                                 if (
                                     lastVisibleItem != null &&
-                                    lastVisibleItem.index >=
-                                    totalItems - 3 && // Trigger 3 items before end
-                                    !isLoading &&
-                                    agents.isNotEmpty()
+                                        lastVisibleItem.index >=
+                                            totalItems - 3 && // Trigger 3 items before end
+                                        !isLoading &&
+                                        agents.isNotEmpty()
                                 ) {
                                     onLoadMore()
                                 }
@@ -291,26 +270,28 @@ internal fun ProfilePage(
                         state = listState,
                         modifier = Modifier.padding(horizontal = 16.dp),
                         columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding() + 100.dp),
+                        contentPadding =
+                            PaddingValues(bottom = innerPadding.calculateBottomPadding() + 100.dp),
                         horizontalArrangement = Arrangement.spacedBy(13.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         runCatching {
-                            if (agents.isNotEmpty()) {
-                                itemsIndexed(
-                                    items = agents,
-                                    key = { index, agent -> "${agent.id}_$index" },
-                                ) { index, agent ->
-                                    MyAgentCard(
-                                        modifier =
-                                            Modifier.noRippleClickable { onClickAgent(agent) },
-                                        agentInfo = agent,
-                                        onEditAgent = onEditAgent,
-                                        onDeleteAgent = onDeleteAgent,
-                                    )
+                                if (agents.isNotEmpty()) {
+                                    itemsIndexed(
+                                        items = agents,
+                                        key = { index, agent -> "${agent.id}_$index" },
+                                    ) { index, agent ->
+                                        MyAgentCard(
+                                            modifier =
+                                                Modifier.noRippleClickable { onClickAgent(agent) },
+                                            agentInfo = agent,
+                                            onEditAgent = onEditAgent,
+                                            onDeleteAgent = onDeleteAgent,
+                                        )
+                                    }
                                 }
                             }
-                        }.onFailure { it.printStackTrace() }
+                            .onFailure { it.printStackTrace() }
 
                         // Loading indicator when loading more (only show when there's no data)
                         if (isLoading && agents.isEmpty()) {
@@ -348,9 +329,7 @@ private fun ProfileHeader(
     // Settings 图标位置固定，不响应折叠状态
     val topSpacerHeight = innerPadding.calculateTopPadding() + 28.dp
 
-    Column(
-        modifier = modifier.fillMaxWidth()
-    ) {
+    Column(modifier = modifier.fillMaxWidth()) {
         // 顶部间距和设置按钮 - 始终显示，位置固定
         Spacer(Modifier.height(topSpacerHeight))
 
@@ -361,9 +340,8 @@ private fun ProfileHeader(
             var lastClickTime by remember { mutableLongStateOf(0L) }
 
             AsyncImage(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clickable {
+                modifier =
+                    Modifier.size(24.dp).clickable {
                         val currentTime = System.currentTimeMillis()
                         if (AntiClick.isValidClick(lastClickTime)) {
                             lastClickTime = currentTime
@@ -384,27 +362,20 @@ private fun ProfileHeader(
         Spacer(Modifier.height(24.dp * (1f - collapseProgress * 0.5f)))
 
         // 头像和昵称 - 始终显示，但大小会变化
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Spacer(Modifier.width(16.dp))
 
             // 头像大小根据折叠状态调整：展开时 120.dp，折叠时 60.dp
-            val avatarSize = remember(collapseProgress) {
-                120.dp * (1f - collapseProgress * 0.5f)
-            }
+            val avatarSize = remember(collapseProgress) { 120.dp * (1f - collapseProgress * 0.5f) }
 
             Box(
                 modifier =
-                    Modifier
-                        .size(avatarSize)
+                    Modifier.size(avatarSize)
                         .background(color = Color.White, shape = CircleShape)
                         .padding(4.dp)
             ) {
                 AsyncImage(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape),
+                    modifier = Modifier.fillMaxSize().clip(CircleShape),
                     model =
                         ImageRequest.Builder(context)
                             .data(getCdnImageUrl(userProfile.avatar, width = 512))
@@ -429,16 +400,12 @@ private fun ProfileHeader(
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .noRippleClickable {
+                    modifier =
+                        Modifier.fillMaxWidth().noRippleClickable {
                             if (userProfile.id.isNotEmpty()) {
                                 val clipboard = context.getSystemService<ClipboardManager>()
                                 clipboard?.setPrimaryClip(
-                                    ClipData.newPlainText(
-                                        "User ID",
-                                        userProfile.id,
-                                    )
+                                    ClipData.newPlainText("User ID", userProfile.id)
                                 )
                                 if (clipboard != null) {
                                     ToastUtils.showShort(R.string.toast_copied_to_clipboard)
@@ -462,20 +429,19 @@ private fun ProfileHeader(
 
         // Intro 和编辑按钮 - 折叠时隐藏编辑按钮，但可以显示一行 intro
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .height(
-                    if (collapseProgress >= 1f) 40.dp // 折叠时只显示一行 intro 的高度
-                    else 60.dp * (1f - collapseProgress * 0.33f) // 展开时正常高度，折叠时逐渐减少
-                ),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .height(
+                        if (collapseProgress >= 1f) 40.dp // 折叠时只显示一行 intro 的高度
+                        else 60.dp * (1f - collapseProgress * 0.33f) // 展开时正常高度，折叠时逐渐减少
+                    ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Intro 文本 - 折叠时只显示一行，展开时显示两行
             Text(
-                modifier = Modifier
-                    .weight(1f)
-                    .alpha(if (collapseProgress >= 1f) 0.7f else 1f), // 折叠时稍微变透明
+                modifier =
+                    Modifier.weight(1f).alpha(if (collapseProgress >= 1f) 0.7f else 1f), // 折叠时稍微变透明
                 text = userProfile.description ?: stringResource(R.string.persona_placeholder),
                 color = Color.White,
                 fontSize = 14.sp,
@@ -487,20 +453,17 @@ private fun ProfileHeader(
             Spacer(Modifier.width(8.dp))
 
             // 编辑按钮 - 折叠时隐藏
-            Box(
-                modifier = Modifier.alpha(1f - collapseProgress)
-            ) {
+            Box(modifier = Modifier.alpha(1f - collapseProgress)) {
                 var lastClickTimeEdit by remember { mutableLongStateOf(0L) }
 
                 AsyncImage(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clickable {
+                    modifier =
+                        Modifier.size(40.dp).clickable {
                             val currentTime = System.currentTimeMillis()
                             if (AntiClick.isValidClick(lastClickTimeEdit)) {
                                 lastClickTimeEdit = currentTime
-                                if (IntySetting.isLogin() && IntySetting.getCurToken()
-                                        .isNotEmpty()
+                                if (
+                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
                                 ) {
                                     ModifyProfileActivity.launch(context, userProfile)
                                 }
@@ -518,20 +481,17 @@ private fun ProfileHeader(
         // VIP Banner - 折叠时隐藏
         if (collapseProgress < 1f) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .alpha(1f - collapseProgress)
-                    .height(150.dp * (1f - collapseProgress))
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .alpha(1f - collapseProgress)
+                        .height(150.dp * (1f - collapseProgress))
             ) {
                 PremiumBanner(
                     status = vipStatus.subscriptionStatus,
                     purchaseTime = TimeUtils.formatTimestampToString(vipStatus.purchaseTime),
                     expireTime = TimeUtils.formatTimestampToString(vipStatus.expiryTime),
                     onClick = {
-                        VipCenterActivity.launch(
-                            context,
-                            VipCenterActivity.PROFILE_UPGRADE
-                        )
+                        VipCenterActivity.launch(context, VipCenterActivity.PROFILE_UPGRADE)
                     },
                 )
             }
@@ -558,11 +518,7 @@ private fun MyAgentCard(
     // 图片加载状态
     var imageLoaded by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = modifier
-            .size(165.dp, 220.dp)
-            .clip(RoundedCornerShape(12.dp))
-    ) {
+    Box(modifier = modifier.size(165.dp, 220.dp).clip(RoundedCornerShape(12.dp))) {
         if (hasAvatarToLoad) {
             // 有头像需要加载时，使用 Shimmer 占位符
             if (!imageLoaded) {
@@ -578,7 +534,7 @@ private fun MyAgentCard(
                 onSuccess = { imageLoaded = true },
                 onError = { imageLoaded = false },
                 contentScale = ContentScale.Crop,
-                alignment = Alignment.TopCenter
+                alignment = Alignment.TopCenter,
             )
         } else {
             // 没有头像需要加载时，直接显示默认头像
@@ -598,8 +554,7 @@ private fun MyAgentCard(
         }
         Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .background(brush = gradientBrush)
                     .padding(8.dp)
                     .align(Alignment.BottomCenter),
@@ -625,15 +580,10 @@ private fun MyAgentCard(
 
         // 右下角的菜单按钮
         if (onEditAgent != null || onDeleteAgent != null) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(4.dp)
-            ) {
+            Box(modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)) {
                 Box(
                     modifier =
-                        Modifier
-                            .size(28.dp)
+                        Modifier.size(28.dp)
                             .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
                             .noRippleClickable(
                                 onClick = {
@@ -649,7 +599,7 @@ private fun MyAgentCard(
                     AsyncImage(
                         modifier = Modifier.size(20.dp),
                         model = R.drawable.icon_more2,
-                        contentDescription = null
+                        contentDescription = null,
                     )
                 }
 
@@ -757,10 +707,8 @@ private fun PremiumBanner(
     var lastClickTimePremium by remember { mutableLongStateOf(0L) }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 12.dp)
-            .clickable {
+        modifier =
+            Modifier.fillMaxSize().padding(horizontal = 12.dp).clickable {
                 val currentTime = System.currentTimeMillis()
                 if (AntiClick.isValidClick(lastClickTimePremium)) {
                     lastClickTimePremium = currentTime
@@ -780,8 +728,7 @@ private fun PremiumBanner(
         )
 
         Row(
-            Modifier
-                .border(
+            Modifier.border(
                     width = 0.5.dp,
                     color = Color(0x61D523FF),
                     shape = RoundedCornerShape(size = 12.dp),
@@ -800,12 +747,7 @@ private fun PremiumBanner(
                     else -> "Activate now"
                 }
 
-            Text(
-                text = str,
-                fontSize = 16.sp,
-                color = Color.White,
-                textAlign = TextAlign.Center,
-            )
+            Text(text = str, fontSize = 16.sp, color = Color.White, textAlign = TextAlign.Center)
         }
     }
 }

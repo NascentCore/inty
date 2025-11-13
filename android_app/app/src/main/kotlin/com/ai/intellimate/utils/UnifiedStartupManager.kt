@@ -290,7 +290,6 @@ object UnifiedStartupManager {
         }
     }
 
-
     /** 同步用户信息 */
     private suspend fun syncUserProfile() {
         try {
@@ -317,8 +316,7 @@ object UnifiedStartupManager {
     /** 同步推荐agents */
     private suspend fun syncRecommendedAgents() {
         try {
-            val agentApi: IAgentApi =
-                NetServiceMgr.getAgentApi()
+            val agentApi: IAgentApi = NetServiceMgr.getAgentApi()
 
             val sortSeed = IntySetting.sortSeed()
             val result =
@@ -367,8 +365,7 @@ object UnifiedStartupManager {
     /** 同步聊天agents */
     private suspend fun syncChatAgents() {
         try {
-            val agentApi: IAgentApi =
-                NetServiceMgr.getAgentApi()
+            val agentApi: IAgentApi = NetServiceMgr.getAgentApi()
 
             val sortSeed = IntySetting.randomSortSeed()
             LogUtils.i("UnifiedStartupManager.syncChatAgents - 使用 sortSeed: $sortSeed")
@@ -418,8 +415,7 @@ object UnifiedStartupManager {
     /** 同步用户自建agents */
     suspend fun syncUserCreatedAgents() {
         try {
-            val agentApi: IAgentApi =
-                NetServiceMgr.getAgentApi()
+            val agentApi: IAgentApi = NetServiceMgr.getAgentApi()
 
             when (val result = agentApi.getUserCreatedAgents(skip = 0, limit = 20)) {
                 is HttpResult.Success -> {
@@ -529,13 +525,14 @@ object UnifiedStartupManager {
     private suspend fun preloadBackgroundVideos(
         context: Context,
         agents: List<AgentInfo>,
-        maxConcurrent: Int = 5
+        maxConcurrent: Int = 5,
     ) {
         try {
             val videoCacheManager = VideoCacheManager.getInstance(context)
-            val videoUrls = agents
-                .mapNotNull { it.backgroundAnimatedUrl?.takeIf { url -> url.isNotBlank() } }
-                .distinct()
+            val videoUrls =
+                agents
+                    .mapNotNull { it.backgroundAnimatedUrl?.takeIf { url -> url.isNotBlank() } }
+                    .distinct()
 
             if (videoUrls.isEmpty()) {
                 LogUtils.d("UnifiedStartupManager - 没有需要预加载的背景视频")
@@ -550,21 +547,24 @@ object UnifiedStartupManager {
             coroutineScope {
                 chunks.forEach { chunk ->
                     // 并发预加载当前组的所有视频
-                    val jobs = chunk.map { url ->
-                        async {
-                            try {
-                                // 检查是否已经缓存
-                                if (!videoCacheManager.isCached(url)) {
-                                    videoCacheManager.preloadVideo(url)
-                                    LogUtils.d("UnifiedStartupManager - 预加载背景视频成功: $url")
-                                } else {
-                                    LogUtils.d("UnifiedStartupManager - 背景视频已缓存，跳过: $url")
+                    val jobs =
+                        chunk.map { url ->
+                            async {
+                                try {
+                                    // 检查是否已经缓存
+                                    if (!videoCacheManager.isCached(url)) {
+                                        videoCacheManager.preloadVideo(url)
+                                        LogUtils.d("UnifiedStartupManager - 预加载背景视频成功: $url")
+                                    } else {
+                                        LogUtils.d("UnifiedStartupManager - 背景视频已缓存，跳过: $url")
+                                    }
+                                } catch (e: Exception) {
+                                    LogUtils.e(
+                                        "UnifiedStartupManager - 预加载背景视频失败: $url, 错误: ${e.message}"
+                                    )
                                 }
-                            } catch (e: Exception) {
-                                LogUtils.e("UnifiedStartupManager - 预加载背景视频失败: $url, 错误: ${e.message}")
                             }
                         }
-                    }
 
                     // 等待当前组的所有任务完成
                     jobs.forEach { it.await() }

@@ -33,7 +33,7 @@ class UpdateMessageFeedbackUseCase(private val chatRepository: ChatRepository) {
     operator fun invoke(
         agentId: String,
         messageId: String,
-        feedback: ai.sxwl.android.data.api.model.MsgInfo.UserFeedback?
+        feedback: ai.sxwl.android.data.api.model.MsgInfo.UserFeedback?,
     ) {
         chatRepository.updateMessageFeedback(agentId, messageId, feedback)
     }
@@ -53,7 +53,9 @@ class GenerateImageUseCase(private val chatRepository: ChatRepository) {
     suspend operator fun invoke(
         agentId: String,
         messageId: String,
-    ): com.architecture.httplib.core.HttpResult<ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult> {
+    ): com.architecture.httplib.core.HttpResult<
+        ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult
+    > {
         return chatRepository.generateImageForMessage(agentId, messageId)
     }
 }

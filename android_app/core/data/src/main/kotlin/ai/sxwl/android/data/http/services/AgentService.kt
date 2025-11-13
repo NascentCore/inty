@@ -65,18 +65,20 @@ object AgentService {
     /** 创建智能体 替换: IAgentApi.createAgent() */
     suspend fun createAgent(agentInfo: AgentInfo): ApiResult<AgentInfo> {
         return IntyNetworkManager.executeRequest("Create Agent") {
-            val paramsBuilder = com.inty.api.models.api.v1.ai.agents.AgentCreateParams.builder()
-                .name(agentInfo.name)
-                .gender(agentInfo.gender)
-                .intro(agentInfo.intro)
-                .opening(agentInfo.opening)
-                .visibility(
-                    when (agentInfo.visibility) {
-                        "PUBLIC" -> com.inty.api.models.api.v1.ai.agents.AgentVisibility.PUBLIC
-                        "PRIVATE" -> com.inty.api.models.api.v1.ai.agents.AgentVisibility.PRIVATE
-                        else -> com.inty.api.models.api.v1.ai.agents.AgentVisibility.PRIVATE
-                    }
-                )
+            val paramsBuilder =
+                com.inty.api.models.api.v1.ai.agents.AgentCreateParams.builder()
+                    .name(agentInfo.name)
+                    .gender(agentInfo.gender)
+                    .intro(agentInfo.intro)
+                    .opening(agentInfo.opening)
+                    .visibility(
+                        when (agentInfo.visibility) {
+                            "PUBLIC" -> com.inty.api.models.api.v1.ai.agents.AgentVisibility.PUBLIC
+                            "PRIVATE" ->
+                                com.inty.api.models.api.v1.ai.agents.AgentVisibility.PRIVATE
+                            else -> com.inty.api.models.api.v1.ai.agents.AgentVisibility.PRIVATE
+                        }
+                    )
 
             if (agentInfo.avatar.isNotEmpty()) {
                 paramsBuilder.avatar(agentInfo.avatar)
@@ -98,7 +100,11 @@ object AgentService {
             }
 
             val response =
-                IntyNetworkManager.getClient().api().v1().ai().agents()
+                IntyNetworkManager.getClient()
+                    .api()
+                    .v1()
+                    .ai()
+                    .agents()
                     .create(paramsBuilder.build())
             val data = response.data()
             if (data != null && data.isAgent()) {
@@ -221,5 +227,4 @@ object AgentService {
             response.data()?.list()?.map { it.toAgentInfo() } ?: emptyList()
         }
     }
-
 }

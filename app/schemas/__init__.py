@@ -5,7 +5,9 @@ from app.schemas.agent import AgentInDB as AgentInDB
 from app.schemas.agent import AgentSortOption as AgentSortOption
 from app.schemas.agent import AgentUpdate as AgentUpdate
 from app.schemas.agent import CreatorAgentStats as CreatorAgentStats
-from app.schemas.agent import GenerateBackgroundAnimatedRequest as GenerateBackgroundAnimatedRequest
+from app.schemas.agent import (
+    GenerateBackgroundAnimatedRequest as GenerateBackgroundAnimatedRequest,
+)
 from app.schemas.agent import TextToImageRequest as TextToImageRequest
 from app.schemas.auth import GoogleAuthRequest as GoogleAuthRequest
 from app.schemas.auth import GoogleCallbackRequest as GoogleCallbackRequest
