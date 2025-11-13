@@ -94,26 +94,4 @@ object UserService {
         }
     }
 
-    /** 获取用户统计信息 替换: IUserApi.getUserStats() */
-    suspend fun getUserStats(): ApiResult<UserStats> {
-        return IntyNetworkManager.executeRequest("Get User Stats") {
-            val response = IntyNetworkManager.getClient().api().v1().users().profile().me()
-
-            val user = response.data() ?: throw IllegalStateException("User data is null")
-            UserStats(
-                publicAgentsCount = user.publicAgentsCount()?.toInt() ?: 0,
-                totalAgentsFollows = user.totalPublicAgentsFollows()?.toInt() ?: 0,
-                followerCount = user.followersCount()?.toInt() ?: 0,
-                connectorCount = user.connectorCount()?.toInt() ?: 0,
-            )
-        }
-    }
-
-    /** 用户统计信息数据类 */
-    data class UserStats(
-        val publicAgentsCount: Int,
-        val totalAgentsFollows: Int,
-        val followerCount: Int,
-        val connectorCount: Int,
-    )
 }

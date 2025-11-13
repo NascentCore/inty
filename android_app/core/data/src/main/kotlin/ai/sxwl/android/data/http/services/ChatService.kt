@@ -109,23 +109,6 @@ object ChatService {
         }
     }
 
-    /** 创建新对话 替换: IChatApi.createConversation() */
-    suspend fun createConversation(agentId: String): ApiResult<String> {
-        return IntyNetworkManager.executeRequest("Create Conversation") {
-            val chat =
-                IntyNetworkManager.getClient()
-                    .api()
-                    .v1()
-                    .chats()
-                    .create(
-                        com.inty.api.models.api.v1.chats.ChatCreateParams.builder()
-                            .agentId(agentId)
-                            .build()
-                    )
-
-            chat.id() ?: throw IllegalStateException("Conversation ID is null")
-        }
-    }
 
     /** 删除对话 替换: IChatApi.deleteConversation() */
     suspend fun deleteConversation(conversationId: String): ApiResult<Unit> {

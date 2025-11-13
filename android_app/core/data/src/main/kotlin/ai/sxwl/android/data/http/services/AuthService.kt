@@ -29,21 +29,4 @@ object AuthService {
         }
     }
 
-    /** 创建游客账号 */
-    suspend fun createGuest(): ApiResult<Pair<String, String>> {
-        return IntyNetworkManager.executeRequest("Create Guest") {
-            val response =
-                IntyNetworkManager.getClient()
-                    .api()
-                    .v1()
-                    .auth()
-                    .createGuest()
-
-            val data = response.data() ?: throw IllegalStateException("Response data is null")
-            val userId = data.guestId()
-            val token = data.token()
-
-            Pair(userId, token)
-        }
-    }
 }
