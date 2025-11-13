@@ -418,6 +418,12 @@ object UnifiedStartupManager {
     /** 同步用户自建agents */
     suspend fun syncUserCreatedAgents() {
         try {
+            // 检查登录状态，确保有有效的token后再调用需要认证的接口
+            if (!isUserLoggedIn()) {
+                LogUtils.w("UnifiedStartupManager - 用户未登录或token无效，跳过用户自建agents同步")
+                return
+            }
+
             val agentApi: IAgentApi =
                 NetServiceMgr.getAgentApi()
 

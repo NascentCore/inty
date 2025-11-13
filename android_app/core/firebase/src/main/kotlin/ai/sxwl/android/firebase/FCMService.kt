@@ -81,30 +81,30 @@ class FCMService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
 
-        LogUtils.d("FCMService", "FCM message received")
-        LogUtils.d("FCMService", "Message ID: ${remoteMessage.messageId}")
-        LogUtils.d("FCMService", "Message from: ${remoteMessage.from}")
+        LogUtils.d("FCMService", "收到 FCM 推送消息")
+        LogUtils.d("FCMService", "消息 ID: ${remoteMessage.messageId}")
+        LogUtils.d("FCMService", "消息来源: ${remoteMessage.from}")
         LogUtils.d(
             "FCMService",
-            "Message type: ${if (remoteMessage.data.isNotEmpty()) "data message" else "notification message"}"
+            "消息类型: ${if (remoteMessage.data.isNotEmpty()) "数据消息" else "通知消息"}"
         )
 
-        // 1. Handle data messages (triggered in both foreground and background)
+        // 1. 处理数据消息（应用前后台均会触发）
         if (remoteMessage.data.isNotEmpty()) {
-            LogUtils.i("FCMService", "Data message content: ${remoteMessage.data}")
+            LogUtils.i("FCMService", "数据消息内容: ${remoteMessage.data}")
             handleDataMessage(remoteMessage.data)
         }
 
-        // 2. Handle notification messages (only triggered in foreground; system displays automatically in background)
+        // 2. 处理通知消息（仅在前台触发；后台时系统自动显示）
         remoteMessage.notification?.let { notification ->
             val title = notification.title
             val body = notification.body
 
             if (title != null && body != null) {
-                LogUtils.i("FCMService", "Notification message - Title: $title, Body: $body")
+                LogUtils.i("FCMService", "通知消息 - 标题: $title, 内容: $body")
                 showNotification(title, body, remoteMessage.data)
             } else {
-                LogUtils.w("FCMService", "Notification message missing title or body")
+                LogUtils.w("FCMService", "通知消息缺少标题或内容")
             }
         }
     }
@@ -123,7 +123,7 @@ class FCMService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
 
-        LogUtils.i("FCMService", "FCM registration token updated: $token")
+        LogUtils.i("FCMService", "FCM 注册令牌已更新: $token")
         uploadTokenToServer(token)
     }
 
@@ -174,15 +174,15 @@ class FCMService : FirebaseMessagingService() {
             val notificationManager = NotificationManagerCompat.from(this)
             if (notificationManager.areNotificationsEnabled()) {
                 notificationManager.notify(System.currentTimeMillis().toInt(), builder.build())
-                LogUtils.d("FCMService", "Notification displayed: $title")
+                LogUtils.d("FCMService", "通知已显示: $title")
             } else {
                 LogUtils.w(
                     "FCMService",
-                    "Notification permission not enabled, cannot display notification"
+                    "通知权限未授予，无法显示通知"
                 )
             }
         } catch (e: Exception) {
-            LogUtils.e("FCMService", "Failed to display notification", e)
+            LogUtils.e("FCMService", "显示通知失败", e)
         }
     }
 
@@ -209,7 +209,7 @@ class FCMService : FirebaseMessagingService() {
                 }
 
                 notificationManager.createNotificationChannel(channel)
-                LogUtils.d("FCMService", "Notification channel created: $NOTIFICATION_CHANNEL_ID")
+                LogUtils.d("FCMService", "通知渠道已创建: $NOTIFICATION_CHANNEL_ID")
             }
         }
     }
@@ -239,7 +239,7 @@ class FCMService : FirebaseMessagingService() {
                 appInfo.icon
             }
         } catch (e: Exception) {
-            LogUtils.w("FCMService", "Failed to get notification icon, using system default", e)
+            LogUtils.w("FCMService", "获取通知图标失败，使用系统默认图标", e)
             android.R.drawable.ic_dialog_info
         }
     }
@@ -276,7 +276,7 @@ class FCMService : FirebaseMessagingService() {
                     } catch (e: Exception) {
                         LogUtils.w(
                             "FCMService",
-                            "Failed to launch ChatActivity, using MainActivity",
+                            "启动 ChatActivity 失败，使用 MainActivity",
                             e
                         )
                         createMainActivityIntent()
@@ -284,7 +284,7 @@ class FCMService : FirebaseMessagingService() {
                 } else {
                     LogUtils.w(
                         "FCMService",
-                        "Chat message missing agent_id, navigating to main page"
+                        "聊天消息缺少 agent_id，跳转到主页面"
                     )
                     createMainActivityIntent()
                 }
@@ -298,7 +298,7 @@ class FCMService : FirebaseMessagingService() {
             else -> {
                 LogUtils.d(
                     "FCMService",
-                    "Unknown message type: $messageType, navigating to main page"
+                    "未知消息类型: $messageType，跳转到主页面"
                 )
                 createMainActivityIntent()
             }
@@ -323,7 +323,7 @@ class FCMService : FirebaseMessagingService() {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
         } catch (e: Exception) {
-            LogUtils.e("FCMService", "Failed to find MainActivity", e)
+            LogUtils.e("FCMService", "未找到 MainActivity", e)
             // Fallback to launcher Intent
             packageManager.getLaunchIntentForPackage(packageName)?.apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -343,10 +343,10 @@ class FCMService : FirebaseMessagingService() {
     private fun uploadTokenToServer(token: String) {
         serviceScope.launch {
             try {
-                LogUtils.d("FCMService", "Starting FCM token upload to server")
+                LogUtils.d("FCMService", "开始上传 FCM Token 到服务器")
                 FirebaseManager.uploadFCMToken(token)
             } catch (e: Exception) {
-                LogUtils.e("FCMService", "Failed to upload FCM token", e)
+                LogUtils.e("FCMService", "上传 FCM Token 失败", e)
             }
         }
     }

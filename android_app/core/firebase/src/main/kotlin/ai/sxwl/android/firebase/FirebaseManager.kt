@@ -549,7 +549,7 @@ object FirebaseManager {
         tokenUploadCallback = callback
         LogUtils.d(
             "FirebaseManager",
-            "FCM token upload callback ${if (callback != null) "set" else "cleared"}"
+            "FCM Token 上传回调已${if (callback != null) "设置" else "清除"}"
         )
     }
 
@@ -560,6 +560,7 @@ object FirebaseManager {
      */
     suspend fun registerFCM(): String {
         val token = FirebaseMessaging.getInstance().token.await()
+        LogUtils.i("FirebaseManager", "FCM 注册令牌已获取: $token")
         return token
     }
 
@@ -573,14 +574,14 @@ object FirebaseManager {
         val callback = tokenUploadCallback
         if (callback != null) {
             try {
-                LogUtils.d("FirebaseManager", "Uploading FCM token via callback")
+                LogUtils.d("FirebaseManager", "通过回调上传 FCM Token")
                 callback.uploadToken(token)
-                LogUtils.i("FirebaseManager", "FCM Token uploaded successfully")
+                LogUtils.i("FirebaseManager", "FCM Token 上传成功")
             } catch (e: Exception) {
-                LogUtils.e("FirebaseManager", "Failed to upload FCM token", e)
+                LogUtils.e("FirebaseManager", "上传 FCM Token 失败", e)
             }
         } else {
-            LogUtils.w("FirebaseManager", "FCM token upload callback not set, skipping upload")
+            LogUtils.w("FirebaseManager", "FCM Token 上传回调未设置，跳过上传")
         }
     }
 
