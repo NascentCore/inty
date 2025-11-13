@@ -63,6 +63,7 @@ fun AnimatedBackground(
     isCurrentPage: Boolean = true,
     staticImageRequest: ImageRequest? = null, // 可选的预构建图片请求，用于优化性能
     onPlayComplete: () -> Unit = {},
+    onIsPlayingChange: ((Boolean) -> Unit)? = null, // 播放状态变化回调
 ) {
     val context = LocalContext.current
     val videoCacheManager = remember { VideoCacheManager.getInstance(context) }
@@ -75,6 +76,8 @@ fun AnimatedBackground(
     var currentPlayCount by remember { mutableIntStateOf(0) }
     var actualPlayCount by remember { mutableIntStateOf(0) }
     var videoPath by remember(videoUrl) { mutableStateOf<String?>(null) }
+    var isPlaying by remember { mutableStateOf(false) } // 视频是否正在播放
+    var hasPlayCompleted by remember { mutableStateOf(false) } // 是否已经播放完成（达到目标次数）
 
     val isVideo = isVideoUrl(videoUrl)
 
@@ -109,9 +112,11 @@ fun AnimatedBackground(
     LaunchedEffect(shouldPlay, playCount) {
         if (shouldPlay) {
             currentPlayCount = playCount
+            hasPlayCompleted = false // 重置完成标志
             LogUtils.d("AnimatedBackground - 设置播放次数: $playCount")
         } else {
             currentPlayCount = 0
+            hasPlayCompleted = false
         }
     }
 
@@ -125,6 +130,7 @@ fun AnimatedBackground(
         videoPrepared = false
         videoFirstFrameRendered = false
         actualPlayCount = 0
+        hasPlayCompleted = false // 重置完成标志
         // 暂停播放，但不释放播放器（由 DisposableEffect 处理）
         exoPlayer?.pause()
         exoPlayer?.seekTo(0)
@@ -231,18 +237,30 @@ fun AnimatedBackground(
                                             LogUtils.d("AnimatedBackground - 视频准备完成")
                                         }
                                     } else if (playbackState == Player.STATE_ENDED) {
+                                        isPlaying = false
+                                        onIsPlayingChange?.invoke(false)
                                         actualPlayCount++
                                         LogUtils.d("AnimatedBackground - 视频播放结束，已播放次数: $actualPlayCount, 目标次数: $currentPlayCount")
                                         if (actualPlayCount >= currentPlayCount) {
                                             pause()
                                             seekTo(0)
                                             actualPlayCount = 0
+                                            hasPlayCompleted = true // 标记播放完成
                                             onPlayComplete()
+                                            LogUtils.d("AnimatedBackground - 播放完成，已达到目标次数: $currentPlayCount")
                                         } else {
                                             seekTo(0)
                                             playWhenReady = true
                                         }
+                                    } else if (playbackState == Player.STATE_IDLE) {
+                                        isPlaying = false
+                                        onIsPlayingChange?.invoke(false)
                                     }
+                                }
+
+                                override fun onIsPlayingChanged(playing: Boolean) {
+                                    isPlaying = playing
+                                    onIsPlayingChange?.invoke(playing)
                                 }
 
                                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
@@ -315,28 +333,38 @@ fun AnimatedBackground(
             )
 
             // 播放控制：当需要播放时，直接播放
+            // 注意：如果 shouldPlay 为 false，但视频正在播放中（由 loading 触发），则继续播放到结束
             LaunchedEffect(shouldPlay, videoPrepared, currentPlayCount, isCurrentPage, exoPlayer) {
-                LogUtils.d("AnimatedBackground - 播放控制检查: shouldPlay=$shouldPlay, videoPrepared=$videoPrepared, currentPlayCount=$currentPlayCount, isCurrentPage=$isCurrentPage, exoPlayer=${exoPlayer != null}")
-                if (isCurrentPage && shouldPlay && videoPrepared && currentPlayCount > 0 && exoPlayer != null) {
-                    LogUtils.d("AnimatedBackground - 开始播放视频，次数: $currentPlayCount")
-                    actualPlayCount = 0
-                    exoPlayer?.seekTo(0)
-                    exoPlayer?.playWhenReady = true
-                } else if (!shouldPlay && exoPlayer != null) {
-                    LogUtils.d("AnimatedBackground - 停止播放")
+                LogUtils.d("AnimatedBackground - 播放控制检查: shouldPlay=$shouldPlay, videoPrepared=$videoPrepared, currentPlayCount=$currentPlayCount, isCurrentPage=$isCurrentPage, exoPlayer=${exoPlayer != null}, isPlaying=$isPlaying, hasPlayCompleted=$hasPlayCompleted")
+                if (isCurrentPage && shouldPlay && videoPrepared && currentPlayCount > 0 && exoPlayer != null && !hasPlayCompleted) {
+                    // 如果视频正在播放中，则不处理（避免打断正在播放的视频）
+                    if (!isPlaying) {
+                        LogUtils.d("AnimatedBackground - 开始播放视频，次数: $currentPlayCount")
+                        actualPlayCount = 0
+                        exoPlayer?.seekTo(0)
+                        exoPlayer?.playWhenReady = true
+                    } else {
+                        LogUtils.d("AnimatedBackground - 视频正在播放中，跳过")
+                    }
+                } else if (!shouldPlay && exoPlayer != null && !isPlaying) {
+                    // 只有在视频未播放时才停止，如果正在播放则让它播放到结束
+                    LogUtils.d("AnimatedBackground - 停止播放（视频未播放）")
                     exoPlayer?.pause()
                     exoPlayer?.seekTo(0)
                     actualPlayCount = 0
+                    hasPlayCompleted = false
+                } else if (hasPlayCompleted) {
+                    LogUtils.d("AnimatedBackground - 播放已完成，不再重复播放")
                 } else {
-                    LogUtils.d("AnimatedBackground - 播放条件不满足: shouldPlay=$shouldPlay, videoPrepared=$videoPrepared, currentPlayCount=$currentPlayCount, isCurrentPage=$isCurrentPage")
+                    LogUtils.d("AnimatedBackground - 播放条件不满足: shouldPlay=$shouldPlay, videoPrepared=$videoPrepared, currentPlayCount=$currentPlayCount, isCurrentPage=$isCurrentPage, isPlaying=$isPlaying")
                 }
             }
 
             // 生命周期监听：页面恢复时强制播放（关键：每次 onResume 都会触发）
             // 使用 Unit 作为 key，确保每次 onResume 都会执行，参考 BackgroundVideoPlayer 的实现
             LifecycleResumeEffect(Unit) {
-                LogUtils.d("AnimatedBackground - LifecycleResumeEffect触发: isCurrentPage=$isCurrentPage, shouldPlay=$shouldPlay, videoPrepared=$videoPrepared, currentPlayCount=$currentPlayCount, exoPlayer=${exoPlayer != null}")
-                if (isCurrentPage && shouldPlay && videoPrepared && currentPlayCount > 0 && exoPlayer != null) {
+                LogUtils.d("AnimatedBackground - LifecycleResumeEffect触发: isCurrentPage=$isCurrentPage, shouldPlay=$shouldPlay, videoPrepared=$videoPrepared, currentPlayCount=$currentPlayCount, exoPlayer=${exoPlayer != null}, hasPlayCompleted=$hasPlayCompleted")
+                if (isCurrentPage && shouldPlay && videoPrepared && currentPlayCount > 0 && exoPlayer != null && !hasPlayCompleted && !isPlaying) {
                     LogUtils.d("AnimatedBackground - LifecycleResumeEffect: 强制播放视频，次数: $currentPlayCount")
                     actualPlayCount = 0
                     exoPlayer?.seekTo(0)
@@ -344,6 +372,8 @@ fun AnimatedBackground(
                 } else if (isCurrentPage && shouldPlay && currentPlayCount > 0 && exoPlayer != null && !videoPrepared) {
                     // 如果视频还没准备好，等待一下再尝试
                     LogUtils.d("AnimatedBackground - LifecycleResumeEffect: 视频未准备好，等待...")
+                } else if (hasPlayCompleted) {
+                    LogUtils.d("AnimatedBackground - LifecycleResumeEffect: 播放已完成，不再重复播放")
                 }
                 onPauseOrDispose {
                     LogUtils.d("AnimatedBackground - onPauseOrDispose: 暂停播放")
