@@ -548,21 +548,21 @@ class GooglePlayService:
             # 强制更新检查：扩展多种检查条件
             force_update_reasons = []
 
-            # 1. 检查是否低于最低支持版本
+            # 1. 检查是否低于版本号差值限制
             try:
-                min_supported_version_code = int(
-                    global_config_loaded_from_config_yaml.google_play.min_supported_version
+                android_app_version_code_diff_limit = int(
+                    global_config_loaded_from_config_yaml.google_play.android_app_version_code_diff_limit
                 )
             except (ValueError, TypeError):
                 logger.warning(
-                    f"最低支持版本配置无效: {global_config_loaded_from_config_yaml.google_play.min_supported_version}, 使用默认值 1"
+                    f"Android 版本号差值限制配置无效: {global_config_loaded_from_config_yaml.google_play.android_app_version_code_diff_limit}, 使用默认值 1"
                 )
-                min_supported_version_code = 1
+                android_app_version_code_diff_limit = 1
 
-            if client_version_code < min_supported_version_code:
-                reason = f"Version code below minimum supported version: {client_version_code} < {min_supported_version_code}"
+            if client_version_code < android_app_version_code_diff_limit:
+                reason = f"Version code below configured limit: {client_version_code} < {android_app_version_code_diff_limit}"
                 force_update_reasons.append(reason)
-                logger.info(f"最低版本检查触发强制更新: {reason}")
+                logger.info(f"版本号差值限制检查触发强制更新: {reason}")
 
             # 2. 检查Major版本号差距
             if client_version_name and latest_version_name:
@@ -582,7 +582,7 @@ class GooglePlayService:
                 "latest_version_code": latest_version_code,
                 "update_required": update_required,
                 "force_update": force_update,
-                "minimum_version": str(min_supported_version_code),
+                "minimum_version": str(android_app_version_code_diff_limit),
                 "changelog": version_info.get("release_notes"),
                 "download_url": f"https://play.google.com/store/apps/details?id={self.package_name}",
             }
@@ -601,7 +601,7 @@ class GooglePlayService:
             # 详细日志记录
             log_msg = (
                 f"版本检查完成: 客户端={client_version_code}, 最新={latest_version_code}, "
-                f"最低支持={min_supported_version_code}, "
+                f"版本号差值限制={android_app_version_code_diff_limit}, "
                 f"需要更新={update_required}, 强制更新={force_update}"
             )
 

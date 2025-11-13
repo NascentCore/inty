@@ -231,7 +231,7 @@ class GooglePlayConfig:
     webhook_secret: Optional[str] = None  # Webhook密钥（可选）
     # 版本检查相关配置
     enable_version_check: bool = True  # 是否启用版本检查
-    min_supported_version: int = 1  # 最低支持版本代码
+    android_app_version_code_diff_limit: int = 1  # Android App 版本号差值限制
     # DEPRECATED: 未被使用过。
     # 删除部署环境中的配置文件使用，然后删除这个代码。
     release_track: str = "production"  # 发布轨道：internal/closed/open/production

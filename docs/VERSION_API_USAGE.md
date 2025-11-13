@@ -68,7 +68,7 @@ google_play:
   package_name: com.ai.intellimate
   service_account_key: inty-backend-key.json
   enable_version_check: true
-  min_supported_version: "1.0.0"
+  android_app_version_code_diff_limit: 100
   force_update_versions: ["1.0.5", "1.1.2"] # Versions that require force update
   release_track: internal # Track to query: internal/closed/open/production
   fallback_tracks: [production, internal] # Fallback tracks if primary fails
@@ -101,7 +101,7 @@ This ensures accurate version comparison regardless of Google Play's internal na
 
 - `update_required`: Whether an update is available
 - `force_update`: Whether the update is mandatory
-- `minimum_version`: Minimum supported version (below this requires force update)
+- `minimum_version`: Minimum supported version code (below this requires force update)
 - `changelog`: Release notes from Google Play Console
 - `download_url`: Direct link to app on Play Store
 
