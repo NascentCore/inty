@@ -86,7 +86,7 @@ const Subscribe: React.FC = () => {
       <div className="subscribe-page">
         <div className="subscribe-error">
           <ErrorAlert message="Failed to load subscription plans" description={error} type="error" />
-          <button className="subscribe-retry-button" onClick={fetchPlans}>
+          <button type="button" className="subscribe-retry-button" onClick={fetchPlans}>
             Retry
           </button>
         </div>

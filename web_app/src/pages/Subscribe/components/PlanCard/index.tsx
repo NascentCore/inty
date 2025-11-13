@@ -125,6 +125,7 @@ const PlanCard: React.FC<IPlanCardProps> = ({
 
       {/* 选择按钮 */}
       <button
+        type="button"
         className={`plan-card-button ${isCurrentPlan ? 'plan-card-button-current' : ''}`}
         onClick={handleSelect}
         disabled={isCurrentPlan}
