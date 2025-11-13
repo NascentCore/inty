@@ -10,6 +10,7 @@ jobs:
   sync:
     # 这是部署在 Google Cloud VM 上的 github self-hosted runner。
     # 该 VM 能直接访问数据库。
+    # https://docs.github.com/en/actions/concepts/runners/self-hosted-runners
     runs-on: inty-prod-server-gcp
 
     steps:
