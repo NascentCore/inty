@@ -14,6 +14,7 @@ DevTest 是一个用于测试 Inty SDK 各项功能的开发测试页面。所�
 - **生产环境**: 请求直接发送到生产服务器
 
 配置位置：
+
 - SDK 配置: `src/constants/index.ts` → `INTY_SDK_CONFIG.BASE_URL`
 - 代理配置: `config/proxy.ts`
 
@@ -47,8 +48,9 @@ DevTest/
 ### 1. 认证模块
 
 #### 游客登录 (`GuestLogin.tsx`)
+
 - **功能**: 创建游客账号并获取 Token
-- **参数**: 
+- **参数**:
   - Device ID (可选，自动生成)
   - 系统语言 (可选，默认 zh-CN)
 - **注意**: Token 会自动保存到本地存储
@@ -56,14 +58,16 @@ DevTest/
 ### 2. 用户模块
 
 #### 获取个人信息 (`UserProfile.tsx`)
+
 - **功能**: 获取当前用户的个人信息
 - **前置条件**: 需要先执行游客登录获取 Token
 
 ### 3. AI 角色模块
 
 #### 获取推荐角色列表 (`RecommendAgents.tsx`)
+
 - **功能**: 获取推荐的 AI 角色列表
-- **参数**: 
+- **参数**:
   - 页码 (可选，默认 1)
   - 每页数量 (可选，默认 20，最大 100)
   - 排序方式 (可选)
@@ -76,43 +80,50 @@ DevTest/
 ### 4. 聊天会话模块
 
 #### 创建聊天会话 (`ChatCreate.tsx`)
+
 - **功能**: 为指定 Agent 创建聊天会话
-- **参数**: 
+- **参数**:
   - Agent ID (必填)
 
 #### 获取聊天列表 (`ChatList.tsx`)
+
 - **功能**: 获取当前用户的聊天会话列表
-- **参数**: 
+- **参数**:
   - 页码 (可选，默认 1)
   - 每页数量 (可选，默认 20)
 
 #### 删除聊天会话 (`ChatDelete.tsx`)
+
 - **功能**: 删除指定的聊天会话
-- **参数**: 
+- **参数**:
   - Chat ID (必填)
 
 ### 5. 消息与设置模块
 
 #### 获取消息历史 (`MessageHistory.tsx`)
+
 - **功能**: 获取与指定 Agent 的聊天消息历史
-- **参数**: 
+- **参数**:
   - Agent ID (必填)
   - 页码 (可选，默认 1)
   - 每页数量 (可选，默认 50)
 
 #### 获取聊天设置 (`ChatSettings.tsx`)
+
 - **功能**: 获取与指定 Agent 的聊天设置
-- **参数**: 
+- **参数**:
   - Agent ID (必填)
 
 #### 更新聊天设置 (`UpdateChatSettings.tsx`)
+
 - **功能**: 更新与指定 Agent 的聊天设置
-- **参数**: 
+- **参数**:
   - Agent ID (必填)
   - Voice ID (可选)
   - 自动语音开关 (可选)
 
 #### 生成消息语音 (`GenerateMessageVoice.tsx`)
+
 - **功能**: 为指定消息生成语音
 - **参数**:
   - Agent ID (必填)
@@ -120,6 +131,7 @@ DevTest/
   - 语言代码 (可选)
 
 #### 发送消息 V1 (`SendMessageV1.tsx`)
+
 - **功能**: 使用 V1 API 发送消息（已废弃）
 - **参数**:
   - Agent ID (必填)
@@ -130,6 +142,7 @@ DevTest/
 - **注意**: 此 API 已废弃，建议仅用于测试
 
 #### 发送消息 V2 (`SendMessageV2.tsx`)
+
 - **功能**: 使用 V2 API 发送消息（已废弃）
 - **参数**:
   - Agent ID (必填)
@@ -140,6 +153,7 @@ DevTest/
 ## 📝 使用步骤
 
 1. **启动项目**
+
    ```bash
    npm run dev
    # 或
@@ -211,17 +225,17 @@ const YourTestComponent: React.FC = () => {
   const handleTest = async () => {
     setLoading(true);
     console.log('========== 开始测试: 功能名称 ==========');
-    
+
     try {
       // 获取 Token
       const token = await getGuestToken();
-      
+
       // 创建客户端
       const client = new Inty({ apiKey: token });
-      
+
       // 调用 API
       const response = await client.api.v1.xxx();
-      
+
       // 输出结果
       console.log('✅ 测试成功:', response);
       console.log('========================================\n');
@@ -238,8 +252,8 @@ const YourTestComponent: React.FC = () => {
   return (
     <div className="test-component">
       <h4>功能名称</h4>
-      <Button 
-        type="primary" 
+      <Button
+        type="primary"
         onClick={handleTest}
         loading={loading}
         block
@@ -295,4 +309,3 @@ export default YourTestComponent;
 ---
 
 **最后更新**: 2025-10-31
-

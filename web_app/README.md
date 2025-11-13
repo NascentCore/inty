@@ -168,6 +168,7 @@ intellimate/
 项目遵循统一的代码规范。
 
 **核心规范：**
+
 - 所有接口名称以大写字母 `I` 开头（如 `IUserInfo`）
 - 禁止使用 `any` 类型
 - 使用 `@/` 别名导入项目模块
@@ -201,9 +202,9 @@ git commit -m "refactor: 重构用户模块代码"
 @import '@/styles/variables.less';
 
 .my-component {
-  color: @primary-color;        // 使用主题色
-  padding: @spacing-lg;          // 使用间距变量
-  font-size: @font-size-base;    // 使用字体大小变量
+  color: @primary-color; // 使用主题色
+  padding: @spacing-lg; // 使用间距变量
+  font-size: @font-size-base; // 使用字体大小变量
 }
 ```
 
@@ -215,7 +216,6 @@ git commit -m "refactor: 重构用户模块代码"
 
 - [Inty SDK 文档](./docs/README.md) - Inty TypeScript SDK 使用指南
 - [API 文档](./docs/api/) - API 接口文档
-
 
 ## 📄 License
 
