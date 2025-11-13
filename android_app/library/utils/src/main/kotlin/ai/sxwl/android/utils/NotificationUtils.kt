@@ -46,7 +46,7 @@ object NotificationUtils {
         val lights: Boolean = false,
         val lightColor: Int = Color.BLUE,
         val actions: List<NotificationAction> = emptyList(),
-        val style: NotificationStyle? = null
+        val style: NotificationStyle? = null,
     )
 
     /** 通知动作 */
@@ -63,13 +63,13 @@ object NotificationUtils {
 
         data class MessagingStyle(
             val conversationTitle: String? = null,
-            val messages: List<NotificationMessage> = emptyList()
+            val messages: List<NotificationMessage> = emptyList(),
         ) : NotificationStyle()
 
         data class ProgressStyle(
             val max: Int,
             val progress: Int,
-            val indeterminate: Boolean = false
+            val indeterminate: Boolean = false,
         ) : NotificationStyle()
     }
 
@@ -77,7 +77,7 @@ object NotificationUtils {
     data class NotificationMessage(
         val text: String,
         val timestamp: Long,
-        val person: Person? = null
+        val person: Person? = null,
     )
 
     // ==================== 通知渠道管理 ====================
@@ -91,7 +91,7 @@ object NotificationUtils {
         sound: Uri? = null,
         vibrationPattern: LongArray? = null,
         lights: Boolean = false,
-        lightColor: Int = Color.BLUE
+        lightColor: Int = Color.BLUE,
     ): Boolean {
         return createNotificationChannel(
             Utils.getApp(),
@@ -102,7 +102,7 @@ object NotificationUtils {
             sound,
             vibrationPattern,
             lights,
-            lightColor
+            lightColor,
         )
     }
 
@@ -116,7 +116,7 @@ object NotificationUtils {
         sound: Uri? = null,
         vibrationPattern: LongArray? = null,
         lights: Boolean = false,
-        lightColor: Int = Color.BLUE
+        lightColor: Int = Color.BLUE,
     ): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
 
@@ -203,7 +203,7 @@ object NotificationUtils {
                 context,
                 config.channelId,
                 getChannelName(config.channelId),
-                getChannelImportance(config.priority)
+                getChannelImportance(config.priority),
             )
 
             val notificationManager = NotificationManagerCompat.from(context)
@@ -221,7 +221,7 @@ object NotificationUtils {
     /** 构建通知Builder */
     private fun buildNotificationBuilder(
         context: Context,
-        config: NotificationConfig
+        config: NotificationConfig,
     ): NotificationCompat.Builder {
         val builder =
             NotificationCompat.Builder(context, config.channelId)
@@ -244,7 +244,7 @@ object NotificationUtils {
                         context,
                         config.id,
                         intent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                     )
                 } catch (e: Exception) {
                     Log.e("NotificationUtils", "创建PendingIntent失败", e)
@@ -309,7 +309,7 @@ object NotificationUtils {
                         context,
                         action.hashCode(),
                         action.intent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                     )
                 } catch (e: Exception) {
                     Log.e("NotificationUtils", "创建动作PendingIntent失败", e)
@@ -328,7 +328,7 @@ object NotificationUtils {
         id: Int,
         title: String,
         content: String,
-        channelId: String = DEFAULT_CHANNEL_ID
+        channelId: String = DEFAULT_CHANNEL_ID,
     ): Boolean {
         return showNotification(
             NotificationConfig(id = id, channelId = channelId, title = title, content = content)
@@ -343,7 +343,7 @@ object NotificationUtils {
         max: Int,
         progress: Int,
         indeterminate: Boolean = false,
-        channelId: String = DEFAULT_CHANNEL_ID
+        channelId: String = DEFAULT_CHANNEL_ID,
     ): Boolean {
         return showNotification(
             NotificationConfig(
@@ -351,7 +351,7 @@ object NotificationUtils {
                 channelId = channelId,
                 title = title,
                 content = content,
-                style = NotificationStyle.ProgressStyle(max, progress, indeterminate)
+                style = NotificationStyle.ProgressStyle(max, progress, indeterminate),
             )
         )
     }
@@ -362,7 +362,7 @@ object NotificationUtils {
         title: String,
         content: String,
         bigText: String,
-        channelId: String = DEFAULT_CHANNEL_ID
+        channelId: String = DEFAULT_CHANNEL_ID,
     ): Boolean {
         return showNotification(
             NotificationConfig(
@@ -370,7 +370,7 @@ object NotificationUtils {
                 channelId = channelId,
                 title = title,
                 content = content,
-                style = NotificationStyle.BigTextStyle(bigText)
+                style = NotificationStyle.BigTextStyle(bigText),
             )
         )
     }
@@ -382,7 +382,7 @@ object NotificationUtils {
         content: String,
         bigPicture: Bitmap,
         bigLargeIcon: Bitmap? = null,
-        channelId: String = DEFAULT_CHANNEL_ID
+        channelId: String = DEFAULT_CHANNEL_ID,
     ): Boolean {
         return showNotification(
             NotificationConfig(
@@ -390,7 +390,7 @@ object NotificationUtils {
                 channelId = channelId,
                 title = title,
                 content = content,
-                style = NotificationStyle.BigPictureStyle(bigPicture, bigLargeIcon)
+                style = NotificationStyle.BigPictureStyle(bigPicture, bigLargeIcon),
             )
         )
     }
@@ -502,22 +502,22 @@ object NotificationUtils {
             createNotificationChannel(
                 channelId = DEFAULT_CHANNEL_ID,
                 channelName = DEFAULT_CHANNEL_NAME,
-                importance = NotificationManager.IMPORTANCE_DEFAULT
+                importance = NotificationManager.IMPORTANCE_DEFAULT,
             ) &&
                 createNotificationChannel(
                     channelId = "important",
                     channelName = "重要通知",
-                    importance = NotificationManager.IMPORTANCE_HIGH
+                    importance = NotificationManager.IMPORTANCE_HIGH,
                 ) &&
                 createNotificationChannel(
                     channelId = "normal",
                     channelName = "普通通知",
-                    importance = NotificationManager.IMPORTANCE_DEFAULT
+                    importance = NotificationManager.IMPORTANCE_DEFAULT,
                 ) &&
                 createNotificationChannel(
                     channelId = "silent",
                     channelName = "静默通知",
-                    importance = NotificationManager.IMPORTANCE_LOW
+                    importance = NotificationManager.IMPORTANCE_LOW,
                 )
         } catch (e: Exception) {
             Log.e(TAG, "创建默认通知渠道失败", e)

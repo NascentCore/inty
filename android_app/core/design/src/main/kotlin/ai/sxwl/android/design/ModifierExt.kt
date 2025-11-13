@@ -91,7 +91,7 @@ fun getBitmapWithAppWaterMarker(context: Context, @DrawableRes res: Int, picture
             drawImage(
                 image = bm.asImageBitmap(),
                 topLeftOffset = offsetOfWaterMarker(bm, size, WaterMarkerPosition.BOTTOM_END),
-                paint = Paint()
+                paint = Paint(),
             )
         }
     }
@@ -110,36 +110,16 @@ private fun offsetOfWaterMarker(
         WaterMarkerPosition.TOP_START -> Offset.Zero
         WaterMarkerPosition.TOP_CENTER -> Offset((size.width - bitmap.width) / 2, 0f)
         WaterMarkerPosition.TOP_END -> Offset(size.width - bitmap.width, 0f)
-        WaterMarkerPosition.CENTER_START ->
-            Offset(
-                0f,
-                (size.height - bitmap.height) / 2,
-            )
+        WaterMarkerPosition.CENTER_START -> Offset(0f, (size.height - bitmap.height) / 2)
         WaterMarkerPosition.CENTER ->
-            Offset(
-                (size.width - bitmap.width) / 2,
-                (size.height - bitmap.height) / 2,
-            )
+            Offset((size.width - bitmap.width) / 2, (size.height - bitmap.height) / 2)
         WaterMarkerPosition.CENTER_END ->
-            Offset(
-                size.width - bitmap.width,
-                (size.height - bitmap.height) / 2,
-            )
-        WaterMarkerPosition.BOTTOM_START ->
-            Offset(
-                0f,
-                size.height - bitmap.height,
-            )
+            Offset(size.width - bitmap.width, (size.height - bitmap.height) / 2)
+        WaterMarkerPosition.BOTTOM_START -> Offset(0f, size.height - bitmap.height)
         WaterMarkerPosition.BOTTOM_CENTER ->
-            Offset(
-                (size.width - bitmap.width) / 2,
-                size.height - bitmap.height,
-            )
+            Offset((size.width - bitmap.width) / 2, size.height - bitmap.height)
         WaterMarkerPosition.BOTTOM_END ->
-            Offset(
-                size.width - bitmap.width,
-                size.height - bitmap.height,
-            )
+            Offset(size.width - bitmap.width, size.height - bitmap.height)
     }
 
 /** 水印的位置 */
@@ -167,7 +147,7 @@ fun Modifier.drawAppWaterMarker(
         appWaterMarker(context, res)?.let { bitmap ->
             drawImage(
                 image = bitmap.asImageBitmap(),
-                topLeft = offsetOfWaterMarker(bitmap, size, position)
+                topLeft = offsetOfWaterMarker(bitmap, size, position),
             )
         }
     }
@@ -184,7 +164,7 @@ private fun appWaterMarker(
             if (size != Size.Zero)
                 drawable.toBitmap(
                     width = size.width.roundToInt(),
-                    height = size.height.roundToInt()
+                    height = size.height.roundToInt(),
                 )
             else {
                 drawable.toBitmap()

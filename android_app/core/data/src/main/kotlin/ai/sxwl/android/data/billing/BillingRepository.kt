@@ -96,7 +96,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
         emitEvent(
             BillingEvent.InitializationFailed(
                 BillingErrorCode.GOOGLE_PLAY_SERVICE_UNAVAILABLE,
-                "Google Play 服务不可用"
+                "Google Play 服务不可用",
             )
         )
     }
@@ -123,7 +123,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                 eventScope,
                 _eventFlow,
                 _vipStatusFlow,
-                _plansFlow
+                _plansFlow,
             )
         remoteManager = BillingRemoteManager(_vipStatusFlow, _plansFlow, priceManager)
     }
@@ -229,7 +229,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     private fun handleBillingSetupFailure(billingResult: BillingResult) {
         log(
             "BillingClient 连接失败: ${billingResult.debugMessage}, 响应码: ${billingResult.responseCode}",
-            LogUtils.E
+            LogUtils.E,
         )
 
         // 更新初始化状态
@@ -325,7 +325,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
         if (internalConnected != clientConnected) {
             log(
                 "状态不一致检测到: internalConnected=$internalConnected, clientConnected=$clientConnected",
-                LogUtils.W
+                LogUtils.W,
             )
             isConnected = clientConnected
         }
@@ -394,7 +394,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                 if (oldStatus.isSubscribed != newStatus.isSubscribed) {
                     log(
                         "订阅状态发生变化: ${oldStatus.isSubscribed} -> ${newStatus.isSubscribed}",
-                        LogUtils.I
+                        LogUtils.I,
                     )
                     _eventFlow.emit(BillingEvent.SubscriptionStatusChanged(oldStatus, newStatus))
 

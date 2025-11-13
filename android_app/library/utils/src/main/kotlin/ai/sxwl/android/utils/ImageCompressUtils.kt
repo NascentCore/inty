@@ -23,7 +23,7 @@ object ImageCompressUtils {
         /** 最大文件大小，单位KB，默认500KB */
         val maxSize: Int = 500,
         /** 是否保留原文件，默认false */
-        val keepOriginal: Boolean = false
+        val keepOriginal: Boolean = false,
     )
 
     /** 压缩结果回调接口 */
@@ -50,7 +50,7 @@ object ImageCompressUtils {
         context: Context,
         imageFile: File,
         config: CompressConfig = CompressConfig(),
-        callback: CompressCallback
+        callback: CompressCallback,
     ) {
         try {
             if (!imageFile.exists()) {
@@ -109,7 +109,7 @@ object ImageCompressUtils {
         context: Context,
         imageFiles: List<File>,
         config: CompressConfig = CompressConfig(),
-        callback: CompressCallback
+        callback: CompressCallback,
     ) {
         try {
             if (imageFiles.isEmpty()) {
@@ -173,7 +173,7 @@ object ImageCompressUtils {
         context: Context,
         imageUri: Uri,
         config: CompressConfig = CompressConfig(),
-        callback: CompressCallback
+        callback: CompressCallback,
     ) {
         Luban.with(context)
             .load(imageUri)
@@ -208,7 +208,7 @@ object ImageCompressUtils {
     suspend fun compressImageSync(
         context: Context,
         imageFile: File,
-        config: CompressConfig = CompressConfig()
+        config: CompressConfig = CompressConfig(),
     ): File? =
         withContext(Dispatchers.IO) {
             try {

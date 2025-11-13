@@ -122,7 +122,6 @@ class MainViewModel : BaseVM() {
         }
     }
 
-
     fun updateCurrentChatPageIndex(index: Int) {
         _currentChatPageIndex.value = index
     }
@@ -223,8 +222,8 @@ class MainViewModel : BaseVM() {
                 "user_id" to currentUserProfile.id,
                 "user_name" to currentUserProfile.nickname,
                 "logout_method" to "manual",
-                "timestamp" to System.currentTimeMillis()
-            )
+                "timestamp" to System.currentTimeMillis(),
+            ),
         )
 
         // 清理内存数据
@@ -259,7 +258,6 @@ class MainViewModel : BaseVM() {
             }
         }
     }
-
 
     /** 检查app版本更新 */
     val needForceUpgrade = MutableStateFlow<AppVersionRsp.AppVersionData?>(null)

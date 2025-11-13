@@ -50,7 +50,9 @@ def build_credentials():
         )
 
     scopes = ["https://www.googleapis.com/auth/analytics.readonly"]
-    return service_account.Credentials.from_service_account_file(str(key_path), scopes=scopes)
+    return service_account.Credentials.from_service_account_file(
+        str(key_path), scopes=scopes
+    )
 
 
 def fetch_event_parameters(

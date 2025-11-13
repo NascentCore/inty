@@ -239,6 +239,7 @@ FIELDS_TO_SYNC = [
     "creator_id",
 ]
 
+
 def compare_agents(agent1: Agent, agent2: Agent) -> bool:
     """
     比较两个Agent对象是否相同

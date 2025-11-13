@@ -14,9 +14,9 @@ import com.inty.api.client.IntyClient
 import com.inty.api.client.IntyClientImpl
 import com.inty.api.client.okhttp.OkHttpClient
 import com.inty.api.core.ClientOptions
-import kotlinx.coroutines.withTimeout
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.withTimeout
 
 /**
  * Inty网络管理器 - 企业级网络库封装 提供统一的网络管理和API服务入口
@@ -63,16 +63,14 @@ object IntyNetworkManager {
         return clientCache.getOrPut(cacheKey) { createClient(currentApiKey, currentBaseUrl) }
     }
 
-    /**
-     * 清除旧token的客户端缓存
-     * 只保留当前token的客户端，确保使用最新token
-     */
+    /** 清除旧token的客户端缓存 只保留当前token的客户端，确保使用最新token */
     private fun clearOldTokenClients(currentApiKey: String, currentBaseUrl: String) {
         val currentCacheKey = "${currentApiKey}_$currentBaseUrl"
-        val entriesToRemove = clientCache.entries.filter { (key, _) ->
-            // 清除所有相同baseUrl但不同token的客户端
-            key != currentCacheKey && key.endsWith("_$currentBaseUrl")
-        }
+        val entriesToRemove =
+            clientCache.entries.filter { (key, _) ->
+                // 清除所有相同baseUrl但不同token的客户端
+                key != currentCacheKey && key.endsWith("_$currentBaseUrl")
+            }
 
         if (entriesToRemove.isNotEmpty()) {
             entriesToRemove.forEach { (key, _) ->
@@ -100,22 +98,20 @@ object IntyNetworkManager {
         val sdkHttpClient = createSdkHttpClient(unifiedOkHttpClient, environmentConfig)
 
         // 创建 ClientOptions，使用统一的 OkHttpClient
-        val clientOptions = ClientOptions.builder()
-            .apiKey(apiKey)
-            .baseUrl(baseUrl)
-            .httpClient(sdkHttpClient)
-            .build()
+        val clientOptions =
+            ClientOptions.builder()
+                .apiKey(apiKey)
+                .baseUrl(baseUrl)
+                .httpClient(sdkHttpClient)
+                .build()
 
         return IntyClientImpl(clientOptions)
     }
 
-    /**
-     * 创建 SDK 的 HttpClient，使用统一的 OkHttpClient
-     * 通过反射创建 SDK 的 OkHttpClient 实例，传入我们的统一 OkHttpClient
-     */
+    /** 创建 SDK 的 HttpClient，使用统一的 OkHttpClient 通过反射创建 SDK 的 OkHttpClient 实例，传入我们的统一 OkHttpClient */
     private fun createSdkHttpClient(
         okHttpClient: okhttp3.OkHttpClient,
-        environmentConfig: NetworkConfig.EnvironmentConfig
+        environmentConfig: NetworkConfig.EnvironmentConfig,
     ): com.inty.api.core.http.HttpClient {
         // SDK 的 OkHttpClient 类使用反射来创建实例
         // 我们通过创建一个包装器 HttpClient 来实现
@@ -124,11 +120,12 @@ object IntyNetworkManager {
 
         // 使用 SDK 的 OkHttpClient.Builder，但我们需要在内部使用我们的统一 OkHttpClient
         // 由于 SDK 的 OkHttpClient 是 private 的，我们通过反射来创建
-        val timeout = com.inty.api.core.Timeout.builder()
-            .connect(java.time.Duration.ofMillis(environmentConfig.timeout.connectTimeoutMs))
-            .read(java.time.Duration.ofMillis(environmentConfig.timeout.readTimeoutMs))
-            .write(java.time.Duration.ofMillis(environmentConfig.timeout.writeTimeoutMs))
-            .build()
+        val timeout =
+            com.inty.api.core.Timeout.builder()
+                .connect(java.time.Duration.ofMillis(environmentConfig.timeout.connectTimeoutMs))
+                .read(java.time.Duration.ofMillis(environmentConfig.timeout.readTimeoutMs))
+                .write(java.time.Duration.ofMillis(environmentConfig.timeout.writeTimeoutMs))
+                .build()
 
         // 创建 SDK 的 HttpClient，使用我们的统一 OkHttpClient
         // 通过反射创建 SDK 的 OkHttpClient 实例
@@ -142,9 +139,7 @@ object IntyNetworkManager {
         } catch (e: Exception) {
             LogUtils.w("Failed to create SDK HttpClient with unified OkHttpClient: ${e.message}")
             // 如果反射失败，使用 SDK 的默认方式
-            return OkHttpClient.builder()
-                .timeout(timeout)
-                .build()
+            return OkHttpClient.builder().timeout(timeout).build()
         }
     }
 

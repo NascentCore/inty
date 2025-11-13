@@ -15,10 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 
-/**
- * CreateRoleActivity 的 ViewModel
- * 负责管理 Agent 的创建和更新逻辑
- */
+/** CreateRoleActivity 的 ViewModel 负责管理 Agent 的创建和更新逻辑 */
 class CreateRoleViewModel : BaseVM() {
 
     private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
@@ -42,7 +39,9 @@ class CreateRoleViewModel : BaseVM() {
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
-                            LogUtils.i("CreateRoleViewModel - createAgent success: ${result.data.id}")
+                            LogUtils.i(
+                                "CreateRoleViewModel - createAgent success: ${result.data.id}"
+                            )
                             onSuccess(result.data)
                         }
 
@@ -57,17 +56,15 @@ class CreateRoleViewModel : BaseVM() {
                     }
                 }
             } catch (e: HttpException) {
-                LogUtils.e("CreateRoleViewModel - createAgent HTTP Exception: ${e.code()} - ${e.message()}")
+                LogUtils.e(
+                    "CreateRoleViewModel - createAgent HTTP Exception: ${e.code()} - ${e.message()}"
+                )
                 val errorMessage = HttpErrorHandler.handleHttpException(e, "create")
-                withContext(Dispatchers.Main) {
-                    onError(errorMessage)
-                }
+                withContext(Dispatchers.Main) { onError(errorMessage) }
             } catch (e: Exception) {
                 LogUtils.e("CreateRoleViewModel - createAgent exception: ${e.message}")
                 val errorMessage = HttpErrorHandler.handleGeneralException(e, "create")
-                withContext(Dispatchers.Main) {
-                    onError(errorMessage)
-                }
+                withContext(Dispatchers.Main) { onError(errorMessage) }
             }
         }
     }
@@ -119,7 +116,9 @@ class CreateRoleViewModel : BaseVM() {
                     }
                 }
             } catch (e: HttpException) {
-                LogUtils.e("CreateRoleViewModel - updateAgent HTTP Exception: ${e.code()} - ${e.message()}")
+                LogUtils.e(
+                    "CreateRoleViewModel - updateAgent HTTP Exception: ${e.code()} - ${e.message()}"
+                )
                 val errorMessage = HttpErrorHandler.handleHttpException(e, "update")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(errorMessage)

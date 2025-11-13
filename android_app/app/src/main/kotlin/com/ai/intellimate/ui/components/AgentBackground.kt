@@ -35,8 +35,8 @@ private const val ASPECT_RATIO_THRESHOLD = 0.05f
 private const val TOP_GRADIENT_HEIGHT_DP = 120
 private const val BOTTOM_GRADIENT_HEIGHT_DP = 300
 
-private const val VIDEO_FIRST_PLAY_COUNT = 2 //首次进入界面播放次数
-private const val VIDEO_MESSAGE_PLAY_COUNT = 1 //发送消息播放次数
+private const val VIDEO_FIRST_PLAY_COUNT = 2 // 首次进入界面播放次数
+private const val VIDEO_MESSAGE_PLAY_COUNT = 1 // 发送消息播放次数
 
 /** 通用角色背景组件 可用于聊天页面、角色主页等需要角色背景的地方 */
 @Composable
@@ -53,44 +53,35 @@ fun AgentBackground(
     val configuration = LocalConfiguration.current
 
     // 容器尺寸（dp），使用 LocalConfiguration 获取屏幕物理尺寸，不受键盘影响
-    val containerWidthDp = remember(configuration.screenWidthDp) {
-        configuration.screenWidthDp
-    }
-    val containerHeightDp = remember(configuration.screenHeightDp) {
-        configuration.screenHeightDp
-    }
+    val containerWidthDp = remember(configuration.screenWidthDp) { configuration.screenWidthDp }
+    val containerHeightDp = remember(configuration.screenHeightDp) { configuration.screenHeightDp }
 
     // 图片原始尺寸（像素），用于计算 ContentScale
     var imageWidthPx by remember { mutableStateOf<Int?>(null) }
     var imageHeightPx by remember { mutableStateOf<Int?>(null) }
 
     // 计算最佳的 ContentScale
-    val optimalContentScale = remember(
-        imageWidthPx,
-        imageHeightPx,
-        containerWidthDp,
-        containerHeightDp,
-        density
-    ) {
-        if (
-            imageWidthPx != null &&
-            imageHeightPx != null &&
-            imageWidthPx!! > 0 &&
-            imageHeightPx!! > 0
-        ) {
-            val imageWidthDpValue = with(density) { imageWidthPx!!.toFloat().toDp().value }
-            val imageHeightDpValue = with(density) { imageHeightPx!!.toFloat().toDp().value }
+    val optimalContentScale =
+        remember(imageWidthPx, imageHeightPx, containerWidthDp, containerHeightDp, density) {
+            if (
+                imageWidthPx != null &&
+                    imageHeightPx != null &&
+                    imageWidthPx!! > 0 &&
+                    imageHeightPx!! > 0
+            ) {
+                val imageWidthDpValue = with(density) { imageWidthPx!!.toFloat().toDp().value }
+                val imageHeightDpValue = with(density) { imageHeightPx!!.toFloat().toDp().value }
 
-            calculateOptimalContentScale(
-                containerWidthDp = containerWidthDp,
-                containerHeightDp = containerHeightDp,
-                imageWidthDp = imageWidthDpValue,
-                imageHeightDp = imageHeightDpValue,
-            )
-        } else {
-            ContentScale.Crop
+                calculateOptimalContentScale(
+                    containerWidthDp = containerWidthDp,
+                    containerHeightDp = containerHeightDp,
+                    imageWidthDp = imageWidthDpValue,
+                    imageHeightDp = imageHeightDpValue,
+                )
+            } else {
+                ContentScale.Crop
+            }
         }
-    }
 
     val backgroundAnimatedUrl = agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
     val staticImageUrl = agentInfo?.getAlbumImage()?.takeIf { it.isNotBlank() }
@@ -111,7 +102,9 @@ fun AgentBackground(
     // 检查视频缓存状态 - 每次进入页面时都重新检查
     // 优化：同步检查缓存状态，避免延迟
     LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage) {
-        LogUtils.d("AgentBackground - LaunchedEffect触发: agentId=${agentInfo?.id}, backgroundAnimatedUrl=$backgroundAnimatedUrl, isCurrentPage=$isCurrentPage")
+        LogUtils.d(
+            "AgentBackground - LaunchedEffect触发: agentId=${agentInfo?.id}, backgroundAnimatedUrl=$backgroundAnimatedUrl, isCurrentPage=$isCurrentPage"
+        )
 
         // 重置状态
         shouldPlayPageSwitch = false
@@ -144,7 +137,9 @@ fun AgentBackground(
                 playCount = 1
                 shouldPlayLoading = true
                 isLoadingTriggeredPlay = true
-                LogUtils.d("AgentBackground - 设置加载播放: playCount=1, shouldPlayLoading=true, isLoadingTriggeredPlay=true")
+                LogUtils.d(
+                    "AgentBackground - 设置加载播放: playCount=1, shouldPlayLoading=true, isLoadingTriggeredPlay=true"
+                )
             } else {
                 LogUtils.d("AgentBackground - 视频正在播放中，跳过加载播放")
             }
@@ -156,7 +151,8 @@ fun AgentBackground(
     // 合并播放状态：页面切换播放优先于加载播放
     // 注意：如果是因为 loading 触发的播放，即使 loading 结束，也继续播放到结束
     val shouldPlay =
-        (shouldPlayPageSwitch || shouldPlayLoading || (isLoadingTriggeredPlay && isVideoPlaying)) && isCurrentPage
+        (shouldPlayPageSwitch || shouldPlayLoading || (isLoadingTriggeredPlay && isVideoPlaying)) &&
+            isCurrentPage
     val finalPlayCount =
         if (shouldPlayPageSwitch) VIDEO_FIRST_PLAY_COUNT
         else if (shouldPlayLoading || isLoadingTriggeredPlay) VIDEO_MESSAGE_PLAY_COUNT
@@ -174,7 +170,7 @@ fun AgentBackground(
                         getCdnImageUrl(
                             staticImageUrl,
                             width = containerWidthPx,
-                            quality = CDN_IMAGE_QUALITY
+                            quality = CDN_IMAGE_QUALITY,
                         ) ?: staticImageUrl
                     )
                     .size(Size(containerWidthPx, containerHeightPx))
@@ -207,9 +203,7 @@ fun AgentBackground(
                     }
                     onPlayComplete()
                 },
-                onIsPlayingChange = { playing ->
-                    isVideoPlaying = playing
-                },
+                onIsPlayingChange = { playing -> isVideoPlaying = playing },
             )
         } else if (staticImageUrl != null && staticImageRequest != null) {
             // 没有背景视频，只显示静态图片
@@ -232,26 +226,22 @@ fun AgentBackground(
             // 顶部渐变遮罩
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .height(TOP_GRADIENT_HEIGHT_DP.dp)
                         .background(
-                            brush = Brush.verticalGradient(
-                                listOf(Color(0xFF000000), Color(0x00000000))
-                            )
+                            brush =
+                                Brush.verticalGradient(listOf(Color(0xFF000000), Color(0x00000000)))
                         )
             )
 
             // 底部渐变遮罩
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .height(BOTTOM_GRADIENT_HEIGHT_DP.dp)
                         .background(
-                            brush = Brush.verticalGradient(
-                                listOf(Color(0x001C1523), Color(0xFF1C1523))
-                            )
+                            brush =
+                                Brush.verticalGradient(listOf(Color(0x001C1523), Color(0xFF1C1523)))
                         )
                         .align(Alignment.BottomCenter)
             )
@@ -260,9 +250,8 @@ fun AgentBackground(
 }
 
 /**
- * 根据容器和图片的宽高比计算最佳的 ContentScale
- * 只支持人像模式屏幕显示，即尽量不留左右两侧空白。
- * 当容器高宽比大于图片高宽比时，使用 FillHeight 填充高度，否则使用 FillWidth 填充宽度。
+ * 根据容器和图片的宽高比计算最佳的 ContentScale 只支持人像模式屏幕显示，即尽量不留左右两侧空白。 当容器高宽比大于图片高宽比时，使用 FillHeight 填充高度，否则使用
+ * FillWidth 填充宽度。
  *
  * @param containerWidthDp 容器宽度（dp）
  * @param containerHeightDp 容器高度（dp）

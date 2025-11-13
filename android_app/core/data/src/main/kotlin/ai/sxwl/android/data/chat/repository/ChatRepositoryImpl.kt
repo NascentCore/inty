@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 /** 聊天Repository实现 作为Domain层和Data层之间的桥梁 遵循Clean Architecture的Repository模式 */
 class ChatRepositoryImpl(
     private val localDataSource: ChatLocalDataSource,
-    private val remoteDataSource: ChatRemoteDataSource
+    private val remoteDataSource: ChatRemoteDataSource,
 ) : ChatRepository {
 
     companion object {
@@ -57,7 +57,7 @@ class ChatRepositoryImpl(
                             localDataSource.setHasMore(agentId, result.data.hasMore)
                             localDataSource.setOffset(
                                 agentId,
-                                if (serverMessages.isNotEmpty()) pageSize else 0
+                                if (serverMessages.isNotEmpty()) pageSize else 0,
                             )
                             LogUtils.i(
                                 "ChatRepositoryImpl.ensureInitialHistory synced ${serverMessages.size} server messages for $agentId"
@@ -143,7 +143,7 @@ class ChatRepositoryImpl(
 
     override suspend fun sendMessage(
         agentId: String,
-        content: String
+        content: String,
     ): HttpResult<SendMsgResponse> {
         LogUtils.d("ChatRepositoryImpl.sendMessage called for $agentId: $content")
 
@@ -224,7 +224,7 @@ class ChatRepositoryImpl(
                         localDataSource.setHasMore(agentId, result.data.hasMore)
                         localDataSource.setOffset(
                             agentId,
-                            if (serverMessages.isNotEmpty()) pageSize else 0
+                            if (serverMessages.isNotEmpty()) pageSize else 0,
                         )
 
                         LogUtils.i(
@@ -257,7 +257,7 @@ class ChatRepositoryImpl(
     override fun updateMessageFeedback(
         agentId: String,
         messageId: String,
-        feedback: MsgInfo.UserFeedback?
+        feedback: MsgInfo.UserFeedback?,
     ) {
         LogUtils.d(
             "ChatRepositoryImpl.updateMessageFeedback called for $agentId, messageId: $messageId, feedback: $feedback"
@@ -293,10 +293,14 @@ class ChatRepositoryImpl(
 
         // 找到最后一条AI消息（排除loading）
         val lastAssistantMessage =
-            messages.lastOrNull { it.role == ROLE_ASSISTANT && it.content != LOADING_PLACEHOLDER_CONTENT }
+            messages.lastOrNull {
+                it.role == ROLE_ASSISTANT && it.content != LOADING_PLACEHOLDER_CONTENT
+            }
 
         if (lastAssistantMessage == null) {
-            LogUtils.w("ChatRepositoryImpl.recallLastAssistantMessage: No assistant message to recall")
+            LogUtils.w(
+                "ChatRepositoryImpl.recallLastAssistantMessage: No assistant message to recall"
+            )
             return
         }
 
@@ -344,25 +348,32 @@ class ChatRepositoryImpl(
     override suspend fun generateImageForMessage(
         agentId: String,
         messageId: String,
-    ): com.architecture.httplib.core.HttpResult<ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult> {
-        LogUtils.d("ChatRepositoryImpl.generateImageForMessage called for $agentId, messageId: $messageId")
+    ): com.architecture.httplib.core.HttpResult<
+        ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult
+    > {
+        LogUtils.d(
+            "ChatRepositoryImpl.generateImageForMessage called for $agentId, messageId: $messageId"
+        )
 
         // 找到触发消息生图的那条消息
         val messages = localDataSource.getMessagesFlow(agentId).value
         val sourceMessage = messages.find { it.id == messageId || it.localMsgId == messageId }
 
         if (sourceMessage == null) {
-            LogUtils.e("ChatRepositoryImpl.generateImageForMessage: source message not found: $messageId")
+            LogUtils.e(
+                "ChatRepositoryImpl.generateImageForMessage: source message not found: $messageId"
+            )
             return HttpResult.Failure("Source message not found", -1)
         }
 
         // 在触发消息上设置 loading 状态：通过设置一个临时的 generatedImage（imageUrl 为 "loading"）
         // 这样图片会显示在触发消息的下方，而不是创建新消息
-        val loadingImage = MsgInfo.MsgMetaData.GeneratedImage(
-            imageUrl = "loading", // 特殊标记，表示正在生成图片
-            width = 300,
-            height = 300,
-        )
+        val loadingImage =
+            MsgInfo.MsgMetaData.GeneratedImage(
+                imageUrl = "loading", // 特殊标记，表示正在生成图片
+                width = 300,
+                height = 300,
+            )
         localDataSource.updateMessageGeneratedImage(agentId, messageId, loadingImage)
 
         val result = remoteDataSource.messageGenerateImage(agentId, messageId)
@@ -370,13 +381,16 @@ class ChatRepositoryImpl(
         when (result) {
             is HttpResult.Success -> {
                 // 更新触发消息的 generatedImage 为实际图片
-                val generatedImage = MsgInfo.MsgMetaData.GeneratedImage(
-                    imageUrl = result.data.imageUrl,
-                    width = result.data.width,
-                    height = result.data.height,
-                )
+                val generatedImage =
+                    MsgInfo.MsgMetaData.GeneratedImage(
+                        imageUrl = result.data.imageUrl,
+                        width = result.data.width,
+                        height = result.data.height,
+                    )
                 localDataSource.updateMessageGeneratedImage(agentId, messageId, generatedImage)
-                LogUtils.i("ChatRepositoryImpl.generateImageForMessage success: ${result.data.imageUrl}")
+                LogUtils.i(
+                    "ChatRepositoryImpl.generateImageForMessage success: ${result.data.imageUrl}"
+                )
             }
 
             is HttpResult.Failure -> {

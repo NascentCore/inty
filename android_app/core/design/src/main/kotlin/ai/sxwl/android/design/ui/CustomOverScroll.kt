@@ -34,31 +34,31 @@ import kotlinx.coroutines.launch
 fun Modifier.customOverscroll(
     listState: LazyListState,
     onNewOverscrollAmount: (Float) -> Unit,
-    animationSpec: SpringSpec<Float> = spring(stiffness = Spring.StiffnessLow)
+    animationSpec: SpringSpec<Float> = spring(stiffness = Spring.StiffnessLow),
 ) =
     customOverscroll(
         orientation = remember { listState.layoutInfo.orientation },
         onNewOverscrollAmount = onNewOverscrollAmount,
-        animationSpec = animationSpec
+        animationSpec = animationSpec,
     )
 
 @Composable
 fun Modifier.customOverscroll(
     pagerState: PagerState,
     onNewOverscrollAmount: (Float) -> Unit,
-    animationSpec: SpringSpec<Float> = spring(stiffness = Spring.StiffnessLow)
+    animationSpec: SpringSpec<Float> = spring(stiffness = Spring.StiffnessLow),
 ) =
     customOverscroll(
         orientation = remember { pagerState.layoutInfo.orientation },
         onNewOverscrollAmount = onNewOverscrollAmount,
-        animationSpec = animationSpec
+        animationSpec = animationSpec,
     )
 
 @Composable
 private fun Modifier.customOverscroll(
     orientation: Orientation,
     onNewOverscrollAmount: (Float) -> Unit,
-    animationSpec: SpringSpec<Float> = spring(stiffness = Spring.StiffnessLow)
+    animationSpec: SpringSpec<Float> = spring(stiffness = Spring.StiffnessLow),
 ): Modifier {
     val overscrollAmountAnimatable = remember { Animatable(0f) }
 
@@ -96,7 +96,7 @@ private fun Modifier.customOverscroll(
             override fun onPostScroll(
                 consumed: Offset,
                 available: Offset,
-                source: NestedScrollSource
+                source: NestedScrollSource,
             ): Offset {
                 scope.launch {
                     overscrollAmountAnimatable.snapTo(targetValue = calculateOverscroll(available))
@@ -113,7 +113,7 @@ private fun Modifier.customOverscroll(
                 overscrollAmountAnimatable.animateTo(
                     targetValue = 0f,
                     initialVelocity = availableVelocity,
-                    animationSpec = animationSpec
+                    animationSpec = animationSpec,
                 )
                 return available
             }
@@ -158,7 +158,7 @@ private fun Modifier.customOverscroll(
                         try {
                             overscrollAmountAnimatable.animateDecay(
                                 initialVelocity = availableVelocity,
-                                animationSpec = exponentialDecay()
+                                animationSpec = exponentialDecay(),
                             ) {
                                 if (value.sign != previousSign) {
                                     consumedVelocity -= velocity

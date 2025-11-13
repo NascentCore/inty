@@ -56,14 +56,12 @@ fun ChatInput(
     // 获取agent信息用于事件上报
     val agentInfo by chatViewModel.agentInfo.collectAsState()
 
-
     val horizontalPadding = 16.dp
     val topPadding = 16.dp
 
     Column(
         modifier =
-            Modifier
-                .padding(
+            Modifier.padding(
                     start = horizontalPadding,
                     top = topPadding,
                     end = horizontalPadding,
@@ -75,9 +73,7 @@ fun ChatInput(
     ) {
         // 主输入区域
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
             IntySmallTextField(
@@ -117,7 +113,12 @@ fun ChatInput(
             val rightPadding = 8.dp
             // 发送/更多按钮区域
             MultiUseAccessButton(
-                modifier = Modifier.padding(end = rightPadding, top = verticalPadding, bottom = verticalPadding),
+                modifier =
+                    Modifier.padding(
+                        end = rightPadding,
+                        top = verticalPadding,
+                        bottom = verticalPadding,
+                    ),
                 buttonSize = 30.dp,
                 hasInput = inputData.value.isNotEmpty(),
                 showMorePanel = showMorePanel,
@@ -147,24 +148,17 @@ private fun MultiUseAccessButton(
     onSendMessage: () -> Unit,
     onToggleMorePanel: () -> Unit,
 ) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.BottomStart,
-    ) {
+    Box(modifier = modifier, contentAlignment = Alignment.BottomStart) {
         // 有输入内容时，发送按钮显示
         if (hasInput) {
             AsyncImage(
-                modifier = Modifier
-                    .size(buttonSize)
-                    .noRippleClickable { onSendMessage() },
+                modifier = Modifier.size(buttonSize).noRippleClickable { onSendMessage() },
                 model = R.drawable.btn_send,
                 contentDescription = null,
             )
         } else {
             AsyncImage(
-                modifier = Modifier
-                    .size(buttonSize)
-                    .noRippleClickable { onToggleMorePanel() },
+                modifier = Modifier.size(buttonSize).noRippleClickable { onToggleMorePanel() },
                 model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2,
                 contentDescription = null,
             )

@@ -141,8 +141,8 @@ class TtsManager private constructor(private val context: Context) {
                                     FirebaseManager.safeEventParams(
                                         "agent_id" to agentId,
                                         "message_id" to messageId,
-                                        "timestamp" to System.currentTimeMillis()
-                                    )
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
                                 )
 
                                 completeWithSuccess(dedupKey, messageId, audioUrl, onSuccess)

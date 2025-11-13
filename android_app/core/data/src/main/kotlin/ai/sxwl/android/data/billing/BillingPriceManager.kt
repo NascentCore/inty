@@ -45,20 +45,21 @@ internal class BillingPriceManager(
         LogUtils.i("Billing [价格查询] 开始查询价格，商品ID列表: $subscriptionIds")
         LogUtils.d("Billing [价格查询] 当前计划状态:")
         currentPlansBeforeQuery.forEach { plan ->
-            LogUtils.d("  - ${plan.googleProductId}: ${plan.name}, 当前价格=${plan.price}, 货币=${plan.currencyCode}, 微单位=${plan.priceAmountMicros}")
+            LogUtils.d(
+                "  - ${plan.googleProductId}: ${plan.name}, 当前价格=${plan.price}, 货币=${plan.currencyCode}, 微单位=${plan.priceAmountMicros}"
+            )
         }
 
         // 使用 ProductDetails API (Billing Library 8.0+)
-        val productList = subscriptionIds.map { productId ->
-            QueryProductDetailsParams.Product.newBuilder()
-                .setProductId(productId)
-                .setProductType(BillingClient.ProductType.SUBS)
-                .build()
-        }
+        val productList =
+            subscriptionIds.map { productId ->
+                QueryProductDetailsParams.Product.newBuilder()
+                    .setProductId(productId)
+                    .setProductType(BillingClient.ProductType.SUBS)
+                    .build()
+            }
 
-        val params = QueryProductDetailsParams.newBuilder()
-            .setProductList(productList)
-            .build()
+        val params = QueryProductDetailsParams.newBuilder().setProductList(productList).build()
 
         LogUtils.d("Billing [价格查询] 调用 queryProductDetailsAsync，查询 ${subscriptionIds.size} 个商品")
 
@@ -79,15 +80,18 @@ internal class BillingPriceManager(
                             val subscriptionOfferDetails =
                                 productDetails.subscriptionOfferDetails?.firstOrNull()
                             val pricingPhase =
-                                subscriptionOfferDetails?.pricingPhases?.pricingPhaseList?.firstOrNull()
+                                subscriptionOfferDetails
+                                    ?.pricingPhases
+                                    ?.pricingPhaseList
+                                    ?.firstOrNull()
                             LogUtils.i(
                                 "  📦 商品ID: ${productDetails.productId}\n" +
-                                        "     标题: ${productDetails.title}\n" +
-                                        "     描述: ${productDetails.description}\n" +
-                                        "     原始价格: ${pricingPhase?.formattedPrice ?: "N/A"}\n" +
-                                        "     货币代码: ${pricingPhase?.priceCurrencyCode ?: "N/A"}\n" +
-                                        "     价格微单位: ${pricingPhase?.priceAmountMicros ?: 0L}\n" +
-                                        "     价格周期: ${pricingPhase?.billingPeriod ?: "N/A"}"
+                                    "     标题: ${productDetails.title}\n" +
+                                    "     描述: ${productDetails.description}\n" +
+                                    "     原始价格: ${pricingPhase?.formattedPrice ?: "N/A"}\n" +
+                                    "     货币代码: ${pricingPhase?.priceCurrencyCode ?: "N/A"}\n" +
+                                    "     价格微单位: ${pricingPhase?.priceAmountMicros ?: 0L}\n" +
+                                    "     价格周期: ${pricingPhase?.billingPeriod ?: "N/A"}"
                             )
                         }
 
@@ -106,7 +110,7 @@ internal class BillingPriceManager(
                                 BillingEvent.SkuDetailsQueryFailed(
                                     BillingErrorCode.PRODUCT_DETAILS_QUERY_FAILED,
                                     billingResult.responseCode,
-                                    "查询成功但返回空商品列表"
+                                    "查询成功但返回空商品列表",
                                 )
                             )
                         }
@@ -118,7 +122,7 @@ internal class BillingPriceManager(
                                 BillingEvent.SkuDetailsQueryFailed(
                                     BillingErrorCode.PRODUCT_DETAILS_QUERY_FAILED,
                                     billingResult.responseCode,
-                                    "Google Play返回的商品列表为null"
+                                    "Google Play返回的商品列表为null",
                                 )
                             )
                         }
@@ -133,7 +137,7 @@ internal class BillingPriceManager(
                             BillingEvent.SkuDetailsQueryFailed(
                                 BillingErrorCode.BILLING_NOT_SUPPORTED,
                                 billingResult.responseCode,
-                                billingResult.debugMessage
+                                billingResult.debugMessage,
                             )
                         )
                     }
@@ -147,7 +151,7 @@ internal class BillingPriceManager(
                             BillingEvent.SkuDetailsQueryFailed(
                                 BillingErrorCode.DEVELOPER_ERROR,
                                 billingResult.responseCode,
-                                billingResult.debugMessage
+                                billingResult.debugMessage,
                             )
                         )
                     }
@@ -161,7 +165,7 @@ internal class BillingPriceManager(
                             BillingEvent.SkuDetailsQueryFailed(
                                 BillingErrorCode.SERVICE_UNAVAILABLE,
                                 billingResult.responseCode,
-                                billingResult.debugMessage
+                                billingResult.debugMessage,
                             )
                         )
                     }
@@ -175,7 +179,7 @@ internal class BillingPriceManager(
                             BillingEvent.SkuDetailsQueryFailed(
                                 BillingErrorCode.NETWORK_ERROR,
                                 billingResult.responseCode,
-                                billingResult.debugMessage
+                                billingResult.debugMessage,
                             )
                         )
                     }
@@ -190,7 +194,7 @@ internal class BillingPriceManager(
                             BillingEvent.SkuDetailsQueryFailed(
                                 BillingErrorCode.UNKNOWN_ERROR,
                                 billingResult.responseCode,
-                                billingResult.debugMessage
+                                billingResult.debugMessage,
                             )
                         )
                     }
@@ -202,7 +206,7 @@ internal class BillingPriceManager(
     /** 根据ProductDetails更新计划价格（Billing Library 8.0+ API） */
     private fun updateLocalPlans(
         currentPlans: List<VipPlan>,
-        productDetailsList: List<ProductDetails>
+        productDetailsList: List<ProductDetails>,
     ) {
         LogUtils.i("Billing [价格更新] 开始处理 ${productDetailsList.size} 个商品的价格更新")
 
@@ -236,13 +240,13 @@ internal class BillingPriceManager(
 
                 LogUtils.d(
                     "Billing [价格更新] 处理商品: $planId (${currentPlan.name})\n" +
-                            "  当前本地价格: ${currentPlan.price}\n" +
-                            "  当前本地货币: ${currentPlan.currencyCode}\n" +
-                            "  当前本地微单位: ${currentPlan.priceAmountMicros}\n" +
-                            "  Google Play原始价格: $formattedPrice\n" +
-                            "  Google Play货币代码: $currencyCode\n" +
-                            "  Google Play微单位: $micros\n" +
-                            "  修正后价格: $correctedPrice"
+                        "  当前本地价格: ${currentPlan.price}\n" +
+                        "  当前本地货币: ${currentPlan.currencyCode}\n" +
+                        "  当前本地微单位: ${currentPlan.priceAmountMicros}\n" +
+                        "  Google Play原始价格: $formattedPrice\n" +
+                        "  Google Play货币代码: $currencyCode\n" +
+                        "  Google Play微单位: $micros\n" +
+                        "  修正后价格: $correctedPrice"
                 )
 
                 // 检查价格是否有变化
@@ -253,18 +257,15 @@ internal class BillingPriceManager(
                 val microsChanged = currentPlan.priceAmountMicros != micros
 
                 val shouldUpdate =
-                    hasPlaceholder ||
-                            priceChanged ||
-                            currencyChanged ||
-                            microsChanged
+                    hasPlaceholder || priceChanged || currencyChanged || microsChanged
 
                 LogUtils.d(
                     "Billing [价格更新] 价格比较结果:\n" +
-                            "  是否有占位符: $hasPlaceholder\n" +
-                            "  价格是否变化: $priceChanged\n" +
-                            "  货币是否变化: $currencyChanged\n" +
-                            "  微单位是否变化: $microsChanged\n" +
-                            "  是否需要更新: $shouldUpdate"
+                        "  是否有占位符: $hasPlaceholder\n" +
+                        "  价格是否变化: $priceChanged\n" +
+                        "  货币是否变化: $currencyChanged\n" +
+                        "  微单位是否变化: $microsChanged\n" +
+                        "  是否需要更新: $shouldUpdate"
                 )
 
                 if (shouldUpdate) {
@@ -283,13 +284,12 @@ internal class BillingPriceManager(
 
                     LogUtils.i(
                         "Billing [价格更新] ✅ 价格已更新\n" +
-                                "  商品ID: $planId\n" +
-                                "  商品名称: ${currentPlan.name}\n" +
-                                "  价格变化: $oldPrice -> $correctedPrice\n" +
-                                "  货币变化: $oldCurrency -> $currencyCode\n" +
-                                "  微单位变化: $oldMicros -> $micros"
+                            "  商品ID: $planId\n" +
+                            "  商品名称: ${currentPlan.name}\n" +
+                            "  价格变化: $oldPrice -> $correctedPrice\n" +
+                            "  货币变化: $oldCurrency -> $currencyCode\n" +
+                            "  微单位变化: $oldMicros -> $micros"
                     )
-
                 } else {
                     LogUtils.d("Billing [价格更新] ℹ️ 价格无变化，跳过: $planId (${currentPlan.name})")
                 }
@@ -304,7 +304,9 @@ internal class BillingPriceManager(
             LogUtils.i("Billing [价格更新] ✅ 检测到 $updatedCount 个计划价格变化，准备更新 plansFlow")
             LogUtils.d("Billing [价格更新] 更新后的计划列表:")
             updatedPlans.forEach { plan ->
-                LogUtils.d("  - ${plan.googleProductId}: ${plan.name}, 价格=${plan.price}, 货币=${plan.currencyCode}, 微单位=${plan.priceAmountMicros}")
+                LogUtils.d(
+                    "  - ${plan.googleProductId}: ${plan.name}, 价格=${plan.price}, 货币=${plan.currencyCode}, 微单位=${plan.priceAmountMicros}"
+                )
             }
 
             plansFlow.value = updatedPlans

@@ -14,7 +14,7 @@ if [ "$FORMAT_ALL" = true ]; then
     # Format all Python files
     black app/ scripts/ experimental/
     # Format all other files
-    npx prettier --write evaluation/
+    npx prettier --write evaluation/ web_app/
     echo "Formatting complete!"
     echo
     

@@ -95,7 +95,7 @@ fun ChatTopBar(
                 error = painterResource(R.drawable.img_default_avatar),
                 contentDescription = null,
                 alignment = Alignment.TopCenter,
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
             )
 
             Spacer(modifier = Modifier.width(6.dp))

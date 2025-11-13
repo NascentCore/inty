@@ -65,7 +65,7 @@ class ScriptedClickTest {
     private fun clickWithFallback(
         device: UiDevice,
         selector: BySelector,
-        timeoutMs: Long = ACTION_TIMEOUT_MS
+        timeoutMs: Long = ACTION_TIMEOUT_MS,
     ) {
         val obj = device.wait(Until.findObject(selector), timeoutMs)
         obj?.click()

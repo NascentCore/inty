@@ -52,8 +52,8 @@ internal class BillingPurchaseManager(
                     purchases.forEachIndexed { index, purchase ->
                         LogUtils.d(
                             "Billing 购买[$index]: productIds=${purchase.products}, " +
-                                    "purchaseToken=${purchase.purchaseToken}, orderId=${purchase.orderId}, " +
-                                    "purchaseState=${purchase.purchaseState}, isAcknowledged=${purchase.isAcknowledged}"
+                                "purchaseToken=${purchase.purchaseToken}, orderId=${purchase.orderId}, " +
+                                "purchaseState=${purchase.purchaseState}, isAcknowledged=${purchase.isAcknowledged}"
                         )
                     }
 
@@ -68,7 +68,7 @@ internal class BillingPurchaseManager(
                         eventFlow.emit(
                             BillingEvent.ShowError(
                                 BillingErrorCode.PURCHASES_EMPTY,
-                                isUserInitiated = true // 购买流程是用户主动操作
+                                isUserInitiated = true, // 购买流程是用户主动操作
                             )
                         )
                     }
@@ -78,9 +78,7 @@ internal class BillingPurchaseManager(
             BillingClient.BillingResponseCode.USER_CANCELED -> {
                 LogUtils.i("Billing 用户取消购买")
                 // 发送用户取消事件，让 UI 层知道可以停止 loading
-                eventScope.launch {
-                    eventFlow.emit(BillingEvent.UserCanceled)
-                }
+                eventScope.launch { eventFlow.emit(BillingEvent.UserCanceled) }
             }
 
             BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> {
@@ -91,7 +89,7 @@ internal class BillingPurchaseManager(
                             BillingErrorCode.ITEM_ALREADY_OWNED,
                             billingResult.responseCode,
                             "Item already owned",
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -105,7 +103,7 @@ internal class BillingPurchaseManager(
                             BillingErrorCode.ITEM_NOT_OWNED,
                             billingResult.responseCode,
                             "Item not owned",
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -119,7 +117,7 @@ internal class BillingPurchaseManager(
                             BillingErrorCode.ITEM_UNAVAILABLE,
                             billingResult.responseCode,
                             "Item is not available in current region",
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -135,35 +133,39 @@ internal class BillingPurchaseManager(
                             BillingErrorCode.DEVELOPER_ERROR,
                             billingResult.responseCode,
                             "Developer error",
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
             }
 
             BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
-                LogUtils.e("Billing Service unavailable: Google Play services temporarily unavailable")
+                LogUtils.e(
+                    "Billing Service unavailable: Google Play services temporarily unavailable"
+                )
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
                             BillingErrorCode.SERVICE_UNAVAILABLE,
                             billingResult.responseCode,
                             "Service unavailable",
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
             }
 
             BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
-                LogUtils.e("Billing Billing unavailable: Device does not support Google Play billing")
+                LogUtils.e(
+                    "Billing Billing unavailable: Device does not support Google Play billing"
+                )
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
                             BillingErrorCode.BILLING_NOT_SUPPORTED,
                             billingResult.responseCode,
                             "Device does not support Google Play billing",
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -177,21 +179,23 @@ internal class BillingPurchaseManager(
                             BillingErrorCode.NETWORK_ERROR,
                             billingResult.responseCode,
                             "Network error",
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
             }
 
             BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED -> {
-                LogUtils.e("Billing Feature not supported: Current device does not support this feature")
+                LogUtils.e(
+                    "Billing Feature not supported: Current device does not support this feature"
+                )
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
                             BillingErrorCode.BILLING_FEATURE_NOT_SUPPORTED,
                             billingResult.responseCode,
                             "Feature not supported",
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -205,7 +209,7 @@ internal class BillingPurchaseManager(
                             BillingErrorCode.UNKNOWN_ERROR,
                             billingResult.responseCode,
                             "General error",
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -221,7 +225,7 @@ internal class BillingPurchaseManager(
                             BillingErrorCode.PURCHASE_FAILED,
                             billingResult.responseCode,
                             billingResult.debugMessage,
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -275,7 +279,7 @@ internal class BillingPurchaseManager(
                             BillingErrorCode.PURCHASE_ACKNOWLEDGMENT_FAILED,
                             billingResult.responseCode,
                             billingResult.debugMessage,
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -290,7 +294,8 @@ internal class BillingPurchaseManager(
             try {
                 // 重要：必须使用 purchase.products 中的 productId
                 // 原因：
-                // 1. purchase.products 和 purchase.purchaseToken 是配对的，必须使用 purchase.products 中的 productId
+                // 1. purchase.products 和 purchase.purchaseToken 是配对的，必须使用 purchase.products 中的
+                // productId
                 // 2. 当有多个未确认的购买时（比如用户之前有月订阅，现在购买年订阅），
                 //    onPurchasesUpdated 会返回所有未确认的购买
                 // 3. Google Play 验证时，productId 和 purchaseToken 必须匹配，否则验证会失败
@@ -304,8 +309,8 @@ internal class BillingPurchaseManager(
 
                 LogUtils.d(
                     "Billing 验证订阅: productId=${verifyRequest.productId}, purchaseToken=${verifyRequest.purchaseToken}, " +
-                            "orderId=${verifyRequest.orderId}, purchaseTime=${purchase.purchaseTime}, " +
-                            "purchaseState=${purchase.purchaseState}, isAcknowledged=${purchase.isAcknowledged}"
+                        "orderId=${verifyRequest.orderId}, purchaseTime=${purchase.purchaseTime}, " +
+                        "purchaseState=${purchase.purchaseState}, isAcknowledged=${purchase.isAcknowledged}"
                 )
 
                 // 调用验证接口
@@ -328,14 +333,15 @@ internal class BillingPurchaseManager(
                             val productId = purchaseProductsFirstId
                             val plan =
                                 plansFlow.value.firstOrNull { it.googleProductId == productId }
-                            val eventParams = mutableMapOf<String, Any>(
-                                "product_id" to productId,
-                                "order_id" to (purchase.orderId ?: ""),
-                                "purchase_token" to purchase.purchaseToken,
-                                "purchase_time" to purchase.purchaseTime,
-                                "user_type" to "vip",
-                                "timestamp" to System.currentTimeMillis()
-                            )
+                            val eventParams =
+                                mutableMapOf<String, Any>(
+                                    "product_id" to productId,
+                                    "order_id" to (purchase.orderId ?: ""),
+                                    "purchase_token" to purchase.purchaseToken,
+                                    "purchase_time" to purchase.purchaseTime,
+                                    "user_type" to "vip",
+                                    "timestamp" to System.currentTimeMillis(),
+                                )
                             // 添加价格参数
                             plan?.let {
                                 eventParams["price"] = it.price
@@ -344,8 +350,9 @@ internal class BillingPurchaseManager(
                             }
                             FirebaseManager.logEvent(
                                 FirebaseManager.Events.SUBSCRIPTION_SUCCESS,
-                                FirebaseManager.safeEventParams(*eventParams.map { it.key to it.value }
-                                    .toTypedArray())
+                                FirebaseManager.safeEventParams(
+                                    *eventParams.map { it.key to it.value }.toTypedArray()
+                                ),
                             )
 
                             // 验证成功后再发送 PurchaseSuccess 事件，触发远程状态刷新
@@ -360,16 +367,18 @@ internal class BillingPurchaseManager(
                             val productId = purchaseProductsFirstId
                             val plan =
                                 plansFlow.value.firstOrNull { it.googleProductId == productId }
-                            val eventParams = mutableMapOf<String, Any>(
-                                "product_id" to productId,
-                                "order_id" to (purchase.orderId ?: ""),
-                                "purchase_token" to purchase.purchaseToken,
-                                "error_code" to (response.errorCode ?: ""),
-                                "error_message" to (response.message ?: ""),
-                                "purchase_time" to purchase.purchaseTime,
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                "timestamp" to System.currentTimeMillis()
-                            )
+                            val eventParams =
+                                mutableMapOf<String, Any>(
+                                    "product_id" to productId,
+                                    "order_id" to (purchase.orderId ?: ""),
+                                    "purchase_token" to purchase.purchaseToken,
+                                    "error_code" to (response.errorCode ?: ""),
+                                    "error_message" to (response.message ?: ""),
+                                    "purchase_time" to purchase.purchaseTime,
+                                    "user_type" to
+                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "timestamp" to System.currentTimeMillis(),
+                                )
                             // 添加价格参数
                             plan?.let {
                                 eventParams["price"] = it.price
@@ -378,15 +387,16 @@ internal class BillingPurchaseManager(
                             }
                             FirebaseManager.logEvent(
                                 FirebaseManager.Events.SUBSCRIPTION_FAILURE,
-                                FirebaseManager.safeEventParams(*eventParams.map { it.key to it.value }
-                                    .toTypedArray())
+                                FirebaseManager.safeEventParams(
+                                    *eventParams.map { it.key to it.value }.toTypedArray()
+                                ),
                             )
-                            
+
                             eventScope.launch {
                                 eventFlow.emit(
                                     BillingEvent.ShowError(
                                         BillingErrorCode.SUBSCRIPTION_VERIFICATION_FAILED,
-                                        response.message
+                                        response.message,
                                     )
                                 )
                             }
@@ -401,15 +411,16 @@ internal class BillingPurchaseManager(
                         // 记录订阅验证失败事件
                         val productId = purchaseProductsFirstId
                         val plan = plansFlow.value.firstOrNull { it.googleProductId == productId }
-                        val eventParams = mutableMapOf<String, Any>(
-                            "product_id" to productId,
-                            "order_id" to (purchase.orderId ?: ""),
-                            "purchase_token" to purchase.purchaseToken,
-                            "error_message" to (result.message ?: ""),
-                            "purchase_time" to purchase.purchaseTime,
-                            "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                            "timestamp" to System.currentTimeMillis()
-                        )
+                        val eventParams =
+                            mutableMapOf<String, Any>(
+                                "product_id" to productId,
+                                "order_id" to (purchase.orderId ?: ""),
+                                "purchase_token" to purchase.purchaseToken,
+                                "error_message" to (result.message ?: ""),
+                                "purchase_time" to purchase.purchaseTime,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "timestamp" to System.currentTimeMillis(),
+                            )
                         // 添加价格参数
                         plan?.let {
                             eventParams["price"] = it.price
@@ -418,14 +429,14 @@ internal class BillingPurchaseManager(
                         }
                         FirebaseManager.logEvent(
                             FirebaseManager.Events.SUBSCRIPTION_FAILURE,
-                            FirebaseManager.safeEventParams(*eventParams.toList().toTypedArray())
+                            FirebaseManager.safeEventParams(*eventParams.toList().toTypedArray()),
                         )
-                        
+
                         eventScope.launch {
                             eventFlow.emit(
                                 BillingEvent.ShowError(
                                     BillingErrorCode.SUBSCRIPTION_VERIFICATION_FAILED,
-                                    result.message
+                                    result.message,
                                 )
                             )
                         }
@@ -440,15 +451,16 @@ internal class BillingPurchaseManager(
                 val productId = purchaseProductsFirstId
                 val plan = plansFlow.value.firstOrNull { it.googleProductId == productId }
                 val errorMessage = "${e.javaClass.simpleName}: ${e.message ?: ""}"
-                val eventParams = mutableMapOf<String, Any>(
-                    "product_id" to productId,
-                    "order_id" to (purchase.orderId ?: ""),
-                    "purchase_token" to purchase.purchaseToken,
-                    "error_message" to errorMessage,
-                    "purchase_time" to purchase.purchaseTime,
-                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                    "timestamp" to System.currentTimeMillis()
-                )
+                val eventParams =
+                    mutableMapOf<String, Any>(
+                        "product_id" to productId,
+                        "order_id" to (purchase.orderId ?: ""),
+                        "purchase_token" to purchase.purchaseToken,
+                        "error_message" to errorMessage,
+                        "purchase_time" to purchase.purchaseTime,
+                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                        "timestamp" to System.currentTimeMillis(),
+                    )
                 // 添加价格参数
                 plan?.let {
                     eventParams["price"] = it.price
@@ -457,15 +469,15 @@ internal class BillingPurchaseManager(
                 }
                 FirebaseManager.logEvent(
                     FirebaseManager.Events.SUBSCRIPTION_FAILURE,
-                    FirebaseManager.safeEventParams(*eventParams.toList().toTypedArray())
+                    FirebaseManager.safeEventParams(*eventParams.toList().toTypedArray()),
                 )
-                
+
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.ShowError(
                             BillingErrorCode.SUBSCRIPTION_VERIFICATION_EXCEPTION,
                             e.message,
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -503,7 +515,7 @@ internal class BillingPurchaseManager(
                             BillingErrorCode.GOOGLE_PLAY_SERVICE_UPDATE_REQUIRED,
                             resultCode,
                             1001,
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -516,7 +528,7 @@ internal class BillingPurchaseManager(
                     eventFlow.emit(
                         BillingEvent.ShowError(
                             BillingErrorCode.GOOGLE_PLAY_SERVICE_DISABLED,
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -529,7 +541,7 @@ internal class BillingPurchaseManager(
                     eventFlow.emit(
                         BillingEvent.ShowError(
                             BillingErrorCode.GOOGLE_PLAY_SERVICE_MISSING,
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -542,7 +554,7 @@ internal class BillingPurchaseManager(
                     eventFlow.emit(
                         BillingEvent.ShowError(
                             BillingErrorCode.GOOGLE_PLAY_SERVICE_INVALID,
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -555,7 +567,7 @@ internal class BillingPurchaseManager(
                     eventFlow.emit(
                         BillingEvent.ShowError(
                             BillingErrorCode.GOOGLE_PLAY_SERVICE_UNAVAILABLE,
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -570,7 +582,7 @@ internal class BillingPurchaseManager(
                 eventFlow.emit(
                     BillingEvent.ShowError(
                         BillingErrorCode.BILLING_NOT_SUPPORTED,
-                        isUserInitiated = true // 购买流程是用户主动操作
+                        isUserInitiated = true, // 购买流程是用户主动操作
                     )
                 )
             }
@@ -594,7 +606,7 @@ internal class BillingPurchaseManager(
                     eventFlow.emit(
                         BillingEvent.ShowError(
                             BillingErrorCode.BILLING_FEATURE_NOT_SUPPORTED,
-                            isUserInitiated = true // 购买流程是用户主动操作
+                            isUserInitiated = true, // 购买流程是用户主动操作
                         )
                     )
                 }
@@ -607,7 +619,7 @@ internal class BillingPurchaseManager(
                     BillingEvent.ShowError(
                         BillingErrorCode.BILLING_SUPPORT_CHECK_ERROR,
                         e.message,
-                        isUserInitiated = true // 购买流程是用户主动操作
+                        isUserInitiated = true, // 购买流程是用户主动操作
                     )
                 )
             }
@@ -623,7 +635,7 @@ internal class BillingPurchaseManager(
                 eventFlow.emit(
                     BillingEvent.ShowError(
                         BillingErrorCode.PURCHASE_PRECONDITIONS_CHECK_FAILED,
-                        isUserInitiated = true // 购买流程是用户主动操作
+                        isUserInitiated = true, // 购买流程是用户主动操作
                     )
                 )
             }
@@ -639,27 +651,27 @@ internal class BillingPurchaseManager(
     /** 内部购买流程实现 */
     private fun launchBillingFlowInternal(activity: Activity, productId: String) {
         // 查询商品详情（使用 ProductDetails API - Billing Library 8.0+）
-        val product = QueryProductDetailsParams.Product.newBuilder()
-            .setProductId(productId)
-            .setProductType(BillingClient.ProductType.SUBS)
-            .build()
+        val product =
+            QueryProductDetailsParams.Product.newBuilder()
+                .setProductId(productId)
+                .setProductType(BillingClient.ProductType.SUBS)
+                .build()
 
-        val params = QueryProductDetailsParams.newBuilder()
-            .setProductList(listOf(product))
-            .build()
+        val params = QueryProductDetailsParams.newBuilder().setProductList(listOf(product)).build()
 
         LogUtils.i("Billing [购买流程] 开始查询商品详情，商品ID: $productId")
 
         billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsResult ->
-            LogUtils.i("Billing [购买流程] 查询商品详情结果: 响应码=${billingResult.responseCode}, 详情=${billingResult.debugMessage}")
+            LogUtils.i(
+                "Billing [购买流程] 查询商品详情结果: 响应码=${billingResult.responseCode}, 详情=${billingResult.debugMessage}"
+            )
 
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
                     val productDetails = productDetailsResult?.productDetailsList?.firstOrNull()
                     productDetails?.let {
                         // 获取订阅优惠详情（通常使用第一个）
-                        val subscriptionOfferDetails =
-                            it.subscriptionOfferDetails?.firstOrNull()
+                        val subscriptionOfferDetails = it.subscriptionOfferDetails?.firstOrNull()
                         val offerToken = subscriptionOfferDetails?.offerToken
 
                         if (offerToken == null) {
@@ -670,7 +682,7 @@ internal class BillingPurchaseManager(
                                         BillingErrorCode.PRODUCT_DETAILS_NOT_FOUND,
                                         BillingClient.BillingResponseCode.OK,
                                         "No subscription offer details found for $productId",
-                                        isUserInitiated = true // 购买流程是用户主动操作
+                                        isUserInitiated = true, // 购买流程是用户主动操作
                                     )
                                 )
                             }
@@ -681,14 +693,14 @@ internal class BillingPurchaseManager(
                             subscriptionOfferDetails.pricingPhases.pricingPhaseList.firstOrNull()
                         LogUtils.i(
                             "Billing [购买流程] ✅ 找到商品详情:\n" +
-                                    "  商品ID: ${it.productId}\n" +
-                                    "  标题: ${it.title}\n" +
-                                    "  描述: ${it.description}\n" +
-                                    "  原始价格: ${pricingPhase?.formattedPrice ?: "N/A"}\n" +
-                                    "  货币代码: ${pricingPhase?.priceCurrencyCode ?: "N/A"}\n" +
-                                    "  价格微单位: ${pricingPhase?.priceAmountMicros ?: 0L}\n" +
-                                    "  价格周期: ${pricingPhase?.billingPeriod ?: "N/A"}\n" +
-                                    "  优惠Token: $offerToken"
+                                "  商品ID: ${it.productId}\n" +
+                                "  标题: ${it.title}\n" +
+                                "  描述: ${it.description}\n" +
+                                "  原始价格: ${pricingPhase?.formattedPrice ?: "N/A"}\n" +
+                                "  货币代码: ${pricingPhase?.priceCurrencyCode ?: "N/A"}\n" +
+                                "  价格微单位: ${pricingPhase?.priceAmountMicros ?: 0L}\n" +
+                                "  价格周期: ${pricingPhase?.billingPeriod ?: "N/A"}\n" +
+                                "  优惠Token: $offerToken"
                         )
 
                         // 使用 ProductDetails 启动购买流程（Billing Library 8.0+）
@@ -701,10 +713,11 @@ internal class BillingPurchaseManager(
                         // 获取当前用户ID，用于设置 ObfuscatedAccountId
                         // 这样 webhook 可以通过 ObfuscatedAccountId 关联用户并创建订阅记录
                         val currentUserId = ai.sxwl.android.data.store.IntySetting.getCurUserID()
-                        
-                        val billingFlowParamsBuilder = BillingFlowParams.newBuilder()
-                            .setProductDetailsParamsList(listOf(productDetailsParams))
-                        
+
+                        val billingFlowParamsBuilder =
+                            BillingFlowParams.newBuilder()
+                                .setProductDetailsParamsList(listOf(productDetailsParams))
+
                         // 设置 ObfuscatedAccountId（如果用户已登录）
                         // 这允许 webhook 通过 Google Play API 响应中的 obfuscatedExternalAccountId 字段关联用户
                         if (currentUserId.isNotEmpty()) {
@@ -713,7 +726,7 @@ internal class BillingPurchaseManager(
                         } else {
                             LogUtils.w("Billing [购买流程] 用户未登录，无法设置 ObfuscatedAccountId")
                         }
-                        
+
                         val billingFlowParams = billingFlowParamsBuilder.build()
 
                         val launchResult =
@@ -728,7 +741,7 @@ internal class BillingPurchaseManager(
                                         BillingErrorCode.PRODUCT_DETAILS_NOT_FOUND,
                                         BillingClient.BillingResponseCode.OK,
                                         productId,
-                                        isUserInitiated = true // 购买流程是用户主动操作
+                                        isUserInitiated = true, // 购买流程是用户主动操作
                                     )
                                 )
                             }
@@ -743,7 +756,7 @@ internal class BillingPurchaseManager(
                                 BillingErrorCode.DEVELOPER_ERROR,
                                 billingResult.responseCode,
                                 "Please check product ID configuration, app signature, test user settings",
-                                isUserInitiated = true // 购买流程是用户主动操作
+                                isUserInitiated = true, // 购买流程是用户主动操作
                             )
                         )
                     }
@@ -757,7 +770,7 @@ internal class BillingPurchaseManager(
                                 BillingErrorCode.SERVICE_UNAVAILABLE,
                                 billingResult.responseCode,
                                 "Google Play services temporarily unavailable",
-                                isUserInitiated = true // 购买流程是用户主动操作
+                                isUserInitiated = true, // 购买流程是用户主动操作
                             )
                         )
                     }
@@ -771,7 +784,7 @@ internal class BillingPurchaseManager(
                                 BillingErrorCode.BILLING_NOT_SUPPORTED,
                                 billingResult.responseCode,
                                 "Device does not support Google Play billing",
-                                isUserInitiated = true // 购买流程是用户主动操作
+                                isUserInitiated = true, // 购买流程是用户主动操作
                             )
                         )
                     }
@@ -785,7 +798,7 @@ internal class BillingPurchaseManager(
                                 BillingErrorCode.ITEM_UNAVAILABLE,
                                 billingResult.responseCode,
                                 "Item is not available in current region",
-                                isUserInitiated = true // 购买流程是用户主动操作
+                                isUserInitiated = true, // 购买流程是用户主动操作
                             )
                         )
                     }
@@ -799,7 +812,7 @@ internal class BillingPurchaseManager(
                                 BillingErrorCode.NETWORK_ERROR,
                                 billingResult.responseCode,
                                 "Network connection issue",
-                                isUserInitiated = true // 购买流程是用户主动操作
+                                isUserInitiated = true, // 购买流程是用户主动操作
                             )
                         )
                     }
@@ -815,7 +828,7 @@ internal class BillingPurchaseManager(
                                 BillingErrorCode.PRODUCT_DETAILS_QUERY_FAILED,
                                 billingResult.responseCode,
                                 billingResult.debugMessage,
-                                isUserInitiated = true // 购买流程是用户主动操作
+                                isUserInitiated = true, // 购买流程是用户主动操作
                             )
                         )
                     }

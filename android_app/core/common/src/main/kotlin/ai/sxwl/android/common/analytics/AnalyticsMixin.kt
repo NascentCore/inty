@@ -63,12 +63,11 @@ interface AnalyticsMixin {
         trackEvent("error_occurred", errorParams)
     }
 
-
     /** 跟踪用户操作 */
     fun trackUserAction(
         action: String,
         target: String? = null,
-        params: Map<String, Any> = emptyMap()
+        params: Map<String, Any> = emptyMap(),
     ) {
         val actionParams =
             params +
@@ -104,7 +103,7 @@ interface AnalyticsMixin {
         url: String,
         method: String,
         success: Boolean,
-        responseTime: Long = 0L
+        responseTime: Long = 0L,
     ) {
         PageTrackingHelper.trackNetworkRequest(url, method, success, responseTime)
     }
@@ -113,7 +112,7 @@ interface AnalyticsMixin {
     fun trackAppError(
         error: String,
         errorType: String = "unknown",
-        params: Map<String, Any> = emptyMap()
+        params: Map<String, Any> = emptyMap(),
     ) {
         PageTrackingHelper.trackError(error, errorType, params)
     }

@@ -77,9 +77,7 @@ data class EventBusStats(
 )
 
 /** 事件总线管理器 负责管理事件订阅者和发布事件 */
-internal class EventBusManager(
-    private val config: EventBusConfig = EventBusConfig(),
-) {
+internal class EventBusManager(private val config: EventBusConfig = EventBusConfig()) {
     private val subscribers = ConcurrentHashMap<KClass<*>, MutableSet<WeakEventSubscriber<*>>>()
     private val eventIdGenerator = AtomicLong(0)
     private val eventScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -153,7 +151,7 @@ internal class EventBusManager(
         stats =
             stats.copy(
                 lastCleanupTime = System.currentTimeMillis(),
-                totalSubscribers = subscribers.values.sumOf { it.size }
+                totalSubscribers = subscribers.values.sumOf { it.size },
             )
 
         logDebug("清理完成，移除 $removedCount 个无效订阅者")
@@ -170,7 +168,7 @@ internal class EventBusManager(
     fun getStats(): EventBusStats {
         return stats.copy(
             totalSubscribers = subscribers.values.sumOf { it.size },
-            activeEventTypes = subscribers.size
+            activeEventTypes = subscribers.size,
         )
     }
 
@@ -197,7 +195,7 @@ internal class EventBusManager(
         stats =
             stats.copy(
                 totalSubscribers = subscribers.values.sumOf { it.size },
-                activeEventTypes = subscribers.size
+                activeEventTypes = subscribers.size,
             )
     }
 
@@ -303,7 +301,7 @@ object EventBusExtensions {
                     onEvent(event)
                 }
             },
-            priority
+            priority,
         )
     }
 

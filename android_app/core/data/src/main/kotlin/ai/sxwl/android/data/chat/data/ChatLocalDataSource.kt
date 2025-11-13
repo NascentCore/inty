@@ -119,16 +119,17 @@ class ChatLocalDataSource {
             session.messages.value.map { msg ->
                 if (msg.id == messageId || msg.localMsgId == messageId) {
                     val currentMeta = msg.meta_data ?: MsgInfo.MsgMetaData(agentId = agentId)
-                    val updatedMeta = if (generatedImage != null) {
-                        currentMeta.copy(generatedImage = generatedImage)
-                    } else {
-                        // 移除 generatedImage：创建新的 meta_data，不包含 generatedImage
-                        MsgInfo.MsgMetaData(
-                            agentId = currentMeta.agentId,
-                            isOpening = currentMeta.isOpening,
-                            generatedImage = null,
-                        )
-                    }
+                    val updatedMeta =
+                        if (generatedImage != null) {
+                            currentMeta.copy(generatedImage = generatedImage)
+                        } else {
+                            // 移除 generatedImage：创建新的 meta_data，不包含 generatedImage
+                            MsgInfo.MsgMetaData(
+                                agentId = currentMeta.agentId,
+                                isOpening = currentMeta.isOpening,
+                                generatedImage = null,
+                            )
+                        }
                     msg.copy(meta_data = updatedMeta)
                 } else {
                     msg

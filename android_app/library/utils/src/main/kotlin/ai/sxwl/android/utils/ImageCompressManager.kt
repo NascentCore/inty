@@ -34,7 +34,7 @@ class ImageCompressManager private constructor() {
         val failedCount: Int = 0,
         val originalSize: Long = 0L,
         val compressedSize: Long = 0L,
-        val compressionRatio: Float = 0f
+        val compressionRatio: Float = 0f,
     ) {
         val isCompleted: Boolean
             get() = successCount + failedCount >= totalFiles
@@ -45,7 +45,7 @@ class ImageCompressManager private constructor() {
         val id: String,
         val files: List<File>,
         val config: ImageCompressUtils.CompressConfig,
-        val startTime: Long = System.currentTimeMillis()
+        val startTime: Long = System.currentTimeMillis(),
     )
 
     private val activeTasks = mutableMapOf<String, CompressTask>()
@@ -64,7 +64,7 @@ class ImageCompressManager private constructor() {
         context: Context,
         imageFiles: List<File>,
         config: ImageCompressUtils.CompressConfig = ImageCompressUtils.CompressConfig(),
-        taskId: String = generateTaskId()
+        taskId: String = generateTaskId(),
     ): Flow<CompressStats> =
         flow {
                 val validFiles = imageFiles.filter { ImageCompressUtils.isSupportedImageFormat(it) }
@@ -124,7 +124,7 @@ class ImageCompressManager private constructor() {
                             compressionRatio =
                                 if (originalSize > 0) {
                                     (1f - compressedSize.toFloat() / originalSize.toFloat()) * 100f
-                                } else 0f
+                                } else 0f,
                         )
 
                     taskStats[taskId] = stats
@@ -147,7 +147,7 @@ class ImageCompressManager private constructor() {
         context: Context,
         imageFile: File,
         config: ImageCompressUtils.CompressConfig = ImageCompressUtils.CompressConfig(),
-        callback: ImageCompressUtils.CompressCallback
+        callback: ImageCompressUtils.CompressCallback,
     ) {
         compressScope.launch {
             try {
@@ -176,7 +176,7 @@ class ImageCompressManager private constructor() {
         context: Context,
         imageFile: File,
         targetSizeKB: Int = 500,
-        callback: ImageCompressUtils.CompressCallback
+        callback: ImageCompressUtils.CompressCallback,
     ) {
         if (!imageFile.exists()) {
             callback.onError(IOException("图片文件不存在"))
@@ -204,21 +204,21 @@ class ImageCompressManager private constructor() {
                         quality = 60,
                         maxWidth = 800,
                         maxHeight = 1200,
-                        maxSize = targetSizeKB
+                        maxSize = targetSizeKB,
                     )
                 fileSizeKB > 2000 ->
                     ImageCompressUtils.CompressConfig(
                         quality = 70,
                         maxWidth = 1000,
                         maxHeight = 1500,
-                        maxSize = targetSizeKB
+                        maxSize = targetSizeKB,
                     )
                 else ->
                     ImageCompressUtils.CompressConfig(
                         quality = 80,
                         maxWidth = 1200,
                         maxHeight = 1800,
-                        maxSize = targetSizeKB
+                        maxSize = targetSizeKB,
                     )
             }
 
@@ -283,7 +283,7 @@ class ImageCompressManager private constructor() {
 fun File.compressImage(
     context: Context,
     config: ImageCompressUtils.CompressConfig = ImageCompressUtils.CompressConfig(),
-    callback: (File) -> Unit
+    callback: (File) -> Unit,
 ) {
     ImageCompressManager.getInstance()
         .compressImageAsync(
@@ -298,7 +298,7 @@ fun File.compressImage(
                 override fun onError(throwable: Throwable) {
                     // 忽略错误，或者可以添加日志
                 }
-            }
+            },
         )
 }
 
@@ -317,7 +317,7 @@ fun File.smartCompress(context: Context, targetSizeKB: Int = 500, callback: (Fil
                 override fun onError(throwable: Throwable) {
                     // 忽略错误，或者可以添加日志
                 }
-            }
+            },
         )
 }
 
@@ -325,7 +325,7 @@ fun File.smartCompress(context: Context, targetSizeKB: Int = 500, callback: (Fil
 fun List<File>.compressImages(
     context: Context,
     config: ImageCompressUtils.CompressConfig = ImageCompressUtils.CompressConfig(),
-    taskId: String = "batch_${System.currentTimeMillis()}"
+    taskId: String = "batch_${System.currentTimeMillis()}",
 ): Flow<ImageCompressManager.CompressStats> {
     return ImageCompressManager.getInstance()
         .compressImagesWithProgress(context, this, config, taskId)

@@ -76,25 +76,20 @@ fun ShimmerPlaceholder(
                     repeat(3) { index ->
                         val delay = index * 200
                         val dotAlpha by
-                        infiniteTransition.animateFloat(
-                            initialValue = 0.3f,
-                            targetValue = 1.0f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(
-                                    600,
-                                    delayMillis = delay
-                                )
-                            ),
-                            label = "dot_alpha_$index",
-                        )
+                            infiniteTransition.animateFloat(
+                                initialValue = 0.3f,
+                                targetValue = 1.0f,
+                                animationSpec =
+                                    infiniteRepeatable(animation = tween(600, delayMillis = delay)),
+                                label = "dot_alpha_$index",
+                            )
 
                         Box(
                             modifier =
-                                Modifier
-                                    .size(6.dp)
+                                Modifier.size(6.dp)
                                     .background(
                                         color = Color.White.copy(alpha = dotAlpha * 0.7f),
-                                        shape = CircleShape
+                                        shape = CircleShape,
                                     )
                         )
                     }

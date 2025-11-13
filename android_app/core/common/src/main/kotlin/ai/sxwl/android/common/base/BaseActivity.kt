@@ -51,7 +51,5 @@ abstract class BaseActivity : ComponentActivity() {
 
     open fun initConfigData() {}
 
-    @Composable
-    open fun ConfigComposeUI() {
-    }
+    @Composable open fun ConfigComposeUI() {}
 }

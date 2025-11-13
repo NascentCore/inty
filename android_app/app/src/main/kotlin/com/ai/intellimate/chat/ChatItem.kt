@@ -90,33 +90,30 @@ fun ChatItem(
     isLatestMessage: Boolean = false,
 ) {
     runCatching {
-        when (item.role) {
-            "assistant" -> {
-                ChatItemAI(item, isCurrentPage, chatViewModel, isLatestMessage)
-            }
+            when (item.role) {
+                "assistant" -> {
+                    ChatItemAI(item, isCurrentPage, chatViewModel, isLatestMessage)
+                }
 
-            "user" -> {
-                ChatItemUser(item)
-            }
+                "user" -> {
+                    ChatItemUser(item)
+                }
 
-            "system" -> {
-                ChatItemSystemTips(item, chatViewModel)
-            }
+                "system" -> {
+                    ChatItemSystemTips(item, chatViewModel)
+                }
 
-            else -> {
-                LogUtils.w("ChatItem - 未知角色: ${item.role}")
-                ChatItemUser(item)
+                else -> {
+                    LogUtils.w("ChatItem - 未知角色: ${item.role}")
+                    ChatItemUser(item)
+                }
             }
         }
-    }
         .onFailure { e ->
             LogUtils.e("ChatItem - 渲染失败: ${e.message}")
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(60.dp)
-                        .background(Color.Red.copy(alpha = 0.1f))
+                    Modifier.fillMaxWidth().height(60.dp).background(Color.Red.copy(alpha = 0.1f))
             ) {
                 Text(
                     text = "Message display failed",
@@ -137,41 +134,42 @@ private fun ChatItemAI(
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
 
     runCatching {
-        Column(modifier = Modifier.fillMaxWidth(.9f)) {
-            val hasGeneratedImage = item.hasGeneratedImage()
-            val generatedImageUrl = item.getGeneratedImageUrl()
-            val isImageLoading = (item.content == "loading_animation" &&
-                    item.localMsgId.contains("loading_image", ignoreCase = true)) ||
-                    (generatedImageUrl == "loading")
+            Column(modifier = Modifier.fillMaxWidth(.9f)) {
+                val hasGeneratedImage = item.hasGeneratedImage()
+                val generatedImageUrl = item.getGeneratedImageUrl()
+                val isImageLoading =
+                    (item.content == "loading_animation" &&
+                        item.localMsgId.contains("loading_image", ignoreCase = true)) ||
+                        (generatedImageUrl == "loading")
 
-            if (item.content.isNotEmpty() && item.content != "loading_animation") {
-                val agentInfo by viewModel.agentInfo.collectAsState()
+                if (item.content.isNotEmpty() && item.content != "loading_animation") {
+                    val agentInfo by viewModel.agentInfo.collectAsState()
 
-                val vmAgentId = agentInfo?.id
-                val metaAgentId = item.agentId()
-                val safeAgentId = vmAgentId ?: metaAgentId ?: ""
+                    val vmAgentId = agentInfo?.id
+                    val metaAgentId = item.agentId()
+                    val safeAgentId = vmAgentId ?: metaAgentId ?: ""
 
-                val audioInfo =
-                    AudioInfo(
-                        url = item.audio_url ?: "",
-                        title = "Voice Message",
-                        artist = "AI Agent",
-                        messageId = item.localMsgId,
-                        agentId = safeAgentId,
-                        agentName = agentInfo?.name,
-                    )
+                    val audioInfo =
+                        AudioInfo(
+                            url = item.audio_url ?: "",
+                            title = "Voice Message",
+                            artist = "AI Agent",
+                            messageId = item.localMsgId,
+                            agentId = safeAgentId,
+                            agentName = agentInfo?.name,
+                        )
 
-                val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
+                    val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
 
-                val allMessages by viewModel.msgs.collectAsState()
-                val actualChatMessages =
-                    allMessages.filter { !it.isOpening() && it.role != "system" }
-                val isOnlyOpeningMessage = actualChatMessages.isEmpty()
+                    val allMessages by viewModel.msgs.collectAsState()
+                    val actualChatMessages =
+                        allMessages.filter { !it.isOpening() && it.role != "system" }
+                    val isOnlyOpeningMessage = actualChatMessages.isEmpty()
 
-                val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
+                    val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
 
-                val shouldAutoPlay =
-                    item.isOpening() &&
+                    val shouldAutoPlay =
+                        item.isOpening() &&
                             isOnlyOpeningMessage &&
                             !hasPlayedOpening &&
                             isCurrentPage &&
@@ -180,357 +178,317 @@ private fun ChatItemAI(
                             audioInfo.url.isNotEmpty() &&
                             IntySetting.isAutoPlayAudio()
 
-                if (safeAgentId.isNotEmpty()) {
-                    VoicePlayer(
-                        audioInfo = audioInfo,
-                        autoPlay = shouldAutoPlay,
-                        modifier = Modifier.widthIn(38.dp),
-                        onTtsGenerated = { audioUrl ->
-                            viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
-                        },
-                        serverMessageId = item.id,
-                    )
+                    if (safeAgentId.isNotEmpty()) {
+                        VoicePlayer(
+                            audioInfo = audioInfo,
+                            autoPlay = shouldAutoPlay,
+                            modifier = Modifier.widthIn(38.dp),
+                            onTtsGenerated = { audioUrl ->
+                                viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
+                            },
+                            serverMessageId = item.id,
+                        )
+                    }
                 }
-            }
-            val msgShape =
-                if (item.content.isNotEmpty() && item.content != "loading_animation")
-                    RoundedCornerShape(topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
-                else RoundedCornerShape(12.dp)
+                val msgShape =
+                    if (item.content.isNotEmpty() && item.content != "loading_animation")
+                        RoundedCornerShape(topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
+                    else RoundedCornerShape(12.dp)
 
-            val isImageOnlyMessage =
-                item.content.isEmpty() && hasGeneratedImage && generatedImageUrl != "loading"
+                val isImageOnlyMessage =
+                    item.content.isEmpty() && hasGeneratedImage && generatedImageUrl != "loading"
 
-            var showFullScreenImage by remember { mutableStateOf(false) }
-            var imageLoadError by remember { mutableStateOf(false) }
+                var showFullScreenImage by remember { mutableStateOf(false) }
+                var imageLoadError by remember { mutableStateOf(false) }
 
-            val isNormalLoading = item.content == "loading_animation" &&
-                    !hasGeneratedImage &&
-                    generatedImageUrl != "loading"
+                val isNormalLoading =
+                    item.content == "loading_animation" &&
+                        !hasGeneratedImage &&
+                        generatedImageUrl != "loading"
 
-            val shouldHideText = isImageOnlyMessage || isNormalLoading
+                val shouldHideText = isImageOnlyMessage || isNormalLoading
 
-            if (isNormalLoading) {
-                Box(
-                    modifier =
-                        Modifier
-                            .background(Color.Black.copy(alpha = 0.5f), msgShape)
-                            .padding(12.dp, 13.dp)
-                            .widthIn(1.dp, 300.dp)
-                ) {
-                    LoadingAnimation()
-                }
-            } else if (!shouldHideText && item.content.isNotEmpty()) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    val context = LocalContext.current
+                if (isNormalLoading) {
                     Box(
                         modifier =
-                            Modifier
-                                .background(Color.Black.copy(alpha = 0.5f), msgShape)
+                            Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
                                 .padding(12.dp, 13.dp)
                                 .widthIn(1.dp, 300.dp)
-                                .pointerInput(item.content) {
-                                    detectTapGestures(
-                                        onLongPress = {
-                                            debugOnlyCopyToClipboard(
-                                                context,
-                                                item.content
-                                            )
-                                        }
-                                    )
-                                }
                     ) {
-                        if (item.content.isNotEmpty()) {
-                            StyledMessageText(
-                                text = item.content,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
-                                normalColor = Color.White,
-                                actionColor = Color.White.copy(0.55f),
-                            )
-                        }
-
-                        if (!hasGeneratedImage && isLatestMessage) {
-                            MessageCornerActions(
-                                onImageGenerate = {
-                                    viewModel.generateImageForMessage(item.id)
-                                },
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .offset(10.dp, 10.dp)
-                            )
-                        }
+                        LoadingAnimation()
                     }
-                    Spacer(
-                        modifier = Modifier
-                            .widthIn(80.dp)
-                            .weight(1f)
-                    )
-                }
-            }
-
-            if (!hasGeneratedImage && isLatestMessage) {
-                Spacer(modifier = Modifier.height(2.dp))
-                MessageActionBar(
-                    message = item,
-                    onLike = {
-                        viewModel.likeMessage(item.localMsgId)
-                    },
-                    onDislike = {
-                        viewModel.dislikeMessage(item.localMsgId)
-                    },
-                    onRecall = {
-                        viewModel.recallMessage()
-                    },
-                )
-            }
-
-            if (hasGeneratedImage || isImageLoading) {
-                Spacer(modifier = Modifier.height(8.dp))
-
-                val imageWidth = if (isImageLoading) 300 else (item.getGeneratedImageWidth() ?: 300)
-                val imageHeight =
-                    if (isImageLoading) 300 else (item.getGeneratedImageHeight() ?: 300)
-                val aspectRatio =
-                    if (imageHeight > 0) imageWidth.toFloat() / imageHeight.toFloat() else 1f
-
-                val targetWidth = 360
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    if (isImageLoading) {
-                        ShimmerPlaceholder(
-                            modifier = Modifier
-                                .fillMaxWidth(0.35f)
-                                .aspectRatio(aspectRatio),
-                            cornerRadius = 12.dp,
-                            showLoadingDots = true,
-                        )
-                    } else if (imageLoadError) {
+                } else if (!shouldHideText && item.content.isNotEmpty()) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        val context = LocalContext.current
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth(0.35f)
-                                .aspectRatio(aspectRatio)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.Black.copy(alpha = 0.3f))
-                                .padding(16.dp)
-                                .noRippleClickable {
-                                    viewModel.deleteMessage(item.localMsgId)
-                                },
-                            contentAlignment = Alignment.Center,
+                            modifier =
+                                Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
+                                    .padding(12.dp, 13.dp)
+                                    .widthIn(1.dp, 300.dp)
+                                    .pointerInput(item.content) {
+                                        detectTapGestures(
+                                            onLongPress = {
+                                                debugOnlyCopyToClipboard(context, item.content)
+                                            }
+                                        )
+                                    }
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_warning_voice),
-                                    contentDescription = "Image load error",
-                                    tint = Color.White.copy(alpha = 0.6f),
-                                    modifier = Modifier.size(24.dp),
+                            if (item.content.isNotEmpty()) {
+                                StyledMessageText(
+                                    text = item.content,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    normalColor = Color.White,
+                                    actionColor = Color.White.copy(0.55f),
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = stringResource(R.string.image_generation_failed_tap_to_delete),
-                                    color = Color.White.copy(alpha = 0.6f),
-                                    fontSize = 12.sp,
+                            }
+
+                            if (!hasGeneratedImage && isLatestMessage) {
+                                MessageCornerActions(
+                                    onImageGenerate = {
+                                        viewModel.generateImageForMessage(item.id)
+                                    },
+                                    modifier =
+                                        Modifier.align(Alignment.BottomEnd).offset(10.dp, 10.dp),
                                 )
                             }
                         }
-                    } else if (!generatedImageUrl.isNullOrEmpty()) {
-                        AsyncImage(
-                            modifier = Modifier
-                                .fillMaxWidth(0.35f)
-                                .aspectRatio(aspectRatio)
-                                .clip(RoundedCornerShape(12.dp))
-                                .pointerInput(Unit) {
-                                    detectTapGestures(
-                                        onTap = {
-                                            showFullScreenImage = true
-                                        }
-                                    )
-                                },
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(
-                                    getCdnImageUrl(
-                                        generatedImageUrl,
-                                        width = targetWidth,
-                                        quality = 70
-                                    )
-                                ).build(),
-                            contentDescription = "Generated image",
-                            contentScale = ContentScale.Fit,
-                            alignment = Alignment.CenterStart,
-                            onError = {
-                                imageLoadError = true
-                            },
-                        )
-                    } else if (generatedImageUrl.isNullOrEmpty()) {
-                        ShimmerPlaceholder(
-                            modifier = Modifier
-                                .fillMaxWidth(0.35f)
-                                .aspectRatio(aspectRatio),
-                            cornerRadius = 12.dp,
-                        )
+                        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
                     }
                 }
 
-                if (showFullScreenImage && generatedImageUrl != null && !imageLoadError) {
-                    Dialog(
-                        onDismissRequest = { showFullScreenImage = false },
-                        properties = DialogProperties(
-                            usePlatformDefaultWidth = false,
-                            dismissOnBackPress = true,
-                            dismissOnClickOutside = true,
-                        ),
+                if (!hasGeneratedImage && isLatestMessage) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    MessageActionBar(
+                        message = item,
+                        onLike = { viewModel.likeMessage(item.localMsgId) },
+                        onDislike = { viewModel.dislikeMessage(item.localMsgId) },
+                        onRecall = { viewModel.recallMessage() },
+                    )
+                }
+
+                if (hasGeneratedImage || isImageLoading) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val imageWidth =
+                        if (isImageLoading) 300 else (item.getGeneratedImageWidth() ?: 300)
+                    val imageHeight =
+                        if (isImageLoading) 300 else (item.getGeneratedImageHeight() ?: 300)
+                    val aspectRatio =
+                        if (imageHeight > 0) imageWidth.toFloat() / imageHeight.toFloat() else 1f
+
+                    val targetWidth = 360
+
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterStart,
                     ) {
-                        FullScreenImageViewer(
-                            imageUrl = generatedImageUrl,
-                            onDismiss = { showFullScreenImage = false },
-                        )
+                        if (isImageLoading) {
+                            ShimmerPlaceholder(
+                                modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
+                                cornerRadius = 12.dp,
+                                showLoadingDots = true,
+                            )
+                        } else if (imageLoadError) {
+                            Box(
+                                modifier =
+                                    Modifier.fillMaxWidth(0.35f)
+                                        .aspectRatio(aspectRatio)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color.Black.copy(alpha = 0.3f))
+                                        .padding(16.dp)
+                                        .noRippleClickable {
+                                            viewModel.deleteMessage(item.localMsgId)
+                                        },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_warning_voice),
+                                        contentDescription = "Image load error",
+                                        tint = Color.White.copy(alpha = 0.6f),
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text =
+                                            stringResource(
+                                                R.string.image_generation_failed_tap_to_delete
+                                            ),
+                                        color = Color.White.copy(alpha = 0.6f),
+                                        fontSize = 12.sp,
+                                    )
+                                }
+                            }
+                        } else if (!generatedImageUrl.isNullOrEmpty()) {
+                            AsyncImage(
+                                modifier =
+                                    Modifier.fillMaxWidth(0.35f)
+                                        .aspectRatio(aspectRatio)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .pointerInput(Unit) {
+                                            detectTapGestures(
+                                                onTap = { showFullScreenImage = true }
+                                            )
+                                        },
+                                model =
+                                    ImageRequest.Builder(LocalContext.current)
+                                        .data(
+                                            getCdnImageUrl(
+                                                generatedImageUrl,
+                                                width = targetWidth,
+                                                quality = 70,
+                                            )
+                                        )
+                                        .build(),
+                                contentDescription = "Generated image",
+                                contentScale = ContentScale.Fit,
+                                alignment = Alignment.CenterStart,
+                                onError = { imageLoadError = true },
+                            )
+                        } else if (generatedImageUrl.isNullOrEmpty()) {
+                            ShimmerPlaceholder(
+                                modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
+                                cornerRadius = 12.dp,
+                            )
+                        }
+                    }
+
+                    if (showFullScreenImage && generatedImageUrl != null && !imageLoadError) {
+                        Dialog(
+                            onDismissRequest = { showFullScreenImage = false },
+                            properties =
+                                DialogProperties(
+                                    usePlatformDefaultWidth = false,
+                                    dismissOnBackPress = true,
+                                    dismissOnClickOutside = true,
+                                ),
+                        ) {
+                            FullScreenImageViewer(
+                                imageUrl = generatedImageUrl,
+                                onDismiss = { showFullScreenImage = false },
+                            )
+                        }
                     }
                 }
             }
         }
-    }.onFailure { e ->
-        Row {
-            val context = LocalContext.current
-            Box(
-                modifier =
-                    Modifier
-                        .background(
-                            Color.Black.copy(alpha = 0.5f),
-                            RoundedCornerShape(12.dp),
-                        )
-                        .padding(12.dp, 13.dp)
-                        .widthIn(1.dp, 300.dp)
-                        .pointerInput(item.content) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    debugOnlyCopyToClipboard(context, item.content)
-                                }
+        .onFailure { e ->
+            Row {
+                val context = LocalContext.current
+                Box(
+                    modifier =
+                        Modifier.background(
+                                Color.Black.copy(alpha = 0.5f),
+                                RoundedCornerShape(12.dp),
                             )
-                        }
-            ) {
-                Text(
-                    text = item.content.ifEmpty { "Message content is empty" },
-                    color = Color.White,
-                    fontSize = 14.sp,
-                )
+                            .padding(12.dp, 13.dp)
+                            .widthIn(1.dp, 300.dp)
+                            .pointerInput(item.content) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        debugOnlyCopyToClipboard(context, item.content)
+                                    }
+                                )
+                            }
+                ) {
+                    Text(
+                        text = item.content.ifEmpty { "Message content is empty" },
+                        color = Color.White,
+                        fontSize = 14.sp,
+                    )
+                }
+                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
             }
-            Spacer(
-                modifier = Modifier
-                    .widthIn(80.dp)
-                    .weight(1f)
-            )
         }
-    }
 }
 
 @Composable
 private fun ChatItemUser(item: MsgInfo) {
     runCatching {
-        Row {
-            Spacer(
-                modifier = Modifier
-                    .widthIn(80.dp)
-                    .weight(1f)
-            )
-            val context = LocalContext.current
-            Box(
-                modifier =
-                    Modifier
-                        .background(
-                            Color.White.copy(alpha = 0.6f),
-                            RoundedCornerShape(12.dp),
-                        )
-                        .padding(12.dp, 13.dp)
-                        .widthIn(1.dp, 300.dp)
-                        .pointerInput(item.content) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    debugOnlyCopyToClipboard(context, item.content)
-                                }
+            Row {
+                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                val context = LocalContext.current
+                Box(
+                    modifier =
+                        Modifier.background(
+                                Color.White.copy(alpha = 0.6f),
+                                RoundedCornerShape(12.dp),
                             )
-                        }
-            ) {
-                StyledMessageText(
-                    text = item.content,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Normal,
-                    normalColor = Color(0xff090909),
-                    actionColor = Color(0xff090909).copy(0.6f),
-                )
+                            .padding(12.dp, 13.dp)
+                            .widthIn(1.dp, 300.dp)
+                            .pointerInput(item.content) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        debugOnlyCopyToClipboard(context, item.content)
+                                    }
+                                )
+                            }
+                ) {
+                    StyledMessageText(
+                        text = item.content,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Normal,
+                        normalColor = Color(0xff090909),
+                        actionColor = Color(0xff090909).copy(0.6f),
+                    )
+                }
             }
         }
-    }.onFailure { e ->
-        Row {
-            Spacer(
-                modifier = Modifier
-                    .widthIn(80.dp)
-                    .weight(1f)
-            )
-            val context = LocalContext.current
-            Box(
-                modifier =
-                    Modifier
-                        .background(
-                            Color.White.copy(alpha = 0.6f),
-                            RoundedCornerShape(12.dp),
-                        )
-                        .padding(12.dp, 13.dp)
-                        .widthIn(1.dp, 300.dp)
-                        .pointerInput(item.content) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    debugOnlyCopyToClipboard(context, item.content)
-                                }
+        .onFailure { e ->
+            Row {
+                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                val context = LocalContext.current
+                Box(
+                    modifier =
+                        Modifier.background(
+                                Color.White.copy(alpha = 0.6f),
+                                RoundedCornerShape(12.dp),
                             )
-                        }
-            ) {
-                Text(
-                    text = item.content.ifEmpty { "Message content is empty" },
-                    color = Color(0xff090909),
-                    fontSize = 14.sp,
-                )
+                            .padding(12.dp, 13.dp)
+                            .widthIn(1.dp, 300.dp)
+                            .pointerInput(item.content) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        debugOnlyCopyToClipboard(context, item.content)
+                                    }
+                                )
+                            }
+                ) {
+                    Text(
+                        text = item.content.ifEmpty { "Message content is empty" },
+                        color = Color(0xff090909),
+                        fontSize = 14.sp,
+                    )
+                }
             }
         }
-    }
 }
 
 @Composable
-private fun ChatItemSystemTips(
-    item: MsgInfo,
-    chatViewModel: ChatViewModel? = null,
-) {
+private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = null) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
 
-    val displayText = if (item.content == "image_generation_error_tip") {
-        stringResource(R.string.image_generation_error_tip)
-    } else {
-        item.content
-    }
+    val displayText =
+        if (item.content == "image_generation_error_tip") {
+            stringResource(R.string.image_generation_error_tip)
+        } else {
+            item.content
+        }
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.Center
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Row(
-            modifier = Modifier.noRippleClickable {
-                viewModel.deleteMessage(item.localMsgId)
-            },
+            modifier = Modifier.noRippleClickable { viewModel.deleteMessage(item.localMsgId) },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = displayText,
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 10.sp,
-            )
+            Text(text = displayText, color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 painter = painterResource(ai.sxwl.android.design.R.drawable.ic_delete),
@@ -551,17 +509,17 @@ private fun StyledMessageText(
     actionColor: Color,
 ) {
     runCatching {
-        Text(
-            text =
-                ChatTextFormatter.formatChatMessage(
-                    text = text,
-                    fontSize = fontSize,
-                    fontWeight = fontWeight,
-                    normalColor = normalColor,
-                    italicColor = actionColor,
-                )
-        )
-    }
+            Text(
+                text =
+                    ChatTextFormatter.formatChatMessage(
+                        text = text,
+                        fontSize = fontSize,
+                        fontWeight = fontWeight,
+                        normalColor = normalColor,
+                        italicColor = actionColor,
+                    )
+            )
+        }
         .onFailure { e ->
             Text(
                 text = text.ifEmpty { "Message content is empty" },
@@ -583,17 +541,16 @@ private fun LoadingAnimation() {
         repeat(3) { index ->
             val delay = index * 200
             val dotAlpha by
-            infiniteTransition.animateFloat(
-                initialValue = 0.3f,
-                targetValue = 1.0f,
-                animationSpec = infiniteRepeatable(animation = tween(600, delayMillis = delay)),
-                label = "dot_alpha_$index",
-            )
+                infiniteTransition.animateFloat(
+                    initialValue = 0.3f,
+                    targetValue = 1.0f,
+                    animationSpec = infiniteRepeatable(animation = tween(600, delayMillis = delay)),
+                    label = "dot_alpha_$index",
+                )
 
             Box(
                 modifier =
-                    Modifier
-                        .size(6.dp)
+                    Modifier.size(6.dp)
                         .background(color = Color.White.copy(dotAlpha * 0.7f), shape = CircleShape)
             )
         }
@@ -613,12 +570,9 @@ internal fun AgentInfoChatCard(info: String) {
 
     Box(
         modifier =
-            Modifier
-                .border(
+            Modifier.border(
                     width = .5.dp,
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(purpleStart, purpleEnd),
-                    ),
+                    brush = Brush.horizontalGradient(colors = listOf(purpleStart, purpleEnd)),
                     shape = RoundedCornerShape(12.dp),
                 )
                 .background(Color(0x99000000), RoundedCornerShape(12.dp))
@@ -652,9 +606,7 @@ private fun ExpandableTextWithButton(
         var pd by remember { mutableIntStateOf(0) }
         Text(
             text = text,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(end = pd.dp),
+            modifier = Modifier.fillMaxWidth().padding(end = pd.dp),
             style = textStyle,
             maxLines = if (isExpanded) Int.MAX_VALUE else collapsedMaxLines,
             overflow = TextOverflow.Ellipsis,
@@ -675,8 +627,7 @@ private fun ExpandableTextWithButton(
                     ),
                 contentDescription = null,
                 modifier =
-                    Modifier
-                        .size(18.dp)
+                    Modifier.size(18.dp)
                         .align(Alignment.BottomEnd)
                         .noRippleClickable(onClick = { isExpanded = isExpanded.not() }),
                 tint = Color.White,

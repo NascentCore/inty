@@ -238,7 +238,7 @@ object FileUtils {
         srcDir: File,
         destDir: File?,
         listener: OnReplaceListener?,
-        isMove: Boolean
+        isMove: Boolean,
     ): Boolean {
         if (destDir == null) return false
         if (destDir.exists()) {
@@ -264,7 +264,7 @@ object FileUtils {
     private fun copyOrMoveFile(
         srcFile: File,
         destFile: File?,
-        listener: OnReplaceListener?
+        listener: OnReplaceListener?,
     ): Boolean {
         return copyOrMoveFile(srcFile, destFile, listener, false)
     }
@@ -273,7 +273,7 @@ object FileUtils {
         srcFile: File,
         destFile: File?,
         listener: OnReplaceListener?,
-        isMove: Boolean
+        isMove: Boolean,
     ): Boolean {
         if (destFile == null) return false
         if (destFile.exists()) {
