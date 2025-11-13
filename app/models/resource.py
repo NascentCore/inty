@@ -59,6 +59,7 @@ class ImageResourceMetadata(BaseModel):
     cropped: bool
     uncropped_image_url: Optional[str] = None
     gcs_url: Optional[str] = None
+    generation_prompt: Optional[str] = None
 
     class Config:
         from_attributes = True

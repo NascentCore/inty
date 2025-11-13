@@ -657,6 +657,7 @@ async def generate_background(
                 compressed=False,  # Generated images are not compressed
                 cropped=False,  # Generated images are not cropped
                 gcs_url=gcs_url,  # Store GCS URL in metadata
+                generation_prompt=request.prompt,
             )
             logger.debug(
                 f"Created image resource record for CDN URL: {cdn_url}, GCS URL: {gcs_url}"
