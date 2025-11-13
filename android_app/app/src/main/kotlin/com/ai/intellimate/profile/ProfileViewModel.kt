@@ -4,6 +4,7 @@ import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
@@ -103,6 +104,13 @@ class ProfileViewModel : BaseVM() {
     /** 加载用户创建的 Agents 列表 */
     private fun loadUserCreatedAgents() {
         if (_uiState.value.isLoading) return // 防止并发加载
+
+        // 检查登录状态，确保有有效的token后再调用需要认证的接口
+        if (!IntySetting.isLogin() || IntySetting.getCurToken().isEmpty()) {
+            LogUtils.w("ProfileViewModel - 用户未登录或token无效，跳过用户自建agents加载")
+            _uiState.update { it.copy(isLoading = false, error = "User not logged in") }
+            return
+        }
 
         _uiState.update { it.copy(isLoading = true, error = null) }
         val skip = currentPage * PAGE_SIZE

@@ -59,7 +59,7 @@ object UserService {
     /** 上传头像 替换: IUserApi.uploadAvatar() */
     suspend fun uploadAvatar(
         inputStream: java.io.InputStream,
-        filename: String = "avatar.jpg",
+        filename: String = "avatar.jpg"
     ): ApiResult<String> {
         return IntyNetworkManager.executeRequest("Upload Avatar") {
             val response =
@@ -74,11 +74,10 @@ object UserService {
 
             val data = response.data()
             val additionalProperties = data?._additionalProperties() ?: emptyMap()
-            val imageUrl =
-                additionalProperties["url"]?.asString()
-                    ?: additionalProperties["image_url"]?.asString()
-                    ?: additionalProperties["avatar_url"]?.asString()
-                    ?: throw IllegalStateException("Image URL not found in response")
+            val imageUrl = additionalProperties["url"]?.asString()
+                ?: additionalProperties["image_url"]?.asString()
+                ?: additionalProperties["avatar_url"]?.asString()
+                ?: throw IllegalStateException("Image URL not found in response")
 
             imageUrl
         }
@@ -87,7 +86,32 @@ object UserService {
     /** 删除用户账户 替换: IUserApi.deleteUser() */
     suspend fun deleteUser(): ApiResult<Unit> {
         return IntyNetworkManager.executeRequest("Delete User") {
-            IntyNetworkManager.getClient().api().v1().users().deleteAccount()
+            IntyNetworkManager.getClient()
+                .api()
+                .v1()
+                .users()
+                .deleteAccount()
         }
     }
+
+    /** Register device token for FCM push notifications */
+    suspend fun registerDeviceToken(fcmToken: String): ApiResult<Unit> {
+        return IntyNetworkManager.executeRequest("Register Device Token") {
+            // Use Retrofit directly since this endpoint is not in inty_sdk
+            // (include_in_schema=False in backend, so not generated in SDK)
+            val api = ai.sxwl.android.data.api.NetServiceMgr.getUserApi()
+            val request =
+                ai.sxwl.android.data.api.model.DeviceTokenRegisterRequest(token = fcmToken)
+            when (val result = api.registerDeviceToken(request)) {
+                is com.architecture.httplib.core.HttpResult.Success -> {
+                    Unit
+                }
+
+                is com.architecture.httplib.core.HttpResult.Failure -> {
+                    throw Exception(result.message)
+                }
+            }
+        }
+    }
+
 }

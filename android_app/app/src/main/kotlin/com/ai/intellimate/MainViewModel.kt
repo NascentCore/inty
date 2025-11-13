@@ -186,6 +186,30 @@ class MainViewModel : BaseVM() {
         }
     }
 
+    /**
+     * 登录成功后，主动获取并上报 FCM Token
+     *
+     * 如果用户在未登录时获取了 Token，登录后需要主动上报
+     */
+    fun uploadFCMTokenAfterLogin() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                LogUtils.d("MainViewModel", "登录成功后，开始获取并上报 FCM Token")
+
+                // 获取 FCM Token
+                val token = FirebaseManager.registerFCM()
+                LogUtils.d("MainViewModel", "FCM Token 获取成功: $token")
+
+                // 上报 Token 到服务器
+                FirebaseManager.uploadFCMToken(token)
+                LogUtils.i("MainViewModel", "登录成功后，FCM Token 上报完成")
+            } catch (e: Exception) {
+                LogUtils.e("MainViewModel", "登录成功后，获取/上报 FCM Token 失败", e)
+                // 失败不影响登录流程，只记录日志
+            }
+        }
+    }
+
     /** 用户登出方法 */
     fun logout() {
         // 获取当前用户信息用于事件上报
