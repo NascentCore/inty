@@ -4,11 +4,17 @@ import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.PermissionUtils
 import ai.sxwl.android.utils.ToastUtils
+import android.Manifest
+import android.os.Build
 import android.view.GestureDetector
 import android.view.MotionEvent
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -80,6 +86,8 @@ class MainActivity : BaseActivity() {
         // 设置返回拦截功能
         setupBackInterception()
 
+        // 申请通知权限（Android 13+）
+        requestNotificationPermissionIfNeeded()
 
         // 标记已初始化（但只标记基本设置，数据加载在登录成功后执行）
         hasInitializedConfig = true
@@ -87,6 +95,26 @@ class MainActivity : BaseActivity() {
         // 立即显示UI，不等待启动管理器完成
         // 二次进入应用（进程未被杀）的场景不会再看到自定义 SplashActivity
         loadUserDataIfLoggedIn()
+    }
+
+    /**
+     * 申请通知权限（Android 13+）
+     *
+     * 如果权限未授予，则主动申请
+     */
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (!PermissionUtils.hasNotificationPermission(this)) {
+                // 使用 ActivityResultLauncher 申请权限
+                // 注意：这里需要在 Compose 中使用 rememberLauncherForActivityResult
+                // 所以实际的权限申请逻辑在 ConfigComposeUI 中实现
+                LogUtils.d("MainActivity", "通知权限未授予，将在 Compose UI 中申请")
+            } else {
+                LogUtils.d("MainActivity", "通知权限已授予")
+            }
+        } else {
+            LogUtils.d("MainActivity", "Android 13 以下版本不需要申请通知权限")
+        }
     }
 
     /** 如果用户已登录，加载用户数据 */
@@ -148,9 +176,28 @@ class MainActivity : BaseActivity() {
         val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
         val showSettings by mainViewModel.showSettings.collectAsState()
 
-        // 实时检查登录状态变化（用于响应在其他Activity中的logout操作）
+        // 通知权限申请 Launcher（Android 13+）
+        val notificationPermissionLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (isGranted) {
+                LogUtils.i("MainActivity", "通知权限已授予")
+            } else {
+                LogUtils.w("MainActivity", "通知权限被拒绝")
+            }
+        }
+
+        // 在首次显示时执行初始化操作
         LaunchedEffect(Unit) {
-            // 使用协程定期检查登录状态，快速响应logout
+            // 1. 检查并申请通知权限（Android 13+）
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (!PermissionUtils.hasNotificationPermission(this@MainActivity)) {
+                    LogUtils.d("MainActivity", "申请通知权限")
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+
+            // 2. 实时检查登录状态变化（用于响应在其他Activity中的logout操作）
             while (true) {
                 val currentState = IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
                 val viewModelState = mainViewModel.isLoggedIn.value
@@ -387,15 +434,18 @@ private fun SplashLoginUI(
                                 )
 
                                 // 上报用户登录事件（使用 Firebase 内置 LOGIN 事件）
-                                ai.sxwl.android.firebase.FirebaseManager.logEvent(
-                                    ai.sxwl.android.firebase.FirebaseManager.Events.LOGIN,
-                                    ai.sxwl.android.firebase.FirebaseManager.safeEventParams(
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.LOGIN,
+                                    FirebaseManager.safeEventParams(
                                         "user_id" to userProfile.id,
                                         "user_name" to (userProfile.nickname),
                                         "login_method" to "google",
                                         "timestamp" to System.currentTimeMillis()
                                     )
                                 )
+
+                                // 登录成功后，主动获取并上报 FCM Token
+                                mainViewModel.uploadFCMTokenAfterLogin()
 
                                 // 检查用户信息是否完整（年龄和性别）
                                 val needsRegInfo =

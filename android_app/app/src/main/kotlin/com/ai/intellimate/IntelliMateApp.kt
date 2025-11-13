@@ -4,11 +4,12 @@ import ai.sxwl.android.common.analytics.GlobalExceptionHandler
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.IntyNetworkManager
+import ai.sxwl.android.data.http.services.UserService
+import ai.sxwl.android.firebase.FCMTokenUploadCallback
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.app.Application
 import com.ai.intellimate.utils.AgentCacheProviderImpl
-import com.ai.intellimate.utils.NetworkManager
 import com.ai.intellimate.utils.RecommendedAgentCacheProviderImpl
 import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlinx.coroutines.CoroutineScope
@@ -20,8 +21,7 @@ class IntelliMateApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // 立即初始化网络管理器（轻量级，不阻塞）
-        NetworkManager.Companion.getInstance().initialize(this)
+        // 初始化网络管理器（IntyNetworkManager 内部已包含 NetworkStateManager）
         IntyNetworkManager.initialize(this, buildType = BuildConfig.BUILD_TYPE)
 
         // 初始化缓存提供者并注入到DataModule
@@ -36,6 +36,9 @@ class IntelliMateApp : Application() {
 
         // Firebase初始化和设备信息设置
         initializeFirebaseAnalytics()
+
+        // 设置FCM token上传回调（连接infrastructure层和data层）
+        setupFCMTokenUploadCallback()
 
         // 安装全局异常处理器
         GlobalExceptionHandler.Companion.install(this)
@@ -63,6 +66,30 @@ class IntelliMateApp : Application() {
         FirebaseManager.setDeviceInfo()
 
         LogUtils.i("IntelliMateApp - Firebase Analytics初始化完成")
+    }
+
+    /**
+     * Setup FCM token upload callback
+     *
+     * Connects infrastructure layer (core/firebase) with data layer (core/data)
+     * This avoids circular dependency between modules
+     */
+    private fun setupFCMTokenUploadCallback() {
+        FirebaseManager.setTokenUploadCallback(object : FCMTokenUploadCallback {
+            override suspend fun uploadToken(token: String) {
+                // Delegate to UserService in data layer
+                when (val result = UserService.registerDeviceToken(token)) {
+                    is ai.sxwl.android.data.http.ApiResult.Success -> {
+                        LogUtils.i("IntelliMateApp", "FCM token uploaded successfully")
+                    }
+
+                    is ai.sxwl.android.data.http.ApiResult.Error -> {
+                        LogUtils.e("IntelliMateApp", "FCM token upload failed: ${result.message}")
+                    }
+                }
+            }
+        })
+        LogUtils.d("IntelliMateApp", "FCM token upload callback set")
     }
 
     override fun onTerminate() {

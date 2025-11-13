@@ -75,3 +75,10 @@ data class UserDeleteResponse(
     val success: Boolean,
     @Json(name = "user_id") val userId: String?,
 )
+
+/** Device token registration request (for FCM push notifications) */
+@JsonClass(generateAdapter = true)
+data class DeviceTokenRegisterRequest(
+    val token: String,
+    @Json(name = "request_id") val requestId: String? = null,
+)

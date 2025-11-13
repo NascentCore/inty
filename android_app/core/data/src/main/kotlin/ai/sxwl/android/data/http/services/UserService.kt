@@ -94,4 +94,24 @@ object UserService {
         }
     }
 
+    /** Register device token for FCM push notifications */
+    suspend fun registerDeviceToken(fcmToken: String): ApiResult<Unit> {
+        return IntyNetworkManager.executeRequest("Register Device Token") {
+            // Use Retrofit directly since this endpoint is not in inty_sdk
+            // (include_in_schema=False in backend, so not generated in SDK)
+            val api = ai.sxwl.android.data.api.NetServiceMgr.getUserApi()
+            val request =
+                ai.sxwl.android.data.api.model.DeviceTokenRegisterRequest(token = fcmToken)
+            when (val result = api.registerDeviceToken(request)) {
+                is com.architecture.httplib.core.HttpResult.Success -> {
+                    Unit
+                }
+
+                is com.architecture.httplib.core.HttpResult.Failure -> {
+                    throw Exception(result.message)
+                }
+            }
+        }
+    }
+
 }

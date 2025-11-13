@@ -534,10 +534,54 @@ object FirebaseManager {
         const val LANGUAGE = "language"
     }
 
-    /** Firebase 推送消息注册 */
+    /**
+     * FCM Token upload callback
+     * Set by application layer to handle token upload to server
+     */
+    @Volatile
+    private var tokenUploadCallback: FCMTokenUploadCallback? = null
+
+    /**
+     * Set FCM token upload callback
+     * Should be called from application layer (e.g., IntelliMateApp)
+     */
+    fun setTokenUploadCallback(callback: FCMTokenUploadCallback?) {
+        tokenUploadCallback = callback
+        LogUtils.d(
+            "FirebaseManager",
+            "FCM token upload callback ${if (callback != null) "set" else "cleared"}"
+        )
+    }
+
+    /**
+     * Get FCM registration token
+     *
+     * This is a Firebase SDK operation, belongs to infrastructure layer
+     */
     suspend fun registerFCM(): String {
         val token = FirebaseMessaging.getInstance().token.await()
         return token
+    }
+
+    /**
+     * Upload FCM Token to server
+     *
+     * Delegates to the callback provided by application layer
+     * This avoids circular dependency between core/firebase and core/data modules
+     */
+    suspend fun uploadFCMToken(token: String) {
+        val callback = tokenUploadCallback
+        if (callback != null) {
+            try {
+                LogUtils.d("FirebaseManager", "Uploading FCM token via callback")
+                callback.uploadToken(token)
+                LogUtils.i("FirebaseManager", "FCM Token uploaded successfully")
+            } catch (e: Exception) {
+                LogUtils.e("FirebaseManager", "Failed to upload FCM token", e)
+            }
+        } else {
+            LogUtils.w("FirebaseManager", "FCM token upload callback not set, skipping upload")
+        }
     }
 
     /** 设置设备信息 */

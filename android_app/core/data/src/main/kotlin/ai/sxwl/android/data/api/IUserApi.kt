@@ -1,5 +1,6 @@
 package ai.sxwl.android.data.api
 
+import ai.sxwl.android.data.api.model.DeviceTokenRegisterRequest
 import ai.sxwl.android.data.api.model.GoogleLoginRequest
 import ai.sxwl.android.data.api.model.GoogleLoginResponse
 import ai.sxwl.android.data.api.model.UploadAvatarResponse
@@ -29,4 +30,7 @@ interface IUserApi {
 
     @POST("/api/v1/users/delete-account")
     suspend fun userDeleteAccount(): HttpResult<UserDeleteResponse>
+
+    @POST("/api/v1/users/device/register")
+    suspend fun registerDeviceToken(@Body request: DeviceTokenRegisterRequest): HttpResult<Any>
 }
