@@ -222,25 +222,41 @@ async def add_ai_message(
     message: str,
     agent_id: Optional[str] = None,
     audio_duration: Optional[float] = None,
+    meta_data: Optional[dict] = None,
 ) -> Optional[int]:
-    """添加AI消息到聊天历史，返回插入的消息ID"""
+    """
+    添加AI消息到聊天历史，返回插入的消息ID
+    
+    Args:
+        db: 数据库会话
+        session_id: 会话ID
+        message: 消息内容
+        agent_id: Agent ID（可选）
+        audio_duration: 音频时长（可选）
+        meta_data: 自定义元数据（可选，会与默认元数据合并）
+    
+    Returns:
+        插入的消息ID
+    """
     try:
         # 构建AIMessage的JSON格式数据
         message_data = {"type": "ai", "data": {"content": message}}
 
         # 构建meta_data
-        meta_data = None
-        if agent_id or audio_duration is not None:
-            meta_data = {}
-            if agent_id:
-                meta_data["agentId"] = agent_id
-                meta_data["isOpening"] = False
-            if audio_duration is not None:
-                meta_data["audioDuration"] = audio_duration
+        final_meta_data = meta_data.copy() if meta_data else {}
+        
+        if agent_id:
+            final_meta_data["agentId"] = agent_id
+            if "isOpening" not in final_meta_data:
+                final_meta_data["isOpening"] = False
+        if audio_duration is not None:
+            final_meta_data["audioDuration"] = audio_duration
 
         # 使用ORM创建新记录
         chat_history = ChatHistory(
-            session_id=session_id, message=message_data, meta_data=meta_data
+            session_id=session_id,
+            message=message_data,
+            meta_data=final_meta_data if final_meta_data else None,
         )
 
         db.add(chat_history)

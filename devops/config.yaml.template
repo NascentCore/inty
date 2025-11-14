@@ -52,3 +52,25 @@ elevenlabs:
   output_format: "mp3_22050_32"
   enabled: true
   max_text_length: 5000
+
+push_notification:
+  enabled: false  # 是否启用推送服务
+  batch_size: 50  # 每批处理的聊天数量
+  max_retries: 3  # 最大重试次数
+  # 推送阶段策略配置（10min, 30min, 2h, 24h, 48h），有聊天记录和无聊天记录用户共用
+  stages:
+    10min:
+      count: 0  # 未读推送记录数
+      minutes: 10  # 时间阈值（分钟）
+    30min:
+      count: 1  # 未读推送记录数
+      minutes: 30  # 时间阈值（分钟）
+    2h:
+      count: 2  # 未读推送记录数
+      minutes: 120  # 时间阈值（分钟）
+    24h:
+      count: 3  # 未读推送记录数
+      hours: 24  # 时间阈值（小时）
+    48h:
+      count: 4  # 未读推送记录数
+      hours: 48  # 时间阈值（小时）

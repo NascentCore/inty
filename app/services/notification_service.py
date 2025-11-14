@@ -239,6 +239,7 @@ async def send_fcm_multicast(
     body: str,
     data: Optional[dict] = None,
     image_url: Optional[str] = None,
+    dry_run: bool = False,
 ) -> bool:
     """Send FCM multicast message push
 
@@ -251,11 +252,15 @@ async def send_fcm_multicast(
         body: Notification content
         data: Additional data (optional)
         image_url: Image URL (optional)
+        dry_run: If True, validate message format without actually sending
 
     Returns:
         bool: Whether sending was successful
     """
     try:
+        if dry_run:
+            logger.info(f"[DRY RUN] FCM 测试模式：验证消息格式，不会实际发送")
+
         # 1. Get all device tokens for multiple users
         tokens = await user_service.get_users_device_tokens(db, user_ids)
 
@@ -267,6 +272,7 @@ async def send_fcm_multicast(
         success_count = 0
         fail_count = 0
         invalid_tokens = []
+        send_results = []
 
         for token in tokens:
             try:
@@ -277,35 +283,89 @@ async def send_fcm_multicast(
                     ),
                     data=data or {},
                 )
-                messaging.send(single_message)
+
+                # 发送消息（支持 dry_run 模式）
+                message_id = messaging.send(single_message, dry_run=dry_run)
+
+                if dry_run:
+                    logger.info(
+                        f"[DRY RUN] 消息验证成功: token={token[:20]}..., message_id={message_id}"
+                    )
+                else:
+                    logger.debug(
+                        f"FCM 消息发送成功: token={token[:20]}..., message_id={message_id}"
+                    )
+
+                send_results.append(
+                    {
+                        "token": token[:20] + "...",
+                        "message_id": message_id,
+                        "status": "success",
+                    }
+                )
                 success_count += 1
-            except INVALID_EXCEPTIONS:
+
+            except INVALID_EXCEPTIONS as e:
                 invalid_tokens.append(token)
                 fail_count += 1
+                error_msg = str(e)
+                logger.warning(
+                    f"FCM 发送失败（无效 token）: token={token[:20]}..., error={error_msg}"
+                )
+                send_results.append(
+                    {
+                        "token": token[:20] + "...",
+                        "status": "invalid_token",
+                        "error": error_msg,
+                    }
+                )
             except Exception as e:
-                logger.error(f"Failed to send to device {token}: {str(e)}")
                 fail_count += 1
+                error_msg = str(e)
+                error_type = type(e).__name__
+                logger.error(
+                    f"FCM 发送失败: token={token[:20]}..., error_type={error_type}, error={error_msg}"
+                )
+                send_results.append(
+                    {
+                        "token": token[:20] + "...",
+                        "status": "error",
+                        "error_type": error_type,
+                        "error": error_msg,
+                    }
+                )
 
         # 3. Process results
-        if fail_count > 0:
-            logger.error(f"FCM message sending failed: {fail_count} devices failed")
-
-        # 4. Clean up invalid tokens
-        if invalid_tokens:
-            try:
-                await db.execute(
-                    delete(DeviceToken).where(DeviceToken.token.in_(invalid_tokens))
+        if dry_run:
+            logger.info(
+                f"[DRY RUN] 测试完成: 成功={success_count}, 失败={fail_count}, 总计={len(tokens)}"
+            )
+            logger.debug(f"[DRY RUN] 详细结果: {send_results}")
+        else:
+            if fail_count > 0:
+                logger.error(
+                    f"FCM 消息发送失败: {fail_count} 个设备失败, 成功={success_count}"
                 )
-                await db.commit()
-                logger.debug(f"Cleaned up {len(invalid_tokens)} invalid tokens")
-            except Exception as e:
-                logger.error(f"Failed to clean up invalid tokens: {str(e)}")
-                logger.error(f"Error stack: {traceback.format_exc()}")
+                logger.debug(f"发送结果详情: {send_results}")
 
-            return False
+            # 4. Clean up invalid tokens (仅在非 dry_run 模式下)
+            if invalid_tokens:
+                try:
+                    await db.execute(
+                        delete(DeviceToken).where(DeviceToken.token.in_(invalid_tokens))
+                    )
+                    await db.commit()
+                    logger.debug(f"已清理 {len(invalid_tokens)} 个无效 token")
+                except Exception as e:
+                    logger.error(f"清理无效 token 失败: {str(e)}")
+                    logger.error(f"错误堆栈: {traceback.format_exc()}")
 
-        logger.info(f"FCM message sent successfully: {success_count} devices")
-        return True
+                return False
+
+            logger.info(f"FCM 消息发送成功: {success_count} 个设备")
+            logger.debug(f"发送结果详情: {send_results}")
+
+        return success_count > 0
 
     except Exception as e:
         logger.error(f"Failed to send FCM message: {str(e)}")

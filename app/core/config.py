@@ -282,6 +282,32 @@ class SentryConfig:
 
 
 @dataclass
+class PushNotificationConfig:
+    """推送通知服务配置"""
+
+    enabled: bool = True  # 是否启用推送服务
+    batch_size: int = 50  # 每批处理的聊天数量
+    max_retries: int = 3  # 最大重试次数
+    max_concurrent_workers: int = 50  # 最大并发 worker 数
+    workers_per_user_ratio: int = (
+        10  # 每 N 个用户分配 1 个 worker（如 10 表示每 10 个用户 1 个 worker）
+    )
+    stages: dict = (
+        None  # 推送阶段策略配置（10min, 30min, 2h, 24h, 48h），有聊天记录和无聊天记录用户共用
+    )
+
+    def __post_init__(self):
+        if self.stages is None:
+            self.stages = {
+                "10min": {"count": 0, "minutes": 10},
+                "30min": {"count": 1, "minutes": 30},
+                "2h": {"count": 2, "minutes": 120},
+                "24h": {"count": 3, "hours": 24},
+                "48h": {"count": 4, "hours": 48},
+            }
+
+
+@dataclass
 class Config:
     app: AppConfig
     security: SecurityConfig
@@ -297,6 +323,7 @@ class Config:
     elevenlabs: ElevenLabsConfig
     cloudflare: CloudflareConfig
     sentry: SentryConfig
+    push_notification: PushNotificationConfig
 
 
 def load_config(path: str) -> Config:
@@ -333,6 +360,7 @@ def load_config(path: str) -> Config:
         elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {})),
         cloudflare=CloudflareConfig(**data.get("cloudflare", {})),
         sentry=SentryConfig(**data.get("sentry", {})),
+        push_notification=PushNotificationConfig(**data.get("push_notification", {})),
     )
 
 
