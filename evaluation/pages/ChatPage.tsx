@@ -89,6 +89,9 @@ export const ChatPage: React.FC = () => {
   const [generatedImages, setGeneratedImages] = useState<Map<string, string>>(
     new Map(),
   );
+  const backgroundImageUrl = selectedAgent?.background;
+  const backgroundVideoUrl = selectedAgent?.background_animated;
+  const backgroundAltName = selectedAgent?.name ?? "角色";
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -1202,22 +1205,91 @@ export const ChatPage: React.FC = () => {
                 }}
               >
                 {/* 消息列表 */}
-                <div
-                  style={{
-                    flex: 1,
-                    overflowY: "auto",
-                    padding: "16px",
-                    backgroundColor: "transparent", // Make background transparent for image
-                    minHeight: 0,
-                    backgroundImage: selectedAgent?.background
-                      ? `url(${selectedAgent.background})`
-                      : "none",
-                    backgroundSize: "contain",
-                    backgroundPosition: "center",
-                    backgroundRepeat: "no-repeat",
-                    backgroundBlendMode: "multiply", // Blend mode for better visibility
-                  }}
-                >
+                  <div
+                    style={{
+                      flex: 1,
+                      minHeight: 0,
+                      position: "relative",
+                      display: "flex",
+                      flexDirection: "column",
+                      backgroundColor: "#0f111a",
+                      borderBottomLeftRadius: 8,
+                      borderBottomRightRadius: 8,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {(backgroundImageUrl || backgroundVideoUrl) && (
+                      <div
+                        aria-hidden
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          overflow: "hidden",
+                          pointerEvents: "none",
+                          zIndex: 0,
+                        }}
+                      >
+                        {backgroundImageUrl && (
+                          <img
+                            src={backgroundImageUrl}
+                            alt={`${backgroundAltName} background`}
+                            style={{
+                              position: "absolute",
+                              inset: 0,
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              filter: backgroundVideoUrl ? "blur(6px)" : "none",
+                              transform: "scale(1.05)",
+                              opacity: backgroundVideoUrl ? 0.4 : 0.85,
+                              transition: "opacity 0.3s ease",
+                            }}
+                          />
+                        )}
+                        {backgroundVideoUrl && (
+                          <video
+                            key={backgroundVideoUrl}
+                            src={backgroundVideoUrl}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            preload="auto"
+                            poster={backgroundImageUrl}
+                            style={{
+                              position: "absolute",
+                              inset: 0,
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              opacity: 0.95,
+                              filter: "saturate(1.05)",
+                              transition: "opacity 0.3s ease",
+                            }}
+                            onError={(event) => {
+                              event.currentTarget.style.display = "none";
+                            }}
+                          />
+                        )}
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            background:
+                              "linear-gradient(180deg, rgba(12,14,25,0.25) 0%, rgba(12,14,25,0.85) 100%)",
+                          }}
+                        />
+                      </div>
+                    )}
+                    <div
+                      style={{
+                        position: "relative",
+                        zIndex: 1,
+                        flex: 1,
+                        overflowY: "auto",
+                        padding: "16px",
+                      }}
+                    >
                   {/* 角色介绍卡片 - 只在聊天开始时显示 */}
                   {selectedAgent?.intro && messages.length === 0 && (
                     <Card
@@ -1577,7 +1649,8 @@ export const ChatPage: React.FC = () => {
                     />
                   )}
 
-                  <div ref={messagesEndRef} />
+                      <div ref={messagesEndRef} />
+                    </div>
                 </div>
 
                 {/* 输入区域 */}
