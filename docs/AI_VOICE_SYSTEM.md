@@ -33,6 +33,13 @@ InTy 后端集成了先进的 AI 语音回复系统，使用 ElevenLabs API 为�
 - **定期清理**：自动清理过期缓存文件
 - **重复利用**：相同内容自动复用已生成的语音
 
+## 文本清洗与默认音色
+
+- **文本清洗规则**：`VoiceService._clean_text_for_voice` 仅移除中文 `（ ... ）` 与英文 `( ... )` 括号内的动作/心理描写，并折叠连续空白字符，避免把星号等其他符号意外删除。
+- **超长文本截断**：当清洗后的文本长度超过 `config.elevenlabs.max_text_length`（默认 5000）时会就地截断，确保 SDK 不报错。
+- **语音默认值**：在没有显式 `voice_id` 时，会先根据 `agent_gender` 使用 `GENDER_VOICE_MAPPING = {"MALE": "rHWSYoq8UlV0YIBKMryp", "FEMALE": "4tRn1lSkEn13EVTuqb0g", "OTHER": "O7p2vmz2iEYgMXxkbsif"}`，再回退到配置里的 `voice_id`，确保所有 Agent 都能生成语音。
+- **空文本保护**：如果清洗后文本为空，会直接跳过语音生成，避免无意义的 SDK 调用。
+
 ## 系统架构
 
 ### 核心服务组件
@@ -56,30 +63,41 @@ InTy 后端集成了先进的 AI 语音回复系统，使用 ElevenLabs API 为�
 
 ```sql
 CREATE TABLE voice_cache (
-    id SERIAL PRIMARY KEY,
-    content_hash VARCHAR(64) UNIQUE NOT NULL,  -- 内容哈希 (text + voice_id + model)
-    audio_url TEXT NOT NULL,                   -- GCS 文件 URL
-    file_size INTEGER NOT NULL,               -- 文件大小 (bytes)
-    created_at TIMESTAMP DEFAULT NOW(),       -- 创建时间
-    last_accessed TIMESTAMP DEFAULT NOW(),    -- 最后访问时间
-    access_count INTEGER DEFAULT 1            -- 访问次数
+    id UUID PRIMARY KEY,                                   -- 由服务端生成的 UUID
+    content_hash VARCHAR(32) UNIQUE NOT NULL,              -- MD5(text + voice_id + model + language)
+    text_content TEXT NOT NULL,                            -- 原始文本（最多 1000 字符）
+    voice_id VARCHAR(255) NOT NULL,
+    model VARCHAR(255) NOT NULL,
+    language VARCHAR(16) NOT NULL,
+    audio_url TEXT NOT NULL,                               -- GCS 文件 URL
+    duration DOUBLE PRECISION DEFAULT 0,                   -- 音频时长（秒）
+    file_size INTEGER DEFAULT 0,                           -- 音频大小（字节）
+    hit_count INTEGER DEFAULT 0,                           -- 缓存命中次数
+    last_accessed TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    is_active BOOLEAN DEFAULT TRUE                         -- 文件失效后会被置为 false
 );
 ```
+
+- `VoiceCacheService` 会在保存时将 `text_content` 截断为 1000 字符，并在命中后异步更新 `hit_count` 与 `last_accessed`。
+- 命中缓存后仍会二次确认 GCS 中的文件是否存在，不存在时会把该条记录标记为 `is_active = false`。
 
 #### chat_settings 表 (语音相关字段)
 
 ```sql
--- voice_enabled: 是否启用语音自动播放
--- 优先级高于用户全局设置
-ALTER TABLE chat_settings ADD COLUMN voice_enabled BOOLEAN DEFAULT false;
+voice_enabled BOOLEAN DEFAULT true -- 是否启用语音自动播放
 ```
+
+- ORM 默认值设置为 `true`，以保持与旧版客户端的兼容性。
+- `chat_service.get_or_create_chat_settings` 在创建新聊天时会显式写入 `voice_enabled = false`，只有用户在 App 内打开自动播放时才会变为 `true`。
 
 #### agents 表 (语音相关字段)
 
 ```sql
--- voice_id: Agent 专属语音 ID，为空时使用默认语音
-ALTER TABLE agents ADD COLUMN voice_id VARCHAR(255);
+voice_id VARCHAR(255) -- Agent 专属语音 ID，为空时使用默认语音
 ```
+
+- `app/models/agent.py` 中字段为可选字符串，配合 `agent.gender` 信息一起决定最终使用的音色。
 
 ## 配置说明
 
@@ -115,12 +133,18 @@ elevenlabs:
 - `mp3_22050_32` - **移动端推荐**，小文件快传输
 - `pcm_44100` - 无压缩格式，需要 Pro 套餐
 
+## 额度与限流
+
+- **生成前检查**：当 `voice_service.generate_voice` 同时拿到 `user` 与 `db` 时，会调用 `subscription_service.check_voice_generation_limit` 确保用户配额未被耗尽。
+- **命中缓存也记账**：无论语音是新生成还是命中缓存，都会通过 `subscription_service.record_usage` 写入 `voice_generation` 用量，并在 `extra_data` 中标记 `cached`、`voice_id` 与 `text_length`。
+- **聊天额度共存**：语音配额独立于 `chat` 配额；即使语音生成被拒绝，文本回复仍然会返回。
+
 ## API 接口
 
-### 标准聊天接口 (带语音)
+### v1 聊天接口（仍在生产，带语音）
 
 ```http
-POST /api/v1/chats/agents/{agent_id}/chat/completions
+POST /api/v1/chat/completions/{agent_id}
 Content-Type: application/json
 
 {
@@ -136,10 +160,13 @@ Content-Type: application/json
 }
 ```
 
-### 极速聊天接口 (推荐)
+- 该路由会根据 `chat_settings.voice_enabled` 决定是否调用 `voice_service.generate_voice`，并把生成得到的 `audio_url` 合并进响应。
+- 路由在代码层标记为 `deprecated`，但仍是 App 正在使用的主路径。
+
+### v2 聊天接口（实验中）
 
 ```http
-POST /api/v1/chats/agents/{agent_id}/chat/fast
+POST /api/v2/chat/completions/{agent_id}
 Content-Type: application/json
 
 {
@@ -154,6 +181,9 @@ Content-Type: application/json
   "language": "zh"
 }
 ```
+
+- v2 版本沿用了相同的 `VoiceService`，但当前接口仍处于未完成状态（接口描述中明确标记）。
+- 两个版本都不支持 `stream = true`。
 
 #### 响应格式 (包含语音)
 
@@ -191,7 +221,7 @@ if chat_settings.voice_enabled:
     voice_id = agent.voice_id or config.elevenlabs.voice_id
 
     # 生成语音并返回 URL
-    audio_url = await voice_service.generate_voice(
+    voice_result = await voice_service.generate_voice(
         text=response_content,
         voice_id=voice_id,
         language=request.language,
@@ -199,8 +229,11 @@ if chat_settings.voice_enabled:
     )
 
     # 在响应中包含语音 URL
-    if audio_url:
+    if voice_result:
+        audio_url, audio_duration = voice_result
         response["choices"][0]["message"]["audio_url"] = audio_url
+    else:
+        logger.warning("语音生成失败或达到配额限制，继续返回文本")
 ```
 
 ## 缓存策略
@@ -220,29 +253,31 @@ def generate_cache_key(text: str, voice_id: str, model: str, language: str = "zh
 graph TD
     A[语音生成请求] --> B[生成内容哈希]
     B --> C{缓存中存在?}
-    C -->|是| D[返回缓存URL]
-    C -->|否| E[调用ElevenLabs API]
-    E --> F[上传到GCS]
-    F --> G[保存到缓存]
-    G --> H[返回新URL]
+    C -->|是| D[检查GCS文件是否存在]
+    D -->|存在| E[返回缓存URL并异步+1命中次数]
+    D -->|缺失| F[标记缓存无效/删除]
+    C -->|否| G[调用ElevenLabs API]
+    G --> H[上传到GCS]
+    H --> I[保存到缓存]
+    I --> J[返回新URL]
 ```
+
+- `VoiceCacheService.get_cached_voice` 命中后会立刻返回 `(audio_url, duration)`，并通过 `asyncio.create_task` 异步更新 `hit_count`。
+- 如果检测到 GCS 文件不存在，会在独立事务中把记录置为 `is_active = false`，防止后续继续命中。
 
 ### 缓存清理策略
 
-```python
-# 定期清理策略
-- 清理30天未访问的缓存
-- 清理总大小超过限制的最旧缓存
-- 清理访问次数为1且超过7天的缓存
-```
+- `cleanup_old_cache`：根据 `cache_ttl_days = 30` 删除 30 天未访问的记录，并尝试同时删除 GCS 文件。
+- `cleanup_invalid_cache`：遍历活跃记录，发现 GCS 文件不存在时将 `is_active` 设为 `false`。
+- `get_cache_stats`：可在管理后台展示缓存数量、今日命中总数以及总文件体积，为后续容量治理提供依据。
 
 ## 成本优化
 
 ### 1. 缓存重用
 
-- **命中率监控**：跟踪缓存命中率，优化缓存策略
-- **智能预热**：为热门内容预生成语音
-- **内容去重**：相同内容自动复用已生成语音
+- **命中率监控**：通过 `voice_cache_service.get_cache_stats` 获取命中次数、总量与存储体积，为后续优化提供数据。
+- **内容去重**：基于 `MD5(text + voice_id + model + language)` 的哈希键，天然避免重复生成浪费。
+- **冷热分层**：`hit_count` 字段可用于将来拓展 LRU/按热度清理策略。
 
 ### 2. 格式优化
 
@@ -252,9 +287,9 @@ graph TD
 
 ### 3. API 调用优化
 
-- **批量处理**：支持批量语音生成（如需要）
-- **错误重试**：智能重试机制减少失败浪费
-- **限流控制**：防止API调用超限
+- **并发控制**：缓存命中和 GCS 上传使用 `asyncio` 并行任务，缩短等待时间。
+- **失败隔离**：语音生成异常不会影响文本回复，且会记录 warning 日志便于排查。
+- **配额保护**：依赖 `subscription_service` 的前置检查与用量记录，避免滥用造成的成本失控。
 
 ## 监控与日志
 
@@ -330,30 +365,15 @@ agent.voice_id = "VR6AewLTigWG4xSOukaG"  # Jessica 专业女声
 
 ### 扩展支持的音频格式
 
-```python
-# 在 VoiceService 中添加新格式支持
-SUPPORTED_FORMATS = [
-    "mp3_44100_128",
-    "mp3_22050_32",
-    "pcm_44100",     # 需要 Pro 套餐
-    "wav_44100"      # 新增格式
-]
-```
+1. 在配置（如 `devops/config.yaml.template`）里更新 `elevenlabs.output_format`。
+2. 若输出格式不再是 MP3，需要同步调整 `GCSService.upload_voice_file(..., content_type="audio/mpeg")` 的 `content_type`，确保浏览器可正确播放。
+3. ElevenLabs 不同套餐支持的格式不同，切换前需确认账号权限；若 SDK 报错可在日志中看到明确提示。
 
-### 集成其他语音服务
+### 集成其他语音服务（规划）
 
-```python
-# 创建抽象基类
-class VoiceServiceBase:
-    async def generate_voice(self, text: str, **kwargs) -> str:
-        raise NotImplementedError
-
-# 实现新的语音服务
-class AzureVoiceService(VoiceServiceBase):
-    async def generate_voice(self, text: str, **kwargs) -> str:
-        # Azure Speech Services 实现
-        pass
-```
+- 当前 `VoiceService` 直接使用 ElevenLabs SDK；若要接入其它 TTS 服务，可创建新的 `CustomVoiceService`，实现与现有 `generate_voice` 相同的签名与返回值 `(audio_url, duration)`。
+- 将 `app/services/voice_service.py` 中的 `voice_service = VoiceService()` 替换或封装为工厂，即可在 API 层无感切换。
+- 推荐尽量复用 `VoiceCacheService` 与 `GCSService`，这样即使底层供应商不同，缓存、配额与监控逻辑也能保持一致。
 
 ## 更新日志
 
