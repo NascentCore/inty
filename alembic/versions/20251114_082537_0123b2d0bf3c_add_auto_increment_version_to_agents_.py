@@ -1,8 +1,8 @@
 """add auto-increment version to agents table
 
-Revision ID: 909c60aa202a
+Revision ID: 0123b2d0bf3c
 Revises: 20251114_142810
-Create Date: 2025-11-14 08:14:03.637934+00:00
+Create Date: 2025-11-14 08:25:37.958981+00:00
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '909c60aa202a'
+revision: str = '0123b2d0bf3c'
 down_revision: Union[str, None] = '20251114_142810'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
