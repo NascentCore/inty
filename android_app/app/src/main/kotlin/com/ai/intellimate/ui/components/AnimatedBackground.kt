@@ -225,11 +225,15 @@ fun AnimatedBackground(
     }
 
     // 关键：在 Compose 层面添加裁剪，防止视频超出容器边界
-    // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度，防止影响相邻 Page
-    Box(modifier = modifier
-        .fillMaxWidth()
-        .fillMaxSize()
-        .clipToBounds()) {
+    // 使用 matchParentSize() 而不是 fillMaxSize()，因为：
+    // 1. matchParentSize() 不会影响父 Box 的尺寸测量（父 Box 尺寸由 HorizontalPager 决定）
+    // 2. 子元素仅在布局阶段匹配父 Box 的最终尺寸
+    // 3. 这符合 BoxScope 的最佳实践，避免子元素影响父容器尺寸
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .clipToBounds()
+    ) {
 
         // 如果有视频URL，创建视频视图
         if (videoUrl != null && isVideo) {
@@ -312,10 +316,10 @@ fun AnimatedBackground(
                     exoPlayer = player
 
                     // 使用 FrameLayout 包裹 PlayerView，确保 crop 模式不会超出容器边界
-                    // 关键：必须严格限制宽度，防止影响相邻 Page
+                    // 关键修复：使用 ConstraintLayout 或 FrameLayout 并严格限制尺寸
                     val frameLayout =
                         android.widget.FrameLayout(ctx).apply {
-                            // 关键：使用 MATCH_PARENT 确保填充父容器，但父容器已经通过 fillMaxWidth() 限制了宽度
+                            // 关键：使用 MATCH_PARENT 确保填充父容器，但父容器已经通过 layout modifier 限制了宽度
                             layoutParams =
                                 android.view.ViewGroup.LayoutParams(
                                     android.view.ViewGroup.LayoutParams.MATCH_PARENT,
@@ -336,8 +340,11 @@ fun AnimatedBackground(
                             visibility = android.view.View.VISIBLE
                             alpha = 1f // 始终可见
 
-                            // 关键：确保 PlayerView 的布局参数不会超出父容器
-                            // 使用 MATCH_PARENT 填充父容器，父容器已经限制了宽度
+                            // 关键：使用 MATCH_PARENT 填充父容器（FrameLayout）
+                            // MATCH_PARENT 是最合适的选择，因为：
+                            // 1. 自动适应父容器尺寸变化
+                            // 2. 父容器已经通过 Compose 的 layout modifier 限制了宽度
+                            // 3. 符合 Android 布局最佳实践
                             layoutParams =
                                 android.widget.FrameLayout.LayoutParams(
                                     android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
@@ -366,10 +373,26 @@ fun AnimatedBackground(
                     frameLayout
                 },
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxSize()
-                    .clipToBounds(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
-                update = {
+                    .matchParentSize()
+                    .clipToBounds(),
+                update = { view ->
+                    // 关键修复：在更新时确保视图使用 MATCH_PARENT，自动适应父容器尺寸
+                    // 使用 MATCH_PARENT 比设置具体像素值更合适，因为：
+                    // 1. 自动适应父容器尺寸变化
+                    // 2. 避免硬编码像素值导致的布局问题
+                    // 3. 符合 Android 布局最佳实践
+                    val layoutParams = view.layoutParams
+                    if (layoutParams != null) {
+                        // 确保使用 MATCH_PARENT，让系统自动处理尺寸
+                        if (layoutParams.width != android.view.ViewGroup.LayoutParams.MATCH_PARENT ||
+                            layoutParams.height != android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                        ) {
+                            layoutParams.width = android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                            layoutParams.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                            view.layoutParams = layoutParams
+                        }
+                    }
+                    
                     // 更新视频路径（如果变化）：当 videoPath 准备好后，从 URL 切换到缓存路径
                     val pathToUse = videoPath ?: videoUrl
                     if (exoPlayer != null) {
