@@ -1020,8 +1020,6 @@ async def update_agent(
 
         # 清除相关缓存，确保更新立即生效
         try:
-            from app.services.cache_service import cache_service
-
             # 清除 agent 配置缓存
             cache_service.invalidate_agent_config(updated_agent.id)
             logger.debug(f"已清除Agent {updated_agent.id} 的配置缓存")
