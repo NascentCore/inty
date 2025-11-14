@@ -87,6 +87,7 @@ internal fun ChatPage(
     isCurrentPage: Boolean = true,
     shouldAutoFocusInput: Boolean = true,
     onInputFocusChange: (Boolean) -> Unit = {},
+    pageSourceOverride: String? = null, // 如果提供，则使用此 pageSource（通常来自 ChatActivity）
 ) {
 
     val context = LocalContext.current
@@ -109,8 +110,23 @@ internal fun ChatPage(
     val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState()
     val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState()
 
-    LaunchedEffect(isCurrentPage, agentInfo?.id, showKeepTalking, autoPlayVoice) {
+    LaunchedEffect(
+        isCurrentPage,
+        agentInfo?.id,
+        showKeepTalking,
+        autoPlayVoice,
+        pageSourceOverride
+    ) {
         if (isCurrentPage) {
+            // 如果提供了 pageSourceOverride（通常来自 ChatActivity），说明 BaseActivity 已经追踪了页面访问
+            // 此时 ChatPage 不应该重复追踪，避免覆盖 BaseActivity 的 page_source
+            if (pageSourceOverride != null) {
+                // ChatActivity 已经通过 BaseActivity 追踪了页面访问，包含正确的 page_source
+                // 这里不再重复追踪
+                return@LaunchedEffect
+            }
+
+            // 在 MainActivity 中使用时，需要自己追踪
             val pageSource =
                 if (showBackButton) ChatPageSource.CHAT_ACTIVITY
                 else ChatPageSource.MAIN_ACTIVITY_HOME_TAB

@@ -3,6 +3,7 @@ package com.ai.intellimate.chat
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.firebase.FirebaseManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -32,6 +33,7 @@ class ChatActivity : BaseActivity() {
         const val MESSAGES_TAB = "messages_tab" // 消息列表Tab
         const val EXPLORE_TAB = "explore_tab" // 探索Tab
         const val PROFILE_TAB = "profile_tab" // 个人中心Tab
+        const val PUSH_NOTIFICATION = "push_notification" // 消息推送通知
 
         /**
          * 启动单独的聊天界面
@@ -39,7 +41,7 @@ class ChatActivity : BaseActivity() {
          * @param context 上下文context
          * @param agentInfo Agent的Info对象
          * @param agentId agent的id 两个参数选一即可，也必须只要有一个
-         * @param pageSource 页面来源，用于统计曝光事件，建议使用 [PageSource] 常量
+         * @param pageSource 页面来源，用于统计曝光事件，建议使用常量
          */
         fun launch(
             context: Context,
@@ -54,6 +56,17 @@ class ChatActivity : BaseActivity() {
                     intent.putExtra(INTENT_KEY_PAGE_SOURCE, pageSource)
                 }
             )
+        }
+
+        /**
+         * 消息推送通知打开聊天页面需要的intent
+         */
+        fun notifyIntent(context: Context, agentId: String?): Intent {
+            return Intent(context, ChatActivity::class.java).also { intent ->
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                intent.putExtra(INTENT_KEY_AGENT_ID, agentId)
+                intent.putExtra(INTENT_KEY_PAGE_SOURCE, PUSH_NOTIFICATION)
+            }
         }
     }
 
@@ -96,6 +109,17 @@ class ChatActivity : BaseActivity() {
             }
         }
         chatViewModel.updateUserInfo()
+
+        // 如果是从推送通知进入，记录推送通知点击事件
+        if (pageSource == PUSH_NOTIFICATION) {
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.PUSH_NOTIFICATION_CLICK,
+                FirebaseManager.safeEventParams(
+                    "agent_id" to (agentId ?: "unknown"),
+                    "page_source" to pageSource,
+                ),
+            )
+        }
     }
 
     @Composable
@@ -108,11 +132,15 @@ class ChatActivity : BaseActivity() {
                 val hasGeneratedImage = msg.hasGeneratedImage()
                 val generatedImageUrl = msg.getGeneratedImageUrl()
                 msg.content == "loading_animation" &&
-                    !hasGeneratedImage &&
-                    generatedImageUrl != "loading"
+                        !hasGeneratedImage &&
+                        generatedImageUrl != "loading"
             }
 
-        Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(HeartColor.primaryColor)
+        ) {
             // 背景图放在最底层，不受 imePadding 影响
             AgentBackground(
                 agentInfo = agentInfo,
@@ -123,10 +151,14 @@ class ChatActivity : BaseActivity() {
             )
 
             ChatPage(
-                modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding()
+                    .navigationBarsPadding(),
                 chatViewModel = chatViewModel,
                 showBackButton = true,
                 onBack = { finish() },
+                pageSourceOverride = pageSource, // 传递 ChatActivity 的 pageSource，避免重复追踪
             )
         }
     }
