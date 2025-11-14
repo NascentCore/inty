@@ -109,9 +109,60 @@ nginx.conf:/etc/nginx/conf.d/sxwl.ai.conf
 
 部署环境：dev prod GitHub deployment environments
 
-- [后端部署](https://github.com/NascentCore/inty-backend/actions/workflows/build_and_deploy.yml)
+- [后端部署](https://github.com/NascentCore/inty-backend/actions/workflows/build_and_deploy_backend.yml)
+- [推送服务部署](https://github.com/NascentCore/inty-backend/actions/workflows/build_and_deploy_push_worker.yml)
 - [前端 APK 发布](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml)
 - [前端 AAB 发布](https://github.com/NascentCore/inty-app/blob/main/.github/workflows/playdebug_release.yaml)
+
+## 推送服务部署
+
+推送服务（Push Worker）独立于后端服务运行，负责处理推送通知任务。
+
+### 部署配置
+
+- **镜像名称**：`ghcr.io/nascentcore/inty-backend/inty-push-worker`
+- **容器名称**：`inty-push-worker-{environment}`（如 `inty-push-worker-dev`、`inty-push-worker-prod`）
+- **Dockerfile**：`Dockerfile.push-worker`
+- **启动脚本**：`start_push_worker.sh`
+- **配置文件**：使用与后端服务相同的配置文件路径 `devops/config.yaml.{environment}`
+- **挂载卷**：与后端服务相同的密钥文件
+  - `/opt/inty-{environment}/inty-backend-key.json`
+  - `/opt/inty-{environment}/inty-firebase-key.json`
+- **日志**：使用 GCP Cloud Logging 驱动，标签为 `application=inty-push-worker`、`environment={environment}`
+
+### 部署流程
+
+1. 代码推送到 `main` 分支且涉及推送服务相关文件时，自动触发构建和部署
+2. 构建 Docker 镜像并推送到 GitHub Container Registry
+3. 通过 SSH 连接到 GCP VM，拉取镜像并重启容器
+4. 检查容器运行状态和初始化日志
+
+### 验证部署
+
+检查容器状态：
+
+```bash
+sudo docker ps | grep inty-push-worker
+```
+
+查看容器日志：
+
+```bash
+sudo docker logs inty-push-worker-{environment}
+```
+
+检查镜像版本：
+
+```bash
+sudo docker inspect --format '{{.Config.Image}}' inty-push-worker-{environment}
+```
+
+### 相关文件
+
+- Dockerfile: `Dockerfile.push-worker`
+- 启动脚本: `start_push_worker.sh`
+- Workflow: `.github/workflows/build_and_deploy_push_worker.yml`
+- 服务代码: `app/services/push_worker.py`
 
 postgres with pgvector (docker container) migration to gcp cloudsql
 pg_dump > inty_prd.sql

@@ -14,6 +14,7 @@ from app.core.config import (
     GoogleOAuthConfig,
     GooglePlayConfig,
     LoggingConfig,
+    PushNotificationConfig,
     SecurityConfig,
     SentryConfig,
     VerificationConfig,
@@ -44,6 +45,7 @@ def config():
         elevenlabs=ElevenLabsConfig(api_key="test"),
         cloudflare=CloudflareConfig(),
         sentry=SentryConfig(),
+        push_notification=PushNotificationConfig(),
     )
 
 
@@ -72,6 +74,7 @@ def test_guest_voice_auto_correction():
         elevenlabs=ElevenLabsConfig(api_key="test"),
         cloudflare=CloudflareConfig(),
         sentry=SentryConfig(),
+        push_notification=PushNotificationConfig(),
     )
 
     _validate_config(config)
@@ -105,6 +108,7 @@ def test_free_user_voice_auto_correction():
         elevenlabs=ElevenLabsConfig(api_key="test"),
         cloudflare=CloudflareConfig(),
         sentry=SentryConfig(),
+        push_notification=PushNotificationConfig(),
     )
 
     _validate_config(config)
@@ -137,6 +141,7 @@ def test_guest_greater_than_free_auto_correction():
         elevenlabs=ElevenLabsConfig(api_key="test"),
         cloudflare=CloudflareConfig(),
         sentry=SentryConfig(),
+        push_notification=PushNotificationConfig(),
     )
 
     _validate_config(config)
@@ -173,6 +178,7 @@ def test_valid_config_no_changes():
         elevenlabs=ElevenLabsConfig(api_key="test"),
         cloudflare=CloudflareConfig(),
         sentry=SentryConfig(),
+        push_notification=PushNotificationConfig(),
     )
 
     _validate_config(config)
@@ -209,6 +215,7 @@ def test_guest_equals_free_is_valid():
         elevenlabs=ElevenLabsConfig(api_key="test"),
         cloudflare=CloudflareConfig(),
         sentry=SentryConfig(),
+        push_notification=PushNotificationConfig(),
     )
 
     _validate_config(config)

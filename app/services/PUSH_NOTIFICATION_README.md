@@ -27,6 +27,8 @@ alembic upgrade head
 
 ### 3. 运行服务
 
+#### 本地运行
+
 启动推送服务：
 
 ```bash
@@ -34,6 +36,44 @@ python -m app.services.push_worker
 ```
 
 或使用 systemd/supervisor 等进程管理器。
+
+#### 容器化部署
+
+推送服务支持 Docker 容器化部署，使用独立的 Dockerfile 和启动脚本。
+
+**构建镜像**：
+
+```bash
+docker build \
+  --build-arg CONFIG_FILE=devops/config.yaml.dev \
+  -f Dockerfile.push-worker \
+  -t inty-push-worker:latest .
+```
+
+**运行容器**：
+
+```bash
+docker run -d \
+  --name inty-push-worker \
+  --restart unless-stopped \
+  --log-driver=gcplogs \
+  --label application=inty-push-worker \
+  --label environment=dev \
+  --volume /opt/inty-dev/inty-backend-key.json:/inty-backend-key.json \
+  --volume /opt/inty-dev/inty-firebase-key.json:/inty-firebase-key.json \
+  inty-push-worker:latest
+```
+
+**GitHub Actions 自动部署**：
+
+推送服务通过 GitHub Actions workflow 自动构建和部署：
+- Workflow 文件：`.github/workflows/build_and_deploy_push_worker.yml`
+- 触发条件：推送服务相关代码变更时自动触发
+- 部署环境：支持 dev 和 prod 环境
+- 镜像仓库：`ghcr.io/nascentcore/inty-backend/inty-push-worker`
+- 容器名称：`inty-push-worker-{environment}`
+
+查看部署状态：[推送服务部署](https://github.com/NascentCore/inty-backend/actions/workflows/build_and_deploy_push_worker.yml)
 
 ## 服务架构
 
