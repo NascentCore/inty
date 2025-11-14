@@ -103,6 +103,19 @@ MAX_UNREAD_PUSH_COUNT = 5
 # 已读推送重新召回的时间窗口（小时）
 READ_PUSH_RECALL_TIME_WINDOW_HOURS = 24
 
+# 推送阶段顺序（从早到晚）
+STAGE_ORDER = ["10min", "30min", "2h", "24h", "48h"]
+
+# 推送阶段间隔配置：每个阶段相对于前一个阶段的间隔（分钟）
+# 例如：30min 阶段应该在 10min 阶段推送后 20 分钟触发（30 - 10 = 20）
+STAGE_INTERVALS = {
+    "10min": None,  # 第一个阶段，无前一个阶段
+    "30min": 20,  # 30 - 10 = 20 分钟
+    "2h": 90,  # 120 - 30 = 90 分钟
+    "24h": 1320,  # (24 * 60) - 120 = 1320 分钟 = 22 小时
+    "48h": 1440,  # (48 * 60) - (24 * 60) = 1440 分钟 = 24 小时
+}
+
 # ============================================================================
 # 内部辅助函数
 # ============================================================================
@@ -399,12 +412,21 @@ async def _filter_users_by_push_conditions(
     """
     按推送条件过滤用户
 
+    时间判断逻辑：
+    - 10min 阶段：基于最后用户消息时间，检查是否在 10 分钟前
+    - 30min 阶段：基于 10min 阶段的推送时间，检查是否已过去 20 分钟（30 - 10）
+    - 2h 阶段：基于 30min 阶段的推送时间，检查是否已过去 90 分钟（120 - 30）
+    - 24h 阶段：基于 2h 阶段的推送时间，检查是否已过去 22 小时（24 - 2）
+    - 48h 阶段：基于 24h 阶段的推送时间，检查是否已过去 24 小时（48 - 24）
+
+    如果前一个阶段的推送不存在或已被标记为已读，则跳过该用户（因为用户已经回来了）。
+
     Args:
         db: 数据库会话
         user_ids: 用户ID列表
         stage: 推送阶段
         expected_unread_count: 期望的未读推送记录数
-        threshold_time: 时间阈值
+        threshold_time: 时间阈值（仅用于 10min 阶段和 24h/48h 阶段的后备逻辑）
         popular_agent: 热门角色（用于无聊天推送）
         batch_size: 批次大小
 
@@ -438,9 +460,51 @@ async def _filter_users_by_push_conditions(
             # 获取用户最近聊天
             recent_chat_data = await get_user_recent_chat(db, user_id, stage=stage)
             if recent_chat_data:
-                # 用户有活跃聊天，检查最后消息时间
+                # 用户有活跃聊天
                 chat, last_user_message_time = recent_chat_data
-                if last_user_message_time <= threshold_time:
+
+                # 判断时间条件
+                time_condition_met = False
+
+                if stage == "10min":
+                    # 10min 阶段：基于最后用户消息时间
+                    time_condition_met = last_user_message_time <= threshold_time
+                else:
+                    # 后续阶段（30min, 2h, 24h, 48h）：基于前一个阶段的推送时间
+                    previous_push_time = await get_previous_stage_push_time(
+                        db, user_id, stage, PUSH_TYPE_RECENT_CHAT, chat.id
+                    )
+
+                    if previous_push_time is None:
+                        # 不存在前一个阶段的未读推送，跳过该用户
+                        skipped_time_not_met += 1
+                        logger.debug(
+                            f"用户不存在前一个阶段的未读推送: user_id={user_id}, chat_id={chat.id}, stage={stage}"
+                        )
+                        continue
+
+                    # 检查前一个阶段推送时间是否满足间隔要求
+                    interval_minutes = STAGE_INTERVALS.get(stage)
+                    if interval_minutes is None:
+                        logger.error(f"未找到阶段间隔配置: stage={stage}")
+                        skipped_time_not_met += 1
+                        continue
+
+                    now = datetime.datetime.now(datetime.timezone.utc)
+                    time_since_previous_push = (
+                        now - previous_push_time
+                    ).total_seconds() / 60
+                    time_condition_met = time_since_previous_push >= interval_minutes
+
+                    logger.debug(
+                        f"检查前一个阶段推送时间: user_id={user_id}, chat_id={chat.id}, stage={stage}, "
+                        f"previous_push_time={previous_push_time.isoformat()}, "
+                        f"time_since_previous_push={time_since_previous_push:.1f}分钟, "
+                        f"required_interval={interval_minutes}分钟, "
+                        f"condition_met={time_condition_met}"
+                    )
+
+                if time_condition_met:
                     users_needing_push.append(
                         (user, chat, last_user_message_time, None)
                     )
@@ -452,28 +516,76 @@ async def _filter_users_by_push_conditions(
                     skipped_time_not_met += 1
                     logger.debug(
                         f"用户时间不满足条件: user_id={user_id}, stage={stage}, "
-                        f"last_message_time={last_user_message_time.isoformat()}, threshold={threshold_time.isoformat()}"
+                        f"last_message_time={last_user_message_time.isoformat()}"
                     )
             else:
                 # 用户没有活跃聊天，检查用户注册时间（仅对24h/48h阶段）
                 if stage in ("24h", "48h"):
-                    if user.created_at and user.created_at <= threshold_time:
-                        if not popular_agent:
-                            skipped_no_popular_agent += 1
-                            continue
-                        users_needing_push.append(
-                            (user, None, user.created_at, popular_agent)
-                        )
-                        logger.debug(
-                            f"用户满足推送条件（无聊天）: user_id={user_id}, stage={stage}, "
-                            f"unread_count={expected_unread_count}, created_at={user.created_at.isoformat()}"
-                        )
+                    # 对于 24h/48h 阶段，也需要基于前一个阶段的推送时间
+                    previous_push_time = await get_previous_stage_push_time(
+                        db, user_id, stage, PUSH_TYPE_NO_CHAT, None
+                    )
+
+                    if previous_push_time is None:
+                        # 不存在前一个阶段的未读推送，检查用户注册时间（作为后备逻辑）
+                        if user.created_at and user.created_at <= threshold_time:
+                            if not popular_agent:
+                                skipped_no_popular_agent += 1
+                                continue
+                            users_needing_push.append(
+                                (user, None, user.created_at, popular_agent)
+                            )
+                            logger.debug(
+                                f"用户满足推送条件（无聊天，基于注册时间）: user_id={user_id}, stage={stage}, "
+                                f"unread_count={expected_unread_count}, created_at={user.created_at.isoformat()}"
+                            )
+                        else:
+                            skipped_time_not_met += 1
+                            logger.debug(
+                                f"用户注册时间不满足条件: user_id={user_id}, stage={stage}, "
+                                f"created_at={user.created_at.isoformat() if user.created_at else None}, threshold={threshold_time.isoformat()}"
+                            )
                     else:
-                        skipped_time_not_met += 1
-                        logger.debug(
-                            f"用户注册时间不满足条件: user_id={user_id}, stage={stage}, "
-                            f"created_at={user.created_at.isoformat() if user.created_at else None}, threshold={threshold_time.isoformat()}"
+                        # 存在前一个阶段的未读推送，检查间隔
+                        interval_minutes = STAGE_INTERVALS.get(stage)
+                        if interval_minutes is None:
+                            logger.error(f"未找到阶段间隔配置: stage={stage}")
+                            skipped_time_not_met += 1
+                            continue
+
+                        now = datetime.datetime.now(datetime.timezone.utc)
+                        time_since_previous_push = (
+                            now - previous_push_time
+                        ).total_seconds() / 60
+                        time_condition_met = (
+                            time_since_previous_push >= interval_minutes
                         )
+
+                        logger.debug(
+                            f"检查前一个阶段推送时间（无聊天）: user_id={user_id}, stage={stage}, "
+                            f"previous_push_time={previous_push_time.isoformat()}, "
+                            f"time_since_previous_push={time_since_previous_push:.1f}分钟, "
+                            f"required_interval={interval_minutes}分钟, "
+                            f"condition_met={time_condition_met}"
+                        )
+
+                        if time_condition_met:
+                            if not popular_agent:
+                                skipped_no_popular_agent += 1
+                                continue
+                            users_needing_push.append(
+                                (user, None, user.created_at, popular_agent)
+                            )
+                            logger.debug(
+                                f"用户满足推送条件（无聊天，基于前一个阶段推送时间）: user_id={user_id}, stage={stage}, "
+                                f"unread_count={expected_unread_count}, previous_push_time={previous_push_time.isoformat()}"
+                            )
+                        else:
+                            skipped_time_not_met += 1
+                            logger.debug(
+                                f"用户时间不满足条件（无聊天）: user_id={user_id}, stage={stage}, "
+                                f"previous_push_time={previous_push_time.isoformat()}"
+                            )
                 else:
                     # 对于 10min/30min/2h 阶段，用户没有活跃聊天时不推送
                     skipped_no_chat += 1
@@ -993,6 +1105,87 @@ async def has_sent_push_for_stage(
     except Exception as e:
         logger.error(f"检查推送历史失败: {str(e)}")
         return True  # 出错时返回 True，避免重复发送
+
+
+async def get_previous_stage_push_time(
+    db: AsyncSession,
+    user_id: str,
+    stage: str,
+    push_type: str,
+    chat_id: Optional[str] = None,
+) -> Optional[datetime.datetime]:
+    """
+    获取前一个阶段的推送时间
+
+    查询指定用户/聊天在前一个阶段的未读推送记录，返回该推送的 sent_at 时间。
+    如果前一个阶段的推送已被标记为已读，则返回 None（因为用户已经回来了）。
+
+    Args:
+        db: 数据库会话
+        user_id: 用户ID
+        stage: 当前推送阶段
+        push_type: 推送类型（recent_chat 或 no_chat）
+        chat_id: 聊天ID（可选，用于有聊天推送）
+
+    Returns:
+        前一个阶段的推送时间（sent_at），如果不存在或已读则返回 None
+    """
+    try:
+        # 获取前一个阶段
+        if stage not in STAGE_ORDER:
+            logger.error(f"无效的推送阶段: {stage}")
+            return None
+
+        stage_index = STAGE_ORDER.index(stage)
+        if stage_index == 0:
+            # 第一个阶段（10min），没有前一个阶段
+            return None
+
+        previous_stage = STAGE_ORDER[stage_index - 1]
+
+        # 构建查询条件
+        conditions = [
+            PushNotificationHistory.user_id == user_id,
+            PushNotificationHistory.stage == previous_stage,
+            PushNotificationHistory.push_type == push_type,
+            PushNotificationHistory.read_at.is_(None),  # 只查询未读推送
+        ]
+
+        # 根据推送类型添加 chat_id 条件
+        if push_type == PUSH_TYPE_RECENT_CHAT:
+            if chat_id:
+                conditions.append(PushNotificationHistory.chat_id == chat_id)
+            else:
+                # 有聊天推送必须提供 chat_id
+                logger.warning(
+                    f"有聊天推送未提供 chat_id: user_id={user_id}, stage={stage}"
+                )
+                return None
+        else:
+            # 无聊天推送，chat_id 应该为 None
+            conditions.append(PushNotificationHistory.chat_id.is_(None))
+
+        # 查询前一个阶段的未读推送记录，按发送时间降序排列，取最新的一条
+        stmt = (
+            select(PushNotificationHistory)
+            .where(and_(*conditions))
+            .order_by(PushNotificationHistory.sent_at.desc())
+            .limit(1)
+        )
+
+        result = await db.execute(stmt)
+        previous_push = result.scalar_one_or_none()
+
+        if previous_push:
+            return previous_push.sent_at
+
+        return None
+
+    except Exception as e:
+        logger.error(
+            f"获取前一个阶段推送时间失败: user_id={user_id}, stage={stage}, error={str(e)}"
+        )
+        return None
 
 
 # ============================================================================
@@ -2479,11 +2672,14 @@ async def get_users_needing_push(
     统一查询需要推送的用户（所有阶段统一处理）
 
     推送阶段映射：
-    - 10min: 未读记录数=0，时间阈值=10分钟
-    - 30min: 未读记录数=1，时间阈值=30分钟
-    - 2h: 未读记录数=2，时间阈值=2小时
-    - 24h: 未读记录数=3，时间阈值=24小时
-    - 48h: 未读记录数=4，时间阈值=48小时
+    - 10min: 未读记录数=0，基于最后用户消息时间（10分钟前）
+    - 30min: 未读记录数=1，基于 10min 阶段推送时间（间隔 20 分钟）
+    - 2h: 未读记录数=2，基于 30min 阶段推送时间（间隔 90 分钟）
+    - 24h: 未读记录数=3，基于 2h 阶段推送时间（间隔 22 小时）
+    - 48h: 未读记录数=4，基于 24h 阶段推送时间（间隔 24 小时）
+
+    注意：后续阶段（30min, 2h, 24h, 48h）基于前一个阶段的推送时间进行判断，
+    而不是基于最后用户消息时间，确保阶段之间的时间间隔正确。
 
     Args:
         db: 数据库会话
