@@ -11,7 +11,7 @@ from typing import List, Optional, Tuple
 
 from langchain_core.messages import HumanMessage
 from loguru import logger
-from sqlalchemy import Integer, and_, func, select, text
+from sqlalchemy import Integer, and_, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.agent import agent_manager
@@ -224,16 +224,29 @@ async def _check_user_has_device_token(
     user_id: str,
 ) -> bool:
     """
-    检查用户是否有 device_token
+    检查用户是否有有效的 device_token
 
     Args:
         db: 数据库会话
         user_id: 用户ID
 
     Returns:
-        是否有 device_token
+        是否有有效的 device_token（如果用户被标记为无效 token，返回 False）
     """
     try:
+        # 检查用户是否被标记为无效 token
+        user_stmt = select(User.fcm_token_invalid_at).where(User.id == user_id)
+        user_result = await db.execute(user_stmt)
+        fcm_token_invalid_at = user_result.scalar_one_or_none()
+
+        # 如果用户被标记为无效 token，返回 False
+        if fcm_token_invalid_at is not None:
+            logger.debug(
+                f"用户被标记为无效 FCM token: user_id={user_id}, invalid_at={fcm_token_invalid_at.isoformat()}"
+            )
+            return False
+
+        # 检查用户是否有 device_token
         device_token_stmt = (
             select(DeviceToken.id)
             .where(DeviceToken.user_id == user_id)
@@ -771,6 +784,148 @@ async def discover_new_users_for_push(
         return 0
 
 
+async def discover_users_with_updated_tokens(
+    db: AsyncSession,
+    batch_size: int = 1000,
+) -> int:
+    """
+    发现已更新 token 的用户（之前被标记为无效 token，但现在有新的 token）
+
+    这个函数主要用于定期扫描，检查被标记为无效 token 的用户是否更新了 token。
+    如果用户有新的 device_token（updated_at > fcm_token_invalid_at），则清除标记。
+
+    使用循环处理机制，确保所有被标记的用户都能被处理。
+
+    Args:
+        db: 数据库会话
+        batch_size: 每次处理的用户数量
+
+    Returns:
+        清除标记的用户数量
+    """
+    try:
+        total_cleared_count = 0
+        total_processed_count = 0
+        max_iterations = 100  # 最大循环次数，防止无限循环
+        iteration = 0
+
+        logger.info(
+            f"[token 更新扫描] 开始扫描已更新 token 的用户，批次大小: {batch_size}"
+        )
+
+        while iteration < max_iterations:
+            iteration += 1
+
+            # 查询被标记为无效 token 的用户（每次查询 batch_size 个）
+            stmt = (
+                select(User.id, User.fcm_token_invalid_at)
+                .where(
+                    and_(
+                        User.deleted_at.is_(None),
+                        User.fcm_token_invalid_at.isnot(None),
+                    )
+                )
+                .order_by(
+                    User.fcm_token_invalid_at.asc()
+                )  # 按标记时间排序，优先处理较早标记的用户
+                .limit(batch_size)
+            )
+
+            result = await db.execute(stmt)
+            users_with_invalid_tokens = result.all()
+
+            if not users_with_invalid_tokens:
+                # 没有更多用户需要处理，退出循环
+                if iteration == 1:
+                    logger.debug("[token 更新扫描] 没有发现被标记为无效 token 的用户")
+                else:
+                    logger.info(
+                        f"[token 更新扫描] 所有用户已处理完成，共处理 {total_processed_count} 个用户，清除 {total_cleared_count} 个标记"
+                    )
+                break
+
+            batch_cleared_count = 0
+            batch_processed_count = len(users_with_invalid_tokens)
+            total_processed_count += batch_processed_count
+
+            logger.debug(
+                f"[token 更新扫描] 第 {iteration} 批: 处理 {batch_processed_count} 个用户"
+            )
+
+            for user_id, fcm_token_invalid_at in users_with_invalid_tokens:
+                try:
+                    # 检查用户是否有新的 device_token（updated_at > fcm_token_invalid_at）
+                    device_token_stmt = (
+                        select(DeviceToken.id)
+                        .where(DeviceToken.user_id == user_id)
+                        .where(DeviceToken.updated_at > fcm_token_invalid_at)
+                        .limit(1)
+                    )
+                    device_token_result = await db.execute(device_token_stmt)
+                    has_new_token = device_token_result.first() is not None
+
+                    if has_new_token:
+                        # 清除标记
+                        update_stmt = (
+                            update(User)
+                            .where(User.id == user_id)
+                            .values(fcm_token_invalid_at=None)
+                        )
+                        await db.execute(update_stmt)
+                        batch_cleared_count += 1
+                        logger.debug(
+                            f"[token 更新扫描] 用户已更新 token，清除无效标记: user_id={user_id}, "
+                            f"invalid_at={fcm_token_invalid_at.isoformat()}"
+                        )
+
+                except Exception as e:
+                    logger.error(
+                        f"[token 更新扫描] 处理用户失败: user_id={user_id}, error={str(e)}"
+                    )
+                    continue
+
+            # 每批处理完后立即提交事务，确保已处理的用户标记被清除
+            if batch_cleared_count > 0:
+                try:
+                    await db.commit()
+                    total_cleared_count += batch_cleared_count
+                    logger.debug(
+                        f"[token 更新扫描] 第 {iteration} 批完成: 清除 {batch_cleared_count} 个用户的无效 token 标记"
+                    )
+                except Exception as e:
+                    logger.error(f"[token 更新扫描] 提交事务失败: error={str(e)}")
+                    await db.rollback()
+                    # 继续处理下一批，不中断整个流程
+
+            # 如果本批处理的用户数量少于 batch_size，说明已经处理完所有用户
+            if batch_processed_count < batch_size:
+                logger.info(
+                    f"[token 更新扫描] 所有用户已处理完成，共处理 {total_processed_count} 个用户，清除 {total_cleared_count} 个标记"
+                )
+                break
+
+        if iteration >= max_iterations:
+            logger.warning(
+                f"[token 更新扫描] 达到最大循环次数限制 ({max_iterations})，停止处理。"
+                f"已处理 {total_processed_count} 个用户，清除 {total_cleared_count} 个标记"
+            )
+
+        if total_cleared_count > 0:
+            logger.info(
+                f"[token 更新扫描] 扫描完成: 共处理 {total_processed_count} 个用户，清除 {total_cleared_count} 个用户的无效 token 标记"
+            )
+
+        return total_cleared_count
+
+    except Exception as e:
+        logger.error(f"[token 更新扫描] 扫描失败: {str(e)}")
+        import traceback
+
+        logger.error(traceback.format_exc())
+        await db.rollback()
+        return 0
+
+
 async def get_user_unread_push_count(
     db: AsyncSession,
     user_id: str,
@@ -1032,6 +1187,65 @@ async def get_agent_avatar_url(
 # ============================================================================
 
 
+async def _save_push_message_to_history(
+    db: AsyncSession,
+    user_id: str,
+    agent_id: str,
+    stage: str,
+    push_type: str,
+    message_content: str,
+    chat_id: Optional[str] = None,
+) -> bool:
+    """
+    保存推送消息到聊天历史
+
+    Args:
+        db: 数据库会话
+        user_id: 用户ID
+        agent_id: Agent ID
+        stage: 推送阶段
+        push_type: 推送类型
+        message_content: 消息内容
+        chat_id: 聊天ID（可选）
+
+    Returns:
+        是否保存成功
+    """
+    try:
+        # 生成会话ID
+        if chat_id:
+            session_id = generate_session_id(chat_id)
+        else:
+            session_id = str(agent_id)
+
+        # 构建推送元数据
+        push_meta_data = {
+            "isPushMessage": True,
+            "pushStage": stage,
+            "pushType": push_type,
+        }
+
+        # 保存AI消息
+        await add_ai_message(
+            db=db,
+            session_id=session_id,
+            message=message_content,
+            agent_id=agent_id,
+            meta_data=push_meta_data,
+        )
+        logger.debug(
+            f"推送消息已保存到聊天历史: user_id={user_id}, agent_id={agent_id}, "
+            f"session_id={session_id}, stage={stage}, push_type={push_type}"
+        )
+        return True
+    except Exception as e:
+        logger.warning(
+            f"保存推送消息到聊天历史失败: user_id={user_id}, agent_id={agent_id}, "
+            f"error={str(e)}"
+        )
+        return False
+
+
 async def generate_agent_message(
     db: AsyncSession,
     user_id: str,
@@ -1040,6 +1254,7 @@ async def generate_agent_message(
     push_type: str = PUSH_TYPE_RECENT_CHAT,
     agent_data: Optional[dict] = None,
     chat_id: Optional[str] = None,
+    save_to_history: bool = False,
 ) -> Optional[str]:
     """
     使用 Agent 生成主动消息
@@ -1052,6 +1267,7 @@ async def generate_agent_message(
         push_type: 推送类型 (PUSH_TYPE_RECENT_CHAT 或 PUSH_TYPE_NO_CHAT)
         agent_data: Agent 数据字典（可选，如果未提供则从数据库获取）
         chat_id: 聊天ID（可选，用于 recent_chat 类型）
+        save_to_history: 是否保存消息到聊天历史，默认为 False
 
     Returns:
         生成的消息内容，失败时返回 None
@@ -1122,33 +1338,34 @@ async def generate_agent_message(
 
         response_content = response_content.strip()
 
-        # 保存AI消息到聊天历史，并添加推送元数据
-        try:
-            # 构建推送元数据
-            push_meta_data = {
-                "isPushMessage": True,
-                "pushStage": stage,
-                "pushType": push_type,
-            }
+        # 根据参数决定是否保存AI消息到聊天历史
+        if save_to_history:
+            try:
+                # 构建推送元数据
+                push_meta_data = {
+                    "isPushMessage": True,
+                    "pushStage": stage,
+                    "pushType": push_type,
+                }
 
-            # 保存AI消息
-            await add_ai_message(
-                db=db,
-                session_id=session_id,
-                message=response_content,
-                agent_id=agent_id,
-                meta_data=push_meta_data,
-            )
-            logger.debug(
-                f"推送消息已保存到聊天历史: user_id={user_id}, agent_id={agent_id}, "
-                f"session_id={session_id}, stage={stage}, push_type={push_type}"
-            )
-        except Exception as e:
-            logger.warning(
-                f"保存推送消息到聊天历史失败: user_id={user_id}, agent_id={agent_id}, "
-                f"error={str(e)}"
-            )
-            # 即使保存失败，也返回生成的消息内容
+                # 保存AI消息
+                await add_ai_message(
+                    db=db,
+                    session_id=session_id,
+                    message=response_content,
+                    agent_id=agent_id,
+                    meta_data=push_meta_data,
+                )
+                logger.debug(
+                    f"推送消息已保存到聊天历史: user_id={user_id}, agent_id={agent_id}, "
+                    f"session_id={session_id}, stage={stage}, push_type={push_type}"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"保存推送消息到聊天历史失败: user_id={user_id}, agent_id={agent_id}, "
+                    f"error={str(e)}"
+                )
+                # 即使保存失败，也返回生成的消息内容
 
         return response_content
 
@@ -1418,20 +1635,10 @@ async def process_single_user_recent_chat_push(
             )
             return False, "已发送过推送"
 
-        # 先尝试记录推送历史（如果失败说明已存在，跳过）
-        sent_at = datetime.datetime.now(datetime.timezone.utc)
-        history_recorded = await record_push_history(
-            db=db,
-            user_id=user_id,
-            agent_id=agent_id,
-            stage=stage,
-            push_type=PUSH_TYPE_RECENT_CHAT,
-            message_content=None,  # 先记录，消息内容稍后填充
-            sent_at=sent_at,
-            chat_id=chat_id,
-        )
-
-        if not history_recorded:
+        # 检查是否已存在推送历史（防止重复推送）
+        if await has_sent_push_for_stage(
+            db, chat_id, stage, PUSH_TYPE_RECENT_CHAT, None
+        ):
             logger.debug(
                 f"[用户维度] 推送历史已存在，跳过: user_id={user_id}, chat_id={chat_id}, stage={stage}"
             )
@@ -1444,7 +1651,7 @@ async def process_single_user_recent_chat_push(
             logger.error(f"[用户维度] {error_msg}")
             return False, error_msg
 
-        # 生成 Agent 消息（传递 agent_data 避免重复查询）
+        # 生成 Agent 消息（不保存到聊天历史）
         message_content = await generate_agent_message(
             db,
             user_id=user_id,
@@ -1453,35 +1660,18 @@ async def process_single_user_recent_chat_push(
             push_type=PUSH_TYPE_RECENT_CHAT,
             agent_data=agent_data,
             chat_id=chat_id,
+            save_to_history=False,
         )
 
         if not message_content:
             error_msg = f"生成消息失败: chat_id={chat_id}"
             logger.warning(f"[用户维度] {error_msg}")
-            # 清理已创建的推送历史记录
-            await _delete_push_history_record(
-                db=db,
-                user_id=user_id,
-                stage=stage,
-                push_type=PUSH_TYPE_RECENT_CHAT,
-                chat_id=chat_id,
-            )
             return False, error_msg
-
-        # 更新推送历史的消息内容
-        await _update_push_history_message_content(
-            db=db,
-            user_id=user_id,
-            message_content=message_content,
-            stage=stage,
-            push_type=PUSH_TYPE_RECENT_CHAT,
-            chat_id=chat_id,
-        )
 
         # 获取 Agent 名称和头像
         agent_name, agent_avatar_url = await _extract_agent_info(agent_data)
 
-        # 发送推送
+        # 发送 FCM 推送
         success = await send_push_notification(
             db,
             user_id=user_id,
@@ -1494,12 +1684,44 @@ async def process_single_user_recent_chat_push(
         )
 
         if success:
+            # FCM 发送成功，保存消息到聊天历史和记录推送历史
+            sent_at = datetime.datetime.now(datetime.timezone.utc)
+
+            # 保存消息到聊天历史
+            history_saved = await _save_push_message_to_history(
+                db=db,
+                user_id=user_id,
+                agent_id=agent_id,
+                stage=stage,
+                push_type=PUSH_TYPE_RECENT_CHAT,
+                message_content=message_content,
+                chat_id=chat_id,
+            )
+
+            if not history_saved:
+                logger.warning(
+                    f"[用户维度] 保存消息到聊天历史失败，但推送已发送: user_id={user_id}, chat_id={chat_id}"
+                )
+
+            # 记录推送历史
+            await record_push_history(
+                db=db,
+                user_id=user_id,
+                agent_id=agent_id,
+                stage=stage,
+                push_type=PUSH_TYPE_RECENT_CHAT,
+                message_content=message_content,
+                sent_at=sent_at,
+                chat_id=chat_id,
+            )
+
             logger.info(
                 f"[用户维度] 推送成功: user_id={user_id}, chat_id={chat_id}, agent_id={agent_id}, "
                 f"agent_name={agent_name}, stage={stage}, message_preview={message_content[:50]}..."
             )
             return True, None
         else:
+            # FCM 发送失败，不保存消息，不记录推送历史
             error_msg = f"推送发送失败: user_id={user_id}, chat_id={chat_id}"
             logger.warning(f"[用户维度] {error_msg}")
             return False, error_msg
@@ -1553,25 +1775,6 @@ async def process_single_user_no_chat_push(
             )
             return False, "已发送过推送"
 
-        # 先尝试记录推送历史（如果失败说明已存在，跳过）
-        sent_at = datetime.datetime.now(datetime.timezone.utc)
-        history_recorded = await record_push_history(
-            db=db,
-            user_id=user_id,
-            agent_id=agent_id,
-            stage=stage,
-            push_type=PUSH_TYPE_NO_CHAT,
-            message_content=None,  # 先记录，消息内容稍后填充
-            sent_at=sent_at,
-            chat_id=None,
-        )
-
-        if not history_recorded:
-            logger.debug(
-                f"[用户维度] 推送历史已存在，跳过: user_id={user_id}, stage={stage}"
-            )
-            return False, "推送历史已存在"
-
         # 获取 Agent 数据
         agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
         if not agent_data:
@@ -1579,7 +1782,7 @@ async def process_single_user_no_chat_push(
             logger.error(f"[用户维度] {error_msg}")
             return False, error_msg
 
-        # 生成 Agent 消息
+        # 生成 Agent 消息（不保存到聊天历史）
         message_content = await generate_agent_message(
             db,
             user_id=user_id,
@@ -1588,35 +1791,18 @@ async def process_single_user_no_chat_push(
             push_type=PUSH_TYPE_NO_CHAT,
             agent_data=agent_data,
             chat_id=None,
+            save_to_history=False,
         )
 
         if not message_content:
             error_msg = f"生成消息失败: user_id={user_id}, agent_id={agent_id}"
             logger.warning(f"[用户维度] {error_msg}")
-            # 清理已创建的推送历史记录
-            await _delete_push_history_record(
-                db=db,
-                user_id=user_id,
-                stage=stage,
-                push_type=PUSH_TYPE_NO_CHAT,
-                chat_id=None,
-            )
             return False, error_msg
-
-        # 更新推送历史的消息内容
-        await _update_push_history_message_content(
-            db=db,
-            user_id=user_id,
-            message_content=message_content,
-            stage=stage,
-            push_type=PUSH_TYPE_NO_CHAT,
-            chat_id=None,
-        )
 
         # 获取 Agent 名称和头像
         agent_name, agent_avatar_url = await _extract_agent_info(agent_data)
 
-        # 发送推送
+        # 发送 FCM 推送
         success = await send_push_notification(
             db,
             user_id=user_id,
@@ -1629,12 +1815,44 @@ async def process_single_user_no_chat_push(
         )
 
         if success:
+            # FCM 发送成功，保存消息到聊天历史和记录推送历史
+            sent_at = datetime.datetime.now(datetime.timezone.utc)
+
+            # 保存消息到聊天历史
+            history_saved = await _save_push_message_to_history(
+                db=db,
+                user_id=user_id,
+                agent_id=agent_id,
+                stage=stage,
+                push_type=PUSH_TYPE_NO_CHAT,
+                message_content=message_content,
+                chat_id=None,
+            )
+
+            if not history_saved:
+                logger.warning(
+                    f"[用户维度] 保存消息到聊天历史失败，但推送已发送: user_id={user_id}, agent_id={agent_id}"
+                )
+
+            # 记录推送历史
+            await record_push_history(
+                db=db,
+                user_id=user_id,
+                agent_id=agent_id,
+                stage=stage,
+                push_type=PUSH_TYPE_NO_CHAT,
+                message_content=message_content,
+                sent_at=sent_at,
+                chat_id=None,
+            )
+
             logger.info(
                 f"[用户维度] 无聊天推送成功: user_id={user_id}, agent_id={agent_id}, agent_name={agent_name}, "
                 f"stage={stage}, message_preview={message_content[:50]}..."
             )
             return True, None
         else:
+            # FCM 发送失败，不保存消息，不记录推送历史
             error_msg = f"推送发送失败: user_id={user_id}, agent_id={agent_id}"
             logger.warning(f"[用户维度] {error_msg}")
             return False, error_msg
@@ -1713,30 +1931,17 @@ async def process_single_user_push(
                     f"user_id={user_id}, chat_id={chat_id}, stage={stage}"
                 )
                 return False, "已发送过推送"
+            # 检查是否已存在推送历史（防止重复推送）
+            if await has_sent_push_for_stage(db, chat_id, stage, push_type, None):
+                logger.debug(
+                    f"推送历史已存在，跳过: user_id={user_id}, chat_id={chat_id}, stage={stage}"
+                )
+                return False, "推送历史已存在"
         else:
             # 无聊天：检查是否已发送过推送
             if await has_sent_push_for_user_stage(db, user_id, stage, push_type):
                 logger.debug(f"推送已发送过，跳过: user_id={user_id}, stage={stage}")
                 return False, "已发送过推送"
-
-        # 先尝试记录推送历史（如果失败说明已存在，跳过）
-        sent_at = datetime.datetime.now(datetime.timezone.utc)
-        history_recorded = await record_push_history(
-            db=db,
-            user_id=user_id,
-            agent_id=agent_id,
-            stage=stage,
-            push_type=push_type,
-            message_content=None,  # 先记录，消息内容稍后填充
-            sent_at=sent_at,
-            chat_id=chat_id,
-        )
-
-        if not history_recorded:
-            logger.debug(
-                f"推送历史已存在，跳过: user_id={user_id}, chat_id={chat_id}, stage={stage}"
-            )
-            return False, "推送历史已存在"
 
         # 获取 Agent 数据（用于生成消息和获取头像）
         agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
@@ -1745,7 +1950,7 @@ async def process_single_user_push(
             logger.error(f"{error_msg} (stage={stage})")
             return False, error_msg
 
-        # 生成 Agent 消息（传递 agent_data 避免重复查询）
+        # 生成 Agent 消息（不保存到聊天历史）
         message_content = await generate_agent_message(
             db,
             user_id=user_id,
@@ -1754,35 +1959,18 @@ async def process_single_user_push(
             push_type=push_type,
             agent_data=agent_data,
             chat_id=chat_id,
+            save_to_history=False,
         )
 
         if not message_content:
             error_msg = f"生成消息失败: user_id={user_id}, agent_id={agent_id}, chat_id={chat_id}"
             logger.warning(f"{error_msg} (stage={stage})")
-            # 清理已创建的推送历史记录
-            await _delete_push_history_record(
-                db=db,
-                user_id=user_id,
-                stage=stage,
-                push_type=push_type,
-                chat_id=chat_id,
-            )
             return False, error_msg
-
-        # 更新推送历史的消息内容
-        await _update_push_history_message_content(
-            db=db,
-            user_id=user_id,
-            message_content=message_content,
-            stage=stage,
-            push_type=push_type,
-            chat_id=chat_id,
-        )
 
         # 获取 Agent 名称和头像
         agent_name, agent_avatar_url = await _extract_agent_info(agent_data)
 
-        # 发送推送
+        # 发送 FCM 推送
         success = await send_push_notification(
             db,
             user_id=user_id,
@@ -1795,12 +1983,44 @@ async def process_single_user_push(
         )
 
         if success:
+            # FCM 发送成功，保存消息到聊天历史和记录推送历史
+            sent_at = datetime.datetime.now(datetime.timezone.utc)
+
+            # 保存消息到聊天历史
+            history_saved = await _save_push_message_to_history(
+                db=db,
+                user_id=user_id,
+                agent_id=agent_id,
+                stage=stage,
+                push_type=push_type,
+                message_content=message_content,
+                chat_id=chat_id,
+            )
+
+            if not history_saved:
+                logger.warning(
+                    f"保存消息到聊天历史失败，但推送已发送: user_id={user_id}, chat_id={chat_id}, agent_id={agent_id}"
+                )
+
+            # 记录推送历史
+            await record_push_history(
+                db=db,
+                user_id=user_id,
+                agent_id=agent_id,
+                stage=stage,
+                push_type=push_type,
+                message_content=message_content,
+                sent_at=sent_at,
+                chat_id=chat_id,
+            )
+
             logger.info(
                 f"推送成功: user_id={user_id}, chat_id={chat_id}, agent_id={agent_id}, "
                 f"agent_name={agent_name}, stage={stage}, push_type={push_type}, message_preview={message_content[:50]}..."
             )
             return True, None
         else:
+            # FCM 发送失败，不保存消息，不记录推送历史
             error_msg = f"推送发送失败: user_id={user_id}, chat_id={chat_id}, agent_id={agent_id}"
             logger.warning(f"{error_msg} (stage={stage})")
             return False, error_msg

@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Optional
 
 from loguru import logger
-from sqlalchemy import and_, text
+from sqlalchemy import and_, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -198,8 +198,22 @@ async def register_device_token(
             device_token = DeviceToken(token=token, user_id=user_id)
             db.add(device_token)
 
+        # 清除用户的无效 token 标记（如果存在）
+        # 因为用户注册了新 token，说明现在有有效 token 了
+        user_stmt = (
+            update(User)
+            .where(User.id == user_id)
+            .where(User.fcm_token_invalid_at.isnot(None))
+            .values(fcm_token_invalid_at=None)
+        )
+        await db.execute(user_stmt)
+
         await db.commit()
         await db.refresh(device_token)
+        
+        # 记录日志
+        logger.debug(f"用户注册新 device token，已清除无效标记: user_id={user_id}, token={token[:20]}...")
+        
         return device_token
 
     except Exception as e:

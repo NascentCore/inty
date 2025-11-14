@@ -87,6 +87,13 @@ class User(Base):
     anonymized_at = Column(DateTime(timezone=True), comment="数据匿名化时间")
     deletion_reason = Column(String(255), comment="删除原因")
 
+    # FCM token 相关字段
+    fcm_token_invalid_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="FCM token 无效时间，如果为 None 表示用户有有效 token 或未检查，如果有值表示在这个时间点发现用户所有 token 都无效",
+    )
+
     # 关系
     agents = relationship("Agent", back_populates="creator")
     following_agents = relationship(
