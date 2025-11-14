@@ -13,6 +13,7 @@ import ai.sxwl.android.utils.TimeUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -48,7 +49,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -102,6 +102,7 @@ internal fun ProfilePage(
     isLoading: Boolean = false,
     onLoadMore: () -> Unit = {},
     onShowSettings: () -> Unit,
+    vipStatus: VipStatus? = null, // 可选的 VIP 状态，用于预览
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -225,6 +226,7 @@ internal fun ProfilePage(
                     onShowSettings = onShowSettings,
                     innerPadding = innerPadding,
                     context = context,
+                    vipStatus = vipStatus,
                 )
 
                 // LazyGrid 区域
@@ -329,9 +331,19 @@ private fun ProfileHeader(
     userProfile: UserProfile,
     onShowSettings: () -> Unit,
     innerPadding: PaddingValues,
-    context: android.content.Context,
+    context: Context,
+    vipStatus: VipStatus? = null, // 可选的 VIP 状态，用于预览
 ) {
-    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
+    // 如果提供了 vipStatus 参数，使用它；否则从 BillingRepository 获取
+    val currentVipStatus =
+        vipStatus ?: remember {
+            try {
+                BillingRepository.vipStatusFlow.value
+            } catch (e: Exception) {
+                // 预览模式下如果 BillingRepository 无法初始化，使用默认值
+                VipStatus(isSubscribed = false)
+            }
+        }
 
     // Settings 图标位置固定，不响应折叠状态
     val topSpacerHeight = innerPadding.calculateTopPadding() + 28.dp
@@ -512,9 +524,9 @@ private fun ProfileHeader(
                 contentAlignment = Alignment.Center,
             ) {
                 PremiumBanner(
-                    status = vipStatus.subscriptionStatus,
-                    purchaseTime = TimeUtils.formatTimestampToString(vipStatus.purchaseTime),
-                    expireTime = TimeUtils.formatTimestampToString(vipStatus.expiryTime),
+                    status = currentVipStatus.subscriptionStatus,
+                    purchaseTime = TimeUtils.formatTimestampToString(currentVipStatus.purchaseTime),
+                    expireTime = TimeUtils.formatTimestampToString(currentVipStatus.expiryTime),
                     onClick = {
                         VipCenterActivity.launch(context, VipCenterActivity.PROFILE_UPGRADE)
                     },
@@ -730,7 +742,6 @@ private fun MyAgentCard(
 }
 
 /** Premium Banner 组件 */
-@Preview
 @Composable
 private fun PremiumBanner(
     status: String? = "Activate Now",
@@ -790,4 +801,95 @@ private fun PremiumBanner(
             Text(text = str, fontSize = 16.sp, color = Color.White, textAlign = TextAlign.Center)
         }
     }
+}
+
+/** ProfilePage 预览 */
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
+@Composable
+private fun ProfilePagePreview() {
+    // 创建预览用的 VIP 状态
+    val previewVipStatus =
+        VipStatus(
+            isSubscribed = false,
+            subscriptionStatus = VipStatus.UI_UNSUBSCRIBED,
+            purchaseTime = null,
+            expiryTime = null,
+        )
+
+    // 创建预览用的用户数据
+    val previewUserProfile =
+        UserProfile(
+            id = "preview_user_123",
+            nickname = "Preview User",
+            avatar = "",
+            description = "This is a preview user profile description. It can be quite long to test the text truncation and layout.",
+            email = "preview@example.com",
+            gender = "MALE",
+            ageGroup = "25-30",
+            systemLanguage = "en",
+            isActive = true,
+            isSuperuser = false,
+            publicAgentsCount = 5,
+            totalAgentsFollows = 10,
+            followerCount = 20,
+            connectorCount = 15,
+        )
+
+    // 创建预览用的 Agent 列表
+    val previewAgents =
+        listOf(
+            AgentInfo(
+                id = "agent_1",
+                name = "Agent One",
+                intro = "This is the first agent with a longer description to test text overflow.",
+                avatar = "",
+                background = "",
+                category = "Fantasy",
+                gender = "FEMALE",
+                tags = listOf("romance", "fantasy", "adventure"),
+            ),
+            AgentInfo(
+                id = "agent_2",
+                name = "Agent Two",
+                intro = "Second agent description.",
+                avatar = "",
+                background = "",
+                category = "Sci-Fi",
+                gender = "MALE",
+                tags = listOf("sci-fi", "action"),
+            ),
+            AgentInfo(
+                id = "agent_3",
+                name = "Agent Three",
+                intro = "Third agent with a very long description that should be truncated properly in the card layout.",
+                avatar = "",
+                background = "",
+                category = "Romance",
+                gender = "FEMALE",
+                tags = listOf("romance", "drama"),
+            ),
+            AgentInfo(
+                id = "agent_4",
+                name = "Agent Four",
+                intro = "Fourth agent.",
+                avatar = "",
+                background = "",
+                category = "Mystery",
+                gender = "MALE",
+                tags = listOf("mystery", "thriller"),
+            ),
+        )
+
+    ProfilePage(
+        modifier = Modifier.fillMaxSize(),
+        userProfile = previewUserProfile,
+        agents = previewAgents,
+        onClickAgent = {},
+        onEditAgent = {},
+        onDeleteAgent = {},
+        isLoading = false,
+        onLoadMore = {},
+        onShowSettings = {},
+        vipStatus = previewVipStatus,
+    )
 }
