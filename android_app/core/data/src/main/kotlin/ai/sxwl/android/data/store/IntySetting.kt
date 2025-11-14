@@ -71,13 +71,13 @@ object IntySetting {
     /** 用于业务标记消息已读的最后一条消息的判断 */
     fun isConversationReaded(agentID: String, lastMessage: String): Boolean {
         val configLastMsg = curUserSetting.decodeString("conversation_last_$agentID", agentID)
-        LogUtils.d("$agentID = $configLastMsg, new=$lastMessage")
+//        LogUtils.d("$agentID = $configLastMsg, new=$lastMessage")
         return (configLastMsg == lastMessage)
     }
 
     /** 用于业务标记消息已读的最后一条消息 */
     fun setConversationReaded(agentID: String, lastMessage: String) {
-        LogUtils.d("$agentID = $lastMessage")
+//        LogUtils.d("$agentID = $lastMessage")
         curUserSetting.putString("conversation_last_$agentID", lastMessage)
     }
 

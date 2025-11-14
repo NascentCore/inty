@@ -120,6 +120,7 @@ androidx-media3-rtsp = { module = "androidx.media3:media3-exoplayer-rtsp", versi
 androidx-media3-midi = { module = "androidx.media3:media3-exoplayer-midi", version.ref = "media3" }
 androidx-media3-ima = { module = "androidx.media3:media3-exoplayer-ima", version.ref = "media3" }
 androidx-media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+androidx-media3-ui-compose = { module = "androidx.media3:media3-ui-compose", version.ref = "media3" }
 androidx-media3-common = { module = "androidx.media3:media3-common", version.ref = "media3" }
 androidx-media3-effect = { module = "androidx.media3:media3-effect", version.ref = "media3" }
 androidx-media3-datasource-cronet = { module = "androidx.media3:media3-datasource-cronet", version.ref = "media3" }
@@ -294,7 +295,7 @@ firebase = ["firebase-bom", "firebase-analytics", "firebase-crashlytics", "fireb
 credentials = ["credential-manager", "credential-manager-play-services", "google-identity"]
 
 # ===== 媒体相关 =====
-androidx-media3-bundle = ["androidx-media3", "androidx-media3-common", "androidx-media3-ui", "androidx-media3-hls", "androidx-media3-dash"]
+androidx-media3-bundle = ["androidx-media3", "androidx-media3-common", "androidx-media3-ui", "androidx-media3-ui-compose", "androidx-media3-hls", "androidx-media3-dash"]
 
 # ===== 图片加载 =====
 coil-bundle = ["coil-kt", "coil-network-okhttp", "coil-kt-gif", "coil-kt-svg", "coil-kt-video", "coil-network-cache-control", "coil-kt-compose", "coil-kt-network"]
