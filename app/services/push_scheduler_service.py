@@ -16,6 +16,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.services.push_notification_service import (
     discover_new_users_for_push,
+    discover_users_with_updated_tokens,
     initialize_push_system,
     process_push_batch,
 )
@@ -135,6 +136,18 @@ class PushSchedulerService:
                 next_run_time=datetime.datetime.now(),
             )
 
+            # 扫描已更新 token 的用户：每小时扫描一次，启动后立即执行一次
+            self.scheduler.add_job(
+                self._discover_users_with_updated_tokens,
+                trigger=IntervalTrigger(hours=1),
+                id="discover_users_with_updated_tokens",
+                name="扫描已更新 token 的用户",
+                replace_existing=True,
+                coalesce=True,
+                max_instances=1,
+                next_run_time=datetime.datetime.now(),
+            )
+
             logger.info("已添加所有推送检查任务，将在启动后立即执行一次")
 
             logger.info("推送调度器启动成功")
@@ -221,6 +234,37 @@ class PushSchedulerService:
 
         except Exception as e:
             logger.error(f"新用户发现任务执行失败: {str(e)}")
+
+    async def _discover_users_with_updated_tokens(self) -> None:
+        """
+        定期扫描已更新 token 的用户（之前被标记为无效 token，但现在有新的 token）
+
+        这个任务每小时执行一次，检查被标记为无效 token 的用户是否更新了 token。
+        """
+        try:
+            logger.info("[token 更新扫描] 开始扫描已更新 token 的用户...")
+
+            # 获取配置
+            config = global_config_loaded_from_config_yaml.push_notification
+            batch_size = config.batch_size
+
+            # 创建数据库会话
+            async with AsyncSessionLocal() as db:
+                try:
+                    # 扫描已更新 token 的用户
+                    cleared_count = await discover_users_with_updated_tokens(
+                        db, batch_size=batch_size
+                    )
+
+                    logger.info(
+                        f"[token 更新扫描] 扫描完成: 清除 {cleared_count} 个用户的无效 token 标记"
+                    )
+
+                except Exception as e:
+                    logger.error(f"扫描已更新 token 的用户失败: {str(e)}")
+
+        except Exception as e:
+            logger.error(f"token 更新扫描任务执行失败: {str(e)}")
 
 
 # 全局调度器实例

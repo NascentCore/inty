@@ -1,5 +1,5 @@
 import traceback
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import List, Optional, Tuple
 
 from fastapi import BackgroundTasks
@@ -7,7 +7,7 @@ from firebase_admin import messaging
 from firebase_admin.exceptions import InvalidArgumentError
 from jinja2 import Template
 from loguru import logger
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.uuid import uid
@@ -266,7 +266,20 @@ async def send_fcm_multicast(
 
         if not tokens:
             logger.warning(f"Users {user_ids} have no registered device tokens")
+            # 标记所有用户为无效 token
+            if not dry_run and user_ids:
+                await _mark_users_with_invalid_tokens(db, user_ids)
             return False
+
+        # 获取 token 到 user_id 的映射
+        token_to_user_map = {}
+        if not dry_run:
+            stmt = select(DeviceToken.token, DeviceToken.user_id).where(
+                DeviceToken.token.in_(tokens)
+            )
+            result = await db.execute(stmt)
+            for token, user_id in result.all():
+                token_to_user_map[token] = user_id
 
         # 2. Send messages
         success_count = 0
@@ -356,6 +369,20 @@ async def send_fcm_multicast(
                     )
                     await db.commit()
                     logger.debug(f"已清理 {len(invalid_tokens)} 个无效 token")
+
+                    # 检查是否有用户的所有 token 都无效了
+                    # 如果所有 token 都无效（success_count == 0 且所有失败都是 invalid_token），标记用户
+                    if success_count == 0 and fail_count == len(invalid_tokens):
+                        # 获取所有无效 token 对应的用户 ID
+                        invalid_user_ids = list(
+                            set(
+                                token_to_user_map.get(token)
+                                for token in invalid_tokens
+                                if token in token_to_user_map
+                            )
+                        )
+                        if invalid_user_ids:
+                            await _mark_users_with_invalid_tokens(db, invalid_user_ids)
                 except Exception as e:
                     logger.error(f"清理无效 token 失败: {str(e)}")
                     logger.error(f"错误堆栈: {traceback.format_exc()}")
@@ -371,3 +398,31 @@ async def send_fcm_multicast(
         logger.error(f"Failed to send FCM message: {str(e)}")
         logger.error(f"Error stack: {traceback.format_exc()}")
         return False
+
+
+async def _mark_users_with_invalid_tokens(
+    db: AsyncSession, user_ids: List[str]
+) -> None:
+    """
+    标记用户的所有 FCM token 都无效
+
+    Args:
+        db: 数据库会话
+        user_ids: 用户 ID 列表
+    """
+    try:
+        now = datetime.now(UTC)
+        stmt = (
+            update(User)
+            .where(User.id.in_(user_ids))
+            .values(fcm_token_invalid_at=now)
+        )
+        await db.execute(stmt)
+        await db.commit()
+        logger.info(
+            f"已标记 {len(user_ids)} 个用户为无效 FCM token: {user_ids}, time={now.isoformat()}"
+        )
+    except Exception as e:
+        logger.error(f"标记用户无效 token 失败: {str(e)}")
+        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        await db.rollback()
