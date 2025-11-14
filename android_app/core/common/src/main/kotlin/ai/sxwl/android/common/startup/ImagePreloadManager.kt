@@ -1,5 +1,6 @@
 package ai.sxwl.android.common.startup
 
+import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.AdvancedCoilConfig
 import ai.sxwl.android.design.ImageLoaderUtils
@@ -21,6 +22,7 @@ import kotlinx.coroutines.withContext
 object ImagePreloadManager {
 
     private var isInitialized = false
+    private var applicationContext: Context? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** 初始化图片预加载管理器 */
@@ -28,6 +30,9 @@ object ImagePreloadManager {
         if (isInitialized) return
 
         try {
+            // 保存 applicationContext 用于后续预加载
+            applicationContext = context.applicationContext
+
             // 使用 core/design 模块中的高级配置
             AdvancedCoilConfig.initGlobalImageLoader()
             isInitialized = true
@@ -39,6 +44,7 @@ object ImagePreloadManager {
 
     /**
      * 预加载agents的图片资源
+     * 包括：ExploreCharacterCard使用的图片（getAlbumImage）和AgentBackground使用的静态背景图（getOriginShowImage）
      *
      * @param agents 需要预加载的agents列表
      * @param maxConcurrent 最大并发预加载数量
@@ -57,10 +63,18 @@ object ImagePreloadManager {
         try {
             withContext(Dispatchers.IO) {
                 // 收集所有需要预加载的图片URL
-                val imageUrls = collectImageUrls(agents)
-                if (imageUrls.isNotEmpty()) {
+                val albumImageUrls = collectImageUrls(agents) // ExploreCharacterCard使用的图片
+                val staticBackgroundUrls =
+                    collectStaticBackgroundImageUrls(agents) // AgentBackground使用的静态背景图（使用固定参数）
+
+                // 合并所有URL并去重
+                val allImageUrls = (albumImageUrls + staticBackgroundUrls).distinct()
+
+                if (allImageUrls.isNotEmpty()) {
+                    LogUtils.d("ImagePreloadManager - 开始预加载 ${allImageUrls.size} 张图片（包含 ${albumImageUrls.size} 张专辑图，${staticBackgroundUrls.size} 张静态背景图）")
                     // 使用全局ImageLoader进行预加载
-                    preloadImagesToCoilCache(imageUrls, maxConcurrent)
+                    preloadImagesToCoilCache(allImageUrls, maxConcurrent)
+                    LogUtils.d("ImagePreloadManager - 图片预加载完成")
                 }
             }
         } catch (e: Exception) {
@@ -83,7 +97,42 @@ object ImagePreloadManager {
     }
 
     /**
+     * 收集agents中的静态背景图URL（用于AgentBackground组件）
+     * 使用与AgentBackground相同的逻辑，确保URL一致性
+     * 使用固定参数（width=1080, quality=75）确保预加载和实际使用的 URL 完全一致
+     *
+     * @param agents agents列表
+     * @return 静态背景图URL列表（已通过CDN优化）
+     */
+    private fun collectStaticBackgroundImageUrls(agents: List<AgentInfo>): List<String> {
+        val imageUrls = mutableSetOf<String>()
+
+        // 使用固定 CDN 参数，与 AgentBackground 和 AnimatedBackground 保持一致
+        // 1080px 宽度适用于大多数 Android 设备，80% 质量在清晰度和文件大小之间取得最佳平衡
+        val CDN_STATIC_BACKGROUND_WIDTH = 1080
+        val CDN_IMAGE_QUALITY = 80
+
+        agents.forEach { agent ->
+            // 使用与AgentBackground相同的逻辑获取静态背景图URL
+            // getOriginShowImage() 返回原始URL，需要经过CDN优化
+            val originImageUrl = agent.getOriginShowImage()
+            if (originImageUrl?.isNotBlank() == true) {
+                // 使用固定 CDN 参数，确保与 AgentBackground 和 AnimatedBackground 的 URL 完全一致
+                val optimizedUrl = getCdnImageUrl(
+                    originImageUrl,
+                    width = CDN_STATIC_BACKGROUND_WIDTH,
+                    quality = CDN_IMAGE_QUALITY
+                ) ?: originImageUrl
+                imageUrls.add(optimizedUrl)
+            }
+        }
+
+        return imageUrls.toList()
+    }
+
+    /**
      * 预加载关键图片（前几屏的图片）
+     * 包括：ExploreCharacterCard使用的图片和AgentBackground使用的静态背景图
      *
      * @param agents 需要预加载的agents列表
      * @param criticalCount 关键图片数量（前几屏）
@@ -104,11 +153,16 @@ object ImagePreloadManager {
 
         try {
             withContext(Dispatchers.IO) {
-                val imageUrls = collectImageUrls(criticalAgents)
+                val albumImageUrls = collectImageUrls(criticalAgents)
+                val staticBackgroundUrls =
+                    collectStaticBackgroundImageUrls(criticalAgents) // 使用固定参数
 
-                if (imageUrls.isNotEmpty()) {
+                // 合并所有URL并去重
+                val allImageUrls = (albumImageUrls + staticBackgroundUrls).distinct()
+
+                if (allImageUrls.isNotEmpty()) {
                     // 使用全局ImageLoader进行关键图片预加载，提高并发数
-                    preloadImagesToCoilCache(imageUrls, maxConcurrent = 8)
+                    preloadImagesToCoilCache(allImageUrls, maxConcurrent = 8)
                 }
             }
             LogUtils.i("ImagePreloadManager - 关键图片预加载完成")

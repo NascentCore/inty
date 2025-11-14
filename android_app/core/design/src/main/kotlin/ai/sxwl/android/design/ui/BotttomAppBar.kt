@@ -3,12 +3,14 @@ package ai.sxwl.android.design.ui
 import ai.sxwl.android.design.R
 import ai.sxwl.android.design.theme.HeartColor
 import androidx.annotation.IntRange
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -27,9 +29,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -39,11 +44,22 @@ fun HeartBottomAppBar(
     modifier: Modifier = Modifier,
     selectedTab: Int = 0,
     tabItems: List<HeartBottomTabItem> = bottomTabItems,
+    iconSize: Dp = 24.dp,
+    textSize: TextUnit = 12.sp,
+    height: Dp? = null,
     onTabSelected: (Int) -> Unit = {},
 ) {
+    val navigationBarModifier =
+        if (height != null) {
+            modifier
+                .fillMaxWidth()
+                .height(height)
+        } else {
+            modifier.fillMaxWidth()
+        }
 
     NavigationBar(
-        modifier = modifier.fillMaxWidth(),
+        modifier = navigationBarModifier,
         containerColor = HeartColor.primaryColor,
         tonalElevation = 8.dp,
     ) {
@@ -59,16 +75,22 @@ fun HeartBottomAppBar(
                         Image(
                             painter = painterResource(id = iconRes),
                             contentDescription = null,
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier.size(iconSize),
                         )
                         if (tab.hasRedDot) HeartRedDot(Modifier.align(Alignment.TopEnd))
                     }
                 },
                 label = {
-                    if (tab.label.isNotEmpty()) {
+                    val labelText =
+                        when {
+                            tab.labelResId != null -> stringResource(id = tab.labelResId)
+                            tab.label.isNotEmpty() -> tab.label
+                            else -> ""
+                        }
+                    if (labelText.isNotEmpty()) {
                         Text(
-                            text = tab.label,
-                            fontSize = 12.sp,
+                            text = labelText,
+                            fontSize = textSize,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             color = if (isSelected) Color(0xFF9C27B0) else Color.White,
                         )
@@ -85,9 +107,16 @@ data class HeartBottomTabItem(
     val index: Int,
     val selectedIcon: Int,
     val unselectedIcon: Int,
-    val label: String = "", // 标签文字
+    val label: String = "", // 标签文字（直接字符串）
+    @StringRes val labelResId: Int? = null, // 标签文字资源 ID（支持国际化，优先级高于 label）
     val hasRedDot: Boolean = false, // 是否有红点
-)
+) {
+    init {
+        require(label.isEmpty() || labelResId == null) {
+            "HeartBottomTabItem: label 和 labelResId 不能同时设置"
+        }
+    }
+}
 
 private val bottomTabItems =
     listOf(
@@ -108,7 +137,7 @@ private val bottomTabItems =
             index = 2,
             selectedIcon = R.drawable.ic_tab_ai,
             unselectedIcon = R.drawable.ic_tab_ai,
-            label = "", // Create tab 不需要文字标签
+            label = "Create",
         ),
         HeartBottomTabItem(
             index = 3,
@@ -143,7 +172,12 @@ private fun 预览底部导航栏() {
 @Preview
 @Composable
 fun HeartRedDot(modifier: Modifier = Modifier, radius: Int = 8) {
-    Box(modifier = modifier.size(radius.dp).clip(CircleShape).background(Color.Red))
+    Box(
+        modifier = modifier
+            .size(radius.dp)
+            .clip(CircleShape)
+            .background(Color.Red)
+    )
 }
 
 /** 红点数字的现实，可以配置 99+，或者完整显示，目前基于业务，数字必须>0 */

@@ -531,6 +531,9 @@ object FirebaseManager {
         const val CHAT_SIDEBAR_CLICK = "chat_sidebar_click" // 聊天侧边栏点击
         const val CHAT_MORE_CLICK = "chat_more_click" // 聊天更多面板点击
 
+        // 推送通知相关事件
+        const val PUSH_NOTIFICATION_CLICK = "push_notification_click" // 推送通知点击
+
         // 图片生成相关事件
         const val MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED =
             "message_to_image_generation_button_clicked"
@@ -598,6 +601,13 @@ object FirebaseManager {
     private var tokenUploadCallback: FCMTokenUploadCallback? = null
 
     /**
+     * FCM message handler callback
+     * Set by common layer or application layer to handle FCM messages
+     */
+    @Volatile
+    private var messageHandler: FCMessageHandler? = null
+
+    /**
      * Set FCM token upload callback
      * Should be called from application layer (e.g., IntelliMateApp)
      */
@@ -608,6 +618,24 @@ object FirebaseManager {
             "FCM Token 上传回调已${if (callback != null) "设置" else "清除"}"
         )
     }
+
+    /**
+     * Set FCM message handler
+     * Should be called from common layer or application layer
+     */
+    fun setMessageHandler(handler: FCMessageHandler?) {
+        messageHandler = handler
+        LogUtils.d(
+            "FirebaseManager",
+            "FCM 消息处理器已${if (handler != null) "设置" else "清除"}"
+        )
+    }
+
+    /**
+     * Get FCM message handler
+     * Used by FCMService to delegate message handling
+     */
+    internal fun getMessageHandler(): FCMessageHandler? = messageHandler
 
     /**
      * Get FCM registration token

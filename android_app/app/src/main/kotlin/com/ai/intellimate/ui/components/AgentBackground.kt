@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -30,8 +29,13 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
 
-private const val CDN_IMAGE_QUALITY = 75
-private const val ASPECT_RATIO_THRESHOLD = 0.05f
+// CDN 图片优化参数
+// 使用固定参数确保预加载和实际使用的 URL 完全一致，提高缓存命中率
+// 1080px 宽度适用于大多数 Android 设备（大多数设备宽度在 360-480dp，转换为 px 约 1080-1440px）
+// 80% 质量在清晰度和文件大小之间取得最佳平衡，相比 75% 质量提升明显但文件大小增加有限（约 5-8%）
+private const val CDN_IMAGE_QUALITY = 80
+private const val CDN_STATIC_BACKGROUND_WIDTH = 1080 // 固定宽度，确保预加载和实际使用 URL 一致
+
 private const val TOP_GRADIENT_HEIGHT_DP = 120
 private const val BOTTOM_GRADIENT_HEIGHT_DP = 300
 
@@ -56,35 +60,13 @@ fun AgentBackground(
     val containerWidthDp = remember(configuration.screenWidthDp) { configuration.screenWidthDp }
     val containerHeightDp = remember(configuration.screenHeightDp) { configuration.screenHeightDp }
 
-    // 图片原始尺寸（像素），用于计算 ContentScale
-    var imageWidthPx by remember { mutableStateOf<Int?>(null) }
-    var imageHeightPx by remember { mutableStateOf<Int?>(null) }
-
-    // 计算最佳的 ContentScale
-    val optimalContentScale =
-        remember(imageWidthPx, imageHeightPx, containerWidthDp, containerHeightDp, density) {
-            if (
-                imageWidthPx != null &&
-                    imageHeightPx != null &&
-                    imageWidthPx!! > 0 &&
-                    imageHeightPx!! > 0
-            ) {
-                val imageWidthDpValue = with(density) { imageWidthPx!!.toFloat().toDp().value }
-                val imageHeightDpValue = with(density) { imageHeightPx!!.toFloat().toDp().value }
-
-                calculateOptimalContentScale(
-                    containerWidthDp = containerWidthDp,
-                    containerHeightDp = containerHeightDp,
-                    imageWidthDp = imageWidthDpValue,
-                    imageHeightDp = imageHeightDpValue,
-                )
-            } else {
-                ContentScale.Crop
-            }
-        }
+    // 统一使用 ContentScale.Crop，确保视频和图片的缩放方式一致
+    // 在 HorizontalPager 中，必须确保内容不会超出屏幕宽度，Crop 是最安全的选择
+    // 视频使用 RESIZE_MODE_ZOOM（相当于 Crop），图片也使用 Crop 保持一致
+    val contentScale = ContentScale.Crop
 
     val backgroundAnimatedUrl = agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
-    val staticImageUrl = agentInfo?.getAlbumImage()?.takeIf { it.isNotBlank() }
+    val staticImageUrl = agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
 
     // 视频缓存管理器
     val videoCacheManager = remember { VideoCacheManager.getInstance(context) }
@@ -95,129 +77,100 @@ fun AgentBackground(
     // 播放控制：页面切换时播放2次，加载状态时播放1次
     var shouldPlayPageSwitch by remember { mutableStateOf(false) }
     var shouldPlayLoading by remember { mutableStateOf(false) }
-    var playCount by remember { mutableIntStateOf(1) }
     var isVideoPlaying by remember { mutableStateOf(false) } // 视频是否正在播放
     var isLoadingTriggeredPlay by remember { mutableStateOf(false) } // 是否因为 loading 触发的播放
 
     // 检查视频缓存状态 - 每次进入页面时都重新检查
     // 优化：同步检查缓存状态，避免延迟
+    // 关键修复：首次安装时，即使未缓存，也应该在视频准备好后触发播放
     LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage) {
-        LogUtils.d(
-            "AgentBackground - LaunchedEffect触发: agentId=${agentInfo?.id}, backgroundAnimatedUrl=$backgroundAnimatedUrl, isCurrentPage=$isCurrentPage"
-        )
-
-        // 重置状态
-        shouldPlayPageSwitch = false
-
         if (backgroundAnimatedUrl != null && isCurrentPage) {
-            // 同步检查缓存状态（快速响应）
-            val cached = videoCacheManager.isCached(backgroundAnimatedUrl)
-            isVideoCached = cached
-            LogUtils.d("AgentBackground - 视频缓存状态: $cached, URL: $backgroundAnimatedUrl")
-
-            // 如果已缓存，立即触发页面切换播放（2次）
-            if (cached) {
-                playCount = 2
-                shouldPlayPageSwitch = true
-                LogUtils.d("AgentBackground - 设置页面切换播放: playCount=2, shouldPlayPageSwitch=true")
-            } else {
-                isVideoCached = false
-            }
+            isVideoCached = videoCacheManager.isCached(backgroundAnimatedUrl)
+            LogUtils.d(
+                "AgentBackground - 视频缓存状态: $isVideoCached, URL: $backgroundAnimatedUrl"
+            )
         } else {
             isVideoCached = false
         }
     }
 
-    // 加载状态时播放视频（1次）- 仅在普通loading时触发，不包含图片生成loading
-    // 优化：如果视频正在播放中，则不处理；如果视频未播放，则触发播放，并让视频播放完整到结束
-    LaunchedEffect(isLoading, backgroundAnimatedUrl, isVideoCached, isCurrentPage, isVideoPlaying) {
-        if (isLoading && backgroundAnimatedUrl != null && isVideoCached && isCurrentPage) {
-            // 如果视频正在播放中，则不处理
-            if (!isVideoPlaying) {
-                playCount = 1
-                shouldPlayLoading = true
-                isLoadingTriggeredPlay = true
-                LogUtils.d(
-                    "AgentBackground - 设置加载播放: playCount=1, shouldPlayLoading=true, isLoadingTriggeredPlay=true"
-                )
-            } else {
-                LogUtils.d("AgentBackground - 视频正在播放中，跳过加载播放")
-            }
+    // 预加载视频（如果未缓存）
+    LaunchedEffect(backgroundAnimatedUrl, isVideoCached) {
+        if (backgroundAnimatedUrl != null && !isVideoCached && isCurrentPage) {
+            videoCacheManager.preloadVideo(backgroundAnimatedUrl)
         }
-        // 注意：loading 结束时，不立即停止播放，让视频播放到结束
-        // 状态重置在 onPlayComplete 中处理
     }
 
-    // 合并播放状态：页面切换播放优先于加载播放
-    // 注意：如果是因为 loading 触发的播放，即使 loading 结束，也继续播放到结束
-    val shouldPlay =
-        (shouldPlayPageSwitch || shouldPlayLoading || (isLoadingTriggeredPlay && isVideoPlaying)) &&
-            isCurrentPage
-    val finalPlayCount =
-        if (shouldPlayPageSwitch) VIDEO_FIRST_PLAY_COUNT
-        else if (shouldPlayLoading || isLoadingTriggeredPlay) VIDEO_MESSAGE_PLAY_COUNT
-        else VIDEO_MESSAGE_PLAY_COUNT
-
-    // 构建静态图片请求
-    val staticImageRequest =
-        remember(staticImageUrl, containerWidthDp, containerHeightDp, density) {
-            if (staticImageUrl != null) {
-                val containerWidthPx = with(density) { containerWidthDp.dp.toPx().toInt() }
-                val containerHeightPx = with(density) { containerHeightDp.dp.toPx().toInt() }
-
-                ImageRequest.Builder(context)
-                    .data(
-                        getCdnImageUrl(
-                            staticImageUrl,
-                            width = containerWidthPx,
-                            quality = CDN_IMAGE_QUALITY,
-                        ) ?: staticImageUrl
-                    )
-                    .size(Size(containerWidthPx, containerHeightPx))
-                    .crossfade(true)
-                    .build()
-            } else {
-                null
-            }
+    // 页面切换时触发播放
+    LaunchedEffect(isCurrentPage, isVideoCached) {
+        if (isCurrentPage && backgroundAnimatedUrl != null) {
+            shouldPlayPageSwitch = true
         }
+    }
 
-    // 关键：在 Compose 层面添加裁剪，防止视频超出容器边界
-    Box(modifier = modifier.clipToBounds()) {
-        // 如果有背景视频URL，始终渲染 AnimatedBackground
+    // 加载状态时触发播放
+    LaunchedEffect(isLoading) {
+        if (isLoading && backgroundAnimatedUrl != null && !isLoadingTriggeredPlay) {
+            shouldPlayLoading = true
+            isLoadingTriggeredPlay = true
+        } else if (!isLoading) {
+            isLoadingTriggeredPlay = false
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .clipToBounds()
+    ) {
         if (backgroundAnimatedUrl != null) {
+            // 有背景视频，使用 AnimatedBackground 组件
             AnimatedBackground(
                 videoUrl = backgroundAnimatedUrl,
                 staticImageUrl = staticImageUrl,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = optimalContentScale,
-                shouldPlay = shouldPlay,
-                playCount = finalPlayCount,
-                isVideoCached = isVideoCached,
                 isCurrentPage = isCurrentPage,
-                staticImageRequest = staticImageRequest, // 传递已优化的图片请求
+                shouldPlay = shouldPlayPageSwitch || shouldPlayLoading,
+                playCount = if (shouldPlayPageSwitch) VIDEO_FIRST_PLAY_COUNT else VIDEO_MESSAGE_PLAY_COUNT,
                 onPlayComplete = {
-                    shouldPlayPageSwitch = false
-                    shouldPlayLoading = false
-                    if (isLoadingTriggeredPlay) {
-                        isLoadingTriggeredPlay = false
+                    if (shouldPlayPageSwitch) {
+                        shouldPlayPageSwitch = false
+                    }
+                    if (shouldPlayLoading) {
+                        shouldPlayLoading = false
                     }
                     onPlayComplete()
                 },
-                onIsPlayingChange = { playing -> isVideoPlaying = playing },
+                contentScale = contentScale,
             )
-        } else if (staticImageUrl != null && staticImageRequest != null) {
+        } else if (staticImageUrl != null) {
             // 没有背景视频，只显示静态图片
+            // 使用固定 CDN 参数，确保与预加载 URL 一致
+            val staticImageRequest =
+                remember(staticImageUrl) {
+                    val containerWidthPx = with(density) { containerWidthDp.dp.toPx().toInt() }
+                    val containerHeightPx = with(density) { containerHeightDp.dp.toPx().toInt() }
+
+                    ImageRequest.Builder(context)
+                        .data(
+                            getCdnImageUrl(
+                                staticImageUrl,
+                                width = CDN_STATIC_BACKGROUND_WIDTH, // 使用固定宽度，确保预加载和实际使用 URL 一致
+                                quality = CDN_IMAGE_QUALITY,
+                            ) ?: staticImageUrl
+                        )
+                        .size(Size(containerWidthPx, containerHeightPx))
+                        .crossfade(true)
+                        .build()
+                }
+            
             AsyncImage(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
                 model = staticImageRequest,
                 contentDescription = null,
                 alignment = Alignment.TopCenter,
-                contentScale = optimalContentScale,
-                onSuccess = { state ->
-                    val drawable = state.painter
-                    imageWidthPx = drawable.intrinsicSize.width.toInt()
-                    imageHeightPx = drawable.intrinsicSize.height.toInt()
-                },
+                contentScale = contentScale, // 统一使用 Crop
             )
         }
 
@@ -225,59 +178,35 @@ fun AgentBackground(
         if (showGradients) {
             // 顶部渐变遮罩
             Box(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .height(TOP_GRADIENT_HEIGHT_DP.dp)
-                        .background(
-                            brush =
-                                Brush.verticalGradient(listOf(Color(0xFF000000), Color(0x00000000)))
-                        )
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(TOP_GRADIENT_HEIGHT_DP.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.3f),
+                                Color.Transparent,
+                            ),
+                        ),
+                    )
+                    .align(Alignment.TopCenter)
             )
 
             // 底部渐变遮罩
             Box(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .height(BOTTOM_GRADIENT_HEIGHT_DP.dp)
-                        .background(
-                            brush =
-                                Brush.verticalGradient(listOf(Color(0x001C1523), Color(0xFF1C1523)))
-                        )
-                        .align(Alignment.BottomCenter)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(BOTTOM_GRADIENT_HEIGHT_DP.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.5f),
+                            ),
+                        ),
+                    )
+                    .align(Alignment.BottomCenter)
             )
         }
-    }
-}
-
-/**
- * 根据容器和图片的宽高比计算最佳的 ContentScale 只支持人像模式屏幕显示，即尽量不留左右两侧空白。 当容器高宽比大于图片高宽比时，使用 FillHeight 填充高度，否则使用
- * FillWidth 填充宽度。
- *
- * @param containerWidthDp 容器宽度（dp）
- * @param containerHeightDp 容器高度（dp）
- * @param imageWidthDp 图片宽度（dp）
- * @param imageHeightDp 图片高度（dp）
- * @return 最佳的 ContentScale
- */
-private fun calculateOptimalContentScale(
-    containerWidthDp: Int,
-    containerHeightDp: Int,
-    imageWidthDp: Float,
-    imageHeightDp: Float,
-): ContentScale {
-    val containerAspectRatio = containerWidthDp.toFloat() / containerHeightDp.toFloat()
-    val imageAspectRatio = imageWidthDp / imageHeightDp
-    val aspectRatioDiff =
-        kotlin.math.abs(containerAspectRatio - imageAspectRatio) / imageAspectRatio
-
-    return when {
-        // 如果容器和图片宽高比非常接近（差异小于阈值），使用 Fit 显示完整图片
-        aspectRatioDiff < ASPECT_RATIO_THRESHOLD -> ContentScale.Fit
-
-        // 如果容器比图片更宽（容器宽高比 > 图片宽高比），图片相对较窄，使用 FillWidth
-        containerAspectRatio > imageAspectRatio -> ContentScale.FillWidth
-
-        // 如果容器比图片更窄（容器宽高比 < 图片宽高比），图片相对较宽，使用 FillHeight
-        else -> ContentScale.FillHeight
     }
 }
