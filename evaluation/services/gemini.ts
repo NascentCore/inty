@@ -58,7 +58,7 @@ export interface GeminiReplyResult {
   emotion: Emotion;
 }
 
-const MODEL = "gemini-1.5-flash"; // 轻量快速，足以驱动情绪选择
+const MODEL = "gemini-1.5-flash-latest"; // 轻量快速，足以驱动情绪选择
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
 function buildSystemPrompt(): string {
