@@ -225,6 +225,7 @@ class AgentInDB(AgentBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None
+    version: int
 
     @field_serializer("created_at")
     def serialize_created_at(self, created_at: datetime) -> int:
