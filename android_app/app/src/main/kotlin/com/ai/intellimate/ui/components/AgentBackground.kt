@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -31,7 +30,6 @@ import coil3.request.crossfade
 import coil3.size.Size
 
 private const val CDN_IMAGE_QUALITY = 75
-private const val ASPECT_RATIO_THRESHOLD = 0.05f
 private const val TOP_GRADIENT_HEIGHT_DP = 120
 private const val BOTTOM_GRADIENT_HEIGHT_DP = 300
 
@@ -56,32 +54,10 @@ fun AgentBackground(
     val containerWidthDp = remember(configuration.screenWidthDp) { configuration.screenWidthDp }
     val containerHeightDp = remember(configuration.screenHeightDp) { configuration.screenHeightDp }
 
-    // 图片原始尺寸（像素），用于计算 ContentScale
-    var imageWidthPx by remember { mutableStateOf<Int?>(null) }
-    var imageHeightPx by remember { mutableStateOf<Int?>(null) }
-
-    // 计算最佳的 ContentScale
-    val optimalContentScale =
-        remember(imageWidthPx, imageHeightPx, containerWidthDp, containerHeightDp, density) {
-            if (
-                imageWidthPx != null &&
-                    imageHeightPx != null &&
-                    imageWidthPx!! > 0 &&
-                    imageHeightPx!! > 0
-            ) {
-                val imageWidthDpValue = with(density) { imageWidthPx!!.toFloat().toDp().value }
-                val imageHeightDpValue = with(density) { imageHeightPx!!.toFloat().toDp().value }
-
-                calculateOptimalContentScale(
-                    containerWidthDp = containerWidthDp,
-                    containerHeightDp = containerHeightDp,
-                    imageWidthDp = imageWidthDpValue,
-                    imageHeightDp = imageHeightDpValue,
-                )
-            } else {
-                ContentScale.Crop
-            }
-        }
+    // 统一使用 ContentScale.Crop，确保视频和图片的缩放方式一致
+    // 在 HorizontalPager 中，必须确保内容不会超出屏幕宽度，Crop 是最安全的选择
+    // 视频使用 RESIZE_MODE_ZOOM（相当于 Crop），图片也使用 Crop 保持一致
+    val contentScale = ContentScale.Crop
 
     val backgroundAnimatedUrl = agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
     val staticImageUrl = agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
@@ -95,7 +71,6 @@ fun AgentBackground(
     // 播放控制：页面切换时播放2次，加载状态时播放1次
     var shouldPlayPageSwitch by remember { mutableStateOf(false) }
     var shouldPlayLoading by remember { mutableStateOf(false) }
-    var playCount by remember { mutableIntStateOf(1) }
     var isVideoPlaying by remember { mutableStateOf(false) } // 视频是否正在播放
     var isLoadingTriggeredPlay by remember { mutableStateOf(false) } // 是否因为 loading 触发的播放
 
@@ -117,19 +92,16 @@ fun AgentBackground(
             // 已缓存：立即触发页面切换播放（2次）
             // 未缓存：也设置 shouldPlayPageSwitch，等视频准备好后播放
             if (!shouldPlayPageSwitch) {
-                playCount = 2
                 shouldPlayPageSwitch = true
-                LogUtils.d("AgentBackground - [缓存检查] ✅ 设置页面切换播放: playCount=2, shouldPlayPageSwitch=true, isVideoCached=$cached")
+                LogUtils.d("AgentBackground - [缓存检查] ✅ 设置页面切换播放: shouldPlayPageSwitch=true, isVideoCached=$cached")
             } else {
                 LogUtils.d("AgentBackground - [缓存检查] shouldPlayPageSwitch 已设置，保持状态: isVideoCached=$cached")
             }
         } else {
             // 只有在没有视频URL或不在当前页面时才重置
-            if (backgroundAnimatedUrl == null || !isCurrentPage) {
-                shouldPlayPageSwitch = false
-                isVideoCached = false
-                LogUtils.d("AgentBackground - [缓存检查] 重置状态: backgroundAnimatedUrl=$backgroundAnimatedUrl, isCurrentPage=$isCurrentPage")
-            }
+            shouldPlayPageSwitch = false
+            isVideoCached = false
+            LogUtils.d("AgentBackground - [缓存检查] 重置状态: backgroundAnimatedUrl=$backgroundAnimatedUrl, isCurrentPage=$isCurrentPage")
         }
     }
 
@@ -139,11 +111,10 @@ fun AgentBackground(
         if (isLoading && backgroundAnimatedUrl != null && isVideoCached && isCurrentPage) {
             // 如果视频正在播放中，则不处理
             if (!isVideoPlaying) {
-                playCount = 1
                 shouldPlayLoading = true
                 isLoadingTriggeredPlay = true
                 LogUtils.d(
-                    "AgentBackground - 设置加载播放: playCount=1, shouldPlayLoading=true, isLoadingTriggeredPlay=true"
+                    "AgentBackground - 设置加载播放: shouldPlayLoading=true, isLoadingTriggeredPlay=true"
                 )
             } else {
                 LogUtils.d("AgentBackground - 视频正在播放中，跳过加载播放")
@@ -163,43 +134,27 @@ fun AgentBackground(
         else if (shouldPlayLoading || isLoadingTriggeredPlay) VIDEO_MESSAGE_PLAY_COUNT
         else VIDEO_MESSAGE_PLAY_COUNT
 
-    // 构建静态图片请求
-    val staticImageRequest =
-        remember(staticImageUrl, containerWidthDp, containerHeightDp, density) {
-            if (staticImageUrl != null) {
-                val containerWidthPx = with(density) { containerWidthDp.dp.toPx().toInt() }
-                val containerHeightPx = with(density) { containerHeightDp.dp.toPx().toInt() }
-
-                ImageRequest.Builder(context)
-                    .data(
-                        getCdnImageUrl(
-                            staticImageUrl,
-                            width = containerWidthPx,
-                            quality = CDN_IMAGE_QUALITY,
-                        ) ?: staticImageUrl
-                    )
-                    .size(Size(containerWidthPx, containerHeightPx))
-                    .crossfade(true)
-                    .build()
-            } else {
-                null
-            }
-        }
-
     // 关键：在 Compose 层面添加裁剪，防止视频超出容器边界
-    Box(modifier = modifier.clipToBounds()) {
-        // 如果有背景视频URL，始终渲染 AnimatedBackground
+    // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度，防止影响相邻 Page
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .fillMaxSize()
+            .clipToBounds()
+    ) {
+        // 如果有背景视频URL，始终渲染 AnimatedBackground（内部会处理静态图占位符）
         if (backgroundAnimatedUrl != null) {
             AnimatedBackground(
                 videoUrl = backgroundAnimatedUrl,
                 staticImageUrl = staticImageUrl,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = optimalContentScale,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxSize(),
+                contentScale = contentScale, // 统一使用 Crop
                 shouldPlay = shouldPlay,
                 playCount = finalPlayCount,
                 isVideoCached = isVideoCached,
                 isCurrentPage = isCurrentPage,
-                staticImageRequest = staticImageRequest, // 传递已优化的图片请求
                 onPlayComplete = {
                     shouldPlayPageSwitch = false
                     shouldPlayLoading = false
@@ -210,19 +165,35 @@ fun AgentBackground(
                 },
                 onIsPlayingChange = { playing -> isVideoPlaying = playing },
             )
-        } else if (staticImageUrl != null && staticImageRequest != null) {
+        } else if (staticImageUrl != null) {
             // 没有背景视频，只显示静态图片
+            // 构建优化的图片请求，使用 CDN 根据容器尺寸生成
+            val staticImageRequest =
+                remember(staticImageUrl, containerWidthDp, containerHeightDp, density) {
+                    val containerWidthPx = with(density) { containerWidthDp.dp.toPx().toInt() }
+                    val containerHeightPx = with(density) { containerHeightDp.dp.toPx().toInt() }
+
+                    ImageRequest.Builder(context)
+                        .data(
+                            getCdnImageUrl(
+                                staticImageUrl,
+                                width = containerWidthPx,
+                                quality = CDN_IMAGE_QUALITY,
+                            ) ?: staticImageUrl
+                        )
+                        .size(Size(containerWidthPx, containerHeightPx))
+                        .crossfade(true)
+                        .build()
+                }
+            
             AsyncImage(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
                 model = staticImageRequest,
                 contentDescription = null,
                 alignment = Alignment.TopCenter,
-                contentScale = optimalContentScale,
-                onSuccess = { state ->
-                    val drawable = state.painter
-                    imageWidthPx = drawable.intrinsicSize.width.toInt()
-                    imageHeightPx = drawable.intrinsicSize.height.toInt()
-                },
+                contentScale = contentScale, // 统一使用 Crop
             )
         }
 
@@ -253,38 +224,5 @@ fun AgentBackground(
                         .align(Alignment.BottomCenter)
             )
         }
-    }
-}
-
-/**
- * 根据容器和图片的宽高比计算最佳的 ContentScale 只支持人像模式屏幕显示，即尽量不留左右两侧空白。 当容器高宽比大于图片高宽比时，使用 FillHeight 填充高度，否则使用
- * FillWidth 填充宽度。
- *
- * @param containerWidthDp 容器宽度（dp）
- * @param containerHeightDp 容器高度（dp）
- * @param imageWidthDp 图片宽度（dp）
- * @param imageHeightDp 图片高度（dp）
- * @return 最佳的 ContentScale
- */
-private fun calculateOptimalContentScale(
-    containerWidthDp: Int,
-    containerHeightDp: Int,
-    imageWidthDp: Float,
-    imageHeightDp: Float,
-): ContentScale {
-    val containerAspectRatio = containerWidthDp.toFloat() / containerHeightDp.toFloat()
-    val imageAspectRatio = imageWidthDp / imageHeightDp
-    val aspectRatioDiff =
-        kotlin.math.abs(containerAspectRatio - imageAspectRatio) / imageAspectRatio
-
-    return when {
-        // 如果容器和图片宽高比非常接近（差异小于阈值），使用 Fit 显示完整图片
-        aspectRatioDiff < ASPECT_RATIO_THRESHOLD -> ContentScale.Fit
-
-        // 如果容器比图片更宽（容器宽高比 > 图片宽高比），图片相对较窄，使用 FillWidth
-        containerAspectRatio > imageAspectRatio -> ContentScale.FillWidth
-
-        // 如果容器比图片更窄（容器宽高比 < 图片宽高比），图片相对较宽，使用 FillHeight
-        else -> ContentScale.FillHeight
     }
 }
