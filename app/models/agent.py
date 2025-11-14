@@ -94,6 +94,8 @@ class Agent(Base):
     chats = relationship("Chat", back_populates="agent")
     resources = relationship("Resource", back_populates="agent")
 
+    # 乐观锁配置：使用 version 字段防止并发更新冲突
+    # 更新时会自动检查版本号，不匹配则抛出 StaleDataError，成功更新后自动递增 version
     __mapper_args__ = {
         "version_id_col": version,
     }
