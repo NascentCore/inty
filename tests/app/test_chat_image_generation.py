@@ -52,6 +52,7 @@ class TestImageGenerationService:
         assert "给我画一张你在咖啡厅的图片" in prompt
 
     @pytest.mark.asyncio
+    @patch("app.services.image_generation_service.agent_service.append_agent_background_image")
     @patch("app.services.image_generation_service.image_transform_service")
     @patch("app.services.image_generation_service.get_genai_client")
     @patch("app.services.image_generation_service.upload_to_gcs")
@@ -66,6 +67,7 @@ class TestImageGenerationService:
         mock_upload_gcs: Mock,
         mock_get_client: Mock,
         mock_transform_service: Mock,
+        mock_append_background: AsyncMock,
     ):
         """测试使用 Gemini 生成聊天图片"""
         # 准备测试数据
@@ -161,6 +163,7 @@ class TestImageGenerationService:
         mock_get_client.assert_called_once()
         mock_upload_gcs.assert_called_once()
         mock_update_metadata.assert_called_once()
+        mock_append_background.assert_awaited_once()
 
 
 class TestChatHistoryService:
@@ -230,8 +233,7 @@ class TestChatHistoryService:
             fake_upload,
         )
         monkeypatch.setattr(
-            image_generation_service.image_transform_service,
-            "transform_desktop",
+            "app.services.image_generation_service.image_transform_service.transform_desktop",
             lambda url: f"https://cdn.example.com/{url.split('/', 3)[-1]}",
         )
 
