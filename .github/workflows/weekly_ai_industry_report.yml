@@ -1,0 +1,39 @@
+name: Weekly AI Industry Report
+
+on:
+  schedule:
+    # 每天北京时间 05:00 运行（对应 UTC 前一天 21:00）
+    - cron: "0 21 * * *"
+  workflow_dispatch:
+
+jobs:
+  run-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install google-generativeai google-api-python-client
+
+      - name: Generate weekly AI industry report
+        env:
+          GOOGLE_CSE_API_KEY: ${{ secrets.GOOGLE_CSE_API_KEY }}
+          GOOGLE_CSE_ID: ${{ secrets.GOOGLE_CSE_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python scripts/weekly_ai_industry_report/weekly_ai_industry_report.py
+
+      - name: Upload report artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-weekly-report
+          path: |
+            ai_weekly_report_*.json
