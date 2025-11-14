@@ -10,8 +10,7 @@ import androidx.core.content.edit
 /**
  * Direct Boot 存储管理器
  *
- * 使用设备加密存储（Device Encrypted Storage）的 SharedPreferences
- * 在 Direct Boot 模式下（用户未解锁）可以访问
+ * 使用设备加密存储（Device Encrypted Storage）的 SharedPreferences 在 Direct Boot 模式下（用户未解锁）可以访问
  *
  * 实现方式：
  * - 使用 Context.createDeviceProtectedStorageContext() 创建设备加密存储 Context
@@ -31,12 +30,9 @@ object DirectBootStorage {
     private const val KEY_PENDING_MESSAGES = "pending_messages"
     private const val KEY_MESSAGE_COUNT = "message_count"
 
-    @Volatile
-    private var deviceProtectedPrefs: SharedPreferences? = null
+    @Volatile private var deviceProtectedPrefs: SharedPreferences? = null
 
-    /**
-     * 数据类：待处理的消息元数据
-     */
+    /** 数据类：待处理的消息元数据 */
     data class PendingMessage(
         val messageId: String,
         val timestamp: Long,
@@ -47,8 +43,7 @@ object DirectBootStorage {
     )
 
     /**
-     * 初始化 Direct Boot 存储
-     * 使用设备加密存储 Context 创建 SharedPreferences
+     * 初始化 Direct Boot 存储 使用设备加密存储 Context 创建 SharedPreferences
      *
      * 注意：不缓存 Context 以避免内存泄漏，只缓存 SharedPreferences 实例
      */
@@ -67,18 +62,17 @@ object DirectBootStorage {
 
             // 创建设备加密存储 Context（不缓存，避免内存泄漏）
             // 这个 Context 在 Direct Boot 模式下可以访问
-            val deviceProtectedContext = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                appContext.createDeviceProtectedStorageContext()
-            } else {
-                appContext
-            }
+            val deviceProtectedContext =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    appContext.createDeviceProtectedStorageContext()
+                } else {
+                    appContext
+                }
 
             // 在设备加密存储 Context 上创建 SharedPreferences
             // 只缓存 SharedPreferences 实例，不缓存 Context
-            deviceProtectedPrefs = deviceProtectedContext.getSharedPreferences(
-                PREFS_NAME,
-                Context.MODE_PRIVATE
-            )
+            deviceProtectedPrefs =
+                deviceProtectedContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
             LogUtils.d("DirectBootStorage", "Direct Boot 存储初始化成功")
             true
@@ -115,11 +109,12 @@ object DirectBootStorage {
             existingMessages.add(message)
 
             // 限制待处理消息数量（最多保存 50 条，避免存储膨胀）
-            val trimmedMessages = if (existingMessages.size > 50) {
-                existingMessages.takeLast(50)
-            } else {
-                existingMessages
-            }
+            val trimmedMessages =
+                if (existingMessages.size > 50) {
+                    existingMessages.takeLast(50)
+                } else {
+                    existingMessages
+                }
 
             // 将消息列表序列化为 JSON 字符串（简化实现，使用简单格式）
             val messagesJson = serializeMessages(trimmedMessages)
@@ -131,7 +126,7 @@ object DirectBootStorage {
 
             LogUtils.d(
                 "DirectBootStorage",
-                "保存待处理消息: messageId=${message.messageId}, 总数=${trimmedMessages.size}"
+                "保存待处理消息: messageId=${message.messageId}, 总数=${trimmedMessages.size}",
             )
             true
         } catch (e: Exception) {
@@ -164,10 +159,7 @@ object DirectBootStorage {
     fun clearPendingMessages(context: Context? = null): Boolean {
         return try {
             val prefs = getPrefs(context) ?: return false
-            prefs.edit {
-                remove(KEY_PENDING_MESSAGES)
-                    .putInt(KEY_MESSAGE_COUNT, 0)
-            }
+            prefs.edit { remove(KEY_PENDING_MESSAGES).putInt(KEY_MESSAGE_COUNT, 0) }
             LogUtils.d("DirectBootStorage", "已清除所有待处理消息")
             true
         } catch (e: Exception) {
@@ -192,8 +184,7 @@ object DirectBootStorage {
     }
 
     /**
-     * 调试方法：打印 Direct Boot 存储状态
-     * 用于测试和调试
+     * 调试方法：打印 Direct Boot 存储状态 用于测试和调试
      *
      * @param context Context 实例
      */
@@ -215,8 +206,8 @@ object DirectBootStorage {
                     LogUtils.d(
                         "DirectBootStorage",
                         "  [$index] messageId=${message.messageId}, " +
-                                "type=${message.type}, agentId=${message.agentId}, " +
-                                "title=${message.title?.take(20)}..."
+                            "type=${message.type}, agentId=${message.agentId}, " +
+                            "title=${message.title?.take(20)}...",
                     )
                 }
             } else {
@@ -228,29 +219,25 @@ object DirectBootStorage {
         }
     }
 
-    /**
-     * 序列化消息列表为 JSON 字符串（简化实现）
-     * 格式：messageId|timestamp|type|agentId|title|body\n...
-     */
+    /** 序列化消息列表为 JSON 字符串（简化实现） 格式：messageId|timestamp|type|agentId|title|body\n... */
     private fun serializeMessages(messages: List<PendingMessage>): String {
         return messages.joinToString("\n") { message ->
             listOf(
-                message.messageId,
-                message.timestamp.toString(),
-                message.type ?: "",
-                message.agentId ?: "",
-                message.title ?: "",
-                message.body ?: "",
-            ).joinToString("|") { field ->
-                // 转义特殊字符
-                field.replace("|", "\\|").replace("\n", "\\n")
-            }
+                    message.messageId,
+                    message.timestamp.toString(),
+                    message.type ?: "",
+                    message.agentId ?: "",
+                    message.title ?: "",
+                    message.body ?: "",
+                )
+                .joinToString("|") { field ->
+                    // 转义特殊字符
+                    field.replace("|", "\\|").replace("\n", "\\n")
+                }
         }
     }
 
-    /**
-     * 反序列化 JSON 字符串为消息列表
-     */
+    /** 反序列化 JSON 字符串为消息列表 */
     private fun deserializeMessages(json: String): List<PendingMessage> {
         if (json.isEmpty()) return emptyList()
 
@@ -258,10 +245,11 @@ object DirectBootStorage {
             if (line.isEmpty()) return@mapNotNull null
 
             try {
-                val fields = line.split("|").map { field ->
-                    // 反转义特殊字符
-                    field.replace("\\|", "|").replace("\\n", "\n")
-                }
+                val fields =
+                    line.split("|").map { field ->
+                        // 反转义特殊字符
+                        field.replace("\\|", "|").replace("\\n", "\n")
+                    }
 
                 if (fields.size >= 6) {
                     PendingMessage(

@@ -79,10 +79,7 @@ fun HomeScreen(
 
     Scaffold(
         modifier =
-            modifier
-                .fillMaxSize()
-                .background(HeartColor.primaryColor)
-                .navigationBarsPadding(),
+            modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
             val context = LocalContext.current

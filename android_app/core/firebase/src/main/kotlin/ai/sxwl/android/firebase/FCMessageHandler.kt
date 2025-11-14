@@ -3,8 +3,7 @@ package ai.sxwl.android.firebase
 /**
  * FCM 消息处理回调接口
  *
- * 用于解耦 FCMService (infrastructure 层) 与业务逻辑层
- * 实现应该由 common 层或 app 层提供
+ * 用于解耦 FCMService (infrastructure 层) 与业务逻辑层 实现应该由 common 层或 app 层提供
  */
 interface FCMessageHandler {
     /**
@@ -31,10 +30,5 @@ interface FCMessageHandler {
      * @param body 通知内容
      * @param data 消息数据（用于点击通知后的跳转）
      */
-    fun showNotification(
-        title: String,
-        body: String,
-        data: Map<String, String>,
-    )
+    fun showNotification(title: String, body: String, data: Map<String, String>)
 }
-

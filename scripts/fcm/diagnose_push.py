@@ -7,7 +7,7 @@
     # 诊断聊天推送
     python scripts/fcm/diagnose_push.py --chat-id CHAT_ID
     python scripts/fcm/diagnose_push.py --chat-id CHAT_ID --stage 10min
-    
+
     # 诊断用户推送（无聊天或最近聊天）
     python scripts/fcm/diagnose_push.py --user-id USER_ID
     python scripts/fcm/diagnose_push.py --user-id USER_ID --push-type no_chat
@@ -35,9 +35,7 @@ from app.services import push_notification_service
 from app.services.chat_service import generate_session_id
 
 
-async def diagnose_chat_push(
-    db: AsyncSession, chat_id: str, stage: str = None
-) -> dict:
+async def diagnose_chat_push(db: AsyncSession, chat_id: str, stage: str = None) -> dict:
     """
     诊断聊天推送条件
 
@@ -122,8 +120,8 @@ async def diagnose_chat_push(
         session_id = generate_session_id(chat.id)
 
         # 7. 检查用户消息
-        last_user_message_time = await push_notification_service.get_last_user_message_time(
-            session_id
+        last_user_message_time = (
+            await push_notification_service.get_last_user_message_time(session_id)
         )
 
         if not last_user_message_time:
@@ -136,11 +134,13 @@ async def diagnose_chat_push(
         # 8. 检查每个阶段的推送条件
         for check_stage in stages_to_check:
             # 检查阶段配置（支持 minutes 和 hours）
-            time_delta_minutes = config.intervals.get(check_stage) if config.intervals else None
+            time_delta_minutes = (
+                config.intervals.get(check_stage) if config.intervals else None
+            )
             time_delta_hours = None
             if not time_delta_minutes and config.no_chat_intervals:
                 time_delta_hours = config.no_chat_intervals.get(check_stage)
-            
+
             if not time_delta_minutes and not time_delta_hours:
                 continue
 
@@ -186,10 +186,12 @@ async def diagnose_chat_push(
                 stage_result["push_history"] = {
                     "id": history.id,
                     "sent_at": history.sent_at.isoformat(),
-                    "message_content": history.message_content[:100]
-                    + "..."
-                    if history.message_content and len(history.message_content) > 100
-                    else history.message_content,
+                    "message_content": (
+                        history.message_content[:100] + "..."
+                        if history.message_content
+                        and len(history.message_content) > 100
+                        else history.message_content
+                    ),
                 }
 
             result["push_history"][check_stage] = stage_result
@@ -200,7 +202,9 @@ async def diagnose_chat_push(
                     f"⚠️  阶段 {check_stage}: 已发送过推送（{history.sent_at.isoformat() if history else '未知'}）"
                 )
             elif not time_meets_threshold:
-                time_diff = (threshold_time - last_user_message_time).total_seconds() / 60
+                time_diff = (
+                    threshold_time - last_user_message_time
+                ).total_seconds() / 60
                 result["diagnosis"].append(
                     f"⏳ 阶段 {check_stage}: 时间未达到阈值（还需等待约 {abs(time_diff):.1f} 分钟）"
                 )
@@ -215,7 +219,9 @@ async def diagnose_chat_push(
 
         if user_id:
             # 检查用户是否有 device_token（实际查询会 join DeviceToken）
-            device_token_stmt = select(DeviceToken).where(DeviceToken.user_id == user_id)
+            device_token_stmt = select(DeviceToken).where(
+                DeviceToken.user_id == user_id
+            )
             device_token_result = await db.execute(device_token_stmt)
             has_device_token = device_token_result.scalar_one_or_none() is not None
 
@@ -231,21 +237,15 @@ async def diagnose_chat_push(
                 if recent_chat_data:
                     recent_chat, _ = recent_chat_data
                     if recent_chat.id == chat_id:
-                        result["diagnosis"].append(
-                            "✅ 这是用户的最近聊天，会被查询到"
-                        )
+                        result["diagnosis"].append("✅ 这是用户的最近聊天，会被查询到")
                     else:
                         result["diagnosis"].append(
                             f"⚠️  这不是用户的最近聊天（最近聊天ID: {recent_chat.id}），不会被推送"
                         )
                 else:
-                    result["diagnosis"].append(
-                        "⚠️  无法获取用户的最近聊天信息"
-                    )
+                    result["diagnosis"].append("⚠️  无法获取用户的最近聊天信息")
         else:
-            result["diagnosis"].append(
-                "⚠️  无法获取用户ID，无法检查是否会被查询到"
-            )
+            result["diagnosis"].append("⚠️  无法获取用户ID，无法检查是否会被查询到")
 
         if not result["diagnosis"]:
             result["diagnosis"].append("✅ 所有检查项通过，应该可以触发推送")
@@ -350,8 +350,10 @@ async def diagnose_user_push(
         if not push_type or push_type == "no_chat":
             if config.no_chat_intervals:
                 for stage, hours in config.no_chat_intervals.items():
-                    has_sent = await push_notification_service.has_sent_push_for_user_stage(
-                        db, user_id, stage, "no_chat"
+                    has_sent = (
+                        await push_notification_service.has_sent_push_for_user_stage(
+                            db, user_id, stage, "no_chat"
+                        )
                     )
                     result["no_chat_push_history"][stage] = {
                         "stage": stage,
@@ -369,12 +371,16 @@ async def diagnose_user_push(
                 if recent_chat_data:
                     chat, last_message_time = recent_chat_data
                     # 检查所有阶段（10min, 30min, 2h, 24h, 48h）
-                    all_stages = list(config.intervals.keys()) if config.intervals else []
+                    all_stages = (
+                        list(config.intervals.keys()) if config.intervals else []
+                    )
                     if config.no_chat_intervals:
                         all_stages.extend(config.no_chat_intervals.keys())
                     for stage in all_stages:
-                        has_sent = await push_notification_service.has_sent_push_for_stage(
-                            db, chat.id, stage, "recent_chat", last_message_time
+                        has_sent = (
+                            await push_notification_service.has_sent_push_for_stage(
+                                db, chat.id, stage, "recent_chat", last_message_time
+                            )
                         )
                         result["recent_chat_push_history"][stage] = {
                             "stage": stage,
@@ -387,41 +393,27 @@ async def diagnose_user_push(
 
         if push_type == "no_chat" or not push_type:
             if result["has_active_chats"]:
-                result["diagnosis"].append(
-                    "⚠️  用户有活跃聊天，不会触发无聊天推送"
-                )
+                result["diagnosis"].append("⚠️  用户有活跃聊天，不会触发无聊天推送")
             elif not result["popular_agent"]:
                 result["diagnosis"].append("❌ 没有找到热门角色，无法进行无聊天推送")
             else:
                 for stage, history in result["no_chat_push_history"].items():
                     if history["has_sent_push"]:
-                        result["diagnosis"].append(
-                            f"⚠️  无聊天推送 {stage}: 已发送过"
-                        )
+                        result["diagnosis"].append(f"⚠️  无聊天推送 {stage}: 已发送过")
                     else:
-                        result["diagnosis"].append(
-                            f"✅ 无聊天推送 {stage}: 满足条件"
-                        )
+                        result["diagnosis"].append(f"✅ 无聊天推送 {stage}: 满足条件")
 
         if push_type == "recent_chat" or not push_type:
             if not result["has_active_chats"]:
-                result["diagnosis"].append(
-                    "⚠️  用户没有活跃聊天，不会触发最近聊天推送"
-                )
+                result["diagnosis"].append("⚠️  用户没有活跃聊天，不会触发最近聊天推送")
             elif not result["recent_chat"]:
-                result["diagnosis"].append(
-                    "⚠️  用户有聊天但没有用户消息，不会触发推送"
-                )
+                result["diagnosis"].append("⚠️  用户有聊天但没有用户消息，不会触发推送")
             else:
                 for stage, history in result["recent_chat_push_history"].items():
                     if history["has_sent_push"]:
-                        result["diagnosis"].append(
-                            f"⚠️  最近聊天推送 {stage}: 已发送过"
-                        )
+                        result["diagnosis"].append(f"⚠️  最近聊天推送 {stage}: 已发送过")
                     else:
-                        result["diagnosis"].append(
-                            f"✅ 最近聊天推送 {stage}: 满足条件"
-                        )
+                        result["diagnosis"].append(f"✅ 最近聊天推送 {stage}: 满足条件")
 
         if not result["diagnosis"]:
             result["diagnosis"].append("✅ 所有检查项通过")
@@ -495,14 +487,18 @@ async def main():
 
                 if result["has_user_messages"]:
                     logger.info("用户消息:")
-                    logger.info(f"  最后用户消息时间: {result['last_user_message_time']}")
+                    logger.info(
+                        f"  最后用户消息时间: {result['last_user_message_time']}"
+                    )
                     logger.info("")
 
                 if result["push_history"]:
                     logger.info("推送阶段检查:")
                     for stage, stage_result in result["push_history"].items():
                         logger.info(f"  阶段 {stage}:")
-                        logger.info(f"    时间阈值（分钟）: {stage_result['time_delta_minutes']}")
+                        logger.info(
+                            f"    时间阈值（分钟）: {stage_result['time_delta_minutes']}"
+                        )
                         logger.info(f"    阈值时间: {stage_result['threshold_time']}")
                         logger.info(
                             f"    时间是否满足: {stage_result['time_meets_threshold']}"
@@ -558,7 +554,9 @@ async def main():
                     logger.info("无聊天推送历史:")
                     for stage, history in result["no_chat_push_history"].items():
                         logger.info(f"  {stage}:")
-                        logger.info(f"    时间阈值（小时）: {history['time_delta_hours']}")
+                        logger.info(
+                            f"    时间阈值（小时）: {history['time_delta_hours']}"
+                        )
                         logger.info(f"    已发送推送: {history['has_sent_push']}")
                     logger.info("")
 
@@ -593,4 +591,3 @@ if __name__ == "__main__":
 
     exit_code = asyncio.run(main())
     sys.exit(exit_code)
-

@@ -18,13 +18,9 @@ import kotlinx.coroutines.launch
 class FCMService : FirebaseMessagingService() {
 
     companion object {
-        /**
-         * 通知渠道 ID
-         * 用于 Firebase Cloud Messaging 推送通知
-         */
+        /** 通知渠道 ID 用于 Firebase Cloud Messaging 推送通知 */
         const val NOTIFICATION_CHANNEL_ID = "fcm_default_channel"
     }
-
 
     /**
      * 当收到 FCM 消息时调用
@@ -32,8 +28,8 @@ class FCMService : FirebaseMessagingService() {
      * 注意：
      * - 数据消息（data message）：应用前后台均会触发此方法
      * - 通知消息（notification message）：
-     *   - 应用在前台：会触发此方法，需要手动显示通知
-     *   - 应用在后台：系统会自动显示通知，不会触发此方法
+     *     - 应用在前台：会触发此方法，需要手动显示通知
+     *     - 应用在后台：系统会自动显示通知，不会触发此方法
      * - Direct Boot 模式：在用户未解锁时，消息元数据会被保存到设备加密存储，待用户解锁后处理
      */
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -56,10 +52,7 @@ class FCMService : FirebaseMessagingService() {
         }
     }
 
-    /**
-     * 在 Direct Boot 模式下处理消息
-     * 仅保存消息元数据到设备加密存储，不进行实际处理
-     */
+    /** 在 Direct Boot 模式下处理消息 仅保存消息元数据到设备加密存储，不进行实际处理 */
     private fun handleMessageInDirectBootMode(remoteMessage: RemoteMessage) {
         try {
             // 初始化 Direct Boot 存储
@@ -70,22 +63,20 @@ class FCMService : FirebaseMessagingService() {
             val notification = remoteMessage.notification
             val data = remoteMessage.data
 
-            val pendingMessage = DirectBootStorage.PendingMessage(
-                messageId = messageId,
-                timestamp = System.currentTimeMillis(),
-                type = data[FCMConstants.DATA_KEY_TYPE],
-                agentId = data[FCMConstants.DATA_KEY_AGENT_ID],
-                title = notification?.title,
-                body = notification?.body,
-            )
+            val pendingMessage =
+                DirectBootStorage.PendingMessage(
+                    messageId = messageId,
+                    timestamp = System.currentTimeMillis(),
+                    type = data[FCMConstants.DATA_KEY_TYPE],
+                    agentId = data[FCMConstants.DATA_KEY_AGENT_ID],
+                    title = notification?.title,
+                    body = notification?.body,
+                )
 
             // 保存到 Direct Boot 存储
             val saved = DirectBootStorage.savePendingMessage(pendingMessage, this)
             if (saved) {
-                LogUtils.i(
-                    "FCMService",
-                    "Direct Boot 模式：消息元数据已保存，待用户解锁后处理。messageId=$messageId"
-                )
+                LogUtils.i("FCMService", "Direct Boot 模式：消息元数据已保存，待用户解锁后处理。messageId=$messageId")
             } else {
                 LogUtils.w("FCMService", "Direct Boot 模式：保存消息元数据失败")
             }
@@ -94,14 +85,9 @@ class FCMService : FirebaseMessagingService() {
         }
     }
 
-    /**
-     * 在正常模式下处理消息（用户已解锁）
-     */
+    /** 在正常模式下处理消息（用户已解锁） */
     private fun handleMessageInNormalMode(remoteMessage: RemoteMessage) {
-        LogUtils.d(
-            "FCMService",
-            "消息类型: ${if (remoteMessage.data.isNotEmpty()) "数据消息" else "通知消息"}"
-        )
+        LogUtils.d("FCMService", "消息类型: ${if (remoteMessage.data.isNotEmpty()) "数据消息" else "通知消息"}")
 
         val data = remoteMessage.data
         val notification = remoteMessage.notification
@@ -124,11 +110,7 @@ class FCMService : FirebaseMessagingService() {
 
             if (title != null && body != null) {
                 LogUtils.i("FCMService", "通知消息 - 标题: $title, 内容: $body")
-                handler?.showNotification(
-                    title = title,
-                    body = body,
-                    data = data,
-                )
+                handler?.showNotification(title = title, body = body, data = data)
             } else {
                 LogUtils.w("FCMService", "通知消息缺少标题或内容")
             }
@@ -152,7 +134,6 @@ class FCMService : FirebaseMessagingService() {
         LogUtils.i("FCMService", "FCM 注册令牌已更新: $token")
         uploadTokenToServer(token)
     }
-
 
     /**
      * Upload FCM Token to server

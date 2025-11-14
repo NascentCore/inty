@@ -413,9 +413,7 @@ async def _mark_users_with_invalid_tokens(
     try:
         now = datetime.now(UTC)
         stmt = (
-            update(User)
-            .where(User.id.in_(user_ids))
-            .values(fcm_token_invalid_at=now)
+            update(User).where(User.id.in_(user_ids)).values(fcm_token_invalid_at=now)
         )
         await db.execute(stmt)
         await db.commit()

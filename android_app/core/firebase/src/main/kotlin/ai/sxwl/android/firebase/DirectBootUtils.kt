@@ -47,4 +47,3 @@ object DirectBootUtils {
         return !isUserUnlocked(context)
     }
 }
-

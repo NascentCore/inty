@@ -210,10 +210,12 @@ async def register_device_token(
 
         await db.commit()
         await db.refresh(device_token)
-        
+
         # 记录日志
-        logger.debug(f"用户注册新 device token，已清除无效标记: user_id={user_id}, token={token[:20]}...")
-        
+        logger.debug(
+            f"用户注册新 device token，已清除无效标记: user_id={user_id}, token={token[:20]}..."
+        )
+
         return device_token
 
     except Exception as e:

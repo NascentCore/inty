@@ -58,9 +58,7 @@ class ChatActivity : BaseActivity() {
             )
         }
 
-        /**
-         * 消息推送通知打开聊天页面需要的intent
-         */
+        /** 消息推送通知打开聊天页面需要的intent */
         fun notifyIntent(context: Context, agentId: String?): Intent {
             return Intent(context, ChatActivity::class.java).also { intent ->
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -132,15 +130,11 @@ class ChatActivity : BaseActivity() {
                 val hasGeneratedImage = msg.hasGeneratedImage()
                 val generatedImageUrl = msg.getGeneratedImageUrl()
                 msg.content == "loading_animation" &&
-                        !hasGeneratedImage &&
-                        generatedImageUrl != "loading"
+                    !hasGeneratedImage &&
+                    generatedImageUrl != "loading"
             }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(HeartColor.primaryColor)
-        ) {
+        Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
             // 背景图放在最底层，不受 imePadding 影响
             AgentBackground(
                 agentInfo = agentInfo,
@@ -151,10 +145,7 @@ class ChatActivity : BaseActivity() {
             )
 
             ChatPage(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .imePadding()
-                    .navigationBarsPadding(),
+                modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
                 chatViewModel = chatViewModel,
                 showBackButton = true,
                 onBack = { finish() },

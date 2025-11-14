@@ -38,10 +38,10 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 
 // CDN 图片优化参数（与 AgentBackground 保持一致）
 // 使用固定参数确保预加载和实际使用的 URL 完全一致，提高缓存命中率
@@ -54,13 +54,13 @@ private fun isVideoUrl(url: String?): Boolean {
     if (url.isNullOrBlank()) return false
     val lowerUrl = url.lowercase()
     return lowerUrl.endsWith(".mp4") ||
-            lowerUrl.endsWith(".webm") ||
-            lowerUrl.contains(".mp4?") ||
-            lowerUrl.contains(".webm?")
+        lowerUrl.endsWith(".webm") ||
+        lowerUrl.contains(".mp4?") ||
+        lowerUrl.contains(".webm?")
 }
 
-/** 视频背景播放组件
- * 逻辑：
+/**
+ * 视频背景播放组件 逻辑：
  * 1. 如果有视频URL，始终渲染视频控件，同时显示静态图作为占位符
  * 2. 视频加载完成后，隐藏静态图并播放视频
  * 3. 如果没有视频URL，只显示静态图
@@ -83,9 +83,10 @@ fun AnimatedBackground(
 
     // 关键修复：立即显示静态图（如果有），避免黑屏
     // 初始状态：如果有静态图URL，立即显示；如果有视频URL且有静态图，也立即显示作为占位符
-    var showStaticImage by remember(videoUrl, staticImageUrl) {
-        mutableStateOf(staticImageUrl != null && (videoUrl == null || isVideoUrl(videoUrl)))
-    }
+    var showStaticImage by
+        remember(videoUrl, staticImageUrl) {
+            mutableStateOf(staticImageUrl != null && (videoUrl == null || isVideoUrl(videoUrl)))
+        }
     var videoPrepared by remember { mutableStateOf(false) }
     var videoFirstFrameRendered by remember { mutableStateOf(false) } // 视频第一帧是否已渲染
     var targetStaticImageAlpha by remember { mutableFloatStateOf(1f) } // 静态图目标透明度，用于动画
@@ -153,13 +154,17 @@ fun AnimatedBackground(
         // 暂停播放，但不释放播放器（由 DisposableEffect 处理）
         exoPlayer?.pause()
         exoPlayer?.seekTo(0)
-        LogUtils.d("AnimatedBackground - [URL变化] 状态已重置: showStaticImage=$showStaticImage, videoPrepared=false")
+        LogUtils.d(
+            "AnimatedBackground - [URL变化] 状态已重置: showStaticImage=$showStaticImage, videoPrepared=false"
+        )
     }
 
     // 确保视频第一帧已渲染：视频准备好后，立即触发第一帧渲染
     // 关键修复：使用更短的延迟，并立即触发第一帧显示
     LaunchedEffect(videoPrepared, exoPlayer, videoUrl) {
-        LogUtils.d("AnimatedBackground - [第一帧渲染] videoPrepared=$videoPrepared, exoPlayer=${exoPlayer != null}, videoUrl=$videoUrl, videoFirstFrameRendered=$videoFirstFrameRendered")
+        LogUtils.d(
+            "AnimatedBackground - [第一帧渲染] videoPrepared=$videoPrepared, exoPlayer=${exoPlayer != null}, videoUrl=$videoUrl, videoFirstFrameRendered=$videoFirstFrameRendered"
+        )
         if (videoPrepared && exoPlayer != null && videoUrl != null && !videoFirstFrameRendered) {
             // 确保视频显示第一帧（不播放）
             exoPlayer?.seekTo(0)
@@ -175,8 +180,16 @@ fun AnimatedBackground(
 
                 // 关键修复：第一帧渲染完成后，如果 shouldPlay 为 true，立即触发播放
                 // 这解决了视频加载完成后没有自动播放的问题
-                if (shouldPlay && currentPlayCount > 0 && isCurrentPage && !isPlaying && !hasPlayCompleted) {
-                    LogUtils.d("AnimatedBackground - [第一帧渲染] ✅ 第一帧渲染完成，立即触发播放: shouldPlay=$shouldPlay, currentPlayCount=$currentPlayCount")
+                if (
+                    shouldPlay &&
+                        currentPlayCount > 0 &&
+                        isCurrentPage &&
+                        !isPlaying &&
+                        !hasPlayCompleted
+                ) {
+                    LogUtils.d(
+                        "AnimatedBackground - [第一帧渲染] ✅ 第一帧渲染完成，立即触发播放: shouldPlay=$shouldPlay, currentPlayCount=$currentPlayCount"
+                    )
                     actualPlayCount = 0
                     exoPlayer?.seekTo(0)
                     exoPlayer?.playWhenReady = true
@@ -186,7 +199,9 @@ fun AnimatedBackground(
         } else if (videoUrl == null) {
             // 只有在 videoUrl 变化时才重置，避免在视频准备过程中误重置
             videoFirstFrameRendered = false
-            LogUtils.d("AnimatedBackground - [第一帧渲染] videoUrl=null, 重置 videoFirstFrameRendered=false")
+            LogUtils.d(
+                "AnimatedBackground - [第一帧渲染] videoUrl=null, 重置 videoFirstFrameRendered=false"
+            )
         }
     }
 
@@ -198,7 +213,9 @@ fun AnimatedBackground(
             if (isVideo && videoFirstFrameRendered) {
                 // 关键修复：立即触发淡出动画，不等待额外延迟
                 targetStaticImageAlpha = 0f
-                LogUtils.d("AnimatedBackground - [静态图切换] ✅ 立即触发静态图淡出动画 (videoFirstFrameRendered=$videoFirstFrameRendered)")
+                LogUtils.d(
+                    "AnimatedBackground - [静态图切换] ✅ 立即触发静态图淡出动画 (videoFirstFrameRendered=$videoFirstFrameRendered)"
+                )
             }
         } else if (videoUrl != null && staticImageUrl == null) {
             // 没有静态图，直接显示视频
@@ -214,15 +231,15 @@ fun AnimatedBackground(
     // 使用 Compose 动画 API 实现平滑的 alpha 过渡
     // 当 targetStaticImageAlpha 变化时，自动执行动画
     val animatedAlpha by
-    animateFloatAsState(
-        targetValue = if (showStaticImage) targetStaticImageAlpha else 0f,
-        animationSpec =
-            tween(
-                durationMillis = 300, // 300ms 的淡出动画
-                easing = FastOutSlowInEasing,
-            ),
-        label = "staticImageAlpha",
-    )
+        animateFloatAsState(
+            targetValue = if (showStaticImage) targetStaticImageAlpha else 0f,
+            animationSpec =
+                tween(
+                    durationMillis = 300, // 300ms 的淡出动画
+                    easing = FastOutSlowInEasing,
+                ),
+            label = "staticImageAlpha",
+        )
 
     // 当动画完成后，如果 alpha 为 0，则隐藏静态图组件
     LaunchedEffect(animatedAlpha) {
@@ -239,11 +256,7 @@ fun AnimatedBackground(
     // 1. matchParentSize() 不会影响父 Box 的尺寸测量（父 Box 尺寸由 HorizontalPager 决定）
     // 2. 子元素仅在布局阶段匹配父 Box 的最终尺寸
     // 3. 这符合 BoxScope 的最佳实践，避免子元素影响父容器尺寸
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .clipToBounds()
-    ) {
+    Box(modifier = modifier.fillMaxSize().clipToBounds()) {
 
         // 如果有视频URL，创建视频视图
         if (videoUrl != null && isVideo) {
@@ -319,12 +332,22 @@ fun AnimatedBackground(
                                             onIsPlayingChange?.invoke(playing)
                                         }
 
-                                        override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                                        override fun onVideoSizeChanged(
+                                            videoSize: androidx.media3.common.VideoSize
+                                        ) {
                                             // 关键修复：视频尺寸变化时，说明第一帧可能已经渲染
                                             // 这是一个更准确的信号，比固定延迟更可靠
-                                            if (videoPrepared && !videoFirstFrameRendered && videoSize.width > 0 && videoSize.height > 0) {
-                                                LogUtils.d("AnimatedBackground - [第一帧渲染] onVideoSizeChanged 触发，视频尺寸: ${videoSize.width}x${videoSize.height}")
-                                                // 不在这里直接设置 videoFirstFrameRendered，让 LaunchedEffect 处理
+                                            if (
+                                                videoPrepared &&
+                                                    !videoFirstFrameRendered &&
+                                                    videoSize.width > 0 &&
+                                                    videoSize.height > 0
+                                            ) {
+                                                LogUtils.d(
+                                                    "AnimatedBackground - [第一帧渲染] onVideoSizeChanged 触发，视频尺寸: ${videoSize.width}x${videoSize.height}"
+                                                )
+                                                // 不在这里直接设置 videoFirstFrameRendered，让 LaunchedEffect
+                                                // 处理
                                                 // 但可以触发一次 seekTo(0) 确保第一帧显示
                                                 if (playWhenReady == false) {
                                                     seekTo(0)
@@ -404,9 +427,7 @@ fun AnimatedBackground(
 
                     frameLayout
                 },
-                modifier = Modifier
-                    .matchParentSize()
-                    .clipToBounds(),
+                modifier = Modifier.matchParentSize().clipToBounds(),
                 update = { view ->
                     // 关键修复：在更新时确保视图使用 MATCH_PARENT，自动适应父容器尺寸
                     // 使用 MATCH_PARENT 比设置具体像素值更合适，因为：
@@ -416,8 +437,11 @@ fun AnimatedBackground(
                     val layoutParams = view.layoutParams
                     if (layoutParams != null) {
                         // 确保使用 MATCH_PARENT，让系统自动处理尺寸
-                        if (layoutParams.width != android.view.ViewGroup.LayoutParams.MATCH_PARENT ||
-                            layoutParams.height != android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                        if (
+                            layoutParams.width !=
+                                android.view.ViewGroup.LayoutParams.MATCH_PARENT ||
+                                layoutParams.height !=
+                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
                         ) {
                             layoutParams.width = android.view.ViewGroup.LayoutParams.MATCH_PARENT
                             layoutParams.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -432,7 +456,9 @@ fun AnimatedBackground(
                         val currentMediaId = currentMediaItem?.mediaId
                         // 如果路径变化了（比如从 URL 切换到缓存路径），需要更新
                         if (currentMediaId == null || currentMediaId != pathToUse) {
-                            LogUtils.d("AnimatedBackground - [播放器更新] 更新视频路径: $currentMediaId -> $pathToUse")
+                            LogUtils.d(
+                                "AnimatedBackground - [播放器更新] 更新视频路径: $currentMediaId -> $pathToUse"
+                            )
                             exoPlayer?.setMediaItem(MediaItem.fromUri(pathToUse))
                             exoPlayer?.prepare()
                             LogUtils.d("AnimatedBackground - [播放器更新] ✅ 已更新视频路径并准备播放")
@@ -453,22 +479,24 @@ fun AnimatedBackground(
                 isCurrentPage,
                 exoPlayer,
                 isPlaying,
-                hasPlayCompleted
+                hasPlayCompleted,
             ) {
                 LogUtils.d(
                     "AnimatedBackground - [播放控制检查] shouldPlay=$shouldPlay, videoPrepared=$videoPrepared, currentPlayCount=$currentPlayCount, isCurrentPage=$isCurrentPage, exoPlayer=${exoPlayer != null}, isPlaying=$isPlaying, hasPlayCompleted=$hasPlayCompleted"
                 )
                 if (
                     isCurrentPage &&
-                    shouldPlay &&
-                    videoPrepared &&
-                    currentPlayCount > 0 &&
-                    exoPlayer != null &&
-                    !hasPlayCompleted
+                        shouldPlay &&
+                        videoPrepared &&
+                        currentPlayCount > 0 &&
+                        exoPlayer != null &&
+                        !hasPlayCompleted
                 ) {
                     // 如果视频正在播放中，则不处理（避免打断正在播放的视频）
                     if (!isPlaying) {
-                        LogUtils.d("AnimatedBackground - [播放控制] ✅ 开始播放视频，次数: $currentPlayCount, playWhenReady=${exoPlayer?.playWhenReady}")
+                        LogUtils.d(
+                            "AnimatedBackground - [播放控制] ✅ 开始播放视频，次数: $currentPlayCount, playWhenReady=${exoPlayer?.playWhenReady}"
+                        )
                         actualPlayCount = 0
                         exoPlayer?.seekTo(0)
                         exoPlayer?.playWhenReady = true
@@ -500,12 +528,12 @@ fun AnimatedBackground(
                 )
                 if (
                     isCurrentPage &&
-                    shouldPlay &&
-                    videoPrepared &&
-                    currentPlayCount > 0 &&
-                    exoPlayer != null &&
-                    !hasPlayCompleted &&
-                    !isPlaying
+                        shouldPlay &&
+                        videoPrepared &&
+                        currentPlayCount > 0 &&
+                        exoPlayer != null &&
+                        !hasPlayCompleted &&
+                        !isPlaying
                 ) {
                     LogUtils.d(
                         "AnimatedBackground - LifecycleResumeEffect: 强制播放视频，次数: $currentPlayCount"
@@ -515,10 +543,10 @@ fun AnimatedBackground(
                     exoPlayer?.playWhenReady = true
                 } else if (
                     isCurrentPage &&
-                    shouldPlay &&
-                    currentPlayCount > 0 &&
-                    exoPlayer != null &&
-                    !videoPrepared
+                        shouldPlay &&
+                        currentPlayCount > 0 &&
+                        exoPlayer != null &&
+                        !videoPrepared
                 ) {
                     // 如果视频还没准备好，等待一下再尝试
                     LogUtils.d("AnimatedBackground - LifecycleResumeEffect: 视频未准备好，等待...")
@@ -547,44 +575,45 @@ fun AnimatedBackground(
                 val configuration = LocalConfiguration.current
 
                 // 使用固定 CDN 参数，确保与预加载 URL 一致，提高缓存命中率
-                val staticImageRequest = remember(staticImageUrl) {
-                    val containerWidthPx =
-                        with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
-                    val containerHeightPx =
-                        with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
+                val staticImageRequest =
+                    remember(staticImageUrl) {
+                        val containerWidthPx =
+                            with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
+                        val containerHeightPx =
+                            with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
 
-                    ImageRequest.Builder(context)
-                        .data(
-                            getCdnImageUrl(
-                                staticImageUrl,
-                                width = CDN_STATIC_BACKGROUND_WIDTH, // 使用固定宽度，确保预加载和实际使用 URL 一致
-                                quality = CDN_IMAGE_QUALITY,
-                            ) ?: staticImageUrl
-                        )
-                        .size(Size(containerWidthPx, containerHeightPx))
-                        .crossfade(true) // 启用淡入淡出效果
-                        .build()
-                }
+                        ImageRequest.Builder(context)
+                            .data(
+                                getCdnImageUrl(
+                                    staticImageUrl,
+                                    width = CDN_STATIC_BACKGROUND_WIDTH, // 使用固定宽度，确保预加载和实际使用 URL 一致
+                                    quality = CDN_IMAGE_QUALITY,
+                                ) ?: staticImageUrl
+                            )
+                            .size(Size(containerWidthPx, containerHeightPx))
+                            .crossfade(true) // 启用淡入淡出效果
+                            .build()
+                    }
                 AsyncImage(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxSize()
-                        .alpha(animatedAlpha), // 使用动画的 alpha 值，alpha=0 时完全透明
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .fillMaxSize()
+                            .alpha(animatedAlpha), // 使用动画的 alpha 值，alpha=0 时完全透明
                     model = staticImageRequest,
                     contentDescription = null,
                     contentScale = contentScale, // 使用 Crop 确保不超出边界
                 )
                 // 添加日志，追踪静态图显示状态
                 LaunchedEffect(showStaticImage, animatedAlpha) {
-                    LogUtils.d("AnimatedBackground - [静态图] showStaticImage=$showStaticImage, animatedAlpha=$animatedAlpha")
+                    LogUtils.d(
+                        "AnimatedBackground - [静态图] showStaticImage=$showStaticImage, animatedAlpha=$animatedAlpha"
+                    )
                 }
             }
         } else if (staticImageUrl != null) {
             // 没有视频URL，只显示静态图片
             AsyncImage(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
+                modifier = Modifier.fillMaxWidth().fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
                 model = ImageRequest.Builder(context).data(staticImageUrl).build(),
                 contentDescription = null,
                 contentScale = contentScale, // 使用 Crop 确保不超出边界

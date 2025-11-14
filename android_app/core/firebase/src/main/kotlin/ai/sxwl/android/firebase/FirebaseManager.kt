@@ -14,14 +14,14 @@ import com.google.firebase.perf.FirebasePerformance
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.remoteConfig
 import com.google.firebase.remoteconfig.remoteConfigSettings
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics、Performance和Remote Config的初始化和使用
@@ -40,19 +40,15 @@ object FirebaseManager {
     private val isInitialized = AtomicBoolean(false)
 
     // 缓存 Firebase 实例，避免重复获取
-    @Volatile
-    private var analytics: FirebaseAnalytics? = null
+    @Volatile private var analytics: FirebaseAnalytics? = null
 
-    @Volatile
-    private var crashlytics: FirebaseCrashlytics? = null
+    @Volatile private var crashlytics: FirebaseCrashlytics? = null
 
-    @Volatile
-    private var performance: FirebasePerformance? = null
+    @Volatile private var performance: FirebasePerformance? = null
 
     // 注意：不缓存 FirebaseRemoteConfig 实例，因为它包含 Context 引用，会导致内存泄漏
     // 每次需要时从 Firebase.remoteConfig 获取（Firebase SDK 会管理单例）
-    @Volatile
-    private var remoteConfigConfigured = AtomicBoolean(false)
+    @Volatile private var remoteConfigConfigured = AtomicBoolean(false)
 
     // 使用SupervisorJob确保子协程异常不影响其他协程
     private val firebaseScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -75,7 +71,8 @@ object FirebaseManager {
             crashlyticsEnabled = true,
             performanceEnabled = true,
             remoteConfigEnabled = true,
-            remoteConfigMinFetchIntervalSeconds = if (AppUtils.isAppDebug()) 0L else 3600L, // 调试模式：实时获取；生产环境：1小时
+            remoteConfigMinFetchIntervalSeconds =
+                if (AppUtils.isAppDebug()) 0L else 3600L, // 调试模式：实时获取；生产环境：1小时
             // 优化采样配置 - 业务数据点100%采样，性能事件保持现有配置
             disabledEvents =
                 setOf(
@@ -133,33 +130,33 @@ object FirebaseManager {
 
                     // 🟡 性能指标事件 - 保持原有采样配置
                     Events.AI_RESPONSE_TIME to
-                            if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                        if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     Events.EXPLORE_RESPONSE_TIME to
-                            if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                        if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     Events.TTS_GENERATION_TIME to
-                            if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                        if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     Events.IMAGE_LOAD_TIME to
-                            if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
+                        if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
                     Events.IMAGE_GENERATION_TIME to
-                            if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                        if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     Events.PAGE_LOAD_TIME to
-                            if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
+                        if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
                     Events.DATABASE_OPERATION_TIME to
-                            if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
+                        if (AppUtils.isAppDebug()) 1.0 else 0.2, // 调试100%，发布20%
                 ),
             minIntervalMsPerEvent =
                 mapOf(
                     // 🔴 业务数据点 - 无限制或很宽松的限频
                     Events.MESSAGE_SENT to
-                            if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
+                        if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
                     Events.MESSAGE_SEND_FAILURE to
-                            if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
+                        if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
                     Events.CHAT_PAGE_CLICK to
-                            if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
+                        if (AppUtils.isAppDebug()) 500L else 1_000L, // 调试0.5秒，发布1秒
 
                     // 🟡 性能相关事件 - 保持现有限频配置
                     Events.SLOW_REQUEST to
-                            if (AppUtils.isAppDebug()) 2_000L else 5_000L, // 调试2秒，发布5秒
+                        if (AppUtils.isAppDebug()) 2_000L else 5_000L, // 调试2秒，发布5秒
                 ),
         )
 
@@ -267,10 +264,10 @@ object FirebaseManager {
                 // 关键事件即使非调试模式也输出警告，便于排查问题
                 if (
                     eventName in
-                    listOf(
-                        Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
-                        Events.MESSAGE_SEND_FAILURE,
-                    )
+                        listOf(
+                            Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
+                            Events.MESSAGE_SEND_FAILURE,
+                        )
                 ) {
                     LogUtils.w("FirebaseManager", "事件被过滤: $eventName（非调试模式）")
                 }
@@ -322,10 +319,10 @@ object FirebaseManager {
                         // 关键事件即使非调试模式也输出确认日志，便于排查问题
                         if (
                             eventName in
-                            listOf(
-                                Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
-                                Events.MESSAGE_SEND_FAILURE,
-                            )
+                                listOf(
+                                    Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
+                                    Events.MESSAGE_SEND_FAILURE,
+                                )
                         ) {
                             LogUtils.i(
                                 "FirebaseManager",
@@ -593,48 +590,29 @@ object FirebaseManager {
         const val AUTO_PLAY_OPENING_VOICE = "auto_play_opening_voice"
     }
 
-    /**
-     * FCM Token upload callback
-     * Set by application layer to handle token upload to server
-     */
-    @Volatile
-    private var tokenUploadCallback: FCMTokenUploadCallback? = null
+    /** FCM Token upload callback Set by application layer to handle token upload to server */
+    @Volatile private var tokenUploadCallback: FCMTokenUploadCallback? = null
 
     /**
-     * FCM message handler callback
-     * Set by common layer or application layer to handle FCM messages
+     * FCM message handler callback Set by common layer or application layer to handle FCM messages
      */
-    @Volatile
-    private var messageHandler: FCMessageHandler? = null
+    @Volatile private var messageHandler: FCMessageHandler? = null
 
     /**
-     * Set FCM token upload callback
-     * Should be called from application layer (e.g., IntelliMateApp)
+     * Set FCM token upload callback Should be called from application layer (e.g., IntelliMateApp)
      */
     fun setTokenUploadCallback(callback: FCMTokenUploadCallback?) {
         tokenUploadCallback = callback
-        LogUtils.d(
-            "FirebaseManager",
-            "FCM Token 上传回调已${if (callback != null) "设置" else "清除"}"
-        )
+        LogUtils.d("FirebaseManager", "FCM Token 上传回调已${if (callback != null) "设置" else "清除"}")
     }
 
-    /**
-     * Set FCM message handler
-     * Should be called from common layer or application layer
-     */
+    /** Set FCM message handler Should be called from common layer or application layer */
     fun setMessageHandler(handler: FCMessageHandler?) {
         messageHandler = handler
-        LogUtils.d(
-            "FirebaseManager",
-            "FCM 消息处理器已${if (handler != null) "设置" else "清除"}"
-        )
+        LogUtils.d("FirebaseManager", "FCM 消息处理器已${if (handler != null) "设置" else "清除"}")
     }
 
-    /**
-     * Get FCM message handler
-     * Used by FCMService to delegate message handling
-     */
+    /** Get FCM message handler Used by FCMService to delegate message handling */
     internal fun getMessageHandler(): FCMessageHandler? = messageHandler
 
     /**
@@ -651,8 +629,8 @@ object FirebaseManager {
     /**
      * Upload FCM Token to server
      *
-     * Delegates to the callback provided by application layer
-     * This avoids circular dependency between core/firebase and core/data modules
+     * Delegates to the callback provided by application layer This avoids circular dependency
+     * between core/firebase and core/data modules
      */
     suspend fun uploadFCMToken(token: String) {
         val callback = tokenUploadCallback
@@ -951,8 +929,7 @@ object FirebaseManager {
     // region Remote Config 相关方法
 
     /**
-     * 设置 Remote Config 默认值
-     * 建议在应用启动时调用，确保在网络不可用时也能使用默认配置
+     * 设置 Remote Config 默认值 建议在应用启动时调用，确保在网络不可用时也能使用默认配置
      *
      * @param defaults 默认值映射，键为参数名，值为参数值（支持 String, Boolean, Long, Double）
      */
@@ -965,7 +942,7 @@ object FirebaseManager {
                     remoteConfig.setDefaultsAsync(defaults)
                     LogUtils.d(
                         "FirebaseManager",
-                        "Remote Config 默认值已设置: ${defaults.entries.joinToString { "${it.key}=${it.value}" }}"
+                        "Remote Config 默认值已设置: ${defaults.entries.joinToString { "${it.key}=${it.value}" }}",
                     )
                 } catch (e: Exception) {
                     logError("setRemoteConfigDefaults", "Failed to set defaults: ${e.message}")
@@ -977,8 +954,7 @@ object FirebaseManager {
     }
 
     /**
-     * 获取并激活 Remote Config
-     * 从 Firebase 服务器获取最新配置并立即激活
+     * 获取并激活 Remote Config 从 Firebase 服务器获取最新配置并立即激活
      *
      * @return 是否成功获取并激活了新配置（true 表示获取到新配置，false 表示使用缓存或失败）
      */
@@ -1010,8 +986,7 @@ object FirebaseManager {
     }
 
     /**
-     * 仅获取 Remote Config（不激活）
-     * 适用于需要手动控制激活时机的场景
+     * 仅获取 Remote Config（不激活） 适用于需要手动控制激活时机的场景
      *
      * @return 是否成功获取配置
      */
@@ -1029,8 +1004,7 @@ object FirebaseManager {
     }
 
     /**
-     * 激活已获取的 Remote Config
-     * 需要先调用 fetchRemoteConfig()
+     * 激活已获取的 Remote Config 需要先调用 fetchRemoteConfig()
      *
      * @return 是否成功激活
      */
@@ -1133,8 +1107,7 @@ object FirebaseManager {
     }
 
     /**
-     * 获取所有 Remote Config 参数的键值对
-     * 用于调试和验证配置
+     * 获取所有 Remote Config 参数的键值对 用于调试和验证配置
      *
      * @return 所有配置参数的 Map，键为参数名，值为参数值的字符串表示
      */
@@ -1142,9 +1115,7 @@ object FirebaseManager {
         return try {
             val remoteConfig = getRemoteConfig() ?: return emptyMap()
             val allConfig = remoteConfig.all
-            allConfig.entries.associate { entry ->
-                entry.key to entry.value.asString()
-            }
+            allConfig.entries.associate { entry -> entry.key to entry.value.asString() }
         } catch (e: Exception) {
             logError("getAllRemoteConfigValues", "Failed to get all config values: ${e.message}")
             emptyMap()
@@ -1152,8 +1123,7 @@ object FirebaseManager {
     }
 
     /**
-     * 更新 Remote Config 配置
-     * 用于动态调整 Remote Config 的行为
+     * 更新 Remote Config 配置 用于动态调整 Remote Config 的行为
      *
      * @param enableRemoteConfig 是否启用 Remote Config
      * @param minFetchIntervalSeconds 最小获取间隔（秒），null 表示不修改
@@ -1178,10 +1148,7 @@ object FirebaseManager {
                         minimumFetchIntervalInSeconds = interval
                     }
                     remoteConfig.setConfigSettingsAsync(configSettings)
-                    LogUtils.d(
-                        "FirebaseManager",
-                        "Remote Config 获取间隔已更新: ${interval}秒"
-                    )
+                    LogUtils.d("FirebaseManager", "Remote Config 获取间隔已更新: ${interval}秒")
                     // 标记为已配置
                     remoteConfigConfigured.set(true)
                 }
@@ -1287,10 +1254,7 @@ object FirebaseManager {
     private fun putParamsToBundle(bundle: Bundle, parameters: Map<String, Any>) {
         // 验证参数数量
         if (parameters.size > MAX_PARAMS_PER_EVENT) {
-            logError(
-                "putParamsToBundle",
-                "参数数量超过限制: ${parameters.size} > $MAX_PARAMS_PER_EVENT"
-            )
+            logError("putParamsToBundle", "参数数量超过限制: ${parameters.size} > $MAX_PARAMS_PER_EVENT")
         }
 
         var paramCount = 0
@@ -1298,10 +1262,7 @@ object FirebaseManager {
             // 限制参数数量
             if (paramCount >= MAX_PARAMS_PER_EVENT) {
                 if (AppUtils.isAppDebug()) {
-                    LogUtils.w(
-                        "FirebaseManager",
-                        "参数数量已达上限 ($MAX_PARAMS_PER_EVENT)，跳过参数: $key"
-                    )
+                    LogUtils.w("FirebaseManager", "参数数量已达上限 ($MAX_PARAMS_PER_EVENT)，跳过参数: $key")
                 }
                 return@forEach
             }
@@ -1314,10 +1275,7 @@ object FirebaseManager {
                     } else {
                         val sanitizedKey = sanitizeParameterName(key)
                         if (AppUtils.isAppDebug()) {
-                            LogUtils.w(
-                                "FirebaseManager",
-                                "参数名不符合规范: '$key'，已规范化: '$sanitizedKey'"
-                            )
+                            LogUtils.w("FirebaseManager", "参数名不符合规范: '$key'，已规范化: '$sanitizedKey'")
                         }
                         sanitizedKey
                     }
