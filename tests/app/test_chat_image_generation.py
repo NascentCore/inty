@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
 from app.core.config import global_config_loaded_from_config_yaml
-from app.db.session import AsyncSessionLocal
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
 from app.services import chat_history_service
@@ -205,7 +204,11 @@ class TestChatHistoryService:
         pass
 
     @pytest.mark.asyncio
-    async def test_generate_chat_image_appends_agent_background_images(self, monkeypatch: pytest.MonkeyPatch):
+    async def test_generate_chat_image_appends_agent_background_images(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        db_session: AsyncSession,
+    ):
         """生成聊天图片后应将GCS图片追加到Agent的background_images"""
         fake_client = FakeGeminiClient()
         monkeypatch.setattr(
@@ -237,75 +240,75 @@ class TestChatHistoryService:
             lambda url: f"https://cdn.example.com/{url.split('/', 3)[-1]}",
         )
 
-        async with AsyncSessionLocal() as session:
-            user_id = f"user-{uuid.uuid4().hex[:8]}"
-            agent_id = f"agent-{uuid.uuid4().hex[:8]}"
+        session = db_session
+        user_id = f"user-{uuid.uuid4().hex[:8]}"
+        agent_id = f"agent-{uuid.uuid4().hex[:8]}"
 
-            user = models.User(
-                id=user_id,
-                readable_id=uuid.uuid4().hex[:8],
-                auth_type=AuthType.PHONE,
-                nickname="Chat Tester",
-                email="test@example.com",
-                system_language="en",
-                is_active=True,
-            )
-            session.add(user)
-            await session.commit()
+        user = models.User(
+            id=user_id,
+            readable_id=uuid.uuid4().hex[:8],
+            auth_type=AuthType.PHONE,
+            nickname="Chat Tester",
+            email="test@example.com",
+            system_language="en",
+            is_active=True,
+        )
+        session.add(user)
+        await session.commit()
 
-            agent = models.Agent(
-                id=agent_id,
-                readable_id=uuid.uuid4().hex[:8],
-                name="Chat Image Agent",
-                gender=Gender.FEMALE,
-                avatar="https://storage.googleapis.com/test-bucket/avatar.jpg",
-                background="https://storage.googleapis.com/test-bucket/background.jpg",
-                personality="gentle",
-                scenario="coffee shop",
-                intro="intro text",
-                opening="hello",
-                visibility=AgentVisibility.PUBLIC,
-                status=AgentStatus.APPROVED,
-                creator_id=user_id,
-                background_images=["gs://test-bucket/original.jpg"],
-            )
-            session.add(agent)
-            await session.commit()
-            await session.refresh(agent)
+        agent = models.Agent(
+            id=agent_id,
+            readable_id=uuid.uuid4().hex[:8],
+            name="Chat Image Agent",
+            gender=Gender.FEMALE,
+            avatar="https://storage.googleapis.com/test-bucket/avatar.jpg",
+            background="https://storage.googleapis.com/test-bucket/background.jpg",
+            personality="gentle",
+            scenario="coffee shop",
+            intro="intro text",
+            opening="hello",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+            background_images=["gs://test-bucket/original.jpg"],
+        )
+        session.add(agent)
+        await session.commit()
+        await session.refresh(agent)
 
-            agent_data = {
-                "id": agent_id,
-                "personality": agent.personality,
-                "scenario": agent.scenario,
-                "intro": agent.intro,
-                "background": agent.background,
-            }
+        agent_data = {
+            "id": agent_id,
+            "personality": agent.personality,
+            "scenario": agent.scenario,
+            "intro": agent.intro,
+            "background": agent.background,
+        }
 
-            session_id = "session-test"
-            message_id = 1001
+        session_id = "session-test"
+        message_id = 1001
 
-            result = await image_generation_service.generate_chat_image_with_gemini(
-                db=session,
-                session_id=session_id,
-                message_id=message_id,
-                agent_data=agent_data,
-                message_content="please draw an image",
-                history_count=5,
-            )
+        result = await image_generation_service.generate_chat_image_with_gemini(
+            db=session,
+            session_id=session_id,
+            message_id=message_id,
+            agent_data=agent_data,
+            message_content="please draw an image",
+            history_count=5,
+        )
 
-            assert result["message_id"] == message_id
-            assert result["image_url"].startswith("https://cdn.example.com/")
-            mock_update_metadata.assert_awaited()
+        assert result["message_id"] == message_id
+        assert result["image_url"].startswith("https://cdn.example.com/")
+        mock_update_metadata.assert_awaited()
 
-            await session.refresh(agent)
-            assert agent.background_images[0] == "gs://test-bucket/original.jpg"
-            assert len(agent.background_images) == 2
-            bucket = global_config_loaded_from_config_yaml.gcs.bucket
-            assert agent.background_images[1].startswith(f"gs://{bucket}/chat_images/")
+        await session.refresh(agent)
+        assert agent.background_images[0] == "gs://test-bucket/original.jpg"
+        assert len(agent.background_images) == 2
+        bucket = global_config_loaded_from_config_yaml.gcs.bucket
+        assert agent.background_images[1].startswith(f"gs://{bucket}/chat_images/")
 
-            await session.delete(agent)
-            await session.delete(user)
-            await session.commit()
+        await session.delete(agent)
+        await session.delete(user)
+        await session.commit()
 
 
 if __name__ == "__main__":
