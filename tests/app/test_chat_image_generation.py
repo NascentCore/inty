@@ -6,7 +6,8 @@ import uuid
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
 from app import models
 from app.core.config import global_config_loaded_from_config_yaml
@@ -19,6 +20,21 @@ from tests.fakes.gemini import FakeGeminiClient
 
 class TestImageGenerationService:
     """测试图片生成服务"""
+
+    @pytest.fixture
+    async def db_session(self):
+        engine = create_async_engine(
+            str(global_config_loaded_from_config_yaml.database.async_url),
+            pool_size=1,
+            max_overflow=0,
+            pool_pre_ping=True,
+        )
+        async_session = sessionmaker(
+            bind=engine, class_=AsyncSession, expire_on_commit=False
+        )
+        async with async_session() as session:
+            yield session
+        await engine.dispose()
 
     @pytest.mark.asyncio
     async def test_build_image_prompt(self):
