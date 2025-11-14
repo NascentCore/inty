@@ -1,6 +1,7 @@
 package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.AppColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +25,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -69,7 +69,7 @@ fun ChatInput(
                 )
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(horizontalPadding))
-                .background(colorResource(id = R.color.dark_purple_60_percent))
+                .background(AppColors.DarkPurpleOverlay60)
     ) {
         // 主输入区域
         Row(
