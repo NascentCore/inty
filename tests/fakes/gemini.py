@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from PIL import Image
@@ -25,12 +25,44 @@ class _FakeGeneratedImageContent:
     gcs_uri: str
 
 
+@dataclass
+class _FakeInlineData:
+    data: bytes
+    mime_type: str = "image/jpeg"
+
+
+@dataclass
+class _FakePart:
+    inline_data: _FakeInlineData
+
+
+@dataclass
+class _FakeContent:
+    parts: List[_FakePart]
+
+
+@dataclass
+class _FakeContentCandidate:
+    content: _FakeContent
+    finish_reason: Optional[str] = None
+    safety_ratings: List = field(default_factory=list)
+
+
+@dataclass
+class _FakeGenerateContentResponse:
+    candidates: List[_FakeContentCandidate]
+    prompt_feedback: Optional[object] = None
+
+
 class _FakeGeminiModels:
     def __init__(self, client: "FakeGeminiClient") -> None:
         self._client = client
 
     def generate_images(self, *, model: str, prompt: str, config):
         return self._client._generate_images(model=model, prompt=prompt, config=config)
+
+    def generate_content(self, *, model: str, contents, config):
+        return self._client._generate_content(model=model, contents=contents, config=config)
 
 
 class FakeGeminiClient:
@@ -71,6 +103,15 @@ class FakeGeminiClient:
 
         self._call_index += 1
         return _FakeGeneratedImageResponse(generated_images=generated_images)
+
+    def _generate_content(self, *, model: str, contents, config):
+        image_bytes = self._make_image_bytes(self._call_index)
+        inline_data = _FakeInlineData(data=image_bytes)
+        part = _FakePart(inline_data=inline_data)
+        content = _FakeContent(parts=[part])
+        candidate = _FakeContentCandidate(content=content)
+        self._call_index += 1
+        return _FakeGenerateContentResponse(candidates=[candidate])
 
     def download_image(self, url: str) -> bytes:
         """

@@ -1213,6 +1213,54 @@ def process_agent_image_urls(agent_data: dict) -> dict:
     return processed_data
 
 
+async def append_agent_background_image(
+    db: AsyncSession, agent_id: str, image_url: Optional[str]
+) -> bool:
+    """
+    将新的背景图 URL 追加到 Agent 的 background_images 列表中
+    """
+    if not agent_id or not image_url:
+        logger.warning(
+            f"append_agent_background_image 参数无效: agent_id={agent_id}, image_url={image_url}"
+        )
+        return False
+
+    normalized_url = image_transform_service.normalize_image_url_for_storage(image_url)
+    if not is_valid_gcs_url(normalized_url):
+        logger.warning(f"无效的背景图URL，无法追加: {normalized_url}")
+        return False
+
+    try:
+        query = select(models.Agent).where(
+            and_(models.Agent.id == agent_id, models.Agent.deleted_at.is_(None))
+        )
+        result = await db.execute(query)
+        db_agent = result.scalar_one_or_none()
+
+        if not db_agent:
+            logger.warning(f"Agent不存在或已删除，无法追加背景图: {agent_id}")
+            return False
+
+        existing_images = list(db_agent.background_images or [])
+        if normalized_url in existing_images:
+            logger.debug(f"背景图URL已存在，跳过追加: {normalized_url}")
+            return False
+
+        existing_images.append(normalized_url)
+        db_agent.background_images = existing_images
+
+        from sqlalchemy.orm.attributes import flag_modified
+
+        flag_modified(db_agent, "background_images")
+        await db.commit()
+        logger.info(f"成功为Agent {agent_id} 追加背景图: {normalized_url}")
+        return True
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"追加背景图失败 Agent {agent_id}: {str(e)}")
+        raise
+
+
 async def follow_agent(db: AsyncSession, agent_id: str, user_id: str) -> bool:
     """
     用户关注AI角色

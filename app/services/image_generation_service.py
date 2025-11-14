@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import upload_to_gcs
-from app.services import chat_history_service
+from app.services import agent_service, chat_history_service
 from app.services.image_transform_service import image_transform_service
 from app.utils.gemini import get_genai_client
 
@@ -387,6 +387,14 @@ class ImageGenerationService:
 
             if not success:
                 raise ValueError(f"更新消息 {message_id} 的 meta_data 失败")
+
+            agent_id = agent_data.get("id")
+            if agent_id:
+                await agent_service.append_agent_background_image(
+                    db=db, agent_id=agent_id, image_url=gcs_uri
+                )
+            else:
+                logger.warning("Agent数据缺少ID，无法追加生成图片到背景图历史")
 
             logger.info(
                 f"图片生成成功并更新到消息 meta_data，message_id={message_id}, cdn_url={cdn_url}"
