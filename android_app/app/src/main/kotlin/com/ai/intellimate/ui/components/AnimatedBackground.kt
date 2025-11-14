@@ -1,5 +1,6 @@
 package com.ai.intellimate.ui.components
 
+import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.utils.LogUtils
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -20,7 +21,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.media3.common.MediaItem
@@ -32,19 +36,27 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.size.Size
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
+
+// CDN 图片优化参数（与 AgentBackground 保持一致）
+// 使用固定参数确保预加载和实际使用的 URL 完全一致，提高缓存命中率
+// 80% 质量在清晰度和文件大小之间取得最佳平衡，相比 75% 质量提升明显但文件大小增加有限（约 5-8%）
+private const val CDN_IMAGE_QUALITY = 80
+private const val CDN_STATIC_BACKGROUND_WIDTH = 1080 // 固定宽度，确保预加载和实际使用 URL 一致
 
 /** 判断 URL 是否为视频格式 */
 private fun isVideoUrl(url: String?): Boolean {
     if (url.isNullOrBlank()) return false
     val lowerUrl = url.lowercase()
     return lowerUrl.endsWith(".mp4") ||
-        lowerUrl.endsWith(".webm") ||
-        lowerUrl.contains(".mp4?") ||
-        lowerUrl.contains(".webm?")
+            lowerUrl.endsWith(".webm") ||
+            lowerUrl.contains(".mp4?") ||
+            lowerUrl.contains(".webm?")
 }
 
 /** 视频背景播放组件
@@ -69,7 +81,11 @@ fun AnimatedBackground(
     val context = LocalContext.current
     val videoCacheManager = remember { VideoCacheManager.getInstance(context) }
 
-    var showStaticImage by remember { mutableStateOf(false) }
+    // 关键修复：立即显示静态图（如果有），避免黑屏
+    // 初始状态：如果有静态图URL，立即显示；如果有视频URL且有静态图，也立即显示作为占位符
+    var showStaticImage by remember(videoUrl, staticImageUrl) {
+        mutableStateOf(staticImageUrl != null && (videoUrl == null || isVideoUrl(videoUrl)))
+    }
     var videoPrepared by remember { mutableStateOf(false) }
     var videoFirstFrameRendered by remember { mutableStateOf(false) } // 视频第一帧是否已渲染
     var targetStaticImageAlpha by remember { mutableFloatStateOf(1f) } // 静态图目标透明度，用于动画
@@ -140,55 +156,49 @@ fun AnimatedBackground(
         LogUtils.d("AnimatedBackground - [URL变化] 状态已重置: showStaticImage=$showStaticImage, videoPrepared=false")
     }
 
-    // 确保视频第一帧已渲染：视频准备好后，等待第一帧渲染完成
-    // 关键修复：确保在 videoPrepared 变为 true 时能正确触发
+    // 确保视频第一帧已渲染：视频准备好后，立即触发第一帧渲染
+    // 关键修复：使用更短的延迟，并立即触发第一帧显示
     LaunchedEffect(videoPrepared, exoPlayer, videoUrl) {
         LogUtils.d("AnimatedBackground - [第一帧渲染] videoPrepared=$videoPrepared, exoPlayer=${exoPlayer != null}, videoUrl=$videoUrl, videoFirstFrameRendered=$videoFirstFrameRendered")
-        if (videoPrepared && exoPlayer != null && videoUrl != null) {
+        if (videoPrepared && exoPlayer != null && videoUrl != null && !videoFirstFrameRendered) {
             // 确保视频显示第一帧（不播放）
             exoPlayer?.seekTo(0)
             exoPlayer?.playWhenReady = false
             LogUtils.d("AnimatedBackground - [第一帧渲染] 设置视频到第一帧，playWhenReady=false")
 
-            // 等待更长时间，确保第一帧已完全渲染到屏幕上
-            kotlinx.coroutines.delay(200)
-            videoFirstFrameRendered = true
-            LogUtils.d("AnimatedBackground - [第一帧渲染] ✅ 视频第一帧已渲染完成 (videoPrepared=$videoPrepared, exoPlayer=${exoPlayer != null})")
+            // 关键修复：使用更短的延迟（50ms），快速响应
+            // onVideoSizeChanged 回调已经提供了更准确的信号，这里只需要短暂等待确保渲染完成
+            kotlinx.coroutines.delay(50) // 减少延迟，快速响应
+            if (videoPrepared && exoPlayer != null) {
+                videoFirstFrameRendered = true
+                LogUtils.d("AnimatedBackground - [第一帧渲染] ✅ 视频第一帧已渲染完成")
 
-            // 关键修复：视频第一帧渲染完成后，如果 shouldPlay 为 true 但视频未播放，立即触发播放
-            // 这解决了首次进入时，shouldPlay 在 videoPrepared 之前就为 true 的问题
-            if (shouldPlay && currentPlayCount > 0 && isCurrentPage && !isPlaying && !hasPlayCompleted) {
-                LogUtils.d("AnimatedBackground - [第一帧渲染] ✅ 视频第一帧渲染完成，触发延迟播放: shouldPlay=$shouldPlay, currentPlayCount=$currentPlayCount")
-                kotlinx.coroutines.delay(100) // 再等待一小段时间，确保第一帧完全稳定
-                if (currentPlayCount > 0 && !isPlaying && !hasPlayCompleted && exoPlayer != null) {
+                // 关键修复：第一帧渲染完成后，如果 shouldPlay 为 true，立即触发播放
+                // 这解决了视频加载完成后没有自动播放的问题
+                if (shouldPlay && currentPlayCount > 0 && isCurrentPage && !isPlaying && !hasPlayCompleted) {
+                    LogUtils.d("AnimatedBackground - [第一帧渲染] ✅ 第一帧渲染完成，立即触发播放: shouldPlay=$shouldPlay, currentPlayCount=$currentPlayCount")
                     actualPlayCount = 0
                     exoPlayer?.seekTo(0)
                     exoPlayer?.playWhenReady = true
-                    LogUtils.d("AnimatedBackground - [第一帧渲染] ✅ 已触发延迟播放，playWhenReady=true")
+                    LogUtils.d("AnimatedBackground - [第一帧渲染] ✅ 已触发播放，playWhenReady=true")
                 }
             }
-        } else {
+        } else if (videoUrl == null) {
             // 只有在 videoUrl 变化时才重置，避免在视频准备过程中误重置
-            if (videoUrl == null) {
-                videoFirstFrameRendered = false
-                LogUtils.d("AnimatedBackground - [第一帧渲染] videoUrl=null, 重置 videoFirstFrameRendered=false")
-            }
+            videoFirstFrameRendered = false
+            LogUtils.d("AnimatedBackground - [第一帧渲染] videoUrl=null, 重置 videoFirstFrameRendered=false")
         }
     }
 
-    // 处理静态图和视频的切换逻辑：视频第一帧渲染完成后，触发动画隐藏静态图
-    // 关键修复：不依赖 isVideoCached，只要视频第一帧已渲染就隐藏静态图
-    // 因为即使未缓存，视频也能正常播放，只是可能稍慢
+    // 处理静态图和视频的切换逻辑：视频第一帧渲染完成后，立即触发动画隐藏静态图
+    // 关键修复：不依赖 isVideoCached，只要视频第一帧已渲染就立即隐藏静态图
     LaunchedEffect(videoFirstFrameRendered, isVideo, videoUrl, staticImageUrl) {
         if (videoUrl != null && staticImageUrl != null && showStaticImage) {
-            // 如果视频第一帧已渲染，就触发动画隐藏静态图
-            // 不依赖 isVideoCached，因为即使未缓存，视频也能正常显示
+            // 如果视频第一帧已渲染，立即触发动画隐藏静态图（不等待额外延迟）
             if (isVideo && videoFirstFrameRendered) {
-                // 等待一小段时间，确保视频第一帧完全稳定
-                kotlinx.coroutines.delay(50)
-                // 设置目标透明度为 0，触发 Compose 动画
+                // 关键修复：立即触发淡出动画，不等待额外延迟
                 targetStaticImageAlpha = 0f
-                LogUtils.d("AnimatedBackground - [静态图切换] 触发静态图淡出动画 (videoFirstFrameRendered=$videoFirstFrameRendered)")
+                LogUtils.d("AnimatedBackground - [静态图切换] ✅ 立即触发静态图淡出动画 (videoFirstFrameRendered=$videoFirstFrameRendered)")
             }
         } else if (videoUrl != null && staticImageUrl == null) {
             // 没有静态图，直接显示视频
@@ -204,15 +214,15 @@ fun AnimatedBackground(
     // 使用 Compose 动画 API 实现平滑的 alpha 过渡
     // 当 targetStaticImageAlpha 变化时，自动执行动画
     val animatedAlpha by
-        animateFloatAsState(
-            targetValue = if (showStaticImage) targetStaticImageAlpha else 0f,
-            animationSpec =
-                tween(
-                    durationMillis = 300, // 300ms 的淡出动画
-                    easing = FastOutSlowInEasing,
-                ),
-            label = "staticImageAlpha",
-        )
+    animateFloatAsState(
+        targetValue = if (showStaticImage) targetStaticImageAlpha else 0f,
+        animationSpec =
+            tween(
+                durationMillis = 300, // 300ms 的淡出动画
+                easing = FastOutSlowInEasing,
+            ),
+        label = "staticImageAlpha",
+    )
 
     // 当动画完成后，如果 alpha 为 0，则隐藏静态图组件
     LaunchedEffect(animatedAlpha) {
@@ -269,6 +279,14 @@ fun AnimatedBackground(
                                                 if (!videoPrepared) {
                                                     videoPrepared = true
                                                     LogUtils.d("AnimatedBackground - 视频准备完成")
+
+                                                    // 关键修复：视频准备完成后，立即 seekTo(0) 触发第一帧渲染
+                                                    // 不等待延迟，直接触发第一帧显示
+                                                    seekTo(0)
+                                                    playWhenReady = false
+
+                                                    // 使用协程在后台等待第一帧渲染
+                                                    // 注意：这里不能直接使用协程，需要在外部 LaunchedEffect 中处理
                                                 }
                                             } else if (playbackState == Player.STATE_ENDED) {
                                                 isPlaying = false
@@ -301,6 +319,19 @@ fun AnimatedBackground(
                                             onIsPlayingChange?.invoke(playing)
                                         }
 
+                                        override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                                            // 关键修复：视频尺寸变化时，说明第一帧可能已经渲染
+                                            // 这是一个更准确的信号，比固定延迟更可靠
+                                            if (videoPrepared && !videoFirstFrameRendered && videoSize.width > 0 && videoSize.height > 0) {
+                                                LogUtils.d("AnimatedBackground - [第一帧渲染] onVideoSizeChanged 触发，视频尺寸: ${videoSize.width}x${videoSize.height}")
+                                                // 不在这里直接设置 videoFirstFrameRendered，让 LaunchedEffect 处理
+                                                // 但可以触发一次 seekTo(0) 确保第一帧显示
+                                                if (playWhenReady == false) {
+                                                    seekTo(0)
+                                                }
+                                            }
+                                        }
+
                                         override fun onPlayerError(
                                             error: androidx.media3.common.PlaybackException
                                         ) {
@@ -308,6 +339,7 @@ fun AnimatedBackground(
                                                 "AnimatedBackground - 视频播放错误: ${error.message}"
                                             )
                                             videoPrepared = false
+                                            videoFirstFrameRendered = false
                                         }
                                     }
                                 )
@@ -392,7 +424,7 @@ fun AnimatedBackground(
                             view.layoutParams = layoutParams
                         }
                     }
-                    
+
                     // 更新视频路径（如果变化）：当 videoPath 准备好后，从 URL 切换到缓存路径
                     val pathToUse = videoPath ?: videoUrl
                     if (exoPlayer != null) {
@@ -428,11 +460,11 @@ fun AnimatedBackground(
                 )
                 if (
                     isCurrentPage &&
-                        shouldPlay &&
-                        videoPrepared &&
-                        currentPlayCount > 0 &&
-                        exoPlayer != null &&
-                        !hasPlayCompleted
+                    shouldPlay &&
+                    videoPrepared &&
+                    currentPlayCount > 0 &&
+                    exoPlayer != null &&
+                    !hasPlayCompleted
                 ) {
                     // 如果视频正在播放中，则不处理（避免打断正在播放的视频）
                     if (!isPlaying) {
@@ -468,12 +500,12 @@ fun AnimatedBackground(
                 )
                 if (
                     isCurrentPage &&
-                        shouldPlay &&
-                        videoPrepared &&
-                        currentPlayCount > 0 &&
-                        exoPlayer != null &&
-                        !hasPlayCompleted &&
-                        !isPlaying
+                    shouldPlay &&
+                    videoPrepared &&
+                    currentPlayCount > 0 &&
+                    exoPlayer != null &&
+                    !hasPlayCompleted &&
+                    !isPlaying
                 ) {
                     LogUtils.d(
                         "AnimatedBackground - LifecycleResumeEffect: 强制播放视频，次数: $currentPlayCount"
@@ -483,10 +515,10 @@ fun AnimatedBackground(
                     exoPlayer?.playWhenReady = true
                 } else if (
                     isCurrentPage &&
-                        shouldPlay &&
-                        currentPlayCount > 0 &&
-                        exoPlayer != null &&
-                        !videoPrepared
+                    shouldPlay &&
+                    currentPlayCount > 0 &&
+                    exoPlayer != null &&
+                    !videoPrepared
                 ) {
                     // 如果视频还没准备好，等待一下再尝试
                     LogUtils.d("AnimatedBackground - LifecycleResumeEffect: 视频未准备好，等待...")
@@ -511,13 +543,34 @@ fun AnimatedBackground(
             // 在 Compose 层覆盖静态图，使用 Compose 动画实现平滑过渡
             // 关键：静态图作为占位符，覆盖在视频上方，视频加载完成后淡出
             if (showStaticImage && staticImageUrl != null) {
+                val density = LocalDensity.current
+                val configuration = LocalConfiguration.current
+
+                // 使用固定 CDN 参数，确保与预加载 URL 一致，提高缓存命中率
+                val staticImageRequest = remember(staticImageUrl) {
+                    val containerWidthPx =
+                        with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
+                    val containerHeightPx =
+                        with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
+
+                    ImageRequest.Builder(context)
+                        .data(
+                            getCdnImageUrl(
+                                staticImageUrl,
+                                width = CDN_STATIC_BACKGROUND_WIDTH, // 使用固定宽度，确保预加载和实际使用 URL 一致
+                                quality = CDN_IMAGE_QUALITY,
+                            ) ?: staticImageUrl
+                        )
+                        .size(Size(containerWidthPx, containerHeightPx))
+                        .crossfade(true) // 启用淡入淡出效果
+                        .build()
+                }
                 AsyncImage(
                     modifier = Modifier
                         .fillMaxWidth()
                         .fillMaxSize()
                         .alpha(animatedAlpha), // 使用动画的 alpha 值，alpha=0 时完全透明
-                    // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度，防止影响相邻 Page
-                    model = ImageRequest.Builder(context).data(staticImageUrl).build(),
+                    model = staticImageRequest,
                     contentDescription = null,
                     contentScale = contentScale, // 使用 Crop 确保不超出边界
                 )

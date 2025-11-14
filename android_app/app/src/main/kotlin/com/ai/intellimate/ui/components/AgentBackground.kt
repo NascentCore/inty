@@ -29,7 +29,13 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
 
-private const val CDN_IMAGE_QUALITY = 75
+// CDN 图片优化参数
+// 使用固定参数确保预加载和实际使用的 URL 完全一致，提高缓存命中率
+// 1080px 宽度适用于大多数 Android 设备（大多数设备宽度在 360-480dp，转换为 px 约 1080-1440px）
+// 80% 质量在清晰度和文件大小之间取得最佳平衡，相比 75% 质量提升明显但文件大小增加有限（约 5-8%）
+private const val CDN_IMAGE_QUALITY = 80
+private const val CDN_STATIC_BACKGROUND_WIDTH = 1080 // 固定宽度，确保预加载和实际使用 URL 一致
+
 private const val TOP_GRADIENT_HEIGHT_DP = 120
 private const val BOTTOM_GRADIENT_HEIGHT_DP = 300
 
@@ -78,98 +84,69 @@ fun AgentBackground(
     // 优化：同步检查缓存状态，避免延迟
     // 关键修复：首次安装时，即使未缓存，也应该在视频准备好后触发播放
     LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage) {
-        LogUtils.d(
-            "AgentBackground - [缓存检查] LaunchedEffect触发: agentId=${agentInfo?.id}, backgroundAnimatedUrl=$backgroundAnimatedUrl, isCurrentPage=$isCurrentPage, shouldPlayPageSwitch=$shouldPlayPageSwitch"
-        )
-
         if (backgroundAnimatedUrl != null && isCurrentPage) {
-            // 同步检查缓存状态（快速响应）
-            val cached = videoCacheManager.isCached(backgroundAnimatedUrl)
-            isVideoCached = cached
-            LogUtils.d("AgentBackground - [缓存检查] 视频缓存状态: $cached, URL: $backgroundAnimatedUrl")
-
-            // 关键修复：无论是否缓存，都应该触发首次播放
-            // 已缓存：立即触发页面切换播放（2次）
-            // 未缓存：也设置 shouldPlayPageSwitch，等视频准备好后播放
-            if (!shouldPlayPageSwitch) {
-                shouldPlayPageSwitch = true
-                LogUtils.d("AgentBackground - [缓存检查] ✅ 设置页面切换播放: shouldPlayPageSwitch=true, isVideoCached=$cached")
-            } else {
-                LogUtils.d("AgentBackground - [缓存检查] shouldPlayPageSwitch 已设置，保持状态: isVideoCached=$cached")
-            }
+            isVideoCached = videoCacheManager.isCached(backgroundAnimatedUrl)
+            LogUtils.d(
+                "AgentBackground - 视频缓存状态: $isVideoCached, URL: $backgroundAnimatedUrl"
+            )
         } else {
-            // 只有在没有视频URL或不在当前页面时才重置
-            shouldPlayPageSwitch = false
             isVideoCached = false
-            LogUtils.d("AgentBackground - [缓存检查] 重置状态: backgroundAnimatedUrl=$backgroundAnimatedUrl, isCurrentPage=$isCurrentPage")
         }
     }
 
-    // 加载状态时播放视频（1次）- 仅在普通loading时触发，不包含图片生成loading
-    // 优化：如果视频正在播放中，则不处理；如果视频未播放，则触发播放，并让视频播放完整到结束
-    LaunchedEffect(isLoading, backgroundAnimatedUrl, isVideoCached, isCurrentPage, isVideoPlaying) {
-        if (isLoading && backgroundAnimatedUrl != null && isVideoCached && isCurrentPage) {
-            // 如果视频正在播放中，则不处理
-            if (!isVideoPlaying) {
-                shouldPlayLoading = true
-                isLoadingTriggeredPlay = true
-                LogUtils.d(
-                    "AgentBackground - 设置加载播放: shouldPlayLoading=true, isLoadingTriggeredPlay=true"
-                )
-            } else {
-                LogUtils.d("AgentBackground - 视频正在播放中，跳过加载播放")
-            }
+    // 预加载视频（如果未缓存）
+    LaunchedEffect(backgroundAnimatedUrl, isVideoCached) {
+        if (backgroundAnimatedUrl != null && !isVideoCached && isCurrentPage) {
+            videoCacheManager.preloadVideo(backgroundAnimatedUrl)
         }
-        // 注意：loading 结束时，不立即停止播放，让视频播放到结束
-        // 状态重置在 onPlayComplete 中处理
     }
 
-    // 合并播放状态：页面切换播放优先于加载播放
-    // 注意：如果是因为 loading 触发的播放，即使 loading 结束，也继续播放到结束
-    val shouldPlay =
-        (shouldPlayPageSwitch || shouldPlayLoading || (isLoadingTriggeredPlay && isVideoPlaying)) &&
-            isCurrentPage
-    val finalPlayCount =
-        if (shouldPlayPageSwitch) VIDEO_FIRST_PLAY_COUNT
-        else if (shouldPlayLoading || isLoadingTriggeredPlay) VIDEO_MESSAGE_PLAY_COUNT
-        else VIDEO_MESSAGE_PLAY_COUNT
+    // 页面切换时触发播放
+    LaunchedEffect(isCurrentPage, isVideoCached) {
+        if (isCurrentPage && backgroundAnimatedUrl != null) {
+            shouldPlayPageSwitch = true
+        }
+    }
 
-    // 关键：在 Compose 层面添加裁剪，防止视频超出容器边界
-    // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度，防止影响相邻 Page
+    // 加载状态时触发播放
+    LaunchedEffect(isLoading) {
+        if (isLoading && backgroundAnimatedUrl != null && !isLoadingTriggeredPlay) {
+            shouldPlayLoading = true
+            isLoadingTriggeredPlay = true
+        } else if (!isLoading) {
+            isLoadingTriggeredPlay = false
+        }
+    }
+
     Box(
         modifier = modifier
-            .fillMaxWidth()
             .fillMaxSize()
             .clipToBounds()
     ) {
-        // 如果有背景视频URL，始终渲染 AnimatedBackground（内部会处理静态图占位符）
         if (backgroundAnimatedUrl != null) {
+            // 有背景视频，使用 AnimatedBackground 组件
             AnimatedBackground(
                 videoUrl = backgroundAnimatedUrl,
                 staticImageUrl = staticImageUrl,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxSize(),
-                contentScale = contentScale, // 统一使用 Crop
-                shouldPlay = shouldPlay,
-                playCount = finalPlayCount,
-                isVideoCached = isVideoCached,
                 isCurrentPage = isCurrentPage,
+                shouldPlay = shouldPlayPageSwitch || shouldPlayLoading,
+                playCount = if (shouldPlayPageSwitch) VIDEO_FIRST_PLAY_COUNT else VIDEO_MESSAGE_PLAY_COUNT,
                 onPlayComplete = {
-                    shouldPlayPageSwitch = false
-                    shouldPlayLoading = false
-                    if (isLoadingTriggeredPlay) {
-                        isLoadingTriggeredPlay = false
+                    if (shouldPlayPageSwitch) {
+                        shouldPlayPageSwitch = false
+                    }
+                    if (shouldPlayLoading) {
+                        shouldPlayLoading = false
                     }
                     onPlayComplete()
                 },
-                onIsPlayingChange = { playing -> isVideoPlaying = playing },
+                contentScale = contentScale,
             )
         } else if (staticImageUrl != null) {
             // 没有背景视频，只显示静态图片
-            // 构建优化的图片请求，使用 CDN 根据容器尺寸生成
+            // 使用固定 CDN 参数，确保与预加载 URL 一致
             val staticImageRequest =
-                remember(staticImageUrl, containerWidthDp, containerHeightDp, density) {
+                remember(staticImageUrl) {
                     val containerWidthPx = with(density) { containerWidthDp.dp.toPx().toInt() }
                     val containerHeightPx = with(density) { containerHeightDp.dp.toPx().toInt() }
 
@@ -177,7 +154,7 @@ fun AgentBackground(
                         .data(
                             getCdnImageUrl(
                                 staticImageUrl,
-                                width = containerWidthPx,
+                                width = CDN_STATIC_BACKGROUND_WIDTH, // 使用固定宽度，确保预加载和实际使用 URL 一致
                                 quality = CDN_IMAGE_QUALITY,
                             ) ?: staticImageUrl
                         )
@@ -201,27 +178,34 @@ fun AgentBackground(
         if (showGradients) {
             // 顶部渐变遮罩
             Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(TOP_GRADIENT_HEIGHT_DP.dp)
-                        .background(
-                            brush =
-                                Brush.verticalGradient(listOf(Color(0xFF000000), Color(0x00000000)))
-                        )
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(TOP_GRADIENT_HEIGHT_DP.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.3f),
+                                Color.Transparent,
+                            ),
+                        ),
+                    )
+                    .align(Alignment.TopCenter)
             )
 
             // 底部渐变遮罩
             Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(BOTTOM_GRADIENT_HEIGHT_DP.dp)
-                        .background(
-                            brush =
-                                Brush.verticalGradient(listOf(Color(0x001C1523), Color(0xFF1C1523)))
-                        )
-                        .align(Alignment.BottomCenter)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(BOTTOM_GRADIENT_HEIGHT_DP.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.5f),
+                            ),
+                        ),
+                    )
+                    .align(Alignment.BottomCenter)
             )
         }
     }

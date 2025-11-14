@@ -336,18 +336,25 @@ object UnifiedStartupManager {
                     LogUtils.i("UnifiedStartupManager - 推荐agents同步成功: ${agents.size}个")
 
                     // 异步预加载资源，不阻塞启动流程
+                    // 关键优化：优先预加载静态背景图（避免黑屏），然后预加载视频和音频
                     val contextForPreload = applicationContext
                     if (contextForPreload != null) {
                         CoroutineScope(Dispatchers.IO).launch {
                             try {
-                                // 预加载关键音频
+                                // 第一步：优先预加载关键静态背景图（前10个，避免黑屏）
+                                // 这是最重要的，因为静态图是用户首先看到的
+                                ImagePreloadManager.preloadCriticalImages(agents, 10)
+
+                                // 第二步：预加载关键音频（前5个）
                                 AudioPreloadManager.preloadCriticalOpeningAudios(agents, 5)
 
-                                // 预加载背景视频（backgroundAnimatedUrl）
+                                // 第三步：预加载关键背景视频（前5个）
                                 preloadBackgroundVideos(contextForPreload, agents, 5)
 
-                                // 最后预加载所有资源，优化后续页面渲染
+                                // 第四步：预加载所有图片资源（包括静态背景图）
                                 ImagePreloadManager.preloadAgentsImages(agents, 5)
+
+                                // 第五步：预加载所有音频资源
                                 AudioPreloadManager.preloadAgentsOpeningAudios(agents, 3)
                             } catch (e: Exception) {
                                 LogUtils.e("UnifiedStartupManager - 资源预加载异常: ${e.message}")
@@ -387,18 +394,27 @@ object UnifiedStartupManager {
                     LogUtils.i("UnifiedStartupManager - 聊天agents同步成功: ${agents.size}个")
 
                     // 异步预加载资源，不阻塞启动流程
+                    // 关键优化：chatAgents是核心数据，需要更积极的预加载策略
+                    // 优先预加载静态背景图（避免黑屏），然后预加载视频和音频
                     val contextForPreload = applicationContext
                     if (contextForPreload != null) {
                         CoroutineScope(Dispatchers.IO).launch {
                             try {
-                                // 预加载关键音频
+                                // 第一步：优先预加载关键静态背景图（前10个，避免黑屏）
+                                // chatAgents是核心数据，需要更积极的预加载
+                                ImagePreloadManager.preloadCriticalImages(agents, 10)
+
+                                // 第二步：预加载关键音频（前5个）
                                 AudioPreloadManager.preloadCriticalOpeningAudios(agents, 5)
 
-                                // 预加载背景视频（backgroundAnimatedUrl）
+                                // 第三步：预加载关键背景视频（前5个）
                                 preloadBackgroundVideos(contextForPreload, agents, 5)
 
-                                // 最后预加载所有资源，优化后续页面渲染
+                                // 第四步：预加载所有图片资源（包括静态背景图）
+                                // chatAgents通常有20个，预加载所有以确保流畅体验
                                 ImagePreloadManager.preloadAgentsImages(agents, 5)
+
+                                // 第五步：预加载所有音频资源
                                 AudioPreloadManager.preloadAgentsOpeningAudios(agents, 3)
                             } catch (e: Exception) {
                                 LogUtils.e("UnifiedStartupManager - 聊天agents资源预加载异常: ${e.message}")
