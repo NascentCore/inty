@@ -404,6 +404,321 @@ Firebase 服务通过以下方式自动初始化：
     - 为不同条件设置不同的值
 4. 发布配置：点击 **发布更改** 使配置生效
 
+### 10. Remote Config 自定义信号条件
+
+#### 10.1 什么是自定义信号条件
+
+**自定义信号（Custom Signals）** 是 Firebase Remote Config 的高级条件类型，允许你基于 **Firebase
+Analytics 的自定义事件或用户属性** 来动态分配参数值。
+
+与传统的条件（如随机百分比、用户属性）不同，自定义信号可以：
+
+- 基于用户行为（如完成特定事件、达到某个等级）
+- 基于用户属性（如订阅状态、用户类型）
+- 实现更精细的个性化配置
+
+#### 10.2 使用场景
+
+**适用于 AI 情感聊天应用的场景：**
+
+1. **基于用户活跃度**：为活跃用户（发送消息数 > 100）启用高级功能
+2. **基于订阅状态**：为 VIP 用户提供不同的配置值
+3. **基于用户行为**：为完成首次聊天的用户启用引导功能
+4. **基于用户属性**：为不同地区的用户提供本地化配置
+
+#### 10.3 实施步骤
+
+##### 步骤 1：在应用中设置用户属性或记录事件
+
+首先，确保在应用中设置了相关的用户属性或记录了相关事件：
+
+```kotlin
+// 示例 1：设置用户属性（订阅状态）
+FirebaseManager.setUserProperty(
+    FirebaseManager.UserProperties.SUBSCRIPTION_LEVEL,
+    "premium" // 或 "free", "plus"
+)
+
+// 示例 2：设置用户属性（用户类型）
+FirebaseManager.setUserProperty(
+    FirebaseManager.UserProperties.USER_TYPE,
+    "vip" // 或 "free"
+)
+
+// 示例 3：记录自定义事件（消息发送数）
+FirebaseManager.logEvent(
+    "message_sent",
+    FirebaseManager.safeEventParams(
+        "message_count" to totalMessageCount,
+        "agent_id" to agentId
+    )
+)
+
+// 示例 4：记录自定义事件（聊天完成）
+FirebaseManager.logEvent(
+    FirebaseManager.Events.CHAT_STARTED,
+    FirebaseManager.safeEventParams(
+        "is_first_chat" to isFirstChat,
+        "agent_id" to agentId
+    )
+)
+```
+
+##### 步骤 2：在 Firebase Console 中创建自定义信号条件
+
+1. **打开 Firebase Console**
+    - 进入 **Remote Config** > **条件** 标签页
+    - 点击 **"创建条件"** 或 **"Add condition"**
+
+2. **选择条件类型**
+    - 选择 **"自定义信号"** 或 **"Custom signal"**
+
+3. **配置条件规则**
+
+   **示例 A：基于用户属性（订阅状态）**
+   ```
+   条件名称: VIP 用户
+   条件类型: 自定义信号
+   信号类型: 用户属性
+   属性名称: subscription_level
+   运算符: 等于
+   值: premium
+   ```
+
+   **示例 B：基于用户属性（用户类型）**
+   ```
+   条件名称: 免费用户
+   条件类型: 自定义信号
+   信号类型: 用户属性
+   属性名称: user_type
+   运算符: 等于
+   值: free
+   ```
+
+   **示例 C：基于事件参数（消息数量）**
+   ```
+   条件名称: 活跃用户
+   条件类型: 自定义信号
+   信号类型: 事件参数
+   事件名称: message_sent
+   参数名称: message_count
+   运算符: 大于
+   值: 100
+   ```
+
+4. **支持的运算符**
+    - **等于** (`==`)：精确匹配
+    - **不等于** (`!=`)：不匹配
+    - **大于** (`>`)：数值比较
+    - **大于等于** (`>=`)：数值比较
+    - **小于** (`<`)：数值比较
+    - **小于等于** (`<=`)：数值比较
+    - **包含** (`contains`)：字符串包含
+    - **不包含** (`not contains`)：字符串不包含
+
+##### 步骤 3：将条件应用到 Remote Config 参数
+
+1. **编辑 Remote Config 参数**
+    - 在参数列表中，找到要配置的参数（如 `auto_enable_keep_talking`）
+    - 点击参数行的 **"条件"** 列
+
+2. **添加条件值**
+    - 点击 **"添加值"** 或 **"Add value"**
+    - 选择你创建的自定义信号条件
+    - 为该条件设置特定的参数值
+
+3. **完整示例：基于订阅状态的配置**
+
+   ```
+   参数: auto_enable_keep_talking
+   
+   默认值: false
+   
+   条件 1: VIP 用户（subscription_level == "premium"）
+   值: true
+   
+   条件 2: 免费用户（subscription_level == "free"）
+   值: false
+   ```
+
+##### 步骤 4：发布配置
+
+1. 点击 **"发布更改"** 或 **"Publish changes"**
+2. 配置会在几分钟内生效
+
+#### 10.4 实际应用示例
+
+##### 示例 1：基于订阅状态配置功能开关
+
+**场景**：为 VIP 用户默认启用 "Keep Talking" 功能
+
+```kotlin
+// 1. 在用户登录或订阅状态变更时设置用户属性
+fun onUserLogin(user: User) {
+    FirebaseManager.setUserProperty(
+        FirebaseManager.UserProperties.SUBSCRIPTION_LEVEL,
+        user.subscriptionLevel // "premium", "plus", "free"
+    )
+}
+
+// 2. 在 Firebase Console 中创建条件：
+//    条件名称: VIP 用户
+//    信号类型: 用户属性
+//    属性名称: subscription_level
+//    运算符: 等于
+//    值: premium
+
+// 3. 在 Remote Config 参数中应用条件：
+//    参数: auto_enable_keep_talking
+//    默认值: false
+//    VIP 用户条件: true
+
+// 4. 在应用中读取配置（代码已自动处理）
+//    SettingStateManager.initializeFromRemoteConfig() 会自动应用配置
+```
+
+##### 示例 2：基于用户活跃度配置功能
+
+**场景**：为活跃用户（发送消息数 > 100）启用新功能
+
+```kotlin
+// 1. 在发送消息时记录事件
+fun onMessageSent(agentId: String, totalMessageCount: Int) {
+    FirebaseManager.logEvent(
+        FirebaseManager.Events.MESSAGE_SENT,
+        FirebaseManager.safeEventParams(
+            "message_count" to totalMessageCount,
+            "agent_id" to agentId
+        )
+    )
+}
+
+// 2. 在 Firebase Console 中创建条件：
+//    条件名称: 活跃用户
+//    信号类型: 事件参数
+//    事件名称: message_sent
+//    参数名称: message_count
+//    运算符: 大于
+//    值: 100
+
+// 3. 在 Remote Config 参数中应用条件：
+//    参数: enable_advanced_features
+//    默认值: false
+//    活跃用户条件: true
+
+// 4. 在应用中读取配置
+lifecycleScope.launch {
+    FirebaseManager.fetchAndActivateRemoteConfig()
+    val enableAdvanced = FirebaseManager.getRemoteConfigBoolean("enable_advanced_features")
+    if (enableAdvanced) {
+        // 启用高级功能
+    }
+}
+```
+
+##### 示例 3：基于地区配置本地化内容
+
+**场景**：为不同地区的用户提供不同的欢迎消息
+
+```kotlin
+// 1. 在应用启动时设置用户地区属性（已自动设置）
+//    FirebaseManager.setDeviceInfo() 会自动设置 user_region
+
+// 2. 在 Firebase Console 中创建多个条件：
+//    条件 1: 美国用户（user_region == "US"）
+//    条件 2: 日本用户（user_region == "JP"）
+//    条件 3: 欧洲用户（user_region in ["GB", "DE", "FR"]）
+
+// 3. 在 Remote Config 参数中应用条件：
+//    参数: welcome_message
+//    默认值: "Welcome to Inty!"
+//    美国用户条件: "Welcome to Inty! Start chatting now."
+//    日本用户条件: "Intyへようこそ！チャットを始めましょう。"
+//    欧洲用户条件: "Bienvenue sur Inty! Commencez à discuter."
+
+// 4. 在应用中读取配置
+val welcomeMessage = FirebaseManager.getRemoteConfigString("welcome_message")
+```
+
+#### 10.5 注意事项
+
+1. **数据延迟**
+    - 用户属性或事件需要先发送到 Firebase Analytics
+    - 通常需要几分钟到几小时才能在 Remote Config 条件中使用
+    - 建议在设置用户属性后等待一段时间再测试
+
+2. **条件匹配**
+    - 如果用户同时满足多个条件，Remote Config 会使用**第一个匹配的条件**
+    - 建议按优先级顺序排列条件
+
+3. **默认值**
+    - 始终设置默认值，确保不满足任何条件时应用仍能正常工作
+    - 默认值会在网络不可用或条件未匹配时使用
+
+4. **测试建议**
+    - 使用 Firebase Console 的 **"测试设备"** 功能进行测试
+    - 在调试模式下设置 `minimumFetchIntervalInSeconds = 0` 以实时获取配置
+    - 使用 `FirebaseManager.getAllRemoteConfigValues()` 查看所有配置值
+
+5. **用户属性命名**
+    - 用户属性名称必须与 Firebase Analytics 中注册的属性名称完全一致
+    - 建议使用 `FirebaseManager.UserProperties` 中定义的常量
+
+6. **事件参数**
+    - 事件参数条件基于最近的事件数据
+    - 如果用户从未触发过该事件，条件不会匹配
+
+#### 10.6 调试和验证
+
+```kotlin
+// 1. 查看所有 Remote Config 值（调试模式）
+if (AppUtils.isAppDebug()) {
+    val allValues = FirebaseManager.getAllRemoteConfigValues()
+    LogUtils.d("RemoteConfig", "所有配置值: $allValues")
+}
+
+// 2. 验证用户属性是否已设置
+FirebaseManager.setUserProperty("test_property", "test_value")
+// 在 Firebase Console > Analytics > User Properties 中验证
+
+// 3. 验证事件是否已记录
+FirebaseManager.logEvent("test_event", mapOf("test_param" to "test_value"))
+// 在 Firebase Console > Analytics > Events 中验证
+
+// 4. 检查配置获取时间
+val lastFetchTime = FirebaseManager.getRemoteConfigLastFetchTime()
+LogUtils.d("RemoteConfig", "最后获取时间: $lastFetchTime")
+```
+
+#### 10.7 最佳实践
+
+1. **使用预定义的用户属性常量**
+   ```kotlin
+   // ✅ 推荐：使用预定义常量
+   FirebaseManager.setUserProperty(
+       FirebaseManager.UserProperties.SUBSCRIPTION_LEVEL,
+       "premium"
+   )
+   
+   // ❌ 不推荐：硬编码字符串
+   FirebaseManager.setUserProperty("subscription_level", "premium")
+   ```
+
+2. **在关键时机设置用户属性**
+    - 用户登录时：设置用户类型、订阅状态
+    - 订阅状态变更时：更新订阅等级
+    - 应用启动时：设置设备信息、地区信息
+
+3. **合理使用条件优先级**
+    - 将更具体的条件放在前面
+    - 将通用条件放在后面
+    - 默认值放在最后
+
+4. **监控和优化**
+    - 定期检查条件匹配率
+    - 根据数据调整条件规则
+    - 使用 A/B 测试验证配置效果
+
 ## 版本信息
 
 - Firebase BOM: 34.5.0
