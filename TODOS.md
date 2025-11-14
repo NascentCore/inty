@@ -3,32 +3,43 @@
 #### P0（必须本期完成）
 
 - [ ] OpenAPI 单一真源与 SDK 生成 **【工程量：3-5 人天】**
-  - [ ] 确认权威源（优先 `stainless.yml`），统一导出 `app/openapi.json` **【1 人天】**
+  - [x] 确认权威源（优先 `stainless.yml`），统一导出 `app/openapi.json` **【1 人天】**
     - *依据：需要梳理现有配置，统一导出逻辑，涉及多个工具链整合*
-  - [ ] 配置 TS/Kotlin/Python 自动生成与发布流水线 **【2-3 人天】**
+    - *现状：`scripts/generate_openapi_json.py` + PR 触发的 stainless workflow 已固定从 FastAPI 导出后推送 SDK*
+  - [x] 配置 TS/Kotlin/Python 自动生成与发布流水线 **【2-3 人天】**
     - *依据：需要配置 CI/CD 流水线，涉及多语言 SDK 生成和发布流程*
+    - *现状：`.github/workflows/stainless.yaml` 会在 PR/合并时上传 `app/openapi.json` 与 `app/stainless.yml`，已覆盖 TS/Kotlin SDK 同步*
   - [ ] 在 CI 中校验 API 变更需伴随 SDK 更新 **【0.5-1 人天】**
     - *依据：相对简单的 CI 规则配置*
-- [ ] API 版本化策略 **【工程量：2-3 人天】**
-  - [ ] 启用 `/api/v1` 路径；预留弃用与稳定期策略 **【1-1.5 人天】**
+    - *现状：尚无守卫，PR 仍可在未更新 SDK 的情况下修改 API*
+- [x] API 版本化策略 **【工程量：2-3 人天】**
+  - [x] 启用 `/api/v1` 路径；预留弃用与稳定期策略 **【1-1.5 人天】**
     - *依据：需要修改路由配置，添加版本前缀，设计弃用策略*
-  - [ ] 加入兼容层与路由别名，记录迁移变更 **【1-1.5 人天】**
+    - *现状：`app/api/constants.py`、`app/main.py` 已固定挂载 `/api/v1` 与 `/api/v2` 路由（`api_router` + `api_v2_router`）*
+  - [x] 加入兼容层与路由别名，记录迁移变更 **【1-1.5 人天】**
     - *依据：需要实现向后兼容，编写迁移文档*
+    - *现状：v1/v2 同时暴露并复用公共依赖，后续仅需文档宣导*
 - [ ] 统一鉴权 **【工程量：4-6 人天】**
   - [ ] Bearer + 刷新 Token 标准；轮换/失效处理 **【2-3 人天】**
     - *依据：需要实现 JWT 刷新机制，处理 token 轮换和失效逻辑*
+    - *现状：后端只签发一次性 access token（`create_access_token`），未实现 refresh/轮换*
   - [ ] Android 侧持久化与自动刷新对齐后端策略 **【2-3 人天】**
     - *依据：需要修改 Android 端存储和网络层，确保与后端策略一致*
+    - *现状：`AuthInterceptor` 在 401 时直接登出/重启，缺少自动刷新/续期流程*
 - [ ] 标准错误响应 **【工程量：2-3 人天】**
   - [ ] 固化 `{code, message, details, request_id}` 响应模型 **【1 人天】**
     - *依据：定义标准错误模型相对简单*
+    - *现状：`APIResponse` 仍只包含 `code/message/data`，无细分 `details/request_id` 字段*
   - [ ] 后端异常中间件与 HTTP 状态映射统一 **【1-2 人天】**
     - *依据：需要修改异常处理中间件，统一状态码映射*
+    - *现状：`error_handler.py` 已集中处理 Validation/JWT/DB，但仍返回旧结构，且未统一 request_id 注入*
 - [ ] 统一网络栈/SDK **【工程量：3-4 人天】**
   - [ ] Android 仅保留单一 SDK，移除双栈分裂 **【2-3 人天】**
     - *依据：需要重构 Android 网络层，移除重复实现，风险较高*
+    - *现状：`core/data` 同时依赖 `com.inty.api:inty-kotlin` 与传统 Retrofit (`NetServiceMgr`)，并存问题仍在*
   - [ ] 对齐拦截器、重试、超时、日志策略 **【1 人天】**
     - *依据：配置统一策略相对简单*
+    - *现状：Inty SDK 未复用 `UnifiedOkHttpClient` 的全部策略，Plan 需覆盖*
 - [ ] 合同测试 **【工程量：3-5 人天】**
   - [ ] 在 CI 中运行契约测试阻断破坏性变更 **【1-2 人天】**
     - *依据：需要配置 CI 集成契约测试工具*
@@ -40,16 +51,21 @@
 - [ ] 请求追踪与可观测性 **【工程量：4-6 人天】**
   - [ ] `x-request-id`/`traceparent` 贯穿 App⇄后端 **【2-3 人天】**
     - *依据：需要修改前后端网络层，确保请求 ID 传递，涉及多个组件*
+    - *现状：`x-request-id` 已由 Android 注入、FastAPI 日志消费，但尚未实现 `traceparent`/分布式追踪头*
   - [ ] 接入 OpenTelemetry Trace/Metrics/Logs **【2-3 人天】**
     - *依据：需要集成 OpenTelemetry 库，配置追踪和指标收集*
+    - *现状：依赖仅含 Sentry/Firebase，尚未引入 OpenTelemetry SDK*
 - [ ] 重试与幂等 **【工程量：3-4 人天】**
   - [ ] 写操作幂等键与 `Idempotency-Key` 规范 **【2-2.5 人天】**
     - *依据：需要设计幂等键机制，修改所有写接口*
+    - *现状：Android/后端均未生成或校验 `Idempotency-Key` 头*
   - [ ] 客户端指数退避 + 抖动策略 **【1-1.5 人天】**
     - *依据：需要实现重试算法，相对独立的功能*
+    - *现状：`UnifiedOkHttpClient` 仅做记录，未注入重试/退避逻辑*
 - [ ] 性能与可靠性 **【工程量：2-3 人天】**
   - [ ] HTTP/2 与 gzip 全面启用 **【1 人天】**
     - *依据：主要是配置修改，相对简单*
+    - *现状：`devops/nginx.conf` 仍以 `proxy_http_version 1.1` 运行，未启用 `http2`/`gzip`*
   - [ ] 分页/游标与确定性排序统一；限流/配额错误码 **【1-2 人天】**
     - *依据：需要统一分页逻辑，添加限流机制*
 - [ ] 媒体与流式 **【工程量：4-6 人天】**
@@ -57,6 +73,7 @@
     - *依据：需要优化媒体处理接口，涉及文件上传和 CDN 集成*
   - [ ] SSE/WebSocket 协议与心跳/重连/鉴权/限流规范 **【2-3 人天】**
     - *依据：需要实现完整的实时通信协议，包括连接管理和错误处理*
+    - *现状：`/api/v2/chat/completions` 仍拒绝 `stream` 参数，实时协议尚未落地*
 - [ ] 环境与配置一致性 **【工程量：1-2 人天】**
   - [ ] 统一 dev/staging/prod 基础 URL 与特性开关 **【1-2 人天】**
     - *依据：主要是配置管理，需要确保各环境一致性*
