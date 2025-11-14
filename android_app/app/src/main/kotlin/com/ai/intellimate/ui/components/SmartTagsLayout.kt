@@ -4,20 +4,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
@@ -35,36 +32,38 @@ fun SmartTagsLayout(
         Arrangement.spacedBy(if (isCardTag) 3.dp else 6.dp),
 ) {
     val density = LocalDensity.current
-    var availableWidth by remember { mutableFloatStateOf(0f) }
 
-    // 优化性能，避免不必要的重组
-    val visibleTags =
-        remember(tags, availableWidth, maxLines) {
-            if (availableWidth > 0) {
+    // 使用 BoxWithConstraints 在布局阶段就获取可用宽度，避免闪动
+    // 这是最简单高效的方案，不需要估算或等待 onGloballyPositioned
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        // 在布局阶段就获取到实际可用宽度（px）
+        val availableWidthPx = with(density) { constraints.maxWidth.toFloat() }
+
+        // 计算可见的 tags，使用实际宽度
+        val visibleTags = remember(tags, availableWidthPx, maxLines, density) {
+            if (availableWidthPx > 0) {
                 calculateVisibleTags(
                     tags = tags,
-                    availableWidth = availableWidth,
+                    availableWidth = availableWidthPx,
                     density = density,
                     maxLines = maxLines,
                 )
             } else {
-                tags // 初始时显示所有标签，避免空白
+                emptyList()
             }
         }
 
-    FlowRow(
-        modifier =
-            modifier.fillMaxWidth().onGloballyPositioned { layoutCoordinates ->
-                availableWidth = layoutCoordinates.size.width.toFloat()
-            },
-        horizontalArrangement = horizontalArrangement,
-        maxItemsInEachRow = Int.MAX_VALUE,
-    ) {
-        visibleTags.forEach { tag ->
-            if (isCardTag) {
-                LiteTagItem(tag)
-            } else {
-                TagItem(text = tag)
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = horizontalArrangement,
+            maxItemsInEachRow = Int.MAX_VALUE,
+        ) {
+            visibleTags.forEach { tag ->
+                if (isCardTag) {
+                    LiteTagItem(tag)
+                } else {
+                    TagItem(text = tag)
+                }
             }
         }
     }
@@ -119,7 +118,8 @@ private fun estimateTagWidth(text: String, density: Density): Float {
 private fun TagItem(text: String) {
     Box(
         modifier =
-            Modifier.background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
+            Modifier
+                .background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
                 .border(
                     width = 1.dp,
                     brush =
@@ -148,7 +148,8 @@ private fun TagItem(text: String) {
 private fun LiteTagItem(text: String) {
     Box(
         modifier =
-            Modifier.background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
+            Modifier
+                .background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
                 .border(
                     width = .5.dp,
                     brush =
