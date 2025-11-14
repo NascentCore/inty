@@ -5,8 +5,9 @@ import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.store.IntySetting
-import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.design.ui.HeartBottomAppBar
+import ai.sxwl.android.design.ui.HeartBottomTabItem
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -14,19 +15,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -34,21 +26,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil3.compose.AsyncImage
 import com.ai.intellimate.agent.generate.CreateRoleActivity
 import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.chat.ChatPageContainer
@@ -91,14 +79,18 @@ fun HomeScreen(
 
     Scaffold(
         modifier =
-            modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
+            modifier
+                .fillMaxSize()
+                .background(HeartColor.primaryColor)
+                .navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
             val context = LocalContext.current
-            AppBottomNavigationBar(
+            HeartBottomAppBar(
                 modifier = Modifier,
                 selectedTab = selectedTab.value.ordinal,
-                onSelectTab = { tabIndex ->
+                tabItems = homeTabItems,
+                onTabSelected = { tabIndex ->
                     handleTabSelectionWithLauncher(
                         tabIndex,
                         context,
@@ -106,6 +98,9 @@ fun HomeScreen(
                         createRoleLauncher,
                     )
                 },
+                iconSize = TabIconSize,
+                textSize = (TabIconSize.value * 0.45f).sp,
+                height = BottomNavigationBarHeight,
             )
         },
     ) { innerPadding ->
@@ -229,7 +224,7 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Conversation -> {
-            ConversationsTabContent()
+            MessagesTabContent()
         }
 
         HomeTabIndex.Create -> {
@@ -276,9 +271,9 @@ private fun ChatTabContent(
     )
 }
 
-/** 会话Tab内容 */
+/** 会话列表Tab内容 */
 @Composable
-private fun ConversationsTabContent() {
+private fun MessagesTabContent() {
     val context = LocalContext.current
     val messagesViewModel: MessagesViewModel = viewModel()
 
@@ -410,86 +405,39 @@ private fun ProfileTabContent(
     )
 }
 
-private data class TabInfo(val icon: Int, val iconSelected: Int, val label: Int)
-
-private val MAIN_TAB_LIST =
+private val homeTabItems =
     listOf(
-        TabInfo(R.drawable.tab_icon_home, R.drawable.tab_icon_home_selected, R.string.tab_home),
-        TabInfo(
-            R.drawable.tab_icon_messages,
-            R.drawable.tab_icon_messages_selected,
-            R.string.tab_messages,
+        HeartBottomTabItem(
+            index = 0,
+            selectedIcon = R.drawable.tab_icon_home_selected,
+            unselectedIcon = R.drawable.tab_icon_home,
+            labelResId = R.string.tab_home,
         ),
-        TabInfo(
-            R.drawable.tab_icon_create,
-            R.drawable.tab_icon_create,
-            R.string.tab_create,
-        ), // Create tab 不需要文字标签
-        TabInfo(
-            R.drawable.tab_icon_explore,
-            R.drawable.tab_icon_explore_selected,
-            R.string.tab_explore,
+        HeartBottomTabItem(
+            index = 1,
+            selectedIcon = R.drawable.tab_icon_messages_selected,
+            unselectedIcon = R.drawable.tab_icon_messages,
+            labelResId = R.string.tab_messages,
         ),
-        TabInfo(R.drawable.tab_icon_me, R.drawable.tab_icon_me_selected, R.string.tab_me),
+        HeartBottomTabItem(
+            index = 2,
+            selectedIcon = R.drawable.tab_icon_create,
+            unselectedIcon = R.drawable.tab_icon_create,
+            labelResId = R.string.tab_create,
+        ),
+        HeartBottomTabItem(
+            index = 3,
+            selectedIcon = R.drawable.tab_icon_explore_selected,
+            unselectedIcon = R.drawable.tab_icon_explore,
+            labelResId = R.string.tab_explore,
+        ),
+        HeartBottomTabItem(
+            index = 4,
+            selectedIcon = R.drawable.tab_icon_me_selected,
+            unselectedIcon = R.drawable.tab_icon_me,
+            labelResId = R.string.tab_me,
+        ),
     )
 
 val BottomNavigationBarHeight = 64.dp
-
-@Composable
-private fun AppBottomNavigationBar(
-    modifier: Modifier,
-    selectedTab: Int,
-    onSelectTab: (Int) -> Unit,
-) {
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .background(HeartColor.primaryColor)
-                .height(BottomNavigationBarHeight),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        MAIN_TAB_LIST.forEachIndexed { index, tab ->
-            BottomNavigationBarItem(
-                modifier =
-                    Modifier.fillMaxHeight().weight(1f).noRippleClickable { onSelectTab(index) },
-                tabInfo = tab,
-                selected = (index == selectedTab),
-            )
-        }
-    }
-}
-
 val TabIconSize = 26.dp
-
-@Composable
-private fun BottomNavigationBarItem(modifier: Modifier, tabInfo: TabInfo, selected: Boolean) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Bottom,
-    ) {
-        AsyncImage(
-            modifier = Modifier.size(TabIconSize),
-            model = if (selected) tabInfo.iconSelected else tabInfo.icon,
-            contentScale = ContentScale.Fit, // 保持图片宽高比不变
-            alignment = Alignment.Center,
-            contentDescription = null,
-        )
-
-        val spacerRatio = 0.05f
-        val spacerHeight = TabIconSize.value * spacerRatio
-        Spacer(
-            modifier = Modifier.height(spacerHeight.dp)
-        ) // Vertical spacing between icon and text
-
-        val tabTextFontSizeRatio = 0.45f
-        val tabTextFontSize = TabIconSize.value * tabTextFontSizeRatio
-        Text(
-            text = stringResource(tabInfo.label),
-            fontSize = tabTextFontSize.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = if (selected) Color(0xFF9C27B0) else Color.White, // 选中时使用紫色，未选中时使用白色
-        )
-    }
-}
