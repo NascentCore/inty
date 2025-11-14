@@ -90,6 +90,16 @@ object IntySetting {
         return curUserSetting.decodeBool("show_keep_talking", false)
     }
 
+    /** 检查用户是否手动设置过 Keep Talking（用于判断是否使用 Remote Config 默认值） */
+    fun hasUserSetKeepTalking(): Boolean {
+        return curUserSetting.decodeBool("user_set_keep_talking", false)
+    }
+
+    /** 标记用户已手动设置过 Keep Talking */
+    fun markUserSetKeepTalking() {
+        curUserSetting.putBoolean("user_set_keep_talking", true)
+    }
+
     /** 自动播放语音消息（全局设置，默认开启） */
     fun setAutoPlayAudio(play: Boolean) {
         curUserSetting.putBoolean("auto_play_audio", play)
@@ -98,6 +108,16 @@ object IntySetting {
     fun isAutoPlayAudio(): Boolean {
         // 默认值为true（开启）
         return curUserSetting.decodeBool("auto_play_audio", true)
+    }
+
+    /** 检查用户是否手动设置过 Auto Play Voice（用于判断是否使用 Remote Config 默认值） */
+    fun hasUserSetAutoPlayVoice(): Boolean {
+        return curUserSetting.decodeBool("user_set_auto_play_voice", false)
+    }
+
+    /** 标记用户已手动设置过 Auto Play Voice */
+    fun markUserSetAutoPlayVoice() {
+        curUserSetting.putBoolean("user_set_auto_play_voice", true)
     }
 
     // region Premium model相关设置

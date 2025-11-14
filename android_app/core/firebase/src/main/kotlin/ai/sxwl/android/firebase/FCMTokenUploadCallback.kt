@@ -3,8 +3,8 @@ package ai.sxwl.android.firebase
 /**
  * FCM Token upload callback interface
  *
- * Used to decouple FCMService (infrastructure layer) from UserService (data layer) Implementation
- * should be provided by the application layer
+ * Used to decouple FCMService (infrastructure layer) from UserService (data layer)
+ * Implementation should be provided by the application layer
  */
 interface FCMTokenUploadCallback {
     /**

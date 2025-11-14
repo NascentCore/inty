@@ -48,12 +48,12 @@ import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
-import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -123,7 +123,7 @@ class MainActivity : BaseActivity() {
             // 等待启动管理器完成必要初始化（但不等缓存数据）
             while (
                 UnifiedStartupManager.startupState.value ==
-                    UnifiedStartupManager.StartupState.Initializing
+                UnifiedStartupManager.StartupState.Initializing
             ) {
                 delay(50) // 50ms检查一次，更快响应
             }
@@ -150,7 +150,7 @@ class MainActivity : BaseActivity() {
                         BillingErrorHandler.handleBillingEvent(
                             event,
                             this@MainActivity,
-                            this@MainActivity,
+                            this@MainActivity
                         )
                     }
                 }
@@ -177,16 +177,15 @@ class MainActivity : BaseActivity() {
         val showSettings by mainViewModel.showSettings.collectAsState()
 
         // 通知权限申请 Launcher（Android 13+）
-        val notificationPermissionLauncher =
-            rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.RequestPermission()
-            ) { isGranted ->
-                if (isGranted) {
-                    LogUtils.i("MainActivity", "通知权限已授予")
-                } else {
-                    LogUtils.w("MainActivity", "通知权限被拒绝")
-                }
+        val notificationPermissionLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (isGranted) {
+                LogUtils.i("MainActivity", "通知权限已授予")
+            } else {
+                LogUtils.w("MainActivity", "通知权限被拒绝")
             }
+        }
 
         // 在首次显示时执行初始化操作
         LaunchedEffect(Unit) {
@@ -242,9 +241,9 @@ class MainActivity : BaseActivity() {
             showSettings -> {
                 // 显示设置界面
                 com.ai.intellimate.settings.SettingContent(
-                    modifier =
-                        Modifier.fillMaxSize()
-                            .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
                     onBack = { mainViewModel.hideSettings() },
                     onLogout = { isDelete ->
                         // 使用MainViewModel的logout方法
@@ -390,7 +389,10 @@ class MainActivity : BaseActivity() {
 
 /** Splash 登录界面 - 集成 Google 登录按钮和隐私政策 */
 @Composable
-private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainViewModel) {
+private fun SplashLoginUI(
+    modifier: Modifier = Modifier,
+    mainViewModel: MainViewModel,
+) {
     val context = LocalContext.current
     var isLoading by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
@@ -416,10 +418,9 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
 
                         // 直接调用后端登录接口
                         val userApi = ai.sxwl.android.data.api.NetServiceMgr.getUserApi()
-                        val loginResult =
-                            userApi.loginByGoogle(
-                                ai.sxwl.android.data.api.model.GoogleLoginRequest(idToken = idToken)
-                            )
+                        val loginResult = userApi.loginByGoogle(
+                            ai.sxwl.android.data.api.model.GoogleLoginRequest(idToken = idToken)
+                        )
 
                         when (loginResult) {
                             is com.architecture.httplib.core.HttpResult.Success -> {
@@ -439,8 +440,8 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
                                         "user_id" to userProfile.id,
                                         "user_name" to (userProfile.nickname),
                                         "login_method" to "google",
-                                        "timestamp" to System.currentTimeMillis(),
-                                    ),
+                                        "timestamp" to System.currentTimeMillis()
+                                    )
                                 )
 
                                 // 登录成功后，主动获取并上报 FCM Token
@@ -449,8 +450,8 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
                                 // 检查用户信息是否完整（年龄和性别）
                                 val needsRegInfo =
                                     userProfile.gender.isNullOrEmpty() ||
-                                        userProfile.ageGroup.isNullOrEmpty() ||
-                                        userProfile.ageGroup == "<18"
+                                            userProfile.ageGroup.isNullOrEmpty() ||
+                                            userProfile.ageGroup == "<18"
 
                                 // 显示登录成功提示
                                 ToastUtils.showShort(R.string.login_successfully)
@@ -467,9 +468,7 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
                                     try {
                                         UnifiedStartupManager.syncUserCreatedAgents()
                                     } catch (e: Exception) {
-                                        LogUtils.e(
-                                            "MainActivity - 登录成功后加载用户自建agents失败: ${e.message}"
-                                        )
+                                        LogUtils.e("MainActivity - 登录成功后加载用户自建agents失败: ${e.message}")
                                     }
                                 }
 
@@ -507,22 +506,28 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
                                 val errorMessage =
                                     context.getString(R.string.no_credentials_available)
                                 LogUtils.e("Credential Manager sign-in failed: $errorMessage")
-                                coroutineScope.launch { ToastUtils.showShort(errorMessage) }
+                                coroutineScope.launch {
+                                    ToastUtils.showShort(errorMessage)
+                                }
                             }
 
                             is androidx.credentials.exceptions.GetCredentialException -> {
                                 val errorMessage = context.getString(R.string.get_credential_failed)
                                 LogUtils.e("Credential Manager sign-in failed: $errorMessage")
-                                coroutineScope.launch { ToastUtils.showShort(errorMessage) }
+                                coroutineScope.launch {
+                                    ToastUtils.showShort(errorMessage)
+                                }
                             }
 
                             else -> {
                                 val errorMessage = context.getString(R.string.login_failed)
                                 LogUtils.e("Credential Manager sign-in failed: $errorMessage")
-                                coroutineScope.launch { ToastUtils.showShort(errorMessage) }
+                                coroutineScope.launch {
+                                    ToastUtils.showShort(errorMessage)
+                                }
                             }
                         }
-                    },
+                    }
                 )
             } finally {
                 isLoading = false
@@ -539,11 +544,14 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
             contentDescription = "",
         )
         Column(
-            modifier = Modifier.align(Alignment.BottomCenter),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .align(Alignment.BottomCenter),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
-                modifier = Modifier.size(120.dp).clip(RoundedCornerShape(10.dp)),
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(RoundedCornerShape(10.dp)),
                 painter = painterResource(R.drawable.icon_splash_icon),
                 contentDescription = "",
                 contentScale = ContentScale.Crop,
@@ -581,11 +589,16 @@ private fun SplashUI(modifier: Modifier = Modifier, onSplashComplete: () -> Unit
             contentDescription = "",
         )
         Column(
-            modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
             Image(
-                modifier = Modifier.size(120.dp).clip(RoundedCornerShape(10.dp)),
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(RoundedCornerShape(10.dp)),
                 painter = painterResource(R.drawable.icon_splash_icon),
                 contentDescription = "",
                 contentScale = ContentScale.Crop,
@@ -593,10 +606,12 @@ private fun SplashUI(modifier: Modifier = Modifier, onSplashComplete: () -> Unit
             Spacer(modifier = Modifier.height(120.dp))
 
             // Google 登录按钮
-            GoogleLoginButton(isLoading = true, onLoginClick = {})
+            GoogleLoginButton(isLoading = true, onLoginClick = { })
 
             Spacer(modifier = Modifier.height(80.dp))
+
         }
+
     }
 }
 
@@ -609,7 +624,7 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
 
         while (
             UnifiedStartupManager.startupState.value ==
-                UnifiedStartupManager.StartupState.Initializing && waitTime < maxWaitTime
+            UnifiedStartupManager.StartupState.Initializing && waitTime < maxWaitTime
         ) {
             delay(50)
             waitTime += 50
