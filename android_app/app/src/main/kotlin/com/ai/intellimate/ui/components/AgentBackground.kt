@@ -84,7 +84,7 @@ fun AgentBackground(
         }
 
     val backgroundAnimatedUrl = agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
-    val staticImageUrl = agentInfo?.getAlbumImage()?.takeIf { it.isNotBlank() }
+    val staticImageUrl = agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
 
     // 视频缓存管理器
     val videoCacheManager = remember { VideoCacheManager.getInstance(context) }
@@ -101,30 +101,35 @@ fun AgentBackground(
 
     // 检查视频缓存状态 - 每次进入页面时都重新检查
     // 优化：同步检查缓存状态，避免延迟
+    // 关键修复：首次安装时，即使未缓存，也应该在视频准备好后触发播放
     LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage) {
         LogUtils.d(
-            "AgentBackground - LaunchedEffect触发: agentId=${agentInfo?.id}, backgroundAnimatedUrl=$backgroundAnimatedUrl, isCurrentPage=$isCurrentPage"
+            "AgentBackground - [缓存检查] LaunchedEffect触发: agentId=${agentInfo?.id}, backgroundAnimatedUrl=$backgroundAnimatedUrl, isCurrentPage=$isCurrentPage, shouldPlayPageSwitch=$shouldPlayPageSwitch"
         )
-
-        // 重置状态
-        shouldPlayPageSwitch = false
 
         if (backgroundAnimatedUrl != null && isCurrentPage) {
             // 同步检查缓存状态（快速响应）
             val cached = videoCacheManager.isCached(backgroundAnimatedUrl)
             isVideoCached = cached
-            LogUtils.d("AgentBackground - 视频缓存状态: $cached, URL: $backgroundAnimatedUrl")
+            LogUtils.d("AgentBackground - [缓存检查] 视频缓存状态: $cached, URL: $backgroundAnimatedUrl")
 
-            // 如果已缓存，立即触发页面切换播放（2次）
-            if (cached) {
+            // 关键修复：无论是否缓存，都应该触发首次播放
+            // 已缓存：立即触发页面切换播放（2次）
+            // 未缓存：也设置 shouldPlayPageSwitch，等视频准备好后播放
+            if (!shouldPlayPageSwitch) {
                 playCount = 2
                 shouldPlayPageSwitch = true
-                LogUtils.d("AgentBackground - 设置页面切换播放: playCount=2, shouldPlayPageSwitch=true")
+                LogUtils.d("AgentBackground - [缓存检查] ✅ 设置页面切换播放: playCount=2, shouldPlayPageSwitch=true, isVideoCached=$cached")
             } else {
-                isVideoCached = false
+                LogUtils.d("AgentBackground - [缓存检查] shouldPlayPageSwitch 已设置，保持状态: isVideoCached=$cached")
             }
         } else {
-            isVideoCached = false
+            // 只有在没有视频URL或不在当前页面时才重置
+            if (backgroundAnimatedUrl == null || !isCurrentPage) {
+                shouldPlayPageSwitch = false
+                isVideoCached = false
+                LogUtils.d("AgentBackground - [缓存检查] 重置状态: backgroundAnimatedUrl=$backgroundAnimatedUrl, isCurrentPage=$isCurrentPage")
+            }
         }
     }
 
@@ -226,7 +231,8 @@ fun AgentBackground(
             // 顶部渐变遮罩
             Box(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .height(TOP_GRADIENT_HEIGHT_DP.dp)
                         .background(
                             brush =
@@ -237,7 +243,8 @@ fun AgentBackground(
             // 底部渐变遮罩
             Box(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .height(BOTTOM_GRADIENT_HEIGHT_DP.dp)
                         .background(
                             brush =
