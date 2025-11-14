@@ -227,4 +227,12 @@ object HeartColor {
     val primaryColor = Color(0xFF1C1523)
 }
 
+object AppColors {
+    val Background = HeartColor.primaryColor
+    val DarkPurpleOverlay60 = Color(0x9937303D)
+    val DiscountLightBlue = Color(0xFFC1F9FD)
+    val DiscountLightPurple = Color(0xFFD4AEFD)
+    val DiscountBlue = Color(0xFF7B96FB)
+}
+
 // endregion

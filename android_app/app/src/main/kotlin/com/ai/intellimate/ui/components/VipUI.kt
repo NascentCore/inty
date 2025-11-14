@@ -1,6 +1,7 @@
 package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.data.billing.VipPlan
+import ai.sxwl.android.design.theme.AppColors
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,7 +30,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -54,9 +54,9 @@ private fun DiscountTag(discountRate: Double, modifier: Modifier = Modifier) {
                         Brush.horizontalGradient(
                             colors =
                                 listOf(
-                                    colorResource(R.color.light_blue),
-                                    colorResource(R.color.light_purple),
-                                    colorResource(R.color.blue),
+                                    AppColors.DiscountLightBlue,
+                                    AppColors.DiscountLightPurple,
+                                    AppColors.DiscountBlue,
                                 )
                         )
                 ),

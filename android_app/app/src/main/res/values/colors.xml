@@ -1,11 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- 仅用于启动 Theme 的 windowBackground；Compose 颜色定义集中在 ai.sxwl.android.design.theme.AppColors -->
     <color name="app_background">#1C1523</color>
-    <color name="dark_purple_60_percent">#9937303D</color>
-    
-    <!-- 折扣标签渐变色彩 -->
-    <color name="light_blue">#FFC1F9FD</color>
-    <color name="light_purple">#FFD4AEFD</color>
-    <color name="blue">#FF7B96FB</color>
 </resources>
