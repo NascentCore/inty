@@ -1,6 +1,6 @@
 import io
 import uuid
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from google.cloud import storage
@@ -19,6 +19,7 @@ from app.external_services.gcs import (
 )
 from app.schemas.agent import AgentUpdate, ModelConfig
 from app.schemas.user import UserCreate
+from app.services import agent_service
 from app.services.agent_service import (
     _crop_avatar_from_background,
     _update_agent_in_db,
@@ -195,6 +196,44 @@ def test_process_agent_image_urls():
             == "https://storage.googleapis.com/test-bucket/background.jpg"
         )
 
+
+@pytest.mark.asyncio
+async def test_update_agent_increments_version(db_session, monkeypatch):
+    """确保更新Agent时版本号自增"""
+
+    agent = models.Agent(
+        id=str(uuid.uuid4()),
+        readable_id="verstest",
+        name="Version Test Agent",
+        gender=models.Gender.FEMALE,
+        creator_id=admin_user.id,
+    )
+    db_session.add(agent)
+    await db_session.commit()
+    await db_session.refresh(agent)
+
+    assert agent.version == 1
+
+    class DummyCacheService:
+        def __init__(self):
+            self.invalidated = []
+
+        def invalidate_agent_config(self, agent_id: str) -> bool:
+            self.invalidated.append(agent_id)
+            return True
+
+    dummy_cache = DummyCacheService()
+    dummy_agent_manager = type("DummyAgentManager", (), {})()
+    dummy_agent_manager.reload_agent = AsyncMock(return_value=True)
+
+    monkeypatch.setattr(agent_service, "cache_service", dummy_cache)
+    monkeypatch.setattr(agent_service, "agent_manager", dummy_agent_manager)
+
+    agent_update = AgentUpdate(name="Updated Name")
+    updated_agent = await agent_service.update_agent(db_session, agent, agent_update)
+
+    assert updated_agent.version == 2
+    assert dummy_cache.invalidated == [agent.id]
 
 # TODO: See how to test the ordering of the agents returned from get_balanced_score_based_agents.
 # The ordering is deterministic but determined by random seed.

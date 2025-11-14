@@ -280,6 +280,7 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
             models.Agent.opening_audio_url,
             models.Agent.created_at,
             models.Agent.updated_at,
+            models.Agent.version,
         ).where(and_(models.Agent.id == agent_id, models.Agent.deleted_at.is_(None)))
 
         result = await db.execute(query)
@@ -313,6 +314,7 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
             "opening_audio_url": row[19],
             "created_at": row[20],
             "updated_at": row[21],
+            "version": row[22],
             "_complete_data": True,  # 标记为完整数据
         }
 
@@ -1018,8 +1020,6 @@ async def update_agent(
 
         # 清除相关缓存，确保更新立即生效
         try:
-            from app.services.cache_service import cache_service
-
             # 清除 agent 配置缓存
             cache_service.invalidate_agent_config(updated_agent.id)
             logger.debug(f"已清除Agent {updated_agent.id} 的配置缓存")
@@ -1049,6 +1049,7 @@ async def update_agent(
                 "voice_id": updated_agent.voice_id or "",
                 "character_version": updated_agent.character_version or "",
                 "extensions": updated_agent.extensions or {},
+                "version": updated_agent.version,
             }
 
             reload_success = await agent_manager.reload_agent(

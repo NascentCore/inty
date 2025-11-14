@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 import sqlalchemy as sa
-from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.models import Base
@@ -51,6 +51,12 @@ class Agent(Base):
     created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
     deleted_at = Column(DateTime(timezone=True), nullable=True)
+    version = Column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default=sa.text("1"),
+    )
     prompt = Column(String)
 
     # 主提示词和模式提示词字段
@@ -87,3 +93,9 @@ class Agent(Base):
     chat_settings = relationship("ChatSettings", back_populates="agent")
     chats = relationship("Chat", back_populates="agent")
     resources = relationship("Resource", back_populates="agent")
+
+    # 乐观锁配置：使用 version 字段防止并发更新冲突
+    # 更新时会自动检查版本号，不匹配则抛出 StaleDataError，成功更新后自动递增 version
+    __mapper_args__ = {
+        "version_id_col": version,
+    }

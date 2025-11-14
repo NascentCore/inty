@@ -12,6 +12,7 @@ def test_agent_intro():
         readable_id="test-agent",
         status=AgentStatus.APPROVED,
         created_at=datetime.now(),
+        version=1,
         intro="Hello, I am {{ char }}",
     )
     # 直接访问 intro 属性返回原始值（包含变量）
