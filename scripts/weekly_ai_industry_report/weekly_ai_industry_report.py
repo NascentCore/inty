@@ -65,7 +65,7 @@ class AIIndustryReporter:
 
         # Configure Gemini
         genai.configure(api_key=self.gemini_api_key)
-        self.gemini_model = genai.GenerativeModel("gemini-1.5-flash-latest")
+        self.gemini_model = genai.GenerativeModel("gemini-2.5-flash-latest")
 
         # Build Google Custom Search service
         self.search_service = build(
