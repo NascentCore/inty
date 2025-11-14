@@ -37,35 +37,29 @@ import kotlinx.coroutines.launch
 class PushNotificationManager private constructor(private val application: Application) {
 
     companion object {
-        @Volatile
-        private var INSTANCE: PushNotificationManager? = null
+        @Volatile private var INSTANCE: PushNotificationManager? = null
 
-        /**
-         * 获取 PushNotificationManager 实例
-         */
+        /** 获取 PushNotificationManager 实例 */
         fun getInstance(context: Application): PushNotificationManager {
             return INSTANCE
                 ?: synchronized(this) {
-                    INSTANCE ?: PushNotificationManager(context.applicationContext as Application)
-                        .also { INSTANCE = it }
+                    INSTANCE
+                        ?: PushNotificationManager(context.applicationContext as Application).also {
+                            INSTANCE = it
+                        }
                 }
         }
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    /**
-     * 初始化推送通知管理器
-     * 订阅 FCM 事件并处理 Direct Boot 待处理消息
-     */
+    /** 初始化推送通知管理器 订阅 FCM 事件并处理 Direct Boot 待处理消息 */
     fun initialize() {
         subscribeToPushNotificationEvents()
         handleDirectBootPendingMessages()
     }
 
-    /**
-     * 订阅 FCM 推送通知事件
-     */
+    /** 订阅 FCM 推送通知事件 */
     private fun subscribeToPushNotificationEvents() {
         EventBus.subscribe(
             PushNotificationEvent.ShowNotification::class,
@@ -77,10 +71,7 @@ class PushNotificationManager private constructor(private val application: Appli
         )
     }
 
-    /**
-     * 处理 Direct Boot 模式下保存的待处理消息
-     * 在用户解锁后（应用启动时）调用
-     */
+    /** 处理 Direct Boot 模式下保存的待处理消息 在用户解锁后（应用启动时）调用 */
     private fun handleDirectBootPendingMessages() {
         // 检查用户是否已解锁
         if (!DirectBootUtils.isUserUnlocked(application)) {
@@ -106,7 +97,7 @@ class PushNotificationManager private constructor(private val application: Appli
                 if (messageCount > 0) {
                     LogUtils.i(
                         "PushNotificationManager",
-                        "发现 $messageCount 条 Direct Boot 模式下保存的待处理消息，开始处理"
+                        "发现 $messageCount 条 Direct Boot 模式下保存的待处理消息，开始处理",
                     )
 
                     // 处理每条消息
@@ -117,7 +108,7 @@ class PushNotificationManager private constructor(private val application: Appli
                             LogUtils.e(
                                 "PushNotificationManager",
                                 "处理待处理消息失败: messageId=${message.messageId}",
-                                e
+                                e,
                             )
                         }
                     }
@@ -134,9 +125,7 @@ class PushNotificationManager private constructor(private val application: Appli
         }
     }
 
-    /**
-     * 处理单条待处理消息
-     */
+    /** 处理单条待处理消息 */
     private fun handlePendingMessage(message: DirectBootStorage.PendingMessage) {
         // 如果有标题和内容，显示通知
         if (!message.title.isNullOrEmpty() && !message.body.isNullOrEmpty()) {
@@ -157,7 +146,7 @@ class PushNotificationManager private constructor(private val application: Appli
         } else {
             LogUtils.d(
                 "PushNotificationManager",
-                "待处理消息缺少标题或内容，跳过显示通知: messageId=${message.messageId}"
+                "待处理消息缺少标题或内容，跳过显示通知: messageId=${message.messageId}",
             )
         }
     }
@@ -219,9 +208,7 @@ class PushNotificationManager private constructor(private val application: Appli
         }
     }
 
-    /**
-     * 创建通知点击后的 Intent
-     */
+    /** 创建通知点击后的 Intent */
     private fun createNotificationIntent(data: Map<String, String>): Intent {
         val messageType = data[FCMConstants.DATA_KEY_TYPE]
         return when (messageType) {
@@ -231,63 +218,55 @@ class PushNotificationManager private constructor(private val application: Appli
                 if (!agentId.isNullOrEmpty()) {
                     ChatActivity.notifyIntent(application, agentId)
                 } else {
-                    LogUtils.w(
-                        "PushNotificationManager",
-                        "消息缺少 agent_id，跳转到主页面。消息类型: $messageType"
-                    )
+                    LogUtils.w("PushNotificationManager", "消息缺少 agent_id，跳转到主页面。消息类型: $messageType")
                     createMainActivityIntent()
                 }
             }
 
-            FCMConstants.TYPE_SYSTEM, null -> {
+            FCMConstants.TYPE_SYSTEM,
+            null -> {
                 // 系统通知或其他：跳转到主页面
                 createMainActivityIntent()
             }
 
             else -> {
-                LogUtils.d(
-                    "PushNotificationManager",
-                    "未知消息类型: $messageType，跳转到主页面"
-                )
+                LogUtils.d("PushNotificationManager", "未知消息类型: $messageType，跳转到主页面")
                 createMainActivityIntent()
             }
         }
     }
 
-    /**
-     * 创建 PendingIntent
-     */
+    /** 创建 PendingIntent */
     private fun createPendingIntent(intent: Intent): PendingIntent {
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        } else {
-            PendingIntent.FLAG_UPDATE_CURRENT
-        }
+        val flags =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
+            }
         return PendingIntent.getActivity(application, 0, intent, flags)
     }
 
-    /**
-     * 创建跳转到主页面的 Intent
-     */
+    /** 创建跳转到主页面的 Intent */
     private fun createMainActivityIntent(): Intent {
         return Intent(application, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
     }
 
-    /**
-     * 获取通知图标资源 ID
-     */
+    /** 获取通知图标资源 ID */
     private fun getNotificationIconResId(): Int {
         return try {
-            val appInfo = application.packageManager.getApplicationInfo(
-                application.packageName,
-                android.content.pm.PackageManager.GET_META_DATA
-            )
-            val iconResId = appInfo.metaData?.getInt(
-                "com.google.firebase.messaging.default_notification_icon",
-                0
-            )
+            val appInfo =
+                application.packageManager.getApplicationInfo(
+                    application.packageName,
+                    android.content.pm.PackageManager.GET_META_DATA,
+                )
+            val iconResId =
+                appInfo.metaData?.getInt(
+                    "com.google.firebase.messaging.default_notification_icon",
+                    0,
+                )
 
             if (iconResId != null && iconResId != 0) {
                 iconResId
@@ -300,25 +279,27 @@ class PushNotificationManager private constructor(private val application: Appli
         }
     }
 
-    /**
-     * 创建通知渠道（Android 8.0+ 必需）
-     */
+    /** 创建通知渠道（Android 8.0+ 必需） */
     private fun createNotificationChannelIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationManager =
-                application.getSystemService(NotificationManager::class.java)
+            val notificationManager = application.getSystemService(NotificationManager::class.java)
 
-            if (notificationManager.getNotificationChannel(FCMService.NOTIFICATION_CHANNEL_ID) == null) {
-                val channel = NotificationChannel(
-                    FCMService.NOTIFICATION_CHANNEL_ID,
-                    "Push Notifications",
-                    NotificationManager.IMPORTANCE_DEFAULT
-                ).apply {
-                    description = "Receive push notifications and messages"
-                    enableVibration(true)
-                    vibrationPattern = longArrayOf(0, 250, 250, 250)
-                    enableLights(true)
-                }
+            if (
+                notificationManager.getNotificationChannel(FCMService.NOTIFICATION_CHANNEL_ID) ==
+                    null
+            ) {
+                val channel =
+                    NotificationChannel(
+                            FCMService.NOTIFICATION_CHANNEL_ID,
+                            "Push Notifications",
+                            NotificationManager.IMPORTANCE_DEFAULT,
+                        )
+                        .apply {
+                            description = "Receive push notifications and messages"
+                            enableVibration(true)
+                            vibrationPattern = longArrayOf(0, 250, 250, 250)
+                            enableLights(true)
+                        }
 
                 notificationManager.createNotificationChannel(channel)
                 LogUtils.d("PushNotificationManager", "通知渠道已创建")

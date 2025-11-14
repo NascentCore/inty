@@ -12,7 +12,11 @@ class PushNotificationHistory(Base):
 
     id = Column(String, primary_key=True, index=True)
     chat_id = Column(
-        String, ForeignKey("chats.id"), nullable=True, index=True, comment="聊天ID（可选，无聊天推送时为空）"
+        String,
+        ForeignKey("chats.id"),
+        nullable=True,
+        index=True,
+        comment="聊天ID（可选，无聊天推送时为空）",
     )
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     agent_id = Column(String, ForeignKey("agents.id"), nullable=False, index=True)
@@ -28,7 +32,11 @@ class PushNotificationHistory(Base):
     )
     message_content = Column(Text, nullable=True, comment="生成的Agent消息内容")
     sent_at = Column(DateTime(timezone=True), nullable=False, comment="发送时间")
-    read_at = Column(DateTime(timezone=True), nullable=True, comment="已读时间（用户发送新消息时标记为已读）")
+    read_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="已读时间（用户发送新消息时标记为已读）",
+    )
     created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
 
     # 关系
@@ -59,4 +67,3 @@ class PushNotificationHistory(Base):
             postgresql_where=sa.text("read_at IS NULL AND chat_id IS NULL"),
         ),
     )
-

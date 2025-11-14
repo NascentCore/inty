@@ -8,8 +8,7 @@ import ai.sxwl.android.utils.LogUtils
 /**
  * FCM 消息处理器默认实现
  *
- * 通过 EventBus 发布事件，将消息处理逻辑委托给订阅者
- * 这个实现位于 common 层，可以依赖 firebase 和 EventBus
+ * 通过 EventBus 发布事件，将消息处理逻辑委托给订阅者 这个实现位于 common 层，可以依赖 firebase 和 EventBus
  */
 class FCMessageHandlerImpl : FCMessageHandler {
     override fun handleMessage(
@@ -31,19 +30,10 @@ class FCMessageHandlerImpl : FCMessageHandler {
         )
     }
 
-    override fun showNotification(
-        title: String,
-        body: String,
-        data: Map<String, String>,
-    ) {
+    override fun showNotification(title: String, body: String, data: Map<String, String>) {
         LogUtils.d("FCMessageHandlerImpl", "显示通知: title=$title")
         EventBus.post(
-            PushNotificationEvent.ShowNotification(
-                title = title,
-                body = body,
-                data = data,
-            )
+            PushNotificationEvent.ShowNotification(title = title, body = body, data = data)
         )
     }
 }
-

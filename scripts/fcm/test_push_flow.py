@@ -92,7 +92,7 @@ async def test_push_for_chat(
 
         # 3. 获取配置
         config = global_config_loaded_from_config_yaml.push_notification
-        
+
         # 检查阶段配置（支持 minutes 和 hours）
         time_delta_minutes = config.intervals.get(stage)
         time_delta_hours = None
@@ -105,9 +105,13 @@ async def test_push_for_chat(
             return result
 
         if time_delta_minutes:
-            result["steps"].append(f"✅ 推送阶段配置: {stage} ({time_delta_minutes} 分钟)")
+            result["steps"].append(
+                f"✅ 推送阶段配置: {stage} ({time_delta_minutes} 分钟)"
+            )
         else:
-            result["steps"].append(f"✅ 推送阶段配置: {stage} ({time_delta_hours} 小时)")
+            result["steps"].append(
+                f"✅ 推送阶段配置: {stage} ({time_delta_hours} 小时)"
+            )
 
         # 4. 获取最后消息时间
         session_id = generate_session_id(chat_id)
@@ -118,9 +122,7 @@ async def test_push_for_chat(
             result["steps"].append("❌ 没有用户消息")
             return result
 
-        result["steps"].append(
-            f"✅ 最后消息时间: {last_message_time.isoformat()}"
-        )
+        result["steps"].append(f"✅ 最后消息时间: {last_message_time.isoformat()}")
 
         # 5. 检查是否已发送过推送
         has_sent = await push_notification_service.has_sent_push_for_stage(

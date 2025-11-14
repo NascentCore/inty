@@ -226,7 +226,7 @@ async def add_ai_message(
 ) -> Optional[int]:
     """
     添加AI消息到聊天历史，返回插入的消息ID
-    
+
     Args:
         db: 数据库会话
         session_id: 会话ID
@@ -234,7 +234,7 @@ async def add_ai_message(
         agent_id: Agent ID（可选）
         audio_duration: 音频时长（可选）
         meta_data: 自定义元数据（可选，会与默认元数据合并）
-    
+
     Returns:
         插入的消息ID
     """
@@ -244,7 +244,7 @@ async def add_ai_message(
 
         # 构建meta_data
         final_meta_data = meta_data.copy() if meta_data else {}
-        
+
         if agent_id:
             final_meta_data["agentId"] = agent_id
             if "isOpening" not in final_meta_data:

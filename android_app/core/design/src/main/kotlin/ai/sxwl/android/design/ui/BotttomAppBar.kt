@@ -51,9 +51,7 @@ fun HeartBottomAppBar(
 ) {
     val navigationBarModifier =
         if (height != null) {
-            modifier
-                .fillMaxWidth()
-                .height(height)
+            modifier.fillMaxWidth().height(height)
         } else {
             modifier.fillMaxWidth()
         }
@@ -172,12 +170,7 @@ private fun 预览底部导航栏() {
 @Preview
 @Composable
 fun HeartRedDot(modifier: Modifier = Modifier, radius: Int = 8) {
-    Box(
-        modifier = modifier
-            .size(radius.dp)
-            .clip(CircleShape)
-            .background(Color.Red)
-    )
+    Box(modifier = modifier.size(radius.dp).clip(CircleShape).background(Color.Red))
 }
 
 /** 红点数字的现实，可以配置 99+，或者完整显示，目前基于业务，数字必须>0 */

@@ -1205,361 +1205,395 @@ export const ChatPage: React.FC = () => {
                 }}
               >
                 {/* 消息列表 */}
-                  <div
-                    style={{
-                      flex: 1,
-                      minHeight: 0,
-                      position: "relative",
-                      display: "flex",
-                      flexDirection: "column",
-                      backgroundColor: "#0f111a",
-                      borderBottomLeftRadius: 8,
-                      borderBottomRightRadius: 8,
-                      overflow: "hidden",
-                    }}
-                  >
-                    {(backgroundImageUrl || backgroundVideoUrl) && (
-                      <div
-                        aria-hidden
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          overflow: "hidden",
-                          pointerEvents: "none",
-                          zIndex: 0,
-                        }}
-                      >
-                        {backgroundImageUrl && (
-                          <img
-                            src={backgroundImageUrl}
-                            alt={`${backgroundAltName} background`}
-                            style={{
-                              position: "absolute",
-                              inset: 0,
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                              filter: backgroundVideoUrl ? "blur(6px)" : "none",
-                              transform: "scale(1.05)",
-                              opacity: backgroundVideoUrl ? 0.4 : 0.85,
-                              transition: "opacity 0.3s ease",
-                            }}
-                          />
-                        )}
-                        {backgroundVideoUrl && (
-                          <video
-                            key={backgroundVideoUrl}
-                            src={backgroundVideoUrl}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            preload="auto"
-                            poster={backgroundImageUrl}
-                            style={{
-                              position: "absolute",
-                              inset: 0,
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                              opacity: 0.95,
-                              filter: "saturate(1.05)",
-                              transition: "opacity 0.3s ease",
-                            }}
-                            onError={(event) => {
-                              event.currentTarget.style.display = "none";
-                            }}
-                          />
-                        )}
-                        <div
+                <div
+                  style={{
+                    flex: 1,
+                    minHeight: 0,
+                    position: "relative",
+                    display: "flex",
+                    flexDirection: "column",
+                    backgroundColor: "#0f111a",
+                    borderBottomLeftRadius: 8,
+                    borderBottomRightRadius: 8,
+                    overflow: "hidden",
+                  }}
+                >
+                  {(backgroundImageUrl || backgroundVideoUrl) && (
+                    <div
+                      aria-hidden
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        overflow: "hidden",
+                        pointerEvents: "none",
+                        zIndex: 0,
+                      }}
+                    >
+                      {backgroundImageUrl && (
+                        <img
+                          src={backgroundImageUrl}
+                          alt={`${backgroundAltName} background`}
                           style={{
                             position: "absolute",
                             inset: 0,
-                            background:
-                              "linear-gradient(180deg, rgba(12,14,25,0.25) 0%, rgba(12,14,25,0.85) 100%)",
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            filter: backgroundVideoUrl ? "blur(6px)" : "none",
+                            transform: "scale(1.05)",
+                            opacity: backgroundVideoUrl ? 0.4 : 0.85,
+                            transition: "opacity 0.3s ease",
                           }}
                         />
-                      </div>
-                    )}
-                    <div
-                      style={{
-                        position: "relative",
-                        zIndex: 1,
-                        flex: 1,
-                        overflowY: "auto",
-                        padding: "16px",
-                      }}
-                    >
-                  {/* 角色介绍卡片 - 只在聊天开始时显示 */}
-                  {selectedAgent?.intro && messages.length === 0 && (
-                    <Card
-                      size="small"
-                      style={{
-                        marginBottom: "16px",
-                        backgroundColor: "rgba(255, 255, 255, 0.95)",
-                        border: "1px solid #e8f4fd",
-                        borderRadius: "12px",
-                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-                      }}
-                      bodyStyle={{
-                        padding: "16px",
-                      }}
-                    >
+                      )}
+                      {backgroundVideoUrl && (
+                        <video
+                          key={backgroundVideoUrl}
+                          src={backgroundVideoUrl}
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          preload="auto"
+                          poster={backgroundImageUrl}
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            opacity: 0.95,
+                            filter: "saturate(1.05)",
+                            transition: "opacity 0.3s ease",
+                          }}
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                          }}
+                        />
+                      )}
                       <div
                         style={{
-                          display: "flex",
-                          alignItems: "flex-start",
-                          gap: "12px",
+                          position: "absolute",
+                          inset: 0,
+                          background:
+                            "linear-gradient(180deg, rgba(12,14,25,0.25) 0%, rgba(12,14,25,0.85) 100%)",
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      position: "relative",
+                      zIndex: 1,
+                      flex: 1,
+                      overflowY: "auto",
+                      padding: "16px",
+                    }}
+                  >
+                    {/* 角色介绍卡片 - 只在聊天开始时显示 */}
+                    {selectedAgent?.intro && messages.length === 0 && (
+                      <Card
+                        size="small"
+                        style={{
+                          marginBottom: "16px",
+                          backgroundColor: "rgba(255, 255, 255, 0.95)",
+                          border: "1px solid #e8f4fd",
+                          borderRadius: "12px",
+                          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+                        }}
+                        bodyStyle={{
+                          padding: "16px",
                         }}
                       >
-                        <AvatarDisplay agent={selectedAgent!} size={40} />
-                        <div style={{ flex: 1 }}>
-                          <Text
-                            strong
-                            style={{ fontSize: "16px", color: "#1890ff" }}
-                          >
-                            {selectedAgent.name}
-                          </Text>
-                          <div style={{ marginTop: "8px" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: "12px",
+                          }}
+                        >
+                          <AvatarDisplay agent={selectedAgent!} size={40} />
+                          <div style={{ flex: 1 }}>
                             <Text
-                              style={{
-                                fontSize: "14px",
-                                lineHeight: "1.6",
-                                color: "#666",
-                                whiteSpace: "pre-wrap",
-                                wordBreak: "break-word",
-                                display: "block",
-                              }}
+                              strong
+                              style={{ fontSize: "16px", color: "#1890ff" }}
                             >
-                              {selectedAgent.intro}
+                              {selectedAgent.name}
                             </Text>
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  )}
-
-                  {messages.length > 0 && (
-                    <List
-                      dataSource={messages}
-                      renderItem={(message: ChatMessage, index: number) => (
-                        <div>
-                          <List.Item
-                            style={{
-                              border: "none",
-                              padding: "8px 0",
-                              justifyContent:
-                                message.role === "user"
-                                  ? "flex-end"
-                                  : "flex-start",
-                            }}
-                          >
-                            <div
-                              style={{
-                                maxWidth: "70%",
-                                display: "flex",
-                                flexDirection:
-                                  message.role === "user"
-                                    ? "row-reverse"
-                                    : "row",
-                                alignItems: "flex-start",
-                                gap: "8px",
-                              }}
-                            >
-                              {message.role === "user" ? (
-                                <Avatar
-                                  size="small"
-                                  icon={<UserOutlined />}
-                                  style={{
-                                    backgroundColor: "#1890ff",
-                                    flexShrink: 0,
-                                  }}
-                                />
-                              ) : (
-                                <AvatarDisplay
-                                  agent={selectedAgent}
-                                  size={24}
-                                  style={{
-                                    flexShrink: 0,
-                                  }}
-                                />
-                              )}
-                              <div
+                            <div style={{ marginTop: "8px" }}>
+                              <Text
                                 style={{
-                                  backgroundColor:
-                                    message.role === "user"
-                                      ? "rgba(24, 144, 255, 0.8)"
-                                      : "rgba(255, 255, 255, 0.8)",
-                                  color:
-                                    message.role === "user" ? "#fff" : "#000",
-                                  padding: "12px 16px",
-                                  borderRadius: "18px",
-                                  boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                                  position: "relative",
-                                  border:
-                                    message.role === "assistant"
-                                      ? "1px solid #f0f0f0"
-                                      : "none",
+                                  fontSize: "14px",
+                                  lineHeight: "1.6",
+                                  color: "#666",
+                                  whiteSpace: "pre-wrap",
+                                  wordBreak: "break-word",
+                                  display: "block",
                                 }}
                               >
-                                {/* 显示文本消息 */}
-                                <Paragraph
-                                  style={{
-                                    margin: 0,
-                                    color:
-                                      message.role === "user" ? "#fff" : "#000",
-                                    whiteSpace: "pre-wrap",
-                                    wordBreak: "break-word",
-                                  }}
-                                >
-                                  {message.content &&
-                                  message.role === "assistant"
-                                    ? formatMessageContent(message.content)
-                                    : message.content || ""}
-                                </Paragraph>
+                                {selectedAgent.intro}
+                              </Text>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
 
-                                {/* 如果有生成的图片，在文本下方显示 */}
-                                {message.role === "assistant" &&
-                                  message.meta_data?.generated_image && (
-                                    <div style={{ marginTop: "12px" }}>
-                                      <Image
-                                        src={
-                                          message.meta_data.generated_image
-                                            .image_url
-                                        }
-                                        alt="Generated image"
-                                        style={{
-                                          maxWidth: "300px",
-                                          borderRadius: "8px",
-                                        }}
-                                        placeholder={<Spin size="small" />}
-                                      />
-                                    </div>
-                                  )}
+                    {messages.length > 0 && (
+                      <List
+                        dataSource={messages}
+                        renderItem={(message: ChatMessage, index: number) => (
+                          <div>
+                            <List.Item
+                              style={{
+                                border: "none",
+                                padding: "8px 0",
+                                justifyContent:
+                                  message.role === "user"
+                                    ? "flex-end"
+                                    : "flex-start",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  maxWidth: "70%",
+                                  display: "flex",
+                                  flexDirection:
+                                    message.role === "user"
+                                      ? "row-reverse"
+                                      : "row",
+                                  alignItems: "flex-start",
+                                  gap: "8px",
+                                }}
+                              >
+                                {message.role === "user" ? (
+                                  <Avatar
+                                    size="small"
+                                    icon={<UserOutlined />}
+                                    style={{
+                                      backgroundColor: "#1890ff",
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                ) : (
+                                  <AvatarDisplay
+                                    agent={selectedAgent}
+                                    size={24}
+                                    style={{
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                )}
                                 <div
                                   style={{
-                                    fontSize: "10px",
-                                    opacity: 0.7,
-                                    marginTop: "4px",
-                                    textAlign:
+                                    backgroundColor:
                                       message.role === "user"
-                                        ? "right"
-                                        : "left",
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
+                                        ? "rgba(24, 144, 255, 0.8)"
+                                        : "rgba(255, 255, 255, 0.8)",
+                                    color:
+                                      message.role === "user" ? "#fff" : "#000",
+                                    padding: "12px 16px",
+                                    borderRadius: "18px",
+                                    boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                                    position: "relative",
+                                    border:
+                                      message.role === "assistant"
+                                        ? "1px solid #f0f0f0"
+                                        : "none",
                                   }}
                                 >
-                                  <span>
-                                    <ClockCircleOutlined
-                                      style={{ marginRight: "2px" }}
-                                    />
-                                    {new Date(
-                                      message.timestamp,
-                                    ).toLocaleTimeString()}
-                                  </span>
-                                  <div
-                                    className="message-actions"
+                                  {/* 显示文本消息 */}
+                                  <Paragraph
                                     style={{
-                                      opacity: 1,
+                                      margin: 0,
+                                      color:
+                                        message.role === "user"
+                                          ? "#fff"
+                                          : "#000",
+                                      whiteSpace: "pre-wrap",
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
+                                    {message.content &&
+                                    message.role === "assistant"
+                                      ? formatMessageContent(message.content)
+                                      : message.content || ""}
+                                  </Paragraph>
+
+                                  {/* 如果有生成的图片，在文本下方显示 */}
+                                  {message.role === "assistant" &&
+                                    message.meta_data?.generated_image && (
+                                      <div style={{ marginTop: "12px" }}>
+                                        <Image
+                                          src={
+                                            message.meta_data.generated_image
+                                              .image_url
+                                          }
+                                          alt="Generated image"
+                                          style={{
+                                            maxWidth: "300px",
+                                            borderRadius: "8px",
+                                          }}
+                                          placeholder={<Spin size="small" />}
+                                        />
+                                      </div>
+                                    )}
+                                  <div
+                                    style={{
+                                      fontSize: "10px",
+                                      opacity: 0.7,
+                                      marginTop: "4px",
+                                      textAlign:
+                                        message.role === "user"
+                                          ? "right"
+                                          : "left",
                                       display: "flex",
-                                      gap: "4px",
+                                      justifyContent: "space-between",
                                       alignItems: "center",
                                     }}
                                   >
-                                    {/* 语音播放按钮 - 只对AI回复且有真实消息ID的消息显示 */}
-                                    {message.role === "assistant" &&
-                                      message.remoteId &&
-                                      !message.remoteId.startsWith(
-                                        "assistant_",
-                                      ) &&
-                                      !message.remoteId.startsWith("error_") &&
-                                      !message.remoteId.startsWith("remote_") &&
-                                      selectedAgent && (
-                                        <VoicePlayer
-                                          agentId={selectedAgent.id}
-                                          messageId={message.remoteId}
-                                          messageText={message.content}
-                                          language="zh"
-                                          size="small"
-                                          style={{
-                                            color: "#666",
-                                            padding: "2px 4px",
-                                            height: "auto",
-                                            minWidth: "auto",
-                                          }}
-                                        />
-                                      )}
+                                    <span>
+                                      <ClockCircleOutlined
+                                        style={{ marginRight: "2px" }}
+                                      />
+                                      {new Date(
+                                        message.timestamp,
+                                      ).toLocaleTimeString()}
+                                    </span>
+                                    <div
+                                      className="message-actions"
+                                      style={{
+                                        opacity: 1,
+                                        display: "flex",
+                                        gap: "4px",
+                                        alignItems: "center",
+                                      }}
+                                    >
+                                      {/* 语音播放按钮 - 只对AI回复且有真实消息ID的消息显示 */}
+                                      {message.role === "assistant" &&
+                                        message.remoteId &&
+                                        !message.remoteId.startsWith(
+                                          "assistant_",
+                                        ) &&
+                                        !message.remoteId.startsWith(
+                                          "error_",
+                                        ) &&
+                                        !message.remoteId.startsWith(
+                                          "remote_",
+                                        ) &&
+                                        selectedAgent && (
+                                          <VoicePlayer
+                                            agentId={selectedAgent.id}
+                                            messageId={message.remoteId}
+                                            messageText={message.content}
+                                            language="zh"
+                                            size="small"
+                                            style={{
+                                              color: "#666",
+                                              padding: "2px 4px",
+                                              height: "auto",
+                                              minWidth: "auto",
+                                            }}
+                                          />
+                                        )}
 
-                                    {/* 图片生成按钮 - 只在最后一条AI文本消息显示 */}
-                                    {message.role === "assistant" &&
-                                      message.type !== "image" &&
-                                      message.remoteId &&
-                                      typeof message.remoteId === "string" &&
-                                      !message.remoteId.startsWith(
-                                        "assistant_",
-                                      ) &&
-                                      !message.remoteId.startsWith("error_") &&
-                                      !message.remoteId.startsWith("remote_") &&
-                                      !isNaN(Number(message.remoteId)) &&
-                                      selectedAgent &&
-                                      selectedAgent.id &&
-                                      index ===
-                                        getLastAssistantMessageIndex() && (
-                                        <MessageToImageIcon
-                                          messageId={Number(message.remoteId)}
-                                          agentId={selectedAgent.id}
-                                          hasImage={
-                                            !!message.meta_data?.generated_image
-                                          }
-                                          size="small"
-                                          onImageGenerated={(imageData) => {
-                                            // 立即更新当前消息的 meta_data，提供即时反馈
-                                            setMessages((prevMessages) => {
-                                              return prevMessages.map((msg) => {
-                                                if (
-                                                  msg.remoteId ===
-                                                  message.remoteId
-                                                ) {
-                                                  return {
-                                                    ...msg,
-                                                    meta_data: {
-                                                      ...msg.meta_data,
-                                                      generated_image: {
-                                                        image_url:
-                                                          imageData.image_url,
-                                                        width: imageData.width,
-                                                        height:
-                                                          imageData.height,
-                                                      },
-                                                    },
-                                                  };
-                                                }
-                                                return msg;
+                                      {/* 图片生成按钮 - 只在最后一条AI文本消息显示 */}
+                                      {message.role === "assistant" &&
+                                        message.type !== "image" &&
+                                        message.remoteId &&
+                                        typeof message.remoteId === "string" &&
+                                        !message.remoteId.startsWith(
+                                          "assistant_",
+                                        ) &&
+                                        !message.remoteId.startsWith(
+                                          "error_",
+                                        ) &&
+                                        !message.remoteId.startsWith(
+                                          "remote_",
+                                        ) &&
+                                        !isNaN(Number(message.remoteId)) &&
+                                        selectedAgent &&
+                                        selectedAgent.id &&
+                                        index ===
+                                          getLastAssistantMessageIndex() && (
+                                          <MessageToImageIcon
+                                            messageId={Number(message.remoteId)}
+                                            agentId={selectedAgent.id}
+                                            hasImage={
+                                              !!message.meta_data
+                                                ?.generated_image
+                                            }
+                                            size="small"
+                                            onImageGenerated={(imageData) => {
+                                              // 立即更新当前消息的 meta_data，提供即时反馈
+                                              setMessages((prevMessages) => {
+                                                return prevMessages.map(
+                                                  (msg) => {
+                                                    if (
+                                                      msg.remoteId ===
+                                                      message.remoteId
+                                                    ) {
+                                                      return {
+                                                        ...msg,
+                                                        meta_data: {
+                                                          ...msg.meta_data,
+                                                          generated_image: {
+                                                            image_url:
+                                                              imageData.image_url,
+                                                            width:
+                                                              imageData.width,
+                                                            height:
+                                                              imageData.height,
+                                                          },
+                                                        },
+                                                      };
+                                                    }
+                                                    return msg;
+                                                  },
+                                                );
                                               });
-                                            });
-                                            // 图片已立即显示，无需刷新
-                                            // 用户刷新页面时会从服务器同步最新数据
-                                          }}
-                                        />
-                                      )}
+                                              // 图片已立即显示，无需刷新
+                                              // 用户刷新页面时会从服务器同步最新数据
+                                            }}
+                                          />
+                                        )}
 
-                                    {/* 只有历史消息才显示重新发送和删除按钮 */}
-                                    {message.remoteId &&
-                                      !message.remoteId.startsWith("user_") &&
-                                      !message.remoteId.startsWith(
-                                        "assistant_",
-                                      ) &&
-                                      !message.remoteId.startsWith(
-                                        "error_",
-                                      ) && (
-                                        <>
-                                          {message.role === "user" && (
-                                            <Tooltip title="重新发送">
+                                      {/* 只有历史消息才显示重新发送和删除按钮 */}
+                                      {message.remoteId &&
+                                        !message.remoteId.startsWith("user_") &&
+                                        !message.remoteId.startsWith(
+                                          "assistant_",
+                                        ) &&
+                                        !message.remoteId.startsWith(
+                                          "error_",
+                                        ) && (
+                                          <>
+                                            {message.role === "user" && (
+                                              <Tooltip title="重新发送">
+                                                <Button
+                                                  type="text"
+                                                  size="small"
+                                                  icon={<RedoOutlined />}
+                                                  style={{
+                                                    color:
+                                                      message.role === "user"
+                                                        ? "#fff"
+                                                        : "#666",
+                                                    padding: "2px 4px",
+                                                    height: "auto",
+                                                    minWidth: "auto",
+                                                  }}
+                                                  onClick={() =>
+                                                    handleResendMessage(message)
+                                                  }
+                                                />
+                                              </Tooltip>
+                                            )}
+                                            <Tooltip title="删除消息">
                                               <Button
                                                 type="text"
                                                 size="small"
-                                                icon={<RedoOutlined />}
+                                                icon={<DeleteOutlined />}
                                                 style={{
                                                   color:
                                                     message.role === "user"
@@ -1570,87 +1604,67 @@ export const ChatPage: React.FC = () => {
                                                   minWidth: "auto",
                                                 }}
                                                 onClick={() =>
-                                                  handleResendMessage(message)
+                                                  handleDeleteMessage(message)
                                                 }
                                               />
                                             </Tooltip>
-                                          )}
-                                          <Tooltip title="删除消息">
-                                            <Button
-                                              type="text"
-                                              size="small"
-                                              icon={<DeleteOutlined />}
-                                              style={{
-                                                color:
-                                                  message.role === "user"
-                                                    ? "#fff"
-                                                    : "#666",
-                                                padding: "2px 4px",
-                                                height: "auto",
-                                                minWidth: "auto",
-                                              }}
-                                              onClick={() =>
-                                                handleDeleteMessage(message)
-                                              }
-                                            />
-                                          </Tooltip>
-                                        </>
-                                      )}
+                                          </>
+                                        )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          </List.Item>
+                            </List.Item>
 
-                          {/* 显示该消息生成的图片 */}
-                          {generatedImages.get(message.content) && (
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "center",
-                                margin: "8px 0",
-                                padding: "0 16px",
-                              }}
-                            >
+                            {/* 显示该消息生成的图片 */}
+                            {generatedImages.get(message.content) && (
                               <div
                                 style={{
-                                  maxWidth: "400px",
-                                  borderRadius: "8px",
-                                  overflow: "hidden",
-                                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+                                  display: "flex",
+                                  justifyContent: "center",
+                                  margin: "8px 0",
+                                  padding: "0 16px",
                                 }}
                               >
-                                <Image
-                                  src={generatedImages.get(message.content)!}
-                                  alt="Generated image"
+                                <div
                                   style={{
-                                    width: "100%",
-                                    height: "auto",
-                                    display: "block",
+                                    maxWidth: "400px",
+                                    borderRadius: "8px",
+                                    overflow: "hidden",
+                                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
                                   }}
-                                  placeholder={
-                                    <div
-                                      style={{
-                                        textAlign: "center",
-                                        padding: "40px",
-                                        backgroundColor: "#f5f5f5",
-                                        borderRadius: "8px",
-                                      }}
-                                    >
-                                      <Spin size="large" />
-                                    </div>
-                                  }
-                                />
+                                >
+                                  <Image
+                                    src={generatedImages.get(message.content)!}
+                                    alt="Generated image"
+                                    style={{
+                                      width: "100%",
+                                      height: "auto",
+                                      display: "block",
+                                    }}
+                                    placeholder={
+                                      <div
+                                        style={{
+                                          textAlign: "center",
+                                          padding: "40px",
+                                          backgroundColor: "#f5f5f5",
+                                          borderRadius: "8px",
+                                        }}
+                                      >
+                                        <Spin size="large" />
+                                      </div>
+                                    }
+                                  />
+                                </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    />
-                  )}
+                            )}
+                          </div>
+                        )}
+                      />
+                    )}
 
-                      <div ref={messagesEndRef} />
-                    </div>
+                    <div ref={messagesEndRef} />
+                  </div>
                 </div>
 
                 {/* 输入区域 */}

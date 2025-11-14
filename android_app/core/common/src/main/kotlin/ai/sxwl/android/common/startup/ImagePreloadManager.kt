@@ -71,7 +71,9 @@ object ImagePreloadManager {
                 val allImageUrls = (albumImageUrls + staticBackgroundUrls).distinct()
 
                 if (allImageUrls.isNotEmpty()) {
-                    LogUtils.d("ImagePreloadManager - 开始预加载 ${allImageUrls.size} 张图片（包含 ${albumImageUrls.size} 张专辑图，${staticBackgroundUrls.size} 张静态背景图）")
+                    LogUtils.d(
+                        "ImagePreloadManager - 开始预加载 ${allImageUrls.size} 张图片（包含 ${albumImageUrls.size} 张专辑图，${staticBackgroundUrls.size} 张静态背景图）"
+                    )
                     // 使用全局ImageLoader进行预加载
                     preloadImagesToCoilCache(allImageUrls, maxConcurrent)
                     LogUtils.d("ImagePreloadManager - 图片预加载完成")
@@ -97,9 +99,8 @@ object ImagePreloadManager {
     }
 
     /**
-     * 收集agents中的静态背景图URL（用于AgentBackground组件）
-     * 使用与AgentBackground相同的逻辑，确保URL一致性
-     * 使用固定参数（width=1080, quality=75）确保预加载和实际使用的 URL 完全一致
+     * 收集agents中的静态背景图URL（用于AgentBackground组件） 使用与AgentBackground相同的逻辑，确保URL一致性 使用固定参数（width=1080,
+     * quality=75）确保预加载和实际使用的 URL 完全一致
      *
      * @param agents agents列表
      * @return 静态背景图URL列表（已通过CDN优化）
@@ -118,11 +119,12 @@ object ImagePreloadManager {
             val originImageUrl = agent.getOriginShowImage()
             if (originImageUrl?.isNotBlank() == true) {
                 // 使用固定 CDN 参数，确保与 AgentBackground 和 AnimatedBackground 的 URL 完全一致
-                val optimizedUrl = getCdnImageUrl(
-                    originImageUrl,
-                    width = CDN_STATIC_BACKGROUND_WIDTH,
-                    quality = CDN_IMAGE_QUALITY
-                ) ?: originImageUrl
+                val optimizedUrl =
+                    getCdnImageUrl(
+                        originImageUrl,
+                        width = CDN_STATIC_BACKGROUND_WIDTH,
+                        quality = CDN_IMAGE_QUALITY,
+                    ) ?: originImageUrl
                 imageUrls.add(optimizedUrl)
             }
         }
@@ -131,8 +133,7 @@ object ImagePreloadManager {
     }
 
     /**
-     * 预加载关键图片（前几屏的图片）
-     * 包括：ExploreCharacterCard使用的图片和AgentBackground使用的静态背景图
+     * 预加载关键图片（前几屏的图片） 包括：ExploreCharacterCard使用的图片和AgentBackground使用的静态背景图
      *
      * @param agents 需要预加载的agents列表
      * @param criticalCount 关键图片数量（前几屏）

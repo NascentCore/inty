@@ -611,8 +611,8 @@ export const UserAnalyticsPage: React.FC = () => {
                   (stats?.image_generation_success_rate ?? 0) >= 80
                     ? "#3f8600"
                     : (stats?.image_generation_success_rate ?? 0) >= 50
-                    ? "#faad14"
-                    : "#cf1322",
+                      ? "#faad14"
+                      : "#cf1322",
               }}
             />
           </Card>

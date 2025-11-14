@@ -205,103 +205,103 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
     );
   };
 
-    const renderImages = () => {
-      if (!showImages) return null;
+  const renderImages = () => {
+    if (!showImages) return null;
 
-      return (
-        <Card size="small" title="图片资源" style={{ marginBottom: 16 }}>
-          <Row gutter={[16, 16]}>
-            <Col xs={24} md={8}>
-              <p>
-                <strong>头像:</strong>
-              </p>
-              {agent.avatar ? (
-                <img src={agent.avatar} alt="avatar" style={imageStyle} />
-              ) : (
-                <span style={{ color: "#999" }}>无</span>
-              )}
-            </Col>
-            <Col xs={24} md={8}>
-              <p>
-                <strong>背景图及截取头像效果:</strong>
-              </p>
-              <BackgroundWithCropOverlay
-                agent={agent}
-                style={imageStyle}
-                showCropOverlay={true}
-              />
-            </Col>
-            <Col xs={24} md={8}>
-              <p>
-                <strong>动态背景视频:</strong>
-              </p>
-              {agent.background_animated ? (
-                <div
+    return (
+      <Card size="small" title="图片资源" style={{ marginBottom: 16 }}>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} md={8}>
+            <p>
+              <strong>头像:</strong>
+            </p>
+            {agent.avatar ? (
+              <img src={agent.avatar} alt="avatar" style={imageStyle} />
+            ) : (
+              <span style={{ color: "#999" }}>无</span>
+            )}
+          </Col>
+          <Col xs={24} md={8}>
+            <p>
+              <strong>背景图及截取头像效果:</strong>
+            </p>
+            <BackgroundWithCropOverlay
+              agent={agent}
+              style={imageStyle}
+              showCropOverlay={true}
+            />
+          </Col>
+          <Col xs={24} md={8}>
+            <p>
+              <strong>动态背景视频:</strong>
+            </p>
+            {agent.background_animated ? (
+              <div
+                style={{
+                  width: "100%",
+                  maxWidth: 220,
+                  borderRadius: 8,
+                  overflow: "hidden",
+                  border: "1px solid #eee",
+                  backgroundColor: "#000",
+                }}
+              >
+                <video
+                  key={agent.background_animated}
+                  src={agent.background_animated}
+                  controls
+                  loop
+                  muted
+                  playsInline
                   style={{
                     width: "100%",
-                    maxWidth: 220,
-                    borderRadius: 8,
-                    overflow: "hidden",
-                    border: "1px solid #eee",
-                    backgroundColor: "#000",
+                    display: "block",
+                  }}
+                  poster={agent.background}
+                />
+                <div
+                  style={{
+                    padding: "6px 8px",
+                    fontSize: 12,
+                    color: "#666",
+                    backgroundColor: "#fafafa",
+                    borderTop: "1px solid #f0f0f0",
                   }}
                 >
-                  <video
-                    key={agent.background_animated}
-                    src={agent.background_animated}
-                    controls
-                    loop
-                    muted
-                    playsInline
-                    style={{
-                      width: "100%",
-                      display: "block",
-                    }}
-                    poster={agent.background}
-                  />
-                  <div
-                    style={{
-                      padding: "6px 8px",
-                      fontSize: 12,
-                      color: "#666",
-                      backgroundColor: "#fafafa",
-                      borderTop: "1px solid #f0f0f0",
-                    }}
+                  <a
+                    href={agent.background_animated}
+                    target="_blank"
+                    rel="noreferrer"
                   >
-                    <a
-                      href={agent.background_animated}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      在新标签页中打开
-                    </a>
-                  </div>
+                    在新标签页中打开
+                  </a>
                 </div>
-              ) : (
-                <span style={{ color: "#999" }}>无</span>
-              )}
-            </Col>
-          </Row>
-          {agent.background_images && agent.background_images.length > 0 && (
-            <>
-              <p style={{ marginTop: 16 }}>
-                <strong>背景图列表:</strong>
-              </p>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {agent.background_images.map((img, index) => (
-                  <img
-                    key={index}
-                    src={img}
-                    alt={`background-${index}`}
-                    style={imageStyle}
-                  />
-                ))}
               </div>
-            </>
-          )}
-        </Card>
-      );
-    };
+            ) : (
+              <span style={{ color: "#999" }}>无</span>
+            )}
+          </Col>
+        </Row>
+        {agent.background_images && agent.background_images.length > 0 && (
+          <>
+            <p style={{ marginTop: 16 }}>
+              <strong>背景图列表:</strong>
+            </p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {agent.background_images.map((img, index) => (
+                <img
+                  key={index}
+                  src={img}
+                  alt={`background-${index}`}
+                  style={imageStyle}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </Card>
+    );
+  };
 
   const renderLLMConfig = () => {
     if (!showLLMConfig || !agent.llm_config) return null;

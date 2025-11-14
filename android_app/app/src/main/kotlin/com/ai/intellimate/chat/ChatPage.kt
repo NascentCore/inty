@@ -115,7 +115,7 @@ internal fun ChatPage(
         agentInfo?.id,
         showKeepTalking,
         autoPlayVoice,
-        pageSourceOverride
+        pageSourceOverride,
     ) {
         if (isCurrentPage) {
             // 如果提供了 pageSourceOverride（通常来自 ChatActivity），说明 BaseActivity 已经追踪了页面访问
@@ -224,25 +224,17 @@ internal fun ChatPage(
         val scope = rememberCoroutineScope()
 
         Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent),
+            modifier = Modifier.fillMaxSize().background(Color.Transparent),
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
         ) { innerPadding ->
             Box(modifier = Modifier.fillMaxSize()) {
-                Column(
-                    modifier = Modifier
-                        .padding(innerPadding)
-                        .imePadding()
-                ) {
+                Column(modifier = Modifier.padding(innerPadding).imePadding()) {
                     Spacer(Modifier.height(48.dp))
 
                     agentInfo?.let { info ->
                         ChatTopBar(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 18.dp),
+                            modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
                             agentInfo = info,
                             showBackButton = showBackButton,
                             onBack = onBack,
@@ -309,9 +301,7 @@ internal fun ChatPage(
                                 (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
 
                     LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 16.dp),
+                        modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
                         state = listState,
                         reverseLayout = true,
                     ) {
@@ -361,8 +351,7 @@ internal fun ChatPage(
                                                     // 渲染失败时显示错误占位符
                                                     Box(
                                                         modifier =
-                                                            Modifier
-                                                                .fillMaxWidth()
+                                                            Modifier.fillMaxWidth()
                                                                 .height(60.dp)
                                                                 .background(
                                                                     Color.Red.copy(alpha = 0.1f)
@@ -385,8 +374,7 @@ internal fun ChatPage(
                                 item {
                                     Box(
                                         modifier =
-                                            Modifier
-                                                .fillMaxWidth()
+                                            Modifier.fillMaxWidth()
                                                 .height(100.dp)
                                                 .background(Color.Red.copy(alpha = 0.1f))
                                     ) {
@@ -438,17 +426,13 @@ internal fun ChatPage(
                         if (showLoadMoreUi) {
                             item {
                                 Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(60.dp),
+                                    modifier = Modifier.fillMaxWidth().height(60.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     if (isLoadingMore) {
                                         CircularProgressIndicator(
                                             color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier
-                                                .width(24.dp)
-                                                .height(24.dp),
+                                            modifier = Modifier.width(24.dp).height(24.dp),
                                         )
                                     } else {
                                         Text(
@@ -495,8 +479,7 @@ internal fun ChatPage(
                     if (agentInfo?.isDeleted == true) {
                         Box(
                             modifier =
-                                Modifier
-                                    .fillMaxWidth()
+                                Modifier.fillMaxWidth()
                                     .height(48.dp)
                                     .padding(horizontal = 16.dp)
                                     .clip(RoundedCornerShape(24.dp))
@@ -567,9 +550,7 @@ internal fun ChatPage(
 
                 KeepTalkingFloatingButton(
                     modifier =
-                        Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(bottom = buttonBottomOffset),
+                        Modifier.align(Alignment.BottomEnd).padding(bottom = buttonBottomOffset),
                     visible = showKeepTalkingButton,
                     enabled = isKeepTalkingEnabled,
                     onClick = { chatViewModel.sendKeepTalkingMessage() },

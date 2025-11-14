@@ -18,13 +18,11 @@ object SettingStateManager {
     val autoPlayAudioFlow: StateFlow<Boolean> = _autoPlayAudioFlow.asStateFlow()
 
     // 标记是否已经初始化过（避免重复初始化）
-    @Volatile
-    private var initialized = false
+    @Volatile private var initialized = false
 
     /**
-     * 从 Remote Config 初始化默认值
-     * 只在用户未手动设置过的情况下使用 Remote Config 的值
-     * 如果 Remote Config 未读取到，使用本地默认值（false 和 true）
+     * 从 Remote Config 初始化默认值 只在用户未手动设置过的情况下使用 Remote Config 的值 如果 Remote Config 未读取到，使用本地默认值（false
+     * 和 true）
      */
     fun initializeFromRemoteConfig() {
         // 避免重复初始化
@@ -47,7 +45,7 @@ object SettingStateManager {
                 _showKeepTalkingFlow.value = keepTalkingDefault
                 LogUtils.d(
                     "SettingStateManager",
-                    "从 Remote Config 初始化 Keep Talking 默认值: $keepTalkingDefault (key: ${FirebaseManager.RemoteConfigKeys.AUTO_ENABLE_KEEP_TALKING})"
+                    "从 Remote Config 初始化 Keep Talking 默认值: $keepTalkingDefault (key: ${FirebaseManager.RemoteConfigKeys.AUTO_ENABLE_KEEP_TALKING})",
                 )
                 // 记录 Remote Config 分配的值到 Firebase Analytics（用于验证随机百分比配置）
                 FirebaseManager.logEvent(
@@ -62,10 +60,7 @@ object SettingStateManager {
                 // 用户已设置过，使用用户设置的值
                 val currentValue = IntySetting.isShowKeepTalking()
                 _showKeepTalkingFlow.value = currentValue
-                LogUtils.d(
-                    "SettingStateManager",
-                    "用户已设置过 Keep Talking，使用用户设置: $currentValue"
-                )
+                LogUtils.d("SettingStateManager", "用户已设置过 Keep Talking，使用用户设置: $currentValue")
             }
 
             // 检查用户是否已经手动设置过 Auto Play Opening Voice
@@ -82,7 +77,7 @@ object SettingStateManager {
                 _autoPlayAudioFlow.value = autoPlayVoiceDefault
                 LogUtils.d(
                     "SettingStateManager",
-                    "从 Remote Config 初始化 Auto Play Opening Voice 默认值: $autoPlayVoiceDefault (key: ${FirebaseManager.RemoteConfigKeys.AUTO_PLAY_OPENING_VOICE})"
+                    "从 Remote Config 初始化 Auto Play Opening Voice 默认值: $autoPlayVoiceDefault (key: ${FirebaseManager.RemoteConfigKeys.AUTO_PLAY_OPENING_VOICE})",
                 )
                 // 记录 Remote Config 分配的值到 Firebase Analytics（用于验证随机百分比配置）
                 FirebaseManager.logEvent(
@@ -99,7 +94,7 @@ object SettingStateManager {
                 _autoPlayAudioFlow.value = currentValue
                 LogUtils.d(
                     "SettingStateManager",
-                    "用户已设置过 Auto Play Opening Voice，使用用户设置: $currentValue"
+                    "用户已设置过 Auto Play Opening Voice，使用用户设置: $currentValue",
                 )
             }
 

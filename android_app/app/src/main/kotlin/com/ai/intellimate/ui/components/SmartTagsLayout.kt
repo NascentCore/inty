@@ -40,18 +40,19 @@ fun SmartTagsLayout(
         val availableWidthPx = with(density) { constraints.maxWidth.toFloat() }
 
         // 计算可见的 tags，使用实际宽度
-        val visibleTags = remember(tags, availableWidthPx, maxLines, density) {
-            if (availableWidthPx > 0) {
-                calculateVisibleTags(
-                    tags = tags,
-                    availableWidth = availableWidthPx,
-                    density = density,
-                    maxLines = maxLines,
-                )
-            } else {
-                emptyList()
+        val visibleTags =
+            remember(tags, availableWidthPx, maxLines, density) {
+                if (availableWidthPx > 0) {
+                    calculateVisibleTags(
+                        tags = tags,
+                        availableWidth = availableWidthPx,
+                        density = density,
+                        maxLines = maxLines,
+                    )
+                } else {
+                    emptyList()
+                }
             }
-        }
 
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
@@ -118,8 +119,7 @@ private fun estimateTagWidth(text: String, density: Density): Float {
 private fun TagItem(text: String) {
     Box(
         modifier =
-            Modifier
-                .background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
+            Modifier.background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
                 .border(
                     width = 1.dp,
                     brush =
@@ -148,8 +148,7 @@ private fun TagItem(text: String) {
 private fun LiteTagItem(text: String) {
     Box(
         modifier =
-            Modifier
-                .background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
+            Modifier.background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
                 .border(
                     width = .5.dp,
                     brush =

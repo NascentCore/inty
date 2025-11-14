@@ -86,9 +86,7 @@ fun AgentBackground(
     LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage) {
         if (backgroundAnimatedUrl != null && isCurrentPage) {
             isVideoCached = videoCacheManager.isCached(backgroundAnimatedUrl)
-            LogUtils.d(
-                "AgentBackground - 视频缓存状态: $isVideoCached, URL: $backgroundAnimatedUrl"
-            )
+            LogUtils.d("AgentBackground - 视频缓存状态: $isVideoCached, URL: $backgroundAnimatedUrl")
         } else {
             isVideoCached = false
         }
@@ -118,11 +116,7 @@ fun AgentBackground(
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .clipToBounds()
-    ) {
+    Box(modifier = modifier.fillMaxSize().clipToBounds()) {
         if (backgroundAnimatedUrl != null) {
             // 有背景视频，使用 AnimatedBackground 组件
             AnimatedBackground(
@@ -130,7 +124,8 @@ fun AgentBackground(
                 staticImageUrl = staticImageUrl,
                 isCurrentPage = isCurrentPage,
                 shouldPlay = shouldPlayPageSwitch || shouldPlayLoading,
-                playCount = if (shouldPlayPageSwitch) VIDEO_FIRST_PLAY_COUNT else VIDEO_MESSAGE_PLAY_COUNT,
+                playCount =
+                    if (shouldPlayPageSwitch) VIDEO_FIRST_PLAY_COUNT else VIDEO_MESSAGE_PLAY_COUNT,
                 onPlayComplete = {
                     if (shouldPlayPageSwitch) {
                         shouldPlayPageSwitch = false
@@ -162,11 +157,9 @@ fun AgentBackground(
                         .crossfade(true)
                         .build()
                 }
-            
+
             AsyncImage(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
+                modifier = Modifier.fillMaxWidth().fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
                 model = staticImageRequest,
                 contentDescription = null,
                 alignment = Alignment.TopCenter,
@@ -178,34 +171,28 @@ fun AgentBackground(
         if (showGradients) {
             // 顶部渐变遮罩
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(TOP_GRADIENT_HEIGHT_DP.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Black.copy(alpha = 0.3f),
-                                Color.Transparent,
-                            ),
-                        ),
-                    )
-                    .align(Alignment.TopCenter)
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .height(TOP_GRADIENT_HEIGHT_DP.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Black.copy(alpha = 0.3f), Color.Transparent)
+                            )
+                        )
+                        .align(Alignment.TopCenter)
             )
 
             // 底部渐变遮罩
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(BOTTOM_GRADIENT_HEIGHT_DP.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.5f),
-                            ),
-                        ),
-                    )
-                    .align(Alignment.BottomCenter)
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .height(BOTTOM_GRADIENT_HEIGHT_DP.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f))
+                            )
+                        )
+                        .align(Alignment.BottomCenter)
             )
         }
     }

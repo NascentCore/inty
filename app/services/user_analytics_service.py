@@ -319,7 +319,8 @@ class UserAnalyticsService:
                 (0 / total_new_users * 100) if total_new_users > 0 else 0.0
             )
             # 查询生图统计（即使没有会话详情也要统计）
-            image_gen_query = text("""
+            image_gen_query = text(
+                """
                 SELECT 
                     COUNT(*) as total_requests,
                     COUNT(*) FILTER (WHERE extra_data->>'success' = 'true') as total_success,
@@ -328,22 +329,23 @@ class UserAnalyticsService:
                 WHERE usage_type = 'image_generation'
                   AND usage_date >= :start_date 
                   AND usage_date < :end_date
-            """)
+            """
+            )
             image_gen_result = await self.db.execute(
                 image_gen_query, {"start_date": start_date, "end_date": end_date}
             )
             image_gen_row = image_gen_result.fetchone()
-            
+
             total_image_generation_requests = image_gen_row[0] if image_gen_row else 0
             total_image_generation_success = image_gen_row[1] if image_gen_row else 0
             total_image_generation_failures = image_gen_row[2] if image_gen_row else 0
-            
+
             image_generation_success_rate = (
                 (total_image_generation_success / total_image_generation_requests * 100)
                 if total_image_generation_requests > 0
                 else 0.0
             )
-            
+
             return {
                 "total_new_users": total_new_users,
                 "total_chat_initiators": 0,
@@ -358,7 +360,9 @@ class UserAnalyticsService:
                 "total_image_generation_requests": total_image_generation_requests,
                 "total_image_generation_success": total_image_generation_success,
                 "total_image_generation_failures": total_image_generation_failures,
-                "image_generation_success_rate": round(image_generation_success_rate, 2),
+                "image_generation_success_rate": round(
+                    image_generation_success_rate, 2
+                ),
             }
 
         # 3. 获取有用户消息的会话（排除仅浏览开场白的）
@@ -375,7 +379,8 @@ class UserAnalyticsService:
                 (0 / total_new_users * 100) if total_new_users > 0 else 0.0
             )
             # 查询生图统计（即使没有活跃会话也要统计）
-            image_gen_query = text("""
+            image_gen_query = text(
+                """
                 SELECT 
                     COUNT(*) as total_requests,
                     COUNT(*) FILTER (WHERE extra_data->>'success' = 'true') as total_success,
@@ -384,22 +389,23 @@ class UserAnalyticsService:
                 WHERE usage_type = 'image_generation'
                   AND usage_date >= :start_date 
                   AND usage_date < :end_date
-            """)
+            """
+            )
             image_gen_result = await self.db.execute(
                 image_gen_query, {"start_date": start_date, "end_date": end_date}
             )
             image_gen_row = image_gen_result.fetchone()
-            
+
             total_image_generation_requests = image_gen_row[0] if image_gen_row else 0
             total_image_generation_success = image_gen_row[1] if image_gen_row else 0
             total_image_generation_failures = image_gen_row[2] if image_gen_row else 0
-            
+
             image_generation_success_rate = (
                 (total_image_generation_success / total_image_generation_requests * 100)
                 if total_image_generation_requests > 0
                 else 0.0
             )
-            
+
             return {
                 "total_new_users": total_new_users,
                 "total_chat_initiators": 0,
@@ -414,7 +420,9 @@ class UserAnalyticsService:
                 "total_image_generation_requests": total_image_generation_requests,
                 "total_image_generation_success": total_image_generation_success,
                 "total_image_generation_failures": total_image_generation_failures,
-                "image_generation_success_rate": round(image_generation_success_rate, 2),
+                "image_generation_success_rate": round(
+                    image_generation_success_rate, 2
+                ),
             }
 
         # 4. 计算统计指标
@@ -449,7 +457,8 @@ class UserAnalyticsService:
         )
 
         # 6. 查询生图统计
-        image_gen_query = text("""
+        image_gen_query = text(
+            """
             SELECT 
                 COUNT(*) as total_requests,
                 COUNT(*) FILTER (WHERE extra_data->>'success' = 'true') as total_success,
@@ -458,16 +467,17 @@ class UserAnalyticsService:
             WHERE usage_type = 'image_generation'
               AND usage_date >= :start_date 
               AND usage_date < :end_date
-        """)
+        """
+        )
         image_gen_result = await self.db.execute(
             image_gen_query, {"start_date": start_date, "end_date": end_date}
         )
         image_gen_row = image_gen_result.fetchone()
-        
+
         total_image_generation_requests = image_gen_row[0] if image_gen_row else 0
         total_image_generation_success = image_gen_row[1] if image_gen_row else 0
         total_image_generation_failures = image_gen_row[2] if image_gen_row else 0
-        
+
         # 计算成功率
         image_generation_success_rate = (
             (total_image_generation_success / total_image_generation_requests * 100)

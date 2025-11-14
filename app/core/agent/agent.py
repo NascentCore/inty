@@ -705,18 +705,18 @@ class Agent:
     ) -> str:
         """
         生成消息但不保存用户消息到历史记录（用于推送消息）
-        
+
         与 _chat_sync_optimized 的区别：
         - 不保存用户消息到历史记录
         - 不保存AI响应到历史记录（由调用方通过 add_ai_message 保存）
-        
+
         Args:
             user_id: 用户ID
             session_id: 会话ID
             messages: 用户消息列表（用于生成AI回复，但不会保存）
             user_profile: 用户信息
             chat_settings: 聊天设置
-            
+
         Returns:
             生成的AI消息内容
         """
@@ -861,14 +861,14 @@ class Agent:
     ) -> str:
         """
         异步封装：生成消息但不保存用户消息到历史记录（用于推送消息）
-        
+
         Args:
             user_id: 用户ID
             session_id: 会话ID
             messages: 用户消息列表（用于生成AI回复，但不会保存）
             user_profile: 用户信息
             chat_settings: 聊天设置
-            
+
         Returns:
             生成的AI消息内容
         """

@@ -70,7 +70,7 @@ data class AgentInfo(
         return getLargeBackground()?.ifEmpty { getLargeAvatar() }
     }
 
-    //获取可用的原图url，优先背景图，avatar做兜底
+    // 获取可用的原图url，优先背景图，avatar做兜底
     fun getOriginShowImage(): String? {
         return background.takeIf { it.isNotBlank() } ?: avatar.takeIf { it.isNotBlank() }
     }
@@ -123,8 +123,7 @@ data class CreateAgentRequest(
     val prompt: String,
 )
 
-@JsonClass(generateAdapter = true)
-data class GenerateBackgroundRequest(val prompt: String)
+@JsonClass(generateAdapter = true) data class GenerateBackgroundRequest(val prompt: String)
 
 @JsonClass(generateAdapter = true)
 data class GenerateBackgroundResponse(
