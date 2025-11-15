@@ -14,6 +14,12 @@ Based on [AGENTS.md](https://agents.md/)
 - `experimental/` 原型代码
 - `docs/` 文档
 
+## 本地服务启动
+
+- 首次运行前启动数据库依赖：`docker compose up pgvector -d`
+- 启动后端服务：`./start.sh --dev`
+- 本地服务启动成功后，可通过 `https://localhost:8000/` 访问并供测试调用
+
 ## 语言与输出
 
 - 所有生成的输出必须使用中文（普通话），即使用户指令为英文。
