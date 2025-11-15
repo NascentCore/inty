@@ -189,6 +189,46 @@ async def ensure_operator_user(session: AsyncSession, user_config: dict) -> User
     return user
 
 
+async def get_alembic_version(session: AsyncSession) -> Optional[str]:
+    """获取数据库的 alembic 版本"""
+    try:
+        result = await session.execute(
+            text("SELECT version_num FROM alembic_version LIMIT 1")
+        )
+        version = result.scalar_one_or_none()
+        return version
+    except Exception as e:
+        logger.warning(f"无法获取 alembic 版本: {e}")
+        return None
+
+
+async def check_alembic_versions(
+    dev_session: AsyncSession, prod_session: AsyncSession
+) -> bool:
+    """检查 dev 和 prod 数据库的 alembic 版本是否一致"""
+    dev_version = await get_alembic_version(dev_session)
+    prod_version = await get_alembic_version(prod_session)
+
+    if dev_version is None or prod_version is None:
+        logger.warning("无法获取 alembic 版本，跳过版本检查")
+        return True
+
+    if dev_version != prod_version:
+        logger.error("=" * 60)
+        logger.error("⚠️  Alembic 版本不一致！")
+        logger.error(f"  Dev 环境版本: {dev_version}")
+        logger.error(f"  Prod 环境版本: {prod_version}")
+        logger.error("=" * 60)
+        logger.error("请确保两个数据库的 alembic 版本一致后再进行同步")
+        logger.error("可以使用以下命令检查版本:")
+        logger.error("  alembic current")
+        logger.error("=" * 60)
+        return False
+
+    logger.info(f"✓ Alembic 版本一致: {dev_version}")
+    return True
+
+
 async def fetch_agents(session: AsyncSession, user_id: str) -> list[Agent]:
     """获取指定用户的未删除角色"""
     result = await session.execute(
@@ -460,6 +500,11 @@ async def main():
         logger.info("")
         async with DevSession() as dev_session, ProdSession() as prod_session:
             logger.info("数据库会话创建成功")
+
+            # 检查 alembic 版本是否一致
+            if not await check_alembic_versions(dev_session, prod_session):
+                logger.error("同步终止：Alembic 版本不一致")
+                sys.exit(1)
 
             user_config = config["operator_user"]
             user_id = user_config["id"]
