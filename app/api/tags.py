@@ -3,4 +3,10 @@
 from typing import Final
 
 
-INTY_EVAL_TAG: Final[str] = "inty-eval"
+ANDROID_APP_TAG: Final[str] = "android_app"
+WEB_APP_TAG: Final[str] = "web_app"
+EVALUATION_APP_TAG: Final[str] = "evaluation"
+INTERNAL_API_TAG: Final[str] = "internal"
+
+# 兼容旧代码引用
+INTY_EVAL_TAG: Final[str] = EVALUATION_APP_TAG

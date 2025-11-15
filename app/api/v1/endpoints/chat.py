@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
 from app.api import deps
-from app.api.tags import INTY_EVAL_TAG
+from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
@@ -101,7 +101,7 @@ def _build_chat_response(
     deprecated=True,
     summary="[Deprecated use /api/v2/chat/completions/{agent_id} instead] 返回与指定 Agent 聊天的下一条消息",
     description="可以处理包括图片在内的各种消息类型，媒体类型应该先上传，然后将 URL 作为索引发送到此 API",
-    tags=["android-app", INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
 )
 async def agent_chat_completions(
     *,
@@ -307,7 +307,7 @@ ChatImageGenerationAPIResponse: TypeAlias = schemas.APIResponse[
         "注意：路径参数 `agent_id` 仅作为目前的名称，实际应为 `chat_id`。未来如需扩展可直接重命名。"
         "agent id 则代表与该 agent 的*当前*会话的 id"
     ),
-    tags=[INTY_EVAL_TAG, "android-app"],
+    tags=[INTY_EVAL_TAG],
 )
 async def generate_chat_image(
     *,

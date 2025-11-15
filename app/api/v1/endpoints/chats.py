@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
 from app.api import deps
-from app.api.tags import INTY_EVAL_TAG
+from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, INTERNAL_API_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
@@ -37,7 +37,7 @@ router = APIRouter(prefix="/chats", route_class=LoggerRoute)
     response_model=List[schemas.Chat],
     summary="Get current user's chat list",
     description="Get current user's chat list",
-    tags=["android-app", INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
 )
 async def list_chats(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -61,7 +61,7 @@ async def list_chats(
     response_model=schemas.Chat,
     summary="Create new chat",
     description="Create new chat",
-    tags=["android-app", INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
 )
 async def create_chat(
     *,
@@ -81,7 +81,7 @@ async def create_chat(
     response_model=schemas.Chat,
     summary="Delete chat",
     description="Delete chat",
-    tags=["android-app", INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
 )
 async def delete_chat(
     *,
@@ -104,6 +104,7 @@ async def delete_chat(
     deprecated=True,
     include_in_schema=False,
     description="No record of who is using this",
+    tags=[INTERNAL_API_TAG],
 )
 async def get_agent_status(
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -124,6 +125,7 @@ async def get_agent_status(
     deprecated=True,
     include_in_schema=False,
     description="No record of who is using this",
+    tags=[INTERNAL_API_TAG],
 )
 async def initialize_agents(
     *,
@@ -149,6 +151,7 @@ async def initialize_agents(
     deprecated=True,
     include_in_schema=False,
     description="No record of who is using this",
+    tags=[INTERNAL_API_TAG],
 )
 async def cleanup_idle_agents(
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -174,7 +177,7 @@ async def cleanup_idle_agents(
     "/{chat_id}/detail",
     deprecated=True,
     include_in_schema=False,
-    tags=["unknown"],
+    tags=[INTERNAL_API_TAG],
     summary="Get Chat Detail",
     description="Get chat details with paginated message records",
 )
@@ -240,7 +243,7 @@ async def get_chat_detail(
 
 @router.get(
     "/agents/{agent_id}/detail",
-    tags=["unknown", INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG],
     include_in_schema=False,
     deprecated=True,
     summary="Get Chat Detail for agent identified by agent_id",
@@ -316,7 +319,7 @@ async def get_agent_chat_detail(
 
 @router.get(
     "/agents/{agent_id}/messages",
-    tags=["android-app", INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
     summary="Get Agent Chat Messages",
     description="Get only chat message records by Agent ID (lighter interface)",
 )
@@ -381,6 +384,7 @@ async def get_agent_chat_messages(
     include_in_schema=False,
     summary="用于支持 v1.0.3 app 新版 app 请勿使用本 API",
     description="基于Agent ID的OpenAI风格聊天接口，已弃用，请使用 /chat/completions/{agent_id} 代替",
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
 )
 async def agent_chat_completions(
     *,
@@ -691,7 +695,7 @@ async def agent_chat_completions(
 
 @router.post(
     "/agents/{agent_id}/messages/{message_id}/voice",
-    tags=["android-app", "inty", "voice", INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
     summary="Generate Message Voice",
     description="Generate voice for a message",
 )
@@ -811,7 +815,7 @@ async def generate_message_voice(
     "/voices/{voice_id}",
     deprecated=True,
     include_in_schema=True,
-    tags=["inty", "voice"],
+    tags=[INTERNAL_API_TAG],
     summary="Get Voice Info",
     description="Get voice info by voice_id",
 )
@@ -837,7 +841,7 @@ async def get_voice_info(
 
 @router.put(
     "/agents/{agent_id}/settings",
-    tags=["android-app", "inty", INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
     summary="Update Chat Settings by Agent ID",
     description=(
         "We do not use chat_id to get settings, because we only support 1 chat per agent."
@@ -934,7 +938,7 @@ async def update_agent_chat_settings(
 @router.get(
     "/agents/{agent_id}/settings",
     response_model=schemas.ChatSettings,
-    tags=["android-app", "inty", INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
     summary="Get Agent Chat Settings",
     description=(
         "[Deprecated, use /chats/{chat_id}/settings instead] Get chat settings by Agent ID, bause we only support 1 chat per agent, "
@@ -994,7 +998,7 @@ async def get_agent_chat_settings(
     response_model=schemas.ChatDeletionResponse,
     deprecated=True,
     include_in_schema=False,
-    tags=["inty"],
+    tags=[INTY_EVAL_TAG],
     summary="Delete Agent Chats",
     description="[Deprecated, use /chats/{chat_id} instead] Delete all chats by Agent ID",
 )
