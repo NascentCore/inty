@@ -376,9 +376,3 @@ async def root():
             version=global_config_loaded_from_config_yaml.app.version,
         )
     )
-
-
-@app.get("/sentry-debug", include_in_schema=False)
-async def trigger_error():
-    """测试 Sentry 错误捕获的调试端点"""
-    division_by_zero = 1 / 0
