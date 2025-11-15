@@ -41,4 +41,7 @@ dependencies {
 
     // ===== Retrofit 协程支持 =====
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
+
+    // ===== 单元测试依赖 =====
+    testImplementation(libs.mockk)
 }

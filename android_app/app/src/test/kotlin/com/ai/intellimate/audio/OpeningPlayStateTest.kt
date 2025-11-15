@@ -1,7 +1,9 @@
 package com.ai.intellimate.audio
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
@@ -63,5 +65,24 @@ class OpeningPlayStateTest {
 
         assertFalse(OpeningPlayState.agentOpeningPlayed(firstAgent))
         assertFalse(OpeningPlayState.agentOpeningPlayed(secondAgent))
+    }
+
+    @Test
+    fun openingPlayedAsync_handlesConcurrentInvocations() = runBlocking {
+        val agentIds = (0 until 20).map { "agent-$it" }
+
+        coroutineScope {
+            agentIds.forEach { id ->
+                launch { OpeningPlayState.openingPlayedAsync(id) }
+            }
+        }
+
+        withTimeout(1_000) {
+            while (agentIds.any { !OpeningPlayState.agentOpeningPlayed(it) }) {
+                delay(10)
+            }
+        }
+
+        agentIds.forEach { id -> assertTrue(OpeningPlayState.agentOpeningPlayed(id)) }
     }
 }

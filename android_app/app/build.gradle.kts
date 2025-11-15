@@ -82,4 +82,10 @@ dependencies {
 
     // ===== UI 测试依赖 =====
     androidTestImplementation(libs.androidx.uiautomator)
+
+    // ===== 单元测试依赖 =====
+    testImplementation(libs.mockk)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 }

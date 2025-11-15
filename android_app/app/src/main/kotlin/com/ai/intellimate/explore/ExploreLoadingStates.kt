@@ -11,11 +11,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
+
+internal const val LOAD_MORE_INDICATOR_TAG = "explore_load_more_loading"
+internal const val LOAD_MORE_ERROR_TAG = "explore_load_more_error"
+internal const val NO_MORE_DATA_TAG = "explore_no_more_data"
 
 /** Explore页面的加载状态组件 */
 @Composable
@@ -55,7 +60,7 @@ fun ExploreLoadingStates(
 @Composable
 private fun LoadingMoreIndicator() {
     Box(
-        modifier = Modifier.size(165.dp, 60.dp).padding(16.dp),
+        modifier = Modifier.size(165.dp, 60.dp).padding(16.dp).testTag(LOAD_MORE_INDICATOR_TAG),
         contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
@@ -65,7 +70,10 @@ private fun LoadingMoreIndicator() {
 /** 加载更多错误指示器 */
 @Composable
 private fun LoadMoreErrorIndicator() {
-    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(16.dp).testTag(LOAD_MORE_ERROR_TAG),
+        contentAlignment = Alignment.Center,
+    ) {
         Text(
             text = "Failed to load more data",
             color = Color.White.copy(0.7f),
@@ -78,7 +86,10 @@ private fun LoadMoreErrorIndicator() {
 /** 没有更多数据指示器 - 跨两列显示 */
 @Composable
 private fun NoMoreDataIndicator() {
-    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(16.dp).testTag(NO_MORE_DATA_TAG),
+        contentAlignment = Alignment.Center,
+    ) {
         Text(
             text = "No more data available",
             color = Color.White.copy(0.6f),
