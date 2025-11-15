@@ -14,7 +14,7 @@ from typing import Optional
 
 import yaml
 from loguru import logger
-from sqlalchemy import select, text, update
+from sqlalchemy import insert, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import load_only, sessionmaker
 
@@ -298,17 +298,16 @@ async def sync_agents(
             logger.info("第 2 步：执行创建操作...")
             for agent_id in to_create_ids:
                 source_agent = dev_agents[agent_id]
-                dev_session.expunge(source_agent)
 
-                new_agent = Agent(id=source_agent.id)
-                copy_agent_fields(source_agent, new_agent)
+                insert_dict = {}
+                for field in FIELDS_TO_SYNC:
+                    insert_dict[field] = getattr(source_agent, field)
 
-
-                prod_session.add(new_agent)
-                await prod_session.flush()
+                # 使用 insert() 语句避免触发乐观锁机制
+                await prod_session.execute(insert(Agent).values(**insert_dict))
 
                 created_count += 1
-                logger.info(f"✨ 创建成功: {new_agent.name} (ID: {agent_id})")
+                logger.info(f"✨ 创建成功: {source_agent.name} (ID: {agent_id})")
 
         # 所有操作成功，提交事务
         await prod_session.commit()
