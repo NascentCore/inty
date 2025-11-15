@@ -23,7 +23,7 @@ on:
       # 容器
       - "Dockerfile"
       # 工作流文件
-      - ".github/workflows/build_and_deploy.yml"
+      - ".github/workflows/build_and_deploy_backend.yml"
 
   workflow_dispatch:
     inputs:
