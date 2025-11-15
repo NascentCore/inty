@@ -14,9 +14,9 @@ from typing import Optional
 
 import yaml
 from loguru import logger
-from sqlalchemy import insert, select, text, update
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import load_only, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from app.models.agent import Agent
 from app.models.user import AuthType, Gender, User
@@ -88,19 +88,81 @@ async def test_connection(engine, db_name: str) -> bool:
         return False
 
 
+def generate_readable_id() -> str:
+    """生成8位随机数字ID"""
+    return "".join(str(random.randint(0, 9)) for _ in range(8))
+
+
+async def get_next_readable_id(session: AsyncSession) -> str:
+    """获取下一个可用的 readable_id（自增），确保唯一性"""
+    # 使用 no_autoflush 避免在查询时触发 autoflush（同步上下文管理器）
+    with session.no_autoflush:
+        result = await session.execute(
+            select(Agent.readable_id)
+            .where(Agent.readable_id.regexp_match(r"^\d{8}$"))
+            .order_by(Agent.readable_id.desc())
+            .limit(1)
+        )
+        max_id = result.scalar_one_or_none()
+
+        if max_id:
+            next_id = int(max_id) + 1
+        else:
+            next_id = 10000000
+
+        # 确保生成的 ID 是唯一的（循环检查直到找到可用的）
+        max_attempts = 1000
+        for _ in range(max_attempts):
+            candidate_id = str(next_id).zfill(8)
+            check_result = await session.execute(
+                select(Agent).where(Agent.readable_id == candidate_id)
+            )
+            if check_result.scalar_one_or_none() is None:
+                return candidate_id
+            next_id += 1
+
+        # 如果循环了 1000 次还没找到，抛出异常
+        raise RuntimeError(f"无法生成唯一的 readable_id，已尝试 {max_attempts} 次")
+
+
+async def ensure_unique_readable_id(
+    session: AsyncSession, readable_id: str, exclude_agent_id: Optional[str] = None
+) -> str:
+    """确保 readable_id 唯一，如果冲突则使用自增 ID
+
+    Args:
+        session: 数据库会话
+        readable_id: 要检查的 readable_id
+        exclude_agent_id: 排除的 agent ID（用于更新场景，排除当前 agent）
+
+    Returns:
+        唯一的 readable_id，如果冲突则返回自增的新 ID
+    """
+    # 使用 no_autoflush 避免在查询时触发 autoflush，防止冲突（同步上下文管理器）
+    with session.no_autoflush:
+        query = select(Agent).where(Agent.readable_id == readable_id)
+        if exclude_agent_id:
+            query = query.where(Agent.id != exclude_agent_id)
+
+        result = await session.execute(query)
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            new_id = await get_next_readable_id(session)
+            logger.warning(
+                f"⚠️  readable_id 冲突: {readable_id} 已被其他 agent 使用，"
+                f"使用自增 ID: {new_id}"
+            )
+            return new_id
+
+    return readable_id
+
+
 async def ensure_operator_user(session: AsyncSession, user_config: dict) -> User:
     """确保运营用户存在，不存在则创建"""
     user_id = user_config["id"]
 
-    result = await session.execute(
-        select(User)
-        .options(
-            load_only(
-                User.id,
-            )
-        )
-        .where(User.id == user_id)
-    )
+    result = await session.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if user:
@@ -118,6 +180,7 @@ async def ensure_operator_user(session: AsyncSession, user_config: dict) -> User
         is_active=True,
         is_superuser=True,
         auth_type=AuthType.GOOGLE,
+        readable_id=generate_readable_id(),
     )
 
     session.add(user)
@@ -129,56 +192,52 @@ async def ensure_operator_user(session: AsyncSession, user_config: dict) -> User
 async def fetch_agents(session: AsyncSession, user_id: str) -> list[Agent]:
     """获取指定用户的未删除角色"""
     result = await session.execute(
-        select(Agent)
-        .options(load_only(*AGENT_FIELDS_TO_SYNC))
-        .where(Agent.creator_id == user_id, Agent.deleted_at.is_(None))
+        select(Agent).where(Agent.creator_id == user_id, Agent.deleted_at.is_(None))
     )
     agents = result.scalars().all()
     return list(agents)
 
 
-AGENT_FIELDS_TO_SYNC = [
+FIELDS_TO_SYNC = [
     # 基础字段
-    Agent.id,
-    Agent.name,
-    Agent.gender,
-    Agent.avatar,
-    Agent.background,
-    Agent.background_images,
-    Agent.background_animated,
-    Agent.voice_id,
-    Agent.settings,
-    Agent.intro,
-    Agent.opening,
-    Agent.visibility,
-    Agent.photos,
-    Agent.category,
-    Agent.status,
-    Agent.prompt,
+    "readable_id",
+    "name",
+    "gender",
+    "avatar",
+    "background",
+    "background_images",
+    "background_animated",
+    "voice_id",
+    "settings",
+    "intro",
+    "opening",
+    "visibility",
+    "photos",
+    "category",
+    "status",
+    "prompt",
     # 主提示词和模式提示词字段
-    Agent.main_prompt,
-    Agent.mode_prompt,
+    "main_prompt",
+    "mode_prompt",
     # 角色卡相关字段
-    Agent.character_card_spec,
-    Agent.character_card_data,
-    Agent.personality,
-    Agent.scenario,
-    Agent.message_example,
-    Agent.creator_notes,
-    Agent.post_history_instructions,
-    Agent.alternate_greetings,
-    Agent.character_book,
-    Agent.tags,
-    Agent.character_version,
-    Agent.extensions,
-    Agent.meta_data,
+    "character_card_spec",
+    "character_card_data",
+    "personality",
+    "scenario",
+    "message_example",
+    "creator_notes",
+    "post_history_instructions",
+    "alternate_greetings",
+    "character_book",
+    "tags",
+    "character_version",
+    "extensions",
+    "meta_data",
     # 语音相关字段
-    Agent.opening_audio_url,
+    "opening_audio_url",
     # 外键
-    Agent.creator_id,
+    "creator_id",
 ]
-
-FIELDS_TO_SYNC = [field.name for field in AGENT_FIELDS_TO_SYNC]
 
 
 def compare_agents(agent1: Agent, agent2: Agent) -> bool:
@@ -278,19 +337,24 @@ async def sync_agents(
             logger.info("第 1 步：执行更新操作...")
             for agent_id in to_update_ids:
                 source_agent = dev_agents[agent_id]
+                target_agent = prod_agents[agent_id]
 
-                # 构建更新字典，只包含 FIELDS_TO_SYNC 中的字段
-                update_dict = {}
-                for field in FIELDS_TO_SYNC:
-                    update_dict[field] = getattr(source_agent, field)
+                result = await prod_session.execute(
+                    select(Agent).where(Agent.id == agent_id)
+                )
+                prod_agent = result.scalar_one()
 
-                # 使用 update() 语句避免触发乐观锁机制
-                await prod_session.execute(
-                    update(Agent).where(Agent.id == agent_id).values(**update_dict)
+                copy_agent_fields(source_agent, prod_agent)
+
+                # 确保 readable_id 唯一（排除当前 agent）
+                prod_agent.readable_id = await ensure_unique_readable_id(
+                    prod_session, prod_agent.readable_id, exclude_agent_id=agent_id
                 )
 
+                await prod_session.flush()
+
                 updated_count += 1
-                logger.info(f"🔄 更新成功: {source_agent.name} (ID: {agent_id})")
+                logger.info(f"🔄 更新成功: {prod_agent.name} (ID: {agent_id})")
             logger.info("")
 
         # 第二步：创建操作
@@ -298,16 +362,21 @@ async def sync_agents(
             logger.info("第 2 步：执行创建操作...")
             for agent_id in to_create_ids:
                 source_agent = dev_agents[agent_id]
+                dev_session.expunge(source_agent)
 
-                insert_dict = {}
-                for field in FIELDS_TO_SYNC:
-                    insert_dict[field] = getattr(source_agent, field)
+                new_agent = Agent(id=source_agent.id)
+                copy_agent_fields(source_agent, new_agent)
 
-                # 使用 insert() 语句避免触发乐观锁机制
-                await prod_session.execute(insert(Agent).values(**insert_dict))
+                # 确保 readable_id 唯一，如果冲突则生成新的自增 ID
+                new_agent.readable_id = await ensure_unique_readable_id(
+                    prod_session, new_agent.readable_id
+                )
+
+                prod_session.add(new_agent)
+                await prod_session.flush()
 
                 created_count += 1
-                logger.info(f"✨ 创建成功: {source_agent.name} (ID: {agent_id})")
+                logger.info(f"✨ 创建成功: {new_agent.name} (ID: {agent_id})")
 
         # 所有操作成功，提交事务
         await prod_session.commit()
@@ -395,21 +464,13 @@ async def main():
             user_config = config["operator_user"]
             user_id = user_config["id"]
 
-            result = await dev_session.execute(
-                select(User)
-                .options(
-                    load_only(
-                        User.id,
-                    )
-                )
-                .where(User.id == user_id)
-            )
+            result = await dev_session.execute(select(User).where(User.id == user_id))
             dev_user = result.scalar_one_or_none()
             if not dev_user:
                 logger.error(f"Dev环境中不存在运营用户: {user_id}")
                 sys.exit(1)
 
-            logger.info(f"Dev环境运营用户: {user_id=}")
+            logger.info(f"Dev环境运营用户: {dev_user.nickname} ({user_id})")
 
             if not args.dry_run:
                 await ensure_operator_user(prod_session, user_config)
