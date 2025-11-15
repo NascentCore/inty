@@ -1,0 +1,12 @@
+# Generated SDK code - should not be linted
+inty_sdk/
+
+# Build outputs
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Cache
+.cache/

@@ -1,0 +1,20 @@
+# Generated SDK code - should not be formatted
+inty_sdk/
+
+# Build outputs
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Package lock files
+package-lock.json
+yarn.lock
+
+# Cache
+.cache/
+
+# Config files that shouldn't be formatted
+*.min.js
+*.min.css
