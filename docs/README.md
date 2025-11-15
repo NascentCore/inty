@@ -5,16 +5,16 @@
 ## P0 核心项目总览
 
 - [x] `README.md`（2025-11-12 已审查）
-- [ ] `DEV.md`
-- [ ] `IMPLEMENTATION_COMPLETE.md`
-- [ ] `FEATURE_IDEAS.md`
-- [ ] `FEATURE_IDEAS_REQUEST.md`
-- [ ] `CHAT_MESSAGES_IMAGE_SUPPORT.md`
-- [ ] `BACKEND_HORIZONTAL_SCALING.md`
-- [ ] `PYTHON_SMELLS.md`
-- [ ] `KOTLIN_SMELLS.md`
+- [ ] `docs/DEV.md`
+- [ ] `docs/IMPLEMENTATION_COMPLETE.md`
+- [ ] `docs/FEATURE_IDEAS.md`
+- [ ] `docs/FEATURE_IDEAS_REQUEST.md`
+- [ ] `docs/CHAT_MESSAGES_IMAGE_SUPPORT.md`
+- [ ] `docs/BACKEND_HORIZONTAL_SCALING.md`
+- [ ] `docs/PYTHON_SMELLS.md`
+- [ ] `docs/KOTLIN_SMELLS.md`
 - [ ] `AGENTS.md`
-- [ ] `TODOS.md`
+- [ ] `docs/TODOS.md`
 - [ ] `.secrets/README.md`
 
 ## P1 关键服务：后端（`app/`）
