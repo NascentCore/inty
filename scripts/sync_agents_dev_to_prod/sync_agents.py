@@ -115,7 +115,9 @@ async def get_next_readable_id(session: AsyncSession) -> str:
         for _ in range(max_attempts):
             candidate_id = str(next_id).zfill(8)
             check_result = await session.execute(
-                select(Agent).where(Agent.readable_id == candidate_id)
+                select(Agent)
+                .options(load_only(Agent.id))
+                .where(Agent.readable_id == candidate_id)
             )
             if check_result.scalar_one_or_none() is None:
                 return candidate_id
@@ -140,7 +142,11 @@ async def ensure_unique_readable_id(
     """
     # 使用 no_autoflush 避免在查询时触发 autoflush，防止冲突（同步上下文管理器）
     with session.no_autoflush:
-        query = select(Agent).where(Agent.readable_id == readable_id)
+        query = (
+            select(Agent)
+            .options(load_only(Agent.id))
+            .where(Agent.readable_id == readable_id)
+        )
         if exclude_agent_id:
             query = query.where(Agent.id != exclude_agent_id)
 
@@ -200,52 +206,57 @@ async def ensure_operator_user(session: AsyncSession, user_config: dict) -> User
 async def fetch_agents(session: AsyncSession, user_id: str) -> list[Agent]:
     """获取指定用户的未删除角色"""
     result = await session.execute(
-        select(Agent).where(Agent.creator_id == user_id, Agent.deleted_at.is_(None))
+        select(Agent)
+        .options(load_only(*AGENT_FIELDS_TO_SYNC))
+        .where(Agent.creator_id == user_id, Agent.deleted_at.is_(None))
     )
     agents = result.scalars().all()
     return list(agents)
 
 
-FIELDS_TO_SYNC = [
+AGENT_FIELDS_TO_SYNC = [
     # 基础字段
-    "readable_id",
-    "name",
-    "gender",
-    "avatar",
-    "background",
-    "background_images",
-    "background_animated",
-    "voice_id",
-    "settings",
-    "intro",
-    "opening",
-    "visibility",
-    "photos",
-    "category",
-    "status",
-    "prompt",
+    Agent.id,
+    Agent.readable_id,
+    Agent.name,
+    Agent.gender,
+    Agent.avatar,
+    Agent.background,
+    Agent.background_images,
+    Agent.background_animated,
+    Agent.voice_id,
+    Agent.settings,
+    Agent.intro,
+    Agent.opening,
+    Agent.visibility,
+    Agent.photos,
+    Agent.category,
+    Agent.status,
+    Agent.prompt,
     # 主提示词和模式提示词字段
-    "main_prompt",
-    "mode_prompt",
+    Agent.main_prompt,
+    Agent.mode_prompt,
     # 角色卡相关字段
-    "character_card_spec",
-    "character_card_data",
-    "personality",
-    "scenario",
-    "message_example",
-    "creator_notes",
-    "post_history_instructions",
-    "alternate_greetings",
-    "character_book",
-    "tags",
-    "character_version",
-    "extensions",
-    "meta_data",
+    Agent.character_card_spec,
+    Agent.character_card_data,
+    Agent.personality,
+    Agent.scenario,
+    Agent.message_example,
+    Agent.creator_notes,
+    Agent.post_history_instructions,
+    Agent.alternate_greetings,
+    Agent.character_book,
+    Agent.tags,
+    Agent.character_version,
+    Agent.extensions,
+    Agent.meta_data,
     # 语音相关字段
-    "opening_audio_url",
+    Agent.opening_audio_url,
     # 外键
-    "creator_id",
+    Agent.creator_id,
 ]
+
+FIELDS_TO_SYNC = [field.name for field in AGENT_FIELDS_TO_SYNC]
 
 
 def compare_agents(agent1: Agent, agent2: Agent) -> bool:
@@ -348,7 +359,9 @@ async def sync_agents(
                 target_agent = prod_agents[agent_id]
 
                 result = await prod_session.execute(
-                    select(Agent).where(Agent.id == agent_id)
+                    select(Agent)
+                    .options(load_only(*AGENT_FIELDS_TO_SYNC))
+                    .where(Agent.id == agent_id)
                 )
                 prod_agent = result.scalar_one()
 
