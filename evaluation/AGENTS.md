@@ -10,3 +10,4 @@
 
 - 只经由统一 API 层访问后端；避免在组件内直接拼接请求。
 - 变更需更新对应测试（vitest），并保持类型无误与构建通过。
+- CI 依赖仓库根目录的 `tests/test_evaluation_ci.py`，其中会自动执行 `npm run type-check`、`npm run lint:check`、`npm run test` 与 `npm run build` 以提前发现常见问题，提交前务必确保这些命令能在本地通过。
