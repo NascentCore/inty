@@ -16,7 +16,7 @@ import yaml
 from loguru import logger
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import load_only, sessionmaker
 
 from app.models.agent import Agent
 from app.models.user import AuthType, Gender, User
@@ -162,7 +162,18 @@ async def ensure_operator_user(session: AsyncSession, user_config: dict) -> User
     """确保运营用户存在，不存在则创建"""
     user_id = user_config["id"]
 
-    result = await session.execute(select(User).where(User.id == user_id))
+    result = await session.execute(
+        select(User)
+        .options(
+            load_only(
+                User.id,
+                User.nickname,
+                User.email,
+                User.is_superuser,
+            )
+        )
+        .where(User.id == user_id)
+    )
     user = result.scalar_one_or_none()
 
     if user:
@@ -464,7 +475,18 @@ async def main():
             user_config = config["operator_user"]
             user_id = user_config["id"]
 
-            result = await dev_session.execute(select(User).where(User.id == user_id))
+            result = await dev_session.execute(
+                select(User)
+                .options(
+                    load_only(
+                        User.id,
+                        User.nickname,
+                        User.email,
+                        User.is_superuser,
+                    )
+                )
+                .where(User.id == user_id)
+            )
             dev_user = result.scalar_one_or_none()
             if not dev_user:
                 logger.error(f"Dev环境中不存在运营用户: {user_id}")
