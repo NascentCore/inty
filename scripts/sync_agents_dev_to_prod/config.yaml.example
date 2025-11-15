@@ -3,11 +3,11 @@
 
 # Dev环境数据库配置
 dev_database:
-  host: 10.148.0.2
+  host: 10.41.177.3
   port: 5432
   user: postgres
-  password: postgres
-  db: devdb
+  password: sxwl666A!
+  db: inty-dev
   pool_size: 10
   max_overflow: 20
   pool_timeout: 10
