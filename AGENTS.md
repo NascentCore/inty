@@ -31,6 +31,7 @@ Based on [AGENTS.md](https://agents.md/)
 - Markdown 文件应从以下文件中选择：`README.md`、`AGENT_TODOS.md`、`ARCH.md`、`AGENTS.md`。
 - Markdown 文件命名：全部使用 `.md` 后缀（小写），文件名使用全大写字母与下划线，例如 `FUTURE_PLANS.md`。
 - Always review the changes afterwards
+- 新建任意文件时，需在适当格式中加入 `CREATED_BY_AGENT` 标记，用于记录创建者身份。
 
 ## 提交与变更请求记录规范
 
