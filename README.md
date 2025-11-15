@@ -26,9 +26,7 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
 1. 克隆仓库并初始化子模块：
 
 ```bash
-git clone git@github.com:NascentCore/inty-backend.git
-cd inty-backend
-git submodule update --init --recursive
+git clone --recurse-submodules git@github.com:NascentCore/inty.git
 ```
 
 > 没有 SSH 权限的开发者可以改用 `https://github.com/NascentCore/inty-backend.git`。
