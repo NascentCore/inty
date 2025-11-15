@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Card,
   Button,
@@ -80,6 +80,7 @@ export const AgentManagePage: React.FC = () => {
   const [searchText, setSearchText] = useState("");
   const [visibilityFilter, setVisibilityFilter] = useState<string>("all");
   const [genderFilter, setGenderFilter] = useState<string>("all");
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
 
   // 分页
   const [pagination, setPagination] = useState({
@@ -237,17 +238,38 @@ export const AgentManagePage: React.FC = () => {
     message.success("正在刷新模型列表...");
   }, [loadModels]);
 
+  const allTags = useMemo(() => {
+    if (!agents || agents.length === 0) {
+      return [];
+    }
+    const tagSet = new Set<string>();
+    agents.forEach((agent) => {
+      (agent.tags || []).forEach((tag) => {
+        if (tag) {
+          tagSet.add(tag);
+        }
+      });
+    });
+    return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
+  }, [agents]);
+
   // 监听 agents 变化，应用筛选
   useEffect(() => {
     let filteredAgents = agents || [];
 
+    const normalizedSearchText = searchText.trim().toLowerCase();
+
     // 搜索筛选
-    if (searchText) {
-      filteredAgents = filteredAgents.filter(
-        (agent) =>
-          agent.name.toLowerCase().includes(searchText.toLowerCase()) ||
-          agent.intro?.toLowerCase().includes(searchText.toLowerCase()),
-      );
+    if (normalizedSearchText) {
+      filteredAgents = filteredAgents.filter((agent) => {
+        const nameMatch = agent.name
+          ?.toLowerCase()
+          .includes(normalizedSearchText);
+        const introMatch = agent.intro
+          ? agent.intro.toLowerCase().includes(normalizedSearchText)
+          : false;
+        return nameMatch || introMatch;
+      });
     }
 
     // 可见性筛选
@@ -264,12 +286,27 @@ export const AgentManagePage: React.FC = () => {
       );
     }
 
+    // 标签筛选（需要全部匹配）
+    const normalizedTagFilter = tagFilter
+      .map((tag) => tag.trim().toLowerCase())
+      .filter((tag) => tag.length > 0);
+    if (normalizedTagFilter.length > 0) {
+      filteredAgents = filteredAgents.filter((agent) => {
+        const agentTags = (agent.tags || [])
+          .filter((tag): tag is string => Boolean(tag))
+          .map((tag) => tag.toLowerCase());
+        return normalizedTagFilter.every((selectedTag) =>
+          agentTags.includes(selectedTag),
+        );
+      });
+    }
+
     setLocalAgents(filteredAgents);
     setPagination((prev) => ({
       ...prev,
       total: filteredAgents.length,
     }));
-  }, [agents, searchText, visibilityFilter, genderFilter]);
+  }, [agents, searchText, visibilityFilter, genderFilter, tagFilter]);
 
   useEffect(() => {
     loadAgents();
@@ -1081,7 +1118,7 @@ export const AgentManagePage: React.FC = () => {
       <Card style={{ marginBottom: 16 }}>
         <Row justify="space-between" align="middle">
           <Col span={16}>
-            <Space size="middle">
+            <Space size="middle" wrap>
               <Search
                 placeholder="搜索智能体名称或简介"
                 allowClear
@@ -1089,6 +1126,22 @@ export const AgentManagePage: React.FC = () => {
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 onSearch={() => loadAgents(true)}
+              />
+              <Select
+                mode="tags"
+                allowClear
+                placeholder="输入或选择标签"
+                style={{ minWidth: 220 }}
+                value={tagFilter}
+                onChange={(value: string[]) =>
+                  setTagFilter(
+                    value.map((tag) => tag.trim()).filter((tag) => tag.length > 0),
+                  )
+                }
+                options={allTags.map((tag) => ({ label: tag, value: tag }))}
+                tokenSeparators={[","]}
+                maxTagCount={3}
+                dropdownMatchSelectWidth={false}
               />
               <Select
                 placeholder="筛选可见性"
@@ -1111,10 +1164,7 @@ export const AgentManagePage: React.FC = () => {
                 <Option value="female">女</Option>
                 <Option value="other">其他</Option>
               </Select>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={() => loadAgents(true)}
-              >
+              <Button icon={<ReloadOutlined />} onClick={() => loadAgents(true)}>
                 刷新
               </Button>
             </Space>
