@@ -191,15 +191,11 @@ async def ensure_operator_user(session: AsyncSession, user_config: dict) -> User
 
 async def get_alembic_version(session: AsyncSession) -> Optional[str]:
     """获取数据库的 alembic 版本"""
-    try:
-        result = await session.execute(
-            text("SELECT version_num FROM alembic_version LIMIT 1")
-        )
-        version = result.scalar_one_or_none()
-        return version
-    except Exception as e:
-        logger.warning(f"无法获取 alembic 版本: {e}")
-        return None
+    result = await session.execute(
+        text("SELECT version_num FROM alembic_version LIMIT 1")
+    )
+    version = result.scalar_one_or_none()
+    return version
 
 
 async def check_alembic_versions(
