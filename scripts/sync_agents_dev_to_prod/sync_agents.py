@@ -167,9 +167,6 @@ async def ensure_operator_user(session: AsyncSession, user_config: dict) -> User
         .options(
             load_only(
                 User.id,
-                User.nickname,
-                User.email,
-                User.is_superuser,
             )
         )
         .where(User.id == user_id)
@@ -480,9 +477,6 @@ async def main():
                 .options(
                     load_only(
                         User.id,
-                        User.nickname,
-                        User.email,
-                        User.is_superuser,
                     )
                 )
                 .where(User.id == user_id)
