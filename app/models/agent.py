@@ -65,7 +65,6 @@ class Agent(Base):
 
     # 角色卡相关字段；都已经废弃
     character_card_spec = Column(String, nullable=True)  # 角色卡规范版本
-    # DEPRECATED: 未通过任何 API endpoints 暴露给客户端，仅用于内部角色卡导入/导出服务
     character_card_data = Column(JSON, nullable=True)  # 原始角色卡数据
     personality = Column(Text, nullable=True)  # 性格特征
     scenario = Column(Text, nullable=True)  # 场景设定
