@@ -1,51 +1,49 @@
 import os
+from pathlib import Path
 
 import pytest
 from loguru import logger
 
-# Optional dependency: skip tests if Python SDK is not available
-inty_module = pytest.importorskip("inty")
-Inty = getattr(inty_module, "Inty")
-
 from app.external_services.gcs import download_from_gcs
+from tests.app.api.test_client import TestClient
 
 
 @pytest.mark.noci
-def test_upload_image():
-    # Initially use dummy api key to create guest user.
-    client = Inty(base_url="http://localhost:8000", api_key="dummy-api-key")
-    # Create guest user
-    guest_response = client.api.v1.auth.create_guest(
-        device_id="test-device-123",
-        system_language="en",
-        age_group="adult",
-    )
-
-    logger.debug(f"Guest registration response: {guest_response}")
-
-    # Extract token and update client
-    token = guest_response.data.token
-    client = Inty(base_url="http://localhost:8000", api_key=token)
-
-    test_image_path = "tests/files/test.jpg"
+def test_upload_image(integration_client: TestClient):
+    test_image_path = Path("tests/files/test.jpg")
     logger.debug(f"Test image path: {test_image_path}")
     logger.debug(f"Pwd: {os.getcwd()}")
     logger.debug(f"files (readable) under pwd: {os.listdir(os.getcwd())}")
 
-    # Upload image using SDK
-    with open(test_image_path, "rb") as f:
-        upload_response = client.api.v1.upload_image(file=f, cropping_avatar=True)
+    data = {"cropping_avatar": "true"}
 
-    assert upload_response.data is not None, "Upload failed: no URL returned"
-    assert upload_response.data["url"].endswith(
+    with test_image_path.open("rb") as file_obj:
+        files = {
+            "file": (
+                test_image_path.name,
+                file_obj,
+                "image/jpeg",
+            )
+        }
+        response = integration_client.client.post(
+            f"{integration_client.base_url}/api/v1/images",
+            files=files,
+            data=data,
+        )
+
+    assert response.status_code == 200, response.text
+    upload_response = response.json()
+
+    assert upload_response.get("data") is not None, "Upload failed: no URL returned"
+    assert upload_response["data"]["url"].endswith(
         ".jpg"
     ), "Upload failed: URL does not end with .jpg"
-    assert upload_response.data["avatar_url"].endswith(
+    assert upload_response["data"]["avatar_url"].endswith(
         ".jpg"
     ), "Upload failed: avatar URL does not end with .jpg"
 
-    image_bytes = download_from_gcs(upload_response.data["url"])
-    with open(test_image_path, "rb") as f:
+    image_bytes = download_from_gcs(upload_response["data"]["url"])
+    with test_image_path.open("rb") as f:
         file_bytes = f.read()
 
     # Since cropping_avatar=True, the downloaded image will be different from original

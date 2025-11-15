@@ -1,34 +1,20 @@
 import pytest
 from loguru import logger
 
-# Optional dependency: skip tests if Python SDK is not available
-inty_module = pytest.importorskip("inty")
-Inty = getattr(inty_module, "Inty")
+from tests.app.api.test_client import TestClient
 
 
 @pytest.mark.noci
-def test_get_subscription_usage():
+def test_get_subscription_usage(integration_client: TestClient):
     """Test getting subscription usage statistics"""
-    # Create client with dummy API key to create guest user
-    client = Inty(base_url="http://localhost:8000", api_key="dummy-api-key")
-
-    # Create guest user
-    guest_response = client.api.v1.auth.create_guest(
-        device_id="test-device-usage-123",
-        system_language="en",
-        age_group="adult",
+    response = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/subscription/usage"
     )
 
-    logger.debug(f"Guest registration response: {guest_response}")
+    logger.debug(f"Usage response: status={response.status_code}, body={response.text}")
 
-    # Extract token and update client
-    token = guest_response.data.token
-    client = Inty(base_url="http://localhost:8000", api_key=token)
+    assert response.status_code == 200, response.text
 
-    # Call the subscription usage endpoint
-    usage_response = client.api.v1.subscription.get_usage()
+    usage_response = response.json()
 
-    logger.debug(f"Usage response: {usage_response}")
-
-    # Verify response structure
-    assert usage_response.data is not None, "Usage data should not be None"
+    assert usage_response.get("data") is not None, "Usage data should not be None"
