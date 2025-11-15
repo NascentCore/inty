@@ -4,7 +4,6 @@ from loguru import logger
 from tests.app.api.test_client import TestClient
 
 
-@pytest.mark.noci
 def test_get_subscription_usage(integration_client: TestClient):
     """Test getting subscription usage statistics"""
     response = integration_client.client.get(

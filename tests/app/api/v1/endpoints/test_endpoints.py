@@ -8,7 +8,6 @@ from app.external_services.gcs import download_from_gcs
 from tests.app.api.test_client import TestClient
 
 
-@pytest.mark.noci
 def test_upload_image(integration_client: TestClient):
     test_image_path = Path("tests/files/test.jpg")
     logger.debug(f"Test image path: {test_image_path}")

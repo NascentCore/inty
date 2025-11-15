@@ -41,7 +41,7 @@ def _ensure_minimal_config() -> None:
         "logging": {"level": "DEBUG"},
         "database": {"host": "localhost"},
         "agent": {"api_key": "test", "langchain_api_key": "test"},
-        "gcs": {"bucket": "inty-test"},
+        "gcs": {"bucket": "inty-test", "use_fake_gcs": True},
         "firebase": {"service_account_path": str(FIREBASE_CRED_PATH)},
         "elevenlabs": {"api_key": "test"},
     }

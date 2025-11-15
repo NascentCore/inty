@@ -1,7 +1,9 @@
 import uuid
+from contextlib import ExitStack
 from typing import Iterable, List, Optional
 
 import httpx
+from fastapi.testclient import TestClient as FastAPITestClient
 from loguru import logger
 
 
@@ -16,12 +18,29 @@ class TestClient:
     but access Inty backend API through HTTP interface.
     """
 
-    def __init__(self, base_url: str):
-        self.base_url = base_url
-        self.client = httpx.Client(timeout=30.0)
+    def __init__(self, base_url: Optional[str] = None):
+        """
+        Args:
+            base_url: When provided, requests will be sent to this HTTP endpoint.
+                When omitted, fall back to an in-process FastAPI TestClient so the
+                integration tests can run without an external server.
+        """
         self.token = None
         self.device_id = None
         self._created_agents: List[str] = []
+        self._exit_stack: Optional[ExitStack] = None
+
+        if base_url:
+            self.base_url = base_url.rstrip("/")
+            self.client = httpx.Client(timeout=30.0)
+        else:
+            from app.main import app
+
+            self._exit_stack = ExitStack()
+            fastapi_client = self._exit_stack.enter_context(FastAPITestClient(app))
+            self.client = fastapi_client
+            # FastAPI TestClient exposes .base_url pointing to http://testserver
+            self.base_url = str(fastapi_client.base_url).rstrip("/")
 
     def create_user(self) -> str:
         """Create a guest user and return the token."""
@@ -188,4 +207,7 @@ class TestClient:
 
     def close(self):
         """Close the HTTP client."""
-        self.client.close()
+        if self._exit_stack:
+            self._exit_stack.close()
+        else:
+            self.client.close()
