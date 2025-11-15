@@ -44,7 +44,7 @@
 ### 文档 (2 个文件)
 
 - `CHAT_IMAGE_GENERATION_IMPLEMENTATION.md` - 完整实现文档
-- `IMPLEMENTATION_COMPLETE.md` - 本文件
+- `docs/IMPLEMENTATION_COMPLETE.md` - 本文件
 
 ## 快速测试
 
