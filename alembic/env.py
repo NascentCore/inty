@@ -1,7 +1,25 @@
+import os
+from typing import Dict
+
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+
+CONFIG_PATH_ENV_VAR = "INTY_CONFIG_PATH"
+
+
+def _apply_custom_x_arguments() -> Dict[str, str]:
+    """读取 Alembic -x 自定义参数，并对 config.yaml 位置做覆盖。"""
+    x_args = context.get_x_argument(as_dictionary=True)
+    config_override = x_args.get("config")
+    if config_override:
+        os.environ[CONFIG_PATH_ENV_VAR] = config_override
+        print(f"[ALEMBIC] 使用自定义 config.yaml: {config_override}")
+    return x_args
+
+
+extra_arguments = _apply_custom_x_arguments()
 
 from app.core.config import global_config_loaded_from_config_yaml
 

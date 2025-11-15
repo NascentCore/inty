@@ -226,6 +226,10 @@ createdb -h localhost -p 15432 -U postgres inty_db
 # 使用 Alembic 同步数据库 schema
 alembic upgrade head
 
+# 如果需要指定非默认配置，可在命令后追加 -x config=... 覆盖 config.yaml
+# 例如：alembic upgrade head -x config=devops/config.yaml.local
+# 也可以在命令前设置 INTY_CONFIG_PATH=/abs/path/to/config.yaml
+
 # 初始化订阅计划（可选）
 python scripts/init_subscription_plans.py
 ```

@@ -10,6 +10,17 @@
   file you generated with `alembic revision --autogenerate --message "<...>"`, and then recreate the version file, by rerunning
   `alembic revision --autogenerate --message "<...>"`.
 
+## 自定义 config.yaml 路径
+
+环境脚本会读取 Alembic 的 `-x` 自定义参数，并优先使用 `config=<path>` 的值覆盖默认的 `config.yaml`：
+
+```bash
+alembic upgrade head -x config=devops/config.yaml.local
+alembic upgrade head -x config=.secrets/prod-config.yaml
+```
+
+等价的做法是预先设置环境变量 `INTY_CONFIG_PATH=/abs/path/to/config.yaml` 再运行 Alembic；`-x config=...` 会在当前进程内临时写入该环境变量，适合 CI 或一次性操作，同时仍可通过额外的 `-x key=value` 参数向迁移脚本透传自定义数据。
+
 ## SOPs
 
 ### Manually set alembic_version when
