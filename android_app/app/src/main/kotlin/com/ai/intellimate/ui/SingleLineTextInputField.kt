@@ -53,10 +53,9 @@ fun SingleLineTextInputField(
             color = Color.White,
             fontWeight = FontWeight.Medium,
         )
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(UiConfigs.Spacing.Medium))
 
-        val cornerRadiusRatio = 0.7f
-        val cornerRadius = cornerRadiusRatio * inputFontSize.value
+        val cornerRadius = UiConfigs.Fractions.TextFieldCornerRadiusRatio * inputFontSize.value
         OutlinedTextField(
             value = inputValue,
             onValueChange = onValueChange,
@@ -67,24 +66,28 @@ fun SingleLineTextInputField(
                         if (capitalizeFirstLetter) KeyboardCapitalization.Sentences
                         else KeyboardCapitalization.None,
                 ),
-            placeholder = {
-                Text(text = placeholder, fontSize = inputFontSize, color = Color.White.copy(0.5f))
-            },
+                placeholder = {
+                    Text(
+                        text = placeholder,
+                        fontSize = inputFontSize,
+                        color = Color.White.copy(UiConfigs.Alpha.DimmedText),
+                    )
+                },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             textStyle = TextStyle(color = Color.White, fontSize = inputFontSize),
             colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.White.copy(0.2f),
-                    unfocusedBorderColor = Color.White.copy(0.2f),
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedPlaceholderColor = Color.White.copy(0.5f),
-                    unfocusedPlaceholderColor = Color.White.copy(0.5f),
-                    focusedContainerColor = Color(0x1A78599A),
-                    unfocusedContainerColor = Color(0x1A78599A),
-                    cursorColor = Color.White,
-                ),
+                    OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.White.copy(UiConfigs.Alpha.SubtleBorder),
+                        unfocusedBorderColor = Color.White.copy(UiConfigs.Alpha.SubtleBorder),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedPlaceholderColor = Color.White.copy(UiConfigs.Alpha.DimmedText),
+                        unfocusedPlaceholderColor = Color.White.copy(UiConfigs.Alpha.DimmedText),
+                        focusedContainerColor = UiConfigs.Colors.InputSurface,
+                        unfocusedContainerColor = UiConfigs.Colors.InputSurface,
+                        cursorColor = Color.White,
+                    ),
             shape = RoundedCornerShape(cornerRadius.dp),
         )
     }

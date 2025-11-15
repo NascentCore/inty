@@ -44,8 +44,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.ai.intellimate.R
@@ -71,9 +69,9 @@ private fun OpenChatDialog(
         Box(
             modifier =
                 Modifier.fillMaxWidth()
-                    .heightIn(430.dp)
-                    .padding(horizontal = 24.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .heightIn(UiConfigs.Size.ChatDialogMinHeight)
+                    .padding(horizontal = UiConfigs.Padding.DialogEdge)
+                    .clip(RoundedCornerShape(UiConfigs.Shape.VipDialog))
         ) {
             Image(
                 painter = painterResource(dialogData.imageRes),
@@ -82,7 +80,12 @@ private fun OpenChatDialog(
                 modifier = Modifier.matchParentSize(),
             )
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(
+                            horizontal = UiConfigs.Padding.DialogContentHorizontal,
+                            vertical = UiConfigs.Padding.DialogContentVertical,
+                        ),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
@@ -91,19 +94,19 @@ private fun OpenChatDialog(
                         painter = painterResource(R.drawable.img_king_premium),
                         contentDescription = "",
                     )
-                    Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(UiConfigs.Spacing.Large))
                 } else {
-                    Spacer(Modifier.height(170.dp))
+                    Spacer(Modifier.height(UiConfigs.Spacing.VipHeroPlaceholder))
                 }
                 Text(
                     text = stringResource(R.string.premium_subscription_title),
-                    fontSize = 22.sp,
+                    fontSize = UiConfigs.Typography.Title,
                     fontWeight = FontWeight.Normal,
                     color = Color.White,
                     textAlign = TextAlign.Center,
                 )
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(UiConfigs.Spacing.Medium))
                 // 对文案中第一个 "!" 之前的语句进行加粗
                 val annotatedContent = buildAnnotatedString {
                     val content = dialogData.content
@@ -126,30 +129,31 @@ private fun OpenChatDialog(
                 }
                 Text(
                     text = annotatedContent,
-                    fontSize = 14.sp,
+                    fontSize = UiConfigs.Typography.Body,
                     fontWeight = FontWeight.Normal,
-                    color = Color(0x8CFFFFFF),
+                    color = UiConfigs.Colors.VipSecondaryText,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    modifier =
+                        Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.TextBlock),
                 )
 
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(UiConfigs.Spacing.XLarge))
                 HeartPrimaryButton(btnText = dialogData.btnText, onClick = onSure)
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(UiConfigs.Spacing.Medium))
                 Text(
                     text = stringResource(R.string.auto_renews_cancel),
-                    fontSize = 13.sp,
-                    lineHeight = 20.sp,
+                    fontSize = UiConfigs.Typography.Support,
+                    lineHeight = UiConfigs.LineHeight.Support,
                     fontWeight = FontWeight.Normal,
                     color = Color(0xFFFFFFFF),
                     textAlign = TextAlign.Center,
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(UiConfigs.Spacing.Tiny))
                 Text(
                     text = stringResource(R.string.more_information_full),
-                    fontSize = 12.sp,
+                    fontSize = UiConfigs.Typography.Caption,
                     fontWeight = FontWeight.Normal,
-                    color = Color(0x59FFFFFF),
+                    color = UiConfigs.Colors.VipTertiaryText,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.noRippleClickable(onClick = onMoreInfo),
                 )
@@ -191,14 +195,14 @@ internal fun HeartPrimaryButton(btnText: String, enable: Boolean = true, onClick
 
     Box(
         modifier =
-            Modifier.fillMaxWidth(.95f)
-                .height(50.dp)
-                .clip(RoundedCornerShape(25.dp))
-                .alpha(if (enable) 1f else .4f)
+            Modifier.fillMaxWidth(UiConfigs.Fractions.PrimaryButtonWidth)
+                .height(UiConfigs.Size.PrimaryButtonHeight)
+                .clip(RoundedCornerShape(UiConfigs.Shape.PrimaryButton))
+                .alpha(if (enable) 1f else UiConfigs.Alpha.DisabledButton)
                 .background(
                     brush =
                         Brush.horizontalGradient(
-                            colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))
+                            colors = UiConfigs.Colors.PrimaryGradient
                         )
                 )
                 .clickable(enabled = enable, onClick = onClick),
@@ -206,8 +210,8 @@ internal fun HeartPrimaryButton(btnText: String, enable: Boolean = true, onClick
     ) {
         Text(
             text = btnText,
-            fontSize = 16.sp,
-            lineHeight = 22.sp,
+            fontSize = UiConfigs.Typography.Button,
+            lineHeight = UiConfigs.LineHeight.Button,
             fontWeight = FontWeight.Normal,
             color = Color.White,
             textAlign = TextAlign.Center,
@@ -221,15 +225,18 @@ internal fun HeartPrimaryButton(btnText: String, enable: Boolean = true, onClick
 internal fun BePremiumDialog(onDismiss: () -> Unit = {}) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 300.dp).padding(vertical = 20.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .heightIn(min = UiConfigs.Size.BecomePremiumDialogMinHeight)
+                    .padding(vertical = UiConfigs.Spacing.Large),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             Image(painter = painterResource(R.drawable.img_king_premium), contentDescription = "")
-            Spacer(Modifier.height(30.dp))
+            Spacer(Modifier.height(UiConfigs.Spacing.HeroGap))
             Text(
                 text = stringResource(R.string.become_a_premium),
-                fontSize = 22.sp,
+                fontSize = UiConfigs.Typography.Title,
                 fontWeight = FontWeight.Normal,
                 color = Color.White,
                 textAlign = TextAlign.Center,
@@ -254,7 +261,7 @@ internal fun ExpiredVipDialog(
                 usePlatformDefaultWidth = true,
             ),
     ) {
-        Box(modifier = Modifier.clip(RoundedCornerShape(20.dp))) {
+        Box(modifier = Modifier.clip(RoundedCornerShape(UiConfigs.Shape.DialogLarge))) {
             Image(
                 painter = painterResource(dialogData.imageRes),
                 contentDescription = "",
@@ -262,40 +269,45 @@ internal fun ExpiredVipDialog(
                 modifier = Modifier.matchParentSize(),
             )
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(
+                            horizontal = UiConfigs.Padding.DialogContentHorizontal,
+                            vertical = UiConfigs.Padding.DialogContentVertical,
+                        ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Image(
                     painter = painterResource(R.drawable.img_king_premium),
                     contentDescription = "",
                 )
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(UiConfigs.Spacing.Large))
 
                 Text(
                     text = stringResource(R.string.premium_subscription_title),
-                    fontSize = 22.sp,
+                    fontSize = UiConfigs.Typography.Title,
                     fontWeight = FontWeight.Normal,
                     color = Color.White,
                     textAlign = TextAlign.Center,
                 )
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(UiConfigs.Spacing.Medium))
                 Text(
                     text = dialogData.content,
-                    fontSize = 14.sp,
+                    fontSize = UiConfigs.Typography.Body,
                     fontWeight = FontWeight.Normal,
-                    color = Color(0x8CFFFFFF),
+                    color = UiConfigs.Colors.VipSecondaryText,
                     textAlign = TextAlign.Center,
                 )
 
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(UiConfigs.Spacing.XLarge))
                 HeartPrimaryButton(btnText = dialogData.btnText, onClick = onSure)
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(UiConfigs.Spacing.Medium))
                 Text(
                     text = stringResource(R.string.cancel),
-                    fontSize = 12.sp,
+                    fontSize = UiConfigs.Typography.Caption,
                     fontWeight = FontWeight.Normal,
-                    color = Color(0x59FFFFFF),
+                    color = UiConfigs.Colors.VipTertiaryText,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.noRippleClickable(onClick = onCancel),
                 )
@@ -325,7 +337,7 @@ internal fun ReplyStyleSheet(
     sheetState: SheetState = rememberModalBottomSheetState(),
     inputStr: String,
     hintStr: String = "",
-    maxLength: Int = 1000,
+    maxLength: Int = UiConfigs.Limits.DefaultTextFieldMaxChars,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
 ) {
@@ -340,14 +352,22 @@ internal fun ReplyStyleSheet(
         Column(
             modifier =
                 Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = UiConfigs.Shape.SheetTop,
+                            topEnd = UiConfigs.Shape.SheetTop,
+                        )
+                    )
                     .background(
                         brush =
                             Brush.verticalGradient(
-                                colors = listOf(Color(0xFF322341), Color(0xFF120E24))
+                                colors = UiConfigs.Colors.ReplySheetGradient
                             )
                     )
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(
+                        horizontal = UiConfigs.Spacing.MediumPlus,
+                        vertical = UiConfigs.Spacing.Small,
+                    ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             IconButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
@@ -355,31 +375,31 @@ internal fun ReplyStyleSheet(
             }
             Text(
                 text = stringResource(R.string.custom_reply_style),
-                fontSize = 20.sp,
-                lineHeight = 28.sp,
+                fontSize = UiConfigs.Typography.SheetTitle,
+                lineHeight = UiConfigs.LineHeight.SheetTitle,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(UiConfigs.Spacing.Large))
             HeartMultiLineEditor(
                 Modifier.fillMaxWidth()
-                    .height(168.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0x1AFFFFFF)),
+                    .height(UiConfigs.Size.ReplyEditorHeight)
+                    .clip(RoundedCornerShape(UiConfigs.Shape.Input))
+                    .background(UiConfigs.Colors.SheetSurfaceOverlay),
                 inputValue = replyStr,
                 onInputChange = { replyStr = it },
                 maxLength = maxLength,
                 supportStr = "${replyStr.length}/$maxLength",
                 hintStr = hintStr,
             )
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(UiConfigs.Spacing.XLarge))
             HeartPrimaryButton(
                 stringResource(R.string.save),
                 enable = replyStr.isNotBlank(),
                 onClick = { onSave(replyStr) },
             )
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(UiConfigs.Spacing.XLarge))
         }
     }
 }

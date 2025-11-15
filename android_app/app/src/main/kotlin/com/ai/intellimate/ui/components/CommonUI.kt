@@ -16,8 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.R
 
 /** 通用渐变按钮组件 */
@@ -27,19 +26,18 @@ fun GradientButton(text: String, onSave: () -> Unit, modifier: Modifier = Modifi
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .height(50.dp)
+                .padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
+                .height(UiConfigs.Size.PrimaryButtonHeight)
                 .background(
-                    brush =
-                        Brush.linearGradient(colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))),
-                    shape = RoundedCornerShape(25.dp),
+                    brush = Brush.linearGradient(colors = UiConfigs.Colors.PrimaryGradient),
+                    shape = RoundedCornerShape(UiConfigs.Shape.PrimaryButton),
                 )
                 .noRippleClickable { onSave() }
     ) {
         Text(
             modifier = Modifier.align(Alignment.Center),
             text = text,
-            fontSize = 16.sp,
+            fontSize = UiConfigs.Typography.Button,
             fontWeight = FontWeight.Normal,
             color = Color.White,
         )

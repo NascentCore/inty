@@ -31,8 +31,6 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
 import kotlinx.coroutines.launch
 
@@ -52,7 +50,7 @@ fun IntySmallTextField(
     onSelectionChanged: ((Int) -> Unit)? = null,
     selection: Int = 0,
     maxLines: Int = Int.MAX_VALUE,
-    maxLength: Int = 1000, // 输入文案默认最大1000个字符
+    maxLength: Int = UiConfigs.Limits.DefaultTextFieldMaxChars, // 输入文案默认最大1000个字符
     focusRequester: FocusRequester? = null,
 ) {
 
@@ -134,7 +132,7 @@ fun IntySmallTextField(
                 },
                 keyboardOptions = keyboardOptions,
                 keyboardActions = newActions,
-                textStyle = TextStyle.Default.copy(fontSize = 14.sp, color = Color.White),
+                textStyle = TextStyle.Default.copy(fontSize = UiConfigs.Typography.Body, color = Color.White),
                 colors =
                     TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
@@ -160,7 +158,7 @@ fun IntySmallTextField2(
     value: String,
     singleLine: Boolean = false,
     enabled: Boolean = true,
-    maxLength: Int = 1000, // 限制最大输入字数，-1 表示不限制
+    maxLength: Int = UiConfigs.Limits.DefaultTextFieldMaxChars, // 限制最大输入字数，-1 表示不限制
     placeholder: @Composable (() -> Unit)? = null,
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
@@ -204,7 +202,12 @@ fun IntySmallTextField2(
 
         Box(
             modifier =
-                Modifier.fillMaxHeight().weight(1f).padding(horizontal = 8.dp, vertical = 4.dp),
+                Modifier.fillMaxHeight()
+                    .weight(1f)
+                    .padding(
+                        horizontal = UiConfigs.Padding.TextFieldHorizontal,
+                        vertical = UiConfigs.Padding.TextFieldVertical,
+                    ),
             contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
         ) {
             BasicTextField(
@@ -212,7 +215,7 @@ fun IntySmallTextField2(
                 enabled = enabled,
                 singleLine = singleLine,
                 value = value,
-                textStyle = TextStyle.Default.copy(fontSize = 14.sp, color = Color.White),
+                textStyle = TextStyle.Default.copy(fontSize = UiConfigs.Typography.Body, color = Color.White),
                 onValueChange = { str ->
                     // 有最大输入数字限制时候
                     if (maxLength > 0 && str.length <= maxLength) {
