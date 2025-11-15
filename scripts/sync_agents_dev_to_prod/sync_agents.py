@@ -486,7 +486,7 @@ async def main():
                 logger.error(f"Dev环境中不存在运营用户: {user_id}")
                 sys.exit(1)
 
-            logger.info(f"Dev环境运营用户: {dev_user.nickname} ({user_id})")
+            logger.info(f"Dev环境运营用户: {user_id=}")
 
             if not args.dry_run:
                 await ensure_operator_user(prod_session, user_config)
