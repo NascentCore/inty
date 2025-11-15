@@ -22,6 +22,16 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 # API 路由前缀常量移动到 app.api.constants
 from app.api.constants import API_V1_PREFIX
 
+CONFIG_PATH_ENV_VAR = "INTY_CONFIG_PATH"
+DEFAULT_CONFIG_FILE = "config.yaml"
+
+
+def _resolve_config_file_path() -> str:
+    override_path = os.getenv(CONFIG_PATH_ENV_VAR)
+    if override_path:
+        return override_path
+    return DEFAULT_CONFIG_FILE
+
 
 class Environment(str, Enum):
     """Environment enum for application deployment environments."""
@@ -424,7 +434,8 @@ def _validate_config(config: Config):
         )
 
 
-global_config_loaded_from_config_yaml = load_config("config.yaml")
+CONFIG_FILE_PATH = _resolve_config_file_path()
+global_config_loaded_from_config_yaml = load_config(CONFIG_FILE_PATH)
 print(f"[CONFIG] Database URL: {global_config_loaded_from_config_yaml.database.url}")
 _validate_config(global_config_loaded_from_config_yaml)
 

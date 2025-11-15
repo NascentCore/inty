@@ -1,7 +1,39 @@
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+import logging
+import os
+
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
+
+CONFIG_PATH_ENV_VAR = "INTY_CONFIG_PATH"
+CONFIG_OVERRIDE_KEYS = (
+    "config",
+    "config_file",
+    "config-file",
+    "config_path",
+    "config-path",
+    "app_config",
+    "app-config",
+)
+logger = logging.getLogger("alembic.env")
+
+
+def _apply_app_config_override_from_cli() -> None:
+    x_args = context.get_x_argument(as_dictionary=True)
+    if not isinstance(x_args, dict):
+        return
+
+    for key in CONFIG_OVERRIDE_KEYS:
+        override_path = x_args.get(key)
+        if not override_path:
+            continue
+
+        os.environ[CONFIG_PATH_ENV_VAR] = override_path
+        logger.info("Using app config file override from -x %s=%s", key, override_path)
+        break
+
+
+_apply_app_config_override_from_cli()
 
 from app.core.config import global_config_loaded_from_config_yaml
 

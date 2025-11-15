@@ -10,6 +10,16 @@
   file you generated with `alembic revision --autogenerate --message "<...>"`, and then recreate the version file, by rerunning
   `alembic revision --autogenerate --message "<...>"`.
 
+## 指定配置文件
+
+迁移脚本默认读取项目根目录下的 `config.yaml`。如果需要使用不同的配置文件（例如 `devops/config.yaml.dev`），可通过 Alembic 的 `-x` 自定义参数或环境变量覆盖：
+
+- `alembic upgrade head -x config=devops/config.yaml.dev`
+- `alembic revision --autogenerate -x app_config=/abs/path/config.yaml --message "add_new_table"`
+- 或者在命令前设置环境变量 `INTY_CONFIG_PATH=/abs/path/config.yaml alembic upgrade head`
+
+支持的 `-x` 键包含：`config`、`config_file`、`config-file`、`config_path`、`config-path`、`app_config`、`app-config`。以上方式会在运行时通过环境变量 `INTY_CONFIG_PATH` 覆盖默认的配置文件路径。
+
 ## SOPs
 
 ### Manually set alembic_version when
