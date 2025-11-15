@@ -50,6 +50,8 @@ COPY alembic/ alembic/
 COPY alembic.ini .
 # Used for manipulate backend system with bundled configurations.
 COPY scripts/ scripts/
+# 方便操作后端数据库
+COPY devops/ devops/
 COPY start.sh .
 
 # 复制指定的配置文件到 config.yaml
