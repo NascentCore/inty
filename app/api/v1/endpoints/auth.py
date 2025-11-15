@@ -10,6 +10,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
+from app.api.tags import ANDROID_APP_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.api.constants import API_V1_PREFIX
 from app.core.config import global_config_loaded_from_config_yaml
@@ -27,7 +28,7 @@ router = APIRouter(prefix="/auth", route_class=LoggerRoute)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{API_V1_PREFIX}/auth/login")
 
 
-@router.post("/guest", response_model=APIResponse[GuestResponse])
+@router.post("/guest", response_model=APIResponse[GuestResponse], tags=[WEB_APP_TAG])
 async def create_guest(
     *,
     db: AsyncSession = Depends(get_async_db),
@@ -54,7 +55,9 @@ async def create_guest(
 
 
 @router.post(
-    "/google/login", response_model=APIResponse[LoginResponse], tags=["android-app"]
+    "/google/login",
+    response_model=APIResponse[LoginResponse],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG],
 )
 async def google_login(
     *,

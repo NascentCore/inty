@@ -5,6 +5,7 @@ from loguru import logger
 
 from app import schemas
 from app.api import deps
+from app.api.tags import ANDROID_APP_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.external_services.globals import google_play_service
 from app.schemas.response import APIResponse
@@ -14,7 +15,9 @@ router = APIRouter(prefix="/version", route_class=LoggerRoute)
 
 
 @router.post(
-    "/check", response_model=APIResponse[VersionCheckResponse], tags=["android-app"]
+    "/check",
+    response_model=APIResponse[VersionCheckResponse],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG],
 )
 async def check_version(
     *,

@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Query
 
-from app.api.tags import INTY_EVAL_TAG
+from app.api.tags import INTY_EVAL_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.services.voice_service import voice_service
 
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/text-to-speech", route_class=LoggerRoute)
     summary="获取音色列表",
     description="获取 ElevenLabs 可用音色列表，支持搜索和过滤功能",
     response_model=List[Dict[str, Any]],
-    tags=["voice", INTY_EVAL_TAG],
+    tags=["voice", INTY_EVAL_TAG, WEB_APP_TAG],
 )
 async def list_voices(
     search: Optional[str] = Query(None, description="搜索音色名称关键词"),

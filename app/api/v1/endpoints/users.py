@@ -11,7 +11,11 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
-from app.api.tags import INTY_EVAL_TAG
+from app.api.tags import (
+    ANDROID_APP_TAG,
+    EVALUATION_APP_TAG,
+    WEB_APP_TAG,
+)
 from app.api.utils.logger_route import LoggerRoute
 from app.db.session import get_async_db
 from app.schemas.response import APIResponse
@@ -33,6 +37,7 @@ router = APIRouter(prefix="/users", route_class=LoggerRoute)
     include_in_schema=False,
     summary="[Deprecated, use /me, kept for v1.0.3 compatibility]",
     response_model=User,
+    tags=[ANDROID_APP_TAG],
 )
 async def get_profile(
     current_user: User = Depends(deps.get_current_active_user),
@@ -71,7 +76,11 @@ async def get_profile(
     return User(**user_dict)
 
 
-@router.get("/me", response_model=APIResponse[User], tags=["android-app"])
+@router.get(
+    "/me",
+    response_model=APIResponse[User],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG],
+)
 async def get_me(
     current_user: User = Depends(deps.get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
@@ -116,7 +125,7 @@ async def get_me(
     response_model=APIResponse[User],
     summary="Update current user profile",
     description="Update current user profile, support avatar update",
-    tags=["android-app"],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG],
 )
 async def update_profile(
     *,
@@ -146,6 +155,7 @@ async def update_profile(
     include_in_schema=False,
     summary="Registers or updates Firebase Cloud Messaging (FCM) device tokens for push notifications",
     description="在用户未打开 app 时向设备推送消息",
+    tags=[ANDROID_APP_TAG],
 )
 async def register_device_token(
     device_in: DeviceTokenRegister,
@@ -169,7 +179,7 @@ async def register_device_token(
 @router.get(
     "/deletion/check",
     response_model=APIResponse[DeletionCheckResponse],
-    tags=["android-app"],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG],
 )
 async def check_deletion_eligibility(
     db: AsyncSession = Depends(get_async_db),
@@ -200,7 +210,7 @@ async def check_deletion_eligibility(
 @router.post(
     "/delete-account",
     response_model=APIResponse[AccountDeletionResponse],
-    tags=["android-app"],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG],
 )
 async def delete_user_account(
     db: AsyncSession = Depends(get_async_db),
@@ -247,7 +257,7 @@ async def delete_user_account(
     "",
     response_model=UserList,
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[EVALUATION_APP_TAG],
 )
 async def get_all_users(
     *,

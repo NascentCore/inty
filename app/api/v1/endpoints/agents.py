@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
-from app.api.tags import INTY_EVAL_TAG
+from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, INTERNAL_API_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.character_card import (
@@ -60,7 +60,7 @@ async def get_current_superuser(
     response_model=schemas.APIResponse[List[schemas.Agent]],
     summary="Get list of user's created AI characters",
     description="This endpoint is used by an registered user to list their created AI characters (agents as a misnomer)",
-    tags=["android-app", INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
 )
 async def list_agents(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -84,7 +84,7 @@ async def list_agents(
     "/search",
     response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
     summary="Used by inty-eval to list all public AI characters",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, WEB_APP_TAG],
 )
 async def search_agents(
     q: str = Query(..., description="Search keyword"),
@@ -112,7 +112,7 @@ async def search_agents(
         "sort_seed is required when sort is random, "
         "which is used to ensure deterministic order for the random sort option"
     ),
-    tags=["android-app", INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
 )
 async def recommend_agents(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -155,6 +155,7 @@ async def recommend_agents(
 @router.get(
     "/following",
     response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
+    tags=[WEB_APP_TAG],
 )
 async def get_following_agents(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -199,7 +200,7 @@ async def get_following_agents(
 @router.post(
     "",
     response_model=schemas.APIResponse[Union[schemas.Agent, Dict[str, Any]]],
-    tags=["app", INTY_EVAL_TAG, "android-app"],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
     summary="Create new AI agent",
     description="Create new AI agent, used by app and inty-eval",
 )
@@ -249,7 +250,7 @@ async def create_agent(
     operation_id="get_public_agent_by_id",
     summary="Get public agent by ID",
     description="Get public agent by ID, include pre-generated agents and user-created public agents",
-    tags=["android-app", INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
 )
 async def get_agent(
     *,
@@ -268,7 +269,11 @@ async def get_agent(
     return agent
 
 
-@router.post("/{agent_id}/follow", response_model=schemas.APIResponse[dict])
+@router.post(
+    "/{agent_id}/follow",
+    response_model=schemas.APIResponse[dict],
+    tags=[WEB_APP_TAG],
+)
 async def follow_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -288,7 +293,11 @@ async def follow_agent(
         return schemas.APIResponse.error(message="Failed to follow")
 
 
-@router.delete("/{agent_id}/follow", response_model=schemas.APIResponse[dict])
+@router.delete(
+    "/{agent_id}/follow",
+    response_model=schemas.APIResponse[dict],
+    tags=[WEB_APP_TAG],
+)
 async def unfollow_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -318,7 +327,7 @@ async def unfollow_agent(
         "更新任何图片，都会将图片全部记录在 background_images 字段中，用于保存历史记录"
         "如果没有提供 avatar，则会自动截取头像，并记录在 avatar 字段中"
     ),
-    tags=["android-app", INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
 )
 async def update_agent(
     *,
@@ -341,7 +350,7 @@ async def update_agent(
 @router.delete(
     "/{agent_id}",
     response_model=schemas.APIResponse[schemas.Agent],
-    tags=["android-app", INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
 )
 async def delete_agent(
     *,
@@ -369,7 +378,7 @@ async def delete_agent(
     response_model=schemas.APIResponse[schemas.Agent],
     summary="生成背景视频",
     description="通过 Google Veo3 API 生成视频并直接存储视频地址",
-    tags=["android-app", INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG],
 )
 async def generate_background_animated(
     *,
@@ -724,6 +733,7 @@ async def generate_background(
     deprecated=True,
     include_in_schema=False,
     response_model=schemas.APIResponse[schemas.CreatorAgentStats],
+    tags=[INTERNAL_API_TAG],
 )
 async def get_creator_agent_stats(
     *,
@@ -752,7 +762,7 @@ async def get_creator_agent_stats(
     "/import-character-card",
     response_model=APIResponse[CharacterCardImportResponse],
     include_in_schema=False,
-    tags=["unknown", INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG],
 )
 async def import_character_card(
     request: CharacterCardImportRequest,
@@ -781,7 +791,7 @@ async def import_character_card(
     "/import-character-card-file",
     response_model=APIResponse[CharacterCardImportResponse],
     include_in_schema=False,
-    tags=["unknown", INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG],
 )
 async def import_character_card_file(
     file: UploadFile = File(...),
@@ -824,7 +834,7 @@ async def import_character_card_file(
     "/export-character-card",
     response_model=APIResponse[dict],
     include_in_schema=False,
-    tags=["unknown", INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG],
 )
 async def export_character_card(
     request: CharacterCardExportRequest,
@@ -857,7 +867,7 @@ async def export_character_card(
     "/{agent_id}/character-card",
     response_model=APIResponse[dict],
     include_in_schema=False,
-    tags=["unknown", INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG],
 )
 async def get_agent_character_card(
     agent_id: str,
@@ -893,7 +903,7 @@ async def get_agent_character_card(
     "/validate-character-card",
     response_model=APIResponse[CharacterCardValidationResponse],
     include_in_schema=False,
-    tags=["unknown", INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG],
 )
 async def validate_character_card(
     card_data: dict, current_user: schemas.User = Depends(deps.get_current_active_user)
@@ -914,7 +924,7 @@ async def validate_character_card(
     "/character-card/features",
     response_model=APIResponse[dict],
     include_in_schema=False,
-    tags=["unknown", INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG],
 )
 async def get_character_card_features(
     current_user: schemas.User = Depends(deps.get_current_active_user),
