@@ -16,8 +16,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.UiConfigs
 
 /** 通用渐变按钮组件 */
 @Composable

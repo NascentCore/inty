@@ -66,28 +66,28 @@ fun SingleLineTextInputField(
                         if (capitalizeFirstLetter) KeyboardCapitalization.Sentences
                         else KeyboardCapitalization.None,
                 ),
-                placeholder = {
-                    Text(
-                        text = placeholder,
-                        fontSize = inputFontSize,
-                        color = Color.White.copy(UiConfigs.Alpha.DimmedText),
-                    )
-                },
+            placeholder = {
+                Text(
+                    text = placeholder,
+                    fontSize = inputFontSize,
+                    color = Color.White.copy(UiConfigs.Alpha.DimmedText),
+                )
+            },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             textStyle = TextStyle(color = Color.White, fontSize = inputFontSize),
             colors =
-                    OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.White.copy(UiConfigs.Alpha.SubtleBorder),
-                        unfocusedBorderColor = Color.White.copy(UiConfigs.Alpha.SubtleBorder),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedPlaceholderColor = Color.White.copy(UiConfigs.Alpha.DimmedText),
-                        unfocusedPlaceholderColor = Color.White.copy(UiConfigs.Alpha.DimmedText),
-                        focusedContainerColor = UiConfigs.Colors.InputSurface,
-                        unfocusedContainerColor = UiConfigs.Colors.InputSurface,
-                        cursorColor = Color.White,
-                    ),
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.White.copy(UiConfigs.Alpha.SubtleBorder),
+                    unfocusedBorderColor = Color.White.copy(UiConfigs.Alpha.SubtleBorder),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedPlaceholderColor = Color.White.copy(UiConfigs.Alpha.DimmedText),
+                    unfocusedPlaceholderColor = Color.White.copy(UiConfigs.Alpha.DimmedText),
+                    focusedContainerColor = UiConfigs.Colors.InputSurface,
+                    unfocusedContainerColor = UiConfigs.Colors.InputSurface,
+                    cursorColor = Color.White,
+                ),
             shape = RoundedCornerShape(cornerRadius.dp),
         )
     }

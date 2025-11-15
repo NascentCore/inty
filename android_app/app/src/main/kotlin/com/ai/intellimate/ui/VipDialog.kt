@@ -200,10 +200,7 @@ internal fun HeartPrimaryButton(btnText: String, enable: Boolean = true, onClick
                 .clip(RoundedCornerShape(UiConfigs.Shape.PrimaryButton))
                 .alpha(if (enable) 1f else UiConfigs.Alpha.DisabledButton)
                 .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors = UiConfigs.Colors.PrimaryGradient
-                        )
+                    brush = Brush.horizontalGradient(colors = UiConfigs.Colors.PrimaryGradient)
                 )
                 .clickable(enabled = enable, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -359,10 +356,7 @@ internal fun ReplyStyleSheet(
                         )
                     )
                     .background(
-                        brush =
-                            Brush.verticalGradient(
-                                colors = UiConfigs.Colors.ReplySheetGradient
-                            )
+                        brush = Brush.verticalGradient(colors = UiConfigs.Colors.ReplySheetGradient)
                     )
                     .padding(
                         horizontal = UiConfigs.Spacing.MediumPlus,

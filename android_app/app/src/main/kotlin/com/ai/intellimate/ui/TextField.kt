@@ -132,7 +132,11 @@ fun IntySmallTextField(
                 },
                 keyboardOptions = keyboardOptions,
                 keyboardActions = newActions,
-                textStyle = TextStyle.Default.copy(fontSize = UiConfigs.Typography.Body, color = Color.White),
+                textStyle =
+                    TextStyle.Default.copy(
+                        fontSize = UiConfigs.Typography.Body,
+                        color = Color.White,
+                    ),
                 colors =
                     TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
@@ -215,7 +219,11 @@ fun IntySmallTextField2(
                 enabled = enabled,
                 singleLine = singleLine,
                 value = value,
-                textStyle = TextStyle.Default.copy(fontSize = UiConfigs.Typography.Body, color = Color.White),
+                textStyle =
+                    TextStyle.Default.copy(
+                        fontSize = UiConfigs.Typography.Body,
+                        color = Color.White,
+                    ),
                 onValueChange = { str ->
                     // 有最大输入数字限制时候
                     if (maxLength > 0 && str.length <= maxLength) {

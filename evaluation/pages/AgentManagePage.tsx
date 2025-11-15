@@ -1135,7 +1135,9 @@ export const AgentManagePage: React.FC = () => {
                 value={tagFilter}
                 onChange={(value: string[]) =>
                   setTagFilter(
-                    value.map((tag) => tag.trim()).filter((tag) => tag.length > 0),
+                    value
+                      .map((tag) => tag.trim())
+                      .filter((tag) => tag.length > 0),
                   )
                 }
                 options={allTags.map((tag) => ({ label: tag, value: tag }))}
@@ -1164,7 +1166,10 @@ export const AgentManagePage: React.FC = () => {
                 <Option value="female">女</Option>
                 <Option value="other">其他</Option>
               </Select>
-              <Button icon={<ReloadOutlined />} onClick={() => loadAgents(true)}>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={() => loadAgents(true)}
+              >
                 刷新
               </Button>
             </Space>

@@ -92,7 +92,11 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
                 onClick = onConfirm,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             ) {
-                Text(stringResource(R.string.delete), fontSize = UiConfigs.Typography.Body, color = Color.Red)
+                Text(
+                    stringResource(R.string.delete),
+                    fontSize = UiConfigs.Typography.Body,
+                    color = Color.Red,
+                )
             }
         }
     }
