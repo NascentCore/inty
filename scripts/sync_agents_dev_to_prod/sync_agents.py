@@ -327,8 +327,9 @@ async def sync_agents(
 
     prod_deleted_agents_list = await fetch_deleted_agents(prod_session, user_id)
     logger.info(f"Prod环境找到 {len(prod_deleted_agents_list)} 个已删除角色")
+    dev_agents_ids = [agent.id for agent in dev_agents_list]
     for agent in prod_deleted_agents_list:
-        if agent.id in dev_agents_list:
+        if agent.id in dev_agents_ids:
             logger.info(f"恢复Prod环境中已删除的角色: {agent.name} (ID: {agent.id})")
             agent.deleted_at = None
     await prod_session.flush()
