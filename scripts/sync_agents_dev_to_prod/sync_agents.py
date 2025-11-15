@@ -236,7 +236,6 @@ async def fetch_agents(session: AsyncSession, user_id: str) -> list[Agent]:
 
 FIELDS_TO_SYNC = [
     # 基础字段
-    "readable_id",
     "name",
     "gender",
     "avatar",
