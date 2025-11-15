@@ -4,9 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * 聚合 UI 层常用尺寸、颜色、比例等配置，避免在组件中直接写裸数字。
- */
+/** 聚合 UI 层常用尺寸、颜色、比例等配置，避免在组件中直接写裸数字。 */
 object UiConfigs {
 
     object Padding {
