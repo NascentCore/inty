@@ -35,9 +35,6 @@ class Environment(str, Enum):
 
 from app.api.constants import API_V2_PREFIX
 
-CONFIG_PATH_ENV_VAR = "INTY_CONFIG_PATH"
-DEFAULT_CONFIG_FILE = "config.yaml"
-
 
 @dataclass
 class LoggingConfig:
@@ -427,14 +424,7 @@ def _validate_config(config: Config):
         )
 
 
-def _resolve_config_path() -> str:
-    override = os.environ.get(CONFIG_PATH_ENV_VAR)
-    if override:
-        return override
-    return DEFAULT_CONFIG_FILE
-
-
-global_config_loaded_from_config_yaml = load_config(_resolve_config_path())
+global_config_loaded_from_config_yaml = load_config("config.yaml")
 print(f"[CONFIG] Database URL: {global_config_loaded_from_config_yaml.database.url}")
 _validate_config(global_config_loaded_from_config_yaml)
 

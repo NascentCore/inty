@@ -1,33 +1,28 @@
-import os
-from typing import Dict
-
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
 
-CONFIG_PATH_ENV_VAR = "INTY_CONFIG_PATH"
+from app.core.config import Config, load_config
+
+DEFAULT_CONFIG_PATH = "config.yaml"
 
 
-def _apply_custom_x_arguments() -> Dict[str, str]:
-    """读取 Alembic -x 自定义参数，并对 config.yaml 位置做覆盖。"""
+def _load_runtime_config() -> Config:
+    """读取 Alembic -x 自定义参数，根据指定路径加载配置文件。"""
     x_args = context.get_x_argument(as_dictionary=True)
-    config_override = x_args.get("config")
-    if config_override:
-        os.environ[CONFIG_PATH_ENV_VAR] = config_override
-        print(f"[ALEMBIC] 使用自定义 config.yaml: {config_override}")
-    return x_args
+    config_path = x_args.get("config", DEFAULT_CONFIG_PATH)
+    if "config" in x_args:
+        print(f"[ALEMBIC] 使用自定义 config.yaml: {config_path}")
+    return load_config(config_path)
 
-
-extra_arguments = _apply_custom_x_arguments()
-
-from app.core.config import global_config_loaded_from_config_yaml
+runtime_config = _load_runtime_config()
 
 # 导入所有模型，app/models/__init__.py 会将所有表定义连同 base 一起导入
 from app.models import Base
 
 target_metadata = Base.metadata
-db_url = global_config_loaded_from_config_yaml.database.url
+db_url = runtime_config.database.url
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

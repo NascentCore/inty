@@ -19,7 +19,7 @@ alembic upgrade head -x config=devops/config.yaml.local
 alembic upgrade head -x config=.secrets/prod-config.yaml
 ```
 
-等价的做法是预先设置环境变量 `INTY_CONFIG_PATH=/abs/path/to/config.yaml` 再运行 Alembic；`-x config=...` 会在当前进程内临时写入该环境变量，适合 CI 或一次性操作，同时仍可通过额外的 `-x key=value` 参数向迁移脚本透传自定义数据。
+Alembic 环境脚本会直接调用 `app.core.config.load_config()` 加载对应文件，适合 CI 里按需切换配置；同一次命令中仍可附带其它 `-x key=value` 以便迁移脚本读取自定义参数。
 
 ## SOPs
 
