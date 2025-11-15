@@ -22,16 +22,54 @@ from app.models.agent import Agent
 from app.models.user import AuthType, Gender, User
 
 
-def load_config(config_path: str = "config.yaml") -> dict:
-    """加载配置文件"""
-    config_file = Path(__file__).parent / config_path
-    if not config_file.exists():
-        logger.error(f"配置文件不存在: {config_file}")
-        logger.info("请复制 config.yaml.example 为 config.yaml 并修改配置")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_DEVOPS_DEV_CONFIG = REPO_ROOT / "devops" / "config.yaml.dev"
+DEFAULT_DEVOPS_PROD_CONFIG = REPO_ROOT / "devops" / "config.yaml.prod"
+
+
+def resolve_config_path(config_path: str) -> Path:
+    """解析配置文件路径，支持绝对路径、CWD 相对路径以及脚本目录相对路径"""
+    path = Path(config_path).expanduser()
+    if path.is_absolute():
+        return path
+
+    cwd_candidate = Path.cwd() / path
+    if cwd_candidate.exists():
+        return cwd_candidate
+
+    return Path(__file__).parent / path
+
+
+def load_yaml_config(path: Path, description: str) -> dict:
+    """加载 YAML 配置文件"""
+    if not path.exists():
+        logger.error(f"{description}不存在: {path}")
         sys.exit(1)
 
-    with open(config_file, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+    with open(path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+
+    if not isinstance(data, dict):
+        logger.error(f"{description}格式错误，应为字典: {path}")
+        sys.exit(1)
+
+    return data
+
+
+def load_env_database_config(config_path: str, env_name: str) -> dict:
+    """读取 devops 配置中的数据库设置"""
+    resolved_path = resolve_config_path(config_path)
+    env_config = load_yaml_config(resolved_path, f"{env_name} 环境配置文件")
+    database_config = env_config.get("database")
+
+    if not isinstance(database_config, dict):
+        logger.error(
+            f"{env_name} 环境配置缺少 database 段或格式错误: {resolved_path}"
+        )
+        sys.exit(1)
+
+    logger.info(f"使用 {env_name} 环境配置: {resolved_path}")
+    return database_config
 
 
 def create_db_url(db_config: dict) -> str:
@@ -438,7 +476,17 @@ async def main():
     parser.add_argument(
         "--config",
         default="config.yaml",
-        help="配置文件路径（默认: config.yaml）",
+        help="同步脚本配置路径（默认: config.yaml，位于脚本目录）",
+    )
+    parser.add_argument(
+        "--dev-config-path",
+        default=str(DEFAULT_DEVOPS_DEV_CONFIG),
+        help="dev 环境 devops 配置路径（默认: devops/config.yaml.dev）",
+    )
+    parser.add_argument(
+        "--prod-config-path",
+        default=str(DEFAULT_DEVOPS_PROD_CONFIG),
+        help="prod 环境 devops 配置路径（默认: devops/config.yaml.prod）",
     )
     parser.add_argument(
         "--dry-run",
@@ -447,14 +495,17 @@ async def main():
     )
     args = parser.parse_args()
 
-    config = load_config(args.config)
+    sync_config_path = resolve_config_path(args.config)
+    sync_config = load_yaml_config(sync_config_path, "同步脚本配置")
 
-    log_level = config.get("logging", {}).get("level", "INFO")
+    log_level = sync_config.get("logging", {}).get("level", "INFO")
     logger.remove()
     logger.add(sys.stderr, level=log_level)
 
-    dev_db_config = config["dev_database"]
-    prod_db_config = config["prod_database"]
+    logger.info(f"使用同步脚本配置: {sync_config_path}")
+
+    dev_db_config = load_env_database_config(args.dev_config_path, "Dev")
+    prod_db_config = load_env_database_config(args.prod_config_path, "Prod")
 
     dev_url = create_db_url(dev_db_config)
     prod_url = create_db_url(prod_db_config)
@@ -501,7 +552,10 @@ async def main():
                 logger.error("同步终止：Alembic 版本不一致")
                 sys.exit(1)
 
-            user_config = config["operator_user"]
+            user_config = sync_config.get("operator_user")
+            if not isinstance(user_config, dict):
+                logger.error("同步脚本配置缺少 operator_user 段或格式错误")
+                sys.exit(1)
             user_id = user_config["id"]
 
             result = await dev_session.execute(select(User).where(User.id == user_id))

@@ -24,17 +24,18 @@
 
 ## 配置
 
-复制配置文件示例并修改数据库连接信息：
+脚本会直接复用 `devops/config.yaml.dev` 与 `devops/config.yaml.prod` 中的数据库配置，避免重复维护。仅需为脚本提供运营用户等额外信息：
 
 ```bash
 cp config.yaml.example config.yaml
 ```
 
-编辑 config.yaml 文件，配置：
+编辑 `config.yaml` 文件，配置：
 
-- dev 和 prod 数据库连接信息
-- 运营用户 ID 和基本信息
-- 日志级别
+- 运营用户 ID 和基本信息（需要确保该用户存在于 dev 环境）
+- 日志级别（可选）
+
+如需使用自定义 dev/prod 配置，可在运行时通过 `--dev-config-path` 与 `--prod-config-path` 覆盖默认路径。
 
 ## 使用方法
 
@@ -44,9 +45,9 @@ cp config.yaml.example config.yaml
 pip install -r requirements.txt
 ```
 
-### 2. 配置数据库连接
+### 2. 确认数据库连接
 
-编辑 config.yaml 文件，确保数据库连接信息正确。
+默认情况下，脚本会读取 `devops/config.yaml.dev` 与 `devops/config.yaml.prod` 的 `database` 段。若需要同步其它环境，请在执行时指定 `--dev-config-path` / `--prod-config-path`。
 
 ### 3. 预览同步操作
 
@@ -128,7 +129,9 @@ Dev环境运营用户: admin (user-01JWZ34Y4D1C92GD86A5R6EWYJ)
 
 ## 命令行参数
 
-- `--config <path>`: 指定配置文件路径（默认: config.yaml）
+- `--config <path>`: 指定脚本配置路径（默认: 脚本目录下的 `config.yaml`）
+- `--dev-config-path <path>`: 指定 dev 环境的 devops 配置路径（默认: `devops/config.yaml.dev`）
+- `--prod-config-path <path>`: 指定 prod 环境的 devops 配置路径（默认: `devops/config.yaml.prod`）
 - `--dry-run`: 预览模式，不实际执行操作
 
 ## 注意事项
