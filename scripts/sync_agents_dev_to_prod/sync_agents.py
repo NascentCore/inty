@@ -238,6 +238,15 @@ async def fetch_agents(session: AsyncSession, user_id: str) -> list[Agent]:
     return list(agents)
 
 
+async def fetch_deleted_agents(session: AsyncSession, user_id: str) -> list[Agent]:
+    """获取指定用户的已删除角色"""
+    result = await session.execute(
+        select(Agent).where(Agent.creator_id == user_id, Agent.deleted_at.isnot(None))
+    )
+    agents = result.scalars().all()
+    return list(agents)
+
+
 FIELDS_TO_SYNC = [
     # 基础字段
     "readable_id",
@@ -315,6 +324,13 @@ async def sync_agents(
 
     dev_agents_list = await fetch_agents(dev_session, user_id)
     logger.info(f"Dev环境找到 {len(dev_agents_list)} 个未删除角色")
+
+    prod_deleted_agents_list = await fetch_deleted_agents(prod_session, user_id)
+    logger.info(f"Prod环境找到 {len(prod_deleted_agents_list)} 个已删除角色")
+    for agent in prod_deleted_agents_list:
+        if agent.id in dev_agents_list:
+            agent.deleted_at = None
+    await prod_session.flush()
 
     prod_agents_list = await fetch_agents(prod_session, user_id)
     logger.info(f"Prod环境找到 {len(prod_agents_list)} 个未删除角色")
