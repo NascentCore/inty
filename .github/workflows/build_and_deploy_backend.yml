@@ -11,7 +11,7 @@ on:
       # 开发环境配置文件
       - "devops/config.yaml.dev"
       # 评测系统
-      - "evaluation/**/*.{ts,tsx,js,jsx,css,scss,less,html,json,svg,png,jpg,jpeg,ico,webp}"
+      - "evaluation/**/*.tsx"
       - "evaluation/tsconfig.json"
       - "evaluation/tsconfig.node.json"
       - "evaluation/package.json"
@@ -20,7 +20,9 @@ on:
       - "evaluation/vitest.config.ts"
       - "evaluation/index.html"
       - "build_evaluation.sh"
+      # 容器
       - "Dockerfile"
+      # 工作流文件
       - ".github/workflows/build_and_deploy.yml"
 
   workflow_dispatch:
