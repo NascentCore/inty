@@ -127,5 +127,5 @@ push_notification_service.py (核心逻辑)
 
 ## 相关文档
 
-- 详细文档：`docs/PUSH_NOTIFICATION_SYSTEM.md`
+- 详细文档：`backend/docs/PUSH_NOTIFICATION_SYSTEM.md`
 - 代码实现：`app/services/push_notification_service.py`

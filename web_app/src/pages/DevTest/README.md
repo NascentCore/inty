@@ -293,8 +293,8 @@ export default YourTestComponent;
 
 ## 📚 相关文档
 
-- [Inty SDK 使用文档](../../../docs/inty-sdk使用文档.md)
-- [Inty SDK 快速参考](../../../docs/inty-sdk快速参考.md)
+- [Inty SDK 使用文档](../../../backend/docs/inty-sdk使用文档.md)
+- [Inty SDK 快速参考](../../../backend/docs/inty-sdk快速参考.md)
 
 ## 🤝 贡献
 

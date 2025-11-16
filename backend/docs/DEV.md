@@ -48,7 +48,7 @@ All table definitions must be added to `app/models` directory for consistency.
 | **Schemas**       | [`app/schemas`](app/schemas)               | Pydantic models validate request/response data (mirroring model structure)                                     |
 | **Services**      | [`app/services`](app/services)             | Business logic; for example, `chat_service.py` manages chat sessions and caching logic                         |
 | **Agent engine**  | [`app/core/agent`](app/core/agent)         | LangChain/LangGraph-based agent system with custom state, memory tools, and model configuration utilities      |
-| **Documentation** | [`docs/`](docs)                            | Design notes for character cards, AI voice, prompt templates, Google Play subscriptions, etc.                  |
+| **Documentation** | [`backend/docs/`](.)                       | Design notes for character cards, AI voice, prompt templates, Google Play subscriptions, etc.                  |
 | **Migrations**    | [`alembic/`](alembic)                      | Database schema migrations                                                                                     |
 | **Utilities**     | [`scripts/`](scripts)                      | Setup helpers and maintenance scripts                                                                          |
 | **Testing**       | [`testing/`](testing)                      | Sample data and test utilities                                                                                 |

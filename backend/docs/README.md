@@ -5,16 +5,16 @@
 ## P0 核心项目总览
 
 - [x] `README.md`（2025-11-12 已审查）
-- [ ] `docs/DEV.md`
-- [ ] `docs/IMPLEMENTATION_COMPLETE.md`
-- [ ] `docs/FEATURE_IDEAS.md`
-- [ ] `docs/FEATURE_IDEAS_REQUEST.md`
-- [ ] `docs/CHAT_MESSAGES_IMAGE_SUPPORT.md`
-- [ ] `docs/BACKEND_HORIZONTAL_SCALING.md`
-- [ ] `docs/PYTHON_SMELLS.md`
-- [ ] `docs/KOTLIN_SMELLS.md`
+- [ ] `backend/docs/DEV.md`
+- [ ] `backend/docs/IMPLEMENTATION_COMPLETE.md`
+- [ ] `backend/docs/FEATURE_IDEAS.md`
+- [ ] `backend/docs/FEATURE_IDEAS_REQUEST.md`
+- [ ] `backend/docs/CHAT_MESSAGES_IMAGE_SUPPORT.md`
+- [ ] `backend/docs/BACKEND_HORIZONTAL_SCALING.md`
+- [ ] `backend/docs/PYTHON_SMELLS.md`
+- [ ] `backend/docs/KOTLIN_SMELLS.md`
 - [ ] `AGENTS.md`
-- [ ] `docs/TODOS.md`
+- [ ] `backend/docs/TODOS.md`
 - [ ] `.secrets/README.md`
 
 ## P1 关键服务：后端（`app/`）
@@ -70,20 +70,20 @@
 - [ ] `android_app/devops/GOOGLE_PLAY_RELEASE_NOTES.md`
 - [ ] `android_app/todos/BILLING_VERISON_UPGRADE_TO_8-0-0.md`
 
-## P1 文档中心（`docs/`）
+## P1 文档中心（`backend/docs/`）
 
-- [x] `docs/AGENTS.md`（2025-11-12 已审查）
-- [x] `docs/AGENT_CHARACTER_CARD_INTEGRATION.md`（2025-11-12 已审查）
-- [ ] `docs/AGENT_EXTENSIONS_SYSTEM.md`
-- [x] `docs/AI_VOICE_SYSTEM.md`（2025-11-14 已审查）
-- [ ] `docs/CHARACTER_CARD_SYSTEM.md`
-- [ ] `docs/FASTAPI_BEST_PRACTICES_ZH.md`
-- [ ] `docs/FFMPEG_INSTALLATION.md`
-- [ ] `docs/Google_Play_Subscription_Setup.md`
-- [ ] `docs/PROMPT_TEMPLATE_SYSTEM.md`
-- [ ] `docs/SUBSCRIPTION_WEBHOOK_COMPENSATION_PLAN.md`
-- [ ] `docs/VERSION_API_USAGE.md`
-- [ ] `docs/tools/LANG_SMITH.md`
+- [x] `backend/docs/AGENTS.md`（2025-11-12 已审查）
+- [x] `backend/docs/AGENT_CHARACTER_CARD_INTEGRATION.md`（2025-11-12 已审查）
+- [ ] `backend/docs/AGENT_EXTENSIONS_SYSTEM.md`
+- [x] `backend/docs/AI_VOICE_SYSTEM.md`（2025-11-14 已审查）
+- [ ] `backend/docs/CHARACTER_CARD_SYSTEM.md`
+- [ ] `backend/docs/FASTAPI_BEST_PRACTICES_ZH.md`
+- [ ] `backend/docs/FFMPEG_INSTALLATION.md`
+- [ ] `backend/docs/Google_Play_Subscription_Setup.md`
+- [ ] `backend/docs/PROMPT_TEMPLATE_SYSTEM.md`
+- [ ] `backend/docs/SUBSCRIPTION_WEBHOOK_COMPENSATION_PLAN.md`
+- [ ] `backend/docs/VERSION_API_USAGE.md`
+- [ ] `backend/docs/tools/LANG_SMITH.md`
 
 ## P2 运维与部署
 

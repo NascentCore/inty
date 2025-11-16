@@ -227,6 +227,6 @@ alembic upgrade head
 
 - [Firebase Cloud Messaging](https://firebase.google.com/docs/cloud-messaging)
 - [APScheduler 文档](https://apscheduler.readthedocs.io/)
-- [Agent 系统文档](docs/AGENTS.md)
+- [Agent 系统文档](AGENTS.md)
 - [通知服务文档](app/services/README.md)
 
