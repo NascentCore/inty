@@ -5,18 +5,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -86,54 +82,24 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = uiState.pendingValue,
-                onValueChange = viewModel::onInputChanged,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                label = { Text("自定义 Base URL") },
-                isError = uiState.error != null,
-                colors =
-                    TextFieldDefaults.colors(
-                        unfocusedIndicatorColor = Color.White.copy(alpha = 0.5f),
-                        focusedIndicatorColor = Color(0xFFB7A5FF),
-                        cursorColor = Color.White,
-                        focusedLabelColor = Color.White,
-                        unfocusedLabelColor = Color.White.copy(alpha = 0.7f),
-                        errorIndicatorColor = Color(0xFFFF6B6B),
-                        errorLabelColor = Color(0xFFFF6B6B),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                    ),
-                textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
-            )
-
-            uiState.error?.let { error ->
-                Spacer(Modifier.height(4.dp))
-                Text(text = error, color = Color(0xFFFF6B6B), style = MaterialTheme.typography.bodySmall)
-            }
             uiState.message?.let { message ->
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(text = message, color = Color(0xFF5BE49B), style = MaterialTheme.typography.bodySmall)
             }
 
             Spacer(Modifier.height(12.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 viewModel.quickPresets.forEach { (label, url) ->
-                    AssistChip(onClick = { viewModel.usePreset(url) }, label = { Text(label) })
+                    AssistChip(
+                        onClick = { viewModel.applyPreset(url) },
+                        label = { Text(label) }
+                    )
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = viewModel::applyOverride, modifier = Modifier.weight(1f)) {
-                    Text(text = "立即切换")
-                }
-                TextButton(
-                    onClick = viewModel::resetOverride,
-                    enabled = uiState.hasOverride,
-                ) {
+            if (uiState.hasOverride) {
+                Spacer(Modifier.height(12.dp))
+                TextButton(onClick = viewModel::resetOverride) {
                     Text(text = "恢复默认", color = Color.White)
                 }
             }

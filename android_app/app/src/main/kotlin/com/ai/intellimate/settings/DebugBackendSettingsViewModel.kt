@@ -1,5 +1,6 @@
 package com.ai.intellimate.settings
 
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.data.http.config.Constant
 import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
@@ -20,10 +21,8 @@ class DebugBackendSettingsViewModel : ViewModel() {
         val isSupported: Boolean,
         val buildType: String,
         val activeBaseUrl: String,
-        val pendingValue: String,
         val overrideInfo: OverrideInfo?,
         val message: String? = null,
-        val error: String? = null,
     ) {
         val hasOverride: Boolean = overrideInfo != null
     }
@@ -41,76 +40,59 @@ class DebugBackendSettingsViewModel : ViewModel() {
     private fun createInitialState(): UiState {
         val overrideInfo = DebugBackendEndpointStore.getOverrideInfo()
         val activeBaseUrl = NetworkConfig.getBaseUrl()
-        val pendingValue = overrideInfo?.url ?: activeBaseUrl
         return UiState(
             isSupported = DebugBackendEndpointStore.isRuntimeOverrideSupported(),
             buildType = NetworkConfig.getCurrentBuildType().value,
             activeBaseUrl = activeBaseUrl,
-            pendingValue = pendingValue,
             overrideInfo = overrideInfo,
         )
     }
 
-    fun onInputChanged(value: String) {
-        _uiState.update { it.copy(pendingValue = value, message = null, error = null) }
-    }
-
-    fun applyOverride() {
-        val pending = _uiState.value.pendingValue
-        val normalized = DebugBackendEndpointStore.normalizeAndValidate(pending)
+    fun applyPreset(url: String) {
+        val normalized = DebugBackendEndpointStore.normalizeAndValidate(url)
         if (normalized == null) {
-            _uiState.update {
-                it.copy(
-                    error = "URL 无效，请确保包含合法的域名或 IP",
-                    message = null,
-                )
-            }
+            LogUtils.e(TAG, "Invalid preset URL: $url")
             return
         }
 
         val info =
-            runCatching { DebugBackendEndpointStore.persistOverride(pending) }
+            runCatching { DebugBackendEndpointStore.persistOverride(url) }
                 .onFailure { LogUtils.e(TAG, "Failed to persist runtime backend override", it) }
                 .getOrElse { throwable ->
                     _uiState.update {
                         it.copy(
-                            error = throwable.message ?: "保存失败，请重试",
-                            message = null,
+                            message = "保存失败：${throwable.message ?: "请重试"}",
                         )
                     }
                     return
                 }
 
+        // 清除 Inty SDK 和 Retrofit 的客户端缓存
         IntyNetworkManager.clearClientCache()
+        NetServiceMgr.clearCache()
 
         _uiState.update {
             it.copy(
                 activeBaseUrl = NetworkConfig.getBaseUrl(),
-                pendingValue = info.url,
                 overrideInfo = info,
                 message = "已切换到 ${info.url}",
-                error = null,
             )
         }
     }
 
     fun resetOverride() {
         DebugBackendEndpointStore.clearOverride()
+        // 清除 Inty SDK 和 Retrofit 的客户端缓存
         IntyNetworkManager.clearClientCache()
+        NetServiceMgr.clearCache()
 
         val active = NetworkConfig.getBaseUrl()
         _uiState.update {
             it.copy(
                 activeBaseUrl = active,
-                pendingValue = active,
                 overrideInfo = null,
                 message = "已恢复到默认后端",
-                error = null,
             )
         }
-    }
-
-    fun usePreset(url: String) {
-        _uiState.update { it.copy(pendingValue = url, error = null, message = null) }
     }
 }
