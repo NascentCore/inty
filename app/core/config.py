@@ -9,8 +9,6 @@ import yaml
 from loguru import logger
 from pydantic import AnyHttpUrl
 
-from app.core.agent import prompts as agent_prompts
-
 # All config classes' fields should have default values.
 # These default value allow this to be used without an actual config file.
 # Since config object is used as a global singleton, most code depends on it,
@@ -328,9 +326,6 @@ def load_config(path: str) -> Config:
     if not isinstance(agent_data, dict):
         raise TypeError("agent config must be a mapping")
     agent_data = dict(agent_data)
-    image_generation_prompt_template = agent_data.pop(
-        "image_generation_prompt_template", None
-    )
 
     config_obj = Config(
         app=AppConfig(**app_data),
@@ -349,11 +344,6 @@ def load_config(path: str) -> Config:
         sentry=SentryConfig(**data.get("sentry", {})),
         push_notification=PushNotificationConfig(**data.get("push_notification", {})),
     )
-
-    if image_generation_prompt_template:
-        agent_prompts.IMAGE_GENERATION_PROMPT_TEMPLATE = (
-            image_generation_prompt_template
-        )
 
     return config_obj
 

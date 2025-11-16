@@ -132,7 +132,7 @@
 请生成一张符合上述场景的图片，确保角色外观与参考图保持高度一致。
 ```
 
-提示词模板在 `app/core/agent/prompts.py` 的 `IMAGE_GENERATION_PROMPT_TEMPLATE` 中维护，必要时可通过 `config.yaml` 的 `agent.image_generation_prompt_template` 字段或评测面板 API 动态覆盖。
+提示词模板在 `app/core/agent/prompts.py` 的 `IMAGE_GENERATION_PROMPT_TEMPLATE` 中维护，必要时可通过评测面板 API `/api/v1/ai/agents/image-generation/config` 在运行时动态覆盖。
 
 #### 3.2 图片生成流程
 
@@ -279,7 +279,7 @@ async def generate_chat_image_with_gemini(
 
 位置: `app/core/agent/prompts.py`、`app/core/config.py`
 
-- 图片生成提示词模板：`IMAGE_GENERATION_PROMPT_TEMPLATE`（可在代码中维护；如需初始化覆盖，可在 `config.yaml` 的 `agent.image_generation_prompt_template` 字段中编写自定义模板，程序加载配置时会写入该常量）
+- 图片生成提示词模板：`IMAGE_GENERATION_PROMPT_TEMPLATE`（在代码中维护，可通过 `/api/v1/ai/agents/image-generation/config` 运行时更新）
 - 默认历史消息数量：`agent.image_generation_default_history_count`（`config.yaml` 中配置，默认 10）
 - 应用限额：`app.limits.free_user_image_gen_24h_limit`、`app.limits.subscribed_user_image_gen_24h_limit`
 - GCS 配置：`gcs.bucket`
