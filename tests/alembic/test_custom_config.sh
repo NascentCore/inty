@@ -93,7 +93,11 @@ write_custom_config() {
     log_info "生成自定义配置文件: $config_path"
     
     cp "$BASE_CONFIG_PATH" "$config_path"
-    sed -i '' "s/db: \"inty\"/db: $dbname/" "$config_path"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "s/db: \"inty\"/db: $dbname/" "$config_path"
+    else
+        sed -i "s/db: \"inty\"/db: $dbname/" "$config_path"
+    fi
     cat "$config_path"
 }
 
