@@ -36,7 +36,6 @@ object BackendEnvironmentManager {
 
     data class BackendEnvironment(
         val id: String,
-        val label: String,
         val baseUrl: String,
         val notes: String? = null,
     )
@@ -82,7 +81,7 @@ object BackendEnvironmentManager {
     /**
      * 返回当前所有可用环境列表，用于调试或设置界面展示。
      */
-    fun getAvailableEnvironments(): List<BackendEnvironment> = state.get().environments.values.toList()
+    fun getAvailableBackends(): List<BackendEnvironment> = state.get().environments.values.toList()
 
     /**
      * 手动刷新配置（例如开发者设置页面调用）。
@@ -177,7 +176,7 @@ object BackendEnvironmentManager {
         if (!root.has(CREATED_BY_AGENT_KEY)) {
             LogUtils.d(TAG, "运行时配置缺少 CREATED_BY_AGENT 标记，仍尝试解析")
         }
-        val envArray = root.optJSONArray("environments") ?: JSONArray()
+        val envArray = root.optJSONArray("backends") ?: JSONArray()
         val environments = mutableMapOf<String, BackendEnvironment>()
         val aliasIndex = mutableMapOf<String, BackendEnvironment>()
 
@@ -189,20 +188,11 @@ object BackendEnvironmentManager {
             val environment =
                 BackendEnvironment(
                     id = id,
-                    label = envJson.optString("label").ifBlank { id },
                     baseUrl = baseUrl,
                     notes = envJson.optString("notes").ifBlank { null },
                 )
             environments[id] = environment
             aliasIndex[id.lowercase()] = environment
-            envJson.optJSONArray("aliases")?.let { aliases ->
-                for (i in 0 until aliases.length()) {
-                    val alias = aliases.optString(i).lowercase()
-                    if (alias.isNotBlank()) {
-                        aliasIndex[alias] = environment
-                    }
-                }
-            }
         }
 
         if (environments.isEmpty()) {
@@ -249,19 +239,16 @@ object BackendEnvironmentManager {
         val prod =
             BackendEnvironment(
                 id = "prod",
-                label = "Production",
                 baseUrl = "https://${Constant.USER_HOST}/",
             )
         val dev =
             BackendEnvironment(
                 id = "dev",
-                label = "Shared Dev",
                 baseUrl = "https://${Constant.USER_HOST_DEV}/",
             )
         val local =
             BackendEnvironment(
                 id = "local",
-                label = "Localhost",
                 baseUrl = "http://${Constant.USER_HOST_LOCAL}/",
             )
         val environments =
@@ -310,30 +297,24 @@ object BackendEnvironmentManager {
                         ),
                     ),
                 )
-        val environments =
+        val backends =
             JSONArray()
                 .put(
                     JSONObject()
                         .put("id", "prod")
-                        .put("label", "Production")
-                        .put("base_url", "https://${Constant.USER_HOST}/")
-                        .put("aliases", JSONArray(listOf("prod", "release"))),
+                        .put("base_url", "https://${Constant.USER_HOST}/"),
                 )
                 .put(
                     JSONObject()
                         .put("id", "dev")
-                        .put("label", "Shared Dev")
-                        .put("base_url", "https://${Constant.USER_HOST_DEV}/")
-                        .put("aliases", JSONArray(listOf("dev", "debug", "playdebug"))),
+                        .put("base_url", "https://${Constant.USER_HOST_DEV}/"),
                 )
                 .put(
                     JSONObject()
                         .put("id", "local")
-                        .put("label", "Localhost")
-                        .put("base_url", "http://${Constant.USER_HOST_LOCAL}/")
-                        .put("aliases", JSONArray(listOf("local", "localhost"))),
+                        .put("base_url", "http://${Constant.USER_HOST_LOCAL}/"),
                 )
-        root.put("environments", environments)
+        root.put("backends", backends)
         return root.toString(2)
     }
 }

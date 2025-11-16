@@ -26,7 +26,7 @@ CREATED_BY_AGENT
 
 1. 打开 Device File Explorer，路径：`data/data/com.ai.intellimate/files/config/`.
 2. 将 `backend_endpoints.json` 复制到本机编辑，或直接右键 `Save As…`。
-3. 修改 `environments` 中的 `base_url` 或新增一个 `id`（确保 URL 包含 `http/https` 并以 `/` 结尾）。
+3. 修改 `backends` 中的 `base_url` 或新增一个 `id`（确保 URL 包含 `http/https` 并以 `/` 结尾）。
 4. 保存后重新上传覆盖原文件（同名 drag & drop）。
 5. 重启 App 或从最近任务中滑掉再打开，日志中可看到 `BackendEnvironmentManager 已加载运行时配置`。
 
@@ -46,7 +46,7 @@ exit
 
 ## 切换构建类型映射
 
-- `build_type_overrides` 映射 Gradle 构建类型（`local/debug/playdebug/release`）到 `environments[].id`。
+- `build_type_overrides` 映射 Gradle 构建类型（`local/debug/playdebug/release`）到 `backends[].id`。
 - 例如希望 `debug` 构建访问本地服务：
   ```json
   "build_type_overrides": {
@@ -60,20 +60,17 @@ exit
 
 ## 新增自定义环境
 
-在 `environments` 数组追加条目：
+在 `backends` 数组追加条目：
 
 ```json
 {
   "id": "qa-sh",
-  "label": "QA Shanghai",
   "base_url": "https://qa-sh.inty.cc/",
-  "aliases": ["qa", "qa-sh"],
   "notes": "与 QA 团队共享的灰度后端"
 }
 ```
 
 - `id`：唯一标识；`base_url` 必须包含协议，末尾保留 `/`。
-- `aliases`：可选，用于让 `BackendEnvironmentManager.getBaseUrlFor("qa")` 命中此环境。
 - 设置完毕后修改 `build_type_overrides` 或在 App 内部（未来 Dev Settings）使用 `BackendEnvironmentManager.refresh()` 切换。
 
 ## 恢复默认配置
@@ -93,4 +90,4 @@ adb shell monkey -p com.ai.intellimate -c android.intent.category.LAUNCHER 1
 - **JSON 语法错误？** 管理器会自动回退内置配置，并在日志中提示“解析运行时配置失败”；修复文件后重新打开 App。
 - **想同时切换 Retrofit 与 Inty SDK？** 已统一使用 `NetworkConfig.getBaseUrl()`，无需额外操作。
 
-如需在 UI 中提供环境选择入口，可直接调用 `BackendEnvironmentManager.getAvailableEnvironments()` 列出选项，并在用户确认后写回 `backend_endpoints.json` 或调用未来的设置接口。若遇到无法恢复的异常，请携带 `backend_endpoints.json` 与 Logcat 输出向客户端基础设施负责人反馈。
+如需在 UI 中提供环境选择入口，可直接调用 `BackendEnvironmentManager.getAvailableBackends()` 列出选项，并在用户确认后写回 `backend_endpoints.json` 或调用未来的设置接口。若遇到无法恢复的异常，请携带 `backend_endpoints.json` 与 Logcat 输出向客户端基础设施负责人反馈。

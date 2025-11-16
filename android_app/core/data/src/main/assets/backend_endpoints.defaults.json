@@ -8,7 +8,7 @@
     "playdebug": "dev",
     "release": "prod"
   },
-  "environments": [
+  "backends": [
     {
       "id": "prod",
       "base_url": "https://app.inty.cc/",

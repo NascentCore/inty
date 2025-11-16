@@ -72,7 +72,7 @@
 ### 🟢 运行时后端环境配置
 
 - 通过 `core/data/src/main/assets/backend_endpoints.defaults.json` 提供默认映射，应用首次启动会将其复制到私有目录 `files/config/backend_endpoints.json`，允许 adb/Device File Explorer 直接编辑，无需重新编译。
-- 配置字段：`environments[].base_url`（必填，需包含协议），`aliases`（可选，用于匹配 `local/debug/release` 构建类型），`build_type_overrides`（映射构建类型到环境 `id`），`default_env`（兜底环境）。
+- 配置字段：`backends[].base_url`（必填且需包含协议），`build_type_overrides`（映射构建类型到后端 `id`），`default_env`（兜底环境）。
 - 运行时修改文件后会由 `BackendEnvironmentManager` 自动重载，`NetworkConfig` 和 `NetServiceMgr` 均使用最新结果；若文件损坏，将退回 `Constant.USER_HOST*` 内置值。
 - 新增文件或手动复制 defaults 时记得保留 `CREATED_BY_AGENT` 标记，方便追踪出厂配置。
 
