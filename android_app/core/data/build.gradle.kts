@@ -11,6 +11,15 @@ android {
     namespace = "ai.sxwl.android.data"
     // room插件 配置scheme目录
     room { schemaDirectory("$projectDir/schemas") }
+
+    publishing {
+        listOf("debug", "local", "playdebug", "release").forEach { variant ->
+            singleVariant(variant) {
+                withSourcesJar()
+                withJavadocJar()
+            }
+        }
+    }
 }
 
 dependencies {
