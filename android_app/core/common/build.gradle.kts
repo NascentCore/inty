@@ -10,7 +10,16 @@ group = "ai.sxwl.android"
 
 version = "1.0.0"
 
-android { namespace = "ai.sxwl.android.common" }
+android {
+    namespace = "ai.sxwl.android.common"
+
+    publishing {
+        singleVariant("debug") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
+}
 
 dependencies {
     implementation(libs.accompanist.permissions)
