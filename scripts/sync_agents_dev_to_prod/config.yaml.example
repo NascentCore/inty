@@ -1,7 +1,39 @@
-# 同步脚本配置示例
-# dev / prod 数据库连接信息复用 devops/config.yaml.* 文件
+# 同步角色配置文件示例
+# 复制此文件为 config.yaml 并修改相应配置
 
-# 运营用户配置（必须存在于 dev 环境）
+# Dev环境数据库配置
+# 与 devops/config.yaml.dev 保持一致
+dev_database:
+  host: 10.41.177.3
+  port: 5432
+  user: postgres
+  password: sxwl666A!
+  db: inty-dev
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 10
+  pool_recycle: 3600
+  pool_pre_ping: true
+  connect_timeout: 5
+  command_timeout: 30
+
+# Prod环境数据库配置
+# 与 devops/config.yaml.prod 保持一致
+prod_database:
+  host: 10.41.177.3
+  port: 5432
+  user: postgres
+  password: sxwl666A!
+  db: inty
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 10
+  pool_recycle: 3600
+  pool_pre_ping: true
+  connect_timeout: 5
+  command_timeout: 30
+
+# 运营用户配置
 operator_user:
   id: user-01JWZ34Y4D1C92GD86A5R6EWYJ
   nickname: admin
