@@ -16,27 +16,27 @@ import kotlinx.parcelize.Parcelize
 @JsonClass(generateAdapter = true)
 @Parcelize
 data class UserProfile(
-    @Json(name = "age_group") val ageGroup: String? = null,
-    @Json(name = "auth_type") val authType: String = "",
+    @param:Json(name = "age_group") val ageGroup: String? = null,
+    @param:Json(name = "auth_type") val authType: String = "",
     val avatar: String? = null,
-    @Json(name = "created_at") val createdAt: String = "",
+    @param:Json(name = "created_at") val createdAt: String = "",
     // description 是早期的称为，目前其在 App 中被称作 persona
     // Persona 指的是AI 角色看到的人类用户的“角色设定”
     val description: String? = null,
     val email: String? = null,
     val gender: String? = null,
     val id: String = "",
-    @Json(name = "readable_id") val readableId: String = "",
-    @Json(name = "is_active") val isActive: Boolean = false,
-    @Json(name = "is_superuser") val isSuperuser: Boolean = false,
+    @param:Json(name = "readable_id") val readableId: String = "",
+    @param:Json(name = "is_active") val isActive: Boolean = false,
+    @param:Json(name = "is_superuser") val isSuperuser: Boolean = false,
     val nickname: String = "",
     val phone: String? = null,
-    @Json(name = "system_language") val systemLanguage: String = "",
-    @Json(name = "updated_at") val updatedAt: String? = null,
-    @Json(name = "public_agents_count") val publicAgentsCount: Int = 0,
-    @Json(name = "total_public_agents_follows") val totalAgentsFollows: Int = 0,
-    @Json(name = "followers_count") val followerCount: Int = 0,
-    @Json(name = "connector_count") val connectorCount: Int = 0,
+    @param:Json(name = "system_language") val systemLanguage: String = "",
+    @param:Json(name = "updated_at") val updatedAt: String? = null,
+    @param:Json(name = "public_agents_count") val publicAgentsCount: Int = 0,
+    @param:Json(name = "total_public_agents_follows") val totalAgentsFollows: Int = 0,
+    @param:Json(name = "followers_count") val followerCount: Int = 0,
+    @param:Json(name = "connector_count") val connectorCount: Int = 0,
 ) : Parcelable {
     /** 性别代指 */
     fun pronouns(): String {
@@ -55,7 +55,7 @@ enum class GENDER(val value: String) {
 }
 
 @JsonClass(generateAdapter = true)
-data class GoogleLoginRequest(@Json(name = "id_token") val idToken: String)
+data class GoogleLoginRequest(@param:Json(name = "id_token") val idToken: String)
 
 @JsonClass(generateAdapter = true)
 data class GoogleLoginResponse(val token: String, val user: UserProfile)
@@ -63,9 +63,9 @@ data class GoogleLoginResponse(val token: String, val user: UserProfile)
 /** 检查账号删除的接口返回 */
 @JsonClass(generateAdapter = true)
 data class UserDeletionCheckResponse(
-    @Json(name = "active_subscription") val activeSubscription: Boolean,
-    @Json(name = "can_delete") val canDelete: Boolean,
-    @Json(name = "error_message") val errorMessage: String?,
+    @param:Json(name = "active_subscription") val activeSubscription: Boolean,
+    @param:Json(name = "can_delete") val canDelete: Boolean,
+    @param:Json(name = "error_message") val errorMessage: String?,
 )
 
 /** 删除账号的结果返回 */
@@ -73,12 +73,12 @@ data class UserDeletionCheckResponse(
 data class UserDeleteResponse(
     val message: String?,
     val success: Boolean,
-    @Json(name = "user_id") val userId: String?,
+    @param:Json(name = "user_id") val userId: String?,
 )
 
 /** Device token registration request (for FCM push notifications) */
 @JsonClass(generateAdapter = true)
 data class DeviceTokenRegisterRequest(
     val token: String,
-    @Json(name = "request_id") val requestId: String? = null,
+    @param:Json(name = "request_id") val requestId: String? = null,
 )
