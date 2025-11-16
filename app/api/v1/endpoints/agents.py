@@ -498,7 +498,7 @@ async def generate_background_animated(
             raise HTTPException(
                 status_code=500,
                 detail=f"视频转换失败: {error_msg}。"
-                "请参考文档 docs/FFMPEG_INSTALLATION.md 了解安装方法。",
+                "请参考文档 backend/docs/FFMPEG_INSTALLATION.md 了解安装方法。",
             )
         raise HTTPException(status_code=500, detail=error_msg)
     except Exception as e:

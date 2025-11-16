@@ -1,6 +1,6 @@
 # AGENTS.md · evaluation/（Web 前端评测工具）
 
-本文件覆盖并补充根 `AGENTS.md`，仅适用于 `evaluation/`。
+本文件覆盖并补充根 `backend/AGENTS.md`，仅适用于 `evaluation/`。
 
 ## 技术栈
 
@@ -21,7 +21,7 @@
 1. 后端：`ScoringService.get_available_models()`、`ScoringService._get_default_openrouter_models()` 与 `GET /api/v1/ai/agents/models/openrouter` 的兜底数据必须同步，字段包括 `id`、`name`、`description`、`context_length`、`provider`。
 2. 前端：`evaluation/services/api.ts` 的 5 秒超时 fallback 以及 `evaluation/services/modelCache.ts` 的 `getDefaultScoringModels()` 需要与后端保持 1:1 对齐。
 3. 测试：`tests/app/services/test_agent_service.py`、`evaluation/test_integration.py`、以及任何显式引用 `anthropic/claude-3.5-sonnet`/`openrouter/anthropic/claude-3-haiku` 的测试数据都要一起更新。
-4. 文档：根目录 `AGENTS.md` 需记录最新 Claude 支持情况，方便其它目录复用；必要时补充 `evaluation/docs/` 下的说明。
+4. 文档：根目录 `backend/AGENTS.md` 需记录最新 Claude 支持情况，方便其它目录复用；必要时补充 `evaluation/docs/` 下的说明。
 
 ### 验证建议
 

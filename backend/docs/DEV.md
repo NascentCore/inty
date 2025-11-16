@@ -41,16 +41,16 @@ All table definitions must be added to `app/models` directory for consistency.
 
 | Layer             | Key Modules                                | Notes                                                                                                          |
 | ----------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| **Entry point**   | [`app/main.py`](app/main.py)               | Configures FastAPI, CORS, error handlers, and startup tasks (e.g., agent initialization, Keep Talking service) |
-| **API layer**     | [`app/api/v1`](app/api/v1)                 | Router modules for agents, chats, auth, subscriptions, etc. provide REST endpoints                             |
-| **Configuration** | [`app/core/config.py`](app/core/config.py) | Settings defined with dataclasses and loaded from `config.yaml` via `load_config`                              |
-| **Models**        | [`app/models`](app/models)                 | SQLAlchemy models (e.g., `User`) map database tables and relationships                                         |
-| **Schemas**       | [`app/schemas`](app/schemas)               | Pydantic models validate request/response data (mirroring model structure)                                     |
-| **Services**      | [`app/services`](app/services)             | Business logic; for example, `chat_service.py` manages chat sessions and caching logic                         |
-| **Agent engine**  | [`app/core/agent`](app/core/agent)         | LangChain/LangGraph-based agent system with custom state, memory tools, and model configuration utilities      |
-| **Documentation** | [`docs/`](docs)                            | Design notes for character cards, AI voice, prompt templates, Google Play subscriptions, etc.                  |
-| **Migrations**    | [`alembic/`](alembic)                      | Database schema migrations                                                                                     |
-| **Utilities**     | [`scripts/`](scripts)                      | Setup helpers and maintenance scripts                                                                          |
+| **Entry point**   | [`app/main.py`](../../app/main.py)               | Configures FastAPI, CORS, error handlers, and startup tasks (e.g., agent initialization, Keep Talking service) |
+| **API layer**     | [`app/api/v1`](../../app/api/v1)                 | Router modules for agents, chats, auth, subscriptions, etc. provide REST endpoints                             |
+| **Configuration** | [`app/core/config.py`](../../app/core/config.py) | Settings defined with dataclasses and loaded from `config.yaml` via `load_config`                              |
+| **Models**        | [`app/models`](../../app/models)                 | SQLAlchemy models (e.g., `User`) map database tables and relationships                                         |
+| **Schemas**       | [`app/schemas`](../../app/schemas)               | Pydantic models validate request/response data (mirroring model structure)                                     |
+| **Services**      | [`app/services`](../../app/services)             | Business logic; for example, `chat_service.py` manages chat sessions and caching logic                         |
+| **Agent engine**  | [`app/core/agent`](../../app/core/agent)         | LangChain/LangGraph-based agent system with custom state, memory tools, and model configuration utilities      |
+| **Documentation** | [`docs/`](../docs)                            | Design notes for character cards, AI voice, prompt templates, Google Play subscriptions, etc.                  |
+| **Migrations**    | [`alembic/`](../../alembic)                      | Database schema migrations                                                                                     |
+| **Utilities**     | [`scripts/`](../../scripts)                      | Setup helpers and maintenance scripts                                                                          |
 | **Testing**       | [`testing/`](testing)                      | Sample data and test utilities                                                                                 |
 
 ## Configuring Cursor
