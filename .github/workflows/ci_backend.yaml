@@ -5,17 +5,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "pytest.ini"
-      - "alembic/versions/**/*.py"
-      - "start.sh"
-      - "app/**/*.py"
-      - "tests/**/*.py"
-      - "scripts/init_admin_user.py"
-      - "requirements.txt"
-      - "test_requirements.txt"
-      - ".github/workflows/ci.yaml"
-      - "devops/config.yaml.test"
 
   pull_request:
     branches:
@@ -29,8 +18,12 @@ on:
       - "scripts/init_admin_user.py"
       - "requirements.txt"
       - "test_requirements.txt"
-      - ".github/workflows/ci.yaml"
-      - "devops/config.yaml.test"
+      # Alembic files
+      - "alembic/**/*"
+      - "alembic.ini"
+      # Config files used for testing
+      - "devops/config.yaml.local"
+      - ".github/workflows/ci_backend.yaml"
 
 env:
   PG_USER: postgres
