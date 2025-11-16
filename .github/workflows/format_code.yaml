@@ -1,4 +1,4 @@
-name: Format all files
+name: Format All Files
 
 on:
   schedule:
