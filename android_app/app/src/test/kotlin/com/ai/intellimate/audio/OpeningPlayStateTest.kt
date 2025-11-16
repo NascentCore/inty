@@ -13,11 +13,9 @@ import org.junit.Test
 
 class OpeningPlayStateTest {
 
-    @Before
-    fun setUp() = runBlocking { OpeningPlayState.clearAllPlayed() }
+    @Before fun setUp() = runBlocking { OpeningPlayState.clearAllPlayed() }
 
-    @After
-    fun tearDown() = runBlocking { OpeningPlayState.clearAllPlayed() }
+    @After fun tearDown() = runBlocking { OpeningPlayState.clearAllPlayed() }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
