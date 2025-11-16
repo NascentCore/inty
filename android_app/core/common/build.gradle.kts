@@ -14,10 +14,7 @@ android {
     namespace = "ai.sxwl.android.common"
 
     publishing {
-        singleVariant("debug") {
-            withSourcesJar()
-            withJavadocJar()
-        }
+        singleVariant("debug") {}
     }
 }
 
