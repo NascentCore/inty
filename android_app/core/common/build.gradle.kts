@@ -14,7 +14,12 @@ android {
     namespace = "ai.sxwl.android.common"
 
     publishing {
-        singleVariant("debug") {}
+        listOf("debug", "local", "playdebug", "release").forEach { variant ->
+            singleVariant(variant) {
+                withSourcesJar()
+                withJavadocJar()
+            }
+        }
     }
 }
 
