@@ -22,11 +22,6 @@ from app.models.agent import Agent
 from app.models.user import AuthType, Gender, User
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_DEVOPS_DEV_CONFIG = REPO_ROOT / "devops" / "config.yaml.dev"
-DEFAULT_DEVOPS_PROD_CONFIG = REPO_ROOT / "devops" / "config.yaml.prod"
-
-
 def resolve_config_path(config_path: str) -> Path:
     """解析配置文件路径，支持绝对路径、CWD 相对路径以及脚本目录相对路径"""
     path = Path(config_path).expanduser()
@@ -479,14 +474,14 @@ async def main():
         help="同步脚本配置路径（默认: config.yaml，位于脚本目录）",
     )
     parser.add_argument(
-        "--dev-config-path",
-        default=str(DEFAULT_DEVOPS_DEV_CONFIG),
-        help="dev 环境 devops 配置路径（默认: devops/config.yaml.dev）",
+        "--source-config-path",
+        default=None,
+        help="源环境 devops 配置路径（默认: None）",
     )
     parser.add_argument(
-        "--prod-config-path",
-        default=str(DEFAULT_DEVOPS_PROD_CONFIG),
-        help="prod 环境 devops 配置路径（默认: devops/config.yaml.prod）",
+        "--target-config-path",
+        default=None,
+        help="目标环境 devops 配置路径（默认: None）",
     )
     parser.add_argument(
         "--dry-run",
@@ -498,14 +493,10 @@ async def main():
     sync_config_path = resolve_config_path(args.config)
     sync_config = load_yaml_config(sync_config_path, "同步脚本配置")
 
-    log_level = sync_config.get("logging", {}).get("level", "INFO")
-    logger.remove()
-    logger.add(sys.stderr, level=log_level)
-
     logger.info(f"使用同步脚本配置: {sync_config_path}")
 
-    dev_db_config = load_env_database_config(args.dev_config_path, "Dev")
-    prod_db_config = load_env_database_config(args.prod_config_path, "Prod")
+    dev_db_config = load_env_database_config(args.source_config_path, "Source")
+    prod_db_config = load_env_database_config(args.target_config_path, "Target")
 
     dev_url = create_db_url(dev_db_config)
     prod_url = create_db_url(prod_db_config)
