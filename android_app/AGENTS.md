@@ -297,7 +297,14 @@ suspend fun login(request: LoginRequest): ApiResult<LoginResponse>
 ## 最佳实践
 - 组件保持单一职责、参数化、浅层级；使用 `Modifier` 链和 `@Stable/@Immutable` 优化。
 - 状态不可变、通过 `copy` 更新并及时释放资源；持续监控 AI 模型表现，确保可解释性与用户同意。
-- 采用绿色软件原则与可持续云资源，跟踪碳足迹。
+- UI 组件不要使用裸写的常量值，而应该使用集中定义的常量，如：
+  ```kotlin
+  private object Config {
+    val ChipSpacing = 16.dp
+    ...
+  }
+  Arrangement.spacedBy(Config.ChipSpacing),
+  ```
 
 ## Firebase 事件（events）
 - 与用户行为相关的事件以行为命名：
