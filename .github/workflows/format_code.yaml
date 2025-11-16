@@ -1,4 +1,4 @@
-name: format_code
+name: Format all files
 
 on:
   schedule:
