@@ -10,7 +10,7 @@ def _load_runtime_config() -> Config:
     x_args = context.get_x_argument(as_dictionary=True)
     config_path = x_args.get("config", None)
     if config_path:
-        print(f"[ALEMBIC] 使用自定义配置文件: {config_path}")
+        logger.info(f"[ALEMBIC] 使用自定义配置文件: {config_path}")
         return load_config(config_path)
     logger.info("[ALEMBIC] 使用默认配置文件: global_config_loaded_from_config_yaml")
     return global_config_loaded_from_config_yaml
