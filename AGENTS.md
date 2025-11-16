@@ -126,7 +126,7 @@ else:
 - 列表/搜索/推荐/关注：`GET /me`、`GET /search`、`GET /recommend`、`POST|DELETE /{agent_id}/follow`
 - 详情/创建/更新/删除：`GET /{agent_id}`、`POST /`、`PUT /{agent_id}`、`DELETE /{agent_id}`
 - 角色卡：导入（JSON/文件）、导出、校验、功能列表
-- OpenRouter 模型：仅超级用户获取模型列表以供评测使用
+- OpenRouter 模型：仅超级用户可访问 `GET /api/v1/ai/agents/models/openrouter`；当实时拉取失败时由 `app/services/scoring_service.py` 提供包含 `Claude 3.5 Sonnet` / `Claude 3.5 Haiku` 等模型的兜底列表，evaluation 前端的 `services/api.ts` 与 `services/modelCache.ts` 需保持完全同步。
 - 订阅/用量限制：创建 Agent、文生图、语音生成均接入限额检查与用量记录
 
 ## 提示词与角色卡集成
@@ -164,6 +164,14 @@ else:
 ## 评测前端（evaluation）对接
 
 - 前端通过上述接口管理 Agent/模型并发起评测；UI 支持头像裁切显示与语音试听。
+- Claude 模型说明集中在 `evaluation/AGENTS.md`，涉及的兜底列表、缓存与测试基线需与本文件保持一致。
+
+## Claude 模型与评测
+
+- 默认评分模型列表定义于 `app/services/scoring_service.py`，并由 `app/api/v1/endpoints/agents.py` 的 OpenRouter 接口、`evaluation/services/api.ts` 的 5 秒超时 fallback 以及 `evaluation/services/modelCache.ts` 的缓存兜底共同复用；列表中包含 `anthropic/claude-3.5-sonnet`、`anthropic/claude-3.5-haiku`（context length 200k）等最新 Claude 版本。
+- 如需新增或替换 Claude 型号，需同时更新上述四处代码与依赖这些常量的测试（`tests/app/services/test_agent_service.py`、`evaluation/test_integration.py` 等），并在文档中记录变更。
+- 评测 UI 的模型下拉依赖浏览器 `localStorage`（键前缀 `inty_scoring_models_*`）；调试 Claude 列表时请调用 `modelCacheService.clearScoringCache()` 或手动清除缓存以避免看到过期数据。
+- 超级用户可通过 `GET /api/v1/ai/agents/models/openrouter` 查看 OpenRouter 实时模型；若调用失败，后端会回退到默认列表以保证评测流程不中断。
 
 ## 配置与性能
 
