@@ -88,7 +88,7 @@ object NetworkConfig {
     /** 本地环境配置 */
     private fun getLocalConfig(): EnvironmentConfig {
         return EnvironmentConfig(
-            baseUrl = "http://${Constant.USER_HOST_LOCAL}/",
+            baseUrl = resolveBaseUrl(BuildType.LOCAL, "http://${Constant.USER_HOST_LOCAL}/"),
             timeout =
                 TimeoutConfig(
                     connectTimeoutMs = 10000, // 本地环境可以更短
@@ -118,7 +118,7 @@ object NetworkConfig {
     /** 调试环境配置 */
     private fun getDebugConfig(): EnvironmentConfig {
         return EnvironmentConfig(
-            baseUrl = "https://${Constant.USER_HOST_DEV}/",
+            baseUrl = resolveBaseUrl(BuildType.DEBUG, "https://${Constant.USER_HOST_DEV}/"),
             timeout =
                 TimeoutConfig(
                     connectTimeoutMs = 15000,
@@ -140,7 +140,7 @@ object NetworkConfig {
     /** Play调试环境配置 */
     private fun getPlayDebugConfig(): EnvironmentConfig {
         return EnvironmentConfig(
-            baseUrl = "https://${Constant.USER_HOST_DEV}/",
+            baseUrl = resolveBaseUrl(BuildType.PLAY_DEBUG, "https://${Constant.USER_HOST_DEV}/"),
             timeout =
                 TimeoutConfig(
                     connectTimeoutMs = 20000, // Play环境可能需要更长时间
@@ -170,7 +170,7 @@ object NetworkConfig {
     /** 生产环境配置 */
     private fun getReleaseConfig(): EnvironmentConfig {
         return EnvironmentConfig(
-            baseUrl = "https://${Constant.USER_HOST}/",
+            baseUrl = resolveBaseUrl(BuildType.RELEASE, "https://${Constant.USER_HOST}/"),
             timeout =
                 TimeoutConfig(
                     connectTimeoutMs = 10000, // 生产环境优化超时
@@ -221,5 +221,13 @@ object NetworkConfig {
     /** 检查是否启用Chucker */
     fun shouldEnableChucker(): Boolean {
         return getCurrentEnvironmentConfig().logging.enableChuckerLogging
+    }
+
+    private fun resolveBaseUrl(buildType: BuildType, fallback: String): String {
+        val dynamicBaseUrl = BackendEnvironmentManager.getBaseUrlFor(buildType.value)
+        if (!dynamicBaseUrl.isNullOrBlank()) {
+            return dynamicBaseUrl
+        }
+        return fallback
     }
 }

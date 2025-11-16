@@ -1,5 +1,6 @@
 package ai.sxwl.android.data.http
 
+import ai.sxwl.android.data.http.config.BackendEnvironmentManager
 import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.data.http.services.AuthService
@@ -40,6 +41,7 @@ object IntyNetworkManager {
             // 使用弱引用保存 ApplicationContext，避免内存泄露
             this.applicationContextRef = WeakReference(context.applicationContext)
             NetworkStateManager.initialize(context)
+            BackendEnvironmentManager.initialize(context)
             NetworkConfig.setBuildType(buildType)
             isInitialized = true
             LogUtils.d(

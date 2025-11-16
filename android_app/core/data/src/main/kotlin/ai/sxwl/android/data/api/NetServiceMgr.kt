@@ -1,7 +1,6 @@
 package ai.sxwl.android.data.api
 
 import ai.sxwl.android.data.http.UnifiedOkHttpClient
-import ai.sxwl.android.data.http.config.Constant
 import ai.sxwl.android.data.http.config.NetworkConfig
 import com.architecture.httplib.core.HttpResponseCallAdapterFactory
 import com.architecture.httplib.core.MoshiResultTypeAdapterFactory
@@ -14,15 +13,9 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 
-/** 获取基础URL 根据构建类型返回对应的API基础URL */
+/** 获取基础URL 根据运行时配置返回对应的API基础URL */
 private fun getBaseUrl(): String {
-    return when (NetworkConfig.getCurrentBuildType().value) {
-        "local" -> "http://${Constant.USER_HOST_LOCAL}/"
-        "debug" -> "https://${Constant.USER_HOST_DEV}/"
-        "playdebug" -> "https://${Constant.USER_HOST_DEV}/"
-        "release" -> "https://${Constant.USER_HOST}/"
-        else -> "https://${Constant.USER_HOST_DEV}/" // fallback to staging
-    }
+    return NetworkConfig.getBaseUrl()
 }
 
 object NetServiceMgr {

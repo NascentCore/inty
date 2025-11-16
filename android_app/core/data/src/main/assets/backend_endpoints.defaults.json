@@ -1,0 +1,34 @@
+{
+  "CREATED_BY_AGENT": "cursor",
+  "schema_version": 1,
+  "default_env": "prod",
+  "build_type_overrides": {
+    "local": "local",
+    "debug": "dev",
+    "playdebug": "dev",
+    "release": "prod"
+  },
+  "environments": [
+    {
+      "id": "prod",
+      "label": "Production",
+      "base_url": "https://app.inty.cc/",
+      "aliases": ["prod", "release"],
+      "notes": "Primary production backend"
+    },
+    {
+      "id": "dev",
+      "label": "Shared Dev",
+      "base_url": "https://dev.inty.sxwl.ai/",
+      "aliases": ["dev", "debug", "playdebug"],
+      "notes": "Shared staging backend for QA and debug builds"
+    },
+    {
+      "id": "local",
+      "label": "Localhost",
+      "base_url": "http://localhost:8000/",
+      "aliases": ["local", "localhost"],
+      "notes": "Local FastAPI server; requires adb reverse or emulator host mapping"
+    }
+  ]
+}
