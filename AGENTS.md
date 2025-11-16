@@ -12,7 +12,7 @@ Based on [AGENTS.md](https://agents.md/)
 - `scripts/` 各类脚本，以修改数据库记录为主
 - `devops/` 运维相关代码
 - `experimental/` 原型代码
-- `docs/` 文档
+- `backend/docs/` 后端文档与知识库
 
 ## 本地服务启动
 
@@ -189,7 +189,7 @@ else:
 
 ## 关联文档
 
-- `docs/AGENT_CHARACTER_CARD_INTEGRATION.md`
-- `docs/CHARACTER_CARD_SYSTEM.md`
-- `docs/AGENT_EXTENSIONS_SYSTEM.md`
-- `docs/AI_VOICE_SYSTEM.md`
+- `backend/docs/AGENT_CHARACTER_CARD_INTEGRATION.md`
+- `backend/docs/CHARACTER_CARD_SYSTEM.md`
+- `backend/docs/AGENT_EXTENSIONS_SYSTEM.md`
+- `backend/docs/AI_VOICE_SYSTEM.md`

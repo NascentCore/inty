@@ -1,6 +1,6 @@
-# AGENTS.md · docs/（文档）
+# AGENTS.md · backend/docs/（文档）
 
-本文件覆盖并补充根 `AGENTS.md`，仅适用于 `docs/`。
+本文件覆盖并补充根 `AGENTS.md`，仅适用于 `backend/docs/`。
 
 ## 约定
 - 仅存放文档；不存放可执行代码与样例密钥。

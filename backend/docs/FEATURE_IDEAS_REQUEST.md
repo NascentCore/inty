@@ -14,4 +14,4 @@ Other information
 
 Think 3 such features 
 
-Write outputs to docs/FEATURE_IDEAS.md
+Write outputs to backend/docs/FEATURE_IDEAS.md

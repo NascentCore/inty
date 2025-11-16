@@ -375,7 +375,7 @@ python scripts/fcm/test_fcm_push.py --test-push-service --user-id USER_ID --dry-
 - `scripts/fcm/test_fcm_push.py` - FCM 测试脚本
 - `scripts/fcm/register_fcm_token.py` - FCM Token 注册脚本
 - `app/external_services/firebase.py` - Firebase 初始化
-- `docs/PUSH_NOTIFICATION_SYSTEM.md` - 推送系统文档
+- `backend/docs/PUSH_NOTIFICATION_SYSTEM.md` - 推送系统文档
 
 ## 参考资源
 

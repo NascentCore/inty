@@ -167,7 +167,7 @@ def convert_video_to_animated_image(
                     logger.error("ffmpeg 未找到，请确保已安装 ffmpeg")
                     raise RuntimeError(
                         "ffmpeg 未安装或不在 PATH 中。"
-                        "请参考文档 docs/FFMPEG_INSTALLATION.md 了解安装方法。"
+                        "请参考文档 backend/docs/FFMPEG_INSTALLATION.md 了解安装方法。"
                     )
                 except subprocess.TimeoutExpired:
                     logger.error("视频转换超时")
