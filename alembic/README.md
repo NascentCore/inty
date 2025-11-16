@@ -3,17 +3,21 @@
 ## Generate version
 
 - `alembic upgrade head`: run this to make sure the local database is in sync with the newest version
-- `alembic revision --autogenerate --message "<write your message for this version>": this will write the new version script for you
-- `alembic upgrade head`: run this again to apply your new version file
-- If the above failed, you'll need to debug with @yaxiong on why this failed
-- If you want to redo the newest version, first rollback the local changes with `alembic downgrade -1` and then delete the new version
-  file you generated with `alembic revision --autogenerate --message "<...>"`, and then recreate the version file, by rerunning
-  `alembic revision --autogenerate --message "<...>"`.
+- `alembic revision --autogenerate --message "description for thsi revision"`: this will write the new version script for you
+
+## 自定义 config.yaml 路径
+
+环境脚本会读取 Alembic 的 `-x` 自定义参数，并优先使用 `config=<path>` 的值覆盖默认的来自
+`app/core/config.py` 的全局配置：
+
+```bash
+alembic -x config=devops/config.yaml.local upgrade head
+```
 
 ## SOPs
 
-### Manually set alembic_version when
+### 手动设置 alembic_version
 
-- `alembic_version` table has a single row, writes the newest version applied to the database.
-- You can update its value to the newest version number: `insert into alembic_version (version_num) values ('75796d073cb2');`
-- Afterwards the revisions will be applied after the recorded version
+- `alembic_version` 表只有一行，记录已应用到数据库的最新版本。
+- 可以更新其值为最新版本号：`insert into alembic_version (version_num) values ('75796d073cb2');`
+- 之后，迁移将在记录的版本之后应用

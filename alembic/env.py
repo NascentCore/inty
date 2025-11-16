@@ -1,15 +1,27 @@
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from loguru import logger
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
+from app.core.config import Config, global_config_loaded_from_config_yaml, load_config
 
-from app.core.config import global_config_loaded_from_config_yaml
+
+def _load_runtime_config() -> Config:
+    """读取 Alembic -x 自定义参数，根据指定路径加载配置文件。"""
+    x_args = context.get_x_argument(as_dictionary=True)
+    config_path = x_args.get("config", None)
+    if config_path:
+        logger.info(f"[ALEMBIC] 使用自定义配置文件: {config_path}")
+        return load_config(config_path)
+    logger.info("[ALEMBIC] 使用默认配置文件: global_config_loaded_from_config_yaml")
+    return global_config_loaded_from_config_yaml
+
+runtime_config = _load_runtime_config()
 
 # 导入所有模型，app/models/__init__.py 会将所有表定义连同 base 一起导入
 from app.models import Base
 
 target_metadata = Base.metadata
-db_url = global_config_loaded_from_config_yaml.database.url
+db_url = runtime_config.database.url
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

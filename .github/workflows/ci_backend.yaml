@@ -5,32 +5,27 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "pytest.ini"
-      - "alembic/versions/**/*.py"
-      - "start.sh"
-      - "app/**/*.py"
-      - "tests/**/*.py"
-      - "scripts/init_admin_user.py"
-      - "requirements.txt"
-      - "test_requirements.txt"
-      - ".github/workflows/ci.yaml"
-      - "devops/config.yaml.test"
 
   pull_request:
     branches:
       - main
     paths:
       - "pytest.ini"
-      - "alembic/versions/**/*.py"
       - "start.sh"
       - "app/**/*.py"
       - "tests/**/*.py"
+      - "tests/alembic/test_custom_config.sh"
       - "scripts/init_admin_user.py"
       - "requirements.txt"
       - "test_requirements.txt"
-      - ".github/workflows/ci.yaml"
+      # Alembic files
+      - "alembic/**/*"
+      - "alembic.ini"
+      # 这是本地开发用配置文件
+      - "devops/config.yaml.local"
+      # 这个是测试用配置文件
       - "devops/config.yaml.test"
+      - ".github/workflows/ci_backend.yaml"
 
 env:
   PG_USER: postgres
@@ -79,7 +74,11 @@ jobs:
           # https://stackoverflow.com/a/74669486
           echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
-
+      - name: Run alembic tests
+        run: |
+          ./tests/alembic/test_custom_config.sh
+        env:
+          PYTHONPATH: .
       - name: Run python tests
         run: |
           cp devops/config.yaml.test config.yaml
