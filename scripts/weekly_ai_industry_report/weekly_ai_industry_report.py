@@ -16,12 +16,19 @@ Environment variables required:
 - GEMINI_API_KEY: Your Gemini API key
 """
 
-import os
-import sys
+import base64
+import hashlib
+import hmac
 import json
 import logging
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+import os
+import sys
+import time
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 
 try:
     import google.generativeai as genai
@@ -202,7 +209,7 @@ class AIIndustryReporter:
 
     def generate_weekly_report(
         self, custom_query: Optional[str] = None
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         Generate a complete weekly AI industry report.
 
@@ -264,6 +271,183 @@ class AIIndustryReporter:
             }
 
 
+@dataclass
+class FeishuNotificationResult:
+    status: str  # success, skipped, failed
+    detail: str = ""
+
+
+class FeishuNotifier:
+    """Send formatted weekly report messages to a Feishu group bot."""
+
+    def __init__(self, webhook_url: str, secret: Optional[str] = None):
+        if not webhook_url:
+            raise ValueError("Webhook URL is required for Feishu notifications")
+
+        self.webhook_url = webhook_url
+        self.secret = secret
+
+    def send_report(self, report: Dict[str, Any]) -> None:
+        payload = self._build_payload(report)
+        self._post(payload)
+
+    def _build_payload(self, report: Dict[str, Any]) -> Dict[str, Any]:
+        report_date = report.get("report_date", "")[:10] or datetime.now().strftime(
+            "%Y-%m-%d"
+        )
+        summary = (report.get("summary") or "").strip()
+        if not summary:
+            summary = "（本周暂无可用摘要）"
+
+        summary = self._truncate(summary, 1000)
+
+        sources_md = self._build_sources_md(report.get("sources", []))
+
+        elements: List[Dict[str, Any]] = [
+            {
+                "tag": "div",
+                "text": {
+                    "tag": "lark_md",
+                    "content": f"**📝 摘要**\n{summary}",
+                },
+            }
+        ]
+
+        if sources_md:
+            elements.extend(
+                [
+                    {"tag": "hr"},
+                    {
+                        "tag": "div",
+                        "text": {"tag": "lark_md", "content": sources_md},
+                    },
+                ]
+            )
+
+        elements.append(
+            {
+                "tag": "note",
+                "elements": [
+                    {
+                        "tag": "plain_text",
+                        "content": "自动推送 · 如需修改请联系 Inty 团队",
+                    }
+                ],
+            }
+        )
+
+        card = {
+            "config": {"wide_screen_mode": True},
+            "header": {
+                "template": "blue",
+                "title": {"tag": "plain_text", "content": f"AI行业周报 · {report_date}"},
+            },
+            "elements": elements,
+        }
+
+        payload: Dict[str, Any] = {
+            "msg_type": "interactive",
+            "card": card,
+        }
+
+        if self.secret:
+            timestamp = str(int(time.time()))
+            payload["timestamp"] = timestamp
+            payload["sign"] = self._generate_signature(timestamp)
+
+        return payload
+
+    def _build_sources_md(self, sources: List[Dict[str, str]]) -> str:
+        if not sources:
+            return ""
+
+        lines = ["**🔗 重点来源（前5条）**"]
+        for item in sources[:5]:
+            title = (item.get("title") or "未命名来源").strip()
+            url = item.get("url", "").strip()
+            if url:
+                lines.append(f"- [{title}]({url})")
+            else:
+                lines.append(f"- {title}")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def _truncate(text: str, limit: int) -> str:
+        if len(text) <= limit:
+            return text
+        return text[: limit - 1].rstrip() + "…"
+
+    def _generate_signature(self, timestamp: str) -> str:
+        """Compute Feishu bot signature when a secret is configured."""
+        if not self.secret:
+            return ""
+
+        string_to_sign = f"{timestamp}\n{self.secret}"
+        hmac_code = hmac.new(
+            self.secret.encode("utf-8"),
+            string_to_sign.encode("utf-8"),
+            digestmod=hashlib.sha256,
+        ).digest()
+        return base64.b64encode(hmac_code).decode("utf-8")
+
+    def _post(self, payload: Dict[str, Any]) -> None:
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        request_obj = urllib_request.Request(
+            self.webhook_url,
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        try:
+            with urllib_request.urlopen(request_obj, timeout=10) as response:
+                response_body = response.read().decode("utf-8")
+        except urllib_error.HTTPError as exc:
+            error_body = exc.read().decode("utf-8", errors="ignore") if exc.fp else ""
+            raise RuntimeError(
+                f"飞书Webhook请求失败，HTTP {exc.code}, body: {error_body}"
+            ) from exc
+        except urllib_error.URLError as exc:
+            raise RuntimeError(f"无法连接飞书Webhook: {exc.reason}") from exc
+
+        if not response_body:
+            return
+
+        try:
+            response_json = json.loads(response_body)
+        except json.JSONDecodeError:
+            logger.warning("飞书Webhook返回非JSON: %s", response_body)
+            return
+
+        status_code = response_json.get("StatusCode")
+        if status_code is None:
+            status_code = response_json.get("code")
+
+        if status_code not in (None, 0):
+            raise RuntimeError(f"飞书Webhook返回错误: {response_json}")
+
+
+def send_report_to_feishu(report: Dict[str, Any]) -> FeishuNotificationResult:
+    """Send the generated report to Feishu if webhook env vars are configured."""
+
+    webhook_url = os.getenv("FEISHU_WEBHOOK_URL")
+    if not webhook_url:
+        return FeishuNotificationResult(
+            status="skipped", detail="环境变量 FEISHU_WEBHOOK_URL 未配置，跳过推送"
+        )
+
+    secret = os.getenv("FEISHU_WEBHOOK_SECRET")
+    notifier = FeishuNotifier(webhook_url=webhook_url, secret=secret)
+
+    try:
+        notifier.send_report(report)
+        return FeishuNotificationResult(status="success")
+    except Exception as exc:
+        logger.error(f"Feishu notification failed: {exc}")
+        return FeishuNotificationResult(status="failed", detail=str(exc))
+
+
 def main():
     """Main execution function."""
     print("🤖 AI行业周报生成器启动中...")
@@ -292,6 +476,14 @@ def main():
                 json.dump(report, f, ensure_ascii=False, indent=2)
 
             print(f"\n📄 完整报告已保存至: {report_filename}")
+
+            feishu_result = send_report_to_feishu(report)
+            if feishu_result.status == "success":
+                print("✅ 已推送至飞书群机器人")
+            elif feishu_result.status == "failed":
+                print(f"⚠️ 飞书推送失败: {feishu_result.detail}")
+            else:
+                print("ℹ️ 未配置飞书Webhook，已跳过飞书推送")
 
         else:
             print(f"❌ 报告生成失败: {report.get('error', '未知错误')}")
