@@ -40,6 +40,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
+
 
 class AIIndustryReporter:
     """Main class for generating AI industry weekly reports."""
@@ -65,7 +67,8 @@ class AIIndustryReporter:
 
         # Configure Gemini
         genai.configure(api_key=self.gemini_api_key)
-        self.gemini_model = genai.GenerativeModel("gemini-2.5-flash-latest")
+        logger.info(f"Using Gemini model: {DEFAULT_GEMINI_MODEL}")
+        self.gemini_model = genai.GenerativeModel(DEFAULT_GEMINI_MODEL)
 
         # Build Google Custom Search service
         self.search_service = build(
