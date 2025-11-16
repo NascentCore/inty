@@ -10,6 +10,7 @@ pip install black
 npm install --save-dev --save-exact prettier
 # 使用标准脚本格式化所有代码
 ./fmt.sh
+# 说明：fmt.sh 会自动调用 prettier 处理 JSON/Markdown/JS/TS/HTML/CSS 等文本文件，并且已经支持 YAML（.yaml/.yml）文件的格式化。
 ```
 
 ## 启动本地后端服务
