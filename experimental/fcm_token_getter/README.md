@@ -185,4 +185,4 @@ val request = Request.Builder()
 
 - [Firebase Cloud Messaging 文档](https://firebase.google.com/docs/cloud-messaging)
 - [Firebase Android 设置指南](https://firebase.google.com/docs/android/setup)
-- [后端 API 文档](../docs/FCM_DEBUG_GUIDE.md)
+- [后端 API 文档](../backend/docs/FCM_DEBUG_GUIDE.md)
