@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.ActivityManager
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.Signature
 import android.graphics.drawable.Drawable
@@ -13,6 +14,7 @@ import android.os.Process
 import android.provider.Settings
 import android.util.Log
 import androidx.core.content.getSystemService
+import androidx.core.content.pm.PackageInfoCompat
 import java.security.MessageDigest
 import kotlin.system.exitProcess
 
@@ -99,17 +101,23 @@ object AppUtils {
             val app = Utils.getApp() ?: return false
             val am = app.getSystemService<ActivityManager>() ?: return false
 
-            // 检查运行的任务（API 21+已废弃，但作为降级方案）
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-                val runningTasks = am.getRunningTasks(Int.MAX_VALUE)
-                if (runningTasks.any { it.baseActivity?.packageName == packageName }) {
+            val runningProcesses = am.runningAppProcesses.orEmpty()
+            val isRunningInProcess =
+                runningProcesses.any { processInfo ->
+                    processInfo.processName == packageName &&
+                        processInfo.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+                }
+            if (isRunningInProcess) return true
+
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+                @Suppress("DEPRECATION")
+                val runningServices = am.getRunningServices(Int.MAX_VALUE)
+                if (runningServices?.any { it.service.packageName == packageName } == true) {
                     return true
                 }
             }
 
-            // 检查运行的服务
-            val runningServices = am.getRunningServices(Int.MAX_VALUE)
-            return runningServices?.any { it.service.packageName == packageName } ?: false
+            false
         } catch (e: Exception) {
             Log.e("AppUtils", "检查应用运行状态失败", e)
             false
@@ -233,11 +241,11 @@ object AppUtils {
     /** 获取应用版本号 */
     fun getVersionCode(packageName: String = Utils.getApp()?.packageName ?: ""): Int {
         if (UtilsBridge.isSpace(packageName)) return -1
-        return try {
-            val app = Utils.getApp() ?: return -1
-            val pm = app.packageManager ?: return -1
-            val pi = pm.getPackageInfo(packageName, 0)
-            pi?.versionCode ?: -1
+          return try {
+              val app = Utils.getApp() ?: return -1
+              val pm = app.packageManager ?: return -1
+              val pi = pm.getPackageInfo(packageName, 0)
+              pi.versionCodeCompat()
         } catch (e: PackageManager.NameNotFoundException) {
             -1
         } catch (e: Exception) {
@@ -332,19 +340,17 @@ object AppUtils {
             val app = Utils.getApp() ?: return null
             val pm = app.packageManager ?: return null
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val pi = pm.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
-                val signingInfo = pi.signingInfo
-                if (signingInfo?.hasMultipleSigners() == true) {
-                    signingInfo.apkContentsSigners
-                } else {
-                    signingInfo?.signingCertificateHistory
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                val pi = pm.getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
-                pi?.signatures
-            }
+              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                  val pi = pm.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                  val signingInfo = pi.signingInfo
+                  if (signingInfo?.hasMultipleSigners() == true) {
+                      signingInfo.apkContentsSigners
+                  } else {
+                      signingInfo?.signingCertificateHistory
+                  }
+              } else {
+                  getLegacySignatures(pm, packageName)
+              }
         } catch (e: PackageManager.NameNotFoundException) {
             null
         } catch (e: Exception) {
@@ -406,7 +412,7 @@ object AppUtils {
                     name = ai.loadLabel(pm).toString(),
                     icon = ai.loadIcon(pm),
                     versionName = pi.versionName ?: "",
-                    versionCode = pi.versionCode,
+                    versionCode = pi.versionCodeCompat(),
                     isSystem = (ai.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
                     isDebug = (ai.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0,
                 )
@@ -434,7 +440,7 @@ object AppUtils {
                             name = ai.loadLabel(pm).toString(),
                             icon = ai.loadIcon(pm),
                             versionName = pi.versionName ?: "",
-                            versionCode = pi.versionCode,
+                            versionCode = pi.versionCodeCompat(),
                             isSystem = (ai.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
                             isDebug = (ai.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0,
                         )
@@ -448,5 +454,19 @@ object AppUtils {
             Log.e("AppUtils", "获取所有应用信息失败", e)
             emptyList()
         }
+    }
+
+    private fun PackageInfo.versionCodeCompat(): Int {
+        val versionCode = PackageInfoCompat.getLongVersionCode(this)
+        return versionCode.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    }
+
+    private fun getLegacySignatures(
+        pm: PackageManager,
+        packageName: String,
+    ): Array<Signature>? {
+        @Suppress("DEPRECATION")
+        val packageInfo = pm.getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
+        @Suppress("DEPRECATION") return packageInfo?.signatures
     }
 }

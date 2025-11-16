@@ -1,9 +1,9 @@
 package ai.sxwl.android.utils
 
 import android.content.Context
-import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.Signature
+import android.os.Build
 import android.util.Log
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -39,21 +39,7 @@ class SignCheckTools(private val context: Context) {
     /** 获取应用的签名 */
     fun getCertificateSHA1Fingerprint(): String? {
         try {
-            // 获取包管理器
-            val pm = context.packageManager
-            val packageName = context.packageName
-            val flags = PackageManager.GET_SIGNATURES
-
-            var packageInfo: PackageInfo? = null
-            try {
-                packageInfo = pm.getPackageInfo(packageName, flags)
-            } catch (e: PackageManager.NameNotFoundException) {
-                Log.e(TAG, "包名未找到: $packageName", e)
-                return null
-            }
-
-            // 签名信息
-            val signatures: Array<Signature> = packageInfo?.signatures ?: return null
+            val signatures = loadSignatures() ?: return null
             if (signatures.isEmpty()) {
                 Log.e(TAG, "未找到签名信息")
                 return null
@@ -141,19 +127,7 @@ class SignCheckTools(private val context: Context) {
     /** 获取MD5签名 */
     fun getCertificateMD5Fingerprint(): String? {
         try {
-            val pm = context.packageManager
-            val packageName = context.packageName
-            val flags = PackageManager.GET_SIGNATURES
-
-            var packageInfo: PackageInfo? = null
-            try {
-                packageInfo = pm.getPackageInfo(packageName, flags)
-            } catch (e: PackageManager.NameNotFoundException) {
-                Log.e(TAG, "包名未找到: $packageName", e)
-                return null
-            }
-
-            val signatures: Array<Signature> = packageInfo?.signatures ?: return null
+            val signatures = loadSignatures() ?: return null
             if (signatures.isEmpty()) {
                 Log.e(TAG, "未找到签名信息")
                 return null
@@ -208,19 +182,7 @@ class SignCheckTools(private val context: Context) {
     /** 获取SHA256签名 */
     fun getCertificateSHA256Fingerprint(): String? {
         try {
-            val pm = context.packageManager
-            val packageName = context.packageName
-            val flags = PackageManager.GET_SIGNATURES
-
-            var packageInfo: PackageInfo? = null
-            try {
-                packageInfo = pm.getPackageInfo(packageName, flags)
-            } catch (e: PackageManager.NameNotFoundException) {
-                Log.e(TAG, "包名未找到: $packageName", e)
-                return null
-            }
-
-            val signatures: Array<Signature> = packageInfo?.signatures ?: return null
+            val signatures = loadSignatures() ?: return null
             if (signatures.isEmpty()) {
                 Log.e(TAG, "未找到签名信息")
                 return null
@@ -269,6 +231,33 @@ class SignCheckTools(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "获取SHA256签名失败", e)
             return null
+        }
+    }
+
+    private fun loadSignatures(): Array<Signature>? {
+        return try {
+            val pm = context.packageManager
+            val packageName = context.packageName
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val packageInfo =
+                    pm.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                val signingInfo = packageInfo.signingInfo ?: return null
+                if (signingInfo.hasMultipleSigners()) {
+                    signingInfo.apkContentsSigners
+                } else {
+                    signingInfo.signingCertificateHistory
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                val packageInfo = pm.getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
+                @Suppress("DEPRECATION") packageInfo?.signatures
+            }
+        } catch (e: PackageManager.NameNotFoundException) {
+            Log.e(TAG, "包名未找到: ${context.packageName}", e)
+            null
+        } catch (e: Exception) {
+            Log.e(TAG, "加载签名信息失败", e)
+            null
         }
     }
 }

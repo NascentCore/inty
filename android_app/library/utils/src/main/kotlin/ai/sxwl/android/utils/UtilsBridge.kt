@@ -175,7 +175,7 @@ internal object UtilsBridge {
 
                     while (usageEvents.hasNextEvent()) {
                         usageEvents.getNextEvent(event)
-                        if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) {
+                        if (isMoveToForegroundEvent(event.eventType)) {
                             lastPackageName = event.packageName
                         }
                     }
@@ -188,6 +188,7 @@ internal object UtilsBridge {
                 // 对于低版本Android，使用ActivityManager
                 val activityManager =
                     sApplication?.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                @Suppress("DEPRECATION")
                 val runningTasks = activityManager?.getRunningTasks(1)
                 runningTasks?.firstOrNull()?.topActivity?.packageName ?: ""
             }
@@ -244,8 +245,13 @@ internal object UtilsBridge {
             try {
                 val field = context.javaClass.getDeclaredField("mActivityContext")
                 field.isAccessible = true
-                val weakRef = field.get(context) as? WeakReference<Activity>
-                return weakRef?.get()
+                val candidate = field.get(context)
+                if (candidate is WeakReference<*>) {
+                    val activity = candidate.get()
+                    if (activity is Activity) {
+                        return activity
+                    }
+                }
             } catch (e: Exception) {
                 // ignore
             }
@@ -295,6 +301,15 @@ internal object UtilsBridge {
                 ignoreUnknownKeys = true
                 encodeDefaults = true
             }
+        }
+    }
+
+    private fun isMoveToForegroundEvent(eventType: Int): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            eventType == UsageEvents.Event.ACTIVITY_RESUMED
+        } else {
+            @Suppress("DEPRECATION")
+            eventType == UsageEvents.Event.MOVE_TO_FOREGROUND
         }
     }
 

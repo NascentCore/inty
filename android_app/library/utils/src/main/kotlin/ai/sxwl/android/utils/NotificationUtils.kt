@@ -284,12 +284,11 @@ object NotificationUtils {
                     builder.setStyle(inboxStyle)
                 }
                 is NotificationStyle.MessagingStyle -> {
-                    val messagingStyle =
-                        if (style.conversationTitle != null) {
-                            NotificationCompat.MessagingStyle(style.conversationTitle)
-                        } else {
-                            NotificationCompat.MessagingStyle("Unknown UserName")
-                        }
+                    val selfPerson =
+                        style.messages.lastOrNull { it.person != null }?.person
+                            ?: Person.Builder().setName("Me").build()
+                    val messagingStyle = NotificationCompat.MessagingStyle(selfPerson)
+                    style.conversationTitle?.let { messagingStyle.setConversationTitle(it) }
                     style.messages.forEach { message ->
                         messagingStyle.addMessage(message.text, message.timestamp, message.person)
                     }

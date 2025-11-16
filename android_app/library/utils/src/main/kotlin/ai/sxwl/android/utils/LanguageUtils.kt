@@ -1,11 +1,11 @@
 package ai.sxwl.android.utils
 
-import android.app.Application
 import android.content.Context
 import android.content.res.Configuration
 import android.content.res.Resources
 import android.os.Build
 import android.util.Log
+import java.util.IllformedLocaleException
 import java.util.Locale
 
 /** 语言工具类 提供语言相关的工具方法 */
@@ -37,7 +37,7 @@ object LanguageUtils {
     /** 获取当前语言 */
     fun getCurrentLanguage(): Locale {
         return try {
-            val app: Application? = Utils.getApp()
+            val app = runCatching { Utils.getApp() }.getOrNull()
             if (app != null) {
                 getCurrentLanguage(app)
             } else {
@@ -101,30 +101,20 @@ object LanguageUtils {
     fun string2Locale(localeString: String?): Locale? {
         if (localeString.isNullOrEmpty()) return null
         return try {
-            val parts = localeString.split("_")
-            when (parts.size) {
-                1 -> {
-                    if (parts[0].isNotEmpty()) {
-                        Locale(parts[0])
-                    } else {
-                        Log.w("LanguageUtils", "Empty language part in: $localeString")
-                        null
-                    }
-                }
-                2 -> {
-                    if (parts[0].isNotEmpty() && parts[1].isNotEmpty()) {
-                        Locale(parts[0], parts[1])
-                    } else {
-                        Log.w("LanguageUtils", "Empty language or country part in: $localeString")
-                        null
-                    }
-                }
-                else -> {
-                    Log.w("LanguageUtils", "Invalid locale string format: $localeString")
-                    null
-                }
+            val parts = localeString.split("_").filter { it.isNotBlank() }
+            if (parts.isEmpty()) {
+                Log.w("LanguageUtils", "Locale string is empty after split: $localeString")
+                return null
             }
-        } catch (e: IllegalArgumentException) {
+            val builder = Locale.Builder().setLanguage(parts[0])
+            if (parts.size >= 2) {
+                builder.setRegion(parts[1])
+            }
+            if (parts.size >= 3) {
+                builder.setVariant(parts[2])
+            }
+            builder.build()
+        } catch (e: IllformedLocaleException) {
             Log.e("LanguageUtils", "Invalid locale arguments: $localeString", e)
             null
         } catch (e: Exception) {
@@ -143,8 +133,8 @@ object LanguageUtils {
         updateAppContextLanguage(
             destLocal,
             object : Utils.Consumer<Boolean> {
-                override fun accept(success: Boolean) {
-                    if (success) {
+                override fun accept(t: Boolean) {
+                    if (t) {
                         restart(isRelaunchApp)
                     } else {
                         // 使用重启应用
@@ -203,31 +193,19 @@ object LanguageUtils {
 
     private fun updateAppContextLanguage(locale: Locale, consumer: Utils.Consumer<Boolean>) {
         try {
-            val context = Utils.getApp()
+            val context = runCatching { Utils.getApp() }.getOrNull()
             if (context == null) {
                 Log.e("LanguageUtils", "App context is null")
                 consumer.accept(false)
                 return
             }
 
-            val resources = context.resources
-            if (resources == null) {
-                Log.e("LanguageUtils", "Resources is null")
-                consumer.accept(false)
-                return
-            }
-
-            val configuration = Configuration(resources.configuration)
+            val configuration = Configuration(context.resources.configuration)
             configuration.setLocale(locale)
 
             try {
                 val newContext = context.createConfigurationContext(configuration)
-                if (newContext == null) {
-                    Log.e("LanguageUtils", "Failed to create configuration context")
-                    consumer.accept(false)
-                    return
-                }
-                consumer.accept(true)
+                consumer.accept(newContext != null)
             } catch (e: Exception) {
                 Log.e("LanguageUtils", "Failed to create configuration context", e)
                 consumer.accept(false)
