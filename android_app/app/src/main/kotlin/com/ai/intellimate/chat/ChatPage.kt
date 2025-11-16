@@ -179,8 +179,8 @@ internal fun ChatPage(
 
     val imeHeight = WindowInsets.ime.getBottom(density)
     KEY_BOARD_HEIGHT_MAX = maxOf(imeHeight, KEY_BOARD_HEIGHT_MAX)
-    val isKeyboardVisible = imeHeight > 0
-    val ratio = 1 - imeHeight.toFloat() / KEY_BOARD_HEIGHT_MAX.toFloat();
+//    val isKeyboardVisible = imeHeight > 0
+    val ratio = 1 - imeHeight.toFloat() / KEY_BOARD_HEIGHT_MAX.toFloat()  // 计算出键盘当前弹出/回收进度
     val gap = BottomNavigationBarHeight * ratio
 
 //    val bottomPadding =
@@ -190,8 +190,6 @@ internal fun ChatPage(
 //            else -> gap + ChatInputBottomSpacerHeight
 //        }
     val bottomPadding = gap + ChatInputBottomSpacerHeight
-//    Log.d("SLTAG--------->", "showBack---->$showBackButton-----isKeyboard---->$isKeyboardVisible-----else------>$ratio-----H---->$KEY_BOARD_HEIGHT_MAX")
-
     fun onKeepTalkingChange(enabled: Boolean) {
         SettingStateManager.updateShowKeepTalking(enabled)
     }
@@ -502,7 +500,6 @@ internal fun ChatPage(
                     } else {
                         val effectiveBottomPadding =
                             if (showMorePanel) morePanelHeight else bottomPadding
-//                        Log.d("effective padding------->", effectiveBottomPadding.toString())
 
                         ChatInput(
                             chatViewModel = chatViewModel,
