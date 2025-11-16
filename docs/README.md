@@ -119,9 +119,6 @@
 - [ ] `evaluation/docs/AVATAR_CROP_FEATURE.md`
 - [ ] `evaluation/docs/AVATAR_CROP_FEATURE_IMPLEMENTATION_SUMMARY.md`
 - [ ] `evaluation/tests/README.md`
-- [ ] `evaluation/.claude/CLAUDE.md`
-- [ ] `evaluation/.claude/prompts/README.md`
-- [ ] `evaluation/.claude/prompts/voice_play.md`
 - [ ] `evaluation/.gemini/GEMINI.md`
 
 ## P3 支撑团队与流程文档
@@ -195,7 +192,6 @@
 - [ ] `experimental/model-apis-examples/README.md`
 - [ ] `experimental/model-apis-examples/README_content_analyzer.md`
 - [ ] `experimental/misc/README.md`
-- [ ] `experimental/misc/cursor_understanding_android_studio_con.md`
 - [ ] `experimental/locust_test/README.md`
 - [ ] `experimental/locust_test/test-plan.md`
 - [ ] `experimental/locust_test/gcp-deployment.md`
