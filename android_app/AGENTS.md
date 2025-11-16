@@ -213,9 +213,8 @@ suspend fun login(request: LoginRequest): ApiResult<LoginResponse>
 ### 使用指导原则
 由于当前双栈并存，遵循以下原则选择合适的网络栈：
 
-1. **聊天相关功能**：优先使用 Retrofit 栈（`NetServiceMgr`）
-2. **用户认证/配置**：多使用 Inty SDK 栈（`IntyNetworkManager`）
-3. **新功能开发**：建议使用 Retrofit 栈，除非明确需要 SDK 特性
+1. **已有功能改善修改**：仍使用已有的网络栈，不进行修改
+3. **新功能开发**：使用 Inty SDK 栈
 
 ### 🔴 已知问题
 - 错误处理机制不统一（`HttpResult` vs `ApiResult`）
@@ -280,19 +279,9 @@ suspend fun login(request: LoginRequest): ApiResult<LoginResponse>
 - 图片加载使用 Coil `AsyncImage` 并配合懒加载/预加载策略；`Modifier.drawWithContent` 优化绘制。
 - 关注应用大小、启动时间、电池与碳足迹；监控内存/GC 压力。
 
-## 安全与合规
-- 敏感信息使用 MMKV 加密，密钥放于 Android Keystore；网络强制 HTTPS + 证书锁定，支付走 Google Play Billing。
-- Firebase Auth + Credential Manager 负责认证；实施代码混淆、反调试、RASP、生物识别等防护。
-- 严格遵循 OWASP Mobile Top 10；所有 AI 能力需通过内容审核并提供用户透明度。
-
 ## 构建与发布
 - 构建依赖统一由 `build-logic` 模块提供；混淆规则维护在 `proguard-rules.pro`。
 - 发布流程：`release` 构建 → 签名 → 使用 `google-services.json` 配置 Firebase；上线前确保事件埋点同步更新。
-
-## 禁止事项
-- 禁用 TheRouter、EasyLog、全局可变单例（除非确有必要）、未审核 AI 模型、过时 Android API。
-- 禁止在 UI 线程执行耗时操作、Compose 中直接发网络请求、无异常处理的协程、在 Activity 内写业务逻辑或硬编码字符串/数字。
-- 忽视无障碍要求、AI 标识或数据隐私法规视为严重违规。
 
 ## 最佳实践
 - 组件保持单一职责、参数化、浅层级；使用 `Modifier` 链和 `@Stable/@Immutable` 优化。
