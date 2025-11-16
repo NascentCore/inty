@@ -1,5 +1,6 @@
 import re
-import traceback
+import shutil
+from pathlib import Path
 
 import loguru
 from google.cloud import storage
@@ -23,8 +24,11 @@ def get_gcs_client():
     global gcs_client
     if gcs_client is None:
         if global_config_loaded_from_config_yaml.gcs.use_fake_gcs:
-            logger.info("使用 GCS Fake 客户端进行测试")
-            gcs_client = FakeGCSClient()
+            fake_gcs_base_dir = (
+                global_config_loaded_from_config_yaml.gcs.fake_gcs_base_dir
+            )
+            logger.info(f"使用 GCS Fake 客户端，存储目录为: {fake_gcs_base_dir}")
+            gcs_client = FakeGCSClient(fake_gcs_base_dir)
         else:
             gcs_client = storage.Client.from_service_account_json(
                 global_config_loaded_from_config_yaml.app.gcp_service_account_key
