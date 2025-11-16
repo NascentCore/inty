@@ -156,3 +156,12 @@ PATH="/Users/yzhao/Library/Android/sdk/platform-tools:$PATH"
  - 推送通知: Firebase Cloud Messaging 集成。
  - 分页: 聊天/探索采用 PagingSource 与仓库封装。
  - 工程化: 版本库（libs.versions.toml）、ProGuard 规则、构建逻辑与 CI。
+
+## core 模块为何仍独立存在？
+
+- `core/common`、`core/design`、`core/data` 虽是 Kotlin Library Module，但它们不仅抽象了“可被多个 App 复用”的能力，更重要的是在单 App 场景下提供清晰依赖边界：`app` 只能向下依赖，禁止横向互调，避免 Activity/Feature 间耦合。
+- 模块化带来的增量编译、Gradle 配置隔离与测试可控性，与是否拥有第二个 App 无关；单 App 仍可通过拆分模块获得更快的全量/增量构建与更清晰的代码所有权。
+- `core/design` 统一维护主题、组件与资源，阻止 UI 资产散落在 `app` 中；未来若出现 Wear/Tablet/WebView 外壳或动态 Feature，可直接依赖该模块。
+- `core/data` 聚合网络、仓库、用例、支付、设置等领域逻辑，本身已经是跨 UI 层可复用的“数据内核”；即便暂时只有主 App，也能在实验模块或 UIAutomator 测试中直接复用。
+- `core/common` 收敛基类、埋点、事件系统、启动优化等基建，任何 Feature 需要的通用能力都从此获取，杜绝散落的 util/单例实现。
+- 若未来新增多端/多壳，现有模块可以直接被依赖；若没有，则也只增加了极小的 Gradle 配置成本，不会影响运行时体积或性能。
