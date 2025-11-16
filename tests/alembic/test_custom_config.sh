@@ -133,12 +133,8 @@ main() {
     
     # 生成自定义配置
     write_custom_config "$config_path" "$db_name"
-    
-    # 运行 Alembic upgrade
-    log_info "运行 Alembic upgrade head -x config=$config_path"
-    export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
-    
-    if ! python3 -m alembic -c alembic.ini -x "config=$config_path" upgrade head; then
+
+    if ! alembic -x "config=$config_path" upgrade head; then
         log_error "Alembic upgrade 失败"
         return 1
     fi

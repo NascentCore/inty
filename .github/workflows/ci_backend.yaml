@@ -75,6 +75,8 @@ jobs:
       - name: Run alembic tests
         run: |
           ./tests/alembic/test_custom_config.sh
+        env:
+          PYTHONPATH: .
       - name: Run python tests
         run: |
           cp devops/config.yaml.local config.yaml
