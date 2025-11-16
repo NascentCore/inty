@@ -129,11 +129,7 @@ object BackendEnvironmentManager {
     private fun startWatching(configFile: File) {
         fileObserver?.stopWatching()
         fileObserver =
-            object :
-                FileObserver(
-                    configFile.absolutePath,
-                    CLOSE_WRITE or ATTRIB or MOVED_TO or DELETE_SELF or MOVE_SELF,
-                ) {
+            object : FileObserver(configFile) {
                 override fun onEvent(event: Int, path: String?) {
                     when (event) {
                         DELETE_SELF,
@@ -146,7 +142,10 @@ object BackendEnvironmentManager {
                                 startWatching(runtimeFile)
                             }
                         }
-                        else -> {
+                        CLOSE_WRITE,
+                        ATTRIB,
+                        MOVED_TO,
+                        -> {
                             LogUtils.d(TAG, "检测到配置变更，重新加载")
                             refresh()
                         }

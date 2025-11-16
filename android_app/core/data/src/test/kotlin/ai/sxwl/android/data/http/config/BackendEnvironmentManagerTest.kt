@@ -85,14 +85,14 @@ class BackendEnvironmentManagerTest {
         }
     }
 
-    private fun setInternalState(newState: Any) {
+    private fun setInternalState(newState: Any?) {
         @Suppress("UNCHECKED_CAST")
-        val atomic = stateField.get(manager) as AtomicReference<Any>
+        val atomic = stateField.get(manager) as AtomicReference<Any?>
         atomic.set(newState)
     }
 
     private fun resetToFallback() {
-        val fallbackState = fallbackMethod.invoke(manager)
+        val fallbackState = fallbackMethod.invoke(manager) ?: return
         setInternalState(fallbackState)
     }
 }
