@@ -56,7 +56,7 @@ exit
     "local": "local"
   }
   ```
-- 若缺失映射，会回退到 `default_env`，再不行则使用 `Constant.USER_HOST*` 内置常量。
+- 若缺失映射，会回退到 `default_backend`，再不行则使用 `Constant.USER_HOST*` 内置常量。
 
 ## 新增自定义环境
 

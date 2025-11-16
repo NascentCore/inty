@@ -1,7 +1,7 @@
 {
   "CREATED_BY_AGENT": "cursor",
   "schema_version": 1,
-  "default_env": "prod",
+  "default_backend": "prod",
   "build_type_overrides": {
     "local": "local",
     "debug": "dev",

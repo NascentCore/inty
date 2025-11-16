@@ -212,7 +212,7 @@ object BackendEnvironmentManager {
             } ?: emptyMap()
 
         val defaultEnvId =
-            root.optString("default_env").takeIf { it.isNotBlank() }
+            root.optString("default_backend").takeIf { it.isNotBlank() }
                 ?: environments.keys.first()
 
         return BackendState(
@@ -285,7 +285,7 @@ object BackendEnvironmentManager {
             JSONObject()
                 .put(CREATED_BY_AGENT_KEY, "cursor")
                 .put("schema_version", 1)
-                .put("default_env", "prod")
+                .put("default_backend", "prod")
                 .put(
                     "build_type_overrides",
                     JSONObject(
