@@ -13,11 +13,13 @@ class FakeGCSClient:
     - 将上传的文件保存到本地临时/指定目录。
     - 暴露与 google.cloud.storage.Client 兼容的最小接口：bucket().blob().
     - Blob 支持：upload_from_string、download_as_bytes、exists、delete、rewrite、public_url。
+
+    注意如果测试 base dir 不改变，则容易导致文件被反复使用，可能导致测试失败或者遗漏。
     """
 
-    def __init__(self) -> None:
-        self.base_dir = Path(tempfile.mkdtemp(prefix="fake_gcs_"))
-        self.base_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, base_dir: str = "/tmp/inty_fake_gcs") -> None:
+        self.base_dir = Path(base_dir)
+        self.base_dir.mkdir(exist_ok=True)
 
     def bucket(self, name: str) -> "FakeBucket":
         return FakeBucket(self, name)
