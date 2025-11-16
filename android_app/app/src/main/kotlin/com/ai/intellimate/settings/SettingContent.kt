@@ -90,6 +90,9 @@ fun SettingContent(
 
             Spacer(Modifier.height(16.dp))
 
+            // Debug 环境后端切换（仅 debug 可见）
+            DebugBackendSettingsEntry()
+
             // 退出登录按钮
             LogoutButton(onLogout = { onLogout(false) })
 
