@@ -5,6 +5,7 @@ import pytest
 from loguru import logger
 
 from app.external_services.gcs import download_from_gcs
+from app.services.image_transform_service import image_transform_service
 from tests.app.api.test_client import TestClient
 
 
@@ -41,7 +42,14 @@ def test_upload_image(integration_client: TestClient):
         ".jpg"
     ), "Upload failed: avatar URL does not end with .jpg"
 
-    image_bytes = download_from_gcs(upload_response["data"]["url"])
+    # 将 CDN URL 转换为 GCS URL，因为 download_from_gcs 需要 GCS URL
+    cdn_url = upload_response["data"]["url"]
+    gcs_url = image_transform_service.cloudflare_to_gcs(cdn_url)
+    if not gcs_url:
+        # 如果转换失败，可能是已经是 GCS URL 或者 CDN 未启用
+        gcs_url = cdn_url
+
+    image_bytes = download_from_gcs(gcs_url)
     with test_image_path.open("rb") as f:
         file_bytes = f.read()
 
