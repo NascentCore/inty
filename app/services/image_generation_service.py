@@ -13,6 +13,7 @@ from google.genai import types
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import upload_to_gcs
 from app.services import agent_service, chat_history_service
@@ -61,10 +62,8 @@ class ImageGenerationService:
                     history_lines.append(f"AI: {content}")
             history_text = "\n".join(history_lines)
 
-        # 使用配置的模板
-        template = (
-            global_config_loaded_from_config_yaml.agent.image_generation_prompt_template
-        )
+        # 使用统一的图片生成提示词模板
+        template = agent_prompts.IMAGE_GENERATION_PROMPT_TEMPLATE
 
         # 替换模板变量
         prompt = template.format(

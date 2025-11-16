@@ -106,7 +106,7 @@
   - 提取 Agent 的 `scenario`（背景设定），若无则使用 `intro`
   - 提取 Agent 的 `personality`（性格）
   - 格式化聊天历史为文本（用户/AI 对话）
-  - 使用配置的提示词模板进行变量替换
+  - 使用 `app/core/agent/prompts.py` 中维护的提示词模板进行变量替换
 
 - **模板变量**:
 
@@ -132,7 +132,7 @@
 请生成一张符合上述场景的图片，确保角色外观与参考图保持高度一致。
 ```
 
-提示词模板可通过配置修改：`agent.image_generation_prompt_template`
+提示词模板在 `app/core/agent/prompts.py` 的 `IMAGE_GENERATION_PROMPT_TEMPLATE` 中维护，必要时可通过评测面板 API `/api/v1/ai/agents/image-generation/config` 在运行时动态覆盖。
 
 #### 3.2 图片生成流程
 
@@ -277,37 +277,13 @@ async def generate_chat_image_with_gemini(
 
 ### 7. 配置项
 
-位置: `app/core/config.py`
+位置: `app/core/agent/prompts.py`、`app/core/config.py`
 
-相关配置：
-
-```python
-# Agent 配置
-agent:
-  # 图片生成提示词模板
-  image_generation_prompt_template: str = "保持图片中角色的外观..."
-  
-  # 默认历史消息数量
-  image_generation_default_history_count: int = 10
-
-# 应用限制配置
-app:
-  limits:
-    # 免费用户 24 小时图片生成限制
-    free_user_image_gen_24h_limit: int
-    
-    # 付费用户 24 小时图片生成限制
-    subscribed_user_image_gen_24h_limit: int
-
-# GCS 配置
-gcs:
-  bucket: str  # GCS bucket 名称
-
-# Cloudflare CDN 配置
-cloudflare:
-  enabled: bool  # 是否启用 CDN
-  domain: str    # CDN 域名
-```
+- 图片生成提示词模板：`IMAGE_GENERATION_PROMPT_TEMPLATE`（在代码中维护，可通过 `/api/v1/ai/agents/image-generation/config` 运行时更新）
+- 默认历史消息数量：`agent.image_generation_default_history_count`（`config.yaml` 中配置，默认 10）
+- 应用限额：`app.limits.free_user_image_gen_24h_limit`、`app.limits.subscribed_user_image_gen_24h_limit`
+- GCS 配置：`gcs.bucket`
+- Cloudflare CDN：`cloudflare.enabled`、`cloudflare.domain`
 
 ## 关键特性
 

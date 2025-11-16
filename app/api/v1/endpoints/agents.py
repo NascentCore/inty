@@ -14,6 +14,7 @@ from app import schemas
 from app.api import deps
 from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, INTERNAL_API_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
+from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.character_card import (
     CharacterCardExportRequest,
@@ -1031,7 +1032,7 @@ async def get_image_generation_config(
     """获取图片生成配置"""
     try:
         config = {
-            "prompt_template": global_config_loaded_from_config_yaml.agent.image_generation_prompt_template,
+            "prompt_template": agent_prompts.IMAGE_GENERATION_PROMPT_TEMPLATE,
             "default_history_count": global_config_loaded_from_config_yaml.agent.image_generation_default_history_count,
         }
 
@@ -1063,9 +1064,7 @@ async def update_image_generation_config(
     try:
         # 更新内存中的配置
         if "prompt_template" in config:
-            global_config_loaded_from_config_yaml.agent.image_generation_prompt_template = config[
-                "prompt_template"
-            ]
+            agent_prompts.IMAGE_GENERATION_PROMPT_TEMPLATE = config["prompt_template"]
 
         if "default_history_count" in config:
             global_config_loaded_from_config_yaml.agent.image_generation_default_history_count = config[
@@ -1076,7 +1075,7 @@ async def update_image_generation_config(
 
         # 返回更新后的配置
         updated_config = {
-            "prompt_template": global_config_loaded_from_config_yaml.agent.image_generation_prompt_template,
+            "prompt_template": agent_prompts.IMAGE_GENERATION_PROMPT_TEMPLATE,
             "default_history_count": global_config_loaded_from_config_yaml.agent.image_generation_default_history_count,
         }
 
