@@ -91,20 +91,17 @@ class ChatActivity : BaseActivity() {
                 intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
             }
         agentId = intent.getStringExtra(INTENT_KEY_AGENT_ID)
-        when {
-            agent != null -> {
-                chatViewModel.setAgentInfo(agent)
-            }
-
-            agentId != null -> {
-                chatViewModel.setAgentID(agentId!!)
-            }
-
-            else -> {
-                // 既没有agent对象也没有agent_id，说明参数传递有问题
+        val resolvedAgent = agent
+        if (resolvedAgent != null) {
+            chatViewModel.setAgentInfo(resolvedAgent)
+        } else {
+            val resolvedAgentId = agentId
+            if (resolvedAgentId.isNullOrBlank()) {
+                // 既没有agent对象也没有可用的agent_id，说明参数传递有问题
                 finish()
                 return
             }
+            chatViewModel.setAgentID(resolvedAgentId)
         }
         chatViewModel.updateUserInfo()
 
