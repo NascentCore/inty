@@ -188,8 +188,7 @@ internal object UtilsBridge {
                 // 对于低版本Android，使用ActivityManager
                 val activityManager =
                     sApplication?.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-                @Suppress("DEPRECATION")
-                val runningTasks = activityManager?.getRunningTasks(1)
+                @Suppress("DEPRECATION") val runningTasks = activityManager?.getRunningTasks(1)
                 runningTasks?.firstOrNull()?.topActivity?.packageName ?: ""
             }
         } catch (e: Exception) {
