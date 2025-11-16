@@ -172,6 +172,7 @@ class AgentConfig:
     vertex_image_model: str = "imagen-4.0-fast-generate-001"
     force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词
     # 图片生成配置
+    # TODO：移除此配置项，应该作为代码中的 prompts 模版写入到 prompts.py
     image_generation_prompt_template: str = (
         "你是一名场景可视化专家，需要根据用户虚拟角色对话语境生成生动的画面。你的目标是「重建场景」。\n"
         "\n"
