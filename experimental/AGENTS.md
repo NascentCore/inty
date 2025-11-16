@@ -1,6 +1,6 @@
 # AGENTS.md · experimental/（原型与实验）
 
-本文件覆盖并补充根 `backend/AGENTS.md`，仅适用于 `experimental/`。
+本文件覆盖并补充根 `AGENTS.md`，仅适用于 `experimental/`。
 
 ## 边界
 - 非生产代码；不作为发布工件依赖；不影响 `app/` 与 `android_app/` 的构建。
