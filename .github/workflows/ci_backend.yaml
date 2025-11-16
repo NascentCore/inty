@@ -14,6 +14,7 @@ on:
       - "start.sh"
       - "app/**/*.py"
       - "tests/**/*.py"
+      - "tests/alembic/test_custom_config.sh"
       - "scripts/init_admin_user.py"
       - "requirements.txt"
       - "test_requirements.txt"
