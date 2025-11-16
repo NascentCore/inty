@@ -28,6 +28,7 @@ jobs:
           GOOGLE_CSE_API_KEY: ${{ secrets.GOOGLE_CSE_API_KEY }}
           GOOGLE_CSE_ID: ${{ vars.GOOGLE_CSE_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
         run: python scripts/weekly_ai_industry_report/weekly_ai_industry_report.py
 
       - name: Upload report artifact
