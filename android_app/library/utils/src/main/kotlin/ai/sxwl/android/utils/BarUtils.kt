@@ -5,10 +5,10 @@ import android.content.res.Resources
 import android.graphics.Color
 import android.view.Window
 import androidx.annotation.ColorInt
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.core.view.ViewCompat
 
 /** 状态栏和导航栏工具类 提供状态栏和导航栏相关的工具方法 */
 object BarUtils {
@@ -81,7 +81,9 @@ object BarUtils {
     /** 设置状态栏颜色 */
     fun setStatusBarColor(window: Window, @ColorInt color: Int) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+            window.addFlags(
+                android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
+            )
             window.statusBarColor = color
         }
     }
@@ -223,7 +225,9 @@ object BarUtils {
     /** 设置导航栏颜色 */
     fun setNavBarColor(window: Window, @ColorInt color: Int) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+            window.addFlags(
+                android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
+            )
             window.navigationBarColor = color
         }
     }
@@ -363,7 +367,10 @@ object BarUtils {
             controller.hide(WindowInsetsCompat.Type.systemBars())
             WindowCompat.setDecorFitsSystemWindows(window, false)
         } else {
-            setSystemBarConfig(window, SystemBarConfig(statusBarVisible = false, navBarVisible = false))
+            setSystemBarConfig(
+                window,
+                SystemBarConfig(statusBarVisible = false, navBarVisible = false),
+            )
         }
     }
 

@@ -340,7 +340,10 @@ class FeishuNotifier:
             "config": {"wide_screen_mode": True},
             "header": {
                 "template": "blue",
-                "title": {"tag": "plain_text", "content": f"AI行业周报 · {report_date}"},
+                "title": {
+                    "tag": "plain_text",
+                    "content": f"AI行业周报 · {report_date}",
+                },
             },
             "elements": elements,
         }
