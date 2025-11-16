@@ -9,6 +9,8 @@ import yaml
 from loguru import logger
 from pydantic import AnyHttpUrl
 
+from app.core.agent import prompts as agent_prompts
+
 # All config classes' fields should have default values.
 # These default value allow this to be used without an actual config file.
 # Since config object is used as a global singleton, most code depends on it,
@@ -171,31 +173,6 @@ class AgentConfig:
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
     vertex_image_model: str = "imagen-4.0-fast-generate-001"
     force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词
-    # 图片生成配置
-    # TODO：移除此配置项，应该作为代码中的 prompts 模版写入到 prompts.py
-    image_generation_prompt_template: str = (
-        "你是一名场景可视化专家，需要根据用户虚拟角色对话语境生成生动的画面。你的目标是「重建场景」。\n"
-        "\n"
-        "### Step 1: 场景推理\n"
-        "根据以下信息进行思考：\n"
-        "- 最近的对话: {chat_history}\n"
-        "- 用户请求: {user_message}\n"
-        "\n"
-        "请先思考：\n"
-        "1. 角色此刻的动作、姿势、服装是什么？\n"
-        "2. 角色的表情与情绪状态如何？\n"
-        "3. 画面的镜头构图应该如何（特写 / 中景 / 全身）？\n"
-        "4.画面此时所处的空间场所应该如何？\n"
-        "\n"
-        "### Step 2: 场景生成\n"
-        "请根据角色性格: {agent_personality}，角色背景设定: {agent_background}，确认角色的发型、五官和身材特征；\n"
-        "再结合step1中思考的结果生成符合场景氛围的图片。\n"
-        "\n"
-        "请确保：\n"
-        "- 角色外观与参考图保持高度一致（发型、面部特征、身材比例等）。\n"
-        "- 人物形象完整自然，动作自然协调，细节到位（如手势、视线、身体距离等）。\n"
-        "- 画面中无文字、对白或身体畸形。"
-    )
     image_generation_default_history_count: int = 10
     # 视频生成配置
     veo3_model: str = "veo-3.0-fast-generate-preview"  # Veo3 模型名称
@@ -347,7 +324,15 @@ def load_config(path: str) -> Config:
     if "environment" in app_data and isinstance(app_data["environment"], str):
         app_data["environment"] = Environment(app_data["environment"])
 
-    return Config(
+    agent_data = data.get("agent", {}) or {}
+    if not isinstance(agent_data, dict):
+        raise TypeError("agent config must be a mapping")
+    agent_data = dict(agent_data)
+    image_generation_prompt_template = agent_data.pop(
+        "image_generation_prompt_template", None
+    )
+
+    config_obj = Config(
         app=AppConfig(**app_data),
         security=SecurityConfig(**data.get("security", {})),
         database=DatabaseSettings(**data.get("database", {})),
@@ -355,7 +340,7 @@ def load_config(path: str) -> Config:
         verification=VerificationConfig(**data.get("verification", {})),
         logging=LoggingConfig(**data.get("logging", {})),
         embedding=EmbeddingConfig(**data.get("embedding", {})),
-        agent=AgentConfig(**data.get("agent", {})),
+        agent=AgentConfig(**agent_data),
         gcs=GCSConfig(**data.get("gcs", {})),
         firebase=FirebaseConfig(**data.get("firebase", {})),
         google_play=GooglePlayConfig(**data.get("google_play", {})),
@@ -364,6 +349,13 @@ def load_config(path: str) -> Config:
         sentry=SentryConfig(**data.get("sentry", {})),
         push_notification=PushNotificationConfig(**data.get("push_notification", {})),
     )
+
+    if image_generation_prompt_template:
+        agent_prompts.IMAGE_GENERATION_PROMPT_TEMPLATE = (
+            image_generation_prompt_template
+        )
+
+    return config_obj
 
 
 def _validate_config(config: Config):
