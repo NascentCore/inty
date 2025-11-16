@@ -14,9 +14,6 @@ Environment variables required:
 - GOOGLE_CSE_API_KEY: Your Google Custom Search API key
 - GOOGLE_CSE_ID: Your Custom Search Engine ID
 - GEMINI_API_KEY: Your Gemini API key
-
-Optional:
-- GEMINI_MODEL: Override the default Gemini model selection
 """
 
 import os
@@ -43,11 +40,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DEFAULT_GEMINI_MODEL_CANDIDATES = [
-    "gemini-2.0-flash",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-flash",
-]
+DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
 
 
 class AIIndustryReporter:
@@ -58,7 +51,6 @@ class AIIndustryReporter:
         self.google_api_key = os.getenv("GOOGLE_CSE_API_KEY")
         self.google_cse_id = os.getenv("GOOGLE_CSE_ID")
         self.gemini_api_key = os.getenv("GEMINI_API_KEY")
-        self.custom_gemini_model = os.getenv("GEMINI_MODEL")
 
         if not all([self.google_api_key, self.google_cse_id, self.gemini_api_key]):
             missing_keys = []
@@ -75,65 +67,13 @@ class AIIndustryReporter:
 
         # Configure Gemini
         genai.configure(api_key=self.gemini_api_key)
-        model_name = self._resolve_gemini_model()
-        logger.info(f"Using Gemini model: {model_name}")
-        self.gemini_model = genai.GenerativeModel(model_name)
+        logger.info(f"Using Gemini model: {DEFAULT_GEMINI_MODEL}")
+        self.gemini_model = genai.GenerativeModel(DEFAULT_GEMINI_MODEL)
 
         # Build Google Custom Search service
         self.search_service = build(
             "customsearch", "v1", developerKey=self.google_api_key
         )
-
-    def _resolve_gemini_model(self) -> str:
-        """
-        Select a Gemini model that supports generateContent, honoring user override and
-        falling back to default candidates when newer models are unavailable.
-        """
-        candidates = self._build_gemini_model_candidates()
-
-        try:
-            available_models = {
-                self._normalize_model_name(model.name)
-                for model in genai.list_models()
-                if "generateContent" in getattr(model, "generation_methods", [])
-            }
-        except Exception as exc:
-            logger.warning(
-                "Failed to list Gemini models, falling back to preferred order: %s", exc
-            )
-            return candidates[0]
-
-        for candidate in candidates:
-            if self._normalize_model_name(candidate) in available_models:
-                return candidate
-
-        raise ValueError(
-            "当前账号无法访问任何候选 Gemini 模型，请检查 GEMINI_MODEL 或账号权限。"
-        )
-
-    def _build_gemini_model_candidates(self) -> List[str]:
-        candidates: List[str] = []
-        if self.custom_gemini_model:
-            candidates.append(self.custom_gemini_model.strip())
-
-        candidates.extend(DEFAULT_GEMINI_MODEL_CANDIDATES)
-
-        deduped: List[str] = []
-        seen = set()
-        for candidate in candidates:
-            normalized = self._normalize_model_name(candidate)
-            if normalized in seen:
-                continue
-            deduped.append(candidate)
-            seen.add(normalized)
-
-        return deduped
-
-    @staticmethod
-    def _normalize_model_name(name: str) -> str:
-        if not name:
-            return ""
-        return name.split("/")[-1]
 
     def search_recent_ai_news(
         self,
