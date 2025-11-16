@@ -95,26 +95,27 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
                 label = { Text("自定义 Base URL") },
                 isError = uiState.error != null,
                 colors =
-                    TextFieldDefaults.outlinedTextFieldColors(
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.5f),
-                        focusedBorderColor = Color(0xFFB7A5FF),
+                    TextFieldDefaults.colors(
+                        unfocusedIndicatorColor = Color.White.copy(alpha = 0.5f),
+                        focusedIndicatorColor = Color(0xFFB7A5FF),
                         cursorColor = Color.White,
                         focusedLabelColor = Color.White,
                         unfocusedLabelColor = Color.White.copy(alpha = 0.7f),
-                        errorBorderColor = Color(0xFFFF6B6B),
+                        errorIndicatorColor = Color(0xFFFF6B6B),
                         errorLabelColor = Color(0xFFFF6B6B),
-                        textColor = Color.White,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
                     ),
                 textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
             )
 
-            if (uiState.error != null) {
+            uiState.error?.let { error ->
                 Spacer(Modifier.height(4.dp))
-                Text(text = uiState.error, color = Color(0xFFFF6B6B), style = MaterialTheme.typography.bodySmall)
+                Text(text = error, color = Color(0xFFFF6B6B), style = MaterialTheme.typography.bodySmall)
             }
-            if (uiState.message != null) {
+            uiState.message?.let { message ->
                 Spacer(Modifier.height(4.dp))
-                Text(text = uiState.message, color = Color(0xFF5BE49B), style = MaterialTheme.typography.bodySmall)
+                Text(text = message, color = Color(0xFF5BE49B), style = MaterialTheme.typography.bodySmall)
             }
 
             Spacer(Modifier.height(12.dp))
