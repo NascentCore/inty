@@ -26,7 +26,7 @@ jobs:
       - name: Generate weekly AI industry report
         env:
           GOOGLE_CSE_API_KEY: ${{ secrets.GOOGLE_CSE_API_KEY }}
-          GOOGLE_CSE_ID: ${{ secrets.GOOGLE_CSE_ID }}
+          GOOGLE_CSE_ID: ${{ vars.GOOGLE_CSE_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python scripts/weekly_ai_industry_report/weekly_ai_industry_report.py
 
