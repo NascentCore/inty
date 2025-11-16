@@ -1,20 +1,19 @@
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from loguru import logger
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-
-from app.core.config import Config, load_config
-
-DEFAULT_CONFIG_PATH = "config.yaml"
+from app.core.config import Config, global_config_loaded_from_config_yaml, load_config
 
 
 def _load_runtime_config() -> Config:
     """读取 Alembic -x 自定义参数，根据指定路径加载配置文件。"""
     x_args = context.get_x_argument(as_dictionary=True)
-    config_path = x_args.get("config", DEFAULT_CONFIG_PATH)
-    if "config" in x_args:
-        print(f"[ALEMBIC] 使用自定义 config.yaml: {config_path}")
-    return load_config(config_path)
+    config_path = x_args.get("config", None)
+    if config_path:
+        print(f"[ALEMBIC] 使用自定义配置文件: {config_path}")
+        return load_config(config_path)
+    logger.info("[ALEMBIC] 使用默认配置文件: global_config_loaded_from_config_yaml")
+    return global_config_loaded_from_config_yaml
 
 runtime_config = _load_runtime_config()
 
