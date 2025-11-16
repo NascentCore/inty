@@ -42,7 +42,6 @@ object BackendEnvironmentManager {
 
     private data class BackendState(
         val environments: Map<String, BackendEnvironment>,
-        val aliasIndex: Map<String, BackendEnvironment>,
         val defaultEnvId: String,
         val buildTypeOverrides: Map<String, String>,
     )
@@ -71,10 +70,7 @@ object BackendEnvironmentManager {
         val snapshot = state.get()
         val normalizedKey = buildType.lowercase()
         val envId = snapshot.buildTypeOverrides[normalizedKey] ?: snapshot.defaultEnvId
-        val environment =
-            envId?.let { snapshot.environments[it] }
-                ?: snapshot.aliasIndex[normalizedKey]
-
+        val environment = envId?.let { snapshot.environments[it] }
         return environment?.baseUrl
     }
 
@@ -177,7 +173,6 @@ object BackendEnvironmentManager {
         }
         val envArray = root.optJSONArray("backends") ?: JSONArray()
         val environments = mutableMapOf<String, BackendEnvironment>()
-        val aliasIndex = mutableMapOf<String, BackendEnvironment>()
 
         for (index in 0 until envArray.length()) {
             val envJson = envArray.optJSONObject(index) ?: continue
@@ -191,7 +186,6 @@ object BackendEnvironmentManager {
                     notes = envJson.optString("notes").ifBlank { null },
                 )
             environments[id] = environment
-            aliasIndex[id.lowercase()] = environment
         }
 
         if (environments.isEmpty()) {
@@ -216,7 +210,6 @@ object BackendEnvironmentManager {
 
         return BackendState(
             environments = environments,
-            aliasIndex = aliasIndex,
             defaultEnvId = defaultEnvId,
             buildTypeOverrides = overrides,
         )
@@ -250,18 +243,7 @@ object BackendEnvironmentManager {
                 id = "local",
                 baseUrl = "http://${Constant.USER_HOST_LOCAL}/",
             )
-        val environments =
-            mapOf(prod.id to prod, dev.id to dev, local.id to local)
-        val aliasIndex =
-            buildMap {
-                put(prod.id, prod)
-                put("release", prod)
-                put(dev.id, dev)
-                put("debug", dev)
-                put("playdebug", dev)
-                put(local.id, local)
-                put("localhost", local)
-            }.mapKeys { it.key.lowercase() }
+        val environments = mapOf(prod.id to prod, dev.id to dev, local.id to local)
 
         val overrides =
             mapOf(
@@ -273,7 +255,6 @@ object BackendEnvironmentManager {
 
         return BackendState(
             environments = environments,
-            aliasIndex = aliasIndex,
             defaultEnvId = prod.id,
             buildTypeOverrides = overrides,
         )
