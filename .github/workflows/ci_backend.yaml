@@ -79,10 +79,12 @@ jobs:
           # https://stackoverflow.com/a/74669486
           echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
-
+      - name: Run alembic tests
+        run: |
+          ./tests/alembic/test_custom_config.sh
       - name: Run python tests
         run: |
-          cp devops/config.yaml.test config.yaml
+          cp devops/config.yaml.local config.yaml
           # alembic upgrade head: no need to run, as start.sh already includes it
           ./start.sh --dev &
 
