@@ -24,6 +24,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.ui.components.SettingSection
 
+private object Spacing {
+    val SectionTopPadding = 16.dp
+    val ContentHorizontalPadding = 12.dp
+    val SmallSpacer = 4.dp
+    val MediumSpacer = 12.dp
+    val ChipSpacing = 8.dp
+}
+
+private object TextConfig {
+    val SecondaryTextAlpha = 0.7f
+    val MaxUrlLines = 2
+}
+
 /**
  * Debug-only backend switcher visible in the Settings screen.
  *
@@ -39,30 +52,27 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
 
     if (!uiState.isSupported) return
 
-    SettingSection(modifier = modifier.padding(top = 16.dp)) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-            Text(
-                text = "Debug Backend Endpoint",
-                color = Color(0xFFB7A5FF),
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(4.dp))
+    SettingSection(modifier = modifier.padding(top = Spacing.SectionTopPadding)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.ContentHorizontalPadding)) {
             Text(
                 text = "当前构建类型：${uiState.buildType}",
-                color = Color.White.copy(alpha = 0.7f),
+                color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
                 style = MaterialTheme.typography.bodySmall,
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Spacing.SmallSpacer))
             Text(
                 text = "当前生效：${uiState.activeBaseUrl}",
                 color = Color.White,
                 fontWeight = FontWeight.Medium,
-                maxLines = 2,
+                maxLines = TextConfig.MaxUrlLines,
                 overflow = TextOverflow.Ellipsis,
             )
 
-            Spacer(Modifier.height(12.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(Modifier.height(Spacing.MediumSpacer))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.ChipSpacing),
+                verticalArrangement = Arrangement.spacedBy(Spacing.ChipSpacing)
+            ) {
                 viewModel.quickPresets.forEach { (label, url) ->
                     AssistChip(
                         onClick = { viewModel.applyPreset(url) },
@@ -72,7 +82,7 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
             }
 
             if (uiState.hasOverride) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Spacing.MediumSpacer))
                 TextButton(onClick = viewModel::resetOverride) {
                     Text(text = "恢复默认", color = Color.White)
                 }
