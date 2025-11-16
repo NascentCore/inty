@@ -15,6 +15,12 @@ if [ "$FORMAT_ALL" = true ]; then
     black app/ scripts/ experimental/
     # Format all other files
     npx prettier --write evaluation/ web_app/
+    # Format all YAML files
+    YAML_ALL_FILES=$(git ls-files '*.yaml' '*.yml')
+    if [ -n "$YAML_ALL_FILES" ]; then
+        echo "Formatting YAML files with prettier..."
+        npx prettier --write $YAML_ALL_FILES
+    fi
     echo "Formatting complete!"
     echo
     
@@ -44,6 +50,7 @@ fi
 KOTLIN_FILES=""
 PYTHON_FILES=""
 OTHER_FILES=""
+YAML_FILES=""
 
 for file in $CHANGED_FILES; do
     case "$file" in
@@ -53,8 +60,11 @@ for file in $CHANGED_FILES; do
         *.py)
             PYTHON_FILES="$PYTHON_FILES $file"
             ;;
-        *.json|*.md|*.js|*.ts|*.tsx|*.css|*.html|*.yaml|*.yml)
+        *.json|*.md|*.js|*.ts|*.tsx|*.css|*.html)
             OTHER_FILES="$OTHER_FILES $file"
+            ;;
+        *.yaml|*.yml)
+            YAML_FILES="$YAML_FILES $file"
             ;;
     esac
 done
@@ -75,6 +85,12 @@ fi
 if [ -n "$OTHER_FILES" ]; then
     echo "Formatting other files with prettier..."
     npx prettier --write $OTHER_FILES
+fi
+
+# Format YAML files with prettier
+if [ -n "$YAML_FILES" ]; then
+    echo "Formatting YAML files with prettier..."
+    npx prettier --write $YAML_FILES
 fi
 
 echo "Formatting complete!"
