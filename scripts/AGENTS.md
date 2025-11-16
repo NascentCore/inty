@@ -1,6 +1,6 @@
 # AGENTS.md · scripts/（脚本）
 
-本文件覆盖并补充根 `backend/AGENTS.md`，仅适用于 `scripts/`。
+本文件覆盖并补充根 `AGENTS.md`，仅适用于 `scripts/`。
 
 ## 约定
 - 脚本需可重复执行（幂等），参数化（使用 `argparse`/配置），日志使用 `logger.debug()`。
