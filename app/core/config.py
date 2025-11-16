@@ -172,7 +172,6 @@ class AgentConfig:
     vertex_image_model: str = "imagen-4.0-fast-generate-001"
     force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词
     # 图片生成配置
-    # TODO：移除此配置项，应该作为代码中的 prompts 模版写入到 prompts.py
     image_generation_prompt_template: str = (
         "你是一名场景可视化专家，需要根据用户虚拟角色对话语境生成生动的画面。你的目标是「重建场景」。\n"
         "\n"
@@ -208,12 +207,13 @@ class AgentConfig:
 
 @dataclass
 class GCSConfig:
-    # 如果为 True，则使用假GCS客户端；在本地存储文件，不使用 GCS 服务。用于测试。
-    use_fake_gcs: bool = False
     bucket: str = "inty-storage"
     # DEPRECATED: 保留作为兼容；被 app.gcp_service_account_key 取代
     # 删除部署环境中的配置文件使用，然后删除这个代码。
     credentials: str = "<deprecated-do-not-use>"
+    # 如果为 True，则使用假GCS客户端；在本地存储文件，不使用 GCS 服务。用于测试。
+    use_fake_gcs: bool = False
+    fake_gcs_base_dir: str = "/tmp/inty_fake_gcs"
 
 
 @dataclass
@@ -426,14 +426,26 @@ def _validate_config(config: Config):
 
 
 DEFAULT_CONFIG_PATH = "config.yaml"
-if not os.path.exists(DEFAULT_CONFIG_PATH):
-    raise FileNotFoundError(
-        f"{DEFAULT_CONFIG_PATH} 不存在，倒入本模块前请先创建配置文件"
-    )
-global_config_loaded_from_config_yaml = load_config(DEFAULT_CONFIG_PATH)
-print(f"[CONFIG] Database URL: {global_config_loaded_from_config_yaml.database.url}")
+# 默认配置文件外，支持通过环境变量 INTY_GLOBAL_CONFIG 指定配置文件路径
+# 原因是 app 使用 uvicorn 在命令行启动，传递命令行参数是由 uvicorn 处理，而不是 app 代码。
+# 一种办法是在 app/main.py 中调用 uvicorn.run(app_instance, host="0.0.0.0", port=8000)
+# 这个可以在后续处理
+ENV_VAR_NAME = "INTY_GLOBAL_CONFIG"
+CONFIG_PATH = os.getenv(ENV_VAR_NAME, DEFAULT_CONFIG_PATH)
+logger.info(f"[CONFIG] 使用环境变量: {ENV_VAR_NAME}={CONFIG_PATH}")
+if not os.path.exists(CONFIG_PATH):
+    raise FileNotFoundError(f"{CONFIG_PATH} 不存在，倒入本模块前请先创建该配置文件")
+logger.info(f"[CONFIG] 使用配置文件: {CONFIG_PATH}")
+global_config_loaded_from_config_yaml = load_config(CONFIG_PATH)
 _validate_config(global_config_loaded_from_config_yaml)
 
+logger.info(f"[CONFIG] 全部配置如下:")
+
+
+from dataclasses import asdict
+
+config_yaml = yaml.dump(asdict(global_config_loaded_from_config_yaml), indent=2)
+logger.info(config_yaml)
 
 # 设置 LangSmith 环境变量用于支持 tracing，因为其只支持从环境变量读取设置，而非依赖注入。
 os.environ["LANGSMITH_TRACING_V2"] = "true"
