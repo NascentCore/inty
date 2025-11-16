@@ -6,7 +6,6 @@ import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.utils.ToastUtils
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -72,7 +71,7 @@ val ChatInputBottomSpacerHeight = 8.dp
 private const val LOAD_MORE_NEAR_TOP_THRESHOLD = 3
 private const val LOAD_MORE_MIN_EXTRA_ITEMS = 5
 
-var KEY_BOARD_HEIGHT_MAX = 1;
+var KEY_BOARD_HEIGHT_MAX = 1
 
 /** ChatPage 页面来源常量 - 用于统计曝光事件 */
 object ChatPageSource {
@@ -179,16 +178,16 @@ internal fun ChatPage(
 
     val imeHeight = WindowInsets.ime.getBottom(density)
     KEY_BOARD_HEIGHT_MAX = maxOf(imeHeight, KEY_BOARD_HEIGHT_MAX)
-//    val isKeyboardVisible = imeHeight > 0
-    val ratio = 1 - imeHeight.toFloat() / KEY_BOARD_HEIGHT_MAX.toFloat()  // 计算出键盘当前弹出/回收进度
+    //    val isKeyboardVisible = imeHeight > 0
+    val ratio = 1 - imeHeight.toFloat() / KEY_BOARD_HEIGHT_MAX.toFloat() // 计算出键盘当前弹出/回收进度
     val gap = BottomNavigationBarHeight * ratio
 
-//    val bottomPadding =
-//        when {
-//            showBackButton -> ChatInputBottomSpacerHeight
-//            isKeyboardVisible -> ChatInputBottomSpacerHeight
-//            else -> gap + ChatInputBottomSpacerHeight
-//        }
+    //    val bottomPadding =
+    //        when {
+    //            showBackButton -> ChatInputBottomSpacerHeight
+    //            isKeyboardVisible -> ChatInputBottomSpacerHeight
+    //            else -> gap + ChatInputBottomSpacerHeight
+    //        }
     val bottomPadding = gap + ChatInputBottomSpacerHeight
     fun onKeepTalkingChange(enabled: Boolean) {
         SettingStateManager.updateShowKeepTalking(enabled)
@@ -554,7 +553,7 @@ internal fun ChatPage(
                         chatInputEstimatedHeight + effectiveBottomPaddingForButton + imeHeightDp
                     }
 
-//                Log.d("SLTAGE------>", buttonBottomOffset.toString())
+                //                Log.d("SLTAGE------>", buttonBottomOffset.toString())
 
                 KeepTalkingFloatingButton(
                     modifier =

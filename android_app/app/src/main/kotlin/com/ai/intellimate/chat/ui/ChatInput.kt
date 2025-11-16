@@ -72,9 +72,7 @@ fun ChatInput(
                 .background(AppColors.DarkPurpleOverlay60)
     ) {
         // 主输入区域
-        Box(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).wrapContentHeight()
-        ) {
+        Box(modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).wrapContentHeight()) {
             IntySmallTextField(
                 modifier = Modifier.padding(end = 38.dp).align(Alignment.Center),
                 value = inputData.value,
@@ -108,17 +106,18 @@ fun ChatInput(
 
             // 视觉上保持与底部 8.dp 的坚决，这样初始，只有一行输入时，其位置位于
             // 输入框垂直方向中央位置。增加输入行数，则位置不变。
-//            val verticalPadding = 16.dp
+            //            val verticalPadding = 16.dp
             val verticalPadding = 13.dp
             val rightPadding = 8.dp
             // 发送/更多按钮区域
             MultiUseAccessButton(
                 modifier =
-                    Modifier.align(Alignment.BottomEnd).padding(
-                        end = rightPadding,
-                        top = verticalPadding,
-                        bottom = verticalPadding,
-                    ),
+                    Modifier.align(Alignment.BottomEnd)
+                        .padding(
+                            end = rightPadding,
+                            top = verticalPadding,
+                            bottom = verticalPadding,
+                        ),
                 buttonSize = 30.dp,
                 hasInput = inputData.value.isNotEmpty(),
                 showMorePanel = showMorePanel,
