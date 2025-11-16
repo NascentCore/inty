@@ -21,8 +21,10 @@ on:
       # Alembic files
       - "alembic/**/*"
       - "alembic.ini"
-      # Config files used for testing
+      # 这是本地开发用配置文件
       - "devops/config.yaml.local"
+      # 这个是测试用配置文件
+      - "devops/config.yaml.test"
       - ".github/workflows/ci_backend.yaml"
 
 env:
@@ -79,7 +81,7 @@ jobs:
           PYTHONPATH: .
       - name: Run python tests
         run: |
-          cp devops/config.yaml.local config.yaml
+          cp devops/config.yaml.test config.yaml
           # alembic upgrade head: no need to run, as start.sh already includes it
           ./start.sh --dev &
 
