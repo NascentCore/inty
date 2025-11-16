@@ -158,7 +158,8 @@ object LogUtils {
     fun getCurrentLogFilePath(): String = getCurrentLogFilePath(Date())
 
     fun getLogFiles(): List<File> {
-        val dir = CONFIG.dir
+        val dir = CONFIG.dir ?: CONFIG.defaultDir
+        if (dir.isBlank()) return emptyList()
         val logDir = File(dir)
         if (!logDir.exists()) return emptyList()
 
@@ -924,6 +925,7 @@ object LogUtils {
             }
         }
 
+        @Suppress("DEPRECATION")
         private fun bundle2String(bundle: Bundle): String {
             val iterator = bundle.keySet().iterator()
             if (!iterator.hasNext()) return "Bundle {}"

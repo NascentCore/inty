@@ -196,8 +196,10 @@ object NetworkUtils {
                 !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
         } else {
             @Suppress("DEPRECATION")
-            val mobileInfo = cm.getNetworkInfo(ConnectivityManager.TYPE_MOBILE)
-            mobileInfo?.isConnected == true && !mobileInfo.isRoaming
+            run {
+                val mobileInfo = cm.getNetworkInfo(ConnectivityManager.TYPE_MOBILE)
+                mobileInfo?.isConnected == true && !mobileInfo.isRoaming
+            }
         }
     }
 
@@ -250,13 +252,16 @@ object NetworkUtils {
             val network = cm.activeNetwork ?: return NetworkType.NONE
             getNetworkTypeFromCapabilities(cm.getNetworkCapabilities(network))
         } else {
-            @Suppress("DEPRECATION") val networkInfo = cm.activeNetworkInfo
-            when {
-                networkInfo?.isConnected != true -> NetworkType.NONE
-                networkInfo.type == ConnectivityManager.TYPE_WIFI -> NetworkType.WIFI
-                networkInfo.type == ConnectivityManager.TYPE_MOBILE -> NetworkType.MOBILE
-                networkInfo.type == ConnectivityManager.TYPE_ETHERNET -> NetworkType.ETHERNET
-                else -> NetworkType.UNKNOWN
+            @Suppress("DEPRECATION")
+            run {
+                val networkInfo = cm.activeNetworkInfo
+                when {
+                    networkInfo?.isConnected != true -> NetworkType.NONE
+                    networkInfo.type == ConnectivityManager.TYPE_WIFI -> NetworkType.WIFI
+                    networkInfo.type == ConnectivityManager.TYPE_MOBILE -> NetworkType.MOBILE
+                    networkInfo.type == ConnectivityManager.TYPE_ETHERNET -> NetworkType.ETHERNET
+                    else -> NetworkType.UNKNOWN
+                }
             }
         }
     }

@@ -80,7 +80,24 @@ object DeviceUtils {
     fun getFingerprint(): String = Build.FINGERPRINT
 
     /** 获取设备序列号 */
-    fun getSerial(): String = Build.SERIAL
+    @SuppressLint("HardwareIds")
+    fun getSerial(): String {
+        return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> getAndroidID()
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
+                try {
+                    Build.getSerial()
+                } catch (e: SecurityException) {
+                    ""
+                } catch (e: Exception) {
+                    ""
+                }
+            }
+            else -> {
+                @Suppress("DEPRECATION") Build.SERIAL
+            }
+        }
+    }
 
     /** 获取设备唯一标识符 */
     fun getUniqueDeviceId(): String {

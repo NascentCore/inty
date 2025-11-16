@@ -3,13 +3,12 @@ package ai.sxwl.android.utils
 import android.app.Activity
 import android.content.res.Resources
 import android.graphics.Color
-import android.os.Build
 import android.view.Window
-import android.view.WindowManager
 import androidx.annotation.ColorInt
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.ViewCompat
 
 /** 状态栏和导航栏工具类 提供状态栏和导航栏相关的工具方法 */
 object BarUtils {
@@ -40,10 +39,14 @@ object BarUtils {
     /** 设置状态栏可见性 */
     fun setStatusBarVisibility(window: Window, isVisible: Boolean) {
         try {
-            if (isVisible) {
-                window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-            } else {
-                window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            WindowCompat.setDecorFitsSystemWindows(window, isVisible)
+            val controller = getInsetsController(window)
+            if (controller != null) {
+                if (isVisible) {
+                    controller.show(WindowInsetsCompat.Type.statusBars())
+                } else {
+                    controller.hide(WindowInsetsCompat.Type.statusBars())
+                }
             }
         } catch (e: Exception) {
             // 静默处理异常
@@ -63,10 +66,10 @@ object BarUtils {
     /** 判断状态栏是否可见 */
     fun isStatusBarVisible(window: Window): Boolean {
         return try {
-            val flags = window.attributes.flags
-            (flags and WindowManager.LayoutParams.FLAG_FULLSCREEN) == 0
+            val insets = ViewCompat.getRootWindowInsets(window.decorView)
+            insets?.isVisible(WindowInsetsCompat.Type.statusBars()) ?: true
         } catch (e: Exception) {
-            true // 默认返回可见
+            true
         }
     }
 
@@ -77,8 +80,10 @@ object BarUtils {
 
     /** 设置状态栏颜色 */
     fun setStatusBarColor(window: Window, @ColorInt color: Int) {
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.statusBarColor = color
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+            window.statusBarColor = color
+        }
     }
 
     /** 获取状态栏颜色 */
@@ -86,11 +91,14 @@ object BarUtils {
 
     /** 获取状态栏颜色 */
     fun getStatusBarColor(window: Window): Int {
-        return try {
-            window.statusBarColor
-        } catch (e: Exception) {
-            Color.TRANSPARENT
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            return try {
+                window.statusBarColor
+            } catch (e: Exception) {
+                Color.TRANSPARENT
+            }
         }
+        return Color.TRANSPARENT
     }
 
     /** 设置状态栏透明度 */
@@ -123,23 +131,10 @@ object BarUtils {
 
     /** 设置状态栏浅色模式 */
     fun setStatusBarLightMode(window: Window, isLightMode: Boolean) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M) return
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // API 30+ 使用 WindowInsetsController
-                val controller: WindowInsetsControllerCompat? =
-                    WindowCompat.getInsetsController(window, window.decorView)
-                controller?.isAppearanceLightStatusBars = isLightMode
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                // API 23-29 使用系统UI标志
-                var flags = window.decorView.systemUiVisibility
-                flags =
-                    if (isLightMode) {
-                        flags or android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                    } else {
-                        flags and android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
-                    }
-                window.decorView.systemUiVisibility = flags
-            }
+            val controller = getInsetsController(window)
+            controller?.isAppearanceLightStatusBars = isLightMode
         } catch (e: Exception) {
             // 静默处理异常
         }
@@ -157,19 +152,10 @@ object BarUtils {
 
     /** 判断状态栏是否为浅色模式 */
     fun isStatusBarLightMode(window: Window): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M) return false
         return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // API 30+ 使用 WindowInsetsController
-                val controller: WindowInsetsControllerCompat? =
-                    WindowCompat.getInsetsController(window, window.decorView)
-                controller?.isAppearanceLightStatusBars ?: false
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                // API 23-29 检查系统UI标志
-                val flags = window.decorView.systemUiVisibility
-                (flags and android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR) != 0
-            } else {
-                false
-            }
+            val controller = getInsetsController(window)
+            controller?.isAppearanceLightStatusBars ?: false
         } catch (e: Exception) {
             false
         }
@@ -201,25 +187,13 @@ object BarUtils {
     /** 设置导航栏可见性 */
     fun setNavBarVisibility(window: Window, isVisible: Boolean) {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // API 30+ 使用 WindowInsetsController
-                val controller: WindowInsetsControllerCompat? =
-                    WindowCompat.getInsetsController(window, window.decorView)
+            val controller = getInsetsController(window)
+            if (controller != null) {
                 if (isVisible) {
-                    controller?.show(WindowInsetsCompat.Type.navigationBars())
+                    controller.show(WindowInsetsCompat.Type.navigationBars())
                 } else {
-                    controller?.hide(WindowInsetsCompat.Type.navigationBars())
+                    controller.hide(WindowInsetsCompat.Type.navigationBars())
                 }
-            } else {
-                // API 30以下使用系统UI标志
-                var flags = window.decorView.systemUiVisibility
-                flags =
-                    if (isVisible) {
-                        flags and android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION.inv()
-                    } else {
-                        flags or android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    }
-                window.decorView.systemUiVisibility = flags
             }
         } catch (e: Exception) {
             // 静默处理异常
@@ -233,8 +207,12 @@ object BarUtils {
 
     /** 判断导航栏是否可见 */
     fun isNavBarVisible(window: Window): Boolean {
-        val flags = window.attributes.flags
-        return (flags and WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS) == 0
+        return try {
+            val insets = ViewCompat.getRootWindowInsets(window.decorView)
+            insets?.isVisible(WindowInsetsCompat.Type.navigationBars()) ?: true
+        } catch (e: Exception) {
+            true
+        }
     }
 
     /** 设置导航栏颜色 */
@@ -244,8 +222,10 @@ object BarUtils {
 
     /** 设置导航栏颜色 */
     fun setNavBarColor(window: Window, @ColorInt color: Int) {
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.navigationBarColor = color
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+            window.navigationBarColor = color
+        }
     }
 
     /** 获取导航栏颜色 */
@@ -253,11 +233,14 @@ object BarUtils {
 
     /** 获取导航栏颜色 */
     fun getNavBarColor(window: Window): Int {
-        return try {
-            window.navigationBarColor
-        } catch (e: Exception) {
-            Color.TRANSPARENT
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            return try {
+                window.navigationBarColor
+            } catch (e: Exception) {
+                Color.TRANSPARENT
+            }
         }
+        return Color.TRANSPARENT
     }
 
     /** 设置导航栏浅色模式 */
@@ -272,23 +255,10 @@ object BarUtils {
 
     /** 设置导航栏浅色模式 */
     fun setNavBarLightMode(window: Window, isLightMode: Boolean) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // API 30+ 使用 WindowInsetsController
-                val controller: WindowInsetsControllerCompat? =
-                    WindowCompat.getInsetsController(window, window.decorView)
-                controller?.isAppearanceLightNavigationBars = isLightMode
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // API 26-29 使用系统UI标志
-                var flags = window.decorView.systemUiVisibility
-                flags =
-                    if (isLightMode) {
-                        flags or android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                    } else {
-                        flags and android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv()
-                    }
-                window.decorView.systemUiVisibility = flags
-            }
+            val controller = getInsetsController(window)
+            controller?.isAppearanceLightNavigationBars = isLightMode
         } catch (e: Exception) {
             // 静默处理异常
         }
@@ -306,19 +276,10 @@ object BarUtils {
 
     /** 判断导航栏是否为浅色模式 */
     fun isNavBarLightMode(window: Window): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return false
         return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // API 30+ 使用 WindowInsetsController
-                val controller: WindowInsetsControllerCompat? =
-                    WindowCompat.getInsetsController(window, window.decorView)
-                controller?.isAppearanceLightNavigationBars ?: false
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // API 26-29 检查系统UI标志
-                val flags = window.decorView.systemUiVisibility
-                (flags and android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR) != 0
-            } else {
-                false
-            }
+            val controller = getInsetsController(window)
+            controller?.isAppearanceLightNavigationBars ?: false
         } catch (e: Exception) {
             false
         }
@@ -395,11 +356,21 @@ object BarUtils {
 
     /** 设置全屏模式 */
     fun setFullScreen(window: Window) {
-        setSystemBarConfig(window, SystemBarConfig(statusBarVisible = false, navBarVisible = false))
+        val controller = getInsetsController(window)
+        if (controller != null) {
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+        } else {
+            setSystemBarConfig(window, SystemBarConfig(statusBarVisible = false, navBarVisible = false))
+        }
     }
 
     /** 获取系统栏总高度 */
-    fun getSystemBarHeight(): Int {
-        return getStatusBarHeight() + getNavBarHeight()
+    fun getSystemBarHeight(): Int = getStatusBarHeight() + getNavBarHeight()
+
+    private fun getInsetsController(window: Window): WindowInsetsControllerCompat? {
+        return WindowCompat.getInsetsController(window, window.decorView)
     }
 }

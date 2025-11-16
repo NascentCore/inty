@@ -147,7 +147,7 @@ object ToastUtils {
             cancel()
 
             // 创建新的Toast
-            val context = Utils.getApp()
+            val context = safeAppContext()
             if (context == null) {
                 Log.e(TAG, "Context为null，无法显示Toast: $message")
                 return
@@ -204,7 +204,7 @@ object ToastUtils {
             // 取消之前的Toast
             cancel()
 
-            val context = Utils.getApp()
+            val context = safeAppContext()
             if (context == null) {
                 Log.e(TAG, "Context为null，无法显示长文本Toast: $message")
                 return
@@ -240,7 +240,7 @@ object ToastUtils {
     /** 兜底Toast方法 */
     private fun fallbackToast(message: String, duration: Int) {
         try {
-            val context = Utils.getApp()
+            val context = safeAppContext()
             if (context != null) {
                 Toast.makeText(context, message, duration).show()
             } else {
@@ -252,7 +252,7 @@ object ToastUtils {
         } catch (e: Exception) {
             // 最后的兜底方案：使用系统默认Toast
             try {
-                val appContext = Utils.getApp()?.applicationContext
+                val appContext = safeAppContext()?.applicationContext
                 if (appContext != null) {
                     Toast.makeText(appContext, message, duration).show()
                 } else {
@@ -271,7 +271,7 @@ object ToastUtils {
     /** 获取字符串资源 */
     private fun getString(@StringRes resId: Int): String {
         return try {
-            val context = Utils.getApp()
+            val context = safeAppContext()
             if (context != null) {
                 context.getString(resId)
             } else {
@@ -285,10 +285,7 @@ object ToastUtils {
 
     /** 获取应用Context */
     private val context: Context?
-        get() =
-            try {
-                Utils.getApp()
-            } catch (e: Exception) {
-                null
-            }
+        get() = safeAppContext()
+
+    private fun safeAppContext(): Context? = runCatching { Utils.getApp() }.getOrNull()
 }
