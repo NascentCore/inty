@@ -1,6 +1,5 @@
 package com.ai.intellimate.settings
 
-import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -40,11 +39,6 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
 
     if (!uiState.isSupported) return
 
-    val lastUpdatedText =
-        uiState.overrideInfo?.updatedAt?.takeIf { it > 0L }?.let { timestamp ->
-            DateFormat.format("MM-dd HH:mm:ss", timestamp).toString()
-        }
-
     SettingSection(modifier = modifier.padding(top = 16.dp)) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
             Text(
@@ -66,26 +60,6 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (uiState.hasOverride) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "覆盖地址：${uiState.overrideInfo?.url}",
-                    color = Color(0xFF5BE49B),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                if (lastUpdatedText != null) {
-                    Text(
-                        text = "更新时间：$lastUpdatedText",
-                        color = Color.White.copy(alpha = 0.55f),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-
-            uiState.message?.let { message ->
-                Spacer(Modifier.height(8.dp))
-                Text(text = message, color = Color(0xFF5BE49B), style = MaterialTheme.typography.bodySmall)
-            }
 
             Spacer(Modifier.height(12.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

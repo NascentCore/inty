@@ -22,7 +22,6 @@ class DebugBackendSettingsViewModel : ViewModel() {
         val buildType: String,
         val activeBaseUrl: String,
         val overrideInfo: OverrideInfo?,
-        val message: String? = null,
     ) {
         val hasOverride: Boolean = overrideInfo != null
     }
@@ -58,14 +57,7 @@ class DebugBackendSettingsViewModel : ViewModel() {
         val info =
             runCatching { DebugBackendEndpointStore.persistOverride(url) }
                 .onFailure { LogUtils.e(TAG, "Failed to persist runtime backend override", it) }
-                .getOrElse { throwable ->
-                    _uiState.update {
-                        it.copy(
-                            message = "保存失败：${throwable.message ?: "请重试"}",
-                        )
-                    }
-                    return
-                }
+                .getOrElse { return }
 
         // 清除 Inty SDK 和 Retrofit 的客户端缓存
         IntyNetworkManager.clearClientCache()
@@ -75,7 +67,6 @@ class DebugBackendSettingsViewModel : ViewModel() {
             it.copy(
                 activeBaseUrl = NetworkConfig.getBaseUrl(),
                 overrideInfo = info,
-                message = "已切换到 ${info.url}",
             )
         }
     }
@@ -91,7 +82,6 @@ class DebugBackendSettingsViewModel : ViewModel() {
             it.copy(
                 activeBaseUrl = active,
                 overrideInfo = null,
-                message = "已恢复到默认后端",
             )
         }
     }
