@@ -54,7 +54,7 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
             )
             Spacer(Modifier.height(Spacing.SmallSpacer))
             Text(
-                text = "当前生效：${uiState.activeBaseUrl}",
+                text = "当前后端地址：${uiState.activeBaseUrl}",
                 color = Color.White,
                 fontWeight = FontWeight.Medium,
                 maxLines = TextConfig.MaxUrlLines,
