@@ -23,18 +23,12 @@ object DebugBackendEndpointStore {
 
     data class OverrideInfo(val url: String, val updatedAt: Long)
 
-    /**
-     * Checks whether runtime overrides are allowed for the provided build type.
-     */
     fun isRuntimeOverrideSupported(
         buildType: NetworkConfig.BuildType = NetworkConfig.getCurrentBuildType(),
     ): Boolean {
         return AppUtils.isAppDebug() && buildType == NetworkConfig.BuildType.DEBUG
     }
 
-    /**
-     * Returns the currently saved override (if any).
-     */
     fun getOverrideInfo(): OverrideInfo? {
         if (!isRuntimeOverrideSupported()) return null
         val url = prefs.getString(KEY_BASE_URL, null)?.takeIf { it.isNotBlank() } ?: return null
@@ -42,9 +36,6 @@ object DebugBackendEndpointStore {
         return OverrideInfo(url = url, updatedAt = updatedAt)
     }
 
-    /**
-     * Persists a new override.
-     */
     fun persistOverride(rawInput: String): OverrideInfo {
         require(isRuntimeOverrideSupported()) {
             "Runtime backend override is only available for debug builds"
