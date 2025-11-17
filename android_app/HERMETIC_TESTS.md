@@ -35,6 +35,7 @@
   - `setGenerationPrompt` 应将 `isGenerating` 置为 `true`，`setGenerationError` 会停用并记录错误。
   - `getGenerationError` 读取后自动清空，避免重复提示。
   - `clearAllAvatarData` 可重置所有字段（含 `chatBackgroundUrl`、`selectedImageIndex`）。
+- ✅ 测试：`app/src/test/kotlin/com/ai/intellimate/utils/AvatarManagerTest.kt`，覆盖单图/多图切换、生成流程状态位、一次性错误读取与完全重置。
 
 ### 4. Agent 缓存读写与过期逻辑
 - **位置**：`app/src/main/kotlin/com/ai/intellimate/utils/AgentCacheManager.kt`
