@@ -1,6 +1,5 @@
 package ai.sxwl.android.data.explore.paging
 
-import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AgentInfoResponse
@@ -122,7 +121,7 @@ class ExplorePagingSource(
     private suspend fun loadFromNetwork(page: Int, pageSize: Int): NetworkResult {
         return try {
             val result =
-                agentApi.exploreAgents(
+                NetServiceMgr.getAgentApi().exploreAgents(
                     page = page,
                     pageSize = pageSize,
                     sort_seed = sortSeed.toString(),
