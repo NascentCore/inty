@@ -151,7 +151,7 @@ async def agent_chat_completions(
             raise HTTPException(status_code=400, detail="No user message found")
 
         last_user_message = user_messages[-1].content
-        messages = {"messages": [HumanMessage(content=last_user_message)]}
+        messages = [HumanMessage(content=last_user_message)]
 
         # 使用高性能的聊天专用Agent获取方法
         with log_time(f"查询 Agent 数据: {chat.agent_id}"):
