@@ -110,7 +110,12 @@ object NetServiceMgr {
         }
     }
 
-    /** 清除 Retrofit 和 API 实例缓存，用于 baseUrl 切换时 */
+    /*
+     * 清除 Retrofit 和 API 实例缓存，用于 baseUrl 切换时
+     * 以下情况调用：
+     * 1. Debug build 专用；当用户需要切换后端地址时调用
+     * 2. 当用户登录状态发生变化时调用
+     */
     fun clearCache() {
         retrofitCache.clear()
         apiCache.clear()

@@ -143,7 +143,11 @@ object IntyNetworkManager {
         }
     }
 
-    /** 清除客户端缓存 当用户登录状态发生变化时调用 */
+    /*
+     * 清除客户端缓存，以下情况调用：
+     * 1. 当用户登录状态发生变化时调用
+     * 2. Debug build 专用；当用户需要切换后端地址时调用
+     */
     fun clearClientCache() {
         clientCache.clear()
         LogUtils.i("IntyNetworkManager: Cleared client cache")
