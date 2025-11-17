@@ -115,10 +115,10 @@ fun ChatInput(
             MultiUseAccessButton(
                 modifier =
                     Modifier.padding(
-                            end = rightPadding,
-                            top = verticalPadding,
-                            bottom = verticalPadding,
-                        ),
+                        end = rightPadding,
+                        top = verticalPadding,
+                        bottom = verticalPadding,
+                    ),
                 buttonSize = 30.dp,
                 hasInput = inputData.value.isNotEmpty(),
                 showMorePanel = showMorePanel,

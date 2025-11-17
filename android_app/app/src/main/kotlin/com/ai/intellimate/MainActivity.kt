@@ -47,12 +47,12 @@ import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
+import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -114,9 +114,7 @@ class MainActivity : BaseActivity() {
         loadUserDataIfLoggedIn()
     }
 
-    /**
-     * 检查登录状态是否有效
-     */
+    /** 检查登录状态是否有效 */
     private fun isUserLoggedIn(): Boolean {
         return IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
     }
@@ -163,15 +161,16 @@ class MainActivity : BaseActivity() {
 
             // 监听 Billing 事件并处理 UI 错误提示（只启动一次）
             billingEventCollectJob?.cancel()
-            billingEventCollectJob = launch(Dispatchers.Main) {
-                BillingRepository.eventFlow.collect { event ->
-                    BillingErrorHandler.handleBillingEvent(
-                        event,
-                        this@MainActivity,
-                        this@MainActivity,
-                    )
+            billingEventCollectJob =
+                launch(Dispatchers.Main) {
+                    BillingRepository.eventFlow.collect { event ->
+                        BillingErrorHandler.handleBillingEvent(
+                            event,
+                            this@MainActivity,
+                            this@MainActivity,
+                        )
+                    }
                 }
-            }
 
             // 异步加载用户自建agents（非关键数据），不阻塞启动
             launch(Dispatchers.IO) {
@@ -194,9 +193,8 @@ class MainActivity : BaseActivity() {
     /**
      * 处理从推送通知启动的情况
      *
-     * 当应用在后台时，如果服务端发送的是包含 notification 字段的消息，
-     * 系统会自动显示通知，点击通知时会启动 MainActivity，并将 data 字段作为 Intent extras 传递。
-     * 此方法检查 Intent 中是否包含推送消息的数据，如果有则跳转到 ChatActivity。
+     * 当应用在后台时，如果服务端发送的是包含 notification 字段的消息， 系统会自动显示通知，点击通知时会启动 MainActivity，并将 data 字段作为 Intent
+     * extras 传递。 此方法检查 Intent 中是否包含推送消息的数据，如果有则跳转到 ChatActivity。
      *
      * @param intent 启动 Activity 的 Intent
      * @return 如果已处理并跳转到 ChatActivity，返回 true；否则返回 false
@@ -226,21 +224,15 @@ class MainActivity : BaseActivity() {
         // 系统会自动显示通知，点击通知时会启动 MainActivity，并将 data 字段作为 Intent extras 传递
         LogUtils.d(
             "MainActivity",
-            "检查通知 Intent - 消息类型: $messageType, agent_id: $agentId, 所有 extras: ${intent.extras?.keySet()}"
+            "检查通知 Intent - 消息类型: $messageType, agent_id: $agentId, 所有 extras: ${intent.extras?.keySet()}",
         )
-        LogUtils.d(
-            "MainActivity",
-            "这是从后台推送通知启动的场景（系统自动显示通知，未触发 FCMService.onMessageReceived）"
-        )
+        LogUtils.d("MainActivity", "这是从后台推送通知启动的场景（系统自动显示通知，未触发 FCMService.onMessageReceived）")
 
         // 如果是 agent_message 类型且有 agent_id，跳转到 ChatActivity
         if (messageType == FCMConstants.TYPE_AGENT_MESSAGE && !agentId.isNullOrEmpty()) {
             hasHandledNotificationIntent = true // 标记已处理，避免重复跳转
 
-            LogUtils.d(
-                "MainActivity",
-                "从推送通知启动，跳转到 ChatActivity - agent_id: $agentId"
-            )
+            LogUtils.d("MainActivity", "从推送通知启动，跳转到 ChatActivity - agent_id: $agentId")
             // 记录推送通知点击事件
             FirebaseManager.logEvent(
                 FirebaseManager.Events.PUSH_NOTIFICATION_CLICK,
@@ -261,10 +253,7 @@ class MainActivity : BaseActivity() {
             return true
         } else {
             // 有推送数据但不是有效的 agent_message，记录日志
-            LogUtils.w(
-                "MainActivity",
-                "从推送通知启动，但数据不完整 - 消息类型: $messageType, agent_id: $agentId"
-            )
+            LogUtils.w("MainActivity", "从推送通知启动，但数据不完整 - 消息类型: $messageType, agent_id: $agentId")
             // 标记已处理，避免重复检查
             hasHandledNotificationIntent = true
             return false
@@ -296,7 +285,8 @@ class MainActivity : BaseActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 if (!PermissionUtils.hasNotificationPermission(this@MainActivity)) {
                     LogUtils.d("MainActivity", "申请通知权限")
-//                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    //
+                    // notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
 
@@ -342,8 +332,7 @@ class MainActivity : BaseActivity() {
                 // 显示设置界面
                 com.ai.intellimate.settings.SettingContent(
                     modifier =
-                        Modifier
-                            .fillMaxSize()
+                        Modifier.fillMaxSize()
                             .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
                     onBack = { mainViewModel.hideSettings() },
                     onLogout = { isDelete ->
@@ -526,11 +515,12 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
 
                                 // 立即设置 Firebase user_id 用户属性（确保后续事件都能关联用户属性）
                                 // 注意：只设置 user_id 用户属性，不设置 userType 和 subscriptionLevel
-                                // 完整的用户信息（包括 setUserId、userType、subscriptionLevel）会在 UnifiedStartupManager.syncUserProfile() 中通过 setUserInfo() 设置
+                                // 完整的用户信息（包括 setUserId、userType、subscriptionLevel）会在
+                                // UnifiedStartupManager.syncUserProfile() 中通过 setUserInfo() 设置
                                 // 这样可以避免设置错误的默认值，防止产生冗余的脏数据
                                 FirebaseManager.setUserProperty(
                                     FirebaseManager.UserProperties.USER_ID,
-                                    userProfile.id
+                                    userProfile.id,
                                 )
 
                                 // 上报用户登录事件（使用 Firebase 内置 LOGIN 事件）
@@ -624,9 +614,7 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Image(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(RoundedCornerShape(10.dp)),
+                modifier = Modifier.size(120.dp).clip(RoundedCornerShape(10.dp)),
                 painter = painterResource(R.drawable.icon_splash_icon),
                 contentDescription = "",
                 contentScale = ContentScale.Crop,
@@ -668,9 +656,7 @@ private class BackPressHandler {
 
     private fun scheduleReset() {
         resetJob?.cancel()
-        resetJob = CoroutineScope(Dispatchers.Main).launch {
-            delay(backTimeout)
-        }
+        resetJob = CoroutineScope(Dispatchers.Main).launch { delay(backTimeout) }
     }
 
     fun cleanup() {

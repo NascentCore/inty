@@ -49,18 +49,24 @@ export const UserDailyMessagesPage: React.FC = () => {
   // 数据加载状态
   const [loading, setLoading] = useState(false);
   const [loadingSessions, setLoadingSessions] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState<Record<string, boolean>>(
-    {},
-  );
+  const [loadingMessages, setLoadingMessages] = useState<
+    Record<string, boolean>
+  >({});
 
   // 数据状态
-  const [userInfo, setUserInfo] = useState<UserDailyMessagesResponse | null>(null);
-  const [todayStats, setTodayStats] = useState<UserTodayStatsResponse | null>(null);
+  const [userInfo, setUserInfo] = useState<UserDailyMessagesResponse | null>(
+    null,
+  );
+  const [todayStats, setTodayStats] = useState<UserTodayStatsResponse | null>(
+    null,
+  );
   const [sessions, setSessions] = useState<UserSessionItem[]>([]);
   const [sessionMessages, setSessionMessages] = useState<
     Record<string, SessionMessagesResponse>
   >({});
-  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(
+    new Set(),
+  );
 
   // 查询用户每日消息
   const handleSearch = useCallback(async () => {
@@ -91,7 +97,7 @@ export const UserDailyMessagesPage: React.FC = () => {
 
       setUserInfo(dailyMessagesData);
       setTodayStats(todayStatsData);
-      
+
       // 自动加载会话列表
       try {
         const sessionsData = await userAnalyticsApi.getUserSessions({
@@ -102,7 +108,7 @@ export const UserDailyMessagesPage: React.FC = () => {
         console.error("加载会话列表失败:", error);
         // 不显示错误，因为这不是主要功能
       }
-      
+
       message.success("查询成功");
     } catch (error: any) {
       console.error("查询失败:", error);
@@ -242,10 +248,11 @@ export const UserDailyMessagesPage: React.FC = () => {
   ];
 
   // 计算总消息数
-  const totalMessages = userInfo?.daily_messages.reduce(
-    (sum, item) => sum + item.message_count,
-    0,
-  ) || 0;
+  const totalMessages =
+    userInfo?.daily_messages.reduce(
+      (sum, item) => sum + item.message_count,
+      0,
+    ) || 0;
 
   return (
     <div style={{ padding: "24px" }}>
@@ -315,10 +322,14 @@ export const UserDailyMessagesPage: React.FC = () => {
               </Col>
               <Col span={6}>
                 <div>
-                  <div style={{ marginBottom: 4, color: "rgba(0, 0, 0, 0.45)" }}>
+                  <div
+                    style={{ marginBottom: 4, color: "rgba(0, 0, 0, 0.45)" }}
+                  >
                     认证类型
                   </div>
-                  <Tag color={userInfo.auth_type === "GOOGLE" ? "blue" : "orange"}>
+                  <Tag
+                    color={userInfo.auth_type === "GOOGLE" ? "blue" : "orange"}
+                  >
                     {userInfo.auth_type}
                   </Tag>
                 </div>
@@ -329,7 +340,9 @@ export const UserDailyMessagesPage: React.FC = () => {
                 <Col span={12}>
                   <Statistic
                     title="注册时间"
-                    value={dayjs(userInfo.created_at).format("YYYY-MM-DD HH:mm:ss")}
+                    value={dayjs(userInfo.created_at).format(
+                      "YYYY-MM-DD HH:mm:ss",
+                    )}
                     prefix={<CalendarOutlined />}
                     valueStyle={{ fontSize: "14px" }}
                   />
@@ -403,10 +416,11 @@ export const UserDailyMessagesPage: React.FC = () => {
               loading={loading}
               pagination={false}
               summary={() => {
-                const totalSessions = userInfo?.daily_messages.reduce(
-                  (sum, item) => sum + item.session_count,
-                  0,
-                ) || 0;
+                const totalSessions =
+                  userInfo?.daily_messages.reduce(
+                    (sum, item) => sum + item.session_count,
+                    0,
+                  ) || 0;
                 return (
                   <Table.Summary fixed>
                     <Table.Summary.Row>
@@ -425,8 +439,8 @@ export const UserDailyMessagesPage: React.FC = () => {
           </Card>
 
           {/* 会话列表和对话历史 */}
-          <Card 
-            title="会话列表和对话历史" 
+          <Card
+            title="会话列表和对话历史"
             style={{ marginBottom: "24px" }}
             extra={
               sessions.length > 0 && (
@@ -466,110 +480,155 @@ export const UserDailyMessagesPage: React.FC = () => {
 
                     return (
                       <div style={{ padding: "16px" }}>
-                        {messagesData.messages.map((msg: SessionMessageItem) => (
-                          <div
-                            key={msg.id}
-                            style={{
-                              marginBottom: 12,
-                              padding: 12,
-                              backgroundColor:
-                                (msg.message_type === "human" || msg.message_type === "HumanMessage") ? "#e6f7ff" : "#f0f0f0",
-                              borderRadius: 8,
-                              textAlign:
-                                (msg.message_type === "human" || msg.message_type === "HumanMessage") ? "right" : "left",
-                              maxWidth: "80%",
-                              marginLeft: (msg.message_type === "human" || msg.message_type === "HumanMessage") ? "auto" : 0,
-                              marginRight: (msg.message_type === "human" || msg.message_type === "HumanMessage") ? 0 : "auto",
-                            }}
-                          >
+                        {messagesData.messages.map(
+                          (msg: SessionMessageItem) => (
                             <div
+                              key={msg.id}
                               style={{
-                                fontSize: 12,
-                                color: "#666",
-                                marginBottom: 4,
+                                marginBottom: 12,
+                                padding: 12,
+                                backgroundColor:
+                                  msg.message_type === "human" ||
+                                  msg.message_type === "HumanMessage"
+                                    ? "#e6f7ff"
+                                    : "#f0f0f0",
+                                borderRadius: 8,
+                                textAlign:
+                                  msg.message_type === "human" ||
+                                  msg.message_type === "HumanMessage"
+                                    ? "right"
+                                    : "left",
+                                maxWidth: "80%",
+                                marginLeft:
+                                  msg.message_type === "human" ||
+                                  msg.message_type === "HumanMessage"
+                                    ? "auto"
+                                    : 0,
+                                marginRight:
+                                  msg.message_type === "human" ||
+                                  msg.message_type === "HumanMessage"
+                                    ? 0
+                                    : "auto",
                               }}
                             >
-                              {(msg.message_type === "human" || msg.message_type === "HumanMessage") ? "👤 用户" : "🤖 AI"} •{" "}
-                              {msg.created_at
-                                ? dayjs(msg.created_at).format("YYYY-MM-DD HH:mm:ss")
-                                : ""}
-                            </div>
-                            <div style={{ wordBreak: "break-word", whiteSpace: "pre-wrap" }}>
-                              {msg.content ? (
-                                msg.content.length > 1000 ? (
-                                  <span>
-                                    {msg.content.substring(0, 1000)}...
-                                    <span style={{ color: "#999", fontSize: "12px" }}>
-                                      （内容过长，已截断）
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: "#666",
+                                  marginBottom: 4,
+                                }}
+                              >
+                                {msg.message_type === "human" ||
+                                msg.message_type === "HumanMessage"
+                                  ? "👤 用户"
+                                  : "🤖 AI"}{" "}
+                                •{" "}
+                                {msg.created_at
+                                  ? dayjs(msg.created_at).format(
+                                      "YYYY-MM-DD HH:mm:ss",
+                                    )
+                                  : ""}
+                              </div>
+                              <div
+                                style={{
+                                  wordBreak: "break-word",
+                                  whiteSpace: "pre-wrap",
+                                }}
+                              >
+                                {msg.content ? (
+                                  msg.content.length > 1000 ? (
+                                    <span>
+                                      {msg.content.substring(0, 1000)}...
+                                      <span
+                                        style={{
+                                          color: "#999",
+                                          fontSize: "12px",
+                                        }}
+                                      >
+                                        （内容过长，已截断）
+                                      </span>
                                     </span>
-                                  </span>
+                                  ) : (
+                                    msg.content
+                                  )
                                 ) : (
-                                  msg.content
-                                )
-                              ) : (
-                                <span style={{ color: "#999", fontStyle: "italic" }}>
-                                  无文本内容
-                                </span>
+                                  <span
+                                    style={{
+                                      color: "#999",
+                                      fontStyle: "italic",
+                                    }}
+                                  >
+                                    无文本内容
+                                  </span>
+                                )}
+                              </div>
+                              {msg.audio_url && (
+                                <div style={{ marginTop: 4 }}>
+                                  <Tag color="purple">语音消息</Tag>
+                                </div>
+                              )}
+                              {/* 显示独立图片消息（type="image"） */}
+                              {msg.message_type === "image" &&
+                                msg.image_url && (
+                                  <div style={{ marginTop: 8 }}>
+                                    <img
+                                      src={msg.image_url}
+                                      alt="图片消息"
+                                      style={{
+                                        maxWidth: "100%",
+                                        maxHeight: "400px",
+                                        borderRadius: 8,
+                                        border: "1px solid #e0e0e0",
+                                      }}
+                                      onError={(e) => {
+                                        // 图片加载失败时的处理
+                                        (
+                                          e.target as HTMLImageElement
+                                        ).style.display = "none";
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              {/* 显示文本消息中包含的生成图片（meta_data.generated_image） */}
+                              {msg.meta_data?.generated_image?.image_url && (
+                                <div style={{ marginTop: 8 }}>
+                                  <img
+                                    src={
+                                      msg.meta_data.generated_image.image_url
+                                    }
+                                    alt="生成的图片"
+                                    style={{
+                                      maxWidth: "100%",
+                                      maxHeight: "400px",
+                                      borderRadius: 8,
+                                      border: "1px solid #e0e0e0",
+                                    }}
+                                    onError={(e) => {
+                                      // 图片加载失败时的处理
+                                      (
+                                        e.target as HTMLImageElement
+                                      ).style.display = "none";
+                                    }}
+                                  />
+                                  {msg.meta_data.generated_image.width &&
+                                    msg.meta_data.generated_image.height && (
+                                      <div
+                                        style={{
+                                          fontSize: "12px",
+                                          color: "#999",
+                                          marginTop: 4,
+                                        }}
+                                      >
+                                        尺寸:{" "}
+                                        {msg.meta_data.generated_image.width} ×{" "}
+                                        {msg.meta_data.generated_image.height}
+                                      </div>
+                                    )}
+                                </div>
                               )}
                             </div>
-                            {msg.audio_url && (
-                              <div style={{ marginTop: 4 }}>
-                                <Tag color="purple">语音消息</Tag>
-                              </div>
-                            )}
-                            {/* 显示独立图片消息（type="image"） */}
-                            {msg.message_type === "image" && msg.image_url && (
-                              <div style={{ marginTop: 8 }}>
-                                <img
-                                  src={msg.image_url}
-                                  alt="图片消息"
-                                  style={{
-                                    maxWidth: "100%",
-                                    maxHeight: "400px",
-                                    borderRadius: 8,
-                                    border: "1px solid #e0e0e0",
-                                  }}
-                                  onError={(e) => {
-                                    // 图片加载失败时的处理
-                                    (e.target as HTMLImageElement).style.display = "none";
-                                  }}
-                                />
-                              </div>
-                            )}
-                            {/* 显示文本消息中包含的生成图片（meta_data.generated_image） */}
-                            {msg.meta_data?.generated_image?.image_url && (
-                              <div style={{ marginTop: 8 }}>
-                                <img
-                                  src={msg.meta_data.generated_image.image_url}
-                                  alt="生成的图片"
-                                  style={{
-                                    maxWidth: "100%",
-                                    maxHeight: "400px",
-                                    borderRadius: 8,
-                                    border: "1px solid #e0e0e0",
-                                  }}
-                                  onError={(e) => {
-                                    // 图片加载失败时的处理
-                                    (e.target as HTMLImageElement).style.display = "none";
-                                  }}
-                                />
-                                {msg.meta_data.generated_image.width &&
-                                  msg.meta_data.generated_image.height && (
-                                    <div
-                                      style={{
-                                        fontSize: "12px",
-                                        color: "#999",
-                                        marginTop: 4,
-                                      }}
-                                    >
-                                      尺寸: {msg.meta_data.generated_image.width} ×{" "}
-                                      {msg.meta_data.generated_image.height}
-                                    </div>
-                                  )}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          ),
+                        )}
                         {messagesData.has_more && (
                           <div style={{ textAlign: "center", marginTop: 16 }}>
                             <Pagination
@@ -589,10 +648,10 @@ export const UserDailyMessagesPage: React.FC = () => {
                 }}
               />
             ) : (
-              <Empty 
+              <Empty
                 description={
-                  loadingSessions 
-                    ? "加载中..." 
+                  loadingSessions
+                    ? "加载中..."
                     : "暂无会话数据，会话列表会在查询用户信息后自动加载"
                 }
               />
@@ -609,4 +668,3 @@ export const UserDailyMessagesPage: React.FC = () => {
     </div>
   );
 };
-
