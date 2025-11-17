@@ -44,6 +44,11 @@ from app.services.image_transform_service import image_transform_service
 # ============================================================================
 
 
+# TODO: 添加推送消息定义，python 代码内用此数据结构操作；发送给 firebase/app 时转换为 JSON 等。
+# class PushMessage(BaseModel):
+#     ....
+
+
 def get_push_stage_config() -> dict:
     """
     获取推送阶段配置（从配置文件中读取）
