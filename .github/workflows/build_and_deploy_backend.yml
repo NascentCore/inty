@@ -55,9 +55,15 @@ jobs:
     environment: ${{ inputs.environment || 'dev' }}
 
     steps:
-      - id: set-environment
+      - id: prep
         run: |
           echo "environment=${{ inputs.environment || 'dev' }}" >> $GITHUB_OUTPUT
+          echo "image_tag=${{ github.ref_name }}-${{ inputs.environment || 'dev' }}" >> $GITHUB_OUTPUT
+
+      - name: Check prep output
+        run: |
+          echo "environment=${{ steps.prep.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "image_tag=${{ steps.prep.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
 
       - uses: actions/checkout@v4
         with:
@@ -78,14 +84,25 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.INTY_SERVER_IMAGE }}:${{ github.ref_name }}-${{ steps.set-environment.outputs.environment }}
+          tags: ${{ env.INTY_SERVER_IMAGE }}:${{ steps.prep.outputs.image_tag }}
           # https://docs.docker.com/build/ci/github-actions/cache/#cache-backend-api
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            CONFIG_FILE=devops/config.yaml.${{ steps.set-environment.outputs.environment }}
+            CONFIG_FILE=devops/config.yaml.${{ steps.prep.outputs.environment }}
 
-      - name: Deploy to ${{ steps.set-environment.outputs.environment }}
+      - name: Pull image ${{ env.INTY_SERVER_IMAGE }}:${{ steps.prep.outputs.image_tag }} with digest ${{ steps.build-docker-image.outputs.digest }}
+        uses: appleboy/ssh-action@master
+        timeout-minutes: 2
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+            sudo docker pull ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
+
+      - name: Deploy to ${{ steps.prep.outputs.environment }}
         uses: appleboy/ssh-action@master
         # 这个限制这一步最长时间，同时内部有一个等待的循环，从而保证不会超时。
         timeout-minutes: 2
@@ -93,32 +110,29 @@ jobs:
           host: ${{ secrets.DEV_SERVER_HOST }}
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
-          # TODO: Replace with script_path using GEMINI_DEPLOY_INTY_BACKEND.sh
           script: |
-            sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
-            sudo docker pull ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
-            sudo docker stop inty-backend-${{ steps.set-environment.outputs.environment }} || true
-            sudo docker rm inty-backend-${{ steps.set-environment.outputs.environment }} || true
+            sudo docker stop inty-backend-${{ steps.prep.outputs.environment }} || true
+            sudo docker rm inty-backend-${{ steps.prep.outputs.environment }} || true
             # log-driver: https://docs.docker.com/engine/logging/drivers/gcplogs/
             #   运行于 gcp 环境，docker engine 探测 gcp 环境信息，相关设置都自动提取
             #   https://docs.docker.com/engine/logging/drivers/gcplogs/#gcplogs-options
             # LANGCHAIN_* 相关环境变量应该不需要设置，已经在代码中强制设置，以后考虑清理
             # https://github.com/NascentCore/inty/blob/ef9c9735c62a9cb2d6be4b2414bebed410f1ff56/app/core/config.py#L267
             sudo docker run --detach --log-driver=gcplogs \
-              --name inty-backend-${{ steps.set-environment.outputs.environment }} \
+              --name inty-backend-${{ steps.prep.outputs.environment }} \
               --restart unless-stopped \
               --publish ${{ vars.SERVICE_PORT_ON_HOST }}:8000 \
               --env LANGCHAIN_TRACING_V2=true \
-              --env LANGCHAIN_PROJECT=inty-backend-${{ steps.set-environment.outputs.environment }} \
+              --env LANGCHAIN_PROJECT=inty-backend-${{ steps.prep.outputs.environment }} \
               --env LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \
               --label application=inty-backend \
-              --label environment=${{ steps.set-environment.outputs.environment }} \
+              --label environment=${{ steps.prep.outputs.environment }} \
               --log-opt labels=application,environment \
-              --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/inty-backend-key.json:/inty-backend-key.json \
-              --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \
+              --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-backend-key.json:/inty-backend-key.json \
+              --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \
               ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
               echo "Waiting for application startup..."
-              while ! sudo docker logs inty-backend-${{ steps.set-environment.outputs.environment }} 2>&1 | grep -q "Application startup complete"
+              while ! sudo docker logs inty-backend-${{ steps.prep.outputs.environment }} 2>&1 | grep -q "Application startup complete"
               do
               sleep 1
               done
@@ -137,4 +151,4 @@ jobs:
         run: |
           echo "## Build and deploy"
           echo "GitHub ref: ${{ github.ref }}"
-          echo "Deployed to ${{ steps.set-environment.outputs.environment }} for ${{ vars.SERVICE_PUBLIC_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "Deployed to ${{ steps.prep.outputs.environment }} for ${{ vars.SERVICE_PUBLIC_URL }}" >> $GITHUB_STEP_SUMMARY
