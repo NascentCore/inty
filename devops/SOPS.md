@@ -2,6 +2,8 @@
 
 ## Docker pull 卡住
 
+体现为 docker pull step github workflow 超时
+
 ![img_v3_02s4_5190d049-13cf-4553-96c4-1de32d770e7g](https://github.com/user-attachments/assets/09cc0d21-e8e0-4bd6-bf74-5318deadd834)
 
 重启 docker daemon，并确保 docker daemon 重启后正常运行
