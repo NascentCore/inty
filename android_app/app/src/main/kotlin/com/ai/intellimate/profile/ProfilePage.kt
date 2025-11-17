@@ -84,7 +84,6 @@ import androidx.core.content.getSystemService
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
-import com.ai.intellimate.test.TestActivity
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlinx.coroutines.launch
@@ -153,7 +152,7 @@ internal fun ProfilePage(
                         // 只有当 LazyGrid 在顶部时，才展开 header
                         if (
                             listState.firstVisibleItemIndex == 0 &&
-                                listState.firstVisibleItemScrollOffset == 0
+                            listState.firstVisibleItemScrollOffset == 0
                         ) {
                             val toConsume = min(available.y, collapseOffset.value)
                             scope.launch { collapseOffset.snapTo(collapseOffset.value - toConsume) }
@@ -185,7 +184,7 @@ internal fun ProfilePage(
                         // 只有当 LazyGrid 在顶部时才展开
                         if (
                             listState.firstVisibleItemIndex == 0 &&
-                                listState.firstVisibleItemScrollOffset == 0
+                            listState.firstVisibleItemScrollOffset == 0
                         ) {
                             scope.launch {
                                 collapseOffset.animateTo(0f, animationSpec = tween(300))
@@ -214,9 +213,11 @@ internal fun ProfilePage(
                 .background(Color.Transparent),
             containerColor = Color.Transparent,
         ) { innerPadding ->
-            Column(modifier = Modifier
-                .fillMaxWidth()
-                .nestedScroll(nestedScrollConnection)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .nestedScroll(nestedScrollConnection)
+            ) {
                 // Header 区域 - 可折叠
                 ProfileHeader(
                     modifier = Modifier,
@@ -264,10 +265,10 @@ internal fun ProfilePage(
 
                                 if (
                                     lastVisibleItem != null &&
-                                        lastVisibleItem.index >=
-                                            totalItems - 3 && // Trigger 3 items before end
-                                        !isLoading &&
-                                        agents.isNotEmpty()
+                                    lastVisibleItem.index >=
+                                    totalItems - 3 && // Trigger 3 items before end
+                                    !isLoading &&
+                                    agents.isNotEmpty()
                                 ) {
                                     onLoadMore()
                                 }
@@ -284,22 +285,21 @@ internal fun ProfilePage(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         runCatching {
-                                if (agents.isNotEmpty()) {
-                                    itemsIndexed(
-                                        items = agents,
-                                        key = { index, agent -> "${agent.id}_$index" },
-                                    ) { index, agent ->
-                                        MyAgentCard(
-                                            modifier =
-                                                Modifier.noRippleClickable { onClickAgent(agent) },
-                                            agentInfo = agent,
-                                            onEditAgent = onEditAgent,
-                                            onDeleteAgent = onDeleteAgent,
-                                        )
-                                    }
+                            if (agents.isNotEmpty()) {
+                                itemsIndexed(
+                                    items = agents,
+                                    key = { index, agent -> "${agent.id}_$index" },
+                                ) { index, agent ->
+                                    MyAgentCard(
+                                        modifier =
+                                            Modifier.noRippleClickable { onClickAgent(agent) },
+                                        agentInfo = agent,
+                                        onEditAgent = onEditAgent,
+                                        onDeleteAgent = onDeleteAgent,
+                                    )
                                 }
                             }
-                            .onFailure { it.printStackTrace() }
+                        }.onFailure { it.printStackTrace() }
 
                         // Loading indicator when loading more (only show when there's no data)
                         if (isLoading && agents.isEmpty()) {
@@ -355,7 +355,6 @@ private fun ProfileHeader(
         // 设置按钮行 - 始终显示
         Row {
             Spacer(Modifier.weight(1f))
-            val context = LocalContext.current
             var lastClickTime by remember { mutableLongStateOf(0L) }
 
             AsyncImage(
@@ -369,8 +368,7 @@ private fun ProfileHeader(
                                 if (IntySetting.isLogin() && IntySetting.getCurToken()
                                         .isNotEmpty()
                                 ) {
-//                                onShowSettings()
-                                    TestActivity.launch(context)
+                                    onShowSettings()
                                 }
                             }
                         },
@@ -553,9 +551,11 @@ private fun MyAgentCard(
     // 图片加载状态
     var imageLoaded by remember { mutableStateOf(false) }
 
-    Box(modifier = modifier
-        .size(165.dp, 220.dp)
-        .clip(RoundedCornerShape(12.dp))) {
+    Box(
+        modifier = modifier
+            .size(165.dp, 220.dp)
+            .clip(RoundedCornerShape(12.dp))
+    ) {
         if (hasAvatarToLoad) {
             // 有头像需要加载时，使用 Shimmer 占位符
             if (!imageLoaded) {
@@ -618,9 +618,11 @@ private fun MyAgentCard(
 
         // 右下角的菜单按钮
         if (onEditAgent != null || onDeleteAgent != null) {
-            Box(modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(4.dp)) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(4.dp)
+            ) {
                 Box(
                     modifier =
                         Modifier
