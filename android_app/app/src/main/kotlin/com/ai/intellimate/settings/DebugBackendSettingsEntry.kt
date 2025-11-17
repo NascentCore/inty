@@ -45,8 +45,6 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
     val viewModel: DebugBackendSettingsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    if (!uiState.isSupported) return
-
     SettingSection(modifier = modifier.padding(top = Spacing.SectionTopPadding)) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.ContentHorizontalPadding)) {
             Text(

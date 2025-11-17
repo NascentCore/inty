@@ -22,7 +22,6 @@ private const val PRESET_NAME_LOCAL = "Local"
 class DebugBackendSettingsViewModel : ViewModel() {
 
     data class UiState(
-        val isSupported: Boolean,
         val buildType: String,
         val activeBaseUrl: String,
         val overrideInfo: OverrideInfo?,
@@ -44,7 +43,6 @@ class DebugBackendSettingsViewModel : ViewModel() {
         val overrideInfo = DebugBackendEndpointStore.getOverrideInfo()
         val activeBaseUrl = NetworkConfig.getBaseUrl()
         return UiState(
-            isSupported = DebugBackendEndpointStore.isRuntimeOverrideSupported(),
             buildType = NetworkConfig.getCurrentBuildType().value,
             activeBaseUrl = activeBaseUrl,
             overrideInfo = overrideInfo,
