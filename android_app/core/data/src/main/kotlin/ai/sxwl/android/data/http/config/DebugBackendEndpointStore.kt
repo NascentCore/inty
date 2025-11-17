@@ -6,10 +6,7 @@ import ai.sxwl.android.utils.Utils
 import android.content.Context
 
 /**
- * Runtime backend endpoint override store.
- *
- * This is only enabled for debug builds so QA can switch between dev / staging / local backends
- * without rebuilding the application.
+ * 用来存储全局的后端地址信息，debug build 下运行时切换后端地址。
  */
 object DebugBackendEndpointStore {
 
