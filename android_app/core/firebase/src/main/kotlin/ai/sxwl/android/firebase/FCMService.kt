@@ -8,6 +8,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
+
+/**
+ * TODO: 定义来自 Firebase 的推送消息的类型与注解；https://github.com/Kotlin/kotlinx.serialization
+ * 来将来自 Firebase 的推送消息转换为 Kotlin 数据结构进行处理。
+ */
+
 /**
  * Firebase Cloud Messaging 服务
  *
