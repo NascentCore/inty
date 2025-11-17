@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Optional
 
 from loguru import logger
-from sqlalchemy import and_, text, update
+from sqlalchemy import and_, func, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -223,17 +223,33 @@ async def register_device_token(
 
 
 async def get_users_device_tokens(db: AsyncSession, user_ids: list[str]) -> list[str]:
-    """Get all device tokens for multiple users
+    """Get the latest device token for each user
 
     Args:
         db: Database session
         user_ids: List of user IDs
 
     Returns:
-        list[str]: List of device tokens, returns empty list if no records found
+        list[str]: List of device tokens (one per user, the latest one), returns empty list if no records found
     """
     try:
-        stmt = select(DeviceToken.token).where(DeviceToken.user_id.in_(user_ids))
+        # 使用窗口函数获取每个用户最新的 token（按 updated_at 降序排序）
+        # 为每个用户的 token 按 updated_at 降序编号，然后选择编号为 1 的（即最新的）
+        row_number = (
+            func.row_number()
+            .over(
+                partition_by=DeviceToken.user_id, order_by=DeviceToken.updated_at.desc()
+            )
+            .label("rn")
+        )
+
+        subquery = (
+            select(DeviceToken.token, DeviceToken.user_id, row_number).where(
+                DeviceToken.user_id.in_(user_ids)
+            )
+        ).subquery()
+
+        stmt = select(subquery.c.token).where(subquery.c.rn == 1)
         result = await db.execute(stmt)
         tokens = result.scalars().all()
         return tokens

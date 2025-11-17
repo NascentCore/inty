@@ -94,10 +94,13 @@ async def test_push_for_chat(
         config = global_config_loaded_from_config_yaml.push_notification
 
         # 检查阶段配置（支持 minutes 和 hours）
-        time_delta_minutes = config.intervals.get(stage)
+        stage_config = config.stages.get(stage) if config.stages else None
+        time_delta_minutes = None
         time_delta_hours = None
-        if not time_delta_minutes and config.no_chat_intervals:
-            time_delta_hours = config.no_chat_intervals.get(stage)
+
+        if stage_config:
+            time_delta_minutes = stage_config.get("minutes")
+            time_delta_hours = stage_config.get("hours")
 
         if not time_delta_minutes and not time_delta_hours:
             result["error"] = f"无效的推送阶段: {stage}"
