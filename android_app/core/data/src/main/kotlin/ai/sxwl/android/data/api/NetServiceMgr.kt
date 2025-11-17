@@ -75,7 +75,10 @@ object NetServiceMgr {
         return NetworkConfig.getBaseUrl()
     }
 
-    /** 获取 Retrofit 实例（带 wrapper） */
+    /*
+     * 获取 Retrofit 实例（带 wrapper）
+     * 后端不返回错误信息时，这个 wrapper 才能使用。
+     */
     private fun getRetrofitNormal(): Retrofit {
         val currentBaseUrl = baseUrl()
         return retrofitCache.getOrPut(currentBaseUrl) {
@@ -92,7 +95,10 @@ object NetServiceMgr {
         }
     }
 
-    /** 获取 Retrofit 实例（不带 wrapper） */
+    /*
+     * 获取 Retrofit 实例（不带 wrapper，wrapper 用于处理业务错误码和成功状态判断）
+     * 后端不返回错误信息时，这个 wrapper 不能使用。
+     */
     private fun getRetrofitNoWrapper(): Retrofit {
         val currentBaseUrl = baseUrl()
         val cacheKey = "${currentBaseUrl}_no_wrapper"
