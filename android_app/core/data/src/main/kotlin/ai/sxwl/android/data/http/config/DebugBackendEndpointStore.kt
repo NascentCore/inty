@@ -4,7 +4,6 @@ import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
-import java.net.URI
 
 /**
  * Runtime backend endpoint override store.
@@ -44,25 +43,23 @@ object DebugBackendEndpointStore {
     }
 
     /**
-     * Persists a new override. Input will be normalized and validated before saving.
+     * Persists a new override.
      */
     fun persistOverride(rawInput: String): OverrideInfo {
         require(isRuntimeOverrideSupported()) {
             "Runtime backend override is only available for debug builds"
         }
-        val normalized =
-            normalizeAndValidate(rawInput)
-                ?: throw IllegalArgumentException("Invalid backend url: $rawInput")
+        val url = rawInput.trim()
 
         val timestamp = System.currentTimeMillis()
         prefs
             .edit()
-            .putString(KEY_BASE_URL, normalized)
+            .putString(KEY_BASE_URL, url)
             .putLong(KEY_UPDATED_AT, timestamp)
             .apply()
 
-        LogUtils.i("DebugBackendEndpointStore", "Runtime backend updated to $normalized")
-        return OverrideInfo(normalized, timestamp)
+        LogUtils.i("DebugBackendEndpointStore", "Runtime backend updated to $url")
+        return OverrideInfo(url, timestamp)
     }
 
     /**
@@ -74,42 +71,4 @@ object DebugBackendEndpointStore {
         LogUtils.i("DebugBackendEndpointStore", "Runtime backend override cleared")
     }
 
-    /**
-     * Normalizes and validates the provided url string. Returns `null` when invalid.
-     *
-     * - Guarantees https:// scheme when absent
-     * - Ensures trailing slash (Retrofit requirement)
-     * - Rejects empty host / malformed input
-     */
-    fun normalizeAndValidate(rawInput: String): String? {
-        val trimmed = rawInput.trim()
-        if (trimmed.isEmpty()) return null
-
-        val urlWithScheme =
-            if (trimmed.startsWith("http://", ignoreCase = true) ||
-                trimmed.startsWith("https://", ignoreCase = true)
-            ) {
-                trimmed
-            } else {
-                "https://$trimmed"
-            }
-
-        return runCatching {
-            val uri = URI(urlWithScheme)
-            if (uri.host.isNullOrBlank()) return@runCatching null
-
-            val normalizedPath =
-                when {
-                    uri.path.isNullOrBlank() -> "/"
-                    uri.path.endsWith("/") -> uri.path
-                    else -> "${uri.path}/"
-                }
-
-            val normalizedUri =
-                URI(uri.scheme, uri.userInfo, uri.host, uri.port, normalizedPath, null, null)
-            normalizedUri.toString()
-        }.onFailure {
-            LogUtils.w("DebugBackendEndpointStore", "Failed to normalize url: ${it.message}")
-        }.getOrNull()
-    }
 }
