@@ -14,9 +14,9 @@ import kotlinx.coroutines.flow.update
 
 private const val TAG = "DebugBackendSettings"
 
-private const val PRESET_NAME_DEV = "Dev"
-private const val PRESET_NAME_PROD = "Prod"
-private const val PRESET_NAME_LOCAL = "Local"
+private const val PRESET_NAME_LOCAL = "local"
+private const val PRESET_NAME_DEV = "dev"
+private const val PRESET_NAME_PROD = "prod"
 
 class DebugBackendSettingsViewModel : ViewModel() {
 
