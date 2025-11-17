@@ -66,13 +66,112 @@ FirebaseManager.logEvent(
 ### 3. 设置用户属性
 
 ```kotlin
-// 设置用户ID
-FirebaseManager.setUserId("user123")
+// 推荐：使用 setUserInfo 方法，它会自动设置 userId 和用户属性
+FirebaseManager.setUserInfo(
+    userId = "user123",
+    userType = "premium",
+    subscriptionLevel = "gold"
+)
 
-// 设置用户属性
+// 单独设置用户属性（如果需要单独更新某个属性）
+FirebaseManager.setUserProperty(
+    FirebaseManager.UserProperties.USER_ID,
+    "user123"
+) // 重要：将userId作为用户属性，才能在Firebase Console中按userId筛选
 FirebaseManager.setUserProperty(FirebaseManager.UserProperties.USER_TYPE, "premium")
 FirebaseManager.setUserProperty(FirebaseManager.UserProperties.SUBSCRIPTION_LEVEL, "gold")
 ```
+
+**重要提示：在 Firebase Console 中按 userId 查看数据**
+
+## `setUserId()` vs 用户属性的区别
+
+### `analytics.setUserId(userId)` 的作用和限制
+
+`setUserId()` 设置的是 Firebase Analytics 的**用户标识符**，它的特点是：
+
+✅ **可以做的**：
+
+- 在 **User Explorer（用户探索器）** 中搜索特定用户（需要知道完整的 userId）
+- 在 **BigQuery** 导出数据中，可以通过 `user_id` 字段查询用户级别的数据
+- 用于跨设备/跨会话的用户识别
+
+❌ **不能做的**：
+
+- **不能**在 Firebase Console 的事件报告中作为筛选维度使用
+- **不能**在用户属性报告中查看
+- **不能**在事件报告中按 userId 筛选数据
+- **不能**用于创建受众群体（Audience）
+
+### 用户属性（User Property）的作用
+
+用户属性可以作为**维度**在 Firebase Console 中使用：
+
+✅ **可以做的**：
+
+- 在 **用户属性报告**中查看所有用户的 userId 列表
+- 在 **事件报告**中按 `user_id` 用户属性进行筛选
+- 创建基于 `user_id` 的**受众群体（Audience）**
+- 在事件报告中按用户属性分组和筛选数据
+
+### 推荐做法
+
+**使用 `setUserInfo()` 方法**，它会同时：
+
+1. 调用 `setUserId()` - 用于 User Explorer 和 BigQuery 查询
+2. 设置 `user_id` 用户属性 - 用于 Firebase Console 中的筛选和分析
+
+### 在事件中关联 userId
+
+**重要：用户属性会自动关联到所有事件**
+
+当通过 `setUserInfo()` 设置了 `user_id` 用户属性后：
+
+- ✅ **所有后续的事件都会自动关联该用户属性**
+- ✅ 无需在每个事件参数中手动添加 `user_id`
+- ✅ 在 Firebase Console 中，可以通过 `user_id` 用户属性筛选所有事件
+
+```kotlin
+// 推荐方式：使用用户属性（自动关联到所有事件）
+FirebaseManager.setUserInfo(userId, userType, subscriptionLevel)
+
+// 记录事件（会自动关联 user_id 用户属性，无需手动添加）
+FirebaseManager.logEvent(
+    "message_sent", mapOf(
+        "agent_id" to agentId,
+        "message_length" to messageLength
+    )
+)
+// 在 Firebase Console 中，可以通过 user_id 用户属性筛选这个事件
+```
+
+**注意**：
+
+- 用户属性是**用户级别**的元数据，不是事件参数
+- 用户属性不会作为事件参数出现在事件详情中
+- 但可以在 Firebase Console 中通过用户属性筛选和分组事件
+
+**可选：在事件参数中包含 user_id**（仅在需要更细粒度控制时使用）：
+
+```kotlin
+// 如果需要在事件参数中也包含 user_id（例如用于 BigQuery 查询）
+FirebaseManager.logEvent(
+    eventName = "message_sent",
+    parameters = mapOf(
+        "agent_id" to agentId,
+        "user_id" to userId,  // 在事件参数中包含 user_id（可选）
+        "message_length" to messageLength
+    )
+)
+```
+
+### 在 Firebase Console 中查看数据
+
+1. **用户属性报告**：Analytics > 用户属性 > `user_id`，查看所有用户的 userId 列表
+2. **事件报告筛选**：在事件报告中，点击"添加筛选条件" > 选择"用户属性" > 选择 `user_id` > 输入或选择
+   userId
+3. **Audience（受众群体）**：创建基于 `user_id` 的用户群组
+4. **User Explorer（用户探索器）**：如果知道确切的 userId，可以直接搜索（使用 `setUserId()` 设置的值）
 
 ### 4. 记录异常
 
