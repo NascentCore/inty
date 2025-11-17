@@ -8,10 +8,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-
 /**
- * TODO: 定义来自 Firebase 的推送消息的类型与注解；https://github.com/Kotlin/kotlinx.serialization
- * 来将来自 Firebase 的推送消息转换为 Kotlin 数据结构进行处理。
+ * TODO: 定义来自 Firebase 的推送消息的类型与注解；https://github.com/Kotlin/kotlinx.serialization 来将来自 Firebase
+ *   的推送消息转换为 Kotlin 数据结构进行处理。
  */
 
 /**
@@ -46,12 +45,12 @@ class FCMService : FirebaseMessagingService() {
         LogUtils.d("FCMService", "消息来源: ${remoteMessage.from}")
         LogUtils.d(
             "FCMService",
-            "消息类型: ${if (remoteMessage.notification != null) "通知消息（应用在前台）" else "数据消息"}"
+            "消息类型: ${if (remoteMessage.notification != null) "通知消息（应用在前台）" else "数据消息"}",
         )
         LogUtils.d("FCMService", "数据字段: ${remoteMessage.data}")
         LogUtils.d(
             "FCMService",
-            "通知字段: ${if (remoteMessage.notification != null) "title=${remoteMessage.notification?.title}, body=${remoteMessage.notification?.body}" else "null"}"
+            "通知字段: ${if (remoteMessage.notification != null) "title=${remoteMessage.notification?.title}, body=${remoteMessage.notification?.body}" else "null"}",
         )
 
         // 检查是否处于 Direct Boot 模式
@@ -110,10 +109,7 @@ class FCMService : FirebaseMessagingService() {
         val agentId = data[FCMConstants.DATA_KEY_AGENT_ID]
 
         // 添加详细日志，便于调试
-        LogUtils.d(
-            "FCMService",
-            "处理消息 - 消息类型: $messageType, agent_id: $agentId, 所有数据: $data"
-        )
+        LogUtils.d("FCMService", "处理消息 - 消息类型: $messageType, agent_id: $agentId, 所有数据: $data")
 
         // 通过回调处理消息
         val handler = FirebaseManager.getMessageHandler()
@@ -133,7 +129,7 @@ class FCMService : FirebaseMessagingService() {
             if (title != null && body != null) {
                 LogUtils.i(
                     "FCMService",
-                    "通知消息 - 标题: $title, 内容: $body, 消息类型: $messageType, agent_id: $agentId"
+                    "通知消息 - 标题: $title, 内容: $body, 消息类型: $messageType, agent_id: $agentId",
                 )
                 handler?.showNotification(title = title, body = body, data = data)
             } else {

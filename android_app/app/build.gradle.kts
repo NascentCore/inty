@@ -34,14 +34,17 @@ tasks.withType<UploadMappingFileTask>().configureEach {
     doLast {
         val file = markerFile.get().asFile
         file.parentFile.mkdirs()
-        val variantName = name.removePrefix("uploadCrashlyticsMappingFile")
-            .replaceFirstChar { it.lowercaseChar() }
+        val variantName =
+            name.removePrefix("uploadCrashlyticsMappingFile").replaceFirstChar {
+                it.lowercaseChar()
+            }
         file.writeText(
             buildString {
-                appendLine("task=$path")
-                appendLine("variant=$variantName")
-                appendLine("timestamp=${System.currentTimeMillis()}")
-            }.trimEnd()
+                    appendLine("task=$path")
+                    appendLine("variant=$variantName")
+                    appendLine("timestamp=${System.currentTimeMillis()}")
+                }
+                .trimEnd()
         )
     }
 }

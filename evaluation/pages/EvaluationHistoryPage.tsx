@@ -129,7 +129,11 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
               .filter((r: EvaluationResult) => r.overall_score != null)
               .map((r: EvaluationResult) => r.overall_score!);
 
-            const totalTests = (session.selected_agents?.length || 0) * (session.questions?.length || session.config?.questions?.length || 0);
+            const totalTests =
+              (session.selected_agents?.length || 0) *
+              (session.questions?.length ||
+                session.config?.questions?.length ||
+                0);
             return {
               ...session,
               best_score: scores.length > 0 ? Math.max(...scores) : undefined,
@@ -137,11 +141,18 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
               agent_count: session.selected_agents?.length || 0,
               total_tests: totalTests,
               completed_tests: results.length,
-              average_score: scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : undefined,
+              average_score:
+                scores.length > 0
+                  ? scores.reduce((a, b) => a + b, 0) / scores.length
+                  : undefined,
             } as EvaluationSessionWithStats;
           } catch (error) {
             console.error(`加载会话 ${session.id} 统计信息失败:`, error);
-            const totalTests = (session.selected_agents?.length || 0) * (session.questions?.length || session.config?.questions?.length || 0);
+            const totalTests =
+              (session.selected_agents?.length || 0) *
+              (session.questions?.length ||
+                session.config?.questions?.length ||
+                0);
             return {
               ...session,
               agent_count: session.selected_agents?.length || 0,
@@ -158,7 +169,10 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       if (Array.isArray(response)) {
         setPagination((prev) => ({ ...prev, total: response.length }));
       } else if ((response as { total?: number }).total !== undefined) {
-        setPagination((prev) => ({ ...prev, total: (response as { total: number }).total }));
+        setPagination((prev) => ({
+          ...prev,
+          total: (response as { total: number }).total,
+        }));
       }
     } catch (error) {
       console.error("加载评测会话失败:", error);
@@ -401,8 +415,15 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       key: "progress",
       width: 150,
       render: (text, record) => {
-        const total = (record.total_tests ?? (record.agent_count || 0) * (record.questions?.length || record.config?.questions?.length || 0)) || 0;
-        const completed = (record.completed_tests ?? record.results?.length) || 0;
+        const total =
+          (record.total_tests ??
+            (record.agent_count || 0) *
+              (record.questions?.length ||
+                record.config?.questions?.length ||
+                0)) ||
+          0;
+        const completed =
+          (record.completed_tests ?? record.results?.length) || 0;
         const percentage =
           total > 0 ? Math.round((completed / total) * 100) : 0;
 

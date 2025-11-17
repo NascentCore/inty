@@ -1,8 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import {
-  EMOTIONS,
-  generateReplyWithEmotion,
-} from "../services/gemini";
+import { EMOTIONS, generateReplyWithEmotion } from "../services/gemini";
 
 // Helper to mock fetch
 const mockFetch = (payload: any, ok = true) => {
