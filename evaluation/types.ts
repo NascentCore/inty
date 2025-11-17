@@ -528,6 +528,7 @@ export interface SessionMessageItem {
   id: number;
   message_type: string;
   content: string | null;
+  image_url?: string | null; // 独立图片消息的 URL
   created_at: string | null;
   audio_url: string | null;
   meta_data: Record<string, any> | null;

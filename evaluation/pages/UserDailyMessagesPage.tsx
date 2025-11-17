@@ -517,6 +517,57 @@ export const UserDailyMessagesPage: React.FC = () => {
                                 <Tag color="purple">语音消息</Tag>
                               </div>
                             )}
+                            {/* 显示独立图片消息（type="image"） */}
+                            {msg.message_type === "image" && msg.image_url && (
+                              <div style={{ marginTop: 8 }}>
+                                <img
+                                  src={msg.image_url}
+                                  alt="图片消息"
+                                  style={{
+                                    maxWidth: "100%",
+                                    maxHeight: "400px",
+                                    borderRadius: 8,
+                                    border: "1px solid #e0e0e0",
+                                  }}
+                                  onError={(e) => {
+                                    // 图片加载失败时的处理
+                                    (e.target as HTMLImageElement).style.display = "none";
+                                  }}
+                                />
+                              </div>
+                            )}
+                            {/* 显示文本消息中包含的生成图片（meta_data.generated_image） */}
+                            {msg.meta_data?.generated_image?.image_url && (
+                              <div style={{ marginTop: 8 }}>
+                                <img
+                                  src={msg.meta_data.generated_image.image_url}
+                                  alt="生成的图片"
+                                  style={{
+                                    maxWidth: "100%",
+                                    maxHeight: "400px",
+                                    borderRadius: 8,
+                                    border: "1px solid #e0e0e0",
+                                  }}
+                                  onError={(e) => {
+                                    // 图片加载失败时的处理
+                                    (e.target as HTMLImageElement).style.display = "none";
+                                  }}
+                                />
+                                {msg.meta_data.generated_image.width &&
+                                  msg.meta_data.generated_image.height && (
+                                    <div
+                                      style={{
+                                        fontSize: "12px",
+                                        color: "#999",
+                                        marginTop: 4,
+                                      }}
+                                    >
+                                      尺寸: {msg.meta_data.generated_image.width} ×{" "}
+                                      {msg.meta_data.generated_image.height}
+                                    </div>
+                                  )}
+                              </div>
+                            )}
                           </div>
                         ))}
                         {messagesData.has_more && (

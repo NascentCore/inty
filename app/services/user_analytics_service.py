@@ -1179,6 +1179,7 @@ class UserAnalyticsService:
                     message->'data'->>'content',
                     message->>'content'
                 ) as content,
+                message->'data'->>'image_url' as image_url_from_message,
                 created_at,
                 audio_url,
                 meta_data
@@ -1198,14 +1199,51 @@ class UserAnalyticsService:
         for row in rows:
             message_type = row[1] or "human"
             content = row[2] or ""
+            image_url_from_message = row[3]  # 独立图片消息的 URL
+            meta_data = row[6]  # 索引从 0 开始，所以 meta_data 是第 7 个字段（索引 6）
+            
+            # 处理图片 URL 转换
+            try:
+                from app.services.image_transform_service import (
+                    image_transform_service,
+                )
+                
+                # 处理独立图片消息（type="image"）
+                if message_type == "image" and image_url_from_message:
+                    image_url_from_message = image_transform_service.transform_desktop(
+                        image_url_from_message
+                    )
+                
+                # 处理 meta_data 中的 generated_image（文本消息中包含的生成图片）
+                if meta_data and isinstance(meta_data, dict) and "generated_image" in meta_data:
+                    generated_image = meta_data["generated_image"]
+                    image_url = generated_image.get("image_url")
+                    
+                    if image_url:
+                        # 转换 GCS URI 为 CDN URL
+                        cdn_url = image_transform_service.transform_desktop(image_url)
+                        
+                        # 更新 meta_data 中的图片 URL
+                        meta_data = dict(meta_data)  # 创建副本避免修改原始数据
+                        meta_data["generated_image"] = {
+                            "image_url": cdn_url,
+                            "width": generated_image.get("width"),
+                            "height": generated_image.get("height"),
+                            "format": generated_image.get("format"),
+                        }
+            except Exception as e:
+                logger.warning(f"转换图片 URL 失败: {str(e)}")
+                # 如果转换失败，保留原始数据
+            
             messages.append(
                 {
                     "id": row[0],
                     "message_type": message_type,
                     "content": content,
-                    "created_at": row[3].isoformat() if row[3] else None,
-                    "audio_url": row[4],
-                    "meta_data": row[5],
+                    "image_url": image_url_from_message,  # 独立图片消息的 URL
+                    "created_at": row[4].isoformat() if row[4] else None,
+                    "audio_url": row[5],
+                    "meta_data": meta_data,
                 }
             )
 
