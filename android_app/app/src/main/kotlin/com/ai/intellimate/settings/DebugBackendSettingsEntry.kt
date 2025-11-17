@@ -21,7 +21,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.ui.components.SettingSection
 
 private object Spacing {
@@ -39,14 +38,10 @@ private object TextConfig {
 
 /**
  * Debug-only backend switcher visible in the Settings screen.
- *
- * The UI is rendered only when running the `debug` build type.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
-    if (!BuildConfig.BUILD_TYPE.equals("debug", ignoreCase = true)) return
-
     val viewModel: DebugBackendSettingsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
