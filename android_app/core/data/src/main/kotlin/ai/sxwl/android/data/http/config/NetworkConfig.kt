@@ -233,7 +233,6 @@ object NetworkConfig {
         if (buildType != BuildType.DEBUG) {
             throw IllegalStateException("Runtime backend override is not supported for build type: $buildType")
         }
-
         val overrideInfo = DebugBackendEndpointStore.getOverrideInfo() ?: return config
         return config.copy(baseUrl = overrideInfo.url)
     }

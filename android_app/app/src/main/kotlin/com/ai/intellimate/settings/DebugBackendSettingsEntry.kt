@@ -36,9 +36,7 @@ private object TextConfig {
     val MaxUrlLines = 2
 }
 
-/**
- * Debug-only backend switcher visible in the Settings screen.
- */
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
