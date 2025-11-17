@@ -30,10 +30,8 @@ import {
   EyeOutlined,
 } from "@ant-design/icons";
 import type { EvaluationSession, EvaluationResult } from "../../types";
-import { MessageToImageIcon } from "../MessageToImageIcon";
 
 const { Text, Paragraph } = Typography;
-const {} = Collapse;
 
 interface MultiAgentChatDisplayProps {
   session: EvaluationSession;
@@ -109,7 +107,7 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
       }
 
       // 按问题索引排序
-      group.results.sort((a, b) => a.question_index - b.question_index);
+      group.results.sort((a, b) => (a.question_index ?? 0) - (b.question_index ?? 0));
     });
 
     return Object.values(groups).sort((a, b) =>
@@ -212,25 +210,32 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
                     >
                       <Text>{dimension}</Text>
                       <div style={{ display: "flex", alignItems: "center" }}>
-                        <Rate
-                          disabled
-                          value={score}
-                          count={10}
-                          style={{ fontSize: "12px" }}
-                        />
-                        <Text
-                          style={{
-                            marginLeft: 8,
-                            color:
-                              score >= 7
-                                ? "#52c41a"
-                                : score >= 5
-                                  ? "#faad14"
-                                  : "#ff4d4f",
-                          }}
-                        >
-                          {score.toFixed(1)}
-                        </Text>
+                        {(() => {
+                          const scoreValue = typeof score === "number" ? score : 0;
+                          return (
+                            <>
+                              <Rate
+                                disabled
+                                value={scoreValue}
+                                count={10}
+                                style={{ fontSize: "12px" }}
+                              />
+                              <Text
+                                style={{
+                                  marginLeft: 8,
+                                  color:
+                                    scoreValue >= 7
+                                      ? "#52c41a"
+                                      : scoreValue >= 5
+                                        ? "#faad14"
+                                        : "#ff4d4f",
+                                }}
+                              >
+                                {scoreValue.toFixed(1)}
+                              </Text>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   ),
@@ -315,7 +320,7 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
                   opacity: 0.9,
                 }}
               >
-                问题 {result.question_index + 1}
+                问题 {(result.question_index ?? 0) + 1}
               </div>
               {result.question}
             </div>
@@ -438,12 +443,7 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
                       <Paragraph style={{ margin: 0, whiteSpace: "pre-wrap" }}>
                         {result.agent_response || "等待回答..."}
                       </Paragraph>
-                      <div style={{ marginTop: 8, textAlign: "right" }}>
-                        <MessageToImageIcon
-                          messageContent={result.agent_response || ""}
-                          size="small"
-                        />
-                      </div>
+                      {/* MessageToImageIcon requires messageId and agentId, which are not available here */}
                     </div>
                   ) : (
                     <Text type="danger">

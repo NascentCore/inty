@@ -121,20 +121,6 @@ export const ChatPage: React.FC = () => {
     }
   }, []);
 
-  // 处理图片生成 - 使用消息内容作为键，因为消息ID会变化
-  const handleImageGenerated = useCallback(
-    (messageContent: string, imageUrl: string) => {
-      setGeneratedImages((prev) => {
-        const newMap = new Map(prev.set(messageContent, imageUrl));
-        // 保存到localStorage
-        const imagesObj = Object.fromEntries(newMap);
-        localStorage.setItem("generatedImages", JSON.stringify(imagesObj));
-        return newMap;
-      });
-    },
-    [],
-  );
-
   // 重新发送和删除消息相关状态
   const [resending, setResending] = useState<string | null>(null);
   const [clearing, setClearing] = useState<string | null>(null);
@@ -155,54 +141,6 @@ export const ChatPage: React.FC = () => {
     }
     return -1;
   }, [messages]);
-
-  // 刷新当前会话的消息列表
-  const refreshMessages = useCallback(async () => {
-    if (!selectedAgent?.id) {
-      return;
-    }
-
-    try {
-      const messagesData = await api.chat.getMessages(selectedAgent.id, {
-        page: 1,
-        size: 100,
-      });
-
-      if (messagesData.messages && messagesData.messages.length > 0) {
-        const convertedMessages: ChatMessage[] = messagesData.messages.map(
-          (msg, index) => ({
-            id: `msg_${selectedAgent.id}_${index}_${Date.now()}`,
-            role: msg.role,
-            content: msg.content || "",
-            timestamp: msg.timestamp,
-            remoteId: msg.id.toString(),
-            type: msg.type || "text",
-            image_url: msg.image_url,
-            meta_data: msg.meta_data,
-          }),
-        );
-
-        // 去重：根据 remoteId 去除重复消息
-        const uniqueMessages = convertedMessages.filter(
-          (msg, index, self) =>
-            index === self.findIndex((m) => m.remoteId === msg.remoteId),
-        );
-
-        console.log(
-          `消息列表已刷新，共 ${convertedMessages.length} 条消息（去重后 ${uniqueMessages.length} 条）`,
-        );
-        console.log(
-          "图片消息数量:",
-          uniqueMessages.filter((m) => m.type === "image").length,
-        );
-        console.log("所有消息:", uniqueMessages);
-
-        setMessages(uniqueMessages);
-      }
-    } catch (error) {
-      console.error("刷新消息列表失败:", error);
-    }
-  }, [selectedAgent?.id]);
 
   // 滚动到底部
   const scrollToBottom = useCallback(() => {
@@ -1255,7 +1193,7 @@ export const ChatPage: React.FC = () => {
                           muted
                           playsInline
                           preload="auto"
-                          poster={backgroundImageUrl}
+                          poster={backgroundImageUrl || undefined}
                           style={{
                             position: "absolute",
                             inset: 0,

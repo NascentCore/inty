@@ -177,3 +177,66 @@ class UserAnalyticsStatsResponse(BaseModel):
     image_generation_success_rate: float = Field(
         description="成功率（百分比，0-100）", default=0.0
     )
+
+
+class UserDailyMessageItem(BaseModel):
+    """每日消息统计项"""
+
+    date: str = Field(description="日期 (YYYY-MM-DD)")
+    message_count: int = Field(description="消息数")
+    session_count: int = Field(description="会话数")
+
+
+class UserDailyMessagesResponse(BaseModel):
+    """用户每日消息统计响应"""
+
+    user_id: str
+    email: Optional[str]
+    nickname: Optional[str]
+    auth_type: str
+    created_at: Optional[str]
+    daily_messages: List[UserDailyMessageItem]
+
+
+class UserTodayStatsResponse(BaseModel):
+    """用户当日统计响应"""
+
+    today_message_count: int = Field(description="今日消息数")
+    today_session_count: int = Field(description="今日会话数")
+
+
+class UserSessionItem(BaseModel):
+    """用户会话项"""
+
+    chat_id: str
+    agent_name: str
+    created_at: Optional[str]
+    updated_at: Optional[str]
+    message_count: int
+
+
+class UserSessionsResponse(BaseModel):
+    """用户会话列表响应"""
+
+    sessions: List[UserSessionItem]
+
+
+class SessionMessageItem(BaseModel):
+    """会话消息项"""
+
+    id: int
+    message_type: str
+    content: Optional[str]
+    created_at: Optional[str]
+    audio_url: Optional[str]
+    meta_data: Optional[Dict[str, Any]]
+
+
+class SessionMessagesResponse(BaseModel):
+    """会话消息列表响应"""
+
+    messages: List[SessionMessageItem]
+    total: int
+    page: int
+    size: int
+    has_more: bool

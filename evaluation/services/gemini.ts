@@ -93,12 +93,16 @@ function extractJson(text: string): any | null {
   if (!text) return null;
   try {
     return JSON.parse(text);
-  } catch {}
+  } catch {
+    // Ignore parse errors
+  }
   const fenceMatch = text.match(/\{[\s\S]*\}/);
   if (fenceMatch) {
     try {
       return JSON.parse(fenceMatch[0]);
-    } catch {}
+    } catch {
+      // Ignore parse errors
+    }
   }
   return null;
 }

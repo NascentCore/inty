@@ -3,7 +3,7 @@
  * 提供表单状态管理、验证、提交等功能
  */
 
-import { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import type { ValidationError } from "../types";
 
 interface UseFormOptions<T> {
@@ -27,7 +27,7 @@ interface UseFormReturn<T> {
   clearError: (field: keyof T) => void;
   clearAllErrors: () => void;
   setTouched: (field: keyof T, touched?: boolean) => void;
-  handleSubmit: (e?: FormEvent) => Promise<void>;
+  handleSubmit: (e?: React.FormEvent) => Promise<void>;
   reset: (newValues?: Partial<T>) => void;
 
   // 辅助方法
@@ -124,7 +124,7 @@ export function useForm<T extends Record<string, any>>(
 
   // 表单提交
   const handleSubmit = useCallback(
-    async (e?) => {
+    async (e?: React.FormEvent) => {
       if (e) {
         e.preventDefault();
       }
@@ -161,7 +161,10 @@ export function useForm<T extends Record<string, any>>(
 
         // 如果是验证错误，设置到errors中
         if (error && typeof error === "object" && "field" in error) {
-          setError(error.field, error.message || "未知错误");
+          const err = error as { field: unknown; message?: string };
+          if (typeof err.field === "string") {
+            setError(err.field as keyof T, err.message || "未知错误");
+          }
         }
       } finally {
         setIsSubmitting(false);

@@ -257,7 +257,7 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
                     width: "100%",
                     display: "block",
                   }}
-                  poster={agent.background}
+                  poster={agent.background || undefined}
                 />
                 <div
                   style={{

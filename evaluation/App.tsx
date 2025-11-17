@@ -23,6 +23,7 @@ import { Live2DEmotionChatDemo } from "./pages/Live2DEmotionChatDemo";
 import AgentManagePage from "./pages/AgentManagePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { UserAnalyticsPage } from "./pages/UserAnalyticsPage";
+import { UserDailyMessagesPage } from "./pages/UserDailyMessagesPage";
 import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
 import { ApiKeyModal } from "./components/ApiKeyModal";
 import { UserInfo } from "./components/UserInfo";
@@ -37,7 +38,8 @@ type PageKey =
   | "agents"
   | "live2d"
   | "settings"
-  | "user-analytics";
+  | "user-analytics"
+  | "user-daily-messages";
 
 interface NavigationItem {
   key: PageKey;
@@ -59,7 +61,7 @@ const AppContent: React.FC = () => {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
   // API Key 管理
-  const { apiKey, isApiKeyValid, isLoading, clearApiKey } = useApiKeyContext();
+  const { isApiKeyValid, isLoading } = useApiKeyContext();
 
   // GEMINI: 将当前页面保存到 localStorage
   useEffect(() => {
@@ -173,6 +175,12 @@ const AppContent: React.FC = () => {
       label: "用户数据分析",
       description: "查看用户注册和聊天行为数据",
     },
+    {
+      key: "user-daily-messages",
+      icon: <MessageOutlined />,
+      label: "用户每日消息",
+      description: "查询用户每日聊天记录和会话历史",
+    },
   ];
 
   // 获取页面标题
@@ -192,6 +200,8 @@ const AppContent: React.FC = () => {
         return "系统设置";
       case "user-analytics":
         return "用户数据分析";
+      case "user-daily-messages":
+        return "用户每日消息";
       default:
         return "智能体评测系统";
     }
@@ -218,6 +228,8 @@ const AppContent: React.FC = () => {
         return <SettingsPage />;
       case "user-analytics":
         return <UserAnalyticsPage />;
+      case "user-daily-messages":
+        return <UserDailyMessagesPage />;
 
       default:
         return null;

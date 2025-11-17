@@ -50,7 +50,7 @@ export const useEvaluationSession = (
 
   // Refs
   const wsManager = useRef<WebSocketManager | null>(null);
-  const refreshTimer = useRef<Timeout | null>(null);
+  const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 清理函数
   useEffect(() => {
@@ -107,7 +107,7 @@ export const useEvaluationSession = (
           // 更新会话状态
           if (session && session.id === sessionId) {
             setSession((prev) =>
-              prev ? { ...prev, status: "RUNNING" } : null,
+              prev ? { ...prev, status: "running" } : null,
             );
           }
 
@@ -139,7 +139,7 @@ export const useEvaluationSession = (
           // 更新会话状态
           if (session && session.id === sessionId) {
             setSession((prev) =>
-              prev ? { ...prev, status: "CANCELLED" } : null,
+              prev ? { ...prev, status: "cancelled" } : null,
             );
           }
 
@@ -213,24 +213,24 @@ export const useEvaluationSession = (
 
         wsManager.current.on(
           "session_completed",
-          (message: WebSocketMessage) => {
-            console.log("评测会话完成:", message);
+          (_message: WebSocketMessage) => {
+            console.log("评测会话完成:", _message);
             message.success("评测已完成");
             refreshSession(sessionId);
             refreshResults(sessionId);
           },
         );
 
-        wsManager.current.on("session_failed", (message: WebSocketMessage) => {
-          console.log("评测会话失败:", message);
+        wsManager.current.on("session_failed", (_message: WebSocketMessage) => {
+          console.log("评测会话失败:", _message);
           message.error("评测执行失败");
           refreshSession(sessionId);
         });
 
         wsManager.current.on(
           "session_cancelled",
-          (message: WebSocketMessage) => {
-            console.log("评测会话取消:", message);
+          (_message: WebSocketMessage) => {
+            console.log("评测会话取消:", _message);
             message.info("评测已取消");
             refreshSession(sessionId);
           },
@@ -261,10 +261,10 @@ export const useEvaluationSession = (
     if (
       autoRefresh &&
       session &&
-      ["PENDING", "RUNNING"].includes(session.status)
+      ["pending", "running"].includes(session.status)
     ) {
       // 运行中的会话更频繁刷新
-      const interval = session.status === "RUNNING" ? 3000 : refreshInterval;
+      const interval = session.status === "running" ? 3000 : refreshInterval;
 
       refreshTimer.current = setInterval(() => {
         console.log(

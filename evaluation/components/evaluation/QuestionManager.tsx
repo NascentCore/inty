@@ -383,7 +383,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
                 <List.Item
                   className="question-item"
                   actions={[
-                    <Tooltip title="删除问题">
+                    <Tooltip key="delete" title="删除问题">
                       <Button
                         type="text"
                         danger
@@ -456,6 +456,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
                     导出JSON
                   </Button>,
                   <Popconfirm
+                    key="delete-confirm"
                     title={`确定删除问题集 "${set.name}" 吗？`}
                     onConfirm={() => deleteQuestionSet(set.name)}
                     okText="确定"

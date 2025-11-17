@@ -143,7 +143,7 @@ export const EvaluationPage: React.FC = () => {
 
       setCurrentStep(step);
     },
-    [stepStatus],
+    [stepStatus, steps.length],
   );
 
   const nextStep = useCallback(() => {
@@ -168,7 +168,14 @@ export const EvaluationPage: React.FC = () => {
       scoring_model: configData.scoring_model!,
       scoring_criteria: configData.scoring_criteria,
       use_new_user_identity: configData.use_new_user_identity || false,
-      config: configData.config || {},
+      config: configData.config || {
+        agents: [],
+        questions: [],
+        scoring_model: configData.scoring_model!,
+        scoring_criteria: configData.scoring_criteria || "",
+        parallel_limit: 1,
+        timeout: 300,
+      },
     };
 
     const newSession = await createSession(sessionData);
@@ -412,7 +419,7 @@ export const EvaluationPage: React.FC = () => {
                 <Button
                   danger
                   onClick={handleReset}
-                  disabled={currentStep === 3 && session?.status === "RUNNING"}
+                  disabled={currentStep === 3 && session?.status === "running"}
                 >
                   重置配置
                 </Button>

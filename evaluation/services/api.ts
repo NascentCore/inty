@@ -640,6 +640,34 @@ export const userAnalyticsApi = {
     last_days?: number;
   }): Promise<import("../types").ConversationsDetailResponse[]> =>
     apiClient.get("/evaluation/user-analytics/conversations-detail", params),
+
+  // 获取用户每日消息统计
+  getUserDailyMessages: (params: {
+    email: string;
+    start_date?: string;
+    end_date?: string;
+  }): Promise<import("../types").UserDailyMessagesResponse> =>
+    apiClient.get("/evaluation/user-analytics/user-daily-messages", params),
+
+  // 获取用户当日统计
+  getUserTodayStats: (params: {
+    email: string;
+  }): Promise<import("../types").UserTodayStatsResponse> =>
+    apiClient.get("/evaluation/user-analytics/user-today-stats", params),
+
+  // 获取用户的所有会话列表
+  getUserSessions: (params: {
+    email: string;
+  }): Promise<import("../types").UserSessionsResponse> =>
+    apiClient.get("/evaluation/user-analytics/user-sessions", params),
+
+  // 获取指定会话的对话历史
+  getSessionMessages: (params: {
+    chat_id: string;
+    page?: number;
+    size?: number;
+  }): Promise<import("../types").SessionMessagesResponse> =>
+    apiClient.get("/evaluation/user-analytics/session-messages", params),
 };
 
 // =============================================================================
@@ -751,6 +779,7 @@ export class WebSocketManager {
     if (listeners) {
       listeners.delete(callback);
     }
+    // callback parameter is required for type signature but may not be used
   }
 
   disconnect() {

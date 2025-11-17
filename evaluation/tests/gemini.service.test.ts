@@ -2,13 +2,12 @@ import { describe, it, expect, vi } from "vitest";
 import {
   EMOTIONS,
   generateReplyWithEmotion,
-  type Emotion,
 } from "../services/gemini";
 
 // Helper to mock fetch
 const mockFetch = (payload: any, ok = true) => {
   // @ts-ignore
-  global.fetch = vi.fn().mockResolvedValue({
+  globalThis.fetch = vi.fn().mockResolvedValue({
     ok,
     status: ok ? 200 : 500,
     statusText: ok ? "OK" : "Server Error",
@@ -66,7 +65,7 @@ describe("gemini service", () => {
 
   it("throws when http error", async () => {
     // @ts-ignore
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
       statusText: "ERR",
