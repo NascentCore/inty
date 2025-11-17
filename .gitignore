@@ -125,7 +125,6 @@ celerybeat.pid
 # Environments
 .env
 .venv
-.python-version
 
 # 前端相关
 node_modules/
