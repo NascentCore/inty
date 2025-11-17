@@ -20,10 +20,6 @@ import kotlinx.coroutines.withContext
 
 /** Messages页面ViewModel 负责管理会话列表的状态和业务逻辑 */
 class MessagesViewModel : BaseVM() {
-
-    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    private val chatApi by lazy { NetServiceMgr.getChatApi() }
-
     // UI状态
     private val _uiState = MutableStateFlow(MessagesUiState())
     val uiState = _uiState.asStateFlow()
@@ -99,7 +95,7 @@ class MessagesViewModel : BaseVM() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val skip = currentConversationsPage * 20
-                val result = chatApi.getConversations(skip, 20)
+                val result = NetServiceMgr.getChatApi().getConversations(skip, 20)
 
                 when (result) {
                     is HttpResult.Success -> {
@@ -155,7 +151,7 @@ class MessagesViewModel : BaseVM() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val skip = currentConversationsPage * 20
-                val result = chatApi.getConversations(skip, 20)
+                val result = NetServiceMgr.getChatApi().getConversations(skip, 20)
 
                 when (result) {
                     is HttpResult.Success -> {

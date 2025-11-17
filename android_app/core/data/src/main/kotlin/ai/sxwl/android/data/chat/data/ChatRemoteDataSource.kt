@@ -11,9 +11,6 @@ import com.architecture.httplib.core.HttpResult
 
 /** 聊天远程数据源 负责处理与服务器的聊天相关API调用 遵循Clean Architecture的数据层模式 */
 class ChatRemoteDataSource {
-
-    private val chatApi: IChatApi by lazy { NetServiceMgr.getChatApi() }
-
     suspend fun getMessages(
         agentId: String,
         pageSize: Int,

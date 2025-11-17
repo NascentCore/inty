@@ -21,8 +21,6 @@ import retrofit2.HttpException
 /** 设置页面 ViewModel */
 class SettingViewModel : BaseVM() {
 
-    private val userApi: IUserApi by lazy { NetServiceMgr.getUserApi() }
-
     // 对话框状态
     private val _dialogState = MutableStateFlow(DialogState())
     val dialogState: StateFlow<DialogState> = _dialogState.asStateFlow()
@@ -54,7 +52,7 @@ class SettingViewModel : BaseVM() {
     fun deleteUserAccount() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = userApi.userDeleteAccount()
+                val result = NetServiceMgr.getUserApi().userDeleteAccount()
 
                 withContext(Dispatchers.Main) {
                     when (result) {

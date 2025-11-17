@@ -1,11 +1,10 @@
-package ai.sxwl.android.data.chat.paging
+package ai.sxwl.android.data.explore.paging
 
 import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
-import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AgentInfoResponse
-import ai.sxwl.android.data.cache.AgentCacheProvider
+import ai.sxwl.android.data.cache.RecommendedAgentCacheProvider
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import androidx.paging.PagingSource
@@ -16,16 +15,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Agent分页数据源 负责处理聊天agents的分页加载、缓存管理 */
-class AgentPagingSource(
+/** Explore页面的Paging数据源 负责处理推荐agents的分页加载、缓存管理 */
+class ExplorePagingSource(
     private val useCache: Boolean = true,
-    private val sortSeed: Int = IntySetting.randomSortSeed(),
-    private val cacheProvider: AgentCacheProvider? = null,
+    private val sortSeed: Int = IntySetting.sortSeed(),
+    private val cacheProvider: RecommendedAgentCacheProvider? = null,
 ) : PagingSource<Int, AgentInfo>() {
 
     companion object {
-        private const val PAGE_SIZE = 20
-        private const val INITIAL_PAGE = 1
+        // 使用统一的常量
+        private const val PAGE_SIZE = ExploreConstants.PAGE_SIZE
+        private const val INITIAL_PAGE = ExploreConstants.INITIAL_PAGE
     }
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, AgentInfo> {
@@ -34,29 +34,26 @@ class AgentPagingSource(
                 val page = params.key ?: INITIAL_PAGE
                 val pageSize = params.loadSize.coerceAtMost(PAGE_SIZE)
 
-                LogUtils.i("AgentPagingSource - 加载第${page}页，页面大小: $pageSize, sortSeed: $sortSeed")
+                LogUtils.i("ExplorePagingSource - 加载第${page}页，页面大小: $pageSize")
 
                 // 第一页特殊处理：优先使用缓存数据
                 if (page == INITIAL_PAGE && useCache && cacheProvider != null) {
-                    val cachedAgents = cacheProvider.getCachedChatAgents()
+                    val cachedAgents = cacheProvider.getCachedRecommendedAgents()
                     if (cachedAgents.isNotEmpty()) {
                         // 过滤掉id为空的agent，避免key重复问题
                         val validCachedAgents = cachedAgents.filter { it.id.isNotEmpty() }
 
                         if (validCachedAgents.isNotEmpty()) {
-                            // 去重：对缓存数据也进行去重，防止重复数据
-                            val uniqueCachedAgents = validCachedAgents.distinctBy { it.id }
-
                             // 如果有缓存数据，返回缓存数据，同时后台加载网络数据
                             if (cacheProvider.shouldUpdateFromNetwork()) {
                                 // 后台静默刷新，不阻塞UI
                                 loadFromNetworkAsync(page, pageSize)
                             }
 
-                            val hasMoreData = uniqueCachedAgents.size >= pageSize
+                            val hasMoreData = validCachedAgents.isNotEmpty()
 
                             return@withContext LoadResult.Page(
-                                data = uniqueCachedAgents,
+                                data = validCachedAgents,
                                 prevKey = null,
                                 nextKey = if (hasMoreData) page + 1 else null,
                             )
@@ -64,27 +61,14 @@ class AgentPagingSource(
                     }
                 }
 
-                // 检查用户账户是否已就绪，如果未就绪则等待或返回空数据
-                // 暂时注释掉账户检查逻辑
-                // if (!UnifiedStartupManager.isUserAccountReady()) {
-                //     LogUtils.i("AgentPagingSource - 用户账户未就绪，等待账户就绪")
-                //
-                //     // 等待用户账户就绪，最多等待5秒
-                //     var waitTime = 0
-                //     while (!UnifiedStartupManager.isUserAccountReady() && waitTime < 5000) {
-                //         delay(100)
-                //         waitTime += 100
-                //     }
-                //
-                //     if (!UnifiedStartupManager.isUserAccountReady()) {
-                //         LogUtils.i("AgentPagingSource - 等待超时，返回空数据")
-                //         return@withContext LoadResult.Page(
-                //             data = emptyList(),
-                //             prevKey = null,
-                //             nextKey = null,
-                //         )
-                //     }
-                // }
+                // 检查用户账户是否已就绪，如果未就绪则返回空数据
+                if (!IntySetting.isLogin()) {
+                    return@withContext LoadResult.Page(
+                        data = emptyList(),
+                        prevKey = null,
+                        nextKey = null,
+                    )
+                }
 
                 // 从网络加载数据
                 val result = loadFromNetwork(page, pageSize)
@@ -93,42 +77,34 @@ class AgentPagingSource(
                     is NetworkResult.Success -> {
                         val agents = result.data.list ?: emptyList()
                         // 过滤掉id为空的agent，避免key重复问题
-                        // 同时过滤掉 IntelliMate agent
-                        val validAgents =
-                            agents.filter { agent ->
-                                agent.id.isNotEmpty() &&
-                                    !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
-                            }
-                        // 去重：基于 agent.id 进行去重，防止重复数据
-                        val uniqueAgents = validAgents.distinctBy { it.id }
+                        val validAgents = agents.filter { it.id.isNotEmpty() }
 
-                        val hasMore = uniqueAgents.isNotEmpty() && uniqueAgents.size >= pageSize
+                        val hasMore = validAgents.isNotEmpty() && validAgents.size >= pageSize
 
                         // 缓存第一页数据
                         if (
                             page == INITIAL_PAGE &&
-                                uniqueAgents.isNotEmpty() &&
+                                validAgents.isNotEmpty() &&
                                 cacheProvider != null
                         ) {
-                            cacheProvider.cacheChatAgents(uniqueAgents)
-                            cacheProvider.refreshChatAgents()
-                            LogUtils.i("AgentPagingSource - 缓存第一页数据: ${uniqueAgents.size}个 (去重后)")
+                            cacheProvider.cacheRecommendedAgents(validAgents)
+                            cacheProvider.refreshRecommendedAgents()
                         }
 
                         LoadResult.Page(
-                            data = uniqueAgents,
+                            data = validAgents,
                             prevKey = if (page == INITIAL_PAGE) null else page - 1,
                             nextKey = if (hasMore) page + 1 else null,
                         )
                     }
 
                     is NetworkResult.Error -> {
-                        LogUtils.e("AgentPagingSource - 网络加载失败: ${result.error}")
+                        LogUtils.e("ExplorePagingSource - 网络加载失败: ${result.error}")
                         LoadResult.Error(Exception(result.error))
                     }
                 }
             } catch (e: Exception) {
-                LogUtils.e("AgentPagingSource - 加载异常: ${e.message}")
+                LogUtils.e("ExplorePagingSource - 加载异常: ${e.message}")
                 LoadResult.Error(e)
             }
         }
@@ -146,7 +122,7 @@ class AgentPagingSource(
     private suspend fun loadFromNetwork(page: Int, pageSize: Int): NetworkResult {
         return try {
             val result =
-                NetServiceMgr.getAgentApi().chatAgents(
+                agentApi.exploreAgents(
                     page = page,
                     pageSize = pageSize,
                     sort_seed = sortSeed.toString(),
@@ -171,36 +147,20 @@ class AgentPagingSource(
         // 在后台协程中执行，不阻塞当前加载
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                LogUtils.i(
-                    "AgentPagingSource.loadFromNetworkAsync - 后台加载第${page}页，sortSeed: $sortSeed"
-                )
                 val result = loadFromNetwork(page, pageSize)
                 if (result is NetworkResult.Success) {
                     val agents = result.data.list ?: emptyList()
                     // 过滤掉id为空的agent，避免key重复问题
                     val validAgents = agents.filter { it.id.isNotEmpty() }
-                    // 去重：基于 agent.id 进行去重，防止重复数据
-                    val uniqueAgents = validAgents.distinctBy { it.id }
-                    if (uniqueAgents.isNotEmpty() && cacheProvider != null) {
-                        // 只更新缓存，不触发刷新，避免触发新的数据流导致重复
-                        cacheProvider.cacheChatAgents(uniqueAgents)
-                        LogUtils.i("AgentPagingSource - 后台刷新完成: ${uniqueAgents.size}个 (去重后)，已更新缓存")
+                    if (validAgents.isNotEmpty() && cacheProvider != null) {
+                        cacheProvider.cacheRecommendedAgents(validAgents)
+                        cacheProvider.refreshRecommendedAgents()
                     }
                 }
             } catch (e: Exception) {
-                LogUtils.e("AgentPagingSource - 后台刷新失败: ${e.message}")
+                LogUtils.e("ExplorePagingSource - 后台刷新失败: ${e.message}")
             }
         }
-    }
-
-    /** 检查是否需要从网络更新数据 */
-    private fun shouldUpdateFromNetwork(): Boolean {
-        // 暂时简化逻辑，直接返回true
-        return true
-        // 确保用户账户已就绪（包括游客账户）且token有效
-        // return UnifiedStartupManager.isUserAccountReady() &&
-        //     IntySetting.isLogin() &&
-        //     IntySetting.getCurToken().isNotEmpty()
     }
 }
 
