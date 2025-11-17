@@ -9,7 +9,6 @@ import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.PermissionUtils
 import ai.sxwl.android.utils.ToastUtils
-import android.Manifest
 import android.content.Intent
 import android.os.Build
 import android.view.GestureDetector
@@ -297,7 +296,7 @@ class MainActivity : BaseActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 if (!PermissionUtils.hasNotificationPermission(this@MainActivity)) {
                     LogUtils.d("MainActivity", "申请通知权限")
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+//                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
 
