@@ -23,18 +23,18 @@
 |---------|---------|---------|
 | `chat_started` | ChatViewModel.kt | 聊天会话开始（第一次发送消息时触发） |
 | `agent_switch` | ChatViewModel.kt | Agent切换 |
-| `message_sent` | ChatViewModel.kt | 消息发送（用户点击发送时触发，理论上等于 `message_send_success` + `message_send_error` 的总和） |
+| `message_sent` | ChatViewModel.kt | 消息发送（用户点击发送时触发，理论上等于 `message_send_success` + `message_send_failure` 的总和） |
 | `message_send_success` | ChatViewModel.kt | 消息发送成功（包含API响应时间和端到端时间，通过 `message_type` 参数区分普通消息和 Keep Talking） |
-| `message_send_error` | ChatViewModel.kt | 消息发送错误（合并 failure 和 exception，错误类型信息在 `error_message` 中，通过 `message_type` 参数区分普通消息和 Keep Talking） |
+| `message_send_failure` | ChatViewModel.kt | 消息发送错误（合并 failure 和 exception，错误类型信息在 `error_message` 中，通过 `message_type` 参数区分普通消息和 Keep Talking） |
 | `free_limit_reached` | ChatViewModel.kt | 达到免费限制 |
 
 ### 图片生成
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
-| `message_to_image_generation_button_clicked` | ChatViewModel.kt | 图片生成开始（请求发起时触发） |
+| `message_to_image_generation_button_clicked` | ChatViewModel.kt | 图片生成开始（按钮点击，请求发起时触发） |
 | `message_to_image_generation_success` | ChatViewModel.kt | 图片生成成功（包含图片信息和生成耗时） |
-| `message_to_image_generation_failure` | ChatViewModel.kt | 图片生成失败（包含错误信息和生成耗时，包括网络错误和异常） |
-| `image_generation_limit_reached` | ChatViewModel.kt | 图片生成限制达到（免费用户需要订阅或VIP用户达到每日限制） |
+| `message_to_image_generation_failure` | ChatViewModel.kt | 图片生成失败（包含错误信息和生成耗时，包括网络错误和异常，除生成数量上限超标以外的错误） |
+| `image_generation_limit_reached` | ChatViewModel.kt | 图片生成限制达到（免费用户需要订阅或VIP用户达到每日限制，这个限制与其他生图操作累加） |
 
 ### 页面访问
 | 事件名称 | 使用位置 | 业务含义 |
