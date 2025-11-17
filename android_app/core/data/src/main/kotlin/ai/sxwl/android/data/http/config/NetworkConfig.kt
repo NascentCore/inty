@@ -84,7 +84,10 @@ object NetworkConfig {
                 BuildType.PLAY_DEBUG -> getPlayDebugConfig()
                 BuildType.RELEASE -> getReleaseConfig()
             }
-        return applyRuntimeOverride(baseConfig)
+        if (getCurrentBuildType() == BuildType.DEBUG) {
+            return debugOnlyApplyRuntimeOverride(baseConfig)
+        }
+        return baseConfig
     }
 
     /** 本地环境配置 */
@@ -225,10 +228,10 @@ object NetworkConfig {
         return getCurrentEnvironmentConfig().logging.enableChuckerLogging
     }
 
-    private fun applyRuntimeOverride(config: EnvironmentConfig): EnvironmentConfig {
+    private fun debugOnlyApplyRuntimeOverride(config: EnvironmentConfig): EnvironmentConfig {
         val buildType = getCurrentBuildType()
-        if (!DebugBackendEndpointStore.isRuntimeOverrideSupported(buildType)) {
-            return config
+        if (buildType != BuildType.DEBUG) {
+            throw IllegalStateException("Runtime backend override is not supported for build type: $buildType")
         }
 
         val overrideInfo = DebugBackendEndpointStore.getOverrideInfo() ?: return config
