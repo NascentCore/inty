@@ -29,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -48,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.ai.intellimate.BottomNavigationBarHeight
@@ -70,6 +72,8 @@ import kotlinx.coroutines.launch
 val ChatInputBottomSpacerHeight = 8.dp
 private const val LOAD_MORE_NEAR_TOP_THRESHOLD = 3
 private const val LOAD_MORE_MIN_EXTRA_ITEMS = 5
+
+var KEY_BOARD_HEIGHT_MAX = 1
 
 /** ChatPage 页面来源常量 - 用于统计曝光事件 */
 object ChatPageSource {
@@ -175,14 +179,18 @@ internal fun ChatPage(
     val suppressFocusCallback = remember { mutableStateOf(false) }
 
     val imeHeight = WindowInsets.ime.getBottom(density)
-    val isKeyboardVisible = imeHeight > 0
+    KEY_BOARD_HEIGHT_MAX = maxOf(imeHeight, KEY_BOARD_HEIGHT_MAX)
+    val ratio = 1 - imeHeight.toFloat() / KEY_BOARD_HEIGHT_MAX.toFloat() // 计算出键盘当前弹出/回收进度
 
-    val bottomPadding =
-        when {
-            showBackButton -> ChatInputBottomSpacerHeight
-            isKeyboardVisible -> ChatInputBottomSpacerHeight
-            else -> BottomNavigationBarHeight + ChatInputBottomSpacerHeight
-        }
+    val gap = if (showBackButton) 0.dp else BottomNavigationBarHeight * ratio
+//    val isKeyboardVisible = imeHeight > 0
+//    val bottomPadding =
+//        when {
+//            showBackButton -> ChatInputBottomSpacerHeight
+//            isKeyboardVisible -> ChatInputBottomSpacerHeight
+//            else -> BottomNavigationBarHeight + ChatInputBottomSpacerHeight
+//        }
+    val bottomPadding = gap + ChatInputBottomSpacerHeight
 
     fun onKeepTalkingChange(enabled: Boolean) {
         SettingStateManager.updateShowKeepTalking(enabled)
@@ -495,22 +503,27 @@ internal fun ChatPage(
                         val effectiveBottomPadding =
                             if (showMorePanel) morePanelHeight else bottomPadding
 
-                        ChatInput(
-                            chatViewModel = chatViewModel,
-                            onSendMessage = { chatViewModel.sendMsg() },
-                            onToggleMorePanel = { showMorePanel = !showMorePanel },
-                            showMorePanel = showMorePanel,
-                            bottomPadding = effectiveBottomPadding,
-                            focusRequester = inputFocusRequester,
-                            onFocusChange = { focused ->
-                                if (!isCurrentPage) return@ChatInput
-                                if (suppressFocusCallback.value) {
-                                    suppressFocusCallback.value = false
-                                    return@ChatInput
-                                }
-                                onInputFocusChange(focused)
-                            },
-                        )
+                        CompositionLocalProvider(    LocalDensity provides Density(
+                            density = LocalDensity.current.density,
+                            fontScale = 1f               // 核心：禁用字体缩放
+                        )) {
+                            ChatInput(
+                                chatViewModel = chatViewModel,
+                                onSendMessage = { chatViewModel.sendMsg() },
+                                onToggleMorePanel = { showMorePanel = !showMorePanel },
+                                showMorePanel = showMorePanel,
+                                bottomPadding = effectiveBottomPadding,
+                                focusRequester = inputFocusRequester,
+                                onFocusChange = { focused ->
+                                    if (!isCurrentPage) return@ChatInput
+                                    if (suppressFocusCallback.value) {
+                                        suppressFocusCallback.value = false
+                                        return@ChatInput
+                                    }
+                                    onInputFocusChange(focused)
+                                },
+                            )
+                        }
                     }
                 }
 
