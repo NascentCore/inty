@@ -58,6 +58,12 @@ jobs:
       - id: set-environment
         run: |
           echo "environment=${{ inputs.environment || 'dev' }}" >> $GITHUB_OUTPUT
+          echo "image_tag=${{ github.ref_name }}-${{ inputs.environment || 'dev' }}" >> $GITHUB_OUTPUT
+
+      - name: Check set-environment output
+        run: |
+          echo "environment=${{ steps.set-environment.outputs.environment }}"
+          echo "image_tag=${{ steps.set-environment.outputs.image_tag }}"
 
       - uses: actions/checkout@v4
         with:
@@ -78,14 +84,14 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.INTY_SERVER_IMAGE }}:${{ github.ref_name }}-${{ steps.set-environment.outputs.environment }}
+          tags: ${{ env.INTY_SERVER_IMAGE }}:${{ steps.set-environment.outputs.image_tag }}
           # https://docs.docker.com/build/ci/github-actions/cache/#cache-backend-api
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
             CONFIG_FILE=devops/config.yaml.${{ steps.set-environment.outputs.environment }}
 
-      - name: Pull image
+      - name: Pull image ${{ steps.set-environment.outputs.image_tag }} with digest ${{ steps.build-docker-image.outputs.digest }}
         uses: appleboy/ssh-action@master
         timeout-minutes: 2
         with:
