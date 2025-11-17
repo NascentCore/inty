@@ -74,11 +74,9 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
                 }
             }
 
-            if (uiState.hasOverride) {
-                Spacer(Modifier.height(Spacing.MediumSpacer))
-                TextButton(onClick = viewModel::resetOverride) {
-                    Text(text = "恢复默认", color = Color.White)
-                }
+            Spacer(Modifier.height(Spacing.MediumSpacer))
+            TextButton(onClick = viewModel::resetOverride) {
+                Text(text = "恢复默认", color = Color.White)
             }
         }
     }

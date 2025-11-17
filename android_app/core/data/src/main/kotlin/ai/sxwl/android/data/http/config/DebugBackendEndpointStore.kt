@@ -15,13 +15,12 @@ object DebugBackendEndpointStore {
 
     private const val PREF_NAME = "debug_network_config"
     private const val KEY_BASE_URL = "override_base_url"
-    private const val KEY_UPDATED_AT = "override_base_url_updated_at"
 
     private val prefs by lazy {
         Utils.getApp().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
     }
 
-    data class OverrideInfo(val url: String, val updatedAt: Long)
+    data class OverrideInfo(val url: String)
 
     fun isRuntimeOverrideSupported(
         buildType: NetworkConfig.BuildType = NetworkConfig.getCurrentBuildType(),
@@ -32,8 +31,7 @@ object DebugBackendEndpointStore {
     fun getOverrideInfo(): OverrideInfo? {
         if (!isRuntimeOverrideSupported()) return null
         val url = prefs.getString(KEY_BASE_URL, null)?.takeIf { it.isNotBlank() } ?: return null
-        val updatedAt = prefs.getLong(KEY_UPDATED_AT, 0L)
-        return OverrideInfo(url = url, updatedAt = updatedAt)
+        return OverrideInfo(url = url)
     }
 
     fun persistOverride(rawInput: String): OverrideInfo {
@@ -42,15 +40,13 @@ object DebugBackendEndpointStore {
         }
         val url = rawInput.trim()
 
-        val timestamp = System.currentTimeMillis()
         prefs
             .edit()
             .putString(KEY_BASE_URL, url)
-            .putLong(KEY_UPDATED_AT, timestamp)
             .apply()
 
         LogUtils.i("DebugBackendEndpointStore", "Runtime backend updated to $url")
-        return OverrideInfo(url, timestamp)
+        return OverrideInfo(url)
     }
 
     /**
@@ -58,7 +54,7 @@ object DebugBackendEndpointStore {
      */
     fun clearOverride() {
         if (!prefs.contains(KEY_BASE_URL)) return
-        prefs.edit().remove(KEY_BASE_URL).remove(KEY_UPDATED_AT).apply()
+        prefs.edit().remove(KEY_BASE_URL).apply()
         LogUtils.i("DebugBackendEndpointStore", "Runtime backend override cleared")
     }
 
