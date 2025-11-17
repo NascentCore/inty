@@ -85,20 +85,29 @@ jobs:
           build-args: |
             CONFIG_FILE=devops/config.yaml.${{ steps.set-environment.outputs.environment }}
 
-      - name: Deploy to ${{ steps.set-environment.outputs.environment }}
-        uses: appleboy/ssh-action@master
-        # 这个限制这一步最长时间，同时内部有一个等待的循环，从而保证不会超时。
-        timeout-minutes: 2
-        with:
-          host: ${{ secrets.DEV_SERVER_HOST }}
-          username: ${{ secrets.DEV_SERVER_USER }}
-          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
-          # TODO: Replace with script_path using GEMINI_DEPLOY_INTY_BACKEND.sh
-          script: |
-            sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
-            sudo docker pull ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
-            sudo docker stop inty-backend-${{ steps.set-environment.outputs.environment }} || true
-            sudo docker rm inty-backend-${{ steps.set-environment.outputs.environment }} || true
+        - name: Pull image
+          uses: appleboy/ssh-action@master
+          timeout-minutes: 2
+          with:
+            host: ${{ secrets.DEV_SERVER_HOST }}
+            username: ${{ secrets.DEV_SERVER_USER }}
+            key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+            script: |
+              sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+              sudo docker pull ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
+
+        - name: Deploy to ${{ steps.set-environment.outputs.environment }}
+          uses: appleboy/ssh-action@master
+          # 这个限制这一步最长时间，同时内部有一个等待的循环，从而保证不会超时。
+          timeout-minutes: 2
+          with:
+            host: ${{ secrets.DEV_SERVER_HOST }}
+            username: ${{ secrets.DEV_SERVER_USER }}
+            key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+            # TODO: Replace with script_path using GEMINI_DEPLOY_INTY_BACKEND.sh
+            script: |
+              sudo docker stop inty-backend-${{ steps.set-environment.outputs.environment }} || true
+              sudo docker rm inty-backend-${{ steps.set-environment.outputs.environment }} || true
             # log-driver: https://docs.docker.com/engine/logging/drivers/gcplogs/
             #   运行于 gcp 环境，docker engine 探测 gcp 环境信息，相关设置都自动提取
             #   https://docs.docker.com/engine/logging/drivers/gcplogs/#gcplogs-options
