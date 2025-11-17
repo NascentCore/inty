@@ -49,9 +49,6 @@ object DebugBackendEndpointStore {
         return OverrideInfo(url)
     }
 
-    /**
-     * Clears the current override (if it exists).
-     */
     fun clearOverride() {
         if (!prefs.contains(KEY_BASE_URL)) return
         prefs.edit().remove(KEY_BASE_URL).apply()
