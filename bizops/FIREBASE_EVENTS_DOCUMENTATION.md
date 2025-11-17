@@ -144,8 +144,9 @@
 
 | 属性名称 | 设置位置 | 业务含义 | 优先级 |
 |---------|---------|---------|--------|
-| `user_type` | FirebaseManager.setDeviceInfo() | 用户类型 (vip/free) | 🔴 CRITICAL |
-| `subscription_level` | FirebaseManager.setDeviceInfo() | 订阅等级 | 🔴 CRITICAL |
+| `user_id` | FirebaseManager.setUserInfo() | 用户ID，用于在Firebase Console中按userId筛选和查看行为数据 | 🔴 CRITICAL |
+| `user_type` | FirebaseManager.setUserInfo() | 用户类型 (vip/free) | 🔴 CRITICAL |
+| `subscription_level` | FirebaseManager.setUserInfo() | 订阅等级 | 🔴 CRITICAL |
 | `app_version` | FirebaseManager.setDeviceInfo() | 应用版本 | 🟡 HIGH |
 | `device_type` | FirebaseManager.setDeviceInfo() | 设备类型 (android) | 🟡 HIGH |
 | `device_model` | FirebaseManager.setDeviceInfo() | 设备型号 | 🟡 HIGH |
