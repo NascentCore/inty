@@ -93,7 +93,7 @@ jobs:
 
       - name: Pull image ${{ env.INTY_SERVER_IMAGE }}:${{ steps.prep.outputs.image_tag }} with digest ${{ steps.build-docker-image.outputs.digest }}
         uses: appleboy/ssh-action@master
-        timeout-minutes: 2
+        timeout-minutes: 5
         with:
           host: ${{ secrets.DEV_SERVER_HOST }}
           username: ${{ secrets.DEV_SERVER_USER }}
