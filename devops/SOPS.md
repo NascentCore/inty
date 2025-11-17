@@ -1,5 +1,19 @@
 # DevOps 日常操作
 
+## 定期清理服务器上的 docker 缓存
+
+```terminal
+licairong@dev-instance:~$ docker system prune -a
+WARNING! This will remove:
+  - all stopped containers
+  - all networks not used by at least one container
+  - all images without at least one container associated to them
+  - all build cache
+
+Are you sure you want to continue? [y/N] y
+...
+```
+
 ## Docker pull 卡住
 
 体现为 docker pull step github workflow 超时
