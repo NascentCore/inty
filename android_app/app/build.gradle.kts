@@ -1,3 +1,5 @@
+import com.google.firebase.crashlytics.buildtools.gradle.tasks.UploadMappingFileTask
+
 plugins {
     alias(libs.plugins.ai.android.application)
     alias(libs.plugins.ai.android.application.compose)
@@ -18,6 +20,28 @@ tasks.register("printVersionInfo") {
         println("Version name: ${android.defaultConfig.versionName}")
         println(
             "Version name with suffix: ${android.defaultConfig.versionName}${android.defaultConfig.versionNameSuffix}"
+        )
+    }
+}
+
+private val crashlyticsUploadMarkerDir =
+    layout.buildDirectory.dir("intermediates/crashlytics/mappingUploadMarkers")
+
+tasks.withType<UploadMappingFileTask>().configureEach {
+    val markerFile = crashlyticsUploadMarkerDir.map { dir -> dir.file("$name.marker") }
+    outputs.file(markerFile)
+
+    doLast {
+        val file = markerFile.get().asFile
+        file.parentFile.mkdirs()
+        val variantName = name.removePrefix("uploadCrashlyticsMappingFile")
+            .replaceFirstChar { it.lowercaseChar() }
+        file.writeText(
+            buildString {
+                appendLine("task=$path")
+                appendLine("variant=$variantName")
+                appendLine("timestamp=${System.currentTimeMillis()}")
+            }.trimEnd()
         )
     }
 }
