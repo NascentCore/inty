@@ -2,6 +2,11 @@
 
 本文件覆盖并补充根 `AGENTS.md`，仅适用于 `android_app/`。
 
+## 一般指示
+
+- 颜色常量应该都写入：`android_app/core/design/src/main/kotlin/ai/sxwl/android/design/theme/Color.kt`，
+  不要使用如 `0xFAB...` 之类的 RGB 颜色值
+
 ## 架构状态说明
 
 **重要：** 本文档同时包含当前实现状态和目标架构指导。请注意区分：
