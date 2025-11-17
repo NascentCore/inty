@@ -55,6 +55,8 @@ class PushNotificationManager private constructor(private val application: Appli
 
     /** 初始化推送通知管理器 订阅 FCM 事件并处理 Direct Boot 待处理消息 */
     fun initialize() {
+        // 立即创建通知渠道，避免 Firebase 在应用启动时使用未创建的渠道
+        createNotificationChannelIfNeeded()
         subscribeToPushNotificationEvents()
         handleDirectBootPendingMessages()
     }
@@ -211,14 +213,28 @@ class PushNotificationManager private constructor(private val application: Appli
     /** 创建通知点击后的 Intent */
     private fun createNotificationIntent(data: Map<String, String>): Intent {
         val messageType = data[FCMConstants.DATA_KEY_TYPE]
+        val agentId = data[FCMConstants.DATA_KEY_AGENT_ID]
+
+        // 添加详细日志，便于调试跳转问题
+        LogUtils.d(
+            "PushNotificationManager",
+            "创建通知 Intent - 消息类型: $messageType, agent_id: $agentId, 所有数据: $data"
+        )
+        
         return when (messageType) {
             FCMConstants.TYPE_AGENT_MESSAGE -> {
                 // Agent 消息：跳转到聊天页面
-                val agentId = data[FCMConstants.DATA_KEY_AGENT_ID]
                 if (!agentId.isNullOrEmpty()) {
+                    LogUtils.d(
+                        "PushNotificationManager",
+                        "跳转到 ChatActivity - agent_id: $agentId"
+                    )
                     ChatActivity.notifyIntent(application, agentId)
                 } else {
-                    LogUtils.w("PushNotificationManager", "消息缺少 agent_id，跳转到主页面。消息类型: $messageType")
+                    LogUtils.w(
+                        "PushNotificationManager",
+                        "消息类型为 agent_message 但缺少 agent_id，跳转到主页面。消息类型: $messageType, 数据: $data"
+                    )
                     createMainActivityIntent()
                 }
             }
@@ -226,11 +242,18 @@ class PushNotificationManager private constructor(private val application: Appli
             FCMConstants.TYPE_SYSTEM,
             null -> {
                 // 系统通知或其他：跳转到主页面
+                LogUtils.d(
+                    "PushNotificationManager",
+                    "系统通知或消息类型为空，跳转到主页面。消息类型: $messageType"
+                )
                 createMainActivityIntent()
             }
 
             else -> {
-                LogUtils.d("PushNotificationManager", "未知消息类型: $messageType，跳转到主页面")
+                LogUtils.w(
+                    "PushNotificationManager",
+                    "未知消息类型: $messageType，跳转到主页面。期望类型: ${FCMConstants.TYPE_AGENT_MESSAGE} 或 ${FCMConstants.TYPE_SYSTEM}，所有数据: $data"
+                )
                 createMainActivityIntent()
             }
         }

@@ -44,6 +44,15 @@ class FCMService : FirebaseMessagingService() {
         LogUtils.d("FCMService", "收到 FCM 推送消息")
         LogUtils.d("FCMService", "消息 ID: ${remoteMessage.messageId}")
         LogUtils.d("FCMService", "消息来源: ${remoteMessage.from}")
+        LogUtils.d(
+            "FCMService",
+            "消息类型: ${if (remoteMessage.notification != null) "通知消息（应用在前台）" else "数据消息"}"
+        )
+        LogUtils.d("FCMService", "数据字段: ${remoteMessage.data}")
+        LogUtils.d(
+            "FCMService",
+            "通知字段: ${if (remoteMessage.notification != null) "title=${remoteMessage.notification?.title}, body=${remoteMessage.notification?.body}" else "null"}"
+        )
 
         // 检查是否处于 Direct Boot 模式
         val isDirectBootMode = DirectBootUtils.isDirectBootMode(this)
@@ -98,6 +107,13 @@ class FCMService : FirebaseMessagingService() {
         val data = remoteMessage.data
         val notification = remoteMessage.notification
         val messageType = data[FCMConstants.DATA_KEY_TYPE]
+        val agentId = data[FCMConstants.DATA_KEY_AGENT_ID]
+
+        // 添加详细日志，便于调试
+        LogUtils.d(
+            "FCMService",
+            "处理消息 - 消息类型: $messageType, agent_id: $agentId, 所有数据: $data"
+        )
 
         // 通过回调处理消息
         val handler = FirebaseManager.getMessageHandler()
@@ -115,7 +131,10 @@ class FCMService : FirebaseMessagingService() {
             val body = notif.body
 
             if (title != null && body != null) {
-                LogUtils.i("FCMService", "通知消息 - 标题: $title, 内容: $body")
+                LogUtils.i(
+                    "FCMService",
+                    "通知消息 - 标题: $title, 内容: $body, 消息类型: $messageType, agent_id: $agentId"
+                )
                 handler?.showNotification(title = title, body = body, data = data)
             } else {
                 LogUtils.w("FCMService", "通知消息缺少标题或内容")
