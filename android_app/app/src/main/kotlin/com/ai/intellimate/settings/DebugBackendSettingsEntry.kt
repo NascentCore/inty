@@ -66,7 +66,7 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
             ) {
                 viewModel.quickPresets.forEach { (label, url) ->
                     AssistChip(
-                        onClick = { viewModel.applyPreset(url) },
+                        onClick = { viewModel.applySelectedOverride(url) },
                         label = { Text(label) }
                     )
                 }

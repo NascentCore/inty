@@ -45,7 +45,7 @@ class DebugBackendSettingsViewModel : ViewModel() {
         )
     }
 
-    fun applyPreset(url: String) {
+    fun applySelectedOverride(url: String) {
         runCatching { DebugBackendEndpointStore.persistOverride(url) }
             .onFailure { LogUtils.e(TAG, "Failed to persist runtime backend override", it) }
             .getOrElse { return }
