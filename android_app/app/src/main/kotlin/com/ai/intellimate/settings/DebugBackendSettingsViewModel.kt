@@ -29,9 +29,9 @@ class DebugBackendSettingsViewModel : ViewModel() {
 
     val quickPresets =
         listOf(
+            PRESET_NAME_LOCAL to "http://${Constant.USER_HOST_LOCAL}/",
             PRESET_NAME_DEV to "https://${Constant.USER_HOST_DEV}/",
             PRESET_NAME_PROD to "https://${Constant.USER_HOST}/",
-            PRESET_NAME_LOCAL to "http://${Constant.USER_HOST_LOCAL}/",
         )
 
     private val _uiState = MutableStateFlow(createInitialState())
