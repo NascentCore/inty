@@ -7,7 +7,6 @@ import React, { useState, useCallback, useMemo } from "react";
 import {
   Card,
   List,
-  Avatar,
   Button,
   Space,
   Tag,
@@ -22,7 +21,6 @@ import {
   message,
 } from "antd";
 import {
-  UserOutlined,
   RobotOutlined,
   CheckCircleOutlined,
   GlobalOutlined,

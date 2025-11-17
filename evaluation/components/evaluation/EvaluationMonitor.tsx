@@ -38,6 +38,8 @@ import { JsonDisplayModal } from "../common/JsonDisplayModal";
 import api from "../../services/api";
 import type { EvaluationSession, EvaluationResult } from "../../types";
 
+type EvaluationStatus = EvaluationSession["status"];
+
 interface EvaluationMonitorProps {
   session: EvaluationSession | null;
   onSessionChange?: (session: EvaluationSession | null) => void;
@@ -285,15 +287,15 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
   // 状态颜色映射
   const getStatusColor = (status: EvaluationStatus) => {
     switch (status) {
-      case "PENDING":
+      case "pending":
         return "default";
-      case "RUNNING":
+      case "running":
         return "processing";
-      case "COMPLETED":
+      case "completed":
         return "success";
-      case "FAILED":
+      case "failed":
         return "error";
-      case "CANCELLED":
+      case "cancelled":
         return "warning";
       default:
         return "default";
@@ -303,15 +305,15 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
   // 状态图标映射
   const getStatusIcon = (status: EvaluationStatus) => {
     switch (status) {
-      case "PENDING":
+      case "pending":
         return <ClockCircleOutlined />;
-      case "RUNNING":
+      case "running":
         return <FireOutlined />;
-      case "COMPLETED":
+      case "completed":
         return <CheckCircleOutlined />;
-      case "FAILED":
+      case "failed":
         return <ExclamationCircleOutlined />;
-      case "CANCELLED":
+      case "cancelled":
         return <StopOutlined />;
       default:
         return <ClockCircleOutlined />;
@@ -341,11 +343,11 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
               color={getStatusColor(session.status)}
               icon={getStatusIcon(session.status)}
             >
-              {session.status === "PENDING" && "等待中"}
-              {session.status === "RUNNING" && "运行中"}
-              {session.status === "COMPLETED" && "已完成"}
-              {session.status === "FAILED" && "失败"}
-              {session.status === "CANCELLED" && "已取消"}
+              {session.status === "pending" && "等待中"}
+              {session.status === "running" && "运行中"}
+              {session.status === "completed" && "已完成"}
+              {session.status === "failed" && "失败"}
+              {session.status === "cancelled" && "已取消"}
             </Tag>
             {isWebSocketConnected && <Badge status="success" text="实时连接" />}
           </Space>
@@ -360,7 +362,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
               >
                 刷新
               </Button>
-              {session.status === "PENDING" && (
+              {session.status === "pending" && (
                 <Button
                   type="primary"
                   icon={<PlayCircleOutlined />}

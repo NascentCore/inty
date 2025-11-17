@@ -1513,3 +1513,177 @@ async def get_user_analytics_stats(
     except Exception as e:
         logger.error(f"获取统计数据失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取统计数据失败")
+
+
+@router.get(
+    "/user-analytics/user-daily-messages",
+    response_model=schemas.user_analytics.UserDailyMessagesResponse,
+    tags=[INTY_EVAL_TAG],
+)
+async def get_user_daily_messages(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    email: str = Query(..., description="用户邮箱"),
+    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
+) -> Any:
+    """获取用户每日消息统计"""
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        from app.services.user_analytics_service import UserAnalyticsService
+
+        service = UserAnalyticsService(db)
+
+        # 查找用户
+        user_info = await service.find_user_by_email(email)
+        if not user_info:
+            raise HTTPException(status_code=404, detail=f"未找到邮箱为 {email} 的用户")
+
+        # 解析日期范围
+        start_date_obj = None
+        end_date_obj = None
+        if start_date:
+            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+        if end_date:
+            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+            # 包含结束日期的全天
+            end_date_obj = end_date_obj.replace(
+                hour=23, minute=59, second=59
+            ) + timedelta(seconds=1)
+
+        # 获取每日消息统计
+        daily_messages = await service.get_user_daily_messages(
+            user_info["id"], start_date_obj, end_date_obj
+        )
+
+        return {
+            "user_id": user_info["id"],
+            "email": user_info["email"],
+            "nickname": user_info.get("nickname"),
+            "auth_type": user_info["auth_type"],
+            "created_at": user_info.get("created_at"),
+            "daily_messages": daily_messages,
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取用户每日消息统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="获取用户每日消息统计失败")
+
+
+@router.get(
+    "/user-analytics/user-today-stats",
+    response_model=schemas.user_analytics.UserTodayStatsResponse,
+    tags=[INTY_EVAL_TAG],
+)
+async def get_user_today_stats(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    email: str = Query(..., description="用户邮箱"),
+) -> Any:
+    """获取用户当日统计"""
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
+    try:
+        from app.services.user_analytics_service import UserAnalyticsService
+
+        service = UserAnalyticsService(db)
+
+        # 查找用户
+        user_info = await service.find_user_by_email(email)
+        if not user_info:
+            raise HTTPException(status_code=404, detail=f"未找到邮箱为 {email} 的用户")
+
+        # 获取当日统计
+        today_stats = await service.get_user_today_stats(user_info["id"])
+
+        return today_stats
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取用户当日统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="获取用户当日统计失败")
+
+
+@router.get(
+    "/user-analytics/user-sessions",
+    response_model=schemas.user_analytics.UserSessionsResponse,
+    tags=[INTY_EVAL_TAG],
+)
+async def get_user_sessions(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    email: str = Query(..., description="用户邮箱"),
+) -> Any:
+    """获取用户的所有会话列表"""
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
+    try:
+        from app.services.user_analytics_service import UserAnalyticsService
+
+        service = UserAnalyticsService(db)
+
+        # 查找用户
+        user_info = await service.find_user_by_email(email)
+        if not user_info:
+            raise HTTPException(status_code=404, detail=f"未找到邮箱为 {email} 的用户")
+
+        # 获取会话列表
+        sessions = await service.get_user_sessions(user_info["id"])
+
+        return {"sessions": sessions}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取用户会话列表失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="获取用户会话列表失败")
+
+
+@router.get(
+    "/user-analytics/session-messages",
+    response_model=schemas.user_analytics.SessionMessagesResponse,
+    tags=[INTY_EVAL_TAG],
+)
+async def get_session_messages(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    chat_id: str = Query(..., description="会话ID (chat_id)"),
+    page: int = Query(1, ge=1, description="页码"),
+    size: int = Query(50, ge=1, le=200, description="每页数量"),
+) -> Any:
+    """获取指定会话的对话历史"""
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
+    try:
+        from app.services.user_analytics_service import UserAnalyticsService
+
+        service = UserAnalyticsService(db)
+
+        # 获取会话消息
+        result = await service.get_session_messages(chat_id, page, size)
+
+        return result
+
+    except Exception as e:
+        logger.error(f"获取会话消息失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="获取会话消息失败")

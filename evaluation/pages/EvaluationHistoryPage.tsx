@@ -51,6 +51,9 @@ const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 interface EvaluationSessionWithStats extends EvaluationSession {
+  total_tests?: number;
+  completed_tests?: number;
+  average_score?: number;
   best_score?: number;
   worst_score?: number;
   agent_count?: number;
@@ -115,7 +118,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       const response = await api.sessions.list(params);
       const sessionsData = Array.isArray(response)
         ? response
-        : response.items || [];
+        : (response as { items?: EvaluationSession[] }).items || [];
 
       // 为每个会话加载统计信息
       const sessionsWithStats = await Promise.all(
@@ -126,17 +129,24 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
               .filter((r: EvaluationResult) => r.overall_score != null)
               .map((r: EvaluationResult) => r.overall_score!);
 
+            const totalTests = (session.selected_agents?.length || 0) * (session.questions?.length || session.config?.questions?.length || 0);
             return {
               ...session,
               best_score: scores.length > 0 ? Math.max(...scores) : undefined,
               worst_score: scores.length > 0 ? Math.min(...scores) : undefined,
               agent_count: session.selected_agents?.length || 0,
+              total_tests: totalTests,
+              completed_tests: results.length,
+              average_score: scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : undefined,
             } as EvaluationSessionWithStats;
           } catch (error) {
             console.error(`加载会话 ${session.id} 统计信息失败:`, error);
+            const totalTests = (session.selected_agents?.length || 0) * (session.questions?.length || session.config?.questions?.length || 0);
             return {
               ...session,
               agent_count: session.selected_agents?.length || 0,
+              total_tests: totalTests,
+              completed_tests: 0,
             } as EvaluationSessionWithStats;
           }
         }),
@@ -145,8 +155,10 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       setSessions(sessionsWithStats);
 
       // 更新分页信息
-      if (response.total !== undefined) {
-        setPagination((prev) => ({ ...prev, total: response.total }));
+      if (Array.isArray(response)) {
+        setPagination((prev) => ({ ...prev, total: response.length }));
+      } else if ((response as { total?: number }).total !== undefined) {
+        setPagination((prev) => ({ ...prev, total: (response as { total: number }).total }));
       }
     } catch (error) {
       console.error("加载评测会话失败:", error);
@@ -201,7 +213,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
   };
 
   // 继续评测
-  const handleContinueEvaluation = (sessionId: string) => {
+  const handleContinueEvaluation = () => {
     // TODO: 实现跳转到评测页面并加载指定会话
     if (onNavigateToEvaluation) {
       onNavigateToEvaluation();
@@ -320,31 +332,31 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
   // 获取状态标签
   const getStatusTag = (status: string) => {
     const statusConfig = {
-      PENDING: {
+      pending: {
         color: "default",
         icon: <ClockCircleOutlined />,
         text: "等待中",
       },
-      RUNNING: {
+      running: {
         color: "processing",
         icon: <ClockCircleOutlined />,
         text: "运行中",
       },
-      COMPLETED: {
+      completed: {
         color: "success",
         icon: <CheckCircleOutlined />,
         text: "已完成",
       },
-      FAILED: {
+      failed: {
         color: "error",
         icon: <ExclamationCircleOutlined />,
         text: "失败",
       },
-      CANCELLED: { color: "warning", icon: <StopOutlined />, text: "已取消" },
+      cancelled: { color: "warning", icon: <StopOutlined />, text: "已取消" },
     };
 
     const config =
-      statusConfig[status as keyof typeof statusConfig] || statusConfig.PENDING;
+      statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
 
     return (
       <Tag color={config.color} icon={config.icon}>
@@ -377,11 +389,11 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       width: 120,
       render: (status) => getStatusTag(status),
       filters: [
-        { text: "等待中", value: "PENDING" },
-        { text: "运行中", value: "RUNNING" },
-        { text: "已完成", value: "COMPLETED" },
-        { text: "失败", value: "FAILED" },
-        { text: "已取消", value: "CANCELLED" },
+        { text: "等待中", value: "pending" },
+        { text: "运行中", value: "running" },
+        { text: "已完成", value: "completed" },
+        { text: "失败", value: "failed" },
+        { text: "已取消", value: "cancelled" },
       ],
     },
     {
@@ -389,8 +401,8 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       key: "progress",
       width: 150,
       render: (text, record) => {
-        const total = record.total_tests || 0;
-        const completed = record.completed_tests || 0;
+        const total = (record.total_tests ?? (record.agent_count || 0) * (record.questions?.length || record.config?.questions?.length || 0)) || 0;
+        const completed = (record.completed_tests ?? record.results?.length) || 0;
         const percentage =
           total > 0 ? Math.round((completed / total) * 100) : 0;
 
@@ -399,7 +411,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
             <Progress
               percent={percentage}
               size="small"
-              status={record.status === "FAILED" ? "exception" : "normal"}
+              status={record.status === "failed" ? "exception" : "normal"}
               showInfo={false}
             />
             <Text style={{ fontSize: "12px" }}>
@@ -494,17 +506,17 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
             />
           </Tooltip>
 
-          {record.status === "PENDING" && (
+          {record.status === "pending" && (
             <Tooltip title="继续评测">
               <Button
                 type="text"
                 icon={<ReloadOutlined />}
-                onClick={() => handleContinueEvaluation(record.id)}
+                onClick={() => handleContinueEvaluation()}
               />
             </Tooltip>
           )}
 
-          {record.status === "COMPLETED" && (
+          {record.status === "completed" && (
             <Tooltip title="导出结果">
               <Button
                 type="text"
@@ -531,7 +543,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       <Content style={{ padding: "24px", background: "#f0f2f5" }}>
         {/* 页面标题已移除，使用顶部导航栏 */}
         <div style={{ marginBottom: 24 }}>
-          <Row justify="flex-end" align="middle">
+          <Row justify="end" align="middle">
             <Col>
               <Button
                 type="primary"
@@ -560,7 +572,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
             <Card>
               <Statistic
                 title="已完成"
-                value={sessions.filter((s) => s.status === "COMPLETED").length}
+                value={sessions.filter((s) => s.status === "completed").length}
                 prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
                 valueStyle={{ color: "#52c41a" }}
               />
@@ -570,7 +582,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
             <Card>
               <Statistic
                 title="运行中"
-                value={sessions.filter((s) => s.status === "RUNNING").length}
+                value={sessions.filter((s) => s.status === "running").length}
                 prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />}
                 valueStyle={{ color: "#faad14" }}
               />
@@ -580,7 +592,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
             <Card>
               <Statistic
                 title="失败数"
-                value={sessions.filter((s) => s.status === "FAILED").length}
+                value={sessions.filter((s) => s.status === "failed").length}
                 prefix={
                   <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
                 }
@@ -611,11 +623,11 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
                 value={statusFilter || undefined}
                 onChange={(value) => setStatusFilter(value || "")}
               >
-                <Option value="PENDING">等待中</Option>
-                <Option value="RUNNING">运行中</Option>
-                <Option value="COMPLETED">已完成</Option>
-                <Option value="FAILED">失败</Option>
-                <Option value="CANCELLED">已取消</Option>
+                <Option value="pending">等待中</Option>
+                <Option value="running">运行中</Option>
+                <Option value="completed">已完成</Option>
+                <Option value="failed">失败</Option>
+                <Option value="cancelled">已取消</Option>
               </Select>
             </Col>
             <Col span={8}>
@@ -688,9 +700,9 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
             loading={loading}
             rowSelection={{
               selectedRowKeys,
-              onChange: setSelectedRowKeys,
+              onChange: (keys) => setSelectedRowKeys(keys as string[]),
               getCheckboxProps: (record) => ({
-                disabled: record.status === "RUNNING", // 正在运行的会话不允许删除
+                disabled: record.status === "running", // 正在运行的会话不允许删除
               }),
             }}
             pagination={{
@@ -733,7 +745,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
                     <Text type="secondary">状态: </Text>
                     <Tag
                       color={
-                        selectedSession.status === "COMPLETED"
+                        selectedSession.status === "completed"
                           ? "green"
                           : "orange"
                       }
@@ -766,10 +778,6 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
                 results={sessionResults}
                 loading={resultsLoading}
                 showControls={true}
-                onViewDetail={(result) => {
-                  // 在这里可以进一步处理单个结果的详情查看
-                  message.info("详细评分查看功能开发中");
-                }}
               />
             </div>
           )}

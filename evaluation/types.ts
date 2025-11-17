@@ -10,6 +10,7 @@ import type {
 export interface Agent extends BaseAgent {
   meta_data?: AgentMetaData;
   background_animated?: string; // 视频URL
+  description?: string; // 描述字段
 }
 
 export type { AgentVisibility };
@@ -118,6 +119,9 @@ export interface EvaluationSession {
   config: EvaluationConfig;
   progress?: EvaluationProgress;
   results?: EvaluationResult[];
+  // 扩展字段
+  selected_agents?: string[];
+  questions?: string[];
 }
 
 // 评测配置
@@ -128,6 +132,7 @@ export interface EvaluationConfig {
   scoring_criteria: string;
   parallel_limit: number;
   timeout: number;
+  use_new_user_identity?: boolean;
 }
 
 // 评测进度
@@ -138,6 +143,18 @@ export interface EvaluationProgress {
   current_agent?: string;
   current_question?: string;
   estimated_remaining?: number;
+}
+
+// WebSocket 消息
+export interface WebSocketMessage {
+  type: string;
+  data?: unknown;
+}
+
+// Hook 选项
+export interface UseEvaluationSessionOptions {
+  autoRefresh?: boolean;
+  refreshInterval?: number;
 }
 
 // 评测结果
@@ -152,6 +169,16 @@ export interface EvaluationResult {
   feedback: string;
   duration: number;
   created_at: string;
+  // 扩展字段
+  overall_score?: number;
+  is_success?: boolean;
+  question_index?: number;
+  detailed_scores?: Record<string, unknown>;
+  scoring_reason?: string;
+  scoring_model_used?: string;
+  response_time?: number;
+  agent_response?: string;
+  error_message?: string;
 }
 
 // 评测会话创建请求
@@ -159,6 +186,11 @@ export interface EvaluationSessionCreateRequest {
   name: string;
   description?: string;
   config: EvaluationConfig;
+  questions?: string[];
+  selected_agents?: string[];
+  scoring_model?: string;
+  scoring_criteria?: string;
+  use_new_user_identity?: boolean;
 }
 
 // 评测模板
@@ -283,6 +315,7 @@ export interface Voice {
   name: string;
   category?: string;
   description?: string;
+  voice_type?: string;
   settings?: {
     stability?: number;
     similarity_boost?: number;
@@ -457,4 +490,53 @@ export interface UserAnalyticsStatsResponse {
   total_image_generation_success: number;
   total_image_generation_failures: number;
   image_generation_success_rate: number;
+}
+
+export interface UserDailyMessageItem {
+  date: string;
+  message_count: number;
+  session_count: number;
+}
+
+export interface UserDailyMessagesResponse {
+  user_id: string;
+  email: string | null;
+  nickname: string | null;
+  auth_type: string;
+  created_at: string | null;
+  daily_messages: UserDailyMessageItem[];
+}
+
+export interface UserTodayStatsResponse {
+  today_message_count: number;
+  today_session_count: number;
+}
+
+export interface UserSessionItem {
+  chat_id: string;
+  agent_name: string;
+  created_at: string | null;
+  updated_at: string | null;
+  message_count: number;
+}
+
+export interface UserSessionsResponse {
+  sessions: UserSessionItem[];
+}
+
+export interface SessionMessageItem {
+  id: number;
+  message_type: string;
+  content: string | null;
+  created_at: string | null;
+  audio_url: string | null;
+  meta_data: Record<string, any> | null;
+}
+
+export interface SessionMessagesResponse {
+  messages: SessionMessageItem[];
+  total: number;
+  page: number;
+  size: number;
+  has_more: boolean;
 }

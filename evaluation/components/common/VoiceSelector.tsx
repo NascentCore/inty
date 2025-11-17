@@ -26,7 +26,6 @@ import {
   SoundOutlined,
   PlayCircleOutlined,
   ClearOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import api from "../../services/api";
 import type { Voice } from "../../types";
@@ -46,7 +45,6 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   value,
   onChange,
   disabled = false,
-  placeholder = "请选择音色",
 }) => {
   // 状态管理
   const [voices, setVoices] = useState<Voice[]>([]);
@@ -155,7 +153,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   // 搜索防抖处理
   const debouncedLoadVoices = useMemo(() => {
     const debounce = (func: Function, delay: number) => {
-      let timeoutId: NodeJS.Timeout;
+      let timeoutId: ReturnType<typeof setTimeout>;
       return (...args: any[]) => {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => func(...args), delay);

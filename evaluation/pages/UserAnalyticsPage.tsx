@@ -20,30 +20,26 @@ import {
   message,
   Spin,
   Empty,
-  Divider,
 } from "antd";
 import {
   ReloadOutlined,
   SearchOutlined,
   UserOutlined,
   MessageOutlined,
-  BarChartOutlined,
   PictureOutlined,
 } from "@ant-design/icons";
 import Plot from "react-plotly.js";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { Dayjs } from "dayjs";
-import api, { userAnalyticsApi } from "../services/api";
+import { userAnalyticsApi } from "../services/api";
 import type {
   DailyNewUsers,
-  UserChatActivityItem,
   ConversationRoundsResponse,
   UserRoundsDistributionItem,
   PopularAgentsResponse,
   UsersHittingLimitResponse,
   UserSessionsDetailResponse,
   ConversationsDetailResponse,
-  ChatMessageResponse,
   UserAnalyticsStatsResponse,
 } from "../types";
 
@@ -69,7 +65,6 @@ export const UserAnalyticsPage: React.FC = () => {
 
   // 数据状态
   const [newUsers, setNewUsers] = useState<DailyNewUsers[]>([]);
-  const [userActivity, setUserActivity] = useState<UserChatActivityItem[]>([]);
   const [conversationRounds, setConversationRounds] = useState<
     ConversationRoundsResponse[]
   >([]);
@@ -127,7 +122,6 @@ export const UserAnalyticsPage: React.FC = () => {
       const [
         statsData,
         newUsersData,
-        userActivityData,
         conversationRoundsData,
         userRoundsDistributionData,
         popularAgentsData,
@@ -136,7 +130,6 @@ export const UserAnalyticsPage: React.FC = () => {
       ] = await Promise.all([
         userAnalyticsApi.getStats(params),
         userAnalyticsApi.getNewUsers(params),
-        userAnalyticsApi.getUserActivity(params),
         userAnalyticsApi.getConversationRounds(params),
         userAnalyticsApi.getUserRoundsDistribution(params),
         userAnalyticsApi.getPopularAgents(params),
@@ -146,7 +139,6 @@ export const UserAnalyticsPage: React.FC = () => {
 
       setStats(statsData);
       setNewUsers(newUsersData);
-      setUserActivity(userActivityData);
       setConversationRounds(conversationRoundsData);
       setUserRoundsDistribution(userRoundsDistributionData);
       setPopularAgents(popularAgentsData);
@@ -181,7 +173,7 @@ export const UserAnalyticsPage: React.FC = () => {
   // 初始化加载
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   // 统计数据从后端API获取，不再在前端计算
 

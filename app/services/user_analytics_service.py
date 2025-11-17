@@ -926,3 +926,293 @@ class UserAnalyticsService:
             )
 
         return data
+
+    async def find_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """通过邮箱查找用户"""
+        query = text(
+            """
+            SELECT id, email, nickname, auth_type, created_at
+            FROM users
+            WHERE email = :email AND deleted_at IS NULL
+            LIMIT 1
+        """
+        )
+        result = await self.db.execute(query, {"email": email})
+        row = result.fetchone()
+        if row:
+            return {
+                "id": row[0],
+                "email": row[1],
+                "nickname": row[2],
+                "auth_type": row[3],
+                "created_at": row[4].isoformat() if row[4] else None,
+            }
+        return None
+
+    async def get_user_chat_ids(self, user_id: str) -> List[str]:
+        """获取用户的所有 chat_id"""
+        query = text(
+            """
+            SELECT id
+            FROM chats
+            WHERE user_id = :user_id AND is_active = true
+        """
+        )
+        result = await self.db.execute(query, {"user_id": user_id})
+        return [row[0] for row in result.fetchall()]
+
+    async def get_user_daily_messages(
+        self,
+        user_id: str,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> List[Dict[str, Any]]:
+        """统计用户每日消息数"""
+        chat_ids = await self.get_user_chat_ids(user_id)
+        if not chat_ids:
+            return []
+
+        session_ids = [generate_session_id(chat_id) for chat_id in chat_ids]
+
+        placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
+        query = f"""
+            SELECT 
+                DATE(ch.created_at AT TIME ZONE 'UTC') as date,
+                COUNT(*) as message_count,
+                COUNT(DISTINCT ch.session_id) as session_count
+            FROM chat_history ch
+            WHERE ch.session_id::text IN ({placeholders})
+              AND ch.message->>'type' = 'human'
+              AND (ch.meta_data->>'isOpening' IS NULL OR ch.meta_data->>'isOpening' != 'true')
+        """
+
+        params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
+
+        if start_date:
+            query += " AND ch.created_at >= :start_date"
+            params["start_date"] = start_date
+        if end_date:
+            query += " AND ch.created_at < :end_date"
+            params["end_date"] = end_date
+
+        query += """
+            GROUP BY DATE(ch.created_at AT TIME ZONE 'UTC')
+            ORDER BY date
+        """
+
+        result = await self.db.execute(text(query), params)
+        rows = result.fetchall()
+        return [
+            {
+                "date": (
+                    row[0].isoformat() if isinstance(row[0], datetime) else str(row[0])
+                ),
+                "message_count": row[1],
+                "session_count": row[2],
+            }
+            for row in rows
+        ]
+
+    async def get_user_today_stats(self, user_id: str) -> Dict[str, Any]:
+        """获取用户当日统计"""
+        from datetime import timedelta
+
+        today = datetime.now(timezone.utc).date()
+        today_start = datetime.combine(today, datetime.min.time()).replace(
+            tzinfo=timezone.utc
+        )
+        today_end = today_start + timedelta(days=1)
+
+        chat_ids = await self.get_user_chat_ids(user_id)
+        if not chat_ids:
+            return {
+                "today_message_count": 0,
+                "today_session_count": 0,
+            }
+
+        session_ids = [generate_session_id(chat_id) for chat_id in chat_ids]
+
+        placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
+        query = text(
+            f"""
+            SELECT 
+                COUNT(DISTINCT ch.session_id) as session_count,
+                COUNT(*) FILTER (
+                    WHERE ch.message->>'type' = 'human'
+                    AND (ch.meta_data->>'isOpening' IS NULL OR ch.meta_data->>'isOpening' != 'true')
+                ) as message_count
+            FROM chat_history ch
+            WHERE ch.session_id::text IN ({placeholders})
+              AND ch.created_at >= :today_start
+              AND ch.created_at < :today_end
+        """
+        )
+        params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
+        params["today_start"] = today_start
+        params["today_end"] = today_end
+
+        result = await self.db.execute(query, params)
+        row = result.fetchone()
+
+        return {
+            "today_message_count": row[1] if row else 0,
+            "today_session_count": row[0] if row else 0,
+        }
+
+    async def get_user_sessions(self, user_id: str) -> List[Dict[str, Any]]:
+        """获取用户的所有会话列表"""
+        query = text(
+            """
+            SELECT 
+                c.id as chat_id,
+                a.name as agent_name,
+                c.created_at,
+                c.updated_at
+            FROM chats c
+            INNER JOIN agents a ON c.agent_id = a.id AND a.deleted_at IS NULL
+            WHERE c.user_id = :user_id AND c.is_active = true
+            ORDER BY c.created_at DESC
+        """
+        )
+        result = await self.db.execute(query, {"user_id": user_id})
+        chat_records = result.fetchall()
+
+        if not chat_records:
+            return []
+
+        chat_ids = [row[0] for row in chat_records]
+        chat_to_session = {
+            chat_id: generate_session_id(chat_id) for chat_id in chat_ids
+        }
+        session_ids = list(chat_to_session.values())
+
+        placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
+        messages_query = text(
+            f"""
+            SELECT
+                ch.session_id::text as session_id,
+                COUNT(*) FILTER (
+                    WHERE ch.message->>'type' = 'human'
+                    AND (
+                        ch.meta_data IS NULL
+                        OR ch.meta_data->>'isOpening' IS NULL
+                        OR ch.meta_data->>'isOpening' != 'true'
+                    )
+                ) as message_count,
+                MAX(ch.created_at) FILTER (
+                    WHERE ch.message->>'type' = 'human'
+                    AND (
+                        ch.meta_data IS NULL
+                        OR ch.meta_data->>'isOpening' IS NULL
+                        OR ch.meta_data->>'isOpening' != 'true'
+                    )
+                ) as last_user_message_time,
+                MAX(ch.created_at) as last_message_time
+            FROM chat_history ch
+            WHERE ch.session_id::text IN ({placeholders})
+            GROUP BY ch.session_id
+        """
+        )
+        params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
+        result = await self.db.execute(messages_query, params)
+
+        session_to_msg_count = {}
+        session_to_last_user_message_time = {}
+        session_to_last_message_time = {}
+        for row in result.fetchall():
+            session_id_str = row[0]
+            session_to_msg_count[session_id_str] = row[1]
+            if row[2]:  # last_user_message_time
+                session_to_last_user_message_time[session_id_str] = row[2]
+            if row[3]:  # last_message_time (any message, including AI)
+                session_to_last_message_time[session_id_str] = row[3]
+
+        data = []
+        for row in chat_records:
+            chat_id = row[0]
+            session_id = chat_to_session[chat_id]
+            message_count = session_to_msg_count.get(session_id, 0)
+            # 优先使用最后一条用户消息时间，如果没有则使用最后一条消息时间（包括AI消息）
+            last_user_message_time = session_to_last_user_message_time.get(session_id)
+            last_message_time = session_to_last_message_time.get(session_id)
+            updated_at = last_user_message_time or last_message_time
+
+            data.append(
+                {
+                    "chat_id": chat_id,
+                    "agent_name": row[1],
+                    "created_at": row[2].isoformat() if row[2] else None,
+                    "updated_at": (
+                        updated_at.isoformat() if updated_at else None
+                    ),
+                    "message_count": message_count,
+                }
+            )
+
+        return data
+
+    async def get_session_messages(
+        self, chat_id: str, page: int = 1, size: int = 50
+    ) -> Dict[str, Any]:
+        """获取指定会话的对话历史"""
+        session_id = generate_session_id(chat_id)
+
+        # 先获取总数
+        count_query = text(
+            """
+            SELECT COUNT(*)
+            FROM chat_history
+            WHERE session_id::text = :session_id
+        """
+        )
+        count_result = await self.db.execute(count_query, {"session_id": session_id})
+        total = count_result.scalar() or 0
+
+        # 获取分页数据
+        offset = (page - 1) * size
+        query = text(
+            """
+            SELECT
+                id,
+                message->>'type' as message_type,
+                COALESCE(
+                    message->'data'->>'content',
+                    message->>'content'
+                ) as content,
+                created_at,
+                audio_url,
+                meta_data
+            FROM chat_history
+            WHERE session_id::text = :session_id
+            ORDER BY created_at ASC
+            LIMIT :limit OFFSET :offset
+        """
+        )
+        result = await self.db.execute(
+            query,
+            {"session_id": session_id, "limit": size, "offset": offset},
+        )
+        rows = result.fetchall()
+
+        messages = []
+        for row in rows:
+            message_type = row[1] or "human"
+            content = row[2] or ""
+            messages.append(
+                {
+                    "id": row[0],
+                    "message_type": message_type,
+                    "content": content,
+                    "created_at": row[3].isoformat() if row[3] else None,
+                    "audio_url": row[4],
+                    "meta_data": row[5],
+                }
+            )
+
+        return {
+            "messages": messages,
+            "total": total,
+            "page": page,
+            "size": size,
+            "has_more": offset + len(messages) < total,
+        }
