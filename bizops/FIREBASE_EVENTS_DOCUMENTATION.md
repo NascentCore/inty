@@ -25,11 +25,6 @@
 | `SEARCH` | FirebaseManager.Events | 预留 | 搜索功能 | 🔴 100% |
 | `PURCHASE` | FirebaseManager.Events | 预留 | 购买事件 | 🔴 100% |
 
-### 1.2 应用生命周期事件
-
-| 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
-|---------|---------|------|---------|--------|
-| `APP_OPEN` | IntelliMateApp.kt | 无 | 应用启动（Firebase内置事件） | 🔴 100% |
 
 ### 1.3 用户认证事件
 
@@ -46,17 +41,17 @@
 | `chat_started` | ChatViewModel.kt | `agent_id`, `agent_name`, `user_type`, `timestamp` | 聊天会话开始 | 🔴 100% |
 | `message_sent` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_length`, `user_type`, `timestamp` | 消息发送（用户点击发送时触发） | 🔴 100% |
 | `message_send_success` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_type`（normal/keep_talking）, `response_code`, `user_type`, `ai_response_time`, `end_to_end_time` | 消息发送成功（包含API响应时间和端到端时间，通过 `message_type` 区分普通消息和 Keep Talking） | 🔴 100% |
-| `message_send_error` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_type`（normal/keep_talking）, `error_message`（包含错误类型信息，格式：`failure: ...` 或 `exception: ClassName, ...`）, `user_type`, `ai_response_time`（failure时）, `end_to_end_time` | 消息发送错误（合并 failure 和 exception，错误类型信息在 `error_message` 中，通过 `message_type` 区分普通消息和 Keep Talking） | 🔴 100% |
+| `message_send_failure` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_type`（normal/keep_talking）, `error_message`（包含错误类型信息，格式：`failure: ...` 或 `exception: ClassName, ...`）, `user_type`, `ai_response_time`（failure时）, `end_to_end_time` | 消息发送错误（合并 failure 和 exception，错误类型信息在 `error_message` 中，通过 `message_type` 区分普通消息和 Keep Talking） | 🔴 100% |
 | `free_limit_reached` | ChatViewModel.kt | `agent_id`, `agent_name`, `user_type`, `timestamp` | 达到免费限制 | 🔴 100% |
 
 ### 1.5 图片生成事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
-| `image_generation_start` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `user_type`, `timestamp` | 图片生成开始（请求发起时触发） | 🔴 100% |
-| `image_generation_success` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `image_url`, `image_width`, `image_height`, `user_type`, `generation_time_ms`, `timestamp` | 图片生成成功（包含图片信息和生成耗时） | 🔴 100% |
-| `image_generation_failure` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `error_code`, `error_message`（包含异常类型信息，格式：`exception: ClassName, ...`）, `user_type`, `generation_time_ms`, `timestamp` | 图片生成失败（包含错误信息和生成耗时，包括网络错误和异常，异常类型信息在 `error_message` 中） | 🔴 100% |
-| `image_generation_limit_reached` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `error_code`, `error_message`, `user_type`, `generation_time_ms`, `timestamp` | 图片生成限制达到（免费用户需要订阅或VIP用户达到每日限制） | 🔴 100% |
+| `message_to_image_generation_button_clicked` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `user_type`, `timestamp` | 图片生成开始（按钮点击，请求发起时触发） | 🔴 100% |
+| `message_to_image_generation_success` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `image_url`, `image_width`, `image_height`, `user_type`, `generation_time_ms`, `timestamp` | 图片生成成功（包含图片信息和生成耗时） | 🔴 100% |
+| `message_to_image_generation_failure` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `error_code`, `error_message`（包含异常类型信息，格式：`exception: ClassName, ...`）, `user_type`, `generation_time_ms`, `timestamp` | 图片生成失败（包含错误信息和生成耗时，包括网络错误和异常，异常类型信息在 `error_message` 中，除生成数量上限超标以外的错误） | 🔴 100% |
+| `image_generation_limit_reached` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `error_code`, `error_message`, `user_type`, `generation_time_ms`, `timestamp` | 图片生成限制达到（免费用户需要订阅或VIP用户达到每日限制，这个限制与其他生图操作累加） | 🔴 100% |
 
 ### 1.6 页面追踪事件
 
@@ -88,6 +83,7 @@
 | `chat_page_click` | ChatViewModel.kt, AudioManager.kt | `click_type`（`voice_play`、`keep_talking`、`message_like`、`message_dislike`）, `agent_id`, `agent_name`, `message_id`（可选）, `message_length`（可选）, `has_generated_image`（可选）, `is_opening`（可选）, `user_type`（可选）, `message_timestamp`（可选）, `has_audio_url`（可选）, `is_auto_play`（可选）, `timestamp` | 聊天页面点击 | 🔴 100% |
 | `chat_sidebar_click` | ChatSettingsDrawer.kt | `click_type`（`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`report`）, `agent_id`（可选）, `enabled`（可选，开关操作时）, `timestamp` | 聊天侧边栏点击 | 🔴 100% |
 | `chat_more_click` | ChatMorePanel.kt | `click_type`（`reply_style`、`report`）, `agent_id`, `timestamp` | 聊天更多面板点击 | 🔴 100% |
+| `push_notification_click` | ChatActivity.kt | 推送通知点击 | 🔴 100% |
 
 ### 1.9 订阅与计费事件
 
