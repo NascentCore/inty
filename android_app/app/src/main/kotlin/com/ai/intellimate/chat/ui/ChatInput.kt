@@ -5,7 +5,6 @@ import ai.sxwl.android.design.theme.AppColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -107,13 +106,14 @@ fun ChatInput(
 
             // 视觉上保持与底部 8.dp 的坚决，这样初始，只有一行输入时，其位置位于
             // 输入框垂直方向中央位置。增加输入行数，则位置不变。
-//            val verticalPadding = 16.dp
+            //            val verticalPadding = 16.dp
             val verticalPadding = 13.dp
             val rightPadding = 8.dp
             // 发送/更多按钮区域
             MultiUseAccessButton(
                 modifier =
-                    Modifier.align(Alignment.BottomEnd).padding(
+                    Modifier.align(Alignment.BottomEnd)
+                        .padding(
                             end = rightPadding,
                             top = verticalPadding,
                             bottom = verticalPadding,
