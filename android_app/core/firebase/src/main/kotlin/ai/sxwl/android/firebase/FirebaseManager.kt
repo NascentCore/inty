@@ -14,14 +14,14 @@ import com.google.firebase.perf.FirebasePerformance
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.remoteConfig
 import com.google.firebase.remoteconfig.remoteConfigSettings
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics、Performance和Remote Config的初始化和使用
@@ -385,29 +385,27 @@ object FirebaseManager {
         }
     }
 
-    /** 安全地设置用户ID 使用SupervisorJob确保异常隔离
+    /**
+     * 安全地设置用户ID 使用SupervisorJob确保异常隔离
      *
      * 重要说明：`analytics.setUserId(userId)` 和用户属性的区别
-     *
      * 1. `setUserId()` 的作用：
-     *    - 设置 Firebase Analytics 的用户标识符
-     *    - 可以在 User Explorer（用户探索器）中搜索特定用户
-     *    - 在 BigQuery 导出数据中可以通过 user_id 字段查询
-     *    - 用于跨设备/跨会话的用户识别
-     *
+     *     - 设置 Firebase Analytics 的用户标识符
+     *     - 可以在 User Explorer（用户探索器）中搜索特定用户
+     *     - 在 BigQuery 导出数据中可以通过 user_id 字段查询
+     *     - 用于跨设备/跨会话的用户识别
      * 2. `setUserId()` 的限制：
-     *    - ❌ 不能在 Firebase Console 的事件报告中作为筛选维度使用
-     *    - ❌ 不能在用户属性报告中查看
-     *    - ❌ 不能在事件报告中按 userId 筛选数据
-     *    - ❌ 不能用于创建受众群体（Audience）
-     *
+     *     - ❌ 不能在 Firebase Console 的事件报告中作为筛选维度使用
+     *     - ❌ 不能在用户属性报告中查看
+     *     - ❌ 不能在事件报告中按 userId 筛选数据
+     *     - ❌ 不能用于创建受众群体（Audience）
      * 3. 为什么需要用户属性：
-     *    - 用户属性可以作为维度在 Firebase Console 中使用
-     *    - 可以在事件报告中按用户属性筛选
-     *    - 可以创建基于用户属性的受众群体
+     *     - 用户属性可以作为维度在 Firebase Console 中使用
+     *     - 可以在事件报告中按用户属性筛选
+     *     - 可以创建基于用户属性的受众群体
      *
-     * 因此，如果需要在 Firebase 后台按 userId 维度查看数据，必须将 userId 作为用户属性设置。
-     * 推荐使用 setUserInfo() 方法，它会同时设置 setUserId() 和用户属性。
+     * 因此，如果需要在 Firebase 后台按 userId 维度查看数据，必须将 userId 作为用户属性设置。 推荐使用 setUserInfo() 方法，它会同时设置
+     * setUserId() 和用户属性。
      *
      * 此方法为内部方法，外部应使用 setUserInfo() 来设置用户信息。
      */
@@ -714,7 +712,8 @@ object FirebaseManager {
         }
     }
 
-    /** 设置用户信息（登录后调用）
+    /**
+     * 设置用户信息（登录后调用）
      *
      * 此方法会同时设置：
      * 1. setUserId() - 用于 User Explorer 和 BigQuery 查询

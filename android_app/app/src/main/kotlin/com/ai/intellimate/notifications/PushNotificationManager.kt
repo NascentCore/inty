@@ -218,22 +218,19 @@ class PushNotificationManager private constructor(private val application: Appli
         // 添加详细日志，便于调试跳转问题
         LogUtils.d(
             "PushNotificationManager",
-            "创建通知 Intent - 消息类型: $messageType, agent_id: $agentId, 所有数据: $data"
+            "创建通知 Intent - 消息类型: $messageType, agent_id: $agentId, 所有数据: $data",
         )
-        
+
         return when (messageType) {
             FCMConstants.TYPE_AGENT_MESSAGE -> {
                 // Agent 消息：跳转到聊天页面
                 if (!agentId.isNullOrEmpty()) {
-                    LogUtils.d(
-                        "PushNotificationManager",
-                        "跳转到 ChatActivity - agent_id: $agentId"
-                    )
+                    LogUtils.d("PushNotificationManager", "跳转到 ChatActivity - agent_id: $agentId")
                     ChatActivity.notifyIntent(application, agentId)
                 } else {
                     LogUtils.w(
                         "PushNotificationManager",
-                        "消息类型为 agent_message 但缺少 agent_id，跳转到主页面。消息类型: $messageType, 数据: $data"
+                        "消息类型为 agent_message 但缺少 agent_id，跳转到主页面。消息类型: $messageType, 数据: $data",
                     )
                     createMainActivityIntent()
                 }
@@ -242,17 +239,14 @@ class PushNotificationManager private constructor(private val application: Appli
             FCMConstants.TYPE_SYSTEM,
             null -> {
                 // 系统通知或其他：跳转到主页面
-                LogUtils.d(
-                    "PushNotificationManager",
-                    "系统通知或消息类型为空，跳转到主页面。消息类型: $messageType"
-                )
+                LogUtils.d("PushNotificationManager", "系统通知或消息类型为空，跳转到主页面。消息类型: $messageType")
                 createMainActivityIntent()
             }
 
             else -> {
                 LogUtils.w(
                     "PushNotificationManager",
-                    "未知消息类型: $messageType，跳转到主页面。期望类型: ${FCMConstants.TYPE_AGENT_MESSAGE} 或 ${FCMConstants.TYPE_SYSTEM}，所有数据: $data"
+                    "未知消息类型: $messageType，跳转到主页面。期望类型: ${FCMConstants.TYPE_AGENT_MESSAGE} 或 ${FCMConstants.TYPE_SYSTEM}，所有数据: $data",
                 )
                 createMainActivityIntent()
             }

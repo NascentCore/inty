@@ -524,10 +524,7 @@ export const AgentManagePage: React.FC = () => {
       // 处理头像文件
       if (avatarFile) {
         // 上传头像文件获取 URL
-        const uploadResult = await api.agents.uploadAvatar(
-          avatarFile,
-          true,
-        );
+        const uploadResult = await api.agents.uploadAvatar(avatarFile, true);
         if (uploadResult && uploadResult.url) {
           agentData.avatar = uploadResult.url;
         }
@@ -546,7 +543,9 @@ export const AgentManagePage: React.FC = () => {
       }
 
       // 使用 useAgents hook 的 createAgent 进行优化创建
-      const newAgent = await createAgentFromHook(agentData as AgentCreateRequest & { avatar?: File });
+      const newAgent = await createAgentFromHook(
+        agentData as AgentCreateRequest & { avatar?: File },
+      );
 
       if (newAgent) {
         // 成功创建，关闭弹窗并重置状态

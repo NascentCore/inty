@@ -107,7 +107,9 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
       }
 
       // 按问题索引排序
-      group.results.sort((a, b) => (a.question_index ?? 0) - (b.question_index ?? 0));
+      group.results.sort(
+        (a, b) => (a.question_index ?? 0) - (b.question_index ?? 0),
+      );
     });
 
     return Object.values(groups).sort((a, b) =>
@@ -211,7 +213,8 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
                       <Text>{dimension}</Text>
                       <div style={{ display: "flex", alignItems: "center" }}>
                         {(() => {
-                          const scoreValue = typeof score === "number" ? score : 0;
+                          const scoreValue =
+                            typeof score === "number" ? score : 0;
                           return (
                             <>
                               <Rate
