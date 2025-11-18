@@ -49,6 +49,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -86,9 +87,9 @@ import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.vip.VipCenterActivity
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.min
-import kotlinx.coroutines.launch
 
 /** "我的"页面 */
 @Composable
@@ -208,10 +209,14 @@ internal fun ProfilePage(
             contentDescription = null,
         )
         Scaffold(
-            modifier = Modifier.fillMaxSize().background(Color.Transparent),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent),
             containerColor = Color.Transparent,
         ) { innerPadding ->
-            Column(modifier = Modifier.fillMaxWidth().nestedScroll(nestedScrollConnection)) {
+            Column(modifier = Modifier
+                .fillMaxWidth()
+                .nestedScroll(nestedScrollConnection)) {
                 // Header 区域 - 可折叠
                 ProfileHeader(
                     modifier = Modifier,
@@ -237,7 +242,8 @@ internal fun ProfilePage(
 
                     Text(
                         modifier =
-                            Modifier.padding(horizontal = 16.dp)
+                            Modifier
+                                .padding(horizontal = 16.dp)
                                 .align(Alignment.CenterHorizontally),
                         text = stringResource(R.string.no_agent),
                         color = Color.White.copy(0.55f),
@@ -327,17 +333,13 @@ private fun ProfileHeader(
     context: Context,
     vipStatus: VipStatus? = null, // 可选的 VIP 状态，用于预览
 ) {
-    // 如果提供了 vipStatus 参数，使用它；否则从 BillingRepository 获取
-    val currentVipStatus =
-        vipStatus
-            ?: remember {
-                try {
-                    BillingRepository.vipStatusFlow.value
-                } catch (e: Exception) {
-                    // 预览模式下如果 BillingRepository 无法初始化，使用默认值
-                    VipStatus(isSubscribed = false)
-                }
-            }
+    // 如果提供了 vipStatus 参数，使用它；否则从 BillingRepository 获取并响应Flow变化
+    // 使用 collectAsState() 来响应 Flow 的变化，确保订阅状态更新时UI能及时刷新
+    // 当 BillingRepository.vipStatusFlow 的值变化时，Compose 会自动重新组合此组件
+    val vipStatusFromFlow by BillingRepository.vipStatusFlow.collectAsState()
+    // 预览模式下使用传入的 vipStatus，正常模式下使用 Flow 的值
+    // 当 vipStatusFromFlow 变化时，currentVipStatus 会自动重新计算
+    val currentVipStatus = vipStatus ?: vipStatusFromFlow
 
     // Settings 图标位置固定，不响应折叠状态
     val topSpacerHeight = innerPadding.calculateTopPadding() + 28.dp
@@ -353,15 +355,19 @@ private fun ProfileHeader(
 
             AsyncImage(
                 modifier =
-                    Modifier.size(24.dp).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                onShowSettings()
+                    Modifier
+                        .size(24.dp)
+                        .clickable {
+                            val currentTime = System.currentTimeMillis()
+                            if (AntiClick.isValidClick(lastClickTime)) {
+                                lastClickTime = currentTime
+                                if (IntySetting.isLogin() && IntySetting.getCurToken()
+                                        .isNotEmpty()
+                                ) {
+                                    onShowSettings()
+                                }
                             }
-                        }
-                    },
+                        },
                 model = R.drawable.icon_setting,
                 contentDescription = null,
             )
@@ -380,12 +386,15 @@ private fun ProfileHeader(
 
             Box(
                 modifier =
-                    Modifier.size(avatarSize)
+                    Modifier
+                        .size(avatarSize)
                         .background(color = Color.White, shape = CircleShape)
                         .padding(4.dp)
             ) {
                 AsyncImage(
-                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
                     model =
                         ImageRequest.Builder(context)
                             .data(getCdnImageUrl(userProfile.avatar, width = 512))
@@ -411,17 +420,19 @@ private fun ProfileHeader(
                 Spacer(Modifier.height(6.dp))
                 Text(
                     modifier =
-                        Modifier.fillMaxWidth().noRippleClickable {
-                            if (userProfile.id.isNotEmpty()) {
-                                val clipboard = context.getSystemService<ClipboardManager>()
-                                clipboard?.setPrimaryClip(
-                                    ClipData.newPlainText("User ID", userProfile.id)
-                                )
-                                if (clipboard != null) {
-                                    ToastUtils.showShort(R.string.toast_copied_to_clipboard)
+                        Modifier
+                            .fillMaxWidth()
+                            .noRippleClickable {
+                                if (userProfile.id.isNotEmpty()) {
+                                    val clipboard = context.getSystemService<ClipboardManager>()
+                                    clipboard?.setPrimaryClip(
+                                        ClipData.newPlainText("User ID", userProfile.id)
+                                    )
+                                    if (clipboard != null) {
+                                        ToastUtils.showShort(R.string.toast_copied_to_clipboard)
+                                    }
                                 }
-                            }
-                        },
+                            },
                     text = stringResource(R.string.ID, userProfile.id),
                     color = Color.White.copy(0.55f),
                     fontSize = 12.sp,
@@ -440,7 +451,8 @@ private fun ProfileHeader(
         // Intro 和编辑按钮 - 折叠时隐藏编辑按钮，但可以显示一行 intro
         Row(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .height(
                         if (collapseProgress >= 1f) 40.dp // 折叠时只显示一行 intro 的高度
@@ -451,7 +463,9 @@ private fun ProfileHeader(
             // Intro 文本 - 折叠时只显示一行，展开时显示两行
             Text(
                 modifier =
-                    Modifier.weight(1f).alpha(if (collapseProgress >= 1f) 0.7f else 1f), // 折叠时稍微变透明
+                    Modifier
+                        .weight(1f)
+                        .alpha(if (collapseProgress >= 1f) 0.7f else 1f), // 折叠时稍微变透明
                 text = userProfile.description ?: stringResource(R.string.persona_placeholder),
                 color = Color.White,
                 fontSize = 14.sp,
@@ -468,17 +482,20 @@ private fun ProfileHeader(
 
                 AsyncImage(
                     modifier =
-                        Modifier.size(40.dp).clickable {
-                            val currentTime = System.currentTimeMillis()
-                            if (AntiClick.isValidClick(lastClickTimeEdit)) {
-                                lastClickTimeEdit = currentTime
-                                if (
-                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                                ) {
-                                    ModifyProfileActivity.launch(context, userProfile)
+                        Modifier
+                            .size(40.dp)
+                            .clickable {
+                                val currentTime = System.currentTimeMillis()
+                                if (AntiClick.isValidClick(lastClickTimeEdit)) {
+                                    lastClickTimeEdit = currentTime
+                                    if (
+                                        IntySetting.isLogin() && IntySetting.getCurToken()
+                                            .isNotEmpty()
+                                    ) {
+                                        ModifyProfileActivity.launch(context, userProfile)
+                                    }
                                 }
-                            }
-                        },
+                            },
                     model = R.drawable.icon_edit,
                     contentDescription = null,
                 )
@@ -492,7 +509,8 @@ private fun ProfileHeader(
         if (collapseProgress < 1f) {
             Box(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .alpha(1f - collapseProgress)
                         .height(120.dp * (1f - collapseProgress)),
                 contentAlignment = Alignment.Center,
@@ -529,7 +547,9 @@ private fun MyAgentCard(
     // 图片加载状态
     var imageLoaded by remember { mutableStateOf(false) }
 
-    Box(modifier = modifier.size(165.dp, 220.dp).clip(RoundedCornerShape(12.dp))) {
+    Box(modifier = modifier
+        .size(165.dp, 220.dp)
+        .clip(RoundedCornerShape(12.dp))) {
         if (hasAvatarToLoad) {
             // 有头像需要加载时，使用 Shimmer 占位符
             if (!imageLoaded) {
@@ -565,7 +585,8 @@ private fun MyAgentCard(
         }
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .background(brush = gradientBrush)
                     .padding(8.dp)
                     .align(Alignment.BottomCenter),
@@ -591,10 +612,13 @@ private fun MyAgentCard(
 
         // 右下角的菜单按钮
         if (onEditAgent != null || onDeleteAgent != null) {
-            Box(modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)) {
+            Box(modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(4.dp)) {
                 Box(
                     modifier =
-                        Modifier.size(28.dp)
+                        Modifier
+                            .size(28.dp)
                             .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
                             .noRippleClickable(
                                 onClick = {
@@ -718,15 +742,18 @@ private fun PremiumBanner(
     // 使用 fillMaxWidth 适配屏幕宽度（不含padding），高度保持 120.dp
     Box(
         modifier =
-            Modifier.fillMaxWidth().height(120.dp).clickable {
-                val currentTime = System.currentTimeMillis()
-                if (AntiClick.isValidClick(lastClickTimePremium)) {
-                    lastClickTimePremium = currentTime
-                    if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                        onClick()
+            Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .clickable {
+                    val currentTime = System.currentTimeMillis()
+                    if (AntiClick.isValidClick(lastClickTimePremium)) {
+                        lastClickTimePremium = currentTime
+                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                            onClick()
+                        }
                     }
                 }
-            }
     ) {
         // 使用 FillBounds 填充整个区域，适配屏幕宽度
         Image(
@@ -737,7 +764,8 @@ private fun PremiumBanner(
         )
 
         Row(
-            Modifier.border(
+            Modifier
+                .border(
                     width = 0.5.dp,
                     color = Color(0x61D523FF),
                     shape = RoundedCornerShape(size = 12.dp),
