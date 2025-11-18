@@ -2,21 +2,7 @@
 
 ## 增加数据连接数
 
-TBA
-
-```
-You can typically adjust this through the Google Cloud Console or the gcloud command-line tool.
-
-Using the Google Cloud Console (Recommended for ease)
-Go to the Cloud SQL Instances page: In the Google Cloud Console, navigate to the Cloud SQL section.
-Select your instance: Click on the name of the Cloud SQL instance you want to modify (e.g., inty-prod ).
-Click "Edit": On the instance's "Overview" page, click the "Edit" button at the top.
-Navigate to Flags: Scroll down or look for a section related to "Database flags" or "Flags".
-Add/Edit max_connections flag:
-Find the max_connections flag. If it's not present, you'll need to add it.
-Enter your desired new value for max_connections . Cloud SQL may have a maximum allowed value based on your instance size.
-Save Changes: Click "Save" at the bottom of the page. The instance will then restart to apply the new flag value.
-```
+现象是服务端错误日志“asyncpg.exceptions.TooManyConnectionsError: remaining connection slots are reserved for roles with privileges of the "pg_use_reserved_connections" role”，google cloud postgres 数据库实例连接数已满，同一实例下的多个库共用数据库连接数，需要修改实例的连接数配置，编辑实例，修改 max_connnection flag,等待实例重启完成，然后重启后端。
 
 ## 定期清理服务器上的 docker 缓存
 
@@ -63,6 +49,7 @@ TriggeredBy: ● docker.socket
 ## 迁移已有后端数据库到一个新的服务器
 
 大体流程：
+
 1. 初始化数据库 schema
 2. 转移数据
 
