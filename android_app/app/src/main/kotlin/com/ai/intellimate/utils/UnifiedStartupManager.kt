@@ -195,15 +195,9 @@ object UnifiedStartupManager {
                 }
             }
 
-        val agentsDeferred =
-            startupScope.async {
-                AgentCacheManager.getCachedAgents()
-            }
+        val agentsDeferred = startupScope.async { AgentCacheManager.getCachedAgents() }
 
-        val chatAgentsDeferred =
-            startupScope.async {
-                AgentCacheManager.getCachedChatAgents()
-            }
+        val chatAgentsDeferred = startupScope.async { AgentCacheManager.getCachedChatAgents() }
 
         // 等待缓存数据加载完成
         _userProfile.value = userProfileDeferred.await()

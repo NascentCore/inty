@@ -125,12 +125,8 @@ def parse_arguments() -> argparse.Namespace:
 
     # 时间范围参数（互斥）
     time_group = parser.add_mutually_exclusive_group(required=True)
-    time_group.add_argument(
-        "--last-days", type=int, help="导出最近 N 天注册的新用户"
-    )
-    time_group.add_argument(
-        "--start-date", type=str, help="开始日期 (YYYY-MM-DD)"
-    )
+    time_group.add_argument("--last-days", type=int, help="导出最近 N 天注册的新用户")
+    time_group.add_argument("--start-date", type=str, help="开始日期 (YYYY-MM-DD)")
 
     parser.add_argument(
         "--end-date", type=str, help="结束日期 (YYYY-MM-DD)，与 --start-date 配合使用"
@@ -171,7 +167,9 @@ def main():
 
     # 计算日期范围
     start_date, end_date = calculate_date_range(args)
-    logger.info(f"查询时间范围: {start_date.date()} 到 {(end_date - timedelta(days=1)).date()}")
+    logger.info(
+        f"查询时间范围: {start_date.date()} 到 {(end_date - timedelta(days=1)).date()}"
+    )
 
     # 加载数据库配置
     db_config = load_database_config(args.config)
@@ -206,7 +204,9 @@ def main():
 
         if users_df.empty:
             logger.warning("在指定时间范围内没有找到新用户")
-            print(f"\n时间范围: {start_date.date()} 到 {(end_date - timedelta(days=1)).date()}")
+            print(
+                f"\n时间范围: {start_date.date()} 到 {(end_date - timedelta(days=1)).date()}"
+            )
             print("未找到新用户")
             return
 
@@ -235,7 +235,9 @@ def main():
         print("\n" + "=" * 60)
         print("导出完成")
         print("=" * 60)
-        print(f"时间范围: {start_date.date()} 到 {(end_date - timedelta(days=1)).date()}")
+        print(
+            f"时间范围: {start_date.date()} 到 {(end_date - timedelta(days=1)).date()}"
+        )
         print(f"新用户数量: {len(users_df)}")
         print(f"输出文件: {output_path}")
         print("\n字段说明:")
@@ -259,4 +261,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

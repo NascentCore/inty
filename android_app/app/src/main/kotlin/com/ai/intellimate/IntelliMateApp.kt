@@ -142,10 +142,7 @@ class IntelliMateApp : Application() {
                     // Check if user is logged in before uploading token
                     // This avoids 401 errors when token is obtained before login
                     if (!IntySetting.isLogin() || IntySetting.getCurToken().isEmpty()) {
-                        LogUtils.w(
-                            "IntelliMateApp",
-                            "用户未登录，跳过 FCM Token 上传。登录后将自动上传。"
-                        )
+                        LogUtils.w("IntelliMateApp", "用户未登录，跳过 FCM Token 上传。登录后将自动上传。")
                         return
                     }
 

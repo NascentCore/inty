@@ -193,10 +193,12 @@ def save_translated_yaml(
         lang_code: Language code to include in filename (optional)
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     with output_path.open("w", encoding="utf-8") as f:
-        yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
-    
+        yaml.dump(
+            data, f, allow_unicode=True, default_flow_style=False, sort_keys=False
+        )
+
     print(f"Saved translated prompts to: {output_path}", file=sys.stderr)
 
 
@@ -225,50 +227,50 @@ Note:
   It requires proper Google Cloud credentials configured via service account.
         """,
     )
-    
+
     parser.add_argument(
         "languages",
         nargs="+",
         help="Target language codes (e.g., es fr de ja zh-CN)",
     )
-    
+
     parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("app/core/agent"),
         help="Directory to save translated files (default: app/core/agent)",
     )
-    
+
     parser.add_argument(
         "--combined",
         action="store_true",
         help="Save all languages to a single combined YAML file",
     )
-    
+
     parser.add_argument(
         "--source-lang",
         default="en",
         help="Source language code (default: en)",
     )
-    
+
     parser.add_argument(
         "--input-file",
         type=Path,
         default=PROMPTS_DATA_PATH,
         help=f"Input YAML file (default: {PROMPTS_DATA_PATH})",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Load source prompts
     print(f"Loading prompts from: {args.input_file}", file=sys.stderr)
     with args.input_file.open(encoding="utf-8") as f:
         source_data = yaml.safe_load(f)
-    
+
     if not isinstance(source_data, dict):
         print(f"Error: Expected dictionary, got {type(source_data)}", file=sys.stderr)
         sys.exit(1)
-    
+
     # Create a single client to reuse across translations
     client = get_genai_client()
 
@@ -277,9 +279,7 @@ Note:
         combined_data = {}
         for lang in args.languages:
             print(f"\nTranslating to {lang}...", file=sys.stderr)
-            translated = translate_prompts(
-                source_data, lang, args.source_lang, client
-            )
+            translated = translate_prompts(source_data, lang, args.source_lang, client)
             combined_data[lang] = translated
 
         output_path = args.output_dir / "prompts_data_multilang.yaml"
@@ -291,16 +291,13 @@ Note:
             print(f"Translating to {lang}...", file=sys.stderr)
             print(f"{'='*60}", file=sys.stderr)
 
-            translated = translate_prompts(
-                source_data, lang, args.source_lang, client
-            )
+            translated = translate_prompts(source_data, lang, args.source_lang, client)
 
             output_path = args.output_dir / f"prompts_data_{lang}.yaml"
             save_translated_yaml(translated, output_path, lang)
-    
+
     print("\nTranslation complete!", file=sys.stderr)
 
 
 if __name__ == "__main__":
     main()
-
