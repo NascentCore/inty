@@ -206,10 +206,7 @@ class PushNotificationManager private constructor(private val application: Appli
                 if (!agentId.isNullOrEmpty()) {
                     ChatActivity.notifyIntent(application, agentId)
                 } else {
-                    LogUtils.w(
-                        "PushNotificationManager",
-                        "消息类型为 agent_message 但缺少 agent_id，跳转到主页面",
-                    )
+                    LogUtils.w("PushNotificationManager", "消息类型为 agent_message 但缺少 agent_id，跳转到主页面")
                     createMainActivityIntent()
                 }
             }
@@ -221,10 +218,7 @@ class PushNotificationManager private constructor(private val application: Appli
             }
 
             else -> {
-                LogUtils.w(
-                    "PushNotificationManager",
-                    "未知消息类型: $messageType，跳转到主页面",
-                )
+                LogUtils.w("PushNotificationManager", "未知消息类型: $messageType，跳转到主页面")
                 createMainActivityIntent()
             }
         }

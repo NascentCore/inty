@@ -21,9 +21,7 @@ def _load_prompts_data() -> dict[str, str]:
     with PROMPTS_DATA_PATH.open(encoding="utf-8") as fp:
         data = yaml.safe_load(fp)
     if not isinstance(data, dict):
-        raise ValueError(
-            f"Prompt data must be a YAML mapping: {PROMPTS_DATA_PATH}"
-        )
+        raise ValueError(f"Prompt data must be a YAML mapping: {PROMPTS_DATA_PATH}")
     return data
 
 
@@ -35,6 +33,7 @@ def _get_prompt_text(key: str) -> str:
     if not isinstance(value, str):
         raise TypeError(f"Prompt '{key}' must be a string, got {type(value)!r}")
     return value
+
 
 ###############################################################################
 # Main prompt is for setting up the whole framework of chat experience.
