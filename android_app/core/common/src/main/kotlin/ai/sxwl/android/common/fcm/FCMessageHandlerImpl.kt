@@ -3,7 +3,6 @@ package ai.sxwl.android.common.fcm
 import ai.sxwl.android.common.event.EventBus
 import ai.sxwl.android.common.event.PushNotificationEvent
 import ai.sxwl.android.firebase.FCMessageHandler
-import ai.sxwl.android.utils.LogUtils
 
 /**
  * FCM 消息处理器默认实现
@@ -18,7 +17,6 @@ class FCMessageHandlerImpl : FCMessageHandler {
         body: String?,
         data: Map<String, String>,
     ) {
-        LogUtils.d("FCMessageHandlerImpl", "处理 FCM 消息: messageId=$messageId, type=$type")
         EventBus.post(
             PushNotificationEvent.MessageReceived(
                 messageId = messageId,
@@ -31,7 +29,6 @@ class FCMessageHandlerImpl : FCMessageHandler {
     }
 
     override fun showNotification(title: String, body: String, data: Map<String, String>) {
-        LogUtils.d("FCMessageHandlerImpl", "显示通知: title=$title")
         EventBus.post(
             PushNotificationEvent.ShowNotification(title = title, body = body, data = data)
         )

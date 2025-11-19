@@ -2,7 +2,6 @@ package ai.sxwl.android.data.store
 
 import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.utils.AppUtils
-import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.os.Handler
 import android.os.Looper
@@ -119,10 +118,6 @@ object IntySetting {
     fun markUserSetAutoPlayVoice() {
         curUserSetting.putBoolean("user_set_auto_play_voice", true)
     }
-
-    // region Premium model相关设置
-
-    // endregion
 
     // 标记是否已经提示过订阅过期的弹窗
     fun hasTipsVipExpired(): Boolean {
@@ -266,57 +261,12 @@ object IntySetting {
 
     // region 聊天数据持久化相关方法
 
-    /** 保存指定agent的聊天数据 使用简单的字符串存储，避免复杂的JSON序列化 */
-    fun saveChatMessages(agentId: String, messages: List<ai.sxwl.android.data.api.model.MsgInfo>) {
-        try {
-            // 暂时禁用数据持久化，避免序列化问题
-            // TODO: 实现更简单的数据存储方案
-            LogUtils.d(
-                "Chat messages persistence temporarily disabled for agent $agentId (${messages.size} messages)"
-            )
-        } catch (e: Exception) {
-            LogUtils.e("Failed to save chat messages for agent $agentId: ${e.message}")
-        }
-    }
-
-    /** 获取指定agent的聊天数据 暂时返回空列表，避免反序列化问题 */
-    fun getChatMessages(agentId: String): List<ai.sxwl.android.data.api.model.MsgInfo> {
-        // 暂时禁用数据持久化，避免反序列化问题
-        // TODO: 实现更简单的数据存储方案
-        LogUtils.d("Chat messages loading temporarily disabled for agent $agentId")
-        return emptyList()
-    }
-
-    /** 保存指定agent的分页状态 */
-    fun saveChatPaginationState(
-        agentId: String,
-        offset: Int,
-        hasMore: Boolean,
-        isInitialLoaded: Boolean,
-    ) {
-        curUserSetting.putInt("chat_offset_$agentId", offset)
-        curUserSetting.putBoolean("chat_has_more_$agentId", hasMore)
-        curUserSetting.putBoolean("chat_initial_loaded_$agentId", isInitialLoaded)
-        LogUtils.d(
-            "Saved pagination state for agent $agentId: offset=$offset, hasMore=$hasMore, initialLoaded=$isInitialLoaded"
-        )
-    }
-
-    /** 获取指定agent的分页状态 */
-    fun getChatPaginationState(agentId: String): Triple<Int, Boolean, Boolean> {
-        val offset = curUserSetting.decodeInt("chat_offset_$agentId", 0)
-        val hasMore = curUserSetting.decodeBool("chat_has_more_$agentId", true)
-        val isInitialLoaded = curUserSetting.decodeBool("chat_initial_loaded_$agentId", false)
-        return Triple(offset, hasMore, isInitialLoaded)
-    }
-
-    /** 清除指定agent的聊天数据 */
+    /** 清除指定agent的聊天数据（清理可能存在的旧数据） */
     fun clearChatData(agentId: String) {
         curUserSetting.removeValueForKey("chat_messages_$agentId")
         curUserSetting.removeValueForKey("chat_offset_$agentId")
         curUserSetting.removeValueForKey("chat_has_more_$agentId")
         curUserSetting.removeValueForKey("chat_initial_loaded_$agentId")
-        LogUtils.d("Cleared chat data for agent $agentId")
     }
 
     /** 清除所有聊天数据 */
@@ -332,7 +282,6 @@ object IntySetting {
                 curUserSetting.removeValueForKey(key)
             }
         }
-        LogUtils.d("Cleared all chat data")
     }
 
     // endregion

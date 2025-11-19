@@ -36,7 +36,6 @@ object ImagePreloadManager {
             // 使用 core/design 模块中的高级配置
             AdvancedCoilConfig.initGlobalImageLoader()
             isInitialized = true
-            LogUtils.i("ImagePreloadManager - 使用 core/design 模块配置初始化成功")
         } catch (e: Exception) {
             LogUtils.e("ImagePreloadManager - 初始化失败: ${e.message}")
         }
@@ -56,7 +55,6 @@ object ImagePreloadManager {
         }
 
         if (agents.isEmpty()) {
-            LogUtils.i("ImagePreloadManager - agents列表为空，跳过预加载")
             return
         }
 
@@ -71,12 +69,8 @@ object ImagePreloadManager {
                 val allImageUrls = (albumImageUrls + staticBackgroundUrls).distinct()
 
                 if (allImageUrls.isNotEmpty()) {
-                    LogUtils.d(
-                        "ImagePreloadManager - 开始预加载 ${allImageUrls.size} 张图片（包含 ${albumImageUrls.size} 张专辑图，${staticBackgroundUrls.size} 张静态背景图）"
-                    )
                     // 使用全局ImageLoader进行预加载
                     preloadImagesToCoilCache(allImageUrls, maxConcurrent)
-                    LogUtils.d("ImagePreloadManager - 图片预加载完成")
                 }
             }
         } catch (e: Exception) {
@@ -146,11 +140,8 @@ object ImagePreloadManager {
 
         val criticalAgents = agents.take(criticalCount)
         if (criticalAgents.isEmpty()) {
-            LogUtils.i("ImagePreloadManager - 关键agents列表为空，跳过预加载")
             return
         }
-
-        LogUtils.i("ImagePreloadManager - 开始预加载前 $criticalCount 个关键图片")
 
         try {
             withContext(Dispatchers.IO) {
@@ -166,7 +157,6 @@ object ImagePreloadManager {
                     preloadImagesToCoilCache(allImageUrls, maxConcurrent = 8)
                 }
             }
-            LogUtils.i("ImagePreloadManager - 关键图片预加载完成")
         } catch (e: Exception) {
             LogUtils.e("ImagePreloadManager - 关键图片预加载异常: ${e.message}")
         }
@@ -258,10 +248,6 @@ object ImagePreloadManager {
                 // 等待两个任务完成
                 avatarJob.await()
                 backgroundJob.await()
-
-                LogUtils.d(
-                    "ImagePreloadManager - 预加载 Agent 图片完成: avatar=$avatarUrl, background=$backgroundUrl"
-                )
             } catch (e: Exception) {
                 LogUtils.e("ImagePreloadManager - 预加载 Agent 图片失败", e)
             }
@@ -279,7 +265,6 @@ object ImagePreloadManager {
         scope.launch {
             try {
                 preloadSingleImage(avatarUrl, Size(120, 120))
-                LogUtils.d("ImagePreloadManager - 预加载用户头像: $avatarUrl")
             } catch (e: Exception) {
                 LogUtils.e("ImagePreloadManager - 预加载用户头像失败", e)
             }
@@ -305,7 +290,6 @@ object ImagePreloadManager {
                         size = size,
                     )
                 SingletonImageLoader.get(Utils.getApp()).execute(request)
-                LogUtils.d("ImagePreloadManager - 预加载 Agent 头像: $avatarUrl (${size}x${size})")
             } catch (e: Exception) {
                 LogUtils.e("ImagePreloadManager - 预加载 Agent 头像失败", e)
             }
@@ -333,9 +317,6 @@ object ImagePreloadManager {
                         height = height,
                     )
                 SingletonImageLoader.get(Utils.getApp()).execute(request)
-                LogUtils.d(
-                    "ImagePreloadManager - 预加载 Agent 背景: $backgroundUrl (${width}x${height})"
-                )
             } catch (e: Exception) {
                 LogUtils.e("ImagePreloadManager - 预加载 Agent 背景失败", e)
             }
@@ -348,7 +329,6 @@ object ImagePreloadManager {
 
         try {
             AdvancedCoilConfig.clearImageCache(Utils.getApp())
-            LogUtils.d("ImagePreloadManager - 清理图片缓存成功")
         } catch (e: Exception) {
             LogUtils.e("ImagePreloadManager - 清理图片缓存失败", e)
         }
@@ -384,7 +364,6 @@ object ImagePreloadManager {
                         deferred.forEach { it.await() }
                     }
                 }
-                LogUtils.d("ImagePreloadManager - 批量预加载完成: ${imageUrls.size} 张图片")
             } catch (e: Exception) {
                 LogUtils.e("ImagePreloadManager - 批量预加载失败", e)
             }

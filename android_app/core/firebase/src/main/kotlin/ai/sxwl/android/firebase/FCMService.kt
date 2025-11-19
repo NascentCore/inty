@@ -40,22 +40,8 @@ class FCMService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
 
-        LogUtils.d("FCMService", "收到 FCM 推送消息")
-        LogUtils.d("FCMService", "消息 ID: ${remoteMessage.messageId}")
-        LogUtils.d("FCMService", "消息来源: ${remoteMessage.from}")
-        LogUtils.d(
-            "FCMService",
-            "消息类型: ${if (remoteMessage.notification != null) "通知消息（应用在前台）" else "数据消息"}",
-        )
-        LogUtils.d("FCMService", "数据字段: ${remoteMessage.data}")
-        LogUtils.d(
-            "FCMService",
-            "通知字段: ${if (remoteMessage.notification != null) "title=${remoteMessage.notification?.title}, body=${remoteMessage.notification?.body}" else "null"}",
-        )
-
         // 检查是否处于 Direct Boot 模式
         val isDirectBootMode = DirectBootUtils.isDirectBootMode(this)
-        LogUtils.d("FCMService", "Direct Boot 模式: $isDirectBootMode")
 
         if (isDirectBootMode) {
             // Direct Boot 模式：保存消息元数据，待用户解锁后处理
@@ -89,9 +75,7 @@ class FCMService : FirebaseMessagingService() {
 
             // 保存到 Direct Boot 存储
             val saved = DirectBootStorage.savePendingMessage(pendingMessage, this)
-            if (saved) {
-                LogUtils.i("FCMService", "Direct Boot 模式：消息元数据已保存，待用户解锁后处理。messageId=$messageId")
-            } else {
+            if (!saved) {
                 LogUtils.w("FCMService", "Direct Boot 模式：保存消息元数据失败")
             }
         } catch (e: Exception) {
@@ -101,15 +85,10 @@ class FCMService : FirebaseMessagingService() {
 
     /** 在正常模式下处理消息（用户已解锁） */
     private fun handleMessageInNormalMode(remoteMessage: RemoteMessage) {
-        LogUtils.d("FCMService", "消息类型: ${if (remoteMessage.data.isNotEmpty()) "数据消息" else "通知消息"}")
-
         val data = remoteMessage.data
         val notification = remoteMessage.notification
         val messageType = data[FCMConstants.DATA_KEY_TYPE]
         val agentId = data[FCMConstants.DATA_KEY_AGENT_ID]
-
-        // 添加详细日志，便于调试
-        LogUtils.d("FCMService", "处理消息 - 消息类型: $messageType, agent_id: $agentId, 所有数据: $data")
 
         // 通过回调处理消息
         val handler = FirebaseManager.getMessageHandler()
@@ -127,10 +106,6 @@ class FCMService : FirebaseMessagingService() {
             val body = notif.body
 
             if (title != null && body != null) {
-                LogUtils.i(
-                    "FCMService",
-                    "通知消息 - 标题: $title, 内容: $body, 消息类型: $messageType, agent_id: $agentId",
-                )
                 handler?.showNotification(title = title, body = body, data = data)
             } else {
                 LogUtils.w("FCMService", "通知消息缺少标题或内容")
@@ -151,8 +126,6 @@ class FCMService : FirebaseMessagingService() {
      */
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-
-        LogUtils.i("FCMService", "FCM 注册令牌已更新: $token")
         uploadTokenToServer(token)
     }
 
@@ -164,7 +137,6 @@ class FCMService : FirebaseMessagingService() {
     private fun uploadTokenToServer(token: String) {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                LogUtils.d("FCMService", "开始上传 FCM Token 到服务器")
                 FirebaseManager.uploadFCMToken(token)
             } catch (e: Exception) {
                 LogUtils.e("FCMService", "上传 FCM Token 失败", e)

@@ -8,17 +8,17 @@ import ai.sxwl.android.utils.DeviceUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import com.chuckerteam.chucker.api.ChuckerInterceptor
-import java.net.InetAddress
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import java.net.InetAddress
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /** 统一的 OkHttpClient 工厂 提供统一的网络客户端配置，包含所有必要的拦截器和配置 */
 object UnifiedOkHttpClient {
@@ -154,14 +154,6 @@ private class AuthInterceptor : Interceptor {
             } else if (existingAuthHeader == null) {
                 // 没有Authorization header，添加最新token
                 builder.addHeader("Authorization", "Bearer $currentToken")
-                LogUtils.d("AuthInterceptor - Added Authorization header with latest token")
-            } else {
-                // Token匹配，使用SDK添加的header
-                LogUtils.d(
-                    "AuthInterceptor - Authorization header already exists and matches: ${
-                        existingAuthHeader.take(20)
-                    }..."
-                )
             }
         } else {
             if (existingAuthHeader != null) {
@@ -174,8 +166,6 @@ private class AuthInterceptor : Interceptor {
         }
 
         val modifiedRequest = builder.build()
-        LogUtils.i("request = $modifiedRequest")
-
         val response = chain.proceed(modifiedRequest)
 
         // 处理 401 未授权响应
