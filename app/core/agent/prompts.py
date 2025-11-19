@@ -4,24 +4,26 @@ Structured prompt for roleplay.
 
 from __future__ import annotations
 
-import json
 from functools import lru_cache
 from pathlib import Path
 
+import yaml
 from pydantic import BaseModel, Field
 
-PROMPTS_DATA_PATH = Path(__file__).with_name("prompts_data.json")
+PROMPTS_DATA_PATH = Path(__file__).with_name("prompts_data.yaml")
 
 
 @lru_cache(maxsize=1)
 def _load_prompts_data() -> dict[str, str]:
     """
-    Lazily load the prompts JSON once per process.
+    Lazily load the prompts YAML once per process.
     """
     with PROMPTS_DATA_PATH.open(encoding="utf-8") as fp:
-        data = json.load(fp)
+        data = yaml.safe_load(fp)
     if not isinstance(data, dict):
-        raise ValueError(f"Prompt data must be a JSON object: {PROMPTS_DATA_PATH}")
+        raise ValueError(
+            f"Prompt data must be a YAML mapping: {PROMPTS_DATA_PATH}"
+        )
     return data
 
 
