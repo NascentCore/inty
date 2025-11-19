@@ -214,6 +214,24 @@ async def test_push_for_chat(
             )
 
             if success:
+                # 保存消息到聊天历史
+                history_saved = (
+                    await push_notification_service._save_push_message_to_history(
+                        db=db,
+                        user_id=chat.user_id,
+                        agent_id=chat.agent_id,
+                        stage=stage,
+                        push_type="recent_chat",
+                        message_content=message_content,
+                        chat_id=chat.id,
+                    )
+                )
+
+                if history_saved:
+                    result["steps"].append("✅ 消息已保存到聊天历史")
+                else:
+                    result["steps"].append("⚠️  保存消息到聊天历史失败（但推送已发送）")
+
                 # 记录推送历史
                 await push_notification_service.record_push_history(
                     db=db,
