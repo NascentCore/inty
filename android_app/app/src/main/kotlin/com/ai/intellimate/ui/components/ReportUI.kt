@@ -32,6 +32,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.IntySmallTextField2
+import com.ai.intellimate.xb.components.MultiLineBasicTextField
 
 /** 举报项组件 */
 @Composable
@@ -120,36 +121,49 @@ fun ReportDescriptionContainer(
         )
         Spacer(Modifier.height(12.dp))
 
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .height(112.dp)
-                    .background(color = Color.White.copy(0.1f), shape = RoundedCornerShape(8.dp))
-                    .padding(vertical = 10.dp)
-        ) {
-            IntySmallTextField2(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        Box(modifier = Modifier.padding(vertical = 10.dp)) {
+            MultiLineBasicTextField(
                 value = description,
+                backgroundColor = Color.White.copy(0.1f),
+                showBorder = false,
+                minLines = 2,
+                fontSize = 14.sp,
                 maxLength = maxLength,
-                placeholder = {
-                    Text(
-                        modifier = Modifier.matchParentSize().align(Alignment.TopStart),
-                        text = placeholder,
-                        fontWeight = FontWeight.Normal,
-                        color = Color.White.copy(0.55f),
-                        fontSize = 14.sp,
-                    )
-                },
+                placeholder = placeholder,
                 onValueChange = { onDescriptionChange(it) },
             )
-
-            Text(
-                modifier = Modifier.align(Alignment.BottomEnd).padding(horizontal = 12.dp),
-                text = stringResource(R.string.character_count_format_full, description.length),
-                fontSize = 12.sp,
-                color = Color.White.copy(0.55f),
-            )
         }
+
+//        Box(
+//            modifier =
+//                Modifier.fillMaxWidth()
+//                    .height(112.dp)
+//                    .background(color = Color.White.copy(0.1f), shape = RoundedCornerShape(8.dp))
+//                    .padding(vertical = 10.dp)
+//        ) {
+//            IntySmallTextField2(
+//                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+//                value = description,
+//                maxLength = maxLength,
+//                placeholder = {
+//                    Text(
+//                        modifier = Modifier.matchParentSize().align(Alignment.TopStart),
+//                        text = placeholder,
+//                        fontWeight = FontWeight.Normal,
+//                        color = Color.White.copy(0.55f),
+//                        fontSize = 14.sp,
+//                    )
+//                },
+//                onValueChange = { onDescriptionChange(it) },
+//            )
+//
+//            Text(
+//                modifier = Modifier.align(Alignment.BottomEnd).padding(horizontal = 12.dp),
+//                text = stringResource(R.string.character_count_format_full, description.length),
+//                fontSize = 12.sp,
+//                color = Color.White.copy(0.55f),
+//            )
+//        }
         Spacer(Modifier.height(16.dp))
     }
 }
