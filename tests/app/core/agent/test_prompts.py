@@ -6,9 +6,6 @@ from app.core.agent.prompts import (
 )
 from app.core.agent.prompts import FRIENDLY_MODE_PROMPT as YAML_FRIENDLY_MODE_PROMPT
 from app.core.agent.prompts import (
-    FRIENDLY_ROLEPLAY_PROMPT as YAML_FRIENDLY_ROLEPLAY_PROMPT,
-)
-from app.core.agent.prompts import (
     IMAGE_GENERATION_PROMPT_TEMPLATE as YAML_IMAGE_GENERATION_PROMPT_TEMPLATE,
 )
 from app.core.agent.prompts import (
