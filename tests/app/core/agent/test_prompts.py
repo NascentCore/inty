@@ -151,9 +151,40 @@ D. Output Format
 - When the output can contain multiple dialogues, always keep the same pair of " "; when inserting () in the middle"", please close the quotation marks first. Do not use: *, **, [], <> and any Markdown tags.
 """
 
+PROACTIVE_CHAT_SYSTEM_PROMPT = """
+The user has no message for {{ time_no_messages }} hours, write something to get the user back to chat with you.
+{{ time_no_messages }} hours have passed, do not repeat the same topic.
+Be creative.
+"""
+
+IMAGE_GENERATION_PROMPT_TEMPLATE = """
+你是一名场景可视化专家，需要根据用户虚拟角色对话语境生成生动的画面。你的目标是「重建场景」。
+
+### Step 1: 场景推理
+根据以下信息进行思考：
+- 最近的对话: {chat_history}
+- 用户请求: {user_message}
+
+请先思考：
+1. 角色此刻的动作、姿势、服装是什么？
+2. 角色的表情与情绪状态如何？
+3. 画面的镜头构图应该如何（特写 / 中景 / 全身）？
+4.画面此时所处的空间场所应该如何？
+
+### Step 2: 场景生成
+请根据角色性格: {agent_personality}，角色背景设定: {agent_background}，确认角色的发型、五官和身材特征；
+再结合step1中思考的结果生成符合场景氛围的图片。
+
+请确保：
+- 角色外观与参考图保持高度一致（发型、面部特征、身材比例等）。
+- 人物形象完整自然，动作自然协调，细节到位（如手势、视线、身体距离等）。
+- 画面中无文字、对白或身体畸形。
+"""
 
 def test_yaml_prompts_identical_to_prompts():
     """Test that YAML prompts are identical to prompts."""
+    assert YAML_PROACTIVE_CHAT_SYSTEM_PROMPT == PROACTIVE_CHAT_SYSTEM_PROMPT
+    assert YAML_IMAGE_GENERATION_PROMPT_TEMPLATE == IMAGE_GENERATION_PROMPT_TEMPLATE
     assert YAML_ROLEPLAY_MAIN_PROMPT == ROLEPLAY_MAIN_PROMPT
     assert YAML_FLIRTING_MODE_PROMPT == FLIRTING_MODE_PROMPT
     assert YAML_FLIRTING_MODE_PROMPT_20250902 == FLIRTING_MODE_PROMPT_20250902
