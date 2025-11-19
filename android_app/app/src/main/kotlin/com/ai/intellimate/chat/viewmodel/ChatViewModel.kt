@@ -218,7 +218,6 @@ class ChatViewModel : BaseVM() {
 
     /** 加载聊天历史 - 使用增量同步优化体验 */
     private fun loadChatHistory(agentId: String) {
-        LogUtils.i("ChatViewModel.loadChatHistory called for agentId=$agentId")
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // 使用增量同步，优先显示本地数据，然后检查服务器更新
@@ -249,20 +248,17 @@ class ChatViewModel : BaseVM() {
         // 防抖检查
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) {
-            LogUtils.i("Send message debounced, ignoring rapid clicks")
             return
         }
         lastSendTime = currentTime
 
         // 确保状态正确
         if (_isWaitingForReply.value) {
-            LogUtils.i("Already waiting for reply, ignoring new send request")
             return
         }
 
         val inputMsg = inputData.value
         if (inputMsg.isBlank()) {
-            LogUtils.i("Empty message, ignoring send request")
             return
         }
 
@@ -340,7 +336,6 @@ class ChatViewModel : BaseVM() {
             val aiResponseStartTime = System.currentTimeMillis()
             try {
                 val result = sendMessageUseCase(agentId, inputMsg.trimEnd())
-                LogUtils.i("Send message result: $result")
 
                 // 处理发送结果
                 when (result) {
@@ -479,7 +474,6 @@ class ChatViewModel : BaseVM() {
             } finally {
                 // 确保状态在最后被正确重置
                 if (_isWaitingForReply.value) {
-                    LogUtils.i("Force reset waiting state due to completion")
                     _isWaitingForReply.value = false
                 }
             }
@@ -546,7 +540,6 @@ class ChatViewModel : BaseVM() {
 
     /** 同步最新消息：优先加载本地数据，然后检查服务器更新 */
     private fun syncLatestMessages(agentId: String) {
-        LogUtils.i("ChatViewModel.syncLatestMessages called for agentId=$agentId")
         viewModelScope.launch(Dispatchers.IO) {
             syncChatDataUseCase(agentId, PAGE_SIZE)
             _isQueryMsgsCompleted.value = true
@@ -555,26 +548,9 @@ class ChatViewModel : BaseVM() {
 
     /** 加载更多消息 */
     fun loadMoreMessages() {
-        LogUtils.d(
-            "loadMoreMessages called: hasMore=${_hasMoreMessages.value}, isLoading=${_isLoadingMore.value}, isQueryingMsgs=$isQueryingMsgs, currentOffset=$currentOffset"
-        )
-
-        if (!_hasMoreMessages.value) {
-            LogUtils.i("Cannot load more messages: no more messages available")
+        if (!_hasMoreMessages.value || _isLoadingMore.value || isQueryingMsgs) {
             return
         }
-
-        if (_isLoadingMore.value) {
-            LogUtils.i("Cannot load more messages: already loading more")
-            return
-        }
-
-        if (isQueryingMsgs) {
-            LogUtils.i("Cannot load more messages: already querying messages")
-            return
-        }
-
-        LogUtils.i("Loading more messages, current offset: $currentOffset")
         val currentAgentId = agentInfo.value?.id ?: return
         viewModelScope.launch(Dispatchers.IO) {
             chatRepository.loadMoreMessages(currentAgentId, PAGE_SIZE)
@@ -606,7 +582,6 @@ class ChatViewModel : BaseVM() {
         // 防抖检查
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) {
-            LogUtils.i("Send keep talking message debounced, ignoring rapid clicks")
             return
         }
         lastSendTime = currentTime
@@ -634,8 +609,6 @@ class ChatViewModel : BaseVM() {
                 try {
                     val aiResponseStartTime = System.currentTimeMillis()
                     val result = sendMessageUseCase(agent.id, keepTalkingMsg)
-
-                    LogUtils.i("sendKeepTalkingMessage to ${agent.id} -> $result")
                     _isWaitingForReply.value = false
 
                     when (result) {
@@ -778,7 +751,6 @@ class ChatViewModel : BaseVM() {
             )
 
         FirebaseManager.logEvent(FirebaseManager.Events.CHAT_PAGE_CLICK, eventParams)
-        LogUtils.i("Message liked: localMsgId=$localMsgId, serviceId=${targetMessage.id}")
     }
 
     /** Dislike 消息 - 通过 Repository 更新并上报 Firebase 事件 */
@@ -816,7 +788,6 @@ class ChatViewModel : BaseVM() {
             )
 
         FirebaseManager.logEvent(FirebaseManager.Events.CHAT_PAGE_CLICK, eventParams)
-        LogUtils.i("Message disliked: localMsgId=$localMsgId, serviceId=${targetMessage.id}")
     }
 
     /** Recall 消息 - 重新生成最新消息（类似 keep talking 的实现） */
@@ -824,14 +795,12 @@ class ChatViewModel : BaseVM() {
         // 防抖检查
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) {
-            LogUtils.i("Recall message debounced, ignoring rapid clicks")
             return
         }
         lastSendTime = currentTime
 
         // 确保状态正确
         if (_isWaitingForReply.value) {
-            LogUtils.i("Already waiting for reply, ignoring recall request")
             return
         }
 
@@ -841,7 +810,6 @@ class ChatViewModel : BaseVM() {
         launchBackground {
             try {
                 recallMessageUseCase(agentId)
-                LogUtils.i("recallMessage to $agentId -> success")
                 _isWaitingForReply.value = false
             } catch (e: Exception) {
                 LogUtils.e("Recall message error: ${e.message}")
@@ -894,7 +862,6 @@ class ChatViewModel : BaseVM() {
 
                 when (result) {
                     is HttpResult.Success -> {
-                        LogUtils.i("Image generated successfully: ${result.data.imageUrl}")
 
                         // Firebase Analytics - 记录图片生成成功
                         FirebaseManager.logEvent(
@@ -988,11 +955,6 @@ class ChatViewModel : BaseVM() {
                             // 其他错误：在消息列表中显示 tips 消息
                             else -> {
                                 // Firebase Analytics - 记录图片生成失败
-                                LogUtils.i(
-                                    "ChatViewModel: 记录 image_generation_failure 事件, " +
-                                        "code=${result.code}, message=${result.message}, " +
-                                        "generation_time_ms=$generationTime"
-                                )
                                 FirebaseManager.logEvent(
                                     FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
                                     FirebaseManager.safeEventParams(
@@ -1026,11 +988,6 @@ class ChatViewModel : BaseVM() {
                 LogUtils.e("Image generation error: ${e.message}")
 
                 // Firebase Analytics - 记录图片生成异常
-                LogUtils.i(
-                    "ChatViewModel: 记录 image_generation_failure 事件（异常）, " +
-                        "error_type=${e.javaClass.simpleName}, message=${e.message}, " +
-                        "generation_time_ms=$generationTime"
-                )
                 FirebaseManager.logEvent(
                     FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
                     FirebaseManager.safeEventParams(
@@ -1117,7 +1074,6 @@ class ChatViewModel : BaseVM() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = chatApi.getAgentInfo(agentId)
-                LogUtils.i("getAgentInfo = $result")
                 when (result) {
                     is HttpResult.Success -> {
                         setAgentInfo(result.data)

@@ -47,12 +47,12 @@ import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
-import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -97,7 +97,6 @@ class MainActivity : BaseActivity() {
 
         // 防止重复执行（onCreate时会调用一次）
         if (hasInitializedConfig) {
-            LogUtils.d("MainActivity - initConfigData 已执行过，跳过重复执行")
             return
         }
 
@@ -123,7 +122,6 @@ class MainActivity : BaseActivity() {
     private fun loadUserDataIfLoggedIn() {
         // 防止重复初始化
         if (hasInitializedUserData) {
-            LogUtils.d("MainActivity - 用户数据已初始化，跳过重复加载")
             return
         }
 
@@ -219,20 +217,9 @@ class MainActivity : BaseActivity() {
             return false
         }
 
-        // 添加详细日志，便于调试
-        // 注意：如果应用在后台，包含 notification 字段的消息不会触发 FCMService.onMessageReceived
-        // 系统会自动显示通知，点击通知时会启动 MainActivity，并将 data 字段作为 Intent extras 传递
-        LogUtils.d(
-            "MainActivity",
-            "检查通知 Intent - 消息类型: $messageType, agent_id: $agentId, 所有 extras: ${intent.extras?.keySet()}",
-        )
-        LogUtils.d("MainActivity", "这是从后台推送通知启动的场景（系统自动显示通知，未触发 FCMService.onMessageReceived）")
-
         // 如果是 agent_message 类型且有 agent_id，跳转到 ChatActivity
         if (messageType == FCMConstants.TYPE_AGENT_MESSAGE && !agentId.isNullOrEmpty()) {
             hasHandledNotificationIntent = true // 标记已处理，避免重复跳转
-
-            LogUtils.d("MainActivity", "从推送通知启动，跳转到 ChatActivity - agent_id: $agentId")
             // 记录推送通知点击事件
             FirebaseManager.logEvent(
                 FirebaseManager.Events.PUSH_NOTIFICATION_CLICK,
@@ -272,9 +259,7 @@ class MainActivity : BaseActivity() {
             rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestPermission()
             ) { isGranted ->
-                if (isGranted) {
-                    LogUtils.i("MainActivity", "通知权限已授予")
-                } else {
+                if (!isGranted) {
                     LogUtils.w("MainActivity", "通知权限被拒绝")
                 }
             }
@@ -284,8 +269,6 @@ class MainActivity : BaseActivity() {
             // 1. 检查并申请通知权限（Android 13+）
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 if (!PermissionUtils.hasNotificationPermission(this@MainActivity)) {
-                    LogUtils.d("MainActivity", "申请通知权限")
-                    //
                     // notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
@@ -332,7 +315,8 @@ class MainActivity : BaseActivity() {
                 // 显示设置界面
                 com.ai.intellimate.settings.SettingContent(
                     modifier =
-                        Modifier.fillMaxSize()
+                        Modifier
+                            .fillMaxSize()
                             .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
                     onBack = { mainViewModel.hideSettings() },
                     onLogout = { isDelete ->
@@ -493,7 +477,6 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
                     com.ai.intellimate.utils.CredentialManagerHelper.signInWithGoogle(context)
                 result.fold(
                     onSuccess = { idToken ->
-                        LogUtils.i("Credential Manager sign-in successful")
 
                         // 直接调用后端登录接口
                         val userApi = ai.sxwl.android.data.api.NetServiceMgr.getUserApi()
@@ -567,11 +550,11 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
                         // 检查是否为用户取消操作，如果是则不显示错误提示
                         when (exception) {
                             is androidx.credentials.exceptions.GetCredentialCancellationException -> {
-                                LogUtils.i("User cancelled the login process")
+                                // 用户取消登录，无需记录日志
                             }
 
                             is androidx.credentials.exceptions.GetCredentialInterruptedException -> {
-                                LogUtils.i("Login process was interrupted")
+                                // 登录过程被中断，无需记录日志
                             }
 
                             is androidx.credentials.exceptions.NoCredentialException -> {
@@ -614,7 +597,9 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Image(
-                modifier = Modifier.size(120.dp).clip(RoundedCornerShape(10.dp)),
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(RoundedCornerShape(10.dp)),
                 painter = painterResource(R.drawable.icon_splash_icon),
                 contentDescription = "",
                 contentScale = ContentScale.Crop,

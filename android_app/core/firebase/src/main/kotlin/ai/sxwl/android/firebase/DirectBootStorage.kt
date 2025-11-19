@@ -73,8 +73,6 @@ object DirectBootStorage {
             // 只缓存 SharedPreferences 实例，不缓存 Context
             deviceProtectedPrefs =
                 deviceProtectedContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-
-            LogUtils.d("DirectBootStorage", "Direct Boot 存储初始化成功")
             true
         } catch (e: Exception) {
             LogUtils.e("DirectBootStorage", "Direct Boot 存储初始化失败: ${e.message}", e)
@@ -123,11 +121,6 @@ object DirectBootStorage {
                 putString(KEY_PENDING_MESSAGES, messagesJson)
                     .putInt(KEY_MESSAGE_COUNT, trimmedMessages.size)
             }
-
-            LogUtils.d(
-                "DirectBootStorage",
-                "保存待处理消息: messageId=${message.messageId}, 总数=${trimmedMessages.size}",
-            )
             true
         } catch (e: Exception) {
             LogUtils.e("DirectBootStorage", "保存待处理消息失败: ${e.message}", e)
@@ -160,7 +153,6 @@ object DirectBootStorage {
         return try {
             val prefs = getPrefs(context) ?: return false
             prefs.edit { remove(KEY_PENDING_MESSAGES).putInt(KEY_MESSAGE_COUNT, 0) }
-            LogUtils.d("DirectBootStorage", "已清除所有待处理消息")
             true
         } catch (e: Exception) {
             LogUtils.e("DirectBootStorage", "清除待处理消息失败: ${e.message}", e)

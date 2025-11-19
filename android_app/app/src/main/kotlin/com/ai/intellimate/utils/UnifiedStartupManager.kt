@@ -82,13 +82,10 @@ object UnifiedStartupManager {
             try {
                 // 检查登录状态，确保有有效的token
                 if (!isUserLoggedIn()) {
-                    LogUtils.i("UnifiedStartupManager - 用户未登录或token无效，等待用户登录")
                     // 不再创建游客账户，等待用户登录
                     _userAccountReady.value = false
                     _startupProgress.value = 0.0f
                     return@launch
-                } else {
-                    LogUtils.i("UnifiedStartupManager - 用户已登录，token有效")
                 }
 
                 // 确保用户账户状态已就绪
@@ -192,27 +189,20 @@ object UnifiedStartupManager {
         val userProfileDeferred =
             startupScope.async {
                 if (UserProfileManager.hasUserProfile()) {
-                    val profile = UserProfileManager.getUserProfile()
-                    LogUtils.i("UnifiedStartupManager - 加载缓存用户信息: ${profile.nickname}")
-                    profile
+                    UserProfileManager.getUserProfile()
                 } else {
-                    LogUtils.i("UnifiedStartupManager - 无缓存用户信息")
                     null
                 }
             }
 
         val agentsDeferred =
             startupScope.async {
-                val cachedAgents = AgentCacheManager.getCachedAgents()
-                LogUtils.i("UnifiedStartupManager - 加载缓存agents: ${cachedAgents.size}个")
-                cachedAgents
+                AgentCacheManager.getCachedAgents()
             }
 
         val chatAgentsDeferred =
             startupScope.async {
-                val cachedChatAgents = AgentCacheManager.getCachedChatAgents()
-                LogUtils.i("UnifiedStartupManager - 加载缓存chat agents: ${cachedChatAgents.size}个")
-                cachedChatAgents
+                AgentCacheManager.getCachedChatAgents()
             }
 
         // 等待缓存数据加载完成
@@ -231,9 +221,7 @@ object UnifiedStartupManager {
 
             // 快速加载缓存数据，不等待
             if (UserProfileManager.hasUserProfile()) {
-                val profile = UserProfileManager.getUserProfile()
-                _userProfile.value = profile
-                LogUtils.i("UnifiedStartupManager - 加载缓存用户信息: ${profile.nickname}")
+                _userProfile.value = UserProfileManager.getUserProfile()
             }
 
             val cachedAgents = AgentCacheManager.getCachedAgents()
@@ -252,7 +240,6 @@ object UnifiedStartupManager {
 
         // 检查登录状态
         if (!isUserLoggedIn()) {
-            LogUtils.i("UnifiedStartupManager - 用户未登录或token无效，跳过网络同步")
             return
         }
 
@@ -279,11 +266,7 @@ object UnifiedStartupManager {
             val token = IntySetting.getCurToken()
             val userId = IntySetting.getCurUserID()
 
-            val isValid = isLogin && token.isNotEmpty() && userId.isNotEmpty()
-            LogUtils.d(
-                "UnifiedStartupManager - 登录状态检查: isLogin=$isLogin, hasToken=${token.isNotEmpty()}, hasUserId=${userId.isNotEmpty()}, isValid=$isValid"
-            )
-            isValid
+            isLogin && token.isNotEmpty() && userId.isNotEmpty()
         } catch (e: Exception) {
             LogUtils.e("UnifiedStartupManager - 登录状态检查异常: ${e.message}")
             false
@@ -331,7 +314,6 @@ object UnifiedStartupManager {
                     val agents = result.data.list ?: emptyList()
                     AgentCacheManager.cacheAgents(agents)
                     _recommendedAgents.value = agents
-                    LogUtils.i("UnifiedStartupManager - 推荐agents同步成功: ${agents.size}个")
 
                     // 异步预加载资源，不阻塞启动流程
                     // 关键优化：优先预加载静态背景图（避免黑屏），然后预加载视频和音频
@@ -375,7 +357,6 @@ object UnifiedStartupManager {
             val agentApi: IAgentApi = NetServiceMgr.getAgentApi()
 
             val sortSeed = IntySetting.randomSortSeed()
-            LogUtils.i("UnifiedStartupManager.syncChatAgents - 使用 sortSeed: $sortSeed")
             val result =
                 agentApi.chatAgents(
                     page = 1,
@@ -388,7 +369,6 @@ object UnifiedStartupManager {
                     val agents = result.data.list ?: emptyList()
                     AgentCacheManager.cacheChatAgents(agents)
                     _chatAgents.value = agents
-                    LogUtils.i("UnifiedStartupManager - 聊天agents同步成功: ${agents.size}个")
 
                     // 异步预加载资源，不阻塞启动流程
                     // 关键优化：chatAgents是核心数据，需要更积极的预加载策略
@@ -443,7 +423,6 @@ object UnifiedStartupManager {
                 is HttpResult.Success -> {
                     val agents = result.data
                     AgentCacheManager.cacheUserCreatedAgents(agents)
-                    LogUtils.i("UnifiedStartupManager - 用户自建agents同步成功: ${agents.size}个")
                 }
 
                 is HttpResult.Failure -> {
@@ -528,13 +507,11 @@ object UnifiedStartupManager {
         _startupProgress.value = 0f
         _startupState.value = StartupState.Initializing
         _currentPhase.value = StartupPhase.Initializing
-        LogUtils.i("UnifiedStartupManager - 清理所有启动数据")
     }
 
     /** 标记用户账户已就绪（用于logout后恢复状态） */
     fun markUserAccountReady() {
         _userAccountReady.value = true
-        LogUtils.i("UnifiedStartupManager - 标记用户账户已就绪")
     }
 
     /**
@@ -557,11 +534,8 @@ object UnifiedStartupManager {
                     .distinct()
 
             if (videoUrls.isEmpty()) {
-                LogUtils.d("UnifiedStartupManager - 没有需要预加载的背景视频")
                 return
             }
-
-            LogUtils.i("UnifiedStartupManager - 开始预加载 ${videoUrls.size} 个背景视频")
 
             // 将URL列表分组，每组最多maxConcurrent个
             val chunks = videoUrls.chunked(maxConcurrent)
@@ -576,9 +550,6 @@ object UnifiedStartupManager {
                                     // 检查是否已经缓存
                                     if (!videoCacheManager.isCached(url)) {
                                         videoCacheManager.preloadVideo(url)
-                                        LogUtils.d("UnifiedStartupManager - 预加载背景视频成功: $url")
-                                    } else {
-                                        LogUtils.d("UnifiedStartupManager - 背景视频已缓存，跳过: $url")
                                     }
                                 } catch (e: Exception) {
                                     LogUtils.e(
@@ -592,8 +563,6 @@ object UnifiedStartupManager {
                     jobs.forEach { it.await() }
                 }
             }
-
-            LogUtils.i("UnifiedStartupManager - 背景视频预加载完成")
         } catch (e: Exception) {
             LogUtils.e("UnifiedStartupManager - 背景视频预加载异常: ${e.message}")
         }

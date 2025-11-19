@@ -85,8 +85,6 @@ fun ChatPageContainer(
                         }
                     }
                 }
-            } catch (e: IndexOutOfBoundsException) {
-                LogUtils.w("ChatPageContainer - 构建agentList时索引越界: ${e.message}")
             } catch (e: Exception) {
                 LogUtils.e("ChatPageContainer - 构建agentList时发生异常: ${e.message}")
             }
@@ -133,7 +131,7 @@ fun ChatPageContainer(
                 val audioManager = AudioManager.getInstance(Utils.getApp(), scope)
                 audioManager.stopAllPlayback()
             } catch (e: Exception) {
-                LogUtils.e("ChatPageContainer - 停止音频播放失败: ${e.message}")
+                // 音频停止失败，静默处理
             }
             delay(100)
         }
@@ -164,10 +162,8 @@ fun ChatPageContainer(
                         // 访问最后一个有效索引，这会触发Paging库自动加载下一页
                         agentsPagingItems[lastValidIndex]
                     }
-                } catch (e: IndexOutOfBoundsException) {
-                    LogUtils.w("ChatPageContainer - 索引越界，跳过预取: ${e.message}")
                 } catch (e: Exception) {
-                    LogUtils.w("ChatPageContainer - 预取触发失败: ${e.message}")
+                    // 预取失败，静默处理
                 }
             }
         }
@@ -181,18 +177,7 @@ fun ChatPageContainer(
             beyondViewportPageCount = 3, // 左右预先处理个page个数
         ) { currentPage ->
             // 防止数组越界
-            if (currentPage < 0 || currentPage >= agentList.size) {
-                LogUtils.w(
-                    "ChatPageContainer - HorizontalPager索引越界: currentPage=$currentPage, agentList.size=${agentList.size}"
-                )
-                // 如果索引无效，显示空页面或返回
-                return@HorizontalPager
-            }
-            val agent = agentList.getOrNull(currentPage)
-            if (agent == null) {
-                LogUtils.w("ChatPageContainer - 获取agent失败: currentPage=$currentPage")
-                return@HorizontalPager
-            }
+            val agent = agentList.getOrNull(currentPage) ?: return@HorizontalPager
             val chatViewModel: ChatViewModel = viewModel(key = agent.id, factory = viewModelFactory)
 
             LaunchedEffect(key1 = agent.id, key2 = agent.isFollowed) {
@@ -202,7 +187,9 @@ fun ChatPageContainer(
 
             val isPageCurrent = currentPage == pageState.currentPage
             // 关键：为每个页面添加裁剪，防止视频超出边界影响相邻页面
-            Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .clipToBounds()) {
                 ChatPage(
                     modifier = Modifier.fillMaxSize(),
                     chatViewModel = chatViewModel,
@@ -268,23 +255,26 @@ private fun NewUserGuide(
             val scope = rememberCoroutineScope()
             Box(
                 modifier =
-                    Modifier.fillMaxSize().noRippleClickable {
-                        // 只有在引导期间才响应点击
-                        if (isGuideActive) {
-                            scope.launch {
-                                showHand = false
-                                pageState.animateScrollToPage(initialPageIndex)
-                                IntySetting.setShowGuested()
-                                onGuideCompleted()
-                                isGuideActive = false
+                    Modifier
+                        .fillMaxSize()
+                        .noRippleClickable {
+                            // 只有在引导期间才响应点击
+                            if (isGuideActive) {
+                                scope.launch {
+                                    showHand = false
+                                    pageState.animateScrollToPage(initialPageIndex)
+                                    IntySetting.setShowGuested()
+                                    onGuideCompleted()
+                                    isGuideActive = false
+                                }
                             }
                         }
-                    }
             ) {
                 // 背景渐变框
                 Box(
                     modifier =
-                        Modifier.align(Alignment.TopEnd)
+                        Modifier
+                            .align(Alignment.TopEnd)
                             .padding(top = 340.dp)
                             .size(210.dp, 40.dp)
                             .background(
@@ -300,7 +290,8 @@ private fun NewUserGuide(
                 // 手势图标
                 Image(
                     modifier =
-                        Modifier.align(Alignment.TopEnd)
+                        Modifier
+                            .align(Alignment.TopEnd)
                             .padding(top = 340.dp, end = 92.dp)
                             .size(112.dp),
                     painter = painterResource(R.drawable.scroll_hand),

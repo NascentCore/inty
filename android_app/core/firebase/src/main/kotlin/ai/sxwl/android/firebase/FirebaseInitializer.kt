@@ -12,8 +12,6 @@ import java.lang.reflect.Method
 class FirebaseInitializer : Initializer<FirebaseManager> {
 
     override fun create(context: Context): FirebaseManager {
-        LogUtils.d(TAG, "Initializing Firebase services...")
-
         try {
             FirebaseManager.initialize(context)
 
@@ -24,8 +22,6 @@ class FirebaseInitializer : Initializer<FirebaseManager> {
                 // 启用 Firebase DebugView（用于实时查看事件和参数）
                 enableFirebaseDebugView(context)
             }
-
-            LogUtils.d(TAG, "Firebase services initialized successfully")
         } catch (e: Exception) {
             LogUtils.e(TAG, "Failed to initialize Firebase services", e)
         }

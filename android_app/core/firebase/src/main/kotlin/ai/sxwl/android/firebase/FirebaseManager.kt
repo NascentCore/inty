@@ -14,14 +14,14 @@ import com.google.firebase.perf.FirebasePerformance
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.remoteConfig
 import com.google.firebase.remoteconfig.remoteConfigSettings
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics、Performance和Remote Config的初始化和使用
@@ -168,7 +168,6 @@ object FirebaseManager {
     /** 初始化Firebase服务 线程安全，支持重复调用 */
     fun initialize(context: Context) {
         if (isInitialized.get()) {
-            LogUtils.i("FirebaseManager - 已经初始化，跳过重复初始化")
             return
         }
 
@@ -258,9 +257,7 @@ object FirebaseManager {
         }
 
         if (!shouldLogEvent(eventName)) {
-            if (AppUtils.isAppDebug()) {
-                LogUtils.d("FirebaseManager", "事件被过滤: $eventName")
-            } else {
+            if (!AppUtils.isAppDebug()) {
                 // 关键事件即使非调试模式也输出警告，便于排查问题
                 if (
                     eventName in
@@ -309,26 +306,12 @@ object FirebaseManager {
                     }
                     analytics.logEvent(eventName, bundle)
 
-                    // 调试模式下确认事件已发送
+                    // 事件已发送（调试模式下输出详细日志）
                     if (AppUtils.isAppDebug()) {
                         LogUtils.d(
                             "FirebaseManager",
                             "✅ 事件已发送: $eventName (${parameters.size} 个参数)",
                         )
-                    } else {
-                        // 关键事件即使非调试模式也输出确认日志，便于排查问题
-                        if (
-                            eventName in
-                                listOf(
-                                    Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
-                                    Events.MESSAGE_SEND_FAILURE,
-                                )
-                        ) {
-                            LogUtils.i(
-                                "FirebaseManager",
-                                "✅ 事件已发送: $eventName (${parameters.size} 个参数)",
-                            )
-                        }
                     }
                 } catch (e: Exception) {
                     logError("logEvent", "Failed to log event '$eventName': ${e.message}")
@@ -627,13 +610,11 @@ object FirebaseManager {
      */
     fun setTokenUploadCallback(callback: FCMTokenUploadCallback?) {
         tokenUploadCallback = callback
-        LogUtils.d("FirebaseManager", "FCM Token 上传回调已${if (callback != null) "设置" else "清除"}")
     }
 
     /** Set FCM message handler Should be called from common layer or application layer */
     fun setMessageHandler(handler: FCMessageHandler?) {
         messageHandler = handler
-        LogUtils.d("FirebaseManager", "FCM 消息处理器已${if (handler != null) "设置" else "清除"}")
     }
 
     /** Get FCM message handler Used by FCMService to delegate message handling */
@@ -660,9 +641,7 @@ object FirebaseManager {
         val callback = tokenUploadCallback
         if (callback != null) {
             try {
-                LogUtils.d("FirebaseManager", "通过回调上传 FCM Token")
                 callback.uploadToken(token)
-                LogUtils.i("FirebaseManager", "FCM Token 上传成功")
             } catch (e: Exception) {
                 LogUtils.e("FirebaseManager", "上传 FCM Token 失败", e)
             }
@@ -705,8 +684,6 @@ object FirebaseManager {
             setUserProperty("is_emulator", DeviceUtils.isEmulator().toString())
             setUserProperty("is_rooted", DeviceUtils.isDeviceRooted().toString())
             setUserProperty("is_debug", AppUtils.isAppDebug().toString())
-
-            LogUtils.i("FirebaseManager - 设备信息设置完成")
         } catch (e: Exception) {
             logError("setDeviceInfo", "Failed to set device info: ${e.message}")
         }
@@ -741,8 +718,6 @@ object FirebaseManager {
             setUserProperty(UserProperties.USER_ID, userId)
             setUserProperty(UserProperties.USER_TYPE, userType)
             setUserProperty(UserProperties.SUBSCRIPTION_LEVEL, subscriptionLevel)
-
-            LogUtils.i("FirebaseManager - 用户信息设置完成: userId=$userId, userType=$userType")
         } catch (e: Exception) {
             logError("setUserInfo", "Failed to set user info: ${e.message}")
         }
@@ -984,10 +959,6 @@ object FirebaseManager {
             firebaseScope.launch {
                 try {
                     remoteConfig.setDefaultsAsync(defaults)
-                    LogUtils.d(
-                        "FirebaseManager",
-                        "Remote Config 默认值已设置: ${defaults.entries.joinToString { "${it.key}=${it.value}" }}",
-                    )
                 } catch (e: Exception) {
                     logError("setRemoteConfigDefaults", "Failed to set defaults: ${e.message}")
                 }
@@ -1007,20 +978,15 @@ object FirebaseManager {
             val remoteConfig = getRemoteConfig() ?: return false
 
             val result = remoteConfig.fetchAndActivate().await()
-            if (result) {
-                LogUtils.i("FirebaseManager", "Remote Config 已获取并激活新配置")
-                // 输出当前配置的值（用于调试）
-                if (AppUtils.isAppDebug()) {
-                    val allConfig = remoteConfig.all
-                    val configValues =
-                        allConfig.entries.joinToString { entry ->
-                            val value = entry.value
-                            "${entry.key}=${value.asString()}"
-                        }
-                    LogUtils.d("FirebaseManager", "Remote Config 当前配置值: $configValues")
-                }
-            } else {
-                LogUtils.d("FirebaseManager", "Remote Config 使用缓存配置")
+            // 调试模式下输出配置信息
+            if (AppUtils.isAppDebug() && result) {
+                val allConfig = remoteConfig.all
+                val configValues =
+                    allConfig.entries.joinToString { entry ->
+                        val value = entry.value
+                        "${entry.key}=${value.asString()}"
+                    }
+                LogUtils.d("FirebaseManager", "Remote Config 已获取并激活新配置: $configValues")
             }
             result
         } catch (e: Exception) {
@@ -1039,7 +1005,6 @@ object FirebaseManager {
             val remoteConfig = getRemoteConfig() ?: return false
 
             remoteConfig.fetch().await()
-            LogUtils.d("FirebaseManager", "Remote Config 已获取（未激活）")
             true
         } catch (e: Exception) {
             logError("fetchRemoteConfig", "Failed to fetch: ${e.message}")
@@ -1056,11 +1021,7 @@ object FirebaseManager {
         return try {
             val remoteConfig = getRemoteConfig() ?: return false
 
-            val result = remoteConfig.activate().await()
-            if (result) {
-                LogUtils.i("FirebaseManager", "Remote Config 已激活")
-            }
-            result
+            remoteConfig.activate().await()
         } catch (e: Exception) {
             logError("activateRemoteConfig", "Failed to activate: ${e.message}")
             false
@@ -1092,11 +1053,7 @@ object FirebaseManager {
     fun getRemoteConfigBoolean(key: String): Boolean {
         return try {
             val remoteConfig = getRemoteConfig() ?: return false
-            val value = remoteConfig.getBoolean(key)
-            if (AppUtils.isAppDebug()) {
-                LogUtils.d("FirebaseManager", "Remote Config 读取值: $key = $value")
-            }
-            value
+            remoteConfig.getBoolean(key)
         } catch (e: Exception) {
             logError("getRemoteConfigBoolean", "Failed to get boolean for key '$key': ${e.message}")
             false
@@ -1192,7 +1149,6 @@ object FirebaseManager {
                         minimumFetchIntervalInSeconds = interval
                     }
                     remoteConfig.setConfigSettingsAsync(configSettings)
-                    LogUtils.d("FirebaseManager", "Remote Config 获取间隔已更新: ${interval}秒")
                     // 标记为已配置
                     remoteConfigConfigured.set(true)
                 }
@@ -1223,8 +1179,6 @@ object FirebaseManager {
             // 清理统计信息
             errorCounts.clear()
             lastEventTimes.clear()
-
-            LogUtils.i("FirebaseManager - 资源清理完成")
         } catch (e: Exception) {
             LogUtils.e("FirebaseManager - 资源清理失败: ${e.message}")
         }
