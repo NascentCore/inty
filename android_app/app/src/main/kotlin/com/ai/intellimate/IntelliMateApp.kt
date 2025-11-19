@@ -34,7 +34,6 @@ class IntelliMateApp : Application() {
         val recommendedCacheProvider = RecommendedAgentCacheProviderImpl()
         DataModule.setAgentCacheProvider(chatCacheProvider)
         DataModule.setRecommendedCacheProvider(recommendedCacheProvider)
-        LogUtils.i("IntelliMateApp - 数据层依赖注入初始化完成")
 
         // 立即初始化统一启动管理器（只做必要的登录判断，不阻塞）
         UnifiedStartupManager.initializeEssential(this)
@@ -78,8 +77,6 @@ class IntelliMateApp : Application() {
 
         // 设置设备信息
         FirebaseManager.setDeviceInfo()
-
-        LogUtils.i("IntelliMateApp - Firebase Analytics初始化完成")
     }
 
     /** 初始化 Remote Config 默认值并获取配置 用于设置聊天开关的默认值（Keep Talking 和 Auto Play Voice） */
@@ -99,10 +96,7 @@ class IntelliMateApp : Application() {
                 )
 
                 // 获取并激活 Remote Config
-                val hasNewConfig = FirebaseManager.fetchAndActivateRemoteConfig()
-                if (hasNewConfig) {
-                    LogUtils.i("IntelliMateApp", "Remote Config 已获取并激活新配置")
-                }
+                FirebaseManager.fetchAndActivateRemoteConfig()
 
                 // 在调试模式下输出所有 Remote Config 参数（用于验证配置）
                 if (ai.sxwl.android.utils.AppUtils.isAppDebug()) {
@@ -133,7 +127,6 @@ class IntelliMateApp : Application() {
      */
     private fun setupFCMessageHandler() {
         FirebaseManager.setMessageHandler(FCMessageHandlerImpl())
-        LogUtils.d("IntelliMateApp", "FCM 消息处理器已设置")
     }
 
     /**
@@ -149,14 +142,17 @@ class IntelliMateApp : Application() {
                     // Check if user is logged in before uploading token
                     // This avoids 401 errors when token is obtained before login
                     if (!IntySetting.isLogin() || IntySetting.getCurToken().isEmpty()) {
-                        LogUtils.w("IntelliMateApp", "用户未登录，跳过 FCM Token 上传。登录后将自动上传。")
+                        LogUtils.w(
+                            "IntelliMateApp",
+                            "用户未登录，跳过 FCM Token 上传。登录后将自动上传。"
+                        )
                         return
                     }
 
                     // Delegate to UserService in data layer
                     when (val result = UserService.registerDeviceToken(token)) {
                         is ApiResult.Success -> {
-                            LogUtils.i("IntelliMateApp", "FCM Token 上传成功")
+                            // Token 上传成功
                         }
 
                         is ApiResult.Error -> {
@@ -166,14 +162,12 @@ class IntelliMateApp : Application() {
                 }
             }
         )
-        LogUtils.d("IntelliMateApp", "FCM Token 上传回调已设置")
     }
 
     override fun onTerminate() {
         super.onTerminate()
         // 应用退出时释放Billing连接
         if (BillingRepository.isInitialized()) {
-            LogUtils.i("IntyApp - 应用退出，释放Billing连接")
             BillingRepository.release()
         }
     }

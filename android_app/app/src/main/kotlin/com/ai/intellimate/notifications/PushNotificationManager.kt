@@ -77,7 +77,6 @@ class PushNotificationManager private constructor(private val application: Appli
     private fun handleDirectBootPendingMessages() {
         // 检查用户是否已解锁
         if (!DirectBootUtils.isUserUnlocked(application)) {
-            LogUtils.d("PushNotificationManager", "用户未解锁，跳过处理 Direct Boot 待处理消息")
             return
         }
 
@@ -97,11 +96,6 @@ class PushNotificationManager private constructor(private val application: Appli
                 val messageCount = pendingMessages.size
 
                 if (messageCount > 0) {
-                    LogUtils.i(
-                        "PushNotificationManager",
-                        "发现 $messageCount 条 Direct Boot 模式下保存的待处理消息，开始处理",
-                    )
-
                     // 处理每条消息
                     pendingMessages.forEach { message ->
                         try {
@@ -117,9 +111,6 @@ class PushNotificationManager private constructor(private val application: Appli
 
                     // 清除已处理的消息
                     DirectBootStorage.clearPendingMessages(application)
-                    LogUtils.i("PushNotificationManager", "Direct Boot 待处理消息处理完成，已清除")
-                } else {
-                    LogUtils.d("PushNotificationManager", "没有 Direct Boot 待处理消息")
                 }
             } catch (e: Exception) {
                 LogUtils.e("PushNotificationManager", "处理 Direct Boot 待处理消息失败", e)
@@ -144,11 +135,6 @@ class PushNotificationManager private constructor(private val application: Appli
                 notificationId = message.messageId.hashCode(),
                 timestamp = message.timestamp,
                 iconResId = android.R.drawable.ic_dialog_info,
-            )
-        } else {
-            LogUtils.d(
-                "PushNotificationManager",
-                "待处理消息缺少标题或内容，跳过显示通知: messageId=${message.messageId}",
             )
         }
     }
@@ -199,12 +185,11 @@ class PushNotificationManager private constructor(private val application: Appli
 
             // 显示通知
             val notificationManager = NotificationManagerCompat.from(application)
-            if (notificationManager.areNotificationsEnabled()) {
-                notificationManager.notify(notificationId, builder.build())
-                LogUtils.d("PushNotificationManager", "通知已显示: $title")
-            } else {
+            if (!notificationManager.areNotificationsEnabled()) {
                 LogUtils.w("PushNotificationManager", "通知权限未授予，无法显示通知")
+                return
             }
+            notificationManager.notify(notificationId, builder.build())
         } catch (e: Exception) {
             LogUtils.e("PushNotificationManager", "显示通知失败", e)
         }
@@ -215,22 +200,15 @@ class PushNotificationManager private constructor(private val application: Appli
         val messageType = data[FCMConstants.DATA_KEY_TYPE]
         val agentId = data[FCMConstants.DATA_KEY_AGENT_ID]
 
-        // 添加详细日志，便于调试跳转问题
-        LogUtils.d(
-            "PushNotificationManager",
-            "创建通知 Intent - 消息类型: $messageType, agent_id: $agentId, 所有数据: $data",
-        )
-
         return when (messageType) {
             FCMConstants.TYPE_AGENT_MESSAGE -> {
                 // Agent 消息：跳转到聊天页面
                 if (!agentId.isNullOrEmpty()) {
-                    LogUtils.d("PushNotificationManager", "跳转到 ChatActivity - agent_id: $agentId")
                     ChatActivity.notifyIntent(application, agentId)
                 } else {
                     LogUtils.w(
                         "PushNotificationManager",
-                        "消息类型为 agent_message 但缺少 agent_id，跳转到主页面。消息类型: $messageType, 数据: $data",
+                        "消息类型为 agent_message 但缺少 agent_id，跳转到主页面",
                     )
                     createMainActivityIntent()
                 }
@@ -239,14 +217,13 @@ class PushNotificationManager private constructor(private val application: Appli
             FCMConstants.TYPE_SYSTEM,
             null -> {
                 // 系统通知或其他：跳转到主页面
-                LogUtils.d("PushNotificationManager", "系统通知或消息类型为空，跳转到主页面。消息类型: $messageType")
                 createMainActivityIntent()
             }
 
             else -> {
                 LogUtils.w(
                     "PushNotificationManager",
-                    "未知消息类型: $messageType，跳转到主页面。期望类型: ${FCMConstants.TYPE_AGENT_MESSAGE} 或 ${FCMConstants.TYPE_SYSTEM}，所有数据: $data",
+                    "未知消息类型: $messageType，跳转到主页面",
                 )
                 createMainActivityIntent()
             }
@@ -319,7 +296,6 @@ class PushNotificationManager private constructor(private val application: Appli
                         }
 
                 notificationManager.createNotificationChannel(channel)
-                LogUtils.d("PushNotificationManager", "通知渠道已创建")
             }
         }
     }
