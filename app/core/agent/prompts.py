@@ -42,6 +42,7 @@ def _get_prompt_text(key: str) -> str:
 
 # In our case, it's roleplay, which is defined here.
 ROLEPLAY_MAIN_PROMPT = _get_prompt_text("ROLEPLAY_MAIN_PROMPT")
+ROLEPLAY_MAIN_PROMPT = _get_prompt_text("ROLEPLAY_MAIN_PROMPT")
 
 ###############################################################################
 # Mode prompt is for further steering the assumed {{char}}'s conversational
@@ -53,13 +54,20 @@ ROLEPLAY_MAIN_PROMPT = _get_prompt_text("ROLEPLAY_MAIN_PROMPT")
 
 # Flirting mode is for romantic roleplay.
 FLIRTING_MODE_PROMPT = _get_prompt_text("FLIRTING_MODE_PROMPT")
+FLIRTING_MODE_PROMPT = _get_prompt_text("FLIRTING_MODE_PROMPT")
 
 FLIRTING_MODE_PROMPT_20250902 = _get_prompt_text("FLIRTING_MODE_PROMPT_20250902")
 
 FRIENDLY_MODE_PROMPT = _get_prompt_text("FRIENDLY_MODE_PROMPT")
 
 PURITY_MAIN_PROMPT_0725 = _get_prompt_text("PURITY_MAIN_PROMPT_0725")
+FLIRTING_MODE_PROMPT_20250902 = _get_prompt_text("FLIRTING_MODE_PROMPT_20250902")
 
+FRIENDLY_MODE_PROMPT = _get_prompt_text("FRIENDLY_MODE_PROMPT")
+
+PURITY_MAIN_PROMPT_0725 = _get_prompt_text("PURITY_MAIN_PROMPT_0725")
+
+PURITY_MODE_PROMPT_0725 = _get_prompt_text("PURITY_MODE_PROMPT_0725")
 PURITY_MODE_PROMPT_0725 = _get_prompt_text("PURITY_MODE_PROMPT_0725")
 
 
@@ -101,6 +109,7 @@ class StructuredPrompt(BaseModel):
 
 
 PROACTIVE_CHAT_SYSTEM_PROMPT = _get_prompt_text("PROACTIVE_CHAT_SYSTEM_PROMPT")
+PROACTIVE_CHAT_SYSTEM_PROMPT = _get_prompt_text("PROACTIVE_CHAT_SYSTEM_PROMPT")
 
 ROMANTIC_ROLEPLAY_PROMPT = StructuredPrompt(
     main_prompt=ROLEPLAY_MAIN_PROMPT,
@@ -121,4 +130,5 @@ PURITY_ROLEPLAY_PROMPT = StructuredPrompt(
 # Image generation prompt
 ###############################################################################
 
+IMAGE_GENERATION_PROMPT_TEMPLATE = _get_prompt_text("IMAGE_GENERATION_PROMPT_TEMPLATE")
 IMAGE_GENERATION_PROMPT_TEMPLATE = _get_prompt_text("IMAGE_GENERATION_PROMPT_TEMPLATE")
