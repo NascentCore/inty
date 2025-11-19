@@ -247,6 +247,19 @@ class ElevenLabsConfig:
 
 
 @dataclass
+class GeminiVoiceConfig:
+    """Gemini 语音生成配置"""
+
+    enabled: bool = False
+    api_key: Optional[str] = None
+    model: str = "gemini-2.5-flash-preview-tts"
+    default_voice_name: str = "Zephyr"
+    default_language_code: Optional[str] = "cmn-CN"
+    temperature: float = 1.0
+    top_p: float = 0.95
+
+
+@dataclass
 class SentryConfig:
     """Sentry 错误监控配置"""
 
@@ -299,6 +312,7 @@ class Config:
     firebase: FirebaseConfig
     google_play: GooglePlayConfig
     elevenlabs: ElevenLabsConfig
+    gemini_voice: GeminiVoiceConfig
     cloudflare: CloudflareConfig
     sentry: SentryConfig
     push_notification: PushNotificationConfig
@@ -336,6 +350,7 @@ def load_config(path: str) -> Config:
         firebase=FirebaseConfig(**data.get("firebase", {})),
         google_play=GooglePlayConfig(**data.get("google_play", {})),
         elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {})),
+        gemini_voice=GeminiVoiceConfig(**data.get("gemini_voice", {})),
         cloudflare=CloudflareConfig(**data.get("cloudflare", {})),
         sentry=SentryConfig(**data.get("sentry", {})),
         push_notification=PushNotificationConfig(**data.get("push_notification", {})),
@@ -356,6 +371,8 @@ def _validate_config(config: Config):
         raise ValueError("firebase.service_account_path is required")
     if not config.elevenlabs.api_key:
         raise ValueError("elevenlabs.api_key is required")
+    if config.gemini_voice.enabled and not config.gemini_voice.api_key:
+        raise ValueError("gemini_voice.api_key is required when gemini_voice.enabled is true")
 
     # 校验并自动修正 limits 配置
     limits = config.app.limits

@@ -53,6 +53,15 @@ elevenlabs:
   enabled: true
   max_text_length: 5000
 
+gemini_voice:
+  enabled: false
+  {{ gemini_voice__api_key }}
+  model: "gemini-2.5-flash-preview-tts"
+  default_voice_name: "Zephyr"
+  default_language_code: "cmn-CN"
+  temperature: 1.0
+  top_p: 0.95
+
 push_notification:
   enabled: false  # 是否启用推送服务
   batch_size: 50  # 每批处理的聊天数量

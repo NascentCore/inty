@@ -8,10 +8,16 @@ import base64
 import hashlib
 import io
 import re
+import struct
+import wave
+from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 from elevenlabs import VoiceSettings
 from elevenlabs.client import ElevenLabs
+from google import genai
+from google.genai import types
 from loguru import logger
 from mutagen.mp3 import MP3
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,14 +32,70 @@ GENDER_VOICE_MAPPING = {
     "OTHER": "O7p2vmz2iEYgMXxkbsif",
 }
 
+GEMINI_GENDER_DEFAULT_MAPPING = {
+    "MALE": "Charon",
+    "FEMALE": "Kore",
+    "OTHER": "Zephyr",
+}
+
+GEMINI_TO_ELEVEN_VOICE_ID = {
+    "kore": "4tRn1lSkEn13EVTuqb0g",
+    "charon": "rHWSYoq8UlV0YIBKMryp",
+    "zephyr": "O7p2vmz2iEYgMXxkbsif",
+}
+
+ELEVEN_TO_GEMINI_VOICE_ID = {value: key for key, value in GEMINI_TO_ELEVEN_VOICE_ID.items()}
+
+LANGUAGE_CODE_ALIAS = {
+    "zh": "cmn-CN",
+    "en": "en-US",
+}
+
+
+class VoiceProvider(str, Enum):
+    GEMINI = "gemini"
+    ELEVENLABS = "elevenlabs"
+
+
+@dataclass
+class VoiceSelection:
+    requested_voice_id: Optional[str]
+    gemini_voice_name: Optional[str]
+    elevenlabs_voice_id: Optional[str]
+
+    def provider_voice_id(self, provider: VoiceProvider) -> Optional[str]:
+        if provider == VoiceProvider.GEMINI:
+            voice_name = (self.gemini_voice_name or "").strip()
+            if not voice_name:
+                return None
+            return f"gemini:{voice_name.lower()}"
+        return self.elevenlabs_voice_id
+
 
 class VoiceService:
     """语音生成服务"""
 
     def __init__(self):
         self.config = global_config_loaded_from_config_yaml.elevenlabs
+        self.gemini_config = global_config_loaded_from_config_yaml.gemini_voice
         self.gcs_service = GCSService()
-        self.client = ElevenLabs(api_key=self.config.api_key)
+        self._elevenlabs_client: Optional[ElevenLabs] = None
+        self._gemini_client: Optional[genai.Client] = None
+        if self.config.enabled:
+            self._elevenlabs_client = ElevenLabs(api_key=self.config.api_key)
+
+    def _get_elevenlabs_client(self) -> ElevenLabs:
+        if self._elevenlabs_client is None:
+            self._elevenlabs_client = ElevenLabs(api_key=self.config.api_key)
+        return self._elevenlabs_client
+
+    def _get_gemini_client(self) -> genai.Client:
+        if self._gemini_client is None:
+            client_kwargs: Dict[str, Any] = {}
+            if self.gemini_config.api_key:
+                client_kwargs["api_key"] = self.gemini_config.api_key
+            self._gemini_client = genai.Client(**client_kwargs)
+        return self._gemini_client
 
     def _clean_text_for_voice(self, text: str) -> str:
         """
@@ -79,45 +141,27 @@ class VoiceService:
         user: Optional[Any] = None,
     ) -> Optional[Tuple[str, float]]:
         """
-        生成语音并上传到GCS
-
-        Args:
-            text: 要转换的文本
-            voice_id: 语音ID，如果为None则根据agent_gender选择默认音色
-            language: 语言代码
-            model: 模型名称，默认使用配置中的
-            db: 数据库会话，用于缓存查询
-            agent_gender: Agent性别，用于选择默认音色（MALE/FEMALE/OTHER）
-            user: 用户对象，用于限制检查和用量记录
-
-        Returns:
-            语音文件的GCS URL和音频时长(秒)的元组，失败返回None
+        生成语音并上传到GCS，优先使用 Gemini 语音模型，失败后回退到 ElevenLabs。
         """
-        if not self.config.enabled:
-            logger.warning("ElevenLabs语音生成已禁用")
+        providers = self._build_provider_sequence()
+        if not providers:
+            logger.warning("所有语音提供商均已禁用，无法生成语音")
             return None
 
-        if not text.strip():
+        if not text or not text.strip():
             logger.warning("文本内容为空，跳过语音生成")
             return None
 
-        # 如果提供了用户信息，检查语音生成限制
         if user and db:
             from app.services.global_services import subscription_service
 
-            (
-                is_allowed,
-                used_count,
-                limit,
-            ) = await subscription_service.check_voice_generation_limit(db, user)
-
+            is_allowed, used_count, limit = await subscription_service.check_voice_generation_limit(
+                db, user
+            )
             if not is_allowed:
-                logger.warning(
-                    f"用户 {user.id} 已达到语音生成限制: {used_count}/{limit}"
-                )
+                logger.warning(f"用户 {user.id} 已达到语音生成限制: {used_count}/{limit}")
                 return None
 
-        # 清理文本内容，移除心理和动作描写
         original_text = text
         text = self._clean_text_for_voice(text)
 
@@ -134,158 +178,276 @@ class VoiceService:
             logger.warning(f"文本长度超过限制 {self.config.max_text_length}，截断处理")
             text = text[: self.config.max_text_length]
 
-        try:
-            # 确定使用的voice_id
-            if not voice_id:
-                # 根据性别选择默认音色ID
-                voice_id = (
-                    GENDER_VOICE_MAPPING.get(agent_gender)
-                    if agent_gender
-                    else self.config.voice_id
+        selection = self._resolve_voice_selection(voice_id, agent_gender)
+        requested_model = model
+        text_length = len(text)
+
+        for provider in providers:
+            provider_model = self._resolve_provider_model(provider, requested_model)
+            provider_voice_id = selection.provider_voice_id(provider)
+            if not provider_voice_id:
+                logger.debug(f"{provider.value} 无可用音色配置，跳过该提供商")
+                continue
+
+            cached_result = await self._get_cached_voice(
+                db, text, provider_voice_id, provider_model, language
+            )
+            if cached_result:
+                cached_url, cached_duration = cached_result
+                await self._record_voice_usage_if_needed(
+                    db,
+                    user,
+                    text_length,
+                    provider_voice_id,
+                    provider,
+                    cached=True,
+                    requested_voice_id=selection.requested_voice_id,
                 )
+                logger.debug(
+                    f"{provider.value} 语音生成使用缓存: {cached_url}, 时长: {cached_duration:.2f}秒"
+                )
+                return cached_url, cached_duration
 
-                if not voice_id:
-                    logger.warning(
-                        f"无法确定音色ID: agent_gender={agent_gender}, 配置文件voice_id={self.config.voice_id}"
-                    )
-                    return None
+            generation_result = await self._invoke_provider_api(
+                provider, text, selection, provider_model, language
+            )
+            if not generation_result:
+                logger.warning(f"{provider.value} 语音生成失败，尝试下一个提供商")
+                continue
 
-            model = model or self.config.model
-
+            audio_data, duration, content_type, file_extension = generation_result
+            file_name = self._generate_file_name(
+                text, provider_voice_id, provider_model, file_extension
+            )
             logger.debug(
-                f"开始语音生成: voice_id={voice_id}, model={model}, language={language}, text_length={len(text)}"
+                f"{provider.value} 语音生成成功，准备上传: voice_id={provider_voice_id}, model={provider_model}"
             )
 
-            # 并行检查缓存和预准备其他资源
-            cached_url = None
-            if db:
-                logger.debug("检查语音缓存")
-                from app.services.voice_cache_service import voice_cache_service
-
-                cached_result = await voice_cache_service.get_cached_voice(
-                    db, text, voice_id, model, language
-                )
-                if cached_result:
-                    cached_url, cached_duration = cached_result
-                    logger.debug(f"使用缓存的语音文件: {cached_url}")
-                    # 访问统计已经在get_cached_voice中异步更新了，这里不需要重复更新
-
-                    # 记录语音生成用量（包括缓存命中）
-                    if user:
-                        try:
-                            from app.services.global_services import (
-                                subscription_service,
-                            )
-
-                            await subscription_service.record_usage(
-                                db,
-                                user.id,
-                                "voice_generation",
-                                1,
-                                extra_data={
-                                    "text_length": len(text),
-                                    "voice_id": voice_id,
-                                    "cached": True,
-                                },
-                            )
-                        except Exception as e:
-                            logger.warning(f"记录语音生成用量失败: {str(e)}")
-
-                    return (cached_url, cached_duration)
-                logger.debug("未找到缓存，开始新的语音生成")
-
-            # 生成语音文件
-            logger.debug("调用ElevenLabs API")
-            audio_result = await self._call_elevenlabs_api(
-                text, voice_id, model, language
+            audio_url = await self.gcs_service.upload_voice_file(
+                file_name, audio_data, content_type=content_type
             )
-            if not audio_result:
-                logger.error("ElevenLabs API返回空数据")
-                return None
-
-            audio_data, duration = audio_result
-
-            logger.debug(
-                f"ElevenLabs API调用成功，音频数据大小: {len(audio_data)} bytes"
-            )
-
-            # 生成唯一文件名
-            file_name = self._generate_file_name(text, voice_id, model)
-            logger.debug(f"生成文件名: {file_name}")
-
-            # 并行上传到GCS和准备缓存保存
-            logger.debug("开始上传到GCS")
-
-            # 创建上传任务
-            upload_task = asyncio.create_task(
-                self.gcs_service.upload_voice_file(
-                    file_name, audio_data, content_type="audio/mpeg"
-                )
-            )
-
-            # 等待上传完成
-            audio_url = await upload_task
-
             if not audio_url:
-                logger.error("GCS上传失败")
-                return None
+                logger.error("GCS上传失败，尝试下一个语音提供商")
+                continue
 
-            logger.debug(f"GCS上传成功: {audio_url}")
+            self._schedule_cache_save(
+                text,
+                provider_voice_id,
+                provider_model,
+                language,
+                audio_url,
+                duration,
+                len(audio_data),
+            )
 
-            # 异步保存到缓存，不阻塞返回
-            if audio_url:
-                logger.debug("异步保存到语音缓存")
-                from app.services.voice_cache_service import voice_cache_service
-
-                asyncio.create_task(
-                    voice_cache_service.save_voice_cache(
-                        None,
-                        text,
-                        voice_id,
-                        model,
-                        language,
-                        audio_url,
-                        duration,
-                        len(audio_data),
-                    )
-                )
-                logger.debug("语音缓存保存任务已启动")
-
-            # 记录语音生成用量（新生成）
-            if user and db:
-                try:
-                    from app.services.global_services import subscription_service
-
-                    await subscription_service.record_usage(
-                        db,
-                        user.id,
-                        "voice_generation",
-                        1,
-                        extra_data={
-                            "text_length": len(text),
-                            "voice_id": voice_id,
-                            "cached": False,
-                        },
-                    )
-                except Exception as e:
-                    logger.warning(f"记录语音生成用量失败: {str(e)}")
+            await self._record_voice_usage_if_needed(
+                db,
+                user,
+                text_length,
+                provider_voice_id,
+                provider,
+                cached=False,
+                requested_voice_id=selection.requested_voice_id,
+            )
 
             logger.debug(f"语音生成成功: {file_name}, 时长: {duration:.2f}秒")
-            return (audio_url, duration)
+            return audio_url, duration
 
-        except Exception as e:
-            logger.error(f"语音生成失败: {str(e)}")
-            logger.exception("语音生成异常详细信息:")
+        logger.error("所有语音提供商均生成失败")
+        return None
+
+    def _build_provider_sequence(self) -> List[VoiceProvider]:
+        order: List[VoiceProvider] = []
+        if self.gemini_config.enabled:
+            order.append(VoiceProvider.GEMINI)
+        if self.config.enabled:
+            order.append(VoiceProvider.ELEVENLABS)
+        return order
+
+    def _resolve_provider_model(
+        self, provider: VoiceProvider, requested_model: Optional[str]
+    ) -> str:
+        if requested_model:
+            return requested_model
+        if provider == VoiceProvider.GEMINI:
+            return self.gemini_config.model
+        return self.config.model
+
+    def _resolve_voice_selection(
+        self, voice_id: Optional[str], agent_gender: Optional[str]
+    ) -> VoiceSelection:
+        requested_voice_id = voice_id
+        resolved_voice_id = voice_id
+        gender_key = (agent_gender or "").upper()
+
+        if not resolved_voice_id and gender_key:
+            resolved_voice_id = GENDER_VOICE_MAPPING.get(gender_key)
+        if not resolved_voice_id:
+            resolved_voice_id = self.config.voice_id
+
+        gemini_voice_name: Optional[str] = None
+        if requested_voice_id and requested_voice_id.lower().startswith("gemini:"):
+            gemini_voice_name = requested_voice_id.split(":", 1)[1].strip() or None
+        else:
+            gemini_voice_name = self._map_elevenlabs_voice_to_gemini(resolved_voice_id)
+
+        if not gemini_voice_name:
+            gemini_voice_name = GEMINI_GENDER_DEFAULT_MAPPING.get(
+                gender_key, self.gemini_config.default_voice_name
+            )
+
+        fallback_elevenlabs_voice_id = resolved_voice_id
+        if requested_voice_id and requested_voice_id.lower().startswith("gemini:"):
+            fallback_elevenlabs_voice_id = GEMINI_TO_ELEVEN_VOICE_ID.get(
+                (gemini_voice_name or "").lower(), self.config.voice_id
+            )
+        if not fallback_elevenlabs_voice_id:
+            fallback_elevenlabs_voice_id = self.config.voice_id
+
+        return VoiceSelection(
+            requested_voice_id=requested_voice_id,
+            gemini_voice_name=gemini_voice_name,
+            elevenlabs_voice_id=fallback_elevenlabs_voice_id,
+        )
+
+    def _map_elevenlabs_voice_to_gemini(
+        self, voice_id: Optional[str]
+    ) -> Optional[str]:
+        if not voice_id:
             return None
+        return ELEVEN_TO_GEMINI_VOICE_ID.get(voice_id)
+
+    async def _invoke_provider_api(
+        self,
+        provider: VoiceProvider,
+        text: str,
+        selection: VoiceSelection,
+        model: str,
+        language: str,
+    ) -> Optional[Tuple[bytes, float, str, str]]:
+        if provider == VoiceProvider.GEMINI:
+            voice_name = selection.gemini_voice_name or self.gemini_config.default_voice_name
+            if not voice_name:
+                logger.warning("Gemini 未配置默认音色，跳过")
+                return None
+            return await self._call_gemini_tts_api(text, voice_name, model, language)
+
+        if not selection.elevenlabs_voice_id:
+            logger.warning("ElevenLabs 未配置可用音色，跳过")
+            return None
+        return await self._call_elevenlabs_api(
+            text, selection.elevenlabs_voice_id, model, language
+        )
+
+    async def _get_cached_voice(
+        self,
+        db: Optional[AsyncSession],
+        text: str,
+        voice_id: str,
+        model: str,
+        language: str,
+    ) -> Optional[Tuple[str, float]]:
+        if not db:
+            return None
+
+        from app.services.voice_cache_service import voice_cache_service
+
+        return await voice_cache_service.get_cached_voice(
+            db, text, voice_id, model, language
+        )
+
+    def _schedule_cache_save(
+        self,
+        text: str,
+        voice_id: str,
+        model: str,
+        language: str,
+        audio_url: str,
+        duration: float,
+        file_size: int,
+    ) -> None:
+        from app.services.voice_cache_service import voice_cache_service
+
+        logger.debug("异步保存到语音缓存")
+        asyncio.create_task(
+            voice_cache_service.save_voice_cache(
+                None,
+                text,
+                voice_id,
+                model,
+                language,
+                audio_url,
+                duration,
+                file_size,
+            )
+        )
+
+    async def _record_voice_usage_if_needed(
+        self,
+        db: Optional[AsyncSession],
+        user: Optional[Any],
+        text_length: int,
+        voice_id: str,
+        provider: VoiceProvider,
+        cached: bool,
+        requested_voice_id: Optional[str],
+    ) -> None:
+        if not user or not db:
+            return
+
+        from app.services.global_services import subscription_service
+
+        extra = {
+            "text_length": text_length,
+            "voice_id": voice_id,
+            "provider": provider.value,
+            "cached": cached,
+        }
+        if requested_voice_id:
+            extra["requested_voice_id"] = requested_voice_id
+
+        try:
+            await subscription_service.record_usage(
+                db, user.id, "voice_generation", 1, extra_data=extra
+            )
+        except Exception as e:
+            logger.warning(f"记录语音生成用量失败: {str(e)}")
+
+    def _normalize_gemini_audio(
+        self, audio_data: bytes, mime_type: str
+    ) -> Optional[Tuple[bytes, float, str, str]]:
+        mime = (mime_type or "").lower()
+        if mime.startswith("audio/l"):
+            sample_rate, bits_per_sample = _parse_audio_mime_type(mime_type)
+            wav_bytes = _pcm_to_wav(audio_data, sample_rate, bits_per_sample)
+            duration = _calculate_pcm_duration(audio_data, sample_rate, bits_per_sample)
+            return wav_bytes, duration, "audio/wav", ".wav"
+        if "wav" in mime or "wave" in mime:
+            duration = self._calculate_wav_duration(audio_data)
+            return audio_data, duration, "audio/wav", ".wav"
+        if "mpeg" in mime or "mp3" in mime:
+            duration = self._calculate_audio_duration(audio_data)
+            return audio_data, duration, "audio/mpeg", ".mp3"
+
+        sample_rate, bits_per_sample = _parse_audio_mime_type("audio/L16;rate=24000")
+        wav_bytes = _pcm_to_wav(audio_data, sample_rate, bits_per_sample)
+        duration = _calculate_pcm_duration(audio_data, sample_rate, bits_per_sample)
+        return wav_bytes, duration, "audio/wav", ".wav"
+
+    def _resolve_language_code(self, language: str) -> Optional[str]:
+        lang_key = (language or "").lower()
+        if lang_key in LANGUAGE_CODE_ALIAS:
+            return LANGUAGE_CODE_ALIAS[lang_key]
+        return self.gemini_config.default_language_code
 
     async def _call_elevenlabs_api(
         self, text: str, voice_id: str, model: str, language: str
-    ) -> Optional[Tuple[bytes, float]]:
+    ) -> Optional[Tuple[bytes, float, str, str]]:
         """
         调用ElevenLabs API生成语音
 
         Returns:
-            音频数据的字节流和时长(秒)的元组
+            音频数据的字节流、时长(秒)、content-type、文件扩展名
         """
         try:
             logger.debug(
@@ -310,7 +472,8 @@ class VoiceService:
                 kwargs["language_code"] = language
 
             # 调用官方SDK的convert_with_timestamps方法
-            response = self.client.text_to_speech.convert_with_timestamps(**kwargs)
+            client = self._get_elevenlabs_client()
+            response = client.text_to_speech.convert_with_timestamps(**kwargs)
 
             # 从base64解码音频数据
             audio_data = base64.b64decode(response.audio_base_64)
@@ -321,14 +484,80 @@ class VoiceService:
             logger.debug(
                 f"ElevenLabs API调用成功，音频大小: {len(audio_data)} bytes, 时长: {duration:.2f}秒"
             )
-            return (audio_data, duration)
+            return (audio_data, duration, "audio/mpeg", ".mp3")
 
         except Exception as e:
             logger.error(f"ElevenLabs API调用异常: {str(e)}")
             logger.exception("ElevenLabs API调用异常详细信息:")
             return None
 
-    def _generate_file_name(self, text: str, voice_id: str, model: str) -> str:
+    async def _call_gemini_tts_api(
+        self, text: str, voice_name: str, model: str, language: str
+    ) -> Optional[Tuple[bytes, float, str, str]]:
+        """
+        调用 Gemini 语音模型生成音频。
+        """
+        if not self.gemini_config.enabled:
+            return None
+
+        try:
+            client = self._get_gemini_client()
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part.from_text(text=text),
+                    ],
+                )
+            ]
+            speech_config = types.SpeechConfig(
+                voice_config=types.VoiceConfig(
+                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                        voice_name=voice_name
+                    )
+                ),
+                language_code=self._resolve_language_code(language),
+            )
+            generate_config = types.GenerateContentConfig(
+                response_modalities=["AUDIO"],
+                speech_config=speech_config,
+                temperature=self.gemini_config.temperature,
+                top_p=self.gemini_config.top_p,
+            )
+
+            logger.debug(
+                f"调用Gemini语音模型: voice_name={voice_name}, model={model}, text_length={len(text)}"
+            )
+            response = client.models.generate_content(
+                model=model, contents=contents, config=generate_config
+            )
+            inline_part = _extract_inline_audio_part(response)
+            if (
+                inline_part is None
+                or inline_part.inline_data is None
+                or not inline_part.inline_data.data
+            ):
+                logger.error("Gemini 语音生成未返回音频数据")
+                return None
+
+            audio_bytes = inline_part.inline_data.data
+            mime_type = inline_part.inline_data.mime_type or "audio/L16;rate=24000"
+            normalized = self._normalize_gemini_audio(audio_bytes, mime_type)
+            if not normalized:
+                return None
+
+            logger.debug(
+                f"Gemini 语音生成成功，mime_type={mime_type}, 大小={len(audio_bytes)} bytes"
+            )
+            return normalized
+        except Exception as e:
+            logger.error(f"Gemini 语音生成失败: {str(e)}")
+            logger.exception("Gemini 语音生成异常详细信息:")
+            return None
+
+    def _generate_file_name(
+        self, text: str, voice_id: str, model: str, extension: str = ".mp3"
+    ) -> str:
         """
         生成语音文件名
         使用文本内容的哈希值确保相同内容生成相同文件名（用于缓存）
@@ -336,8 +565,8 @@ class VoiceService:
         # 创建内容哈希
         content_hash = hashlib.md5(f"{text}_{voice_id}_{model}".encode()).hexdigest()
 
-        # 生成文件名：voice_时间戳_哈希值.mp3
-        file_name = f"voice_{content_hash}.mp3"
+        # 生成文件名：voice_哈希值.<ext>
+        file_name = f"voice_{content_hash}{extension}"
 
         return file_name
 
@@ -359,6 +588,21 @@ class VoiceService:
             return duration_seconds
         except Exception as e:
             logger.error(f"计算音频时长失败: {str(e)}")
+            return 0.0
+
+    def _calculate_wav_duration(self, audio_data: bytes) -> float:
+        """
+        计算 WAV 音频的时长
+        """
+        try:
+            with wave.open(io.BytesIO(audio_data), "rb") as wav_file:
+                frames = wav_file.getnframes()
+                frame_rate = wav_file.getframerate()
+                if frame_rate == 0:
+                    return 0.0
+                return frames / frame_rate
+        except Exception as e:
+            logger.error(f"计算WAV音频时长失败: {str(e)}")
             return 0.0
 
     async def get_available_voices(
@@ -447,7 +691,8 @@ class VoiceService:
             )
 
             # 1. 获取所有基础语音，包括legacy音色
-            voices_response = self.client.voices.get_all(show_legacy=True)
+            client = self._get_elevenlabs_client()
+            voices_response = client.voices.get_all(show_legacy=True)
             logger.info(f"get_all API返回 {len(voices_response.voices)} 个音色")
 
             # 转换为字典格式并添加来源标识
@@ -540,7 +785,8 @@ class VoiceService:
             logger.debug(f"搜索共享音色，参数: {search_params}")
 
             # 调用 ElevenLabs get_shared API
-            voices_response = self.client.voices.get_shared(**search_params)
+            client = self._get_elevenlabs_client()
+            voices_response = client.voices.get_shared(**search_params)
 
             # 转换为字典格式并添加来源标识
             voices_list = []
@@ -570,7 +816,8 @@ class VoiceService:
         """
         try:
             # 1. 先尝试从常规音色中获取（用户音色 + 预置音色）
-            voice = self.client.voices.get(voice_id)
+            client = self._get_elevenlabs_client()
+            voice = client.voices.get(voice_id)
             voice_dict = voice.model_dump()
             voice_dict["source"] = "regular"
             logger.debug(f"从常规音色中找到 voice_id: {voice_id}")
@@ -601,4 +848,70 @@ class VoiceService:
 
 
 # 创建全局实例
+def _parse_audio_mime_type(mime_type: str) -> Tuple[int, int]:
+    sample_rate = 24000
+    bits_per_sample = 16
+    parts = [part.strip() for part in mime_type.split(";")]
+    for part in parts:
+        if part.lower().startswith("rate="):
+            try:
+                sample_rate = int(part.split("=", 1)[1])
+            except (ValueError, IndexError):
+                pass
+        if part.lower().startswith("audio/l"):
+            try:
+                bits_per_sample = int(part.split("l", 1)[1])
+            except (ValueError, IndexError):
+                pass
+    return sample_rate, bits_per_sample
+
+
+def _pcm_to_wav(
+    audio_data: bytes, sample_rate: int, bits_per_sample: int, num_channels: int = 1
+) -> bytes:
+    bytes_per_sample = bits_per_sample // 8
+    byte_rate = sample_rate * num_channels * bytes_per_sample
+    block_align = num_channels * bytes_per_sample
+    header = struct.pack(
+        "<4sI4s4sIHHIIHH4sI",
+        b"RIFF",
+        36 + len(audio_data),
+        b"WAVE",
+        b"fmt ",
+        16,
+        1,
+        num_channels,
+        sample_rate,
+        byte_rate,
+        block_align,
+        bits_per_sample,
+        b"data",
+        len(audio_data),
+    )
+    return header + audio_data
+
+
+def _calculate_pcm_duration(
+    audio_data: bytes, sample_rate: int, bits_per_sample: int, num_channels: int = 1
+) -> float:
+    if sample_rate <= 0 or bits_per_sample <= 0 or num_channels <= 0:
+        return 0.0
+    bytes_per_second = sample_rate * num_channels * (bits_per_sample // 8)
+    if bytes_per_second == 0:
+        return 0.0
+    return len(audio_data) / bytes_per_second
+
+
+def _extract_inline_audio_part(response: Any) -> Optional[Any]:
+    candidates = getattr(response, "candidates", []) or []
+    for candidate in candidates:
+        content = getattr(candidate, "content", None)
+        if not content or not getattr(content, "parts", None):
+            continue
+        for part in content.parts:
+            if getattr(part, "inline_data", None):
+                return part
+    return None
+
+
 voice_service = VoiceService()

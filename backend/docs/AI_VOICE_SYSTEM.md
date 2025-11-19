@@ -26,6 +26,13 @@ InTy 后端集成了先进的 AI 语音回复系统，使用 ElevenLabs API 为�
 - **异步生成**：文本立即返回，语音后台生成
 - **智能任务管理**：语音生成任务状态跟踪
 
+### 🎙️ Gemini 优先的多供应商策略
+
+- **Gemini 2.5 Flash 语音模型为首选**：当 `gemini_voice.enabled = true` 时，后端会优先调用 Gemini TTS 生成语音。
+- **自动回退**：Gemini 被限流、被安全过滤或未返回音频时，会自动回退到 ElevenLabs，保证聊天体验不中断。
+- **音色一对多映射**：同一个 `voice_id` 绑定了一对 Gemini/ElevenLabs 音色，也可以通过 `gemini:<voice_name>` 的写法直接指定 Gemini 预设音色。
+- **缓存隔离**：缓存键包含 `model` 字段，不同供应商生成的音频会落在各自的缓存条目中，互不干扰。
+
 ### 💰 成本优化策略
 
 - **智能缓存系统**：基于内容哈希的语音文件缓存
@@ -112,6 +119,23 @@ elevenlabs:
   enabled: true # 是否启用语音功能
   max_text_length: 5000 # 最大文本长度限制
 ```
+
+### Gemini 语音配置
+
+```yaml
+gemini_voice:
+  enabled: true
+  api_key: "sk_google_ai_studio_key"
+  model: "gemini-2.5-flash-preview-tts"
+  default_voice_name: "Zephyr"
+  default_language_code: "cmn-CN"
+  temperature: 1.0
+  top_p: 0.95
+```
+
+- `enabled` 控制是否启用 Gemini 语音模型；开启后会在 ElevenLabs 之前尝试 Gemini。
+- `default_voice_name`、`default_language_code` 分别决定默认音色与语言（支持 `zh`、`en` 等别名）。
+- 仍然可以传入 `voice_id="gemini:Kore"` 之类的自定义音色，后端会自动映射到最接近的 ElevenLabs 音色以便回退。
 
 ### 推荐语音配置
 
@@ -264,6 +288,7 @@ graph TD
 
 - `VoiceCacheService.get_cached_voice` 命中后会立刻返回 `(audio_url, duration)`，并通过 `asyncio.create_task` 异步更新 `hit_count`。
 - 如果检测到 GCS 文件不存在，会在独立事务中把记录置为 `is_active = false`，防止后续继续命中。
+- 缓存键包含 `model` 字段，`gemini-2.5-flash-preview-tts` 与 `eleven_flash_v2_5` 会生成不同的缓存条目，避免交叉污染。
 
 ### 缓存清理策略
 
