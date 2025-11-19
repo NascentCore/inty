@@ -321,6 +321,19 @@ class ChatViewModel : BaseVM() {
                     "timestamp" to endToEndStartTime,
                 ),
             )
+
+            // Firebase Analytics - 记录消息发送按钮点击（CHAT_PAGE_CLICK事件）
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.CHAT_PAGE_CLICK,
+                FirebaseManager.safeEventParams(
+                    "click_type" to "message_sent",
+                    "agent_id" to agent.id,
+                    "agent_name" to agent.name,
+                    "message_length" to inputMsg.length,
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                    "timestamp" to endToEndStartTime,
+                ),
+            )
         }
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -852,6 +865,19 @@ class ChatViewModel : BaseVM() {
         FirebaseManager.logEvent(
             FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED,
             FirebaseManager.safeEventParams(
+                "agent_id" to agentId,
+                "agent_name" to agent.name,
+                "message_id" to messageId,
+                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                "timestamp" to startTime,
+            ),
+        )
+
+        // Firebase Analytics - 记录消息生图按钮点击（CHAT_PAGE_CLICK事件）
+        FirebaseManager.logEvent(
+            FirebaseManager.Events.CHAT_PAGE_CLICK,
+            FirebaseManager.safeEventParams(
+                "click_type" to "message_to_image",
                 "agent_id" to agentId,
                 "agent_name" to agent.name,
                 "message_id" to messageId,
