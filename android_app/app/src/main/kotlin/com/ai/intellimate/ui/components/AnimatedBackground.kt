@@ -2,6 +2,8 @@ package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.utils.LogUtils
+import android.view.TextureView
+import androidx.annotation.OptIn
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -27,21 +29,23 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 // CDN 图片优化参数（与 AgentBackground 保持一致）
 // 使用固定参数确保预加载和实际使用的 URL 完全一致，提高缓存命中率
@@ -64,7 +68,10 @@ private fun isVideoUrl(url: String?): Boolean {
  * 1. 如果有视频URL，始终渲染视频控件，同时显示静态图作为占位符
  * 2. 视频加载完成后，隐藏静态图并播放视频
  * 3. 如果没有视频URL，只显示静态图
+ *
+ * 使用 TextureView 替代 PlayerView，解决 HorizontalPager 中视频宽度适配和页面切换问题
  */
+@OptIn(UnstableApi::class)
 @Composable
 fun AnimatedBackground(
     videoUrl: String?,
@@ -256,7 +263,9 @@ fun AnimatedBackground(
     // 1. matchParentSize() 不会影响父 Box 的尺寸测量（父 Box 尺寸由 HorizontalPager 决定）
     // 2. 子元素仅在布局阶段匹配父 Box 的最终尺寸
     // 3. 这符合 BoxScope 的最佳实践，避免子元素影响父容器尺寸
-    Box(modifier = modifier.fillMaxSize().clipToBounds()) {
+    Box(modifier = modifier
+        .fillMaxSize()
+        .clipToBounds()) {
 
         // 如果有视频URL，创建视频视图
         if (videoUrl != null && isVideo) {
@@ -285,6 +294,8 @@ fun AnimatedBackground(
                                 playWhenReady = false
                                 volume = 0f
                                 repeatMode = Player.REPEAT_MODE_OFF
+                                // 关键：在播放器创建时就设置缩放模式，避免初始拉伸
+                                videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
                                 addListener(
                                     object : Player.Listener {
                                         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -332,9 +343,12 @@ fun AnimatedBackground(
                                             onIsPlayingChange?.invoke(playing)
                                         }
 
-                                        override fun onVideoSizeChanged(
-                                            videoSize: androidx.media3.common.VideoSize
-                                        ) {
+                                        override fun onVideoSizeChanged(videoSize: VideoSize) {
+                                            // 关键：视频尺寸信息已加载，确保缩放模式正确应用
+                                            // 这样可以避免因视频元数据加载导致的缩放效果变化
+                                            videoScalingMode =
+                                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                                            
                                             // 关键修复：视频尺寸变化时，说明第一帧可能已经渲染
                                             // 这是一个更准确的信号，比固定延迟更可靠
                                             if (
@@ -370,46 +384,24 @@ fun AnimatedBackground(
 
                     exoPlayer = player
 
-                    // 使用 FrameLayout 包裹 PlayerView，确保 crop 模式不会超出容器边界
-                    // 关键修复：使用 ConstraintLayout 或 FrameLayout 并严格限制尺寸
-                    val frameLayout =
-                        android.widget.FrameLayout(ctx).apply {
-                            // 关键：使用 MATCH_PARENT 确保填充父容器，但父容器已经通过 layout modifier 限制了宽度
-                            layoutParams =
-                                android.view.ViewGroup.LayoutParams(
-                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                                )
-                            // 关键：启用裁剪，防止视频超出容器边界影响相邻页面
-                            clipChildren = true
-                            clipToPadding = true
-                        }
+                    // 使用 TextureView 替代 PlayerView，解决 HorizontalPager 中视频宽度适配和页面切换问题
+                    // TextureView 在 View 层级中渲染，生命周期管理更简单，更适合 HorizontalPager
+                    val textureView = TextureView(ctx).apply {
+                        // 设置裁剪，防止视频超出边界
+                        clipToOutline = true
 
-                    val view =
-                        PlayerView(ctx).apply {
-                            this.player = player
-                            useController = false
-                            // 使用 ZOOM 模式（crop），填充整个容器，超出部分裁剪
-                            // 这与 ContentScale.Crop 保持一致
-                            resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                            visibility = android.view.View.VISIBLE
-                            alpha = 1f // 始终可见
+                        // 关键优化：在设置 TextureView 之前就设置缩放模式
+                        // 这样可以避免视频在初始加载时被错误缩放
+                        player.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
 
-                            // 关键：使用 MATCH_PARENT 填充父容器（FrameLayout）
-                            // MATCH_PARENT 是最合适的选择，因为：
-                            // 1. 自动适应父容器尺寸变化
-                            // 2. 父容器已经通过 Compose 的 layout modifier 限制了宽度
-                            // 3. 符合 Android 布局最佳实践
-                            layoutParams =
-                                android.widget.FrameLayout.LayoutParams(
-                                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                                )
-                            // 关键：确保 PlayerView 本身不会超出父容器
-                            clipToOutline = true
-                        }
+                        // 设置视频 TextureView
+                        player.setVideoTextureView(this)
 
-                    frameLayout.addView(view)
+                        // 再次确保缩放模式正确（双重保险）
+                        player.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+
+                        LogUtils.d("AnimatedBackground - TextureView 创建完成，videoUrl: $videoUrl, 缩放模式已设置")
+                    }
 
                     // 设置媒体项：优先使用缓存的本地路径，否则使用原始URL
                     // 如果 isVideoCached 为 true，videoPath 应该已经同步获取到了
@@ -425,45 +417,42 @@ fun AnimatedBackground(
                         "AnimatedBackground - [播放器创建] ✅ 设置视频路径: $pathToUse (factory, isVideoCached=$isVideoCached), playWhenReady=${player.playWhenReady}"
                     )
 
-                    frameLayout
+                    textureView
                 },
-                modifier = Modifier.matchParentSize().clipToBounds(),
+                modifier = Modifier
+                    .matchParentSize()
+                    .clipToBounds(),
                 update = { view ->
-                    // 关键修复：在更新时确保视图使用 MATCH_PARENT，自动适应父容器尺寸
-                    // 使用 MATCH_PARENT 比设置具体像素值更合适，因为：
-                    // 1. 自动适应父容器尺寸变化
-                    // 2. 避免硬编码像素值导致的布局问题
-                    // 3. 符合 Android 布局最佳实践
-                    val layoutParams = view.layoutParams
-                    if (layoutParams != null) {
-                        // 确保使用 MATCH_PARENT，让系统自动处理尺寸
-                        if (
-                            layoutParams.width !=
-                                android.view.ViewGroup.LayoutParams.MATCH_PARENT ||
-                                layoutParams.height !=
-                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
-                        ) {
-                            layoutParams.width = android.view.ViewGroup.LayoutParams.MATCH_PARENT
-                            layoutParams.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT
-                            view.layoutParams = layoutParams
-                        }
-                    }
+                    // 关键：在 update 块中确保 TextureView 和播放器正确连接
+                    // 这解决了页面切换后屏幕黑掉的问题
+                    val textureView = view as? TextureView
+                    textureView?.let {
+                        exoPlayer?.let { player ->
+                            // 检查 TextureView 是否已设置，如果没有则设置
+                            // TextureView 在 View 层级中，页面切换时不会丢失，但需要确保播放器连接正确
+                            player.setVideoTextureView(it)
+                            player.videoScalingMode =
+                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
 
-                    // 更新视频路径（如果变化）：当 videoPath 准备好后，从 URL 切换到缓存路径
-                    val pathToUse = videoPath ?: videoUrl
-                    if (exoPlayer != null) {
-                        val currentMediaItem = exoPlayer?.currentMediaItem
-                        val currentMediaId = currentMediaItem?.mediaId
-                        // 如果路径变化了（比如从 URL 切换到缓存路径），需要更新
-                        if (currentMediaId == null || currentMediaId != pathToUse) {
-                            LogUtils.d(
-                                "AnimatedBackground - [播放器更新] 更新视频路径: $currentMediaId -> $pathToUse"
-                            )
-                            exoPlayer?.setMediaItem(MediaItem.fromUri(pathToUse))
-                            exoPlayer?.prepare()
-                            LogUtils.d("AnimatedBackground - [播放器更新] ✅ 已更新视频路径并准备播放")
-                        } else {
-                            LogUtils.d("AnimatedBackground - [播放器更新] 视频路径未变化，跳过更新: $pathToUse")
+                            // 确保缩放模式正确（防止运行时变化）
+                            if (player.videoScalingMode != C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING) {
+                                player.videoScalingMode =
+                                    C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                            }
+
+                            // 更新视频路径（如果变化）：当 videoPath 准备好后，从 URL 切换到缓存路径
+                            val pathToUse = videoPath ?: videoUrl
+                            val currentMediaItem = player.currentMediaItem
+                            val currentMediaId = currentMediaItem?.mediaId
+                            // 如果路径变化了（比如从 URL 切换到缓存路径），需要更新
+                            if (currentMediaId == null || currentMediaId != pathToUse) {
+                                LogUtils.d(
+                                    "AnimatedBackground - [播放器更新] 更新视频路径: $currentMediaId -> $pathToUse"
+                                )
+                                player.setMediaItem(MediaItem.fromUri(pathToUse))
+                                player.prepare()
+                                LogUtils.d("AnimatedBackground - [播放器更新] ✅ 已更新视频路径并准备播放")
+                            }
                         }
                     }
                 },
@@ -563,7 +552,11 @@ fun AnimatedBackground(
             DisposableEffect(videoUrl) {
                 onDispose {
                     LogUtils.d("AnimatedBackground - DisposableEffect: 释放播放器: $videoUrl")
-                    exoPlayer?.release()
+                    exoPlayer?.let { player ->
+                        // 清除 TextureView
+                        player.clearVideoTextureView(null)
+                        player.release()
+                    }
                     exoPlayer = null
                 }
             }
@@ -596,7 +589,8 @@ fun AnimatedBackground(
                     }
                 AsyncImage(
                     modifier =
-                        Modifier.fillMaxWidth()
+                        Modifier
+                            .fillMaxWidth()
                             .fillMaxSize()
                             .alpha(animatedAlpha), // 使用动画的 alpha 值，alpha=0 时完全透明
                     model = staticImageRequest,
@@ -613,7 +607,9 @@ fun AnimatedBackground(
         } else if (staticImageUrl != null) {
             // 没有视频URL，只显示静态图片
             AsyncImage(
-                modifier = Modifier.fillMaxWidth().fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
                 model = ImageRequest.Builder(context).data(staticImageUrl).build(),
                 contentDescription = null,
                 contentScale = contentScale, // 使用 Crop 确保不超出边界

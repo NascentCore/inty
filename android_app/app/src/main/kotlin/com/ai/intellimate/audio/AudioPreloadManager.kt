@@ -126,7 +126,7 @@ object AudioPreloadManager {
                                     //
                                     // LogUtils.i("AudioPreloadManager - 预加载音频成功: $url")
                                 } else {
-                                    LogUtils.i("AudioPreloadManager - 音频已缓存，跳过: $url")
+//                                    LogUtils.i("AudioPreloadManager - 音频已缓存，跳过: $url")
                                 }
                             } catch (e: Exception) {
                                 LogUtils.e("AudioPreloadManager - 预加载音频失败: $url, 错误: ${e.message}")
