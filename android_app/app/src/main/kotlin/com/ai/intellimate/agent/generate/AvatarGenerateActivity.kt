@@ -33,7 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
+import com.ai.intellimate.ui.MultiLineBasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -55,14 +55,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
@@ -297,33 +295,16 @@ private fun PromptInputField(value: String, onValueChange: (String) -> Unit) {
         )
         Spacer(modifier = Modifier.height(12.dp))
 
-        BasicTextField(
+        MultiLineBasicTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .background(color = Color(0x1A78599A), shape = RoundedCornerShape(12.dp))
-                    .border(
-                        width = 1.dp,
-                        color = Color.White.copy(0.2f),
-                        shape = RoundedCornerShape(12.dp),
-                    )
-                    .padding(16.dp)
-                    .height(120.dp),
-            textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
-            cursorBrush = SolidColor(Color.White),
-            decorationBox = { innerTextField ->
-                Box {
-                    if (value.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.avatar_creation_hint_full),
-                            fontSize = 16.sp,
-                            color = Color.White.copy(0.5f),
-                        )
-                    }
-                    innerTextField()
-                }
-            },
+            placeholder = stringResource(R.string.avatar_creation_hint_full),
+            minLines = 3,
+            fontSize = 16.sp,
+            backgroundColor = Color(0x1A78599A),
+            cursorColor = Color.White,
+            maxLength = 200,
+            showMaxLength = true,
         )
     }
 }

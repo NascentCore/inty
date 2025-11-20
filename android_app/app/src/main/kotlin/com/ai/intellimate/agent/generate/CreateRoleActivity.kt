@@ -42,7 +42,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -70,7 +69,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -78,7 +76,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
@@ -92,6 +89,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.MultiLineBasicTextField
 import com.ai.intellimate.ui.SingleLineTextInputField
 import com.ai.intellimate.utils.AvatarManager
 import com.architecture.httplib.core.HttpResult
@@ -666,6 +664,7 @@ private fun CreateRolePage(
                 onValueChange = { settings = it },
                 placeholder = "Please fill in the dialogue effect...",
                 minLines = 4,
+                maxLength = 800
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -1171,34 +1170,17 @@ private fun CustomTextField(
     onValueChange: (String) -> Unit,
     placeholder: String,
     minLines: Int = 1,
+    maxLength: Int = 500,
 ) {
     Column {
         Text(text = label, fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Medium)
         Spacer(modifier = Modifier.height(12.dp))
-
-        BasicTextField(
+        MultiLineBasicTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .background(color = Color(0x1A78599A), shape = RoundedCornerShape(12.dp))
-                    .border(
-                        width = 1.dp,
-                        color = Color.White.copy(0.2f),
-                        shape = RoundedCornerShape(12.dp),
-                    )
-                    .padding(16.dp)
-                    .let { if (minLines > 1) it.height((minLines * 24 + 32).dp) else it },
-            textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
-            cursorBrush = SolidColor(Color.White),
-            decorationBox = { innerTextField ->
-                Box {
-                    if (value.isEmpty()) {
-                        Text(text = placeholder, fontSize = 16.sp, color = Color.White.copy(0.5f))
-                    }
-                    innerTextField()
-                }
-            },
+            placeholder = placeholder,
+            minLines = minLines,
+            maxLength = maxLength
         )
     }
 }

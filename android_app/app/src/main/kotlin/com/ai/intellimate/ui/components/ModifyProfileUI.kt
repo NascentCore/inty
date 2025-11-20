@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.MultiLineBasicTextField
 import com.ai.intellimate.ui.IntySmallTextField
 import com.ai.intellimate.ui.IntySmallTextField2
 
@@ -322,7 +323,16 @@ private fun EditContent(editKey: EditKey, editValue: String, onValueChange: (Str
         }
 
         EditKey.Persona -> {
-            PersonaEditField(value = editValue, onValueChange = onValueChange)
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                MultiLineBasicTextField(
+                    value = editValue,
+                    onValueChange = onValueChange,
+                    minLines = 3,
+                    maxLength = 400,
+                    placeholder = stringResource(R.string.please_enter_character_full),
+                    backgroundColor = Color.White.copy(0.1f)
+                )
+            }
         }
 
         EditKey.Pronouns -> {
@@ -357,6 +367,14 @@ private fun NameEditField(value: String, onValueChange: (String) -> Unit) {
             selection = value.length,
             onValueChange = onValueChange,
             maxLength = 50,
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.str_name_placeholder),
+                    color = Color.White.copy(0.55f),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                )
+            },
         )
     }
 }

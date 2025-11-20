@@ -51,6 +51,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.ai.intellimate.BottomNavigationBarHeight
 import com.ai.intellimate.R
@@ -246,6 +247,8 @@ internal fun ChatPage(
                             agentInfo = info,
                             showBackButton = showBackButton,
                             onBack = onBack,
+                            fontSize = 15.sp,
+                            avatarWidth = 40.dp,
                             onClickMore = {
                                 scope.launch {
                                     if (agentInfo?.isDeleted == true) {

@@ -24,6 +24,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -48,6 +50,8 @@ fun ChatTopBar(
     showBackButton: Boolean = false,
     onBack: (() -> Unit)? = null,
     onClickMore: () -> Unit,
+    avatarWidth: Dp = 30.dp,
+    fontSize: TextUnit = 14.sp
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -68,7 +72,7 @@ fun ChatTopBar(
             modifier =
                 Modifier.background(
                         color = CHAT_TOP_BAR_BACKGROUND_COLOR,
-                        shape = RoundedCornerShape(CHAT_TOP_BAR_CORNER_RADIUS.dp),
+                        shape = RoundedCornerShape(avatarWidth),
                     )
                     .noRippleClickable {
                         scope.launch {
@@ -85,7 +89,7 @@ fun ChatTopBar(
             AsyncImage(
                 modifier =
                     Modifier.padding(CHAT_TOP_BAR_AVATAR_PADDING.dp)
-                        .size(CHAT_TOP_BAR_AVATAR_SIZE.dp)
+                        .size(avatarWidth)
                         .clip(CircleShape),
                 model =
                     ImageRequest.Builder(context)
@@ -102,7 +106,7 @@ fun ChatTopBar(
 
             Text(
                 text = agentInfo.name,
-                fontSize = 14.sp,
+                fontSize = fontSize,
                 fontWeight = FontWeight.Medium,
                 color = Color.White,
             )
