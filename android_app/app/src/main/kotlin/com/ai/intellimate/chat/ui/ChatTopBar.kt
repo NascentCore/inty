@@ -51,7 +51,7 @@ fun ChatTopBar(
     onBack: (() -> Unit)? = null,
     onClickMore: () -> Unit,
     avatarWidth: Dp = 30.dp,
-    fontSize: TextUnit = 14.sp
+    fontSize: TextUnit = 14.sp,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()

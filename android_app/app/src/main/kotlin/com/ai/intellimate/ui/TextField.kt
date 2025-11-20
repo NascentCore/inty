@@ -44,11 +44,12 @@ fun IntySmallTextField(
     placeholder: @Composable (() -> Unit)? = null,
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
-    keyboardOptions: KeyboardOptions = KeyboardOptions(
-        imeAction = ImeAction.Done,
-        // 每个单词都大写
-        capitalization = KeyboardCapitalization.Words,
-    ),
+    keyboardOptions: KeyboardOptions =
+        KeyboardOptions(
+            imeAction = ImeAction.Done,
+            // 每个单词都大写
+            capitalization = KeyboardCapitalization.Words,
+        ),
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     onValueChange: (String) -> Unit,
     onFocusChanged: ((Boolean) -> Unit)? = null,
