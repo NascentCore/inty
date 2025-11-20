@@ -14,6 +14,7 @@ import ai.sxwl.android.utils.ToastUtils
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -66,6 +67,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -90,6 +92,7 @@ import com.ai.intellimate.vip.VipCenterActivity
 import kotlin.math.abs
 import kotlin.math.min
 import kotlinx.coroutines.launch
+import androidx.core.net.toUri
 
 /** "我的"页面 */
 @Composable
@@ -347,6 +350,28 @@ private fun ProfileHeader(
         Row {
             Spacer(Modifier.weight(1f))
             var lastClickTime by remember { mutableLongStateOf(0L) }
+
+            AsyncImage(
+                modifier =
+                    Modifier.size(24.dp).clickable {
+                        val currentTime = System.currentTimeMillis()
+                        if (AntiClick.isValidClick(lastClickTime)) {
+                            lastClickTime = currentTime
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW,
+                                    "https://chat.whatsapp.com/FquOcDMQR7dBliPdXeKZ2w?mode=wwt".toUri())
+                                // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                ToastUtils.showLargeText(e.toString());
+                            }
+                        }
+                    },
+                model = R.drawable.ic_whatsapp,
+                contentDescription = null,
+            )
+            Spacer(Modifier.width(8.dp))
 
             AsyncImage(
                 modifier =
