@@ -811,6 +811,80 @@ async def generate_message_voice(
         return APIResponse.error(message=f"Voice generation failed: {str(e)}", code=500)
 
 
+@router.post(
+    "/agents/{agent_id}/messages/{message_id}/feedback",
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
+    summary="Upvote or downvote a chat message",
+    response_model=schemas.APIResponse[schemas.MessageFeedbackResponse],
+)
+async def set_message_feedback(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    message_id: str,
+    request: schemas.MessageFeedbackRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    给指定消息点赞或点踩，或清除已设置的反馈
+    """
+    try:
+        _agent = await agent_service.get_agent(db, agent_id=agent_id)
+        if not _agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        chat = await chat_service.get_chat_by_user_and_agent(
+            db=db, user_id=current_user.id, agent_id=agent_id
+        )
+        if not chat:
+            raise HTTPException(status_code=404, detail="Chat not found")
+
+        session_id = generate_session_id(chat.id)
+
+        feedback_value = None
+        if request.feedback in (
+            schemas.MessageFeedbackAction.UPVOTE,
+            schemas.MessageFeedbackAction.DOWNVOTE,
+        ):
+            feedback_value = request.feedback.value
+
+        result = await chat_history_service.set_message_feedback(
+            db=db,
+            session_id=session_id,
+            message_id=message_id,
+            feedback_value=feedback_value,
+            user_id=current_user.id,
+        )
+
+        if not result.get("success"):
+            reason = result.get("reason")
+            if reason == "INVALID_MESSAGE_ID":
+                raise HTTPException(status_code=400, detail="Invalid message_id")
+            if reason == "MESSAGE_NOT_FOUND":
+                raise HTTPException(status_code=404, detail="Message not found")
+            raise HTTPException(status_code=500, detail="Failed to update feedback")
+
+        feedback_state = result.get("feedback")
+        response = schemas.MessageFeedbackResponse(
+            message_id=result["message_id"],
+            feedback=schemas.MessageFeedbackValue(feedback_state)
+            if feedback_state
+            else None,
+            updated_at=result.get("updated_at"),
+        )
+        return APIResponse.success(data=response)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"设置消息反馈失败: agent_id={agent_id}, message_id={message_id}, 错误: {str(e)}"
+        )
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update message feedback: {str(e)}"
+        )
+
+
 @router.get(
     "/voices/{voice_id}",
     deprecated=True,

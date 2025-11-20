@@ -33,6 +33,10 @@ from app.schemas.chat import ClearMessagesRequest as ClearMessagesRequest
 from app.schemas.chat import ClearMessagesResponse as ClearMessagesResponse
 from app.schemas.chat import Message as Message
 from app.schemas.chat import MessageCreate as MessageCreate
+from app.schemas.chat import MessageFeedbackAction as MessageFeedbackAction
+from app.schemas.chat import MessageFeedbackRequest as MessageFeedbackRequest
+from app.schemas.chat import MessageFeedbackResponse as MessageFeedbackResponse
+from app.schemas.chat import MessageFeedbackValue as MessageFeedbackValue
 from app.schemas.chat import MessageList as MessageList
 from app.schemas.chat import MessageUpdate as MessageUpdate
 from app.schemas.evaluation import BatchEvaluationRequest as BatchEvaluationRequest

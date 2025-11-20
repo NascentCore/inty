@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from langchain_core.messages import HumanMessage
@@ -326,6 +327,81 @@ async def update_message_metadata(
         return False
 
 
+async def set_message_feedback(
+    db: AsyncSession,
+    session_id: str,
+    message_id: str,
+    feedback_value: Optional[str],
+    user_id: str,
+) -> Dict[str, Any]:
+    """
+    设置或清除指定消息的反馈（点赞/点踩）
+
+    Args:
+        db: 数据库会话
+        session_id: 会话ID
+        message_id: 消息ID（数据库的真实ID，字符串形式）
+        feedback_value: 反馈值（UPVOTE/DOWNVOTE），为None时清除
+        user_id: 操作用户ID（用于记录在 meta_data 中）
+
+    Returns:
+        包含更新结果的字典
+    """
+    try:
+        try:
+            db_message_id = int(message_id)
+        except ValueError:
+            logger.warning(f"无法解析消息ID为整数: {message_id}")
+            return {"success": False, "reason": "INVALID_MESSAGE_ID"}
+
+        stmt = select(ChatHistory).where(
+            and_(ChatHistory.session_id == session_id, ChatHistory.id == db_message_id)
+        )
+        result = await db.execute(stmt)
+        chat_history = result.scalar_one_or_none()
+
+        if not chat_history:
+            logger.warning(
+                f"消息不存在: session_id={session_id}, message_id={db_message_id}"
+            )
+            return {"success": False, "reason": "MESSAGE_NOT_FOUND"}
+
+        meta_data = dict(chat_history.meta_data or {})
+        if feedback_value:
+            meta_data["feedback"] = {
+                "type": feedback_value,
+                "updatedBy": user_id,
+                "updatedAt": datetime.now(timezone.utc).isoformat(),
+            }
+        else:
+            meta_data.pop("feedback", None)
+
+        chat_history.meta_data = meta_data or None
+        await db.commit()
+
+        feedback = (
+            meta_data.get("feedback", {}).get("type") if meta_data else None
+        )
+
+        return {
+            "success": True,
+            "message_id": chat_history.id,
+            "feedback": feedback,
+            "updated_at": (
+                meta_data.get("feedback", {}).get("updatedAt")
+                if meta_data and "feedback" in meta_data
+                else None
+            ),
+        }
+
+    except Exception as e:
+        logger.error(
+            f"设置消息反馈失败: session_id={session_id}, message_id={message_id}, 错误: {str(e)}"
+        )
+        await db.rollback()
+        return {"success": False, "reason": "INTERNAL_ERROR", "message": str(e)}
+
+
 async def add_ai_image_message(
     db: AsyncSession,
     session_id: str,
@@ -616,6 +692,13 @@ def get_messages_paginated(
                         elif isinstance(meta_data_raw, dict):
                             meta_data = meta_data_raw
 
+                    # 解析反馈信息
+                    feedback_value = None
+                    if meta_data and isinstance(meta_data, dict):
+                        feedback_data = meta_data.get("feedback")
+                        if isinstance(feedback_data, dict):
+                            feedback_value = feedback_data.get("type")
+
                     # 构建基础消息对象
                     timestamp_str = created_at.isoformat() if created_at else None
                     message_obj = {
@@ -630,6 +713,9 @@ def get_messages_paginated(
                         "timestamp": timestamp_str,
                         "created_at": timestamp_str,  # 添加 created_at 以保持向后兼容
                     }
+
+                    if feedback_value:
+                        message_obj["feedback"] = feedback_value
 
                     # 检查是否是图片消息（独立的图片消息，兼容旧数据）
                     if message_type == "image" and "data" in message_data:

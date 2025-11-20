@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
@@ -373,3 +374,33 @@ class ChatImageGenerationResponse(BaseModel):
     image_metadata: dict
     prompt: str
     message_id: int
+
+
+class MessageFeedbackValue(str, Enum):
+    """消息反馈结果"""
+
+    UPVOTE = "UPVOTE"
+    DOWNVOTE = "DOWNVOTE"
+
+
+class MessageFeedbackAction(str, Enum):
+    """消息反馈操作"""
+
+    UPVOTE = "UPVOTE"
+    DOWNVOTE = "DOWNVOTE"
+    CLEAR = "CLEAR"
+
+
+class MessageFeedbackRequest(BaseModel):
+    """消息反馈请求"""
+
+    feedback: MessageFeedbackAction
+    request_id: Optional[str] = None
+
+
+class MessageFeedbackResponse(BaseModel):
+    """消息反馈响应"""
+
+    message_id: int
+    feedback: Optional[MessageFeedbackValue] = None
+    updated_at: Optional[str] = None
