@@ -42,10 +42,10 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 
 // CDN 图片优化参数（与 AgentBackground 保持一致）
 // 使用固定参数确保预加载和实际使用的 URL 完全一致，提高缓存命中率
@@ -263,9 +263,7 @@ fun AnimatedBackground(
     // 1. matchParentSize() 不会影响父 Box 的尺寸测量（父 Box 尺寸由 HorizontalPager 决定）
     // 2. 子元素仅在布局阶段匹配父 Box 的最终尺寸
     // 3. 这符合 BoxScope 的最佳实践，避免子元素影响父容器尺寸
-    Box(modifier = modifier
-        .fillMaxSize()
-        .clipToBounds()) {
+    Box(modifier = modifier.fillMaxSize().clipToBounds()) {
 
         // 如果有视频URL，创建视频视图
         if (videoUrl != null && isVideo) {
@@ -348,7 +346,7 @@ fun AnimatedBackground(
                                             // 这样可以避免因视频元数据加载导致的缩放效果变化
                                             videoScalingMode =
                                                 C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                                            
+
                                             // 关键修复：视频尺寸变化时，说明第一帧可能已经渲染
                                             // 这是一个更准确的信号，比固定延迟更可靠
                                             if (
@@ -386,22 +384,27 @@ fun AnimatedBackground(
 
                     // 使用 TextureView 替代 PlayerView，解决 HorizontalPager 中视频宽度适配和页面切换问题
                     // TextureView 在 View 层级中渲染，生命周期管理更简单，更适合 HorizontalPager
-                    val textureView = TextureView(ctx).apply {
-                        // 设置裁剪，防止视频超出边界
-                        clipToOutline = true
+                    val textureView =
+                        TextureView(ctx).apply {
+                            // 设置裁剪，防止视频超出边界
+                            clipToOutline = true
 
-                        // 关键优化：在设置 TextureView 之前就设置缩放模式
-                        // 这样可以避免视频在初始加载时被错误缩放
-                        player.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                            // 关键优化：在设置 TextureView 之前就设置缩放模式
+                            // 这样可以避免视频在初始加载时被错误缩放
+                            player.videoScalingMode =
+                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
 
-                        // 设置视频 TextureView
-                        player.setVideoTextureView(this)
+                            // 设置视频 TextureView
+                            player.setVideoTextureView(this)
 
-                        // 再次确保缩放模式正确（双重保险）
-                        player.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                            // 再次确保缩放模式正确（双重保险）
+                            player.videoScalingMode =
+                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
 
-                        LogUtils.d("AnimatedBackground - TextureView 创建完成，videoUrl: $videoUrl, 缩放模式已设置")
-                    }
+                            LogUtils.d(
+                                "AnimatedBackground - TextureView 创建完成，videoUrl: $videoUrl, 缩放模式已设置"
+                            )
+                        }
 
                     // 设置媒体项：优先使用缓存的本地路径，否则使用原始URL
                     // 如果 isVideoCached 为 true，videoPath 应该已经同步获取到了
@@ -419,9 +422,7 @@ fun AnimatedBackground(
 
                     textureView
                 },
-                modifier = Modifier
-                    .matchParentSize()
-                    .clipToBounds(),
+                modifier = Modifier.matchParentSize().clipToBounds(),
                 update = { view ->
                     // 关键：在 update 块中确保 TextureView 和播放器正确连接
                     // 这解决了页面切换后屏幕黑掉的问题
@@ -435,7 +436,10 @@ fun AnimatedBackground(
                                 C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
 
                             // 确保缩放模式正确（防止运行时变化）
-                            if (player.videoScalingMode != C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING) {
+                            if (
+                                player.videoScalingMode !=
+                                    C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                            ) {
                                 player.videoScalingMode =
                                     C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
                             }
@@ -589,8 +593,7 @@ fun AnimatedBackground(
                     }
                 AsyncImage(
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
+                        Modifier.fillMaxWidth()
                             .fillMaxSize()
                             .alpha(animatedAlpha), // 使用动画的 alpha 值，alpha=0 时完全透明
                     model = staticImageRequest,
@@ -607,9 +610,7 @@ fun AnimatedBackground(
         } else if (staticImageUrl != null) {
             // 没有视频URL，只显示静态图片
             AsyncImage(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
+                modifier = Modifier.fillMaxWidth().fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
                 model = ImageRequest.Builder(context).data(staticImageUrl).build(),
                 contentDescription = null,
                 contentScale = contentScale, // 使用 Crop 确保不超出边界

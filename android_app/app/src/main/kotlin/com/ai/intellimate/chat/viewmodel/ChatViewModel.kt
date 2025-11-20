@@ -332,7 +332,7 @@ class ChatViewModel : BaseVM() {
                     "timestamp" to aiResponseStartTime,
                 ),
             )
-            
+
             try {
                 val result = sendMessageUseCase(agentId, inputMsg.trimEnd())
 
@@ -620,7 +620,7 @@ class ChatViewModel : BaseVM() {
                             "timestamp" to aiResponseStartTime,
                         ),
                     )
-                    
+
                     val result = sendMessageUseCase(agent.id, keepTalkingMsg)
                     _isWaitingForReply.value = false
 
@@ -889,7 +889,7 @@ class ChatViewModel : BaseVM() {
                 LogUtils.e("generateImageForMessage: agentId or agent is null")
                 return@launch
             }
-            
+
             try {
                 val result = generateImageUseCase(agentId, messageId)
                 val endTime = System.currentTimeMillis()
