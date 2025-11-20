@@ -305,7 +305,8 @@ private fun PromptInputField(value: String, onValueChange: (String) -> Unit) {
             fontSize = 16.sp,
             backgroundColor = Color(0x1A78599A),
             cursorColor = Color.White,
-            showMaxLength = false, // 头像描述不需要显示字数限制
+            maxLength = 200,
+            showMaxLength = true,
         )
     }
 }
