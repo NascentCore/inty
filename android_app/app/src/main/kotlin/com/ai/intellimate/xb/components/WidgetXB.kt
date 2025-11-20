@@ -47,7 +47,23 @@ fun MultiLineBasicTextField(
             onValueChange(value.take(maxLength))
         }
     }
-    val lineHeight = fontSize.plusSp(4);
+    val lineHeight = fontSize.plusSp(4)
+    
+    // 根据实际的 lineHeight 和 padding 计算高度
+    // 将 lineHeight 从 sp 转换为 dp：在默认字体缩放下，1 sp ≈ 1 dp
+    // 直接使用数值作为 dp 以匹配渲染的行高
+    val calculatedHeight = remember(minLines, lineHeight, showMaxLength) {
+        if (minLines > 1) {
+            // 使用 lineHeight.value 作为 dp（在默认字体缩放下大致正确）
+            // 这确保高度随实际的 fontSize/lineHeight 缩放
+            val lineHeightInDp = lineHeight.value
+            val topPadding = 16
+            val bottomPadding = if (showMaxLength) 24 else 16
+            (minLines * lineHeightInDp + topPadding + bottomPadding).dp
+        } else {
+            null
+        }
+    }
 
     Box {
         BasicTextField(
@@ -67,7 +83,7 @@ fun MultiLineBasicTextField(
                         )
                     }
                     .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = if (showMaxLength) 24.dp else 16.dp)
-                    .let { if (minLines > 1) it.height((minLines * 24 + 32).dp) else it },
+                    .let { if (calculatedHeight != null) it.height(calculatedHeight) else it },
             textStyle = TextStyle(color = Color.White, fontSize = fontSize, lineHeight = lineHeight),
             interactionSource = interactionSource,
 

@@ -1175,31 +1175,6 @@ private fun CustomTextField(
     Column {
         Text(text = label, fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Medium)
         Spacer(modifier = Modifier.height(12.dp))
-
-//        BasicTextField(
-//            value = value,
-//            onValueChange = onValueChange,
-//            modifier =
-//                Modifier.fillMaxWidth()
-//                    .background(color = Color(0x1A78599A), shape = RoundedCornerShape(12.dp))
-//                    .border(
-//                        width = 1.dp,
-//                        color = Color.White.copy(0.2f),
-//                        shape = RoundedCornerShape(12.dp),
-//                    )
-//                    .padding(16.dp)
-//                    .let { if (minLines > 1) it.height((minLines * 24 + 32).dp) else it },
-//            textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
-//            cursorBrush = SolidColor(Color.White),
-//            decorationBox = { innerTextField ->
-//                Box {
-//                    if (value.isEmpty()) {
-//                        Text(text = placeholder, fontSize = 16.sp, color = Color.White.copy(0.5f))
-//                    }
-//                    innerTextField()
-//                }
-//            },
-//        )
         MultiLineBasicTextField(
             value = value,
             onValueChange = onValueChange,

@@ -248,7 +248,7 @@ internal fun ChatPage(
                             showBackButton = showBackButton,
                             onBack = onBack,
                             fontSize = 15.sp,
-                            avatarWidth = 40,
+                            avatarWidth = 40.dp,
                             onClickMore = {
                                 scope.launch {
                                     if (agentInfo?.isDeleted == true) {

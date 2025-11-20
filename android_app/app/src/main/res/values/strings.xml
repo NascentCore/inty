@@ -204,7 +204,7 @@
     <string name="character_count_format_full">%d/400</string>
     <string name="image_evidence_full">Image evidence</string>
     <string name="submit_button">Submit</string>
-    <string name="please_enter_character_full">Please enter your character…</string>
+    <string name="please_enter_character_full">How would you describe yourself?</string>
     <string name="character_count_format_my">%d/400</string>
     <string name="str_report">Report</string>
     <string name="reply_style">Chat Style</string>
@@ -261,6 +261,7 @@
 
     <string name="str_edit_my_persona">Edit My Persona</string>
     <string name="str_name">Name</string>
+    <string name="str_name_placeholder">Enter your name</string>
     <string name="str_pronouns">Pronouns</string>
     <string name="str_persona">Persona Description</string>
     <string name="str_message_is_too_long">message is too long. Please send it in parts.</string>
