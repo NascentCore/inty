@@ -49,13 +49,16 @@ fun MultiLineBasicTextField(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
-    // ⭐ 自动限制最大字符数
-    val safeValue = remember(value) { value.take(maxLength) }
+    // ⭐ 自动限制最大字符数 - 确保显示的文本和计数器始终一致
+    val safeValue = remember(value, maxLength) { value.take(maxLength) }
+    
+    // 如果外部传入的 value 超过限制，立即同步更新
     LaunchedEffect(value) {
         if (value.length > maxLength) {
             onValueChange(value.take(maxLength))
         }
     }
+    
     val lineHeight = fontSize.plusSp(4)
     
     // 根据实际的 lineHeight 和 padding 计算高度
@@ -76,8 +79,12 @@ fun MultiLineBasicTextField(
 
     Box {
         BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
+            value = safeValue, // 使用 safeValue 确保显示的文本与计数器一致
+            onValueChange = { newValue ->
+                // 立即截断输入，确保不会超过 maxLength
+                val truncated = newValue.take(maxLength)
+                onValueChange(truncated)
+            },
             cursorBrush = SolidColor(cursorColor),
             minLines = minLines,
             maxLines = maxLines,
@@ -100,7 +107,7 @@ fun MultiLineBasicTextField(
 
             decorationBox = { innerTextField ->
                 Box {
-                    if (value.isEmpty()) {
+                    if (safeValue.isEmpty()) {
                         Text(text = placeholder, fontSize = fontSize, lineHeight = lineHeight, color = Color.White.copy(0.5f))
                     }
                     innerTextField()
