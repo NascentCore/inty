@@ -1,6 +1,7 @@
 # AGENTS.md · app/（后端服务）
 
-本文件覆盖并补充仓库根 `AGENTS.md`，仅适用于 `app/`。
+- 本文件覆盖并补充仓库根 `AGENTS.md`，仅适用于 `app/`
+- 不要编辑 `stainless.yml` `openapi.json` 这两个自动生成的配置文件
 
 ## 范围与目标
 - 负责 FastAPI HTTP 服务与业务逻辑。
