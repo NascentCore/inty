@@ -126,7 +126,7 @@
     <string name="generate_avatar">Generate Avatar</string>
     <string name="preview_generated_avatar">Preview Generated Avatar</string>
     <string name="describe_desired_avatar">Describe your desired avatar *</string>
-    <string name="avatar_creation_hint_full">e.g.: A cute anime girl with long hair, big eyes, wearing a white dress…</string>
+    <string name="avatar_creation_hint_full">A cute anime girl, long hair, big eyes, wearing a white dress, in front of a beautiful garden, smiling at you…</string>
 
     <!-- Character Creation -->
     <string name="face_edit">Crop</string>
