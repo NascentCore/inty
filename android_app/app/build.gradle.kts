@@ -85,6 +85,7 @@ android {
 dependencies {
     implementation(libs.androidx.appcompat) // ucropActivity需要
     implementation(libs.androidx.paging.compose)
+    implementation(libs.androidx.compose.material.iconsExtended)
 
     // ===== 项目模块 =====
     implementation(projects.core.common)

@@ -217,7 +217,7 @@ fun ReportImageEvidenceContainer(title: String, images: List<String>, onClickAdd
 
 /** 保存按钮组件 */
 @Composable
-fun SaveBtn(onSave: () -> Unit, isSubmitting: Boolean = false) {
+fun SaveBtn(onSave: () -> Unit, isSubmitting: Boolean = false, buttonText: String? = null) {
     Box(
         modifier =
             Modifier.fillMaxWidth()
@@ -253,7 +253,7 @@ fun SaveBtn(onSave: () -> Unit, isSubmitting: Boolean = false) {
         } else {
             Text(
                 modifier = Modifier.align(Alignment.Center),
-                text = stringResource(R.string.submit_button),
+                text = buttonText ?: stringResource(R.string.submit_button),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Normal,
                 color = Color.White,

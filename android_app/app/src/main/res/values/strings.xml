@@ -133,6 +133,12 @@
 
     <!-- Report -->
     <string name="report_description">Report description</string>
+    <string name="str_feature_request">Feature Request</string>
+    <string name="feature_request_reasons_label">Request type *</string>
+    <string name="feature_request_description_label">Describe your idea</string>
+    <string name="feature_request_description_placeholder">Tell us what you would like to see next…</string>
+    <string name="feature_request_image_label">Mockups or screenshots (optional)</string>
+    <string name="feature_request_submit_button">Send request</string>
 
     <!-- Settings -->
     <string name="he_him">He/Him</string>

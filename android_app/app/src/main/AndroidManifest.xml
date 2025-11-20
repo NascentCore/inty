@@ -101,6 +101,11 @@
             android:theme="@style/Theme.Inty.Popup"
             android:windowSoftInputMode="adjustResize" />
         <activity
+            android:name=".feature.request.FeatureRequestActivity"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.Inty.Popup"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".agent.generate.CreateRoleActivity"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup"

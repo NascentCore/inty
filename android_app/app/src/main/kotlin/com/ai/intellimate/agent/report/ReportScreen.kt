@@ -51,8 +51,21 @@ fun ReportScreen(
     onClickAddImage: () -> Unit,
     onSave: () -> Unit,
     isSubmitting: Boolean = false,
+    titleText: String? = null,
+    reasonsTitle: String? = null,
+    descriptionTitle: String? = null,
+    descriptionPlaceholder: String? = null,
+    imageEvidenceTitle: String? = null,
+    submitButtonText: String? = null,
 ) {
     val focusManager = LocalFocusManager.current
+
+    val resolvedTitle = titleText ?: stringResource(R.string.str_report)
+    val resolvedReasonsTitle = reasonsTitle ?: stringResource(R.string.npc_asterisk_full)
+    val resolvedDescriptionTitle = descriptionTitle ?: stringResource(R.string.report_description)
+    val resolvedDescriptionPlaceholder =
+        descriptionPlaceholder ?: stringResource(R.string.please_fill_feedback_full)
+    val resolvedImageTitle = imageEvidenceTitle ?: stringResource(R.string.image_evidence_full)
 
     Box(
         modifier =
@@ -79,7 +92,7 @@ fun ReportScreen(
             Spacer(Modifier.height(16.dp))
 
             // 举报原因
-            ReportReasonsContainer(title = stringResource(R.string.npc_asterisk_full)) {
+            ReportReasonsContainer(title = resolvedReasonsTitle) {
                 reasons.forEach { reason ->
                     val isSelected = selectIDs.contains(reason.id)
                     ReportItem(
@@ -94,24 +107,24 @@ fun ReportScreen(
 
             // 举报描述
             ReportDescriptionContainer(
-                title = stringResource(R.string.report_description),
+                title = resolvedDescriptionTitle,
                 description = description,
                 onDescriptionChange = onDescriptionChange,
-                placeholder = stringResource(R.string.please_fill_feedback_full),
+                placeholder = resolvedDescriptionPlaceholder,
             )
 
             Spacer(Modifier.height(24.dp))
 
             // 图片证据
             ReportImageEvidenceContainer(
-                title = stringResource(R.string.image_evidence_full),
+                title = resolvedImageTitle,
                 images = images,
                 onClickAddImage = onClickAddImage,
             )
 
             Spacer(Modifier.height(60.dp))
 
-            SaveBtn(onSave = onSave, isSubmitting = isSubmitting)
+            SaveBtn(onSave = onSave, isSubmitting = isSubmitting, buttonText = submitButtonText)
             Spacer(Modifier.height(60.dp))
         }
 
@@ -122,7 +135,7 @@ fun ReportScreen(
                     .copy(containerColor = Color(0XFF1C1523)),
             title = {
                 Text(
-                    text = stringResource(R.string.str_report),
+                    text = resolvedTitle,
                     color = Color.White,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 20.sp,

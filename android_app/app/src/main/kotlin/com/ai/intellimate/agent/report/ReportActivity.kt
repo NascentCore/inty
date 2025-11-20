@@ -1,14 +1,10 @@
 package com.ai.intellimate.agent.report
 
 import ai.sxwl.android.common.base.BaseActivity
-import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.lifecycleScope
 import com.ai.intellimate.ViewModelEvent
 import kotlinx.coroutines.launch
@@ -41,8 +37,10 @@ class ReportActivity : BaseActivity() {
 
     override fun initConfigData() {
         super.initConfigData()
-        viewModel.targetID = intent.getStringExtra(INTENT_KEY_TARGET_ID) ?: ""
-        viewModel.targetType = intent.getStringExtra(INTENT_KEY_TARGET_TYPE) ?: "USER"
+        viewModel.updateTarget(
+            intent.getStringExtra(INTENT_KEY_TARGET_ID),
+            intent.getStringExtra(INTENT_KEY_TARGET_TYPE),
+        )
 
         // 监听ViewModel事件
         lifecycleScope.launch {
@@ -62,41 +60,6 @@ class ReportActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
-        ReportContent(viewModel = viewModel, onBack = { finish() })
+        FeedbackFormContent(viewModel = viewModel, onBack = { finish() })
     }
-}
-
-/** 举报内容组件 */
-@Composable
-private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit) {
-    val reasons = viewModel.reasons.collectAsState()
-    val selectIDs = viewModel.selectIDS
-    val description = viewModel.description.collectAsState()
-    val localImages = viewModel.localImages
-    val isSubmitting = viewModel.isSubmitting.collectAsState()
-
-    val galleryLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
-            imageUri?.let { viewModel.onAddImage(imageUri) }
-        }
-
-    ReportScreen(
-        reasons = reasons.value,
-        selectIDs = selectIDs,
-        onClickReason = { id, isSelect ->
-            LogUtils.i("onClickReason id = $id, isSelect = $isSelect")
-            if (isSelect) {
-                viewModel.selectIDS.add(id)
-            } else {
-                viewModel.selectIDS.remove(id)
-            }
-        },
-        description = description.value,
-        onDescriptionChange = { viewModel.setDescription(it) },
-        images = localImages.toList(),
-        onClickAddImage = { galleryLauncher.launch("image/*") },
-        onSave = { viewModel.submit() },
-        isSubmitting = isSubmitting.value,
-        onBack = onBack,
-    )
 }

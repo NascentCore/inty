@@ -40,11 +40,16 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -85,6 +90,7 @@ import androidx.core.content.getSystemService
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
+import com.ai.intellimate.feature.request.FeatureRequestActivity
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlin.math.abs
@@ -347,6 +353,33 @@ private fun ProfileHeader(
         Row {
             Spacer(Modifier.weight(1f))
             var lastClickTime by remember { mutableLongStateOf(0L) }
+            var lastFeatureClickTime by remember { mutableLongStateOf(0L) }
+
+            IconButton(
+                onClick = {
+                    val currentTime = System.currentTimeMillis()
+                    if (AntiClick.isValidClick(lastFeatureClickTime)) {
+                        lastFeatureClickTime = currentTime
+                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                            FeatureRequestActivity.launch(context)
+                        }
+                    }
+                },
+                colors =
+                    IconButtonDefaults.iconButtonColors(
+                        contentColor = Color.White,
+                        containerColor = Color.White.copy(alpha = 0.08f),
+                    ),
+                modifier = Modifier.size(36.dp).clip(CircleShape),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Lightbulb,
+                    contentDescription = stringResource(R.string.str_feature_request),
+                    tint = Color.White,
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
 
             AsyncImage(
                 modifier =
