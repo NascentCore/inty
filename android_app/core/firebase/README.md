@@ -434,6 +434,22 @@ CrashlyticsTest.recordTestException(Exception("Test exception"))
 - `PROFILE_UPDATED`: 更新资料
 - `SETTINGS_CHANGED`: 设置变更
 
+**重要：图片生成事件命名区分**
+
+项目中存在两种不同的图片生成场景，使用不同的事件前缀，**绝对不能混淆**：
+
+- **消息生图**：`MESSAGE_TO_IMAGE_*` 前缀（在聊天页面为消息生成配图）
+    - 代码位置：`ChatViewModel.kt` - `generateImageForMessage()`
+    - 关键参数：`message_id`
+
+- **创建角色生图**：`AVATAR_*` 前缀（在创建/编辑角色时生成头像/背景图）
+    - 代码位置：`AvatarGenerateViewModel.kt` - `generateAvatar()`, `regenerateAvatar()`
+    - 关键参数：`prompt`
+
+- **限制事件共享**：`IMAGE_GENERATION_LIMIT_REACHED` 是共享事件，两种场景都会触发，限制是累加的
+
+详细事件列表和参数说明见：`bizops/FIREBASE_EVENTS_DOCUMENTATION.md`
+
 ## 预定义用户属性
 
 - `USER_TYPE`: 用户类型

@@ -4,6 +4,8 @@ import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.GenerateBackgroundRequest
 import ai.sxwl.android.data.api.model.GenerateBackgroundResponse
+import ai.sxwl.android.data.billing.VipStatusHelper
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.utils.NetworkErrorHandler
@@ -62,11 +64,26 @@ class AvatarGenerateViewModel : BaseVM() {
         clearError()
 
         launchBackground {
+            val startTime = System.currentTimeMillis()
+
+            // Firebase Analytics - 记录头像生成按钮点击
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.AVATAR_GENERATION_BUTTON_CLICKED,
+                FirebaseManager.safeEventParams(
+                    "prompt" to currentPrompt,
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                    "timestamp" to startTime,
+                ),
+            )
+
             try {
                 val request = GenerateBackgroundRequest(prompt = currentPrompt)
 
                 // Start generation in background - this will continue even after navigation
                 val response = generateBackground(request = request)
+                val endTime = System.currentTimeMillis()
+                val generationTime = endTime - startTime
+
                 withContext(Dispatchers.Main) {
                     LogUtils.i("Generated image URLs: ${response.imageUrls}")
 
@@ -76,14 +93,50 @@ class AvatarGenerateViewModel : BaseVM() {
                         _selectedImageIndex.value = 0
                         AvatarManager.setGeneratedAvatarUrls(response.imageUrls)
                         LogUtils.i("Setting generatedImageUrls to: ${response.imageUrls}")
+
+                        // Firebase Analytics - 记录头像生成成功
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.AVATAR_GENERATION_SUCCESS,
+                            FirebaseManager.safeEventParams(
+                                "prompt" to currentPrompt,
+                                "image_count" to response.imageUrls.size,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "generation_time_ms" to generationTime,
+                                "timestamp" to endTime,
+                            ),
+                        )
                     } else if (response.imageUrl.isNotBlank()) {
                         // 兼容单张图片的情况
                         _generatedImageUrl.value = response.imageUrl
                         AvatarManager.setGeneratedAvatarUrl(response.imageUrl)
                         LogUtils.i("Setting generatedImageUrl to: ${response.imageUrl}")
+
+                        // Firebase Analytics - 记录头像生成成功（单张图片）
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.AVATAR_GENERATION_SUCCESS,
+                            FirebaseManager.safeEventParams(
+                                "prompt" to currentPrompt,
+                                "image_count" to 1,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "generation_time_ms" to generationTime,
+                                "timestamp" to endTime,
+                            ),
+                        )
                     } else {
                         LogUtils.e("Empty image URLs received from server")
                         AvatarManager.setGenerationError("Generated image URLs are empty")
+
+                        // Firebase Analytics - 记录头像生成失败（空结果）
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.AVATAR_GENERATION_FAILURE,
+                            FirebaseManager.safeEventParams(
+                                "prompt" to currentPrompt,
+                                "error_message" to "Empty image URLs received from server",
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "generation_time_ms" to generationTime,
+                                "timestamp" to endTime,
+                            ),
+                        )
                     }
 
                     _isLoading.value = false
@@ -92,6 +145,9 @@ class AvatarGenerateViewModel : BaseVM() {
                 // 生成成功后，返回到Ai形象创建页面 Immediately navigate back to CreateRoleActivity
                 withContext(Dispatchers.Main) { onNavigateBack() }
             } catch (e: Exception) {
+                val endTime = System.currentTimeMillis()
+                val generationTime = endTime - startTime
+
                 withContext(Dispatchers.Main) {
                     val errorMessage =
                         NetworkErrorHandler.handleNetworkException(
@@ -101,6 +157,42 @@ class AvatarGenerateViewModel : BaseVM() {
                     AvatarManager.setGenerationError(errorMessage)
                     _errorMessage.value = errorMessage
                     LogUtils.e("Ai头像生成异常: ${e.message}")
+
+                    // Firebase Analytics - 记录头像生成失败
+                    // 检查是否是限制达到的错误
+                    val isLimitReached = e.message?.contains("limit", ignoreCase = true) == true ||
+                            e.message?.contains(
+                                "IMAGE_GENERATION_LIMIT_REACHED",
+                                ignoreCase = true
+                            ) == true ||
+                            e.message?.contains("SUBSCRIPTION_REQUIRED", ignoreCase = true) == true
+
+                    if (isLimitReached) {
+                        // 达到限制时，上报限制事件（与消息生图共享）
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.IMAGE_GENERATION_LIMIT_REACHED,
+                            FirebaseManager.safeEventParams(
+                                "prompt" to currentPrompt,
+                                "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "generation_time_ms" to generationTime,
+                                "timestamp" to endTime,
+                            ),
+                        )
+                    } else {
+                        // 其他错误，上报失败事件
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.AVATAR_GENERATION_FAILURE,
+                            FirebaseManager.safeEventParams(
+                                "prompt" to currentPrompt,
+                                "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "generation_time_ms" to generationTime,
+                                "timestamp" to endTime,
+                            ),
+                        )
+                    }
+
                     _isLoading.value = false
                     clearError()
                 }
@@ -124,10 +216,26 @@ class AvatarGenerateViewModel : BaseVM() {
         _errorMessage.value = null
 
         launchBackground {
+            val startTime = System.currentTimeMillis()
+
+            // Firebase Analytics - 记录头像重新生成按钮点击
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.AVATAR_GENERATION_BUTTON_CLICKED,
+                FirebaseManager.safeEventParams(
+                    "prompt" to currentPrompt,
+                    "is_regenerate" to true,
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                    "timestamp" to startTime,
+                ),
+            )
+
             try {
                 val request = GenerateBackgroundRequest(prompt = currentPrompt)
 
                 val response = generateBackground(request = request)
+                val endTime = System.currentTimeMillis()
+                val generationTime = endTime - startTime
+
                 withContext(Dispatchers.Main) {
                     LogUtils.i("Regenerated image URLs: ${response.imageUrls}")
                     if (response.imageUrls.isNotEmpty()) {
@@ -135,22 +243,102 @@ class AvatarGenerateViewModel : BaseVM() {
                         _selectedImageIndex.value = 0 // 默认选中第一张
                         AvatarManager.setGeneratedAvatarUrls(response.imageUrls)
                         LogUtils.i("Setting regenerated imageUrls to: ${response.imageUrls}")
+
+                        // Firebase Analytics - 记录头像重新生成成功
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.AVATAR_GENERATION_SUCCESS,
+                            FirebaseManager.safeEventParams(
+                                "prompt" to currentPrompt,
+                                "image_count" to response.imageUrls.size,
+                                "is_regenerate" to true,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "generation_time_ms" to generationTime,
+                                "timestamp" to endTime,
+                            ),
+                        )
                     } else if (response.imageUrl.isNotBlank()) {
                         // 兼容单张图片的情况
                         _generatedImageUrl.value = response.imageUrl
                         AvatarManager.setGeneratedAvatarUrl(response.imageUrl)
                         LogUtils.i("Setting regenerated imageUrl to: ${response.imageUrl}")
+
+                        // Firebase Analytics - 记录头像重新生成成功（单张图片）
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.AVATAR_GENERATION_SUCCESS,
+                            FirebaseManager.safeEventParams(
+                                "prompt" to currentPrompt,
+                                "image_count" to 1,
+                                "is_regenerate" to true,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "generation_time_ms" to generationTime,
+                                "timestamp" to endTime,
+                            ),
+                        )
                     } else {
                         LogUtils.e("Empty image URLs received from server during regeneration")
                         _errorMessage.value = "Regenerated image URLs are empty"
+
+                        // Firebase Analytics - 记录头像重新生成失败（空结果）
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.AVATAR_GENERATION_FAILURE,
+                            FirebaseManager.safeEventParams(
+                                "prompt" to currentPrompt,
+                                "error_message" to "Empty image URLs received from server during regeneration",
+                                "is_regenerate" to true,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "generation_time_ms" to generationTime,
+                                "timestamp" to endTime,
+                            ),
+                        )
                     }
                     _isLoading.value = false
                 }
             } catch (e: Exception) {
+                val endTime = System.currentTimeMillis()
+                val generationTime = endTime - startTime
+
                 withContext(Dispatchers.Main) {
                     val errorMessage = e.message?.substringBefore(':') ?: "Unknown error"
                     _errorMessage.value = errorMessage
                     LogUtils.e("Regenerate avatar error: ${e.message}")
+
+                    // Firebase Analytics - 记录头像重新生成失败
+                    // 检查是否是限制达到的错误
+                    val isLimitReached = e.message?.contains("limit", ignoreCase = true) == true ||
+                            e.message?.contains(
+                                "IMAGE_GENERATION_LIMIT_REACHED",
+                                ignoreCase = true
+                            ) == true ||
+                            e.message?.contains("SUBSCRIPTION_REQUIRED", ignoreCase = true) == true
+
+                    if (isLimitReached) {
+                        // 达到限制时，上报限制事件（与消息生图共享）
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.IMAGE_GENERATION_LIMIT_REACHED,
+                            FirebaseManager.safeEventParams(
+                                "prompt" to currentPrompt,
+                                "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
+                                "is_regenerate" to true,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "generation_time_ms" to generationTime,
+                                "timestamp" to endTime,
+                            ),
+                        )
+                    } else {
+                        // 其他错误，上报失败事件
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.AVATAR_GENERATION_FAILURE,
+                            FirebaseManager.safeEventParams(
+                                "prompt" to currentPrompt,
+                                "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
+                                "is_regenerate" to true,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "generation_time_ms" to generationTime,
+                                "timestamp" to endTime,
+                            ),
+                        )
+                    }
+
                     _isLoading.value = false
                 }
             }
@@ -160,9 +348,10 @@ class AvatarGenerateViewModel : BaseVM() {
     fun getSelectedAvatarUrl(): String? {
         return when {
             _generatedImageUrls.value.isNotEmpty() &&
-                _selectedImageIndex.value < _generatedImageUrls.value.size -> {
+                    _selectedImageIndex.value < _generatedImageUrls.value.size -> {
                 _generatedImageUrls.value[_selectedImageIndex.value]
             }
+
             _generatedImageUrl.value != null -> _generatedImageUrl.value
             else -> null
         }
@@ -184,6 +373,7 @@ class AvatarGenerateViewModel : BaseVM() {
                     LogUtils.i("generateBackground success: ${result.data}")
                     return result.data
                 }
+
                 is HttpResult.Failure -> {
                     LogUtils.e("generateBackground error: $result")
                     val errorMessage =
@@ -199,10 +389,13 @@ class AvatarGenerateViewModel : BaseVM() {
                 when {
                     e.message?.contains("timeout", ignoreCase = true) == true ->
                         "Network timeout, please try again later"
+
                     e.message?.contains("network", ignoreCase = true) == true ->
                         "Network connection failed, please check your network"
+
                     e.message?.contains("json", ignoreCase = true) == true ->
                         "Data format error, please try again later"
+
                     else -> e.message ?: "Unknown error"
                 }
             throw Exception(errorMessage)

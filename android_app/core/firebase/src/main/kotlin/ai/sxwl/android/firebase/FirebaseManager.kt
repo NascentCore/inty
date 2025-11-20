@@ -14,14 +14,14 @@ import com.google.firebase.perf.FirebasePerformance
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.remoteConfig
 import com.google.firebase.remoteconfig.remoteConfigSettings
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics、Performance和Remote Config的初始化和使用
@@ -124,6 +124,9 @@ object FirebaseManager {
                     Events.MESSAGE_TO_IMAGE_GENERATION_SUCCESS to 1.0, // 图片生成成功
                     Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE to 1.0, // 图片生成失败
                     Events.IMAGE_GENERATION_LIMIT_REACHED to 1.0, // 图片生成限制达到
+                    Events.AVATAR_GENERATION_BUTTON_CLICKED to 1.0, // 头像生成开始
+                    Events.AVATAR_GENERATION_SUCCESS to 1.0, // 头像生成成功
+                    Events.AVATAR_GENERATION_FAILURE to 1.0, // 头像生成失败
 
                     // 🟡 性能相关事件 - 保持现有采样配置
                     Events.SLOW_REQUEST to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
@@ -547,6 +550,11 @@ object FirebaseManager {
 
         // 图片生成限制达到，这个限制与其他生图操作（如创建角色时生图）累加到一起的
         const val IMAGE_GENERATION_LIMIT_REACHED = "image_generation_limit_reached"
+
+        // 创建角色图片生成相关事件
+        const val AVATAR_GENERATION_BUTTON_CLICKED = "avatar_generation_button_clicked"
+        const val AVATAR_GENERATION_SUCCESS = "avatar_generation_success"
+        const val AVATAR_GENERATION_FAILURE = "avatar_generation_failure"
 
         // Explore相关事件
         const val EXPLORE_AGENTS_FETCH_SUCCESS = "explore_agents_fetch_success" // Explore接口请求成功
