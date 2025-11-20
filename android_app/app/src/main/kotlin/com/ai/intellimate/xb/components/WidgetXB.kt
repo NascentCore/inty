@@ -17,7 +17,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
@@ -36,7 +40,12 @@ fun MultiLineBasicTextField(
     fontSize: TextUnit = 16.sp,
     counterColor: Color = Color.Gray,  // 右下角字数颜色
     backgroundColor: Color = Color(0x1A78599A),
-    cursorColor: Color = Color.White
+    cursorColor: Color = Color.White,
+    keyboardOptions: KeyboardOptions = KeyboardOptions(
+        imeAction = ImeAction.Default,
+        capitalization = KeyboardCapitalization.Sentences, // 每句话首字母自动大写
+    ),
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
@@ -72,6 +81,8 @@ fun MultiLineBasicTextField(
             cursorBrush = SolidColor(cursorColor),
             minLines = minLines,
             maxLines = maxLines,
+            keyboardOptions = keyboardOptions,
+            keyboardActions = keyboardActions,
             modifier =
                 Modifier.fillMaxWidth()
                     .background(color = backgroundColor, shape = RoundedCornerShape(12.dp))
