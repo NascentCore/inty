@@ -263,10 +263,10 @@ class ChatViewModel : BaseVM() {
         }
 
         val agentId = _agentInfo.value?.id ?: return
+        val agent = _agentInfo.value ?: return
         inputData.value = ""
         _isWaitingForReply.value = true
 
-        // Firebase Analytics - 记录消息发送
         // 记录端到端时间的起始点（用户点击发送按钮的时间）
         val endToEndStartTime = System.currentTimeMillis()
 
@@ -276,64 +276,63 @@ class ChatViewModel : BaseVM() {
 
         // 如果是第一次聊天，上报聊天开始事件（准确反映用户第一次发送消息的行为）
         if (!hasChatHistory) {
-            _agentInfo.value?.let { agent ->
-                FirebaseManager.logEvent(
-                    FirebaseManager.Events.CHAT_STARTED,
-                    FirebaseManager.safeEventParams(
-                        "agent_id" to agent.id,
-                        "agent_name" to agent.name,
-                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                        "timestamp" to endToEndStartTime,
-                    ),
-                )
-            }
-        }
-        _agentInfo.value?.let { agent ->
             FirebaseManager.logEvent(
-                FirebaseManager.Events.MESSAGE_SENT,
+                FirebaseManager.Events.CHAT_STARTED,
                 FirebaseManager.safeEventParams(
                     "agent_id" to agent.id,
                     "agent_name" to agent.name,
-                    "message_length" to inputMsg.length,
-                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                    "timestamp" to endToEndStartTime,
-                ),
-            )
-
-            // Firebase Crashlytics - 记录消息发送上下文
-            FirebaseManager.setCustomKey("last_message_length", inputMsg.length.toString())
-            FirebaseManager.setCustomKey("last_message_preview", inputMsg.take(50))
-            FirebaseManager.setCustomKey("last_agent_id", agent.id)
-
-            // 追踪消息发送（用户操作：发送消息）
-            PageTrackingHelper.trackUserInteraction(
-                PageTrackingHelper.UserActions.SEND_MESSAGE,
-                "chat_input",
-                FirebaseManager.safeEventParams(
-                    "agent_id" to agent.id,
-                    "agent_name" to agent.name,
-                    "message_length" to inputMsg.length,
-                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                    "timestamp" to endToEndStartTime,
-                ),
-            )
-
-            // Firebase Analytics - 记录消息发送按钮点击（CHAT_PAGE_CLICK事件）
-            FirebaseManager.logEvent(
-                FirebaseManager.Events.CHAT_PAGE_CLICK,
-                FirebaseManager.safeEventParams(
-                    "click_type" to "message_sent",
-                    "agent_id" to agent.id,
-                    "agent_name" to agent.name,
-                    "message_length" to inputMsg.length,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                     "timestamp" to endToEndStartTime,
                 ),
             )
         }
+
+        // Firebase Crashlytics - 记录消息发送上下文
+        FirebaseManager.setCustomKey("last_message_length", inputMsg.length.toString())
+        FirebaseManager.setCustomKey("last_message_preview", inputMsg.take(50))
+        FirebaseManager.setCustomKey("last_agent_id", agent.id)
+
+        // 追踪消息发送（用户操作：发送消息）
+        PageTrackingHelper.trackUserInteraction(
+            PageTrackingHelper.UserActions.SEND_MESSAGE,
+            "chat_input",
+            FirebaseManager.safeEventParams(
+                "agent_id" to agent.id,
+                "agent_name" to agent.name,
+                "message_length" to inputMsg.length,
+                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                "timestamp" to endToEndStartTime,
+            ),
+        )
+
+        // Firebase Analytics - 记录消息发送按钮点击（CHAT_PAGE_CLICK事件）
+        FirebaseManager.logEvent(
+            FirebaseManager.Events.CHAT_PAGE_CLICK,
+            FirebaseManager.safeEventParams(
+                "click_type" to "message_sent",
+                "agent_id" to agent.id,
+                "agent_name" to agent.name,
+                "message_length" to inputMsg.length,
+                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                "timestamp" to endToEndStartTime,
+            ),
+        )
 
         viewModelScope.launch(Dispatchers.IO) {
             val aiResponseStartTime = System.currentTimeMillis()
+
+            // ✅ 修复：将 MESSAGE_SENT 事件移到 API 调用开始时上报，确保与 MESSAGE_SEND_SUCCESS/FAILURE 一一对应
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.MESSAGE_SENT,
+                FirebaseManager.safeEventParams(
+                    "agent_id" to agentId,
+                    "agent_name" to agent.name,
+                    "message_length" to inputMsg.length,
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                    "timestamp" to aiResponseStartTime,
+                ),
+            )
+            
             try {
                 val result = sendMessageUseCase(agentId, inputMsg.trimEnd())
 
@@ -608,6 +607,20 @@ class ChatViewModel : BaseVM() {
             agentInfo.value?.let { agent ->
                 try {
                     val aiResponseStartTime = System.currentTimeMillis()
+
+                    // ✅ 修复：添加缺失的 MESSAGE_SENT 事件上报（在 API 调用开始时）
+                    FirebaseManager.logEvent(
+                        FirebaseManager.Events.MESSAGE_SENT,
+                        FirebaseManager.safeEventParams(
+                            "agent_id" to agent.id,
+                            "agent_name" to agent.name,
+                            "message_type" to "keep_talking",
+                            "message_length" to keepTalkingMsg.length,
+                            "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                            "timestamp" to aiResponseStartTime,
+                        ),
+                    )
+                    
                     val result = sendMessageUseCase(agent.id, keepTalkingMsg)
                     _isWaitingForReply.value = false
 
@@ -825,36 +838,58 @@ class ChatViewModel : BaseVM() {
     }
 
     fun generateImageForMessage(messageId: String) {
-        val agentId = _agentInfo.value?.id ?: return
-        val agent = _agentInfo.value ?: return
+        val agentId = _agentInfo.value?.id
+        val agent = _agentInfo.value
 
-        val startTime = System.currentTimeMillis()
-
-        FirebaseManager.logEvent(
-            FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED,
-            FirebaseManager.safeEventParams(
-                "agent_id" to agentId,
-                "agent_name" to agent.name,
-                "message_id" to messageId,
-                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                "timestamp" to startTime,
-            ),
-        )
-
-        // Firebase Analytics - 记录消息生图按钮点击（CHAT_PAGE_CLICK事件）
-        FirebaseManager.logEvent(
-            FirebaseManager.Events.CHAT_PAGE_CLICK,
-            FirebaseManager.safeEventParams(
-                "click_type" to "message_to_image",
-                "agent_id" to agentId,
-                "agent_name" to agent.name,
-                "message_id" to messageId,
-                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                "timestamp" to startTime,
-            ),
-        )
-
+        // ✅ 修复：将 clicked 事件移到协程内部，确保即使参数检查失败也能上报
+        // 同时，即使参数为空也先上报 clicked 事件，然后在协程内部检查并上报 failure
         viewModelScope.launch(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
+
+            // ✅ 修复：在协程内部、API 调用前上报 clicked 事件，确保不会丢失
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED,
+                FirebaseManager.safeEventParams(
+                    "agent_id" to (agentId ?: "unknown"),
+                    "agent_name" to (agent?.name ?: "unknown"),
+                    "message_id" to messageId,
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                    "timestamp" to startTime,
+                ),
+            )
+
+            // Firebase Analytics - 记录消息生图按钮点击（CHAT_PAGE_CLICK事件）
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.CHAT_PAGE_CLICK,
+                FirebaseManager.safeEventParams(
+                    "click_type" to "message_to_image",
+                    "agent_id" to (agentId ?: "unknown"),
+                    "agent_name" to (agent?.name ?: "unknown"),
+                    "message_id" to messageId,
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                    "timestamp" to startTime,
+                ),
+            )
+
+            // ✅ 修复：参数检查失败时，上报 failure 事件
+            if (agentId == null || agent == null) {
+                val endTime = System.currentTimeMillis()
+                FirebaseManager.logEvent(
+                    FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
+                    FirebaseManager.safeEventParams(
+                        "agent_id" to (agentId ?: "unknown"),
+                        "agent_name" to (agent?.name ?: "unknown"),
+                        "message_id" to messageId,
+                        "error_message" to "agent_id or agent is null",
+                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                        "generation_time_ms" to (endTime - startTime),
+                        "timestamp" to endTime,
+                    ),
+                )
+                LogUtils.e("generateImageForMessage: agentId or agent is null")
+                return@launch
+            }
+            
             try {
                 val result = generateImageUseCase(agentId, messageId)
                 val endTime = System.currentTimeMillis()
