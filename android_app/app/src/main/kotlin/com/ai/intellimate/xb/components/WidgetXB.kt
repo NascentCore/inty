@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.TextStyle
@@ -60,18 +61,20 @@ fun MultiLineBasicTextField(
     }
     
     val lineHeight = fontSize.plusSp(4)
+    val density = LocalDensity.current
     
     // 根据实际的 lineHeight 和 padding 计算高度
-    // 将 lineHeight 从 sp 转换为 dp：在默认字体缩放下，1 sp ≈ 1 dp
-    // 直接使用数值作为 dp 以匹配渲染的行高
-    val calculatedHeight = remember(minLines, lineHeight, showMaxLength) {
+    // 正确将 sp 转换为 dp，考虑用户的字体缩放设置（fontScale）
+    val calculatedHeight = remember(minLines, lineHeight, showMaxLength, density) {
         if (minLines > 1) {
-            // 使用 lineHeight.value 作为 dp（在默认字体缩放下大致正确）
-            // 这确保高度随实际的 fontSize/lineHeight 缩放
-            val lineHeightInDp = lineHeight.value
-            val topPadding = 16
-            val bottomPadding = if (showMaxLength) 24 else 16
-            (minLines * lineHeightInDp + topPadding + bottomPadding).dp
+            // sp 会根据 fontScale 缩放，所以实际渲染高度 = sp 值 * fontScale
+            // 为了匹配文本的实际渲染高度，容器高度也应该使用 sp * fontScale
+            val lineHeightInDp = with(density) {
+                (lineHeight.value * fontScale)
+            }
+            val topPaddingInDp = 16
+            val bottomPaddingInDp = if (showMaxLength) 24 else 16
+            (minLines * lineHeightInDp + topPaddingInDp + bottomPaddingInDp)
         } else {
             null
         }
@@ -101,7 +104,7 @@ fun MultiLineBasicTextField(
                         )
                     }
                     .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = if (showMaxLength) 24.dp else 16.dp)
-                    .let { if (calculatedHeight != null) it.height(calculatedHeight) else it },
+                    .let { if (calculatedHeight != null) it.height(calculatedHeight.dp) else it },
             textStyle = TextStyle(color = Color.White, fontSize = fontSize, lineHeight = lineHeight),
             interactionSource = interactionSource,
 
