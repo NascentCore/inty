@@ -225,6 +225,7 @@ class MessagesViewModel : BaseVM() {
     private fun processConversationsWithPinHide(
         rawConversations: List<ConversationItem>
     ): List<ConversationItem> {
+        autoPinOfficialConversations(rawConversations)
         return rawConversations
             .filter { conversation ->
                 // 过滤隐藏的会话，除非有新消息
@@ -271,6 +272,18 @@ class MessagesViewModel : BaseVM() {
             currentState.copy(
                 conversations = processConversationsWithPinHide(currentState.conversations)
             )
+        }
+    }
+
+    /** 将官方标签角色自动标记为置顶（仅在用户未手动设置过时生效） */
+    private fun autoPinOfficialConversations(conversations: List<ConversationItem>) {
+        conversations.forEach { conversation ->
+            if (
+                conversation.hasOfficialTag() &&
+                    !IntySetting.hasConversationPinnedPreference(conversation.agentId)
+            ) {
+                IntySetting.setConversationPinned(conversation.agentId, true)
+            }
         }
     }
 

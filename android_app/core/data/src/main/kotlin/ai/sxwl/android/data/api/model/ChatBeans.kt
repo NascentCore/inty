@@ -135,6 +135,7 @@ data class ConversationItem(
     @Json(name = "agent_background") val agentBackground: String = "",
     @Json(name = "agent_background_animated") val agentBackgroundAnimated: String = "",
     @Json(name = "agent_intro") val agentIntro: String = "",
+    @Json(name = "agent_tags") val agentTags: List<String?>? = null,
     @Json(name = "agent_opening") val agentOpening: String = "",
     @Json(name = "agent_opening_audio_url") val agentOpeningAudioUrl: String = "",
     @Json(name = "created_at") val createdAt: String = "",
@@ -173,9 +174,24 @@ data class ConversationItem(
                 intro = agentIntro,
                 opening = agentOpening,
                 opening_audio_url = agentOpeningAudioUrl,
+                tags = agentTags,
                 backgroundAnimatedUrl = agentBackgroundAnimated,
             )
             .also { info -> info.isDeleted = this.isDeleted }
+    }
+
+    fun hasOfficialTag(): Boolean {
+        if (agentTags.isNullOrEmpty()) {
+            return false
+        }
+
+        return agentTags.any { tag ->
+            tag?.trim()?.equals(OFFICIAL_TAG, ignoreCase = true) == true
+        }
+    }
+
+    companion object {
+        private const val OFFICIAL_TAG = "official"
     }
 }
 

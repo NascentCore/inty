@@ -293,6 +293,11 @@ object IntySetting {
         curUserSetting.putBoolean("conversation_pinned_$agentId", pinned)
     }
 
+    /** 判断用户是否对会话置顶状态做过显式设置（用于区分自动置顶与手动操作） */
+    fun hasConversationPinnedPreference(agentId: String): Boolean {
+        return curUserSetting.containsKey("conversation_pinned_$agentId")
+    }
+
     /** 获取会话置顶状态 */
     fun isConversationPinned(agentId: String): Boolean {
         return curUserSetting.decodeBool("conversation_pinned_$agentId", false)
