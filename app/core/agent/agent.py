@@ -7,7 +7,14 @@ from typing import Any, Dict, List, Optional
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_postgres import PostgresChatMessageHistory
 from loguru import logger
-from openai import OpenAI
+from openai import (
+    APIConnectionError,
+    APIError,
+    APITimeoutError,
+    AuthenticationError,
+    OpenAI,
+    RateLimitError,
+)
 from psycopg_pool import ConnectionPool
 from sqlalchemy import text
 from typing_extensions import deprecated
@@ -543,6 +550,146 @@ class Agent:
 
         return recent_messages
 
+    def _is_retryable_error(self, error: Exception) -> bool:
+        """
+        判断错误是否可重试
+
+        Args:
+            error: 异常对象
+
+        Returns:
+            bool: 如果错误可重试返回True，否则返回False
+        """
+        # OpenAI SDK的错误类型
+        if isinstance(error, (RateLimitError, APIConnectionError, APITimeoutError)):
+            return True
+
+        # 401错误可能是临时性的认证问题
+        if isinstance(error, AuthenticationError):
+            # 检查错误消息，某些401错误可能是临时性的
+            error_str = str(error).lower()
+            if "user not found" in error_str or "unauthorized" in error_str:
+                return True
+
+        # APIError可能包含状态码信息
+        if isinstance(error, APIError):
+            status_code = getattr(error, "status_code", None)
+            if status_code:
+                # 401, 429, 500-503 可能是临时性错误
+                if status_code in (401, 429) or (500 <= status_code <= 503):
+                    return True
+
+        return False
+
+    def _call_openai_api_with_retry(
+        self,
+        client: OpenAI,
+        model: str,
+        openai_messages: List[Dict[str, Any]],
+        temperature: float,
+        max_tokens: int,
+        top_p: float,
+        extra_body: Dict[str, Any],
+        user_id: str,
+        max_retries: int = 3,
+        initial_delay: float = 1.0,
+    ):
+        """
+        带重试机制的OpenAI API调用
+
+        Args:
+            client: OpenAI客户端
+            model: 模型名称
+            openai_messages: 消息列表
+            temperature: 温度参数
+            max_tokens: 最大token数
+            top_p: top_p参数
+            extra_body: 额外请求体
+            user_id: 用户ID（用于日志）
+            max_retries: 最大重试次数
+            initial_delay: 初始延迟（秒），使用指数退避
+
+        Returns:
+            API响应对象
+
+        Raises:
+            最后一次尝试的异常
+        """
+        last_error = None
+
+        for attempt in range(max_retries):
+            try:
+                response = client.chat.completions.create(
+                    messages=openai_messages,
+                    model=model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    top_p=top_p,
+                    extra_body=extra_body,
+                )
+                # 成功则返回
+                if attempt > 0:
+                    logger.info(
+                        f"OpenRouter API调用成功（重试后） - "
+                        f"Agent: {self.agent_id}, User: {user_id}, "
+                        f"Model: {model}, Attempt: {attempt + 1}/{max_retries}"
+                    )
+                return response
+
+            except Exception as e:
+                last_error = e
+                is_retryable = self._is_retryable_error(e)
+
+                # 记录错误详情
+                error_details = {
+                    "agent_id": self.agent_id,
+                    "user_id": user_id,
+                    "model": model,
+                    "message_count": len(openai_messages),
+                    "attempt": attempt + 1,
+                    "max_retries": max_retries,
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "is_retryable": is_retryable,
+                }
+
+                # 如果是APIError，记录状态码和错误体
+                if isinstance(e, APIError):
+                    error_details["status_code"] = getattr(e, "status_code", None)
+                    error_details["error_body"] = getattr(e, "body", None)
+
+                if is_retryable and attempt < max_retries - 1:
+                    # 计算延迟时间（指数退避）
+                    delay = initial_delay * (2**attempt)
+                    logger.warning(
+                        f"OpenRouter API调用失败（可重试） - "
+                        f"Agent: {self.agent_id}, User: {user_id}, "
+                        f"Model: {model}, Attempt: {attempt + 1}/{max_retries}, "
+                        f"Error: {str(e)}, 将在 {delay:.2f}秒后重试"
+                    )
+                    logger.debug(f"错误详情: {error_details}")
+                    time.sleep(delay)
+                else:
+                    # 不可重试或已达到最大重试次数
+                    if not is_retryable:
+                        logger.error(
+                            f"OpenRouter API调用失败（不可重试） - "
+                            f"Agent: {self.agent_id}, User: {user_id}, "
+                            f"Model: {model}, Error: {str(e)}"
+                        )
+                    else:
+                        logger.error(
+                            f"OpenRouter API调用失败（重试次数已用完） - "
+                            f"Agent: {self.agent_id}, User: {user_id}, "
+                            f"Model: {model}, Attempt: {attempt + 1}/{max_retries}, "
+                            f"Error: {str(e)}"
+                        )
+                    logger.error(f"完整错误详情: {error_details}")
+                    raise
+
+        # 如果所有重试都失败，抛出最后一次的错误
+        raise last_error
+
     def _chat_sync_optimized(
         self,
         user_id: str,
@@ -644,26 +791,66 @@ class Agent:
                     f"客户端获取耗时: {client_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # API调用
+                # API调用（带重试机制）
                 api_start = time.time()
-                response = client.chat.completions.create(
-                    messages=openai_messages,
-                    model=self.model_config.get("model", default_model),
-                    temperature=self.model_config.get(
-                        "temperature", default_temperature
-                    ),
-                    max_tokens=self.model_config.get("max_tokens", default_max_tokens),
-                    top_p=self.model_config.get("top_p", default_top_p),
-                    extra_body={
-                        # This only works for Gemini models.
-                        "generation_config": {
-                            "thinking_budget": 0,
+                model_name = self.model_config.get("model", default_model)
+                temperature = self.model_config.get("temperature", default_temperature)
+                max_tokens = self.model_config.get("max_tokens", default_max_tokens)
+                top_p = self.model_config.get("top_p", default_top_p)
+
+                try:
+                    response = self._call_openai_api_with_retry(
+                        client=client,
+                        model=model_name,
+                        openai_messages=openai_messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                        extra_body={
+                            # This only works for Gemini models.
+                            "generation_config": {
+                                "thinking_budget": 0,
+                            },
+                            # This appears on Open Router Client User ID field.
+                            # can be used to track end user's usage.
+                            "user": user_id,
                         },
-                        # This appears on Open Router Client User ID field.
-                        # can be used to track end user's usage.
-                        "user": user_id,
-                    },
-                )
+                        user_id=user_id,
+                        max_retries=3,
+                        initial_delay=1.0,
+                    )
+                except Exception as api_error:
+                    # 记录详细的错误信息
+                    error_context = {
+                        "agent_id": self.agent_id,
+                        "user_id": user_id,
+                        "session_id": session_id,
+                        "model": model_name,
+                        "message_count": len(openai_messages),
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                        "top_p": top_p,
+                        "error_type": type(api_error).__name__,
+                        "error_message": str(api_error),
+                    }
+
+                    # 如果是APIError，记录更多信息
+                    if isinstance(api_error, APIError):
+                        error_context["status_code"] = getattr(
+                            api_error, "status_code", None
+                        )
+                        error_context["error_body"] = getattr(api_error, "body", None)
+                        error_context["error_code"] = getattr(api_error, "code", None)
+
+                    logger.error(
+                        f"OpenRouter API调用最终失败 - "
+                        f"Agent: {self.agent_id}, User: {user_id}, "
+                        f"Session: {session_id}, Model: {model_name}, "
+                        f"Error: {str(api_error)}"
+                    )
+                    logger.error(f"完整错误上下文: {error_context}")
+                    raise
+
                 api_time = time.time() - api_start
                 logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
 
@@ -690,9 +877,38 @@ class Agent:
 
                 return response_text
             except Exception as e:
+                # 增强的错误日志记录
+                error_context = {
+                    "agent_id": self.agent_id,
+                    "user_id": user_id,
+                    "session_id": session_id,
+                    "message_count": len(messages),
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                }
+
+                # 如果是OpenAI API错误，记录更多信息
+                if isinstance(
+                    e,
+                    (
+                        APIError,
+                        AuthenticationError,
+                        RateLimitError,
+                        APIConnectionError,
+                        APITimeoutError,
+                    ),
+                ):
+                    error_context["is_api_error"] = True
+                    if isinstance(e, APIError):
+                        error_context["status_code"] = getattr(e, "status_code", None)
+                        error_context["error_body"] = getattr(e, "body", None)
+
                 logger.error(
-                    f"聊天处理失败（优化版） - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}"
+                    f"聊天处理失败（优化版） - "
+                    f"Agent: {self.agent_id}, Session: {session_id}, "
+                    f"User: {user_id}, Error: {str(e)}"
                 )
+                logger.error(f"错误上下文: {error_context}")
                 raise
 
     def _generate_message_without_user_save_sync(
