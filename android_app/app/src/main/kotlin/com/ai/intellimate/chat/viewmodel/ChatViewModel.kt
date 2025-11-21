@@ -889,7 +889,7 @@ class ChatViewModel : BaseVM() {
                 LogUtils.e("generateImageForMessage: agentId or agent is null")
                 return@launch
             }
-
+            
             try {
                 val result = generateImageUseCase(agentId, messageId)
                 val endTime = System.currentTimeMillis()
