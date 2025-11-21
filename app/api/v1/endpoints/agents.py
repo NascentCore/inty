@@ -1052,9 +1052,7 @@ async def get_image_generation_config(
     tags=[INTY_EVAL_TAG, WEB_APP_TAG],
 )
 async def get_available_prompts(
-    include_content: bool = Query(
-        False, description="是否包含完整的 prompt 内容"
-    ),
+    include_content: bool = Query(False, description="是否包含完整的 prompt 内容"),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """获取可用的 prompt 列表"""
