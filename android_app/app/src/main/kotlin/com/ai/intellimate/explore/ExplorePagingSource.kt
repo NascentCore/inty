@@ -2,6 +2,7 @@ package com.ai.intellimate.explore
 
 import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AgentInfoResponse
 import ai.sxwl.android.data.cache.RecommendedAgentCacheProvider
@@ -121,7 +122,12 @@ class ExplorePagingSource(
                     is NetworkResult.Success -> {
                         val agents = result.data.list ?: emptyList()
                         // 过滤掉id为空的agent，避免key重复问题
-                        val validAgents = agents.filter { it.id.isNotEmpty() }
+                        // 同时过滤掉 IntelliMate agent
+                        val validAgents =
+                            agents.filter { agent ->
+                                agent.id.isNotEmpty() &&
+                                        !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
+                            }
                         val hasMore = validAgents.isNotEmpty() && validAgents.size >= pageSize
 
                         // 缓存第一页数据

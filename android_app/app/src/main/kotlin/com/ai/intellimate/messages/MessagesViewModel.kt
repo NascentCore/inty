@@ -3,10 +3,13 @@ package com.ai.intellimate.messages
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.AgentConstants
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
+import com.ai.intellimate.utils.AgentCacheManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,9 +34,15 @@ class MessagesViewModel : BaseVM() {
     // 页面跟踪上下文名称（默认为当前类名，可在外部设置）
     private var pageTrackingContext: String = "MessagesViewModel"
 
+    // IntelliMate agent 缓存（只在启动时加载一次，避免频繁调用网络接口）
+    private var cachedIntelliMateAgent: ConversationItem? = null
+    private var intelliMateAgentLoaded = false // 标记是否已尝试加载过
+
     init {
         // 页面跟踪
         trackPageView()
+        // 启动时加载 IntelliMate agent（只调用一次）
+        loadIntelliMateAgentOnce()
     }
 
     /**
@@ -98,11 +107,16 @@ class MessagesViewModel : BaseVM() {
                         if (userInitiatedConversations.isEmpty()) {
                             hasMoreConversations = false
                         } else {
-                            // 应用 Pin/Hide 逻辑：排序和过滤
-                            val processedConversations =
+                            // 应用 Pin/Hide 逻辑：排序和过滤（包含 IntelliMate agent）
+                            val (processedConversations, intelliMateAgentIds) =
                                 processConversationsWithPinHide(userInitiatedConversations)
                             // 静默更新数据，不显示loading
-                            _uiState.update { it.copy(conversations = processedConversations) }
+                            _uiState.update {
+                                it.copy(
+                                    conversations = processedConversations,
+                                    intelliMateAgentIds = intelliMateAgentIds
+                                )
+                            }
                         }
                     }
 
@@ -149,20 +163,31 @@ class MessagesViewModel : BaseVM() {
                         if (userInitiatedConversations.isEmpty()) {
                             hasMoreConversations = false
                         } else {
-                            // 应用 Pin/Hide 逻辑：排序和过滤
-                            val processedConversations =
+                            // 应用 Pin/Hide 逻辑：排序和过滤（包含 IntelliMate agent）
+                            val (processedConversations, intelliMateAgentIds) =
                                 processConversationsWithPinHide(userInitiatedConversations)
 
                             if (currentConversationsPage == 0) {
                                 // 第一页，直接替换
-                                _uiState.update { it.copy(conversations = processedConversations) }
+                                _uiState.update {
+                                    it.copy(
+                                        conversations = processedConversations,
+                                        intelliMateAgentIds = intelliMateAgentIds
+                                    )
+                                }
                             } else {
                                 // 后续页，追加到现有列表（需要重新处理整个列表以保持排序）
                                 val currentConversations = _uiState.value.conversations
                                 val allConversations =
                                     currentConversations + userInitiatedConversations
-                                val allProcessed = processConversationsWithPinHide(allConversations)
-                                _uiState.update { it.copy(conversations = allProcessed) }
+                                val (allProcessed, allIntelliMateAgentIds) =
+                                    processConversationsWithPinHide(allConversations)
+                                _uiState.update {
+                                    it.copy(
+                                        conversations = allProcessed,
+                                        intelliMateAgentIds = allIntelliMateAgentIds
+                                    )
+                                }
                             }
                         }
                     }
@@ -221,17 +246,127 @@ class MessagesViewModel : BaseVM() {
         }
     }
 
-    /** 处理会话列表：排序（Pin在前）和过滤（隐藏的移除，除非有新消息） */
-    private fun processConversationsWithPinHide(
+
+    /** 启动时加载 IntelliMate agent（只调用一次） */
+    private fun loadIntelliMateAgentOnce() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // 首先从缓存中查找
+                val cachedAgents = AgentCacheManager.getCachedAgents()
+                var intelliMateAgent: AgentInfo? =
+                    cachedAgents.firstOrNull { agent ->
+                        AgentConstants.isIntelliMateAgent(agent.id, agent.name)
+                    }
+
+                // 如果缓存中没有找到，尝试从网络请求获取（只调用一次）
+                if (intelliMateAgent == null && !intelliMateAgentLoaded) {
+                    LogUtils.i("MessagesViewModel - 缓存中未找到 IntelliMate agent，从网络获取（启动时只调用一次）")
+                    intelliMateAgentLoaded = true // 标记已尝试加载
+                    try {
+                        // 尝试通过 ID 获取
+                        val agentResult = chatApi.getAgentInfo(AgentConstants.INTELLIMATE_AGENT_ID)
+                        when (agentResult) {
+                            is HttpResult.Success -> {
+                                val agent = agentResult.data
+                                if (AgentConstants.isIntelliMateAgent(agent.id, agent.name)) {
+                                    intelliMateAgent = agent
+                                    LogUtils.i("MessagesViewModel - 从网络获取 IntelliMate agent 成功: ${agent.id}_${agent.name}")
+                                }
+                            }
+
+                            is HttpResult.Failure -> {
+                                LogUtils.w("MessagesViewModel - 从网络获取 IntelliMate agent 失败: ${agentResult.message}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        LogUtils.e("MessagesViewModel - 从网络获取 IntelliMate agent 异常: ${e.message}")
+                    }
+                } else if (intelliMateAgent != null) {
+                    LogUtils.i("MessagesViewModel - 从缓存获取 IntelliMate agent 成功: ${intelliMateAgent.id}_${intelliMateAgent.name}")
+                }
+
+                // 缓存转换后的 ConversationItem
+                cachedIntelliMateAgent = intelliMateAgent?.toConversationItem()
+            } catch (e: Exception) {
+                LogUtils.e("MessagesViewModel - 加载 IntelliMate agent 失败: ${e.message}")
+            }
+        }
+    }
+
+    /** 获取 IntelliMate agent 并转换为 ConversationItem（使用缓存，不频繁调用网络） */
+    private suspend fun getIntelliMateAgentAsConversation(): List<ConversationItem> {
+        // 如果已有缓存，直接返回
+        val cached = cachedIntelliMateAgent
+        if (cached != null) {
+            return listOf(cached)
+        }
+
+        // 如果缓存为空，尝试从 AgentCacheManager 获取（不发起网络请求）
+        return try {
+            val cachedAgents = AgentCacheManager.getCachedAgents()
+            val intelliMateAgents =
+                cachedAgents.filter { agent ->
+                    AgentConstants.isIntelliMateAgent(agent.id, agent.name)
+                }
+            intelliMateAgents.map { agent -> agent.toConversationItem() }
+        } catch (e: Exception) {
+            LogUtils.e("MessagesViewModel - 获取 IntelliMate agent 失败: ${e.message}")
+            emptyList()
+        }
+    }
+
+    /** AgentInfo 转换为 ConversationItem 的扩展方法 */
+    private fun AgentInfo.toConversationItem(): ConversationItem {
+        return ConversationItem(
+            agentId = this.id,
+            agentName = this.name,
+            agentAvatar = this.avatar,
+            agentBackground = this.background,
+            agentBackgroundAnimated = this.backgroundAnimatedUrl,
+            agentIntro = this.intro,
+            agentOpening = this.opening,
+            agentOpeningAudioUrl = this.opening_audio_url,
+            createdAt = this.createdAt,
+            id = "", // IntelliMate agent 没有实际的 conversation id
+            lastMessage = this.opening, // 使用 opening 作为 last message
+            lastMessageTime = this.createdAt, // 使用创建时间作为最后消息时间
+            settings = null,
+            updatedAt = null,
+            userId = "",
+            isDeleted = this.isDeleted,
+        )
+    }
+
+    /** 处理会话列表：排序（IntelliMate在前，Pin在前）和过滤（隐藏的移除，除非有新消息） */
+    private suspend fun processConversationsWithPinHide(
         rawConversations: List<ConversationItem>
-    ): List<ConversationItem> {
-        return rawConversations
-            .filter { conversation ->
+    ): Pair<List<ConversationItem>, Set<String>> {
+        // 获取 IntelliMate agent
+        val intelliMateAgents = getIntelliMateAgentAsConversation()
+        val intelliMateAgentIds = intelliMateAgents.map { it.agentId }.toSet()
+
+        // 获取用户已聊过的 agent IDs（从 rawConversations 中提取）
+        val userChattedAgentIds = rawConversations.map { it.agentId }.toSet()
+
+        // 只显示用户未聊过的 IntelliMate agent
+        val intelliMateAgentsToShow =
+            intelliMateAgents.filter { it.agentId !in userChattedAgentIds }
+
+        // 过滤普通会话：隐藏的会话（除非有新消息）
+        val regularConversations =
+            rawConversations.filter { conversation ->
                 // 过滤隐藏的会话，除非有新消息
                 !conversation.isHidden || conversation.shouldShow()
             }
-            .sortedWith(
-                compareBy<ConversationItem> { !it.isPinned }
+
+        // 合并 IntelliMate agent 和普通会话
+        val allConversations = intelliMateAgentsToShow + regularConversations
+
+        // 排序：IntelliMate > Pin > 时间
+        val sortedConversations =
+            allConversations.sortedWith(
+                compareBy<ConversationItem> { it.agentId !in intelliMateAgentIds } // IntelliMate 在前
+                    .thenBy { !it.isPinned } // pin 在前
                     .thenByDescending { conversation ->
                         // 将 lastMessageTime（ISO 8601 格式）转换为时间戳进行比较
                         ai.sxwl.android.utils.TimeUtils.parseIsoTimeToTimestamp(
@@ -239,6 +374,9 @@ class MessagesViewModel : BaseVM() {
                         ) ?: 0L
                     }
             )
+
+        // 返回排序后的会话列表和 IntelliMate agent IDs
+        return Pair(sortedConversations, intelliMateAgentIds)
     }
 
     /** 置顶会话 */
@@ -267,10 +405,15 @@ class MessagesViewModel : BaseVM() {
 
     /** 刷新会话列表（应用Pin/Hide逻辑） */
     private fun refreshConversationsWithPinHide() {
-        _uiState.update { currentState ->
-            currentState.copy(
-                conversations = processConversationsWithPinHide(currentState.conversations)
-            )
+        viewModelScope.launch(Dispatchers.IO) {
+            val (processedConversations, intelliMateAgentIds) =
+                processConversationsWithPinHide(_uiState.value.conversations)
+            _uiState.update { currentState ->
+                currentState.copy(
+                    conversations = processedConversations,
+                    intelliMateAgentIds = intelliMateAgentIds
+                )
+            }
         }
     }
 
@@ -297,5 +440,44 @@ class MessagesViewModel : BaseVM() {
         currentConversationsPage = 0
         hasMoreConversations = true
         _uiState.value = MessagesUiState()
+        // 注意：不清理 cachedIntelliMateAgent，因为它是启动时加载的，应该保持
+    }
+
+    /** 刷新 IntelliMate agent 显示（如果缓存中没有，等待启动时加载完成） */
+    fun refreshIntelliMateAgentIfNeeded() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // 如果缓存为空，等待启动时加载完成（最多等待 2 秒）
+                if (cachedIntelliMateAgent == null) {
+                    var waitCount = 0
+                    while (cachedIntelliMateAgent == null && waitCount < 20) {
+                        kotlinx.coroutines.delay(100)
+                        waitCount++
+                    }
+                }
+
+                // 重新处理会话列表，使用缓存的 IntelliMate agent
+                val currentConversations = _uiState.value.conversations
+                val hasIntelliMateInList =
+                    currentConversations.any {
+                        AgentConstants.isIntelliMateAgent(
+                            it.agentId,
+                            it.agentName
+                        )
+                    }
+                if (!hasIntelliMateInList && cachedIntelliMateAgent != null) {
+                    val (processedConversations, intelliMateAgentIds) =
+                        processConversationsWithPinHide(currentConversations)
+                    _uiState.update {
+                        it.copy(
+                            conversations = processedConversations,
+                            intelliMateAgentIds = intelliMateAgentIds
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                LogUtils.e("MessagesViewModel - refreshIntelliMateAgentIfNeeded 异常: ${e.message}")
+            }
+        }
     }
 }

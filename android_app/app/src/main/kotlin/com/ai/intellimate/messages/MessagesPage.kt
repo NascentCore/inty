@@ -70,6 +70,11 @@ fun MessagesPage(
     // 监听会话列表更新，检查是否有新消息自动取消隐藏
     LaunchedEffect(uiState.conversations) { viewModel.checkAndUnhideConversations() }
 
+    // 当页面显示时，主动刷新 IntelliMate agent（如果缓存中没有）
+    LaunchedEffect(Unit) {
+        viewModel.refreshIntelliMateAgentIfNeeded()
+    }
+
     Box(modifier = modifier) {
         AsyncImage(
             modifier = Modifier.align(Alignment.TopEnd),
@@ -94,7 +99,9 @@ private fun Content(
     onLoadMore: () -> Unit,
 ) {
     Scaffold(
-        modifier = Modifier.fillMaxSize().background(Color.Transparent),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent),
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
@@ -102,7 +109,9 @@ private fun Content(
                     Image(
                         painter = painterResource(R.drawable.img_message_title),
                         contentDescription = null,
-                        modifier = Modifier.height(30.dp).fillMaxWidth(),
+                        modifier = Modifier
+                            .height(30.dp)
+                            .fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )
@@ -112,7 +121,9 @@ private fun Content(
             )
         },
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)) {
             MessageTabContent(
                 uiState = uiState,
                 viewModel = viewModel,
@@ -165,7 +176,9 @@ private fun MessageTabContent(
             if (uiState.isRefreshing) {
                 item {
                     Box(
-                        modifier = Modifier.fillMaxWidth().height(80.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
@@ -185,10 +198,14 @@ private fun MessageTabContent(
                         ) { index, conversion ->
                             var lastClickTime by remember { mutableStateOf(0L) }
 
+                            val isIntelliMate = conversion.agentId in uiState.intelliMateAgentIds
+
                             // 使用 combinedClickable 同时处理点击和长按
+                            // IntelliMate agent 不可长按操作
                             Box(
                                 modifier =
-                                    Modifier.fillMaxWidth()
+                                    Modifier
+                                        .fillMaxWidth()
                                         .combinedClickable(
                                             onClick = {
                                                 // 正常点击：如果菜单未显示，则进入聊天
@@ -201,8 +218,8 @@ private fun MessageTabContent(
                                                         // 检查是否已登录
                                                         if (
                                                             IntySetting.isLogin() &&
-                                                                IntySetting.getCurToken()
-                                                                    .isNotEmpty()
+                                                            IntySetting.getCurToken()
+                                                                .isNotEmpty()
                                                         ) {
                                                             onClickConversationItem(conversion)
                                                         }
@@ -212,11 +229,18 @@ private fun MessageTabContent(
                                                     showMenuForConversationId = null
                                                 }
                                             },
-                                            onLongClick = {
-                                                // 长按：显示菜单，记录 item 索引用于定位
-                                                showMenuForConversationId = conversion.agentId
-                                                menuItemIndex = index
-                                            },
+                                            onLongClick =
+                                                if (isIntelliMate) {
+                                                    // IntelliMate agent 不可长按
+                                                    null
+                                                } else {
+                                                    {
+                                                        // 长按：显示菜单，记录 item 索引用于定位
+                                                        showMenuForConversationId =
+                                                            conversion.agentId
+                                                        menuItemIndex = index
+                                                    }
+                                                },
                                         )
                             ) {
                                 ChatHistoryItem(
@@ -234,7 +258,9 @@ private fun MessageTabContent(
             if (uiState.isLoading) {
                 item {
                     Box(
-                        modifier = Modifier.fillMaxWidth().height(80.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
@@ -254,7 +280,8 @@ private fun MessageTabContent(
                 // 遮罩层，点击外部关闭菜单（全屏）
                 Box(
                     modifier =
-                        Modifier.fillMaxSize()
+                        Modifier
+                            .fillMaxSize()
                             .background(Color.Transparent)
                             .clickable { showMenuForConversationId = null }
                             .zIndex(999f)
@@ -266,7 +293,9 @@ private fun MessageTabContent(
                 val menuY = (estimatedItemHeight * menuItemIndex) + estimatedItemHeight / 2
 
                 Box(
-                    modifier = Modifier.fillMaxSize().zIndex(1000f),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(1000f),
                     contentAlignment = Alignment.TopStart,
                 ) {
                     ConversationItemMenu(
@@ -290,7 +319,9 @@ private fun MessageTabContent(
                             showMenuForConversationId = null
                         },
                         onDismiss = { showMenuForConversationId = null },
-                        modifier = Modifier.offset(x = 16.dp, y = menuY).width(140.dp),
+                        modifier = Modifier
+                            .offset(x = 16.dp, y = menuY)
+                            .width(140.dp),
                     )
                 }
             }
@@ -316,7 +347,9 @@ private fun ChatHistoryItem(
 
         // 头像
         AsyncImage(
-            modifier = Modifier.size(56.dp).clip(CircleShape),
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape),
             model = getCdnImageUrl(conversation.agentAvatar, width = 128),
             placeholder = painterResource(placeholderID),
             contentDescription = null,
