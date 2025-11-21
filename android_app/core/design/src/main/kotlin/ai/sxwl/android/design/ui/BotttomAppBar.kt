@@ -20,6 +20,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -28,11 +29,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -65,37 +68,46 @@ fun HeartBottomAppBar(
             val isSelected = selectedTab == tab.index
             val iconRes = if (isSelected) tab.selectedIcon else tab.unselectedIcon
 
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = { onTabSelected(tab.index) },
-                icon = {
-                    Box(modifier = Modifier) {
-                        Image(
-                            painter = painterResource(id = iconRes),
-                            contentDescription = null,
-                            modifier = Modifier.size(iconSize),
+            CompositionLocalProvider(
+                LocalDensity provides
+                        Density(
+                            density = LocalDensity.current.density,
+                            fontScale = 1f, // 核心：禁用字体缩放
                         )
-                        if (tab.hasRedDot) HeartRedDot(Modifier.align(Alignment.TopEnd))
-                    }
-                },
-                label = {
-                    val labelText =
-                        when {
-                            tab.labelResId != null -> stringResource(id = tab.labelResId)
-                            tab.label.isNotEmpty() -> tab.label
-                            else -> ""
+            ) {
+                NavigationBarItem(
+                    selected = isSelected,
+                    onClick = { onTabSelected(tab.index) },
+                    icon = {
+                        Box(modifier = Modifier) {
+                            Image(
+                                painter = painterResource(id = iconRes),
+                                contentDescription = null,
+                                modifier = Modifier.size(iconSize),
+                            )
+                            if (tab.hasRedDot) HeartRedDot(Modifier.align(Alignment.TopEnd))
                         }
-                    if (labelText.isNotEmpty()) {
-                        Text(
-                            text = labelText,
-                            fontSize = textSize,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) Color(0xFF9C27B0) else Color.White,
-                        )
-                    }
-                },
-                colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent),
-            )
+                    },
+                    label = {
+                        val labelText =
+                            when {
+                                tab.labelResId != null -> stringResource(id = tab.labelResId)
+                                tab.label.isNotEmpty() -> tab.label
+                                else -> ""
+                            }
+                        if (labelText.isNotEmpty()) {
+                            Text(
+                                text = labelText,
+                                fontSize = textSize,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) Color(0xFF9C27B0) else Color.White,
+                            )
+                        }
+                    },
+                    colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent),
+                )
+            }
+
         }
     }
 }
