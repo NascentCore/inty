@@ -207,7 +207,7 @@ fun ChatPageContainer(
                     modifier = Modifier.fillMaxSize(),
                     chatViewModel = chatViewModel,
                     isCurrentPage = isPageCurrent,
-                    shouldAutoFocusInput = autoFocusEnabled,
+                    shouldAutoFocusInput = isKeyboardVisibleChatPage,
                     onInputFocusChange = { focused ->
                         if (!isPageCurrent) return@ChatPage
                         if (focused != autoFocusEnabled) {

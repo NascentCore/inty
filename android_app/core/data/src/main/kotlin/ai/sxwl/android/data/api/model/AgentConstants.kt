@@ -1,9 +1,6 @@
 package ai.sxwl.android.data.api.model
 
-/**
- * Agent 相关常量
- * CREATED_BY_AGENT
- */
+/** Agent 相关常量 CREATED_BY_AGENT */
 object AgentConstants {
     /** IntelliMate 官方 agent 的 ID */
     const val INTELLIMATE_AGENT_ID = "879e5e14-fec2-4d63-9704-4f3141bed74f"
@@ -22,4 +19,3 @@ object AgentConstants {
         return agentId == INTELLIMATE_AGENT_ID || agentName == INTELLIMATE_AGENT_NAME
     }
 }
-

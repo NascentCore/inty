@@ -63,7 +63,9 @@ class RegInfoActivity : BaseActivity() {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             if (!PermissionUtils.hasNotificationPermission(this@RegInfoActivity)) {
                                 // 申请通知权限
-                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                notificationPermissionLauncher.launch(
+                                    Manifest.permission.POST_NOTIFICATIONS
+                                )
                             } else {
                                 // 已有权限，直接关闭页面
                                 finish()

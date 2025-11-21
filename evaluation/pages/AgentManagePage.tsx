@@ -539,7 +539,13 @@ export const AgentManagePage: React.FC = () => {
       setSaveLoading(true);
 
       // 从 values 中排除 score、comment 和 prompt_select 字段，因为它们只是 UI 状态
-      const { score, comment, main_prompt_select, mode_prompt_select, ...otherValues } = values;
+      const {
+        score,
+        comment,
+        main_prompt_select,
+        mode_prompt_select,
+        ...otherValues
+      } = values;
 
       const agentData: AgentCreateRequest = {
         ...otherValues,
@@ -621,7 +627,13 @@ export const AgentManagePage: React.FC = () => {
       setSaveLoading(true);
 
       // 从 values 中排除 score、comment 和 prompt_select 字段，因为它们只是 UI 状态
-      const { score, comment, main_prompt_select, mode_prompt_select, ...otherValues } = values;
+      const {
+        score,
+        comment,
+        main_prompt_select,
+        mode_prompt_select,
+        ...otherValues
+      } = values;
 
       const updateData = {
         ...otherValues,
@@ -1258,7 +1270,10 @@ export const AgentManagePage: React.FC = () => {
                 );
                 if (selectedPrompt && selectedPrompt.content) {
                   // 如果内容与预设不同，切换为自定义
-                  if (value !== selectedId && value !== selectedPrompt.content) {
+                  if (
+                    value !== selectedId &&
+                    value !== selectedPrompt.content
+                  ) {
                     form.setFieldsValue({ main_prompt_select: "custom" });
                   }
                 }
@@ -1342,7 +1357,10 @@ export const AgentManagePage: React.FC = () => {
                 );
                 if (selectedPrompt && selectedPrompt.content) {
                   // 如果内容与预设不同，切换为自定义
-                  if (value !== selectedId && value !== selectedPrompt.content) {
+                  if (
+                    value !== selectedId &&
+                    value !== selectedPrompt.content
+                  ) {
                     form.setFieldsValue({ mode_prompt_select: "custom" });
                   }
                 }

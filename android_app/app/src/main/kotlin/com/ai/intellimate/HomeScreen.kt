@@ -79,10 +79,7 @@ fun HomeScreen(
 
     Scaffold(
         modifier =
-            modifier
-                .fillMaxSize()
-                .background(HeartColor.primaryColor)
-                .navigationBarsPadding(),
+            modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
             val context = LocalContext.current
@@ -385,7 +382,9 @@ private fun ProfileTabContent(
     LaunchedEffect(uiState.userProfile.id) {
         val currentUserId = uiState.userProfile.id
         // 当用户ID变化且不是首次加载时，清空旧数据并重新加载
-        if (currentUserId.isNotEmpty() && previousUserId != null && previousUserId != currentUserId) {
+        if (
+            currentUserId.isNotEmpty() && previousUserId != null && previousUserId != currentUserId
+        ) {
             // 用户ID发生变化，清空旧数据并重新加载
             profileViewModel.clearAllData()
             profileViewModel.loadUserProfile()
