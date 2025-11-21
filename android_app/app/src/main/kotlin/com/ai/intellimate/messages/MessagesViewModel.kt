@@ -115,7 +115,7 @@ class MessagesViewModel : BaseVM() {
                             _uiState.update {
                                 it.copy(
                                     conversations = processedConversations,
-                                    intelliMateAgentIds = intelliMateAgentIds
+                                    intelliMateAgentIds = intelliMateAgentIds,
                                 )
                             }
                         }
@@ -173,7 +173,7 @@ class MessagesViewModel : BaseVM() {
                                 _uiState.update {
                                     it.copy(
                                         conversations = processedConversations,
-                                        intelliMateAgentIds = intelliMateAgentIds
+                                        intelliMateAgentIds = intelliMateAgentIds,
                                     )
                                 }
                             } else {
@@ -186,7 +186,7 @@ class MessagesViewModel : BaseVM() {
                                 _uiState.update {
                                     it.copy(
                                         conversations = allProcessed,
-                                        intelliMateAgentIds = allIntelliMateAgentIds
+                                        intelliMateAgentIds = allIntelliMateAgentIds,
                                     )
                                 }
                             }
@@ -247,7 +247,6 @@ class MessagesViewModel : BaseVM() {
         }
     }
 
-
     /** 启动时加载 IntelliMate agent（只调用一次） */
     private fun loadIntelliMateAgentOnce() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -271,19 +270,25 @@ class MessagesViewModel : BaseVM() {
                                 val agent = agentResult.data
                                 if (AgentConstants.isIntelliMateAgent(agent.id, agent.name)) {
                                     intelliMateAgent = agent
-                                    LogUtils.i("MessagesViewModel - 从网络获取 IntelliMate agent 成功: ${agent.id}_${agent.name}")
+                                    LogUtils.i(
+                                        "MessagesViewModel - 从网络获取 IntelliMate agent 成功: ${agent.id}_${agent.name}"
+                                    )
                                 }
                             }
 
                             is HttpResult.Failure -> {
-                                LogUtils.w("MessagesViewModel - 从网络获取 IntelliMate agent 失败: ${agentResult.message}")
+                                LogUtils.w(
+                                    "MessagesViewModel - 从网络获取 IntelliMate agent 失败: ${agentResult.message}"
+                                )
                             }
                         }
                     } catch (e: Exception) {
                         LogUtils.e("MessagesViewModel - 从网络获取 IntelliMate agent 异常: ${e.message}")
                     }
                 } else if (intelliMateAgent != null) {
-                    LogUtils.i("MessagesViewModel - 从缓存获取 IntelliMate agent 成功: ${intelliMateAgent.id}_${intelliMateAgent.name}")
+                    LogUtils.i(
+                        "MessagesViewModel - 从缓存获取 IntelliMate agent 成功: ${intelliMateAgent.id}_${intelliMateAgent.name}"
+                    )
                 }
 
                 // 缓存转换后的 ConversationItem
@@ -399,18 +404,18 @@ class MessagesViewModel : BaseVM() {
         val sortedConversations =
             allConversations.sortedWith(
                 compareBy<ConversationItem> { conversation ->
-                    val isIntelliMate = conversation.agentId in intelliMateAgentIds
-                    // 如果 IntelliMate 是 pinned，排在最前面（优先级最高）
-                    if (isIntelliMate && conversation.isPinned) {
-                        0
-                    } else if (conversation.isPinned) {
-                        // 其他 pinned 的 item 排在第二优先级
-                        1
-                    } else {
-                        // unpinned 的 item（包括 unpinned 的 IntelliMate）排在最后
-                        2
+                        val isIntelliMate = conversation.agentId in intelliMateAgentIds
+                        // 如果 IntelliMate 是 pinned，排在最前面（优先级最高）
+                        if (isIntelliMate && conversation.isPinned) {
+                            0
+                        } else if (conversation.isPinned) {
+                            // 其他 pinned 的 item 排在第二优先级
+                            1
+                        } else {
+                            // unpinned 的 item（包括 unpinned 的 IntelliMate）排在最后
+                            2
+                        }
                     }
-                }
                     .thenBy { conversation ->
                         // 在相同优先级内，IntelliMate 优先（仅当都是 pinned 时）
                         val isIntelliMate = conversation.agentId in intelliMateAgentIds
@@ -467,31 +472,33 @@ class MessagesViewModel : BaseVM() {
     /** 刷新会话列表（应用Pin/Hide逻辑） */
     private suspend fun refreshConversationsWithPinHide() {
         // 获取当前原始会话列表（不包含 IntelliMate agent，因为它会在 processConversationsWithPinHide 中添加）
-        val currentRawConversations = _uiState.value.conversations.filter { conversation ->
-            !AgentConstants.isIntelliMateAgent(conversation.agentId, conversation.agentName)
-        }
+        val currentRawConversations =
+            _uiState.value.conversations.filter { conversation ->
+                !AgentConstants.isIntelliMateAgent(conversation.agentId, conversation.agentName)
+            }
 
         // 重新创建所有 ConversationItem 以确保 isPinned 等计算属性能获取最新值
-        val refreshedRawConversations = currentRawConversations.map { conv ->
-            ConversationItem(
-                agentId = conv.agentId,
-                agentName = conv.agentName,
-                agentAvatar = conv.agentAvatar,
-                agentBackground = conv.agentBackground,
-                agentBackgroundAnimated = conv.agentBackgroundAnimated,
-                agentIntro = conv.agentIntro,
-                agentOpening = conv.agentOpening,
-                agentOpeningAudioUrl = conv.agentOpeningAudioUrl,
-                createdAt = conv.createdAt,
-                id = conv.id,
-                lastMessage = conv.lastMessage,
-                lastMessageTime = conv.lastMessageTime,
-                settings = conv.settings,
-                updatedAt = conv.updatedAt,
-                userId = conv.userId,
-                isDeleted = conv.isDeleted,
-            )
-        }
+        val refreshedRawConversations =
+            currentRawConversations.map { conv ->
+                ConversationItem(
+                    agentId = conv.agentId,
+                    agentName = conv.agentName,
+                    agentAvatar = conv.agentAvatar,
+                    agentBackground = conv.agentBackground,
+                    agentBackgroundAnimated = conv.agentBackgroundAnimated,
+                    agentIntro = conv.agentIntro,
+                    agentOpening = conv.agentOpening,
+                    agentOpeningAudioUrl = conv.agentOpeningAudioUrl,
+                    createdAt = conv.createdAt,
+                    id = conv.id,
+                    lastMessage = conv.lastMessage,
+                    lastMessageTime = conv.lastMessageTime,
+                    settings = conv.settings,
+                    updatedAt = conv.updatedAt,
+                    userId = conv.userId,
+                    isDeleted = conv.isDeleted,
+                )
+            }
 
         val (processedConversations, intelliMateAgentIds) =
             processConversationsWithPinHide(refreshedRawConversations)
@@ -500,11 +507,12 @@ class MessagesViewModel : BaseVM() {
         withContext(Dispatchers.Main) {
             // 直接更新 StateFlow，确保 UI 立即刷新
             // 使用 refreshKey 强制 Compose 重新组合所有 item
-            _uiState.value = _uiState.value.copy(
-                conversations = processedConversations,
-                intelliMateAgentIds = intelliMateAgentIds,
-                refreshKey = System.currentTimeMillis() // 更新 refreshKey 强制刷新
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    conversations = processedConversations,
+                    intelliMateAgentIds = intelliMateAgentIds,
+                    refreshKey = System.currentTimeMillis(), // 更新 refreshKey 强制刷新
+                )
         }
     }
 
@@ -553,10 +561,7 @@ class MessagesViewModel : BaseVM() {
                 val currentConversations = _uiState.value.conversations
                 val hasIntelliMateInList =
                     currentConversations.any {
-                        AgentConstants.isIntelliMateAgent(
-                            it.agentId,
-                            it.agentName
-                        )
+                        AgentConstants.isIntelliMateAgent(it.agentId, it.agentName)
                     }
                 if (!hasIntelliMateInList && cachedIntelliMateAgent != null) {
                     val (processedConversations, intelliMateAgentIds) =
@@ -564,7 +569,7 @@ class MessagesViewModel : BaseVM() {
                     _uiState.update {
                         it.copy(
                             conversations = processedConversations,
-                            intelliMateAgentIds = intelliMateAgentIds
+                            intelliMateAgentIds = intelliMateAgentIds,
                         )
                     }
                 }

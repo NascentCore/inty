@@ -37,15 +37,12 @@ fun ConversationItemMenu(
     modifier: Modifier = Modifier,
     showHideOption: Boolean = true, // 是否显示 hide 选项，默认为 true
 ) {
-    Box(modifier = modifier
-        .zIndex(1000f)
-        .background(Color(0xCC000000), RoundedCornerShape(8.dp))) {
+    Box(modifier = modifier.zIndex(1000f).background(Color(0xCC000000), RoundedCornerShape(8.dp))) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Pin/Unpin 选项
             Row(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .height(48.dp)
                         .clickable {
                             onPinClick()
@@ -56,10 +53,8 @@ fun ConversationItemMenu(
                 horizontalArrangement = Arrangement.Start,
             ) {
                 androidx.compose.foundation.Image(
-                    painter = painterResource(
-                        if (isPinned) R.drawable.ic_unpin
-                        else R.drawable.ic_pin
-                    ),
+                    painter =
+                        painterResource(if (isPinned) R.drawable.ic_unpin else R.drawable.ic_pin),
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                 )
@@ -77,8 +72,7 @@ fun ConversationItemMenu(
             if (showHideOption) {
                 Box(
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
+                        Modifier.fillMaxWidth()
                             .height(1.dp)
                             .background(Color.White.copy(alpha = 0.2f))
                 )
@@ -86,8 +80,7 @@ fun ConversationItemMenu(
                 // Hide/Unhide 选项
                 Row(
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
+                        Modifier.fillMaxWidth()
                             .height(48.dp)
                             .clickable {
                                 onHideClick()

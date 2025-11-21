@@ -39,13 +39,14 @@ fun MultiLineBasicTextField(
     showMaxLength: Boolean = true,
     showBorder: Boolean = true,
     fontSize: TextUnit = 16.sp,
-    counterColor: Color = Color.Gray,  // 右下角字数颜色
+    counterColor: Color = Color.Gray, // 右下角字数颜色
     backgroundColor: Color = Color(0x1A78599A),
     cursorColor: Color = Color.White,
-    keyboardOptions: KeyboardOptions = KeyboardOptions(
-        imeAction = ImeAction.Default,
-        capitalization = KeyboardCapitalization.Sentences, // 每句话首字母自动大写
-    ),
+    keyboardOptions: KeyboardOptions =
+        KeyboardOptions(
+            imeAction = ImeAction.Default,
+            capitalization = KeyboardCapitalization.Sentences, // 每句话首字母自动大写
+        ),
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -65,20 +66,19 @@ fun MultiLineBasicTextField(
 
     // 根据实际的 lineHeight 和 padding 计算高度
     // 正确将 sp 转换为 dp，考虑用户的字体缩放设置（fontScale）
-    val calculatedHeight = remember(minLines, lineHeight, showMaxLength, density) {
-        if (minLines > 1) {
-            // sp 会根据 fontScale 缩放，所以实际渲染高度 = sp 值 * fontScale
-            // 为了匹配文本的实际渲染高度，容器高度也应该使用 sp * fontScale
-            val lineHeightInDp = with(density) {
-                (lineHeight.value * fontScale)
+    val calculatedHeight =
+        remember(minLines, lineHeight, showMaxLength, density) {
+            if (minLines > 1) {
+                // sp 会根据 fontScale 缩放，所以实际渲染高度 = sp 值 * fontScale
+                // 为了匹配文本的实际渲染高度，容器高度也应该使用 sp * fontScale
+                val lineHeightInDp = with(density) { (lineHeight.value * fontScale) }
+                val topPaddingInDp = 16
+                val bottomPaddingInDp = if (showMaxLength) 24 else 16
+                (minLines * lineHeightInDp + topPaddingInDp + bottomPaddingInDp)
+            } else {
+                null
             }
-            val topPaddingInDp = 16
-            val bottomPaddingInDp = if (showMaxLength) 24 else 16
-            (minLines * lineHeightInDp + topPaddingInDp + bottomPaddingInDp)
-        } else {
-            null
         }
-    }
 
     Box {
         BasicTextField(
@@ -107,16 +107,12 @@ fun MultiLineBasicTextField(
                         top = 16.dp,
                         start = 16.dp,
                         end = 16.dp,
-                        bottom = if (showMaxLength) 24.dp else 16.dp
+                        bottom = if (showMaxLength) 24.dp else 16.dp,
                     )
                     .let { if (calculatedHeight != null) it.height(calculatedHeight.dp) else it },
-            textStyle = TextStyle(
-                color = Color.White,
-                fontSize = fontSize,
-                lineHeight = lineHeight
-            ),
+            textStyle =
+                TextStyle(color = Color.White, fontSize = fontSize, lineHeight = lineHeight),
             interactionSource = interactionSource,
-
             decorationBox = { innerTextField ->
                 Box {
                     if (safeValue.isEmpty()) {
@@ -124,36 +120,26 @@ fun MultiLineBasicTextField(
                             text = placeholder,
                             fontSize = fontSize,
                             lineHeight = lineHeight,
-                            color = Color.White.copy(0.5f)
+                            color = Color.White.copy(0.5f),
                         )
                     }
                     innerTextField()
                 }
-            }
+            },
         )
 
         // ⭐ 右下角字符计数
         if (showMaxLength) {
             Text(
                 text = "${safeValue.length} / $maxLength",
-                style = TextStyle(
-                    fontSize = fontSize.plusSp(-4),
-                    color = counterColor
-                ),
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 8.dp, end = 12.dp)
+                style = TextStyle(fontSize = fontSize.plusSp(-4), color = counterColor),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 8.dp, end = 12.dp),
             )
         }
-
     }
 }
 
-
-inline fun Modifier.conditional(
-    condition: Boolean,
-    modifier: Modifier.() -> Modifier
-): Modifier {
+inline fun Modifier.conditional(condition: Boolean, modifier: Modifier.() -> Modifier): Modifier {
     return if (condition) {
         this.modifier()
     } else {
@@ -161,5 +147,4 @@ inline fun Modifier.conditional(
     }
 }
 
-fun TextUnit.plusSp(delta: Int): TextUnit =
-    TextUnit(this.value + delta, TextUnitType.Sp)
+fun TextUnit.plusSp(delta: Int): TextUnit = TextUnit(this.value + delta, TextUnitType.Sp)

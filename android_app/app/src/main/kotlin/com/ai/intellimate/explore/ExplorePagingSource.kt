@@ -126,7 +126,7 @@ class ExplorePagingSource(
                         val validAgents =
                             agents.filter { agent ->
                                 agent.id.isNotEmpty() &&
-                                        !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
+                                    !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
                             }
                         val hasMore = validAgents.isNotEmpty() && validAgents.size >= pageSize
 
