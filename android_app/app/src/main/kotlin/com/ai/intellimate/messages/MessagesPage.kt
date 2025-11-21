@@ -121,9 +121,11 @@ private fun Content(
             )
         },
     ) { innerPadding ->
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
             MessageTabContent(
                 uiState = uiState,
                 viewModel = viewModel,
@@ -153,9 +155,9 @@ private fun MessageTabContent(
 
             // 当滚动到倒数第3项时触发加载更多
             totalItems > 0 &&
-                lastVisibleItem >= totalItems - 3 &&
-                !uiState.isLoading &&
-                uiState.hasMore
+                    lastVisibleItem >= totalItems - 3 &&
+                    !uiState.isLoading &&
+                    uiState.hasMore
         }
     }
 
@@ -194,14 +196,20 @@ private fun MessageTabContent(
                 runCatching {
                         itemsIndexed(
                             items = uiState.conversations,
-                            key = { index, conversion -> "${conversion.agentId}_$index" },
+                            key = { index, conversion ->
+                                // 使用 agentId、isPinned 状态和 refreshKey 作为 key，确保状态变化时 Compose 能检测到
+                                "${conversion.agentId}_${conversion.isPinned}_${uiState.refreshKey}_${index}"
+                            },
                         ) { index, conversion ->
                             var lastClickTime by remember { mutableStateOf(0L) }
 
                             val isIntelliMate = conversion.agentId in uiState.intelliMateAgentIds
+                            // 显式读取 isPinned 值，使用 refreshKey 作为依赖，确保状态变化时重新读取
+                            val isPinned = remember(conversion.agentId, uiState.refreshKey) {
+                                conversion.isPinned
+                            }
 
                             // 使用 combinedClickable 同时处理点击和长按
-                            // IntelliMate agent 不可长按操作
                             Box(
                                 modifier =
                                     Modifier
@@ -229,18 +237,11 @@ private fun MessageTabContent(
                                                     showMenuForConversationId = null
                                                 }
                                             },
-                                            onLongClick =
-                                                if (isIntelliMate) {
-                                                    // IntelliMate agent 不可长按
-                                                    null
-                                                } else {
-                                                    {
-                                                        // 长按：显示菜单，记录 item 索引用于定位
-                                                        showMenuForConversationId =
-                                                            conversion.agentId
-                                                        menuItemIndex = index
-                                                    }
-                                                },
+                                            onLongClick = {
+                                                // 长按：显示菜单，记录 item 索引用于定位
+                                                showMenuForConversationId = conversion.agentId
+                                                menuItemIndex = index
+                                            },
                                         )
                             ) {
                                 ChatHistoryItem(
@@ -249,8 +250,8 @@ private fun MessageTabContent(
                                 )
                             }
                         }
-                        item { Spacer(Modifier.height(60.dp)) }
-                    }
+                    item { Spacer(Modifier.height(60.dp)) }
+                }
                     .onFailure { it.printStackTrace() }
             }
 
@@ -277,6 +278,7 @@ private fun MessageTabContent(
             val conversation =
                 uiState.conversations.find { it.agentId == showMenuForConversationId }
             conversation?.let { conv ->
+                val isIntelliMate = conv.agentId in uiState.intelliMateAgentIds
                 // 遮罩层，点击外部关闭菜单（全屏）
                 Box(
                     modifier =
@@ -319,6 +321,7 @@ private fun MessageTabContent(
                             showMenuForConversationId = null
                         },
                         onDismiss = { showMenuForConversationId = null },
+                        showHideOption = !isIntelliMate, // IntelliMate agent 不显示 hide 选项
                         modifier = Modifier
                             .offset(x = 16.dp, y = menuY)
                             .width(140.dp),
@@ -342,6 +345,8 @@ private fun ChatHistoryItem(
     conversation: ConversationItem,
     placeholderID: Int = R.drawable.img_default_avatar,
 ) {
+    // 每次重组时重新读取 isPinned 值，确保获取最新状态
+    val isPinned = conversation.isPinned
     Row(modifier = modifier.height(88.dp), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(16.dp))
 
@@ -371,8 +376,8 @@ private fun ChatHistoryItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                // Pin 状态图标
-                if (conversation.isPinned) {
+                // Pin 状态图标 - 使用局部变量确保每次重组时读取最新值
+                if (isPinned) {
                     Spacer(Modifier.width(6.dp))
                     Image(
                         painter = painterResource(R.drawable.ic_pin),

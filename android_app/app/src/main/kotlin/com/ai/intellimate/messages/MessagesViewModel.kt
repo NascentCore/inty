@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Messages页面ViewModel 负责管理会话列表的状态和业务逻辑 */
 class MessagesViewModel : BaseVM() {
@@ -286,7 +287,16 @@ class MessagesViewModel : BaseVM() {
                 }
 
                 // 缓存转换后的 ConversationItem
-                cachedIntelliMateAgent = intelliMateAgent?.toConversationItem()
+                val conversationItem = intelliMateAgent?.toConversationItem()
+                cachedIntelliMateAgent = conversationItem
+
+                // 确保 IntelliMate agent 默认置顶
+                conversationItem?.let {
+                    if (!IntySetting.isConversationPinned(it.agentId)) {
+                        IntySetting.setConversationPinned(it.agentId, true)
+                        LogUtils.i("MessagesViewModel - 设置 IntelliMate agent 默认置顶: ${it.agentId}")
+                    }
+                }
             } catch (e: Exception) {
                 LogUtils.e("MessagesViewModel - 加载 IntelliMate agent 失败: ${e.message}")
             }
@@ -295,10 +305,30 @@ class MessagesViewModel : BaseVM() {
 
     /** 获取 IntelliMate agent 并转换为 ConversationItem（使用缓存，不频繁调用网络） */
     private suspend fun getIntelliMateAgentAsConversation(): List<ConversationItem> {
-        // 如果已有缓存，直接返回
+        // 如果已有缓存，重新创建 ConversationItem 以确保 isPinned 状态是最新的
         val cached = cachedIntelliMateAgent
         if (cached != null) {
-            return listOf(cached)
+            // 重新创建 ConversationItem 以确保 isPinned 等计算属性能获取最新值
+            return listOf(
+                ConversationItem(
+                    agentId = cached.agentId,
+                    agentName = cached.agentName,
+                    agentAvatar = cached.agentAvatar,
+                    agentBackground = cached.agentBackground,
+                    agentBackgroundAnimated = cached.agentBackgroundAnimated,
+                    agentIntro = cached.agentIntro,
+                    agentOpening = cached.agentOpening,
+                    agentOpeningAudioUrl = cached.agentOpeningAudioUrl,
+                    createdAt = cached.createdAt,
+                    id = cached.id,
+                    lastMessage = cached.lastMessage,
+                    lastMessageTime = cached.lastMessageTime,
+                    settings = cached.settings,
+                    updatedAt = cached.updatedAt,
+                    userId = cached.userId,
+                    isDeleted = cached.isDeleted,
+                )
+            )
         }
 
         // 如果缓存为空，尝试从 AgentCacheManager 获取（不发起网络请求）
@@ -362,13 +392,36 @@ class MessagesViewModel : BaseVM() {
         // 合并 IntelliMate agent 和普通会话
         val allConversations = intelliMateAgentsToShow + regularConversations
 
-        // 排序：IntelliMate > Pin > 时间
+        // 排序逻辑：
+        // 1. 如果 IntelliMate agent 是 pinned 的，它排在最前面
+        // 2. 否则，按照 pin 状态排序（pinned 在前），然后按时间排序
+        // 3. unpinned 的 IntelliMate agent 和普通 item 一样参与排序
         val sortedConversations =
             allConversations.sortedWith(
-                compareBy<ConversationItem> { it.agentId !in intelliMateAgentIds } // IntelliMate 在前
-                    .thenBy { !it.isPinned } // pin 在前
+                compareBy<ConversationItem> { conversation ->
+                    val isIntelliMate = conversation.agentId in intelliMateAgentIds
+                    // 如果 IntelliMate 是 pinned，排在最前面（优先级最高）
+                    if (isIntelliMate && conversation.isPinned) {
+                        0
+                    } else if (conversation.isPinned) {
+                        // 其他 pinned 的 item 排在第二优先级
+                        1
+                    } else {
+                        // unpinned 的 item（包括 unpinned 的 IntelliMate）排在最后
+                        2
+                    }
+                }
+                    .thenBy { conversation ->
+                        // 在相同优先级内，IntelliMate 优先（仅当都是 pinned 时）
+                        val isIntelliMate = conversation.agentId in intelliMateAgentIds
+                        if (conversation.isPinned && isIntelliMate) {
+                            0
+                        } else {
+                            1
+                        }
+                    }
                     .thenByDescending { conversation ->
-                        // 将 lastMessageTime（ISO 8601 格式）转换为时间戳进行比较
+                        // 最后按时间排序
                         ai.sxwl.android.utils.TimeUtils.parseIsoTimeToTimestamp(
                             conversation.lastMessageTime
                         ) ?: 0L
@@ -381,57 +434,97 @@ class MessagesViewModel : BaseVM() {
 
     /** 置顶会话 */
     fun pinConversation(agentId: String) {
-        IntySetting.setConversationPinned(agentId, true)
-        refreshConversationsWithPinHide()
+        viewModelScope.launch(Dispatchers.Main) {
+            IntySetting.setConversationPinned(agentId, true)
+            refreshConversationsWithPinHide()
+        }
     }
 
     /** 取消置顶 */
     fun unpinConversation(agentId: String) {
-        IntySetting.setConversationPinned(agentId, false)
-        refreshConversationsWithPinHide()
+        viewModelScope.launch(Dispatchers.Main) {
+            IntySetting.setConversationPinned(agentId, false)
+            refreshConversationsWithPinHide()
+        }
     }
 
     /** 隐藏会话 */
     fun hideConversation(agentId: String) {
-        IntySetting.setConversationHidden(agentId, true)
-        refreshConversationsWithPinHide()
+        viewModelScope.launch(Dispatchers.Main) {
+            IntySetting.setConversationHidden(agentId, true)
+            refreshConversationsWithPinHide()
+        }
     }
 
     /** 取消隐藏 */
     fun unhideConversation(agentId: String) {
-        IntySetting.setConversationHidden(agentId, false)
-        refreshConversationsWithPinHide()
+        viewModelScope.launch(Dispatchers.Main) {
+            IntySetting.setConversationHidden(agentId, false)
+            refreshConversationsWithPinHide()
+        }
     }
 
     /** 刷新会话列表（应用Pin/Hide逻辑） */
-    private fun refreshConversationsWithPinHide() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val (processedConversations, intelliMateAgentIds) =
-                processConversationsWithPinHide(_uiState.value.conversations)
-            _uiState.update { currentState ->
-                currentState.copy(
-                    conversations = processedConversations,
-                    intelliMateAgentIds = intelliMateAgentIds
-                )
-            }
+    private suspend fun refreshConversationsWithPinHide() {
+        // 获取当前原始会话列表（不包含 IntelliMate agent，因为它会在 processConversationsWithPinHide 中添加）
+        val currentRawConversations = _uiState.value.conversations.filter { conversation ->
+            !AgentConstants.isIntelliMateAgent(conversation.agentId, conversation.agentName)
+        }
+
+        // 重新创建所有 ConversationItem 以确保 isPinned 等计算属性能获取最新值
+        val refreshedRawConversations = currentRawConversations.map { conv ->
+            ConversationItem(
+                agentId = conv.agentId,
+                agentName = conv.agentName,
+                agentAvatar = conv.agentAvatar,
+                agentBackground = conv.agentBackground,
+                agentBackgroundAnimated = conv.agentBackgroundAnimated,
+                agentIntro = conv.agentIntro,
+                agentOpening = conv.agentOpening,
+                agentOpeningAudioUrl = conv.agentOpeningAudioUrl,
+                createdAt = conv.createdAt,
+                id = conv.id,
+                lastMessage = conv.lastMessage,
+                lastMessageTime = conv.lastMessageTime,
+                settings = conv.settings,
+                updatedAt = conv.updatedAt,
+                userId = conv.userId,
+                isDeleted = conv.isDeleted,
+            )
+        }
+
+        val (processedConversations, intelliMateAgentIds) =
+            processConversationsWithPinHide(refreshedRawConversations)
+
+        // 使用 withContext 确保在主线程更新 UI StateFlow
+        withContext(Dispatchers.Main) {
+            // 直接更新 StateFlow，确保 UI 立即刷新
+            // 使用 refreshKey 强制 Compose 重新组合所有 item
+            _uiState.value = _uiState.value.copy(
+                conversations = processedConversations,
+                intelliMateAgentIds = intelliMateAgentIds,
+                refreshKey = System.currentTimeMillis() // 更新 refreshKey 强制刷新
+            )
         }
     }
 
     /** 检查是否有新消息，自动取消隐藏 */
     fun checkAndUnhideConversations() {
-        val currentConversations = _uiState.value.conversations
-        var needRefresh = false
+        viewModelScope.launch(Dispatchers.Main) {
+            val currentConversations = _uiState.value.conversations
+            var needRefresh = false
 
-        currentConversations.forEach { conversation ->
-            if (conversation.isHidden && conversation.shouldShow()) {
-                // 有新消息，自动取消隐藏
-                IntySetting.setConversationHidden(conversation.agentId, false)
-                needRefresh = true
+            currentConversations.forEach { conversation ->
+                if (conversation.isHidden && conversation.shouldShow()) {
+                    // 有新消息，自动取消隐藏
+                    IntySetting.setConversationHidden(conversation.agentId, false)
+                    needRefresh = true
+                }
             }
-        }
 
-        if (needRefresh) {
-            refreshConversationsWithPinHide()
+            if (needRefresh) {
+                refreshConversationsWithPinHide()
+            }
         }
     }
 

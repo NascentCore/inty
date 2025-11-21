@@ -35,13 +35,17 @@ fun ConversationItemMenu(
     onHideClick: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    showHideOption: Boolean = true, // 是否显示 hide 选项，默认为 true
 ) {
-    Box(modifier = modifier.zIndex(1000f).background(Color(0xCC000000), RoundedCornerShape(8.dp))) {
+    Box(modifier = modifier
+        .zIndex(1000f)
+        .background(Color(0xCC000000), RoundedCornerShape(8.dp))) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Pin/Unpin 选项
             Row(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .height(48.dp)
                         .clickable {
                             onPinClick()
@@ -52,7 +56,10 @@ fun ConversationItemMenu(
                 horizontalArrangement = Arrangement.Start,
             ) {
                 androidx.compose.foundation.Image(
-                    painter = painterResource(R.drawable.ic_pin),
+                    painter = painterResource(
+                        if (isPinned) R.drawable.ic_unpin
+                        else R.drawable.ic_pin
+                    ),
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                 )
@@ -66,38 +73,44 @@ fun ConversationItemMenu(
                 )
             }
 
-            // 分隔线
-            Box(
-                modifier =
-                    Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.2f))
-            )
+            // 分隔线（仅在显示 hide 选项时显示）
+            if (showHideOption) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(Color.White.copy(alpha = 0.2f))
+                )
 
-            // Hide/Unhide 选项
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .height(48.dp)
-                        .clickable {
-                            onHideClick()
-                            onDismiss()
-                        }
-                        .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start,
-            ) {
-                androidx.compose.foundation.Image(
-                    painter = painterResource(R.drawable.ic_hide),
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text =
-                        if (isHidden) stringResource(R.string.unhide)
-                        else stringResource(R.string.hide),
-                    color = Color.White,
-                    fontSize = 14.sp,
-                )
+                // Hide/Unhide 选项
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clickable {
+                                onHideClick()
+                                onDismiss()
+                            }
+                            .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start,
+                ) {
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(R.drawable.ic_hide),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text =
+                            if (isHidden) stringResource(R.string.unhide)
+                            else stringResource(R.string.hide),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                    )
+                }
             }
         }
     }
