@@ -4,6 +4,7 @@ Structured prompt for roleplay.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
@@ -60,6 +61,78 @@ FRIENDLY_MODE_PROMPT = _get_prompt_text("FRIENDLY_MODE_PROMPT")
 PURITY_MAIN_PROMPT_0725 = _get_prompt_text("PURITY_MAIN_PROMPT_0725")
 
 PURITY_MODE_PROMPT_0725 = _get_prompt_text("PURITY_MODE_PROMPT_0725")
+
+
+@dataclass
+class PromptOption:
+    """Prompt 选项数据类"""
+
+    id: str
+    name: str
+    description: str
+    content: str
+
+
+AVAILABLE_MAIN_PROMPTS: list[PromptOption] = [
+    PromptOption(
+        id="roleplay_main",
+        name="角色扮演主提示词",
+        description="标准角色扮演主提示词，用于建立角色扮演对话框架",
+        content=ROLEPLAY_MAIN_PROMPT,
+    ),
+    PromptOption(
+        id="purity_main_0725",
+        name="纯净模式主提示词 (0725)",
+        description="纯净模式主提示词，用于建立更安全的对话框架",
+        content=PURITY_MAIN_PROMPT_0725,
+    ),
+]
+
+AVAILABLE_MODE_PROMPTS: list[PromptOption] = [
+    PromptOption(
+        id="flirting_mode",
+        name="调情模式",
+        description="调情模式提示词，用于浪漫角色扮演",
+        content=FLIRTING_MODE_PROMPT,
+    ),
+    PromptOption(
+        id="flirting_mode_20250902",
+        name="调情模式 (20250902)",
+        description="调情模式提示词（2025年9月2日版本），用于浪漫角色扮演",
+        content=FLIRTING_MODE_PROMPT_20250902,
+    ),
+    PromptOption(
+        id="friendly_mode",
+        name="友好模式",
+        description="友好模式提示词，用于友好对话",
+        content=FRIENDLY_MODE_PROMPT,
+    ),
+    PromptOption(
+        id="purity_mode_0725",
+        name="纯净模式 (0725)",
+        description="纯净模式提示词（0725版本），用于更安全的对话",
+        content=PURITY_MODE_PROMPT_0725,
+    ),
+]
+
+DEFAULT_MAIN_PROMPT_ID = "purity_main_0725"
+DEFAULT_MODE_PROMPT_ID = "purity_mode_0725"
+
+
+def get_main_prompt_by_id(prompt_id: str) -> str:
+    """根据 ID 获取 main prompt 内容"""
+    for prompt in AVAILABLE_MAIN_PROMPTS:
+        if prompt.id == prompt_id:
+            return prompt.content
+    raise ValueError(f"Main prompt with id '{prompt_id}' not found")
+
+
+def get_mode_prompt_by_id(prompt_id: str) -> str:
+    """根据 ID 获取 mode prompt 内容"""
+    for prompt in AVAILABLE_MODE_PROMPTS:
+        if prompt.id == prompt_id:
+            return prompt.content
+    raise ValueError(f"Mode prompt with id '{prompt_id}' not found")
 
 
 class StructuredPrompt(BaseModel):

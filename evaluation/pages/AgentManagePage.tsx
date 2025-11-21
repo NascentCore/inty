@@ -142,6 +142,26 @@ export const AgentManagePage: React.FC = () => {
   );
   const [modelsLoading, setModelsLoading] = useState(false);
 
+  // Prompt 相关状态
+  const [availablePrompts, setAvailablePrompts] = useState<{
+    main_prompts: Array<{
+      id: string;
+      name: string;
+      description: string;
+      content?: string;
+    }>;
+    mode_prompts: Array<{
+      id: string;
+      name: string;
+      description: string;
+      content?: string;
+    }>;
+    force_default_prompts: boolean;
+    default_main_prompt_id: string;
+    default_mode_prompt_id: string;
+  } | null>(null);
+  const [promptsLoading, setPromptsLoading] = useState(false);
+
   // 背景视频相关状态
   const [backgroundAnimatedFile, setBackgroundAnimatedFile] =
     useState<File | null>(null);
@@ -238,6 +258,31 @@ export const AgentManagePage: React.FC = () => {
     message.success("正在刷新模型列表...");
   }, [loadModels]);
 
+  // 加载可用 prompt 列表
+  const loadAvailablePrompts = useCallback(async () => {
+    setPromptsLoading(true);
+    try {
+      // 使用 agentApi 获取 prompt 列表
+      const data = await api.agents.getAvailablePrompts({
+        include_content: true,
+      });
+      console.log("Prompt data:", data);
+      console.log("Main prompts:", data?.main_prompts);
+      console.log("Mode prompts:", data?.mode_prompts);
+      if (data && (data.main_prompts || data.mode_prompts)) {
+        setAvailablePrompts(data);
+      } else {
+        console.error("加载 prompt 列表失败: 数据格式不正确", data);
+        message.error("加载 prompt 列表失败");
+      }
+    } catch (error) {
+      console.error("加载 prompt 列表失败:", error);
+      message.error("加载 prompt 列表失败");
+    } finally {
+      setPromptsLoading(false);
+    }
+  }, []);
+
   const allTags = useMemo(() => {
     if (!agents || agents.length === 0) {
       return [];
@@ -311,7 +356,8 @@ export const AgentManagePage: React.FC = () => {
   useEffect(() => {
     loadAgents();
     loadModels(); // 加载模型列表
-  }, [loadAgents, loadModels]);
+    loadAvailablePrompts(); // 加载 prompt 列表
+  }, [loadAgents, loadModels, loadAvailablePrompts]);
 
   // 处理头像上传（创建模式，不截取）
   const handleAvatarChange: UploadProps["beforeUpload"] = (file) => {
@@ -492,8 +538,8 @@ export const AgentManagePage: React.FC = () => {
 
       setSaveLoading(true);
 
-      // 从 values 中排除 score 和 comment，因为它们需要放到 meta_data 中
-      const { score, comment, ...otherValues } = values;
+      // 从 values 中排除 score、comment 和 prompt_select 字段，因为它们只是 UI 状态
+      const { score, comment, main_prompt_select, mode_prompt_select, ...otherValues } = values;
 
       const agentData: AgentCreateRequest = {
         ...otherValues,
@@ -574,8 +620,8 @@ export const AgentManagePage: React.FC = () => {
       const values = await editForm.validateFields();
       setSaveLoading(true);
 
-      // 从 values 中排除 score 和 comment，因为它们需要放到 meta_data 中
-      const { score, comment, ...otherValues } = values;
+      // 从 values 中排除 score、comment 和 prompt_select 字段，因为它们只是 UI 状态
+      const { score, comment, main_prompt_select, mode_prompt_select, ...otherValues } = values;
 
       const updateData = {
         ...otherValues,
@@ -721,6 +767,66 @@ export const AgentManagePage: React.FC = () => {
 
     // 预填表单 - 使用 setTimeout 确保 Modal 完全渲染后再设置表单值
     setTimeout(() => {
+      // 判断 main_prompt 和 mode_prompt 是预设 ID 还是自定义文本
+      let mainPromptSelect: string | null = null;
+      let modePromptSelect: string | null = null;
+
+      if (availablePrompts && agent.main_prompt) {
+        // 检查是否是预设 ID
+        const isPresetId = availablePrompts.main_prompts.some(
+          (p) => p.id === agent.main_prompt,
+        );
+        if (isPresetId) {
+          mainPromptSelect = agent.main_prompt;
+          // 查找对应的预设内容
+          const matchedPrompt = availablePrompts.main_prompts.find(
+            (p) => p.id === agent.main_prompt,
+          );
+          // 将ID替换为内容，以便在文本区域中显示
+          if (matchedPrompt && matchedPrompt.content) {
+            agent.main_prompt = matchedPrompt.content;
+          }
+        } else {
+          // 检查是否与某个预设内容匹配
+          const matchedMainPrompt = availablePrompts.main_prompts.find(
+            (p) => p.content === agent.main_prompt,
+          );
+          if (matchedMainPrompt) {
+            mainPromptSelect = matchedMainPrompt.id;
+          } else {
+            mainPromptSelect = "custom";
+          }
+        }
+      }
+
+      if (availablePrompts && agent.mode_prompt) {
+        // 检查是否是预设 ID
+        const isPresetId = availablePrompts.mode_prompts.some(
+          (p) => p.id === agent.mode_prompt,
+        );
+        if (isPresetId) {
+          modePromptSelect = agent.mode_prompt;
+          // 查找对应的预设内容
+          const matchedPrompt = availablePrompts.mode_prompts.find(
+            (p) => p.id === agent.mode_prompt,
+          );
+          // 将ID替换为内容，以便在文本区域中显示
+          if (matchedPrompt && matchedPrompt.content) {
+            agent.mode_prompt = matchedPrompt.content;
+          }
+        } else {
+          // 检查是否与某个预设内容匹配
+          const matchedModePrompt = availablePrompts.mode_prompts.find(
+            (p) => p.content === agent.mode_prompt,
+          );
+          if (matchedModePrompt) {
+            modePromptSelect = matchedModePrompt.id;
+          } else {
+            modePromptSelect = "custom";
+          }
+        }
+      }
+
       const formValues = {
         name: agent.name,
         gender: agent.gender,
@@ -728,8 +834,10 @@ export const AgentManagePage: React.FC = () => {
         opening: agent.opening,
         visibility: agent.visibility,
         main_prompt: agent.main_prompt,
+        main_prompt_select: mainPromptSelect,
         personality: agent.personality,
         mode_prompt: agent.mode_prompt,
+        mode_prompt_select: modePromptSelect,
         voice_id: agent.voice_id,
         score: agent.meta_data?.score,
         comment: agent.meta_data?.comment,
@@ -1084,11 +1192,79 @@ export const AgentManagePage: React.FC = () => {
         <Divider>提示词配置</Divider>
 
         <Form.Item
+          name="main_prompt_select"
+          label="主提示词预设"
+          tooltip="选择预设的主提示词，或选择自定义后在下方的文本框中编辑"
+        >
+          <Select
+            placeholder="选择预设主提示词或自定义"
+            allowClear
+            onChange={(value) => {
+              if (value && value !== "custom" && availablePrompts) {
+                const selectedPrompt = availablePrompts.main_prompts.find(
+                  (p) => p.id === value,
+                );
+                if (selectedPrompt) {
+                  // 选择预设时，存储内容到 main_prompt 字段
+                  form.setFieldsValue({
+                    main_prompt: selectedPrompt.content || value, // 存储内容
+                    main_prompt_select: value,
+                  });
+                }
+              } else if (value === "custom") {
+                // 选择自定义时，清空 main_prompt，让用户输入
+                form.setFieldsValue({
+                  main_prompt: "",
+                  main_prompt_select: "custom",
+                });
+              } else {
+                form.setFieldsValue({
+                  main_prompt: null,
+                  main_prompt_select: null,
+                });
+              }
+            }}
+            disabled={promptsLoading}
+          >
+            {availablePrompts?.main_prompts.map((prompt) => (
+              <Option key={prompt.id} value={prompt.id}>
+                {prompt.name}
+              </Option>
+            ))}
+            <Option value="custom">自定义</Option>
+          </Select>
+        </Form.Item>
+
+        <Form.Item
           name="main_prompt"
           label="主提示词"
           rules={[{ max: 50000, message: "主提示词长度不能超过50000个字符" }]}
         >
-          <TextArea rows={5} placeholder="请输入主提示词（可选）" />
+          <TextArea
+            rows={5}
+            placeholder="请输入主提示词（可选）"
+            disabled={
+              availablePrompts?.force_default_prompts === true &&
+              form.getFieldValue("main_prompt_select") !== "custom" &&
+              form.getFieldValue("main_prompt_select") !== null
+            }
+            onChange={(e) => {
+              const value = e.target.value;
+              const selectedId = form.getFieldValue("main_prompt_select");
+              if (selectedId && selectedId !== "custom" && availablePrompts) {
+                // 如果用户编辑了文本，自动切换为自定义模式
+                const selectedPrompt = availablePrompts.main_prompts.find(
+                  (p) => p.id === selectedId,
+                );
+                if (selectedPrompt && selectedPrompt.content) {
+                  // 如果内容与预设不同，切换为自定义
+                  if (value !== selectedId && value !== selectedPrompt.content) {
+                    form.setFieldsValue({ main_prompt_select: "custom" });
+                  }
+                }
+              }
+            }}
+          />
         </Form.Item>
 
         <Form.Item
@@ -1100,11 +1276,79 @@ export const AgentManagePage: React.FC = () => {
         </Form.Item>
 
         <Form.Item
+          name="mode_prompt_select"
+          label="聊天模式预设"
+          tooltip="选择预设的聊天模式提示词，或选择自定义后在下方的文本框中编辑"
+        >
+          <Select
+            placeholder="选择预设聊天模式或自定义"
+            allowClear
+            onChange={(value) => {
+              if (value && value !== "custom" && availablePrompts) {
+                const selectedPrompt = availablePrompts.mode_prompts.find(
+                  (p) => p.id === value,
+                );
+                if (selectedPrompt) {
+                  // 选择预设时，存储内容到 mode_prompt 字段
+                  form.setFieldsValue({
+                    mode_prompt: selectedPrompt.content || value, // 存储内容
+                    mode_prompt_select: value,
+                  });
+                }
+              } else if (value === "custom") {
+                // 选择自定义时，清空 mode_prompt，让用户输入
+                form.setFieldsValue({
+                  mode_prompt: "",
+                  mode_prompt_select: "custom",
+                });
+              } else {
+                form.setFieldsValue({
+                  mode_prompt: null,
+                  mode_prompt_select: null,
+                });
+              }
+            }}
+            disabled={promptsLoading}
+          >
+            {availablePrompts?.mode_prompts.map((prompt) => (
+              <Option key={prompt.id} value={prompt.id}>
+                {prompt.name}
+              </Option>
+            ))}
+            <Option value="custom">自定义</Option>
+          </Select>
+        </Form.Item>
+
+        <Form.Item
           name="mode_prompt"
           label="聊天模式"
           rules={[{ max: 50000, message: "聊天模式长度不能超过50000个字符" }]}
         >
-          <TextArea rows={4} placeholder="请输入聊天模式（可选）" />
+          <TextArea
+            rows={4}
+            placeholder="请输入聊天模式（可选）"
+            disabled={
+              availablePrompts?.force_default_prompts === true &&
+              form.getFieldValue("mode_prompt_select") !== "custom" &&
+              form.getFieldValue("mode_prompt_select") !== null
+            }
+            onChange={(e) => {
+              const value = e.target.value;
+              const selectedId = form.getFieldValue("mode_prompt_select");
+              if (selectedId && selectedId !== "custom" && availablePrompts) {
+                // 如果用户编辑了文本，自动切换为自定义模式
+                const selectedPrompt = availablePrompts.mode_prompts.find(
+                  (p) => p.id === selectedId,
+                );
+                if (selectedPrompt && selectedPrompt.content) {
+                  // 如果内容与预设不同，切换为自定义
+                  if (value !== selectedId && value !== selectedPrompt.content) {
+                    form.setFieldsValue({ mode_prompt_select: "custom" });
+                  }
+                }
+              }
+            }}
+          />
         </Form.Item>
 
         {/* 模型配置 */}

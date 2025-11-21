@@ -1,8 +1,10 @@
 package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.data.api.getCdnImageUrl
+import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.utils.LogUtils
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,11 +25,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
+import com.ai.intellimate.R
 
 // CDN 图片优化参数
 // 使用固定参数确保预加载和实际使用的 URL 完全一致，提高缓存命中率
@@ -65,8 +69,17 @@ fun AgentBackground(
     // 视频使用 RESIZE_MODE_ZOOM（相当于 Crop），图片也使用 Crop 保持一致
     val contentScale = ContentScale.Crop
 
+    // 判断是否为 IntelliMate agent
+    val isIntelliMateAgent =
+        AgentConstants.isIntelliMateAgent(agentInfo?.id, agentInfo?.name)
+
     val backgroundAnimatedUrl = agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
-    val staticImageUrl = agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
+    val staticImageUrl = if (isIntelliMateAgent) {
+        // IntelliMate agent 使用本地资源
+        null
+    } else {
+        agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
+    }
 
     // 视频缓存管理器
     val videoCacheManager = remember { VideoCacheManager.getInstance(context) }
@@ -116,7 +129,9 @@ fun AgentBackground(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize().clipToBounds()) {
+    Box(modifier = modifier
+        .fillMaxSize()
+        .clipToBounds()) {
         if (backgroundAnimatedUrl != null) {
             // 有背景视频，使用 AnimatedBackground 组件
             AnimatedBackground(
@@ -159,11 +174,24 @@ fun AgentBackground(
                 }
 
             AsyncImage(
-                modifier = Modifier.fillMaxWidth().fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
                 model = staticImageRequest,
                 contentDescription = null,
                 alignment = Alignment.TopCenter,
                 contentScale = contentScale, // 统一使用 Crop
+            )
+        } else if (isIntelliMateAgent) {
+            // IntelliMate agent 使用本地资源图片
+            Image(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxSize(),
+                painter = painterResource(R.drawable.img_official_agent_background),
+                contentDescription = null,
+                alignment = Alignment.TopCenter,
+                contentScale = contentScale,
             )
         }
 
@@ -172,7 +200,8 @@ fun AgentBackground(
             // 顶部渐变遮罩
             Box(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .height(TOP_GRADIENT_HEIGHT_DP.dp)
                         .background(
                             Brush.verticalGradient(
@@ -185,7 +214,8 @@ fun AgentBackground(
             // 底部渐变遮罩
             Box(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .height(BOTTOM_GRADIENT_HEIGHT_DP.dp)
                         .background(
                             Brush.verticalGradient(

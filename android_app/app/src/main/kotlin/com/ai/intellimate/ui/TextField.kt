@@ -211,7 +211,8 @@ fun IntySmallTextField2(
 
         Box(
             modifier =
-                Modifier.fillMaxHeight()
+                Modifier
+                    .fillMaxHeight()
                     .weight(1f)
                     .padding(
                         horizontal = UiConfigs.Padding.TextFieldHorizontal,

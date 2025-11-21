@@ -612,7 +612,7 @@ private fun CreateRolePage(
                                                 LogUtils.d(
                                                     "Face edit download - Image downloaded successfully, file size: ${tempFile.length()} bytes"
                                                 )
-                                                
+
                                                 withContext(Dispatchers.Main) {
                                                     startUCropWithLocalFile(
                                                         tempFile,

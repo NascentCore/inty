@@ -3,6 +3,7 @@ package com.ai.intellimate.utils
 import ai.sxwl.android.common.startup.ImagePreloadManager
 import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.VipStatusHelper
@@ -306,8 +307,13 @@ object UnifiedStartupManager {
             when (result) {
                 is HttpResult.Success -> {
                     val agents = result.data.list ?: emptyList()
-                    AgentCacheManager.cacheAgents(agents)
-                    _recommendedAgents.value = agents
+                    // 过滤掉 IntelliMate agent
+                    val filteredAgents =
+                        agents.filter { agent ->
+                            !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
+                        }
+                    AgentCacheManager.cacheAgents(filteredAgents)
+                    _recommendedAgents.value = filteredAgents
 
                     // 异步预加载资源，不阻塞启动流程
                     // 关键优化：优先预加载静态背景图（避免黑屏），然后预加载视频和音频
@@ -361,8 +367,13 @@ object UnifiedStartupManager {
             when (result) {
                 is HttpResult.Success -> {
                     val agents = result.data.list ?: emptyList()
-                    AgentCacheManager.cacheChatAgents(agents)
-                    _chatAgents.value = agents
+                    // 过滤掉 IntelliMate agent
+                    val filteredAgents =
+                        agents.filter { agent ->
+                            !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
+                        }
+                    AgentCacheManager.cacheChatAgents(filteredAgents)
+                    _chatAgents.value = filteredAgents
 
                     // 异步预加载资源，不阻塞启动流程
                     // 关键优化：chatAgents是核心数据，需要更积极的预加载策略
