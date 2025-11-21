@@ -163,7 +163,7 @@ fun IgnoreSystemFontScaling(
                     fontScale = 1f, // 核心：禁用字体缩放
                 )
     ) {
-        content
+        content()
     }
 }
 

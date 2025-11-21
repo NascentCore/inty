@@ -33,6 +33,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.ui.components.SmartTagsLayout
+import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 
 /** Explore页面的角色卡片组件 */
 @Composable
@@ -137,11 +138,14 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
 
             if (filteredTags.isNotEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().height(16.dp)) {
-                    SmartTagsLayout(
-                        modifier = Modifier.matchParentSize(),
-                        tags = filteredTags,
-                        isCardTag = true,
-                    )
+                    IgnoreSystemFontScaling {
+                        SmartTagsLayout(
+                            modifier = Modifier.matchParentSize(),
+                            tags = filteredTags,
+                            isCardTag = true,
+                        )
+                    }
+
                 }
             }
         }
