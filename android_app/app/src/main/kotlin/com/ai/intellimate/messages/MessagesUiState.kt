@@ -9,5 +9,5 @@ data class MessagesUiState(
     val isRefreshing: Boolean = false,
     val hasMore: Boolean = true,
     val error: String? = null,
-    val officialAgentIds: Set<String> = emptySet(), // 标记哪些 agent 是 official
+    val intelliMateAgentIds: Set<String> = emptySet(), // 标记哪些 agent 是 IntelliMate（需要置顶且不可长按）
 )

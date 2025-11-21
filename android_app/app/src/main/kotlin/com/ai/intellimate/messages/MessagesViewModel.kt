@@ -100,14 +100,14 @@ class MessagesViewModel : BaseVM() {
                         if (userInitiatedConversations.isEmpty()) {
                             hasMoreConversations = false
                         } else {
-                            // 应用 Pin/Hide 逻辑：排序和过滤（包含 official agents）
-                            val (processedConversations, officialAgentIds) =
+                            // 应用 Pin/Hide 逻辑：排序和过滤（包含 IntelliMate agent）
+                            val (processedConversations, intelliMateAgentIds) =
                                 processConversationsWithPinHide(userInitiatedConversations)
                             // 静默更新数据，不显示loading
                             _uiState.update {
                                 it.copy(
                                     conversations = processedConversations,
-                                    officialAgentIds = officialAgentIds
+                                    intelliMateAgentIds = intelliMateAgentIds
                                 )
                             }
                         }
@@ -156,8 +156,8 @@ class MessagesViewModel : BaseVM() {
                         if (userInitiatedConversations.isEmpty()) {
                             hasMoreConversations = false
                         } else {
-                            // 应用 Pin/Hide 逻辑：排序和过滤（包含 official agents）
-                            val (processedConversations, officialAgentIds) =
+                            // 应用 Pin/Hide 逻辑：排序和过滤（包含 IntelliMate agent）
+                            val (processedConversations, intelliMateAgentIds) =
                                 processConversationsWithPinHide(userInitiatedConversations)
 
                             if (currentConversationsPage == 0) {
@@ -165,7 +165,7 @@ class MessagesViewModel : BaseVM() {
                                 _uiState.update {
                                     it.copy(
                                         conversations = processedConversations,
-                                        officialAgentIds = officialAgentIds
+                                        intelliMateAgentIds = intelliMateAgentIds
                                     )
                                 }
                             } else {
@@ -173,12 +173,12 @@ class MessagesViewModel : BaseVM() {
                                 val currentConversations = _uiState.value.conversations
                                 val allConversations =
                                     currentConversations + userInitiatedConversations
-                                val (allProcessed, allOfficialAgentIds) =
+                                val (allProcessed, allIntelliMateAgentIds) =
                                     processConversationsWithPinHide(allConversations)
                                 _uiState.update {
                                     it.copy(
                                         conversations = allProcessed,
-                                        officialAgentIds = allOfficialAgentIds
+                                        intelliMateAgentIds = allIntelliMateAgentIds
                                     )
                                 }
                             }
@@ -239,18 +239,25 @@ class MessagesViewModel : BaseVM() {
         }
     }
 
-    /** 获取 official agents 并转换为 ConversationItem */
-    private suspend fun getOfficialAgentsAsConversations(): List<ConversationItem> {
+    companion object {
+        private const val INTELLIMATE_AGENT_ID = "879e5e14-fec2-4d63-9704-4f3141bed74f"
+        private const val INTELLIMATE_AGENT_NAME = "IntelliMate"
+    }
+
+    /** 获取 IntelliMate agent 并转换为 ConversationItem */
+    private suspend fun getIntelliMateAgentAsConversation(): List<ConversationItem> {
         return try {
             val cachedAgents = AgentCacheManager.getCachedAgents()
-            val officialAgents =
+            val intelliMateAgents =
                 cachedAgents.filter { agent ->
-                    agent.tags?.any { tag -> tag?.equals("official", ignoreCase = true) == true }
-                        ?: false
+                    agent.id == INTELLIMATE_AGENT_ID || agent.name == INTELLIMATE_AGENT_NAME
                 }
-            officialAgents.map { agent -> agent.toConversationItem() }
+            LogUtils.i(
+                "MessagesViewModel - 获取 IntelliMate agent 成功: ${intelliMateAgents.joinToString { "${it.id}_${it.name}" }}"
+            )
+            intelliMateAgents.map { agent -> agent.toConversationItem() }
         } catch (e: Exception) {
-            LogUtils.e("MessagesViewModel - 获取 official agents 失败: ${e.message}")
+            LogUtils.e("MessagesViewModel - 获取 IntelliMate agent 失败: ${e.message}")
             emptyList()
         }
     }
@@ -267,7 +274,7 @@ class MessagesViewModel : BaseVM() {
             agentOpening = this.opening,
             agentOpeningAudioUrl = this.opening_audio_url,
             createdAt = this.createdAt,
-            id = "", // official agents 没有实际的 conversation id
+            id = "", // IntelliMate agent 没有实际的 conversation id
             lastMessage = this.opening, // 使用 opening 作为 last message
             lastMessageTime = this.createdAt, // 使用创建时间作为最后消息时间
             settings = null,
@@ -277,20 +284,20 @@ class MessagesViewModel : BaseVM() {
         )
     }
 
-    /** 处理会话列表：排序（Official在前，Pin在前）和过滤（隐藏的移除，除非有新消息） */
+    /** 处理会话列表：排序（IntelliMate在前，Pin在前）和过滤（隐藏的移除，除非有新消息） */
     private suspend fun processConversationsWithPinHide(
         rawConversations: List<ConversationItem>
     ): Pair<List<ConversationItem>, Set<String>> {
-        // 获取所有 official agents
-        val allOfficialAgents = getOfficialAgentsAsConversations()
-        val allOfficialAgentIds = allOfficialAgents.map { it.agentId }.toSet()
+        // 获取 IntelliMate agent
+        val intelliMateAgents = getIntelliMateAgentAsConversation()
+        val intelliMateAgentIds = intelliMateAgents.map { it.agentId }.toSet()
 
         // 获取用户已聊过的 agent IDs（从 rawConversations 中提取）
         val userChattedAgentIds = rawConversations.map { it.agentId }.toSet()
 
-        // 只显示用户未聊过的 official agents
-        val officialAgentsToShow =
-            allOfficialAgents.filter { it.agentId !in userChattedAgentIds }
+        // 只显示用户未聊过的 IntelliMate agent
+        val intelliMateAgentsToShow =
+            intelliMateAgents.filter { it.agentId !in userChattedAgentIds }
 
         // 过滤普通会话：隐藏的会话（除非有新消息）
         val regularConversations =
@@ -299,13 +306,13 @@ class MessagesViewModel : BaseVM() {
                 !conversation.isHidden || conversation.shouldShow()
             }
 
-        // 合并 official agents 和普通会话
-        val allConversations = officialAgentsToShow + regularConversations
+        // 合并 IntelliMate agent 和普通会话
+        val allConversations = intelliMateAgentsToShow + regularConversations
 
-        // 排序：Official > Pin > 时间
+        // 排序：IntelliMate > Pin > 时间
         val sortedConversations =
             allConversations.sortedWith(
-                compareBy<ConversationItem> { it.agentId !in allOfficialAgentIds } // official 在前
+                compareBy<ConversationItem> { it.agentId !in intelliMateAgentIds } // IntelliMate 在前
                     .thenBy { !it.isPinned } // pin 在前
                     .thenByDescending { conversation ->
                         // 将 lastMessageTime（ISO 8601 格式）转换为时间戳进行比较
@@ -315,8 +322,8 @@ class MessagesViewModel : BaseVM() {
                     }
             )
 
-        // 返回排序后的会话列表和 official agent IDs
-        return Pair(sortedConversations, allOfficialAgentIds)
+        // 返回排序后的会话列表和 IntelliMate agent IDs
+        return Pair(sortedConversations, intelliMateAgentIds)
     }
 
     /** 置顶会话 */
@@ -346,12 +353,12 @@ class MessagesViewModel : BaseVM() {
     /** 刷新会话列表（应用Pin/Hide逻辑） */
     private fun refreshConversationsWithPinHide() {
         viewModelScope.launch(Dispatchers.IO) {
-            val (processedConversations, officialAgentIds) =
+            val (processedConversations, intelliMateAgentIds) =
                 processConversationsWithPinHide(_uiState.value.conversations)
             _uiState.update { currentState ->
                 currentState.copy(
                     conversations = processedConversations,
-                    officialAgentIds = officialAgentIds
+                    intelliMateAgentIds = intelliMateAgentIds
                 )
             }
         }

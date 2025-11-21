@@ -5,12 +5,10 @@ import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.ui.HeartRedDot
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,7 +24,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -44,12 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -201,7 +193,10 @@ private fun MessageTabContent(
                         ) { index, conversion ->
                             var lastClickTime by remember { mutableStateOf(0L) }
 
+                            val isIntelliMate = conversion.agentId in uiState.intelliMateAgentIds
+
                             // 使用 combinedClickable 同时处理点击和长按
+                            // IntelliMate agent 不可长按操作
                             Box(
                                 modifier =
                                     Modifier
@@ -229,18 +224,23 @@ private fun MessageTabContent(
                                                     showMenuForConversationId = null
                                                 }
                                             },
-                                            onLongClick = {
-                                                // 长按：显示菜单，记录 item 索引用于定位
-                                                showMenuForConversationId = conversion.agentId
-                                                menuItemIndex = index
-                                            },
+                                            onLongClick =
+                                                if (isIntelliMate) {
+                                                    // IntelliMate agent 不可长按
+                                                    null
+                                                } else {
+                                                    {
+                                                        // 长按：显示菜单，记录 item 索引用于定位
+                                                        showMenuForConversationId =
+                                                            conversion.agentId
+                                                        menuItemIndex = index
+                                                    }
+                                                },
                                         )
                             ) {
-                                val isOfficial = conversion.agentId in uiState.officialAgentIds
                                 ChatHistoryItem(
                                     modifier = Modifier.fillMaxWidth(),
                                     conversation = conversion,
-                                    isOfficial = isOfficial,
                                 )
                             }
                         }
@@ -336,7 +336,6 @@ private fun ChatHistoryItem(
     modifier: Modifier,
     conversation: ConversationItem,
     placeholderID: Int = R.drawable.img_default_avatar,
-    isOfficial: Boolean = false,
 ) {
     Row(modifier = modifier.height(88.dp), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(16.dp))
@@ -367,11 +366,6 @@ private fun ChatHistoryItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                // Official tag
-                if (isOfficial) {
-                    Spacer(Modifier.width(6.dp))
-                    OfficialTag()
-                }
                 // Pin 状态图标
                 if (conversation.isPinned) {
                     Spacer(Modifier.width(6.dp))
@@ -410,64 +404,5 @@ private fun ChatHistoryItem(
             }
         }
         Spacer(Modifier.width(13.dp))
-    }
-}
-
-/** Official tag 组件，采用更正式、美观的设计风格，参考主流社交 app 的认证标记 */
-@Composable
-private fun OfficialTag() {
-    Row(
-        modifier =
-            Modifier
-                .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors =
-                                listOf(
-                                    Color(0xFFFFD700), // 金色
-                                    Color(0xFFFFA500), // 橙色
-                                )
-                        ),
-                    shape = RoundedCornerShape(10.dp),
-                )
-                .padding(horizontal = 6.dp, vertical = 2.5.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
-        // 勾选图标 - 使用白色圆形背景 + 深色勾选标记
-        Box(
-            modifier =
-                Modifier
-                    .size(10.dp)
-                    .background(color = Color.White, shape = CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Canvas(
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                val path = Path()
-                path.moveTo(2.5f, size.height / 2)
-                path.lineTo(size.width / 2 - 0.5f, size.height - 2.5f)
-                path.lineTo(size.width - 2.5f, 2.5f)
-                drawPath(
-                    path = path,
-                    color = Color(0xFFFFA500),
-                    style =
-                        Stroke(
-                            width = 1.5.dp.toPx(),
-                            cap = StrokeCap.Round,
-                            join = StrokeJoin.Round,
-                        ),
-                )
-            }
-        }
-
-        Text(
-            text = "Official",
-            fontSize = 10.sp,
-            lineHeight = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF1C1523), // 深色文字，与金色背景形成对比
-        )
     }
 }
