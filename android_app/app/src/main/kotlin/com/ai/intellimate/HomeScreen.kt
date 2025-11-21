@@ -79,7 +79,10 @@ fun HomeScreen(
 
     Scaffold(
         modifier =
-            modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
+            modifier
+                .fillMaxSize()
+                .background(HeartColor.primaryColor)
+                .navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
             val context = LocalContext.current
@@ -375,6 +378,23 @@ private fun ProfileTabContent(
         VipStatusHelper.refreshSubscriptionStatus()
         // 不再频繁刷新列表，只在首次加载或从 CreateRoleActivity 返回时刷新
         onPauseOrDispose {}
+    }
+
+    // 监听用户ID变化，当切换账号时清空并重新加载数据
+    var previousUserId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(uiState.userProfile.id) {
+        val currentUserId = uiState.userProfile.id
+        // 当用户ID变化且不是首次加载时，清空旧数据并重新加载
+        if (currentUserId.isNotEmpty() && previousUserId != null && previousUserId != currentUserId) {
+            // 用户ID发生变化，清空旧数据并重新加载
+            profileViewModel.clearAllData()
+            profileViewModel.loadUserProfile()
+            profileViewModel.getUserCreatedAgents()
+        }
+        // 更新上一次的用户ID
+        if (currentUserId.isNotEmpty()) {
+            previousUserId = currentUserId
+        }
     }
 
     ProfilePage(
