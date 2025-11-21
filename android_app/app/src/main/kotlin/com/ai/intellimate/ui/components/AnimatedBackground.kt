@@ -263,9 +263,11 @@ fun AnimatedBackground(
     // 1. matchParentSize() 不会影响父 Box 的尺寸测量（父 Box 尺寸由 HorizontalPager 决定）
     // 2. 子元素仅在布局阶段匹配父 Box 的最终尺寸
     // 3. 这符合 BoxScope 的最佳实践，避免子元素影响父容器尺寸
-    Box(modifier = modifier
-        .fillMaxSize()
-        .clipToBounds()) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .clipToBounds()
+    ) {
 
         // 如果有视频URL，创建视频视图
         if (videoUrl != null && isVideo) {
@@ -348,7 +350,7 @@ fun AnimatedBackground(
                                             // 这样可以避免因视频元数据加载导致的缩放效果变化
                                             videoScalingMode =
                                                 C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                                            
+
                                             // 关键修复：视频尺寸变化时，说明第一帧可能已经渲染
                                             // 这是一个更准确的信号，比固定延迟更可靠
                                             if (

@@ -115,11 +115,15 @@ class AgentBase(BaseModel):
     )
 
     # 主提示词和模式提示词字段
+    # 如果使用预设提示词，存储 prompt ID（如 "roleplay_main"）
+    # 如果自定义，存储完整文本
     main_prompt: Optional[str] = Field(
-        None, description="主提示词 - 作为第一个system message，覆盖全局默认主提示词"
+        None,
+        description="主提示词 - 作为第一个system message，覆盖全局默认主提示词。可以是预设 ID 或自定义文本",
     )
     mode_prompt: Optional[str] = Field(
-        None, description="模式提示词 - 放在角色卡提示词后面，覆盖全局默认模式提示词"
+        None,
+        description="模式提示词 - 放在角色卡提示词后面，覆盖全局默认模式提示词。可以是预设 ID 或自定义文本",
     )
 
     # 角色卡相关字段 (推荐使用)
@@ -189,6 +193,8 @@ class AgentUpdate(AgentBase):
     )
 
     # 主提示词和模式提示词字段
+    # 如果使用预设提示词，存储 prompt ID（如 "roleplay_main"）
+    # 如果自定义，存储完整文本
     main_prompt: Optional[str] = None
     mode_prompt: Optional[str] = None
 

@@ -376,6 +376,27 @@ export const agentApi = {
     apiClient.post(`/ai/agents/${agentId}/generate-background-animated`, {
       prompt: prompt || undefined, // 如果为空字符串，发送 undefined
     }),
+
+  // 获取可用的 prompt 列表
+  getAvailablePrompts: (params?: {
+    include_content?: boolean;
+  }): Promise<{
+    main_prompts: Array<{
+      id: string;
+      name: string;
+      description: string;
+      content?: string;
+    }>;
+    mode_prompts: Array<{
+      id: string;
+      name: string;
+      description: string;
+      content?: string;
+    }>;
+    force_default_prompts: boolean;
+    default_main_prompt_id: string;
+    default_mode_prompt_id: string;
+  }> => apiClient.get("/ai/agents/prompts/available", params),
 };
 
 // =============================================================================

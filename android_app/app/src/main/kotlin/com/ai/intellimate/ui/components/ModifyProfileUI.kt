@@ -279,10 +279,11 @@ fun EditDialog(
     onSave: (EditKey, String) -> Unit,
     onValueChange: (String) -> Unit,
 ) {
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .imePadding()
-        .noRippleClickable { onDismiss() }) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding()
+            .noRippleClickable { onDismiss() }) {
         Column(
             modifier =
                 Modifier

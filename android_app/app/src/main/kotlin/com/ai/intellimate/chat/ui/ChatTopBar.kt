@@ -61,7 +61,9 @@ fun ChatTopBar(
         if (showBackButton) {
             AsyncImage(
                 modifier =
-                    Modifier.size(BACK_BUTTON_SIZE.dp).noRippleClickable { onBack?.invoke() },
+                    Modifier
+                        .size(BACK_BUTTON_SIZE.dp)
+                        .noRippleClickable { onBack?.invoke() },
                 model = R.drawable.back,
                 contentDescription = null,
             )
@@ -70,7 +72,8 @@ fun ChatTopBar(
 
         Row(
             modifier =
-                Modifier.background(
+                Modifier
+                    .background(
                         color = CHAT_TOP_BAR_BACKGROUND_COLOR,
                         shape = RoundedCornerShape(avatarWidth),
                     )
@@ -88,7 +91,8 @@ fun ChatTopBar(
         ) {
             AsyncImage(
                 modifier =
-                    Modifier.padding(CHAT_TOP_BAR_AVATAR_PADDING.dp)
+                    Modifier
+                        .padding(CHAT_TOP_BAR_AVATAR_PADDING.dp)
                         .size(avatarWidth)
                         .clip(CircleShape),
                 model =
@@ -118,7 +122,8 @@ fun ChatTopBar(
 
         Box(
             modifier =
-                Modifier.size(48.dp, 32.dp)
+                Modifier
+                    .size(48.dp, 32.dp)
                     .background(
                         color = Color.Black.copy(.3f),
                         shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
@@ -126,7 +131,9 @@ fun ChatTopBar(
             contentAlignment = Alignment.Center,
         ) {
             AsyncImage(
-                modifier = Modifier.size(MORE_BUTTON_SIZE.dp).noRippleClickable { onClickMore() },
+                modifier = Modifier
+                    .size(MORE_BUTTON_SIZE.dp)
+                    .noRippleClickable { onClickMore() },
                 model = R.drawable.icon_more,
                 contentDescription = null,
             )
