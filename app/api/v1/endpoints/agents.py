@@ -1044,6 +1044,60 @@ async def get_image_generation_config(
         return schemas.APIResponse.error(message=f"获取图片生成配置失败: {str(e)}")
 
 
+@router.get(
+    "/prompts/available",
+    response_model=schemas.APIResponse[Dict[str, Any]],
+    summary="获取可用的 prompt 列表",
+    description="获取可用的主提示词和模式提示词列表，以及 force_default_prompts 配置状态",
+    tags=[INTY_EVAL_TAG, WEB_APP_TAG],
+)
+async def get_available_prompts(
+    include_content: bool = Query(
+        False, description="是否包含完整的 prompt 内容"
+    ),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """获取可用的 prompt 列表"""
+    try:
+        from app.core.agent import prompts as agent_prompts
+        from app.core.config import global_config_loaded_from_config_yaml
+
+        main_prompts = [
+            {
+                "id": prompt.id,
+                "name": prompt.name,
+                "description": prompt.description,
+                **({"content": prompt.content} if include_content else {}),
+            }
+            for prompt in agent_prompts.AVAILABLE_MAIN_PROMPTS
+        ]
+
+        mode_prompts = [
+            {
+                "id": prompt.id,
+                "name": prompt.name,
+                "description": prompt.description,
+                **({"content": prompt.content} if include_content else {}),
+            }
+            for prompt in agent_prompts.AVAILABLE_MODE_PROMPTS
+        ]
+
+        config = {
+            "main_prompts": main_prompts,
+            "mode_prompts": mode_prompts,
+            "force_default_prompts": global_config_loaded_from_config_yaml.agent.force_default_prompts,
+            "default_main_prompt_id": agent_prompts.DEFAULT_MAIN_PROMPT_ID,
+            "default_mode_prompt_id": agent_prompts.DEFAULT_MODE_PROMPT_ID,
+        }
+
+        logger.debug(f"用户 {current_user.id} 获取可用 prompt 列表")
+        return schemas.APIResponse.success(data=config)
+
+    except Exception as e:
+        logger.error(f"获取可用 prompt 列表失败: {str(e)}")
+        return schemas.APIResponse.error(message=f"获取可用 prompt 列表失败: {str(e)}")
+
+
 @router.put(
     "/image-generation/config",
     response_model=schemas.APIResponse[Dict[str, Any]],
