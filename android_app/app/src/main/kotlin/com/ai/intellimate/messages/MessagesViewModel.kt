@@ -3,6 +3,7 @@ package com.ai.intellimate.messages
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.store.IntySetting
@@ -33,9 +34,15 @@ class MessagesViewModel : BaseVM() {
     // 页面跟踪上下文名称（默认为当前类名，可在外部设置）
     private var pageTrackingContext: String = "MessagesViewModel"
 
+    // IntelliMate agent 缓存（只在启动时加载一次，避免频繁调用网络接口）
+    private var cachedIntelliMateAgent: ConversationItem? = null
+    private var intelliMateAgentLoaded = false // 标记是否已尝试加载过
+
     init {
         // 页面跟踪
         trackPageView()
+        // 启动时加载 IntelliMate agent（只调用一次）
+        loadIntelliMateAgentOnce()
     }
 
     /**
@@ -239,22 +246,68 @@ class MessagesViewModel : BaseVM() {
         }
     }
 
-    companion object {
-        private const val INTELLIMATE_AGENT_ID = "879e5e14-fec2-4d63-9704-4f3141bed74f"
-        private const val INTELLIMATE_AGENT_NAME = "IntelliMate"
+
+    /** 启动时加载 IntelliMate agent（只调用一次） */
+    private fun loadIntelliMateAgentOnce() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // 首先从缓存中查找
+                val cachedAgents = AgentCacheManager.getCachedAgents()
+                var intelliMateAgent: AgentInfo? =
+                    cachedAgents.firstOrNull { agent ->
+                        AgentConstants.isIntelliMateAgent(agent.id, agent.name)
+                    }
+
+                // 如果缓存中没有找到，尝试从网络请求获取（只调用一次）
+                if (intelliMateAgent == null && !intelliMateAgentLoaded) {
+                    LogUtils.i("MessagesViewModel - 缓存中未找到 IntelliMate agent，从网络获取（启动时只调用一次）")
+                    intelliMateAgentLoaded = true // 标记已尝试加载
+                    try {
+                        // 尝试通过 ID 获取
+                        val agentResult = chatApi.getAgentInfo(AgentConstants.INTELLIMATE_AGENT_ID)
+                        when (agentResult) {
+                            is HttpResult.Success -> {
+                                val agent = agentResult.data
+                                if (AgentConstants.isIntelliMateAgent(agent.id, agent.name)) {
+                                    intelliMateAgent = agent
+                                    LogUtils.i("MessagesViewModel - 从网络获取 IntelliMate agent 成功: ${agent.id}_${agent.name}")
+                                }
+                            }
+
+                            is HttpResult.Failure -> {
+                                LogUtils.w("MessagesViewModel - 从网络获取 IntelliMate agent 失败: ${agentResult.message}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        LogUtils.e("MessagesViewModel - 从网络获取 IntelliMate agent 异常: ${e.message}")
+                    }
+                } else if (intelliMateAgent != null) {
+                    LogUtils.i("MessagesViewModel - 从缓存获取 IntelliMate agent 成功: ${intelliMateAgent.id}_${intelliMateAgent.name}")
+                }
+
+                // 缓存转换后的 ConversationItem
+                cachedIntelliMateAgent = intelliMateAgent?.toConversationItem()
+            } catch (e: Exception) {
+                LogUtils.e("MessagesViewModel - 加载 IntelliMate agent 失败: ${e.message}")
+            }
+        }
     }
 
-    /** 获取 IntelliMate agent 并转换为 ConversationItem */
+    /** 获取 IntelliMate agent 并转换为 ConversationItem（使用缓存，不频繁调用网络） */
     private suspend fun getIntelliMateAgentAsConversation(): List<ConversationItem> {
+        // 如果已有缓存，直接返回
+        val cached = cachedIntelliMateAgent
+        if (cached != null) {
+            return listOf(cached)
+        }
+
+        // 如果缓存为空，尝试从 AgentCacheManager 获取（不发起网络请求）
         return try {
             val cachedAgents = AgentCacheManager.getCachedAgents()
             val intelliMateAgents =
                 cachedAgents.filter { agent ->
-                    agent.id == INTELLIMATE_AGENT_ID || agent.name == INTELLIMATE_AGENT_NAME
+                    AgentConstants.isIntelliMateAgent(agent.id, agent.name)
                 }
-            LogUtils.i(
-                "MessagesViewModel - 获取 IntelliMate agent 成功: ${intelliMateAgents.joinToString { "${it.id}_${it.name}" }}"
-            )
             intelliMateAgents.map { agent -> agent.toConversationItem() }
         } catch (e: Exception) {
             LogUtils.e("MessagesViewModel - 获取 IntelliMate agent 失败: ${e.message}")
@@ -387,5 +440,44 @@ class MessagesViewModel : BaseVM() {
         currentConversationsPage = 0
         hasMoreConversations = true
         _uiState.value = MessagesUiState()
+        // 注意：不清理 cachedIntelliMateAgent，因为它是启动时加载的，应该保持
+    }
+
+    /** 刷新 IntelliMate agent 显示（如果缓存中没有，等待启动时加载完成） */
+    fun refreshIntelliMateAgentIfNeeded() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // 如果缓存为空，等待启动时加载完成（最多等待 2 秒）
+                if (cachedIntelliMateAgent == null) {
+                    var waitCount = 0
+                    while (cachedIntelliMateAgent == null && waitCount < 20) {
+                        kotlinx.coroutines.delay(100)
+                        waitCount++
+                    }
+                }
+
+                // 重新处理会话列表，使用缓存的 IntelliMate agent
+                val currentConversations = _uiState.value.conversations
+                val hasIntelliMateInList =
+                    currentConversations.any {
+                        AgentConstants.isIntelliMateAgent(
+                            it.agentId,
+                            it.agentName
+                        )
+                    }
+                if (!hasIntelliMateInList && cachedIntelliMateAgent != null) {
+                    val (processedConversations, intelliMateAgentIds) =
+                        processConversationsWithPinHide(currentConversations)
+                    _uiState.update {
+                        it.copy(
+                            conversations = processedConversations,
+                            intelliMateAgentIds = intelliMateAgentIds
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                LogUtils.e("MessagesViewModel - refreshIntelliMateAgentIfNeeded 异常: ${e.message}")
+            }
+        }
     }
 }

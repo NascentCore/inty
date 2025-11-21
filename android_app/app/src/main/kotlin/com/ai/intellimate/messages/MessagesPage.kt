@@ -70,6 +70,11 @@ fun MessagesPage(
     // 监听会话列表更新，检查是否有新消息自动取消隐藏
     LaunchedEffect(uiState.conversations) { viewModel.checkAndUnhideConversations() }
 
+    // 当页面显示时，主动刷新 IntelliMate agent（如果缓存中没有）
+    LaunchedEffect(Unit) {
+        viewModel.refreshIntelliMateAgentIfNeeded()
+    }
+
     Box(modifier = modifier) {
         AsyncImage(
             modifier = Modifier.align(Alignment.TopEnd),
