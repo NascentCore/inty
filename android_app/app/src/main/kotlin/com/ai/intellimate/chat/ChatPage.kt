@@ -92,6 +92,7 @@ internal fun ChatPage(
     isCurrentPage: Boolean = true,
     shouldAutoFocusInput: Boolean = true,
     onInputFocusChange: (Boolean) -> Unit = {},
+    onKeyboardVisible: (Boolean) -> Unit = {},
     pageSourceOverride: String? = null, // 如果提供，则使用此 pageSource（通常来自 ChatActivity）
 ) {
 
@@ -184,7 +185,8 @@ internal fun ChatPage(
     val ratio = 1 - imeHeight.toFloat() / KEY_BOARD_HEIGHT_MAX.toFloat() // 计算出键盘当前弹出/回收进度
 
     val gap = if (showBackButton) 0.dp else BottomNavigationBarHeight * ratio
-    //    val isKeyboardVisible = imeHeight > 0
+    val isKeyboardVisible = imeHeight > 0
+    onKeyboardVisible(isKeyboardVisible)
     //    val bottomPadding =
     //        when {
     //            showBackButton -> ChatInputBottomSpacerHeight
