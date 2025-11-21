@@ -778,6 +778,14 @@ export const AgentManagePage: React.FC = () => {
         );
         if (isPresetId) {
           mainPromptSelect = agent.main_prompt;
+          // 查找对应的预设内容
+          const matchedPrompt = availablePrompts.main_prompts.find(
+            (p) => p.id === agent.main_prompt,
+          );
+          // 将ID替换为内容，以便在文本区域中显示
+          if (matchedPrompt && matchedPrompt.content) {
+            agent.main_prompt = matchedPrompt.content;
+          }
         } else {
           // 检查是否与某个预设内容匹配
           const matchedMainPrompt = availablePrompts.main_prompts.find(
@@ -798,6 +806,14 @@ export const AgentManagePage: React.FC = () => {
         );
         if (isPresetId) {
           modePromptSelect = agent.mode_prompt;
+          // 查找对应的预设内容
+          const matchedPrompt = availablePrompts.mode_prompts.find(
+            (p) => p.id === agent.mode_prompt,
+          );
+          // 将ID替换为内容，以便在文本区域中显示
+          if (matchedPrompt && matchedPrompt.content) {
+            agent.mode_prompt = matchedPrompt.content;
+          }
         } else {
           // 检查是否与某个预设内容匹配
           const matchedModePrompt = availablePrompts.mode_prompts.find(
@@ -1189,9 +1205,9 @@ export const AgentManagePage: React.FC = () => {
                   (p) => p.id === value,
                 );
                 if (selectedPrompt) {
-                  // 选择预设时，存储 ID 到 main_prompt 字段
+                  // 选择预设时，存储内容到 main_prompt 字段
                   form.setFieldsValue({
-                    main_prompt: value, // 存储 ID
+                    main_prompt: selectedPrompt.content || value, // 存储内容
                     main_prompt_select: value,
                   });
                 }
@@ -1273,9 +1289,9 @@ export const AgentManagePage: React.FC = () => {
                   (p) => p.id === value,
                 );
                 if (selectedPrompt) {
-                  // 选择预设时，存储 ID 到 mode_prompt 字段
+                  // 选择预设时，存储内容到 mode_prompt 字段
                   form.setFieldsValue({
-                    mode_prompt: value, // 存储 ID
+                    mode_prompt: selectedPrompt.content || value, // 存储内容
                     mode_prompt_select: value,
                   });
                 }
@@ -1321,9 +1337,14 @@ export const AgentManagePage: React.FC = () => {
               const selectedId = form.getFieldValue("mode_prompt_select");
               if (selectedId && selectedId !== "custom" && availablePrompts) {
                 // 如果用户编辑了文本，自动切换为自定义模式
-                // 检查是否与预设 ID 不同（如果相同，说明还是预设）
-                if (value !== selectedId) {
-                  form.setFieldsValue({ mode_prompt_select: "custom" });
+                const selectedPrompt = availablePrompts.mode_prompts.find(
+                  (p) => p.id === selectedId,
+                );
+                if (selectedPrompt && selectedPrompt.content) {
+                  // 如果内容与预设不同，切换为自定义
+                  if (value !== selectedId && value !== selectedPrompt.content) {
+                    form.setFieldsValue({ mode_prompt_select: "custom" });
+                  }
                 }
               }
             }}
