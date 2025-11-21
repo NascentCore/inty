@@ -7,15 +7,11 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
-import ai.sxwl.android.utils.PermissionUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Intent
-import android.os.Build
 import android.view.GestureDetector
 import android.view.MotionEvent
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -47,12 +43,12 @@ import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
-import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -254,26 +250,9 @@ class MainActivity : BaseActivity() {
         val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
         val showSettings by mainViewModel.showSettings.collectAsState()
 
-        // 通知权限申请 Launcher（Android 13+）
-        val notificationPermissionLauncher =
-            rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.RequestPermission()
-            ) { isGranted ->
-                if (!isGranted) {
-                    LogUtils.w("MainActivity", "通知权限被拒绝")
-                }
-            }
-
         // 在首次显示时执行初始化操作
         LaunchedEffect(Unit) {
-            // 1. 检查并申请通知权限（Android 13+）
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                if (!PermissionUtils.hasNotificationPermission(this@MainActivity)) {
-                    // notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
-            }
-
-            // 2. 实时检查登录状态变化
+            // 1. 实时检查登录状态变化
             // 用于响应：1) 手动logout（在SettingContent中触发） 2) 401自动logout（会重启应用）
             // 注意：onResume() 中也有立即检查，这里作为补充监控
             while (true) {
@@ -315,7 +294,8 @@ class MainActivity : BaseActivity() {
                 // 显示设置界面
                 com.ai.intellimate.settings.SettingContent(
                     modifier =
-                        Modifier.fillMaxSize()
+                        Modifier
+                            .fillMaxSize()
                             .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
                     onBack = { mainViewModel.hideSettings() },
                     onLogout = { isDelete ->
@@ -596,7 +576,9 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Image(
-                modifier = Modifier.size(120.dp).clip(RoundedCornerShape(10.dp)),
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(RoundedCornerShape(10.dp)),
                 painter = painterResource(R.drawable.icon_splash_icon),
                 contentDescription = "",
                 contentScale = ContentScale.Crop,
