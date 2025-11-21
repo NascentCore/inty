@@ -5,10 +5,12 @@ import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.ui.HeartRedDot
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -41,7 +44,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -94,7 +102,9 @@ private fun Content(
     onLoadMore: () -> Unit,
 ) {
     Scaffold(
-        modifier = Modifier.fillMaxSize().background(Color.Transparent),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent),
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
@@ -102,7 +112,9 @@ private fun Content(
                     Image(
                         painter = painterResource(R.drawable.img_message_title),
                         contentDescription = null,
-                        modifier = Modifier.height(30.dp).fillMaxWidth(),
+                        modifier = Modifier
+                            .height(30.dp)
+                            .fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )
@@ -112,7 +124,9 @@ private fun Content(
             )
         },
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)) {
             MessageTabContent(
                 uiState = uiState,
                 viewModel = viewModel,
@@ -165,7 +179,9 @@ private fun MessageTabContent(
             if (uiState.isRefreshing) {
                 item {
                     Box(
-                        modifier = Modifier.fillMaxWidth().height(80.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
@@ -188,7 +204,8 @@ private fun MessageTabContent(
                             // 使用 combinedClickable 同时处理点击和长按
                             Box(
                                 modifier =
-                                    Modifier.fillMaxWidth()
+                                    Modifier
+                                        .fillMaxWidth()
                                         .combinedClickable(
                                             onClick = {
                                                 // 正常点击：如果菜单未显示，则进入聊天
@@ -201,8 +218,8 @@ private fun MessageTabContent(
                                                         // 检查是否已登录
                                                         if (
                                                             IntySetting.isLogin() &&
-                                                                IntySetting.getCurToken()
-                                                                    .isNotEmpty()
+                                                            IntySetting.getCurToken()
+                                                                .isNotEmpty()
                                                         ) {
                                                             onClickConversationItem(conversion)
                                                         }
@@ -219,9 +236,11 @@ private fun MessageTabContent(
                                             },
                                         )
                             ) {
+                                val isOfficial = conversion.agentId in uiState.officialAgentIds
                                 ChatHistoryItem(
                                     modifier = Modifier.fillMaxWidth(),
                                     conversation = conversion,
+                                    isOfficial = isOfficial,
                                 )
                             }
                         }
@@ -234,7 +253,9 @@ private fun MessageTabContent(
             if (uiState.isLoading) {
                 item {
                     Box(
-                        modifier = Modifier.fillMaxWidth().height(80.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
@@ -254,7 +275,8 @@ private fun MessageTabContent(
                 // 遮罩层，点击外部关闭菜单（全屏）
                 Box(
                     modifier =
-                        Modifier.fillMaxSize()
+                        Modifier
+                            .fillMaxSize()
                             .background(Color.Transparent)
                             .clickable { showMenuForConversationId = null }
                             .zIndex(999f)
@@ -266,7 +288,9 @@ private fun MessageTabContent(
                 val menuY = (estimatedItemHeight * menuItemIndex) + estimatedItemHeight / 2
 
                 Box(
-                    modifier = Modifier.fillMaxSize().zIndex(1000f),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(1000f),
                     contentAlignment = Alignment.TopStart,
                 ) {
                     ConversationItemMenu(
@@ -290,7 +314,9 @@ private fun MessageTabContent(
                             showMenuForConversationId = null
                         },
                         onDismiss = { showMenuForConversationId = null },
-                        modifier = Modifier.offset(x = 16.dp, y = menuY).width(140.dp),
+                        modifier = Modifier
+                            .offset(x = 16.dp, y = menuY)
+                            .width(140.dp),
                     )
                 }
             }
@@ -310,13 +336,16 @@ private fun ChatHistoryItem(
     modifier: Modifier,
     conversation: ConversationItem,
     placeholderID: Int = R.drawable.img_default_avatar,
+    isOfficial: Boolean = false,
 ) {
     Row(modifier = modifier.height(88.dp), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(16.dp))
 
         // 头像
         AsyncImage(
-            modifier = Modifier.size(56.dp).clip(CircleShape),
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape),
             model = getCdnImageUrl(conversation.agentAvatar, width = 128),
             placeholder = painterResource(placeholderID),
             contentDescription = null,
@@ -338,6 +367,11 @@ private fun ChatHistoryItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                // Official tag
+                if (isOfficial) {
+                    Spacer(Modifier.width(6.dp))
+                    OfficialTag()
+                }
                 // Pin 状态图标
                 if (conversation.isPinned) {
                     Spacer(Modifier.width(6.dp))
@@ -376,5 +410,64 @@ private fun ChatHistoryItem(
             }
         }
         Spacer(Modifier.width(13.dp))
+    }
+}
+
+/** Official tag 组件，采用更正式、美观的设计风格，参考主流社交 app 的认证标记 */
+@Composable
+private fun OfficialTag() {
+    Row(
+        modifier =
+            Modifier
+                .background(
+                    brush =
+                        Brush.horizontalGradient(
+                            colors =
+                                listOf(
+                                    Color(0xFFFFD700), // 金色
+                                    Color(0xFFFFA500), // 橙色
+                                )
+                        ),
+                    shape = RoundedCornerShape(10.dp),
+                )
+                .padding(horizontal = 6.dp, vertical = 2.5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        // 勾选图标 - 使用白色圆形背景 + 深色勾选标记
+        Box(
+            modifier =
+                Modifier
+                    .size(10.dp)
+                    .background(color = Color.White, shape = CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                val path = Path()
+                path.moveTo(2.5f, size.height / 2)
+                path.lineTo(size.width / 2 - 0.5f, size.height - 2.5f)
+                path.lineTo(size.width - 2.5f, 2.5f)
+                drawPath(
+                    path = path,
+                    color = Color(0xFFFFA500),
+                    style =
+                        Stroke(
+                            width = 1.5.dp.toPx(),
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round,
+                        ),
+                )
+            }
+        }
+
+        Text(
+            text = "Official",
+            fontSize = 10.sp,
+            lineHeight = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF1C1523), // 深色文字，与金色背景形成对比
+        )
     }
 }

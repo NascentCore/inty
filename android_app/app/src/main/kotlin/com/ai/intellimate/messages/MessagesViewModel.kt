@@ -3,10 +3,12 @@ package com.ai.intellimate.messages
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
+import com.ai.intellimate.utils.AgentCacheManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -98,11 +100,16 @@ class MessagesViewModel : BaseVM() {
                         if (userInitiatedConversations.isEmpty()) {
                             hasMoreConversations = false
                         } else {
-                            // 应用 Pin/Hide 逻辑：排序和过滤
-                            val processedConversations =
+                            // 应用 Pin/Hide 逻辑：排序和过滤（包含 official agents）
+                            val (processedConversations, officialAgentIds) =
                                 processConversationsWithPinHide(userInitiatedConversations)
                             // 静默更新数据，不显示loading
-                            _uiState.update { it.copy(conversations = processedConversations) }
+                            _uiState.update {
+                                it.copy(
+                                    conversations = processedConversations,
+                                    officialAgentIds = officialAgentIds
+                                )
+                            }
                         }
                     }
 
@@ -149,20 +156,31 @@ class MessagesViewModel : BaseVM() {
                         if (userInitiatedConversations.isEmpty()) {
                             hasMoreConversations = false
                         } else {
-                            // 应用 Pin/Hide 逻辑：排序和过滤
-                            val processedConversations =
+                            // 应用 Pin/Hide 逻辑：排序和过滤（包含 official agents）
+                            val (processedConversations, officialAgentIds) =
                                 processConversationsWithPinHide(userInitiatedConversations)
 
                             if (currentConversationsPage == 0) {
                                 // 第一页，直接替换
-                                _uiState.update { it.copy(conversations = processedConversations) }
+                                _uiState.update {
+                                    it.copy(
+                                        conversations = processedConversations,
+                                        officialAgentIds = officialAgentIds
+                                    )
+                                }
                             } else {
                                 // 后续页，追加到现有列表（需要重新处理整个列表以保持排序）
                                 val currentConversations = _uiState.value.conversations
                                 val allConversations =
                                     currentConversations + userInitiatedConversations
-                                val allProcessed = processConversationsWithPinHide(allConversations)
-                                _uiState.update { it.copy(conversations = allProcessed) }
+                                val (allProcessed, allOfficialAgentIds) =
+                                    processConversationsWithPinHide(allConversations)
+                                _uiState.update {
+                                    it.copy(
+                                        conversations = allProcessed,
+                                        officialAgentIds = allOfficialAgentIds
+                                    )
+                                }
                             }
                         }
                     }
@@ -221,17 +239,74 @@ class MessagesViewModel : BaseVM() {
         }
     }
 
-    /** 处理会话列表：排序（Pin在前）和过滤（隐藏的移除，除非有新消息） */
-    private fun processConversationsWithPinHide(
+    /** 获取 official agents 并转换为 ConversationItem */
+    private suspend fun getOfficialAgentsAsConversations(): List<ConversationItem> {
+        return try {
+            val cachedAgents = AgentCacheManager.getCachedAgents()
+            val officialAgents =
+                cachedAgents.filter { agent ->
+                    agent.tags?.any { tag -> tag?.equals("official", ignoreCase = true) == true }
+                        ?: false
+                }
+            officialAgents.map { agent -> agent.toConversationItem() }
+        } catch (e: Exception) {
+            LogUtils.e("MessagesViewModel - 获取 official agents 失败: ${e.message}")
+            emptyList()
+        }
+    }
+
+    /** AgentInfo 转换为 ConversationItem 的扩展方法 */
+    private fun AgentInfo.toConversationItem(): ConversationItem {
+        return ConversationItem(
+            agentId = this.id,
+            agentName = this.name,
+            agentAvatar = this.avatar,
+            agentBackground = this.background,
+            agentBackgroundAnimated = this.backgroundAnimatedUrl,
+            agentIntro = this.intro,
+            agentOpening = this.opening,
+            agentOpeningAudioUrl = this.opening_audio_url,
+            createdAt = this.createdAt,
+            id = "", // official agents 没有实际的 conversation id
+            lastMessage = this.opening, // 使用 opening 作为 last message
+            lastMessageTime = this.createdAt, // 使用创建时间作为最后消息时间
+            settings = null,
+            updatedAt = null,
+            userId = "",
+            isDeleted = this.isDeleted,
+        )
+    }
+
+    /** 处理会话列表：排序（Official在前，Pin在前）和过滤（隐藏的移除，除非有新消息） */
+    private suspend fun processConversationsWithPinHide(
         rawConversations: List<ConversationItem>
-    ): List<ConversationItem> {
-        return rawConversations
-            .filter { conversation ->
+    ): Pair<List<ConversationItem>, Set<String>> {
+        // 获取所有 official agents
+        val allOfficialAgents = getOfficialAgentsAsConversations()
+        val allOfficialAgentIds = allOfficialAgents.map { it.agentId }.toSet()
+
+        // 获取用户已聊过的 agent IDs（从 rawConversations 中提取）
+        val userChattedAgentIds = rawConversations.map { it.agentId }.toSet()
+
+        // 只显示用户未聊过的 official agents
+        val officialAgentsToShow =
+            allOfficialAgents.filter { it.agentId !in userChattedAgentIds }
+
+        // 过滤普通会话：隐藏的会话（除非有新消息）
+        val regularConversations =
+            rawConversations.filter { conversation ->
                 // 过滤隐藏的会话，除非有新消息
                 !conversation.isHidden || conversation.shouldShow()
             }
-            .sortedWith(
-                compareBy<ConversationItem> { !it.isPinned }
+
+        // 合并 official agents 和普通会话
+        val allConversations = officialAgentsToShow + regularConversations
+
+        // 排序：Official > Pin > 时间
+        val sortedConversations =
+            allConversations.sortedWith(
+                compareBy<ConversationItem> { it.agentId !in allOfficialAgentIds } // official 在前
+                    .thenBy { !it.isPinned } // pin 在前
                     .thenByDescending { conversation ->
                         // 将 lastMessageTime（ISO 8601 格式）转换为时间戳进行比较
                         ai.sxwl.android.utils.TimeUtils.parseIsoTimeToTimestamp(
@@ -239,6 +314,9 @@ class MessagesViewModel : BaseVM() {
                         ) ?: 0L
                     }
             )
+
+        // 返回排序后的会话列表和 official agent IDs
+        return Pair(sortedConversations, allOfficialAgentIds)
     }
 
     /** 置顶会话 */
@@ -267,10 +345,15 @@ class MessagesViewModel : BaseVM() {
 
     /** 刷新会话列表（应用Pin/Hide逻辑） */
     private fun refreshConversationsWithPinHide() {
-        _uiState.update { currentState ->
-            currentState.copy(
-                conversations = processConversationsWithPinHide(currentState.conversations)
-            )
+        viewModelScope.launch(Dispatchers.IO) {
+            val (processedConversations, officialAgentIds) =
+                processConversationsWithPinHide(_uiState.value.conversations)
+            _uiState.update { currentState ->
+                currentState.copy(
+                    conversations = processedConversations,
+                    officialAgentIds = officialAgentIds
+                )
+            }
         }
     }
 
