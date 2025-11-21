@@ -126,18 +126,26 @@ async def get_next_readable_id(session: AsyncSession) -> str:
 
 
 async def ensure_unique_readable_id(
-    session: AsyncSession, readable_id: str, exclude_agent_id: Optional[str] = None
+    session: AsyncSession,
+    readable_id: Optional[str],
+    exclude_agent_id: Optional[str] = None,
 ) -> str:
-    """确保 readable_id 唯一，如果冲突则使用自增 ID
+    """确保 readable_id 唯一，如果冲突或为空则使用自增 ID
 
     Args:
         session: 数据库会话
-        readable_id: 要检查的 readable_id
+        readable_id: 要检查的 readable_id，可以为 None 或空字符串
         exclude_agent_id: 排除的 agent ID（用于更新场景，排除当前 agent）
 
     Returns:
-        唯一的 readable_id，如果冲突则返回自增的新 ID
+        唯一的 readable_id，如果冲突或为空则返回自增的新 ID
     """
+    # 如果 readable_id 为空（None、空字符串或只包含空白字符），直接生成新的自增 ID
+    if not readable_id or not readable_id.strip():
+        new_id = await get_next_readable_id(session)
+        logger.warning(f"⚠️  readable_id 为空，使用自增 ID: {new_id}")
+        return new_id
+
     # 使用 no_autoflush 避免在查询时触发 autoflush，防止冲突（同步上下文管理器）
     with session.no_autoflush:
         query = select(Agent).where(Agent.readable_id == readable_id)
