@@ -15,6 +15,9 @@ jobs:
     permissions:
       contents: read
 
+    # 自动运行的情况下，inputs.environment 为空，因此需要额外设置
+    environment: ${{ inputs.environment || 'dev' }}
+
     steps:
       - uses: actions/checkout@v4
         with:
