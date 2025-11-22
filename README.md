@@ -97,5 +97,23 @@ git submodule update --init --recursive
 - `scripts/` - 各类脚本
 - `devops/` - 运维相关代码
 
+## 如何修改代码库中的文件内容
+
+以 [ui_configs.kt](android_app/app/src/main/kotlin/com/ai/intellimate/ui/ui_configs.kt#L96)
+中的 `WhatsAppGroupInvite` 为例：
+
+1. 打开 GitHub 文件链接：ui_configs.kt，点击右上角铅笔图标编辑文件，可以按照路径从 https://github.com/NascentCore/inty 找到对应的目标文件
+   ![img_v3_02sa_4f309e3d-a334-4b25-8006-91f361222d5g](https://github.com/user-attachments/assets/18a2d9c0-a596-4095-bea3-18f376b33657)
+2. 定位要修改的地方，修改
+   ![img_v3_02sa_6259fdaf-e194-4d91-8120-56b79317f7ag](https://github.com/user-attachments/assets/af713402-c9da-4821-b46e-1a5eaeb7bc23)
+3. 修改完成点击 commit changes，弹窗填入改动标题，其他不用修改，点击右下角 propose changes
+   ![img_v3_02sa_f539d752-b939-405f-8ec7-98d696d47c8g](https://github.com/user-attachments/assets/bad0e20f-0b66-4265-8af0-4d18b152ee0d)
+4. 下一个页面点击 create pull request 生成改动
+   ![img_v3_02sa_a2fef23c-5902-4154-8ff6-9a97a1d384bg](https://github.com/user-attachments/assets/fa985e25-a821-4a14-91e9-5e164b387114)
+5. 生成改动链接，发给@赵亚雄 确认；之后就可以提交
+   ![img_v3_02sa_c2d1a841-1cbe-417f-a52b-04061565a83g](https://github.com/user-attachments/assets/165e57c6-b151-4968-9e67-cfbcff959d6f)
+
+## 说明
+
 更多详细信息请参考各子目录的 README 文件：
 - 后端开发：参见 [backend/README.md](backend/README.md)
