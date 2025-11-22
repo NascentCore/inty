@@ -91,6 +91,7 @@ import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.SingleLineTextInputField
 import com.ai.intellimate.utils.AvatarManager
+import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
 import com.architecture.httplib.core.HttpResult
 import com.yalantis.ucrop.UCrop
@@ -1229,12 +1230,14 @@ private fun GenderButton(
                 shape = RoundedCornerShape(20.dp),
             ),
     ) {
-        Text(
-            text = text,
-            fontSize = 12.sp,
-            color = Color.White,
-            modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp),
-        )
+        IgnoreSystemFontScaling {
+            Text(
+                text = text,
+                fontSize = 12.sp,
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp),
+            )
+        }
     }
 }
 
