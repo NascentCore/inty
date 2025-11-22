@@ -365,9 +365,34 @@ private fun ProfileHeader(
         Spacer(Modifier.height(topSpacerHeight))
 
         // 设置按钮行 - 始终显示
-        Row {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Spacer(Modifier.weight(1f))
             var lastClickTime by remember { mutableLongStateOf(0L) }
+
+            AsyncImage(
+                modifier =
+                    Modifier.size(24.dp).clickable {
+                        val currentTime = System.currentTimeMillis()
+                        if (AntiClick.isValidClick(lastClickTime)) {
+                            lastClickTime = currentTime
+                            try {
+                                val intent =
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        UiConfigs.Urls.DiscordInvite.toUri(),
+                                    )
+                                // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                ToastUtils.showLargeText(e.toString())
+                            }
+                        }
+                    },
+                model = R.drawable.discord,
+                contentDescription = null,
+            )
+            Spacer(Modifier.width(8.dp))
 
             AsyncImage(
                 modifier =
