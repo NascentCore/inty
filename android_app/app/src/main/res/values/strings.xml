@@ -75,6 +75,7 @@
     <string name="premium_benefit_higher_other_limits">Higher image speech synthesis limits</string>
     <string name="premium_benefit_model">Empathetic AI</string>
     <string name="premium_benefit_chat_style">Customizable chat style</string>
+    <string name="premium_benefit_flagship_models">Latest flagship models (Gemini 3, Grok 4.1)</string>
 
     <string name="premium_benefit_newfeature">Priority access to new features</string>
 
