@@ -85,14 +85,13 @@ jobs:
       - name: Deploy ads.txt
         uses: appleboy/ssh-action@master
         timeout-minutes: 1
-        env:
-          ADS_TXT_CONTENT: ${{ secrets.GOOGLE_ADSENSE_ADS_TXT }}
         with:
           host: ${{ secrets.DEV_SERVER_HOST }}
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           script: |
-            echo "$ADS_TXT_CONTENT" | sudo tee /var/www/dev.intellimate.app/ads.txt > /dev/null
+            # 来自 Adsense 账户中确认站点所有权的功能
+            echo "${{ secrets.GOOGLE_ADSENSE_ADS_TXT }}" | sudo tee /var/www/dev.intellimate.app/ads.txt > /dev/null
             sudo chown www-data:www-data /var/www/dev.intellimate.app/ads.txt
             sudo chmod 644 /var/www/dev.intellimate.app/ads.txt
 
