@@ -70,10 +70,10 @@ fun HeartBottomAppBar(
 
             CompositionLocalProvider(
                 LocalDensity provides
-                        Density(
-                            density = LocalDensity.current.density,
-                            fontScale = 1f, // 核心：禁用字体缩放
-                        )
+                    Density(
+                        density = LocalDensity.current.density,
+                        fontScale = 1f, // 核心：禁用字体缩放
+                    )
             ) {
                 NavigationBarItem(
                     selected = isSelected,
@@ -107,7 +107,6 @@ fun HeartBottomAppBar(
                     colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent),
                 )
             }
-
         }
     }
 }
