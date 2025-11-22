@@ -13,6 +13,7 @@ import ai.sxwl.android.utils.ToastUtils
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -90,10 +91,15 @@ import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.SingleLineTextInputField
 import com.ai.intellimate.utils.AvatarManager
+import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
 import com.architecture.httplib.core.HttpResult
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
+import java.io.File
+import java.net.URL
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -103,11 +109,6 @@ import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
-import java.io.File
-import java.net.URL
-import java.util.UUID
-import java.util.concurrent.TimeUnit
-import android.graphics.Color as AndroidColor
 
 /** 创建角色的页面 */
 class CreateRoleActivity : BaseActivity() {
@@ -485,9 +486,7 @@ private fun CreateRolePage(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier
-                                .padding(horizontal = 12.dp)
-                                .noRippleClickable { onBack() },
+                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
                         painter = painterResource(R.drawable.close),
                         contentDescription = null,
                     )
@@ -497,8 +496,7 @@ private fun CreateRolePage(
     ) { padding ->
         Column(
             modifier =
-                Modifier
-                    .fillMaxSize()
+                Modifier.fillMaxSize()
                     .imePadding()
                     .padding(
                         top = padding.calculateTopPadding(),
@@ -606,7 +604,9 @@ private fun CreateRolePage(
 
                                                 // 验证文件是否成功写入
                                                 if (!tempFile.exists() || tempFile.length() == 0L) {
-                                                    throw Exception("Failed to write image data to temp file")
+                                                    throw Exception(
+                                                        "Failed to write image data to temp file"
+                                                    )
                                                 }
 
                                                 LogUtils.d(
@@ -683,7 +683,7 @@ private fun CreateRolePage(
                 onValueChange = { settings = it },
                 placeholder = "Please fill in the dialogue effect...",
                 minLines = 4,
-                maxLength = 800
+                maxLength = 800,
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -917,9 +917,7 @@ private fun AvatarUploadSection(
             modifier =
                 Modifier.then(
                         if (isEmpty) Modifier.size(200.dp)
-                        else Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(9.div(16f))
+                        else Modifier.fillMaxWidth().aspectRatio(9.div(16f))
                     )
                     .let { modifier ->
                         if (isEmpty) {
@@ -954,9 +952,7 @@ private fun AvatarUploadSection(
                     AsyncImage(
                         model = previewUrl ?: displayUrl,
                         contentDescription = stringResource(R.string.content_desc_selected_avatar),
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
@@ -983,9 +979,7 @@ private fun AvatarUploadSection(
                     AsyncImage(
                         model = previewUrl ?: avatarUrl,
                         contentDescription = stringResource(R.string.content_desc_generated_avatar),
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
@@ -1045,8 +1039,7 @@ private fun AvatarUploadSection(
             if (avatarUrls.isNotEmpty() || avatarUrl != null) {
                 Box(
                     modifier =
-                        Modifier
-                            .align(Alignment.TopEnd)
+                        Modifier.align(Alignment.TopEnd)
                             .padding(8.dp)
                             .background(
                                 color = Color.Black.copy(alpha = 0.5f),
@@ -1079,8 +1072,7 @@ private fun AvatarUploadSection(
         if (avatarUrls.isNotEmpty()) {
             Row(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .background(
                             color = Color.Black.copy(alpha = 0.5f),
                             shape = RoundedCornerShape(12.dp),
@@ -1090,11 +1082,7 @@ private fun AvatarUploadSection(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Fixed Regen button on the left
-                Box(
-                    modifier = Modifier
-                        .width(88.dp)
-                        .aspectRatio(9 / 16f)
-                ) {
+                Box(modifier = Modifier.width(88.dp).aspectRatio(9 / 16f)) {
                     RegenButton(
                         onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
                         enabled = !isGenerating,
@@ -1116,8 +1104,7 @@ private fun AvatarUploadSection(
                                         getCdnImageUrl(imageUrl, width = 80, quality = 60)
                                     Box(
                                         modifier =
-                                            Modifier
-                                                .width(88.dp)
+                                            Modifier.width(88.dp)
                                                 .aspectRatio(9 / 16f)
                                                 .background(
                                                     color = Color(0x1A78599A),
@@ -1143,8 +1130,7 @@ private fun AvatarUploadSection(
                                                     index,
                                                 ),
                                             modifier =
-                                                Modifier
-                                                    .fillMaxSize()
+                                                Modifier.fillMaxSize()
                                                     .clip(RoundedCornerShape(8.dp)),
                                             contentScale = ContentScale.Crop,
                                         )
@@ -1213,7 +1199,7 @@ private fun CustomTextField(
             onValueChange = onValueChange,
             placeholder = placeholder,
             minLines = minLines,
-            maxLength = maxLength
+            maxLength = maxLength,
         )
     }
 }
@@ -1244,12 +1230,14 @@ private fun GenderButton(
                 shape = RoundedCornerShape(20.dp),
             ),
     ) {
-        Text(
-            text = text,
-            fontSize = 12.sp,
-            color = Color.White,
-            modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp),
-        )
+        IgnoreSystemFontScaling {
+            Text(
+                text = text,
+                fontSize = 12.sp,
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp),
+            )
+        }
     }
 }
 
@@ -1269,8 +1257,7 @@ private fun CreateButton(isLoading: Boolean, isEditMode: Boolean = false, onClic
         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(25.dp),
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .height(56.dp)
                 .background(
                     brush =

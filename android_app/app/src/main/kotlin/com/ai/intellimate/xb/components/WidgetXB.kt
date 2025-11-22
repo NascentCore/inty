@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -23,6 +24,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
@@ -146,6 +148,21 @@ fun MultiLineBasicTextField(
             )
         }
 
+    }
+}
+
+@Composable
+fun IgnoreSystemFontScaling(
+    content: @Composable () -> Unit
+) {
+    CompositionLocalProvider(
+        LocalDensity provides
+                Density(
+                    density = LocalDensity.current.density,
+                    fontScale = 1f, // 核心：禁用字体缩放
+                )
+    ) {
+        content()
     }
 }
 

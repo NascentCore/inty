@@ -62,8 +62,12 @@ class Agent(Base):
     # 主提示词和模式提示词字段
     # 如果使用预设提示词，存储 prompt ID（如 "roleplay_main"）
     # 如果自定义，存储完整文本
-    main_prompt = Column(Text, nullable=True)  # 主提示词 - 作为第一个system message，可以是预设 ID 或自定义文本
-    mode_prompt = Column(Text, nullable=True)  # 模式提示词 - 放在角色卡提示词后面，可以是预设 ID 或自定义文本
+    main_prompt = Column(
+        Text, nullable=True
+    )  # 主提示词 - 作为第一个system message，可以是预设 ID 或自定义文本
+    mode_prompt = Column(
+        Text, nullable=True
+    )  # 模式提示词 - 放在角色卡提示词后面，可以是预设 ID 或自定义文本
 
     # 角色卡相关字段；都已经废弃
     character_card_spec = Column(String, nullable=True)  # 角色卡规范版本

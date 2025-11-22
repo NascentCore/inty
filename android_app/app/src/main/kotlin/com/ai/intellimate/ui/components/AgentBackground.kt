@@ -70,16 +70,16 @@ fun AgentBackground(
     val contentScale = ContentScale.Crop
 
     // 判断是否为 IntelliMate agent
-    val isIntelliMateAgent =
-        AgentConstants.isIntelliMateAgent(agentInfo?.id, agentInfo?.name)
+    val isIntelliMateAgent = AgentConstants.isIntelliMateAgent(agentInfo?.id, agentInfo?.name)
 
     val backgroundAnimatedUrl = agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
-    val staticImageUrl = if (isIntelliMateAgent) {
-        // IntelliMate agent 使用本地资源
-        null
-    } else {
-        agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
-    }
+    val staticImageUrl =
+        if (isIntelliMateAgent) {
+            // IntelliMate agent 使用本地资源
+            null
+        } else {
+            agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
+        }
 
     // 视频缓存管理器
     val videoCacheManager = remember { VideoCacheManager.getInstance(context) }
@@ -129,9 +129,7 @@ fun AgentBackground(
         }
     }
 
-    Box(modifier = modifier
-        .fillMaxSize()
-        .clipToBounds()) {
+    Box(modifier = modifier.fillMaxSize().clipToBounds()) {
         if (backgroundAnimatedUrl != null) {
             // 有背景视频，使用 AnimatedBackground 组件
             AnimatedBackground(
@@ -174,9 +172,7 @@ fun AgentBackground(
                 }
 
             AsyncImage(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
+                modifier = Modifier.fillMaxWidth().fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
                 model = staticImageRequest,
                 contentDescription = null,
                 alignment = Alignment.TopCenter,
@@ -185,9 +181,7 @@ fun AgentBackground(
         } else if (isIntelliMateAgent) {
             // IntelliMate agent 使用本地资源图片
             Image(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxSize(),
+                modifier = Modifier.fillMaxWidth().fillMaxSize(),
                 painter = painterResource(R.drawable.img_official_agent_background),
                 contentDescription = null,
                 alignment = Alignment.TopCenter,
@@ -200,8 +194,7 @@ fun AgentBackground(
             // 顶部渐变遮罩
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .height(TOP_GRADIENT_HEIGHT_DP.dp)
                         .background(
                             Brush.verticalGradient(
@@ -214,8 +207,7 @@ fun AgentBackground(
             // 底部渐变遮罩
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .height(BOTTOM_GRADIENT_HEIGHT_DP.dp)
                         .background(
                             Brush.verticalGradient(

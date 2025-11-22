@@ -160,10 +160,11 @@ class AvatarGenerateViewModel : BaseVM() {
 
                     // Firebase Analytics - 记录头像生成失败
                     // 检查是否是限制达到的错误
-                    val isLimitReached = e.message?.contains("limit", ignoreCase = true) == true ||
+                    val isLimitReached =
+                        e.message?.contains("limit", ignoreCase = true) == true ||
                             e.message?.contains(
                                 "IMAGE_GENERATION_LIMIT_REACHED",
-                                ignoreCase = true
+                                ignoreCase = true,
                             ) == true ||
                             e.message?.contains("SUBSCRIPTION_REQUIRED", ignoreCase = true) == true
 
@@ -173,7 +174,8 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.IMAGE_GENERATION_LIMIT_REACHED,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
-                                "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
+                                "error_message" to
+                                    "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "generation_time_ms" to generationTime,
                                 "timestamp" to endTime,
@@ -185,7 +187,8 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.AVATAR_GENERATION_FAILURE,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
-                                "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
+                                "error_message" to
+                                    "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "generation_time_ms" to generationTime,
                                 "timestamp" to endTime,
@@ -283,7 +286,8 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.AVATAR_GENERATION_FAILURE,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
-                                "error_message" to "Empty image URLs received from server during regeneration",
+                                "error_message" to
+                                    "Empty image URLs received from server during regeneration",
                                 "is_regenerate" to true,
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "generation_time_ms" to generationTime,
@@ -304,10 +308,11 @@ class AvatarGenerateViewModel : BaseVM() {
 
                     // Firebase Analytics - 记录头像重新生成失败
                     // 检查是否是限制达到的错误
-                    val isLimitReached = e.message?.contains("limit", ignoreCase = true) == true ||
+                    val isLimitReached =
+                        e.message?.contains("limit", ignoreCase = true) == true ||
                             e.message?.contains(
                                 "IMAGE_GENERATION_LIMIT_REACHED",
-                                ignoreCase = true
+                                ignoreCase = true,
                             ) == true ||
                             e.message?.contains("SUBSCRIPTION_REQUIRED", ignoreCase = true) == true
 
@@ -317,7 +322,8 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.IMAGE_GENERATION_LIMIT_REACHED,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
-                                "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
+                                "error_message" to
+                                    "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
                                 "is_regenerate" to true,
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "generation_time_ms" to generationTime,
@@ -330,7 +336,8 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.AVATAR_GENERATION_FAILURE,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
-                                "error_message" to "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
+                                "error_message" to
+                                    "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
                                 "is_regenerate" to true,
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "generation_time_ms" to generationTime,
@@ -348,7 +355,7 @@ class AvatarGenerateViewModel : BaseVM() {
     fun getSelectedAvatarUrl(): String? {
         return when {
             _generatedImageUrls.value.isNotEmpty() &&
-                    _selectedImageIndex.value < _generatedImageUrls.value.size -> {
+                _selectedImageIndex.value < _generatedImageUrls.value.size -> {
                 _generatedImageUrls.value[_selectedImageIndex.value]
             }
 

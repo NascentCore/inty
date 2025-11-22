@@ -135,6 +135,24 @@ internal fun ProfilePage(
     // LazyGrid state - 需要在 nestedScrollConnection 之前创建
     val listState = rememberLazyGridState()
 
+    // 监听用户ID变化，当切换账号时重置滚动状态和折叠状态
+    var previousUserId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(userProfile.id) {
+        val currentUserId = userProfile.id
+        // 当用户ID变化且不是首次加载时，重置滚动位置和折叠状态
+        if (
+            currentUserId.isNotEmpty() && previousUserId != null && previousUserId != currentUserId
+        ) {
+            // 用户ID发生变化，重置滚动位置和折叠状态
+            listState.animateScrollToItem(0)
+            collapseOffset.snapTo(0f)
+        }
+        // 更新上一次的用户ID
+        if (currentUserId.isNotEmpty()) {
+            previousUserId = currentUserId
+        }
+    }
+
     // 嵌套滚动连接 - 处理折叠逻辑
     val nestedScrollConnection =
         remember(listState) {

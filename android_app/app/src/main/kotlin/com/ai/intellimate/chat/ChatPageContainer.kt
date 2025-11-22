@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -49,7 +50,11 @@ import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+
+var inChatPageScrolling = false  // 当前ChatPage 是否在滚动中
+var isKeyboardVisibleChatPage = false  // 当前页面键盘是否可见
 
 /** ChatPageContainer - 支持分页加载的聊天页面容器 使用Paging库实现分页加载更多agents，提供更流畅的滑动体验 */
 @Composable
@@ -169,6 +174,16 @@ fun ChatPageContainer(
         }
     }
 
+    LaunchedEffect(pageState) {
+        // 将 PagerState 的 isScrollInProgress 属性转化为 Flow
+        snapshotFlow { pageState.isScrollInProgress }
+            // 确保只有在状态发生变化时才触发
+            .distinctUntilChanged()
+            .collect { isScrolling ->
+                inChatPageScrolling = isScrolling
+            }
+    }
+
     Box {
         HorizontalPager(
             modifier = modifier,
@@ -192,13 +207,22 @@ fun ChatPageContainer(
                     modifier = Modifier.fillMaxSize(),
                     chatViewModel = chatViewModel,
                     isCurrentPage = isPageCurrent,
-                    shouldAutoFocusInput = autoFocusEnabled,
+                    shouldAutoFocusInput = isKeyboardVisibleChatPage,
                     onInputFocusChange = { focused ->
                         if (!isPageCurrent) return@ChatPage
                         if (focused != autoFocusEnabled) {
                             autoFocusEnabled = focused
                         }
+                        if (!inChatPageScrolling && !focused) {
+                            isKeyboardVisibleChatPage = false
+                        }
                     },
+                    onKeyboardVisible = { visible ->
+                        val nextState = if (inChatPageScrolling) isKeyboardVisibleChatPage else visible
+                        if (nextState != isKeyboardVisibleChatPage) {
+                            isKeyboardVisibleChatPage = nextState
+                        }
+                    }
                 )
             }
         }

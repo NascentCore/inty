@@ -99,7 +99,7 @@ class AgentPagingSource(
                         val validAgents =
                             agents.filter { agent ->
                                 agent.id.isNotEmpty() &&
-                                        !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
+                                    !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
                             }
                         // 去重：基于 agent.id 进行去重，防止重复数据
                         val uniqueAgents = validAgents.distinctBy { it.id }
