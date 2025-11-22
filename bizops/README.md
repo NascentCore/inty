@@ -6,6 +6,7 @@
 - YouTube channel: https://www.youtube.com/@IntelliMate（转化率最好，可以长期转化）
 - Facebook page: https://www.facebook.com/profile.php?id=61579913877109#
 - X account: https://x.com/IntelliMate2025 (CPM 低、量大）
+- 电话：+1 (925) 209 5237
 
 ## 市场推广计划
 
