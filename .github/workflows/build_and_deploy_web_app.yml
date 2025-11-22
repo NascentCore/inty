@@ -82,6 +82,20 @@ jobs:
             sudo chmod -R 755 /var/www/dev.intellimate.app
             sudo rm -f /tmp/intellimate-app-dist.tar.gz
 
+      - name: Deploy ads.txt
+        uses: appleboy/ssh-action@master
+        timeout-minutes: 1
+        env:
+          ADS_TXT_CONTENT: ${{ secrets.GOOGLE_ADSENSE_ADS_TXT }}
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            echo "$ADS_TXT_CONTENT" | sudo tee /var/www/dev.intellimate.app/ads.txt > /dev/null
+            sudo chown www-data:www-data /var/www/dev.intellimate.app/ads.txt
+            sudo chmod 644 /var/www/dev.intellimate.app/ads.txt
+
       - name: Sanity check
         run: |
           curl --verbose --fail --retry 5 --retry-delay 5 ${{ vars.INTELLI_MATE_WEB_APP_URL }}
