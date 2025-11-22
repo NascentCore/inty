@@ -49,29 +49,9 @@
 - Dev instance is on GCP, serves all backend services.
 - This instance should only run docker images, do not perform any coding or used for other purposes.
 - nginx is the reverse proxy
-- in front of dev & prod inty backend, inty-eval
+- in front of dev & prod inty backend, 和 intellimate.app web app
 
-The files are placed onto the host in the following paths
-
-```text
-htpasswd:/etc/nginx/.htpasswd # Used by nginx.conf
-nginx.conf:/etc/nginx/conf.d/sxwl.ai.conf
-
-ssh inty
-pushd inty
-# SSH key 已经上传到 github
-git pull
-popd
-sudo cp inty/devops/nginx/conf.d/sxwl.ai.conf /etc/nginx/conf.d/sxwl.ai.conf
-sudo systemctl restart nginx
-sudo systemctl status nginx
-```
-
-打开：
-
-1. https://app.inty.cc/evaluation
-2. https://dev.inty.sxwl.ai/evaluation
-3. https://intellimate.app/
+详情请查看 [NGINX](NGINX.md)
 
 ## Inty prod & dev 部署
 
