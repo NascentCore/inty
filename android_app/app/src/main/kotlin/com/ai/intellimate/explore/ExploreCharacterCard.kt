@@ -145,7 +145,6 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
                             isCardTag = true,
                         )
                     }
-
                 }
             }
         }

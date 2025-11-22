@@ -376,13 +376,16 @@ private fun ProfileHeader(
                         if (AntiClick.isValidClick(lastClickTime)) {
                             lastClickTime = currentTime
                             try {
-                                val intent = Intent(Intent.ACTION_VIEW,
-                                    UiConfigs.Urls.WhatsAppGroupInvite.toUri())
+                                val intent =
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        UiConfigs.Urls.WhatsAppGroupInvite.toUri(),
+                                    )
                                 // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
                                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 context.startActivity(intent)
                             } catch (e: Exception) {
-                                ToastUtils.showLargeText(e.toString());
+                                ToastUtils.showLargeText(e.toString())
                             }
                         }
                     },
