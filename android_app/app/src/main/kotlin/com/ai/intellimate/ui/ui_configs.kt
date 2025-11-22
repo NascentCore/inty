@@ -91,4 +91,8 @@ object UiConfigs {
     object Limits {
         const val DefaultTextFieldMaxChars = 1000
     }
+
+    object Urls {
+        const val WhatsAppGroupInvite = "https://chat.whatsapp.com/FquOcDMQR7dBliPdXeKZ2w?mode=wwt"
+    }
 }
