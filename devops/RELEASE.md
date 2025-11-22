@@ -42,4 +42,8 @@
 
 ## Web app 发布流程
 
-1. 与上述相同
+1. 与上述相同创建 release
+2. 打开 [build_and_deploy_web_app](https://github.com/NascentCore/inty/blob/main/.github/workflows/build_and_deploy_web_app.yml)
+3. 选择 tag 及 prod 环境
+   <img width="800" height="756" alt="image" src="https://github.com/user-attachments/assets/066e530b-3d1d-402e-a72f-97169178e606" />
+
