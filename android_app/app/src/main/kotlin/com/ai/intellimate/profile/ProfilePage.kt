@@ -87,6 +87,7 @@ import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlin.math.abs
@@ -376,7 +377,7 @@ private fun ProfileHeader(
                             lastClickTime = currentTime
                             try {
                                 val intent = Intent(Intent.ACTION_VIEW,
-                                    "https://chat.whatsapp.com/FquOcDMQR7dBliPdXeKZ2w?mode=wwt".toUri())
+                                    UiConfigs.Urls.WhatsAppGroupInvite.toUri())
                                 // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
                                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 context.startActivity(intent)
