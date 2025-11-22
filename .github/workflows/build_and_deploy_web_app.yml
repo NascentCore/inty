@@ -81,10 +81,10 @@ jobs:
 
       - name: Sanity check
         run: |
-          curl --verbose --fail --retry 5 --retry-delay 5 https://dev.intellimate.app
+          curl --verbose --fail --retry 5 --retry-delay 5 ${{ vars.INTELLI_MATE_WEB_APP_URL }}
 
       - name: Write summary
         run: |
           echo "## Build and deploy web app" >> $GITHUB_STEP_SUMMARY
           echo "GitHub ref: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "Deployed to ${{ inputs.environment }} for https://dev.intellimate.app" >> $GITHUB_STEP_SUMMARY
+          echo "Deployed to ${{ inputs.environment }} for ${{ vars.INTELLI_MATE_WEB_APP_URL }}" >> $GITHUB_STEP_SUMMARY
