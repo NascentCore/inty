@@ -7,7 +7,9 @@
 
 1. [新建 GitHub Release](https://github.com/NascentCore/inty/releases/new) 选择创建新的 tag
    <img width="800" height="996" alt="image" src="https://github.com/user-attachments/assets/cb58a6d5-79cb-4772-8736-814c585bb165" />
-2. `-backend` 后缀添加到版本号上，版本号依次递增，每次 backend android 发布都要增加 fix 或者 minor 版本号
+2. `-backend` 后缀添加到版本号上，版本号依次递增，每次 backend android 发布都要增加 fix 或者 minor 版本号；
+   previous release 选择同样后缀的 tag，如下面发布 web app 就选择 -web 后缀
+   <img width="480" height="374" alt="image" src="https://github.com/user-attachments/assets/22f307a2-eefb-437d-acec-437ccd16ef0f" />
 3. [Build and deploy Inty backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
    选择刚刚创建的 tag，环境选择 prod
    <img width="800" height="1210" alt="image" src="https://github.com/user-attachments/assets/3e0fe7de-abf5-4eb8-b81d-ae9f31fa6399" />
