@@ -23,15 +23,16 @@ InTy 是一个 AI 智能伴侣平台，包含后端服务、Android 应用和 We
 
 ## 快速开始
 
-1. 克隆仓库并初始化子模块：
-
 ```bash
+# 1. 克隆仓库并初始化子模块：
 git clone --recurse-submodules git@github.com:NascentCore/inty.git
 ```
 
-> 没有 SSH 权限的开发者可以改用 `https://github.com/NascentCore/inty-backend.git`。
+Android App 开发使用 Android Studio 打开`inty/android_app`，
+详情参考 [android_app/README.md](android_app/README.md)。
 
-2. 如需本地开发后端服务，请参考 [backend/README.md](backend/README.md)。
+后端开发，代码位于 `app` 目录（目前正在逐步向 `backend` 目录迁移），
+请参考 [backend/README.md](backend/README.md)。
 
 如果子模块出现脏数据（如下图所示），可以按照下面的流程重置：
 
@@ -45,15 +46,7 @@ git submodule deinit -f .
 git submodule update --init --recursive
 ```
 
-### Git submodule 常用操作
-
-- **回滚到指定提交**：进入目标子模块目录后执行 `git checkout <commit-hash>`。
-- **拉取子模块最新代码**：在仓库根目录执行 `git submodule update --remote --recursive`。
-- **同步子模块远程信息**：在仓库根目录执行 `git submodule sync`
-
-<img width="960" height="236" alt="image" src="https://github.com/user-attachments/assets/a3b34dad-45f4-43d0-b1fb-c066f8397bd2" />
-
-更多进阶技巧可参考 [Git Submodule 使用指南](https://www.atlassian.com/git/articles/core-concept-workflows-and-tips)。
+更新子模块使用 [update_inty_sdk_submodule.sh](update_inty_sdk_submodule.sh)
 
 ## 使用 Docker 容器本地运行后端服务和 Android app（适用于 app 开发者）
 
