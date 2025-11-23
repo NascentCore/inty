@@ -102,7 +102,12 @@ fun HeartBottomAppBar(
                                 text = labelText,
                                 fontSize = textSize,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) Color(0xFF9C27B0) else Color.White,
+                                color =
+                                    if (isSelected) {
+                                        BottomTabSelectedLabelColor
+                                    } else {
+                                        BottomTabUnselectedLabelColor
+                                    },
                             )
                         }
                     },
@@ -128,6 +133,9 @@ data class HeartBottomTabItem(
         }
     }
 }
+
+private val BottomTabSelectedLabelColor = Color(0xFF9C27B0)
+private val BottomTabUnselectedLabelColor = Color(0x8C808080)
 
 private val bottomTabItems =
     listOf(
