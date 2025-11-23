@@ -80,9 +80,24 @@ class SettingViewModel : BaseVM() {
                         }
 
                         is HttpResult.Failure -> {
-                            ToastUtils.showShort(
-                                Utils.getApp().getString(R.string.toast_account_deletion_error)
-                            )
+                            // 检查错误消息是否包含订阅相关关键词
+                            val errorMessage = result.message
+                            if (errorMessage.contains("订阅", ignoreCase = true) ||
+                                errorMessage.contains("subscription", ignoreCase = true)) {
+                                ToastUtils.showShort(
+                                    Utils.getApp()
+                                        .getString(R.string.toast_cancel_subscription_first)
+                                )
+                            } else {
+                                // 如果有错误消息，显示错误消息；否则显示通用错误
+                                if (errorMessage.isNotEmpty()) {
+                                    ToastUtils.showShort(errorMessage)
+                                } else {
+                                    ToastUtils.showShort(
+                                        Utils.getApp().getString(R.string.toast_account_deletion_error)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
