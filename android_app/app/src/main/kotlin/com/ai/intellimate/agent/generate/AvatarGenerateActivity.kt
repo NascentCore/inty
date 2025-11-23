@@ -75,18 +75,29 @@ import com.ai.intellimate.xb.components.MultiLineBasicTextField
 class AvatarGenerateActivity : BaseActivity() {
 
     companion object {
+        private const val EXTRA_INITIAL_PROMPT = "extra_initial_prompt"
 
         /**
          * 启动单独的聊天界面
          *
          * @param context 上下文context
          */
-        fun launch(context: Context) {
-            context.startActivity(Intent(context, AvatarGenerateActivity::class.java))
+        fun launch(context: Context, initialPrompt: String? = null) {
+            context.startActivity(
+                Intent(context, AvatarGenerateActivity::class.java).apply {
+                    initialPrompt?.let { putExtra(EXTRA_INITIAL_PROMPT, it) }
+                }
+            )
         }
     }
 
     private val viewModel: AvatarGenerateViewModel by viewModels()
+    private var initialPromptArg: String? = null
+
+    override fun initConfigData() {
+        super.initConfigData()
+        initialPromptArg = intent.getStringExtra(EXTRA_INITIAL_PROMPT)
+    }
 
     @Composable
     override fun ConfigComposeUI() {
@@ -95,6 +106,7 @@ class AvatarGenerateActivity : BaseActivity() {
             modifier = Modifier.fillMaxSize(),
             viewModel = viewModel,
             onBack = { finish() },
+            initialPrompt = initialPromptArg,
         )
     }
 }
@@ -105,6 +117,7 @@ private fun AvatarGeneratePage(
     modifier: Modifier = Modifier,
     viewModel: AvatarGenerateViewModel,
     onBack: () -> Unit,
+    initialPrompt: String? = null,
 ) {
     val prompt by viewModel.prompt.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -114,6 +127,8 @@ private fun AvatarGeneratePage(
     val errorMessage by viewModel.errorMessage.collectAsState()
 
     val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(initialPrompt) { viewModel.initializePrompt(initialPrompt) }
 
     // Handle error messages
     LaunchedEffect(errorMessage) {
