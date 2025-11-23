@@ -15,8 +15,6 @@ import ai.sxwl.android.data.chat.domain.SendMessageUseCase
 import ai.sxwl.android.data.chat.domain.SyncChatDataUseCase
 import ai.sxwl.android.data.chat.domain.UpdateMessageFeedbackUseCase
 import ai.sxwl.android.data.chat.repository.ChatRepositoryImpl
-import ai.sxwl.android.data.explore.domain.ExploreRepository
-import ai.sxwl.android.data.explore.repository.ExploreRepositoryImpl
 
 /** 数据层依赖注入管理 遵循Clean Architecture的依赖注入模式 不使用Hilt，采用手动依赖注入 */
 object DataModule {
@@ -35,10 +33,6 @@ object DataModule {
 
     private val _agentRepository: AgentRepository by lazy {
         AgentRepositoryImpl(_agentCacheProvider)
-    }
-
-    private val _exploreRepository: ExploreRepository by lazy {
-        ExploreRepositoryImpl(_recommendedCacheProvider)
     }
 
     // UseCases
