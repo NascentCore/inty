@@ -88,13 +88,12 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.utils.formatDisplayId
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlin.math.abs
 import kotlin.math.min
 import kotlinx.coroutines.launch
-
-private const val DISPLAY_ID_VISIBLE_LENGTH = 8
 
 /** "我的"页面 */
 @Composable
@@ -831,16 +830,6 @@ private fun PremiumBanner(
             Text(text = str, fontSize = 16.sp, color = Color.White, textAlign = TextAlign.Center)
         }
     }
-}
-
-private fun formatDisplayId(fullId: String): String {
-    if (fullId.isEmpty()) {
-        return fullId
-    }
-    if (fullId.length <= DISPLAY_ID_VISIBLE_LENGTH) {
-        return fullId
-    }
-    return fullId.takeLast(DISPLAY_ID_VISIBLE_LENGTH)
 }
 
 /** ProfilePage 预览 */
