@@ -55,6 +55,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.ai.intellimate.R
+import com.ai.intellimate.boost.BoostConfig
+import com.ai.intellimate.boost.BoostError
+import com.ai.intellimate.boost.BoostException
+import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.ui.BoostSheet
+import com.ai.intellimate.boost.ui.BoostStatusChip
 import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatMorePanel
 import com.ai.intellimate.chat.ui.ChatSettingsDrawer
@@ -97,12 +103,26 @@ internal fun ChatPage(
     onKeyboardVisible: (Boolean) -> Unit = {},
     pageSourceOverride: String? = null, // 如果提供，则使用此 pageSource（通常来自 ChatActivity）
     isGuideVisible: Boolean = false,
+    shouldShowBoostSheetOnOpen: Boolean = false,
 ) {
 
     val context = LocalContext.current
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val isQueryMsgsCompleted by chatViewModel.isQueryMsgsCompleted.collectAsState()
     val chatMessages by chatViewModel.msgs.collectAsState()
+    val boostState by BoostManager.boostState.collectAsState()
+    var showBoostSheet by remember { mutableStateOf(false) }
+    var pendingBoostSheet by remember(shouldShowBoostSheetOnOpen) { mutableStateOf(shouldShowBoostSheetOnOpen) }
+    val scope = rememberCoroutineScope()
+    val showBoostError: (BoostError) -> Unit = { error ->
+        val messageRes =
+            when (error) {
+                BoostError.NotEnoughPoints -> R.string.boost_toast_not_enough_points
+                BoostError.DailyRewardAlreadyClaimed -> R.string.boost_daily_reward_already
+                else -> R.string.boost_toast_generic_error
+            }
+        ToastUtils.showShort(messageRes)
+    }
 
     val hasLoadingMessage =
         remember(chatMessages) {
@@ -208,6 +228,59 @@ internal fun ChatPage(
                 ),
             )
         }
+
+        if (showBoostSheet && agentInfo != null) {
+            val currentAgent = agentInfo
+            BoostSheet(
+                agentInfo = currentAgent,
+                availablePoints = boostState.availablePoints,
+                hasDailyReward = boostState.hasClaimedDailyReward,
+                onBoostConfirmed = { amount ->
+                    scope.launch {
+                        try {
+                            val result = BoostManager.boostAgent(currentAgent, amount)
+                            chatViewModel.appendBoostSystemMessage(
+                                currentAgent,
+                                result.pointsSpent,
+                                result.info.boostCount,
+                            )
+                            ToastUtils.showShort(
+                                context.getString(R.string.boost_toast_success, currentAgent.name)
+                            )
+                            showBoostSheet = false
+                        } catch (e: BoostException) {
+                            showBoostError(e.error)
+                            showBoostSheet = true
+                        } catch (_: Exception) {
+                            ToastUtils.showShort(R.string.boost_toast_generic_error)
+                            showBoostSheet = true
+                        }
+                    }
+                },
+                onClaimDailyReward = {
+                    scope.launch {
+                        try {
+                            val reward = BoostManager.claimDailyReward()
+                            ToastUtils.showShort(
+                                context.getString(R.string.boost_toast_daily_reward_claimed, reward)
+                            )
+                        } catch (e: BoostException) {
+                            showBoostError(e.error)
+                        } catch (_: Exception) {
+                            ToastUtils.showShort(R.string.boost_toast_generic_error)
+                        }
+                    }
+                },
+                onDismiss = { showBoostSheet = false },
+            )
+        }
+    }
+
+    LaunchedEffect(agentInfo?.id, pendingBoostSheet) {
+        if (agentInfo != null && pendingBoostSheet) {
+            showBoostSheet = true
+            pendingBoostSheet = false
+        }
     }
 
     LaunchedEffect(chatViewModel) {
@@ -284,7 +357,6 @@ internal fun ChatPage(
         }
 
         val drawerState = remember { mutableStateOf(DrawerValue.Closed) }
-        val scope = rememberCoroutineScope()
 
         Scaffold(
             modifier = Modifier.fillMaxSize().background(Color.Transparent),
@@ -320,6 +392,21 @@ internal fun ChatPage(
                     }
 
                     Spacer(Modifier.height(16.dp))
+
+                    agentInfo?.let {
+                        BoostStatusChip(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            availablePoints = boostState.availablePoints,
+                            onClick = {
+                                if (boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS) {
+                                    ToastUtils.showShort(R.string.boost_toast_not_enough_points)
+                                } else {
+                                    showBoostSheet = true
+                                }
+                            },
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
 
                     if (agentInfo != null && !vipStatus.isSubscribed) {
                         PremiumModelTag(

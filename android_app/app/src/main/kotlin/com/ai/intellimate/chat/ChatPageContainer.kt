@@ -228,6 +228,7 @@ fun ChatPageContainer(
                             isKeyboardVisibleChatPage = nextState
                         }
                     },
+                    shouldShowBoostSheetOnOpen = false,
                 )
                 if (isDebugMode) {
                     DebugAgentIndexBadge(

@@ -15,6 +15,7 @@ import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.LogUtils
 import android.app.Application
+import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.notifications.PushNotificationManager
 import com.ai.intellimate.utils.AgentCacheProviderImpl
 import com.ai.intellimate.utils.RecommendedAgentCacheProviderImpl
@@ -41,6 +42,9 @@ class IntelliMateApp : Application() {
         DataModule.setRecommendedCacheProvider(recommendedCacheProvider)
 
         UnifiedStartupManager.initializeEssential(this)
+
+        // 初始化本地 Boost 体系
+        BoostManager.initialize(this)
         initializeFirebaseAnalytics()
         initializeRemoteConfigDefaults()
         setupFCMessageHandler()
