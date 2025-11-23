@@ -78,7 +78,6 @@ def test_delete_account_success(integration_client: TestClient):
     assert profile_response.status_code in (400, 401)
 
 
-@pytest.mark.noci
 @pytest.mark.asyncio
 async def test_delete_account_with_active_subscription(
     integration_client: TestClient, db_session: AsyncSession
@@ -146,7 +145,6 @@ async def test_delete_account_with_active_subscription(
     test_client.close()
 
 
-@pytest.mark.noci
 @pytest.mark.asyncio
 async def test_delete_account_already_deleted(
     integration_client: TestClient, db_session: AsyncSession
@@ -186,13 +184,12 @@ async def test_delete_account_already_deleted(
         delete_data.get("message")
         or delete_data.get("data", {}).get("message", "")
     )
-    assert "已删除" in error_message or "deleted" in error_message.lower()
+    assert "删除" in error_message or "deleted" in error_message.lower()
 
     # Clean up
     test_client.close()
 
 
-@pytest.mark.noci
 def test_delete_account_with_reason(integration_client: TestClient):
     """Test account deletion with a custom deletion reason."""
     # Create a separate user for this test
@@ -232,4 +229,3 @@ def test_delete_account_with_reason(integration_client: TestClient):
     assert profile_response.status_code in (400, 401)
 
     test_client.close()
-

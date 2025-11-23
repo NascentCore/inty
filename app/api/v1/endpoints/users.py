@@ -211,7 +211,7 @@ async def check_deletion_eligibility(
 )
 async def delete_user_account(
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_user),
     request: Optional[AccountDeletionRequest] = None,
 ) -> Any:
     """
