@@ -94,7 +94,7 @@ object UiConfigs {
     }
 
     object Urls {
-        const val WhatsAppGroupInvite = "https://chat.whatsapp.com/FquOcDMQR7dBliPdXeKZ2w?mode=wwt"
+        const val WhatsAppGroupInvite = "https://chat.whatsapp.com/Cw1ZM46InipFHel3ws5ria"
         const val DiscordInvite = "https://discord.gg/xbJJ9NBdJT"
     }
 }
