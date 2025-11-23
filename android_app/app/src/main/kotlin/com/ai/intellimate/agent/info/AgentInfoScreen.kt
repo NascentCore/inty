@@ -302,21 +302,18 @@ internal fun AiAgentInfoScreen(
 
                             Spacer(Modifier.height(16.dp))
                         }
-
-                      if (galleryItems.isNotEmpty()) {
-                          Spacer(Modifier.height(16.dp))
-                          AgentGeneratedImagesSection(
-                              modifier = Modifier.padding(horizontal = 16.dp),
-                              images = galleryItems,
-                          )
-                      }
-                      
-
-                      Spacer(Modifier.height(60.dp))
-                      if (isDebugMode) {
-                        Spacer(Modifier.height(24.dp))
-                        AgentInfoDebugSection(agent = agent)
-                      }
+                        if (galleryItems.isNotEmpty()) {
+                            Spacer(Modifier.height(16.dp))
+                            AgentGeneratedImagesSection(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                images = galleryItems,
+                            )
+                        }
+                        if (isDebugMode) {
+                            Spacer(Modifier.height(60.dp))
+                            Spacer(Modifier.height(24.dp))
+                            AgentInfoDebugSection(agent = agent)
+                        }
                     }
                 }
             }
