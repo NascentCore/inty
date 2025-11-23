@@ -14,6 +14,7 @@ import android.content.Context
 import com.ai.intellimate.audio.AudioPreloadManager
 import com.ai.intellimate.explore.ExploreConstants
 import com.ai.intellimate.ui.components.VideoCacheManager
+import kotlin.math.min
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -312,35 +313,21 @@ object UnifiedStartupManager {
                         agents.filter { agent ->
                             !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
                         }
-                    AgentCacheManager.cacheAgents(filteredAgents)
-                    _recommendedAgents.value = filteredAgents
+                      AgentCacheManager.cacheAgents(filteredAgents)
+                      _recommendedAgents.value = filteredAgents
 
-                    // 异步预加载资源，不阻塞启动流程
-                    // 关键优化：优先预加载静态背景图（避免黑屏），然后预加载视频和音频
-                    val contextForPreload = applicationContext
-                    if (contextForPreload != null) {
-                        CoroutineScope(Dispatchers.IO).launch {
-                            try {
-                                // 第一步：优先预加载关键静态背景图（前10个，避免黑屏）
-                                // 这是最重要的，因为静态图是用户首先看到的
-                                ImagePreloadManager.preloadCriticalImages(agents, 10)
-
-                                // 第二步：预加载关键音频（前5个）
-                                AudioPreloadManager.preloadCriticalOpeningAudios(agents, 5)
-
-                                // 第三步：预加载关键背景视频（前5个）
-                                preloadBackgroundVideos(contextForPreload, agents, 5)
-
-                                // 第四步：预加载所有图片资源（包括静态背景图）
-                                ImagePreloadManager.preloadAgentsImages(agents, 5)
-
-                                // 第五步：预加载所有音频资源
-                                AudioPreloadManager.preloadAgentsOpeningAudios(agents, 3)
-                            } catch (e: Exception) {
-                                LogUtils.e("UnifiedStartupManager - 资源预加载异常: ${e.message}")
-                            }
-                        }
-                    }
+                      // 异步预加载资源，不阻塞启动流程
+                      // 关键优化：优先预加载静态背景图（避免黑屏），然后预加载视频和音频
+                      val contextForPreload = applicationContext
+                      if (contextForPreload != null) {
+                          CoroutineScope(Dispatchers.IO).launch {
+                              try {
+                                  preloadAgentMedia(contextForPreload, agents)
+                              } catch (e: Exception) {
+                                  LogUtils.e("UnifiedStartupManager - 资源预加载异常: ${e.message}")
+                              }
+                          }
+                      }
                 }
                 is HttpResult.Failure -> {
                     LogUtils.w("UnifiedStartupManager - 推荐agents同步失败: ${result.message}")
@@ -372,37 +359,22 @@ object UnifiedStartupManager {
                         agents.filter { agent ->
                             !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
                         }
-                    AgentCacheManager.cacheChatAgents(filteredAgents)
-                    _chatAgents.value = filteredAgents
+                      AgentCacheManager.cacheChatAgents(filteredAgents)
+                      _chatAgents.value = filteredAgents
 
-                    // 异步预加载资源，不阻塞启动流程
-                    // 关键优化：chatAgents是核心数据，需要更积极的预加载策略
-                    // 优先预加载静态背景图（避免黑屏），然后预加载视频和音频
-                    val contextForPreload = applicationContext
-                    if (contextForPreload != null) {
-                        CoroutineScope(Dispatchers.IO).launch {
-                            try {
-                                // 第一步：优先预加载关键静态背景图（前10个，避免黑屏）
-                                // chatAgents是核心数据，需要更积极的预加载
-                                ImagePreloadManager.preloadCriticalImages(agents, 10)
-
-                                // 第二步：预加载关键音频（前5个）
-                                AudioPreloadManager.preloadCriticalOpeningAudios(agents, 5)
-
-                                // 第三步：预加载关键背景视频（前5个）
-                                preloadBackgroundVideos(contextForPreload, agents, 5)
-
-                                // 第四步：预加载所有图片资源（包括静态背景图）
-                                // chatAgents通常有20个，预加载所有以确保流畅体验
-                                ImagePreloadManager.preloadAgentsImages(agents, 5)
-
-                                // 第五步：预加载所有音频资源
-                                AudioPreloadManager.preloadAgentsOpeningAudios(agents, 3)
-                            } catch (e: Exception) {
-                                LogUtils.e("UnifiedStartupManager - 聊天agents资源预加载异常: ${e.message}")
-                            }
-                        }
-                    }
+                      // 异步预加载资源，不阻塞启动流程
+                      // 关键优化：chatAgents是核心数据，需要更积极的预加载策略
+                      // 优先预加载静态背景图（避免黑屏），然后预加载视频和音频
+                      val contextForPreload = applicationContext
+                      if (contextForPreload != null) {
+                          CoroutineScope(Dispatchers.IO).launch {
+                              try {
+                                  preloadAgentMedia(contextForPreload, agents)
+                              } catch (e: Exception) {
+                                  LogUtils.e("UnifiedStartupManager - 聊天agents资源预加载异常: ${e.message}")
+                              }
+                          }
+                      }
                 }
                 is HttpResult.Failure -> {
                     LogUtils.w("UnifiedStartupManager - 聊天agents同步失败: ${result.message}")
@@ -512,11 +484,39 @@ object UnifiedStartupManager {
         _startupProgress.value = 0f
         _startupState.value = StartupState.Initializing
         _currentPhase.value = StartupPhase.Initializing
+        AgentMediaCache.clear()
     }
 
     /** 标记用户账户已就绪（用于logout后恢复状态） */
     fun markUserAccountReady() {
         _userAccountReady.value = true
+    }
+
+    /**
+     * 根据 AgentMediaCache 过滤后批量预加载图片、音频与视频，避免重复下载。
+     */
+    private suspend fun preloadAgentMedia(context: Context, agents: List<AgentInfo>) {
+        val imageTargets = AgentMediaCache.filterAgentsNeedingImages(agents)
+        if (imageTargets.isNotEmpty()) {
+            val criticalCount = min(10, imageTargets.size)
+            ImagePreloadManager.preloadCriticalImages(imageTargets, criticalCount)
+            ImagePreloadManager.preloadAgentsImages(imageTargets, 5)
+            AgentMediaCache.markImagesCached(imageTargets)
+        }
+
+        val audioTargets = AgentMediaCache.filterAgentsNeedingOpeningAudios(agents)
+        if (audioTargets.isNotEmpty()) {
+            val criticalCount = min(5, audioTargets.size)
+            AudioPreloadManager.preloadCriticalOpeningAudios(audioTargets, criticalCount)
+            AudioPreloadManager.preloadAgentsOpeningAudios(audioTargets, 3)
+            AgentMediaCache.markOpeningAudiosCached(audioTargets)
+        }
+
+        val videoTargets = AgentMediaCache.filterAgentsNeedingBackgroundVideos(agents)
+        if (videoTargets.isNotEmpty()) {
+            preloadBackgroundVideos(context, videoTargets, 5)
+            AgentMediaCache.markBackgroundVideosCached(videoTargets)
+        }
     }
 
     /**

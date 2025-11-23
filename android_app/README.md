@@ -25,6 +25,7 @@ experience your own imagination.
 - `AudioCacheManager` + `AudioPreloadManager`：`app/src/main/kotlin/com/ai/intellimate/audio/` 中使用 `LruCache<String, ByteArray>` 与 `context.cacheDir/audio_cache` 双层缓存开场白/消息语音，`UnifiedStartupManager` 启动阶段批量预热，命中后直接从内存或本地文件播放。
 - `VideoCacheManager`：`app/src/main/kotlin/com/ai/intellimate/ui/components/VideoCacheManager.kt` 把背景动画视频下载到 `context.cacheDir/video_cache`，内存仅存文件路径并同步至 `IntySetting`，`AnimatedBackground`、`AgentBackground` 以及启动流程调用 `preloadVideo()` 缓解首次加载黑屏。
 - `AdvancedCoilConfig` + `ImagePreloadManager`：`core/design` 为 Coil 配置 40% 内存 + 5% 磁盘缓存（目录 `context.cacheDir/image_cache`），`core/common/startup/ImagePreloadManager` 在推荐/聊天 agent 到手后批量 `preloadAgentsImages()`，保证头像与背景图片快速命中。
+- `AgentMediaCache`：`app/src/main/kotlin/com/ai/intellimate/utils/AgentMediaCache.kt` 纯内存跟踪已经预热过的图片、开场白音频与背景视频 URL，`UnifiedStartupManager` 依赖它过滤待预加载的 Agent，避免重复下载。
 
 ## 运行脚本化点击测试（UIAutomator）
 
