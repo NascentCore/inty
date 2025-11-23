@@ -47,9 +47,10 @@ export default function useAgentModel() {
   /**
    * 加载推荐角色列表
    * @param params 请求参数
+   * @param append 是否追加到列表（默认 false，替换列表）
    */
   const loadRecommendAgents = useCallback(
-    async (params?: Partial<IAgentRecommendRequest>) => {
+    async (params?: Partial<IAgentRecommendRequest>, append: boolean = false) => {
       setLoading(true);
       setError(null);
 
@@ -66,8 +67,12 @@ export default function useAgentModel() {
         if (result.code === 200 && result.data) {
           const data: IAgentRecommendData = result.data;
 
-          // 直接替换列表（首页只调用一次，不需要追加逻辑）
-          setRecommendList(data.list);
+          // 根据 append 参数决定是替换还是追加
+          if (append) {
+            setRecommendList((prev) => [...prev, ...data.list]);
+          } else {
+            setRecommendList(data.list);
+          }
 
           // 更新分页信息
           setPagination({
@@ -103,14 +108,14 @@ export default function useAgentModel() {
 
   /**
    * 加载更多推荐角色
-   * 加载下一页
+   * 加载下一页，追加到列表
    */
   const loadMoreRecommendAgents = useCallback(async () => {
-    if (pagination.page >= pagination.totalPages) {
+    if (pagination.page >= pagination.totalPages || loading) {
       return null;
     }
-    return await loadRecommendAgents({ page: pagination.page + 1 });
-  }, [loadRecommendAgents, pagination.page, pagination.totalPages]);
+    return await loadRecommendAgents({ page: pagination.page + 1 }, true);
+  }, [loadRecommendAgents, pagination.page, pagination.totalPages, loading]);
 
   /**
    * 加载 Agent 详情

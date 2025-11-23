@@ -1,15 +1,22 @@
 @import '@/styles/variables.less';
 
-.sidebar-layout {
+.sidebar-layout-wrapper {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   overflow: hidden;
+}
+
+.sidebar-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
   background: @dark-bg-primary;
+  min-height: 0; // 允许 flex 子元素缩小
 
   // 左侧边栏
   .sidebar-layout-aside {
     width: 280px;
-    height: 100vh;
     background: @dark-bg-secondary;
     color: @dark-text-primary;
     flex-shrink: 0;
@@ -23,11 +30,11 @@
   // 右侧主体内容
   .sidebar-layout-main {
     flex: 1;
-    height: 100vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     background: @dark-bg-primary;
+    min-height: 0; // 允许 flex 子元素缩小
 
     .main-content {
       flex: 1;
