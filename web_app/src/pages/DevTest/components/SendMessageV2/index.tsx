@@ -44,7 +44,7 @@ const SendMessageV2: React.FC = () => {
               content: values.content,
             },
           ],
-          stream: values.stream || false,
+          stream: values.stream === 'true',
         };
 
         logger.testDetail('Agent ID', values.agent_id);

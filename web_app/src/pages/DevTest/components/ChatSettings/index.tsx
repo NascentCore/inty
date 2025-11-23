@@ -23,8 +23,9 @@ const ChatSettings: React.FC = () => {
         const response = await client.api.v1.chats.agents.getSettings(values.agent_id);
 
         // 自定义成功日志
-        logger.testDetail('Voice ID', response.voice_id);
-        logger.testDetail('自动语音', response.auto_voice);
+        const responseData = (response as any).data || response;
+        logger.testDetail('Voice ID', responseData.voice_id);
+        logger.testDetail('自动语音', responseData.auto_voice);
         logger.testDetail('完整数据', response);
 
         return response;

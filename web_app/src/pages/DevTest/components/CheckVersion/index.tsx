@@ -30,7 +30,7 @@ const CheckVersion: React.FC = () => {
       ]}
       onTest={async (values) => {
         const params = {
-          appVersionCode: values.appVersionCode,
+          appVersionCode: Number.parseInt(values.appVersionCode, 10) || 100,
           appVersionName: values.appVersionName,
         };
 

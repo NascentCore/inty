@@ -29,8 +29,8 @@ const FollowingList: React.FC = () => {
       ]}
       onTest={async (values) => {
         const params = {
-          page: values.page || 1,
-          page_size: values.page_size || 20,
+          page: Number.parseInt(values.page, 10) || 1,
+          page_size: Number.parseInt(values.page_size, 10) || 20,
         };
 
         logger.testDetail('请求参数', params);

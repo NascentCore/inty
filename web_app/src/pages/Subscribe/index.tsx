@@ -36,9 +36,17 @@ const Subscribe: React.FC = () => {
       const response = await client.api.v1.subscription.listPlans();
 
       if (response.code === 200 && response.data) {
-        setPlansData(response.data);
+        // 确保 currency 字段存在，如果不存在则使用默认值
+        const plansData = {
+          ...response.data,
+          plans: response.data.plans.map((plan: any) => ({
+            ...plan,
+            currency: plan.currency || 'USD',
+          })),
+        };
+        setPlansData(plansData as ISubscriptionPlansData);
         logger.info('Successfully fetched subscription plans', {
-          planCount: response.data.plans.length,
+          planCount: plansData.plans.length,
         });
       } else {
         throw new Error(response.message || 'Failed to fetch subscription plans');
