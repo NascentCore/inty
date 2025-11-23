@@ -37,12 +37,6 @@ data class AgentInfo(
     // 本地使用的属性数据，非接口字段
     var isDeleted: Boolean = false // 标记该agent是否被服务端已经删除
 
-    fun imageAspectRatio(): Float {
-        // TODO: Gemini text-to-image 返回尺寸为 6/11（768/1408），
-        // 这是在指定 9/16 下的结果。
-        return .75f
-    }
-
     // 头像的url获取，根据尺寸比例 和quality
     fun getSmallAvatar(): String? {
         return getCdnImageUrl(avatar, width = 128)

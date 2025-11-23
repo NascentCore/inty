@@ -36,6 +36,9 @@ import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.ui.components.SmartTagsLayout
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 
+// 固定使用 9:16 宽高比
+private const val CARD_ASPECT_RATIO = 9f / 16f
+
 /** Explore页面的角色卡片组件 */
 @Composable
 fun ExploreCharacterCard(
@@ -44,10 +47,18 @@ fun ExploreCharacterCard(
     onClick: () -> Unit,
     index: Int? = null,
 ) {
+
     // 缓存渐变画笔，避免每次重组时重新创建
     val gradientBrush = remember {
         Brush.verticalGradient(
             colors = listOf(Color.Transparent, Color.Black.copy(.6f), Color.Black.copy(.95f))
+        )
+    }
+
+    // 底部渐变背景画笔，用于填充图片高度不足时的空白区域
+    val bottomGradientBrush = remember {
+        Brush.verticalGradient(
+            colors = listOf(Color.Black.copy(.95f), Color.Black.copy(.95f))
         )
     }
 
@@ -66,10 +77,26 @@ fun ExploreCharacterCard(
 
     Box(
         modifier =
-            modifier.fillMaxWidth().aspectRatio(agentInfo.imageAspectRatio()).noRippleClickable {
+            modifier.fillMaxWidth().aspectRatio(CARD_ASPECT_RATIO).noRippleClickable {
                 onClick()
             }
     ) {
+        // 底部渐变背景层 - 填充整个容器，确保图片高度不足时有渐变背景
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(
+                        brush = bottomGradientBrush,
+                        shape =
+                            RoundedCornerShape(
+                                topStart = 7.dp,
+                                topEnd = 7.dp,
+                                bottomStart = 8.dp,
+                                bottomEnd = 8.dp,
+                            ),
+                    )
+        )
+
         // 背景图片层
         Box(
             modifier =
