@@ -3,9 +3,10 @@
  * 聊天消息列表展示
  */
 
-import { Bot, MessageCircle } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import React, { useEffect, useRef } from 'react';
 import { Icon } from '@/components';
+import { DEFAULT_AGENT_AVATAR } from '@/constants';
 import type { IMessage } from '@/types';
 import MessageItem from '../MessageItem';
 import './index.less';
@@ -38,6 +39,7 @@ const MessageList: React.FC<IMessageListProps> = ({
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const resolvedAgentAvatar = agentAvatar || DEFAULT_AGENT_AVATAR;
 
   /**
    * 滚动到底部
@@ -83,17 +85,13 @@ const MessageList: React.FC<IMessageListProps> = ({
    * 渲染发送中状态
    */
   const renderSendingIndicator = () => {
-    if (!sending) return null;
+    if (!sending) {
+      return null;
+    }
 
     return (
       <div className="message-sending">
-        {agentAvatar ? (
-          <div className="sending-avatar" style={{ backgroundImage: `url(${agentAvatar})` }} />
-        ) : (
-          <div className="sending-avatar">
-            <Icon icon={Bot} size={20} />
-          </div>
-        )}
+        <div className="sending-avatar" style={{ backgroundImage: `url(${resolvedAgentAvatar})` }} />
         <div className="sending-bubble">
           <div className="typing-indicator">
             <span />
@@ -119,7 +117,7 @@ const MessageList: React.FC<IMessageListProps> = ({
                 <MessageItem
                   key={message.id}
                   message={message}
-                  agentAvatar={agentAvatar}
+                  agentAvatar={resolvedAgentAvatar}
                   agentId={agentId}
                 />
               ))}

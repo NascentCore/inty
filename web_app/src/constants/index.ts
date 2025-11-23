@@ -86,3 +86,7 @@ export const GOOGLE_AUTH_CONFIG = {
   /** Google OAuth Client ID */
   CLIENT_ID: '1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com',
 } as const;
+
+// 默认 Agent 头像（SVG Data URI，CREATED_BY_AGENT）
+export const DEFAULT_AGENT_AVATAR =
+  'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23667eea%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%23764ba2%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2232%22%20fill%3D%22url%28%23g%29%22%2F%3E%0A%20%20%3Ccircle%20cx%3D%2232%22%20cy%3D%2226%22%20r%3D%2211%22%20fill%3D%22white%22%20fill-opacity%3D%220.9%22%2F%3E%0A%20%20%3Cpath%20d%3D%22M16%2051c4.5-8%2012-12%2016-12s11.5%204%2016%2012%22%20stroke%3D%22white%22%20stroke-opacity%3D%220.8%22%20stroke-width%3D%224%22%20stroke-linecap%3D%22round%22%2F%3E%0A%3C%2Fsvg%3E%3C%21--CREATED_BY_AGENT--%3E';

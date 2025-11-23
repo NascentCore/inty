@@ -2,9 +2,8 @@
  * 聊天历史项组件
  */
 
-import { Bot } from 'lucide-react';
 import React from 'react';
-import { Icon } from '@/components';
+import { DEFAULT_AGENT_AVATAR } from '@/constants';
 import type { IChatItem } from '@/types';
 import { truncateMessage } from '@/utils/sidebarHelpers';
 import './index.less';
@@ -26,13 +25,11 @@ const ChatHistoryItem: React.FC<IChatHistoryItemProps> = ({ chat, isActive, onCl
   return (
     <div className={`chat-history-item ${isActive ? 'active' : ''}`} onClick={handleClick}>
       <div className="chat-avatar">
-        {chat.agent_avatar ? (
-          <img src={chat.agent_avatar} alt={chat.agent_name} className="avatar-image" />
-        ) : (
-          <div className="avatar-placeholder">
-            <Icon icon={Bot} size={16} />
-          </div>
-        )}
+        <img
+          src={chat.agent_avatar || DEFAULT_AGENT_AVATAR}
+          alt={chat.agent_name}
+          className="avatar-image"
+        />
       </div>
       <div className="chat-info">
         <div className="chat-title">{chat.agent_name}</div>

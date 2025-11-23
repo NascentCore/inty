@@ -3,9 +3,10 @@
  * 单条聊天消息展示
  */
 
-import { Bot, Loader2, User, Volume2, VolumeX } from 'lucide-react';
+import { Loader2, User, Volume2, VolumeX } from 'lucide-react';
 import React from 'react';
 import { Icon } from '@/components';
+import { DEFAULT_AGENT_AVATAR } from '@/constants';
 import { useVoicePlayer } from '@/hooks';
 import type { IMessage } from '@/types';
 import { formatMessageTime } from '@/utils';
@@ -35,6 +36,7 @@ const MessageItem: React.FC<IMessageItemProps> = ({
   agentId,
 }) => {
   const isUser = message.role === 'user';
+  const assistantAvatar = agentAvatar || DEFAULT_AGENT_AVATAR;
 
   // 使用语音播放 Hook
   const { voiceStatus, playVoice, stopVoice } = useVoicePlayer({
@@ -52,12 +54,8 @@ const MessageItem: React.FC<IMessageItemProps> = ({
             <div className="avatar-user">
               <Icon icon={User} size={20} />
             </div>
-          ) : agentAvatar ? (
-            <div className="avatar-assistant" style={{ backgroundImage: `url(${agentAvatar})` }} />
           ) : (
-            <div className="avatar-assistant">
-              <Icon icon={Bot} size={20} />
-            </div>
+            <div className="avatar-assistant" style={{ backgroundImage: `url(${assistantAvatar})` }} />
           )}
         </div>
       )}
