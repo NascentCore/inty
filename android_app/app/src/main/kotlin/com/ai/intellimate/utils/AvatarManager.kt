@@ -23,6 +23,10 @@ object AvatarManager {
         generationError = null
     }
 
+    fun updatePromptDraft(prompt: String) {
+        generationPrompt = prompt
+    }
+
     fun setGenerationPrompt(prompt: String) {
         generationPrompt = prompt
         isGenerating = true

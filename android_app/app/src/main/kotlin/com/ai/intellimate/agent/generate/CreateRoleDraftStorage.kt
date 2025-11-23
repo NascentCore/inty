@@ -58,6 +58,7 @@ data class CreateRoleDraft(
     val avatarUrls: List<String> = emptyList(),
     val selectedImageIndex: Int = 0,
     val croppedAvatarUrl: String? = null,
+    val avatarPrompt: String = "",
 ) {
     fun isEmpty(): Boolean {
         val hasTextFields =
@@ -67,7 +68,8 @@ data class CreateRoleDraft(
                 avatarUrls.isNotEmpty() ||
                 !croppedAvatarUrl.isNullOrBlank()
         val hasMeta = gender != DEFAULT_GENDER || visibility != DEFAULT_VISIBILITY
-        return !(hasTextFields || hasAvatars || hasMeta)
+        val hasAvatarPrompt = avatarPrompt.isNotBlank()
+        return !(hasTextFields || hasAvatars || hasMeta || hasAvatarPrompt)
     }
 
     companion object {

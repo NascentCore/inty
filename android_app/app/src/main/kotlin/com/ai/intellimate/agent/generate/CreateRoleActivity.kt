@@ -170,7 +170,9 @@ class CreateRoleActivity : BaseActivity() {
                 setResult(Activity.RESULT_OK)
                 finish()
             },
-            onAvatarGenerateClick = { AvatarGenerateActivity.Companion.launch(this) },
+            onAvatarGenerateClick = { prompt ->
+                AvatarGenerateActivity.launch(this, prompt?.takeIf { it.isNotBlank() })
+            },
             editAgent = agent,
         )
     }
@@ -183,7 +185,7 @@ private fun CreateRolePage(
     createRoleViewModel: CreateRoleViewModel,
     onBack: () -> Unit,
     onCreateSuccess: () -> Unit,
-    onAvatarGenerateClick: () -> Unit,
+    onAvatarGenerateClick: (String?) -> Unit,
     editAgent: AgentInfo? = null,
 ) {
     val isEditMode = editAgent != null
@@ -284,6 +286,9 @@ private fun CreateRolePage(
     val croppedInitial =
         if (isEditMode) editCroppedAvatar else savedDraft?.croppedAvatarUrl ?: editCroppedAvatar
     var croppedAvatarUrl by remember(croppedInitial) { mutableStateOf<String?>(croppedInitial) }
+    val avatarPromptInitial =
+        if (isEditMode) "" else savedDraft?.avatarPrompt.orEmpty()
+    var avatarPrompt by remember(avatarPromptInitial) { mutableStateOf(avatarPromptInitial) }
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -307,6 +312,7 @@ private fun CreateRolePage(
                         avatarUrls = normalizedUrls,
                         selectedImageIndex = sanitizedIndex,
                         croppedAvatarUrl = croppedAvatarUrl?.takeIf { it.isNotBlank() },
+                        avatarPrompt = avatarPrompt,
                     )
                 }
                 .distinctUntilChanged()
@@ -318,6 +324,7 @@ private fun CreateRolePage(
     LaunchedEffect(isEditMode) {
         if (!isEditMode) {
             AvatarManager.clearAllAvatarData()
+            avatarPrompt = savedDraft?.avatarPrompt.orEmpty()
             LogUtils.i("Cleared avatar data for new character creation")
         }
     }
@@ -458,9 +465,12 @@ private fun CreateRolePage(
             }
 
             // Show current generation prompt if generating
+            val promptDraft = AvatarManager.getGenerationPrompt()
             if (generatingStatus) {
-                val prompt = AvatarManager.getGenerationPrompt()
-                LogUtils.i("Currently generating with prompt: '$prompt'")
+                LogUtils.i("Currently generating with prompt: '$promptDraft'")
+            }
+            if (promptDraft.isNotBlank() && promptDraft != avatarPrompt) {
+                avatarPrompt = promptDraft
             }
         }
 
@@ -498,6 +508,10 @@ private fun CreateRolePage(
                 if (error != null) {
                     ToastUtils.showShort(error)
                     isGeneratingAvatar = false
+                }
+                val promptDraft = AvatarManager.getGenerationPrompt()
+                if (promptDraft.isNotBlank() && promptDraft != avatarPrompt) {
+                    avatarPrompt = promptDraft
                 }
             }
         }
@@ -538,6 +552,11 @@ private fun CreateRolePage(
             if (error != null) {
                 ToastUtils.showShort(error)
                 isGeneratingAvatar = false
+            }
+
+            val promptDraft = AvatarManager.getGenerationPrompt()
+            if (promptDraft.isNotBlank() && promptDraft != avatarPrompt) {
+                avatarPrompt = promptDraft
             }
         }
     }
@@ -588,6 +607,8 @@ private fun CreateRolePage(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Avatar Upload Section
+            val promptForGeneration =
+                if (avatarPrompt.isNotBlank()) avatarPrompt else settings
             AvatarUploadSection(
                 avatarUrl = avatarUrl,
                 avatarUrls = avatarUrls,
@@ -595,7 +616,7 @@ private fun CreateRolePage(
                 isGenerating = isGeneratingAvatar,
                 croppedAvatarUrl = croppedAvatarUrl,
                 onGenerateClick = {
-                    onAvatarGenerateClick()
+                    onAvatarGenerateClick(promptForGeneration.takeIf { it.isNotBlank() })
                     // 当点击生成头像时，不清除当前URL，让用户返回时检查新的URL
                 },
                 onImageSelected = { index ->
@@ -604,7 +625,8 @@ private fun CreateRolePage(
                 },
                 onRegenerate = { prompt ->
                     // Navigate to avatar generation page with existing prompt
-                    onAvatarGenerateClick()
+                    val promptToUse = prompt.takeIf { it.isNotBlank() } ?: promptForGeneration
+                    onAvatarGenerateClick(promptToUse.takeIf { it.isNotBlank() })
                 },
                 onFaceEdit = {
                     // Get the current avatar URL to crop

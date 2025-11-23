@@ -39,6 +39,7 @@ class AvatarGenerateViewModel : BaseVM() {
 
     fun updatePrompt(newPrompt: String) {
         _prompt.value = newPrompt
+        AvatarManager.updatePromptDraft(newPrompt)
     }
 
     fun selectImage(index: Int) {
@@ -363,6 +364,16 @@ class AvatarGenerateViewModel : BaseVM() {
 
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    fun initializePrompt(initialPrompt: String?) {
+        if (initialPrompt.isNullOrBlank()) {
+            return
+        }
+        if (_prompt.value.isBlank()) {
+            _prompt.value = initialPrompt
+            AvatarManager.updatePromptDraft(initialPrompt)
+        }
     }
 
     private suspend fun generateBackground(
