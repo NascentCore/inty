@@ -206,8 +206,7 @@ private fun CreateRolePage(
         }
     var gender by remember(genderInitial) { mutableStateOf(genderInitial) }
 
-    val editSettings =
-        editAgent?.settings?.get("description") as? String ?: editAgent?.prompt ?: ""
+    val editSettings = editAgent?.settings?.get("description") as? String ?: editAgent?.prompt ?: ""
     val settingsInitial = if (isEditMode) editSettings else savedDraft?.settings.orEmpty()
     var settings by remember(settingsInitial) { mutableStateOf(settingsInitial) }
 
@@ -274,18 +273,13 @@ private fun CreateRolePage(
             val lastIndex = avatarUrlsInitial.lastIndex
             if (lastIndex < 0) 0 else draftIndex.coerceIn(0, lastIndex)
         } ?: 0
-    var selectedImageIndex by remember(
-        isEditMode,
-        avatarUrlsInitial,
-        editSelectedIndex,
-        savedSelectedIndex,
-    ) {
-        mutableIntStateOf(if (isEditMode) editSelectedIndex else savedSelectedIndex)
-    }
+    var selectedImageIndex by
+        remember(isEditMode, avatarUrlsInitial, editSelectedIndex, savedSelectedIndex) {
+            mutableIntStateOf(if (isEditMode) editSelectedIndex else savedSelectedIndex)
+        }
     var isGeneratingAvatar by remember { mutableStateOf(false) }
     val editCroppedAvatar =
-        if (isEditMode)
-            editAgent?.avatar?.takeIf { it.isNotBlank() && it != editAgent.background }
+        if (isEditMode) editAgent?.avatar?.takeIf { it.isNotBlank() && it != editAgent.background }
         else null
     val croppedInitial =
         if (isEditMode) editCroppedAvatar else savedDraft?.croppedAvatarUrl ?: editCroppedAvatar
@@ -298,23 +292,23 @@ private fun CreateRolePage(
     if (!isEditMode) {
         LaunchedEffect(Unit) {
             snapshotFlow {
-                val normalizedUrls = avatarUrls.filter { it.isNotBlank() }
-                val sanitizedIndex =
-                    if (normalizedUrls.isEmpty()) 0
-                    else selectedImageIndex.coerceIn(0, normalizedUrls.lastIndex)
-                CreateRoleDraft(
-                    name = name,
-                    gender = gender,
-                    settings = settings,
-                    intro = intro,
-                    opening = opening,
-                    visibility = visibility,
-                    avatarUrl = avatarUrl?.takeIf { it.isNotBlank() },
-                    avatarUrls = normalizedUrls,
-                    selectedImageIndex = sanitizedIndex,
-                    croppedAvatarUrl = croppedAvatarUrl?.takeIf { it.isNotBlank() },
-                )
-            }
+                    val normalizedUrls = avatarUrls.filter { it.isNotBlank() }
+                    val sanitizedIndex =
+                        if (normalizedUrls.isEmpty()) 0
+                        else selectedImageIndex.coerceIn(0, normalizedUrls.lastIndex)
+                    CreateRoleDraft(
+                        name = name,
+                        gender = gender,
+                        settings = settings,
+                        intro = intro,
+                        opening = opening,
+                        visibility = visibility,
+                        avatarUrl = avatarUrl?.takeIf { it.isNotBlank() },
+                        avatarUrls = normalizedUrls,
+                        selectedImageIndex = sanitizedIndex,
+                        croppedAvatarUrl = croppedAvatarUrl?.takeIf { it.isNotBlank() },
+                    )
+                }
                 .distinctUntilChanged()
                 .collect { draft -> CreateRoleDraftStorage.saveDraft(draft) }
         }

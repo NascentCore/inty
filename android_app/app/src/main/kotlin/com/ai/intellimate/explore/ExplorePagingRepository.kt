@@ -31,7 +31,8 @@ class ExplorePagingRepository(
                         prefetchDistance = ExploreConstants.PREFETCH_DISTANCE,
                         enablePlaceholders = ExploreConstants.ENABLE_PLACEHOLDERS,
                         initialLoadSize = ExploreConstants.PAGE_SIZE,
-                        maxSize = ExploreConstants.PAGE_SIZE * ExploreConstants.MAX_CACHE_PAGES, // 最大缓存页数
+                        maxSize =
+                            ExploreConstants.PAGE_SIZE * ExploreConstants.MAX_CACHE_PAGES, // 最大缓存页数
                     ),
                 pagingSourceFactory = {
                     ExplorePagingSource(

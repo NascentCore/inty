@@ -109,7 +109,9 @@ class AgentInfoViewModel : BaseVM() {
                 launch(Dispatchers.IO) {
                     runCatching { chatRepository.ensureInitialHistory(agentId, GALLERY_PAGE_SIZE) }
                         .onFailure { throwable ->
-                            LogUtils.e("ensureInitialHistory failed for $agentId: ${throwable.message}")
+                            LogUtils.e(
+                                "ensureInitialHistory failed for $agentId: ${throwable.message}"
+                            )
                         }
                 }
 
@@ -118,9 +120,7 @@ class AgentInfoViewModel : BaseVM() {
                         messages
                             .asSequence()
                             .filter { it.role == "assistant" }
-                            .mapNotNull { message ->
-                                mapMessageToGalleryItem(message)
-                            }
+                            .mapNotNull { message -> mapMessageToGalleryItem(message) }
                             .sortedByDescending { it.timestamp ?: "" }
                             .distinctBy { it.imageUrl }
                             .take(MAX_GALLERY_ITEMS)

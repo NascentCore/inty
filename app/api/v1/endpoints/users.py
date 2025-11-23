@@ -180,8 +180,8 @@ async def check_deletion_eligibility(
 ) -> Any:
     """
     检查用户是否可以删除账户
-    
-    .. deprecated:: 
+
+    .. deprecated::
         此端点已废弃，请使用 POST /api/v1/users/delete-account 端点。
         删除账户时会自动执行相同的检查。
     """

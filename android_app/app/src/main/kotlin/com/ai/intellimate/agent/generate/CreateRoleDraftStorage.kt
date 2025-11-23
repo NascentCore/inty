@@ -14,10 +14,7 @@ object CreateRoleDraftStorage {
 
     private const val KEY_CREATE_ROLE_DRAFT = "create_role_draft_v1"
 
-    private val moshi =
-        Moshi.Builder()
-            .addLast(KotlinJsonAdapterFactory())
-            .build()
+    private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
     private val adapter = moshi.adapter(CreateRoleDraft::class.java)
 
     fun saveDraft(draft: CreateRoleDraft) {
@@ -64,10 +61,7 @@ data class CreateRoleDraft(
 ) {
     fun isEmpty(): Boolean {
         val hasTextFields =
-            name.isNotBlank() ||
-                settings.isNotBlank() ||
-                intro.isNotBlank() ||
-                opening.isNotBlank()
+            name.isNotBlank() || settings.isNotBlank() || intro.isNotBlank() || opening.isNotBlank()
         val hasAvatars =
             !avatarUrl.isNullOrBlank() ||
                 avatarUrls.isNotEmpty() ||
