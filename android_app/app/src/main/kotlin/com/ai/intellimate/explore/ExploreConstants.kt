@@ -18,17 +18,17 @@ object ExploreConstants {
     const val INITIAL_PAGE = 1
 
     /** Explore页面滚动 - 初始速度缩放，用于整体放缓或加速手势 */
-    const val SCROLL_INITIAL_VELOCITY_MULTIPLIER = 0.92f
+    const val SCROLL_INITIAL_VELOCITY_MULTIPLIER = 0.9f
 
     /** Explore页面滚动 - 触发滑动的最小速度，避免轻微抖动 */
     const val SCROLL_MIN_FLING_VELOCITY = 80f
 
     /** Explore页面滚动 - 限制最大速度，防止 fling 过猛 */
-    const val SCROLL_MAX_FLING_VELOCITY = 7500f
+    const val SCROLL_MAX_FLING_VELOCITY = 12000f
 
     /** Explore页面滚动 - 减速度因子，>1 表示更快停下，<1 表示惯性更强 */
-    const val SCROLL_DECELERATION_MULTIPLIER = 1.15f
+    const val SCROLL_DECELERATION_MULTIPLIER = 1.5f
 
     /** Explore页面滚动 - 每次手势允许的最大即时位移 */
-    const val SCROLL_DELTA_THRESHOLD = 24f
+    const val SCROLL_DELTA_THRESHOLD = 216f
 }
