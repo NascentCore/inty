@@ -232,6 +232,10 @@
 ### 一句话总结
 提供订阅用户一个“Frontier Models”优先模式，对话、生图、语音三大模型全部直连业内最新的 Frontier 级别模型，并随厂商分发节奏滚动升级。
 
+权益选项已经添加到订阅文案中
+
+<img width="200" height="1204" alt="image" src="https://github.com/user-attachments/assets/b4ef813a-d9f9-4db5-a1ec-3ab62c25e3bd" />
+
 ### 核心用户价值
 - 付费用户在角色、创作、通话的所有入口都可一键开启“Frontier 模式”，获得更强的理解力、情感演绎与视觉表现力。
 - Frontier 模型池由运营团队与模型供应商共建，自动检测业界发布（如 OpenAI、Anthropic、Google、Meta 等）并进行灰度验证，确保始终使用最新版。
