@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -69,6 +70,8 @@ fun ExploreContent(
             initialFirstVisibleItemIndex = vm.savedFirstVisibleIndex.collectAsState().value,
             initialFirstVisibleItemScrollOffset = vm.savedFirstVisibleOffset.collectAsState().value,
         )
+
+    val scrollConnection = rememberExploreScrollConnection()
 
     // 检测用户是否主动滚动到底部触发加载更多
     var showLoadMoreLoading by remember { mutableStateOf(false) }
@@ -170,7 +173,10 @@ fun ExploreContent(
     } else {
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
-            modifier = modifier.padding(bottom = innerPadding.calculateBottomPadding()),
+            modifier =
+                modifier
+                    .padding(bottom = innerPadding.calculateBottomPadding())
+                    .nestedScroll(scrollConnection),
             state = gridState,
             contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
