@@ -63,6 +63,13 @@ class AgentInfoActivity : BaseActivity() {
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
         val agentInfo = viewModel.agentInfo.collectAsState()
-        agentInfo.value?.let { agent -> AiAgentInfoScreen(agent, onBack = { finish() }) }
+        val galleryImages = viewModel.chatImageGallery.collectAsState()
+        agentInfo.value?.let { agent ->
+            AiAgentInfoScreen(
+                agent = agent,
+                galleryItems = galleryImages.value,
+                onBack = { finish() },
+            )
+        }
     }
 }

@@ -246,6 +246,9 @@
 
     <string name="str_chat_disabled">Chat unavailable</string>
     <string name="str_agent_is_deleted">Character is no longer available</string>
+    <string name="agent_gallery_ai_images_title">AI-Generated Images</string>
+    <string name="agent_gallery_ai_images_description">Based on your chat history · showing the latest %1$d images</string>
+    <string name="agent_gallery_ai_images_content_description">AI-generated chat image</string>
 
     <!-- Empty State Messages -->
     <string name="empty_conversations">No conversations yet\nStart chatting with your favorite characters!</string>

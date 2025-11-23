@@ -1,5 +1,6 @@
 package com.ai.intellimate.agent.info
 
+import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
@@ -10,6 +11,7 @@ import android.content.ClipboardManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +21,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -38,8 +42,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -49,7 +55,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.getSystemService
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.ai.intellimate.R
+import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
@@ -60,6 +71,16 @@ private const val CLIPBOARD_LABEL_AGENT_ID = "Agent ID"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
+    AiAgentInfoScreen(agent = agent, galleryItems = emptyList(), onBack = onBack)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun AiAgentInfoScreen(
+    agent: AgentInfo,
+    galleryItems: List<AgentImageGalleryItem>,
+    onBack: () -> Unit,
+) {
     val context = LocalContext.current
     var showBottomSheet by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState()
@@ -284,6 +305,14 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                             Spacer(Modifier.height(16.dp))
                         }
 
+                      if (galleryItems.isNotEmpty()) {
+                          Spacer(Modifier.height(16.dp))
+                          AgentGeneratedImagesSection(
+                              modifier = Modifier.padding(horizontal = 16.dp),
+                              images = galleryItems,
+                          )
+                      }
+
                         Spacer(Modifier.height(60.dp))
                     }
                 }
@@ -310,6 +339,89 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                 onCancelClick = { showBottomSheet = false },
             )
         }
+    }
+}
+
+private object AgentGalleryConfig {
+    val SectionSpacing = 12.dp
+    val SectionTitleSpacing = 4.dp
+    val ImageSpacing = 12.dp
+    val ImageWidth = 140.dp
+    val ImageCornerRadius = 14.dp
+    val SectionBottomPadding = 8.dp
+    const val CDN_IMAGE_WIDTH = 480
+    const val CDN_IMAGE_QUALITY = 70
+}
+
+@Composable
+private fun AgentGeneratedImagesSection(modifier: Modifier = Modifier, images: List<AgentImageGalleryItem>) {
+    var previewImage by remember { mutableStateOf<String?>(null) }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.agent_gallery_ai_images_title),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+        )
+        Spacer(Modifier.height(AgentGalleryConfig.SectionTitleSpacing))
+        Text(
+            text = stringResource(R.string.agent_gallery_ai_images_description, images.size),
+            fontSize = 12.sp,
+            color = Color.White.copy(alpha = 0.7f),
+        )
+        Spacer(Modifier.height(AgentGalleryConfig.SectionSpacing))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(AgentGalleryConfig.ImageSpacing)) {
+            items(images, key = { it.messageId }) { item ->
+                AgentGalleryImageCard(item = item) { previewImage = it }
+            }
+        }
+        Spacer(Modifier.height(AgentGalleryConfig.SectionBottomPadding))
+    }
+
+    if (previewImage != null) {
+        Dialog(
+            onDismissRequest = { previewImage = null },
+            properties =
+                DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    dismissOnClickOutside = true,
+                    dismissOnBackPress = true,
+                ),
+        ) {
+            FullScreenImageViewer(imageUrl = previewImage.orEmpty(), onDismiss = { previewImage = null })
+        }
+    }
+}
+
+@Composable
+private fun AgentGalleryImageCard(item: AgentImageGalleryItem, onPreview: (String) -> Unit) {
+    val context = LocalContext.current
+    val aspectRatio =
+        if (item.height > 0) item.width.toFloat() / item.height.toFloat() else 1f
+    Box(
+        modifier =
+            Modifier.width(AgentGalleryConfig.ImageWidth)
+                .clip(RoundedCornerShape(AgentGalleryConfig.ImageCornerRadius))
+                .background(Color.White.copy(alpha = 0.08f))
+                .noRippleClickable { onPreview(item.imageUrl) },
+    ) {
+        AsyncImage(
+            modifier = Modifier.fillMaxWidth().aspectRatio(aspectRatio),
+            model =
+                ImageRequest.Builder(context)
+                    .data(
+                        getCdnImageUrl(
+                            item.imageUrl,
+                            width = AgentGalleryConfig.CDN_IMAGE_WIDTH,
+                            quality = AgentGalleryConfig.CDN_IMAGE_QUALITY,
+                        )
+                    )
+                    .build(),
+            contentDescription =
+                stringResource(R.string.agent_gallery_ai_images_content_description),
+            contentScale = ContentScale.Crop,
+        )
     }
 }
 
@@ -388,5 +500,23 @@ private fun PreviewAgentInfoScreen() {
             prompt = "性感，时尚，火辣，大方",
         )
 
-    AiAgentInfoScreen(agent) {}
+        val gallery =
+            listOf(
+                AgentImageGalleryItem(
+                    messageId = "1",
+                    imageUrl = "https://example.com/demo1.png",
+                    width = 512,
+                    height = 768,
+                    timestamp = null,
+                ),
+                AgentImageGalleryItem(
+                    messageId = "2",
+                    imageUrl = "https://example.com/demo2.png",
+                    width = 512,
+                    height = 512,
+                    timestamp = null,
+                ),
+            )
+
+        AiAgentInfoScreen(agent = agent, galleryItems = gallery) {}
 }
