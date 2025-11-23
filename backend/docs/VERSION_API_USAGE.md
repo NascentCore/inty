@@ -6,9 +6,10 @@ The version check API allows clients to verify if they need to update to the lat
 
 ### POST /api/v1/version/check
 
-Check if the client app needs to update.
+Check if the client app needs to update.  
+客户端需要通过 HTTP Header 传递 `appVersionCode`（整型，必传），后端会忽略 `appVersionName`，仅根据 version code 判断是否需要更新。
 
-**Request Body:**
+**Request Body（可选，用于兼容旧实现）:**
 
 ```json
 {
@@ -86,16 +87,11 @@ google_play:
   - Useful when transitioning between tracks
   - System will try tracks in order until it finds version information
 
-### Version Name Parsing
+### Version Comparison Strategy
 
-The system automatically handles complex version name formats from Google Play:
-
-- `"217 (1.0.1 (507a57a))"` → extracts `"1.0.1"`
-- `"(1.0.1)"` → extracts `"1.0.1"`
-- `"1.0.1"` → uses as is
-- `"v1.2.3"` → uses as is
-
-This ensures accurate version comparison regardless of Google Play's internal naming conventions.
+- 仅比较 Google Play 暴露的 `versionCode`，逻辑更简单、行为一致。
+- 当客户端 `versionCode` 小于最新版本时返回 `update_required = true`。
+- 若 `versionCode` 低于配置的 `min_supported_version`，将附加 `force_update_reasons` 强制用户升级。
 
 ## Response Fields
 
