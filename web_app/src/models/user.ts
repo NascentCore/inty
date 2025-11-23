@@ -76,8 +76,14 @@ export default function useUserModel() {
 
       setError('获取用户信息失败');
       return false;
-    } catch (err) {
+    } catch (err: any) {
       const errorMsg = err instanceof Error ? err.message : '获取用户信息失败';
+      if (err?.status === 401) {
+        // 这里使用退出登录 再重新访客登录
+        await logout();
+        window.location.reload();
+        return false;
+      }
       setError(errorMsg);
       return false;
     } finally {
