@@ -18,7 +18,7 @@ object ExploreConstants {
     const val INITIAL_PAGE = 1
 
     /** Explore页面滚动 - 初始速度缩放，用于整体放缓或加速手势 */
-    const val SCROLL_INITIAL_VELOCITY_MULTIPLIER = 0.9f
+    const val SCROLL_INITIAL_VELOCITY_MULTIPLIER = 0.8f
 
     /** Explore页面滚动 - 触发滑动的最小速度，避免轻微抖动 */
     const val SCROLL_MIN_FLING_VELOCITY = 80f
