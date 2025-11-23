@@ -94,6 +94,8 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlinx.coroutines.launch
 
+private const val DISPLAY_ID_VISIBLE_LENGTH = 8
+
 /** "我的"页面 */
 @Composable
 internal fun ProfilePage(
@@ -464,40 +466,42 @@ private fun ProfileHeader(
                 )
             }
 
-            // 头像和昵称之间的间距根据折叠状态调整
-            Spacer(Modifier.width(19.dp * (1f - collapseProgress * 0.3f)))
+              // 头像和昵称之间的间距根据折叠状态调整
+              Spacer(Modifier.width(19.dp * (1f - collapseProgress * 0.3f)))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = userProfile.nickname.ifEmpty { "Guest" },
-                    color = Color.White,
-                    fontSize = (20.sp.value * (1f - collapseProgress * 0.2f)).sp, // 折叠时稍微缩小
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    modifier =
-                        Modifier.fillMaxWidth().noRippleClickable {
-                            if (userProfile.id.isNotEmpty()) {
-                                val clipboard = context.getSystemService<ClipboardManager>()
-                                clipboard?.setPrimaryClip(
-                                    ClipData.newPlainText("User ID", userProfile.id)
-                                )
-                                if (clipboard != null) {
-                                    ToastUtils.showShort(R.string.toast_copied_to_clipboard)
-                                }
-                            }
-                        },
-                    text = stringResource(R.string.ID, userProfile.id),
-                    color = Color.White.copy(0.55f),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Light,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+              val displayId = remember(userProfile.id) { formatDisplayId(userProfile.id) }
+
+              Column(modifier = Modifier.weight(1f)) {
+                  Text(
+                      text = userProfile.nickname.ifEmpty { "Guest" },
+                      color = Color.White,
+                      fontSize = (20.sp.value * (1f - collapseProgress * 0.2f)).sp, // 折叠时稍微缩小
+                      fontWeight = FontWeight.SemiBold,
+                      maxLines = 1,
+                      overflow = TextOverflow.Ellipsis,
+                  )
+                  Spacer(Modifier.height(6.dp))
+                  Text(
+                      modifier =
+                          Modifier.fillMaxWidth().noRippleClickable {
+                              if (userProfile.id.isNotEmpty()) {
+                                  val clipboard = context.getSystemService<ClipboardManager>()
+                                  clipboard?.setPrimaryClip(
+                                      ClipData.newPlainText("User ID", userProfile.id)
+                                  )
+                                  if (clipboard != null) {
+                                      ToastUtils.showShort(R.string.toast_copied_to_clipboard)
+                                  }
+                              }
+                          },
+                      text = stringResource(R.string.ID, displayId),
+                      color = Color.White.copy(0.55f),
+                      fontSize = 12.sp,
+                      fontWeight = FontWeight.Light,
+                      maxLines = 1,
+                      overflow = TextOverflow.Ellipsis,
+                  )
+              }
 
             Spacer(Modifier.width(16.dp))
         }
@@ -827,6 +831,16 @@ private fun PremiumBanner(
             Text(text = str, fontSize = 16.sp, color = Color.White, textAlign = TextAlign.Center)
         }
     }
+}
+
+private fun formatDisplayId(fullId: String): String {
+    if (fullId.isEmpty()) {
+        return fullId
+    }
+    if (fullId.length <= DISPLAY_ID_VISIBLE_LENGTH) {
+        return fullId
+    }
+    return fullId.takeLast(DISPLAY_ID_VISIBLE_LENGTH)
 }
 
 /** ProfilePage 预览 */
