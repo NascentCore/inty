@@ -71,12 +71,6 @@ private const val CLIPBOARD_LABEL_AGENT_ID = "Agent ID"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
-    AiAgentInfoScreen(agent = agent, galleryItems = emptyList(), onBack = onBack)
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 internal fun AiAgentInfoScreen(
     agent: AgentInfo,
     galleryItems: List<AgentImageGalleryItem>,
