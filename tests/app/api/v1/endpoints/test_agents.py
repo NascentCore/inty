@@ -94,3 +94,47 @@ def test_create_agent_with_empty_background(
 
     # 清理：删除创建的 agent
     integration_client.delete_agent(agent["id"])
+
+
+@pytest.mark.noci
+def test_create_agent_with_non_binary_gender(integration_client: TestClient):
+    """测试创建性别为 NON_BINARY 的角色"""
+    agent_data = {
+        "name": "Non-Binary Test Agent",
+        "gender": "NON_BINARY",
+        "visibility": "PRIVATE",
+        "personality": "一个性别非二元的测试角色",
+        "scenario": "用于测试 NON_BINARY 性别选项的场景",
+        "intro": "这是一个性别非二元的测试角色",
+        "opening": "你好！我是性别非二元的角色。",
+    }
+
+    # 发送创建请求
+    response = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/ai/agents",
+        json=agent_data,
+        headers={"Authorization": f"Bearer {integration_client.token}"},
+    )
+
+    # 验证响应
+    assert response.status_code == 200, f"Request failed: {response.text}"
+
+    response_data = response.json()
+    assert response_data.get("code") == 200, f"API error: {response_data}"
+
+    # 验证创建的 agent 数据
+    agent = response_data["data"]
+    assert agent["name"] == agent_data["name"]
+    assert (
+        agent["gender"] == "NON_BINARY"
+    ), f"Expected gender to be NON_BINARY, but got: {agent['gender']}"
+    assert agent["visibility"] == agent_data["visibility"]
+    assert agent["personality"] == agent_data["personality"]
+    assert agent["scenario"] == agent_data["scenario"]
+
+    # 验证 agent 有唯一 ID
+    assert agent["id"]
+    assert agent["readable_id"]
+
+    # 清理：删除创建的 agent
+    integration_client.delete_agent(agent["id"])

@@ -123,3 +123,70 @@ def test_agent_extensions_field():
 
     assert final_agent.extensions == {}, "空对象应该为空对象"
     db.close()
+
+
+def test_create_agent_with_non_binary_gender():
+    """测试创建性别为 NON_BINARY 的角色"""
+    # 数据库连接配置
+    DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+
+    # 创建数据库引擎和会话
+    engine = create_engine(DATABASE_URL)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    # 创建会话
+    db = SessionLocal()
+
+    # 1. 首先创建一个测试用户
+    user_id = f"test-user-{uuid.uuid4().hex[:8]}"
+    user_readable_id = f"user{uuid.uuid4().hex[:4]}"
+
+    test_user = User(
+        id=user_id,
+        readable_id=user_readable_id,
+        auth_type=AuthType.PHONE,
+        nickname="Test User",
+        email="test@example.com",
+        system_language="en",
+        is_active=True,
+    )
+    db.add(test_user)
+    db.commit()
+    db.refresh(test_user)
+
+    # 2. 创建一个性别为 NON_BINARY 的 Agent
+    agent_id = f"test-agent-{uuid.uuid4().hex[:8]}"
+    readable_id = f"test{uuid.uuid4().hex[:4]}"
+
+    new_agent = Agent(
+        id=agent_id,
+        readable_id=readable_id,
+        name="非二元性别测试角色",
+        gender=Gender.NON_BINARY,
+        avatar="https://example.com/avatar.jpg",
+        intro="这是一个性别非二元的测试角色",
+        opening="你好！我是性别非二元的角色。",
+        visibility=AgentVisibility.PUBLIC,
+        status=AgentStatus.APPROVED,
+        creator_id=test_user.id,
+    )
+
+    # 保存到数据库
+    db.add(new_agent)
+    db.commit()
+    db.refresh(new_agent)
+
+    # 3. 验证创建的 Agent
+    retrieved_agent = db.query(Agent).filter(Agent.id == agent_id).first()
+
+    assert retrieved_agent is not None, "Agent 应该存在"
+    assert retrieved_agent.gender == Gender.NON_BINARY, f"性别应该是 NON_BINARY，但得到: {retrieved_agent.gender}"
+    assert retrieved_agent.name == "非二元性别测试角色"
+    assert retrieved_agent.creator_id == test_user.id
+
+    # 4. 清理测试数据
+    db.delete(retrieved_agent)
+    db.delete(test_user)
+    db.commit()
+
+    db.close()
