@@ -468,7 +468,7 @@ private fun ProfileHeader(
               // 头像和昵称之间的间距根据折叠状态调整
               Spacer(Modifier.width(19.dp * (1f - collapseProgress * 0.3f)))
 
-              val displayId = remember(userProfile.id) { formatDisplayId(userProfile.id) }
+              val displayId = remember(userProfile.id, context) { formatDisplayId(userProfile.id, context = context) }
 
               Column(modifier = Modifier.weight(1f)) {
                   Text(

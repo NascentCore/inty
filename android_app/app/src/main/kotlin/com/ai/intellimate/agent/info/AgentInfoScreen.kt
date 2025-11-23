@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -84,7 +85,7 @@ internal fun AiAgentInfoScreen(
     val context = LocalContext.current
     var showBottomSheet by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState()
-    val displayId = remember(agent.id) { formatDisplayId(agent.id) }
+    val displayId = remember(agent.id, context) { formatDisplayId(agent.id, context = context) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AgentBackground(
