@@ -8,6 +8,8 @@ import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
+import ai.sxwl.android.data.api.model.GoogleLoginRequest
+import ai.sxwl.android.data.api.NetServiceMgr
 import android.content.Intent
 import android.view.GestureDetector
 import android.view.MotionEvent
