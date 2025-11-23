@@ -84,9 +84,6 @@ class ChatViewModel : BaseVM() {
     private val _isQueryMsgsCompleted = MutableStateFlow<Boolean>(false)
     val isQueryMsgsCompleted = _isQueryMsgsCompleted.asStateFlow()
 
-    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    private val chatApi by lazy { NetServiceMgr.getChatApi() }
-
     // 绑定到 ChatSessionManager 的收集任务
     private var messagesJob: Job? = null
     private var loadingMoreJob: Job? = null
@@ -1066,7 +1063,7 @@ class ChatViewModel : BaseVM() {
     private fun getChatSetting() = launchBackground {
         val agentId = agentInfo.value?.id ?: return@launchBackground
         // 有agent信息，才请求
-        val result = chatApi.getChatSettings(agentId)
+        val result = NetServiceMgr.getChatApi().getChatSettings(agentId)
         when (result) {
             is HttpResult.Failure -> {
                 // 此设置，暂时不用toast显示
@@ -1088,7 +1085,7 @@ class ChatViewModel : BaseVM() {
         val agentId = agentInfo.value?.id ?: return@launchBackground
         // 有agent信息，才请求
         val req = ChatSettingsReq(style_prompt = prompt)
-        val result = chatApi.updateChatSettings(agentId, req)
+        val result = NetServiceMgr.getChatApi().updateChatSettings(agentId, req)
         when (result) {
             is HttpResult.Failure -> NetworkErrorHandler.showNetworkAwareError(result.message)
             is HttpResult.Success -> {
@@ -1108,7 +1105,7 @@ class ChatViewModel : BaseVM() {
     fun setAgentID(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = chatApi.getAgentInfo(agentId)
+                val result = NetServiceMgr.getChatApi().getAgentInfo(agentId)
                 when (result) {
                     is HttpResult.Success -> {
                         setAgentInfo(result.data)

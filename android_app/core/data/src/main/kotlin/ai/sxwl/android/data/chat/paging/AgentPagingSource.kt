@@ -23,8 +23,6 @@ class AgentPagingSource(
     private val cacheProvider: AgentCacheProvider? = null,
 ) : PagingSource<Int, AgentInfo>() {
 
-    private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
-
     companion object {
         private const val PAGE_SIZE = 20
         private const val INITIAL_PAGE = 1
@@ -148,7 +146,7 @@ class AgentPagingSource(
     private suspend fun loadFromNetwork(page: Int, pageSize: Int): NetworkResult {
         return try {
             val result =
-                agentApi.chatAgents(
+                NetServiceMgr.getAgentApi().chatAgents(
                     page = page,
                     pageSize = pageSize,
                     sort_seed = sortSeed.toString(),

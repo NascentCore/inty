@@ -1,5 +1,6 @@
 package ai.sxwl.android.data.store
 
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.Utils
@@ -57,6 +58,7 @@ object IntySetting {
         // 先清除客户端缓存，确保旧客户端不会残留
         // 这样可以避免token更新和客户端获取之间的竞态条件
         IntyNetworkManager.clearClientCache()
+        NetServiceMgr.clearCache()
 
         // 然后更新token
         changeUser(uid)
@@ -65,6 +67,7 @@ object IntySetting {
         // 再次清除缓存，确保使用新token创建客户端
         // 虽然getClient()会清除旧token的缓存，但这里双重保险
         IntyNetworkManager.clearClientCache()
+        NetServiceMgr.clearCache()
     }
 
     /** 用于业务标记消息已读的最后一条消息的判断 */

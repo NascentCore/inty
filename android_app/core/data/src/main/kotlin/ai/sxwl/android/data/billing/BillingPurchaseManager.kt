@@ -36,9 +36,6 @@ internal class BillingPurchaseManager(
     private val vipStatusFlow: MutableStateFlow<VipStatus>,
     private val plansFlow: MutableStateFlow<List<VipPlan>>,
 ) {
-
-    private val api = NetServiceMgr.getSubscriptionApi()
-
     /** 处理购买更新 */
     fun onPurchasesUpdated(billingResult: BillingResult, purchases: MutableList<Purchase>?) {
         LogUtils.d("Billing 购买更新回调: 响应码=${billingResult.responseCode}")
@@ -314,7 +311,7 @@ internal class BillingPurchaseManager(
                 )
 
                 // 调用验证接口
-                when (val result = api.verifySubscription(verifyRequest)) {
+                when (val result = NetServiceMgr.getSubscriptionApi().verifySubscription(verifyRequest)) {
                     is HttpResult.Success -> {
                         val response = result.data
                         if (response.isVerified) {

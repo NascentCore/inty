@@ -37,8 +37,6 @@ enum class HomeTabIndex {
 
 class MainViewModel : BaseVM() {
 
-    private val commonApi: ICommonApi by lazy { NetServiceMgr.getCommonApi() }
-
     val followingAgents = mutableStateListOf<AgentInfo>() // 关注的agents列表数据
 
     private val _selectedTab = MutableStateFlow(HomeTabIndex.Chat)
@@ -247,7 +245,7 @@ class MainViewModel : BaseVM() {
     val needForceUpgrade = MutableStateFlow<AppVersionRsp.AppVersionData?>(null)
 
     private fun checkAppVersion() = launchBackground {
-        when (val result = commonApi.checkAppUpgrade()) {
+        when (val result = NetServiceMgr.getCommonApi().checkAppUpgrade()) {
             is HttpResult.Success -> {
                 val rsp = result.data
                 if (rsp.update_required && rsp.force_update) {

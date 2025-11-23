@@ -77,12 +77,17 @@ object NetworkConfig {
 
     /** 获取当前环境配置 */
     fun getCurrentEnvironmentConfig(): EnvironmentConfig {
-        return when (getCurrentBuildType()) {
-            BuildType.LOCAL -> getLocalConfig()
-            BuildType.DEBUG -> getDebugConfig()
-            BuildType.PLAY_DEBUG -> getPlayDebugConfig()
-            BuildType.RELEASE -> getReleaseConfig()
+        val baseConfig =
+            when (getCurrentBuildType()) {
+                BuildType.LOCAL -> getLocalConfig()
+                BuildType.DEBUG -> getDebugConfig()
+                BuildType.PLAY_DEBUG -> getPlayDebugConfig()
+                BuildType.RELEASE -> getReleaseConfig()
+            }
+        if (getCurrentBuildType() == BuildType.DEBUG) {
+            return debugOnlyApplyRuntimeOverride(baseConfig)
         }
+        return baseConfig
     }
 
     /** 本地环境配置 */
@@ -221,5 +226,14 @@ object NetworkConfig {
     /** 检查是否启用Chucker */
     fun shouldEnableChucker(): Boolean {
         return getCurrentEnvironmentConfig().logging.enableChuckerLogging
+    }
+
+    private fun debugOnlyApplyRuntimeOverride(config: EnvironmentConfig): EnvironmentConfig {
+        val buildType = getCurrentBuildType()
+        if (buildType != BuildType.DEBUG) {
+            throw IllegalStateException("Runtime backend override is not supported for build type: $buildType")
+        }
+        val overrideInfo = DebugBackendEndpointStore.getOverrideInfo() ?: return config
+        return config.copy(baseUrl = overrideInfo.url)
     }
 }

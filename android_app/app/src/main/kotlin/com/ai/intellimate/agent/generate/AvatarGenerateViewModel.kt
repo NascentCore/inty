@@ -18,9 +18,6 @@ import kotlinx.coroutines.withContext
 
 class AvatarGenerateViewModel : BaseVM() {
 
-    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    private val agentApi by lazy { NetServiceMgr.getAgentApi() }
-
     // UI States
     private val _prompt = MutableStateFlow("")
     val prompt: StateFlow<String> = _prompt.asStateFlow()
@@ -372,7 +369,7 @@ class AvatarGenerateViewModel : BaseVM() {
         request: GenerateBackgroundRequest
     ): GenerateBackgroundResponse {
         try {
-            val result = agentApi.generateBackground(request)
+            val result = NetServiceMgr.getAgentApi().generateBackground(request)
             LogUtils.i("generateBackground = $result")
 
             when (result) {

@@ -40,9 +40,6 @@ class TtsManager private constructor(private val context: Context) {
     // 去重与并发控制：同一个( agentId, messageId ) 在同一时刻只能有一个in-flight
     private val inFlight = mutableMapOf<String, MutableList<(Result<String>) -> Unit>>()
 
-    // 延迟获取API依赖
-    private val chatApi by lazy { NetServiceMgr.getChatApi() }
-
     /**
      * 生成消息语音
      *
@@ -112,7 +109,7 @@ class TtsManager private constructor(private val context: Context) {
                     completeWithError(dedupKey, messageId, "TTS生成失败：ID格式无效", onError)
                     return@launch
                 }
-                val response = withTimeout(30_000) { chatApi.fetchMsgVoice(agentId, messageId) }
+                val response = withTimeout(30_000) { NetServiceMgr.getChatApi().fetchMsgVoice(agentId, messageId) }
 
                 when (response) {
                     is HttpResult.Success -> {

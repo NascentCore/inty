@@ -17,13 +17,10 @@ internal class BillingRemoteManager(
     private val plansFlow: MutableStateFlow<List<VipPlan>>,
     private val priceManager: BillingPriceManager,
 ) {
-
-    private val api = NetServiceMgr.getSubscriptionApi()
-
     /** 获取远程数据 */
     suspend fun fetchRemote(isConnected: Boolean) {
 
-        runCatching { api.getSubscriptionPlans() }
+        runCatching { NetServiceMgr.getSubscriptionApi().getSubscriptionPlans() }
             .onSuccess { result ->
                 when (result) {
                     is HttpResult.Success -> {

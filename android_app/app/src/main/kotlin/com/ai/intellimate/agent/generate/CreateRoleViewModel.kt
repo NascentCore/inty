@@ -18,8 +18,6 @@ import retrofit2.HttpException
 /** CreateRoleActivity 的 ViewModel 负责管理 Agent 的创建和更新逻辑 */
 class CreateRoleViewModel : BaseVM() {
 
-    private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
-
     /**
      * 创建 Agent
      *
@@ -34,7 +32,7 @@ class CreateRoleViewModel : BaseVM() {
     ) {
         launchBackground {
             try {
-                val result = agentApi.createAgent(request)
+                val result = NetServiceMgr.getAgentApi().createAgent(request)
 
                 withContext(Dispatchers.Main) {
                     when (result) {
@@ -86,7 +84,7 @@ class CreateRoleViewModel : BaseVM() {
         LogUtils.i("CreateRoleViewModel - updateAgent: $agentId")
         launchBackground {
             try {
-                val result = agentApi.updateAgent(agentId, request)
+                val result = NetServiceMgr.getAgentApi().updateAgent(agentId, request)
 
                 withContext(Dispatchers.Main) {
                     when (result) {

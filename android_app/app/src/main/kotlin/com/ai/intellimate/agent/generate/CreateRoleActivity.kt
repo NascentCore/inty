@@ -363,11 +363,10 @@ private fun CreateRolePage(
                             val body =
                                 MultipartBody.Part.createFormData("file", file.name, requestFile)
 
-                            val agentApi = NetServiceMgr.getAgentApi()
                             // Use CreateRoleViewModel's scope to launch the coroutine
                             createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
                                 try {
-                                    val response = agentApi.uploadAvatar(body)
+                                    val response = NetServiceMgr.getAgentApi().uploadAvatar(body)
                                     when (response) {
                                         is HttpResult.Success -> {
                                             val uploadedUrl = response.data.url

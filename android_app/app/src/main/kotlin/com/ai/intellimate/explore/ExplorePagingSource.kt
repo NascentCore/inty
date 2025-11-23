@@ -53,8 +53,6 @@ class ExplorePagingSource(
     private val fetchCallback: ExploreFetchCallback? = null,
 ) : PagingSource<Int, AgentInfo>() {
 
-    private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
-
     companion object {
         // 使用统一的常量
         private const val PAGE_SIZE = ExploreConstants.PAGE_SIZE
@@ -171,7 +169,7 @@ class ExplorePagingSource(
         val startTime = System.currentTimeMillis()
         return try {
             val result =
-                agentApi.exploreAgents(
+                NetServiceMgr.getAgentApi().exploreAgents(
                     page = page,
                     pageSize = pageSize,
                     sort_seed = sortSeed.toString(),

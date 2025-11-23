@@ -26,8 +26,6 @@ import retrofit2.HttpException
 /** Profile 页面 ViewModel 负责管理用户创建的 Agents 列表、用户信息等 */
 class ProfileViewModel : BaseVM() {
 
-    private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
-
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -117,7 +115,7 @@ class ProfileViewModel : BaseVM() {
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = agentApi.getUserCreatedAgents(skip, PAGE_SIZE)
+                val result = NetServiceMgr.getAgentApi().getUserCreatedAgents(skip, PAGE_SIZE)
 
                 when (result) {
                     is HttpResult.Success -> {
@@ -186,7 +184,7 @@ class ProfileViewModel : BaseVM() {
     fun deleteAgent(agentId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         launchBackground {
             try {
-                val result = agentApi.deleteAgent(agentId)
+                val result = NetServiceMgr.getAgentApi().deleteAgent(agentId)
 
                 withContext(Dispatchers.Main) {
                     when (result) {

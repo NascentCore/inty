@@ -37,10 +37,6 @@ class AgentInfoViewModel : BaseVM() {
 
     private val _chatImageGallery = MutableStateFlow<List<AgentImageGalleryItem>>(emptyList())
     val chatImageGallery = _chatImageGallery.asStateFlow()
-
-    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    val chatApi by lazy { NetServiceMgr.getChatApi() }
-    val agentApi by lazy { NetServiceMgr.getAgentApi() }
     private val chatRepository: ChatRepository = DataModule.getChatRepository()
 
     private var galleryAgentId: String? = null
@@ -50,7 +46,7 @@ class AgentInfoViewModel : BaseVM() {
         bindGallery(agentId)
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = chatApi.getAgentInfo(agentId)
+                val result = NetServiceMgr.getChatApi().getAgentInfo(agentId)
                 LogUtils.i("getAgentInfo = $result")
                 when (result) {
                     is HttpResult.Success -> {
@@ -83,7 +79,7 @@ class AgentInfoViewModel : BaseVM() {
     private fun refreshAgentData(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = agentApi.getAgentDetail(agentId)
+                val result = NetServiceMgr.getAgentApi().getAgentDetail(agentId)
                 LogUtils.i("refreshAgentData = $result")
                 when (result) {
                     is HttpResult.Success -> {
