@@ -82,7 +82,7 @@ internal fun AiAgentInfoScreen(
     val isDebugMode = HeartAppUtils.isAppDebugMode()
     var showBottomSheet by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState()
-    val displayId = remember(agent.id, context) { formatDisplayId(agent.id, context = context) }
+    val displayId = remember(agent.id) { formatDisplayId(agent.id) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AgentBackground(
