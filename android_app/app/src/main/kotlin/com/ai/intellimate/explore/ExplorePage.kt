@@ -96,15 +96,17 @@ fun ExplorePage(
             // 使用原生下拉刷新状态
             var isRefreshing by remember { mutableStateOf(false) }
             var refreshStartTime by remember { mutableLongStateOf(0L) }
+            var isAtTop by remember { mutableStateOf(true) } // 是否在第1页顶部
 
             // 监听Paging的刷新状态，自动控制下拉刷新指示器
             // 添加最小持续时间（400ms），避免快速完成时的闪动
-            LaunchedEffect(lazyPagingItems?.loadState?.refresh, isRefreshing) {
+            LaunchedEffect(lazyPagingItems?.loadState?.refresh, isRefreshing, agentsFlow) {
                 val currentTime = System.currentTimeMillis()
                 val minRefreshDuration = 400L // 最小刷新持续时间（毫秒）
                 val elapsedTime = if (refreshStartTime > 0) currentTime - refreshStartTime else 0L
+                val loadState = lazyPagingItems?.loadState?.refresh
 
-                when (lazyPagingItems?.loadState?.refresh) {
+                when (loadState) {
                     is LoadState.Loading -> {
                         // 正在加载，保持刷新状态
                         // 如果 refreshStartTime 未设置且正在刷新，则设置开始时间
@@ -143,13 +145,20 @@ fun ExplorePage(
                     }
 
                     null -> {
-                        // 无数据状态，如果正在刷新则停止
-                        if (isRefreshing) {
-                            if (elapsedTime >= minRefreshDuration) {
+                        // 无数据状态（agentsFlow 为 null 或 lazyPagingItems 为 null）
+                        // 如果正在刷新，等待新的数据流创建
+                        if (isRefreshing && agentsFlow != null) {
+                            // agentsFlow 已创建，等待 lazyPagingItems 加载
+                            // 如果等待时间过长，强制结束刷新
+                            if (elapsedTime >= 2000) {
                                 isRefreshing = false
                                 refreshStartTime = 0L
-                            } else {
-                                delay(minRefreshDuration - elapsedTime)
+                            }
+                        } else if (isRefreshing && agentsFlow == null) {
+                            // agentsFlow 为 null，说明正在清空数据，保持刷新状态
+                        } else if (isRefreshing) {
+                            // 其他情况，如果超过最小持续时间则结束
+                            if (elapsedTime >= minRefreshDuration) {
                                 isRefreshing = false
                                 refreshStartTime = 0L
                             }
@@ -161,6 +170,11 @@ fun ExplorePage(
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
                 onRefresh = {
+                    // 只有在第1页顶部时才允许刷新
+                    if (!isAtTop) {
+                        return@PullToRefreshBox
+                    }
+
                     // 设置刷新开始时间
                     refreshStartTime = System.currentTimeMillis()
                     isRefreshing = true
@@ -175,6 +189,9 @@ fun ExplorePage(
                     onClickAgent = onClickAgent,
                     isRefreshing = isRefreshing,
                     onRetry = { viewModel.refreshRecommendAgents() },
+                    onTopStateChanged = { isAtTopValue ->
+                        isAtTop = isAtTopValue
+                    },
                 )
             }
         }

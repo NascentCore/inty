@@ -67,9 +67,21 @@ class ExplorePagingSource(
                 val page = params.key ?: INITIAL_PAGE
                 val pageSize = params.loadSize.coerceAtMost(PAGE_SIZE)
 
+                // 检查sortSeed是否仍然有效（防止刷新时旧请求污染新数据）
+                val currentSortSeed = IntySetting.sortSeed()
+                if (currentSortSeed != sortSeed) {
+                    // 返回空数据，Paging会自动处理
+                    return@withContext LoadResult.Page(
+                        data = emptyList(),
+                        prevKey = null,
+                        nextKey = null,
+                    )
+                }
+
                 // 第一页特殊处理：优先使用缓存数据
                 if (page == INITIAL_PAGE && useCache && cacheProvider != null) {
                     val cachedAgents = cacheProvider.getCachedRecommendedAgents()
+
                     if (cachedAgents.isNotEmpty()) {
                         // 过滤掉id为空的agent，避免key重复问题
                         val validCachedAgents = cachedAgents.filter { it.id.isNotEmpty() }
@@ -93,9 +105,18 @@ class ExplorePagingSource(
                     }
                 }
 
+                // 再次检查sortSeed（网络请求前，防止长时间网络请求期间sortSeed变化）
+                val sortSeedBeforeNetwork = IntySetting.sortSeed()
+                if (sortSeedBeforeNetwork != sortSeed) {
+                    return@withContext LoadResult.Page(
+                        data = emptyList(),
+                        prevKey = null,
+                        nextKey = null,
+                    )
+                }
+
                 // 检查用户账户是否已就绪，如果未就绪则等待或返回空数据
                 if (!UnifiedStartupManager.isUserAccountReady()) {
-
                     // 等待用户账户就绪，最多等待5秒（增加等待时间，给登录流程更多时间）
                     var waitTime = 0
                     while (!UnifiedStartupManager.isUserAccountReady() && waitTime < 5000) {
@@ -117,6 +138,17 @@ class ExplorePagingSource(
 
                 // 从网络加载数据
                 val result = loadFromNetwork(page, pageSize)
+
+                // 网络请求后再次检查sortSeed（防止网络请求完成后sortSeed已变化）
+                val sortSeedAfterNetwork = IntySetting.sortSeed()
+                if (sortSeedAfterNetwork != sortSeed) {
+                    // 丢弃结果，返回空数据
+                    return@withContext LoadResult.Page(
+                        data = emptyList(),
+                        prevKey = null,
+                        nextKey = null,
+                    )
+                }
 
                 when (result) {
                     is NetworkResult.Success -> {
@@ -212,7 +244,20 @@ class ExplorePagingSource(
         // 在后台协程中执行，不阻塞当前加载
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                // 检查sortSeed是否仍然有效
+                val currentSortSeed = IntySetting.sortSeed()
+                if (currentSortSeed != sortSeed) {
+                    return@launch
+                }
+
                 val result = loadFromNetwork(page, pageSize)
+
+                // 再次检查sortSeed
+                val sortSeedAfterLoad = IntySetting.sortSeed()
+                if (sortSeedAfterLoad != sortSeed) {
+                    return@launch
+                }
+
                 if (result is NetworkResult.Success) {
                     val agents = result.data.list ?: emptyList()
                     // 过滤掉id为空的agent，避免key重复问题

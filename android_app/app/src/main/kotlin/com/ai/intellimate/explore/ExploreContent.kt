@@ -55,6 +55,7 @@ fun ExploreContent(
     onClickAgent: (AgentInfo) -> Unit,
     isRefreshing: Boolean = false,
     onRetry: (() -> Unit)? = null,
+    onTopStateChanged: ((Boolean) -> Unit)? = null,
 ) {
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
     val vm: ExploreViewModel = viewModel()
@@ -72,6 +73,18 @@ fun ExploreContent(
         )
 
     val scrollConnection = rememberExploreScrollConnection()
+
+    // 检测是否在第1页顶部（允许下拉刷新）
+    val isAtTop by remember {
+        derivedStateOf {
+            gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
+        }
+    }
+
+    // 通知父组件顶部状态变化
+    LaunchedEffect(isAtTop) {
+        onTopStateChanged?.invoke(isAtTop)
+    }
 
     // 检测用户是否主动滚动到底部触发加载更多
     var showLoadMoreLoading by remember { mutableStateOf(false) }
