@@ -53,6 +53,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
+import com.ai.intellimate.utils.formatDisplayId
 
 private const val CLIPBOARD_LABEL_AGENT_ID = "Agent ID"
 
@@ -62,6 +63,7 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
     val context = LocalContext.current
     var showBottomSheet by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState()
+    val displayId = remember(agent.id) { formatDisplayId(agent.id) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AgentBackground(
@@ -174,7 +176,7 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                                     Spacer(Modifier.width(16.dp))
                                     Text(
                                         modifier = Modifier.fillMaxWidth(),
-                                        text = stringResource(R.string.ID, agent.id),
+                                        text = stringResource(R.string.ID, displayId),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Light,
                                         color = Color.White.copy(0.55f),
