@@ -101,7 +101,10 @@ const AdSense: React.FC<IAdSenseProps> = ({
 
     try {
       // 初始化广告
-      ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+      if (!(window as any).adsbygoogle) {
+        (window as any).adsbygoogle = [];
+      }
+      (window as any).adsbygoogle.push({});
       isInitialized.current = true;
     } catch (err) {
       console.error('AdSense 初始化失败:', err);

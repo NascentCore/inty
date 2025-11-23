@@ -60,7 +60,7 @@ const HomePage: React.FC = () => {
       {/* 页面标题 */}
       <div className="page-header">
         <h1 className="page-title">discover</h1>
-        <button className="download-button" onClick={handleDownloadClick}>
+        <button type="button" className="download-button" onClick={handleDownloadClick}>
           <Icon icon={Download} size={18} />
           <span>Download App</span>
         </button>
