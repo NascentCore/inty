@@ -1,0 +1,188 @@
+package ai.sxwl.android.data.explore.paging
+
+import ai.sxwl.android.data.api.IAgentApi
+import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.AgentConstants
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.AgentInfoResponse
+import ai.sxwl.android.data.cache.RecommendedAgentCacheProvider
+import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.utils.LogUtils
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
+import com.architecture.httplib.core.HttpResult
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/** Explore页面的Paging数据源 负责处理推荐agents的分页加载、缓存管理 */
+open class ExplorePagingSource(
+    private val useCache: Boolean = true,
+    private val sortSeed: Int = IntySetting.sortSeed(),
+    private val cacheProvider: RecommendedAgentCacheProvider? = null,
+) : PagingSource<Int, AgentInfo>() {
+
+    private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
+
+    companion object {
+        // 使用统一的常量
+        protected const val PAGE_SIZE = ExploreConstants.PAGE_SIZE
+        protected const val INITIAL_PAGE = ExploreConstants.INITIAL_PAGE
+    }
+
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, AgentInfo> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val page = params.key ?: INITIAL_PAGE
+                val pageSize = params.loadSize.coerceAtMost(PAGE_SIZE)
+
+                LogUtils.i("ExplorePagingSource - 加载第${page}页，页面大小: $pageSize")
+
+                // 第一页特殊处理：优先使用缓存数据
+                if (page == INITIAL_PAGE && useCache && cacheProvider != null) {
+                    val cachedAgents = cacheProvider.getCachedRecommendedAgents()
+                    if (cachedAgents.isNotEmpty()) {
+                        // 过滤掉id为空的agent，避免key重复问题
+                        val validCachedAgents = cachedAgents.filter { it.id.isNotEmpty() }
+
+                        if (validCachedAgents.isNotEmpty()) {
+                            // 如果有缓存数据，返回缓存数据，同时后台加载网络数据
+                            if (cacheProvider.shouldUpdateFromNetwork()) {
+                                // 后台静默刷新，不阻塞UI
+                                loadFromNetworkAsync(page, pageSize)
+                            }
+
+                            val hasMoreData = validCachedAgents.isNotEmpty()
+
+                            return@withContext LoadResult.Page(
+                                data = validCachedAgents,
+                                prevKey = null,
+                                nextKey = if (hasMoreData) page + 1 else null,
+                            )
+                        }
+                    }
+                }
+
+                // 检查用户账户是否已就绪，如果未就绪则返回空数据
+                if (!IntySetting.isLogin()) {
+                    return@withContext LoadResult.Page(
+                        data = emptyList(),
+                        prevKey = null,
+                        nextKey = null,
+                    )
+                }
+
+                // 从网络加载数据
+                val result = loadFromNetwork(page, pageSize)
+
+                when (result) {
+                    is NetworkResult.Success -> {
+                        val agents = result.data.list ?: emptyList()
+                        // 过滤掉id为空的agent，避免key重复问题
+                        // 同时过滤掉 IntelliMate agent
+                        val validAgents =
+                            agents.filter { agent ->
+                                agent.id.isNotEmpty() &&
+                                    !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
+                            }
+
+                        val hasMore = validAgents.isNotEmpty() && validAgents.size >= pageSize
+
+                        // 缓存第一页数据
+                        if (
+                            page == INITIAL_PAGE &&
+                                validAgents.isNotEmpty() &&
+                                cacheProvider != null
+                        ) {
+                            cacheProvider.cacheRecommendedAgents(validAgents)
+                            cacheProvider.refreshRecommendedAgents()
+                        }
+
+                        LoadResult.Page(
+                            data = validAgents,
+                            prevKey = if (page == INITIAL_PAGE) null else page - 1,
+                            nextKey = if (hasMore) page + 1 else null,
+                        )
+                    }
+
+                    is NetworkResult.Error -> {
+                        LogUtils.e("ExplorePagingSource - 网络加载失败: ${result.error}")
+                        LoadResult.Error(Exception(result.error))
+                    }
+                }
+            } catch (e: Exception) {
+                LogUtils.e("ExplorePagingSource - 加载异常: ${e.message}")
+                LoadResult.Error(e)
+            }
+        }
+    }
+
+    override fun getRefreshKey(state: PagingState<Int, AgentInfo>): Int? {
+        // 返回最近访问的页面，用于刷新时定位
+        // 修复：当快速反向滚动时，如果之前的页面没有加载，closestPageToPosition 可能返回 null
+        // 此时不应该触发刷新，而是返回一个合理的默认值（第一页）
+        val anchorPosition = state.anchorPosition ?: return INITIAL_PAGE
+        
+        val closestPage = state.closestPageToPosition(anchorPosition)
+        if (closestPage == null) {
+            // 如果找不到最近页面（快速滚动到未加载区域），返回第一页，避免触发不必要的刷新
+            return INITIAL_PAGE
+        }
+        
+        // 优先使用 prevKey，如果不存在则使用 nextKey
+        return closestPage.prevKey?.plus(1) ?: closestPage.nextKey?.minus(1) ?: INITIAL_PAGE
+    }
+
+    /** 从网络加载数据 */
+    protected open suspend fun loadFromNetwork(page: Int, pageSize: Int): NetworkResult {
+        return try {
+            val result =
+                agentApi.exploreAgents(
+                    page = page,
+                    pageSize = pageSize,
+                    sort_seed = sortSeed.toString(),
+                )
+
+            when (result) {
+                is HttpResult.Success -> {
+                    NetworkResult.Success(result.data)
+                }
+
+                is HttpResult.Failure -> {
+                    NetworkResult.Error(result.message)
+                }
+            }
+        } catch (e: Exception) {
+            NetworkResult.Error(e.message ?: "Network error")
+        }
+    }
+
+    /** 异步从网络加载数据（不阻塞UI） */
+    protected fun loadFromNetworkAsync(page: Int, pageSize: Int) {
+        // 在后台协程中执行，不阻塞当前加载
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = loadFromNetwork(page, pageSize)
+                if (result is NetworkResult.Success) {
+                    val agents = result.data.list ?: emptyList()
+                    // 过滤掉id为空的agent，避免key重复问题
+                    val validAgents = agents.filter { it.id.isNotEmpty() }
+                    if (validAgents.isNotEmpty() && cacheProvider != null) {
+                        cacheProvider.cacheRecommendedAgents(validAgents)
+                        cacheProvider.refreshRecommendedAgents()
+                    }
+                }
+            } catch (e: Exception) {
+                LogUtils.e("ExplorePagingSource - 后台刷新失败: ${e.message}")
+            }
+        }
+    }
+}
+
+/** 网络请求结果 */
+sealed class NetworkResult {
+    data class Success(val data: AgentInfoResponse) : NetworkResult()
+
+    data class Error(val error: String) : NetworkResult()
+}

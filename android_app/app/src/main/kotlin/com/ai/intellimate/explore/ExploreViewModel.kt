@@ -4,7 +4,6 @@ import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.VipStatusHelper
-import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
@@ -17,6 +16,7 @@ import kotlinx.coroutines.launch
 
 /** Explore页面ViewModel 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑 */
 class ExploreViewModel : BaseVM(), ExploreFetchCallback {
+
     // 使用app层的ExplorePagingRepository替代core/data层的Repository，以支持事件回调
     // 注意：这会使用不同的缓存策略，但可以支持事件上报
     private val explorePagingRepository by lazy {
