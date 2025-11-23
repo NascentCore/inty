@@ -6,6 +6,7 @@
 import { history, useModel } from '@umijs/max';
 import { Download } from 'lucide-react';
 import React, { useEffect } from 'react';
+import { Download } from 'lucide-react';
 import { EmptyState, ErrorAlert, Icon, Loading } from '@/components';
 import type { IAgent } from '@/types';
 import { CharacterCard } from './components';
@@ -37,7 +38,7 @@ const HomePage: React.FC = () => {
    * 处理下载按钮点击
    */
   const handleDownloadClick = () => {
-    // TODO: 实现下载逻辑
+    window.open('https://play.google.com/store/apps/details?id=com.ai.intellimate', '_blank');
   };
 
   return (
@@ -51,25 +52,27 @@ const HomePage: React.FC = () => {
         </button>
       </div>
 
-      {/* 错误提示 */}
-      {error && <ErrorAlert message="Failed to load" description={error} type="error" closable />}
+      <div className="page-content">
+        {/* 错误提示 */}
+        {error && <ErrorAlert message="Failed to load" description={error} type="error" closable />}
 
-      {/* 加载状态 */}
-      {loading && <Loading tip="Loading..." size="large" fullscreen />}
+        {/* 加载状态 */}
+        {loading && <Loading tip="Loading..." size="large" fullscreen />}
 
-      {/* 角色卡片列表 */}
-      {!loading && recommendList.length > 0 && (
-        <div className="character-grid">
-          {recommendList.map((agent: IAgent) => (
-            <CharacterCard key={agent.id} agent={agent} onStartChat={handleStartChat} />
-          ))}
-        </div>
-      )}
+        {/* 角色卡片列表 */}
+        {!loading && recommendList.length > 0 && (
+          <div className="character-grid">
+            {recommendList.map((agent: IAgent) => (
+              <CharacterCard key={agent.id} agent={agent} onStartChat={handleStartChat} />
+            ))}
+          </div>
+        )}
 
-      {/* 空状态 */}
-      {!loading && !error && recommendList.length === 0 && (
-        <EmptyState description="No recommended agents" />
-      )}
+        {/* 空状态 */}
+        {!loading && !error && recommendList.length === 0 && (
+          <EmptyState description="No recommended agents" />
+        )}
+      </div>
     </div>
   );
 };

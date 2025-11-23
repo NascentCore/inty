@@ -7,7 +7,6 @@ export { default as ChatCreate } from './ChatCreate';
 export { default as ChatDelete } from './ChatDelete';
 export { default as ChatList } from './ChatList';
 export { default as ChatSettings } from './ChatSettings';
-export { default as CheckDeletionEligibility } from './CheckDeletionEligibility';
 export { default as CheckVersion } from './CheckVersion';
 export { default as CreateAgent } from './CreateAgent';
 export { default as CreateReport } from './CreateReport';

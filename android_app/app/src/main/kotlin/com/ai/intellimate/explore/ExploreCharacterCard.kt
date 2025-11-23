@@ -1,5 +1,6 @@
 package com.ai.intellimate.explore
 
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.background
@@ -35,14 +36,28 @@ import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.ui.components.SmartTagsLayout
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 
+// 固定使用 9:16 宽高比
+private const val CARD_ASPECT_RATIO = 9f / 16f
+
 /** Explore页面的角色卡片组件 */
 @Composable
-fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, onClick: () -> Unit) {
+fun ExploreCharacterCard(
+    modifier: Modifier = Modifier,
+    agentInfo: AgentInfo,
+    onClick: () -> Unit,
+    index: Int? = null,
+) {
+
     // 缓存渐变画笔，避免每次重组时重新创建
     val gradientBrush = remember {
         Brush.verticalGradient(
             colors = listOf(Color.Transparent, Color.Black.copy(.6f), Color.Black.copy(.95f))
         )
+    }
+
+    // 底部渐变背景画笔，用于填充图片高度不足时的空白区域
+    val bottomGradientBrush = remember {
+        Brush.verticalGradient(colors = listOf(Color.Black.copy(.95f), Color.Black.copy(.95f)))
     }
 
     // 缓存过滤后的标签，避免每次重组时重新计算
@@ -55,12 +70,29 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
     // 图片加载状态 - 使用稳定的key避免不必要的重组
     var imageLoaded by remember(agentInfo.id) { mutableStateOf(false) }
 
+    // 判断是否是 debug 模式
+    val isDebugMode = HeartAppUtils.isAppDebugMode()
+
     Box(
         modifier =
-            modifier.fillMaxWidth().aspectRatio(agentInfo.imageAspectRatio()).noRippleClickable {
-                onClick()
-            }
+            modifier.fillMaxWidth().aspectRatio(CARD_ASPECT_RATIO).noRippleClickable { onClick() }
     ) {
+        // 底部渐变背景层 - 填充整个容器，确保图片高度不足时有渐变背景
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(
+                        brush = bottomGradientBrush,
+                        shape =
+                            RoundedCornerShape(
+                                topStart = 7.dp,
+                                topEnd = 7.dp,
+                                bottomStart = 8.dp,
+                                bottomEnd = 8.dp,
+                            ),
+                    )
+        )
+
         // 背景图片层
         Box(
             modifier =
@@ -98,6 +130,27 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
                     }
                 },
             )
+        }
+
+        // Debug 模式下显示索引（左上角）
+        if (isDebugMode && index != null) {
+            Box(
+                modifier =
+                    Modifier.align(Alignment.TopStart)
+                        .padding(8.dp)
+                        .background(
+                            color = Color.Black.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(4.dp),
+                        )
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = "#$index",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
+            }
         }
 
         // 文本内容层 - 立即显示，不依赖图片加载状态

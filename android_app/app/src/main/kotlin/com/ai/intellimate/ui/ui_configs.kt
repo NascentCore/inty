@@ -27,6 +27,7 @@ object UiConfigs {
         val HeroGap = 30.dp
         val XLarge = 40.dp
         val VipHeroPlaceholder = 170.dp
+        val BottomTabIconLabel = 0.dp
     }
 
     object Size {
@@ -93,7 +94,7 @@ object UiConfigs {
     }
 
     object Urls {
-        const val WhatsAppGroupInvite = "https://chat.whatsapp.com/FquOcDMQR7dBliPdXeKZ2w?mode=wwt"
+        const val WhatsAppGroupInvite = "https://chat.whatsapp.com/Cw1ZM46InipFHel3ws5ria"
         const val DiscordInvite = "https://discord.gg/xbJJ9NBdJT"
     }
 }

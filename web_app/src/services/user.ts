@@ -25,7 +25,7 @@ export async function getUserProfile(): Promise<IUserProfile | null> {
     return null;
   } catch (err: unknown) {
     logger.error('获取用户信息异常', err);
-    return null;
+    throw err;
   }
 }
 

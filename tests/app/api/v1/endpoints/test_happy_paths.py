@@ -46,10 +46,10 @@ def version_app(monkeypatch: pytest.MonkeyPatch):
 
     class FakeGooglePlayService:
         def __init__(self):
-            self.last_call: tuple[int, str] | None = None
+            self.last_call: int | None = None
 
-        def check_version_requirement(self, version_code: int, version_name: str):
-            self.last_call = (version_code, version_name)
+        def check_version_requirement(self, version_code: int):
+            self.last_call = version_code
             return {
                 "current_version": str(version_code),
                 "latest_version": "200",
@@ -117,10 +117,7 @@ def test_version_check_returns_google_play_result(version_app: FastAPI):
     assert body["code"] == 200
     assert body["data"]["current_version"] == "150"
     assert body["data"]["latest_version"] == "200"
-    assert (
-        version_app.state.fake_google_play_service.last_call
-        == (150, "1.5.0")
-    )
+    assert version_app.state.fake_google_play_service.last_call == 150
 
 
 def test_get_current_user_profile_happy_path(

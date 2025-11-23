@@ -51,6 +51,7 @@ Error 400: origin_mismatch
 
 4. **添加授权的重定向 URI（如果需要）**
    在 **Authorized redirect URIs** 部分，确保包含：
+
    ```
    https://intellimate.app
    https://www.intellimate.app
@@ -90,5 +91,5 @@ A: 不需要。只需要在 Google Cloud Console 中配置即可，代码中的 
 - Nginx 配置：`devops/nginx/conf.d/sxwl.ai.conf`
 
 ---
-CREATED_BY_AGENT
 
+CREATED_BY_AGENT
