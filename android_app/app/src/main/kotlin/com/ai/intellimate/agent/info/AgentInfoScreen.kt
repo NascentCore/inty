@@ -299,8 +299,6 @@ internal fun AiAgentInfoScreen(
                                 maxLines = 3,
                                 overflow = TextOverflow.Ellipsis,
                             )
-
-                            Spacer(Modifier.height(16.dp))
                         }
                         if (galleryItems.isNotEmpty()) {
                             Spacer(Modifier.height(16.dp))
