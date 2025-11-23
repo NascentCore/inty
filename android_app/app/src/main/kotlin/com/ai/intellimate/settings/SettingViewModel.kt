@@ -63,12 +63,16 @@ class SettingViewModel : BaseVM() {
                                 deleteAccountResultFlow.emit(true)
                             } else {
                                 // 删除失败，显示后端返回的错误信息
-                                val errorMessage = result.data.message
-                                    ?: Utils.getApp().getString(R.string.toast_account_deletion_error)
-                                
+                                val errorMessage =
+                                    result.data.message
+                                        ?: Utils.getApp()
+                                            .getString(R.string.toast_account_deletion_error)
+
                                 // 如果错误信息包含订阅相关关键词，显示特定的提示
-                                if (errorMessage.contains("订阅", ignoreCase = true) ||
-                                    errorMessage.contains("subscription", ignoreCase = true)) {
+                                if (
+                                    errorMessage.contains("订阅", ignoreCase = true) ||
+                                        errorMessage.contains("subscription", ignoreCase = true)
+                                ) {
                                     ToastUtils.showShort(
                                         Utils.getApp()
                                             .getString(R.string.toast_cancel_subscription_first)
@@ -82,8 +86,10 @@ class SettingViewModel : BaseVM() {
                         is HttpResult.Failure -> {
                             // 检查错误消息是否包含订阅相关关键词
                             val errorMessage = result.message
-                            if (errorMessage.contains("订阅", ignoreCase = true) ||
-                                errorMessage.contains("subscription", ignoreCase = true)) {
+                            if (
+                                errorMessage.contains("订阅", ignoreCase = true) ||
+                                    errorMessage.contains("subscription", ignoreCase = true)
+                            ) {
                                 ToastUtils.showShort(
                                     Utils.getApp()
                                         .getString(R.string.toast_cancel_subscription_first)
@@ -94,7 +100,8 @@ class SettingViewModel : BaseVM() {
                                     ToastUtils.showShort(errorMessage)
                                 } else {
                                     ToastUtils.showShort(
-                                        Utils.getApp().getString(R.string.toast_account_deletion_error)
+                                        Utils.getApp()
+                                            .getString(R.string.toast_account_deletion_error)
                                     )
                                 }
                             }

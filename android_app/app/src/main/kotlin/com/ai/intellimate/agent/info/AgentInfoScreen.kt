@@ -1,7 +1,7 @@
 package com.ai.intellimate.agent.info
 
-import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.common.utils.HeartAppUtils
+import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
@@ -27,8 +27,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -57,14 +57,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.getSystemService
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.getSystemService
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
-import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.agent.report.ReportActivity
+import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
 import com.ai.intellimate.utils.formatDisplayId
@@ -153,7 +153,7 @@ internal fun AiAgentInfoScreen(
                                     )
                             )
                 ) {
-                          Column(
+                    Column(
                         modifier =
                             Modifier.padding(innerPadding).verticalScroll(rememberScrollState())
                     ) {
@@ -352,7 +352,10 @@ private object AgentGalleryConfig {
 }
 
 @Composable
-private fun AgentGeneratedImagesSection(modifier: Modifier = Modifier, images: List<AgentImageGalleryItem>) {
+private fun AgentGeneratedImagesSection(
+    modifier: Modifier = Modifier,
+    images: List<AgentImageGalleryItem>,
+) {
     var previewImage by remember { mutableStateOf<String?>(null) }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -387,7 +390,10 @@ private fun AgentGeneratedImagesSection(modifier: Modifier = Modifier, images: L
                     dismissOnBackPress = true,
                 ),
         ) {
-            FullScreenImageViewer(imageUrl = previewImage.orEmpty(), onDismiss = { previewImage = null })
+            FullScreenImageViewer(
+                imageUrl = previewImage.orEmpty(),
+                onDismiss = { previewImage = null },
+            )
         }
     }
 }
@@ -395,14 +401,13 @@ private fun AgentGeneratedImagesSection(modifier: Modifier = Modifier, images: L
 @Composable
 private fun AgentGalleryImageCard(item: AgentImageGalleryItem, onPreview: (String) -> Unit) {
     val context = LocalContext.current
-    val aspectRatio =
-        if (item.height > 0) item.width.toFloat() / item.height.toFloat() else 1f
+    val aspectRatio = if (item.height > 0) item.width.toFloat() / item.height.toFloat() else 1f
     Box(
         modifier =
             Modifier.width(AgentGalleryConfig.ImageWidth)
                 .clip(RoundedCornerShape(AgentGalleryConfig.ImageCornerRadius))
                 .background(Color.White.copy(alpha = 0.08f))
-                .noRippleClickable { onPreview(item.imageUrl) },
+                .noRippleClickable { onPreview(item.imageUrl) }
     ) {
         AsyncImage(
             modifier = Modifier.fillMaxWidth().aspectRatio(aspectRatio),
@@ -499,10 +504,7 @@ private fun AgentInfoDebugSection(agent: AgentInfo) {
                         width = 1.dp,
                         shape = RoundedCornerShape(8.dp),
                     )
-                    .background(
-                        color = Color(0x4D000000),
-                        shape = RoundedCornerShape(8.dp),
-                    )
+                    .background(color = Color(0x4D000000), shape = RoundedCornerShape(8.dp))
         ) {
             Text(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
@@ -589,23 +591,23 @@ private fun PreviewAgentInfoScreen() {
             prompt = "性感，时尚，火辣，大方",
         )
 
-        val gallery =
-            listOf(
-                AgentImageGalleryItem(
-                    messageId = "1",
-                    imageUrl = "https://example.com/demo1.png",
-                    width = 512,
-                    height = 768,
-                    timestamp = null,
-                ),
-                AgentImageGalleryItem(
-                    messageId = "2",
-                    imageUrl = "https://example.com/demo2.png",
-                    width = 512,
-                    height = 512,
-                    timestamp = null,
-                ),
-            )
+    val gallery =
+        listOf(
+            AgentImageGalleryItem(
+                messageId = "1",
+                imageUrl = "https://example.com/demo1.png",
+                width = 512,
+                height = 768,
+                timestamp = null,
+            ),
+            AgentImageGalleryItem(
+                messageId = "2",
+                imageUrl = "https://example.com/demo2.png",
+                width = 512,
+                height = 512,
+                timestamp = null,
+            ),
+        )
 
-        AiAgentInfoScreen(agent = agent, galleryItems = gallery) {}
+    AiAgentInfoScreen(agent = agent, galleryItems = gallery) {}
 }

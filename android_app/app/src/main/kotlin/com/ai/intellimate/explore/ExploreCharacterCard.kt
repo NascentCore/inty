@@ -57,9 +57,7 @@ fun ExploreCharacterCard(
 
     // 底部渐变背景画笔，用于填充图片高度不足时的空白区域
     val bottomGradientBrush = remember {
-        Brush.verticalGradient(
-            colors = listOf(Color.Black.copy(.95f), Color.Black.copy(.95f))
-        )
+        Brush.verticalGradient(colors = listOf(Color.Black.copy(.95f), Color.Black.copy(.95f)))
     }
 
     // 缓存过滤后的标签，避免每次重组时重新计算
@@ -77,9 +75,7 @@ fun ExploreCharacterCard(
 
     Box(
         modifier =
-            modifier.fillMaxWidth().aspectRatio(CARD_ASPECT_RATIO).noRippleClickable {
-                onClick()
-            }
+            modifier.fillMaxWidth().aspectRatio(CARD_ASPECT_RATIO).noRippleClickable { onClick() }
     ) {
         // 底部渐变背景层 - 填充整个容器，确保图片高度不足时有渐变背景
         Box(
@@ -146,7 +142,7 @@ fun ExploreCharacterCard(
                             color = Color.Black.copy(alpha = 0.7f),
                             shape = RoundedCornerShape(4.dp),
                         )
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
             ) {
                 Text(
                     text = "#$index",
