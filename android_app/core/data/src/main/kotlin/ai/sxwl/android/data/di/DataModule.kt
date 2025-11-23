@@ -16,12 +16,10 @@ import ai.sxwl.android.data.chat.domain.SyncChatDataUseCase
 import ai.sxwl.android.data.chat.domain.UpdateMessageFeedbackUseCase
 import ai.sxwl.android.data.chat.repository.ChatRepositoryImpl
 import ai.sxwl.android.data.explore.domain.ExploreRepository
-import ai.sxwl.android.data.explore.domain.GetRecommendAgentsUseCase
 import ai.sxwl.android.data.explore.repository.ExploreRepositoryImpl
 
 /** 数据层依赖注入管理 遵循Clean Architecture的依赖注入模式 不使用Hilt，采用手动依赖注入 */
 object DataModule {
-
     // Data Sources
     private val _chatLocalDataSource: ChatLocalDataSource by lazy { ChatLocalDataSource() }
     private val _chatRemoteDataSource: ChatRemoteDataSource by lazy { ChatRemoteDataSource() }
@@ -64,18 +62,8 @@ object DataModule {
         GetChatAgentsUseCase(_agentRepository)
     }
 
-    val getRecommendAgentsUseCase: GetRecommendAgentsUseCase by lazy {
-        GetRecommendAgentsUseCase(_exploreRepository)
-    }
-
-    // Repository accessors
     fun getChatRepository(): ChatRepository = _chatRepository
 
-    fun getAgentRepository(): AgentRepository = _agentRepository
-
-    fun getExploreRepository(): ExploreRepository = _exploreRepository
-
-    // Cache provider setters
     fun setAgentCacheProvider(cacheProvider: AgentCacheProvider) {
         _agentCacheProvider = cacheProvider
     }
