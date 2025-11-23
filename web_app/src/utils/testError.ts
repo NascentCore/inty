@@ -4,7 +4,6 @@
  */
 
 import { message } from 'antd';
-// @ts-expect-error - inty SDK is installed as a file dependency
 import Inty from 'inty';
 import { logger } from './logger';
 
