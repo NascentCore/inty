@@ -50,6 +50,7 @@ fun HeartBottomAppBar(
     iconSize: Dp = 24.dp,
     textSize: TextUnit = 12.sp,
     height: Dp? = null,
+    labelSpacing: Dp = 4.dp,
     onTabSelected: (Int) -> Unit = {},
 ) {
     val navigationBarModifier =
@@ -97,6 +98,7 @@ fun HeartBottomAppBar(
                             }
                         if (labelText.isNotEmpty()) {
                             Text(
+                                modifier = Modifier.padding(top = labelSpacing),
                                 text = labelText,
                                 fontSize = textSize,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,

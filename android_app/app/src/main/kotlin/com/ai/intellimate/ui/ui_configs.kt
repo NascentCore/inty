@@ -27,6 +27,7 @@ object UiConfigs {
         val HeroGap = 30.dp
         val XLarge = 40.dp
         val VipHeroPlaceholder = 170.dp
+        val BottomTabIconLabel = 2.dp
     }
 
     object Size {
