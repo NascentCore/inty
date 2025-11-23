@@ -29,8 +29,8 @@ const MyAgentList: React.FC = () => {
       ]}
       onTest={async (values) => {
         const params = {
-          skip: values.skip || 0,
-          limit: values.limit || 20,
+          skip: Number.parseInt(values.skip, 10) || 0,
+          limit: Number.parseInt(values.limit, 10) || 20,
         };
 
         logger.testDetail('请求参数', params);

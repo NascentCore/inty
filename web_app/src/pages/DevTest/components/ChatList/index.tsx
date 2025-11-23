@@ -29,27 +29,27 @@ const ChatList: React.FC = () => {
       onTest={async (values) => {
         const pageNum = Number.parseInt(values.page, 10) || 1;
         const size = Number.parseInt(values.page_size, 10) || 20;
+        const skip = (pageNum - 1) * size;
+        const limit = size;
 
         const client = await createIntyClient(true);
         const response = await client.api.v1.chats.list({
-          page: pageNum,
-          page_size: size,
+          skip,
+          limit,
         });
 
         // 自定义成功日志
-        if (response.data) {
-          logger.testDetail('总数', response.data.total);
-          logger.testDetail('当前页', response.data.page);
-          logger.testDetail('页大小', response.data.page_size);
+        if (Array.isArray(response) && response.length > 0) {
+          logger.testDetail('总数', response.length);
+          logger.testDetail('当前页', pageNum);
+          logger.testDetail('页大小', size);
 
-          if (response.data.data && response.data.data.length > 0) {
-            logger.info('\n前 3 个会话:');
-            response.data.data.slice(0, 3).forEach((chat: any, index: number) => {
-              logger.info(`  ${index + 1}. Chat ID: ${chat.id}`);
-              logger.info(`     Agent ID: ${chat.agent_id}`);
-              logger.info(`     创建时间: ${chat.created_at}`);
-            });
-          }
+          logger.info('\n前 3 个会话:');
+          response.slice(0, 3).forEach((chat: any, index: number) => {
+            logger.info(`  ${index + 1}. Chat ID: ${chat.id}`);
+            logger.info(`     Agent ID: ${chat.agent_id}`);
+            logger.info(`     创建时间: ${chat.created_at}`);
+          });
         }
 
         return response;
