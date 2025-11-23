@@ -1,5 +1,6 @@
 package com.ai.intellimate.agent.info
 
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
@@ -50,7 +51,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.getSystemService
-import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.ui.components.AgentBackground
@@ -62,7 +62,8 @@ private const val CLIPBOARD_LABEL_AGENT_ID = "Agent ID"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
-    val context = LocalContext.current
+      val context = LocalContext.current
+      val isDebugMode = HeartAppUtils.isAppDebugMode()
     var showBottomSheet by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState()
     val displayId = remember(agent.id) { formatDisplayId(agent.id) }
@@ -286,7 +287,7 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                             Spacer(Modifier.height(16.dp))
                         }
 
-                      if (BuildConfig.DEBUG) {
+                      if (isDebugMode) {
                           Spacer(Modifier.height(24.dp))
                           AgentInfoDebugSection(agent = agent)
                       }
