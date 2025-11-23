@@ -15,10 +15,22 @@ object AvatarManager {
         generatedAvatarUrls = emptyList() // Clear multiple URLs when setting single URL
     }
 
-    fun setGeneratedAvatarUrls(urls: List<String>) {
+    fun setGeneratedAvatarUrls(
+        urls: List<String>,
+        selectedIndex: Int = 0,
+    ) {
+        if (urls.isEmpty()) {
+            generatedAvatarUrls = emptyList()
+            generatedAvatarUrl = null
+            selectedImageIndex = 0
+            isGenerating = false
+            generationError = null
+            return
+        }
+
         generatedAvatarUrls = urls
         generatedAvatarUrl = null // Clear single URL when setting multiple URLs
-        selectedImageIndex = 0 // Reset selection to first image
+        selectedImageIndex = selectedIndex.coerceIn(0, urls.lastIndex)
         isGenerating = false
         generationError = null
     }

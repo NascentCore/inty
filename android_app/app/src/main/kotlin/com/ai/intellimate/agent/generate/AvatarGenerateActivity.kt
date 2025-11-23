@@ -408,41 +408,56 @@ private fun AvatarGridSection(
     onRegenerate: (String) -> Unit,
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        // Regen 按钮
         RegenButton(onClick = { onRegenerate(prompt) }, enabled = !isLoading)
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 4张图片的网格布局
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            imageUrls.take(4).forEachIndexed { index, imageUrl ->
-                // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
-                val thumbnailUrl = getCdnImageUrl(imageUrl, width = 80, quality = 60)
-                Box(
-                    modifier =
-                        Modifier.weight(1f)
-                            .aspectRatio(9 / 16f)
-                            .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
-                            .border(
-                                width = if (index == selectedIndex) 3.dp else 1.dp,
-                                color =
-                                    if (index == selectedIndex) Color(0xFFE91E63)
-                                    else Color.Transparent,
-                                shape = RoundedCornerShape(8.dp),
-                            )
-                            .noRippleClickable { onImageSelected(index) },
-                    contentAlignment = Alignment.Center,
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            imageUrls.chunked(4).forEachIndexed { chunkIndex, rowImages ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    AsyncImage(
-                        model = thumbnailUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
-                        contentDescription =
-                            stringResource(R.string.content_desc_generated_avatar_index, index),
-                        modifier = Modifier.fillMaxSize().padding(4.dp),
-                        contentScale = ContentScale.Crop,
-                    )
+                    rowImages.forEachIndexed { indexInRow, imageUrl ->
+                        val absoluteIndex = chunkIndex * 4 + indexInRow
+                        val thumbnailUrl = getCdnImageUrl(imageUrl, width = 80, quality = 60)
+                        Box(
+                            modifier =
+                                Modifier.weight(1f)
+                                    .aspectRatio(9 / 16f)
+                                    .background(
+                                        color = Color(0x1A78599A),
+                                        shape = RoundedCornerShape(8.dp),
+                                    )
+                                    .border(
+                                        width = if (absoluteIndex == selectedIndex) 3.dp else 1.dp,
+                                        color =
+                                            if (absoluteIndex == selectedIndex) Color(0xFFE91E63)
+                                            else Color.Transparent,
+                                        shape = RoundedCornerShape(8.dp),
+                                    )
+                                    .noRippleClickable { onImageSelected(absoluteIndex) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            AsyncImage(
+                                model = thumbnailUrl ?: imageUrl,
+                                contentDescription =
+                                    stringResource(
+                                        R.string.content_desc_generated_avatar_index,
+                                        absoluteIndex,
+                                    ),
+                                modifier = Modifier.fillMaxSize().padding(4.dp),
+                                contentScale = ContentScale.Crop,
+                            )
+                        }
+                    }
+                    repeat((4 - rowImages.size).coerceAtLeast(0)) {
+                        Spacer(
+                            modifier =
+                                Modifier.weight(1f)
+                                    .aspectRatio(9 / 16f),
+                        )
+                    }
                 }
             }
         }

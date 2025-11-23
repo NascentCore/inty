@@ -10,6 +10,7 @@ import ai.sxwl.android.utils.LogUtils
 import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.architecture.httplib.core.HttpResult
+import java.util.LinkedHashSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -210,11 +211,6 @@ class AvatarGenerateViewModel : BaseVM() {
             return
         }
 
-        // Clear current images and regenerate
-        _generatedImageUrls.value = emptyList()
-        _generatedImageUrl.value = null
-        _selectedImageIndex.value = 0
-
         _isLoading.value = true
         _errorMessage.value = null
 
@@ -240,60 +236,78 @@ class AvatarGenerateViewModel : BaseVM() {
                 val generationTime = endTime - startTime
 
                 withContext(Dispatchers.Main) {
-                    LogUtils.i("Regenerated image URLs: ${response.imageUrls}")
-                    if (response.imageUrls.isNotEmpty()) {
-                        _generatedImageUrls.value = response.imageUrls
-                        _selectedImageIndex.value = 0 // 默认选中第一张
-                        AvatarManager.setGeneratedAvatarUrls(response.imageUrls)
-                        LogUtils.i("Setting regenerated imageUrls to: ${response.imageUrls}")
+                    val existingUrls = getExistingImageUrls()
+                    when {
+                        response.imageUrls.isNotEmpty() -> {
+                            val mergedUrls = mergeImageUrls(existingUrls, response.imageUrls)
+                            val safeSelection =
+                                _selectedImageIndex.value.coerceIn(0, mergedUrls.lastIndex)
+                            _generatedImageUrls.value = mergedUrls
+                            _generatedImageUrl.value = null
+                            _selectedImageIndex.value = safeSelection
+                            AvatarManager.setGeneratedAvatarUrls(
+                                mergedUrls,
+                                selectedIndex = safeSelection,
+                            )
+                            LogUtils.i("Setting regenerated imageUrls to: $mergedUrls")
 
-                        // Firebase Analytics - 记录头像重新生成成功
-                        FirebaseManager.logEvent(
-                            FirebaseManager.Events.AVATAR_GENERATION_SUCCESS,
-                            FirebaseManager.safeEventParams(
-                                "prompt" to currentPrompt,
-                                "image_count" to response.imageUrls.size,
-                                "is_regenerate" to true,
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                "generation_time_ms" to generationTime,
-                                "timestamp" to endTime,
-                            ),
-                        )
-                    } else if (response.imageUrl.isNotBlank()) {
-                        // 兼容单张图片的情况
-                        _generatedImageUrl.value = response.imageUrl
-                        AvatarManager.setGeneratedAvatarUrl(response.imageUrl)
-                        LogUtils.i("Setting regenerated imageUrl to: ${response.imageUrl}")
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.AVATAR_GENERATION_SUCCESS,
+                                FirebaseManager.safeEventParams(
+                                    "prompt" to currentPrompt,
+                                    "image_count" to response.imageUrls.size,
+                                    "is_regenerate" to true,
+                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "generation_time_ms" to generationTime,
+                                    "timestamp" to endTime,
+                                ),
+                            )
+                        }
 
-                        // Firebase Analytics - 记录头像重新生成成功（单张图片）
-                        FirebaseManager.logEvent(
-                            FirebaseManager.Events.AVATAR_GENERATION_SUCCESS,
-                            FirebaseManager.safeEventParams(
-                                "prompt" to currentPrompt,
-                                "image_count" to 1,
-                                "is_regenerate" to true,
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                "generation_time_ms" to generationTime,
-                                "timestamp" to endTime,
-                            ),
-                        )
-                    } else {
-                        LogUtils.e("Empty image URLs received from server during regeneration")
-                        _errorMessage.value = "Regenerated image URLs are empty"
+                        response.imageUrl.isNotBlank() -> {
+                            val mergedUrls =
+                                mergeImageUrls(existingUrls, listOf(response.imageUrl))
+                            val safeSelection =
+                                _selectedImageIndex.value.coerceIn(0, mergedUrls.lastIndex)
+                            _generatedImageUrls.value = mergedUrls
+                            _generatedImageUrl.value = null
+                            _selectedImageIndex.value = safeSelection
+                            AvatarManager.setGeneratedAvatarUrls(
+                                mergedUrls,
+                                selectedIndex = safeSelection,
+                            )
+                            LogUtils.i("Setting regenerated imageUrl to list: $mergedUrls")
 
-                        // Firebase Analytics - 记录头像重新生成失败（空结果）
-                        FirebaseManager.logEvent(
-                            FirebaseManager.Events.AVATAR_GENERATION_FAILURE,
-                            FirebaseManager.safeEventParams(
-                                "prompt" to currentPrompt,
-                                "error_message" to
-                                    "Empty image URLs received from server during regeneration",
-                                "is_regenerate" to true,
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                "generation_time_ms" to generationTime,
-                                "timestamp" to endTime,
-                            ),
-                        )
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.AVATAR_GENERATION_SUCCESS,
+                                FirebaseManager.safeEventParams(
+                                    "prompt" to currentPrompt,
+                                    "image_count" to 1,
+                                    "is_regenerate" to true,
+                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "generation_time_ms" to generationTime,
+                                    "timestamp" to endTime,
+                                ),
+                            )
+                        }
+
+                        else -> {
+                            LogUtils.e("Empty image URLs received from server during regeneration")
+                            _errorMessage.value = "Regenerated image URLs are empty"
+
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.AVATAR_GENERATION_FAILURE,
+                                FirebaseManager.safeEventParams(
+                                    "prompt" to currentPrompt,
+                                    "error_message" to
+                                        "Empty image URLs received from server during regeneration",
+                                    "is_regenerate" to true,
+                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "generation_time_ms" to generationTime,
+                                    "timestamp" to endTime,
+                                ),
+                            )
+                        }
                     }
                     _isLoading.value = false
                 }
@@ -407,5 +421,31 @@ class AvatarGenerateViewModel : BaseVM() {
                 }
             throw Exception(errorMessage)
         }
+    }
+
+    private fun getExistingImageUrls(): List<String> {
+        return when {
+            _generatedImageUrls.value.isNotEmpty() -> _generatedImageUrls.value
+            _generatedImageUrl.value.isNullOrBlank().not() ->
+                listOfNotNull(_generatedImageUrl.value)
+            else -> emptyList()
+        }
+    }
+
+    private fun mergeImageUrls(
+        existing: List<String>,
+        incoming: List<String>,
+    ): List<String> {
+        if (incoming.isEmpty()) {
+            return existing
+        }
+        if (existing.isEmpty()) {
+            return incoming
+        }
+
+        val merged = LinkedHashSet<String>(existing.size + incoming.size)
+        merged.addAll(existing)
+        merged.addAll(incoming)
+        return merged.toList()
     }
 }
