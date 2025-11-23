@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -49,6 +50,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.getSystemService
+import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.ui.components.AgentBackground
@@ -134,7 +136,7 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                                     )
                             )
                 ) {
-                    Column(
+                          Column(
                         modifier =
                             Modifier.padding(innerPadding).verticalScroll(rememberScrollState())
                     ) {
@@ -284,6 +286,11 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                             Spacer(Modifier.height(16.dp))
                         }
 
+                      if (BuildConfig.DEBUG) {
+                          Spacer(Modifier.height(24.dp))
+                          AgentInfoDebugSection(agent = agent)
+                      }
+
                         Spacer(Modifier.height(60.dp))
                     }
                 }
@@ -367,6 +374,97 @@ private fun BottomSheetContent(onReportClick: () -> Unit, onCancelClick: () -> U
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun AgentInfoDebugSection(agent: AgentInfo) {
+    SelectionContainer {
+        Column(
+            modifier =
+                Modifier.padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+                    .border(
+                        brush =
+                            Brush.linearGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(alpha = 0.25f),
+                                    Color.Transparent,
+                                )
+                            ),
+                        width = 1.dp,
+                        shape = RoundedCornerShape(8.dp),
+                    )
+                    .background(
+                        color = Color(0x4D000000),
+                        shape = RoundedCornerShape(8.dp),
+                    )
+        ) {
+            Text(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                text = "Debug · AgentInfo",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+            )
+            AgentSpacerLine()
+            val debugItems =
+                remember(agent) {
+                    listOf(
+                        "id" to agent.id,
+                        "name" to agent.name,
+                        "readableId" to agent.readableId,
+                        "avatar" to agent.avatar,
+                        "background" to agent.background,
+                        "backgroundAnimatedUrl" to agent.backgroundAnimatedUrl,
+                        "backgroundImages" to agent.backgroundImages.joinToString(),
+                        "category" to agent.category,
+                        "gender" to agent.gender,
+                        "isFollowed" to agent.isFollowed.toString(),
+                        "intro" to agent.intro,
+                        "opening" to agent.opening,
+                        "opening_audio_url" to agent.opening_audio_url,
+                        "voicePreview" to agent.voicePreview,
+                        "createdAt" to agent.createdAt,
+                        "creator" to (agent.creator?.toString() ?: "null"),
+                        "tags" to (agent.tags?.joinToString { it ?: "null" } ?: "null"),
+                        "settings" to (agent.settings?.toString() ?: "null"),
+                        "visibility" to agent.visibility,
+                        "prompt" to agent.prompt,
+                        "followerCount" to agent.followerCount.toString(),
+                        "connectorCount" to agent.connectorCount.toString(),
+                        "deletedAt" to (agent.deletedAt?.toString() ?: "null"),
+                        "isDeleted(local)" to agent.isDeleted.toString(),
+                    )
+                }
+            debugItems.forEachIndexed { index, (label, value) ->
+                DebugInfoRow(label = label, value = value)
+                if (index != debugItems.lastIndex) {
+                    AgentSpacerLine()
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+private fun DebugInfoRow(label: String, value: String) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White.copy(alpha = 0.75f),
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = value.ifEmpty { "(empty)" },
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Light,
+            color = Color.White,
+        )
     }
 }
 
