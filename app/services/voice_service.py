@@ -17,6 +17,7 @@ from mutagen.mp3 import MP3
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.voice.elevenlabs import NON_BINARY_DEFAULT_VOICE_ID
 from app.services.gcs_service import GCSService
 
 # 性别到音色ID的映射
@@ -24,6 +25,7 @@ GENDER_VOICE_MAPPING = {
     "MALE": "rHWSYoq8UlV0YIBKMryp",
     "FEMALE": "4tRn1lSkEn13EVTuqb0g",
     "OTHER": "O7p2vmz2iEYgMXxkbsif",
+    "NON_BINARY": NON_BINARY_DEFAULT_VOICE_ID,
 }
 
 

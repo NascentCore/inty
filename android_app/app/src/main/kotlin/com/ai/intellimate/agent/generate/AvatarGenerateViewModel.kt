@@ -211,6 +211,15 @@ class AvatarGenerateViewModel : BaseVM() {
             return
         }
 
+        // 在开始重新生成前，确保从 AvatarManager 恢复状态（如果 ViewModel 状态为空）
+        if (_generatedImageUrls.value.isEmpty() && _generatedImageUrl.value.isNullOrBlank()) {
+            val avatarManagerUrls = AvatarManager.getCurrentAvatarUrls()
+            if (avatarManagerUrls.isNotEmpty()) {
+                _generatedImageUrls.value = avatarManagerUrls
+                _selectedImageIndex.value = AvatarManager.getSelectedImageIndex()
+            }
+        }
+
         _isLoading.value = true
         _errorMessage.value = null
 
@@ -424,12 +433,26 @@ class AvatarGenerateViewModel : BaseVM() {
     }
 
     private fun getExistingImageUrls(): List<String> {
-        return when {
+        // 优先从 ViewModel 状态获取
+        val fromViewModel = when {
             _generatedImageUrls.value.isNotEmpty() -> _generatedImageUrls.value
             _generatedImageUrl.value.isNullOrBlank().not() ->
                 listOfNotNull(_generatedImageUrl.value)
             else -> emptyList()
         }
+        
+        // 如果 ViewModel 状态为空，尝试从 AvatarManager 恢复
+        if (fromViewModel.isEmpty()) {
+            val fromAvatarManager = AvatarManager.getCurrentAvatarUrls()
+            if (fromAvatarManager.isNotEmpty()) {
+                // 恢复 ViewModel 状态
+                _generatedImageUrls.value = fromAvatarManager
+                _selectedImageIndex.value = AvatarManager.getSelectedImageIndex()
+                return fromAvatarManager
+            }
+        }
+        
+        return fromViewModel
     }
 
     private fun mergeImageUrls(

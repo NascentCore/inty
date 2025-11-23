@@ -34,6 +34,7 @@ class Gender(str, enum.Enum):
     MALE = "MALE"
     FEMALE = "FEMALE"
     OTHER = "OTHER"
+    NON_BINARY = "NON_BINARY"
 
 
 class User(Base):
