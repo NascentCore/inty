@@ -23,7 +23,7 @@
 
 ## Android app 发布流程
 
-1. 修改代码中的 versionName 到新的版本号，如 https://github.com/NascentCore/inty/commit/0c18b413401dedc48efe9c1bcc67e2ba999065be
+1. 修改代码中的 versionName 到新的版本号，否则会触发版本检查错误，如 https://github.com/NascentCore/inty/commit/0c18b413401dedc48efe9c1bcc67e2ba999065be
    <img width="900" height="400" alt="image" src="https://github.com/user-attachments/assets/186335c0-fc96-4520-b8da-d89f0f892a23" />
 2. 在 GitHub 上创建 release（选择创建新的 tag）添加`-android` 后缀
    <img width="900" height="402" alt="image" src="https://github.com/user-attachments/assets/090663da-e86a-4b8f-a8a5-dd98a34f1c9c" />
