@@ -9,8 +9,6 @@ import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Intent
-import android.Manifest
-import android.os.Build
 import android.view.GestureDetector
 import android.view.MotionEvent
 import androidx.activity.OnBackPressedCallback
@@ -41,29 +39,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-
+import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.ui.components.GoogleLoginButton
+import com.ai.intellimate.utils.BillingErrorHandler
+import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-import ai.sxwl.android.common.analytics.PageTrackingHelper
-import ai.sxwl.android.common.base.BaseActivity
-import ai.sxwl.android.data.billing.BillingRepository
-import ai.sxwl.android.data.store.IntySetting
-import ai.sxwl.android.firebase.FirebaseManager
-import ai.sxwl.android.utils.LogUtils
-import ai.sxwl.android.utils.PermissionUtils
-import ai.sxwl.android.utils.ToastUtils
-import ai.sxwl.android.data.api.NetServiceMgr
-import ai.sxwl.android.data.api.model.GoogleLoginRequest
-
-import com.ai.intellimate.chat.viewmodel.ChatViewModel
-import com.ai.intellimate.ui.components.GoogleLoginButton
-import com.ai.intellimate.utils.BillingErrorHandler
-import com.ai.intellimate.utils.UnifiedStartupManager
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
