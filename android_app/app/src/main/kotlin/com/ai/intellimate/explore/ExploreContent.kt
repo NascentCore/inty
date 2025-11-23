@@ -204,6 +204,7 @@ fun ExploreContent(
                             modifier = Modifier.fillMaxWidth(),
                             agentInfo = agent,
                             onClick = { onClickAgent(agent) },
+                            index = index,
                         )
                     } else {
                         // 显示加载占位符

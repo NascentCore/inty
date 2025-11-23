@@ -14,13 +14,6 @@ class ExplorePagingRepository(
     private val fetchCallback: ExploreFetchCallback? = null,
 ) {
 
-    companion object {
-        // 使用统一的常量
-        private const val PAGE_SIZE = ExploreConstants.PAGE_SIZE
-        private const val PREFETCH_DISTANCE = ExploreConstants.PREFETCH_DISTANCE
-        private const val ENABLE_PLACEHOLDERS = ExploreConstants.ENABLE_PLACEHOLDERS
-    }
-
     /**
      * 获取推荐agents的Paging数据流
      *
@@ -34,11 +27,11 @@ class ExplorePagingRepository(
         return Pager(
                 config =
                     PagingConfig(
-                        pageSize = PAGE_SIZE,
-                        prefetchDistance = PREFETCH_DISTANCE,
-                        enablePlaceholders = ENABLE_PLACEHOLDERS,
-                        initialLoadSize = PAGE_SIZE,
-                        maxSize = PAGE_SIZE * ExploreConstants.MAX_CACHE_PAGES, // 最大缓存页数
+                        pageSize = ExploreConstants.PAGE_SIZE,
+                        prefetchDistance = ExploreConstants.PREFETCH_DISTANCE,
+                        enablePlaceholders = ExploreConstants.ENABLE_PLACEHOLDERS,
+                        initialLoadSize = ExploreConstants.PAGE_SIZE,
+                        maxSize = ExploreConstants.PAGE_SIZE * ExploreConstants.MAX_CACHE_PAGES, // 最大缓存页数
                     ),
                 pagingSourceFactory = {
                     ExplorePagingSource(
