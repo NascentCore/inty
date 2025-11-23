@@ -4,8 +4,9 @@
  */
 
 import { history, useModel } from '@umijs/max';
+import { Download } from 'lucide-react';
 import React, { useEffect } from 'react';
-import { EmptyState, ErrorAlert, Loading } from '@/components';
+import { EmptyState, ErrorAlert, Icon, Loading } from '@/components';
 import type { IAgent } from '@/types';
 import { CharacterCard } from './components';
 import './index.less';
@@ -32,11 +33,22 @@ const HomePage: React.FC = () => {
     history.push(`/chat/${agent.id}`);
   };
 
+  /**
+   * 处理下载按钮点击
+   */
+  const handleDownloadClick = () => {
+    // TODO: 实现下载逻辑
+  };
+
   return (
     <div className="home-page">
       {/* 页面标题 */}
       <div className="page-header">
         <h1 className="page-title">discover</h1>
+        <button className="download-button" type="button" onClick={handleDownloadClick}>
+          <Icon icon={Download} size={18} />
+          <span>Download App</span>
+        </button>
       </div>
 
       {/* 错误提示 */}
