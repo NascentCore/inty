@@ -106,6 +106,7 @@ def test_version_check_returns_google_play_result(version_app: FastAPI):
 
     headers = {
         "appVersionCode": "150",
+        "appVersionName": "1.5.0",
     }
 
     with TestClient(version_app) as client:

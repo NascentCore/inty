@@ -33,6 +33,7 @@ def test_android_app_requests_flow():
     headers = session.headers.copy()
     headers.update({
         "appVersionCode": "100",
+        "appVersionName": "1.0.0",
     })
     r = session.post(f"{BASE_URL}/api/v1/version/check", headers=headers, timeout=TIMEOUT)
     assert r.status_code == 200
