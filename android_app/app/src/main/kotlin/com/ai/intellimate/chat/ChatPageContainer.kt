@@ -53,8 +53,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
-var inChatPageScrolling = false  // 当前ChatPage 是否在滚动中
-var isKeyboardVisibleChatPage = false  // 当前页面键盘是否可见
+var inChatPageScrolling = false // 当前ChatPage 是否在滚动中
+var isKeyboardVisibleChatPage = false // 当前页面键盘是否可见
 
 /** ChatPageContainer - 支持分页加载的聊天页面容器 使用Paging库实现分页加载更多agents，提供更流畅的滑动体验 */
 @Composable
@@ -179,9 +179,7 @@ fun ChatPageContainer(
         snapshotFlow { pageState.isScrollInProgress }
             // 确保只有在状态发生变化时才触发
             .distinctUntilChanged()
-            .collect { isScrolling ->
-                inChatPageScrolling = isScrolling
-            }
+            .collect { isScrolling -> inChatPageScrolling = isScrolling }
     }
 
     Box {
@@ -218,11 +216,12 @@ fun ChatPageContainer(
                         }
                     },
                     onKeyboardVisible = { visible ->
-                        val nextState = if (inChatPageScrolling) isKeyboardVisibleChatPage else visible
+                        val nextState =
+                            if (inChatPageScrolling) isKeyboardVisibleChatPage else visible
                         if (nextState != isKeyboardVisibleChatPage) {
                             isKeyboardVisibleChatPage = nextState
                         }
-                    }
+                    },
                 )
             }
         }

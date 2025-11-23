@@ -25,7 +25,7 @@ async def check_version(
         ..., alias="appVersionCode", description="应用版本代码"
     ),
     app_version_name: Optional[str] = Header(
-        None, alias="appVersionName", description="应用版本名称（可选）"
+        None, alias="appVersionName", description="应用版本名称（向后兼容，忽略）"
     ),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -34,24 +34,26 @@ async def check_version(
 
     通过HTTP头传递版本信息：
     - appVersionCode: 应用版本代码（必填，整数）
-    - appVersionName: 应用版本名称（可选，字符串）
+    - appVersionName: 应用版本名称（可选，后端会忽略，保留向后兼容）
     """
     try:
         # 直接使用注入的版本参数
         client_version_code = app_version_code
-        version_name = app_version_name or "unknown"
+        if app_version_name:
+            logger.debug(
+                "收到 appVersionName header，将忽略版本名称，仅比较 versionCode"
+            )
 
-        # 调用Google Play服务检查版本
+        # 调用Google Play服务检查版本（仅基于versionCode）
         version_check_result = google_play_service.check_version_requirement(
-            client_version_code, version_name
+            client_version_code
         )
 
         # 转换为响应模型
         response = VersionCheckResponse(**version_check_result)
 
         logger.debug(
-            f"用户 {current_user.id} 版本检查完成: versionCode {client_version_code} "
-            f"(versionName: {version_name}) -> "
+            f"用户 {current_user.id} 版本检查完成: versionCode {client_version_code} -> "
             f"需要更新: {response.update_required}, 强制更新: {response.force_update}"
         )
 

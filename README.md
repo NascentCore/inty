@@ -23,15 +23,16 @@ InTy 是一个 AI 智能伴侣平台，包含后端服务、Android 应用和 We
 
 ## 快速开始
 
-1. 克隆仓库并初始化子模块：
-
 ```bash
+# 1. 克隆仓库并初始化子模块：
 git clone --recurse-submodules git@github.com:NascentCore/inty.git
 ```
 
-> 没有 SSH 权限的开发者可以改用 `https://github.com/NascentCore/inty-backend.git`。
+Android App 开发使用 Android Studio 打开`inty/android_app`，
+详情参考 [android_app/README.md](android_app/README.md)。
 
-2. 如需本地开发后端服务，请参考 [backend/README.md](backend/README.md)。
+后端开发，代码位于 `app` 目录（目前正在逐步向 `backend` 目录迁移），
+请参考 [backend/README.md](backend/README.md)。
 
 如果子模块出现脏数据（如下图所示），可以按照下面的流程重置：
 
@@ -45,15 +46,7 @@ git submodule deinit -f .
 git submodule update --init --recursive
 ```
 
-### Git submodule 常用操作
-
-- **回滚到指定提交**：进入目标子模块目录后执行 `git checkout <commit-hash>`。
-- **拉取子模块最新代码**：在仓库根目录执行 `git submodule update --remote --recursive`。
-- **同步子模块远程信息**：在仓库根目录执行 `git submodule sync`
-
-<img width="960" height="236" alt="image" src="https://github.com/user-attachments/assets/a3b34dad-45f4-43d0-b1fb-c066f8397bd2" />
-
-更多进阶技巧可参考 [Git Submodule 使用指南](https://www.atlassian.com/git/articles/core-concept-workflows-and-tips)。
+更新子模块使用 [update_inty_sdk_submodule.sh](update_inty_sdk_submodule.sh)
 
 ## 使用 Docker 容器本地运行后端服务和 Android app（适用于 app 开发者）
 
@@ -96,6 +89,24 @@ git submodule update --init --recursive
 - `alembic/` - 数据库迁移
 - `scripts/` - 各类脚本
 - `devops/` - 运维相关代码
+
+## 如何修改代码库中的文件内容
+
+以 [ui_configs.kt](android_app/app/src/main/kotlin/com/ai/intellimate/ui/ui_configs.kt#L96)
+中的 `WhatsAppGroupInvite` 为例：
+
+1. 打开 GitHub 文件链接：ui_configs.kt，点击右上角铅笔图标编辑文件，可以按照路径从 https://github.com/NascentCore/inty 找到对应的目标文件
+   ![img_v3_02sa_4f309e3d-a334-4b25-8006-91f361222d5g](https://github.com/user-attachments/assets/18a2d9c0-a596-4095-bea3-18f376b33657)
+2. 定位要修改的地方，修改
+   ![img_v3_02sa_6259fdaf-e194-4d91-8120-56b79317f7ag](https://github.com/user-attachments/assets/af713402-c9da-4821-b46e-1a5eaeb7bc23)
+3. 修改完成点击 commit changes，弹窗填入改动标题，其他不用修改，点击右下角 propose changes
+   ![img_v3_02sa_f539d752-b939-405f-8ec7-98d696d47c8g](https://github.com/user-attachments/assets/bad0e20f-0b66-4265-8af0-4d18b152ee0d)
+4. 下一个页面点击 create pull request 生成改动
+   ![img_v3_02sa_a2fef23c-5902-4154-8ff6-9a97a1d384bg](https://github.com/user-attachments/assets/fa985e25-a821-4a14-91e9-5e164b387114)
+5. 生成改动链接，发给@赵亚雄 确认；之后就可以提交
+   ![img_v3_02sa_c2d1a841-1cbe-417f-a52b-04061565a83g](https://github.com/user-attachments/assets/165e57c6-b151-4968-9e67-cfbcff959d6f)
+
+## 说明
 
 更多详细信息请参考各子目录的 README 文件：
 - 后端开发：参见 [backend/README.md](backend/README.md)

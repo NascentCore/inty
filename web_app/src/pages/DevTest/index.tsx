@@ -24,7 +24,6 @@ import {
   ChatDelete,
   ChatList,
   ChatSettings,
-  CheckDeletionEligibility,
   // 版本检查模块
   CheckVersion,
   // AI代理模块
@@ -105,7 +104,6 @@ const DevTestPage: React.FC = () => {
     // 用户模块
     'user-profile': UserProfile,
     'user-update-profile': UpdateProfile,
-    'user-check-deletion': CheckDeletionEligibility,
     'user-delete-account': DeleteAccount,
 
     // AI代理模块
@@ -178,7 +176,6 @@ const DevTestPage: React.FC = () => {
       children: [
         { key: 'user-profile', label: '获取个人信息' },
         { key: 'user-update-profile', label: '更新用户资料' },
-        { key: 'user-check-deletion', label: '检查删除资格' },
         { key: 'user-delete-account', label: '删除账户' },
       ],
     },

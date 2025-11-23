@@ -251,6 +251,7 @@ private fun VipCenterBenefits() {
         PremiumBenefitItem(stringResource(R.string.premium_benefit_higher_other_limits))
 
         PremiumBenefitItem(stringResource(R.string.premium_benefit_model))
+        PremiumBenefitItem(stringResource(R.string.premium_benefit_flagship_models))
         PremiumBenefitItem(stringResource(R.string.premium_benefit_chat_style))
 
         PremiumBenefitItem(stringResource(R.string.premium_benefit_newfeature))

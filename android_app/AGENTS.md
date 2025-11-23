@@ -6,7 +6,9 @@
 
 - 颜色常量应该都写入：`android_app/core/design/src/main/kotlin/ai/sxwl/android/design/theme/Color.kt`，
   不要使用如 `0xFAB...` 之类的 RGB 颜色值
-- URL 定义为常量写入 `app/src/main/kotlin/com/ai/intellimate/ui/ui_configs.kt` 
+- URL 定义为常量写入 `app/src/main/kotlin/com/ai/intellimate/ui/ui_configs.kt`
+- 用户可见的字符写入 `android_app/app/src/main/res/values/strings.xml`
+  并以资源 ID 的形式在代码中使用
 
 ## 架构状态说明
 
@@ -35,6 +37,7 @@
 - 在 UI 中明确标识 AI 生成内容，符合 GB45438-2025。
 - 禁止使用未经审核的模型；遵循欧盟 AI 法案与 OpenAI 指南，落实可解释性与内容审核。
 - 处理用户数据时遵循 GDPR/CCPA，执行数据最小化、加密存储/传输，并提供删除、修改能力。
+- 角色主页（`AgentInfoScreen`）已接入聊天记录中的 `generatedImage` 数据，必须展示 “AI-Generated Images” 画廊，并使用明确的 AI 标签提示用户内容来源；画廊数据通过 `ChatRepository.getMessagesFlow(agentId)` 提供的历史消息实时更新。
 
 ## 技术栈（2025.11）
 

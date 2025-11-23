@@ -50,6 +50,7 @@ fun HeartBottomAppBar(
     iconSize: Dp = 24.dp,
     textSize: TextUnit = 12.sp,
     height: Dp? = null,
+    labelSpacing: Dp = 4.dp,
     onTabSelected: (Int) -> Unit = {},
 ) {
     val navigationBarModifier =
@@ -70,10 +71,10 @@ fun HeartBottomAppBar(
 
             CompositionLocalProvider(
                 LocalDensity provides
-                        Density(
-                            density = LocalDensity.current.density,
-                            fontScale = 1f, // 核心：禁用字体缩放
-                        )
+                    Density(
+                        density = LocalDensity.current.density,
+                        fontScale = 1f, // 核心：禁用字体缩放
+                    )
             ) {
                 NavigationBarItem(
                     selected = isSelected,
@@ -97,17 +98,22 @@ fun HeartBottomAppBar(
                             }
                         if (labelText.isNotEmpty()) {
                             Text(
+                                modifier = Modifier.padding(top = labelSpacing),
                                 text = labelText,
                                 fontSize = textSize,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) Color(0xFF9C27B0) else Color.White,
+                                color =
+                                    if (isSelected) {
+                                        BottomTabSelectedLabelColor
+                                    } else {
+                                        BottomTabUnselectedLabelColor
+                                    },
                             )
                         }
                     },
                     colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent),
                 )
             }
-
         }
     }
 }
@@ -127,6 +133,9 @@ data class HeartBottomTabItem(
         }
     }
 }
+
+private val BottomTabSelectedLabelColor = Color(0xFF9C27B0)
+private val BottomTabUnselectedLabelColor = Color(0x8C808080)
 
 private val bottomTabItems =
     listOf(

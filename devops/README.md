@@ -49,14 +49,9 @@
 - Dev instance is on GCP, serves all backend services.
 - This instance should only run docker images, do not perform any coding or used for other purposes.
 - nginx is the reverse proxy
-- in front of dev & prod inty backend, inty-eval
+- in front of dev & prod inty backend, 和 intellimate.app web app
 
-The files are placed onto the host in the following paths
-
-```text
-htpasswd:/etc/nginx/.htpasswd # Used by nginx.conf
-nginx.conf:/etc/nginx/conf.d/sxwl.ai.conf
-```
+详情请查看 [NGINX](NGINX.md)
 
 ## Inty prod & dev 部署
 
@@ -100,6 +95,8 @@ nginx.conf:/etc/nginx/conf.d/sxwl.ai.conf
   - nginx provide password protection for internal services
   - [Arch diagram feishu source](https://tricorder.feishu.cn/wiki/RjfPw00OKiWKNvk8Ldmc4d2snNc#share-KZGQdQrWSo1eb2xAq6mcLHjfn5c)
     <img width="800" height="468" alt="image" src="https://github.com/user-attachments/assets/acce2ea3-b571-4bd6-8f66-b1eea9796742" />
+  - OAuth
+    <img width="1784" height="1252" alt="image" src="https://github.com/user-attachments/assets/0cf4de58-0841-46b1-8c0c-6193140f06b0" />
 - langsmith 监控平台：<try@sxwl.ai>
 - OpenRouter 大模型聚合调用平台：<it@sxwl.ai>
   - 下面 2 个 API key 应该删除（不知道哪里用到）
