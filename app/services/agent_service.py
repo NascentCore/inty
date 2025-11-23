@@ -5,7 +5,7 @@
 import math
 import uuid
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from fastapi import HTTPException
 from loguru import logger
@@ -30,6 +30,7 @@ from app.external_services.gcs import (
 )
 from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
+from app.models.user import Gender
 from app.schemas.agent import AgentSortOption
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.services.cache_service import cache_service
@@ -763,6 +764,12 @@ async def create_agent(
         # 处理图片URL：验证、复制临时文件到永久路径、删除临时文件
         processed_agent_data = process_agent_image_urls(agent_data)
 
+        # 处理 gender 字段：将字符串转换为 Gender 枚举，并将 NON_BINARY 映射到 OTHER
+        if "gender" in processed_agent_data and processed_agent_data["gender"]:
+            processed_agent_data["gender"] = _normalize_gender(
+                processed_agent_data["gender"]
+            )
+
         need_to_crop_avatar = not processed_agent_data.get(
             "avatar", None
         ) and processed_agent_data.get("background", None)
@@ -896,6 +903,32 @@ def _validate_character_card_fields(agent_in: schemas.AgentCreate):
     )
 
 
+def _normalize_gender(gender_value: Any) -> Gender:
+    """
+    规范化 gender 字段：将字符串转换为 Gender 枚举，并将 NON_BINARY 映射到 OTHER
+
+    Args:
+        gender_value: gender 字段的值，可能是字符串或 Gender 枚举
+
+    Returns:
+        规范化后的 Gender 枚举值
+    """
+    # 如果已经是 Gender 枚举实例，直接返回
+    if isinstance(gender_value, Gender):
+        return gender_value
+
+    # 将字符串转换为大写
+    gender_str = str(gender_value).upper()
+    # 将 NON_BINARY 映射到 OTHER
+    if gender_str == "NON_BINARY":
+        gender_str = "OTHER"
+    try:
+        return Gender[gender_str]
+    except KeyError:
+        logger.warning(f"无效的 gender 值: {gender_value}，使用默认值 OTHER")
+        return Gender.OTHER
+
+
 def _update_agent_in_db(update_data: dict, db_agent: models.Agent):
     # 验证更新数据
     # 验证名称不为空（如果提供了名称）
@@ -956,6 +989,10 @@ def _update_agent_in_db(update_data: dict, db_agent: models.Agent):
             if image not in existing_images:
                 existing_images.append(image)
         db_agent.background_images = existing_images
+
+    # 处理 gender 字段：将字符串转换为 Gender 枚举，并将 NON_BINARY 映射到 OTHER
+    if "gender" in update_data and update_data["gender"]:
+        update_data["gender"] = _normalize_gender(update_data["gender"])
 
     # 更新其他字段
     for field, value in update_data.items():
