@@ -38,13 +38,12 @@ fun ExploreLoadingStates(
         }
         is LoadState.NotLoading -> {
             // 只有在真正没有更多数据且不是初始状态时才显示
-            // 增加更严格的条件：确保不是首次加载，且确实没有更多数据
+            // Explore 页面只向下加载（append），不向上加载（prepend），所以只需要检查 append 状态
             if (
                 lazyPagingItems.loadState.append.endOfPaginationReached &&
                     lazyPagingItems.itemCount > 0 &&
-                    lazyPagingItems.loadState.refresh is LoadState.NotLoading &&
-                    !lazyPagingItems.loadState.prepend.endOfPaginationReached
-            ) { // 确保不是初始状态
+                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
+            ) {
                 NoMoreDataIndicator()
             }
         }

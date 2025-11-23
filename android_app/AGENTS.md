@@ -6,7 +6,9 @@
 
 - 颜色常量应该都写入：`android_app/core/design/src/main/kotlin/ai/sxwl/android/design/theme/Color.kt`，
   不要使用如 `0xFAB...` 之类的 RGB 颜色值
-- URL 定义为常量写入 `app/src/main/kotlin/com/ai/intellimate/ui/ui_configs.kt` 
+- URL 定义为常量写入 `app/src/main/kotlin/com/ai/intellimate/ui/ui_configs.kt`
+- 用户可见的字符写入 `android_app/app/src/main/res/values/strings.xml`
+  并以资源 ID 的形式在代码中使用
 
 ## 架构状态说明
 
