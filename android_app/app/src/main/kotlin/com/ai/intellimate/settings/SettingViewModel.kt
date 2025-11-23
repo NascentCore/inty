@@ -37,46 +37,6 @@ class SettingViewModel : BaseVM() {
         _dialogState.value = _dialogState.value.copy(showDeleteAccountDialog = false)
     }
 
-    /** 检查账号是否有订阅需要取消，才能用来删除账号 */
-    fun checkAccountSubscribe() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val result = userApi.userDeletionCheck()
-
-                withContext(Dispatchers.Main) {
-                    when (result) {
-                        is HttpResult.Success -> {
-                            if (result.data.canDelete && !result.data.activeSubscription) {
-                                deleteUserAccount()
-                            } else {
-                                ToastUtils.showShort(
-                                    Utils.getApp()
-                                        .getString(R.string.toast_cancel_subscription_first)
-                                )
-                            }
-                        }
-
-                        is HttpResult.Failure -> {
-                            ToastUtils.showShort(
-                                Utils.getApp()
-                                    .getString(R.string.toast_check_account_deletion_error)
-                            )
-                        }
-                    }
-                }
-            } catch (e: HttpException) {
-                // 专门处理HTTP异常
-                LogUtils.e("checkAccountSubscribe HTTP Exception: ${e.code()} - ${e.message()}")
-                val errorMessage = HttpErrorHandler.handleHttpException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
-            } catch (e: Exception) {
-                LogUtils.e("检查账号需要取消订阅 exception: ${e.message}")
-                val errorMessage = HttpErrorHandler.handleGeneralException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
-            }
-        }
-    }
-
     // 删除账号的结果
     val deleteAccountResultFlow = MutableStateFlow(false)
 
@@ -90,16 +50,33 @@ class SettingViewModel : BaseVM() {
         _dialogState.value = DialogState()
     }
 
-    /** 删除账号的接口 */
-    private fun deleteUserAccount() {
-        launchBackground {
+    /** 删除账号（已包含删除检查逻辑） */
+    fun deleteUserAccount() {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = userApi.userDeleteAccount()
 
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
-                            deleteAccountResultFlow.emit(true)
+                            if (result.data.success) {
+                                deleteAccountResultFlow.emit(true)
+                            } else {
+                                // 删除失败，显示后端返回的错误信息
+                                val errorMessage = result.data.message
+                                    ?: Utils.getApp().getString(R.string.toast_account_deletion_error)
+                                
+                                // 如果错误信息包含订阅相关关键词，显示特定的提示
+                                if (errorMessage.contains("订阅", ignoreCase = true) ||
+                                    errorMessage.contains("subscription", ignoreCase = true)) {
+                                    ToastUtils.showShort(
+                                        Utils.getApp()
+                                            .getString(R.string.toast_cancel_subscription_first)
+                                    )
+                                } else {
+                                    ToastUtils.showShort(errorMessage)
+                                }
+                            }
                         }
 
                         is HttpResult.Failure -> {

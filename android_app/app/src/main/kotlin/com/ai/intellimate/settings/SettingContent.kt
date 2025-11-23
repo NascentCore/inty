@@ -97,7 +97,7 @@ fun SettingContent(
             SettingDialogs(
                 dialogState = dialogState,
                 onHideDeleteDialog = { viewModel.hideDeleteAccountDialog() },
-                onConfirmDelete = { viewModel.checkAccountSubscribe() },
+                onConfirmDelete = { viewModel.deleteUserAccount() },
             )
         }
     }
