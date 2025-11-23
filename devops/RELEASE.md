@@ -10,7 +10,8 @@
    3. previous release 选择同样后缀的 tag，如下面发布 web app 就选择 -web 后缀
       <img width="480" height="374" alt="image" src="https://github.com/user-attachments/assets/22f307a2-eefb-437d-acec-437ccd16ef0f" />
    4. 数字版本号所有组件共享，也就是如果后端发布了 v1.3.1-backend，下一个 android 发布名称为 v1.3.2-android
-3. 然后从创建的 tag 启动相应 GitHub Actions 工作流创建新的发布产物（后端服务的 docker 容器镜像、web app 在服务器上的静态文件等等）
+2. 然后从创建的 tag 启动相应 GitHub Actions 工作流创建新的发布产物（后端服务的 docker 容器镜像、web app 在服务器上的静态文件等等）
+3. 确保创建的 release 被设为最新 release，从而方便下次创建新的 release 时查看上一次的 version name，进行 <fix> 递增
 
 ## Backend 发布流程
 
