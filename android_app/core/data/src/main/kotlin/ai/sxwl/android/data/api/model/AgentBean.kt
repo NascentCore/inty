@@ -61,7 +61,7 @@ data class AgentInfo(
 
     // 用于显示的图
     fun getAlbumImage(): String? {
-        return getLargeBackground()?.takeIf { it.isNotBlank() } ?: getLargeAvatar()
+        return getLargeBackground()?.ifEmpty { getLargeAvatar() }
     }
 
     // 获取可用的原图url，优先背景图，avatar做兜底
