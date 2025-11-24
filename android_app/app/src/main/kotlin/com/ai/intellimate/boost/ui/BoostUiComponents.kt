@@ -30,6 +30,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
+import com.ai.intellimate.boost.BoostCalculator
 import com.ai.intellimate.boost.BoostConfig
 import kotlinx.coroutines.launch
 
@@ -125,7 +127,7 @@ fun BoostSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var desiredPoints by remember(availablePoints) {
         mutableIntStateOf(
-            BoostConfig.normalizeBoostAmount(
+            BoostCalculator.normalizeBoostAmount(
                 BoostConfig.BOOST_STEP_POINTS,
                 availablePoints,
             )
@@ -134,7 +136,7 @@ fun BoostSheet(
 
     LaunchedEffect(availablePoints) {
         desiredPoints =
-            BoostConfig.normalizeBoostAmount(
+            BoostCalculator.normalizeBoostAmount(
                 desiredPoints.coerceAtLeast(BoostConfig.BOOST_STEP_POINTS),
                 availablePoints,
             )
