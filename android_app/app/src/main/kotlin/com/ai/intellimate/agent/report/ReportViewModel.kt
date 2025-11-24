@@ -13,13 +13,13 @@ import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.ViewModelEvent
-import java.io.InputStream
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.InputStream
 
 class ReportViewModel : BaseVM() {
 
@@ -32,11 +32,12 @@ class ReportViewModel : BaseVM() {
         viewModelScope.launch { _events.emit(event) }
     }
 
+    var isFeedbackMode: Boolean = false
     var targetID: String = ""
     var targetType: String = "USER"
 
     // Hard-coded list of report reasons
-    private val _reasons =
+    private val _reportReasons =
         MutableStateFlow(
             listOf(
                 ReportItem(
@@ -64,7 +65,60 @@ class ReportViewModel : BaseVM() {
                 ),
             )
         )
+
+    // Hard-coded list of feedback reasons
+    // Note: These descriptions will be replaced with string resources in the UI layer
+    private val _feedbackReasons =
+        MutableStateFlow(
+            listOf(
+                ReportItem(
+                    id = 1,
+                    description = "Chat replies don't feel natural / off-topic",
+                    code = "CHAT_NOT_NATURAL",
+                ),
+                ReportItem(
+                    id = 2,
+                    description = "The character doesn't match its persona",
+                    code = "CHARACTER_MISMATCH",
+                ),
+                ReportItem(
+                    id = 3,
+                    description = "The app is slow or gets stuck",
+                    code = "APP_SLOW",
+                ),
+                ReportItem(
+                    id = 4,
+                    description = "I couldn't find / how to use this feature",
+                    code = "FEATURE_HARD_TO_FIND",
+                ),
+                ReportItem(
+                    id = 5,
+                    description = "UI or interaction feels inconvenient",
+                    code = "UI_INCONVENIENT",
+                ),
+                ReportItem(
+                    id = 6,
+                    description = "I'd like to see a new feature or improvement",
+                    code = "NEW_FEATURE",
+                ),
+                ReportItem(
+                    id = 0,
+                    description = "Other, please describe below",
+                    code = "OTHER",
+                ),
+            )
+        )
+
+    private val _reasons = MutableStateFlow(_reportReasons.value)
     val reasons = _reasons.asStateFlow()
+
+    fun updateReasonsForMode() {
+        _reasons.value = if (isFeedbackMode) {
+            _feedbackReasons.value
+        } else {
+            _reportReasons.value
+        }
+    }
 
     var selectIDS = mutableStateSetOf<Int>()
 
@@ -112,15 +166,19 @@ class ReportViewModel : BaseVM() {
                 val result =
                     ReportService.createReport(
                         reasonIds = selectIDS.map { it.toLong() },
-                        targetId = targetID,
-                        targetType = targetType,
+                        targetId = if (isFeedbackMode) null else targetID,
+                        targetType = if (isFeedbackMode) null else targetType,
                         description = description.value.trim(),
                         imageUrls = uploadedImageUrls + remoteImages.toList(),
                     )
 
                 when (result) {
                     is ApiResult.Success -> {
-                        ToastUtils.showShort(R.string.toast_submitted_successfully)
+                        if (isFeedbackMode) {
+                            ToastUtils.showShort(R.string.toast_feedback_submitted)
+                        } else {
+                            ToastUtils.showShort(R.string.toast_submitted_successfully)
+                        }
                         sendEvent(ViewModelEvent.ReportSubmitted)
                     }
                     is ApiResult.Error -> {

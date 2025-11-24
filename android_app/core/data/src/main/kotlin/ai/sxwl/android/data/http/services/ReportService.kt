@@ -11,23 +11,26 @@ object ReportService {
     /** 创建举报 */
     suspend fun createReport(
         reasonIds: List<Long>,
-        targetId: String,
+        targetId: String?,
         targetType: String?,
         description: String,
         imageUrls: List<String>,
     ): ApiResult<Unit> {
         return IntyNetworkManager.executeRequest("Create Report") {
-            val type =
+            // 如果 targetId 和 targetType 为 null（Feedback 模式），使用空字符串和默认类型
+            val finalTargetId = targetId ?: ""
+            val finalTargetType =
                 if (targetType == "USER") {
                     ReportCreateParams.TargetType.USER
                 } else {
                     ReportCreateParams.TargetType.AGENT
                 }
+
             val reportParams =
                 ReportCreateParams.builder()
                     .reasonIds(reasonIds)
-                    .targetId(targetId)
-                    .targetType(type)
+                    .targetId(finalTargetId)
+                    .targetType(finalTargetType)
                     .description(description.trim())
                     .imageUrls(imageUrls)
                     .build()

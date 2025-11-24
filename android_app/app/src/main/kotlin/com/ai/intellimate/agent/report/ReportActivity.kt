@@ -19,9 +19,10 @@ class ReportActivity : BaseActivity() {
     companion object {
         private const val INTENT_KEY_TARGET_ID = "intent_key_target_id"
         private const val INTENT_KEY_TARGET_TYPE = "intent_key_target_type"
+        private const val INTENT_KEY_IS_FEEDBACK = "intent_key_is_feedback"
 
         /**
-         * 启动单独的聊天界面
+         * 启动举报界面
          *
          * @param context 上下文context
          * @param targetType
@@ -32,6 +33,20 @@ class ReportActivity : BaseActivity() {
                 Intent(context, ReportActivity::class.java).also { intent ->
                     intent.putExtra(INTENT_KEY_TARGET_ID, targetId)
                     intent.putExtra(INTENT_KEY_TARGET_TYPE, targetType)
+                    intent.putExtra(INTENT_KEY_IS_FEEDBACK, false)
+                }
+            )
+        }
+
+        /**
+         * 启动反馈界面
+         *
+         * @param context 上下文context
+         */
+        fun launchFeedback(context: Context) {
+            context.startActivity(
+                Intent(context, ReportActivity::class.java).also { intent ->
+                    intent.putExtra(INTENT_KEY_IS_FEEDBACK, true)
                 }
             )
         }
@@ -41,8 +56,14 @@ class ReportActivity : BaseActivity() {
 
     override fun initConfigData() {
         super.initConfigData()
-        viewModel.targetID = intent.getStringExtra(INTENT_KEY_TARGET_ID) ?: ""
-        viewModel.targetType = intent.getStringExtra(INTENT_KEY_TARGET_TYPE) ?: "USER"
+        val isFeedback = intent.getBooleanExtra(INTENT_KEY_IS_FEEDBACK, false)
+        viewModel.isFeedbackMode = isFeedback
+        viewModel.updateReasonsForMode()
+
+        if (!isFeedback) {
+            viewModel.targetID = intent.getStringExtra(INTENT_KEY_TARGET_ID) ?: ""
+            viewModel.targetType = intent.getStringExtra(INTENT_KEY_TARGET_TYPE) ?: "USER"
+        }
 
         // 监听ViewModel事件
         lifecycleScope.launch {
@@ -62,13 +83,17 @@ class ReportActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
-        ReportContent(viewModel = viewModel, onBack = { finish() })
+        ReportContent(
+            viewModel = viewModel,
+            onBack = { finish() },
+            isFeedbackMode = viewModel.isFeedbackMode,
+        )
     }
 }
 
 /** 举报内容组件 */
 @Composable
-private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit) {
+private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit, isFeedbackMode: Boolean) {
     val reasons = viewModel.reasons.collectAsState()
     val selectIDs = viewModel.selectIDS
     val description = viewModel.description.collectAsState()
@@ -98,5 +123,6 @@ private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit) {
         onSave = { viewModel.submit() },
         isSubmitting = isSubmitting.value,
         onBack = onBack,
+        isFeedbackMode = isFeedbackMode,
     )
 }

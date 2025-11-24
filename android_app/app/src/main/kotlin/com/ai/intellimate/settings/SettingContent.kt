@@ -123,7 +123,9 @@ private fun SettingTopBar(onBack: () -> Unit) {
         },
         navigationIcon = {
             Image(
-                modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .noRippleClickable { onBack() },
                 painter = painterResource(R.drawable.back),
                 contentDescription = null,
             )
@@ -141,6 +143,14 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
             title = stringResource(R.string.settings_email_support),
             subtitle = email,
             onClick = { mailTo(context, email) },
+        )
+
+        SettingDivider()
+
+        // Feedback
+        SettingNavigationItem(
+            title = stringResource(R.string.str_feedback),
+            onClick = { ReportActivity.launchFeedback(context) },
         )
 
         SettingDivider()
