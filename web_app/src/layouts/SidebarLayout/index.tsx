@@ -5,7 +5,7 @@
 
 import { history, Outlet, useModel } from '@umijs/max';
 import React, { useEffect } from 'react';
-import { FooterAd, GoogleLoginModal, TopBannerAd, VersionBadge } from '@/components';
+import { GoogleLoginModal, VersionBadge } from '@/components';
 import ChatHistoryList from './components/ChatHistoryList';
 import DiscoverButton from './components/DiscoverButton';
 import SidebarHeader from './components/SidebarHeader';
@@ -50,9 +50,6 @@ const SidebarLayout: React.FC = () => {
 
   return (
     <div className="sidebar-layout-wrapper">
-      {/* 整个页面顶部横幅广告 */}
-      <TopBannerAd />
-
       <div className="sidebar-layout">
         {/* 左侧边栏 */}
         <aside className="sidebar-layout-aside">
@@ -81,9 +78,6 @@ const SidebarLayout: React.FC = () => {
           </div>
         </main>
       </div>
-
-      {/* 整个页面底部横幅广告 */}
-      <FooterAd />
 
       {/* 全局 Google 登录弹窗 */}
       <GoogleLoginModal />
