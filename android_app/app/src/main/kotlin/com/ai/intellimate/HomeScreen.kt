@@ -99,6 +99,7 @@ fun HomeScreen(
                 textSize = UiConfigs.BottomTab.TextLabelSize,
                 height = UiConfigs.BottomTab.Height,
                 labelSpacing = UiConfigs.BottomTab.IconTextLabelSpacing,
+                bottomSpacing = UiConfigs.BottomTab.BottomSpacing,
             )
         },
     ) { innerPadding ->

@@ -46,10 +46,11 @@ object UiConfigs {
     }
 
     object BottomTab {
-        val Height = 50.dp
-        val IconSize = 22.dp
-        val TextLabelSize = 10.sp
+        val Height = 64.dp
+        val IconSize = 26.dp
+        val TextLabelSize = 12.sp
         val IconTextLabelSpacing = (-6).dp  // 负值减少图标和文字之间的间距（使用 offset 向上移动）
+        val BottomSpacing = 10.dp  // 底部 tab 与屏幕底部边缘的间距（负值可缩小间距）
     }
 
     object Typography {

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -51,14 +52,20 @@ fun HeartBottomAppBar(
     textSize: TextUnit,
     height: Dp,
     labelSpacing: Dp,
+    bottomSpacing: Dp,
     onTabSelected: (Int) -> Unit = {},
 ) {
-    val navigationBarModifier =
-        if (height != null) {
-            modifier.fillMaxWidth().height(height)
-        } else {
-            modifier.fillMaxWidth()
-        }
+    val baseModifier = if (height != null) {
+        modifier.fillMaxWidth().height(height)
+    } else {
+        modifier.fillMaxWidth()
+    }
+    
+    val navigationBarModifier = if (bottomSpacing.value >= 0) {
+        baseModifier.padding(bottom = bottomSpacing)
+    } else {
+        baseModifier.offset(y = bottomSpacing)
+    }
 
     NavigationBar(
         modifier = navigationBarModifier,
@@ -98,7 +105,11 @@ fun HeartBottomAppBar(
                             }
                         if (labelText.isNotEmpty()) {
                             Text(
-                                modifier = Modifier.padding(top = labelSpacing),
+                                modifier = if (labelSpacing.value >= 0) {
+                                    Modifier.padding(top = labelSpacing)
+                                } else {
+                                    Modifier.offset(y = labelSpacing)
+                                },
                                 text = labelText,
                                 fontSize = textSize,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
