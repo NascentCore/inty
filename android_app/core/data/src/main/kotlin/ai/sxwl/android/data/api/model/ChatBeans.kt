@@ -76,6 +76,7 @@ data class MsgInfo(
     val meta_data: MsgMetaData? = null, // 附带数据
     val audio_url: String? = null, // 音频文件的url
     val timestamp: String? = null, // 消息时间戳 2025-09-11T03:58:29.077875+00:00
+    @Json(name = "user_vote") val user_vote: String? = null, // 用户投票状态：like 或 dislike
     // 本地创建一个msgId，临时用于消息标记
     val localMsgId: String = "${System.nanoTime()}_${role}_${content.hashCode()}",
     // 本地状态：用户反馈（like/dislike）- 不序列化
@@ -235,5 +236,31 @@ data class MsgVoiceRsp(
         val description: String? = null,
         val used_count: Int = 0,
         val limit: Int = 0,
+    )
+}
+
+/** 消息投票常量 */
+object VoteConstants {
+    const val LIKE = "like"
+    const val DISLIKE = "dislike"
+}
+
+/** 消息投票请求 */
+@JsonClass(generateAdapter = true)
+data class VoteMessageReq(
+    @Json(name = "agent_id") val agent_id: String,
+    @Json(name = "message_id") val message_id: String,
+    val vote: String, // 使用 VoteConstants.LIKE 或 VoteConstants.DISLIKE
+)
+
+/** 消息投票响应 */
+@JsonClass(generateAdapter = true)
+data class VoteMessageRsp(
+    val code: Int? = null,
+    val message: String? = null,
+    val data: VoteMessageData? = null,
+) {
+    data class VoteMessageData(
+        val vote: String, // VoteConstants.LIKE 或 VoteConstants.DISLIKE
     )
 }

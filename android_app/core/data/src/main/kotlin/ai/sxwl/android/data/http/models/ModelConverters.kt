@@ -5,10 +5,10 @@ import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.api.model.CreatorInfo
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.UserProfile
+import com.inty.api.models.v2.chat.ChatSendMessageResponse
 import com.inty.api.models.api.v1.ai.agents.Agent as IntyAgent
 import com.inty.api.models.api.v1.chats.Chat as IntyChat
 import com.inty.api.models.api.v1.users.profile.User as IntyUser
-import com.inty.api.models.v2.chat.ChatSendMessageResponse
 
 /** 数据模型转换工具 将Inty SDK的模型转换为业务层模型 */
 
@@ -137,6 +137,7 @@ fun Map<String, Any>.toMsgInfo(agentId: String? = null): MsgInfo {
     val role = (this["type"] as? String) ?: (this["role"] as? String) ?: ""
     val timestamp = (this["timestamp"] as? String) ?: null
     val audioUrl = (this["audio_url"] as? String) ?: null
+    val userVote = (this["user_vote"] as? String) ?: null
 
     val metaData =
         MsgInfo.MsgMetaData(
@@ -145,6 +146,14 @@ fun Map<String, Any>.toMsgInfo(agentId: String? = null): MsgInfo {
             generatedImage = null,
         )
 
+    // 将服务端的 user_vote 转换为本地的 userFeedback
+    val userFeedback =
+        when (userVote) {
+            ai.sxwl.android.data.api.model.VoteConstants.LIKE -> MsgInfo.UserFeedback.LIKE
+            ai.sxwl.android.data.api.model.VoteConstants.DISLIKE -> MsgInfo.UserFeedback.DISLIKE
+            else -> null
+        }
+
     return MsgInfo(
         id = id,
         content = content,
@@ -152,5 +161,7 @@ fun Map<String, Any>.toMsgInfo(agentId: String? = null): MsgInfo {
         meta_data = metaData,
         audio_url = audioUrl,
         timestamp = timestamp,
+        user_vote = userVote,
+        userFeedback = userFeedback,
     )
 }

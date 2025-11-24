@@ -2,6 +2,8 @@ package ai.sxwl.android.data.chat.repository
 
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.SendMsgResponse
+import ai.sxwl.android.data.api.model.VoteConstants
+import ai.sxwl.android.data.api.model.VoteMessageRsp
 import ai.sxwl.android.data.chat.data.ChatLocalDataSource
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
@@ -20,6 +22,24 @@ class ChatRepositoryImpl(
         private const val DEFAULT_PAGE_SIZE = 20
         private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
         private const val ROLE_ASSISTANT = "assistant"
+    }
+
+    /** 将服务端返回的消息中的 user_vote 转换为 userFeedback */
+    private fun convertUserVoteToFeedback(messages: List<MsgInfo>): List<MsgInfo> {
+        return messages.map { msg ->
+            if (msg.user_vote != null && msg.userFeedback == null) {
+                // 如果消息有 user_vote 但没有 userFeedback，进行转换
+                val userFeedback =
+                    when (msg.user_vote) {
+                        VoteConstants.LIKE -> MsgInfo.UserFeedback.LIKE
+                        VoteConstants.DISLIKE -> MsgInfo.UserFeedback.DISLIKE
+                        else -> null
+                    }
+                msg.copy(userFeedback = userFeedback)
+            } else {
+                msg
+            }
+        }
     }
 
     override fun getMessagesFlow(agentId: String): StateFlow<List<MsgInfo>> {
@@ -51,7 +71,8 @@ class ChatRepositoryImpl(
                 val result = remoteDataSource.getMessages(agentId, pageSize, 0)
                 when (result) {
                     is HttpResult.Success -> {
-                        val serverMessages = result.data.messages ?: emptyList()
+                        val serverMessages =
+                            convertUserVoteToFeedback(result.data.messages ?: emptyList())
                         if (serverMessages.isNotEmpty()) {
                             localDataSource.updateMessages(agentId, serverMessages)
                             localDataSource.setHasMore(agentId, result.data.hasMore)
@@ -77,10 +98,9 @@ class ChatRepositoryImpl(
         }
 
         try {
-            val result = remoteDataSource.getMessages(agentId, pageSize, 0)
-            when (result) {
+            when (val result = remoteDataSource.getMessages(agentId, pageSize, 0)) {
                 is HttpResult.Success -> {
-                    val messages = result.data.messages ?: emptyList()
+                    val messages = convertUserVoteToFeedback(result.data.messages ?: emptyList())
                     LogUtils.i(
                         "ChatRepositoryImpl.ensureInitialHistory loaded ${messages.size} messages for $agentId"
                     )
@@ -113,11 +133,10 @@ class ChatRepositoryImpl(
 
         try {
             val offset = localDataSource.getOffset(agentId)
-            val result = remoteDataSource.getMessages(agentId, pageSize, offset)
-
-            when (result) {
+            when (val result = remoteDataSource.getMessages(agentId, pageSize, offset)) {
                 is HttpResult.Success -> {
-                    val moreMessages = result.data.messages ?: emptyList()
+                    val moreMessages =
+                        convertUserVoteToFeedback(result.data.messages ?: emptyList())
                     if (moreMessages.isNotEmpty()) {
                         localDataSource.appendMessages(agentId, moreMessages)
                         localDataSource.incrementOffset(agentId, pageSize)
@@ -202,13 +221,13 @@ class ChatRepositoryImpl(
         }
 
         try {
-            val result = remoteDataSource.getMessages(agentId, pageSize, 0)
-            when (result) {
+            when (val result = remoteDataSource.getMessages(agentId, pageSize, 0)) {
                 is HttpResult.Success -> {
-                    val serverMessages = result.data.messages ?: emptyList()
+                    val serverMessages =
+                        convertUserVoteToFeedback(result.data.messages ?: emptyList())
                     val localMessages = localDataSource.getMessagesFlow(agentId).value
 
-                    // 检查是否有新消息
+                    // 检查是否有新消息或消息状态变化（如 user_vote）
                     val hasNewMessages =
                         serverMessages.any { serverMsg ->
                             localMessages.none { localMsg ->
@@ -218,8 +237,16 @@ class ChatRepositoryImpl(
                             }
                         }
 
-                    if (hasNewMessages) {
-                        // 有新消息，更新本地数据
+                    // 检查是否有消息状态变化（如 user_vote 更新）
+                    val hasStatusChanges =
+                        serverMessages.any { serverMsg ->
+                            localMessages.any { localMsg ->
+                                localMsg.id == serverMsg.id && localMsg.user_vote != serverMsg.user_vote
+                            }
+                        }
+
+                    if (hasNewMessages || hasStatusChanges) {
+                        // 有新消息或状态变化，更新本地数据
                         localDataSource.updateMessages(agentId, serverMessages)
                         localDataSource.setHasMore(agentId, result.data.hasMore)
                         localDataSource.setOffset(
@@ -228,11 +255,11 @@ class ChatRepositoryImpl(
                         )
 
                         LogUtils.i(
-                            "ChatRepositoryImpl.syncLatestMessages found new messages for $agentId, updated ${serverMessages.size} messages"
+                            "ChatRepositoryImpl.syncLatestMessages found new messages or status changes for $agentId, updated ${serverMessages.size} messages"
                         )
                     } else {
                         LogUtils.i(
-                            "ChatRepositoryImpl.syncLatestMessages no new messages for $agentId"
+                            "ChatRepositoryImpl.syncLatestMessages no new messages or status changes for $agentId"
                         )
                     }
                 }
@@ -263,7 +290,46 @@ class ChatRepositoryImpl(
             "ChatRepositoryImpl.updateMessageFeedback called for $agentId, messageId: $messageId, feedback: $feedback"
         )
         localDataSource.updateMessageFeedback(agentId, messageId, feedback)
-        // TODO: 后续对接接口上报反馈
+    }
+
+    override suspend fun voteMessage(
+        agentId: String,
+        messageId: String,
+        vote: String,
+    ): HttpResult<VoteMessageRsp> {
+        LogUtils.d(
+            "ChatRepositoryImpl.voteMessage called for $agentId, messageId: $messageId, vote: $vote"
+        )
+
+        val result = remoteDataSource.voteMessage(agentId, messageId, vote)
+
+        // 如果投票成功，更新本地消息的 user_vote 和 userFeedback 字段
+        if (result is HttpResult.Success) {
+            val voteValue = result.data.data?.vote
+            if (voteValue != null) {
+                // 将服务端的 vote 值转换为本地的 userFeedback
+                val userFeedback =
+                    when (voteValue) {
+                        VoteConstants.LIKE -> MsgInfo.UserFeedback.LIKE
+                        VoteConstants.DISLIKE -> MsgInfo.UserFeedback.DISLIKE
+                        else -> null
+                    }
+                // 更新本地消息的 user_vote 和 userFeedback 字段
+                val messages = localDataSource.getMessagesFlow(agentId).value
+                val targetMessage =
+                    messages.find { it.id == messageId || it.localMsgId == messageId }
+                if (targetMessage != null) {
+                    val updatedMessage =
+                        targetMessage.copy(
+                            user_vote = voteValue,
+                            userFeedback = userFeedback,
+                        )
+                    localDataSource.updateMessage(agentId, targetMessage.localMsgId, updatedMessage)
+                }
+            }
+        }
+
+        return result
     }
 
     override fun updateMessageGeneratedImage(

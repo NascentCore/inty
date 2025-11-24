@@ -109,6 +109,20 @@ class ChatLocalDataSource {
             }
     }
 
+    suspend fun updateMessage(agentId: String, messageId: String, updatedMessage: MsgInfo) {
+        val session = getSession(agentId)
+        session.lock.withLock {
+            session.messages.value =
+                session.messages.value.map { msg ->
+                    if (msg.localMsgId == messageId || msg.id == messageId) {
+                        updatedMessage
+                    } else {
+                        msg
+                    }
+                }
+        }
+    }
+
     fun updateMessageGeneratedImage(
         agentId: String,
         messageId: String,
