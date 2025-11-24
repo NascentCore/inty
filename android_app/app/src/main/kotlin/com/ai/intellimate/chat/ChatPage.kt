@@ -228,52 +228,6 @@ internal fun ChatPage(
                 ),
             )
         }
-
-        if (showBoostSheet && agentInfo != null) {
-            val currentAgent = agentInfo
-            BoostSheet(
-                agentInfo = currentAgent,
-                availablePoints = boostState.availablePoints,
-                hasDailyReward = boostState.hasClaimedDailyReward,
-                onBoostConfirmed = { amount ->
-                    scope.launch {
-                        try {
-                            val result = BoostManager.boostAgent(currentAgent, amount)
-                            chatViewModel.appendBoostSystemMessage(
-                                currentAgent,
-                                result.pointsSpent,
-                                result.info.boostCount,
-                            )
-                            ToastUtils.showShort(
-                                context.getString(R.string.boost_toast_success, currentAgent.name)
-                            )
-                            showBoostSheet = false
-                        } catch (e: BoostException) {
-                            showBoostError(e.error)
-                            showBoostSheet = true
-                        } catch (_: Exception) {
-                            ToastUtils.showShort(R.string.boost_toast_generic_error)
-                            showBoostSheet = true
-                        }
-                    }
-                },
-                onClaimDailyReward = {
-                    scope.launch {
-                        try {
-                            val reward = BoostManager.claimDailyReward()
-                            ToastUtils.showShort(
-                                context.getString(R.string.boost_toast_daily_reward_claimed, reward)
-                            )
-                        } catch (e: BoostException) {
-                            showBoostError(e.error)
-                        } catch (_: Exception) {
-                            ToastUtils.showShort(R.string.boost_toast_generic_error)
-                        }
-                    }
-                },
-                onDismiss = { showBoostSheet = false },
-            )
-        }
     }
 
     LaunchedEffect(agentInfo?.id, pendingBoostSheet) {
@@ -737,6 +691,53 @@ internal fun ChatPage(
 
         ShowLimitDialog(chatViewModel)
         ShowImageGenerationDialog(chatViewModel)
+
+        agentInfo?.let { info ->
+            if (showBoostSheet) {
+                BoostSheet(
+                    agentInfo = info,
+                    availablePoints = boostState.availablePoints,
+                    hasDailyReward = boostState.hasClaimedDailyReward,
+                    onBoostConfirmed = { points ->
+                        scope.launch {
+                            try {
+                                val result = BoostManager.boostAgent(info, points)
+                                chatViewModel.appendBoostSystemMessage(
+                                    agent = info,
+                                    points = result.pointsSpent,
+                                    totalBoosts = result.info.boostCount,
+                                )
+                                showBoostSheet = false
+                            } catch (e: BoostException) {
+                                showBoostError(e.error)
+                                showBoostSheet = false
+                            } catch (e: Exception) {
+                                showBoostError(BoostError.NotEnoughPoints)
+                                showBoostSheet = false
+                            }
+                        }
+                    },
+                    onClaimDailyReward = {
+                        scope.launch {
+                            try {
+                                val claimed = BoostManager.claimDailyReward()
+                                ToastUtils.showShort(
+                                    context.getString(
+                                        R.string.boost_toast_daily_reward_claimed,
+                                        claimed,
+                                    ),
+                                )
+                            } catch (e: BoostException) {
+                                showBoostError(e.error)
+                            } catch (e: Exception) {
+                                showBoostError(BoostError.NotEnoughPoints)
+                            }
+                        }
+                    },
+                    onDismiss = { showBoostSheet = false },
+                )
+            }
+        }
 
         val needLogin by chatViewModel.requestLogin.collectAsState()
         if (needLogin) {
