@@ -47,10 +47,10 @@ fun HeartBottomAppBar(
     modifier: Modifier = Modifier,
     selectedTab: Int = 0,
     tabItems: List<HeartBottomTabItem> = bottomTabItems,
-    iconSize: Dp = 24.dp,
-    textSize: TextUnit = 12.sp,
-    height: Dp? = null,
-    labelSpacing: Dp = 4.dp,
+    iconSize: Dp,
+    textSize: TextUnit,
+    height: Dp,
+    labelSpacing: Dp,
     onTabSelected: (Int) -> Unit = {},
 ) {
     val navigationBarModifier =
@@ -73,7 +73,7 @@ fun HeartBottomAppBar(
                 LocalDensity provides
                     Density(
                         density = LocalDensity.current.density,
-                        fontScale = 1f, // 核心：禁用字体缩放
+                        fontScale = 1f, // 核心：禁用字体缩放，避免因系统字体缩放导致视觉变异
                     )
             ) {
                 NavigationBarItem(
@@ -171,22 +171,6 @@ private val bottomTabItems =
             label = "我的",
         ),
     )
-
-@Preview
-@Composable
-private fun 预览底部导航栏() {
-
-    Column(modifier = Modifier.Companion.background(HeartColor.primaryColor)) {
-        var checkedIndex by remember { mutableIntStateOf(0) }
-        HeartBottomAppBar(
-            modifier = Modifier.fillMaxWidth(),
-            selectedTab = checkedIndex,
-            tabItems = bottomTabItems,
-        ) {
-            checkedIndex = it
-        }
-    }
-}
 
 @Preview
 @Composable

@@ -27,7 +27,6 @@ object UiConfigs {
         val HeroGap = 30.dp
         val XLarge = 40.dp
         val VipHeroPlaceholder = 170.dp
-        val BottomTabIconLabel = 0.dp
     }
 
     object Size {
@@ -46,12 +45,18 @@ object UiConfigs {
         val Input = 8.dp
     }
 
+    object BottomTab {
+        val Height = 50.dp
+        val IconSize = 22.dp
+        val TextLabelSize = 10.sp
+        val IconTextLabelSpacing = (-6).dp  // 负值减少图标和文字之间的间距（使用 offset 向上移动）
+    }
+
     object Typography {
         val Title = 22.sp
         val SheetTitle = 20.sp
         val Button = 16.sp
         val ButtonLarge = 18.sp
-        val BottomTabLabel = 10.sp
         val BodyLarge = 16.sp
         val Body = 14.sp
         val Support = 13.sp
