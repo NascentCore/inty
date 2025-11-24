@@ -375,16 +375,10 @@ class ChatImageGenerationResponse(BaseModel):
     message_id: int
 
 
-class MessageFeedbackRequest(BaseModel):
-    """消息反馈请求"""
+class MessageVoteRequest(BaseModel):
+    """消息投票请求"""
 
-    feedback: Optional[str] = None  # "like" | "dislike" | null
+    agent_id: str
+    message_id: int
+    vote: Optional[str] = None  # "like" | "dislike" | null
     request_id: Optional[str] = None
-
-
-class MessageFeedbackResponse(BaseModel):
-    """消息反馈响应"""
-
-    success: bool
-    message: str
-    feedback: Optional[str] = None  # "like" | "dislike" | null

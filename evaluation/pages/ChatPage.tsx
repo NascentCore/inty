@@ -66,7 +66,7 @@ interface ChatMessage {
   remoteId?: string; // 数据库消息ID，用于删除和重发功能
   type?: "text" | "image"; // 消息类型：文本或图片
   image_url?: string; // 图片URL（仅图片消息）
-  user_feedback?: "like" | "dislike" | null; // 用户反馈：点赞/点踩
+  user_vote?: "like" | "dislike" | null; // 用户投票：点赞/点踩
   meta_data?: {
     generated_image?: {
       image_url: string;
@@ -209,7 +209,7 @@ export const ChatPage: React.FC = () => {
             remoteId: msg.id.toString(),
             type: msg.type || "text",
             image_url: msg.image_url,
-            user_feedback: msg.user_feedback || null,
+            user_vote: msg.user_vote || null,
             meta_data: msg.meta_data,
           }),
         );
@@ -263,67 +263,67 @@ export const ChatPage: React.FC = () => {
     loadChatHistory();
   }, [loadChatHistory]);
 
-  // 处理消息反馈（点赞/点踩）
-  const handleMessageFeedback = useCallback(
-    async (msg: ChatMessage, newFeedback: "like" | "dislike" | null) => {
+  // 处理消息投票（点赞/点踩）
+  const handleMessageVote = useCallback(
+    async (msg: ChatMessage, newVote: "like" | "dislike" | null) => {
       if (!selectedAgent?.id || !msg.remoteId) {
-        message.warning("无法更新反馈：缺少必要信息");
+        message.warning("无法更新投票：缺少必要信息");
         return;
       }
 
       // 验证 remoteId 是否为有效数字
       const messageId = parseInt(msg.remoteId);
       if (isNaN(messageId)) {
-        message.warning("无法更新反馈：消息ID无效");
+        message.warning("无法更新投票：消息ID无效");
         return;
       }
 
-      // 确定新的反馈状态
-      let finalFeedback: "like" | "dislike" | null = newFeedback;
-      const currentFeedback = msg.user_feedback;
+      // 确定新的投票状态
+      let finalVote: "like" | "dislike" | null = newVote;
+      const currentVote = msg.user_vote;
 
       // 实现切换逻辑：
-      // - 未反馈 → 点赞
+      // - 未投票 → 点赞
       // - 点赞 → 点踩（如果点击点踩）或取消（如果再次点击点赞）
       // - 点踩 → 点赞（如果点击点赞）或取消（如果再次点击点踩）
-      if (currentFeedback === null) {
-        // 未反馈，设置为新反馈
-        finalFeedback = newFeedback;
-      } else if (currentFeedback === "like") {
+      if (currentVote === null) {
+        // 未投票，设置为新投票
+        finalVote = newVote;
+      } else if (currentVote === "like") {
         // 当前是点赞
-        if (newFeedback === "like") {
-          // 再次点击点赞，取消反馈
-          finalFeedback = null;
+        if (newVote === "like") {
+          // 再次点击点赞，取消投票
+          finalVote = null;
         } else {
           // 点击点踩，切换到点踩
-          finalFeedback = "dislike";
+          finalVote = "dislike";
         }
-      } else if (currentFeedback === "dislike") {
+      } else if (currentVote === "dislike") {
         // 当前是点踩
-        if (newFeedback === "dislike") {
-          // 再次点击点踩，取消反馈
-          finalFeedback = null;
+        if (newVote === "dislike") {
+          // 再次点击点踩，取消投票
+          finalVote = null;
         } else {
           // 点击点赞，切换到点赞
-          finalFeedback = "like";
+          finalVote = "like";
         }
       }
 
       // 乐观更新：先更新 UI（使用函数式更新，避免闭包问题）
       setMessages((prevMessages) => {
         if (!prevMessages || prevMessages.length === 0) {
-          console.warn("警告：尝试更新反馈时消息列表为空，跳过更新");
+          console.warn("警告：尝试更新投票时消息列表为空，跳过更新");
           return prevMessages || [];
         }
         const updated = prevMessages.map((m) =>
           m.remoteId === msg.remoteId
-            ? { ...m, user_feedback: finalFeedback }
+            ? { ...m, user_vote: finalVote }
             : m,
         );
-        console.log("乐观更新消息反馈:", {
+        console.log("乐观更新消息投票:", {
           messageId: msg.remoteId,
-          currentFeedback,
-          finalFeedback,
+          currentVote,
+          finalVote,
           messagesCount: prevMessages.length,
           updatedCount: updated.length,
         });
@@ -336,22 +336,22 @@ export const ChatPage: React.FC = () => {
       });
 
       try {
-        // 调用 API 更新反馈
-        const response = await api.chat.updateMessageFeedback(
+        // 调用 API 更新投票
+        const response = await api.chat.updateMessageVote(
           selectedAgent.id,
           messageId,
-          finalFeedback,
+          finalVote,
         );
-        console.log("反馈更新成功:", response);
+        console.log("投票更新成功:", response);
         message.success(
-          finalFeedback === null
-            ? "已取消反馈"
-            : finalFeedback === "like"
+          finalVote === null
+            ? "已取消投票"
+            : finalVote === "like"
               ? "已点赞"
               : "已点踩",
         );
       } catch (error) {
-        console.error("更新反馈失败:", error, {
+        console.error("更新投票失败:", error, {
           messageId: msg.remoteId,
           agentId: selectedAgent?.id,
         });
@@ -363,7 +363,7 @@ export const ChatPage: React.FC = () => {
           }
           const rolledBack = prevMessages.map((m) =>
             m.remoteId === msg.remoteId
-              ? { ...m, user_feedback: currentFeedback }
+              ? { ...m, user_vote: currentVote }
               : m,
           );
           // 确保回滚后不为空
@@ -373,7 +373,7 @@ export const ChatPage: React.FC = () => {
           }
           return rolledBack;
         });
-        message.error("更新反馈失败，请重试");
+        message.error("更新投票失败，请重试");
       }
     },
     [selectedAgent?.id],
@@ -408,7 +408,7 @@ export const ChatPage: React.FC = () => {
             remoteId: msg.id ? msg.id.toString() : undefined, // 使用真实消息ID
             type: msg.type || "text",
             image_url: msg.image_url,
-            user_feedback: msg.user_feedback || null,
+            user_vote: msg.user_vote || null,
             meta_data: msg.meta_data,
           }),
         );
@@ -507,7 +507,7 @@ export const ChatPage: React.FC = () => {
                 remoteId: msg.id ? String(msg.id) : `remote_${index}`, // 安全地访问id字段
                 type: msg.type || "text",
                 image_url: msg.image_url,
-                user_feedback: msg.user_feedback || null,
+                user_vote: msg.user_vote || null,
                 meta_data: msg.meta_data,
               }),
             );
@@ -604,7 +604,7 @@ export const ChatPage: React.FC = () => {
               remoteId: msg.id ? String(msg.id) : `remote_${index}`,
               type: msg.type || "text",
               image_url: msg.image_url,
-              user_feedback: msg.user_feedback || null,
+              user_vote: msg.user_vote || null,
               meta_data: msg.meta_data,
             }),
           );
@@ -729,7 +729,7 @@ export const ChatPage: React.FC = () => {
             remoteId: msg.id.toString(), // 添加remoteId
             type: msg.type || "text",
             image_url: msg.image_url,
-            user_feedback: msg.user_feedback || null,
+            user_vote: msg.user_vote || null,
             meta_data: msg.meta_data,
           }));
 
@@ -1637,14 +1637,14 @@ export const ChatPage: React.FC = () => {
                                                 size="small"
                                                 icon={<LikeOutlined />}
                                                 onClick={() =>
-                                                  handleMessageFeedback(
+                                                  handleMessageVote(
                                                     message,
                                                     "like",
                                                   )
                                                 }
                                                 style={{
                                                   color:
-                                                    message.user_feedback ===
+                                                    message.user_vote ===
                                                     "like"
                                                       ? "#1890ff"
                                                       : "#666",
@@ -1660,14 +1660,14 @@ export const ChatPage: React.FC = () => {
                                                 size="small"
                                                 icon={<DislikeOutlined />}
                                                 onClick={() =>
-                                                  handleMessageFeedback(
+                                                  handleMessageVote(
                                                     message,
                                                     "dislike",
                                                   )
                                                 }
                                                 style={{
                                                   color:
-                                                    message.user_feedback ===
+                                                    message.user_vote ===
                                                     "dislike"
                                                       ? "#ff4d4f"
                                                       : "#666",
@@ -1930,11 +1930,11 @@ export const ChatPage: React.FC = () => {
                                 size="small"
                                 icon={<LikeOutlined />}
                                 onClick={() =>
-                                  handleMessageFeedback(message, "like")
+                                  handleMessageVote(message, "like")
                                 }
                                 style={{
                                   color:
-                                    message.user_feedback === "like"
+                                    message.user_vote === "like"
                                       ? "#1890ff"
                                       : undefined,
                                 }}
@@ -1946,11 +1946,11 @@ export const ChatPage: React.FC = () => {
                                 size="small"
                                 icon={<DislikeOutlined />}
                                 onClick={() =>
-                                  handleMessageFeedback(message, "dislike")
+                                  handleMessageVote(message, "dislike")
                                 }
                                 style={{
                                   color:
-                                    message.user_feedback === "dislike"
+                                    message.user_vote === "dislike"
                                       ? "#ff4d4f"
                                       : undefined,
                                 }}

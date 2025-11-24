@@ -1,6 +1,6 @@
 import json
 import uuid
-from typing import Any, List, Union
+from typing import Any, Dict, List, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -16,11 +16,7 @@ from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.user_privilege.premium_check import is_eligible_for_premium
-from app.schemas.chat import (
-    ChatCompletionRequest,
-    MessageFeedbackRequest,
-    MessageFeedbackResponse,
-)
+from app.schemas.chat import ChatCompletionRequest, MessageVoteRequest
 from app.schemas.response import (
     APIResponse,
     BizError,
@@ -384,39 +380,38 @@ async def get_agent_chat_messages(
 
 
 @router.post(
-    "/agents/{agent_id}/messages/{message_id}/feedback",
+    "/messages/vote",
+    response_model=APIResponse[Dict[str, Any]],
     tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
-    summary="Update Message Feedback",
-    description="Set, toggle, or remove feedback (like/dislike) for a message. Only AI messages can be feedbacked.",
+    summary="Update Message Vote",
+    description="Set, toggle, or remove vote (like/dislike) for a message. Only AI messages can be voted.",
 )
-async def update_message_feedback(
+async def update_message_vote(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    agent_id: str,
-    message_id: int,
-    request: MessageFeedbackRequest,
+    request: MessageVoteRequest,
     current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> MessageFeedbackResponse:
+) -> APIResponse[Dict[str, Any]]:
     """
-    Update message feedback (like/dislike)
-    Only AI messages (role="assistant") can be feedbacked.
+    Update message vote (like/dislike)
+    Only AI messages (role="assistant") can be voted.
     """
     try:
-        # 验证 feedback 值
-        if request.feedback is not None and request.feedback not in ["like", "dislike"]:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid feedback value. Must be 'like', 'dislike', or null",
+        # 验证 vote 值
+        if request.vote is not None and request.vote not in ["like", "dislike"]:
+            return APIResponse.error(
+                message="Invalid vote value. Must be 'like', 'dislike', or null",
+                code=400,
             )
 
         # Get or create chat session
         chat = await chat_service.get_or_create_chat_by_agent(
-            db=db, user_id=current_user.id, agent_id=agent_id
+            db=db, user_id=current_user.id, agent_id=request.agent_id
         )
 
         # Verify chat belongs to current user
         if chat.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
+            return APIResponse.error(message="Forbidden", code=403)
 
         # Generate session_id
         session_id = generate_session_id(chat.id)
@@ -429,11 +424,11 @@ async def update_message_feedback(
                 FROM chat_history 
                 WHERE session_id = %s AND id = %s
             """
-            cur.execute(check_query, (session_id, message_id))
+            cur.execute(check_query, (session_id, request.message_id))
             row = cur.fetchone()
 
             if not row:
-                raise HTTPException(status_code=404, detail="Message not found")
+                return APIResponse.error(message="Message not found", code=404)
 
             # 解析消息类型
             message_raw = row[1]
@@ -447,38 +442,34 @@ async def update_message_feedback(
             message_type = message_data.get("type", "human")
             role = "user" if message_type in ["human", "HumanMessage"] else "assistant"
 
-            # 仅允许对 AI 消息进行反馈
+            # 仅允许对 AI 消息进行投票
             if role != "assistant":
-                raise HTTPException(
-                    status_code=400, detail="Only AI messages can be feedbacked"
+                return APIResponse.error(
+                    message="Only AI messages can be voted", code=400
                 )
 
-        # 更新反馈
-        success = await chat_history_service.update_message_feedback(
+        # 更新投票
+        success = await chat_history_service.update_message_vote(
             db=db,
             session_id=session_id,
-            message_id=message_id,
+            message_id=request.message_id,
             user_id=current_user.id,
-            feedback=request.feedback,
+            vote=request.vote,
         )
 
         if not success:
-            raise HTTPException(
-                status_code=500, detail="Failed to update message feedback"
+            return APIResponse.error(
+                message="Failed to update message vote", code=500
             )
 
-        return MessageFeedbackResponse(
-            success=True,
-            message="Feedback updated successfully",
-            feedback=request.feedback,
+        return APIResponse.success(
+            data={"vote": request.vote}, message="Vote updated successfully"
         )
 
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"更新消息反馈失败: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to update message feedback: {str(e)}"
+        logger.error(f"更新消息投票失败: {str(e)}")
+        return APIResponse.error(
+            message=f"Failed to update message vote: {str(e)}", code=500
         )
 
 

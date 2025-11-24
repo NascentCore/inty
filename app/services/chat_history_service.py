@@ -326,22 +326,22 @@ async def update_message_metadata(
         return False
 
 
-async def update_message_feedback(
+async def update_message_vote(
     db: AsyncSession,
     session_id: str,
     message_id: int,
-    user_id: str,
-    feedback: Optional[str],
+    user_id: str,  # 保留参数以保持API兼容性，但不再使用
+    vote: Optional[str],
 ) -> bool:
     """
-    更新消息的用户反馈（点赞/点踩）
+    更新消息的用户投票（点赞/点踩）
 
     Args:
         db: 数据库会话
         session_id: 会话ID
         message_id: 消息ID
-        user_id: 用户ID
-        feedback: 反馈类型，"like" | "dislike" | None（取消反馈）
+        user_id: 用户ID（保留以保持API兼容性，但不再存储）
+        vote: 投票类型，"like" | "dislike" | None（取消投票）
 
     Returns:
         是否更新成功
@@ -369,14 +369,20 @@ async def update_message_feedback(
             f"更新前 meta_data: {existing_meta}, session_id={session_id}, message_id={message_id}"
         )
 
-        # 更新或删除 user_feedback（直接存储feedback值，不存储user_id）
-        if feedback is None:
-            # 取消反馈：删除 user_feedback 字段
+        # 更新或删除 user_vote（直接存储vote值，不存储user_id）
+        # 兼容旧字段名 user_feedback
+        if vote is None:
+            # 取消投票：删除 user_vote 和 user_feedback 字段（兼容旧数据）
+            if "user_vote" in existing_meta:
+                del existing_meta["user_vote"]
             if "user_feedback" in existing_meta:
                 del existing_meta["user_feedback"]
         else:
-            # 设置反馈（直接存储feedback值）
-            existing_meta["user_feedback"] = feedback
+            # 设置投票（直接存储vote值）
+            existing_meta["user_vote"] = vote
+            # 同时删除旧的 user_feedback 字段（如果存在）
+            if "user_feedback" in existing_meta:
+                del existing_meta["user_feedback"]
 
         # 创建新的字典对象，确保SQLAlchemy能检测到变化
         updated_meta = dict(existing_meta)
@@ -392,12 +398,12 @@ async def update_message_feedback(
         await db.refresh(chat_history)
 
         logger.debug(
-            f"更新消息反馈成功: session_id={session_id}, message_id={message_id}, user_id={user_id}, feedback={feedback}, 更新后 meta_data: {chat_history.meta_data}"
+            f"更新消息投票成功: session_id={session_id}, message_id={message_id}, user_id={user_id}, vote={vote}, 更新后 meta_data: {chat_history.meta_data}"
         )
         return True
 
     except Exception as e:
-        logger.error(f"更新消息反馈失败: {str(e)}")
+        logger.error(f"更新消息投票失败: {str(e)}")
         await db.rollback()
         return False
 
@@ -756,26 +762,27 @@ def get_messages_paginated(
                             }
                             # 不包含 prompt 字段
 
-                    # 提取用户反馈（仅对 AI 消息）
+                    # 提取用户投票（仅对 AI 消息）
                     if role == "assistant" and meta_data:
-                        user_feedback = meta_data.get("user_feedback")
-                        # 兼容旧格式（dict格式）和新格式（直接存储feedback值）
-                        if isinstance(user_feedback, dict):
+                        # 优先使用新字段名 user_vote，兼容旧字段名 user_feedback
+                        user_vote = meta_data.get("user_vote") or meta_data.get("user_feedback")
+                        # 兼容旧格式（dict格式）和新格式（直接存储vote值）
+                        if isinstance(user_vote, dict):
                             # 旧格式：{"user_id": "...", "feedback": "like"}
-                            message_obj["user_feedback"] = user_feedback.get("feedback")
-                        elif user_feedback in ["like", "dislike"]:
+                            message_obj["user_vote"] = user_vote.get("feedback")
+                        elif user_vote in ["like", "dislike"]:
                             # 新格式：直接存储 "like" 或 "dislike"
-                            message_obj["user_feedback"] = user_feedback
+                            message_obj["user_vote"] = user_vote
                         else:
-                            message_obj["user_feedback"] = None
+                            message_obj["user_vote"] = None
                         # 添加调试日志
-                        if user_feedback:
+                        if user_vote:
                             logger.debug(
-                                f"提取用户反馈: message_id={message_id}, user_feedback={user_feedback}, meta_data_keys={list(meta_data.keys()) if meta_data else []}"
+                                f"提取用户投票: message_id={message_id}, user_vote={user_vote}, meta_data_keys={list(meta_data.keys()) if meta_data else []}"
                             )
                     elif role == "assistant":
                         # AI 消息但没有 meta_data，设置为 None
-                        message_obj["user_feedback"] = None
+                        message_obj["user_vote"] = None
 
                     messages.append(message_obj)
 

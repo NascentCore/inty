@@ -902,7 +902,7 @@ export const chatApi = {
       timestamp: string;
       type?: "text" | "image";
       image_url?: string;
-      user_feedback?: "like" | "dislike" | null;
+      user_vote?: "like" | "dislike" | null;
       meta_data?: {
         generated_image?: {
           image_url: string;
@@ -937,7 +937,7 @@ export const chatApi = {
       timestamp: string;
       type?: "text" | "image";
       image_url?: string;
-      user_feedback?: "like" | "dislike" | null;
+      user_vote?: "like" | "dislike" | null;
       meta_data?: {
         generated_image?: {
           image_url: string;
@@ -954,18 +954,22 @@ export const chatApi = {
     page: number;
   }> => apiClient.get(`/chats/agents/${agentId}/messages`, params),
 
-  // 更新消息反馈
-  updateMessageFeedback: (
+  // 更新消息投票
+  updateMessageVote: (
     agentId: string,
     messageId: number,
-    feedback: "like" | "dislike" | null,
+    vote: "like" | "dislike" | null,
   ): Promise<{
-    success: boolean;
+    code: number;
     message: string;
-    feedback: "like" | "dislike" | null;
+    data: {
+      vote: "like" | "dislike" | null;
+    };
   }> =>
-    apiClient.post(`/chats/agents/${agentId}/messages/${messageId}/feedback`, {
-      feedback,
+    apiClient.post(`/chats/messages/vote`, {
+      agent_id: agentId,
+      message_id: messageId,
+      vote,
     }),
 
   // 清除聊天消息 - 注意：API 期望单个 message_id 而不是数组
