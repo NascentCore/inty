@@ -326,6 +326,82 @@ async def update_message_metadata(
         return False
 
 
+async def update_message_feedback(
+    db: AsyncSession,
+    session_id: str,
+    message_id: int,
+    user_id: str,
+    feedback: Optional[str],
+) -> bool:
+    """
+    更新消息的用户反馈（点赞/点踩）
+
+    Args:
+        db: 数据库会话
+        session_id: 会话ID
+        message_id: 消息ID
+        user_id: 用户ID
+        feedback: 反馈类型，"like" | "dislike" | None（取消反馈）
+
+    Returns:
+        是否更新成功
+    """
+    try:
+        # 查询现有消息
+        stmt = select(ChatHistory).where(
+            and_(
+                ChatHistory.session_id == session_id,
+                ChatHistory.id == message_id,
+            )
+        )
+        result = await db.execute(stmt)
+        chat_history = result.scalar_one_or_none()
+
+        if not chat_history:
+            logger.warning(
+                f"消息不存在: session_id={session_id}, message_id={message_id}"
+            )
+            return False
+
+        # 获取现有 meta_data
+        existing_meta = chat_history.meta_data or {}
+        logger.debug(
+            f"更新前 meta_data: {existing_meta}, session_id={session_id}, message_id={message_id}"
+        )
+
+        # 更新或删除 user_feedback（直接存储feedback值，不存储user_id）
+        if feedback is None:
+            # 取消反馈：删除 user_feedback 字段
+            if "user_feedback" in existing_meta:
+                del existing_meta["user_feedback"]
+        else:
+            # 设置反馈（直接存储feedback值）
+            existing_meta["user_feedback"] = feedback
+
+        # 创建新的字典对象，确保SQLAlchemy能检测到变化
+        updated_meta = dict(existing_meta)
+
+        # 更新消息（使用flag_modified确保SQLAlchemy检测到JSONB字段的变化）
+        from sqlalchemy.orm.attributes import flag_modified
+
+        chat_history.meta_data = updated_meta
+        flag_modified(chat_history, "meta_data")
+        await db.commit()
+
+        # 刷新对象以获取最新数据
+        await db.refresh(chat_history)
+
+        logger.debug(
+            f"更新消息反馈成功: session_id={session_id}, message_id={message_id}, user_id={user_id}, feedback={feedback}, 更新后 meta_data: {chat_history.meta_data}"
+        )
+        return True
+
+    except Exception as e:
+        logger.error(f"更新消息反馈失败: {str(e)}")
+        await db.rollback()
+        return False
+
+
 async def add_ai_image_message(
     db: AsyncSession,
     session_id: str,
@@ -533,7 +609,7 @@ async def get_latest_ai_message_info(
 
 
 def get_messages_paginated(
-    session_id: str, limit: int = 20, offset: int = 0
+    session_id: str, limit: int = 20, offset: int = 0, user_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     分页获取聊天消息
@@ -542,6 +618,7 @@ def get_messages_paginated(
         session_id: 会话ID
         limit: 每页消息数量
         offset: 偏移量（跳过的消息数量）
+        user_id: 用户ID（保留以保持API兼容性，但不再用于过滤反馈）
 
     Returns:
         包含消息列表和分页信息的字典
@@ -678,6 +755,27 @@ def get_messages_paginated(
                                 "height": generated_image.get("height"),
                             }
                             # 不包含 prompt 字段
+
+                    # 提取用户反馈（仅对 AI 消息）
+                    if role == "assistant" and meta_data:
+                        user_feedback = meta_data.get("user_feedback")
+                        # 兼容旧格式（dict格式）和新格式（直接存储feedback值）
+                        if isinstance(user_feedback, dict):
+                            # 旧格式：{"user_id": "...", "feedback": "like"}
+                            message_obj["user_feedback"] = user_feedback.get("feedback")
+                        elif user_feedback in ["like", "dislike"]:
+                            # 新格式：直接存储 "like" 或 "dislike"
+                            message_obj["user_feedback"] = user_feedback
+                        else:
+                            message_obj["user_feedback"] = None
+                        # 添加调试日志
+                        if user_feedback:
+                            logger.debug(
+                                f"提取用户反馈: message_id={message_id}, user_feedback={user_feedback}, meta_data_keys={list(meta_data.keys()) if meta_data else []}"
+                            )
+                    elif role == "assistant":
+                        # AI 消息但没有 meta_data，设置为 None
+                        message_obj["user_feedback"] = None
 
                     messages.append(message_obj)
 

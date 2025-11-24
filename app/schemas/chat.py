@@ -373,3 +373,18 @@ class ChatImageGenerationResponse(BaseModel):
     image_metadata: dict
     prompt: str
     message_id: int
+
+
+class MessageFeedbackRequest(BaseModel):
+    """消息反馈请求"""
+
+    feedback: Optional[str] = None  # "like" | "dislike" | null
+    request_id: Optional[str] = None
+
+
+class MessageFeedbackResponse(BaseModel):
+    """消息反馈响应"""
+
+    success: bool
+    message: str
+    feedback: Optional[str] = None  # "like" | "dislike" | null

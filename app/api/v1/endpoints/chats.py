@@ -1,3 +1,4 @@
+import json
 import uuid
 from typing import Any, List, Union
 
@@ -9,13 +10,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, INTERNAL_API_TAG, WEB_APP_TAG
+from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, INTY_EVAL_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.user_privilege.premium_check import is_eligible_for_premium
-from app.schemas.chat import ChatCompletionRequest
+from app.schemas.chat import (
+    ChatCompletionRequest,
+    MessageFeedbackRequest,
+    MessageFeedbackResponse,
+)
 from app.schemas.response import (
     APIResponse,
     BizError,
@@ -208,7 +213,7 @@ async def get_chat_detail(
 
         # Get paginated messages
         messages_data = chat_history_service.get_messages_paginated(
-            session_id=session_id, limit=limit, offset=offset
+            session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
         )
 
         # Assemble return data
@@ -283,7 +288,7 @@ async def get_agent_chat_detail(
 
         # Get paginated messages
         messages_data = chat_history_service.get_messages_paginated(
-            session_id=session_id, limit=limit, offset=offset
+            session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
         )
 
         # Assemble return data
@@ -362,7 +367,7 @@ async def get_agent_chat_messages(
 
         # 获取分页消息
         messages_data = chat_history_service.get_messages_paginated(
-            session_id=session_id, limit=limit, offset=offset
+            session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
         )
 
         # 如果要求升序（旧消息在前），则不反转
@@ -375,6 +380,105 @@ async def get_agent_chat_messages(
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to get message records: {str(e)}"
+        )
+
+
+@router.post(
+    "/agents/{agent_id}/messages/{message_id}/feedback",
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
+    summary="Update Message Feedback",
+    description="Set, toggle, or remove feedback (like/dislike) for a message. Only AI messages can be feedbacked.",
+)
+async def update_message_feedback(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    message_id: int,
+    request: MessageFeedbackRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> MessageFeedbackResponse:
+    """
+    Update message feedback (like/dislike)
+    Only AI messages (role="assistant") can be feedbacked.
+    """
+    try:
+        # 验证 feedback 值
+        if request.feedback is not None and request.feedback not in ["like", "dislike"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid feedback value. Must be 'like', 'dislike', or null",
+            )
+
+        # Get or create chat session
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db, user_id=current_user.id, agent_id=agent_id
+        )
+
+        # Verify chat belongs to current user
+        if chat.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        # Generate session_id
+        session_id = generate_session_id(chat.id)
+
+        # 验证消息是否存在且为 AI 消息
+        conn = chat_history_service.get_chat_history_connection()
+        with conn.cursor() as cur:
+            check_query = """
+                SELECT id, message, meta_data
+                FROM chat_history 
+                WHERE session_id = %s AND id = %s
+            """
+            cur.execute(check_query, (session_id, message_id))
+            row = cur.fetchone()
+
+            if not row:
+                raise HTTPException(status_code=404, detail="Message not found")
+
+            # 解析消息类型
+            message_raw = row[1]
+            if isinstance(message_raw, str):
+                message_data = json.loads(message_raw)
+            elif isinstance(message_raw, dict):
+                message_data = message_raw
+            else:
+                message_data = json.loads(str(message_raw))
+
+            message_type = message_data.get("type", "human")
+            role = "user" if message_type in ["human", "HumanMessage"] else "assistant"
+
+            # 仅允许对 AI 消息进行反馈
+            if role != "assistant":
+                raise HTTPException(
+                    status_code=400, detail="Only AI messages can be feedbacked"
+                )
+
+        # 更新反馈
+        success = await chat_history_service.update_message_feedback(
+            db=db,
+            session_id=session_id,
+            message_id=message_id,
+            user_id=current_user.id,
+            feedback=request.feedback,
+        )
+
+        if not success:
+            raise HTTPException(
+                status_code=500, detail="Failed to update message feedback"
+            )
+
+        return MessageFeedbackResponse(
+            success=True,
+            message="Feedback updated successfully",
+            feedback=request.feedback,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新消息反馈失败: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update message feedback: {str(e)}"
         )
 
 
