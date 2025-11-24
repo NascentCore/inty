@@ -36,7 +36,6 @@ private object TextConfig {
     val MaxUrlLines = 2
 }
 
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
@@ -44,7 +43,10 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     SettingSection(modifier = modifier.padding(top = Spacing.SectionTopPadding)) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.ContentHorizontalPadding)) {
+        Column(
+            modifier =
+                Modifier.fillMaxWidth().padding(horizontal = Spacing.ContentHorizontalPadding)
+        ) {
             Text(
                 text = "当前构建类型：${uiState.buildType}",
                 color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
@@ -62,12 +64,12 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
             Spacer(Modifier.height(Spacing.MediumSpacer))
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.ChipSpacing),
-                verticalArrangement = Arrangement.spacedBy(Spacing.ChipSpacing)
+                verticalArrangement = Arrangement.spacedBy(Spacing.ChipSpacing),
             ) {
                 viewModel.quickPresets.forEach { (label, url) ->
                     AssistChip(
                         onClick = { viewModel.applySelectedOverride(url) },
-                        label = { Text(label) }
+                        label = { Text(label) },
                     )
                 }
             }

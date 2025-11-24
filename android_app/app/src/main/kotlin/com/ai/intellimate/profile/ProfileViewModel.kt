@@ -2,7 +2,6 @@ package com.ai.intellimate.profile
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
-import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils

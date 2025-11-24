@@ -115,4 +115,3 @@ export const useInfiniteScroll = <T extends HTMLElement = HTMLElement>({
     };
   }, [containerRef, handleScroll, enabled]);
 };
-

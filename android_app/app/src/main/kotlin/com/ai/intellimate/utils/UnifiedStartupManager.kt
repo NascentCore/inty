@@ -1,7 +1,6 @@
 package com.ai.intellimate.utils
 
 import ai.sxwl.android.common.startup.ImagePreloadManager
-import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
@@ -296,11 +295,12 @@ object UnifiedStartupManager {
         try {
             val sortSeed = IntySetting.sortSeed()
             val result =
-                NetServiceMgr.getAgentApi().exploreAgents(
-                    page = 1,
-                    pageSize = ExploreConstants.PAGE_SIZE, // 使用统一的页面大小
-                    sort_seed = sortSeed.toString(),
-                )
+                NetServiceMgr.getAgentApi()
+                    .exploreAgents(
+                        page = 1,
+                        pageSize = ExploreConstants.PAGE_SIZE, // 使用统一的页面大小
+                        sort_seed = sortSeed.toString(),
+                    )
 
             when (result) {
                 is HttpResult.Success -> {
@@ -354,11 +354,12 @@ object UnifiedStartupManager {
         try {
             val sortSeed = IntySetting.randomSortSeed()
             val result =
-                NetServiceMgr.getAgentApi().chatAgents(
-                    page = 1,
-                    pageSize = 20, // 使用聊天页面大小
-                    sort_seed = sortSeed.toString(),
-                )
+                NetServiceMgr.getAgentApi()
+                    .chatAgents(
+                        page = 1,
+                        pageSize = 20, // 使用聊天页面大小
+                        sort_seed = sortSeed.toString(),
+                    )
 
             when (result) {
                 is HttpResult.Success -> {
@@ -418,7 +419,9 @@ object UnifiedStartupManager {
                 return
             }
 
-            when (val result = NetServiceMgr.getAgentApi().getUserCreatedAgents(skip = 0, limit = 20)) {
+            when (
+                val result = NetServiceMgr.getAgentApi().getUserCreatedAgents(skip = 0, limit = 20)
+            ) {
                 is HttpResult.Success -> {
                     val agents = result.data
                     AgentCacheManager.cacheUserCreatedAgents(agents)

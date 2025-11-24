@@ -81,9 +81,10 @@ class ModifyProfileViewModel : BaseVM() {
                         File(fileUri.path!!)
                             .asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
                     val result =
-                        NetServiceMgr.getUserApi().uploadAvatar(
-                            MultipartBody.Part.createFormData("file", "file.png", requestBody)
-                        )
+                        NetServiceMgr.getUserApi()
+                            .uploadAvatar(
+                                MultipartBody.Part.createFormData("file", "file.png", requestBody)
+                            )
 
                     when (result) {
                         is HttpResult.Success -> {

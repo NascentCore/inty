@@ -286,8 +286,7 @@ private fun CreateRolePage(
     val croppedInitial =
         if (isEditMode) editCroppedAvatar else savedDraft?.croppedAvatarUrl ?: editCroppedAvatar
     var croppedAvatarUrl by remember(croppedInitial) { mutableStateOf<String?>(croppedInitial) }
-    val avatarPromptInitial =
-        if (isEditMode) "" else savedDraft?.avatarPrompt.orEmpty()
+    val avatarPromptInitial = if (isEditMode) "" else savedDraft?.avatarPrompt.orEmpty()
     var avatarPrompt by remember(avatarPromptInitial) { mutableStateOf(avatarPromptInitial) }
 
     val context = LocalContext.current
@@ -607,8 +606,7 @@ private fun CreateRolePage(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Avatar Upload Section
-            val promptForGeneration =
-                if (avatarPrompt.isNotBlank()) avatarPrompt else settings
+            val promptForGeneration = if (avatarPrompt.isNotBlank()) avatarPrompt else settings
             AvatarUploadSection(
                 avatarUrl = avatarUrl,
                 avatarUrls = avatarUrls,

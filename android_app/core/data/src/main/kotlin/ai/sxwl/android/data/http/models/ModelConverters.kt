@@ -5,10 +5,10 @@ import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.api.model.CreatorInfo
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.UserProfile
-import com.inty.api.models.v2.chat.ChatSendMessageResponse
 import com.inty.api.models.api.v1.ai.agents.Agent as IntyAgent
 import com.inty.api.models.api.v1.chats.Chat as IntyChat
 import com.inty.api.models.api.v1.users.profile.User as IntyUser
+import com.inty.api.models.v2.chat.ChatSendMessageResponse
 
 /** 数据模型转换工具 将Inty SDK的模型转换为业务层模型 */
 

@@ -5,9 +5,7 @@ import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
 
-/**
- * 用来存储全局的后端地址信息，debug build 下运行时切换后端地址。
- */
+/** 用来存储全局的后端地址信息，debug build 下运行时切换后端地址。 */
 object DebugBackendEndpointStore {
 
     private const val PREF_NAME = "debug_network_config"
@@ -20,7 +18,7 @@ object DebugBackendEndpointStore {
     data class OverrideInfo(val url: String)
 
     fun isRuntimeOverrideSupported(
-        buildType: NetworkConfig.BuildType = NetworkConfig.getCurrentBuildType(),
+        buildType: NetworkConfig.BuildType = NetworkConfig.getCurrentBuildType()
     ): Boolean {
         return AppUtils.isAppDebug() && buildType == NetworkConfig.BuildType.DEBUG
     }
@@ -37,10 +35,7 @@ object DebugBackendEndpointStore {
         }
         val url = rawInput.trim()
 
-        prefs
-            .edit()
-            .putString(KEY_BASE_URL, url)
-            .apply()
+        prefs.edit().putString(KEY_BASE_URL, url).apply()
 
         LogUtils.i("DebugBackendEndpointStore", "Runtime backend updated to $url")
         return OverrideInfo(url)
@@ -51,5 +46,4 @@ object DebugBackendEndpointStore {
         prefs.edit().remove(KEY_BASE_URL).apply()
         LogUtils.i("DebugBackendEndpointStore", "Runtime backend override cleared")
     }
-
 }

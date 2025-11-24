@@ -765,7 +765,9 @@ def get_messages_paginated(
                     # 提取用户投票（仅对 AI 消息）
                     if role == "assistant" and meta_data:
                         # 优先使用新字段名 user_vote，兼容旧字段名 user_feedback
-                        user_vote = meta_data.get("user_vote") or meta_data.get("user_feedback")
+                        user_vote = meta_data.get("user_vote") or meta_data.get(
+                            "user_feedback"
+                        )
                         # 兼容旧格式（dict格式）和新格式（直接存储vote值）
                         if isinstance(user_vote, dict):
                             # 旧格式：{"user_id": "...", "feedback": "like"}

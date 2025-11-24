@@ -95,7 +95,9 @@ class ChatRemoteDataSource {
         vote: String, // "like" 或 "dislike"
     ): HttpResult<VoteMessageRsp> {
         return try {
-            LogUtils.i("ChatRemoteDataSource.voteMessage: agentId=$agentId, messageId=$messageId, vote=$vote")
+            LogUtils.i(
+                "ChatRemoteDataSource.voteMessage: agentId=$agentId, messageId=$messageId, vote=$vote"
+            )
             val request = VoteMessageReq(agent_id = agentId, message_id = messageId, vote = vote)
             NetServiceMgr.getChatApi().voteMessage(request)
         } catch (e: Exception) {

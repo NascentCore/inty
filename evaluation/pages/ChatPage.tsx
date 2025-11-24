@@ -316,9 +316,7 @@ export const ChatPage: React.FC = () => {
           return prevMessages || [];
         }
         const updated = prevMessages.map((m) =>
-          m.remoteId === msg.remoteId
-            ? { ...m, user_vote: finalVote }
-            : m,
+          m.remoteId === msg.remoteId ? { ...m, user_vote: finalVote } : m,
         );
         console.log("乐观更新消息投票:", {
           messageId: msg.remoteId,
@@ -362,9 +360,7 @@ export const ChatPage: React.FC = () => {
             return prevMessages || [];
           }
           const rolledBack = prevMessages.map((m) =>
-            m.remoteId === msg.remoteId
-              ? { ...m, user_vote: currentVote }
-              : m,
+            m.remoteId === msg.remoteId ? { ...m, user_vote: currentVote } : m,
           );
           // 确保回滚后不为空
           if (rolledBack.length === 0) {
@@ -1626,7 +1622,9 @@ export const ChatPage: React.FC = () => {
                                         !message.remoteId.startsWith(
                                           "assistant_",
                                         ) &&
-                                        !message.remoteId.startsWith("error_") &&
+                                        !message.remoteId.startsWith(
+                                          "error_",
+                                        ) &&
                                         !message.remoteId.startsWith(
                                           "remote_",
                                         ) && (
@@ -1644,8 +1642,7 @@ export const ChatPage: React.FC = () => {
                                                 }
                                                 style={{
                                                   color:
-                                                    message.user_vote ===
-                                                    "like"
+                                                    message.user_vote === "like"
                                                       ? "#1890ff"
                                                       : "#666",
                                                   padding: "2px 4px",

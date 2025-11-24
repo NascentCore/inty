@@ -46,11 +46,18 @@ interface ICharacterListProps {
 /**
  * CharacterList - 推荐角色列表展示
  */
-const CharacterList: React.FC<ICharacterListProps> = ({ recommendList, loading, pagination, onStartChat }) => {
+const CharacterList: React.FC<ICharacterListProps> = ({
+  recommendList,
+  loading,
+  pagination,
+  onStartChat,
+}) => {
   return (
     <div className="character-list-section">
       {/* 初始加载状态 */}
-      {loading && recommendList.length === 0 && <Loading tip="Loading..." size="large" fullscreen />}
+      {loading && recommendList.length === 0 && (
+        <Loading tip="Loading..." size="large" fullscreen />
+      )}
 
       {/* 角色卡片列表 */}
       {recommendList.length > 0 && (
@@ -80,4 +87,3 @@ const CharacterList: React.FC<ICharacterListProps> = ({ recommendList, loading, 
 };
 
 export default CharacterList;
-

@@ -311,7 +311,10 @@ internal class BillingPurchaseManager(
                 )
 
                 // 调用验证接口
-                when (val result = NetServiceMgr.getSubscriptionApi().verifySubscription(verifyRequest)) {
+                when (
+                    val result =
+                        NetServiceMgr.getSubscriptionApi().verifySubscription(verifyRequest)
+                ) {
                     is HttpResult.Success -> {
                         val response = result.data
                         if (response.isVerified) {
