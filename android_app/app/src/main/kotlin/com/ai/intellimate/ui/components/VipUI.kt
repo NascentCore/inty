@@ -4,7 +4,6 @@ import ai.sxwl.android.data.billing.VipPlan
 import ai.sxwl.android.design.theme.AppColors
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +28,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -47,8 +47,8 @@ private fun DiscountTag(discountRate: Double, modifier: Modifier = Modifier) {
     Box(
         modifier =
             modifier
-                .fillMaxWidth(0.8f)
-                .clip(RoundedCornerShape(6.dp))
+                .fillMaxWidth(0.6f)
+                .clip(RoundedCornerShape(22.dp))
                 .background(
                     brush =
                         Brush.horizontalGradient(
@@ -74,14 +74,14 @@ private fun DiscountTag(discountRate: Double, modifier: Modifier = Modifier) {
                         ceil((1 - discountRate) * 100).toInt(),
                     ),
                 color = Color.Black,
-                fontSize = 24.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
             )
             Spacer(modifier = Modifier.width(2.dp))
             Text(
                 text = stringResource(R.string.discount_save),
                 color = Color.Black,
-                fontSize = 16.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -121,71 +121,116 @@ fun PremiumPlanCard(
         modifier =
             modifier
                 .fillMaxHeight()
-                .background(
-                    color = if (isSelected) Color(0x99350D5D) else Color(0x991C1523),
-                    shape = RoundedCornerShape(8.dp),
-                )
-                .border(
-                    width = 1.dp,
-                    color = if (isSelected) Color.White else Color.Transparent,
-                    shape = RoundedCornerShape(8.dp),
-                )
                 .then(subModifier)
-                .clickable(enabled = !isSubscribed) { onClick() }
-                .padding(vertical = 14.dp),
+                .clickable(enabled = !isSubscribed) { onClick() },
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Text(
-                text = plan.name,
-                color =
-                    when {
-                        isSubscribed -> Color.White.copy(alpha = 0.5f)
-                        else -> Color.White
-                    },
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                modifier = subModifier,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(15.dp))
 
-            // 处理价格显示：去掉 .00 后缀，并根据长度自适应字号
-            val displayPrice = remember(plan.price) { plan.price.replace(".00", "") }
+            Box(
+                modifier
+                    .width(110.dp)
+                    .height(97.dp)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = if (isSelected) listOf(Color(0xFFC2F7FD), Color(0xFFC4A9FC), Color(0xFF7E96FB)) else listOf(Color.Black.copy(alpha = 0.4f), Color.Black.copy(alpha = 0.4f))
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                    )
+                    .padding(1.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(109.dp)
+                        .height(96.dp)
+                        .background(
+                            if (isSelected) Color(red = 40, green = 20, blue = 65) else Color.Transparent,
+                            shape = RoundedCornerShape(8.dp),
+                        )
+                ) {
+                    Column (
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
 
-            // 根据价格长度自适应字号
-            val priceFontSize =
-                remember(displayPrice) {
-                    val priceLength =
-                        displayPrice.filter { it.isDigit() || it == '.' || it == ',' }.length
-                    when {
-                        priceLength <= 3 -> 24.sp // 短价格（如 $9, $99）
-                        priceLength <= 5 -> 20.sp // 中等价格（如 $9.99, $99.99）
-                        priceLength <= 7 -> 18.sp // 较长价格（如 $999.99）
-                        else -> 16.sp // 很长价格（如 $9999.99）
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = plan.name,
+                            color =
+                                when {
+                                    isSubscribed -> Color.White.copy(alpha = 0.5f)
+                                    else -> Color.White
+                                },
+                            fontSize = 12.sp,
+                            modifier = subModifier,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .background(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(Color.White.copy(0.1f), Color.White.copy(0.4f), Color.White.copy(0.1f))
+                                    )
+                                )
+                        )
+
+                        // 处理价格显示：去掉 .00 后缀，并根据长度自适应字号
+                        val displayPrice = remember(plan.price) { plan.price.replace(".00", "") }
+
+                        // 根据价格长度自适应字号
+                        val priceFontSize =
+                            remember(displayPrice) {
+                                val priceLength =
+                                    displayPrice.filter { it.isDigit() || it == '.' || it == ',' }.length
+                                when {
+                                    priceLength <= 3 -> 24.sp // 短价格（如 $9, $99）
+                                    priceLength <= 5 -> 20.sp // 中等价格（如 $9.99, $99.99）
+                                    priceLength <= 7 -> 18.sp // 较长价格（如 $999.99）
+                                    else -> 16.sp // 很长价格（如 $9999.99）
+                                }
+                            }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = displayPrice,
+                            color =
+                                when {
+                                    isSubscribed -> Color.White.copy(alpha = 0.5f)
+                                    else -> Color.White
+                                },
+                            fontSize = priceFontSize,
+                            fontWeight = FontWeight.Normal,
+                            modifier = subModifier,
+                        )
+
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        // 由于接口暂无此数据，先隐藏
+//                        Text(
+//                            text = "$6.66/month",
+//                            color = Color.White.copy(0.8f),
+//                            fontSize = 10.sp,
+//                            modifier = subModifier,
+//                        )
                     }
                 }
+            }
 
-            Text(
-                text = displayPrice,
-                color =
-                    when {
-                        isSubscribed -> Color.White.copy(alpha = 0.5f)
-                        else -> Color.White
-                    },
-                fontSize = priceFontSize,
-                fontWeight = FontWeight.Normal,
-                modifier = subModifier,
-            )
+            Spacer(modifier = Modifier.height(10.dp))
         }
 
         // 折扣标签
         if (plan.discountRate < 1) {
             DiscountTag(
                 discountRate = plan.discountRate,
-                modifier = Modifier.then(subModifier).align(Alignment.BottomCenter),
+                modifier = Modifier.then(subModifier).align(Alignment.TopEnd),
             )
         }
     }
@@ -201,7 +246,7 @@ fun PremiumPlanList(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().height(132.dp).padding(horizontal = 16.dp),
+        modifier = modifier.fillMaxWidth().height(122.dp).padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         plans.forEachIndexed { idx, plan ->
@@ -229,22 +274,20 @@ fun PurchaseButton(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 15.dp)
-                .height(56.dp)
-                .clip(RoundedCornerShape(28.dp))
-                .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors = listOf(Color(0xFF9756FF), Color(0xFFEF56FF))
-                        )
-                )
-                .alpha(if (isSubscribed) .4f else 1f)
+                .height(76.dp)
                 .clickable(
                     enabled = !isSubscribed && hasSelectedPlan && !isLoading,
                     onClick = onPurchase,
                 ),
         contentAlignment = Alignment.Center,
     ) {
+        Image(
+            painter = painterResource(R.drawable.vip_buy_btn),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillHeight
+        )
+
         if (isLoading) {
             // Loading 状态：显示透明背景的 CircularProgressIndicator
             Box(
@@ -253,7 +296,7 @@ fun PurchaseButton(
                         .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(28.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(24.dp))
             }
         } else {
             Text(
@@ -265,7 +308,7 @@ fun PurchaseButton(
                     },
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = Color.Black,
                 modifier = Modifier.alpha(if (isSubscribed) .7f else 1f),
             )
         }
@@ -282,14 +325,13 @@ fun AutoRenewalNotice(modifier: Modifier = Modifier) {
     ) {
         Text(
             text =
-                stringResource(R.string.auto_renews_cancel) +
-                    ".\n" +
-                    stringResource(R.string.subscription_consent),
-            fontSize = 12.sp,
-            lineHeight = 12.sp,
+                stringResource(R.string.auto_renews_cancel),
+            fontSize = 13.sp,
+            letterSpacing = 0.6.sp,
             color = Color.White,
         )
-        PolicyRow(context = LocalContext.current, fontSize = 12.sp)
+        Spacer(Modifier.height(2.dp))
+        PolicyRow(context = LocalContext.current, fontSize = 11.sp)
     }
 }
 

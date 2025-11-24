@@ -109,4 +109,6 @@ dependencies {
 
     // ===== UI 测试依赖 =====
     androidTestImplementation(libs.androidx.uiautomator)
+
+    implementation(libs.haze)
 }

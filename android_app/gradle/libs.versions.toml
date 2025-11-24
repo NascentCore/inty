@@ -55,6 +55,7 @@ moshi = "1.15.2"
 koin = "4.1.1"
 okhttp = "5.3.0"
 retrofit = "3.0.0"
+haze = "1.7.1"
 
 # Google & Firebase 相关
 googleServices = "4.4.4"
@@ -179,6 +180,7 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 
 # ===== 常用知名开源库 =====
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanist" }
+haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
 
 # ===== 图片加载库 =====
 coil-kt = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil" }
