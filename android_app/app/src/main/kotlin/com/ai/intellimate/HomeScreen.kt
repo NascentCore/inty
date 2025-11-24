@@ -32,7 +32,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -97,7 +96,7 @@ fun HomeScreen(
                     )
                 },
                 iconSize = TabIconSize,
-                textSize = (TabIconSize.value * 0.45f).sp,
+                textSize = UiConfigs.Typography.BottomTabLabel,
                 height = BottomNavigationBarHeight,
                 labelSpacing = UiConfigs.Spacing.BottomTabIconLabel,
             )
