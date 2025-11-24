@@ -37,22 +37,24 @@
     }
 
     .download-button {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
+      padding: 0;
       background: transparent;
-      border: 1px solid @dark-border-color;
-      border-radius: 6px;
-      color: @dark-text-primary;
-      font-size: 14px;
-      font-weight: 500;
+      border: none;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: transform 0.2s ease;
+
+      img {
+        display: block;
+        height: 40px;
+        width: auto;
+        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+        border-radius: 4px;
+      }
 
       &:hover {
-        background: @dark-bg-secondary;
-        border-color: @dark-border-hover;
+        transform: scale(1.02);
       }
 
       &:active {
@@ -111,11 +113,8 @@
       }
 
       .download-button {
-        padding: 6px 12px;
-        font-size: 12px;
-
-        span {
-          display: none; // 移动端隐藏文字，只显示图标
+        img {
+          height: 32px;
         }
       }
     }

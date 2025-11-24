@@ -5,8 +5,7 @@
 
 import { history, useModel } from '@umijs/max';
 import React, { useEffect, useRef } from 'react';
-import { Download } from 'lucide-react';
-import { EmptyState, ErrorAlert, Loading, Icon } from '@/components';
+import { EmptyState, ErrorAlert, Loading } from '@/components';
 import { useInfiniteScroll } from '@/hooks';
 import type { IAgent } from '@/types';
 import { CharacterCard } from './components';
@@ -61,8 +60,11 @@ const HomePage: React.FC = () => {
       <div className="page-header">
         <h1 className="page-title">discover</h1>
         <button type="button" className="download-button" onClick={handleDownloadClick}>
-          <Icon icon={Download} size={18} />
-          <span>Download App</span>
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
+            alt="Get it on Google Play"
+            loading="lazy"
+          />
         </button>
       </div>
 
