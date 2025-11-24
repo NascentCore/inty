@@ -1,7 +1,6 @@
 package ai.sxwl.android.data.api
 
 import ai.sxwl.android.data.http.UnifiedOkHttpClient
-import ai.sxwl.android.data.http.config.Constant
 import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResponseCallAdapterFactory
@@ -11,10 +10,10 @@ import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterF
 import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import java.util.concurrent.ConcurrentHashMap
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 传统 Retrofit/Moshi 网络管理器
@@ -40,6 +39,7 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * ## URL 切换协调
  * 当切换 URL 时，需要同时清除两个管理器的缓存：
+ *
  * ```kotlin
  * IntyNetworkManager.clearClientCache()  // 清除 SDK 缓存
  * NetServiceMgr.clearCache()              // 清除 Retrofit 缓存
@@ -84,19 +84,17 @@ object NetServiceMgr {
     private val globalErrorHandler = GlobalErrorHandler()
 
     /**
-     * Retrofit 实例缓存，基于 baseUrl 进行缓存
-     * 缓存 key 格式: `baseUrl` 或 `"${baseUrl}_no_wrapper"`
-     * 
+     * Retrofit 实例缓存，基于 baseUrl 进行缓存 缓存 key 格式: `baseUrl` 或 `"${baseUrl}_no_wrapper"`
+     *
      * 注意：与 IntyNetworkManager 的缓存机制不同
      * - NetServiceMgr: 缓存 key 不包含 apiKey，因为 Retrofit 通过拦截器添加认证
      * - IntyNetworkManager: 缓存 key 为 `"${apiKey}_${baseUrl}"`
      */
     private val retrofitCache = ConcurrentHashMap<String, Retrofit>()
-    
+
     /**
-     * API 接口实例缓存，基于 baseUrl + API 类型进行缓存
-     * 缓存 key 格式: `"${baseUrl()}_${ApiType}"`
-     * 例如: `"https://dev.inty.sxwl.ai/_IUserApi"`
+     * API 接口实例缓存，基于 baseUrl + API 类型进行缓存 缓存 key 格式: `"${baseUrl()}_${ApiType}"` 例如:
+     * `"https://dev.inty.sxwl.ai/_IUserApi"`
      */
     private val apiCache = ConcurrentHashMap<String, Any>()
 
@@ -134,7 +132,10 @@ object NetServiceMgr {
     private fun getRetrofitNormal(): Retrofit {
         val currentBaseUrl = baseUrl()
         return retrofitCache.getOrPut(currentBaseUrl) {
-            LogUtils.d("NetServiceMgr", "Creating new Retrofit instance with baseUrl: $currentBaseUrl")
+            LogUtils.d(
+                "NetServiceMgr",
+                "Creating new Retrofit instance with baseUrl: $currentBaseUrl",
+            )
             Retrofit.Builder()
                 .baseUrl(currentBaseUrl)
                 .client(okHttpClient)
@@ -155,7 +156,10 @@ object NetServiceMgr {
         val currentBaseUrl = baseUrl()
         val cacheKey = "${currentBaseUrl}_no_wrapper"
         return retrofitCache.getOrPut(cacheKey) {
-            LogUtils.d("NetServiceMgr", "Creating new Retrofit instance (no wrapper) with baseUrl: $currentBaseUrl")
+            LogUtils.d(
+                "NetServiceMgr",
+                "Creating new Retrofit instance (no wrapper) with baseUrl: $currentBaseUrl",
+            )
             Retrofit.Builder()
                 .baseUrl(currentBaseUrl)
                 .client(okHttpClient)
@@ -170,18 +174,19 @@ object NetServiceMgr {
 
     /**
      * 清除 Retrofit 和 API 实例缓存
-     * 
+     *
      * ## 调用时机
      * 1. Debug build 专用：当用户需要切换后端地址时调用
      * 2. 当用户登录状态发生变化时调用
-     * 
+     *
      * ## 重要：需要与 IntyNetworkManager 协调
      * 切换 URL 或登录状态变化时，需要同时清除两个管理器的缓存：
+     *
      * ```kotlin
      * IntyNetworkManager.clearClientCache()  // 清除 SDK 缓存
      * NetServiceMgr.clearCache()              // 清除 Retrofit 缓存（本方法）
      * ```
-     * 
+     *
      * 参考: `DebugBackendSettingsViewModel.applySelectedOverride()` 和 `IntySetting.login()`
      */
     fun clearCache() {
@@ -192,32 +197,28 @@ object NetServiceMgr {
 
     /**
      * 获取用户相关 API 接口实例
-     * 
-     * 缓存 key: `"${baseUrl()}_IUserApi"`
-     * 当 baseUrl 变化时，会自动创建新的 Retrofit 和 API 实例
+     *
+     * 缓存 key: `"${baseUrl()}_IUserApi"` 当 baseUrl 变化时，会自动创建新的 Retrofit 和 API 实例
      */
     fun getUserApi(): IUserApi {
         val cacheKey = "${baseUrl()}_IUserApi"
         @Suppress("UNCHECKED_CAST")
-        return apiCache.getOrPut(cacheKey) {
-            getRetrofitNormal().create(IUserApi::class.java)
-        } as IUserApi
+        return apiCache.getOrPut(cacheKey) { getRetrofitNormal().create(IUserApi::class.java) }
+            as IUserApi
     }
 
     fun getAgentApi(): IAgentApi {
         val cacheKey = "${baseUrl()}_IAgentApi"
         @Suppress("UNCHECKED_CAST")
-        return apiCache.getOrPut(cacheKey) {
-            getRetrofitNormal().create(IAgentApi::class.java)
-        } as IAgentApi
+        return apiCache.getOrPut(cacheKey) { getRetrofitNormal().create(IAgentApi::class.java) }
+            as IAgentApi
     }
 
     fun getChatApi(): IChatApi {
         val cacheKey = "${baseUrl()}_IChatApi"
         @Suppress("UNCHECKED_CAST")
-        return apiCache.getOrPut(cacheKey) {
-            getRetrofitNoWrapper().create(IChatApi::class.java)
-        } as IChatApi
+        return apiCache.getOrPut(cacheKey) { getRetrofitNoWrapper().create(IChatApi::class.java) }
+            as IChatApi
     }
 
     fun getSubscriptionApi(): ISubscriptionApi {
@@ -231,8 +232,7 @@ object NetServiceMgr {
     fun getCommonApi(): ICommonApi {
         val cacheKey = "${baseUrl()}_ICommonApi"
         @Suppress("UNCHECKED_CAST")
-        return apiCache.getOrPut(cacheKey) {
-            getRetrofitNormal().create(ICommonApi::class.java)
-        } as ICommonApi
+        return apiCache.getOrPut(cacheKey) { getRetrofitNormal().create(ICommonApi::class.java) }
+            as ICommonApi
     }
 }

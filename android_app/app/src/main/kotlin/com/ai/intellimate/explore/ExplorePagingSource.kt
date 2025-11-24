@@ -1,6 +1,5 @@
 package com.ai.intellimate.explore
 
-import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
@@ -169,11 +168,12 @@ class ExplorePagingSource(
         val startTime = System.currentTimeMillis()
         return try {
             val result =
-                NetServiceMgr.getAgentApi().exploreAgents(
-                    page = page,
-                    pageSize = pageSize,
-                    sort_seed = sortSeed.toString(),
-                )
+                NetServiceMgr.getAgentApi()
+                    .exploreAgents(
+                        page = page,
+                        pageSize = pageSize,
+                        sort_seed = sortSeed.toString(),
+                    )
 
             val responseTime = System.currentTimeMillis() - startTime
 

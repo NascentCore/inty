@@ -61,4 +61,3 @@ const AdHomeTop: React.FC = () => {
 };
 
 export default AdHomeTop;
-

@@ -1,13 +1,12 @@
 package ai.sxwl.android.data.http.services
 
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.DeviceTokenRegisterRequest
 import ai.sxwl.android.data.api.model.UserProfile
-import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.data.http.models.toUserProfile
 import com.inty.api.models.api.v1.users.profile.ProfileUpdateParams
-
 
 /** 用户服务 封装所有用户相关的API调用 替换原有的 IUserApi 用户相关方法 */
 object UserService {

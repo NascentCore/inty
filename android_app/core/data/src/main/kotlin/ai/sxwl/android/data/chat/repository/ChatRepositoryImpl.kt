@@ -241,7 +241,8 @@ class ChatRepositoryImpl(
                     val hasStatusChanges =
                         serverMessages.any { serverMsg ->
                             localMessages.any { localMsg ->
-                                localMsg.id == serverMsg.id && localMsg.user_vote != serverMsg.user_vote
+                                localMsg.id == serverMsg.id &&
+                                    localMsg.user_vote != serverMsg.user_vote
                             }
                         }
 
@@ -320,10 +321,7 @@ class ChatRepositoryImpl(
                     messages.find { it.id == messageId || it.localMsgId == messageId }
                 if (targetMessage != null) {
                     val updatedMessage =
-                        targetMessage.copy(
-                            user_vote = voteValue,
-                            userFeedback = userFeedback,
-                        )
+                        targetMessage.copy(user_vote = voteValue, userFeedback = userFeedback)
                     localDataSource.updateMessage(agentId, targetMessage.localMsgId, updatedMessage)
                 }
             }

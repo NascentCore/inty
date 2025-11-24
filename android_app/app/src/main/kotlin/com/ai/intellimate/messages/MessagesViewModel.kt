@@ -260,7 +260,9 @@ class MessagesViewModel : BaseVM() {
                     intelliMateAgentLoaded = true // 标记已尝试加载
                     try {
                         // 尝试通过 ID 获取
-                        val agentResult = NetServiceMgr.getChatApi().getAgentInfo(AgentConstants.INTELLIMATE_AGENT_ID)
+                        val agentResult =
+                            NetServiceMgr.getChatApi()
+                                .getAgentInfo(AgentConstants.INTELLIMATE_AGENT_ID)
                         when (agentResult) {
                             is HttpResult.Success -> {
                                 val agent = agentResult.data

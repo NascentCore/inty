@@ -1,6 +1,5 @@
 package ai.sxwl.android.data.chat.paging
 
-import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
@@ -146,11 +145,8 @@ class AgentPagingSource(
     private suspend fun loadFromNetwork(page: Int, pageSize: Int): NetworkResult {
         return try {
             val result =
-                NetServiceMgr.getAgentApi().chatAgents(
-                    page = page,
-                    pageSize = pageSize,
-                    sort_seed = sortSeed.toString(),
-                )
+                NetServiceMgr.getAgentApi()
+                    .chatAgents(page = page, pageSize = pageSize, sort_seed = sortSeed.toString())
 
             when (result) {
                 is HttpResult.Success -> {

@@ -48,17 +48,15 @@ class DebugBackendSettingsViewModel : ViewModel() {
     fun applySelectedOverride(url: String) {
         runCatching { DebugBackendEndpointStore.persistOverride(url) }
             .onFailure { LogUtils.e(TAG, "Failed to persist runtime backend override", it) }
-            .getOrElse { return }
+            .getOrElse {
+                return
+            }
 
         // 清除 Inty SDK 和 Retrofit 的客户端缓存
         IntyNetworkManager.clearClientCache()
         NetServiceMgr.clearCache()
 
-        _uiState.update {
-            it.copy(
-                activeBaseUrl = NetworkConfig.getBaseUrl(),
-            )
-        }
+        _uiState.update { it.copy(activeBaseUrl = NetworkConfig.getBaseUrl()) }
     }
 
     fun resetOverride() {
@@ -68,10 +66,6 @@ class DebugBackendSettingsViewModel : ViewModel() {
         NetServiceMgr.clearCache()
 
         val active = NetworkConfig.getBaseUrl()
-        _uiState.update {
-            it.copy(
-                activeBaseUrl = active,
-            )
-        }
+        _uiState.update { it.copy(activeBaseUrl = active) }
     }
 }

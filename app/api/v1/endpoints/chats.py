@@ -458,9 +458,7 @@ async def update_message_vote(
         )
 
         if not success:
-            return APIResponse.error(
-                message="Failed to update message vote", code=500
-            )
+            return APIResponse.error(message="Failed to update message vote", code=500)
 
         return APIResponse.success(
             data={"vote": request.vote}, message="Vote updated successfully"

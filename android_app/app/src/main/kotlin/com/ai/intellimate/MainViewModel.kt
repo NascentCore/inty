@@ -1,7 +1,6 @@
 package com.ai.intellimate
 
 import ai.sxwl.android.common.base.BaseVM
-import ai.sxwl.android.data.api.ICommonApi
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AppVersionRsp

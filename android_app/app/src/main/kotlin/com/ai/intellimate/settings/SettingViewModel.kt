@@ -1,7 +1,6 @@
 package com.ai.intellimate.settings
 
 import ai.sxwl.android.common.base.BaseVM
-import ai.sxwl.android.data.api.IUserApi
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils

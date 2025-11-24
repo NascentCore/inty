@@ -109,7 +109,10 @@ class TtsManager private constructor(private val context: Context) {
                     completeWithError(dedupKey, messageId, "TTS生成失败：ID格式无效", onError)
                     return@launch
                 }
-                val response = withTimeout(30_000) { NetServiceMgr.getChatApi().fetchMsgVoice(agentId, messageId) }
+                val response =
+                    withTimeout(30_000) {
+                        NetServiceMgr.getChatApi().fetchMsgVoice(agentId, messageId)
+                    }
 
                 when (response) {
                     is HttpResult.Success -> {

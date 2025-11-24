@@ -42,6 +42,7 @@ import kotlinx.coroutines.withTimeout
  *
  * ## URL 切换协调
  * 当切换 URL 时，需要同时清除两个管理器的缓存：
+ *
  * ```kotlin
  * IntyNetworkManager.clearClientCache()  // 清除 SDK 缓存（本方法）
  * NetServiceMgr.clearCache()              // 清除 Retrofit 缓存
@@ -68,14 +69,13 @@ object IntyNetworkManager {
 
     /**
      * IntyClient 实例缓存
-     * 
-     * 缓存 key 格式: `"${apiKey}_${baseUrl}"`
-     * 例如: `"token123_https://dev.inty.sxwl.ai/"`
-     * 
+     *
+     * 缓存 key 格式: `"${apiKey}_${baseUrl}"` 例如: `"token123_https://dev.inty.sxwl.ai/"`
+     *
      * 注意：与 NetServiceMgr 的缓存机制不同
      * - IntyNetworkManager: 缓存 key 包含 apiKey，因为不同用户需要不同的客户端实例
      * - NetServiceMgr: 缓存 key 不包含 apiKey，因为 Retrofit 通过拦截器添加认证
-     * 
+     *
      * 当 baseUrl 或 apiKey 变化时，会自动创建新的客户端实例
      */
     private val clientCache = ConcurrentHashMap<String, IntyClient>()
@@ -98,12 +98,12 @@ object IntyNetworkManager {
 
     /**
      * 获取 Inty 客户端实例，支持客户端缓存和自动重新创建
-     * 
+     *
      * ## 缓存机制
      * - 缓存 key: `"${apiKey}_${baseUrl}"`
      * - 当 apiKey 或 baseUrl 变化时，会自动创建新的客户端实例
      * - 会自动清理旧 token 的客户端缓存，避免内存泄漏
-     * 
+     *
      * ## 与 NetServiceMgr 的区别
      * - IntyNetworkManager: 每次调用都会检查最新的 baseUrl（支持运行时切换）
      * - NetServiceMgr: 同样支持运行时 baseUrl 切换，但缓存机制不同
@@ -204,18 +204,19 @@ object IntyNetworkManager {
 
     /**
      * 清除客户端缓存
-     * 
+     *
      * ## 调用时机
      * 1. 当用户登录状态发生变化时调用（例如：`IntySetting.login()`）
      * 2. Debug build 专用：当用户需要切换后端地址时调用（例如：`DebugBackendSettingsViewModel.applySelectedOverride()`）
-     * 
+     *
      * ## 重要：需要与 NetServiceMgr 协调
      * 切换 URL 或登录状态变化时，需要同时清除两个管理器的缓存：
+     *
      * ```kotlin
      * IntyNetworkManager.clearClientCache()  // 清除 SDK 缓存（本方法）
      * NetServiceMgr.clearCache()              // 清除 Retrofit 缓存
      * ```
-     * 
+     *
      * 参考: `DebugBackendSettingsViewModel.applySelectedOverride()` 和 `IntySetting.login()`
      */
     fun clearClientCache() {
@@ -277,10 +278,9 @@ object IntyNetworkManager {
 
     /**
      * 业务 API 服务入口
-     * 
-     * 这些服务封装了 Inty SDK 的 API 调用，提供统一的接口和错误处理。
-     * 推荐使用这些服务，而不是直接使用 `getClient()`。
-     * 
+     *
+     * 这些服务封装了 Inty SDK 的 API 调用，提供统一的接口和错误处理。 推荐使用这些服务，而不是直接使用 `getClient()`。
+     *
      * ## 与 NetServiceMgr 的对应关系
      * - `auth`: 对应 NetServiceMgr 的认证相关 API
      * - `user`: 对应 NetServiceMgr 的 `getUserApi()`
@@ -288,15 +288,16 @@ object IntyNetworkManager {
      * - `chat`: 对应 NetServiceMgr 的 `getChatApi()`
      * - `subscription`: 对应 NetServiceMgr 的 `getSubscriptionApi()`
      * - `report`: 对应 NetServiceMgr 的举报相关 API
-     * 
+     *
      * ## 使用示例
+     *
      * ```kotlin
      * // 推荐：使用 Service 层
      * when (val result = IntyNetworkManager.user.getProfile()) {
      *     is ApiResult.Success -> { /* 处理成功 */ }
      *     is ApiResult.Error -> { /* 处理失败 */ }
      * }
-     * 
+     *
      * // 不推荐：直接使用 getClient()
      * val client = IntyNetworkManager.getClient()
      * val response = client.api().v1().users().profile().me()

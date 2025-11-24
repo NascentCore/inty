@@ -60,7 +60,5 @@ interface IChatApi {
     ): HttpResult<MsgVoiceRsp>
 
     @POST("/api/v1/chats/messages/vote")
-    suspend fun voteMessage(
-        @Body req: VoteMessageReq,
-    ): HttpResult<VoteMessageRsp>
+    suspend fun voteMessage(@Body req: VoteMessageReq): HttpResult<VoteMessageRsp>
 }

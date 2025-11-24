@@ -261,6 +261,6 @@ data class VoteMessageRsp(
     val data: VoteMessageData? = null,
 ) {
     data class VoteMessageData(
-        val vote: String, // VoteConstants.LIKE 或 VoteConstants.DISLIKE
+        val vote: String // VoteConstants.LIKE 或 VoteConstants.DISLIKE
     )
 }
