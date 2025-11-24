@@ -25,8 +25,11 @@ InTy 是一个 AI 智能伴侣平台，包含后端服务、Android 应用和 We
 
 ## 快速开始
 
+添加 SSH key 到你的 GitHub 账户：
+https://docs.github.com/zh/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account
+
 ```bash
-# 1. 克隆仓库并初始化子模块：
+# 克隆仓库并初始化子模块：
 git clone --recurse-submodules git@github.com:NascentCore/inty.git
 ```
 
