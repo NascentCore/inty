@@ -8,6 +8,7 @@ import ai.sxwl.android.data.api.model.ChatSettingsReq
 import ai.sxwl.android.data.api.model.ChatSettingsResponse
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.api.model.VoteConstants
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.di.DataModule
@@ -40,6 +41,7 @@ class ChatViewModel : BaseVM() {
     private val updateMessageFeedbackUseCase = DataModule.updateMessageFeedbackUseCase
     private val recallMessageUseCase = DataModule.recallMessageUseCase
     private val generateImageUseCase = DataModule.generateImageUseCase
+    private val voteMessageUseCase = DataModule.voteMessageUseCase
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()
@@ -742,9 +744,25 @@ class ChatViewModel : BaseVM() {
         // 业务逻辑：本地状态更新始终使用localMsgId（这是本地标识符）
         updateMessageFeedbackUseCase(agent.id, localMsgId, MsgInfo.UserFeedback.LIKE)
 
+        // 如果消息有服务端id，调用投票接口
+        val messageId = targetMessage.id
+        if (messageId.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                when (val result = voteMessageUseCase(agent.id, messageId, VoteConstants.LIKE)) {
+                    is HttpResult.Success -> {
+                        LogUtils.i("Vote message success: like")
+                    }
+
+                    is HttpResult.Failure -> {
+                        LogUtils.e("Vote message failure: ${result.message}")
+                    }
+                }
+            }
+        }
+
         // Firebase事件统计：优先使用服务端id（message_id），这是有意义的标识
         // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
-        val messageIdForEvent = targetMessage.id.ifEmpty { localMsgId }
+        val messageIdForEvent = messageId.ifEmpty { localMsgId }
 
         val eventParams =
             FirebaseManager.safeEventParams(
@@ -779,9 +797,25 @@ class ChatViewModel : BaseVM() {
         // 业务逻辑：本地状态更新始终使用localMsgId（这是本地标识符）
         updateMessageFeedbackUseCase(agent.id, localMsgId, MsgInfo.UserFeedback.DISLIKE)
 
+        // 如果消息有服务端id，调用投票接口
+        val messageId = targetMessage.id
+        if (messageId.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                when (val result = voteMessageUseCase(agent.id, messageId, VoteConstants.DISLIKE)) {
+                    is HttpResult.Success -> {
+                        LogUtils.i("Vote message success: dislike")
+                    }
+
+                    is HttpResult.Failure -> {
+                        LogUtils.e("Vote message failure: ${result.message}")
+                    }
+                }
+            }
+        }
+
         // Firebase事件统计：优先使用服务端id（message_id），这是有意义的标识
         // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
-        val messageIdForEvent = targetMessage.id.ifEmpty { localMsgId }
+        val messageIdForEvent = messageId.ifEmpty { localMsgId }
 
         val eventParams =
             FirebaseManager.safeEventParams(

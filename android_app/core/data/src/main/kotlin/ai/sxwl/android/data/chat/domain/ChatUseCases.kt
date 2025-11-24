@@ -1,6 +1,7 @@
 package ai.sxwl.android.data.chat.domain
 
 import ai.sxwl.android.data.api.model.SendMsgResponse
+import ai.sxwl.android.data.api.model.VoteMessageRsp
 import com.architecture.httplib.core.HttpResult
 
 /** 加载聊天历史用例 封装加载聊天历史的业务逻辑 遵循Clean Architecture的UseCase模式 */
@@ -57,5 +58,17 @@ class GenerateImageUseCase(private val chatRepository: ChatRepository) {
         ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult
     > {
         return chatRepository.generateImageForMessage(agentId, messageId)
+    }
+}
+
+/** 投票消息用例 封装投票消息的业务逻辑 */
+class VoteMessageUseCase(private val chatRepository: ChatRepository) {
+
+    suspend operator fun invoke(
+        agentId: String,
+        messageId: String,
+        vote: String, // "like" 或 "dislike"
+    ): HttpResult<VoteMessageRsp> {
+        return chatRepository.voteMessage(agentId, messageId, vote)
     }
 }

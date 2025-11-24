@@ -5,6 +5,8 @@ import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.QueryMsgsResponse
 import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.api.model.SendMsgResponse
+import ai.sxwl.android.data.api.model.VoteMessageReq
+import ai.sxwl.android.data.api.model.VoteMessageRsp
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
 
@@ -82,6 +84,22 @@ class ChatRemoteDataSource {
             )
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.generateImage exception: ${e.message}")
+            HttpResult.Failure(e.message ?: "Network error", -1)
+        }
+    }
+
+    /** 消息投票接口请求 */
+    suspend fun voteMessage(
+        agentId: String,
+        messageId: String,
+        vote: String, // "like" 或 "dislike"
+    ): HttpResult<VoteMessageRsp> {
+        return try {
+            LogUtils.i("ChatRemoteDataSource.voteMessage: agentId=$agentId, messageId=$messageId, vote=$vote")
+            val request = VoteMessageReq(agent_id = agentId, message_id = messageId, vote = vote)
+            NetServiceMgr.getChatApi().voteMessage(request)
+        } catch (e: Exception) {
+            LogUtils.e("ChatRemoteDataSource.voteMessage exception: ${e.message}")
             HttpResult.Failure(e.message ?: "Network error", -1)
         }
     }
