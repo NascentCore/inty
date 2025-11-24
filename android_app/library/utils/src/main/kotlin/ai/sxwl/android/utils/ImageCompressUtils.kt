@@ -1,13 +1,16 @@
 package ai.sxwl.android.utils
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
-import java.io.File
-import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import top.zibin.luban.Luban
 import top.zibin.luban.OnCompressListener
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 
 /** 图片压缩工具类 基于Luban库封装，提供简洁的API供上层模块使用 */
 object ImageCompressUtils {
@@ -320,4 +323,87 @@ object ImageCompressUtils {
     fun isSupportedImageFormat(filePath: String): Boolean {
         return isSupportedImageFormat(File(filePath))
     }
+
+    /**
+     * 将图片转换为 WebP 格式（同步方法，在协程中使用）
+     *
+     * @param context 上下文
+     * @param imageFile 要转换的图片文件
+     * @param quality WebP 压缩质量，范围 0-100，默认 80
+     * @param maxWidth 最大宽度，如果超过则缩放，默认不限制
+     * @param maxHeight 最大高度，如果超过则缩放，默认不限制
+     * @return 转换后的 WebP 文件，失败时返回 null
+     */
+    suspend fun convertToWebPSync(
+        context: Context,
+        imageFile: File,
+        quality: Int = 80,
+        maxWidth: Int = -1,
+        maxHeight: Int = -1,
+    ): File? =
+        withContext(Dispatchers.IO) {
+            try {
+                if (!imageFile.exists()) {
+                    return@withContext null
+                }
+
+                // 读取原始图片
+                val options = BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
+                BitmapFactory.decodeFile(imageFile.absolutePath, options)
+
+                // 计算缩放比例
+                var sampleSize = 1
+                if (maxWidth > 0 && maxHeight > 0) {
+                    val widthRatio = options.outWidth / maxWidth
+                    val heightRatio = options.outHeight / maxHeight
+                    sampleSize = maxOf(widthRatio, heightRatio, 1)
+                }
+
+                // 加载缩放后的 Bitmap
+                val decodeOptions = BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
+                }
+                val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath, decodeOptions)
+                    ?: return@withContext null
+
+                // 如果指定了最大尺寸，进一步缩放
+                val finalBitmap =
+                    if (maxWidth > 0 && maxHeight > 0 && (bitmap.width > maxWidth || bitmap.height > maxHeight)) {
+                        val scale =
+                            minOf(
+                                maxWidth.toFloat() / bitmap.width,
+                                maxHeight.toFloat() / bitmap.height,
+                            )
+                        val scaledWidth = (bitmap.width * scale).toInt()
+                        val scaledHeight = (bitmap.height * scale).toInt()
+                        Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
+                    } else {
+                        bitmap
+                    }
+
+                // 创建 WebP 输出文件
+                val webpFile =
+                    File(
+                        getCompressCacheDir(context),
+                        "${imageFile.nameWithoutExtension}_${System.currentTimeMillis()}.webp",
+                    )
+
+                // 保存为 WebP 格式
+                FileOutputStream(webpFile).use { out ->
+                    finalBitmap.compress(Bitmap.CompressFormat.WEBP, quality, out)
+                }
+
+                // 清理临时 Bitmap
+                if (finalBitmap != bitmap) {
+                    finalBitmap.recycle()
+                }
+                bitmap.recycle()
+
+                webpFile
+            } catch (e: Exception) {
+                null
+            }
+        }
 }

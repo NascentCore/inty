@@ -4,6 +4,7 @@ import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.ReportItem
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.services.ReportService
+import ai.sxwl.android.utils.ImageCompressUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
@@ -13,13 +14,17 @@ import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.ViewModelEvent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.io.InputStream
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 
 class ReportViewModel : BaseVM() {
 
@@ -152,14 +157,13 @@ class ReportViewModel : BaseVM() {
         launchBackground {
             try {
                 val uploadedImageUrls = mutableListOf<String>()
+                val context = Utils.getApp() ?: return@launchBackground
+                
                 for (imageUri in localImages) {
                     val uri = imageUri.toUri()
-                    val inputStream = Utils.getApp().contentResolver.openInputStream(uri)
-                    inputStream?.let { stream ->
-                        val uploadedUrl = uploadImageWithIntySdk(stream)
-                        if (uploadedUrl != null) {
-                            uploadedImageUrls.add(uploadedUrl)
-                        }
+                    val uploadedUrl = uploadImageWithCompression(context, uri)
+                    if (uploadedUrl != null) {
+                        uploadedImageUrls.add(uploadedUrl)
                     }
                 }
 
@@ -201,18 +205,164 @@ class ReportViewModel : BaseVM() {
         localImages.add(imageUri.toString())
     }
 
-    private suspend fun uploadImageWithIntySdk(inputStream: InputStream): String? {
+    private suspend fun uploadImageWithCompression(
+        context: android.content.Context,
+        uri: Uri
+    ): String? {
+        return withContext(Dispatchers.IO) {
+            var tempFile: File? = null
+            var compressedFile: File? = null
+            try {
+                // 将 Uri 转换为临时 File
+                tempFile = createTempFileFromUri(context, uri) ?: return@withContext null
 
-        val result = ReportService.uploadImage(inputStream, "report-image.jpg")
+                // 检查原文件大小，如果已经小于 1024KB，直接使用
+                val originalSizeKB = tempFile.length() / 1024
+                if (originalSizeKB <= 1024) {
+                    // 原文件已经小于 1024KB，直接上传
+                    val inputStream = FileInputStream(tempFile)
+                    val result = ReportService.uploadImage(inputStream, "report-image.jpg")
+                    inputStream.close()
 
-        return when (result) {
-            is ApiResult.Success -> {
-                val url = result.data
-                LogUtils.i("Image uploaded successfully: $url")
-                url
+                    return@withContext when (result) {
+                        is ApiResult.Success -> {
+                            val url = result.data
+                            LogUtils.i("Image uploaded successfully (no compression needed): $url")
+                            url
+                        }
+
+                        is ApiResult.Error -> {
+                            LogUtils.e("Image upload failed: ${result.message}")
+                            null
+                        }
+                    }
+                }
+
+                // 先尝试转换为 WebP 格式（通常能获得更好的压缩率）
+                var webpFile = ImageCompressUtils.convertToWebPSync(
+                    context = context,
+                    imageFile = tempFile,
+                    quality = 85,
+                    maxWidth = 1920,
+                    maxHeight = 1920
+                )
+
+                // 如果 WebP 转换成功，检查文件大小
+                if (webpFile != null && webpFile.exists()) {
+                    val webpSizeKB = webpFile.length() / 1024
+                    if (webpSizeKB <= 1024) {
+                        // WebP 文件已经小于 1024KB，直接使用
+                        compressedFile = webpFile
+                    } else {
+                        // WebP 文件还是太大，使用 Luban 进一步压缩
+                        compressedFile = ImageCompressUtils.compressImageSync(
+                            context = context,
+                            imageFile = webpFile,
+                            config = ImageCompressUtils.CompressConfig(maxSize = 800)
+                        )
+                        // 如果 Luban 压缩失败，使用更低质量的 WebP
+                        if (compressedFile == null || !compressedFile.exists()) {
+                            webpFile.delete()
+                            webpFile = ImageCompressUtils.convertToWebPSync(
+                                context = context,
+                                imageFile = tempFile,
+                                quality = 70,
+                                maxWidth = 1600,
+                                maxHeight = 1600
+                            )
+                            compressedFile = webpFile
+                        } else {
+                            webpFile.delete() // 清理中间文件
+                        }
+                    }
+                } else {
+                    // WebP 转换失败，使用 Luban 压缩原图
+                    compressedFile = ImageCompressUtils.compressImageSync(
+                        context = context,
+                        imageFile = tempFile,
+                        config = ImageCompressUtils.CompressConfig(maxSize = 800)
+                    )
+                }
+
+                if (compressedFile == null || !compressedFile.exists()) {
+                    LogUtils.e("Image compression failed")
+                    return@withContext null
+                }
+
+                // 检查最终文件大小
+                val compressedSizeKB = compressedFile.length() / 1024
+                if (compressedSizeKB > 1024) {
+                    LogUtils.w("Compressed image size ($compressedSizeKB KB) still exceeds 1024KB limit, trying more aggressive compression")
+                    // 如果还是太大，尝试更激进的 WebP 压缩
+                    val moreCompressedFile = ImageCompressUtils.convertToWebPSync(
+                        context = context,
+                        imageFile = tempFile,
+                        quality = 60,
+                        maxWidth = 1280,
+                        maxHeight = 1280
+                    )
+                    if (moreCompressedFile != null && moreCompressedFile.exists()) {
+                        val moreCompressedSizeKB = moreCompressedFile.length() / 1024
+                        if (moreCompressedSizeKB <= 1024) {
+                            compressedFile.delete()
+                            compressedFile = moreCompressedFile
+                        } else {
+                            moreCompressedFile.delete()
+                        }
+                    }
+                }
+
+                // 读取压缩后的文件并上传
+                // 根据文件扩展名确定上传的文件名
+                val filename = if (compressedFile.name.endsWith(".webp", ignoreCase = true)) {
+                    "report-image.webp"
+                } else {
+                    "report-image.jpg"
+                }
+                val inputStream = FileInputStream(compressedFile)
+                val result = ReportService.uploadImage(inputStream, filename)
+                inputStream.close()
+
+                when (result) {
+                    is ApiResult.Success -> {
+                        val url = result.data
+                        LogUtils.i("Image uploaded successfully (compressed from ${originalSizeKB}KB to ${compressedFile.length() / 1024}KB): $url")
+                        url
+                    }
+
+                    is ApiResult.Error -> {
+                        LogUtils.e("Image upload failed: ${result.message}")
+                        null
+                    }
+                }
+            } catch (e: Exception) {
+                LogUtils.e("Error uploading image: ${e.message}", e)
+                null
+            } finally {
+                // 清理临时文件
+                tempFile?.delete()
+                compressedFile?.delete()
             }
-            is ApiResult.Error -> {
-                LogUtils.e("Image upload failed: ${result.message}")
+        }
+    }
+
+    private suspend fun createTempFileFromUri(context: android.content.Context, uri: Uri): File? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val inputStream =
+                    context.contentResolver.openInputStream(uri) ?: return@withContext null
+                val tempFile = File.createTempFile("upload_", ".jpg", context.cacheDir)
+                val outputStream = FileOutputStream(tempFile)
+
+                inputStream.use { input ->
+                    outputStream.use { output ->
+                        input.copyTo(output)
+                    }
+                }
+
+                tempFile
+            } catch (e: Exception) {
+                LogUtils.e("Error creating temp file from URI: ${e.message}", e)
                 null
             }
         }

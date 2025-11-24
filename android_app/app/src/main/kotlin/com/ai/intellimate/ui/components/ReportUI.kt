@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -43,12 +44,19 @@ fun ReportItem(text: String, selected: Boolean, onClick: () -> Unit = {}) {
             .noRippleClickable { onClick() },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = text, fontSize = 14.sp, color = Color.White.copy(0.55f))
+        Text(
+            text = text,
+            fontSize = 14.sp,
+            color = Color.White.copy(0.55f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         Spacer(Modifier.weight(1f))
 
         Image(
             painter = painterResource(if (selected) R.drawable.checked else R.drawable.check_no),
             contentDescription = null,
+            modifier = Modifier.size(20.dp),
         )
     }
 }

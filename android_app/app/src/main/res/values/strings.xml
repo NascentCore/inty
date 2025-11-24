@@ -134,6 +134,13 @@
 
     <!-- Report -->
     <string name="report_description">Report description</string>
+    <string name="report_reason_sensitive_content">Sensitive or sexual content</string>
+    <string name="report_reason_misinformation">Misinformation</string>
+    <string name="report_reason_fraud_scams">Fraud or scams</string>
+    <string name="report_reason_privacy_violation">Violation of privacy</string>
+    <string name="report_reason_harmful_minors">Harmful to minors</string>
+    <string name="report_reason_ip_violation">Violations of my intellectual property</string>
+    <string name="report_reason_other">Other, details in report description</string>
 
     <!-- Feedback -->
     <string name="str_feedback">Feedback</string>
@@ -144,7 +151,7 @@
     <string name="feedback_reason_app_slow">The app is slow or gets stuck</string>
     <string name="feedback_reason_feature_hard_to_find">I couldn\'t find / how to use this feature</string>
     <string name="feedback_reason_ui_inconvenient">UI or interaction feels inconvenient</string>
-    <string name="feedback_reason_new_feature">I\'d like to see a new feature or improvement</string>
+    <string name="feedback_reason_new_feature">Suggest a new feature or improvement</string>
     <string name="feedback_reason_other">Other, please describe below</string>
     <string name="feedback_description">Feedback description</string>
     <string name="feedback_description_placeholder">Please describe your experience or suggestions…</string>

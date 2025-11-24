@@ -116,7 +116,28 @@ fun ReportScreen(
                                 else -> reason.description
                             }
                         } else {
-                            reason.description
+                            when (reason.code) {
+                                "SENSITIVE_CONTENT" ->
+                                    stringResource(R.string.report_reason_sensitive_content)
+
+                                "MISINFORMATION" ->
+                                    stringResource(R.string.report_reason_misinformation)
+
+                                "FRAUD_SCAMS" ->
+                                    stringResource(R.string.report_reason_fraud_scams)
+
+                                "PRIVACY_VIOLATION" ->
+                                    stringResource(R.string.report_reason_privacy_violation)
+
+                                "HARMFUL_MINORS" ->
+                                    stringResource(R.string.report_reason_harmful_minors)
+
+                                "IP_VIOLATION" ->
+                                    stringResource(R.string.report_reason_ip_violation)
+
+                                "OTHER" -> stringResource(R.string.report_reason_other)
+                                else -> reason.description
+                            }
                         }
                     ReportItem(
                         text = displayText,
