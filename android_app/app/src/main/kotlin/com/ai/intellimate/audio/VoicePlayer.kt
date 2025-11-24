@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -349,6 +350,11 @@ private fun ChatVoicePlayer(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
+        val errorContentDescription = stringResource(R.string.content_desc_voice_error_icon)
+        val ttsFailedContentDescription = stringResource(R.string.content_desc_voice_tts_failed_icon)
+        val pauseContentDescription = stringResource(R.string.content_desc_voice_pause_icon)
+        val playContentDescription = stringResource(R.string.content_desc_voice_play_icon)
+        val failedToPlayText = stringResource(R.string.voice_player_failed_to_play)
         // 播放按钮
         Box(modifier = Modifier.size(16.dp), contentAlignment = Alignment.Center) {
             when {
@@ -356,7 +362,7 @@ private fun ChatVoicePlayer(
                 hasError -> {
                     Icon(
                         painter = painterResource(R.drawable.ic_warning_voice),
-                        contentDescription = "Error",
+                        contentDescription = errorContentDescription,
                         tint = Color.White,
                         modifier = Modifier.size(16.dp),
                     )
@@ -366,7 +372,7 @@ private fun ChatVoicePlayer(
                 ttsGenerationFailed -> {
                     Icon(
                         painter = painterResource(R.drawable.ic_warning_voice),
-                        contentDescription = "TTS Failed",
+                        contentDescription = ttsFailedContentDescription,
                         tint = Color.White,
                         modifier = Modifier.size(16.dp),
                     )
@@ -389,29 +395,33 @@ private fun ChatVoicePlayer(
                                 if (isPlaying) R.drawable.ic_pause_voice
                                 else R.drawable.ic_play_voice
                             ),
-                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        contentDescription =
+                            if (isPlaying) pauseContentDescription else playContentDescription,
                         tint = Color.White,
                         modifier = Modifier.size(16.dp),
                     )
                 }
             }
         }
-        // 格式化时间
-        fun formatTime(timeMs: Long): String {
-            val seconds = timeMs / 1000
-            return "$seconds”"
-        }
         Spacer(Modifier.width(2.dp))
         // 状态文本
         if (duration > 0) {
+            val seconds = duration / 1000
+            val formattedDuration =
+                stringResource(R.string.voice_player_duration_seconds, seconds)
             Text(
-                text = formatTime(duration),
+                text = formattedDuration,
                 color = Color.White,
                 fontSize = 12.sp,
                 lineHeight = 12.sp,
             )
         } else if (ttsGenerationFailed) {
-            Text(text = "Failed to play", color = Color.White, fontSize = 12.sp, lineHeight = 12.sp)
+            Text(
+                text = failedToPlayText,
+                color = Color.White,
+                fontSize = 12.sp,
+                lineHeight = 12.sp,
+            )
         }
     }
 }

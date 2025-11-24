@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ai.intellimate.R
 
 @Composable
 fun MultiLineBasicTextField(
@@ -132,8 +134,14 @@ fun MultiLineBasicTextField(
 
         // ⭐ 右下角字符计数
         if (showMaxLength) {
+            val counterText =
+                stringResource(
+                    R.string.xb_character_counter_format,
+                    safeValue.length,
+                    maxLength,
+                )
             Text(
-                text = "${safeValue.length} / $maxLength",
+                text = counterText,
                 style = TextStyle(fontSize = fontSize.plusSp(-4), color = counterColor),
                 modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 8.dp, end = 12.dp),
             )

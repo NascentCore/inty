@@ -16,11 +16,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.SettingSection
 
 private object Spacing {
@@ -46,13 +48,13 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
     SettingSection(modifier = modifier.padding(top = Spacing.SectionTopPadding)) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.ContentHorizontalPadding)) {
             Text(
-                text = "当前构建类型：${uiState.buildType}",
+                text = stringResource(R.string.debug_backend_build_type, uiState.buildType),
                 color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
                 style = MaterialTheme.typography.bodySmall,
             )
             Spacer(Modifier.height(Spacing.SmallSpacer))
             Text(
-                text = "当前后端地址：${uiState.activeBaseUrl}",
+                text = stringResource(R.string.debug_backend_active_base_url, uiState.activeBaseUrl),
                 color = Color.White,
                 fontWeight = FontWeight.Medium,
                 maxLines = TextConfig.MaxUrlLines,
@@ -64,17 +66,17 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.spacedBy(Spacing.ChipSpacing),
                 verticalArrangement = Arrangement.spacedBy(Spacing.ChipSpacing)
             ) {
-                viewModel.quickPresets.forEach { (label, url) ->
+                viewModel.quickPresets.forEach { preset ->
                     AssistChip(
-                        onClick = { viewModel.applySelectedOverride(url) },
-                        label = { Text(label) }
+                        onClick = { viewModel.applySelectedOverride(preset.url) },
+                        label = { Text(text = stringResource(preset.labelResId)) }
                     )
                 }
             }
 
             Spacer(Modifier.height(Spacing.MediumSpacer))
             TextButton(onClick = viewModel::resetOverride) {
-                Text(text = "恢复默认", color = Color.White)
+                Text(text = stringResource(R.string.debug_backend_reset_button), color = Color.White)
             }
         }
     }

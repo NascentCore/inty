@@ -366,7 +366,11 @@ private fun ChatHistoryItem(
                 }
                 if (conversation.isDeleted) {
                     Spacer(Modifier.width(4.dp))
-                    Text(text = "(deleted)", fontSize = 15.sp, color = Color(0x8CFFFFFF))
+                    Text(
+                        text = stringResource(R.string.messages_deleted_indicator),
+                        fontSize = 15.sp,
+                        color = Color(0x8CFFFFFF),
+                    )
                 }
             }
 

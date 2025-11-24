@@ -5,6 +5,7 @@ import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import com.ai.intellimate.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -146,8 +147,8 @@ private constructor(private val context: Context, private var scope: CoroutineSc
         val audioInfo =
             AudioInfo(
                 url = audioUrl,
-                title = "msg voice",
-                artist = "AI",
+                title = context.getString(R.string.voice_message_title),
+                artist = context.getString(R.string.voice_message_artist_ai),
                 messageId = messageId,
                 agentId = agentId,
                 agentName = agentName,

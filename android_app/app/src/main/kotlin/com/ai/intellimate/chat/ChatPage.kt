@@ -371,7 +371,10 @@ internal fun ChatPage(
                                                                 )
                                                     ) {
                                                         Text(
-                                                            text = "Message loading failed",
+                                                            text =
+                                                                stringResource(
+                                                                    R.string.chat_message_list_render_failed
+                                                                ),
                                                             color = Color.White,
                                                             modifier =
                                                                 Modifier.align(Alignment.Center),
@@ -392,7 +395,10 @@ internal fun ChatPage(
                                                 .background(Color.Red.copy(alpha = 0.1f))
                                     ) {
                                         Text(
-                                            text = "Chat history loading failed, please retry",
+                                            text =
+                                                stringResource(
+                                                    R.string.chat_history_load_failed_retry
+                                                ),
                                             color = Color.White,
                                             modifier = Modifier.align(Alignment.Center),
                                         )
@@ -449,7 +455,7 @@ internal fun ChatPage(
                                         )
                                     } else {
                                         Text(
-                                            text = "Pull to load more",
+                                            text = stringResource(R.string.chat_pull_to_load_more),
                                             color =
                                                 MaterialTheme.colorScheme.onSurface.copy(
                                                     alpha = 0.6f

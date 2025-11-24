@@ -23,10 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ai.intellimate.R
 
 /** Shimmer 占位符组件 用于图片加载时的占位效果 */
 @Composable
@@ -97,7 +99,7 @@ fun ShimmerPlaceholder(
                 // "Image generating..." 文字
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Image generating...",
+                    text = stringResource(R.string.shimmer_loading_text),
                     color = Color.White.copy(alpha = 0.6f),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Normal,

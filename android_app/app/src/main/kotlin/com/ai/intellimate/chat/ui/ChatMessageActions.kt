@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
 
@@ -35,7 +36,7 @@ private fun LikeButton(
                 painterResource(
                     if (isSelected) R.drawable.ic_like_light else R.drawable.ic_like_normal
                 ),
-            contentDescription = "Like",
+            contentDescription = stringResource(R.string.content_desc_like_button),
             modifier = Modifier.size(24.dp),
             tint = Color.Unspecified,
         )
@@ -59,7 +60,7 @@ private fun DislikeButton(
                 painterResource(
                     if (isSelected) R.drawable.ic_dislike_light else R.drawable.ic_dislike_normal
                 ),
-            contentDescription = "Dislike",
+            contentDescription = stringResource(R.string.content_desc_dislike_button),
             modifier = Modifier.size(24.dp),
             tint = Color.Unspecified,
         )
@@ -75,7 +76,7 @@ private fun RecallButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_recall),
-            contentDescription = "Recall",
+            contentDescription = stringResource(R.string.content_desc_recall_button),
             modifier = Modifier.size(24.dp),
             tint = Color.Unspecified,
         )
@@ -91,7 +92,7 @@ private fun ImageGenerateButton(onClick: () -> Unit, modifier: Modifier = Modifi
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_image_star),
-            contentDescription = "Generate Image",
+            contentDescription = stringResource(R.string.content_desc_generate_image_button),
             modifier = Modifier.size(24.dp),
             tint = Color.Unspecified,
         )

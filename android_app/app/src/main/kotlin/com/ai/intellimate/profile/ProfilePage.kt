@@ -471,8 +471,9 @@ private fun ProfileHeader(
                 }
 
             Column(modifier = Modifier.weight(1f)) {
+                val guestNamePlaceholder = stringResource(R.string.profile_guest_name_placeholder)
                 Text(
-                    text = userProfile.nickname.ifEmpty { "Guest" },
+                    text = userProfile.nickname.ifEmpty { guestNamePlaceholder },
                     color = Color.White,
                     fontSize = (20.sp.value * (1f - collapseProgress * 0.2f)).sp, // 折叠时稍微缩小
                     fontWeight = FontWeight.SemiBold,
@@ -486,7 +487,10 @@ private fun ProfileHeader(
                             if (userProfile.id.isNotEmpty()) {
                                 val clipboard = context.getSystemService<ClipboardManager>()
                                 clipboard?.setPrimaryClip(
-                                    ClipData.newPlainText("User ID", userProfile.id)
+                                    ClipData.newPlainText(
+                                        context.getString(R.string.clipboard_label_user_id),
+                                        userProfile.id,
+                                    )
                                 )
                                 if (clipboard != null) {
                                     ToastUtils.showShort(R.string.toast_copied_to_clipboard)
@@ -779,7 +783,7 @@ private fun MyAgentCard(
 /** Premium Banner 组件 */
 @Composable
 private fun PremiumBanner(
-    status: String? = "Activate Now",
+    status: String? = null,
     purchaseTime: String? = null, // 购买日期
     expireTime: String? = null, // 过期时间
     onClick: () -> Unit = {},
@@ -822,9 +826,17 @@ private fun PremiumBanner(
             // 三种UI状态显示，1. 无有效订阅 显示Activate Now；2. 有效订阅 显示Since 日期；3. 有订阅快过期 显示Expires ON 日期
             val str =
                 when (status) {
-                    VipStatus.UI_SUBSCRIBED -> "Since $purchaseTime"
-                    VipStatus.UI_SUBSCRIBED_EXPIRE_SOON -> "Expires on $expireTime"
-                    else -> "Activate now"
+                    VipStatus.UI_SUBSCRIBED ->
+                        stringResource(
+                            R.string.profile_vip_status_since,
+                            purchaseTime.orEmpty(),
+                        )
+                    VipStatus.UI_SUBSCRIBED_EXPIRE_SOON ->
+                        stringResource(
+                            R.string.profile_vip_status_expires_on,
+                            expireTime.orEmpty(),
+                        )
+                    else -> stringResource(R.string.profile_vip_status_activate_now)
                 }
 
             Text(text = str, fontSize = 16.sp, color = Color.White, textAlign = TextAlign.Center)

@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
 
@@ -60,7 +61,7 @@ fun KeepTalkingFloatingButton(
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_keep_talking),
-            contentDescription = "Keep Talking",
+            contentDescription = stringResource(R.string.content_desc_keep_talking_button),
             modifier = Modifier.size(20.dp),
             tint = if (enabled) Color.White else Color.LightGray,
         )

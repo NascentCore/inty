@@ -23,11 +23,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.ai.intellimate.R
 
 /** 全屏图片查看器 */
 @Composable
@@ -153,7 +155,7 @@ internal fun FullScreenImageViewer(
                     maxWidth = 1920,
                     maxHeight = 1920,
                 ),
-            contentDescription = "Full screen image",
+            contentDescription = stringResource(R.string.content_desc_full_screen_image),
             contentScale = ContentScale.Fit,
             alignment = Alignment.Center,
         )
@@ -164,7 +166,7 @@ internal fun FullScreenImageViewer(
             modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
         ) {
             androidx.compose.material3.Text(
-                text = "✕",
+                text = stringResource(R.string.full_screen_image_close_label),
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,

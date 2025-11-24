@@ -57,7 +57,7 @@ fun PremiumModelTag(isPremiumModel: Boolean = false, onClick: () -> Unit) {
                     if (isPremiumModel) R.drawable.icon_vip_flag_on
                     else R.drawable.icon_vip_flag_off
                 ),
-            contentDescription = "upgrade to premium icon",
+            contentDescription = stringResource(R.string.content_desc_premium_upgrade_icon),
             modifier = Modifier.size(20.dp),
         )
 

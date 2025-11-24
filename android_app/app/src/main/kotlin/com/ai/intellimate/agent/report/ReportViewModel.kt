@@ -36,35 +36,50 @@ class ReportViewModel : BaseVM() {
     var targetType: String = "USER"
 
     // Hard-coded list of report reasons
-    private val _reasons =
-        MutableStateFlow(
-            listOf(
-                ReportItem(
-                    id = 1,
-                    description = "Sensitive or sexual content",
-                    code = "SENSITIVE_CONTENT",
-                ),
-                ReportItem(id = 2, description = "Misinformation", code = "MISINFORMATION"),
-                ReportItem(id = 3, description = "Fraud or scams", code = "FRAUD_SCAMS"),
-                ReportItem(
-                    id = 4,
-                    description = "Violation of privacy",
-                    code = "PRIVACY_VIOLATION",
-                ),
-                ReportItem(id = 5, description = "Harmful to minors", code = "HARMFUL_MINORS"),
-                ReportItem(
-                    id = 6,
-                    description = "Violations of my intellectual property",
-                    code = "IP_VIOLATION",
-                ),
-                ReportItem(
-                    id = 0,
-                    description = "Other, details in report description",
-                    code = "OTHER",
-                ),
-            )
-        )
+    private val _reasons = MutableStateFlow(loadReportReasons())
     val reasons = _reasons.asStateFlow()
+    private fun loadReportReasons(): List<ReportItem> {
+        val context = Utils.getApp()
+        return listOf(
+            ReportItem(
+                id = 1,
+                description =
+                    context?.getString(R.string.report_reason_sensitive_content).orEmpty(),
+                code = "SENSITIVE_CONTENT",
+            ),
+            ReportItem(
+                id = 2,
+                description = context?.getString(R.string.report_reason_misinformation).orEmpty(),
+                code = "MISINFORMATION",
+            ),
+            ReportItem(
+                id = 3,
+                description = context?.getString(R.string.report_reason_fraud).orEmpty(),
+                code = "FRAUD_SCAMS",
+            ),
+            ReportItem(
+                id = 4,
+                description = context?.getString(R.string.report_reason_privacy).orEmpty(),
+                code = "PRIVACY_VIOLATION",
+            ),
+            ReportItem(
+                id = 5,
+                description = context?.getString(R.string.report_reason_harmful_minors).orEmpty(),
+                code = "HARMFUL_MINORS",
+            ),
+            ReportItem(
+                id = 6,
+                description = context?.getString(R.string.report_reason_ip_violation).orEmpty(),
+                code = "IP_VIOLATION",
+            ),
+            ReportItem(
+                id = 0,
+                description = context?.getString(R.string.report_reason_other).orEmpty(),
+                code = "OTHER",
+            ),
+        )
+    }
+
 
     var selectIDS = mutableStateSetOf<Int>()
 

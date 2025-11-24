@@ -6,7 +6,9 @@ import ai.sxwl.android.data.http.config.Constant
 import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
 import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.utils.LogUtils
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
+import com.ai.intellimate.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +22,8 @@ private const val PRESET_NAME_PROD = "prod"
 
 class DebugBackendSettingsViewModel : ViewModel() {
 
+    data class BackendPreset(@StringRes val labelResId: Int, val url: String)
+
     data class UiState(
         // 在配置页面中显示构建类型
         val buildType: String,
@@ -29,9 +33,18 @@ class DebugBackendSettingsViewModel : ViewModel() {
 
     val quickPresets =
         listOf(
-            PRESET_NAME_LOCAL to "http://${Constant.USER_HOST_LOCAL}/",
-            PRESET_NAME_DEV to "https://${Constant.USER_HOST_DEV}/",
-            PRESET_NAME_PROD to "https://${Constant.USER_HOST}/",
+            BackendPreset(
+                labelResId = R.string.debug_backend_preset_local,
+                url = "http://${Constant.USER_HOST_LOCAL}/",
+            ),
+            BackendPreset(
+                labelResId = R.string.debug_backend_preset_dev,
+                url = "https://${Constant.USER_HOST_DEV}/",
+            ),
+            BackendPreset(
+                labelResId = R.string.debug_backend_preset_prod,
+                url = "https://${Constant.USER_HOST}/",
+            ),
         )
 
     private val _uiState = MutableStateFlow(createInitialState())

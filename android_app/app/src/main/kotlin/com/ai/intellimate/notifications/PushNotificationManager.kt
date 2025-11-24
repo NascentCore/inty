@@ -20,6 +20,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.ai.intellimate.MainActivity
 import com.ai.intellimate.chat.ChatActivity
+import com.ai.intellimate.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -279,11 +280,14 @@ class PushNotificationManager private constructor(private val application: Appli
                 val channel =
                     NotificationChannel(
                             FCMService.NOTIFICATION_CHANNEL_ID,
-                            "Push Notifications",
+                        application.getString(R.string.push_notifications_channel_name),
                             NotificationManager.IMPORTANCE_DEFAULT,
                         )
                         .apply {
-                            description = "Receive push notifications and messages"
+                            description =
+                                application.getString(
+                                    R.string.push_notifications_channel_description
+                                )
                             enableVibration(true)
                             vibrationPattern = longArrayOf(0, 250, 250, 250)
                             enableLights(true)

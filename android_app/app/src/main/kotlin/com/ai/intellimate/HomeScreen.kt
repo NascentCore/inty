@@ -328,13 +328,15 @@ private fun ProfileTabContent(
     val uiState by profileViewModel.uiState.collectAsStateWithLifecycle()
 
     // 确保用户信息有效，避免崩溃
+    val loadingName = stringResource(R.string.home_loading_name_placeholder)
+    val loadingDescription = stringResource(R.string.home_loading_description_placeholder)
     val safeUserProfile =
         if (uiState.userProfile.id.isEmpty()) {
             UserProfile(
                 id = "loading",
-                nickname = "Loading...",
+                nickname = loadingName,
                 avatar = null,
-                description = "UserInfo Loading...",
+                description = loadingDescription,
             )
         } else {
             uiState.userProfile

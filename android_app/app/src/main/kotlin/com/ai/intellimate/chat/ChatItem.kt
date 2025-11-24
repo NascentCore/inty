@@ -78,7 +78,11 @@ import com.ai.intellimate.utils.ChatTextFormatter
 
 private fun debugOnlyCopyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService<ClipboardManager>()
-    val clip = ClipData.newPlainText("Message", text)
+    val clip =
+        ClipData.newPlainText(
+            context.getString(R.string.clipboard_label_message),
+            text,
+        )
     clipboard?.setPrimaryClip(clip)
 }
 
@@ -116,7 +120,7 @@ fun ChatItem(
                     Modifier.fillMaxWidth().height(60.dp).background(Color.Red.copy(alpha = 0.1f))
             ) {
                 Text(
-                    text = "Message display failed",
+                    text = stringResource(R.string.chat_message_render_failed),
                     color = Color.White,
                     modifier = Modifier.align(Alignment.Center),
                 )
@@ -152,8 +156,8 @@ private fun ChatItemAI(
                     val audioInfo =
                         AudioInfo(
                             url = item.audio_url ?: "",
-                            title = "Voice Message",
-                            artist = "AI Agent",
+                            title = stringResource(R.string.voice_message_title),
+                            artist = stringResource(R.string.voice_message_artist_ai_agent),
                             messageId = item.localMsgId,
                             agentId = safeAgentId,
                             agentName = agentInfo?.name,
@@ -308,7 +312,8 @@ private fun ChatItemAI(
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_warning_voice),
-                                        contentDescription = "Image load error",
+                                        contentDescription =
+                                            stringResource(R.string.content_desc_image_load_error),
                                         tint = Color.White.copy(alpha = 0.6f),
                                         modifier = Modifier.size(24.dp),
                                     )
@@ -344,7 +349,8 @@ private fun ChatItemAI(
                                             )
                                         )
                                         .build(),
-                                contentDescription = "Generated image",
+                                contentDescription =
+                                    stringResource(R.string.content_desc_generated_image),
                                 contentScale = ContentScale.Fit,
                                 alignment = Alignment.CenterStart,
                                 onError = { imageLoadError = true },
@@ -377,6 +383,7 @@ private fun ChatItemAI(
             }
         }
         .onFailure { e ->
+            val emptyMessageFallback = stringResource(R.string.chat_message_empty_placeholder)
             Row {
                 val context = LocalContext.current
                 Box(
@@ -396,7 +403,7 @@ private fun ChatItemAI(
                             }
                 ) {
                     Text(
-                        text = item.content.ifEmpty { "Message content is empty" },
+                        text = item.content.ifEmpty { emptyMessageFallback },
                         color = Color.White,
                         fontSize = 14.sp,
                     )
@@ -439,6 +446,7 @@ private fun ChatItemUser(item: MsgInfo) {
             }
         }
         .onFailure { e ->
+            val emptyMessageFallback = stringResource(R.string.chat_message_empty_placeholder)
             Row {
                 Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
                 val context = LocalContext.current
@@ -459,7 +467,7 @@ private fun ChatItemUser(item: MsgInfo) {
                             }
                 ) {
                     Text(
-                        text = item.content.ifEmpty { "Message content is empty" },
+                        text = item.content.ifEmpty { emptyMessageFallback },
                         color = Color(0xff090909),
                         fontSize = 14.sp,
                     )
@@ -492,7 +500,7 @@ private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = nu
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 painter = painterResource(ai.sxwl.android.design.R.drawable.ic_delete),
-                contentDescription = "Delete tip",
+                contentDescription = stringResource(R.string.content_desc_delete_tip),
                 tint = Color.White.copy(alpha = 0.5f),
                 modifier = Modifier.size(16.dp),
             )
@@ -508,6 +516,7 @@ private fun StyledMessageText(
     normalColor: Color,
     actionColor: Color,
 ) {
+    val emptyMessageFallback = stringResource(R.string.chat_message_empty_placeholder)
     runCatching {
             Text(
                 text =
@@ -522,7 +531,7 @@ private fun StyledMessageText(
         }
         .onFailure { e ->
             Text(
-                text = text.ifEmpty { "Message content is empty" },
+                text = text.ifEmpty { emptyMessageFallback },
                 fontSize = fontSize,
                 fontWeight = fontWeight,
                 color = normalColor,
@@ -560,8 +569,9 @@ private fun LoadingAnimation() {
 @Composable
 internal fun AgentInfoChatCard(info: String) {
 
+    val introPrefix = stringResource(R.string.chat_agent_intro_prefix)
     val str = buildAnnotatedString {
-        withStyle(style = SpanStyle(fontWeight = FontWeight.SemiBold)) { append("Intro: ") }
+        withStyle(style = SpanStyle(fontWeight = FontWeight.SemiBold)) { append(introPrefix) }
         append(info)
     }
 

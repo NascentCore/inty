@@ -11,11 +11,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
+import com.ai.intellimate.R
 
 /** Explore页面的加载状态组件 */
 @Composable
@@ -66,7 +68,7 @@ private fun LoadingMoreIndicator() {
 private fun LoadMoreErrorIndicator() {
     Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
         Text(
-            text = "Failed to load more data",
+            text = stringResource(R.string.explore_load_more_failed),
             color = Color.White.copy(0.7f),
             fontSize = 12.sp,
             textAlign = TextAlign.Center,
@@ -79,7 +81,7 @@ private fun LoadMoreErrorIndicator() {
 private fun NoMoreDataIndicator() {
     Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
         Text(
-            text = "No more data available",
+            text = stringResource(R.string.explore_no_more_data),
             color = Color.White.copy(0.6f),
             fontSize = 12.sp,
             textAlign = TextAlign.Center,
