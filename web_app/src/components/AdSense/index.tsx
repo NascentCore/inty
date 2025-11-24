@@ -58,78 +58,92 @@ const AdSense: React.FC<IAdSenseProps> = ({
   className,
 }) => {
   const adRef = useRef<HTMLDivElement>(null);
+  const insRef = useRef<HTMLDivElement>(null);
   const isInitialized = useRef<boolean>(false);
   const [isAvailable, setIsAvailable] = useState<boolean>(false);
 
-  // 检查 AdSense 是否可用
+  // 检查 AdSense 是否可用，并持续监听脚本加载
   useEffect(() => {
-    const checkAvailability = () => {
-      const available = isAdSenseAvailable();
-      setIsAvailable(available);
-      return available;
-    };
-
     // 立即检查一次
-    if (checkAvailability()) {
+    if (isAdSenseAvailable()) {
+      setIsAvailable(true);
       return;
     }
 
     // 如果不可用，等待脚本加载后重试
+    let checkCount = 0;
+    const maxChecks = 20; // 最多检查20次（10秒）
     const timer = setInterval(() => {
-      if (checkAvailability()) {
+      checkCount++;
+      const available = isAdSenseAvailable();
+      if (available) {
+        setIsAvailable(true);
+        clearInterval(timer);
+      } else if (checkCount >= maxChecks) {
         clearInterval(timer);
       }
     }, 500);
 
-    // 设置最大等待时间（5秒）
-    const maxWaitTimer = setTimeout(() => {
-      clearInterval(timer);
-    }, 5000);
-
     return () => {
       clearInterval(timer);
-      clearTimeout(maxWaitTimer);
     };
   }, []);
 
-  // 初始化广告
+  // 初始化广告 - 确保在 DOM 元素准备好且脚本加载完成后执行
   useEffect(() => {
-    // 如果不可用或已初始化，直接返回
-    if (!isAvailable || isInitialized.current || !adRef.current) {
+    // 如果不可用、已初始化或 DOM 元素未准备好，直接返回
+    if (!isAvailable || isInitialized.current || !insRef.current) {
       return;
     }
 
-    try {
-      // 初始化广告
-      if (!(window as any).adsbygoogle) {
-        (window as any).adsbygoogle = [];
+    // 使用 requestAnimationFrame 确保 DOM 已完全渲染
+    const initAd = () => {
+      if (isInitialized.current || !insRef.current) {
+        return;
       }
-      (window as any).adsbygoogle.push({});
-      isInitialized.current = true;
-    } catch (err) {
-      console.error('AdSense 初始化失败:', err);
-    }
+
+      try {
+        // 确保 adsbygoogle 数组存在
+        if (!(window as any).adsbygoogle) {
+          (window as any).adsbygoogle = [];
+        }
+
+        // 初始化广告
+        (window as any).adsbygoogle.push({});
+        isInitialized.current = true;
+      } catch (err) {
+        console.error('AdSense 初始化失败:', err);
+      }
+    };
+
+    // 延迟初始化，确保 DOM 完全准备好
+    const timeoutId = setTimeout(() => {
+      requestAnimationFrame(initAd);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [isAvailable]);
 
   // 开发环境：即使 AdSense 不可用，也显示占位符用于测试布局
-  if (!isAvailable) {
-    if (ADSENSE_CONFIG.IS_DEV) {
-      return (
-        <div className={`adsense-container adsense-placeholder ${className || ''}`} style={style}>
-          <div className="adsense-placeholder-content">
-            <span className="adsense-placeholder-text">AdSense 占位符</span>
-            <span className="adsense-placeholder-info">广告位 ID: {adSlot} | 格式: {adFormat}</span>
-            <span className="adsense-placeholder-tip">(本地测试模式 - 实际广告仅在生产环境显示)</span>
-          </div>
+  if (!isAvailable && ADSENSE_CONFIG.IS_DEV) {
+    return (
+      <div className={`adsense-container adsense-placeholder ${className || ''}`} style={style}>
+        <div className="adsense-placeholder-content">
+          <span className="adsense-placeholder-text">AdSense 占位符</span>
+          <span className="adsense-placeholder-info">广告位 ID: {adSlot} | 格式: {adFormat}</span>
+          <span className="adsense-placeholder-tip">(本地测试模式 - 实际广告仅在生产环境显示)</span>
         </div>
-      );
-    }
-    return null;
+      </div>
+    );
   }
 
+  // 渲染广告 DOM 元素（生产环境即使脚本未加载也渲染，让 Google 可以检测到）
   return (
     <div ref={adRef} className={`adsense-container ${className || ''}`} style={style}>
       <ins
+        ref={insRef as any}
         className="adsbygoogle"
         data-ad-client="ca-pub-2092760210658178"
         data-ad-slot={adSlot}
