@@ -19,8 +19,6 @@ export interface IAgentModelState {
   loading: boolean;
   /** Agent 详情加载状态 */
   detailLoading: boolean;
-  /** 错误信息 */
-  error: string | null;
   /** 分页信息 */
   pagination: {
     total: number;
@@ -36,7 +34,6 @@ export default function useAgentModel() {
   const [currentAgent, setCurrentAgent] = useState<IAgent | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [detailLoading, setDetailLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
@@ -52,8 +49,6 @@ export default function useAgentModel() {
   const loadRecommendAgents = useCallback(
     async (params?: Partial<IAgentRecommendRequest>, append: boolean = false) => {
       setLoading(true);
-      setError(null);
-
       try {
         const requestParams: IAgentRecommendRequest = {
           page: params?.page || 1,
@@ -85,11 +80,9 @@ export default function useAgentModel() {
           return data;
         }
 
-        setError(result.message || '加载推荐角色失败');
         return null;
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : '加载推荐角色失败';
-        setError(errorMsg);
+        console.error('加载推荐角色失败:', err);
         return null;
       } finally {
         setLoading(false);
@@ -124,8 +117,6 @@ export default function useAgentModel() {
    */
   const loadAgentDetail = useCallback(async (agentId: string) => {
     setDetailLoading(true);
-    setError(null);
-
     try {
       const agentData = await getAgentDetail(agentId);
 
@@ -134,11 +125,8 @@ export default function useAgentModel() {
         return agentData;
       }
 
-      setError('未找到 Agent 信息');
       return null;
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '加载 Agent 详情失败';
-      setError(errorMsg);
       console.error('加载 Agent 详情失败:', err);
       return null;
     } finally {
@@ -167,13 +155,6 @@ export default function useAgentModel() {
   );
 
   /**
-   * 清除错误信息
-   */
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
-  /**
    * 重置状态
    */
   const reset = useCallback(() => {
@@ -181,7 +162,6 @@ export default function useAgentModel() {
     setCurrentAgent(null);
     setLoading(false);
     setDetailLoading(false);
-    setError(null);
     setPagination({
       total: 0,
       page: 1,
@@ -196,7 +176,6 @@ export default function useAgentModel() {
     currentAgent,
     loading,
     detailLoading,
-    error,
     pagination,
 
     // 方法
@@ -206,7 +185,6 @@ export default function useAgentModel() {
     loadAgentDetail,
     selectAgent,
     findAgentById,
-    clearError,
     reset,
   };
 }

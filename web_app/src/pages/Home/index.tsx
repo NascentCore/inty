@@ -5,10 +5,9 @@
 
 import { history, useModel } from '@umijs/max';
 import React, { useEffect, useRef } from 'react';
-import { EmptyState, ErrorAlert, Loading } from '@/components';
 import { useInfiniteScroll } from '@/hooks';
 import type { IAgent } from '@/types';
-import { CharacterCard } from './components';
+import { CharacterList } from './components';
 import './index.less';
 
 /**
@@ -16,7 +15,7 @@ import './index.less';
  */
 const HomePage: React.FC = () => {
   // 获取 agent model
-  const { recommendList, loading, error, pagination, loadRecommendAgents, loadMoreRecommendAgents } = useModel('agent');
+  const { recommendList, loading, pagination, loadRecommendAgents, loadMoreRecommendAgents } = useModel('agent');
   
   // 用于存储滚动容器的 ref
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -69,37 +68,12 @@ const HomePage: React.FC = () => {
       </div>
 
       <div className="page-content">
-        {/* 错误提示 */}
-        {error && <ErrorAlert message="Failed to load" description={error} type="error" closable />}
-
-        {/* 初始加载状态 */}
-        {loading && recommendList.length === 0 && <Loading tip="Loading..." size="large" fullscreen />}
-
-        {/* 角色卡片列表 */}
-        {recommendList.length > 0 && (
-          <div className="character-grid">
-            {recommendList.map((agent: IAgent) => (
-              <CharacterCard key={agent.id} agent={agent} onStartChat={handleStartChat} />
-            ))}
-          </div>
-        )}
-
-        {/* 加载更多指示器 */}
-        {loading && recommendList.length > 0 && (
-          <div className="loading-more">
-            <Loading tip="Loading more..." size="small" />
-          </div>
-        )}
-
-        {/* 空状态 */}
-        {!loading && !error && recommendList.length === 0 && (
-          <EmptyState description="No recommended agents" />
-        )}
-
-        {/* 没有更多数据提示 */}
-        {!loading && recommendList.length > 0 && pagination.page >= pagination.totalPages && (
-          <div className="no-more-data">No more agents</div>
-        )}
+        <CharacterList
+          recommendList={recommendList}
+          loading={loading}
+          pagination={pagination}
+          onStartChat={handleStartChat}
+        />
       </div>
     </div>
   );

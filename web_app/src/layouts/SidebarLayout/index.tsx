@@ -5,7 +5,7 @@
 
 import { history, Outlet, useModel } from '@umijs/max';
 import React, { useEffect } from 'react';
-import { GoogleLoginModal, VersionBadge } from '@/components';
+import { AdSidebar, GoogleLoginModal, VersionBadge } from '@/components';
 import ChatHistoryList from './components/ChatHistoryList';
 import DiscoverButton from './components/DiscoverButton';
 import SidebarHeader from './components/SidebarHeader';
@@ -61,6 +61,9 @@ const SidebarLayout: React.FC = () => {
 
           {/* 聊天历史列表 */}
           <ChatHistoryList chatList={chatList} loading={loading} />
+
+          {/* google 自定义广告 */}
+          <AdSidebar />
 
           {/* 用户区域 - 底部（头像 + 订阅按钮） */}
           <UserSection

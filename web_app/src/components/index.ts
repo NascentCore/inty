@@ -3,16 +3,14 @@
  * 目的是统一管理对外输出的组件，方便分类
  */
 
-export { default as AdSense } from './AdSense';
 export { default as EmptyState } from './EmptyState';
 export { default as ErrorAlert } from './ErrorAlert';
 /**
  * 布局组件
  */
+export { default as AdSidebar } from './AdSidebar';
 export { default as Footer } from './Footer';
-export { default as FooterAd } from './FooterAd';
 export { default as GoogleLoginModal } from './GoogleLoginModal';
-export { default as TopBannerAd } from './TopBannerAd';
 /**
  * 通用 UI 组件
  */

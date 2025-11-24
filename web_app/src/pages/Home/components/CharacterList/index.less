@@ -1,0 +1,60 @@
+@import '@/styles/variables.less';
+
+.character-list-section {
+  // 角色卡片网格
+  .character-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 190px);
+    gap: 24px;
+    margin-bottom: 32px;
+    justify-content: start;
+  }
+
+  // 加载更多指示器
+  .loading-more {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px 0;
+    margin-bottom: 32px;
+  }
+
+  // 没有更多数据提示
+  .no-more-data {
+    text-align: center;
+    padding: 24px 0;
+    margin-bottom: 32px;
+    color: @dark-text-tertiary;
+    font-size: 14px;
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .character-list-section {
+    .character-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+      justify-content: stretch;
+    }
+  }
+}
+
+// 平板设备
+@media (min-width: 769px) and (max-width: 1024px) {
+  .character-list-section {
+    .character-grid {
+      grid-template-columns: repeat(auto-fill, 190px);
+    }
+  }
+}
+
+// 大屏幕
+@media (min-width: 1400px) {
+  .character-list-section {
+    .character-grid {
+      grid-template-columns: repeat(auto-fill, 190px);
+    }
+  }
+}
+
