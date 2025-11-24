@@ -10,3 +10,6 @@ sudo certbot --nginx -d dev.intellimate.app
 sudo systemctl reload nginx
 sudo systemctl status nginx
 ```
+
+Google Oauth client ID 位于 GCP console 上：
+[Inty Web App](https://console.cloud.google.com/auth/clients/1034291688895-4aajnset4lc3subled86dikpk92hi7hp.apps.googleusercontent.com?project=alien-paratext-461204-i9)

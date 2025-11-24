@@ -74,6 +74,8 @@ resources:
                   update: put /api/v1/users/profile
                   me: get /api/v1/users/me
               deletion:
+                # DEPRECATED: This endpoint is deprecated. Use POST /api/v1/users/delete-account instead.
+                # The delete-account endpoint automatically performs the same eligibility check.
                 methods:
                   check_eligibility: get /api/v1/users/deletion/check
           report:

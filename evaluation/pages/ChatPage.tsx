@@ -35,6 +35,8 @@ import {
   HistoryOutlined,
   RedoOutlined,
   DeleteOutlined,
+  LikeOutlined,
+  DislikeOutlined,
 } from "@ant-design/icons";
 import { useAgents } from "../hooks/useAgents";
 import api from "../services/api";
@@ -64,6 +66,7 @@ interface ChatMessage {
   remoteId?: string; // 数据库消息ID，用于删除和重发功能
   type?: "text" | "image"; // 消息类型：文本或图片
   image_url?: string; // 图片URL（仅图片消息）
+  user_vote?: "like" | "dislike" | null; // 用户投票：点赞/点踩
   meta_data?: {
     generated_image?: {
       image_url: string;
@@ -206,6 +209,7 @@ export const ChatPage: React.FC = () => {
             remoteId: msg.id.toString(),
             type: msg.type || "text",
             image_url: msg.image_url,
+            user_vote: msg.user_vote || null,
             meta_data: msg.meta_data,
           }),
         );
@@ -259,6 +263,122 @@ export const ChatPage: React.FC = () => {
     loadChatHistory();
   }, [loadChatHistory]);
 
+  // 处理消息投票（点赞/点踩）
+  const handleMessageVote = useCallback(
+    async (msg: ChatMessage, newVote: "like" | "dislike" | null) => {
+      if (!selectedAgent?.id || !msg.remoteId) {
+        message.warning("无法更新投票：缺少必要信息");
+        return;
+      }
+
+      // 验证 remoteId 是否为有效数字
+      const messageId = parseInt(msg.remoteId);
+      if (isNaN(messageId)) {
+        message.warning("无法更新投票：消息ID无效");
+        return;
+      }
+
+      // 确定新的投票状态
+      let finalVote: "like" | "dislike" | null = newVote;
+      const currentVote = msg.user_vote;
+
+      // 实现切换逻辑：
+      // - 未投票 → 点赞
+      // - 点赞 → 点踩（如果点击点踩）或取消（如果再次点击点赞）
+      // - 点踩 → 点赞（如果点击点赞）或取消（如果再次点击点踩）
+      if (currentVote === null) {
+        // 未投票，设置为新投票
+        finalVote = newVote;
+      } else if (currentVote === "like") {
+        // 当前是点赞
+        if (newVote === "like") {
+          // 再次点击点赞，取消投票
+          finalVote = null;
+        } else {
+          // 点击点踩，切换到点踩
+          finalVote = "dislike";
+        }
+      } else if (currentVote === "dislike") {
+        // 当前是点踩
+        if (newVote === "dislike") {
+          // 再次点击点踩，取消投票
+          finalVote = null;
+        } else {
+          // 点击点赞，切换到点赞
+          finalVote = "like";
+        }
+      }
+
+      // 乐观更新：先更新 UI（使用函数式更新，避免闭包问题）
+      setMessages((prevMessages) => {
+        if (!prevMessages || prevMessages.length === 0) {
+          console.warn("警告：尝试更新投票时消息列表为空，跳过更新");
+          return prevMessages || [];
+        }
+        const updated = prevMessages.map((m) =>
+          m.remoteId === msg.remoteId
+            ? { ...m, user_vote: finalVote }
+            : m,
+        );
+        console.log("乐观更新消息投票:", {
+          messageId: msg.remoteId,
+          currentVote,
+          finalVote,
+          messagesCount: prevMessages.length,
+          updatedCount: updated.length,
+        });
+        // 确保返回的数组不为空
+        if (updated.length === 0) {
+          console.error("错误：更新后消息列表为空，返回原始列表");
+          return prevMessages;
+        }
+        return updated;
+      });
+
+      try {
+        // 调用 API 更新投票
+        const response = await api.chat.updateMessageVote(
+          selectedAgent.id,
+          messageId,
+          finalVote,
+        );
+        console.log("投票更新成功:", response);
+        message.success(
+          finalVote === null
+            ? "已取消投票"
+            : finalVote === "like"
+              ? "已点赞"
+              : "已点踩",
+        );
+      } catch (error) {
+        console.error("更新投票失败:", error, {
+          messageId: msg.remoteId,
+          agentId: selectedAgent?.id,
+        });
+        // 回滚 UI 更新：恢复原始消息状态
+        setMessages((prevMessages) => {
+          if (!prevMessages || prevMessages.length === 0) {
+            console.error("错误：回滚时消息列表为空，无法回滚");
+            return prevMessages || [];
+          }
+          const rolledBack = prevMessages.map((m) =>
+            m.remoteId === msg.remoteId
+              ? { ...m, user_vote: currentVote }
+              : m,
+          );
+          // 确保回滚后不为空
+          if (rolledBack.length === 0) {
+            console.error("错误：回滚后消息列表为空，返回原始列表");
+            return prevMessages;
+          }
+          return rolledBack;
+        });
+        message.error("更新投票失败，请重试");
+      }
+    },
+    [selectedAgent?.id],
+  );
+
   // 选择智能体 - 从后端获取真实会话记录
   const handleSelectAgent = useCallback(
     async (agent: Agent) => {
@@ -288,6 +408,7 @@ export const ChatPage: React.FC = () => {
             remoteId: msg.id ? msg.id.toString() : undefined, // 使用真实消息ID
             type: msg.type || "text",
             image_url: msg.image_url,
+            user_vote: msg.user_vote || null,
             meta_data: msg.meta_data,
           }),
         );
@@ -386,6 +507,7 @@ export const ChatPage: React.FC = () => {
                 remoteId: msg.id ? String(msg.id) : `remote_${index}`, // 安全地访问id字段
                 type: msg.type || "text",
                 image_url: msg.image_url,
+                user_vote: msg.user_vote || null,
                 meta_data: msg.meta_data,
               }),
             );
@@ -482,6 +604,7 @@ export const ChatPage: React.FC = () => {
               remoteId: msg.id ? String(msg.id) : `remote_${index}`,
               type: msg.type || "text",
               image_url: msg.image_url,
+              user_vote: msg.user_vote || null,
               meta_data: msg.meta_data,
             }),
           );
@@ -606,6 +729,7 @@ export const ChatPage: React.FC = () => {
             remoteId: msg.id.toString(), // 添加remoteId
             type: msg.type || "text",
             image_url: msg.image_url,
+            user_vote: msg.user_vote || null,
             meta_data: msg.meta_data,
           }));
 
@@ -1496,6 +1620,66 @@ export const ChatPage: React.FC = () => {
                                           />
                                         )}
 
+                                      {/* 点赞/点踩按钮 - 仅对 AI 消息显示 */}
+                                      {message.role === "assistant" &&
+                                        message.remoteId &&
+                                        !message.remoteId.startsWith(
+                                          "assistant_",
+                                        ) &&
+                                        !message.remoteId.startsWith("error_") &&
+                                        !message.remoteId.startsWith(
+                                          "remote_",
+                                        ) && (
+                                          <>
+                                            <Tooltip title="点赞">
+                                              <Button
+                                                type="text"
+                                                size="small"
+                                                icon={<LikeOutlined />}
+                                                onClick={() =>
+                                                  handleMessageVote(
+                                                    message,
+                                                    "like",
+                                                  )
+                                                }
+                                                style={{
+                                                  color:
+                                                    message.user_vote ===
+                                                    "like"
+                                                      ? "#1890ff"
+                                                      : "#666",
+                                                  padding: "2px 4px",
+                                                  height: "auto",
+                                                  minWidth: "auto",
+                                                }}
+                                              />
+                                            </Tooltip>
+                                            <Tooltip title="点踩">
+                                              <Button
+                                                type="text"
+                                                size="small"
+                                                icon={<DislikeOutlined />}
+                                                onClick={() =>
+                                                  handleMessageVote(
+                                                    message,
+                                                    "dislike",
+                                                  )
+                                                }
+                                                style={{
+                                                  color:
+                                                    message.user_vote ===
+                                                    "dislike"
+                                                      ? "#ff4d4f"
+                                                      : "#666",
+                                                  padding: "2px 4px",
+                                                  height: "auto",
+                                                  minWidth: "auto",
+                                                }}
+                                              />
+                                            </Tooltip>
+                                          </>
+                                        )}
+
                                       {/* 只有历史消息才显示重新发送和删除按钮 */}
                                       {message.remoteId &&
                                         !message.remoteId.startsWith("user_") &&
@@ -1720,15 +1904,61 @@ export const ChatPage: React.FC = () => {
                         </Space>
                       }
                       description={
-                        <div
-                          style={{
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                            maxHeight: "200px",
-                            overflowY: "auto",
-                          }}
-                        >
-                          {message.content}
+                        <div>
+                          <div
+                            style={{
+                              whiteSpace: "pre-wrap",
+                              wordBreak: "break-word",
+                              maxHeight: "200px",
+                              overflowY: "auto",
+                            }}
+                          >
+                            {message.content}
+                          </div>
+                          {/* 仅对 AI 消息显示点赞/点踩按钮 */}
+                          {message.role === "assistant" && (
+                            <div
+                              style={{
+                                marginTop: 8,
+                                display: "flex",
+                                gap: 8,
+                                alignItems: "center",
+                              }}
+                            >
+                              <Button
+                                type="text"
+                                size="small"
+                                icon={<LikeOutlined />}
+                                onClick={() =>
+                                  handleMessageVote(message, "like")
+                                }
+                                style={{
+                                  color:
+                                    message.user_vote === "like"
+                                      ? "#1890ff"
+                                      : undefined,
+                                }}
+                              >
+                                点赞
+                              </Button>
+                              <Button
+                                type="text"
+                                size="small"
+                                icon={<DislikeOutlined />}
+                                onClick={() =>
+                                  handleMessageVote(message, "dislike")
+                                }
+                                style={{
+                                  color:
+                                    message.user_vote === "dislike"
+                                      ? "#ff4d4f"
+                                      : undefined,
+                                }}
+                              >
+                                点踩
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       }
                     />

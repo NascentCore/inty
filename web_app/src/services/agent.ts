@@ -28,7 +28,7 @@ export async function getAgentDetail(agentId: string): Promise<IAgent | null> {
     return response as IAgent;
   } catch (err: unknown) {
     logger.error('获取 Agent 详情失败', err);
-    return null;
+    throw err;
   }
 }
 
@@ -64,37 +64,9 @@ export async function getRecommendAgents(
     });
     logger.info('获取推荐角色响应', response);
 
-    // 转换为项目的统一格式
-    const result: IApiResult<IAgentRecommendData> = {
-      code: response.code || 200,
-      message: response.message || 'success',
-      data: {
-        list: (response.data?.list || []) as IAgent[],
-        total: response.data?.total || 0,
-        page: response.data?.page || params.page,
-        page_size: response.data?.page_size || params.page_size,
-        total_pages: Math.ceil(
-          (response.data?.total || 0) / (response.data?.page_size || params.page_size),
-        ),
-      },
-    };
-
-    return result;
+    return response as IApiResult<IAgentRecommendData>;
   } catch (err: unknown) {
     logger.error('获取推荐角色失败', err);
-
-    // 返回错误结果
-    const error = err as { status?: number; message?: string };
-    return {
-      code: error.status || 500,
-      message: error.message || '获取推荐角色失败',
-      data: {
-        list: [],
-        total: 0,
-        page: params.page,
-        page_size: params.page_size,
-        total_pages: 0,
-      },
-    };
+    throw err;
   }
 }

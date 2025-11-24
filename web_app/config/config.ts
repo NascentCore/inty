@@ -145,6 +145,12 @@ export default defineConfig({
   headScripts: [
     // 解决首次加载时白屏的问题
     { src: join(PUBLIC_PATH, 'scripts/loading.js'), async: true },
+    // Google AdSense 脚本
+    {
+      src: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2092760210658178',
+      async: true,
+      crossorigin: 'anonymous',
+    },
   ],
   //================ pro 插件配置 =================
   presets: ['umi-presets-pro'],

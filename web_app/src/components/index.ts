@@ -8,6 +8,8 @@ export { default as ErrorAlert } from './ErrorAlert';
 /**
  * 布局组件
  */
+export { default as AdHomeTop } from './AdHomeTop';
+export { default as AdSidebar } from './AdSidebar';
 export { default as Footer } from './Footer';
 export { default as GoogleLoginModal } from './GoogleLoginModal';
 /**

@@ -60,6 +60,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -91,6 +92,7 @@ import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.SingleLineTextInputField
 import com.ai.intellimate.utils.AvatarManager
+import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
 import com.architecture.httplib.core.HttpResult
 import com.yalantis.ucrop.UCrop
@@ -101,6 +103,7 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -167,7 +170,9 @@ class CreateRoleActivity : BaseActivity() {
                 setResult(Activity.RESULT_OK)
                 finish()
             },
-            onAvatarGenerateClick = { AvatarGenerateActivity.Companion.launch(this) },
+            onAvatarGenerateClick = { prompt ->
+                AvatarGenerateActivity.launch(this, prompt?.takeIf { it.isNotBlank() })
+            },
             editAgent = agent,
         )
     }
@@ -180,67 +185,146 @@ private fun CreateRolePage(
     createRoleViewModel: CreateRoleViewModel,
     onBack: () -> Unit,
     onCreateSuccess: () -> Unit,
-    onAvatarGenerateClick: () -> Unit,
+    onAvatarGenerateClick: (String?) -> Unit,
     editAgent: AgentInfo? = null,
 ) {
     val isEditMode = editAgent != null
+    val savedDraft =
+        remember(editAgent) { if (editAgent == null) CreateRoleDraftStorage.loadDraft() else null }
 
-    var name by remember { mutableStateOf(editAgent?.name ?: "") }
-    var gender by remember { mutableStateOf(editAgent?.gender ?: "FEMALE") }
-    var settings by remember {
-        mutableStateOf(
-            editAgent?.settings?.get("description") as? String ?: editAgent?.prompt ?: ""
-        )
-    }
-    var intro by remember { mutableStateOf(editAgent?.intro ?: "") }
-    var opening by remember { mutableStateOf(editAgent?.opening ?: "") }
-    var visibility by remember { mutableStateOf(editAgent?.visibility ?: "PRIVATE") }
+    val nameInitial =
+        if (isEditMode) {
+            editAgent?.name ?: ""
+        } else {
+            savedDraft?.name.orEmpty()
+        }
+    var name by remember(nameInitial) { mutableStateOf(nameInitial) }
+
+    val genderInitial =
+        if (isEditMode) {
+            editAgent?.gender ?: CreateRoleDraft.DEFAULT_GENDER
+        } else {
+            savedDraft?.gender ?: CreateRoleDraft.DEFAULT_GENDER
+        }
+    var gender by remember(genderInitial) { mutableStateOf(genderInitial) }
+
+    val editSettings = editAgent?.settings?.get("description") as? String ?: editAgent?.prompt ?: ""
+    val settingsInitial = if (isEditMode) editSettings else savedDraft?.settings.orEmpty()
+    var settings by remember(settingsInitial) { mutableStateOf(settingsInitial) }
+
+    val introInitial =
+        if (isEditMode) {
+            editAgent?.intro ?: ""
+        } else {
+            savedDraft?.intro.orEmpty()
+        }
+    var intro by remember(introInitial) { mutableStateOf(introInitial) }
+
+    val openingInitial =
+        if (isEditMode) {
+            editAgent?.opening ?: ""
+        } else {
+            savedDraft?.opening.orEmpty()
+        }
+    var opening by remember(openingInitial) { mutableStateOf(openingInitial) }
+
+    val visibilityInitial =
+        if (isEditMode) {
+            editAgent?.visibility ?: CreateRoleDraft.DEFAULT_VISIBILITY
+        } else {
+            savedDraft?.visibility ?: CreateRoleDraft.DEFAULT_VISIBILITY
+        }
+    var visibility by remember(visibilityInitial) { mutableStateOf(visibilityInitial) }
+
     var isLoading by remember { mutableStateOf(false) }
-    // Initialize image states based on edit mode
-    var avatarUrl by remember {
-        mutableStateOf<String?>(
-            if (isEditMode && editAgent.backgroundImages.isEmpty()) {
-                // If no background images array, use single background field
-                editAgent.background.takeIf { it.isNotBlank() }
-            } else null
-        )
-    }
-    var avatarUrls by remember {
-        mutableStateOf<List<String>>(if (isEditMode) editAgent.backgroundImages else emptyList())
-    }
-    var selectedImageIndex by remember {
-        mutableIntStateOf(
-            if (isEditMode && editAgent.backgroundImages.isNotEmpty()) {
-                // Find the index of the background image in the background_images list
-                val backgroundUrl = editAgent.background.takeIf { it.isNotBlank() }
-                if (backgroundUrl != null) {
-                    val index = editAgent.backgroundImages.indexOf(backgroundUrl)
-                    if (index >= 0) index else 0
-                } else {
-                    0
-                }
-            } else {
-                0
-            }
-        )
-    }
+
+    val editAvatarUrls = if (isEditMode) editAgent?.backgroundImages ?: emptyList() else emptyList()
+    val avatarUrlsInitial =
+        if (isEditMode) editAvatarUrls
+        else savedDraft?.avatarUrls?.filter { it.isNotBlank() } ?: emptyList()
+    var avatarUrls by remember(avatarUrlsInitial) { mutableStateOf(avatarUrlsInitial) }
+
+    val editSingleBackground =
+        if (isEditMode && editAgent?.backgroundImages?.isEmpty() == true) {
+            editAgent.background.takeIf { it.isNotBlank() }
+        } else {
+            null
+        }
+    val avatarUrlInitial =
+        if (avatarUrlsInitial.isNotEmpty()) {
+            null
+        } else if (isEditMode) {
+            editSingleBackground
+        } else {
+            savedDraft?.avatarUrl?.takeIf { it.isNotBlank() }
+        }
+    var avatarUrl by remember(avatarUrlInitial) { mutableStateOf<String?>(avatarUrlInitial) }
+
+    val editSelectedIndex =
+        if (isEditMode && editAgent != null && editAgent.backgroundImages.isNotEmpty()) {
+            val backgroundUrl = editAgent.background.takeIf { it.isNotBlank() }
+            backgroundUrl?.let { url ->
+                val index = editAgent.backgroundImages.indexOf(url)
+                if (index >= 0) index else 0
+            } ?: 0
+        } else {
+            0
+        }
+    val savedSelectedIndex =
+        savedDraft?.selectedImageIndex?.let { draftIndex ->
+            val lastIndex = avatarUrlsInitial.lastIndex
+            if (lastIndex < 0) 0 else draftIndex.coerceIn(0, lastIndex)
+        } ?: 0
+    var selectedImageIndex by
+        remember(isEditMode, avatarUrlsInitial, editSelectedIndex, savedSelectedIndex) {
+            mutableIntStateOf(if (isEditMode) editSelectedIndex else savedSelectedIndex)
+        }
     var isGeneratingAvatar by remember { mutableStateOf(false) }
-    var croppedAvatarUrl by remember {
-        mutableStateOf<String?>(
-            if (isEditMode)
-                editAgent.avatar.takeIf { it.isNotBlank() && it != editAgent.background }
-            else null
-        )
-    }
+    val editCroppedAvatar =
+        if (isEditMode) editAgent?.avatar?.takeIf { it.isNotBlank() && it != editAgent.background }
+        else null
+    val croppedInitial =
+        if (isEditMode) editCroppedAvatar else savedDraft?.croppedAvatarUrl ?: editCroppedAvatar
+    var croppedAvatarUrl by remember(croppedInitial) { mutableStateOf<String?>(croppedInitial) }
+    val avatarPromptInitial =
+        if (isEditMode) "" else savedDraft?.avatarPrompt.orEmpty()
+    var avatarPrompt by remember(avatarPromptInitial) { mutableStateOf(avatarPromptInitial) }
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val focusManager = LocalFocusManager.current
 
+    if (!isEditMode) {
+        LaunchedEffect(Unit) {
+            snapshotFlow {
+                    val normalizedUrls = avatarUrls.filter { it.isNotBlank() }
+                    val sanitizedIndex =
+                        if (normalizedUrls.isEmpty()) 0
+                        else selectedImageIndex.coerceIn(0, normalizedUrls.lastIndex)
+                    CreateRoleDraft(
+                        name = name,
+                        gender = gender,
+                        settings = settings,
+                        intro = intro,
+                        opening = opening,
+                        visibility = visibility,
+                        avatarUrl = avatarUrl?.takeIf { it.isNotBlank() },
+                        avatarUrls = normalizedUrls,
+                        selectedImageIndex = sanitizedIndex,
+                        croppedAvatarUrl = croppedAvatarUrl?.takeIf { it.isNotBlank() },
+                        avatarPrompt = avatarPrompt,
+                    )
+                }
+                .distinctUntilChanged()
+                .collect { draft -> CreateRoleDraftStorage.saveDraft(draft) }
+        }
+    }
+
     // Clear avatar data when creating new character
     LaunchedEffect(isEditMode) {
         if (!isEditMode) {
             AvatarManager.clearAllAvatarData()
+            avatarPrompt = savedDraft?.avatarPrompt.orEmpty()
             LogUtils.i("Cleared avatar data for new character creation")
         }
     }
@@ -286,11 +370,10 @@ private fun CreateRolePage(
                             val body =
                                 MultipartBody.Part.createFormData("file", file.name, requestFile)
 
-                            val agentApi = NetServiceMgr.getAgentApi()
                             // Use CreateRoleViewModel's scope to launch the coroutine
                             createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
                                 try {
-                                    val response = agentApi.uploadAvatar(body)
+                                    val response = NetServiceMgr.getAgentApi().uploadAvatar(body)
                                     when (response) {
                                         is HttpResult.Success -> {
                                             val uploadedUrl = response.data.url
@@ -382,9 +465,12 @@ private fun CreateRolePage(
             }
 
             // Show current generation prompt if generating
+            val promptDraft = AvatarManager.getGenerationPrompt()
             if (generatingStatus) {
-                val prompt = AvatarManager.getGenerationPrompt()
-                LogUtils.i("Currently generating with prompt: '$prompt'")
+                LogUtils.i("Currently generating with prompt: '$promptDraft'")
+            }
+            if (promptDraft.isNotBlank() && promptDraft != avatarPrompt) {
+                avatarPrompt = promptDraft
             }
         }
 
@@ -422,6 +508,10 @@ private fun CreateRolePage(
                 if (error != null) {
                     ToastUtils.showShort(error)
                     isGeneratingAvatar = false
+                }
+                val promptDraft = AvatarManager.getGenerationPrompt()
+                if (promptDraft.isNotBlank() && promptDraft != avatarPrompt) {
+                    avatarPrompt = promptDraft
                 }
             }
         }
@@ -462,6 +552,11 @@ private fun CreateRolePage(
             if (error != null) {
                 ToastUtils.showShort(error)
                 isGeneratingAvatar = false
+            }
+
+            val promptDraft = AvatarManager.getGenerationPrompt()
+            if (promptDraft.isNotBlank() && promptDraft != avatarPrompt) {
+                avatarPrompt = promptDraft
             }
         }
     }
@@ -512,6 +607,8 @@ private fun CreateRolePage(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Avatar Upload Section
+            val promptForGeneration =
+                if (avatarPrompt.isNotBlank()) avatarPrompt else settings
             AvatarUploadSection(
                 avatarUrl = avatarUrl,
                 avatarUrls = avatarUrls,
@@ -519,7 +616,7 @@ private fun CreateRolePage(
                 isGenerating = isGeneratingAvatar,
                 croppedAvatarUrl = croppedAvatarUrl,
                 onGenerateClick = {
-                    onAvatarGenerateClick()
+                    onAvatarGenerateClick(promptForGeneration.takeIf { it.isNotBlank() })
                     // 当点击生成头像时，不清除当前URL，让用户返回时检查新的URL
                 },
                 onImageSelected = { index ->
@@ -528,7 +625,8 @@ private fun CreateRolePage(
                 },
                 onRegenerate = { prompt ->
                     // Navigate to avatar generation page with existing prompt
-                    onAvatarGenerateClick()
+                    val promptToUse = prompt.takeIf { it.isNotBlank() } ?: promptForGeneration
+                    onAvatarGenerateClick(promptToUse.takeIf { it.isNotBlank() })
                 },
                 onFaceEdit = {
                     // Get the current avatar URL to crop
@@ -799,6 +897,7 @@ private fun CreateRolePage(
                                 request = request,
                                 onSuccess = { agentInfo ->
                                     isLoading = false
+                                    CreateRoleDraftStorage.clearDraft()
                                     ToastUtils.showShort(
                                         context.getString(R.string.create_ai_successfully)
                                     )
@@ -1229,12 +1328,14 @@ private fun GenderButton(
                 shape = RoundedCornerShape(20.dp),
             ),
     ) {
-        Text(
-            text = text,
-            fontSize = 12.sp,
-            color = Color.White,
-            modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp),
-        )
+        IgnoreSystemFontScaling {
+            Text(
+                text = text,
+                fontSize = 12.sp,
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp),
+            )
+        }
     }
 }
 

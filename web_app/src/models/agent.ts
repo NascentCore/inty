@@ -19,8 +19,6 @@ export interface IAgentModelState {
   loading: boolean;
   /** Agent 详情加载状态 */
   detailLoading: boolean;
-  /** 错误信息 */
-  error: string | null;
   /** 分页信息 */
   pagination: {
     total: number;
@@ -36,7 +34,6 @@ export default function useAgentModel() {
   const [currentAgent, setCurrentAgent] = useState<IAgent | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [detailLoading, setDetailLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
@@ -47,12 +44,11 @@ export default function useAgentModel() {
   /**
    * 加载推荐角色列表
    * @param params 请求参数
+   * @param append 是否追加到列表（默认 false，替换列表）
    */
   const loadRecommendAgents = useCallback(
-    async (params?: Partial<IAgentRecommendRequest>) => {
+    async (params?: Partial<IAgentRecommendRequest>, append: boolean = false) => {
       setLoading(true);
-      setError(null);
-
       try {
         const requestParams: IAgentRecommendRequest = {
           page: params?.page || 1,
@@ -66,8 +62,12 @@ export default function useAgentModel() {
         if (result.code === 200 && result.data) {
           const data: IAgentRecommendData = result.data;
 
-          // 直接替换列表（首页只调用一次，不需要追加逻辑）
-          setRecommendList(data.list);
+          // 根据 append 参数决定是替换还是追加
+          if (append) {
+            setRecommendList((prev) => [...prev, ...data.list]);
+          } else {
+            setRecommendList(data.list);
+          }
 
           // 更新分页信息
           setPagination({
@@ -80,11 +80,9 @@ export default function useAgentModel() {
           return data;
         }
 
-        setError(result.message || '加载推荐角色失败');
         return null;
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : '加载推荐角色失败';
-        setError(errorMsg);
+        console.error('加载推荐角色失败:', err);
         return null;
       } finally {
         setLoading(false);
@@ -103,14 +101,14 @@ export default function useAgentModel() {
 
   /**
    * 加载更多推荐角色
-   * 加载下一页
+   * 加载下一页，追加到列表
    */
   const loadMoreRecommendAgents = useCallback(async () => {
-    if (pagination.page >= pagination.totalPages) {
+    if (pagination.page >= pagination.totalPages || loading) {
       return null;
     }
-    return await loadRecommendAgents({ page: pagination.page + 1 });
-  }, [loadRecommendAgents, pagination.page, pagination.totalPages]);
+    return await loadRecommendAgents({ page: pagination.page + 1 }, true);
+  }, [loadRecommendAgents, pagination.page, pagination.totalPages, loading]);
 
   /**
    * 加载 Agent 详情
@@ -119,8 +117,6 @@ export default function useAgentModel() {
    */
   const loadAgentDetail = useCallback(async (agentId: string) => {
     setDetailLoading(true);
-    setError(null);
-
     try {
       const agentData = await getAgentDetail(agentId);
 
@@ -129,11 +125,8 @@ export default function useAgentModel() {
         return agentData;
       }
 
-      setError('未找到 Agent 信息');
       return null;
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '加载 Agent 详情失败';
-      setError(errorMsg);
       console.error('加载 Agent 详情失败:', err);
       return null;
     } finally {
@@ -162,13 +155,6 @@ export default function useAgentModel() {
   );
 
   /**
-   * 清除错误信息
-   */
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
-  /**
    * 重置状态
    */
   const reset = useCallback(() => {
@@ -176,7 +162,6 @@ export default function useAgentModel() {
     setCurrentAgent(null);
     setLoading(false);
     setDetailLoading(false);
-    setError(null);
     setPagination({
       total: 0,
       page: 1,
@@ -191,7 +176,6 @@ export default function useAgentModel() {
     currentAgent,
     loading,
     detailLoading,
-    error,
     pagination,
 
     // 方法
@@ -201,7 +185,6 @@ export default function useAgentModel() {
     loadAgentDetail,
     selectAgent,
     findAgentById,
-    clearError,
     reset,
   };
 }

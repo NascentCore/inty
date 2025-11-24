@@ -49,6 +49,7 @@ import com.ai.intellimate.profile.ProfilePage
 import com.ai.intellimate.profile.ProfileViewModel
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.ExpiredVipDialog
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ForceUpgradeDialog
 import com.ai.intellimate.vip.VipCenterActivity
 
@@ -98,6 +99,7 @@ fun HomeScreen(
                 iconSize = TabIconSize,
                 textSize = (TabIconSize.value * 0.45f).sp,
                 height = BottomNavigationBarHeight,
+                labelSpacing = UiConfigs.Spacing.BottomTabIconLabel,
             )
         },
     ) { innerPadding ->

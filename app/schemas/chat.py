@@ -373,3 +373,12 @@ class ChatImageGenerationResponse(BaseModel):
     image_metadata: dict
     prompt: str
     message_id: int
+
+
+class MessageVoteRequest(BaseModel):
+    """消息投票请求"""
+
+    agent_id: str
+    message_id: int
+    vote: Optional[str] = None  # "like" | "dislike" | null
+    request_id: Optional[str] = None

@@ -5,3 +5,4 @@
 
 export type { TVoiceStatus } from './useVoicePlayer';
 export { useVoicePlayer } from './useVoicePlayer';
+export { useInfiniteScroll } from './useInfiniteScroll';

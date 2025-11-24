@@ -8,6 +8,8 @@ import ai.sxwl.android.data.api.model.MsgVoiceRsp
 import ai.sxwl.android.data.api.model.QueryMsgsResponse
 import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.api.model.SendMsgResponse
+import ai.sxwl.android.data.api.model.VoteMessageReq
+import ai.sxwl.android.data.api.model.VoteMessageRsp
 import com.architecture.httplib.core.HttpResult
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -56,4 +58,9 @@ interface IChatApi {
         @Path("agent_id") agent_id: String,
         @Path("message_id") message_id: String,
     ): HttpResult<MsgVoiceRsp>
+
+    @POST("/api/v1/chats/messages/vote")
+    suspend fun voteMessage(
+        @Body req: VoteMessageReq,
+    ): HttpResult<VoteMessageRsp>
 }

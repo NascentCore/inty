@@ -1,5 +1,6 @@
+import json
 import uuid
-from typing import Any, List, Union
+from typing import Any, Dict, List, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -9,13 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, INTERNAL_API_TAG, WEB_APP_TAG
+from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, INTY_EVAL_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.user_privilege.premium_check import is_eligible_for_premium
-from app.schemas.chat import ChatCompletionRequest
+from app.schemas.chat import ChatCompletionRequest, MessageVoteRequest
 from app.schemas.response import (
     APIResponse,
     BizError,
@@ -208,7 +209,7 @@ async def get_chat_detail(
 
         # Get paginated messages
         messages_data = chat_history_service.get_messages_paginated(
-            session_id=session_id, limit=limit, offset=offset
+            session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
         )
 
         # Assemble return data
@@ -283,7 +284,7 @@ async def get_agent_chat_detail(
 
         # Get paginated messages
         messages_data = chat_history_service.get_messages_paginated(
-            session_id=session_id, limit=limit, offset=offset
+            session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
         )
 
         # Assemble return data
@@ -362,7 +363,7 @@ async def get_agent_chat_messages(
 
         # 获取分页消息
         messages_data = chat_history_service.get_messages_paginated(
-            session_id=session_id, limit=limit, offset=offset
+            session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
         )
 
         # 如果要求升序（旧消息在前），则不反转
@@ -375,6 +376,100 @@ async def get_agent_chat_messages(
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to get message records: {str(e)}"
+        )
+
+
+@router.post(
+    "/messages/vote",
+    response_model=APIResponse[Dict[str, Any]],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
+    summary="Update Message Vote",
+    description="Set, toggle, or remove vote (like/dislike) for a message. Only AI messages can be voted.",
+)
+async def update_message_vote(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    request: MessageVoteRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> APIResponse[Dict[str, Any]]:
+    """
+    Update message vote (like/dislike)
+    Only AI messages (role="assistant") can be voted.
+    """
+    try:
+        # 验证 vote 值
+        if request.vote is not None and request.vote not in ["like", "dislike"]:
+            return APIResponse.error(
+                message="Invalid vote value. Must be 'like', 'dislike', or null",
+                code=400,
+            )
+
+        # Get or create chat session
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db, user_id=current_user.id, agent_id=request.agent_id
+        )
+
+        # Verify chat belongs to current user
+        if chat.user_id != current_user.id:
+            return APIResponse.error(message="Forbidden", code=403)
+
+        # Generate session_id
+        session_id = generate_session_id(chat.id)
+
+        # 验证消息是否存在且为 AI 消息
+        conn = chat_history_service.get_chat_history_connection()
+        with conn.cursor() as cur:
+            check_query = """
+                SELECT id, message, meta_data
+                FROM chat_history 
+                WHERE session_id = %s AND id = %s
+            """
+            cur.execute(check_query, (session_id, request.message_id))
+            row = cur.fetchone()
+
+            if not row:
+                return APIResponse.error(message="Message not found", code=404)
+
+            # 解析消息类型
+            message_raw = row[1]
+            if isinstance(message_raw, str):
+                message_data = json.loads(message_raw)
+            elif isinstance(message_raw, dict):
+                message_data = message_raw
+            else:
+                message_data = json.loads(str(message_raw))
+
+            message_type = message_data.get("type", "human")
+            role = "user" if message_type in ["human", "HumanMessage"] else "assistant"
+
+            # 仅允许对 AI 消息进行投票
+            if role != "assistant":
+                return APIResponse.error(
+                    message="Only AI messages can be voted", code=400
+                )
+
+        # 更新投票
+        success = await chat_history_service.update_message_vote(
+            db=db,
+            session_id=session_id,
+            message_id=request.message_id,
+            user_id=current_user.id,
+            vote=request.vote,
+        )
+
+        if not success:
+            return APIResponse.error(
+                message="Failed to update message vote", code=500
+            )
+
+        return APIResponse.success(
+            data={"vote": request.vote}, message="Vote updated successfully"
+        )
+
+    except Exception as e:
+        logger.error(f"更新消息投票失败: {str(e)}")
+        return APIResponse.error(
+            message=f"Failed to update message vote: {str(e)}", code=500
         )
 
 

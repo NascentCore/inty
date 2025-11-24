@@ -93,11 +93,16 @@ fun SettingContent(
             // 退出登录按钮
             LogoutButton(onLogout = { onLogout(false) })
 
+            // Debug 环境后端切换（仅 debug 可见）
+            if (BuildConfig.BUILD_TYPE.equals("debug", ignoreCase = true)) {
+                DebugBackendSettingsEntry()
+            }
+
             // 对话框
             SettingDialogs(
                 dialogState = dialogState,
                 onHideDeleteDialog = { viewModel.hideDeleteAccountDialog() },
-                onConfirmDelete = { viewModel.checkAccountSubscribe() },
+                onConfirmDelete = { viewModel.deleteUserAccount() },
             )
         }
     }

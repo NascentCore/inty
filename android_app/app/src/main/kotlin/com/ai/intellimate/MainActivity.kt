@@ -8,6 +8,8 @@ import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
+import ai.sxwl.android.data.api.model.GoogleLoginRequest
+import ai.sxwl.android.data.api.NetServiceMgr
 import android.content.Intent
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -457,10 +459,9 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
                     onSuccess = { idToken ->
 
                         // 直接调用后端登录接口
-                        val userApi = ai.sxwl.android.data.api.NetServiceMgr.getUserApi()
                         val loginResult =
-                            userApi.loginByGoogle(
-                                ai.sxwl.android.data.api.model.GoogleLoginRequest(idToken = idToken)
+                            NetServiceMgr.getUserApi().loginByGoogle(
+                                GoogleLoginRequest(idToken = idToken)
                             )
 
                         when (loginResult) {

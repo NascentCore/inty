@@ -3,7 +3,6 @@
  * 提供统一的客户端实例创建和管理
  */
 
-// @ts-expect-error - inty SDK is installed as a file dependency
 import Inty from 'inty';
 import { INTY_SDK_CONFIG } from '@/constants';
 import { getToken } from './token';

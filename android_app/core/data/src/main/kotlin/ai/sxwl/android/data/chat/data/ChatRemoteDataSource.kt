@@ -1,19 +1,17 @@
 package ai.sxwl.android.data.chat.data
 
-import ai.sxwl.android.data.api.IChatApi
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.QueryMsgsResponse
 import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.api.model.SendMsgResponse
+import ai.sxwl.android.data.api.model.VoteMessageReq
+import ai.sxwl.android.data.api.model.VoteMessageRsp
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
 
 /** 聊天远程数据源 负责处理与服务器的聊天相关API调用 遵循Clean Architecture的数据层模式 */
 class ChatRemoteDataSource {
-
-    private val chatApi: IChatApi by lazy { NetServiceMgr.getChatApi() }
-
     suspend fun getMessages(
         agentId: String,
         pageSize: Int,
@@ -23,7 +21,7 @@ class ChatRemoteDataSource {
             LogUtils.i(
                 "ChatRemoteDataSource.getMessages: agentId=$agentId, pageSize=$pageSize, offset=$offset"
             )
-            chatApi.getMsgs(agentId, pageSize, offset)
+            NetServiceMgr.getChatApi().getMsgs(agentId, pageSize, offset)
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.getMessages exception: ${e.message}")
             HttpResult.Failure(e.message ?: "Network error", -1)
@@ -36,7 +34,7 @@ class ChatRemoteDataSource {
                 "ChatRemoteDataSource.sendMessage: agentId=$agentId, messagesCount=${messages.size}"
             )
             val request = SendMsgReq(messages)
-            chatApi.sendMsg(agentId, request)
+            NetServiceMgr.getChatApi().sendMsg(agentId, request)
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.sendMessage exception: ${e.message}")
             HttpResult.Failure(e.message ?: "Network error", -1)
@@ -86,6 +84,22 @@ class ChatRemoteDataSource {
             )
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.generateImage exception: ${e.message}")
+            HttpResult.Failure(e.message ?: "Network error", -1)
+        }
+    }
+
+    /** 消息投票接口请求 */
+    suspend fun voteMessage(
+        agentId: String,
+        messageId: String,
+        vote: String, // "like" 或 "dislike"
+    ): HttpResult<VoteMessageRsp> {
+        return try {
+            LogUtils.i("ChatRemoteDataSource.voteMessage: agentId=$agentId, messageId=$messageId, vote=$vote")
+            val request = VoteMessageReq(agent_id = agentId, message_id = messageId, vote = vote)
+            NetServiceMgr.getChatApi().voteMessage(request)
+        } catch (e: Exception) {
+            LogUtils.e("ChatRemoteDataSource.voteMessage exception: ${e.message}")
             HttpResult.Failure(e.message ?: "Network error", -1)
         }
     }

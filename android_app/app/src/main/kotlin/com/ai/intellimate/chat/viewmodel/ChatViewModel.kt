@@ -8,6 +8,7 @@ import ai.sxwl.android.data.api.model.ChatSettingsReq
 import ai.sxwl.android.data.api.model.ChatSettingsResponse
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.api.model.VoteConstants
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.di.DataModule
@@ -40,6 +41,7 @@ class ChatViewModel : BaseVM() {
     private val updateMessageFeedbackUseCase = DataModule.updateMessageFeedbackUseCase
     private val recallMessageUseCase = DataModule.recallMessageUseCase
     private val generateImageUseCase = DataModule.generateImageUseCase
+    private val voteMessageUseCase = DataModule.voteMessageUseCase
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()
@@ -83,9 +85,6 @@ class ChatViewModel : BaseVM() {
     // 消息查询完成状态，用于控制开场白自动播放时机
     private val _isQueryMsgsCompleted = MutableStateFlow<Boolean>(false)
     val isQueryMsgsCompleted = _isQueryMsgsCompleted.asStateFlow()
-
-    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    private val chatApi by lazy { NetServiceMgr.getChatApi() }
 
     // 绑定到 ChatSessionManager 的收集任务
     private var messagesJob: Job? = null
@@ -745,9 +744,25 @@ class ChatViewModel : BaseVM() {
         // 业务逻辑：本地状态更新始终使用localMsgId（这是本地标识符）
         updateMessageFeedbackUseCase(agent.id, localMsgId, MsgInfo.UserFeedback.LIKE)
 
+        // 如果消息有服务端id，调用投票接口
+        val messageId = targetMessage.id
+        if (messageId.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                when (val result = voteMessageUseCase(agent.id, messageId, VoteConstants.LIKE)) {
+                    is HttpResult.Success -> {
+                        LogUtils.i("Vote message success: like")
+                    }
+
+                    is HttpResult.Failure -> {
+                        LogUtils.e("Vote message failure: ${result.message}")
+                    }
+                }
+            }
+        }
+
         // Firebase事件统计：优先使用服务端id（message_id），这是有意义的标识
         // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
-        val messageIdForEvent = targetMessage.id.ifEmpty { localMsgId }
+        val messageIdForEvent = messageId.ifEmpty { localMsgId }
 
         val eventParams =
             FirebaseManager.safeEventParams(
@@ -782,9 +797,25 @@ class ChatViewModel : BaseVM() {
         // 业务逻辑：本地状态更新始终使用localMsgId（这是本地标识符）
         updateMessageFeedbackUseCase(agent.id, localMsgId, MsgInfo.UserFeedback.DISLIKE)
 
+        // 如果消息有服务端id，调用投票接口
+        val messageId = targetMessage.id
+        if (messageId.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                when (val result = voteMessageUseCase(agent.id, messageId, VoteConstants.DISLIKE)) {
+                    is HttpResult.Success -> {
+                        LogUtils.i("Vote message success: dislike")
+                    }
+
+                    is HttpResult.Failure -> {
+                        LogUtils.e("Vote message failure: ${result.message}")
+                    }
+                }
+            }
+        }
+
         // Firebase事件统计：优先使用服务端id（message_id），这是有意义的标识
         // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
-        val messageIdForEvent = targetMessage.id.ifEmpty { localMsgId }
+        val messageIdForEvent = messageId.ifEmpty { localMsgId }
 
         val eventParams =
             FirebaseManager.safeEventParams(
@@ -1066,7 +1097,7 @@ class ChatViewModel : BaseVM() {
     private fun getChatSetting() = launchBackground {
         val agentId = agentInfo.value?.id ?: return@launchBackground
         // 有agent信息，才请求
-        val result = chatApi.getChatSettings(agentId)
+        val result = NetServiceMgr.getChatApi().getChatSettings(agentId)
         when (result) {
             is HttpResult.Failure -> {
                 // 此设置，暂时不用toast显示
@@ -1088,7 +1119,7 @@ class ChatViewModel : BaseVM() {
         val agentId = agentInfo.value?.id ?: return@launchBackground
         // 有agent信息，才请求
         val req = ChatSettingsReq(style_prompt = prompt)
-        val result = chatApi.updateChatSettings(agentId, req)
+        val result = NetServiceMgr.getChatApi().updateChatSettings(agentId, req)
         when (result) {
             is HttpResult.Failure -> NetworkErrorHandler.showNetworkAwareError(result.message)
             is HttpResult.Success -> {
@@ -1108,7 +1139,7 @@ class ChatViewModel : BaseVM() {
     fun setAgentID(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = chatApi.getAgentInfo(agentId)
+                val result = NetServiceMgr.getChatApi().getAgentInfo(agentId)
                 when (result) {
                     is HttpResult.Success -> {
                         setAgentInfo(result.data)

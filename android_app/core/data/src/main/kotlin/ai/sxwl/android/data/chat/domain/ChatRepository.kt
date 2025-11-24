@@ -2,6 +2,7 @@ package ai.sxwl.android.data.chat.domain
 
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.SendMsgResponse
+import ai.sxwl.android.data.api.model.VoteMessageRsp
 import ai.sxwl.android.data.http.services.ChatService
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +36,13 @@ interface ChatRepository {
 
     /** 更新消息反馈（like/dislike） */
     fun updateMessageFeedback(agentId: String, messageId: String, feedback: MsgInfo.UserFeedback?)
+
+    /** 投票消息（like/dislike） */
+    suspend fun voteMessage(
+        agentId: String,
+        messageId: String,
+        vote: String, // "like" 或 "dislike"
+    ): HttpResult<VoteMessageRsp>
 
     /**
      * 更新消息的生成图片信息

@@ -294,11 +294,9 @@ object UnifiedStartupManager {
     /** 同步推荐agents */
     private suspend fun syncRecommendedAgents() {
         try {
-            val agentApi: IAgentApi = NetServiceMgr.getAgentApi()
-
             val sortSeed = IntySetting.sortSeed()
             val result =
-                agentApi.exploreAgents(
+                NetServiceMgr.getAgentApi().exploreAgents(
                     page = 1,
                     pageSize = ExploreConstants.PAGE_SIZE, // 使用统一的页面大小
                     sort_seed = sortSeed.toString(),
@@ -354,11 +352,9 @@ object UnifiedStartupManager {
     /** 同步聊天agents */
     private suspend fun syncChatAgents() {
         try {
-            val agentApi: IAgentApi = NetServiceMgr.getAgentApi()
-
             val sortSeed = IntySetting.randomSortSeed()
             val result =
-                agentApi.chatAgents(
+                NetServiceMgr.getAgentApi().chatAgents(
                     page = 1,
                     pageSize = 20, // 使用聊天页面大小
                     sort_seed = sortSeed.toString(),
@@ -422,9 +418,7 @@ object UnifiedStartupManager {
                 return
             }
 
-            val agentApi: IAgentApi = NetServiceMgr.getAgentApi()
-
-            when (val result = agentApi.getUserCreatedAgents(skip = 0, limit = 20)) {
+            when (val result = NetServiceMgr.getAgentApi().getUserCreatedAgents(skip = 0, limit = 20)) {
                 is HttpResult.Success -> {
                     val agents = result.data
                     AgentCacheManager.cacheUserCreatedAgents(agents)

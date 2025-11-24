@@ -326,6 +326,88 @@ async def update_message_metadata(
         return False
 
 
+async def update_message_vote(
+    db: AsyncSession,
+    session_id: str,
+    message_id: int,
+    user_id: str,  # 保留参数以保持API兼容性，但不再使用
+    vote: Optional[str],
+) -> bool:
+    """
+    更新消息的用户投票（点赞/点踩）
+
+    Args:
+        db: 数据库会话
+        session_id: 会话ID
+        message_id: 消息ID
+        user_id: 用户ID（保留以保持API兼容性，但不再存储）
+        vote: 投票类型，"like" | "dislike" | None（取消投票）
+
+    Returns:
+        是否更新成功
+    """
+    try:
+        # 查询现有消息
+        stmt = select(ChatHistory).where(
+            and_(
+                ChatHistory.session_id == session_id,
+                ChatHistory.id == message_id,
+            )
+        )
+        result = await db.execute(stmt)
+        chat_history = result.scalar_one_or_none()
+
+        if not chat_history:
+            logger.warning(
+                f"消息不存在: session_id={session_id}, message_id={message_id}"
+            )
+            return False
+
+        # 获取现有 meta_data
+        existing_meta = chat_history.meta_data or {}
+        logger.debug(
+            f"更新前 meta_data: {existing_meta}, session_id={session_id}, message_id={message_id}"
+        )
+
+        # 更新或删除 user_vote（直接存储vote值，不存储user_id）
+        # 兼容旧字段名 user_feedback
+        if vote is None:
+            # 取消投票：删除 user_vote 和 user_feedback 字段（兼容旧数据）
+            if "user_vote" in existing_meta:
+                del existing_meta["user_vote"]
+            if "user_feedback" in existing_meta:
+                del existing_meta["user_feedback"]
+        else:
+            # 设置投票（直接存储vote值）
+            existing_meta["user_vote"] = vote
+            # 同时删除旧的 user_feedback 字段（如果存在）
+            if "user_feedback" in existing_meta:
+                del existing_meta["user_feedback"]
+
+        # 创建新的字典对象，确保SQLAlchemy能检测到变化
+        updated_meta = dict(existing_meta)
+
+        # 更新消息（使用flag_modified确保SQLAlchemy检测到JSONB字段的变化）
+        from sqlalchemy.orm.attributes import flag_modified
+
+        chat_history.meta_data = updated_meta
+        flag_modified(chat_history, "meta_data")
+        await db.commit()
+
+        # 刷新对象以获取最新数据
+        await db.refresh(chat_history)
+
+        logger.debug(
+            f"更新消息投票成功: session_id={session_id}, message_id={message_id}, user_id={user_id}, vote={vote}, 更新后 meta_data: {chat_history.meta_data}"
+        )
+        return True
+
+    except Exception as e:
+        logger.error(f"更新消息投票失败: {str(e)}")
+        await db.rollback()
+        return False
+
+
 async def add_ai_image_message(
     db: AsyncSession,
     session_id: str,
@@ -533,7 +615,7 @@ async def get_latest_ai_message_info(
 
 
 def get_messages_paginated(
-    session_id: str, limit: int = 20, offset: int = 0
+    session_id: str, limit: int = 20, offset: int = 0, user_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     分页获取聊天消息
@@ -542,6 +624,7 @@ def get_messages_paginated(
         session_id: 会话ID
         limit: 每页消息数量
         offset: 偏移量（跳过的消息数量）
+        user_id: 用户ID（保留以保持API兼容性，但不再用于过滤反馈）
 
     Returns:
         包含消息列表和分页信息的字典
@@ -678,6 +761,28 @@ def get_messages_paginated(
                                 "height": generated_image.get("height"),
                             }
                             # 不包含 prompt 字段
+
+                    # 提取用户投票（仅对 AI 消息）
+                    if role == "assistant" and meta_data:
+                        # 优先使用新字段名 user_vote，兼容旧字段名 user_feedback
+                        user_vote = meta_data.get("user_vote") or meta_data.get("user_feedback")
+                        # 兼容旧格式（dict格式）和新格式（直接存储vote值）
+                        if isinstance(user_vote, dict):
+                            # 旧格式：{"user_id": "...", "feedback": "like"}
+                            message_obj["user_vote"] = user_vote.get("feedback")
+                        elif user_vote in ["like", "dislike"]:
+                            # 新格式：直接存储 "like" 或 "dislike"
+                            message_obj["user_vote"] = user_vote
+                        else:
+                            message_obj["user_vote"] = None
+                        # 添加调试日志
+                        if user_vote:
+                            logger.debug(
+                                f"提取用户投票: message_id={message_id}, user_vote={user_vote}, meta_data_keys={list(meta_data.keys()) if meta_data else []}"
+                            )
+                    elif role == "assistant":
+                        # AI 消息但没有 meta_data，设置为 None
+                        message_obj["user_vote"] = None
 
                     messages.append(message_obj)
 
