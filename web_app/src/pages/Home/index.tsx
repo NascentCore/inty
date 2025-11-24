@@ -7,6 +7,7 @@ import { history, useModel } from '@umijs/max';
 import React, { useEffect, useRef } from 'react';
 import { useInfiniteScroll } from '@/hooks';
 import type { IAgent } from '@/types';
+import { AdHomeTop } from '@/components';
 import { CharacterList } from './components';
 import './index.less';
 
@@ -15,8 +16,9 @@ import './index.less';
  */
 const HomePage: React.FC = () => {
   // 获取 agent model
-  const { recommendList, loading, pagination, loadRecommendAgents, loadMoreRecommendAgents } = useModel('agent');
-  
+  const { recommendList, loading, pagination, loadRecommendAgents, loadMoreRecommendAgents } =
+    useModel('agent');
+
   // 用于存储滚动容器的 ref
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -68,6 +70,8 @@ const HomePage: React.FC = () => {
       </div>
 
       <div className="page-content">
+        {/* 首页上方 横向广告 */}
+        <AdHomeTop />
         <CharacterList
           recommendList={recommendList}
           loading={loading}
