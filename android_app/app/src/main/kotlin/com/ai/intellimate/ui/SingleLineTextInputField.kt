@@ -10,17 +10,20 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,40 +59,49 @@ fun SingleLineTextInputField(
         Spacer(modifier = Modifier.height(UiConfigs.Spacing.Medium))
 
         val cornerRadius = UiConfigs.Fractions.TextFieldCornerRadiusRatio * inputFontSize.value
-        OutlinedTextField(
-            value = inputValue,
-            onValueChange = onValueChange,
-            keyboardOptions =
-                KeyboardOptions(
-                    imeAction = ImeAction.Done,
-                    capitalization =
-                        if (capitalizeFirstLetter) KeyboardCapitalization.Sentences
-                        else KeyboardCapitalization.None,
-                ),
-            placeholder = {
-                Text(
-                    text = placeholder,
-                    fontSize = inputFontSize,
-                    color = Color.White.copy(UiConfigs.Alpha.DimmedText),
-                )
-            },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            textStyle = TextStyle(color = Color.White, fontSize = inputFontSize),
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.White.copy(UiConfigs.Alpha.SubtleBorder),
-                    unfocusedBorderColor = Color.White.copy(UiConfigs.Alpha.SubtleBorder),
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedPlaceholderColor = Color.White.copy(UiConfigs.Alpha.DimmedText),
-                    unfocusedPlaceholderColor = Color.White.copy(UiConfigs.Alpha.DimmedText),
-                    focusedContainerColor = UiConfigs.Colors.InputSurface,
-                    unfocusedContainerColor = UiConfigs.Colors.InputSurface,
-                    cursorColor = Color.White,
-                ),
-            shape = RoundedCornerShape(cornerRadius.dp),
-        )
+        // 禁用字体缩放，避免视觉抖动
+        CompositionLocalProvider(
+            LocalDensity provides
+                    Density(
+                        density = LocalDensity.current.density,
+                        fontScale = 1f, // 核心：禁用字体缩放
+                    )
+        ) {
+            OutlinedTextField(
+                value = inputValue,
+                onValueChange = onValueChange,
+                keyboardOptions =
+                    KeyboardOptions(
+                        imeAction = ImeAction.Done,
+                        capitalization =
+                            if (capitalizeFirstLetter) KeyboardCapitalization.Sentences
+                            else KeyboardCapitalization.None,
+                    ),
+                placeholder = {
+                    Text(
+                        text = placeholder,
+                        fontSize = inputFontSize,
+                        color = Color.White.copy(UiConfigs.Alpha.DimmedText),
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                textStyle = TextStyle(color = Color.White, fontSize = inputFontSize),
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.White.copy(UiConfigs.Alpha.SubtleBorder),
+                        unfocusedBorderColor = Color.White.copy(UiConfigs.Alpha.SubtleBorder),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedPlaceholderColor = Color.White.copy(UiConfigs.Alpha.DimmedText),
+                        unfocusedPlaceholderColor = Color.White.copy(UiConfigs.Alpha.DimmedText),
+                        focusedContainerColor = UiConfigs.Colors.InputSurface,
+                        unfocusedContainerColor = UiConfigs.Colors.InputSurface,
+                        cursorColor = Color.White,
+                    ),
+                shape = RoundedCornerShape(cornerRadius.dp),
+            )
+        }
     }
 }
 
