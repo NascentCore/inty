@@ -15,7 +15,7 @@ from app.services import agent_service
 router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 
 
-@router.post(
+@router.get(
     "/recommend",
     response_model=schemas.AgentRecommendationResponse,
     summary="获取推荐 AI 角色列表（v2）",
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
     ),
 )
 async def recommend_agents_v2(
-    request: schemas.AgentRecommendationRequest,
+    request: schemas.AgentRecommendationRequest = Depends(),
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> schemas.AgentRecommendationResponse:
