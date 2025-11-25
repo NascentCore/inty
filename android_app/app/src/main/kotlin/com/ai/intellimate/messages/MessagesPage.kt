@@ -244,19 +244,19 @@ private fun MessageTabContent(
             }
 
             // 加载更多指示器
-            if (uiState.isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(80.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-                }
-            }
+//            if (uiState.isLoading) {
+//                item {
+//                    Box(
+//                        modifier = Modifier.fillMaxWidth().height(80.dp),
+//                        contentAlignment = Alignment.Center,
+//                    ) {
+//                        CircularProgressIndicator(
+//                            color = Color.White,
+//                            modifier = Modifier.size(24.dp),
+//                        )
+//                    }
+//                }
+//            }
         }
 
         // 显示菜单（在 LazyColumn 外部）
