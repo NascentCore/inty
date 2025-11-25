@@ -90,7 +90,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
-import com.ai.intellimate.ui.SingleLineTextInputField
+import com.ai.intellimate.ui.NameEditField
 import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
@@ -754,12 +754,10 @@ private fun CreateRolePage(
             Spacer(modifier = Modifier.height(32.dp))
 
             // Name Field
-            SingleLineTextInputField(
-                label = "Name *",
-                labelFontSize = 16.sp,
-                inputValue = name,
+            NameEditField(
+                value = name,
                 onValueChange = { name = it },
-                inputFontSize = 16.sp,
+                label = "Name *",
                 placeholder = "Name your IntelliMate",
             )
 

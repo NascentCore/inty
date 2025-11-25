@@ -54,6 +54,7 @@ import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.IntySmallTextField
 import com.ai.intellimate.ui.IntySmallTextField2
+import com.ai.intellimate.ui.NameEditField
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
 
 /** 编辑类型枚举 */
@@ -342,40 +343,6 @@ private fun EditContent(editKey: EditKey, editValue: String, onValueChange: (Str
         EditKey.None -> {
             // 空内容
         }
-    }
-}
-
-/** 姓名编辑字段 */
-@Composable
-private fun NameEditField(value: String, onValueChange: (String) -> Unit) {
-    Row(
-        modifier =
-            Modifier.padding(horizontal = 16.dp, vertical = 0.dp)
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-                .background(Color.White.copy(0.1f), RoundedCornerShape(8.dp))
-                .border(
-                    width = 0.5.dp,
-                    color = Color.White.copy(0.2f),
-                    shape = RoundedCornerShape(8.dp),
-                ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IntySmallTextField(
-            modifier = Modifier.weight(1f),
-            value = value,
-            selection = value.length,
-            onValueChange = onValueChange,
-            maxLength = 50,
-            placeholder = {
-                Text(
-                    text = stringResource(R.string.str_name_placeholder),
-                    color = Color.White.copy(0.55f),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Normal,
-                )
-            },
-        )
     }
 }
 
