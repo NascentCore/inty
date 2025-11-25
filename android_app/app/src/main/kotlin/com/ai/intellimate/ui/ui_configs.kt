@@ -114,7 +114,7 @@ object UiConfigs {
         const val INITIAL_PAGE = 1
 
         /** Explore页面滚动 - 初始速度缩放，用于整体放缓或加速手势 */
-        const val SCROLL_INITIAL_VELOCITY_MULTIPLIER = 0.5f
+        const val SCROLL_INITIAL_VELOCITY_MULTIPLIER = 0.6f
 
         /** Explore页面滚动 - 触发滑动的最小速度，避免轻微抖动 */
         const val SCROLL_MIN_FLING_VELOCITY = 80f
@@ -123,9 +123,9 @@ object UiConfigs {
         const val SCROLL_MAX_FLING_VELOCITY = 12000f
 
         /** Explore页面滚动 - 减速度因子，>1 表示更快停下，<1 表示惯性更强 */
-        const val SCROLL_DECELERATION_MULTIPLIER = 1.2f
+        const val SCROLL_DECELERATION_MULTIPLIER = 1.0f
 
         /** Explore页面滚动 - 每次手势允许的最大即时位移 */
-        const val SCROLL_DELTA_THRESHOLD = 1000f
+        const val SCROLL_DELTA_THRESHOLD = 500f
     }
 }
