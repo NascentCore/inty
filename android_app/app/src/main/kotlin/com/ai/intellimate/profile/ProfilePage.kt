@@ -430,26 +430,26 @@ private fun ProfileHeader(
                 contentDescription = null,
             )
             Spacer(Modifier.width(8.dp))
-
-            AsyncImage(
-                modifier =
-                    Modifier
-                        .size(24.dp)
-                        .clickable {
-                            val currentTime = System.currentTimeMillis()
-                            if (AntiClick.isValidClick(lastClickTime)) {
-                                lastClickTime = currentTime
-                                try {
-                                    ToastUtils.showShort("Not Implementation！")
-                                } catch (e: Exception) {
-                                    ToastUtils.showLargeText(e.toString())
-                                }
-                            }
-                        },
-                model = R.drawable.ic_checkin,
-                contentDescription = null,
-            )
-            Spacer(Modifier.width(8.dp))
+//
+//            AsyncImage(
+//                modifier =
+//                    Modifier
+//                        .size(24.dp)
+//                        .clickable {
+//                            val currentTime = System.currentTimeMillis()
+//                            if (AntiClick.isValidClick(lastClickTime)) {
+//                                lastClickTime = currentTime
+//                                try {
+//                                    ToastUtils.showShort("Not Implementation！")
+//                                } catch (e: Exception) {
+//                                    ToastUtils.showLargeText(e.toString())
+//                                }
+//                            }
+//                        },
+//                model = R.drawable.ic_checkin,
+//                contentDescription = null,
+//            )
+//            Spacer(Modifier.width(8.dp))
 
             AsyncImage(
                 modifier =
