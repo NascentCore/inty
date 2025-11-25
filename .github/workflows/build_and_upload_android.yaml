@@ -1,6 +1,5 @@
-# The app is built with debug build type, and connects to dev backend
-# at dev.inty.sxwl.ai.
-name: Build and release debug APK
+# 构建 release 构建类型并上传到 Google Play Internal Testing 轨道。
+name: Build and upload release bundle to Google Play internal testing
 
 on:
   workflow_dispatch:
@@ -15,6 +14,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - uses: actions/setup-java@v4
         with:
@@ -47,16 +48,27 @@ jobs:
         run: |
           echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_KEY" > service-account-key.json
 
-      - name: Build APK
+      - name: Build release bundle and APK
         run: |
           cd android_app
-          ./gradlew assembleDebug --stacktrace --info
+          ./gradlew bundleRelease assembleRelease --stacktrace --info
 
       - id: gen-release-info
         run: |
           cd android_app
-          echo "version_name_with_commit_id=$(./gradlew printVersionWithSuffix | grep 'Version Name with Suffix: ' | awk -F': ' '{print $2}')" >> $GITHUB_OUTPUT
-          echo "release_name=$(./gradlew printVersionWithSuffix | grep 'Version Name with Suffix: ' | awk -F': ' '{print $2}' | sed 's/ (/-/; s/)//')" >> $GITHUB_OUTPUT
+          echo "version_name_with_commit_id=$(./gradlew printVersionInfo | grep 'Version name with suffix: ' | awk -F': ' '{print $2}')" >> $GITHUB_OUTPUT
+          echo "release_name=$(./gradlew printVersionInfo | grep 'Version name with suffix: ' | awk -F': ' '{print $2}' | sed 's/ (/-/; s/)//')" >> $GITHUB_OUTPUT
+
+      - name: Upload release bundle to Google Play internal testing
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJson: service-account-key.json
+          packageName: com.ai.intellimate
+          releaseFiles: android_app/app/build/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
+          releaseName: ${{ steps.gen-release-info.outputs.release_name }}
+          changesNotSentForReview: true
 
       - id: create-release
         uses: softprops/action-gh-release@v2
@@ -65,7 +77,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            android_app/app/build/outputs/apk/debug/app-debug.apk
+            android_app/app/build/outputs/apk/release/app-release.apk
           generate_release_notes: true
           make_latest: true
           fail_on_unmatched_files: false
@@ -97,7 +109,7 @@ jobs:
                   "tag": "div",
                   "text": {
                     "tag": "lark_md",
-                    "content": "✅ 改动列表见 [GitHub Release](${RELEASE_URL})\n📦 [APK 下载链接](${RELEASE_APK_URL})"
+                    "content": "✅ 已上传至 Google Play Internal Testing 轨道\n📦 改动详见 [GitHub Release](${RELEASE_URL})\n📥 [Release APK 下载](${RELEASE_APK_URL})"
                   }
                 }
               ]

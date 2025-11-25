@@ -11,7 +11,7 @@ import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import com.ai.intellimate.audio.AudioPreloadManager
-import com.ai.intellimate.explore.ExploreConstants
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.VideoCacheManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CoroutineScope
@@ -298,7 +298,7 @@ object UnifiedStartupManager {
                 NetServiceMgr.getAgentApi()
                     .exploreAgents(
                         page = 1,
-                        pageSize = ExploreConstants.PAGE_SIZE, // 使用统一的页面大小
+                        pageSize = UiConfigs.Explore.PAGE_SIZE, // 使用统一的页面大小
                         sort_seed = sortSeed.toString(),
                     )
 

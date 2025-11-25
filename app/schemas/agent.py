@@ -11,6 +11,7 @@ from app.core.agent.prompt_template import (
 from app.models.agent import AgentStatus, AgentVisibility
 from app.schemas.user import User
 from app.utils.image import ImageSize
+from app.schemas.response import APIResponse, PaginationData
 
 
 class AgentMetaData(BaseModel):
@@ -50,6 +51,40 @@ class AgentSortConfig(BaseModel):
     sort_seed: str = Field(
         default="",
         description="Sort seed, used to ensure consistent order for the random sort option",
+    )
+
+
+# Agent recommendation pagination defaults
+AGENT_RECOMMENDATION_DEFAULT_PAGE = 1
+AGENT_RECOMMENDATION_DEFAULT_PAGE_SIZE = 10
+AGENT_RECOMMENDATION_MAX_PAGE_SIZE = 100
+
+
+class AgentRecommendationRequest(BaseModel):
+    """V2 AI角色推荐请求"""
+
+    page: int = Field(
+        default=AGENT_RECOMMENDATION_DEFAULT_PAGE,
+        ge=1,
+        description="Page number, starting from 1",
+    )
+    page_size: int = Field(
+        default=AGENT_RECOMMENDATION_DEFAULT_PAGE_SIZE,
+        ge=1,
+        le=AGENT_RECOMMENDATION_MAX_PAGE_SIZE,
+        description="Items per page, maximum 100",
+    )
+    sort: AgentSortOption = Field(
+        default=AgentSortOption.CREATED_DESC,
+        description=(
+            "Sort order: created_asc, created_desc, random, score_based_random"
+        ),
+    )
+    sort_seed: str = Field(
+        default="",
+        description=(
+            "Sort seed for deterministic ordering when using random or score_based_random"
+        ),
     )
 
 
@@ -540,3 +575,9 @@ class CreatorAgentStats(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AgentRecommendationResponse(APIResponse[PaginationData[Agent]]):
+    """V2 AI角色推荐响应"""
+
+    pass
