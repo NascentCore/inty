@@ -16,7 +16,7 @@
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
-| `APP_OPEN` | IntelliMateApp.kt | 无 | 应用启动事件 | 🔴 100% |
+| `APP_OPEN` | IntelliMateApp.kt | `remote_config_auto_enable_keep_talking`（可选，Remote Config 获取完成后补充上报）, `remote_config_auto_play_opening_voice`（可选，Remote Config 获取完成后补充上报）, `remote_config_home_page_default_tab_index`（可选，Remote Config 获取完成后补充上报） | 应用启动事件（首次上报无参数，Remote Config 获取完成后补充上报一次带参数的事件） | 🔴 100% |
 | `LOGIN` | LoginViewModel.kt, MainActivity.kt | `user_id`, `user_type`, `timestamp` | 用户登录（Firebase内置事件） | 🔴 100% |
 | `SIGN_UP` | FirebaseManager.Events | 预留 | 用户注册 | 🔴 100% |
 | `SCREEN_VIEW` | PageTrackingHelper.kt | `page_name`, `page_class`, `timestamp`, `page_source` (可选), 其他自定义参数 | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录） | 🔴 100% |
@@ -57,7 +57,8 @@
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
-| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | `page_name`, `page_class`, `timestamp`, `page_source` (可选), `page_type` (可选), `is_initial_load` (可选), 其他自定义参数 | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，`page_name` 统一为 xxxPage 格式，如 ChatPage、ExplorePage、subscriptionPage 等） | 🔴 100% |
+| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | `page_name`, `page_class`, `timestamp`, `page_source` (可选), `page_type` (可选), `is_initial_load` (可选), `default_home_tab_index` (可选，MainPage/HomePage), `default_home_tab_name` (可选，MainPage/HomePage), `current_tab_index` (可选，HomePage), `current_tab_name` (可选，HomePage), 其他自定义参数 | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，`page_name` 统一为 xxxPage 格式，如 ChatPage、ExplorePage、subscriptionPage 等） | 🔴 100% |
+| `chat_page_view` | ChatPage.kt | `page_source`, `agent_id`, `agent_name`, `keep_talking_enabled`, `auto_play_voice_enabled` | ChatPage 页面曝光（页面真正可见且成为当前页面时触发，用于分析用户访问 ChatPage 的来源和配置） | 🔴 100% |
 | `duration` | PageTrackingHelper.kt | `page_name`, `duration`, `timestamp` | 页面停留时长（页面离开时上报） | 🔴 100% |
 | `page_visible` | PageTrackingHelper.kt | `page_name`, `page_class`, `timestamp` | 页面变为可见 | ⚪ 禁用 |
 | `page_hidden` | PageTrackingHelper.kt | `page_name`, `page_class`, `visible_time_spent`, `timestamp` | 页面变为不可见 | ⚪ 禁用 |
@@ -66,7 +67,20 @@
 **页面来源参数说明：**
 - `page_source`：页面来源标识，用于统计用户从哪个入口进入页面
   - **subscriptionPage**：`home_expired_dialog`（首页过期VIP对话框）、`chat_page`（聊天页面）、`chat_more_panel`（聊天更多面板）、`profile_upgrade`（个人中心升级按钮）、`settings_subscription`（设置页面订阅管理）、`settings_premium_dialog`（设置页面高级模型对话框）
-  - **ChatPage**：`chat_activity`（在 ChatActivity 中）、`main_activity_home_tab`（在 MainActivity 的 HorizontalPager 中）
+  - **ChatPage**：
+    - `chat_activity`：在 ChatActivity 中（独立页面）
+    - `main_activity_home_tab`：在 MainActivity 的 HorizontalPager 中（首次进入或从 chat tab 进入）
+    - `from_previous_agent`：在 HorizontalPager 中从上一个 agent 滑动而来
+    - ChatActivity 场景下的其他来源：`messages_tab`（消息列表Tab）、`explore_tab`（探索Tab）、`profile_tab`（个人中心Tab）、`push_notification`（消息推送通知）等
+
+**ChatPage 曝光事件说明：**
+- `chat_page_view` 事件在 ChatPage 真正可见且成为当前页面时触发（`isCurrentPage == true`）
+- 事件包含页面来源、Agent 信息、功能开关状态等关键参数，用于分析用户访问 ChatPage 的行为模式
+- 通过 `page_source` 参数可以区分用户是从 ChatActivity 进入还是从 MainActivity 的 HorizontalPager 滑动进入
+- 在 HorizontalPager 场景中，可以区分是首次进入/从 chat tab 进入（`main_activity_home_tab`）还是从其他 agent 滑动而来（`from_previous_agent`）
+- 通过 `keep_talking_enabled` 和 `auto_play_voice_enabled` 参数可以分析不同配置下的用户行为差异
+- 事件上报时机：页面真正曝光时（避免重复上报，仅在关键参数变化时上报）
+- **重要**：`chat_page_view` 事件在所有场景下都会上报，与 `SCREEN_VIEW` 事件（由 BaseActivity 或 PageTrackingHelper 触发）是独立的，用于专门追踪 ChatPage 的曝光情况
 
 ### 1.7 Explore 数据加载事件
 
@@ -233,6 +247,10 @@
 - `timestamp`：事件时间戳，用于时序分析
 - `page_name`、`page_class`：页面名称和类名，用于页面追踪
 - `page_source`：页面来源标识，用于统计用户从哪个入口进入页面（详见页面追踪事件说明）
+- `default_home_tab_index`、`default_home_tab_name`：默认首页 tab 索引和名称（MainPage/HomePage 事件），用于分析用户默认进入的 tab（chat/explore 等）
+- `current_tab_index`、`current_tab_name`：当前选中的 tab 索引和名称（HomePage 事件），用于分析用户实际访问的 tab
+- `remote_config_auto_enable_keep_talking`、`remote_config_auto_play_opening_voice`、`remote_config_home_page_default_tab_index`：Remote Config 配置参数（APP_OPEN 事件），用于分析 Remote Config 配置对用户行为的影响
+- `keep_talking_enabled`、`auto_play_voice_enabled`：ChatPage 功能开关状态，用于分析不同配置下的用户行为（chat_page_view 事件）
 - `page`、`page_size`：分页信息（Explore接口的分页参数）
 - `agents_count`：本次接口返回的agents数量（单次请求的数量）
 - `current_ui_agents_count`：当前UI中所有已加载的agents总数（累计数量，用于统计界面总agent数）

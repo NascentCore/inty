@@ -120,6 +120,9 @@ object FirebaseManager {
                     Events.CHAT_SIDEBAR_CLICK to 1.0, // 聊天侧边栏点击
                     Events.CHAT_MORE_CLICK to 1.0, // 聊天更多面板点击
 
+                    // 🔴 页面曝光事件 - 100%采样
+                    Events.CHAT_PAGE_VIEW to 1.0, // ChatPage 页面曝光
+
                     // 🔴 图片生成相关事件 - 100%采样
                     Events.MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED to 1.0, // 图片生成开始
                     Events.MESSAGE_TO_IMAGE_GENERATION_SUCCESS to 1.0, // 图片生成成功
@@ -537,6 +540,9 @@ object FirebaseManager {
         const val CHAT_PAGE_CLICK = "chat_page_click" // 聊天页面点击
         const val CHAT_SIDEBAR_CLICK = "chat_sidebar_click" // 聊天侧边栏点击
         const val CHAT_MORE_CLICK = "chat_more_click" // 聊天更多面板点击
+
+        // 页面曝光事件
+        const val CHAT_PAGE_VIEW = "chat_page_view" // ChatPage 页面曝光
 
         // 推送通知相关事件
         const val PUSH_NOTIFICATION_CLICK = "push_notification_click" // 推送通知点击
