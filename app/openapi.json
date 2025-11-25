@@ -2639,6 +2639,87 @@
                     }
                 }
             }
+        },
+        "/api/v2/ai/agents/recommend": {
+            "get": {
+                "tags": [
+                    "agents"
+                ],
+                "summary": "\u83b7\u53d6\u63a8\u8350 AI \u89d2\u8272\u5217\u8868\uff08v2\uff09",
+                "description": "\u8fd4\u56de\u516c\u5f00\u4e14\u5ba1\u6838\u901a\u8fc7\u7684 AI \u89d2\u8272\u5217\u8868\uff0c\u652f\u6301\u6309\u521b\u5efa\u65f6\u95f4\u3001\u968f\u673a\u6216\u57fa\u4e8e\u8bc4\u5206\u7684\u968f\u673a\u6392\u5e8f\u3002\u82e5 sort \u4e3a random \u6216 score_based_random\uff0c\u9700\u8981\u63d0\u4f9b sort_seed \u4ee5\u4fdd\u8bc1\u8fd4\u56de\u987a\u5e8f\u7a33\u5b9a\u3002",
+                "operationId": "recommend_agents_v2_api_v2_ai_agents_recommend_get",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1,
+                            "title": "Page"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "default": 10,
+                            "title": "Page Size"
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "$ref": "#/components/schemas/AgentSortOption",
+                            "default": "created_desc"
+                        }
+                    },
+                    {
+                        "name": "sort_seed",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "title": "Sort Seed"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AgentRecommendationResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -4203,6 +4284,33 @@
                 "type": "object",
                 "title": "AgentMetaData",
                 "description": "Agent \u5143\u6570\u636e\u6a21\u578b"
+            },
+            "AgentRecommendationResponse": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/PaginationData_Agent_"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "title": "AgentRecommendationResponse",
+                "description": "V2 AI\u89d2\u8272\u63a8\u8350\u54cd\u5e94"
             },
             "AgentSortOption": {
                 "type": "string",
