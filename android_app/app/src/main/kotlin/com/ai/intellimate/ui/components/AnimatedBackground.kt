@@ -85,13 +85,13 @@ private class AspectRatioTextureView(context: Context) : TextureView(context) {
         val viewRatio = viewWidth / viewHeight
         aspectMatrix.reset()
 
-        if (ratio > viewRatio) {
-            val scaleX = viewRatio / ratio
-            aspectMatrix.setScale(scaleX, 1f, viewWidth / 2f, viewHeight / 2f)
-        } else {
-            val scaleY = ratio / viewRatio
-            aspectMatrix.setScale(1f, scaleY, viewWidth / 2f, viewHeight / 2f)
-        }
+        val (scaleX, scaleY) =
+            if (ratio > viewRatio) {
+                1f to (viewRatio / ratio)
+            } else {
+                (ratio / viewRatio) to 1f
+            }
+        aspectMatrix.setScale(scaleX, scaleY, viewWidth / 2f, viewHeight / 2f)
         setTransform(aspectMatrix)
         invalidate()
     }
