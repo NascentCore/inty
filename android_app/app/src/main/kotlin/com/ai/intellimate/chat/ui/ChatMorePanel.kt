@@ -83,7 +83,8 @@ fun ChatMorePanel(
                 val density = LocalDensity.current
                 Column(
                     modifier =
-                        Modifier.fillMaxWidth()
+                        Modifier
+                            .fillMaxWidth()
                             .background(color = HeartColor.primaryColor)
                             .onGloballyPositioned { coords ->
                                 val h = with(density) { coords.size.height.toDp() }
@@ -135,6 +136,27 @@ fun ChatMorePanel(
                                 }
                             },
                         )*/
+                        Spacer(Modifier.width(16.dp))
+                        MorePanelItem(
+                            icon = R.drawable.icon_feedback,
+                            text = stringResource(R.string.str_feedback),
+                            onClick = {
+                                // 检查是否已登录
+                                if (
+                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                                ) {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_MORE_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "feedback",
+                                            "agent_id" to (agentInfo?.id ?: ""),
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    ReportActivity.launchFeedback(context)
+                                }
+                            },
+                        )
                         Spacer(Modifier.width(16.dp))
                         MorePanelItem(
                             icon = R.drawable.icon_report,
@@ -217,17 +239,22 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
         Spacer(Modifier.height(20.dp))
         Box(
             modifier =
-                Modifier.size(64.dp)
+                Modifier
+                    .size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier.size(36.dp).align(Alignment.Center),
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )
             if (isVip) {
                 Image(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )

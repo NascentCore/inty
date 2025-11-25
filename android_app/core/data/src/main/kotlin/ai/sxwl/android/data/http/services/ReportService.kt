@@ -2,6 +2,7 @@ package ai.sxwl.android.data.http.services
 
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.IntyNetworkManager
+import com.inty.api.core.MultipartField
 import com.inty.api.models.api.v1.report.ReportCreateParams
 import java.io.InputStream
 
@@ -11,23 +12,26 @@ object ReportService {
     /** 创建举报 */
     suspend fun createReport(
         reasonIds: List<Long>,
-        targetId: String,
+        targetId: String?,
         targetType: String?,
         description: String,
         imageUrls: List<String>,
     ): ApiResult<Unit> {
         return IntyNetworkManager.executeRequest("Create Report") {
-            val type =
+            // 如果 targetId 和 targetType 为 null（Feedback 模式），使用空字符串和默认类型
+            val finalTargetId = targetId ?: ""
+            val finalTargetType =
                 if (targetType == "USER") {
                     ReportCreateParams.TargetType.USER
                 } else {
                     ReportCreateParams.TargetType.AGENT
                 }
+
             val reportParams =
                 ReportCreateParams.builder()
                     .reasonIds(reasonIds)
-                    .targetId(targetId)
-                    .targetType(type)
+                    .targetId(finalTargetId)
+                    .targetType(finalTargetType)
                     .description(description.trim())
                     .imageUrls(imageUrls)
                     .build()
@@ -46,13 +50,19 @@ object ReportService {
         filename: String = "report-image.jpg",
     ): ApiResult<String> {
         return IntyNetworkManager.executeRequest("Upload Image") {
+            val fileBytes = inputStream.readBytes()
+            val multipartField = MultipartField.builder<InputStream>()
+                .value(fileBytes.inputStream())
+                .filename(filename)
+                .build()
+
             val response =
                 IntyNetworkManager.getClient()
                     .api()
                     .v1()
                     .uploadImage(
                         com.inty.api.models.api.v1.V1UploadImageParams.builder()
-                            .file(inputStream.readBytes())
+                            .file(multipartField)
                             .build()
                     )
 

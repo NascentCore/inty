@@ -51,21 +51,25 @@ fun ReportScreen(
     onClickAddImage: () -> Unit,
     onSave: () -> Unit,
     isSubmitting: Boolean = false,
+    isFeedbackMode: Boolean = false,
 ) {
     val focusManager = LocalFocusManager.current
 
     Box(
         modifier =
-            Modifier.fillMaxSize().clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) {
-                focusManager.clearFocus()
-            }
+            Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) {
+                    focusManager.clearFocus()
+                }
     ) {
         Column(
             modifier =
-                Modifier.matchParentSize()
+                Modifier
+                    .matchParentSize()
                     .padding(horizontal = 16.dp)
                     .imePadding()
                     .verticalScroll(rememberScrollState()),
@@ -78,12 +82,65 @@ fun ReportScreen(
             )
             Spacer(Modifier.height(16.dp))
 
-            // 举报原因
-            ReportReasonsContainer(title = stringResource(R.string.npc_asterisk_full)) {
+            // 举报原因或反馈选项
+            ReportReasonsContainer(
+                title =
+                    if (isFeedbackMode) {
+                        stringResource(R.string.tell_us_what_you_think)
+                    } else {
+                        stringResource(R.string.npc_asterisk_full)
+                    },
+            ) {
                 reasons.forEach { reason ->
                     val isSelected = selectIDs.contains(reason.id)
+                    val displayText =
+                        if (isFeedbackMode) {
+                            when (reason.code) {
+                                "CHAT_NOT_NATURAL" ->
+                                    stringResource(R.string.feedback_reason_chat_not_natural)
+
+                                "CHARACTER_MISMATCH" ->
+                                    stringResource(R.string.feedback_reason_character_mismatch)
+
+                                "APP_SLOW" -> stringResource(R.string.feedback_reason_app_slow)
+                                "FEATURE_HARD_TO_FIND" ->
+                                    stringResource(R.string.feedback_reason_feature_hard_to_find)
+
+                                "UI_INCONVENIENT" ->
+                                    stringResource(R.string.feedback_reason_ui_inconvenient)
+
+                                "NEW_FEATURE" ->
+                                    stringResource(R.string.feedback_reason_new_feature)
+
+                                "OTHER" -> stringResource(R.string.feedback_reason_other)
+                                else -> reason.description
+                            }
+                        } else {
+                            when (reason.code) {
+                                "SENSITIVE_CONTENT" ->
+                                    stringResource(R.string.report_reason_sensitive_content)
+
+                                "MISINFORMATION" ->
+                                    stringResource(R.string.report_reason_misinformation)
+
+                                "FRAUD_SCAMS" ->
+                                    stringResource(R.string.report_reason_fraud_scams)
+
+                                "PRIVACY_VIOLATION" ->
+                                    stringResource(R.string.report_reason_privacy_violation)
+
+                                "HARMFUL_MINORS" ->
+                                    stringResource(R.string.report_reason_harmful_minors)
+
+                                "IP_VIOLATION" ->
+                                    stringResource(R.string.report_reason_ip_violation)
+
+                                "OTHER" -> stringResource(R.string.report_reason_other)
+                                else -> reason.description
+                            }
+                        }
                     ReportItem(
-                        text = reason.description,
+                        text = displayText,
                         selected = isSelected,
                         onClick = { onClickReason(reason.id, !isSelected) },
                     )
@@ -92,12 +149,22 @@ fun ReportScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // 举报描述
+            // 举报描述或反馈描述
             ReportDescriptionContainer(
-                title = stringResource(R.string.report_description),
+                title =
+                    if (isFeedbackMode) {
+                        stringResource(R.string.feedback_description)
+                    } else {
+                        stringResource(R.string.report_description)
+                    },
                 description = description,
                 onDescriptionChange = onDescriptionChange,
-                placeholder = stringResource(R.string.please_fill_feedback_full),
+                placeholder =
+                    if (isFeedbackMode) {
+                        stringResource(R.string.feedback_description_placeholder)
+                    } else {
+                        stringResource(R.string.please_fill_feedback_full)
+                    },
             )
 
             Spacer(Modifier.height(24.dp))
@@ -122,7 +189,12 @@ fun ReportScreen(
                     .copy(containerColor = Color(0XFF1C1523)),
             title = {
                 Text(
-                    text = stringResource(R.string.str_report),
+                    text =
+                        if (isFeedbackMode) {
+                            stringResource(R.string.share_feedback)
+                        } else {
+                            stringResource(R.string.str_report)
+                        },
                     color = Color.White,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 20.sp,
@@ -130,7 +202,9 @@ fun ReportScreen(
             },
             navigationIcon = {
                 Image(
-                    modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .noRippleClickable { onBack() },
                     painter = painterResource(R.drawable.back),
                     contentDescription = null,
                 )
