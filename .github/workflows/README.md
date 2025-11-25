@@ -2,8 +2,7 @@
 
 ## 发布内测轨道 AAB
 
-运行[playdebug_release.yaml](https://github.com/NascentCore/inty-app/actions/workflows/playdebug_release.yaml)上传 AAB 到 Google Play
-Internal Testing 轨道。
+运行[build_and_upload_android.yaml](https://github.com/NascentCore/inty-app/actions/workflows/build_and_upload_android.yaml)构建 release 变体，并上传 AAB 到 Google Play Internal Testing 轨道。
 
 <img width="860" alt="image" src="https://github.com/user-attachments/assets/e3b5c920-3617-4f89-8f56-bfec0e62af2a" />
 

@@ -9,14 +9,14 @@
   - 可能与 App 还未发布有关
   - ![image](https://github.com/user-attachments/assets/3d7c05ea-7cd8-406e-9973-f123d06d1671)
 - Google Play 不允许复用 Version Code，即便是已经被丢弃的版本
-- 发布 2 个版本：用于支持产品测试的版本（指向 dev 后端，playdebug 构建类型）、用户上架发布的版本（指向 prod 后端、release 构建类型）
+- 发布 2 个版本：用于支持产品测试的版本（指向 dev 后端，playdebug 构建类型）、用户上架发布的版本（指向 prod 后端、release 构建类型）。当前 GitHub Workflow `build_and_upload_android.yaml` 会构建 release 变体，并上传到 Google Play Internal Testing 轨道。
 
 ## 向 Play 发布新内测版本（适用于需要 Play 签名后的功能测试，如订阅）
 
 总体流程：运行 github workflow 构建新版本、并上传到 internal testing、发布、打开内测轨道连接、从 Play Store 下载新版本
 
-打开 [playdebug_release.yaml](https://github.com/NascentCore/inty-app/actions/workflows/playdebug_release.yaml)
-工作流，运行工作流来推送 AAB。
+打开 [build_and_upload_android.yaml](https://github.com/NascentCore/inty-app/actions/workflows/build_and_upload_android.yaml)
+工作流，运行后会构建 release Bundle 并推送到 Internal Testing 轨道。
 
 ![image](https://github.com/user-attachments/assets/e4362ecd-7001-4013-91da-4987619f4d59)
 
