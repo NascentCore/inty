@@ -3,6 +3,12 @@ from app.schemas.agent import Agent as Agent
 from app.schemas.agent import AgentCreate as AgentCreate
 from app.schemas.agent import AgentInDB as AgentInDB
 from app.schemas.agent import AgentSortOption as AgentSortOption
+from app.schemas.agent import (
+    AgentRecommendationRequest as AgentRecommendationRequest,
+)
+from app.schemas.agent import (
+    AgentRecommendationResponse as AgentRecommendationResponse,
+)
 from app.schemas.agent import AgentUpdate as AgentUpdate
 from app.schemas.agent import CreatorAgentStats as CreatorAgentStats
 from app.schemas.agent import (
