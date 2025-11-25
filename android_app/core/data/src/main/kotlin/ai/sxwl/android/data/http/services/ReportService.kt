@@ -2,6 +2,7 @@ package ai.sxwl.android.data.http.services
 
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.IntyNetworkManager
+import com.inty.api.core.MultipartField
 import com.inty.api.models.api.v1.report.ReportCreateParams
 import java.io.InputStream
 
@@ -49,13 +50,19 @@ object ReportService {
         filename: String = "report-image.jpg",
     ): ApiResult<String> {
         return IntyNetworkManager.executeRequest("Upload Image") {
+            val fileBytes = inputStream.readBytes()
+            val multipartField = MultipartField.builder<InputStream>()
+                .value(fileBytes.inputStream())
+                .filename(filename)
+                .build()
+
             val response =
                 IntyNetworkManager.getClient()
                     .api()
                     .v1()
                     .uploadImage(
                         com.inty.api.models.api.v1.V1UploadImageParams.builder()
-                            .file(inputStream.readBytes())
+                            .file(multipartField)
                             .build()
                     )
 

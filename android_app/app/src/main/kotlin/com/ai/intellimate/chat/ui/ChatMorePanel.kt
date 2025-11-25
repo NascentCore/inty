@@ -138,7 +138,7 @@ fun ChatMorePanel(
                         )*/
                         Spacer(Modifier.width(16.dp))
                         MorePanelItem(
-                            icon = R.drawable.icon_report,
+                            icon = R.drawable.icon_feedback,
                             text = stringResource(R.string.str_feedback),
                             onClick = {
                                 // 检查是否已登录
