@@ -53,6 +53,11 @@ class ReportStatus(str, enum.Enum):
     REJECTED = "REJECTED"  # 已驳回
 
 
+class ReportType(str, enum.Enum):
+    REPORT = "REPORT"  # 举报
+    FEEDBACK = "FEEDBACK"  # 反馈
+
+
 class Report(Base):
     """举报记录模型"""
 
@@ -72,6 +77,11 @@ class Report(Base):
         default=ReportStatus.PENDING,
         nullable=False,
         comment="举报处理状态",
+    )
+    report_type = Column(
+        SAEnum(ReportType),
+        nullable=True,
+        comment="记录类型：举报或反馈，为空时默认为 REPORT",
     )
     created_at = Column(
         DateTime(timezone=True), server_default=sa.text("now()"), comment="创建时间"

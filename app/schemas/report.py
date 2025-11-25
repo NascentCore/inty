@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
-from app.models.report import ReportStatus
+from app.models.report import ReportStatus, ReportType
 from app.schemas.response import PagedResponse
 
 
@@ -30,6 +30,7 @@ class ReportCreate(BaseModel):
     image_urls: Optional[List[str]] = []
     description: Optional[str] = None
     request_id: Optional[str] = None
+    report_type: Optional[ReportType] = None
 
 
 class ReportQuery(BaseModel):
@@ -38,6 +39,7 @@ class ReportQuery(BaseModel):
     target_type: Optional[TargetType] = None
     status: Optional[ReportStatus] = None
     reporter_id: Optional[str] = None
+    report_type: Optional[ReportType] = None
     skip: int = 0
     limit: int = 100
 
@@ -52,6 +54,7 @@ class ReportOut(BaseModel):
     image_urls: List[str]
     description: Optional[str]
     status: str
+    report_type: Optional[str]
     created_at: datetime
 
     class Config:
