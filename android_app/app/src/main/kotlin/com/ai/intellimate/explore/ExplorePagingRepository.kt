@@ -6,6 +6,7 @@ import ai.sxwl.android.data.store.IntySetting
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import com.ai.intellimate.ui.UiConfigs
 import kotlinx.coroutines.flow.Flow
 
 /** Explore页面的Paging数据仓库 负责管理Paging数据流、配置和传统数据请求 */
@@ -27,12 +28,12 @@ class ExplorePagingRepository(
         return Pager(
                 config =
                     PagingConfig(
-                        pageSize = ExploreConstants.PAGE_SIZE,
-                        prefetchDistance = ExploreConstants.PREFETCH_DISTANCE,
-                        enablePlaceholders = ExploreConstants.ENABLE_PLACEHOLDERS,
-                        initialLoadSize = ExploreConstants.PAGE_SIZE,
+                        pageSize = UiConfigs.Explore.PAGE_SIZE,
+                        prefetchDistance = UiConfigs.Explore.PREFETCH_DISTANCE,
+                        enablePlaceholders = UiConfigs.Explore.ENABLE_PLACEHOLDERS,
+                        initialLoadSize = UiConfigs.Explore.PAGE_SIZE,
                         maxSize =
-                            ExploreConstants.PAGE_SIZE * ExploreConstants.MAX_CACHE_PAGES, // 最大缓存页数
+                            UiConfigs.Explore.PAGE_SIZE * UiConfigs.Explore.MAX_CACHE_PAGES, // 最大缓存页数
                     ),
                 pagingSourceFactory = {
                     ExplorePagingSource(

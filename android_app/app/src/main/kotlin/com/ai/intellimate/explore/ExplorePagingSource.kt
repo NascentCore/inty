@@ -9,6 +9,7 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CoroutineScope
@@ -52,18 +53,13 @@ class ExplorePagingSource(
     private val fetchCallback: ExploreFetchCallback? = null,
 ) : PagingSource<Int, AgentInfo>() {
 
-    companion object {
-        private const val PAGE_SIZE = ExploreConstants.PAGE_SIZE
-        private const val INITIAL_PAGE = ExploreConstants.INITIAL_PAGE
-    }
-
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, AgentInfo> {
         return withContext(Dispatchers.IO) {
             try {
-                val page = params.key ?: INITIAL_PAGE
-                val pageSize = params.loadSize.coerceAtMost(PAGE_SIZE)
+                val page = params.key ?: UiConfigs.Explore.INITIAL_PAGE
+                val pageSize = params.loadSize.coerceAtMost(UiConfigs.Explore.PAGE_SIZE)
 
-                if (page == INITIAL_PAGE && useCache && cacheProvider != null) {
+                if (page == UiConfigs.Explore.INITIAL_PAGE && useCache && cacheProvider != null) {
                     val cachedAgents = cacheProvider.getCachedRecommendedAgents()
                     if (cachedAgents.isNotEmpty()) {
                         val validCachedAgents = cachedAgents.filter { agent ->
@@ -97,7 +93,7 @@ class ExplorePagingSource(
                         return@withContext LoadResult.Page(
                             data = emptyList(),
                             prevKey = null,
-                            nextKey = INITIAL_PAGE,
+                            nextKey = UiConfigs.Explore.INITIAL_PAGE,
                         )
                     }
                 }
@@ -119,14 +115,14 @@ class ExplorePagingSource(
                             estimatedLoadedCount < result.data.total
                         }
 
-                        if (page == INITIAL_PAGE && validAgents.isNotEmpty() && cacheProvider != null) {
+                        if (page == UiConfigs.Explore.INITIAL_PAGE && validAgents.isNotEmpty() && cacheProvider != null) {
                             cacheProvider.cacheRecommendedAgents(validAgents)
                             cacheProvider.refreshRecommendedAgents()
                         }
 
                         LoadResult.Page(
                             data = validAgents,
-                            prevKey = if (page == INITIAL_PAGE) null else page - 1,
+                            prevKey = if (page == UiConfigs.Explore.INITIAL_PAGE) null else page - 1,
                             nextKey = if (hasMore) page + 1 else null,
                         )
                     }
