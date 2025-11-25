@@ -4,7 +4,7 @@
 
 /**
  * 格式化消息时间
- * 智能显示：刚刚、N分钟前、HH:MM、MM-DD HH:MM
+ * 智能显示：Just now、N分钟前、HH:MM、MM-DD HH:MM
  * @param timestamp 时间戳
  * @returns 格式化后的时间字符串
  */
@@ -16,7 +16,7 @@ export const formatMessageTime = (timestamp: string): string => {
 
     // 一分钟内
     if (diff < 60000) {
-      return '刚刚';
+      return 'Just now';
     }
 
     // 一小时内
