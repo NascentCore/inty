@@ -33,6 +33,7 @@ const MessageInput: React.FC<IMessageInputProps> = ({
 }) => {
   const [inputValue, setInputValue] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [pendingCursorPosition, setPendingCursorPosition] = useState<number | null>(null);
 
   /**
    * 处理输入变化
@@ -92,6 +93,43 @@ const MessageInput: React.FC<IMessageInputProps> = ({
    */
   const canSend = inputValue.trim().length > 0 && !sending && !disabled;
 
+  /**
+   * 插入场景动作模板
+   */
+  const handleInsertSceneAction = useCallback(() => {
+    if (disabled) {
+      return;
+    }
+
+    const textarea = textareaRef.current;
+    const selectionStart = textarea?.selectionStart ?? inputValue.length;
+    const selectionEnd = textarea?.selectionEnd ?? inputValue.length;
+    const newValue = `${inputValue.slice(0, selectionStart)}()${inputValue.slice(selectionEnd)}`;
+
+    setInputValue(newValue);
+    setPendingCursorPosition(selectionStart + 1);
+
+    if (textarea) {
+      textarea.focus();
+    }
+  }, [disabled, inputValue]);
+
+  /**
+   * 更新插入后的光标位置
+   */
+  useEffect(() => {
+    if (pendingCursorPosition === null) {
+      return;
+    }
+
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.setSelectionRange(pendingCursorPosition, pendingCursorPosition);
+    }
+
+    setPendingCursorPosition(null);
+  }, [pendingCursorPosition]);
+
   return (
     <div className="message-input-container">
       <div className="message-input-wrapper">
@@ -108,6 +146,15 @@ const MessageInput: React.FC<IMessageInputProps> = ({
         />
 
         {/* 发送按钮 */}
+        <button
+          className="action-button"
+          onClick={handleInsertSceneAction}
+          type="button"
+          disabled={disabled || sending}
+          title="快速插入场景动作"
+        >
+          () 场景
+        </button>
         <button
           className={`send-button ${canSend ? 'active' : ''} ${sending ? 'sending' : ''}`}
           onClick={handleSend}
