@@ -96,10 +96,10 @@ fun HomeScreen(
                         createRoleLauncher,
                     )
                 },
-                iconSize = TabIconSize,
-                textSize = (TabIconSize.value * 0.45f).sp,
-                height = BottomNavigationBarHeight,
-                labelSpacing = UiConfigs.Spacing.BottomTabIconLabel,
+                iconSize = UiConfigs.BottomBar.TabIconSize,
+                textSize = (UiConfigs.BottomBar.TabIconSize.value * 0.45f).sp,
+                height = UiConfigs.BottomBar.Height,
+                labelSpacing = UiConfigs.BottomBar.TabIconLabelSpacing,
             )
         },
     ) { innerPadding ->
@@ -456,6 +456,3 @@ private val homeTabItems =
             labelResId = R.string.tab_me,
         ),
     )
-
-val BottomNavigationBarHeight = 64.dp
-val TabIconSize = 26.dp

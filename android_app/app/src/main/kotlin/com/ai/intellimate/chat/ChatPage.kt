@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import com.ai.intellimate.BottomNavigationBarHeight
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.R
 import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatMorePanel
@@ -184,15 +184,9 @@ internal fun ChatPage(
     KEY_BOARD_HEIGHT_MAX = maxOf(imeHeight, KEY_BOARD_HEIGHT_MAX)
     val ratio = 1 - imeHeight.toFloat() / KEY_BOARD_HEIGHT_MAX.toFloat() // 计算出键盘当前弹出/回收进度
 
-    val gap = if (showBackButton) 0.dp else BottomNavigationBarHeight * ratio
+    val gap = if (showBackButton) 0.dp else UiConfigs.BottomBar.Height * ratio
     val isKeyboardVisible = imeHeight > 0
     onKeyboardVisible(isKeyboardVisible)
-    //    val bottomPadding =
-    //        when {
-    //            showBackButton -> ChatInputBottomSpacerHeight
-    //            isKeyboardVisible -> ChatInputBottomSpacerHeight
-    //            else -> BottomNavigationBarHeight + ChatInputBottomSpacerHeight
-    //        }
     val bottomPadding = gap + ChatInputBottomSpacerHeight
 
     fun onKeepTalkingChange(enabled: Boolean) {
