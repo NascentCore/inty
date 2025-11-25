@@ -92,21 +92,21 @@ class IntelliMateApp : Application() {
                         FirebaseManager.RemoteConfigKeys.AUTO_ENABLE_KEEP_TALKING to false,
                         // Auto Play Opening Voice 开关默认值（true = 开启）
                         FirebaseManager.RemoteConfigKeys.AUTO_PLAY_OPENING_VOICE to true,
+                        // 首页默认 Tab 索引（0 = Chat tab）
+                        FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX to 0L,
                     )
                 )
 
-                // 获取并激活 Remote Config
-                FirebaseManager.fetchAndActivateRemoteConfig()
+                FirebaseManager.fetchAndActivateRemoteConfigForced()
 
-                // 在调试模式下输出所有 Remote Config 参数（用于验证配置）
                 if (ai.sxwl.android.utils.AppUtils.isAppDebug()) {
-                    val allConfig = FirebaseManager.getAllRemoteConfigValues()
-                    if (allConfig.isNotEmpty()) {
-                        LogUtils.d(
-                            "IntelliMateApp",
-                            "Remote Config 所有参数: ${allConfig.entries.joinToString { "${it.key}=${it.value}" }}",
-                        )
-                    }
+                    val tabIndex = FirebaseManager.getRemoteConfigLong(
+                        FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
+                    )
+                    LogUtils.d(
+                        "IntelliMateApp",
+                        "Remote Config home_page_default_tab_index = $tabIndex"
+                    )
                 }
 
                 // 从 Remote Config 读取默认值并初始化设置

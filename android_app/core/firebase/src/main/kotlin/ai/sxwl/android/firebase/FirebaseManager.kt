@@ -14,14 +14,15 @@ import com.google.firebase.perf.FirebasePerformance
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.remoteConfig
 import com.google.firebase.remoteconfig.remoteConfigSettings
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics、Performance和Remote Config的初始化和使用
@@ -603,6 +604,9 @@ object FirebaseManager {
 
         /** Auto Play Opening Voice 开关默认值 */
         const val AUTO_PLAY_OPENING_VOICE = "auto_play_opening_voice"
+
+        /** 首页默认 Tab 索引 */
+        const val HOME_PAGE_DEFAULT_TAB_INDEX = "home_page_default_tab_index"
     }
 
     /** FCM Token upload callback Set by application layer to handle token upload to server */
@@ -984,21 +988,38 @@ object FirebaseManager {
     suspend fun fetchAndActivateRemoteConfig(): Boolean {
         return try {
             val remoteConfig = getRemoteConfig() ?: return false
-
-            val result = remoteConfig.fetchAndActivate().await()
-            // 调试模式下输出配置信息
-            if (AppUtils.isAppDebug() && result) {
-                val allConfig = remoteConfig.all
-                val configValues =
-                    allConfig.entries.joinToString { entry ->
-                        val value = entry.value
-                        "${entry.key}=${value.asString()}"
-                    }
-                LogUtils.d("FirebaseManager", "Remote Config 已获取并激活新配置: $configValues")
-            }
-            result
+            remoteConfig.fetchAndActivate().await()
         } catch (e: Exception) {
             logError("fetchAndActivateRemoteConfig", "Failed to fetch and activate: ${e.message}")
+            false
+        }
+    }
+
+    suspend fun fetchAndActivateRemoteConfigForced(): Boolean {
+        return try {
+            val remoteConfig = getRemoteConfig() ?: return false
+
+            val originalMinInterval = config.remoteConfigMinFetchIntervalSeconds
+
+            val configSettings = remoteConfigSettings {
+                minimumFetchIntervalInSeconds = 0
+            }
+            remoteConfig.setConfigSettingsAsync(configSettings)
+            delay(100)
+
+            val result = remoteConfig.fetchAndActivate().await()
+
+            val restoreSettings = remoteConfigSettings {
+                minimumFetchIntervalInSeconds = originalMinInterval
+            }
+            remoteConfig.setConfigSettingsAsync(restoreSettings)
+
+            result
+        } catch (e: Exception) {
+            logError(
+                "fetchAndActivateRemoteConfigForced",
+                "Failed to force fetch and activate: ${e.message}"
+            )
             false
         }
     }

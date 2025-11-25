@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class HomeTabIndex {
     Chat,
@@ -38,7 +39,7 @@ class MainViewModel : BaseVM() {
 
     val followingAgents = mutableStateListOf<AgentInfo>() // 关注的agents列表数据
 
-    private val _selectedTab = MutableStateFlow(HomeTabIndex.Chat)
+    private val _selectedTab = MutableStateFlow(getInitialTabFromRemoteConfig())
     val selectedTab = _selectedTab.asStateFlow()
 
     private val _currentChatPageIndex = MutableStateFlow(0)
@@ -58,10 +59,58 @@ class MainViewModel : BaseVM() {
     val showSettings: StateFlow<Boolean> = _showSettings.asStateFlow()
 
     init {
-        // 使用统一启动管理器的数据快速初始化UI
         loadStartupData()
-        // 初始化登录状态
         updateLoginState()
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val initialFetchTime = FirebaseManager.getRemoteConfigLastFetchTime()
+
+            var waitCount = 0
+            val maxWaitCount = 30
+            while (waitCount < maxWaitCount) {
+                delay(100)
+                val currentFetchTime = FirebaseManager.getRemoteConfigLastFetchTime()
+                if (currentFetchTime > initialFetchTime || waitCount >= maxWaitCount - 1) {
+                    break
+                }
+                waitCount++
+            }
+
+            val newTab = getInitialTabFromRemoteConfig()
+            if (newTab != _selectedTab.value) {
+                LogUtils.d(
+                    "MainViewModel",
+                    "根据 Remote Config 更新 tab: ${_selectedTab.value.name} -> ${newTab.name}"
+                )
+                withContext(Dispatchers.Main) {
+                    _selectedTab.value = newTab
+                }
+            }
+        }
+    }
+
+    private fun getInitialTabFromRemoteConfig(): HomeTabIndex {
+        return try {
+            val tabIndex = FirebaseManager.getRemoteConfigLong(
+                FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
+            ).toInt()
+
+            LogUtils.d("MainViewModel", "Remote Config home_page_default_tab_index = $tabIndex")
+
+            val tabEntries = HomeTabIndex.entries.toTypedArray()
+            if (tabIndex >= 0 && tabIndex < tabEntries.size) {
+                tabEntries[tabIndex]
+            } else {
+                LogUtils.w(
+                    "MainViewModel",
+                    "Remote Config tab index ($tabIndex) 越界（有效范围: 0-${tabEntries.size - 1}），使用默认值 Chat tab"
+                )
+                HomeTabIndex.Chat
+            }
+        } catch (e: Exception) {
+            LogUtils.e("MainViewModel", "获取 Remote Config tab index 失败: ${e.message}", e)
+            HomeTabIndex.Chat
+        }
     }
 
     /** 显示设置界面 */
