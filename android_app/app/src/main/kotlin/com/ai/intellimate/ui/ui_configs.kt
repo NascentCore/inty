@@ -130,7 +130,7 @@ object UiConfigs {
 
     object BottomBar {
         val Height = 64.dp
-        val TabIconSize = 26.dp
+        val TabIconSize = 24.dp
         val TabIconLabelSpacing = (-6).dp
     }
 }
