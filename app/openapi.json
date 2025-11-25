@@ -9,7 +9,8 @@
         "/api/v1/auth/guest": {
             "post": {
                 "tags": [
-                    "auth"
+                    "auth",
+                    "web_app"
                 ],
                 "summary": "Create Guest",
                 "description": "\u521b\u5efa\u6e38\u5ba2\u8d26\u53f7",
@@ -51,7 +52,9 @@
         "/api/v1/auth/google/login": {
             "post": {
                 "tags": [
-                    "auth"
+                    "auth",
+                    "android_app",
+                    "web_app"
                 ],
                 "summary": "Google Login",
                 "description": "Google\u767b\u5f55",
@@ -98,7 +101,9 @@
         "/api/v1/users/me": {
             "get": {
                 "tags": [
-                    "users"
+                    "users",
+                    "android_app",
+                    "web_app"
                 ],
                 "summary": "Get Me",
                 "description": "Get current user profile.",
@@ -125,7 +130,9 @@
         "/api/v1/users/profile": {
             "put": {
                 "tags": [
-                    "users"
+                    "users",
+                    "android_app",
+                    "web_app"
                 ],
                 "summary": "Update current user profile",
                 "description": "Update current user profile, support avatar update",
@@ -172,10 +179,12 @@
         "/api/v1/users/deletion/check": {
             "get": {
                 "tags": [
-                    "users"
+                    "users",
+                    "android_app",
+                    "web_app"
                 ],
-                "summary": "Check Deletion Eligibility",
-                "description": "\u68c0\u67e5\u7528\u6237\u662f\u5426\u53ef\u4ee5\u5220\u9664\u8d26\u6237",
+                "summary": "DEPRECATED: POST /api/v1/users/delete-account \u5df2\u7ecf\u505a\u4e86\u6b64\u68c0\u67e5",
+                "description": "\u68c0\u67e5\u7528\u6237\u662f\u5426\u53ef\u4ee5\u5220\u9664\u8d26\u6237\n\n.. deprecated::\n    \u6b64\u7aef\u70b9\u5df2\u5e9f\u5f03\uff0c\u8bf7\u4f7f\u7528 POST /api/v1/users/delete-account \u7aef\u70b9\u3002\n    \u5220\u9664\u8d26\u6237\u65f6\u4f1a\u81ea\u52a8\u6267\u884c\u76f8\u540c\u7684\u68c0\u67e5\u3002",
                 "operationId": "check_deletion_eligibility_api_v1_users_deletion_check_get",
                 "responses": {
                     "200": {
@@ -189,6 +198,7 @@
                         }
                     }
                 },
+                "deprecated": true,
                 "security": [
                     {
                         "Bearer": []
@@ -199,7 +209,9 @@
         "/api/v1/users/delete-account": {
             "post": {
                 "tags": [
-                    "users"
+                    "users",
+                    "android_app",
+                    "web_app"
                 ],
                 "summary": "Delete User Account",
                 "description": "\u5220\u9664\u7528\u6237\u8d26\u6237",
@@ -253,7 +265,8 @@
         "/api/v1/notifications/": {
             "get": {
                 "tags": [
-                    "notification"
+                    "notification",
+                    "web_app"
                 ],
                 "summary": "List Notifications",
                 "description": "\u5206\u9875\u67e5\u8be2\u7528\u6237\u7684\u6d88\u606f\u5217\u8868\uff1b\u8fd4\u56de\u7528\u6237\u6536\u5230\u7684\u901a\u77e5\u3002",
@@ -330,7 +343,8 @@
         "/api/v1/report/": {
             "post": {
                 "tags": [
-                    "report"
+                    "report",
+                    "web_app"
                 ],
                 "summary": "Create Report",
                 "description": "Submit report",
@@ -378,7 +392,10 @@
             "get": {
                 "tags": [
                     "agents",
-                    "characters"
+                    "characters",
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "Get list of user's created AI characters",
                 "description": "This endpoint is used by an registered user to list their created AI characters (agents as a misnomer)",
@@ -438,7 +455,9 @@
             "get": {
                 "tags": [
                     "agents",
-                    "characters"
+                    "characters",
+                    "evaluation",
+                    "web_app"
                 ],
                 "summary": "Used by inty-eval to list all public AI characters",
                 "description": "Search public AI agents\nSupport fuzzy search by name, description, category",
@@ -516,7 +535,10 @@
             "get": {
                 "tags": [
                     "agents",
-                    "characters"
+                    "characters",
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "Get recommended AI agents list",
                 "description": "Get recommended AI agents list (public and approved agents), sort_seed is required when sort is random, which is used to ensure deterministic order for the random sort option",
@@ -606,7 +628,8 @@
             "get": {
                 "tags": [
                     "agents",
-                    "characters"
+                    "characters",
+                    "web_app"
                 ],
                 "summary": "Get Following Agents",
                 "description": "Get current user's followed AI agents list",
@@ -674,8 +697,9 @@
                 "tags": [
                     "agents",
                     "characters",
-                    "app",
-                    "inty-eval"
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "Create new AI agent",
                 "description": "Create new AI agent, used by app and inty-eval",
@@ -723,7 +747,10 @@
             "get": {
                 "tags": [
                     "agents",
-                    "characters"
+                    "characters",
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "Get public agent by ID",
                 "description": "Get public agent by ID, include pre-generated agents and user-created public agents",
@@ -770,7 +797,10 @@
             "put": {
                 "tags": [
                     "agents",
-                    "characters"
+                    "characters",
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "\u66f4\u65b0\u667a\u80fd\u4f53\uff08AI \u89d2\u8272\uff09",
                 "description": "\u66f4\u65b0\u4efb\u4f55\u56fe\u7247\uff0c\u90fd\u4f1a\u5c06\u56fe\u7247\u5168\u90e8\u8bb0\u5f55\u5728 background_images \u5b57\u6bb5\u4e2d\uff0c\u7528\u4e8e\u4fdd\u5b58\u5386\u53f2\u8bb0\u5f55\u5982\u679c\u6ca1\u6709\u63d0\u4f9b avatar\uff0c\u5219\u4f1a\u81ea\u52a8\u622a\u53d6\u5934\u50cf\uff0c\u5e76\u8bb0\u5f55\u5728 avatar \u5b57\u6bb5\u4e2d",
@@ -827,7 +857,10 @@
             "delete": {
                 "tags": [
                     "agents",
-                    "characters"
+                    "characters",
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "Delete Agent",
                 "description": "Delete AI agent",
@@ -876,7 +909,8 @@
             "post": {
                 "tags": [
                     "agents",
-                    "characters"
+                    "characters",
+                    "web_app"
                 ],
                 "summary": "Follow Agent",
                 "description": "Follow AI agent",
@@ -923,7 +957,8 @@
             "delete": {
                 "tags": [
                     "agents",
-                    "characters"
+                    "characters",
+                    "web_app"
                 ],
                 "summary": "Unfollow Agent",
                 "description": "Unfollow AI agent",
@@ -968,12 +1003,72 @@
                 }
             }
         },
+        "/api/v1/ai/agents/{agent_id}/generate-background-animated": {
+            "post": {
+                "tags": [
+                    "agents",
+                    "characters",
+                    "evaluation"
+                ],
+                "summary": "\u751f\u6210\u80cc\u666f\u89c6\u9891",
+                "description": "\u901a\u8fc7 Google Veo3 API \u751f\u6210\u89c6\u9891\u5e76\u76f4\u63a5\u5b58\u50a8\u89c6\u9891\u5730\u5740",
+                "operationId": "generate_background_animated_api_v1_ai_agents__agent_id__generate_background_animated_post",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "agent_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Agent Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenerateBackgroundAnimatedRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_Agent_"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/ai/agents/image-generation/config": {
             "get": {
                 "tags": [
                     "agents",
                     "characters",
-                    "inty-eval"
+                    "evaluation"
                 ],
                 "summary": "\u83b7\u53d6\u56fe\u7247\u751f\u6210\u914d\u7f6e",
                 "description": "\u83b7\u53d6\u5f53\u524d\u56fe\u7247\u751f\u6210\u7684\u63d0\u793a\u8bcd\u6a21\u677f\u548c\u9ed8\u8ba4\u53c2\u6570\u914d\u7f6e",
@@ -1000,7 +1095,7 @@
                 "tags": [
                     "agents",
                     "characters",
-                    "inty-eval"
+                    "evaluation"
                 ],
                 "summary": "\u66f4\u65b0\u56fe\u7247\u751f\u6210\u914d\u7f6e",
                 "description": "\u66f4\u65b0\u56fe\u7247\u751f\u6210\u7684\u63d0\u793a\u8bcd\u6a21\u677f\u548c\u9ed8\u8ba4\u53c2\u6570\u914d\u7f6e\uff08\u4ec5\u8d85\u7ea7\u7528\u6237\uff09",
@@ -1046,10 +1141,67 @@
                 ]
             }
         },
+        "/api/v1/ai/agents/prompts/available": {
+            "get": {
+                "tags": [
+                    "agents",
+                    "characters",
+                    "evaluation",
+                    "web_app"
+                ],
+                "summary": "\u83b7\u53d6\u53ef\u7528\u7684 prompt \u5217\u8868",
+                "description": "\u83b7\u53d6\u53ef\u7528\u7684\u4e3b\u63d0\u793a\u8bcd\u548c\u6a21\u5f0f\u63d0\u793a\u8bcd\u5217\u8868\uff0c\u4ee5\u53ca force_default_prompts \u914d\u7f6e\u72b6\u6001",
+                "operationId": "get_available_prompts_api_v1_ai_agents_prompts_available_get",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "include_content",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "description": "\u662f\u5426\u5305\u542b\u5b8c\u6574\u7684 prompt \u5185\u5bb9",
+                            "default": false,
+                            "title": "Include Content"
+                        },
+                        "description": "\u662f\u5426\u5305\u542b\u5b8c\u6574\u7684 prompt \u5185\u5bb9"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_Dict_str__Any__"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/chats/": {
             "get": {
                 "tags": [
-                    "chats"
+                    "chats",
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "Get current user's chat list",
                 "description": "Get current user's chat list",
@@ -1110,7 +1262,10 @@
             },
             "post": {
                 "tags": [
-                    "chats"
+                    "chats",
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "Create new chat",
                 "description": "Create new chat",
@@ -1157,7 +1312,10 @@
         "/api/v1/chats/{chat_id}": {
             "delete": {
                 "tags": [
-                    "chats"
+                    "chats",
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "Delete chat",
                 "description": "Delete chat",
@@ -1206,7 +1364,9 @@
             "get": {
                 "tags": [
                     "chats",
-                    "inty-eval"
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "Get Agent Chat Messages",
                 "description": "Get only chat message records by Agent ID (lighter interface)",
@@ -1291,12 +1451,63 @@
                 }
             }
         },
+        "/api/v1/chats/messages/vote": {
+            "post": {
+                "tags": [
+                    "chats",
+                    "android_app",
+                    "web_app",
+                    "evaluation"
+                ],
+                "summary": "Update Message Vote",
+                "description": "Set, toggle, or remove vote (like/dislike) for a message. Only AI messages can be voted.",
+                "operationId": "update_message_vote_api_v1_chats_messages_vote_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MessageVoteRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_Dict_str__Any__"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
         "/api/v1/chats/agents/{agent_id}/messages/{message_id}/voice": {
             "post": {
                 "tags": [
                     "chats",
-                    "inty",
-                    "voice"
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "Generate Message Voice",
                 "description": "Generate voice for a message",
@@ -1364,8 +1575,7 @@
             "get": {
                 "tags": [
                     "chats",
-                    "inty",
-                    "voice"
+                    "internal"
                 ],
                 "summary": "Get Voice Info",
                 "description": "Get voice info by voice_id",
@@ -1413,7 +1623,9 @@
             "put": {
                 "tags": [
                     "chats",
-                    "inty"
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "Update Chat Settings by Agent ID",
                 "description": "We do not use chat_id to get settings, because we only support 1 chat per agent.TODO: We should switch to /chats/{chat_id}/settings",
@@ -1478,7 +1690,9 @@
             "get": {
                 "tags": [
                     "chats",
-                    "inty"
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "Get Agent Chat Settings",
                 "description": "[Deprecated, use /chats/{chat_id}/settings instead] Get chat settings by Agent ID, bause we only support 1 chat per agent, so we do not use chat_id to get settings",
@@ -1526,7 +1740,10 @@
         "/api/v1/chat/completions/{agent_id}": {
             "post": {
                 "tags": [
-                    "chat"
+                    "chat",
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "[Deprecated use /api/v2/chat/completions/{agent_id} instead] \u8fd4\u56de\u4e0e\u6307\u5b9a Agent \u804a\u5929\u7684\u4e0b\u4e00\u6761\u6d88\u606f",
                 "description": "\u53ef\u4ee5\u5904\u7406\u5305\u62ec\u56fe\u7247\u5728\u5185\u7684\u5404\u79cd\u6d88\u606f\u7c7b\u578b\uff0c\u5a92\u4f53\u7c7b\u578b\u5e94\u8be5\u5148\u4e0a\u4f20\uff0c\u7136\u540e\u5c06 URL \u4f5c\u4e3a\u7d22\u5f15\u53d1\u9001\u5230\u6b64 API",
@@ -1586,8 +1803,7 @@
             "post": {
                 "tags": [
                     "chat",
-                    "inty-eval",
-                    "android-app"
+                    "evaluation"
                 ],
                 "summary": "\u57fa\u4e8e\u804a\u5929\u6d88\u606f\u53ca\u5386\u53f2\u6d88\u606f\u548c\u5176\u4ed6\u76f8\u5173\u4fe1\u606f\uff08\u89d2\u8272\u80cc\u666f\u3001\u7528\u6237 profile \u7b49\uff09\u751f\u6210\u56fe\u7247",
                 "description": "\u6839\u636eAgent\u89d2\u8272\u3001\u804a\u5929\u5386\u53f2\u548c\u7528\u6237\u6d88\u606f\u751f\u6210\u56fe\u7247\uff0c\u5e76\u4fdd\u5b58\u5230\u804a\u5929\u5386\u53f2\u4e2d\u3002\u6ce8\u610f\uff1a\u8def\u5f84\u53c2\u6570 `agent_id` \u4ec5\u4f5c\u4e3a\u76ee\u524d\u7684\u540d\u79f0\uff0c\u5b9e\u9645\u5e94\u4e3a `chat_id`\u3002\u672a\u6765\u5982\u9700\u6269\u5c55\u53ef\u76f4\u63a5\u91cd\u547d\u540d\u3002agent id \u5219\u4ee3\u8868\u4e0e\u8be5 agent \u7684*\u5f53\u524d*\u4f1a\u8bdd\u7684 id",
@@ -1624,7 +1840,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_Union_ChatImageGenerationResponse__UsageLimitExceeded__"
+                                    "$ref": "#/components/schemas/APIResponse_Union_ChatImageGenerationResponse__UsageLimitExceeded__BizError__"
                                 }
                             }
                         }
@@ -1646,7 +1862,9 @@
             "post": {
                 "tags": [
                     "images",
-                    "resources"
+                    "android_app",
+                    "web_app",
+                    "evaluation"
                 ],
                 "summary": "Upload image and get the URL of the image",
                 "description": "Upload image file with validation, compression, and GCS storage",
@@ -1693,7 +1911,8 @@
         "/api/v1/settings/": {
             "get": {
                 "tags": [
-                    "settings"
+                    "settings",
+                    "web_app"
                 ],
                 "summary": "Get Settings Endpoint",
                 "description": "Get current user settings",
@@ -1718,7 +1937,8 @@
             },
             "put": {
                 "tags": [
-                    "settings"
+                    "settings",
+                    "web_app"
                 ],
                 "summary": "Update Settings Endpoint",
                 "description": "Update current user settings",
@@ -1765,7 +1985,9 @@
         "/api/v1/subscription/plans": {
             "get": {
                 "tags": [
-                    "subscription"
+                    "subscription",
+                    "android_app",
+                    "web_app"
                 ],
                 "summary": "\u83b7\u53d6\u8ba2\u9605\u8ba1\u5212\u5217\u8868\u53ca\u5176\u4ed6\u7528\u6237\u8ba2\u9605\u4fe1\u606f",
                 "description": "\u73b0\u6709\u8ba2\u9605\u8ba1\u5212\u3001\u7528\u6237\u8ba2\u9605\u7684\u5185\u5bb9\u3001\u4ee5\u53ca\u5176\u4ed6\u4e0e\u7528\u6237\u8ba2\u9605\u72b6\u6001\u76f8\u5173\u7684\u4fe1\u606f",
@@ -1792,7 +2014,8 @@
         "/api/v1/subscription/status": {
             "get": {
                 "tags": [
-                    "subscription"
+                    "subscription",
+                    "web_app"
                 ],
                 "summary": "Get Subscription Status",
                 "description": "\u83b7\u53d6\u7528\u6237\u8ba2\u9605\u72b6\u6001",
@@ -1819,7 +2042,8 @@
         "/api/v1/subscription/usage": {
             "get": {
                 "tags": [
-                    "subscription"
+                    "subscription",
+                    "web_app"
                 ],
                 "summary": "Get Usage Statistics",
                 "description": "\u83b7\u53d6\u7528\u6237\u4f7f\u7528\u7edf\u8ba1",
@@ -1846,7 +2070,9 @@
         "/api/v1/subscription/verify": {
             "post": {
                 "tags": [
-                    "subscription"
+                    "subscription",
+                    "android_app",
+                    "web_app"
                 ],
                 "summary": "Verify Google Play purchase",
                 "description": "Used by app to prove user has purchased a subscription",
@@ -1893,7 +2119,8 @@
         "/api/v1/subscription/webhook": {
             "post": {
                 "tags": [
-                    "subscription"
+                    "subscription",
+                    "internal"
                 ],
                 "summary": "Google Play Webhook",
                 "description": "Google Play Developer Notifications webhook\n\u5904\u7406\u8ba2\u9605\u72b6\u6001\u53d8\u5316\u901a\u77e5",
@@ -1924,7 +2151,8 @@
         "/api/v1/subscription/admin/plans": {
             "post": {
                 "tags": [
-                    "subscription"
+                    "subscription",
+                    "internal"
                 ],
                 "summary": "Create Subscription Plan",
                 "description": "\u521b\u5efa\u8ba2\u9605\u8ba1\u5212\uff08\u7ba1\u7406\u5458\u63a5\u53e3\uff09",
@@ -1969,7 +2197,8 @@
             },
             "get": {
                 "tags": [
-                    "subscription"
+                    "subscription",
+                    "internal"
                 ],
                 "summary": "Get All Subscription Plans",
                 "description": "\u83b7\u53d6\u6240\u6709\u8ba2\u9605\u8ba1\u5212\uff08\u7ba1\u7406\u5458\u63a5\u53e3\uff09",
@@ -2018,7 +2247,8 @@
         "/api/v1/subscription/admin/users/{user_id}/subscription": {
             "get": {
                 "tags": [
-                    "subscription"
+                    "subscription",
+                    "internal"
                 ],
                 "summary": "Get User Subscription Status Admin",
                 "description": "\u83b7\u53d6\u6307\u5b9a\u7528\u6237\u7684\u8ba2\u9605\u72b6\u6001\uff08\u7ba1\u7406\u5458\u63a5\u53e3\uff09",
@@ -2066,7 +2296,8 @@
         "/api/v1/subscription/admin/users/{user_id}/usage": {
             "get": {
                 "tags": [
-                    "subscription"
+                    "subscription",
+                    "internal"
                 ],
                 "summary": "Get User Usage Statistics Admin",
                 "description": "\u83b7\u53d6\u6307\u5b9a\u7528\u6237\u7684\u4f7f\u7528\u7edf\u8ba1\uff08\u7ba1\u7406\u5458\u63a5\u53e3\uff09",
@@ -2114,7 +2345,8 @@
         "/api/v1/subscription/admin/refund": {
             "post": {
                 "tags": [
-                    "subscription"
+                    "subscription",
+                    "internal"
                 ],
                 "summary": "Process Manual Refund",
                 "description": "\u624b\u52a8\u5904\u7406\u9000\u6b3e\uff08\u7ba1\u7406\u5458\u63a5\u53e3\uff09",
@@ -2161,10 +2393,12 @@
         "/api/v1/version/check": {
             "post": {
                 "tags": [
-                    "version"
+                    "version",
+                    "android_app",
+                    "web_app"
                 ],
                 "summary": "Check Version",
-                "description": "\u68c0\u67e5\u5e94\u7528\u7248\u672c\u66f4\u65b0\n\n\u901a\u8fc7HTTP\u5934\u4f20\u9012\u7248\u672c\u4fe1\u606f\uff1a\n- appVersionCode: \u5e94\u7528\u7248\u672c\u4ee3\u7801\uff08\u5fc5\u586b\uff0c\u6574\u6570\uff09\n- appVersionName: \u5e94\u7528\u7248\u672c\u540d\u79f0\uff08\u53ef\u9009\uff0c\u5b57\u7b26\u4e32\uff09",
+                "description": "\u68c0\u67e5\u5e94\u7528\u7248\u672c\u66f4\u65b0\n\n\u901a\u8fc7HTTP\u5934\u4f20\u9012\u7248\u672c\u4fe1\u606f\uff1a\n- appVersionCode: \u5e94\u7528\u7248\u672c\u4ee3\u7801\uff08\u5fc5\u586b\uff0c\u6574\u6570\uff09\n- appVersionName: \u5e94\u7528\u7248\u672c\u540d\u79f0\uff08\u53ef\u9009\uff0c\u540e\u7aef\u4f1a\u5ffd\u7565\uff0c\u4fdd\u7559\u5411\u540e\u517c\u5bb9\uff09",
                 "operationId": "check_version_api_v1_version_check_post",
                 "security": [
                     {
@@ -2196,10 +2430,10 @@
                                     "type": "null"
                                 }
                             ],
-                            "description": "\u5e94\u7528\u7248\u672c\u540d\u79f0\uff08\u53ef\u9009\uff09",
+                            "description": "\u5e94\u7528\u7248\u672c\u540d\u79f0\uff08\u5411\u540e\u517c\u5bb9\uff0c\u5ffd\u7565\uff09",
                             "title": "Appversionname"
                         },
-                        "description": "\u5e94\u7528\u7248\u672c\u540d\u79f0\uff08\u53ef\u9009\uff09"
+                        "description": "\u5e94\u7528\u7248\u672c\u540d\u79f0\uff08\u5411\u540e\u517c\u5bb9\uff0c\u5ffd\u7565\uff09"
                     }
                 ],
                 "responses": {
@@ -2230,7 +2464,9 @@
             "get": {
                 "tags": [
                     "text_to_speech",
-                    "voice"
+                    "voice",
+                    "evaluation",
+                    "web_app"
                 ],
                 "summary": "\u83b7\u53d6\u97f3\u8272\u5217\u8868",
                 "description": "\u83b7\u53d6 ElevenLabs \u53ef\u7528\u97f3\u8272\u5217\u8868\uff0c\u652f\u6301\u641c\u7d22\u548c\u8fc7\u6ee4\u529f\u80fd",
@@ -2386,7 +2622,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_ChatCompletionResponse_"
+                                    "$ref": "#/components/schemas/APIResponse"
                                 }
                             }
                         }
@@ -2483,32 +2719,6 @@
                 },
                 "type": "object",
                 "title": "APIResponse[Agent]"
-            },
-            "APIResponse_ChatCompletionResponse_": {
-                "properties": {
-                    "code": {
-                        "type": "integer",
-                        "title": "Code",
-                        "default": 200
-                    },
-                    "message": {
-                        "type": "string",
-                        "title": "Message",
-                        "default": "success"
-                    },
-                    "data": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/components/schemas/ChatCompletionResponse"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ]
-                    }
-                },
-                "type": "object",
-                "title": "APIResponse[ChatCompletionResponse]"
             },
             "APIResponse_ChatSettings_": {
                 "properties": {
@@ -2915,7 +3125,7 @@
                 "type": "object",
                 "title": "APIResponse[Union[Agent, Dict[str, Any]]]"
             },
-            "APIResponse_Union_ChatImageGenerationResponse__UsageLimitExceeded__": {
+            "APIResponse_Union_ChatImageGenerationResponse__UsageLimitExceeded__BizError__": {
                 "properties": {
                     "code": {
                         "type": "integer",
@@ -2936,6 +3146,9 @@
                                 "$ref": "#/components/schemas/UsageLimitExceeded"
                             },
                             {
+                                "$ref": "#/components/schemas/BizError"
+                            },
+                            {
                                 "type": "null"
                             }
                         ],
@@ -2943,7 +3156,7 @@
                     }
                 },
                 "type": "object",
-                "title": "APIResponse[Union[ChatImageGenerationResponse, UsageLimitExceeded]]"
+                "title": "APIResponse[Union[ChatImageGenerationResponse, UsageLimitExceeded, BizError]]"
             },
             "APIResponse_UsageStatisticsResponse_": {
                 "properties": {
@@ -3196,6 +3409,17 @@
                         ],
                         "title": "Background Images"
                     },
+                    "background_animated": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Background Animated"
+                    },
                     "voice_id": {
                         "anyOf": [
                             {
@@ -3304,7 +3528,7 @@
                             }
                         ],
                         "title": "Main Prompt",
-                        "description": "\u4e3b\u63d0\u793a\u8bcd - \u4f5c\u4e3a\u7b2c\u4e00\u4e2asystem message\uff0c\u8986\u76d6\u5168\u5c40\u9ed8\u8ba4\u4e3b\u63d0\u793a\u8bcd"
+                        "description": "\u4e3b\u63d0\u793a\u8bcd - \u4f5c\u4e3a\u7b2c\u4e00\u4e2asystem message\uff0c\u8986\u76d6\u5168\u5c40\u9ed8\u8ba4\u4e3b\u63d0\u793a\u8bcd\u3002\u53ef\u4ee5\u662f\u9884\u8bbe ID \u6216\u81ea\u5b9a\u4e49\u6587\u672c"
                     },
                     "mode_prompt": {
                         "anyOf": [
@@ -3316,7 +3540,7 @@
                             }
                         ],
                         "title": "Mode Prompt",
-                        "description": "\u6a21\u5f0f\u63d0\u793a\u8bcd - \u653e\u5728\u89d2\u8272\u5361\u63d0\u793a\u8bcd\u540e\u9762\uff0c\u8986\u76d6\u5168\u5c40\u9ed8\u8ba4\u6a21\u5f0f\u63d0\u793a\u8bcd"
+                        "description": "\u6a21\u5f0f\u63d0\u793a\u8bcd - \u653e\u5728\u89d2\u8272\u5361\u63d0\u793a\u8bcd\u540e\u9762\uff0c\u8986\u76d6\u5168\u5c40\u9ed8\u8ba4\u6a21\u5f0f\u63d0\u793a\u8bcd\u3002\u53ef\u4ee5\u662f\u9884\u8bbe ID \u6216\u81ea\u5b9a\u4e49\u6587\u672c"
                     },
                     "character_card_spec": {
                         "anyOf": [
@@ -3520,6 +3744,10 @@
                         ],
                         "title": "Deleted At"
                     },
+                    "version": {
+                        "type": "integer",
+                        "title": "Version"
+                    },
                     "is_followed": {
                         "type": "boolean",
                         "title": "Is Followed",
@@ -3585,7 +3813,8 @@
                     "id",
                     "readable_id",
                     "status",
-                    "created_at"
+                    "created_at",
+                    "version"
                 ],
                 "title": "Agent",
                 "description": "AI\u89d2\u8272\uff0c\u5728 sqlalchemy \u6a21\u578b\u57fa\u7840\u4e0a\u6dfb\u52a0\u989d\u5916\u591a\u8868\u67e5\u8be2\u6765\u7684\u6570\u636e"
@@ -3635,6 +3864,17 @@
                             }
                         ],
                         "title": "Background Images"
+                    },
+                    "background_animated": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Background Animated"
                     },
                     "voice_id": {
                         "anyOf": [
@@ -3744,7 +3984,7 @@
                             }
                         ],
                         "title": "Main Prompt",
-                        "description": "\u4e3b\u63d0\u793a\u8bcd - \u4f5c\u4e3a\u7b2c\u4e00\u4e2asystem message\uff0c\u8986\u76d6\u5168\u5c40\u9ed8\u8ba4\u4e3b\u63d0\u793a\u8bcd"
+                        "description": "\u4e3b\u63d0\u793a\u8bcd - \u4f5c\u4e3a\u7b2c\u4e00\u4e2asystem message\uff0c\u8986\u76d6\u5168\u5c40\u9ed8\u8ba4\u4e3b\u63d0\u793a\u8bcd\u3002\u53ef\u4ee5\u662f\u9884\u8bbe ID \u6216\u81ea\u5b9a\u4e49\u6587\u672c"
                     },
                     "mode_prompt": {
                         "anyOf": [
@@ -3756,7 +3996,7 @@
                             }
                         ],
                         "title": "Mode Prompt",
-                        "description": "\u6a21\u5f0f\u63d0\u793a\u8bcd - \u653e\u5728\u89d2\u8272\u5361\u63d0\u793a\u8bcd\u540e\u9762\uff0c\u8986\u76d6\u5168\u5c40\u9ed8\u8ba4\u6a21\u5f0f\u63d0\u793a\u8bcd"
+                        "description": "\u6a21\u5f0f\u63d0\u793a\u8bcd - \u653e\u5728\u89d2\u8272\u5361\u63d0\u793a\u8bcd\u540e\u9762\uff0c\u8986\u76d6\u5168\u5c40\u9ed8\u8ba4\u6a21\u5f0f\u63d0\u793a\u8bcd\u3002\u53ef\u4ee5\u662f\u9884\u8bbe ID \u6216\u81ea\u5b9a\u4e49\u6587\u672c"
                     },
                     "character_card_spec": {
                         "anyOf": [
@@ -3930,7 +4170,7 @@
                     "gender"
                 ],
                 "title": "AgentCreate",
-                "description": "\u521b\u5efaAI\u89d2\u8272\n\n\u63a8\u8350\u4f7f\u7528\u65b9\u5f0f\uff1a\n1. \u4f7f\u7528personality + scenario\u5b57\u6bb5\u6784\u5efa\u89d2\u8272\n2. \u6dfb\u52a0first_message\u4f5c\u4e3a\u5f00\u573a\u767d\n3. \u53ef\u9009\u6dfb\u52a0message_example\u5c55\u793a\u5bf9\u8bdd\u98ce\u683c\n\n\u517c\u5bb9\u6027\u8bf4\u660e\uff1a\n- \u4ecd\u652f\u6301\u4f7f\u7528prompt\u5b57\u6bb5 (legacy\u6a21\u5f0f)\n- \u4f18\u5148\u7ea7\uff1a\u89d2\u8272\u5361\u5b57\u6bb5 > prompt\u5b57\u6bb5"
+                "description": "\u521b\u5efaAI\u89d2\u8272\n\n\u63a8\u8350\u4f7f\u7528\u65b9\u5f0f\uff1a\n1. \u4f7f\u7528personality + scenario\u5b57\u6bb5\u6784\u5efa\u89d2\u8272\n2. \u6dfb\u52a0first_message\u4f5c\u4e3a\u5f00\u573a\u767d\n3. \u53ef\u9009\u6dfb\u52a0message_example\u5c55\u793a\u5bf9\u8bdd\u98ce\u683c\n\n\u517c\u5bb9\u6027\u8bf4\u660e\uff1a\n - \u4ecd\u652f\u6301\u4f7f\u7528prompt\u5b57\u6bb5 (legacy\u6a21\u5f0f)\n - \u4f18\u5148\u7ea7\uff1a\u89d2\u8272\u5361\u5b57\u6bb5 > prompt\u5b57\u6bb5"
             },
             "AgentMetaData": {
                 "properties": {
@@ -4044,6 +4284,17 @@
                             }
                         ],
                         "title": "Background Images"
+                    },
+                    "background_animated": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Background Animated"
                     },
                     "voice_id": {
                         "anyOf": [
@@ -4355,6 +4606,30 @@
                 "title": "AuthType",
                 "description": "\u8ba4\u8bc1\u7c7b\u578b"
             },
+            "BizError": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code"
+                    },
+                    "error_code": {
+                        "type": "string",
+                        "title": "Error Code"
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "code",
+                    "error_code",
+                    "message"
+                ],
+                "title": "BizError",
+                "description": "\u4e1a\u52a1\u9519\u8bef\u4fe1\u606f\u6a21\u578b"
+            },
             "Body_upload_image_api_v1_images_post": {
                 "properties": {
                     "file": {
@@ -4461,6 +4736,29 @@
                         ],
                         "title": "Agent Background"
                     },
+                    "agent_background_animated": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Agent Background Animated"
+                    },
+                    "agent_extensions": {
+                        "anyOf": [
+                            {
+                                "additionalProperties": true,
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Agent Extensions"
+                    },
                     "agent_is_deleted": {
                         "anyOf": [
                             {
@@ -4526,34 +4824,11 @@
                 "title": "Chat",
                 "description": "\u804a\u5929"
             },
-            "ChatChoice": {
-                "properties": {
-                    "index": {
-                        "type": "integer",
-                        "title": "Index"
-                    },
-                    "message": {
-                        "$ref": "#/components/schemas/ChatMessage-Output"
-                    },
-                    "finish_reason": {
-                        "type": "string",
-                        "title": "Finish Reason"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "index",
-                    "message",
-                    "finish_reason"
-                ],
-                "title": "ChatChoice",
-                "description": "Chat choice model for OpenAI-style responses"
-            },
             "ChatCompletionRequest": {
                 "properties": {
                     "messages": {
                         "items": {
-                            "$ref": "#/components/schemas/ChatMessage-Input"
+                            "$ref": "#/components/schemas/ChatMessage"
                         },
                         "type": "array",
                         "title": "Messages"
@@ -4590,42 +4865,6 @@
                     "messages"
                 ],
                 "title": "ChatCompletionRequest"
-            },
-            "ChatCompletionResponse": {
-                "properties": {
-                    "id": {
-                        "type": "string",
-                        "title": "Id"
-                    },
-                    "created": {
-                        "type": "integer",
-                        "title": "Created"
-                    },
-                    "model": {
-                        "type": "string",
-                        "title": "Model"
-                    },
-                    "choices": {
-                        "items": {
-                            "$ref": "#/components/schemas/ChatChoice"
-                        },
-                        "type": "array",
-                        "title": "Choices"
-                    },
-                    "usage": {
-                        "$ref": "#/components/schemas/ChatUsage"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "id",
-                    "created",
-                    "model",
-                    "choices",
-                    "usage"
-                ],
-                "title": "ChatCompletionResponse",
-                "description": "OpenAI-style chat completion response model"
             },
             "ChatCreate": {
                 "properties": {
@@ -4718,7 +4957,7 @@
                 "title": "ChatImageGenerationResponse",
                 "description": "\u804a\u5929\u751f\u56fe\u54cd\u5e94"
             },
-            "ChatMessage-Input": {
+            "ChatMessage": {
                 "properties": {
                     "role": {
                         "type": "string",
@@ -4735,70 +4974,6 @@
                     "content"
                 ],
                 "title": "ChatMessage"
-            },
-            "ChatMessage-Output": {
-                "properties": {
-                    "role": {
-                        "type": "string",
-                        "title": "Role"
-                    },
-                    "content": {
-                        "type": "string",
-                        "title": "Content"
-                    },
-                    "id": {
-                        "anyOf": [
-                            {
-                                "type": "integer"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Id"
-                    },
-                    "meta_data": {
-                        "anyOf": [
-                            {
-                                "additionalProperties": true,
-                                "type": "object"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Meta Data"
-                    },
-                    "timestamp": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Timestamp"
-                    },
-                    "audio_url": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Audio Url"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "role",
-                    "content"
-                ],
-                "title": "ChatMessage",
-                "description": "Chat message model for OpenAI-style responses"
             },
             "ChatSettings": {
                 "properties": {
@@ -4935,30 +5110,6 @@
                 "title": "ChatSettingsUpdate",
                 "description": "\u66f4\u65b0\u804a\u5929\u8bbe\u7f6e"
             },
-            "ChatUsage": {
-                "properties": {
-                    "prompt_tokens": {
-                        "type": "integer",
-                        "title": "Prompt Tokens"
-                    },
-                    "completion_tokens": {
-                        "type": "integer",
-                        "title": "Completion Tokens"
-                    },
-                    "total_tokens": {
-                        "type": "integer",
-                        "title": "Total Tokens"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "prompt_tokens",
-                    "completion_tokens",
-                    "total_tokens"
-                ],
-                "title": "ChatUsage",
-                "description": "Token usage model for OpenAI-style responses"
-            },
             "DeletionCheckResponse": {
                 "properties": {
                     "can_delete": {
@@ -5063,6 +5214,25 @@
                 ],
                 "title": "Gender",
                 "description": "\u6027\u522b"
+            },
+            "GenerateBackgroundAnimatedRequest": {
+                "properties": {
+                    "prompt": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Prompt",
+                        "description": "\u89c6\u9891\u751f\u6210\u63d0\u793a\u8bcd\uff08\u53ef\u9009\uff0c\u5982\u679c\u4e3a\u7a7a\u5219\u4ece\u80cc\u666f\u56fe\u81ea\u52a8\u751f\u6210\uff09"
+                    }
+                },
+                "type": "object",
+                "title": "GenerateBackgroundAnimatedRequest",
+                "description": "\u751f\u6210\u80cc\u666f\u89c6\u9891\u8bf7\u6c42"
             },
             "GoogleAuthRequest": {
                 "properties": {
@@ -5315,6 +5485,47 @@
                 ],
                 "title": "LoginUserResponse",
                 "description": "\u767b\u5f55\u7528\u6237\u54cd\u5e94"
+            },
+            "MessageVoteRequest": {
+                "properties": {
+                    "agent_id": {
+                        "type": "string",
+                        "title": "Agent Id"
+                    },
+                    "message_id": {
+                        "type": "integer",
+                        "title": "Message Id"
+                    },
+                    "vote": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Vote"
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "agent_id",
+                    "message_id"
+                ],
+                "title": "MessageVoteRequest",
+                "description": "\u6d88\u606f\u6295\u7968\u8bf7\u6c42"
             },
             "ModelConfig": {
                 "properties": {
@@ -5847,6 +6058,16 @@
                             }
                         ],
                         "title": "Request Id"
+                    },
+                    "report_type": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/ReportType"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
                     }
                 },
                 "type": "object",
@@ -5856,6 +6077,14 @@
                     "reason_ids"
                 ],
                 "title": "ReportCreate"
+            },
+            "ReportType": {
+                "type": "string",
+                "enum": [
+                    "REPORT",
+                    "FEEDBACK"
+                ],
+                "title": "ReportType"
             },
             "Settings": {
                 "properties": {
