@@ -9,9 +9,13 @@ import androidx.annotation.OptIn
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -21,14 +25,22 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toDp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.media3.common.C
@@ -48,7 +60,6 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-
 // CDN 图片优化参数（与 AgentBackground 保持一致）
 // 使用固定参数确保预加载和实际使用的 URL 完全一致，提高缓存命中率
 // 80% 质量在清晰度和文件大小之间取得最佳平衡，相比 75% 质量提升明显但文件大小增加有限（约 5-8%）
@@ -65,14 +76,50 @@ private fun isVideoUrl(url: String?): Boolean {
         lowerUrl.contains(".webm?")
 }
 
+@Composable
+private fun LetterboxFiller(
+    modifier: Modifier,
+    orientation: LetterboxOrientation,
+    imageRequest: ImageRequest?,
+) {
+    if (imageRequest != null) {
+        AsyncImage(
+            modifier = modifier.graphicsLayer { alpha = 0.85f },
+            model = imageRequest,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+        )
+    } else {
+        val brush =
+            if (orientation == LetterboxOrientation.Vertical) {
+                Brush.verticalGradient(listOf(Color(0xFF1C1723), Color(0xFF0B0811)))
+            } else {
+                Brush.horizontalGradient(listOf(Color(0xFF1C1723), Color(0xFF0B0811)))
+            }
+        Box(modifier = modifier.background(brush))
+    }
+}
+
+private enum class LetterboxOrientation {
+    Vertical,
+    Horizontal,
+}
+
+private data class LetterboxPadding(
+    val verticalPx: Float = 0f,
+    val horizontalPx: Float = 0f,
+)
+
 /** TextureView 实现，使用 Matrix 维持视频原始宽高比并避免拉伸 */
 private class AspectRatioTextureView(context: Context) : TextureView(context) {
     private val aspectMatrix = Matrix()
     private var videoAspectRatio: Float? = null
+    var onAspectRatioChanged: ((Float) -> Unit)? = null
 
     fun updateVideoSize(width: Int, height: Int) {
         if (width <= 0 || height <= 0) return
         videoAspectRatio = width.toFloat() / height.toFloat()
+        videoAspectRatio?.let { ratio -> onAspectRatioChanged?.invoke(ratio) }
         adjustAspectRatio()
     }
 
@@ -125,7 +172,36 @@ fun AnimatedBackground(
     onIsPlayingChange: ((Boolean) -> Unit)? = null, // 播放状态变化回调
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
     val videoCacheManager = remember { VideoCacheManager.getInstance(context) }
+
+    var containerSize by remember { mutableStateOf(IntSize.Zero) }
+    var videoAspectRatioState by remember { mutableStateOf<Float?>(null) }
+
+    val staticImageRequest =
+        remember(staticImageUrl) {
+            if (staticImageUrl == null) {
+                null
+            } else {
+                val containerWidthPx =
+                    with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
+                val containerHeightPx =
+                    with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
+
+                ImageRequest.Builder(context)
+                    .data(
+                        getCdnImageUrl(
+                            staticImageUrl,
+                            width = CDN_STATIC_BACKGROUND_WIDTH,
+                            quality = CDN_IMAGE_QUALITY,
+                        ) ?: staticImageUrl
+                    )
+                    .size(Size(containerWidthPx, containerHeightPx))
+                    .crossfade(true)
+                    .build()
+            }
+        }
 
     // 关键修复：立即显示静态图（如果有），避免黑屏
     // 初始状态：如果有静态图URL，立即显示；如果有视频URL且有静态图，也立即显示作为占位符
@@ -145,6 +221,35 @@ fun AnimatedBackground(
     var hasPlayCompleted by remember { mutableStateOf(false) } // 是否已经播放完成（达到目标次数）
 
     val isVideo = isVideoUrl(videoUrl)
+
+    val letterboxPadding =
+        remember(containerSize, videoAspectRatioState) {
+            if (containerSize == IntSize.Zero || videoAspectRatioState == null) {
+                LetterboxPadding()
+            } else {
+                val width = containerSize.width.toFloat()
+                val height = containerSize.height.toFloat()
+                if (width <= 0f || height <= 0f) {
+                    LetterboxPadding()
+                } else {
+                    val aspect = videoAspectRatioState!!
+                    val containerRatio = width / height
+                    when {
+                        aspect > containerRatio + 0.01f -> {
+                            val videoHeight = width / aspect
+                            val padding = ((height - videoHeight) / 2f).coerceAtLeast(0f)
+                            LetterboxPadding(verticalPx = padding)
+                        }
+                        aspect < containerRatio - 0.01f -> {
+                            val videoWidth = height * aspect
+                            val padding = ((width - videoWidth) / 2f).coerceAtLeast(0f)
+                            LetterboxPadding(horizontalPx = padding)
+                        }
+                        else -> LetterboxPadding()
+                    }
+                }
+            }
+        }
 
     // 获取视频路径
     // 如果 isVideoCached 为 true，同步获取路径（避免黑屏）
@@ -303,10 +408,23 @@ fun AnimatedBackground(
     // 1. matchParentSize() 不会影响父 Box 的尺寸测量（父 Box 尺寸由 HorizontalPager 决定）
     // 2. 子元素仅在布局阶段匹配父 Box 的最终尺寸
     // 3. 这符合 BoxScope 的最佳实践，避免子元素影响父容器尺寸
-    Box(modifier = modifier.fillMaxSize().clipToBounds()) {
+    Box(modifier = modifier.fillMaxSize().clipToBounds().onSizeChanged { containerSize = it }) {
 
         // 如果有视频URL，创建视频视图
         if (videoUrl != null && isVideo) {
+            val verticalPaddingDp =
+                if (letterboxPadding.verticalPx > 0f) {
+                    with(density) { letterboxPadding.verticalPx.toDp() }
+                } else {
+                    0.dp
+                }
+            val horizontalPaddingDp =
+                if (letterboxPadding.horizontalPx > 0f) {
+                    with(density) { letterboxPadding.horizontalPx.toDp() }
+                } else {
+                    0.dp
+                }
+
             AndroidView(
                 factory = { ctx ->
                     LogUtils.d("AnimatedBackground - 创建新的播放器实例")
@@ -430,6 +548,7 @@ fun AnimatedBackground(
                     // TextureView 在 View 层级中渲染，生命周期管理更简单，更适合 HorizontalPager
                     val textureViewInstance =
                         AspectRatioTextureView(ctx).apply {
+                            onAspectRatioChanged = { ratio -> videoAspectRatioState = ratio }
                             // 设置裁剪，防止视频超出边界
                             clipToOutline = true
 
@@ -471,6 +590,8 @@ fun AnimatedBackground(
                     // 这解决了页面切换后屏幕黑掉的问题
                     val updatedTextureView = view as? AspectRatioTextureView
                     if (updatedTextureView != null) {
+                        updatedTextureView.onAspectRatioChanged =
+                            { ratio -> videoAspectRatioState = ratio }
                         textureView = updatedTextureView
                         exoPlayer?.let { player ->
                             // 检查 TextureView 是否已设置，如果没有则设置
@@ -500,6 +621,49 @@ fun AnimatedBackground(
                     }
                 },
             )
+
+            when {
+                letterboxPadding.verticalPx > 0f && verticalPaddingDp > 0.dp -> {
+                    LetterboxFiller(
+                        modifier =
+                            Modifier.align(Alignment.TopCenter)
+                                .fillMaxWidth()
+                                .height(verticalPaddingDp)
+                                .zIndex(1f),
+                        orientation = LetterboxOrientation.Vertical,
+                        imageRequest = staticImageRequest,
+                    )
+                    LetterboxFiller(
+                        modifier =
+                            Modifier.align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .height(verticalPaddingDp)
+                                .zIndex(1f),
+                        orientation = LetterboxOrientation.Vertical,
+                        imageRequest = staticImageRequest,
+                    )
+                }
+                letterboxPadding.horizontalPx > 0f && horizontalPaddingDp > 0.dp -> {
+                    LetterboxFiller(
+                        modifier =
+                            Modifier.align(Alignment.CenterStart)
+                                .width(horizontalPaddingDp)
+                                .fillMaxHeight()
+                                .zIndex(1f),
+                        orientation = LetterboxOrientation.Horizontal,
+                        imageRequest = staticImageRequest,
+                    )
+                    LetterboxFiller(
+                        modifier =
+                            Modifier.align(Alignment.CenterEnd)
+                                .width(horizontalPaddingDp)
+                                .fillMaxHeight()
+                                .zIndex(1f),
+                        orientation = LetterboxOrientation.Horizontal,
+                        imageRequest = staticImageRequest,
+                    )
+                }
+            }
 
             // 播放控制：当需要播放时，直接播放
             // 注意：如果 shouldPlay 为 false，但视频正在播放中（由 loading 触发），则继续播放到结束
@@ -601,36 +765,14 @@ fun AnimatedBackground(
                         player.release()
                     }
                     exoPlayer = null
+                    textureView?.onAspectRatioChanged = null
                     textureView = null
                 }
             }
 
             // 在 Compose 层覆盖静态图，使用 Compose 动画实现平滑过渡
             // 关键：静态图作为占位符，覆盖在视频上方，视频加载完成后淡出
-            if (showStaticImage && staticImageUrl != null) {
-                val density = LocalDensity.current
-                val configuration = LocalConfiguration.current
-
-                // 使用固定 CDN 参数，确保与预加载 URL 一致，提高缓存命中率
-                val staticImageRequest =
-                    remember(staticImageUrl) {
-                        val containerWidthPx =
-                            with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
-                        val containerHeightPx =
-                            with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
-
-                        ImageRequest.Builder(context)
-                            .data(
-                                getCdnImageUrl(
-                                    staticImageUrl,
-                                    width = CDN_STATIC_BACKGROUND_WIDTH, // 使用固定宽度，确保预加载和实际使用 URL 一致
-                                    quality = CDN_IMAGE_QUALITY,
-                                ) ?: staticImageUrl
-                            )
-                            .size(Size(containerWidthPx, containerHeightPx))
-                            .crossfade(true) // 启用淡入淡出效果
-                            .build()
-                    }
+            if (showStaticImage && staticImageUrl != null && staticImageRequest != null) {
                 AsyncImage(
                     modifier =
                         Modifier.fillMaxWidth()
@@ -651,7 +793,8 @@ fun AnimatedBackground(
             // 没有视频URL，只显示静态图片
             AsyncImage(
                 modifier = Modifier.fillMaxWidth().fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
-                model = ImageRequest.Builder(context).data(staticImageUrl).build(),
+                model =
+                    staticImageRequest ?: ImageRequest.Builder(context).data(staticImageUrl).build(),
                 contentDescription = null,
                 contentScale = contentScale, // 使用 Crop 确保不超出边界
             )
