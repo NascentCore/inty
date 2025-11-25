@@ -9,7 +9,7 @@
 ### 应用生命周期
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
-| `APP_OPEN` | IntelliMateApp.kt | 应用启动（Firebase内置事件） |
+| `APP_OPEN` | IntelliMateApp.kt | 应用启动（Firebase内置事件，包含 Remote Config 配置参数：`remote_config_auto_enable_keep_talking`、`remote_config_auto_play_opening_voice`、`remote_config_home_page_default_tab_index`） |
 
 ### 用户认证
 | 事件名称 | 使用位置 | 业务含义 |
@@ -39,13 +39,19 @@
 ### 页面访问
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
-| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，`page_name` 统一为 xxxPage 格式，如 ChatPage、ExplorePage、subscriptionPage 等，包含 `page_source` 参数） |
+| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，`page_name` 统一为 xxxPage 格式，如 ChatPage、ExplorePage、subscriptionPage 等，包含 `page_source` 参数。MainPage/HomePage 还包含 `default_home_tab_index`、`default_home_tab_name`、`current_tab_index`、`current_tab_name` 参数） |
 | `duration` | PageTrackingHelper.kt | 页面停留时长（页面离开时上报，记录 `page_name` 和 `duration`） |
 
 **页面来源参数说明：**
 - `page_source`：页面来源标识，用于统计用户从哪个入口进入页面
   - **subscriptionPage**：`home_expired_dialog`（首页过期VIP对话框）、`chat_page`（聊天页面）、`chat_more_panel`（聊天更多面板）、`profile_upgrade`（个人中心升级按钮）、`settings_subscription`（设置页面订阅管理）、`settings_premium_dialog`（设置页面高级模型对话框）
-  - **ChatPage**：`chat_activity`（在 ChatActivity 中）、`main_activity_home_tab`（在 MainActivity 的 HorizontalPager 中）
+  - **ChatPage**：`chat_activity`（在 ChatActivity 中）、`main_activity_home_tab`（在 MainActivity 的 HorizontalPager 中）、`from_previous_agent`（在 HorizontalPager 中从上一个 agent 滑动而来）
+
+**首页 Tab 参数说明（MainPage/HomePage）：**
+- `default_home_tab_index`：默认首页 tab 索引（数值类型，0=Chat, 3=Explore 等）
+- `default_home_tab_name`：默认首页 tab 名称（字符串类型，chat/explore/other）
+- `current_tab_index`：当前选中的 tab 索引（数值类型，HomePage 事件）
+- `current_tab_name`：当前选中的 tab 名称（字符串类型，chat/conversation/create/explore/profile，HomePage 事件）
 
 ### Explore 数据加载
 | 事件名称 | 使用位置 | 业务含义 |
@@ -111,6 +117,9 @@
 - `timestamp`：事件时间戳
 - `page_name`、`page_class`：页面名称和类名，用于页面追踪
 - `page_source`：页面来源标识，用于统计用户从哪个入口进入页面（详见页面访问事件说明）
+- `default_home_tab_index`、`default_home_tab_name`：默认首页 tab 索引和名称（MainPage/HomePage 事件），用于分析用户默认进入的 tab（chat/explore 等）
+- `current_tab_index`、`current_tab_name`：当前选中的 tab 索引和名称（HomePage 事件），用于分析用户实际访问的 tab
+- `remote_config_auto_enable_keep_talking`、`remote_config_auto_play_opening_voice`、`remote_config_home_page_default_tab_index`：Remote Config 配置参数（APP_OPEN 事件），用于分析 Remote Config 配置对用户行为的影响
 
 ### Explore 参数
 - `page`、`page_size`：分页信息（当前页码和每页大小）

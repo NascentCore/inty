@@ -31,7 +31,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -62,8 +61,40 @@ fun HomeScreen(
 ) {
     val selectedTab = mainViewModel.selectedTab.collectAsState()
 
-    // 页面跟踪
-    LaunchedEffect(Unit) { PageTrackingHelper.trackPageView("HomePage", "MainActivity") }
+    // 页面跟踪，包含默认首页 tab index（只在首次加载时上报）
+    LaunchedEffect(Unit) {
+        // 获取默认首页 tab index
+        val defaultTabIndex =
+            try {
+                ai.sxwl.android.firebase.FirebaseManager.getRemoteConfigLong(
+                    ai.sxwl.android.firebase.FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
+                ).toInt()
+            } catch (e: Exception) {
+                0 // 默认值：Chat tab
+            }
+
+        val currentTabIndex = selectedTab.value.ordinal
+        val currentTabName =
+            when (selectedTab.value) {
+                HomeTabIndex.Chat -> "chat"
+                HomeTabIndex.Messages -> "messages"
+                HomeTabIndex.Create -> "create"
+                HomeTabIndex.Explore -> "explore"
+                HomeTabIndex.Profile -> "profile"
+            }
+
+        PageTrackingHelper.trackPageView(
+            "HomePage",
+            "MainActivity",
+            mapOf(
+                "current_tab_index" to currentTabIndex,
+                "current_tab_name" to currentTabName,
+                "default_home_tab_index" to defaultTabIndex,
+                "default_home_tab_name" to
+                        if (defaultTabIndex == 0) "chat" else if (defaultTabIndex == 3) "explore" else "other",
+            ),
+        )
+    }
 
     // 创建共享的 CreateRoleActivity launcher，用于处理从 Create Tab 创建后的刷新
     // 当 CreateRoleActivity 返回成功时，如果当前在 Profile Tab，需要刷新列表
@@ -80,7 +111,10 @@ fun HomeScreen(
 
     Scaffold(
         modifier =
-            modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
+            modifier
+                .fillMaxSize()
+                .background(HeartColor.primaryColor)
+                .navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
             val context = LocalContext.current
@@ -222,7 +256,7 @@ private fun HomeContent(
             ChatTabContent(mainViewModel = mainViewModel, viewModelFactory = viewModelFactory)
         }
 
-        HomeTabIndex.Conversation -> {
+        HomeTabIndex.Messages -> {
             MessagesTabContent()
         }
 

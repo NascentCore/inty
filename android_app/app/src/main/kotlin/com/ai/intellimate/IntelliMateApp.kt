@@ -73,6 +73,7 @@ class IntelliMateApp : Application() {
         // FirebaseInitializer已经自动初始化了FirebaseManager，这里作为备用保障
 
         // 记录应用启动事件 - 使用Firebase内置事件
+        // 注意：Remote Config 参数会在 initializeRemoteConfigDefaults() 中获取完成后补充上报
         FirebaseManager.logEvent(FirebaseManager.Events.APP_OPEN)
 
         // 设置设备信息
@@ -99,15 +100,38 @@ class IntelliMateApp : Application() {
 
                 FirebaseManager.fetchAndActivateRemoteConfigForced()
 
-                if (ai.sxwl.android.utils.AppUtils.isAppDebug()) {
-                    val tabIndex = FirebaseManager.getRemoteConfigLong(
+                // 获取 Remote Config 参数值
+                val autoEnableKeepTalking =
+                    FirebaseManager.getRemoteConfigBoolean(
+                        FirebaseManager.RemoteConfigKeys.AUTO_ENABLE_KEEP_TALKING
+                    )
+                val autoPlayOpeningVoice =
+                    FirebaseManager.getRemoteConfigBoolean(
+                        FirebaseManager.RemoteConfigKeys.AUTO_PLAY_OPENING_VOICE
+                    )
+                val homePageDefaultTabIndex =
+                    FirebaseManager.getRemoteConfigLong(
                         FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
                     )
+
+                if (ai.sxwl.android.utils.AppUtils.isAppDebug()) {
                     LogUtils.d(
                         "IntelliMateApp",
-                        "Remote Config home_page_default_tab_index = $tabIndex"
+                        "Remote Config home_page_default_tab_index = $homePageDefaultTabIndex"
                     )
                 }
+
+                // 上报 Remote Config 配置参数到 APP_OPEN 事件（补充上报）
+                // 注意：APP_OPEN 事件已经在 initializeFirebaseAnalytics() 中上报，这里补充上报配置参数
+                // Firebase Analytics 允许同一个事件多次上报，每次上报都会记录一次事件
+                FirebaseManager.logEvent(
+                    FirebaseManager.Events.APP_OPEN,
+                    FirebaseManager.safeEventParams(
+                        "remote_config_auto_enable_keep_talking" to autoEnableKeepTalking,
+                        "remote_config_auto_play_opening_voice" to autoPlayOpeningVoice,
+                        "remote_config_home_page_default_tab_index" to homePageDefaultTabIndex,
+                    ),
+                )
 
                 // 从 Remote Config 读取默认值并初始化设置
                 SettingStateManager.initializeFromRemoteConfig()

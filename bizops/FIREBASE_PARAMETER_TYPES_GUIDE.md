@@ -138,6 +138,8 @@ bundle.putDouble("discount_rate", discountRate)
 | `page_class` | 事件 | 页面类名 | 页面追踪事件 |
 | `page_source` | 事件 | 页面来源 | SCREEN_VIEW |
 | `page_type` | 事件 | 页面类型 | SCREEN_VIEW（explore 页面） |
+| `default_home_tab_name` | 事件 | 默认首页 tab 名称 | SCREEN_VIEW（MainPage/HomePage） |
+| `current_tab_name` | 事件 | 当前选中的 tab 名称 | SCREEN_VIEW（HomePage） |
 
 #### Agent切换维度（中优先级）
 
@@ -177,8 +179,10 @@ bundle.putDouble("discount_rate", discountRate)
 | `price_changed` | 事件 | 价格是否变化 | subscription_price_fetched |
 | `currency_changed` | 事件 | 货币是否变化 | subscription_price_fetched |
 | `micros_changed` | 事件 | 微单位是否变化 | subscription_price_fetched |
+| `remote_config_auto_enable_keep_talking` | 事件 | Remote Config Keep Talking 开关默认值 | APP_OPEN |
+| `remote_config_auto_play_opening_voice` | 事件 | Remote Config Auto Play Opening Voice 开关默认值 | APP_OPEN |
 
-**自定义维度总计**：约 **49 个**（在 50 个限制范围内，使用率98%，剩余1个配额）
+**自定义维度总计**：约 **51 个**（超过 50 个限制，需要优化或移除部分低优先级参数）
 
 ### 3.2 自定义指标（数值类型参数）
 
@@ -210,6 +214,9 @@ bundle.putDouble("discount_rate", discountRate)
 | `sort_seed` | 事件 | 排序种子 | explore_agents_fetch_* |
 | `selected_plan_index` | 事件 | 选中的计划索引 | subscription_price_displayed |
 | `total_plans_count` | 事件 | 计划总数 | subscription_price_displayed |
+| `default_home_tab_index` | 事件 | 默认首页 tab 索引 | SCREEN_VIEW（MainPage/HomePage） |
+| `current_tab_index` | 事件 | 当前选中的 tab 索引 | SCREEN_VIEW（HomePage） |
+| `remote_config_home_page_default_tab_index` | 事件 | Remote Config 首页默认 Tab 索引 | APP_OPEN |
 
 #### 价格相关指标（高优先级）
 
@@ -235,7 +242,7 @@ bundle.putDouble("discount_rate", discountRate)
 | `metric_value` | 事件 | 指标值 | AI_RESPONSE_TIME, EXPLORE_RESPONSE_TIME, TTS_GENERATION_TIME, IMAGE_GENERATION_TIME |
 | `metric_unit` | 事件 | 指标单位 | AI_RESPONSE_TIME, EXPLORE_RESPONSE_TIME, TTS_GENERATION_TIME, IMAGE_GENERATION_TIME |
 
-**自定义指标总计**：约 **25 个**（在 50 个限制范围内，使用率50%，剩余25个配额）
+**自定义指标总计**：约 **28 个**（在 50 个限制范围内，使用率56%，剩余22个配额）
 
 ### 3.3 计算指标（建议创建）
 
@@ -346,8 +353,8 @@ bundle.putDouble("discount_rate", discountRate)
 
 ### 5.2 配额使用情况
 
-- **自定义维度**：约 49 个（在 50 个限制范围内，使用率98%）✅
-- **自定义指标**：约 25 个（在 50 个限制范围内，使用率50%）✅
+- **自定义维度**：约 51 个（超过 50 个限制，需要优化或移除部分低优先级参数）⚠️
+- **自定义指标**：约 28 个（在 50 个限制范围内，使用率56%）✅
 - **计算指标**：不占用配额，可创建多个 ✅
 
 ### 5.3 最佳实践
