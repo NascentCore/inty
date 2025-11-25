@@ -69,7 +69,11 @@ class ExplorePagingSource(
                     val cachedAgents = cacheProvider.getCachedRecommendedAgents()
                     if (cachedAgents.isNotEmpty()) {
                         // 过滤掉id为空的agent，避免key重复问题
-                        val validCachedAgents = cachedAgents.filter { it.id.isNotEmpty() }
+                        // 同时过滤掉 IntelliMate agent（与网络数据保持一致）
+                        val validCachedAgents = cachedAgents.filter { agent ->
+                            agent.id.isNotEmpty() &&
+                                    !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
+                        }
 
                         if (validCachedAgents.isNotEmpty()) {
                             // 如果有缓存数据，返回缓存数据，同时后台加载网络数据
@@ -125,7 +129,20 @@ class ExplorePagingSource(
                                 agent.id.isNotEmpty() &&
                                     !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
                             }
-                        val hasMore = validAgents.isNotEmpty() && validAgents.size >= pageSize
+
+                        // 修复 hasMore 判断：使用原始数据量（未过滤）来判断是否还有更多数据
+                        // 因为服务端返回的 total 是未过滤的总数，而过滤是在客户端进行的
+                        // 如果使用过滤后的数据量判断，当过滤导致数据量少于 pageSize 时，会错误地认为没有更多数据
+                        val hasMore = if (result.data.total > 0) {
+                            // 使用服务端返回的 total 来判断
+                            // 计算已加载的原始数据量：当前页数 * 每页大小（或使用实际返回的数据量）
+                            val estimatedLoadedCount = (page - 1) * pageSize + agents.size
+                            estimatedLoadedCount < result.data.total
+                        } else {
+                            // 回退逻辑：如果服务端未返回 total，使用原始数据量判断
+                            // 如果当前页返回的原始数据量 >= pageSize，认为还有更多数据
+                            agents.size >= pageSize
+                        }
 
                         // 缓存第一页数据
                         if (
@@ -180,7 +197,11 @@ class ExplorePagingSource(
             when (result) {
                 is HttpResult.Success -> {
                     val agents = result.data.list ?: emptyList()
-                    val validAgents = agents.filter { it.id.isNotEmpty() }
+                    // 过滤逻辑与主逻辑保持一致：过滤掉 id 为空的 agent 和 IntelliMate agent
+                    val validAgents = agents.filter { agent ->
+                        agent.id.isNotEmpty() &&
+                                !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
+                    }
                     val agentsCount = validAgents.size
 
                     // 上报成功事件
@@ -213,8 +234,11 @@ class ExplorePagingSource(
                 val result = loadFromNetwork(page, pageSize)
                 if (result is NetworkResult.Success) {
                     val agents = result.data.list ?: emptyList()
-                    // 过滤掉id为空的agent，避免key重复问题
-                    val validAgents = agents.filter { it.id.isNotEmpty() }
+                    // 过滤逻辑与主逻辑保持一致：过滤掉 id 为空的 agent 和 IntelliMate agent
+                    val validAgents = agents.filter { agent ->
+                        agent.id.isNotEmpty() &&
+                                !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
+                    }
                     if (validAgents.isNotEmpty() && cacheProvider != null) {
                         cacheProvider.cacheRecommendedAgents(validAgents)
                         cacheProvider.refreshRecommendedAgents()
