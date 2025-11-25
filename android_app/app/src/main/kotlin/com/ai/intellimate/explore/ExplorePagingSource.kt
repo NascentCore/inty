@@ -9,6 +9,7 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CoroutineScope
@@ -53,8 +54,8 @@ class ExplorePagingSource(
 ) : PagingSource<Int, AgentInfo>() {
 
     companion object {
-        private const val PAGE_SIZE = ExploreConstants.PAGE_SIZE
-        private const val INITIAL_PAGE = ExploreConstants.INITIAL_PAGE
+        private const val PAGE_SIZE = UiConfigs.Explore.PAGE_SIZE
+        private const val INITIAL_PAGE = UiConfigs.Explore.INITIAL_PAGE
     }
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, AgentInfo> {

@@ -12,11 +12,11 @@ import kotlin.math.sign
 // CREATED_BY_AGENT
 @Composable
 fun rememberExploreScrollConnection(
-    initialVelocityMultiplier: Float = ExploreConstants.SCROLL_INITIAL_VELOCITY_MULTIPLIER,
-    minFlingVelocity: Float = ExploreConstants.SCROLL_MIN_FLING_VELOCITY,
-    maxFlingVelocity: Float = ExploreConstants.SCROLL_MAX_FLING_VELOCITY,
-    decelerationMultiplier: Float = ExploreConstants.SCROLL_DECELERATION_MULTIPLIER,
-    scrollDeltaThreshold: Float = ExploreConstants.SCROLL_DELTA_THRESHOLD,
+    initialVelocityMultiplier: Float,
+    minFlingVelocity: Float,
+    maxFlingVelocity: Float,
+    decelerationMultiplier: Float,
+    scrollDeltaThreshold: Float,
 ): NestedScrollConnection {
     return remember {
         object : NestedScrollConnection {
