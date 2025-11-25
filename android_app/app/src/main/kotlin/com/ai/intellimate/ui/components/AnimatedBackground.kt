@@ -2,6 +2,8 @@ package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.utils.LogUtils
+import android.content.Context
+import android.graphics.Matrix
 import android.view.TextureView
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -63,6 +65,43 @@ private fun isVideoUrl(url: String?): Boolean {
         lowerUrl.contains(".webm?")
 }
 
+/** TextureView 实现，使用 Matrix 维持视频原始宽高比并避免拉伸 */
+private class AspectRatioTextureView(context: Context) : TextureView(context) {
+    private val aspectMatrix = Matrix()
+    private var videoAspectRatio: Float? = null
+
+    fun updateVideoSize(width: Int, height: Int) {
+        if (width <= 0 || height <= 0) return
+        videoAspectRatio = width.toFloat() / height.toFloat()
+        adjustAspectRatio()
+    }
+
+    private fun adjustAspectRatio() {
+        val ratio = videoAspectRatio ?: return
+        val viewWidth = width.toFloat()
+        val viewHeight = height.toFloat()
+        if (viewWidth <= 0f || viewHeight <= 0f) return
+
+        val viewRatio = viewWidth / viewHeight
+        aspectMatrix.reset()
+
+        if (ratio > viewRatio) {
+            val scaleX = viewRatio / ratio
+            aspectMatrix.setScale(scaleX, 1f, viewWidth / 2f, viewHeight / 2f)
+        } else {
+            val scaleY = ratio / viewRatio
+            aspectMatrix.setScale(1f, scaleY, viewWidth / 2f, viewHeight / 2f)
+        }
+        setTransform(aspectMatrix)
+        invalidate()
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        adjustAspectRatio()
+    }
+}
+
 /**
  * 视频背景播放组件 逻辑：
  * 1. 如果有视频URL，始终渲染视频控件，同时显示静态图作为占位符
@@ -98,6 +137,7 @@ fun AnimatedBackground(
     var videoFirstFrameRendered by remember { mutableStateOf(false) } // 视频第一帧是否已渲染
     var targetStaticImageAlpha by remember { mutableFloatStateOf(1f) } // 静态图目标透明度，用于动画
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+    var textureView by remember { mutableStateOf<AspectRatioTextureView?>(null) }
     var currentPlayCount by remember { mutableIntStateOf(0) }
     var actualPlayCount by remember { mutableIntStateOf(0) }
     var videoPath by remember(videoUrl) { mutableStateOf<String?>(null) }
@@ -293,7 +333,7 @@ fun AnimatedBackground(
                                 volume = 0f
                                 repeatMode = Player.REPEAT_MODE_OFF
                                 // 关键：在播放器创建时就设置缩放模式，避免初始拉伸
-                                videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                                videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
                                 addListener(
                                     object : Player.Listener {
                                         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -345,7 +385,11 @@ fun AnimatedBackground(
                                             // 关键：视频尺寸信息已加载，确保缩放模式正确应用
                                             // 这样可以避免因视频元数据加载导致的缩放效果变化
                                             videoScalingMode =
-                                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT
+                                            textureView?.updateVideoSize(
+                                                videoSize.width,
+                                                videoSize.height,
+                                            )
 
                                             // 关键修复：视频尺寸变化时，说明第一帧可能已经渲染
                                             // 这是一个更准确的信号，比固定延迟更可靠
@@ -384,27 +428,26 @@ fun AnimatedBackground(
 
                     // 使用 TextureView 替代 PlayerView，解决 HorizontalPager 中视频宽度适配和页面切换问题
                     // TextureView 在 View 层级中渲染，生命周期管理更简单，更适合 HorizontalPager
-                    val textureView =
-                        TextureView(ctx).apply {
+                    val textureViewInstance =
+                        AspectRatioTextureView(ctx).apply {
                             // 设置裁剪，防止视频超出边界
                             clipToOutline = true
 
                             // 关键优化：在设置 TextureView 之前就设置缩放模式
                             // 这样可以避免视频在初始加载时被错误缩放
-                            player.videoScalingMode =
-                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                            player.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
 
                             // 设置视频 TextureView
                             player.setVideoTextureView(this)
 
                             // 再次确保缩放模式正确（双重保险）
-                            player.videoScalingMode =
-                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                            player.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
 
                             LogUtils.d(
                                 "AnimatedBackground - TextureView 创建完成，videoUrl: $videoUrl, 缩放模式已设置"
                             )
                         }
+                    textureView = textureViewInstance
 
                     // 设置媒体项：优先使用缓存的本地路径，否则使用原始URL
                     // 如果 isVideoCached 为 true，videoPath 应该已经同步获取到了
@@ -420,28 +463,24 @@ fun AnimatedBackground(
                         "AnimatedBackground - [播放器创建] ✅ 设置视频路径: $pathToUse (factory, isVideoCached=$isVideoCached), playWhenReady=${player.playWhenReady}"
                     )
 
-                    textureView
+                    textureViewInstance
                 },
                 modifier = Modifier.matchParentSize().clipToBounds(),
                 update = { view ->
                     // 关键：在 update 块中确保 TextureView 和播放器正确连接
                     // 这解决了页面切换后屏幕黑掉的问题
-                    val textureView = view as? TextureView
-                    textureView?.let {
+                    val updatedTextureView = view as? AspectRatioTextureView
+                    if (updatedTextureView != null) {
+                        textureView = updatedTextureView
                         exoPlayer?.let { player ->
                             // 检查 TextureView 是否已设置，如果没有则设置
                             // TextureView 在 View 层级中，页面切换时不会丢失，但需要确保播放器连接正确
-                            player.setVideoTextureView(it)
-                            player.videoScalingMode =
-                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                            player.setVideoTextureView(updatedTextureView)
+                            player.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
 
                             // 确保缩放模式正确（防止运行时变化）
-                            if (
-                                player.videoScalingMode !=
-                                    C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                            ) {
-                                player.videoScalingMode =
-                                    C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                            if (player.videoScalingMode != C.VIDEO_SCALING_MODE_SCALE_TO_FIT) {
+                                player.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
                             }
 
                             // 更新视频路径（如果变化）：当 videoPath 准备好后，从 URL 切换到缓存路径
@@ -562,6 +601,7 @@ fun AnimatedBackground(
                         player.release()
                     }
                     exoPlayer = null
+                    textureView = null
                 }
             }
 
