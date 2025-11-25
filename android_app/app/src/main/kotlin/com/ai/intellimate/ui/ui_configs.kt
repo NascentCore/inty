@@ -26,7 +26,6 @@ object UiConfigs {
         val HeroGap = 30.dp
         val XLarge = 40.dp
         val VipHeroPlaceholder = 170.dp
-        val BottomTabIconLabel = (-6).dp
     }
 
     object Size {
@@ -127,5 +126,11 @@ object UiConfigs {
 
         /** Explore页面滚动 - 每次手势允许的最大即时位移 */
         const val SCROLL_DELTA_THRESHOLD = 500f
+    }
+
+    object BottomBar {
+        val Height = 64.dp
+        val TabIconSize = 26.dp
+        val TabIconLabelSpacing = (-6).dp
     }
 }
