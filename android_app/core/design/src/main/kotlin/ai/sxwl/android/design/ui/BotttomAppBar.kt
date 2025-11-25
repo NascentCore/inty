@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.offset
 
 /** 封装项目用的Bottom Navigation Bar */
 @Composable
@@ -97,8 +98,14 @@ fun HeartBottomAppBar(
                                 else -> ""
                             }
                         if (labelText.isNotEmpty()) {
+                            val labelModifier =
+                                if (labelSpacing.value >= 0f) {
+                                    Modifier.padding(top = labelSpacing)
+                                } else {
+                                    Modifier.offset(y = labelSpacing)
+                                }
                             Text(
-                                modifier = Modifier.padding(top = labelSpacing),
+                                modifier = labelModifier,
                                 text = labelText,
                                 fontSize = textSize,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
