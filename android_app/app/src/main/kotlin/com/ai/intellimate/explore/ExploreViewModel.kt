@@ -102,7 +102,6 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         PageTrackingHelper.trackPageView(
             pageName = "ExplorePage",
             pageClass = "ExploreViewModel",
-            additionalParams = mapOf("page_type" to "recommendations", "is_initial_load" to true),
         )
 
         // 使用app层的ExplorePagingRepository，支持事件回调

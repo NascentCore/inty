@@ -98,7 +98,7 @@ class MainActivity : BaseActivity() {
             return
         }
 
-        // 追踪页面访问，包含默认首页 tab index
+        // 追踪页面访问，包含默认首页 tab
         val defaultTabIndex =
             try {
                 FirebaseManager.getRemoteConfigLong(
@@ -107,13 +107,17 @@ class MainActivity : BaseActivity() {
             } catch (e: Exception) {
                 0 // 默认值：Chat tab
             }
+        val defaultTabName =
+            when (defaultTabIndex) {
+                0 -> "chat"
+                3 -> "explore"
+                else -> "other"
+            }
         PageTrackingHelper.trackPageView(
             "MainPage",
             "MainActivity",
             mapOf(
-                "default_home_tab_index" to defaultTabIndex,
-                "default_home_tab_name" to
-                        if (defaultTabIndex == 0) "chat" else if (defaultTabIndex == 3) "explore" else "other",
+                "default_home_tab" to defaultTabName,
             ),
         )
 
