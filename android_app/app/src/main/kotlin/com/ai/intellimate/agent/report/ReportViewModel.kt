@@ -174,6 +174,11 @@ class ReportViewModel : BaseVM() {
                         targetType = if (isFeedbackMode) null else targetType,
                         description = description.value.trim(),
                         imageUrls = uploadedImageUrls + remoteImages.toList(),
+                        reportType = if (isFeedbackMode) {
+                            ReportService.ReportType.FEEDBACK
+                        } else {
+                            ReportService.ReportType.REPORT
+                        },
                     )
 
                 when (result) {
