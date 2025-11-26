@@ -243,20 +243,21 @@ private fun MessageTabContent(
                     .onFailure { it.printStackTrace() }
             }
 
-            // 加载更多指示器
-            if (uiState.isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(80.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-                }
-            }
+            // 加载更多指示器；有多页的消息记录显示时显示加载更多指示器，就是一个转动的圆圈。
+            // 暂时隐藏，避免影响用户体验。可以随时恢复。
+            // if (uiState.isLoading) {
+            //     item {
+            //         Box(
+            //             modifier = Modifier.fillMaxWidth().height(80.dp),
+            //             contentAlignment = Alignment.Center,
+            //         ) {
+            //             CircularProgressIndicator(
+            //                 color = Color.White,
+            //                 modifier = Modifier.size(24.dp),
+            //             )
+            //         }
+            //     }
+            // }
         }
 
         // 显示菜单（在 LazyColumn 外部）
