@@ -37,6 +37,7 @@ firebase:
 
 agent:
   model: "google/gemini-2.5-flash"
+  chat_provider: "openrouter"  # 可选：openrouter / gemini_native
   {{ agent__api_key }}
   base_url: "https://openrouter.ai/api/v1"
   enable_debug_logging: true

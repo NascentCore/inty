@@ -18,6 +18,7 @@ google_oauth:
   redirect_uri: "http://localhost:8000/api/v1/auth/google/callback"
 
 agent:
+  chat_provider: "openrouter"
   api_key: "<fill-in-your-openrouter-api-key>"
   langchain_api_key: "<fill-in-your-langchain_api_key>"
 

@@ -3,6 +3,7 @@ import pytest
 from app.core.config import (
     AgentConfig,
     AppConfig,
+    ChatProvider,
     CloudflareConfig,
     Config,
     DatabaseSettings,
@@ -225,6 +226,34 @@ def test_guest_equals_free_is_valid():
     assert config.app.limits.free_user_chat_24h_limit == 10
     assert config.app.limits.guest_user_voice_24h_limit == 10
     assert config.app.limits.free_user_voice_24h_limit == 10
+
+
+def test_validate_config_allows_missing_agent_api_key_for_gemini():
+    """Gemini 原生客户端无需配置 OpenRouter API Key"""
+    config = Config(
+        app=AppConfig(name="test"),
+        security=SecurityConfig(secret_key="test"),
+        database=DatabaseSettings(),
+        google_oauth=GoogleOAuthConfig(),
+        verification=VerificationConfig(),
+        logging=LoggingConfig(),
+        embedding=EmbeddingConfig(),
+        agent=AgentConfig(
+            api_key="",
+            langchain_api_key="test",
+            chat_provider=ChatProvider.GEMINI_NATIVE,
+        ),
+        gcs=GCSConfig(bucket="test"),
+        firebase=FirebaseConfig(service_account_path="test"),
+        google_play=GooglePlayConfig(),
+        elevenlabs=ElevenLabsConfig(api_key="test"),
+        cloudflare=CloudflareConfig(),
+        sentry=SentryConfig(),
+        push_notification=PushNotificationConfig(),
+    )
+
+    # 不应抛出异常
+    _validate_config(config)
 
 
 def test_local_only_guest_user_image_gen_limit_in_non_local_environment(config):

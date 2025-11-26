@@ -87,3 +87,9 @@ alembic upgrade head
 - Config/Logging: 集中配置与日志在 `app/core/config.py`、`app/core/logging.py`。
 - Middleware: 错误处理中间件见 `app/middleware/error_handler.py`。
 - OpenAPI/SDK: `app/openapi.json` 与仓库根部 `stainless.yml` 协同 Stainless 生成多语言 SDK（详见本 README 前半部分说明）。
+
+## 模型提供商切换
+
+- 后端聊天模型的全局提供商由 `config.yaml` 中的 `agent.chat_provider` 控制，可选值为 `openrouter`（默认，通过 OpenAI SDK 兼容层调用 OpenRouter）或 `gemini_native`（通过 `google.genai` 原生客户端调用 Gemini）。
+- 单个角色可在 `settings.llm_config.chat_provider` 中覆写该设置，未显式指定时会继承全局配置。
+- 当设置为 `gemini_native` 时，`app/utils/gemini.py` 会基于 `app.gcp_service_account_key` 指定的服务账号创建 Vertex AI/Gemini 客户端，后端将直接走 Google SDK，跳过 OpenAI/OpenRouter 兼容层。

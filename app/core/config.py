@@ -33,6 +33,13 @@ class Environment(str, Enum):
     UNSPECIFIED = "unspecified"
 
 
+class ChatProvider(str, Enum):
+    """LLM 聊天调用提供商"""
+
+    OPENROUTER = "openrouter"
+    GEMINI_NATIVE = "gemini_native"
+
+
 from app.api.constants import API_V2_PREFIX
 
 
@@ -159,6 +166,7 @@ class EmbeddingConfig:
 class AgentConfig:
     api_key: str
     langchain_api_key: str
+    chat_provider: ChatProvider = ChatProvider.OPENROUTER
     model: str = GEMINI_2_5_FLASH
     base_url: str = OPENROUTER_BASE_URL
     temperature: float = 0.5
@@ -323,6 +331,10 @@ def load_config(path: str) -> Config:
     if "environment" in app_data and isinstance(app_data["environment"], str):
         app_data["environment"] = Environment(app_data["environment"])
 
+    agent_data = data.get("agent", {})
+    if "chat_provider" in agent_data and isinstance(agent_data["chat_provider"], str):
+        agent_data["chat_provider"] = ChatProvider(agent_data["chat_provider"])
+
     return Config(
         app=AppConfig(**app_data),
         security=SecurityConfig(**data.get("security", {})),
@@ -331,7 +343,7 @@ def load_config(path: str) -> Config:
         verification=VerificationConfig(**data.get("verification", {})),
         logging=LoggingConfig(**data.get("logging", {})),
         embedding=EmbeddingConfig(**data.get("embedding", {})),
-        agent=AgentConfig(**data.get("agent", {})),
+        agent=AgentConfig(**agent_data),
         gcs=GCSConfig(**data.get("gcs", {})),
         firebase=FirebaseConfig(**data.get("firebase", {})),
         google_play=GooglePlayConfig(**data.get("google_play", {})),
@@ -346,7 +358,10 @@ def _validate_config(config: Config):
     """Validate config values with auto-correction"""
     if not config.app.gcp_service_account_key:
         raise ValueError("app.gcp_service_account_key is required")
-    if not config.agent.api_key:
+    if (
+        config.agent.chat_provider == ChatProvider.OPENROUTER
+        and not config.agent.api_key
+    ):
         raise ValueError("agent.api_key is required")
     if not config.agent.langchain_api_key:
         raise ValueError("agent.langchain_api_key is required")

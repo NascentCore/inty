@@ -2,7 +2,7 @@ import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, RLock
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_postgres import PostgresChatMessageHistory
@@ -15,13 +15,14 @@ from openai import (
     OpenAI,
     RateLimitError,
 )
+from google.genai import types as genai_types
 from psycopg_pool import ConnectionPool
 from sqlalchemy import text
 from typing_extensions import deprecated
 
 from app import models
 from app.core.agent import prompt_template, prompts
-from app.core.config import global_config_loaded_from_config_yaml
+from app.core.config import ChatProvider, global_config_loaded_from_config_yaml
 from app.models import chat_history
 from app.services.cache_service import cache_service
 from app.utils.openai_client import (
@@ -29,6 +30,7 @@ from app.utils.openai_client import (
     langchain_message_to_openai_message,
     wrap_client_with_langsmith,
 )
+from app.utils.gemini import get_genai_client
 
 
 def get_agent_model_config(agent_data: dict) -> dict:
@@ -84,6 +86,16 @@ def get_agent_model_config(agent_data: dict) -> dict:
             )
         if not model_config.get("model"):
             model_config["model"] = global_config_loaded_from_config_yaml.agent.model
+
+    default_chat_provider = (
+        global_config_loaded_from_config_yaml.agent.chat_provider.value
+    )
+    chat_provider_value = model_config.get("chat_provider")
+    if isinstance(chat_provider_value, ChatProvider):
+        chat_provider_value = chat_provider_value.value
+    if not chat_provider_value:
+        chat_provider_value = default_chat_provider
+    model_config["chat_provider"] = chat_provider_value
 
     return model_config
 
@@ -173,6 +185,17 @@ class Agent:
         self.agent_id = agent_id
         self.name = name
         self.model_config = model_config
+        chat_provider_value = self.model_config.get(
+            "chat_provider",
+            global_config_loaded_from_config_yaml.agent.chat_provider.value,
+        )
+        try:
+            self.chat_provider = ChatProvider(chat_provider_value)
+        except ValueError:
+            logger.warning(
+                f"未知的聊天提供商 {chat_provider_value}，回退到 openrouter"
+            )
+            self.chat_provider = ChatProvider.OPENROUTER
         self.last_used = time.time()
         self.description = description
         self._last_used_lock = RLock()
@@ -706,6 +729,149 @@ class Agent:
         # 如果所有重试都失败，抛出最后一次的错误
         raise last_error
 
+    def _normalize_gemini_model_name(self, model_name: str) -> str:
+        """
+        Gemini SDK 使用不带 provider 前缀的模型名称。
+        """
+        if not model_name:
+            return global_config_loaded_from_config_yaml.agent.model.split("/", 1)[-1]
+        if "/" in model_name:
+            return model_name.split("/", 1)[-1]
+        return model_name
+
+    def _build_gemini_request_payload(
+        self, openai_messages: List[Dict[str, Any]]
+    ) -> Tuple[Optional[str], List[genai_types.Content]]:
+        """
+        将 OpenAI 风格消息转换为 Gemini SDK 输入
+        """
+        system_messages: List[str] = []
+        contents: List[genai_types.Content] = []
+
+        for message in openai_messages:
+            role = message.get("role", "")
+            message_content = message.get("content")
+            if message_content is None:
+                continue
+
+            if isinstance(message_content, list):
+                text_parts = []
+                for part in message_content:
+                    if isinstance(part, dict) and part.get("text"):
+                        text_parts.append(str(part["text"]))
+                    elif isinstance(part, str):
+                        text_parts.append(part)
+                text_content = "".join(text_parts).strip()
+            else:
+                text_content = str(message_content).strip()
+
+            if not text_content:
+                continue
+
+            if role == "system":
+                system_messages.append(text_content)
+                continue
+
+            if role == "assistant":
+                gemini_role = "model"
+            elif role == "user":
+                gemini_role = "user"
+            else:
+                gemini_role = "user"
+
+            contents.append(
+                genai_types.Content(
+                    role=gemini_role,
+                    parts=[genai_types.Part.from_text(text_content)],
+                )
+            )
+
+        system_instruction = (
+            "\n\n".join(system_messages) if system_messages else None
+        )
+        return system_instruction, contents
+
+    def _extract_text_from_gemini_response(self, response) -> str:
+        """
+        提取 Gemini 响应中的文本内容
+        """
+        candidates = getattr(response, "candidates", None)
+        if not candidates:
+            raise ValueError("Gemini 未返回任何候选结果")
+
+        candidate = candidates[0]
+        content = getattr(candidate, "content", None)
+        parts = getattr(content, "parts", None) if content else None
+
+        texts: List[str] = []
+        if parts:
+            for part in parts:
+                text_value = getattr(part, "text", None)
+                if not text_value:
+                    continue
+                if getattr(part, "thought", False):
+                    continue
+                texts.append(text_value)
+
+        if not texts:
+            fallback_text = getattr(response, "text", None) or getattr(
+                candidate, "text", None
+            )
+            if fallback_text:
+                return fallback_text.strip()
+            raise ValueError("Gemini 响应中没有文本内容")
+
+        return "".join(texts).strip()
+
+    def _call_gemini_chat_api(
+        self,
+        openai_messages: List[Dict[str, Any]],
+        model: str,
+        temperature: Optional[float],
+        max_tokens: Optional[int],
+        top_p: Optional[float],
+        user_id: str,
+    ) -> str:
+        """
+        调用 Gemini 原生 SDK
+        """
+        system_instruction, contents = self._build_gemini_request_payload(
+            openai_messages
+        )
+        if not contents:
+            raise ValueError("Gemini 请求内容为空")
+
+        config_kwargs: Dict[str, Any] = {
+            "thinking_config": genai_types.ThinkingConfig(thinking_budget=0),
+        }
+        if temperature is not None:
+            config_kwargs["temperature"] = temperature
+        if max_tokens is not None:
+            config_kwargs["max_output_tokens"] = max_tokens
+        if top_p is not None:
+            config_kwargs["top_p"] = top_p
+
+        generation_config = genai_types.GenerateContentConfig(**config_kwargs)
+        client = get_genai_client()
+
+        request_kwargs = {
+            "model": self._normalize_gemini_model_name(model),
+            "contents": contents,
+            "config": generation_config,
+        }
+        if system_instruction:
+            request_kwargs["system_instruction"] = system_instruction
+
+        try:
+            response = client.models.generate_content(**request_kwargs)
+            return self._extract_text_from_gemini_response(response)
+        except Exception as error:
+            logger.error(
+                f"Gemini SDK 调用失败 - Agent: {self.agent_id}, User: {user_id}, "
+                f"Model: {model}, Error: {error}"
+            )
+            raise
+
     def _chat_sync_optimized(
         self,
         user_id: str,
@@ -800,12 +966,14 @@ class Agent:
                 default_top_p = global_config_loaded_from_config_yaml.agent.top_p
 
                 # 获取或创建wrapped client（性能优化：复用客户端）
-                client_start = time.time()
-                client = self._get_wrapped_client(chat_name, labels)
-                client_time = time.time() - client_start
-                logger.debug(
-                    f"客户端获取耗时: {client_time:.3f}秒 - Agent: {self.agent_id}"
-                )
+                client = None
+                if self.chat_provider == ChatProvider.OPENROUTER:
+                    client_start = time.time()
+                    client = self._get_wrapped_client(chat_name, labels)
+                    client_time = time.time() - client_start
+                    logger.debug(
+                        f"客户端获取耗时: {client_time:.3f}秒 - Agent: {self.agent_id}"
+                    )
 
                 # API调用（带重试机制）
                 api_start = time.time()
@@ -814,74 +982,121 @@ class Agent:
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
 
-                try:
-                    response = self._call_openai_api_with_retry(
-                        client=client,
-                        model=model_name,
-                        openai_messages=openai_messages,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        top_p=top_p,
-                        extra_body={
-                            # This only works for Gemini models.
-                            "generation_config": {
-                                "thinking_budget": 0,
+                response_text: str = ""
+                response_process_time = 0.0
+                if self.chat_provider == ChatProvider.OPENROUTER:
+                    try:
+                        response = self._call_openai_api_with_retry(
+                            client=client,
+                            model=model_name,
+                            openai_messages=openai_messages,
+                            temperature=temperature,
+                            max_tokens=max_tokens,
+                            top_p=top_p,
+                            extra_body={
+                                # This only works for Gemini models.
+                                "generation_config": {
+                                    "thinking_budget": 0,
+                                },
+                                # This appears on Open Router Client User ID field.
+                                # can be used to track end user's usage.
+                                "user": user_id,
                             },
-                            # This appears on Open Router Client User ID field.
-                            # can be used to track end user's usage.
-                            "user": user_id,
-                        },
-                        user_id=user_id,
-                        max_retries=3,
-                        initial_delay=1.0,
-                    )
-                except Exception as api_error:
-                    # 记录详细的错误信息
-                    error_context = {
-                        "agent_id": self.agent_id,
-                        "user_id": user_id,
-                        "session_id": session_id,
-                        "model": model_name,
-                        "message_count": len(openai_messages),
-                        "temperature": temperature,
-                        "max_tokens": max_tokens,
-                        "top_p": top_p,
-                        "error_type": type(api_error).__name__,
-                        "error_message": str(api_error),
-                    }
-
-                    # 如果是APIError，记录更多信息
-                    if isinstance(api_error, APIError):
-                        error_context["status_code"] = getattr(
-                            api_error, "status_code", None
+                            user_id=user_id,
+                            max_retries=3,
+                            initial_delay=1.0,
                         )
-                        error_context["error_body"] = getattr(api_error, "body", None)
-                        error_context["error_code"] = getattr(api_error, "code", None)
+                    except Exception as api_error:
+                        # 记录详细的错误信息
+                        error_context = {
+                            "agent_id": self.agent_id,
+                            "user_id": user_id,
+                            "session_id": session_id,
+                            "model": model_name,
+                            "message_count": len(openai_messages),
+                            "temperature": temperature,
+                            "max_tokens": max_tokens,
+                            "top_p": top_p,
+                            "error_type": type(api_error).__name__,
+                            "error_message": str(api_error),
+                        }
 
-                    logger.error(
-                        f"OpenRouter API调用最终失败 - "
-                        f"Agent: {self.agent_id}, User: {user_id}, "
-                        f"Session: {session_id}, Model: {model_name}, "
-                        f"Error: {str(api_error)}"
+                        # 如果是APIError，记录更多信息
+                        if isinstance(api_error, APIError):
+                            error_context["status_code"] = getattr(
+                                api_error, "status_code", None
+                            )
+                            error_context["error_body"] = getattr(api_error, "body", None)
+                            error_context["error_code"] = getattr(api_error, "code", None)
+
+                        logger.error(
+                            f"OpenRouter API调用最终失败 - "
+                            f"Agent: {self.agent_id}, User: {user_id}, "
+                            f"Session: {session_id}, Model: {model_name}, "
+                            f"Error: {str(api_error)}"
+                        )
+                        logger.error(f"完整错误上下文: {error_context}")
+                        raise
+
+                    api_time = time.time() - api_start
+                    logger.debug(
+                        f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}"
                     )
-                    logger.error(f"完整错误上下文: {error_context}")
-                    raise
 
-                api_time = time.time() - api_start
-                logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
+                    agent_invoke_time = time.time() - agent_invoke_start
+                    logger.debug(
+                        f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
+                    )
 
-                agent_invoke_time = time.time() - agent_invoke_start
-                logger.debug(
-                    f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
-                )
+                    response_process_start = time.time()
+                    response_text = response.choices[0].message.content
+                    response_process_time = time.time() - response_process_start
+                    logger.debug(
+                        f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
+                    )
+                else:
+                    try:
+                        response_text = self._call_gemini_chat_api(
+                            openai_messages=openai_messages,
+                            model=model_name,
+                            temperature=temperature,
+                            max_tokens=max_tokens,
+                            top_p=top_p,
+                            user_id=user_id,
+                        )
+                    except Exception as api_error:
+                        error_context = {
+                            "agent_id": self.agent_id,
+                            "user_id": user_id,
+                            "session_id": session_id,
+                            "model": model_name,
+                            "message_count": len(openai_messages),
+                            "temperature": temperature,
+                            "max_tokens": max_tokens,
+                            "top_p": top_p,
+                            "chat_provider": self.chat_provider.value,
+                            "error_type": type(api_error).__name__,
+                            "error_message": str(api_error),
+                        }
+                        logger.error(
+                            f"Gemini SDK 调用最终失败 - Agent: {self.agent_id}, "
+                            f"User: {user_id}, Session: {session_id}, "
+                            f"Model: {model_name}, Error: {api_error}"
+                        )
+                        logger.error(f"完整错误上下文: {error_context}")
+                        raise
 
-                # 处理响应
-                response_process_start = time.time()
-                response_text = response.choices[0].message.content
-                response_process_time = time.time() - response_process_start
-                logger.debug(
-                    f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
-                )
+                    api_time = time.time() - api_start
+                    logger.debug(
+                        f"Gemini API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}"
+                    )
+                    agent_invoke_time = time.time() - agent_invoke_start
+                    logger.debug(
+                        f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
+                    )
+                    logger.debug(
+                        f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
+                    )
 
                 # 保存AI响应到历史记录
                 save_response_start = time.time()
@@ -1028,35 +1243,60 @@ class Agent:
                 default_top_p = global_config_loaded_from_config_yaml.agent.top_p
 
                 # 获取或创建wrapped client（性能优化：复用客户端）
-                client_start = time.time()
-                client = self._get_wrapped_client(chat_name, labels)
-                client_time = time.time() - client_start
-                logger.debug(
-                    f"客户端获取耗时: {client_time:.3f}秒 - Agent: {self.agent_id}"
+                client = None
+                if self.chat_provider == ChatProvider.OPENROUTER:
+                    client_start = time.time()
+                    client = self._get_wrapped_client(chat_name, labels)
+                    client_time = time.time() - client_start
+                    logger.debug(
+                        f"客户端获取耗时: {client_time:.3f}秒 - Agent: {self.agent_id}"
+                    )
+
+                model_name = self.model_config.get("model", default_model)
+                temperature = self.model_config.get(
+                    "temperature", default_temperature
                 )
+                max_tokens = self.model_config.get("max_tokens", default_max_tokens)
+                top_p = self.model_config.get("top_p", default_top_p)
 
                 # API调用
                 api_start = time.time()
-                response = client.chat.completions.create(
-                    messages=openai_messages,
-                    model=self.model_config.get("model", default_model),
-                    temperature=self.model_config.get(
-                        "temperature", default_temperature
-                    ),
-                    max_tokens=self.model_config.get("max_tokens", default_max_tokens),
-                    top_p=self.model_config.get("top_p", default_top_p),
-                    extra_body={
-                        # This only works for Gemini models.
-                        "generation_config": {
-                            "thinking_budget": 0,
+                response_text: str
+                response_process_time = 0.0
+                if self.chat_provider == ChatProvider.OPENROUTER:
+                    response = client.chat.completions.create(
+                        messages=openai_messages,
+                        model=model_name,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                        extra_body={
+                            # This only works for Gemini models.
+                            "generation_config": {
+                                "thinking_budget": 0,
+                            },
+                            # This appears on Open Router Client User ID field.
+                            # can be used to track end user's usage.
+                            "user": user_id,
                         },
-                        # This appears on Open Router Client User ID field.
-                        # can be used to track end user's usage.
-                        "user": user_id,
-                    },
-                )
+                    )
+                    response_process_start = time.time()
+                    response_text = response.choices[0].message.content
+                    response_process_time = time.time() - response_process_start
+                else:
+                    response_text = self._call_gemini_chat_api(
+                        openai_messages=openai_messages,
+                        model=model_name,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                        user_id=user_id,
+                    )
+
                 api_time = time.time() - api_start
-                logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
+                logger.debug(
+                    f"{self.chat_provider.value} API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}"
+                )
 
                 agent_invoke_time = time.time() - agent_invoke_start
                 logger.debug(
@@ -1064,9 +1304,6 @@ class Agent:
                 )
 
                 # 处理响应
-                response_process_start = time.time()
-                response_text = response.choices[0].message.content
-                response_process_time = time.time() - response_process_start
                 logger.debug(
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
                 )
