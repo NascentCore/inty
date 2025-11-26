@@ -16,9 +16,10 @@
 
 ### 文档索引
 
-- **[业务事件文档](./FIREBASE_BUSINESS_EVENTS.md)** - 所有业务相关事件的详细说明
-- **[事件完整文档](./FIREBASE_EVENTS_DOCUMENTATION.md)** - Analytics 和 Performance 事件的完整列表
+- **[业务事件文档](./FIREBASE_BUSINESS_EVENTS.md)** - 业务事件的统一管理文档，面向产品、运营、数据分析师，关注业务含义和价值
+- **[事件完整文档](./FIREBASE_EVENTS_DOCUMENTATION.md)** - Analytics 和 Performance 事件的完整技术文档，面向开发人员，包含所有技术细节和实现
 - **[Firebase 参数类型指南](./FIREBASE_PARAMETER_TYPES_GUIDE.md)** - 自定义维度、自定义指标、计算指标的区别和项目参数分类
+- **[Firebase 维度分析](./FIREBASE_DIMENSIONS_ANALYSIS.md)** - 自定义维度使用情况分析和优化建议
 
 ### 核心事件说明
 
