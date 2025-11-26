@@ -96,6 +96,7 @@ internal fun ChatPage(
     onInputFocusChange: (Boolean) -> Unit = {},
     onKeyboardVisible: (Boolean) -> Unit = {},
     pageSourceOverride: String? = null, // 如果提供，则使用此 pageSource（通常来自 ChatActivity）
+    isGuideVisible: Boolean = false
 ) {
 
     val context = LocalContext.current
@@ -415,8 +416,8 @@ internal fun ChatPage(
                                                     item,
                                                     isCurrentPage = isCurrentPage,
                                                     chatViewModel = chatViewModel,
-                                                    isLatestMessage =
-                                                        isLatestAssistantTextMessage,
+                                                    isLatestMessage = isLatestAssistantTextMessage,
+                                                    isGuideVisible = isGuideVisible
                                                 )
                                             }
                                             Spacer(Modifier.height(16.dp))
@@ -484,6 +485,7 @@ internal fun ChatPage(
                                             openingMessage,
                                             isCurrentPage = isCurrentPage,
                                             chatViewModel = chatViewModel,
+                                            isGuideVisible = isGuideVisible
                                         )
                                         Spacer(Modifier.height(16.dp))
                                     }
