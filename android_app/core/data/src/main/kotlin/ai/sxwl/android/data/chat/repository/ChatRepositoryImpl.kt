@@ -432,11 +432,12 @@ class ChatRepositoryImpl(
 
         // 在触发消息上设置 loading 状态：通过设置一个临时的 generatedImage（imageUrl 为 "loading"）
         // 这样图片会显示在触发消息的下方，而不是创建新消息
+        // 使用 9:16 的宽高比（竖屏），与生成的图片尺寸匹配
         val loadingImage =
             MsgInfo.MsgMetaData.GeneratedImage(
                 imageUrl = "loading", // 特殊标记，表示正在生成图片
                 width = 300,
-                height = 300,
+                height = 533, // 9:16 比例 (300 * 16 / 9 ≈ 533)
             )
         localDataSource.updateMessageGeneratedImage(agentId, messageId, loadingImage)
 
