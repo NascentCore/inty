@@ -244,6 +244,7 @@ private fun MessageTabContent(
             }
 
             // 加载更多指示器；有多页的消息记录显示时显示加载更多指示器，就是一个转动的圆圈。
+            // 暂时隐藏，避免影响用户体验。可以随时恢复。
             // if (uiState.isLoading) {
             //     item {
             //         Box(
