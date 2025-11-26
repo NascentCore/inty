@@ -132,14 +132,14 @@ bundle.putDouble("discount_rate", discountRate)
 
 #### 页面追踪维度（中优先级）
 
-| 参数名称 | 事件范围 | 说明 | 使用事件 |
-|---------|---------|------|---------|
-| `page_name` | 事件 | 页面名称 | 页面追踪事件 |
-| `page_class` | 事件 | 页面类名 | 页面追踪事件 |
-| `page_source` | 事件 | 页面来源 | SCREEN_VIEW |
-| `page_type` | 事件 | 页面类型 | SCREEN_VIEW（explore 页面） |
-| `default_home_tab_name` | 事件 | 默认首页 tab 名称 | SCREEN_VIEW（MainPage/HomePage） |
-| `current_tab_name` | 事件 | 当前选中的 tab 名称 | SCREEN_VIEW（HomePage） |
+| 参数名称 | 事件范围 | 说明 | 使用事件 | 状态 |
+|---------|---------|------|---------|------|
+| `page_name` | 事件 | 页面名称 | 页面追踪事件 | ✅ 保留（Firebase 内置） |
+| `page_class` | 事件 | 页面类名 | 页面追踪事件 | ✅ 保留（Firebase 内置） |
+| `page_source` | 事件 | 页面来源 | SCREEN_VIEW | ✅ 保留（业务相关） |
+| `default_home_tab` | 事件 | 默认首页 tab 名称（值为 "chat"/"explore"/"other"） | SCREEN_VIEW（MainPage/HomePage） |
+| `current_tab` | 事件 | 当前选中的 tab 名称（值为 "chat"/"conversation"/"create"/"explore"/"profile"） | SCREEN_VIEW（HomePage） |
+| ~~`page_type`~~ | ~~事件~~ | ~~页面类型~~ | ~~SCREEN_VIEW（explore 页面）~~ | ❌ **已移除**（仅用于 explore 页面，价值较低） |
 
 #### Agent切换维度（中优先级）
 
@@ -153,36 +153,44 @@ bundle.putDouble("discount_rate", discountRate)
 
 #### 其他维度（中优先级）
 
-| 参数名称 | 事件范围 | 说明 | 使用事件 |
-|---------|---------|------|---------|
-| `play_status` | 事件 | 播放状态 | audio_play_end |
-| `user_logged_out` | 事件 | 用户是否已登出 | auth_failure |
-| `is_initial_load` | 事件 | 是否为初始加载 | SCREEN_VIEW（explore 页面） |
-| `success` | 事件 | 操作是否成功 | 网络请求相关事件 |
-| `image_url` | 事件 | 图片 URL | image_generation_success |
-| `audio_url` | 事件 | 音频 URL | audio_play_end |
-| `url` | 事件 | 请求 URL | slow_request, very_slow_request, request_failure |
-| `method` | 事件 | HTTP 方法 | slow_request, very_slow_request, request_failure |
-| `message_timestamp` | 事件 | 消息时间戳 | message_like, message_dislike |
+| 参数名称 | 事件范围 | 说明 | 使用事件 | 状态 |
+|---------|---------|------|---------|------|
+| `user_logged_out` | 事件 | 用户是否已登出 | auth_failure | ✅ 保留 |
+| ~~`play_status`~~ | ~~事件~~ | ~~播放状态~~ | ~~audio_play_end~~ | ⚠️ **建议移除**（非核心业务） |
+| ~~`is_initial_load`~~ | ~~事件~~ | ~~是否为初始加载~~ | ~~SCREEN_VIEW（explore 页面）~~ | ❌ **已移除**（仅用于 explore 页面，价值较低） |
+| ~~`success`~~ | ~~事件~~ | ~~操作是否成功~~ | ~~网络请求相关事件~~ | ❌ **已移除**（性能相关，非业务） |
+| ~~`image_url`~~ | ~~事件~~ | ~~图片 URL~~ | ~~image_generation_success~~ | ❌ **已移除**（URL 太长，非业务） |
+| ~~`audio_url`~~ | ~~事件~~ | ~~音频 URL~~ | ~~audio_play_end~~ | ❌ **已移除**（URL 太长，非业务） |
+| ~~`url`~~ | ~~事件~~ | ~~请求 URL~~ | ~~slow_request, very_slow_request, request_failure~~ | ❌ **已移除**（性能相关，非业务） |
+| ~~`method`~~ | ~~事件~~ | ~~HTTP 方法~~ | ~~slow_request, very_slow_request, request_failure~~ | ❌ **已移除**（性能相关，非业务） |
+| ~~`message_timestamp`~~ | ~~事件~~ | ~~消息时间戳~~ | ~~message_like, message_dislike~~ | ❌ **已移除**（已有 timestamp 指标） |
 
 #### 布尔值维度（作为字符串维度）
 
-| 参数名称 | 事件范围 | 说明 | 使用事件 |
-|---------|---------|------|---------|
-| `is_auto_play` | 事件 | 是否自动播放 | voice_playback_start, audio_play_end |
-| `is_manual_click` | 事件 | 是否手动点击 | voice_playback_start |
-| `has_audio_url` | 事件 | 是否有音频 URL | voice_playback_start |
-| `has_generated_image` | 事件 | 是否有生成的图片 | message_like, message_dislike |
-| `is_opening` | 事件 | 是否为开场消息 | message_like, message_dislike |
-| `is_selected` | 事件 | 是否被选中 | subscription_price_displayed |
-| `is_subscribed` | 事件 | 是否已订阅 | subscription_price_displayed |
-| `price_changed` | 事件 | 价格是否变化 | subscription_price_fetched |
-| `currency_changed` | 事件 | 货币是否变化 | subscription_price_fetched |
-| `micros_changed` | 事件 | 微单位是否变化 | subscription_price_fetched |
-| `remote_config_auto_enable_keep_talking` | 事件 | Remote Config Keep Talking 开关默认值 | APP_OPEN |
-| `remote_config_auto_play_opening_voice` | 事件 | Remote Config Auto Play Opening Voice 开关默认值 | APP_OPEN |
+| 参数名称 | 事件范围 | 说明 | 使用事件 | 状态 |
+|---------|---------|------|---------|------|
+| `is_auto_play` | 事件 | 是否自动播放 | voice_playback_start, audio_play_end | ✅ 保留（业务相关） |
+| `has_generated_image` | 事件 | 是否有生成的图片 | message_like, message_dislike | ✅ 保留（业务相关） |
+| `is_opening` | 事件 | 是否为开场消息 | message_like, message_dislike | ✅ 保留（业务相关） |
+| `is_selected` | 事件 | 是否被选中 | subscription_price_displayed | ✅ 保留（订阅相关） |
+| `is_subscribed` | 事件 | 是否已订阅 | subscription_price_displayed | ✅ 保留（订阅相关） |
+| `price_changed` | 事件 | 价格是否变化 | subscription_price_fetched | ✅ 保留（订阅相关） |
+| `currency_changed` | 事件 | 货币是否变化 | subscription_price_fetched | ✅ 保留（订阅相关） |
+| `micros_changed` | 事件 | 微单位是否变化 | subscription_price_fetched | ✅ 保留（订阅相关） |
+| `remote_config_auto_enable_keep_talking` | 事件 | Remote Config Keep Talking 开关默认值 | APP_OPEN | ✅ 保留（业务相关） |
+| `remote_config_auto_play_opening_voice` | 事件 | Remote Config Auto Play Opening Voice 开关默认值 | APP_OPEN | ✅ 保留（业务相关） |
+| ~~`is_manual_click`~~ | ~~事件~~ | ~~是否手动点击~~ | ~~voice_playback_start~~ | ❌ **已移除**（与 is_auto_play 互补，未使用） |
+| ~~`has_audio_url`~~ | ~~事件~~ | ~~是否有音频 URL~~ | ~~voice_playback_start~~ | ❌ **已移除**（非核心业务） |
 
-**自定义维度总计**：约 **51 个**（超过 50 个限制，需要优化或移除部分低优先级参数）
+**自定义维度总计：39 个**（在 50 个限制范围内，使用率 78%，剩余 11 个配额）✅
+
+**参数简化说明**：
+- `default_home_tab_index` + `default_home_tab_name` → `default_home_tab`（只保留 name，更直观）
+- `current_tab_index` + `current_tab_name` → `current_tab`（只保留 name，更直观）
+
+**已移除的维度（11 个）**：
+- 性能/调试相关（5 个）：`success`、`url`、`method`、`image_url`、`audio_url` ✅
+- 低价值业务维度（6 个）：`page_type`、`is_initial_load`、`play_status`、`is_manual_click`、`has_audio_url`、`message_timestamp` ✅
 
 ### 3.2 自定义指标（数值类型参数）
 
@@ -214,8 +222,6 @@ bundle.putDouble("discount_rate", discountRate)
 | `sort_seed` | 事件 | 排序种子 | explore_agents_fetch_* |
 | `selected_plan_index` | 事件 | 选中的计划索引 | subscription_price_displayed |
 | `total_plans_count` | 事件 | 计划总数 | subscription_price_displayed |
-| `default_home_tab_index` | 事件 | 默认首页 tab 索引 | SCREEN_VIEW（MainPage/HomePage） |
-| `current_tab_index` | 事件 | 当前选中的 tab 索引 | SCREEN_VIEW（HomePage） |
 | `remote_config_home_page_default_tab_index` | 事件 | Remote Config 首页默认 Tab 索引 | APP_OPEN |
 
 #### 价格相关指标（高优先级）
@@ -242,7 +248,7 @@ bundle.putDouble("discount_rate", discountRate)
 | `metric_value` | 事件 | 指标值 | AI_RESPONSE_TIME, EXPLORE_RESPONSE_TIME, TTS_GENERATION_TIME, IMAGE_GENERATION_TIME |
 | `metric_unit` | 事件 | 指标单位 | AI_RESPONSE_TIME, EXPLORE_RESPONSE_TIME, TTS_GENERATION_TIME, IMAGE_GENERATION_TIME |
 
-**自定义指标总计**：约 **28 个**（在 50 个限制范围内，使用率56%，剩余22个配额）
+**自定义指标总计**：约 **26 个**（在 50 个限制范围内，使用率52%，剩余24个配额）
 
 ### 3.3 计算指标（建议创建）
 
@@ -353,8 +359,11 @@ bundle.putDouble("discount_rate", discountRate)
 
 ### 5.2 配额使用情况
 
-- **自定义维度**：约 51 个（超过 50 个限制，需要优化或移除部分低优先级参数）⚠️
-- **自定义指标**：约 28 个（在 50 个限制范围内，使用率56%）✅
+- **自定义维度**：39 个（在 50 个限制范围内，使用率 78%，剩余 11 个配额）✅
+  - **已移除的维度（11 个）**：
+    - 性能/调试相关（5 个）：`success`、`url`、`method`、`image_url`、`audio_url` ✅
+    - 低价值业务维度（6 个）：`page_type`、`is_initial_load`、`play_status`、`is_manual_click`、`has_audio_url`、`message_timestamp` ✅
+- **自定义指标**：约 26 个（在 50 个限制范围内，使用率 52%，剩余 24 个配额）✅
 - **计算指标**：不占用配额，可创建多个 ✅
 
 ### 5.3 最佳实践

@@ -1,14 +1,10 @@
 package ai.sxwl.android.data.http.models
 
 import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.api.model.CreatorInfo
-import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.UserProfile
 import com.inty.api.models.api.v1.ai.agents.Agent as IntyAgent
-import com.inty.api.models.api.v1.chats.Chat as IntyChat
 import com.inty.api.models.api.v1.users.profile.User as IntyUser
-import com.inty.api.models.v2.chat.ChatSendMessageResponse
 
 /** 数据模型转换工具 将Inty SDK的模型转换为业务层模型 */
 
@@ -62,106 +58,28 @@ fun IntyAgent.toAgentInfo(): AgentInfo {
         }
 
     return AgentInfo(
-            avatar = this.avatar() ?: "",
-            background = this.background() ?: "",
-            backgroundAnimatedUrl = "", // SDK中没有此字段，需要从extensions中获取
-            backgroundImages = this.backgroundImages() ?: emptyList(),
-            category = this.category() ?: "",
-            gender = this.gender(),
-            id = this.id(),
-            readableId = this.readableId(),
-            isFollowed = this.isFollowed() ?: false,
-            name = this.name(),
-            opening = this.opening() ?: "",
-            opening_audio_url = this.openingAudioUrl() ?: "",
-            voicePreview = "", // SDK中没有此字段
-            createdAt = this.createdAt().toString(),
-            creator = creator,
-            intro = this.intro() ?: "",
-            tags = this.tags()?.map { it },
-            settings = null, // SDK中settings是Settings对象，需要转换为Map
-            visibility = this.visibility()?.toString() ?: "",
-            prompt = this.prompt() ?: "",
-            followerCount = this.followerCount()?.toInt() ?: 0,
-            connectorCount = this.connectorCount()?.toInt() ?: 0,
-            deletedAt = this.deletedAt(),
-        )
-        .also { info -> info.isDeleted = this.deletedAt() != null }
-}
-
-/** 将Inty SDK的Chat对象转换为ConversationItem对象 */
-fun IntyChat.toConversationItem(): ConversationItem {
-    return ConversationItem(
-        agentId = this.agentId(),
-        agentName = this.agentName() ?: "",
-        agentAvatar = this.agentAvatar() ?: "",
-        agentBackground = this.agentBackground() ?: "",
-        agentBackgroundAnimated = "", // SDK中没有此字段
-        agentIntro = this.agentIntro() ?: "",
-        agentOpening = this.agentOpening() ?: "",
-        agentOpeningAudioUrl = this.agentOpeningAudioUrl() ?: "",
-        createdAt = this.createdAt().toString(),
+        avatar = this.avatar() ?: "",
+        background = this.background() ?: "",
+        backgroundAnimatedUrl = "", // SDK中没有此字段，需要从extensions中获取
+        backgroundImages = this.backgroundImages() ?: emptyList(),
+        category = this.category() ?: "",
+        gender = this.gender(),
         id = this.id(),
-        lastMessage = this.lastMessage() ?: "",
-        lastMessageTime = this.lastMessageTime()?.toString() ?: "",
-        settings = null, // SDK中settings是ChatSettings对象
-        updatedAt = this.updatedAt()?.toString(),
-        userId = this.userId(),
-        isDeleted = this.agentIsDeleted() ?: false,
-    )
-}
-
-/** 将Inty SDK的ChatSendMessageResponse中的Message转换为MsgInfo对象 */
-fun ChatSendMessageResponse.Data.Choice.Message.toMsgInfo(agentId: String? = null): MsgInfo {
-    val metaData =
-        MsgInfo.MsgMetaData(
-            agentId = agentId,
-            isOpening = false,
-            generatedImage = null, // 需要从其他地方获取
-        )
-
-    return MsgInfo(
-        id = this.id()?.toString() ?: "",
-        content = this.content(), // content() 是必需的，不是可空的
-        role = this.role(), // role() 是必需的，不是可空的
-        meta_data = metaData,
-        audio_url = this.audioUrl(),
-        timestamp = this.timestamp(),
-    )
-}
-
-/** 将字典格式的消息转换为MsgInfo对象 */
-fun Map<String, Any>.toMsgInfo(agentId: String? = null): MsgInfo {
-    val id = (this["id"] as? Number)?.toString() ?: (this["id"] as? String) ?: ""
-    val content = (this["content"] as? String) ?: ""
-    val role = (this["type"] as? String) ?: (this["role"] as? String) ?: ""
-    val timestamp = (this["timestamp"] as? String) ?: null
-    val audioUrl = (this["audio_url"] as? String) ?: null
-    val userVote = (this["user_vote"] as? String) ?: null
-
-    val metaData =
-        MsgInfo.MsgMetaData(
-            agentId = agentId,
-            isOpening = (this["is_opening"] as? Boolean) ?: false,
-            generatedImage = null,
-        )
-
-    // 将服务端的 user_vote 转换为本地的 userFeedback
-    val userFeedback =
-        when (userVote) {
-            ai.sxwl.android.data.api.model.VoteConstants.LIKE -> MsgInfo.UserFeedback.LIKE
-            ai.sxwl.android.data.api.model.VoteConstants.DISLIKE -> MsgInfo.UserFeedback.DISLIKE
-            else -> null
-        }
-
-    return MsgInfo(
-        id = id,
-        content = content,
-        role = role,
-        meta_data = metaData,
-        audio_url = audioUrl,
-        timestamp = timestamp,
-        user_vote = userVote,
-        userFeedback = userFeedback,
-    )
+        readableId = this.readableId(),
+        isFollowed = this.isFollowed() ?: false,
+        name = this.name(),
+        opening = this.opening() ?: "",
+        opening_audio_url = this.openingAudioUrl() ?: "",
+        voicePreview = "", // SDK中没有此字段
+        createdAt = this.createdAt().toString(),
+        creator = creator,
+        intro = this.intro() ?: "",
+        tags = this.tags()?.map { it },
+        settings = null, // SDK中settings是Settings对象，需要转换为Map
+        visibility = this.visibility()?.toString() ?: "",
+        prompt = this.prompt() ?: "",
+        followerCount = this.followerCount()?.toInt() ?: 0,
+        connectorCount = this.connectorCount()?.toInt() ?: 0,
+        deletedAt = this.deletedAt(),
+    ).also { info -> info.isDeleted = this.deletedAt() != null }
 }

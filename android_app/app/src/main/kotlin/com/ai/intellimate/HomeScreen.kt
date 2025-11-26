@@ -61,9 +61,9 @@ fun HomeScreen(
 ) {
     val selectedTab = mainViewModel.selectedTab.collectAsState()
 
-    // 页面跟踪，包含默认首页 tab index（只在首次加载时上报）
+    // 页面跟踪，包含当前和默认首页 tab（只在首次加载时上报）
     LaunchedEffect(Unit) {
-        // 获取默认首页 tab index
+        // 获取默认首页 tab
         val defaultTabIndex =
             try {
                 ai.sxwl.android.firebase.FirebaseManager.getRemoteConfigLong(
@@ -72,8 +72,13 @@ fun HomeScreen(
             } catch (e: Exception) {
                 0 // 默认值：Chat tab
             }
+        val defaultTabName =
+            when (defaultTabIndex) {
+                0 -> "chat"
+                3 -> "explore"
+                else -> "other"
+            }
 
-        val currentTabIndex = selectedTab.value.ordinal
         val currentTabName =
             when (selectedTab.value) {
                 HomeTabIndex.Chat -> "chat"
@@ -87,11 +92,8 @@ fun HomeScreen(
             "HomePage",
             "MainActivity",
             mapOf(
-                "current_tab_index" to currentTabIndex,
-                "current_tab_name" to currentTabName,
-                "default_home_tab_index" to defaultTabIndex,
-                "default_home_tab_name" to
-                        if (defaultTabIndex == 0) "chat" else if (defaultTabIndex == 3) "explore" else "other",
+                "current_tab" to currentTabName,
+                "default_home_tab" to defaultTabName,
             ),
         )
     }

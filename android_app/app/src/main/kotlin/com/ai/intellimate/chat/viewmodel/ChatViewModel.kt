@@ -774,7 +774,6 @@ class ChatViewModel : BaseVM() {
                 "has_generated_image" to targetMessage.hasGeneratedImage(),
                 "is_opening" to targetMessage.isOpening(),
                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                "message_timestamp" to (targetMessage.timestamp ?: ""),
                 "timestamp" to System.currentTimeMillis(),
             )
 
@@ -827,7 +826,6 @@ class ChatViewModel : BaseVM() {
                 "has_generated_image" to targetMessage.hasGeneratedImage(),
                 "is_opening" to targetMessage.isOpening(),
                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                "message_timestamp" to (targetMessage.timestamp ?: ""),
                 "timestamp" to System.currentTimeMillis(),
             )
 
@@ -936,7 +934,6 @@ class ChatViewModel : BaseVM() {
                                 "agent_id" to agentId,
                                 "agent_name" to agent.name,
                                 "message_id" to messageId,
-                                "image_url" to result.data.imageUrl,
                                 "image_width" to result.data.width,
                                 "image_height" to result.data.height,
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",

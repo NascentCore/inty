@@ -49,7 +49,7 @@
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
 | `message_to_image_generation_button_clicked` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `user_type`, `timestamp` | 图片生成开始（按钮点击，请求发起时触发） | 🔴 100% |
-| `message_to_image_generation_success` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `image_url`, `image_width`, `image_height`, `user_type`, `generation_time_ms`, `timestamp` | 图片生成成功（包含图片信息和生成耗时） | 🔴 100% |
+| `message_to_image_generation_success` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `image_width`, `image_height`, `user_type`, `generation_time_ms`, `timestamp` | 图片生成成功（包含图片信息和生成耗时） | 🔴 100% |
 | `message_to_image_generation_failure` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `error_code`, `error_message`（包含异常类型信息，格式：`exception: ClassName, ...`）, `user_type`, `generation_time_ms`, `timestamp` | 图片生成失败（包含错误信息和生成耗时，包括网络错误和异常，异常类型信息在 `error_message` 中，除生成数量上限超标以外的错误） | 🔴 100% |
 | `image_generation_limit_reached` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `error_code`, `error_message`, `user_type`, `generation_time_ms`, `timestamp` | 图片生成限制达到（免费用户需要订阅或VIP用户达到每日限制，这个限制与其他生图操作累加） | 🔴 100% |
 
@@ -57,7 +57,7 @@
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
-| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | `page_name`, `page_class`, `timestamp`, `page_source` (可选), `page_type` (可选), `is_initial_load` (可选), `default_home_tab_index` (可选，MainPage/HomePage), `default_home_tab_name` (可选，MainPage/HomePage), `current_tab_index` (可选，HomePage), `current_tab_name` (可选，HomePage), 其他自定义参数 | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，`page_name` 统一为 xxxPage 格式，如 ChatPage、ExplorePage、subscriptionPage 等） | 🔴 100% |
+| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | `page_name`, `page_class`, `timestamp`, `page_source` (可选), `default_home_tab` (可选，MainPage/HomePage，值为 "chat"/"explore"/"other"), `current_tab` (可选，HomePage，值为 "chat"/"conversation"/"create"/"explore"/"profile"), 其他自定义参数 | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，`page_name` 统一为 xxxPage 格式，如 ChatPage、ExplorePage、subscriptionPage 等） | 🔴 100% |
 | `chat_page_view` | ChatPage.kt | `page_source`, `agent_id`, `agent_name`, `keep_talking_enabled`, `auto_play_voice_enabled` | ChatPage 页面曝光（页面真正可见且成为当前页面时触发，用于分析用户访问 ChatPage 的来源和配置） | 🔴 100% |
 | `duration` | PageTrackingHelper.kt | `page_name`, `duration`, `timestamp` | 页面停留时长（页面离开时上报） | 🔴 100% |
 | `page_visible` | PageTrackingHelper.kt | `page_name`, `page_class`, `timestamp` | 页面变为可见 | ⚪ 禁用 |
@@ -94,7 +94,7 @@
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
 | `agent_switch` | ChatViewModel.kt | `from_agent_id`, `from_agent_name`, `to_agent_id`, `to_agent_name`, `switch_method`, `user_type`, `timestamp` | Agent切换 | 🔴 100% |
-| `chat_page_click` | ChatViewModel.kt, AudioManager.kt | `click_type`（`voice_play`、`keep_talking`、`message_like`、`message_dislike`）, `agent_id`, `agent_name`, `message_id`（可选）, `message_length`（可选）, `has_generated_image`（可选）, `is_opening`（可选）, `user_type`（可选）, `message_timestamp`（可选）, `has_audio_url`（可选）, `is_auto_play`（可选）, `timestamp` | 聊天页面点击 | 🔴 100% |
+| `chat_page_click` | ChatViewModel.kt, AudioManager.kt | `click_type`（`voice_play`、`keep_talking`、`message_like`、`message_dislike`）, `agent_id`, `agent_name`, `message_id`（可选）, `message_length`（可选）, `has_generated_image`（可选）, `is_opening`（可选）, `user_type`（可选）, `is_auto_play`（可选）, `timestamp` | 聊天页面点击 | 🔴 100% |
 | `chat_sidebar_click` | ChatSettingsDrawer.kt | `click_type`（`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`report`）, `agent_id`（可选）, `enabled`（可选，开关操作时）, `timestamp` | 聊天侧边栏点击 | 🔴 100% |
 | `chat_more_click` | ChatMorePanel.kt | `click_type`（`reply_style`、`report`）, `agent_id`, `timestamp` | 聊天更多面板点击 | 🔴 100% |
 | `push_notification_click` | ChatActivity.kt | 推送通知点击 | 🔴 100% |
@@ -111,9 +111,9 @@
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
-| `slow_request` | UnifiedOkHttpClient.kt | `duration_ms`, `method`, `url`, `success` | 慢请求（>3秒） | 🟡 调试100%，发布30% |
-| `very_slow_request` | UnifiedOkHttpClient.kt | `duration_ms`, `method`, `url`, `success` | 极慢请求（>10秒） | 🔴 100% |
-| `request_failure` | UnifiedOkHttpClient.kt | `duration_ms`, `method`, `url`, `error_message`（包含异常类型信息，格式：`exception: ClassName, ...`） | 请求失败（网络请求失败时触发，异常类型信息在 `error_message` 中） | 🔴 100% |
+| `slow_request` | UnifiedOkHttpClient.kt | `duration_ms` | 慢请求（>3秒） | 🟡 调试100%，发布30% |
+| `very_slow_request` | UnifiedOkHttpClient.kt | `duration_ms` | 极慢请求（>10秒） | 🔴 100% |
+| `request_failure` | UnifiedOkHttpClient.kt | `duration_ms`, `error_message`（包含异常类型信息，格式：`exception: ClassName, ...`） | 请求失败（网络请求失败时触发，异常类型信息在 `error_message` 中） | 🔴 100% |
 
 ### 1.11 错误监控事件
 
@@ -247,8 +247,8 @@
 - `timestamp`：事件时间戳，用于时序分析
 - `page_name`、`page_class`：页面名称和类名，用于页面追踪
 - `page_source`：页面来源标识，用于统计用户从哪个入口进入页面（详见页面追踪事件说明）
-- `default_home_tab_index`、`default_home_tab_name`：默认首页 tab 索引和名称（MainPage/HomePage 事件），用于分析用户默认进入的 tab（chat/explore 等）
-- `current_tab_index`、`current_tab_name`：当前选中的 tab 索引和名称（HomePage 事件），用于分析用户实际访问的 tab
+- `default_home_tab`：默认首页 tab 名称（MainPage/HomePage 事件，值为 "chat"/"explore"/"other"），用于分析用户默认进入的 tab
+- `current_tab`：当前选中的 tab 名称（HomePage 事件，值为 "chat"/"conversation"/"create"/"explore"/"profile"），用于分析用户实际访问的 tab
 - `remote_config_auto_enable_keep_talking`、`remote_config_auto_play_opening_voice`、`remote_config_home_page_default_tab_index`：Remote Config 配置参数（APP_OPEN 事件），用于分析 Remote Config 配置对用户行为的影响
 - `keep_talking_enabled`、`auto_play_voice_enabled`：ChatPage 功能开关状态，用于分析不同配置下的用户行为（chat_page_view 事件）
 - `page`、`page_size`：分页信息（Explore接口的分页参数）
@@ -260,7 +260,7 @@
 - `order_id`、`purchase_token`、`purchase_time`：订阅订单信息（subscription_success/subscription_failure事件），用于订阅转化分析和问题排查
 - `price`、`currency_code`、`price_micros`：订阅价格信息（subscription_success/subscription_failure/subscription_price_view事件）
 - `message_id`：消息ID（图片生成相关事件）
-- `image_url`、`image_width`、`image_height`：生成的图片信息（成功时）
+- `image_width`、`image_height`：生成的图片信息（成功时）
 - `generation_time_ms`：图片生成耗时（从发起请求到收到图片URL的完整耗时，毫秒）
 - `error_code`、`error_message`：错误信息（失败时），统一使用 `error_` 前缀，错误类型和异常类型信息在 `error_message` 中
 
