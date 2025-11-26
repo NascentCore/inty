@@ -14,6 +14,8 @@ import com.google.firebase.perf.FirebasePerformance
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.remoteConfig
 import com.google.firebase.remoteconfig.remoteConfigSettings
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,8 +23,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics、Performance和Remote Config的初始化和使用
@@ -1007,9 +1007,7 @@ object FirebaseManager {
 
             val originalMinInterval = config.remoteConfigMinFetchIntervalSeconds
 
-            val configSettings = remoteConfigSettings {
-                minimumFetchIntervalInSeconds = 0
-            }
+            val configSettings = remoteConfigSettings { minimumFetchIntervalInSeconds = 0 }
             remoteConfig.setConfigSettingsAsync(configSettings)
             delay(100)
 
@@ -1024,7 +1022,7 @@ object FirebaseManager {
         } catch (e: Exception) {
             logError(
                 "fetchAndActivateRemoteConfigForced",
-                "Failed to force fetch and activate: ${e.message}"
+                "Failed to force fetch and activate: ${e.message}",
             )
             false
         }

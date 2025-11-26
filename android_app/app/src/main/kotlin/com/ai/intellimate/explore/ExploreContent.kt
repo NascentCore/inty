@@ -72,13 +72,14 @@ fun ExploreContent(
             initialFirstVisibleItemScrollOffset = vm.savedFirstVisibleOffset.collectAsState().value,
         )
 
-    val scrollConnection = rememberExploreScrollConnection(
-        initialVelocityMultiplier = UiConfigs.Explore.SCROLL_INITIAL_VELOCITY_MULTIPLIER,
-        minFlingVelocity = UiConfigs.Explore.SCROLL_MIN_FLING_VELOCITY,
-        maxFlingVelocity = UiConfigs.Explore.SCROLL_MAX_FLING_VELOCITY,
-        decelerationMultiplier = UiConfigs.Explore.SCROLL_DECELERATION_MULTIPLIER,
-        scrollDeltaThreshold = UiConfigs.Explore.SCROLL_DELTA_THRESHOLD,
-    )
+    val scrollConnection =
+        rememberExploreScrollConnection(
+            initialVelocityMultiplier = UiConfigs.Explore.SCROLL_INITIAL_VELOCITY_MULTIPLIER,
+            minFlingVelocity = UiConfigs.Explore.SCROLL_MIN_FLING_VELOCITY,
+            maxFlingVelocity = UiConfigs.Explore.SCROLL_MAX_FLING_VELOCITY,
+            decelerationMultiplier = UiConfigs.Explore.SCROLL_DECELERATION_MULTIPLIER,
+            scrollDeltaThreshold = UiConfigs.Explore.SCROLL_DELTA_THRESHOLD,
+        )
 
     // 检测用户是否主动滚动到底部触发加载更多
     var showLoadMoreLoading by remember { mutableStateOf(false) }

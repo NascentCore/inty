@@ -14,6 +14,9 @@ import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.ViewModelEvent
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,9 +25,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
 
 class ReportViewModel : BaseVM() {
 
@@ -106,11 +106,7 @@ class ReportViewModel : BaseVM() {
                     description = "I'd like to see a new feature or improvement",
                     code = "NEW_FEATURE",
                 ),
-                ReportItem(
-                    id = 0,
-                    description = "Other, please describe below",
-                    code = "OTHER",
-                ),
+                ReportItem(id = 0, description = "Other, please describe below", code = "OTHER"),
             )
         )
 
@@ -118,11 +114,12 @@ class ReportViewModel : BaseVM() {
     val reasons = _reasons.asStateFlow()
 
     fun updateReasonsForMode() {
-        _reasons.value = if (isFeedbackMode) {
-            _feedbackReasons.value
-        } else {
-            _reportReasons.value
-        }
+        _reasons.value =
+            if (isFeedbackMode) {
+                _feedbackReasons.value
+            } else {
+                _reportReasons.value
+            }
     }
 
     var selectIDS = mutableStateSetOf<Int>()
@@ -158,7 +155,7 @@ class ReportViewModel : BaseVM() {
             try {
                 val uploadedImageUrls = mutableListOf<String>()
                 val context = Utils.getApp() ?: return@launchBackground
-                
+
                 for (imageUri in localImages) {
                     val uri = imageUri.toUri()
                     val uploadedUrl = uploadImageWithCompression(context, uri)
@@ -174,11 +171,12 @@ class ReportViewModel : BaseVM() {
                         targetType = if (isFeedbackMode) null else targetType,
                         description = description.value.trim(),
                         imageUrls = uploadedImageUrls + remoteImages.toList(),
-                        reportType = if (isFeedbackMode) {
-                            ReportService.ReportType.FEEDBACK
-                        } else {
-                            ReportService.ReportType.REPORT
-                        },
+                        reportType =
+                            if (isFeedbackMode) {
+                                ReportService.ReportType.FEEDBACK
+                            } else {
+                                ReportService.ReportType.REPORT
+                            },
                     )
 
                 when (result) {
@@ -212,7 +210,7 @@ class ReportViewModel : BaseVM() {
 
     private suspend fun uploadImageWithCompression(
         context: android.content.Context,
-        uri: Uri
+        uri: Uri,
     ): String? {
         return withContext(Dispatchers.IO) {
             var tempFile: File? = null
@@ -244,13 +242,14 @@ class ReportViewModel : BaseVM() {
                 }
 
                 // 先尝试转换为 WebP 格式（通常能获得更好的压缩率）
-                var webpFile = ImageCompressUtils.convertToWebPSync(
-                    context = context,
-                    imageFile = tempFile,
-                    quality = 85,
-                    maxWidth = 1920,
-                    maxHeight = 1920
-                )
+                var webpFile =
+                    ImageCompressUtils.convertToWebPSync(
+                        context = context,
+                        imageFile = tempFile,
+                        quality = 85,
+                        maxWidth = 1920,
+                        maxHeight = 1920,
+                    )
 
                 // 如果 WebP 转换成功，检查文件大小
                 if (webpFile != null && webpFile.exists()) {
@@ -260,21 +259,23 @@ class ReportViewModel : BaseVM() {
                         compressedFile = webpFile
                     } else {
                         // WebP 文件还是太大，使用 Luban 进一步压缩
-                        compressedFile = ImageCompressUtils.compressImageSync(
-                            context = context,
-                            imageFile = webpFile,
-                            config = ImageCompressUtils.CompressConfig(maxSize = 800)
-                        )
+                        compressedFile =
+                            ImageCompressUtils.compressImageSync(
+                                context = context,
+                                imageFile = webpFile,
+                                config = ImageCompressUtils.CompressConfig(maxSize = 800),
+                            )
                         // 如果 Luban 压缩失败，使用更低质量的 WebP
                         if (compressedFile == null || !compressedFile.exists()) {
                             webpFile.delete()
-                            webpFile = ImageCompressUtils.convertToWebPSync(
-                                context = context,
-                                imageFile = tempFile,
-                                quality = 70,
-                                maxWidth = 1600,
-                                maxHeight = 1600
-                            )
+                            webpFile =
+                                ImageCompressUtils.convertToWebPSync(
+                                    context = context,
+                                    imageFile = tempFile,
+                                    quality = 70,
+                                    maxWidth = 1600,
+                                    maxHeight = 1600,
+                                )
                             compressedFile = webpFile
                         } else {
                             webpFile.delete() // 清理中间文件
@@ -282,11 +283,12 @@ class ReportViewModel : BaseVM() {
                     }
                 } else {
                     // WebP 转换失败，使用 Luban 压缩原图
-                    compressedFile = ImageCompressUtils.compressImageSync(
-                        context = context,
-                        imageFile = tempFile,
-                        config = ImageCompressUtils.CompressConfig(maxSize = 800)
-                    )
+                    compressedFile =
+                        ImageCompressUtils.compressImageSync(
+                            context = context,
+                            imageFile = tempFile,
+                            config = ImageCompressUtils.CompressConfig(maxSize = 800),
+                        )
                 }
 
                 if (compressedFile == null || !compressedFile.exists()) {
@@ -297,15 +299,18 @@ class ReportViewModel : BaseVM() {
                 // 检查最终文件大小
                 val compressedSizeKB = compressedFile.length() / 1024
                 if (compressedSizeKB > 1024) {
-                    LogUtils.w("Compressed image size ($compressedSizeKB KB) still exceeds 1024KB limit, trying more aggressive compression")
-                    // 如果还是太大，尝试更激进的 WebP 压缩
-                    val moreCompressedFile = ImageCompressUtils.convertToWebPSync(
-                        context = context,
-                        imageFile = tempFile,
-                        quality = 60,
-                        maxWidth = 1280,
-                        maxHeight = 1280
+                    LogUtils.w(
+                        "Compressed image size ($compressedSizeKB KB) still exceeds 1024KB limit, trying more aggressive compression"
                     )
+                    // 如果还是太大，尝试更激进的 WebP 压缩
+                    val moreCompressedFile =
+                        ImageCompressUtils.convertToWebPSync(
+                            context = context,
+                            imageFile = tempFile,
+                            quality = 60,
+                            maxWidth = 1280,
+                            maxHeight = 1280,
+                        )
                     if (moreCompressedFile != null && moreCompressedFile.exists()) {
                         val moreCompressedSizeKB = moreCompressedFile.length() / 1024
                         if (moreCompressedSizeKB <= 1024) {
@@ -319,11 +324,12 @@ class ReportViewModel : BaseVM() {
 
                 // 读取压缩后的文件并上传
                 // 根据文件扩展名确定上传的文件名
-                val filename = if (compressedFile.name.endsWith(".webp", ignoreCase = true)) {
-                    "report-image.webp"
-                } else {
-                    "report-image.jpg"
-                }
+                val filename =
+                    if (compressedFile.name.endsWith(".webp", ignoreCase = true)) {
+                        "report-image.webp"
+                    } else {
+                        "report-image.jpg"
+                    }
                 val inputStream = FileInputStream(compressedFile)
                 val result = ReportService.uploadImage(inputStream, filename)
                 inputStream.close()
@@ -331,7 +337,9 @@ class ReportViewModel : BaseVM() {
                 when (result) {
                     is ApiResult.Success -> {
                         val url = result.data
-                        LogUtils.i("Image uploaded successfully (compressed from ${originalSizeKB}KB to ${compressedFile.length() / 1024}KB): $url")
+                        LogUtils.i(
+                            "Image uploaded successfully (compressed from ${originalSizeKB}KB to ${compressedFile.length() / 1024}KB): $url"
+                        )
                         url
                     }
 
@@ -359,11 +367,7 @@ class ReportViewModel : BaseVM() {
                 val tempFile = File.createTempFile("upload_", ".jpg", context.cacheDir)
                 val outputStream = FileOutputStream(tempFile)
 
-                inputStream.use { input ->
-                    outputStream.use { output ->
-                        input.copyTo(output)
-                    }
-                }
+                inputStream.use { input -> outputStream.use { output -> input.copyTo(output) } }
 
                 tempFile
             } catch (e: Exception) {

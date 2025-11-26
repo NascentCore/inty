@@ -33,7 +33,8 @@ class ExplorePagingRepository(
                         enablePlaceholders = UiConfigs.Explore.ENABLE_PLACEHOLDERS,
                         initialLoadSize = UiConfigs.Explore.PAGE_SIZE,
                         maxSize =
-                            UiConfigs.Explore.PAGE_SIZE * UiConfigs.Explore.MAX_CACHE_PAGES, // 最大缓存页数
+                            UiConfigs.Explore.PAGE_SIZE *
+                                UiConfigs.Explore.MAX_CACHE_PAGES, // 最大缓存页数
                     ),
                 pagingSourceFactory = {
                     ExplorePagingSource(

@@ -107,8 +107,7 @@ fun ChatSettingsDrawer(
         drawerContent = {
             Column(
                 modifier =
-                    Modifier
-                        .width(319.dp)
+                    Modifier.width(319.dp)
                         .fillMaxHeight()
                         .background(
                             brush =
@@ -129,8 +128,7 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier =
-                        Modifier
-                            .padding(horizontal = horizontalPadding.dp)
+                        Modifier.padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =
@@ -221,8 +219,7 @@ fun ChatSettingsDrawer(
                 // 参照My Persona的样式，使用Column包裹，外层padding，内层item也有padding
                 Column(
                     modifier =
-                        Modifier
-                            .padding(horizontal = horizontalPadding.dp)
+                        Modifier.padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =
@@ -303,9 +300,7 @@ fun ChatSettingsDrawer(
                         horizontalPadding = horizontalPadding, // 使用与My Persona相同的padding
                         onItemClick = {
                             // 检查是否已登录
-                            if (
-                                IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                            ) {
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 FirebaseManager.logEvent(
                                     FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
                                     FirebaseManager.safeEventParams(
