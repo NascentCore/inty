@@ -28,8 +28,8 @@ fun PolicyRow(context: Context, fontSize: TextUnit) {
     ) {
         TextStyleUtils.BuildLink(
             context = context,
-            text = stringResource(R.string.terms_of_use),
-            url = context.getString(R.string.url_user_agreement),
+            text = stringResource(R.string.privacy_policy),
+            url = context.getString(R.string.url_privacy_policy),
             fontSize = fontSize,
         )
 
@@ -38,20 +38,20 @@ fun PolicyRow(context: Context, fontSize: TextUnit) {
                 buildAnnotatedString {
                     withStyle(
                         SpanStyle(
-                            color = Color.White.copy(alpha = 0.6f),
+                            color = Color.White,
                             fontSize = fontSize,
                             fontWeight = FontWeight.Normal,
                         )
                     ) {
-                        append(" and ")
+                        append(" & ")
                     }
                 }
         )
 
         TextStyleUtils.BuildLink(
             context = context,
-            text = stringResource(R.string.privacy_policy),
-            url = context.getString(R.string.url_privacy_policy),
+            text = stringResource(R.string.terms_of_use),
+            url = context.getString(R.string.url_user_agreement),
             fontSize = fontSize,
         )
     }
