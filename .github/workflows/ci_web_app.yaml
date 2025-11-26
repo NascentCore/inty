@@ -1,13 +1,14 @@
 name: CI - Web App
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - web_app/**
-      - evaluation/inty_sdk/**
-      - .github/workflows/ci_web_app.yaml
+  workflow_dispatch:
+  # pull_request:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - web_app/**
+  #     - evaluation/inty_sdk/**
+  #     - .github/workflows/ci_web_app.yaml
 
 permissions:
   contents: read

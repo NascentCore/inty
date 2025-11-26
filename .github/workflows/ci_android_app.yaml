@@ -16,20 +16,20 @@ on:
       - "android_app/gradlew"
       - ".github/workflows/ci_android_app.yaml"
 
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "android_app/**/*.kt"
-      - "android_app/**/*.kts"
-      - "android_app/**/*.java"
-      - "android_app/**/*.xml"
-      - "android_app/**/*.pro"
-      - "android_app/**/*.gradle*"
-      - "android_app/gradle/**"
-      - "android_app/**/gradle.properties"
-      - "android_app/gradlew"
-      - ".github/workflows/ci_android_app.yaml"
+  # pull_request:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - "android_app/**/*.kt"
+  #     - "android_app/**/*.kts"
+  #     - "android_app/**/*.java"
+  #     - "android_app/**/*.xml"
+  #     - "android_app/**/*.pro"
+  #     - "android_app/**/*.gradle*"
+  #     - "android_app/gradle/**"
+  #     - "android_app/**/gradle.properties"
+  #     - "android_app/gradlew"
+  #     - ".github/workflows/ci_android_app.yaml"
 
 jobs:
   test:

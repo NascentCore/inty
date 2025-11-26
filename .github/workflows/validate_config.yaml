@@ -10,14 +10,14 @@ on:
       - "devops/validate_configs.py"
       - "app/core/config.py"
 
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "devops/config.yaml.*"
-      - ".github/workflows/validate_config.yaml"
-      - "devops/validate_configs.py"
-      - "app/core/config.py"
+  # pull_request:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - "devops/config.yaml.*"
+  #     - ".github/workflows/validate_config.yaml"
+  #     - "devops/validate_configs.py"
+  #     - "app/core/config.py"
 
 jobs:
   validate:

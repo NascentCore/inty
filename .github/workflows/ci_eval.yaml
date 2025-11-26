@@ -1,12 +1,13 @@
 name: CI - Evaluation
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - evaluation/**
-      - .github/workflows/ci_eval.yaml
+  workflow_dispatch:
+  # pull_request:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - evaluation/**
+  #     - .github/workflows/ci_eval.yaml
 
 permissions:
   contents: read

@@ -1,18 +1,19 @@
 name: Build SDKs for pull request
 
 on:
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-      - closed
-    paths:
-      - app/openapi.json
-      - app/stainless.yml
+  workflow_dispatch:
+  # pull_request:
+  #   types:
+  #     - opened
+  #     - synchronize
+  #     - reopened
+  #     - closed
+  #   paths:
+  #     - app/openapi.json
+  #     - app/stainless.yml
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 env:
@@ -23,7 +24,7 @@ env:
 
 jobs:
   preview:
-    if: github.event.action != 'closed'
+    if: github.event.pull_request && github.event.action != 'closed'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -44,7 +45,7 @@ jobs:
           config_path: ${{ env.CONFIG_PATH }}
 
   merge:
-    if: github.event.action == 'closed' && github.event.pull_request.merged == true
+    if: github.event.pull_request && github.event.action == 'closed' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
       contents: read

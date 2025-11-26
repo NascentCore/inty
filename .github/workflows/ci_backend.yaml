@@ -8,26 +8,26 @@ on:
     paths:
       - "!**/*.md"
 
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "pytest.ini"
-      - "start.sh"
-      - "app/**/*.py"
-      - "tests/**/*.py"
-      - "tests/alembic/test_custom_config.sh"
-      - "scripts/init_admin_user.py"
-      - "requirements.txt"
-      - "test_requirements.txt"
-      # Alembic files
-      - "alembic/**/*"
-      - "alembic.ini"
-      # 这是本地开发用配置文件
-      - "devops/config.yaml.local"
-      # 这个是测试用配置文件
-      - "devops/config.yaml.test"
-      - ".github/workflows/ci_backend.yaml"
+  # pull_request:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - "pytest.ini"
+  #     - "start.sh"
+  #     - "app/**/*.py"
+  #     - "tests/**/*.py"
+  #     - "tests/alembic/test_custom_config.sh"
+  #     - "scripts/init_admin_user.py"
+  #     - "requirements.txt"
+  #     - "test_requirements.txt"
+  #     # Alembic files
+  #     - "alembic/**/*"
+  #     - "alembic.ini"
+  #     # 这是本地开发用配置文件
+  #     - "devops/config.yaml.local"
+  #     # 这个是测试用配置文件
+  #     - "devops/config.yaml.test"
+  #     - ".github/workflows/ci_backend.yaml"
 
 env:
   PG_USER: postgres
