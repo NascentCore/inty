@@ -38,10 +38,11 @@ object ReportService {
                 }
 
             // 将桥接层的 ReportType 转换为 SDK 的 ReportType
-            val sdkReportType = when (reportType) {
-                ReportType.REPORT -> ReportCreateParams.ReportType.REPORT
-                ReportType.FEEDBACK -> ReportCreateParams.ReportType.FEEDBACK
-            }
+            val sdkReportType =
+                when (reportType) {
+                    ReportType.REPORT -> ReportCreateParams.ReportType.REPORT
+                    ReportType.FEEDBACK -> ReportCreateParams.ReportType.FEEDBACK
+                }
 
             val reportParams =
                 ReportCreateParams.builder()
@@ -68,10 +69,11 @@ object ReportService {
     ): ApiResult<String> {
         return IntyNetworkManager.executeRequest("Upload Image") {
             val fileBytes = inputStream.readBytes()
-            val multipartField = MultipartField.builder<InputStream>()
-                .value(fileBytes.inputStream())
-                .filename(filename)
-                .build()
+            val multipartField =
+                MultipartField.builder<InputStream>()
+                    .value(fileBytes.inputStream())
+                    .filename(filename)
+                    .build()
 
             val response =
                 IntyNetworkManager.getClient()

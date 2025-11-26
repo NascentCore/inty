@@ -34,25 +34,23 @@ fun NameEditField(
 ) {
     Column {
         label?.let {
-            Text(
-                text = it,
-                fontSize = 16.sp,
-                color = Color.White,
-                fontWeight = FontWeight.Medium,
-            )
+            Text(text = it, fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(12.dp))
         }
         // 禁用字体缩放，避免视觉抖动
         CompositionLocalProvider(
             LocalDensity provides
-                    Density(
-                        density = LocalDensity.current.density,
-                        fontScale = 1f, // 核心：禁用字体缩放
-                    )
+                Density(
+                    density = LocalDensity.current.density,
+                    fontScale = 1f, // 核心：禁用字体缩放
+                )
         ) {
             Row(
                 modifier =
-                    Modifier.padding(horizontal = if (label != null) 0.dp else 16.dp, vertical = 0.dp)
+                    Modifier.padding(
+                            horizontal = if (label != null) 0.dp else 16.dp,
+                            vertical = 0.dp,
+                        )
                         .fillMaxWidth()
                         .heightIn(min = 48.dp)
                         .background(Color.White.copy(0.1f), RoundedCornerShape(8.dp))
@@ -82,4 +80,3 @@ fun NameEditField(
         }
     }
 }
-

@@ -186,17 +186,14 @@ class ChatViewModel : BaseVM() {
         getChatSetting()
     }
 
-    /**
-     * 检查错误消息是否包含取消相关的关键字
-     * 用于避免在用户退出 Activity 后显示错误 Toast
-     */
+    /** 检查错误消息是否包含取消相关的关键字 用于避免在用户退出 Activity 后显示错误 Toast */
     private fun isCancellationError(errorMessage: String?): Boolean {
         if (errorMessage == null) return false
         val message = errorMessage.lowercase()
         return message.contains("cancel") ||
-                message.contains("interrupted") ||
-                message.contains("socket closed") ||
-                message.contains("connection reset")
+            message.contains("interrupted") ||
+            message.contains("socket closed") ||
+            message.contains("connection reset")
     }
 
     private fun bindToAgentSession(agentId: String) {
@@ -416,9 +413,11 @@ class ChatViewModel : BaseVM() {
                         // 检查是否是取消相关的错误，避免在 Activity 退出后显示 Toast
                         if (
                             runCatching { ensureActive() }.isFailure ||
-                            isCancellationError(result.message)
+                                isCancellationError(result.message)
                         ) {
-                            LogUtils.d("ChatViewModel.sendMsg: 请求被取消，不显示错误 Toast: ${result.message}")
+                            LogUtils.d(
+                                "ChatViewModel.sendMsg: 请求被取消，不显示错误 Toast: ${result.message}"
+                            )
                             return@launch
                         }
 
@@ -461,8 +460,8 @@ class ChatViewModel : BaseVM() {
                 // 检查是否是取消相关的异常，如果是则不显示错误 Toast
                 if (
                     e is CancellationException ||
-                    runCatching { ensureActive() }.isFailure ||
-                    isCancellationError(e.message)
+                        runCatching { ensureActive() }.isFailure ||
+                        isCancellationError(e.message)
                 ) {
                     LogUtils.d("ChatViewModel.sendMsg: 请求被取消，不显示错误 Toast: ${e.message}")
                     return@launch
@@ -708,9 +707,11 @@ class ChatViewModel : BaseVM() {
                             // 检查是否是取消相关的错误，避免在 Activity 退出后显示 Toast
                             if (
                                 runCatching { ensureActive() }.isFailure ||
-                                isCancellationError(result.message)
+                                    isCancellationError(result.message)
                             ) {
-                                LogUtils.d("ChatViewModel.sendKeepTalkingMessage: 请求被取消，不显示错误 Toast: ${result.message}")
+                                LogUtils.d(
+                                    "ChatViewModel.sendKeepTalkingMessage: 请求被取消，不显示错误 Toast: ${result.message}"
+                                )
                                 return@launchBackground
                             }
 
@@ -741,10 +742,12 @@ class ChatViewModel : BaseVM() {
                     // 检查是否是取消相关的异常，如果是则不显示错误 Toast
                     if (
                         e is CancellationException ||
-                        runCatching { ensureActive() }.isFailure ||
-                        isCancellationError(e.message)
+                            runCatching { ensureActive() }.isFailure ||
+                            isCancellationError(e.message)
                     ) {
-                        LogUtils.d("ChatViewModel.sendKeepTalkingMessage: 请求被取消，不显示错误 Toast: ${e.message}")
+                        LogUtils.d(
+                            "ChatViewModel.sendKeepTalkingMessage: 请求被取消，不显示错误 Toast: ${e.message}"
+                        )
                         return@launchBackground
                     }
                     val endToEndTime = System.currentTimeMillis() - keepTalkingStartTime

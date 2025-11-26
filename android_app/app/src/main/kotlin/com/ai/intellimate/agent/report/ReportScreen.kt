@@ -57,19 +57,16 @@ fun ReportScreen(
 
     Box(
         modifier =
-            Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) {
-                    focusManager.clearFocus()
-                }
+            Modifier.fillMaxSize().clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) {
+                focusManager.clearFocus()
+            }
     ) {
         Column(
             modifier =
-                Modifier
-                    .matchParentSize()
+                Modifier.matchParentSize()
                     .padding(horizontal = 16.dp)
                     .imePadding()
                     .verticalScroll(rememberScrollState()),
@@ -89,7 +86,7 @@ fun ReportScreen(
                         stringResource(R.string.tell_us_what_you_think)
                     } else {
                         stringResource(R.string.npc_asterisk_full)
-                    },
+                    }
             ) {
                 reasons.forEach { reason ->
                     val isSelected = selectIDs.contains(reason.id)
@@ -123,8 +120,7 @@ fun ReportScreen(
                                 "MISINFORMATION" ->
                                     stringResource(R.string.report_reason_misinformation)
 
-                                "FRAUD_SCAMS" ->
-                                    stringResource(R.string.report_reason_fraud_scams)
+                                "FRAUD_SCAMS" -> stringResource(R.string.report_reason_fraud_scams)
 
                                 "PRIVACY_VIOLATION" ->
                                     stringResource(R.string.report_reason_privacy_violation)
@@ -202,9 +198,7 @@ fun ReportScreen(
             },
             navigationIcon = {
                 Image(
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp)
-                        .noRippleClickable { onBack() },
+                    modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
                     painter = painterResource(R.drawable.back),
                     contentDescription = null,
                 )

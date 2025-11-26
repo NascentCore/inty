@@ -117,7 +117,7 @@ class IntelliMateApp : Application() {
                 if (ai.sxwl.android.utils.AppUtils.isAppDebug()) {
                     LogUtils.d(
                         "IntelliMateApp",
-                        "Remote Config home_page_default_tab_index = $homePageDefaultTabIndex"
+                        "Remote Config home_page_default_tab_index = $homePageDefaultTabIndex",
                     )
                 }
 

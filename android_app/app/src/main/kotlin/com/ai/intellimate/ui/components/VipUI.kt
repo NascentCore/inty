@@ -119,10 +119,9 @@ fun PremiumPlanCard(
 
     Box(
         modifier =
-            modifier
-                .fillMaxHeight()
-                .then(subModifier)
-                .clickable(enabled = !isSubscribed) { onClick() },
+            modifier.fillMaxHeight().then(subModifier).clickable(enabled = !isSubscribed) {
+                onClick()
+            },
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(
@@ -136,27 +135,39 @@ fun PremiumPlanCard(
                     .width(110.dp)
                     .height(97.dp)
                     .background(
-                        brush = Brush.verticalGradient(
-                            colors = if (isSelected) listOf(Color(0xFFC2F7FD), Color(0xFFC4A9FC), Color(0xFF7E96FB)) else listOf(Color.Black.copy(alpha = 0.4f), Color.Black.copy(alpha = 0.4f))
-                        ),
+                        brush =
+                            Brush.verticalGradient(
+                                colors =
+                                    if (isSelected)
+                                        listOf(
+                                            Color(0xFFC2F7FD),
+                                            Color(0xFFC4A9FC),
+                                            Color(0xFF7E96FB),
+                                        )
+                                    else
+                                        listOf(
+                                            Color.Black.copy(alpha = 0.4f),
+                                            Color.Black.copy(alpha = 0.4f),
+                                        )
+                            ),
                         shape = RoundedCornerShape(8.dp),
                     )
                     .padding(1.dp)
             ) {
                 Box(
-                    modifier = Modifier
-                        .width(109.dp)
-                        .height(96.dp)
-                        .background(
-                            if (isSelected) Color(red = 40, green = 20, blue = 65) else Color.Transparent,
-                            shape = RoundedCornerShape(8.dp),
-                        )
+                    modifier =
+                        Modifier.width(109.dp)
+                            .height(96.dp)
+                            .background(
+                                if (isSelected) Color(red = 40, green = 20, blue = 65)
+                                else Color.Transparent,
+                                shape = RoundedCornerShape(8.dp),
+                            )
                 ) {
-                    Column (
+                    Column(
                         modifier = Modifier.fillMaxSize(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = plan.name,
@@ -171,14 +182,20 @@ fun PremiumPlanCard(
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(1.dp)
-                                .background(
-                                    brush = Brush.horizontalGradient(
-                                        colors = listOf(Color.White.copy(0.1f), Color.White.copy(0.4f), Color.White.copy(0.1f))
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(
+                                        brush =
+                                            Brush.horizontalGradient(
+                                                colors =
+                                                    listOf(
+                                                        Color.White.copy(0.1f),
+                                                        Color.White.copy(0.4f),
+                                                        Color.White.copy(0.1f),
+                                                    )
+                                            )
                                     )
-                                )
                         )
 
                         // 处理价格显示：去掉 .00 后缀，并根据长度自适应字号
@@ -188,7 +205,9 @@ fun PremiumPlanCard(
                         val priceFontSize =
                             remember(displayPrice) {
                                 val priceLength =
-                                    displayPrice.filter { it.isDigit() || it == '.' || it == ',' }.length
+                                    displayPrice
+                                        .filter { it.isDigit() || it == '.' || it == ',' }
+                                        .length
                                 when {
                                     priceLength <= 3 -> 24.sp // 短价格（如 $9, $99）
                                     priceLength <= 5 -> 20.sp // 中等价格（如 $9.99, $99.99）
@@ -213,12 +232,12 @@ fun PremiumPlanCard(
                         Spacer(modifier = Modifier.height(2.dp))
 
                         // 由于接口暂无此数据，先隐藏
-//                        Text(
-//                            text = "$6.66/month",
-//                            color = Color.White.copy(0.8f),
-//                            fontSize = 10.sp,
-//                            modifier = subModifier,
-//                        )
+                        //                        Text(
+                        //                            text = "$6.66/month",
+                        //                            color = Color.White.copy(0.8f),
+                        //                            fontSize = 10.sp,
+                        //                            modifier = subModifier,
+                        //                        )
                     }
                 }
             }
@@ -285,7 +304,7 @@ fun PurchaseButton(
             painter = painterResource(R.drawable.vip_buy_btn),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.FillHeight
+            contentScale = ContentScale.FillHeight,
         )
 
         if (isLoading) {
@@ -324,8 +343,7 @@ fun AutoRenewalNotice(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text =
-                stringResource(R.string.auto_renews_cancel),
+            text = stringResource(R.string.auto_renews_cancel),
             fontSize = 13.sp,
             letterSpacing = 0.6.sp,
             color = Color.White,

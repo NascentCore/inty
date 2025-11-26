@@ -99,10 +99,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         if (isInitialized) return
 
         // Firebase Analytics - 记录探索页面访问（使用 SCREEN_VIEW 事件）
-        PageTrackingHelper.trackPageView(
-            pageName = "ExplorePage",
-            pageClass = "ExploreViewModel",
-        )
+        PageTrackingHelper.trackPageView(pageName = "ExplorePage", pageClass = "ExploreViewModel")
 
         // 使用app层的ExplorePagingRepository，支持事件回调
         val initialFlow =

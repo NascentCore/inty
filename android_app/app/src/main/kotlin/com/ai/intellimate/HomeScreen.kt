@@ -67,8 +67,10 @@ fun HomeScreen(
         val defaultTabIndex =
             try {
                 ai.sxwl.android.firebase.FirebaseManager.getRemoteConfigLong(
-                    ai.sxwl.android.firebase.FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
-                ).toInt()
+                        ai.sxwl.android.firebase.FirebaseManager.RemoteConfigKeys
+                            .HOME_PAGE_DEFAULT_TAB_INDEX
+                    )
+                    .toInt()
             } catch (e: Exception) {
                 0 // 默认值：Chat tab
             }
@@ -91,10 +93,7 @@ fun HomeScreen(
         PageTrackingHelper.trackPageView(
             "HomePage",
             "MainActivity",
-            mapOf(
-                "current_tab" to currentTabName,
-                "default_home_tab" to defaultTabName,
-            ),
+            mapOf("current_tab" to currentTabName, "default_home_tab" to defaultTabName),
         )
     }
 
@@ -113,10 +112,7 @@ fun HomeScreen(
 
     Scaffold(
         modifier =
-            modifier
-                .fillMaxSize()
-                .background(HeartColor.primaryColor)
-                .navigationBarsPadding(),
+            modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
             val context = LocalContext.current
