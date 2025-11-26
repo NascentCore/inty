@@ -1,6 +1,7 @@
 import {
   BellOutlined,
   CrownOutlined,
+  ExperimentOutlined,
   LockOutlined,
   MessageOutlined,
   MobileOutlined,
@@ -44,6 +45,7 @@ import {
   ListNotifications,
   // 语音合成模块
   ListVoices,
+  Live2DTester,
   MessageHistory,
   MyAgentList,
   RecommendAgents,
@@ -153,6 +155,9 @@ const DevTestPage: React.FC = () => {
 
     // 文件上传模块
     'upload-image': UploadImage,
+
+    // Live2D 模块
+    'live2d-viewer-demo': Live2DTester,
   };
 
   /**
@@ -261,6 +266,12 @@ const DevTestPage: React.FC = () => {
       icon: <UploadOutlined />,
       label: '文件上传模块',
       children: [{ key: 'upload-image', label: '上传图片' }],
+    },
+    {
+      key: 'live2d',
+      icon: <ExperimentOutlined />,
+      label: 'Live2D Playground',
+      children: [{ key: 'live2d-viewer-demo', label: 'Live2D Viewer Demo' }],
     },
   ];
 

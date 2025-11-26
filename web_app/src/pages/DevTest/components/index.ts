@@ -20,6 +20,7 @@ export { default as GoogleLogin } from './GoogleLogin';
 export { default as GuestLogin } from './GuestLogin';
 export { default as ListNotifications } from './ListNotifications';
 export { default as ListVoices } from './ListVoices';
+export { default as Live2DTester } from './Live2DTester';
 export { default as MessageHistory } from './MessageHistory';
 export { default as MyAgentList } from './MyAgentList';
 export { default as RecommendAgents } from './RecommendAgents';
