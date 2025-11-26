@@ -25,6 +25,7 @@ import {
   UserOutlined,
   MessageOutlined,
   CalendarOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import Plot from "react-plotly.js";
 import type { ColumnsType } from "antd/es/table";
@@ -50,6 +51,9 @@ export const UserDailyMessagesPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState<
+    Record<string, boolean>
+  >({});
+  const [exportingSessions, setExportingSessions] = useState<
     Record<string, boolean>
   >({});
 
@@ -190,6 +194,151 @@ export const UserDailyMessagesPage: React.FC = () => {
     [loadSessionMessages],
   );
 
+  // 导出会话历史记录
+  const handleExportSession = useCallback(
+    async (chatId: string, agentName: string, session: UserSessionItem) => {
+      setExportingSessions((prev) => ({ ...prev, [chatId]: true }));
+      try {
+        // 分页获取所有消息
+        const allMessages: SessionMessageItem[] = [];
+        let page = 1;
+        let hasMore = true;
+        const pageSize = 50;
+
+        while (hasMore) {
+          const data = await userAnalyticsApi.getSessionMessages({
+            chat_id: chatId,
+            page,
+            size: pageSize,
+          });
+
+          allMessages.push(...data.messages);
+          hasMore = data.has_more;
+          page++;
+        }
+
+        if (allMessages.length === 0) {
+          message.warning("该会话暂无消息记录");
+          return;
+        }
+
+        // 按时间排序
+        allMessages.sort((a, b) => {
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return timeA - timeB;
+        });
+
+        // 格式化消息为 TXT
+        const lines: string[] = [];
+        lines.push("会话导出记录");
+        lines.push("====================");
+        lines.push(`角色名称: ${agentName}`);
+        lines.push(`会话ID: ${chatId}`);
+        lines.push(
+          `创建时间: ${
+            session.created_at
+              ? dayjs(session.created_at).format("YYYY-MM-DD HH:mm:ss")
+              : "-"
+          }`,
+        );
+        lines.push(
+          `更新时间: ${
+            session.updated_at
+              ? dayjs(session.updated_at).format("YYYY-MM-DD HH:mm:ss")
+              : "-"
+          }`,
+        );
+        lines.push(`消息总数: ${allMessages.length}`);
+        lines.push("");
+        lines.push("对话记录");
+        lines.push("====================");
+        lines.push("");
+
+        allMessages.forEach((msg) => {
+          const timestamp = msg.created_at
+            ? dayjs(msg.created_at).format("YYYY-MM-DD HH:mm:ss")
+            : "未知时间";
+          const isUser =
+            msg.message_type === "human" ||
+            msg.message_type === "HumanMessage";
+          const sender = isUser ? "👤 用户" : "🤖 AI";
+
+          lines.push(`[${timestamp}] ${sender}`);
+          lines.push("");
+
+          // 处理消息内容
+          if (msg.message_type === "image" && msg.image_url) {
+            lines.push(`[图片消息]`);
+            lines.push(`图片URL: ${msg.image_url}`);
+          } else if (msg.content) {
+            lines.push(msg.content);
+          } else {
+            lines.push("[无文本内容]");
+          }
+
+          // 处理语音消息
+          if (msg.audio_url) {
+            lines.push("");
+            lines.push(`[语音消息]`);
+            lines.push(`语音URL: ${msg.audio_url}`);
+          }
+
+          // 处理生成的图片
+          if (msg.meta_data?.generated_image?.image_url) {
+            lines.push("");
+            lines.push(`[生成的图片]`);
+            lines.push(
+              `图片URL: ${msg.meta_data.generated_image.image_url}`,
+            );
+            if (
+              msg.meta_data.generated_image.width &&
+              msg.meta_data.generated_image.height
+            ) {
+              lines.push(
+                `尺寸: ${msg.meta_data.generated_image.width} × ${msg.meta_data.generated_image.height}`,
+              );
+            }
+          }
+
+          lines.push("");
+          lines.push("---");
+          lines.push("");
+        });
+
+        // 生成文件名（处理特殊字符）
+        const sanitizeFileName = (name: string) => {
+          return name.replace(/[<>:"/\\|?*]/g, "_");
+        };
+
+        const timestamp = dayjs().format("YYYY-MM-DD_HH-mm-ss");
+        const safeAgentName = sanitizeFileName(agentName);
+        const safeChatId = chatId.substring(0, 20); // 限制长度
+        const filename = `session_${safeAgentName}_${safeChatId}_${timestamp}.txt`;
+
+        // 创建并下载文件
+        const content = lines.join("\n");
+        const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        message.success(`会话记录已导出: ${filename}`);
+      } catch (error: any) {
+        console.error("导出会话记录失败:", error);
+        message.error(error?.message || "导出失败，请重试");
+      } finally {
+        setExportingSessions((prev) => ({ ...prev, [chatId]: false }));
+      }
+    },
+    [],
+  );
+
   // 每日消息表格列
   const dailyMessagesColumns: ColumnsType<UserDailyMessageItem> = [
     {
@@ -244,6 +393,23 @@ export const UserDailyMessagesPage: React.FC = () => {
       width: 180,
       render: (text: string) =>
         text ? dayjs(text).format("YYYY-MM-DD HH:mm:ss") : "-",
+    },
+    {
+      title: "操作",
+      key: "action",
+      width: 100,
+      render: (_: any, record: UserSessionItem) => (
+        <Button
+          type="link"
+          icon={<DownloadOutlined />}
+          loading={exportingSessions[record.chat_id]}
+          onClick={() =>
+            handleExportSession(record.chat_id, record.agent_name, record)
+          }
+        >
+          导出
+        </Button>
+      ),
     },
   ];
 
