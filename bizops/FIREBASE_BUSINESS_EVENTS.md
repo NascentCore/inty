@@ -35,11 +35,15 @@
 | `message_to_image_generation_success` | ChatViewModel.kt | 图片生成成功（包含图片信息和生成耗时） |
 | `message_to_image_generation_failure` | ChatViewModel.kt | 图片生成失败（包含错误信息和生成耗时，包括网络错误和异常，除生成数量上限超标以外的错误） |
 | `image_generation_limit_reached` | ChatViewModel.kt | 图片生成限制达到（免费用户需要订阅或VIP用户达到每日限制，这个限制与其他生图操作累加） |
+| `avatar_generation_button_clicked` | AvatarGenerateViewModel.kt | 头像生成开始（创建角色时生成头像/背景图） |
+| `avatar_generation_success` | AvatarGenerateViewModel.kt | 头像生成成功 |
+| `avatar_generation_failure` | AvatarGenerateViewModel.kt | 头像生成失败 |
 
 ### 页面访问
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
-| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，`page_name` 统一为 xxxPage 格式，如 ChatPage、ExplorePage、subscriptionPage 等，包含 `page_source` 参数。MainPage/HomePage 还包含 `default_home_tab_index`、`default_home_tab_name`、`current_tab_index`、`current_tab_name` 参数） |
+| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，`page_name` 统一为 xxxPage 格式，如 ChatPage、ExplorePage、subscriptionPage 等，包含 `page_source` 参数。MainPage/HomePage 还包含 `default_home_tab`、`current_tab` 参数） |
+| `chat_page_view` | ChatPage.kt | ChatPage 页面曝光（页面真正可见且成为当前页面时触发，用于分析用户访问 ChatPage 的来源和配置） |
 | `duration` | PageTrackingHelper.kt | 页面停留时长（页面离开时上报，记录 `page_name` 和 `duration`） |
 
 **页面来源参数说明：**
@@ -70,6 +74,7 @@
 | `chat_page_click` | ChatViewModel.kt, AudioManager.kt | 聊天页面点击（通过 `click_type` 区分：`voice_play`、`keep_talking`、`message_like`、`message_dislike`，参数包含：`agent_id`、`agent_name`、`message_id`、`message_length`、`has_generated_image`、`is_opening`、`user_type`、`is_auto_play`、`timestamp`） |
 | `chat_sidebar_click` | ChatSettingsDrawer.kt | 聊天侧边栏点击（通过 `click_type` 区分：`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`report`） |
 | `chat_more_click` | ChatMorePanel.kt | 聊天更多面板点击（通过 `click_type` 区分：`reply_style`、`report`） |
+| `push_notification_click` | ChatActivity.kt | 推送通知点击 |
 
 ### 错误监控
 | 事件名称 | 使用位置 | 业务含义 |
