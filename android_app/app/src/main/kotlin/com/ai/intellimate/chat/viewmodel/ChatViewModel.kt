@@ -24,8 +24,10 @@ import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -182,6 +184,19 @@ class ChatViewModel : BaseVM() {
 
         // 查询聊天设置
         getChatSetting()
+    }
+
+    /**
+     * 检查错误消息是否包含取消相关的关键字
+     * 用于避免在用户退出 Activity 后显示错误 Toast
+     */
+    private fun isCancellationError(errorMessage: String?): Boolean {
+        if (errorMessage == null) return false
+        val message = errorMessage.lowercase()
+        return message.contains("cancel") ||
+                message.contains("interrupted") ||
+                message.contains("socket closed") ||
+                message.contains("connection reset")
     }
 
     private fun bindToAgentSession(agentId: String) {
@@ -398,6 +413,15 @@ class ChatViewModel : BaseVM() {
                     }
 
                     is HttpResult.Failure -> {
+                        // 检查是否是取消相关的错误，避免在 Activity 退出后显示 Toast
+                        if (
+                            runCatching { ensureActive() }.isFailure ||
+                            isCancellationError(result.message)
+                        ) {
+                            LogUtils.d("ChatViewModel.sendMsg: 请求被取消，不显示错误 Toast: ${result.message}")
+                            return@launch
+                        }
+
                         val responseTime = System.currentTimeMillis() - aiResponseStartTime
                         val endToEndTime = System.currentTimeMillis() - endToEndStartTime
 
@@ -434,6 +458,16 @@ class ChatViewModel : BaseVM() {
                     }
                 }
             } catch (e: Exception) {
+                // 检查是否是取消相关的异常，如果是则不显示错误 Toast
+                if (
+                    e is CancellationException ||
+                    runCatching { ensureActive() }.isFailure ||
+                    isCancellationError(e.message)
+                ) {
+                    LogUtils.d("ChatViewModel.sendMsg: 请求被取消，不显示错误 Toast: ${e.message}")
+                    return@launch
+                }
+
                 val endToEndTime = System.currentTimeMillis() - endToEndStartTime
                 LogUtils.e("Unexpected error in sendMsg: ${e.message}")
 
@@ -671,6 +705,15 @@ class ChatViewModel : BaseVM() {
                         }
 
                         is HttpResult.Failure -> {
+                            // 检查是否是取消相关的错误，避免在 Activity 退出后显示 Toast
+                            if (
+                                runCatching { ensureActive() }.isFailure ||
+                                isCancellationError(result.message)
+                            ) {
+                                LogUtils.d("ChatViewModel.sendKeepTalkingMessage: 请求被取消，不显示错误 Toast: ${result.message}")
+                                return@launchBackground
+                            }
+
                             val responseTime = System.currentTimeMillis() - aiResponseStartTime
                             val endToEndTime = System.currentTimeMillis() - keepTalkingStartTime
 
@@ -695,6 +738,15 @@ class ChatViewModel : BaseVM() {
                         }
                     }
                 } catch (e: Exception) {
+                    // 检查是否是取消相关的异常，如果是则不显示错误 Toast
+                    if (
+                        e is CancellationException ||
+                        runCatching { ensureActive() }.isFailure ||
+                        isCancellationError(e.message)
+                    ) {
+                        LogUtils.d("ChatViewModel.sendKeepTalkingMessage: 请求被取消，不显示错误 Toast: ${e.message}")
+                        return@launchBackground
+                    }
                     val endToEndTime = System.currentTimeMillis() - keepTalkingStartTime
                     LogUtils.e("Unexpected error in sendKeepTalkingMessage: ${e.message}")
 
