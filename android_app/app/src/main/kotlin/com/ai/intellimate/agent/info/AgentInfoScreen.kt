@@ -373,7 +373,13 @@ private fun AgentGeneratedImagesSection(
         )
         Spacer(Modifier.height(AgentGalleryConfig.SectionSpacing))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(AgentGalleryConfig.ImageSpacing)) {
-            items(images, key = { it.messageId }) { item ->
+            items(
+                images,
+                key = { image ->
+                    // 使用 imageUrl（已在 ViewModel 中去重）作为稳定 key，避免 messageId 重复导致崩溃
+                    image.imageUrl
+                },
+            ) { item ->
                 AgentGalleryImageCard(item = item) { previewImage = it }
             }
         }
