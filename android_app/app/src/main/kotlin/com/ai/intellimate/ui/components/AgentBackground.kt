@@ -54,6 +54,7 @@ fun AgentBackground(
     showGradients: Boolean = true,
     isLoading: Boolean = false,
     isCurrentPage: Boolean = true,
+    overrideStaticImageUrl: String? = null,
     onPlayComplete: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -72,13 +73,18 @@ fun AgentBackground(
     // 判断是否为 IntelliMate agent
     val isIntelliMateAgent = AgentConstants.isIntelliMateAgent(agentInfo?.id, agentInfo?.name)
 
-    val backgroundAnimatedUrl = agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
-    val staticImageUrl =
-        if (isIntelliMateAgent) {
-            // IntelliMate agent 使用本地资源
+    val hasOverrideBackground = !overrideStaticImageUrl.isNullOrBlank()
+    val backgroundAnimatedUrl =
+        if (hasOverrideBackground) {
             null
         } else {
-            agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
+            agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
+        }
+    val staticImageUrl =
+        when {
+            hasOverrideBackground -> overrideStaticImageUrl
+            isIntelliMateAgent -> null // IntelliMate agent 使用本地资源
+            else -> agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
         }
 
     // 视频缓存管理器

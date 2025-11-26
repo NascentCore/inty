@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -132,6 +133,7 @@ private fun ChatItemAI(
     isLatestMessage: Boolean = false,
 ) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
+    val backgroundSettingMessages by viewModel.backgroundSettingMessages.collectAsState()
 
     runCatching {
             Column(modifier = Modifier.fillMaxWidth(.9f)) {
@@ -371,6 +373,50 @@ private fun ChatItemAI(
                                 imageUrl = generatedImageUrl,
                                 onDismiss = { showFullScreenImage = false },
                             )
+                        }
+                    }
+
+                    val isLoggedIn =
+                        IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                    if (
+                        !isImageLoading &&
+                            !generatedImageUrl.isNullOrEmpty() &&
+                            isLoggedIn &&
+                            item.id.isNotBlank()
+                    ) {
+                        val isSettingBackground = backgroundSettingMessages.contains(item.id)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                text =
+                                    if (isSettingBackground) {
+                                        stringResource(R.string.setting_chat_background)
+                                    } else {
+                                        stringResource(R.string.set_chat_background)
+                                    },
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                modifier =
+                                    Modifier
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .background(Color.Black.copy(alpha = 0.35f))
+                                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                                        .noRippleClickable {
+                                            if (!isSettingBackground) {
+                                                viewModel.setChatBackground(item.id)
+                                            }
+                                        },
+                            )
+                            if (isSettingBackground) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White.copy(alpha = 0.8f),
+                                )
+                            }
                         }
                     }
                 }

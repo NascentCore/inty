@@ -326,6 +326,43 @@ async def update_message_metadata(
         return False
 
 
+async def get_generated_image_metadata(
+    db: AsyncSession, session_id: str, message_id: int
+) -> Optional[dict]:
+    """
+    获取指定消息上的生成图片元数据
+    """
+    try:
+        stmt = select(ChatHistory).where(
+            and_(ChatHistory.session_id == session_id, ChatHistory.id == message_id)
+        )
+        result = await db.execute(stmt)
+        chat_history = result.scalar_one_or_none()
+
+        if not chat_history:
+            logger.warning(
+                f"消息不存在，无法获取生成图片: session_id={session_id}, message_id={message_id}"
+            )
+            return None
+
+        meta_data = chat_history.meta_data or {}
+        generated_image = meta_data.get("generated_image")
+
+        if generated_image and generated_image.get("image_url"):
+            return generated_image
+
+        logger.warning(
+            f"消息 meta_data 中没有生成图片: session_id={session_id}, message_id={message_id}"
+        )
+        return None
+
+    except Exception as e:
+        logger.error(
+            f"获取生成图片元数据失败: session_id={session_id}, message_id={message_id}, error={str(e)}"
+        )
+        return None
+
+
 async def update_message_vote(
     db: AsyncSession,
     session_id: str,

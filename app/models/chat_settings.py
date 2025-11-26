@@ -1,5 +1,5 @@
 import sqlalchemy as sa
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text, Index
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, JSON, String, Text, Index
 from sqlalchemy.orm import relationship
 
 from app.models import Base
@@ -34,6 +34,12 @@ class ChatSettings(Base):
 
     chat_id = Column(String, ForeignKey("chats.id"))
     chat = relationship("Chat", back_populates="settings")
+
+    background_image = Column(
+        JSON,
+        nullable=True,
+        comment="用户为该聊天选择的背景图（存储生成图片元数据）",
+    )
 
     # TODO: 增加 mode，enum (vanila, standard, premium)
     # TODO: 增加 features，list[str] (keep_talking, style_prompt, auto_play_voice)

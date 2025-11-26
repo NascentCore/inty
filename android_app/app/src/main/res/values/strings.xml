@@ -185,6 +185,10 @@
     <string name="chat_settings_show_keep_talking">Show \"Keep Talking\" button</string>
     <string name="chat_settings_auto_play_voice">Auto-play voice messages</string>
     <string name="chat_input_placeholder">Write something to your AI companion</string>
+    <string name="set_chat_background">Set as chat background</string>
+    <string name="setting_chat_background">Setting background…</string>
+    <string name="chat_background_updated">Chat background updated</string>
+    <string name="chat_background_invalid_message">This image can't be used right now</string>
 
     <!-- VIP Components -->
     <string name="discount_save">OFF</string>

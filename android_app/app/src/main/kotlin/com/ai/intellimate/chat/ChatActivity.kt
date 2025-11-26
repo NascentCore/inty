@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.components.AgentBackground
@@ -122,6 +123,7 @@ class ChatActivity : BaseActivity() {
         super.ConfigComposeUI()
         val agentInfo by chatViewModel.agentInfo.collectAsState()
         val chatMessages by chatViewModel.msgs.collectAsState()
+        val chatSettings by chatViewModel.chatSettings.collectAsState()
         val hasLoadingMessage =
             chatMessages.any { msg ->
                 val hasGeneratedImage = msg.hasGeneratedImage()
@@ -131,6 +133,11 @@ class ChatActivity : BaseActivity() {
                     generatedImageUrl != "loading"
             }
 
+        val backgroundOverride =
+            remember(agentInfo, chatSettings) {
+                agentInfo?.id?.let { chatViewModel.getChatBackgroundForAgent(it) }
+            }
+
         Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
             // 背景图放在最底层，不受 imePadding 影响
             AgentBackground(
@@ -138,6 +145,7 @@ class ChatActivity : BaseActivity() {
                 showGradients = true,
                 isLoading = hasLoadingMessage,
                 isCurrentPage = true,
+                overrideStaticImageUrl = backgroundOverride,
                 modifier = Modifier.fillMaxSize(),
             )
 

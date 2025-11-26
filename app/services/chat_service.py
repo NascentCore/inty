@@ -1,5 +1,6 @@
 import logging
 import uuid
+from datetime import datetime
 from typing import List, Optional, Union
 
 from fastapi import HTTPException
@@ -907,11 +908,47 @@ async def update_chat_settings(
 
         # 更新设置
         update_data = settings_update.model_dump(exclude_unset=True)
-        if not update_data:
+        background_message_id = update_data.pop("background_image_message_id", None)
+        clear_background = update_data.pop("clear_background_image", None)
+        if (
+            not update_data
+            and background_message_id is None
+            and not clear_background
+        ):
             raise HTTPException(status_code=400, detail="没有提供要更新的数据")
 
         for field, value in update_data.items():
             setattr(settings, field, value)
+
+        session_id = generate_session_id(chat_id)
+
+        if clear_background:
+            settings.background_image = None
+        elif background_message_id is not None:
+            try:
+                message_id_int = int(background_message_id)
+            except (TypeError, ValueError):
+                raise HTTPException(status_code=400, detail="无效的背景消息ID")
+
+            generated_image = await chat_history_service.get_generated_image_metadata(
+                db=db, session_id=session_id, message_id=message_id_int
+            )
+
+            if not generated_image:
+                raise HTTPException(
+                    status_code=400, detail="指定的消息不包含生成的图片"
+                )
+
+            image_url = generated_image.get("image_url")
+            if not image_url:
+                raise HTTPException(status_code=400, detail="生成图片缺少可用的地址")
+
+            settings.background_image = {
+                "image_url": image_url,
+                "message_id": message_id_int,
+                "generated_at": generated_image.get("generated_at"),
+                "updated_at": datetime.utcnow().isoformat(),
+            }
 
         await db.commit()
         await db.refresh(settings)

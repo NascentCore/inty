@@ -58,6 +58,26 @@ class MessageList(BaseModel):
     items: List[Message]
 
 
+class ChatBackgroundImage(BaseModel):
+    """聊天背景图片信息"""
+
+    image_url: str
+    message_id: Optional[int] = None
+    generated_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    @field_serializer("image_url")
+    def serialize_image_url(self, image_url: Optional[str]) -> Optional[str]:
+        if not image_url:
+            return image_url
+        try:
+            from app.services.image_transform_service import image_transform_service
+
+            return image_transform_service.transform_desktop(image_url)
+        except Exception:
+            return image_url
+
+
 class ChatSettingsBase(BaseModel):
     """聊天设置基础模型"""
 
@@ -83,6 +103,8 @@ class ChatSettingsUpdate(ChatSettingsBase):
     style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
     premium_mode: Optional[bool] = None  # 高级模式开关，仅订阅用户可设置
     request_id: Optional[str] = None
+    background_image_message_id: Optional[int] = None
+    clear_background_image: Optional[bool] = False
 
 
 class ChatSettingsInDB(ChatSettingsBase):
@@ -96,6 +118,7 @@ class ChatSettingsInDB(ChatSettingsBase):
     premium_mode: bool = False  # 高级模式开关，仅订阅用户可设置
     created_at: datetime
     updated_at: Optional[datetime] = None
+    background_image: Optional[ChatBackgroundImage] = None
 
     class Config:
         # 当设置为 True 时，Pydantic 可以从具有属性的对象（如 SQLAlchemy 模型实例）创建模型实例

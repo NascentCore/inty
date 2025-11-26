@@ -1085,10 +1085,16 @@ class ChatViewModel : BaseVM() {
     private val _chatSettings =
         MutableStateFlow<Map<String, ChatSettingsResponse.ChatSettingRspData>>(emptyMap())
     val chatSettings = _chatSettings.asStateFlow()
+    private val _backgroundSettingMessages = MutableStateFlow<Set<String>>(emptySet())
+    val backgroundSettingMessages = _backgroundSettingMessages.asStateFlow()
 
     /** 获取指定agent的聊天设置 */
     fun getChatSettingForAgent(agentId: String): ChatSettingsResponse.ChatSettingRspData? {
         return _chatSettings.value[agentId]
+    }
+
+    fun getChatBackgroundForAgent(agentId: String): String? {
+        return _chatSettings.value[agentId]?.backgroundImage?.imageUrl
     }
 
     private fun getChatSetting() = launchBackground {
@@ -1133,6 +1139,46 @@ class ChatViewModel : BaseVM() {
         }
     }
 
+    fun setChatBackground(messageId: String) = launchBackground {
+        val agentId = agentInfo.value?.id ?: return@launchBackground
+        if (!IntySetting.isLogin() || IntySetting.getCurToken().isEmpty()) {
+            return@launchBackground
+        }
+        val numericId = messageId.toLongOrNull()
+        if (numericId == null) {
+            NetworkErrorHandler.showNetworkAwareError(
+                Utils.getApp().getString(R.string.chat_background_invalid_message)
+            )
+            return@launchBackground
+        }
+
+        _backgroundSettingMessages.update { it + messageId }
+        try {
+            val req = ChatSettingsReq(background_image_message_id = numericId)
+            val result = NetServiceMgr.getChatApi().updateChatSettings(agentId, req)
+            when (result) {
+                is HttpResult.Success -> {
+                    NetworkErrorHandler.showNetworkAwareError(
+                        Utils.getApp().getString(R.string.chat_background_updated)
+                    )
+                    result.data.data?.let { chatSettingData ->
+                        _chatSettings.update { currentSettings ->
+                            currentSettings + (agentId to chatSettingData)
+                        }
+                    }
+                }
+
+                is HttpResult.Failure -> {
+                    NetworkErrorHandler.showNetworkAwareError(result.message)
+                }
+            }
+        } catch (e: Exception) {
+            NetworkErrorHandler.handleNetworkException(e)
+        } finally {
+            _backgroundSettingMessages.update { it - messageId }
+        }
+    }
+
     fun setAgentID(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -1168,6 +1214,7 @@ class ChatViewModel : BaseVM() {
 
         // 清理chatSettings
         _chatSettings.value = emptyMap()
+        _backgroundSettingMessages.value = emptySet()
 
         // 清理消息查询完成状态
         _isQueryMsgsCompleted.value = false

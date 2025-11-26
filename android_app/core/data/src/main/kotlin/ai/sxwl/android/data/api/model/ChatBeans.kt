@@ -190,6 +190,9 @@ data class ChatSettingsReq(
     val premium_mode: Boolean? = null,
     val style_prompt: String? = null,
     val voice_enabled: Boolean? = null,
+    @Json(name = "background_image_message_id")
+    val background_image_message_id: Long? = null,
+    @Json(name = "clear_background_image") val clear_background_image: Boolean? = null,
 )
 
 @JsonClass(generateAdapter = true)
@@ -215,6 +218,15 @@ data class ChatSettingsResponse(
         val voice_enabled: Boolean? = null, // 是否启用语音
         val keep_talking: Boolean? = null, // 连续回复,似乎客户端实现，不需要接口字段
         val premium_mode: Boolean? = null, // 是否会员模式
+        @Json(name = "background_image") val backgroundImage: BackgroundImage? = null,
+    ) {
+        @JsonClass(generateAdapter = true)
+        data class BackgroundImage(
+            @Json(name = "image_url") val imageUrl: String? = null,
+            @Json(name = "message_id") val messageId: Long? = null,
+            @Json(name = "generated_at") val generatedAt: String? = null,
+            @Json(name = "updated_at") val updatedAt: String? = null,
+        )
     )
 }
 

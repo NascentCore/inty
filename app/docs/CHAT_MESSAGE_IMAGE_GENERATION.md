@@ -299,6 +299,13 @@ async def generate_chat_image_with_gemini(
 
 6. **重复生成**: 重复生成会直接覆盖 `meta_data.generated_image` 字段。
 
+## 聊天背景设置（2025-11）
+
+- `PUT /api/v1/chats/agents/{agent_id}/settings` 现支持 `background_image_message_id`，可将同一聊天中包含生成图片的消息设置为聊天背景。
+- 服务端会校验 `message_id` 是否隶属于该聊天，并检查 `meta_data.generated_image` 内是否存在 `image_url`，仅在验证通过时写入 `chat_settings.background_image`。
+- 响应中的 `background_image.image_url` 自动转换为 CDN URL（数据库仍保存 `gs://`），客户端无需再次转换即可使用。
+- 通过 `clear_background_image=true` 可以移除当前聊天背景，恢复为默认 Agent 背景。
+
 ## 错误处理
 
 1. **Agent 不存在**: 返回 404

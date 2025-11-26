@@ -3,13 +3,15 @@
 """
 
 import uuid
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app import models
+from app import models, schemas
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
@@ -194,6 +196,136 @@ class TestChatService:
         await db_session.delete(test_agent)
         await db_session.delete(test_user)
         await db_session.commit()
+
+    @pytest.mark.asyncio
+    async def test_update_chat_settings_sets_background_image(
+        self, db_session: AsyncSession
+    ):
+        user_id = f"user_{uuid.uuid4().hex[:6]}"
+        agent_id = f"agent_{uuid.uuid4().hex[:6]}"
+
+        user = models.User(
+            id=user_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            auth_type=AuthType.GOOGLE,
+            nickname="BG User",
+            email="bg_user@example.com",
+            system_language="en",
+            is_active=True,
+        )
+        agent = models.Agent(
+            id=agent_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            name="BG Agent",
+            gender=Gender.FEMALE,
+            avatar="https://example.com/avatar.jpg",
+            background="https://example.com/background.jpg",
+            intro="intro",
+            opening="opening",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+        )
+        db_session.add_all([user, agent])
+        await db_session.commit()
+
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user_id, agent_id=agent_id
+        )
+        await chat_service.get_or_create_chat_settings(
+            db=db_session, chat_id=chat.id, user_id=user_id, agent_id=agent_id
+        )
+
+        session_id = chat_service.generate_session_id(chat.id)
+        ai_message = models.ChatHistory(
+            session_id=session_id,
+            message={"type": "ai", "data": {"content": "show me"}},
+            meta_data={
+                "generated_image": {
+                    "image_url": "gs://test-bucket/chat_images/example.jpg",
+                    "width": 512,
+                    "height": 512,
+                    "generated_at": datetime.utcnow().isoformat(),
+                }
+            },
+        )
+        db_session.add(ai_message)
+        await db_session.commit()
+        await db_session.refresh(ai_message)
+
+        update_payload = schemas.ChatSettingsUpdate(
+            background_image_message_id=ai_message.id
+        )
+        updated_settings = await chat_service.update_chat_settings(
+            db=db_session, chat_id=chat.id, settings_update=update_payload
+        )
+
+        assert updated_settings.background_image is not None
+        assert (
+            updated_settings.background_image["image_url"]
+            == "gs://test-bucket/chat_images/example.jpg"
+        )
+        assert updated_settings.background_image["message_id"] == ai_message.id
+
+    @pytest.mark.asyncio
+    async def test_update_chat_settings_rejects_message_without_generated_image(
+        self, db_session: AsyncSession
+    ):
+        user_id = f"user_{uuid.uuid4().hex[:6]}"
+        agent_id = f"agent_{uuid.uuid4().hex[:6]}"
+
+        user = models.User(
+            id=user_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            auth_type=AuthType.GOOGLE,
+            nickname="BG User",
+            email="bg_user@example.com",
+            system_language="en",
+            is_active=True,
+        )
+        agent = models.Agent(
+            id=agent_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            name="BG Agent",
+            gender=Gender.MALE,
+            avatar="https://example.com/avatar.jpg",
+            background="https://example.com/background.jpg",
+            intro="intro",
+            opening="opening",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+        )
+        db_session.add_all([user, agent])
+        await db_session.commit()
+
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user_id, agent_id=agent_id
+        )
+        await chat_service.get_or_create_chat_settings(
+            db=db_session, chat_id=chat.id, user_id=user_id, agent_id=agent_id
+        )
+
+        session_id = chat_service.generate_session_id(chat.id)
+        ai_message = models.ChatHistory(
+            session_id=session_id,
+            message={"type": "ai", "data": {"content": "hello"}},
+            meta_data={},  # 没有 generated_image
+        )
+        db_session.add(ai_message)
+        await db_session.commit()
+        await db_session.refresh(ai_message)
+
+        update_payload = schemas.ChatSettingsUpdate(
+            background_image_message_id=ai_message.id
+        )
+        with pytest.raises(HTTPException) as exc:
+            await chat_service.update_chat_settings(
+                db=db_session, chat_id=chat.id, settings_update=update_payload
+            )
+
+        assert exc.value.status_code == 400
+        assert "生成的图片" in exc.value.detail
 
     @pytest.mark.asyncio
     @patch("app.services.chat_service.subscription_service.check_image_gen_limit")
