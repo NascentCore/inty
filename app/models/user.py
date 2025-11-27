@@ -23,9 +23,12 @@ from app.models.associations import agent_followers
 class AuthType(str, enum.Enum):
     """认证类型"""
 
+    # 目前未使用
     PHONE = "PHONE"
     GOOGLE = "GOOGLE"
     GUEST = "GUEST"
+    # 使用 Email+Password 登录
+    # （2025-11-27）目前仅用于让 Google Play 审查员登录
     EMAIL = "EMAIL"
 
 
