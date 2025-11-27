@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional, Union
 
-from pydantic import BaseModel, Field, root_validator, validator
+from pydantic import BaseModel, Field, model_validator, validator
 
 from app.models.user import AuthType, Gender
 
@@ -106,12 +106,12 @@ class GoogleAuthRequest(BaseModel):
     user_info: Optional[UserInfo] = None
     request_id: Optional[str] = None
 
-    @root_validator
-    def validate_credentials(cls, values):
+    @model_validator(mode="after")
+    def validate_credentials(self):
         """验证：必须提供 id_token 或 email+password，且 email 和 password 必须同时提供"""
-        id_token = values.get("id_token")
-        email = values.get("email")
-        password = values.get("password")
+        id_token = self.id_token
+        email = self.email
+        password = self.password
 
         # 如果提供了 email，必须同时提供 password
         if email and not password:
@@ -123,7 +123,7 @@ class GoogleAuthRequest(BaseModel):
         if not id_token and not (email and password):
             raise ValueError("Either id_token or email+password must be provided")
 
-        return values
+        return self
 
 
 class UserResponse(BaseModel):
