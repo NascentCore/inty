@@ -1,5 +1,9 @@
 # Inty 长期 AI 陪伴
 
+## Alembic
+
+- 按照 alembic/README.md 中的步骤创建新的 alembic version 文件，而不是直接编写
+
 ## 代码库结构
 
 - `android_app/` IntelliMate, android app code，kotlin compose jetpack
