@@ -6,11 +6,13 @@ import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.IntyNetworkManager
+import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.http.services.UserService
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.firebase.FCMTokenUploadCallback
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.LogUtils
 import android.app.Application
 import com.ai.intellimate.notifications.PushNotificationManager
@@ -28,6 +30,13 @@ class IntelliMateApp : Application() {
         super.onCreate()
         // 初始化网络管理器（IntyNetworkManager 内部已包含 NetworkStateManager）
         IntyNetworkManager.initialize(this, buildType = BuildConfig.BUILD_TYPE)
+
+        // 记录并验证 baseUrl 配置（特别是 release 构建）
+        // 如果验证失败，会直接退出应用，不继续执行后续初始化
+        if (!logAndValidateBaseUrl()) {
+            // 验证失败，应用即将退出，不继续执行初始化
+            return
+        }
 
         // 初始化缓存提供者并注入到DataModule
         val chatCacheProvider = AgentCacheProviderImpl()
@@ -166,7 +175,10 @@ class IntelliMateApp : Application() {
                     // Check if user is logged in before uploading token
                     // This avoids 401 errors when token is obtained before login
                     if (!IntySetting.isLogin() || IntySetting.getCurToken().isEmpty()) {
-                        LogUtils.w("IntelliMateApp", "用户未登录，跳过 FCM Token 上传。登录后将自动上传。")
+                        LogUtils.w(
+                            "IntelliMateApp",
+                            "用户未登录，跳过 FCM Token 上传。登录后将自动上传。"
+                        )
                         return
                     }
 
@@ -183,6 +195,64 @@ class IntelliMateApp : Application() {
                 }
             }
         )
+    }
+
+    /**
+     * 记录并验证 baseUrl 配置
+     * 对于 release 构建，如果 baseUrl 不正确，直接退出应用
+     *
+     * @return Boolean 返回 true 表示验证通过或不需要验证，可以继续执行；返回 false 表示验证失败，应用即将退出
+     */
+    private fun logAndValidateBaseUrl(): Boolean {
+        val buildType = NetworkConfig.getCurrentBuildType()
+        val baseUrl = NetworkConfig.getBaseUrl()
+
+        // 记录 baseUrl 信息（所有构建类型都记录）
+        LogUtils.i("IntelliMateApp", "当前构建类型: ${buildType.value}, baseUrl: $baseUrl")
+
+        // 上报到 Firebase（便于监控）
+        try {
+            FirebaseManager.setCustomKey("app_build_type", buildType.value)
+            FirebaseManager.setCustomKey("app_base_url", baseUrl)
+        } catch (e: Exception) {
+            LogUtils.w("IntelliMateApp", "设置 Firebase 自定义键失败: ${e.message}")
+        }
+
+        // Release 构建的强验证
+        if (buildType == NetworkConfig.BuildType.RELEASE) {
+            val (isValid, errorMessage) = NetworkConfig.validateReleaseBaseUrl()
+            if (!isValid) {
+                // 记录严重错误
+                LogUtils.e("IntelliMateApp", "❌ 严重错误: $errorMessage")
+
+                // 上报到 Firebase Crashlytics（尝试上报，但不阻塞退出）
+                try {
+                    FirebaseManager.setCustomKey("base_url_validation_failed", true)
+                    FirebaseManager.setCustomKey("base_url_validation_error", errorMessage)
+                    FirebaseManager.recordException(
+                        IllegalStateException("Release 构建 baseUrl 验证失败: $errorMessage")
+                    )
+                } catch (e: Exception) {
+                    LogUtils.e("IntelliMateApp", "上报 Firebase 失败: ${e.message}")
+                    // 即使上报失败，也要退出应用
+                }
+
+                // 直接退出应用，不继续运行
+                // 这是一个严重的安全问题，必须立即退出
+                LogUtils.e(
+                    "IntelliMateApp",
+                    "Release 构建 baseUrl 配置错误，强制退出应用。错误: $errorMessage"
+                )
+                AppUtils.exitApp()
+                // 返回 false，表示验证失败，调用方不应继续执行初始化
+                return false
+            } else {
+                LogUtils.i("IntelliMateApp", "✅ Release 构建 baseUrl 验证通过: $baseUrl")
+            }
+        }
+
+        // 验证通过或不需要验证，返回 true
+        return true
     }
 
     override fun onTerminate() {
