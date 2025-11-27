@@ -397,7 +397,7 @@ async def get_evaluation_stats(
 
 
 # WebSocket端点用于实时监控评测进度
-@router.websocket("/sessions/{session_id}/monitor", tags=[NOT_USED_TAG])
+@router.websocket("/sessions/{session_id}/monitor")
 async def monitor_evaluation_session(
     websocket,
     session_id: str,
