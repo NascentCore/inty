@@ -5,7 +5,7 @@
 Android sytem allows increasing display size and font size for easier reading.
 Below is a screenshot of increased display size and font size on Pixel 7a.
 
-<img width="1344" height="2992" alt="img_v3_02se_0a66ea3d-9939-45f7-afa3-935023beefcg" src="https://github.com/user-attachments/assets/4ca8b0a9-8687-44f0-a436-fbfd8150bc3c" />
+<img width="480" height="2992" alt="img_v3_02se_0a66ea3d-9939-45f7-afa3-935023beefcg" src="https://github.com/user-attachments/assets/4ca8b0a9-8687-44f0-a436-fbfd8150bc3c" />
 
 IntelliMate does not work with such settings.
 
