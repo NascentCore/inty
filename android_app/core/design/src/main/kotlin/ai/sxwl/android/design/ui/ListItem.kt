@@ -129,22 +129,36 @@ fun SettingsSwitchItem(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(48.dp)
+                .heightIn(min = 48.dp)
                 .then(modifier)
-                .padding(horizontal = horizontalPadding.dp)
+                .padding(horizontal = horizontalPadding.dp, vertical = 12.dp)
                 .noRippleClickable { onCheckChanged(item.checked.not()) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = item.title,
-            fontSize = 14.sp,
-            lineHeight = 24.sp, // 根据设计稿，lineHeight应该是24sp
-            fontWeight = if (fontLight) FontWeight.Normal else FontWeight.Bold,
-            color = Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.weight(1f))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.title,
+                fontSize = 14.sp,
+                lineHeight = 22.sp,
+                fontWeight = if (fontLight) FontWeight.Normal else FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (item.content.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = item.content,
+                    fontSize = 14.sp,
+                    lineHeight = 22.sp,
+                    fontWeight = FontWeight(400),
+                    color = Color(0x8CFFFFFF),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Spacer(Modifier.width(8.dp))
         // 如果提供了图标资源，使用Image；否则使用Switch
         if (openedIconRes != null && closedIconRes != null) {
             Image(
@@ -173,8 +187,11 @@ fun SettingsSwitchItem(
 sealed class SettingsItemData {
 
     /** 开关设置 */
-    data class SwitchItemData(val title: String = "", val checked: Boolean = false) :
-        SettingsItemData()
+    data class SwitchItemData(
+        val title: String = "",
+        val content: String = "",
+        val checked: Boolean = false,
+    ) : SettingsItemData()
 
     /** 普通item数据 */
     data class CommonItemData(
@@ -195,15 +212,15 @@ sealed class SettingsItemData {
 @Composable
 private fun 预览设置开关() {
     Column {
-        SettingsSwitchItem(item = SettingsItemData.SwitchItemData("开通VIP", true))
+        SettingsSwitchItem(item = SettingsItemData.SwitchItemData("开通VIP", "", true))
         Spacer(Modifier.height(10.dp))
-        SettingsSwitchItem(item = SettingsItemData.SwitchItemData("一键起飞", false))
+        SettingsSwitchItem(item = SettingsItemData.SwitchItemData("一键起飞", "", false))
         Spacer(Modifier.height(10.dp))
-        SettingsSwitchItem(item = SettingsItemData.SwitchItemData("轻灵字体", false), true)
+        SettingsSwitchItem(item = SettingsItemData.SwitchItemData("轻灵字体", "", false), true)
         Spacer(Modifier.height(10.dp))
-        SettingsCheckBoxItem(item = SettingsItemData.SwitchItemData("一键起飞", true))
+        SettingsCheckBoxItem(item = SettingsItemData.SwitchItemData("一键起飞", "", true))
         Spacer(Modifier.height(10.dp))
-        SettingsCheckBoxItem(item = SettingsItemData.SwitchItemData("轻灵字体", false), true)
+        SettingsCheckBoxItem(item = SettingsItemData.SwitchItemData("轻灵字体", "", false), true)
     }
 }
 
@@ -426,7 +443,7 @@ private fun 预览设置分组容器() {
         )
         IntelliMateDivider()
         SettingsCheckBoxItem(
-            item = SettingsItemData.SwitchItemData("轻灵字体", true),
+            item = SettingsItemData.SwitchItemData("轻灵字体", "", true),
             fontLight = true,
             isInGroup = true,
         )
