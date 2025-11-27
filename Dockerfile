@@ -30,9 +30,11 @@ RUN apt-get update && apt-get install -y \
 
 # 复制依赖文件
 COPY requirements.txt .
-
 # https://stackoverflow.com/a/58021389/31283770
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
+
+COPY scripts/requirements.txt scripts_requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r scripts_requirements.txt
 
 FROM base
 
