@@ -11,9 +11,9 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
+from app.api.constants import API_V1_PREFIX
 from app.api.tags import ANDROID_APP_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
-from app.api.constants import API_V1_PREFIX
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.security import create_access_token, verify_password
 from app.core.uuid import get_new_user_id
@@ -250,16 +250,16 @@ async def email_password_login(
 
         if not user:
             logger.error(f"User not found with email: {email}")
-            return APIResponse.error(message="Invalid email or password")
+            return APIResponse.error(message="Invalid Email password combination")
 
         # 验证密码
         if not user.password:
             logger.error(f"User {user.id} has no password set")
-            return APIResponse.error(message="Invalid email or password")
+            return APIResponse.error(message="Invalid Email password combination")
 
         if not verify_password(password, user.password):
             logger.error(f"Invalid password for user: {user.id}")
-            return APIResponse.error(message="Invalid email or password")
+            return APIResponse.error(message="Invalid Email password combination")
 
         # 尝试恢复孤立的订阅记录
         try:

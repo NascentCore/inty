@@ -76,11 +76,43 @@ async def create_email_password_user(
                         f"User already exists but password does not match. "
                         f"User ID: {existing_user.id}"
                     )
+                    # 如果不是 dry-run 模式，询问是否更新密码
+                    if not dry_run:
+                        if confirm_action(
+                            f"Password does not match. Do you want to update the password for user {existing_user.id}?"
+                        ):
+                            hashed_password = get_password_hash(password)
+                            existing_user.password = hashed_password
+                            await db.commit()
+                            await db.refresh(existing_user)
+                            logger.info(
+                                f"Password updated successfully for user {existing_user.id}"
+                            )
+                        else:
+                            logger.info("Password update cancelled by user")
+                    else:
+                        logger.info("DRY-RUN: Would update password for existing user")
             else:
                 logger.warning(
                     f"User already exists but has no password set. "
                     f"User ID: {existing_user.id}"
                 )
+                # 如果不是 dry-run 模式，询问是否设置密码
+                if not dry_run:
+                    if confirm_action(
+                        f"User has no password set. Do you want to set the password for user {existing_user.id}?"
+                    ):
+                        hashed_password = get_password_hash(password)
+                        existing_user.password = hashed_password
+                        await db.commit()
+                        await db.refresh(existing_user)
+                        logger.info(
+                            f"Password set successfully for user {existing_user.id}"
+                        )
+                    else:
+                        logger.info("Password setting cancelled by user")
+                else:
+                    logger.info("DRY-RUN: Would set password for existing user")
 
             return existing_user
 
