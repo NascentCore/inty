@@ -7,6 +7,12 @@
 docker run --volume /opt/inty-pre-prod/config.yaml:/config.yaml -it ghcr.io/nascentcore/inty-backend/inty-server:<tag> bash
 ```
 
+## API 使用标签
+
+- `app/api/used_api_endpoints.py` 保存最近一次后端真实流量的 API 路径与调用次数快照。
+- `app/main.py` 会在应用启动时自动遍历所有 `/api/*` 与 `/evaluation/*` 路由，并为不在快照列表内的接口追加 `NOT_USED` tag，方便在 Swagger/OpenAPI 中识别待下线接口。
+- 若有新的调用统计，请同步更新上述快照文件，以确保标记准确。
+
 ## Stainless OpenAPI generator
 
 ```bash
