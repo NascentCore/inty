@@ -213,6 +213,31 @@ object NetworkConfig {
         return getCurrentBuildType() == BuildType.RELEASE
     }
 
+    /**
+     * 验证 Release 构建的 baseUrl 是否正确
+     *
+     * @return Pair<Boolean, String> 第一个值表示是否有效，第二个值表示错误信息（如果无效）
+     */
+    fun validateReleaseBaseUrl(): Pair<Boolean, String> {
+        val buildType = getCurrentBuildType()
+        if (buildType != BuildType.RELEASE) {
+            // 非 release 构建，不需要验证
+            return Pair(true, "")
+        }
+
+        val currentBaseUrl = getBaseUrl()
+        val expectedBaseUrl = "https://${Constant.USER_HOST}/"
+
+        return if (currentBaseUrl == expectedBaseUrl) {
+            Pair(true, "")
+        } else {
+            Pair(
+                false,
+                "Release 构建的 baseUrl 不正确。期望: $expectedBaseUrl, 实际: $currentBaseUrl"
+            )
+        }
+    }
+
     /** 检查是否启用详细日志 */
     fun shouldEnableDetailedLogging(): Boolean {
         return getCurrentEnvironmentConfig().logging.enableRequestLogging
