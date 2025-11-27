@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from loguru import logger
+from pydantic import ValidationError
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -205,6 +206,13 @@ async def google_login(
     except ValueError as e:
         logger.error(f"Google login error: {str(e)}")
         return APIResponse.error(message="Invalid Google ID token")
+    except ValidationError as e:
+        logger.error(f"Google login validation error: {str(e)}")
+        logger.error(f"Validation error details: {e.errors()}")
+        return APIResponse.error(
+            message=f"Invalid response data: {', '.join([err['msg'] for err in e.errors()])}"
+        )
     except Exception as e:
         logger.error(f"Google login error: {str(e)}")
+        logger.error(f"Error stack: {traceback.format_exc()}")
         return APIResponse.error(message=str(e))

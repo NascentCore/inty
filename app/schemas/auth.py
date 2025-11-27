@@ -149,7 +149,7 @@ class LoginUserResponse(BaseModel):
 
     id: str
     nickname: str
-    avatar: str
+    avatar: Optional[str] = None
     email: str
     phone: Optional[str] = None
     auth_type: AuthType
