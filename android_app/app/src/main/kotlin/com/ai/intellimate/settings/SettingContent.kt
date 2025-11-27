@@ -37,6 +37,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.ui.components.DeleteAccountDialog
 import com.ai.intellimate.ui.components.LogoutButton
+import com.ai.intellimate.ui.components.SettingCopyableInfoItem
 import com.ai.intellimate.ui.components.SettingDivider
 import com.ai.intellimate.ui.components.SettingNavigationItem
 import com.ai.intellimate.ui.components.SettingSection
@@ -81,6 +82,12 @@ fun SettingContent(
 
     Scaffold(modifier = modifier, topBar = { SettingTopBar(onBack = onBack) }) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
+            AccountInfoSection(
+                userId = IntySetting.getCurUserID(),
+                onCopyUserId = { ToastUtils.showShort(R.string.toast_copied_to_clipboard) },
+            )
+
+            Spacer(Modifier.height(16.dp))
 
             // 支持与帮助区域
             SupportAndHelpSection(
@@ -129,6 +136,21 @@ private fun SettingTopBar(onBack: () -> Unit) {
             )
         },
     )
+}
+
+/** 账号信息区域 */
+@Composable
+private fun AccountInfoSection(userId: String, onCopyUserId: () -> Unit) {
+    SettingSection {
+        val displayId =
+            if (userId.isNotBlank()) userId else stringResource(R.string.settings_user_id_unavailable)
+        SettingCopyableInfoItem(
+            title = stringResource(R.string.settings_user_id),
+            value = displayId,
+            copyText = userId.takeIf { it.isNotBlank() },
+            onCopied = onCopyUserId,
+        )
+    }
 }
 
 /** 支持与帮助区域 */
