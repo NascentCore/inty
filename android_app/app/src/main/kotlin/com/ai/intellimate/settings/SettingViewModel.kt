@@ -37,13 +37,14 @@ data class SettingState(
 class SettingViewModel : BaseVM() {
 
     // 统一状态，合并所有数据源
-    private val _state = MutableStateFlow(
-        SettingState(
-            userId = IntySetting.getCurUserID(),
-            hasAppUpdateTips = IntySetting.hasAppUpdateTips(),
-            vipStatus = BillingRepository.vipStatusFlow.value,
-        ),
-    )
+    private val _state =
+        MutableStateFlow(
+            SettingState(
+                userId = IntySetting.getCurUserID(),
+                hasAppUpdateTips = IntySetting.hasAppUpdateTips(),
+                vipStatus = BillingRepository.vipStatusFlow.value,
+            )
+        )
     val state: StateFlow<SettingState> = _state.asStateFlow()
 
     // 对话框状态（保留用于兼容）
@@ -68,10 +69,11 @@ class SettingViewModel : BaseVM() {
 
     /** 刷新用户ID和更新提示状态（用于响应非响应式数据源的变化） */
     fun refreshUserData() {
-        _state.value = _state.value.copy(
-            userId = IntySetting.getCurUserID(),
-            hasAppUpdateTips = IntySetting.hasAppUpdateTips(),
-        )
+        _state.value =
+            _state.value.copy(
+                userId = IntySetting.getCurUserID(),
+                hasAppUpdateTips = IntySetting.hasAppUpdateTips(),
+            )
     }
 
     /** 显示删除账号对话框 */

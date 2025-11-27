@@ -159,10 +159,7 @@ class IntelliMateApp : Application() {
                     LogUtils.e("IntelliMateApp", "上报 Firebase 失败: ${e.message}")
                 }
 
-                LogUtils.e(
-                    "IntelliMateApp",
-                    "Release 构建 baseUrl 配置错误，强制退出应用。错误: $errorMessage"
-                )
+                LogUtils.e("IntelliMateApp", "Release 构建 baseUrl 配置错误，强制退出应用。错误: $errorMessage")
                 AppUtils.exitApp()
                 return false
             }

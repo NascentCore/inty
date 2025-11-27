@@ -24,29 +24,26 @@ import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
 
 /** 退出登录按钮组件 */
-
 @Composable
 fun LogoutButton(modifier: Modifier = Modifier, onLogout: () -> Unit = {}) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .border(
-                brush =
-                    Brush.linearGradient(
-                        colors =
-                            listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
-                    ),
-                width = 1.dp,
-                shape = RoundedCornerShape(8.dp),
-            )
-            .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
-            .clickable { onLogout() }
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .border(
+                    brush =
+                        Brush.linearGradient(
+                            colors =
+                                listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                        ),
+                    width = 1.dp,
+                    shape = RoundedCornerShape(8.dp),
+                )
+                .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
+                .clickable { onLogout() }
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp)
-                .padding(horizontal = 12.dp),
+            modifier = Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Spacer(Modifier.weight(1f))

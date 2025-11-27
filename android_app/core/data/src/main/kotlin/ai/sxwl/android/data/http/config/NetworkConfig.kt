@@ -231,10 +231,7 @@ object NetworkConfig {
         return if (currentBaseUrl == expectedBaseUrl) {
             Pair(true, "")
         } else {
-            Pair(
-                false,
-                "Release 构建的 baseUrl 不正确。期望: $expectedBaseUrl, 实际: $currentBaseUrl"
-            )
+            Pair(false, "Release 构建的 baseUrl 不正确。期望: $expectedBaseUrl, 实际: $currentBaseUrl")
         }
     }
 

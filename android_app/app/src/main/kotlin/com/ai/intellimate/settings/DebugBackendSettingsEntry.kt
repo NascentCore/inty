@@ -42,13 +42,8 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     SettingsItemGroup {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.ContentHorizontalPadding)
-        ) {
-
-        Text(
+        Column(modifier = Modifier.fillMaxWidth().padding(Spacing.ContentHorizontalPadding)) {
+            Text(
                 text = "当前构建类型：${uiState.buildType}",
                 color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
                 style = MaterialTheme.typography.bodySmall,

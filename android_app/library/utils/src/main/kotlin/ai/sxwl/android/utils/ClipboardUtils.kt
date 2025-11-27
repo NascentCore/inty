@@ -11,6 +11,7 @@ import androidx.core.content.getSystemService
  * 提供复制文本到剪贴板的功能
  *
  * 使用示例：
+ *
  * ```kotlin
  * ClipboardUtils.copyToClipboard(context, "标签", "要复制的文本")
  * ```
@@ -34,4 +35,3 @@ object ClipboardUtils {
         return true
     }
 }
-

@@ -105,8 +105,7 @@ fun ChatSettingsDrawer(
         drawerContent = {
             Column(
                 modifier =
-                    Modifier
-                        .width(319.dp)
+                    Modifier.width(319.dp)
                         .fillMaxHeight()
                         .background(
                             brush =
@@ -127,17 +126,18 @@ fun ChatSettingsDrawer(
                 Column(modifier = Modifier.padding(horizontal = horizontalPadding.dp)) {
                     SettingsItemGroup(modifier = Modifier) {
                         SettingsArrowItem(
-                            item = SettingsItemData.CommonItemData(
-                                title = stringResource(R.string.str_name),
-                                content = userProfileState.nickname.ifEmpty { "Guest" },
-                            ),
+                            item =
+                                SettingsItemData.CommonItemData(
+                                    title = stringResource(R.string.str_name),
+                                    content = userProfileState.nickname.ifEmpty { "Guest" },
+                                ),
                             isInGroup = true,
                             fontLight = true,
                             horizontalPadding = horizontalPadding,
                             onItemClick = {
                                 // 检查是否已登录
-                                if (IntySetting.isLogin() && IntySetting.getCurToken()
-                                        .isNotEmpty()
+                                if (
+                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
                                 ) {
                                     FirebaseManager.logEvent(
                                         FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
@@ -153,17 +153,18 @@ fun ChatSettingsDrawer(
                         )
                         IntelliMateDivider()
                         SettingsArrowItem(
-                            item = SettingsItemData.CommonItemData(
-                                title = stringResource(R.string.str_pronouns),
-                                content = userProfileState.pronouns(),
-                            ),
+                            item =
+                                SettingsItemData.CommonItemData(
+                                    title = stringResource(R.string.str_pronouns),
+                                    content = userProfileState.pronouns(),
+                                ),
                             isInGroup = true,
                             fontLight = true,
                             horizontalPadding = horizontalPadding,
                             onItemClick = {
                                 // 检查是否已登录
-                                if (IntySetting.isLogin() && IntySetting.getCurToken()
-                                        .isNotEmpty()
+                                if (
+                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
                                 ) {
                                     FirebaseManager.logEvent(
                                         FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
@@ -179,17 +180,18 @@ fun ChatSettingsDrawer(
                         )
                         IntelliMateDivider()
                         SettingsArrowItem(
-                            item = SettingsItemData.CommonItemData(
-                                title = stringResource(R.string.str_persona),
-                                content = userProfileState.description ?: "Edit",
-                            ),
+                            item =
+                                SettingsItemData.CommonItemData(
+                                    title = stringResource(R.string.str_persona),
+                                    content = userProfileState.description ?: "Edit",
+                                ),
                             isInGroup = true,
                             fontLight = true,
                             horizontalPadding = horizontalPadding,
                             onItemClick = {
                                 // 检查是否已登录
-                                if (IntySetting.isLogin() && IntySetting.getCurToken()
-                                        .isNotEmpty()
+                                if (
+                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
                                 ) {
                                     FirebaseManager.logEvent(
                                         FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
@@ -224,7 +226,9 @@ fun ChatSettingsDrawer(
                         SettingsSwitchItem(
                             item =
                                 SettingsItemData.SwitchItemData(
-                                    title = stringResource(R.string.chat_settings_show_keep_talking) + "青青河边草，有有利到寒假工i哦啊个",
+                                    title =
+                                        stringResource(R.string.chat_settings_show_keep_talking) +
+                                            "青青河边草，有有利到寒假工i哦啊个",
                                     checked = showKeepTalking,
                                 ),
                             fontLight = true,
@@ -288,8 +292,8 @@ fun ChatSettingsDrawer(
                             horizontalPadding = horizontalPadding,
                             onItemClick = {
                                 // 检查是否已登录
-                                if (IntySetting.isLogin() && IntySetting.getCurToken()
-                                        .isNotEmpty()
+                                if (
+                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
                                 ) {
                                     FirebaseManager.logEvent(
                                         FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
@@ -321,7 +325,7 @@ fun ChatSettingsDrawer(
                                     // 检查是否已登录
                                     if (
                                         IntySetting.isLogin() &&
-                                        IntySetting.getCurToken().isNotEmpty()
+                                            IntySetting.getCurToken().isNotEmpty()
                                     ) {
                                         FirebaseManager.logEvent(
                                             FirebaseManager.Events.CHAT_SIDEBAR_CLICK,

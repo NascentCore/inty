@@ -179,7 +179,7 @@ private fun ChatItemAI(
                             safeAgentId.isNotEmpty() &&
                             audioInfo.url.isNotEmpty() &&
                             IntySetting.isAutoPlayAudio() &&
-                                !isGuideVisible  // 未出现引导手势时
+                            !isGuideVisible // 未出现引导手势时
 
                     if (safeAgentId.isNotEmpty()) {
                         VoicePlayer(
