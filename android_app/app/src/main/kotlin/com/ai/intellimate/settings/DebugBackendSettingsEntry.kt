@@ -1,5 +1,6 @@
 package com.ai.intellimate.settings
 
+import ai.sxwl.android.design.ui.SettingsItemGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -21,10 +22,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ai.intellimate.ui.components.SettingSection
 
 private object Spacing {
-    val SectionTopPadding = 16.dp
     val ContentHorizontalPadding = 12.dp
     val SmallSpacer = 4.dp
     val MediumSpacer = 12.dp
@@ -42,12 +41,14 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
     val viewModel: DebugBackendSettingsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    SettingSection(modifier = modifier.padding(top = Spacing.SectionTopPadding)) {
+    SettingsItemGroup {
         Column(
-            modifier =
-                Modifier.fillMaxWidth().padding(horizontal = Spacing.ContentHorizontalPadding)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.ContentHorizontalPadding)
         ) {
-            Text(
+
+        Text(
                 text = "当前构建类型：${uiState.buildType}",
                 color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
                 style = MaterialTheme.typography.bodySmall,

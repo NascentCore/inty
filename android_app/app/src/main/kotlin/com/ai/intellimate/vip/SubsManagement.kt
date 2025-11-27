@@ -1,6 +1,9 @@
 package com.ai.intellimate.vip
 
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.ui.IntelliMateDivider
+import ai.sxwl.android.design.ui.SettingsArrowItem
+import ai.sxwl.android.design.ui.SettingsItemData
 import ai.sxwl.android.utils.ToastUtils
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
@@ -22,8 +25,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
-import com.ai.intellimate.ui.components.SettingDivider
-import com.ai.intellimate.ui.components.SettingNavigationItem
 import com.ai.intellimate.ui.components.SubscriptionManagementContainer
 import com.ai.intellimate.ui.components.openPlayStoreSubscriptions
 
@@ -67,7 +68,9 @@ fun SubscriptionManagementScreen(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                            Modifier
+                                .padding(horizontal = 12.dp)
+                                .noRippleClickable { onBack() },
                         painter = painterResource(R.drawable.back),
                         contentDescription = null,
                     )
@@ -77,14 +80,20 @@ fun SubscriptionManagementScreen(
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             SubscriptionManagementContainer {
-                SettingNavigationItem(
-                    title = stringResource(R.string.cancel_subscription),
-                    onClick = { viewModel.navigateToGooglePlaySubscription() },
+                SettingsArrowItem(
+                    item = SettingsItemData.CommonItemData(
+                        title = stringResource(R.string.cancel_subscription),
+                    ),
+                    isInGroup = true,
+                    onItemClick = { viewModel.navigateToGooglePlaySubscription() },
                 )
-                SettingDivider()
-                SettingNavigationItem(
-                    title = stringResource(R.string.restore_subscription),
-                    onClick = { viewModel.navigateToGooglePlaySubscription() },
+                IntelliMateDivider()
+                SettingsArrowItem(
+                    item = SettingsItemData.CommonItemData(
+                        title = stringResource(R.string.restore_subscription),
+                    ),
+                    isInGroup = true,
+                    onItemClick = { viewModel.navigateToGooglePlaySubscription() },
                 )
             }
         }

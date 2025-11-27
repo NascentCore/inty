@@ -2,9 +2,13 @@ package com.ai.intellimate.settings
 
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.billing.VipStatus
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.utils.HttpErrorHandler
@@ -17,12 +21,58 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 
+/** 设置页面统一状态 */
+@Immutable
+data class SettingState(
+    val userId: String = "",
+    val hasAppUpdateTips: Boolean = false,
+    val vipStatus: VipStatus = VipStatus(false),
+    val dialogState: DialogState = DialogState(),
+) {
+    val isVipSubscribed: Boolean
+        get() = vipStatus.isSubscribed
+}
+
 /** 设置页面 ViewModel */
 class SettingViewModel : BaseVM() {
 
-    // 对话框状态
+    // 统一状态，合并所有数据源
+    private val _state = MutableStateFlow(
+        SettingState(
+            userId = IntySetting.getCurUserID(),
+            hasAppUpdateTips = IntySetting.hasAppUpdateTips(),
+            vipStatus = BillingRepository.vipStatusFlow.value,
+        ),
+    )
+    val state: StateFlow<SettingState> = _state.asStateFlow()
+
+    // 对话框状态（保留用于兼容）
     private val _dialogState = MutableStateFlow(DialogState())
     val dialogState: StateFlow<DialogState> = _dialogState.asStateFlow()
+
+    init {
+        // 监听 VIP 状态变化
+        viewModelScope.launch {
+            BillingRepository.vipStatusFlow.collect { vipStatus ->
+                _state.value = _state.value.copy(vipStatus = vipStatus)
+            }
+        }
+
+        // 同步对话框状态到统一状态
+        viewModelScope.launch {
+            _dialogState.collect { dialogState ->
+                _state.value = _state.value.copy(dialogState = dialogState)
+            }
+        }
+    }
+
+    /** 刷新用户ID和更新提示状态（用于响应非响应式数据源的变化） */
+    fun refreshUserData() {
+        _state.value = _state.value.copy(
+            userId = IntySetting.getCurUserID(),
+            hasAppUpdateTips = IntySetting.hasAppUpdateTips(),
+        )
+    }
 
     /** 显示删除账号对话框 */
     fun showDeleteAccountDialog() {
@@ -45,6 +95,7 @@ class SettingViewModel : BaseVM() {
     /** 重置所有对话框状态 */
     fun resetDialogState() {
         _dialogState.value = DialogState()
+        _state.value = _state.value.copy(dialogState = DialogState())
     }
 
     /** 删除账号（已包含删除检查逻辑） */
