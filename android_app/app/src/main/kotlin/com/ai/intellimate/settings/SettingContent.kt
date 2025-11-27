@@ -2,24 +2,31 @@ package com.ai.intellimate.settings
 
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.design.isInPreview
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -58,35 +65,47 @@ fun SettingContent(
     viewModel: SettingViewModel = viewModel(),
 ) {
     val context = LocalContext.current
-    val dialogState by viewModel.dialogState.collectAsState()
+    val dialogState = if (isInPreview) {
+        remember { DialogState() }
+    } else {
+        viewModel.dialogState.collectAsState().value
+    }
 
     // 每次打开设置界面时，重置删除账号结果状态和对话框状态，避免残留状态导致误触发
     // 这可以防止在删除账号后，再次登录并打开设置界面时误触发 onLogout(true) 或显示对话框
-    LaunchedEffect(Unit) {
-        viewModel.resetDeleteAccountResult()
-        viewModel.resetDialogState()
-    }
+    if (!isInPreview) {
+        LaunchedEffect(Unit) {
+            viewModel.resetDeleteAccountResult()
+            viewModel.resetDialogState()
+        }
 
-    // 监听删除账号结果
-    LaunchedEffect(viewModel) {
-        viewModel.deleteAccountResultFlow.collectLatest { deleted ->
-            if (deleted) {
-                // 账号删除成功，先关闭对话框
-                viewModel.hideDeleteAccountDialog()
-                // 立即重置状态，避免残留导致下次打开设置界面时误触发
-                // 注意：SettingViewModel 的作用域是 MainActivity，如果不重置，
-                // 下次打开设置界面时会再次触发 onLogout(true)
-                viewModel.resetDeleteAccountResult()
-                // 触发登出流程
-                onLogout(true)
+        // 监听删除账号结果
+        LaunchedEffect(viewModel) {
+            viewModel.deleteAccountResultFlow.collectLatest { deleted ->
+                if (deleted) {
+                    // 账号删除成功，先关闭对话框
+                    viewModel.hideDeleteAccountDialog()
+                    // 立即重置状态，避免残留导致下次打开设置界面时误触发
+                    // 注意：SettingViewModel 的作用域是 MainActivity，如果不重置，
+                    // 下次打开设置界面时会再次触发 onLogout(true)
+                    viewModel.resetDeleteAccountResult()
+                    // 触发登出流程
+                    onLogout(true)
+                }
             }
         }
     }
 
-    Scaffold(modifier = modifier, topBar = { SettingTopBar(onBack = onBack) }) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
+    Scaffold(
+        modifier = modifier,
+        topBar = { SettingTopBar(onBack = onBack) }
+    ) { innerPadding ->
+        val scrollState = rememberScrollState()
+        Column(modifier = Modifier
+            .verticalScroll(scrollState)
+            .padding(innerPadding)) {
             AccountInfoSection(
-                userId = IntySetting.getCurUserID(),
+                userId = if (isInPreview) "uid preview mode " else IntySetting.getCurUserID(),
                 onCopyUserId = { ToastUtils.showShort(R.string.toast_copied_to_clipboard) },
             )
 
@@ -133,11 +152,14 @@ private fun SettingTopBar(onBack: () -> Unit) {
         },
         navigationIcon = {
             Image(
-                modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .noRippleClickable { onBack() },
                 painter = painterResource(R.drawable.back),
                 contentDescription = null,
             )
         },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = HeartColor.primaryColor)
     )
 }
 
@@ -146,7 +168,7 @@ private fun SettingTopBar(onBack: () -> Unit) {
 private fun AccountInfoSection(userId: String, onCopyUserId: () -> Unit) {
     SettingSection {
         val displayId =
-            if (userId.isNotBlank()) userId else stringResource(R.string.settings_user_id_unavailable)
+            userId.ifBlank { stringResource(R.string.settings_user_id_unavailable) }
         SettingCopyableInfoItem(
             title = stringResource(R.string.settings_user_id),
             value = displayId,
@@ -236,33 +258,41 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
 
         SettingDivider()
 
-        // 订阅管理
-        // VIP状态
-        val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
-        val str =
-            if (vipStatus.isSubscribed) {
-                stringResource(R.string.settings_subscription_management)
-            } else {
-                stringResource(R.string.settings_update_subscription)
-            }
-        SettingNavigationItem(
-            title = str,
-            onClick = {
+        if (isInPreview) {
+            SettingNavigationItem(
+                title = stringResource(R.string.settings_update_subscription),
+                onClick = {},
+            )
+        } else {
+            // 订阅管理 VIP状态
+            val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
+            val str =
                 if (vipStatus.isSubscribed) {
-                    SubsManageActivity.launch(context)
+                    stringResource(R.string.settings_subscription_management)
                 } else {
-                    VipCenterActivity.launch(context, VipCenterActivity.SETTINGS_SUBSCRIPTION)
+                    stringResource(R.string.settings_update_subscription)
                 }
-            },
-        )
+
+            SettingNavigationItem(
+                title = str,
+                onClick = {
+                    if (vipStatus.isSubscribed) {
+                        SubsManageActivity.launch(context)
+                    } else {
+                        VipCenterActivity.launch(context, VipCenterActivity.SETTINGS_SUBSCRIPTION)
+                    }
+                },
+            )
+        }
 
         SettingDivider()
 
         // 版本号
+        val hasAppUpdateTips = if (isInPreview) true else IntySetting.hasAppUpdateTips()
         SettingNavigationItem(
             title = stringResource(R.string.settings_about),
             subtitle =
-                if (IntySetting.hasAppUpdateTips())
+                if (hasAppUpdateTips)
                     stringResource(R.string.version_update_available, BuildConfig.VERSION_NAME)
                 else BuildConfig.VERSION_NAME,
             onClick = {
@@ -271,7 +301,7 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
                     if (url.isNotBlank()) uriHandler.openUri(url)
                 }
             },
-            showRedDot = IntySetting.hasAppUpdateTips(),
+            showRedDot = hasAppUpdateTips,
         )
     }
 }
@@ -299,8 +329,104 @@ private fun mailTo(context: Context, email: String) {
     }
 }
 
+
+//region 界面预览效果
 @Preview(showBackground = true)
 @Composable
 private fun SettingContentPreview() {
-    SettingContent(modifier = Modifier.fillMaxSize(), onBack = {}, onLogout = {})
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(HeartColor.primaryColor),
+        containerColor = HeartColor.primaryColor,
+        topBar = { SettingTopBar(onBack = {}) }
+    ) { innerPadding ->
+        Column(modifier = Modifier.padding(innerPadding)) {
+            AccountInfoSection(
+                userId = "preview_user_12345",
+                onCopyUserId = {},
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            SupportAndHelpSectionPreview(
+                onShowDeleteDialog = {},
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            LogoutButton(onLogout = {})
+        }
+    }
 }
+
+@Composable
+private fun SupportAndHelpSectionPreview(onShowDeleteDialog: () -> Unit) {
+    SettingSection {
+        val email = stringResource(R.string.settings_email_inty)
+        SettingNavigationItem(
+            title = stringResource(R.string.settings_email_support),
+            subtitle = email,
+            onClick = {},
+        )
+
+        SettingDivider()
+
+        SettingNavigationItem(
+            title = stringResource(R.string.settings_help),
+            onClick = {},
+        )
+
+        SettingDivider()
+
+        SettingNavigationItem(
+            title = stringResource(R.string.str_feedback),
+            onClick = {},
+        )
+
+        SettingDivider()
+
+        SettingNavigationItem(
+            title = stringResource(R.string.str_report),
+            onClick = {},
+        )
+
+        SettingDivider()
+
+        SettingNavigationItem(
+            title = stringResource(R.string.terms_of_use),
+            onClick = {},
+        )
+
+        SettingDivider()
+
+        SettingNavigationItem(
+            title = stringResource(R.string.privacy_policy),
+            onClick = {},
+        )
+
+        SettingDivider()
+
+        SettingNavigationItem(
+            title = stringResource(R.string.settings_str_delete_account),
+            onClick = onShowDeleteDialog,
+        )
+
+        SettingDivider()
+
+        SettingNavigationItem(
+            title = stringResource(R.string.settings_update_subscription),
+            onClick = {},
+        )
+
+        SettingDivider()
+
+        SettingNavigationItem(
+            title = stringResource(R.string.settings_about),
+            subtitle = BuildConfig.VERSION_NAME,
+            onClick = {},
+        )
+    }
+}
+
+//endregion
