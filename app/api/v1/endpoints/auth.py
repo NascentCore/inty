@@ -11,11 +11,11 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
+from app.api.constants import API_V1_PREFIX
 from app.api.tags import ANDROID_APP_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
-from app.api.constants import API_V1_PREFIX
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.security import create_access_token
+from app.core.security import create_access_token, verify_password
 from app.core.uuid import get_new_user_id
 from app.db.session import get_async_db
 from app.models import User
@@ -65,8 +65,16 @@ async def google_login(
     db: AsyncSession = Depends(get_async_db),
     login_in: schemas.GoogleAuthRequest,
 ) -> Any:
-    """Google登录"""
+    """Google登录或Email密码登录"""
     try:
+        # 如果提供了 email 和 password，使用 email + password 登录
+        if login_in.email and login_in.password:
+            return await email_password_login(db, login_in.email, login_in.password)
+
+        # 否则使用 Google ID token 登录（向后兼容）
+        if not login_in.id_token:
+            return APIResponse.error(message="Either id_token or email+password must be provided")
+
         # 验证 Google ID Token
         idinfo = id_token.verify_oauth2_token(
             login_in.id_token,
@@ -214,5 +222,77 @@ async def google_login(
         )
     except Exception as e:
         logger.error(f"Google login error: {str(e)}")
+        logger.error(f"Error stack: {traceback.format_exc()}")
+        return APIResponse.error(message=str(e))
+
+
+async def email_password_login(
+    db: AsyncSession,
+    email: str,
+    password: str,
+) -> APIResponse[LoginResponse]:
+    """Email + Password 登录"""
+    try:
+        # 验证 email 格式
+        import re
+
+        email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+        if not re.match(email_pattern, email):
+            logger.error(f"Invalid email format: {email}")
+            return APIResponse.error(message="Invalid email format")
+
+        # 查询用户
+        stmt = select(User).where(
+            and_(User.email == email, User.deleted_at == None, User.auth_type == AuthType.EMAIL)
+        )
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if not user:
+            logger.error(f"User not found with email: {email}")
+            return APIResponse.error(message="Invalid Email password combination")
+
+        # 验证密码
+        if not user.password:
+            logger.error(f"User {user.id} has no password set")
+            return APIResponse.error(message="Invalid Email password combination")
+
+        if not verify_password(password, user.password):
+            logger.error(f"Invalid password for user: {user.id}")
+            return APIResponse.error(message="Invalid Email password combination")
+
+        # 尝试恢复孤立的订阅记录
+        try:
+            recovered_count = await subscription_service.recover_orphaned_subscriptions(
+                db, user.id, email, None
+            )
+            if recovered_count > 0:
+                logger.info(f"用户 {user.id} 登录时恢复了 {recovered_count} 个订阅")
+        except Exception as e:
+            logger.error(f"用户 {user.id} 恢复订阅失败: {str(e)}")
+            # 订阅恢复失败不影响登录流程
+
+        # 生成 token
+        access_token = create_access_token(user.id)
+        return APIResponse.success(
+            data=LoginResponse(
+                token=access_token,
+                user=LoginUserResponse(
+                    id=user.id,
+                    nickname=user.nickname,
+                    avatar=user.avatar,
+                    email=user.email,
+                    phone=user.phone,
+                    auth_type=user.auth_type,
+                    gender=user.gender,
+                    age_group=user.age_group,
+                    system_language=user.system_language,
+                    description=user.description,
+                    is_new_user=False,
+                ),
+            )
+        )
+    except Exception as e:
+        logger.error(f"Email password login error: {str(e)}")
         logger.error(f"Error stack: {traceback.format_exc()}")
         return APIResponse.error(message=str(e))

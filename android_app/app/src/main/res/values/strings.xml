@@ -109,6 +109,14 @@
     <string name="welcome_to_intellimate">Welcome to IntelliMate</string>
     <string name="create_account_or_login">Create an account or log in to continue</string>
     <string name="continue_with_google">Continue with Google</string>
+    <string name="continue_with_email">Continue with Email</string>
+    <string name="enter_email">Email</string>
+    <string name="enter_email_placeholder">Enter your Email</string>
+    <string name="enter_password_placeholder">Enter password</string>
+    <string name="login_with_email_password">Login with Email + Password</string>
+    <string name="continue_button">Continue</string>
+    <string name="login_button">Login</string>
+    <string name="invalid_email_format">Invalid Email</string>
     <string name="hello_wave">Hello 👋</string>
     <string name="tell_us_more">Tell us more for a better personalized experience</string>
     <string name="which_pronoun_use">Which pronoun do you use? *</string>

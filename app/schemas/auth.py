@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator, validator
+from pydantic_core import PydanticCustomError
 
 from app.models.user import AuthType, Gender
 
@@ -100,9 +101,42 @@ class UserCreate(BaseModel):
 class GoogleAuthRequest(BaseModel):
     """Google认证请求"""
 
-    id_token: str
+    id_token: Optional[str] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
     user_info: Optional[UserInfo] = None
     request_id: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_credentials(self):
+        """验证：必须提供 id_token 或 email+password，且 email 和 password 必须同时提供"""
+        id_token = self.id_token
+        email = self.email
+        password = self.password
+
+        # 如果提供了 email，必须同时提供 password
+        if email and not password:
+            raise PydanticCustomError(
+                "missing_password",
+                "Password is required when email is provided",
+                {"field": "password"},
+            )
+        # 如果提供了 password，必须同时提供 email
+        if password and not email:
+            raise PydanticCustomError(
+                "missing_email",
+                "Email is required when password is provided",
+                {"field": "email"},
+            )
+        # 必须提供 id_token 或 email+password
+        if not id_token and not (email and password):
+            raise PydanticCustomError(
+                "missing_credentials",
+                "Either id_token or email+password must be provided",
+                {},
+            )
+
+        return self
 
 
 class UserResponse(BaseModel):
