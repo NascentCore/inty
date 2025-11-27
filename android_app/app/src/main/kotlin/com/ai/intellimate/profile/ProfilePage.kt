@@ -11,8 +11,6 @@ import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.TimeUtils
 import ai.sxwl.android.utils.ToastUtils
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.core.Animatable
@@ -82,14 +80,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
-import com.ai.intellimate.utils.formatDisplayId
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlin.math.abs
 import kotlin.math.min
@@ -485,38 +481,12 @@ private fun ProfileHeader(
             // 头像和昵称之间的间距根据折叠状态调整
             Spacer(Modifier.width(19.dp * (1f - collapseProgress * 0.3f)))
 
-            val displayId =
-                remember(userProfile.id, context) {
-                    formatDisplayId(userProfile.id, context = context)
-                }
-
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = userProfile.nickname.ifEmpty { "Guest" },
                     color = Color.White,
                     fontSize = (20.sp.value * (1f - collapseProgress * 0.2f)).sp, // 折叠时稍微缩小
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    modifier =
-                        Modifier.fillMaxWidth().noRippleClickable {
-                            if (userProfile.id.isNotEmpty()) {
-                                val clipboard = context.getSystemService<ClipboardManager>()
-                                clipboard?.setPrimaryClip(
-                                    ClipData.newPlainText("User ID", userProfile.id)
-                                )
-                                if (clipboard != null) {
-                                    ToastUtils.showShort(R.string.toast_copied_to_clipboard)
-                                }
-                            }
-                        },
-                    text = stringResource(R.string.ID, displayId),
-                    color = Color.White.copy(0.55f),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Light,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
