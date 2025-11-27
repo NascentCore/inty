@@ -2,6 +2,7 @@ import asyncio
 import re
 import sys
 import traceback
+from datetime import UTC, datetime
 
 import cyclopts
 from loguru import logger
@@ -14,12 +15,12 @@ from app.models.user import AuthType, User
 from app.services.user_service import generate_next_readable_id
 
 
-async def create_email_password_user(
+async def create_email_password_superuser(
     email: str,
     password: str,
     nickname: str,
-    system_language: str = "en",
     dry_run: bool = False,
+    delete_existing: bool = False,
 ) -> User:
     """
     创建邮箱密码认证用户
@@ -35,10 +36,10 @@ async def create_email_password_user(
         用户密码，明文（必需）
     nickname
         用户昵称（可选，如果不提供将自动生成）
-    system_language
-        系统语言（默认: en）
     dry_run
         试运行模式：显示将要执行的操作但不实际写入数据库（默认: False）
+    delete_existing
+        如果为 True，删除现有用户后创建新用户（默认: False）
 
     Returns
     -------
@@ -56,65 +57,81 @@ async def create_email_password_user(
         existing_user = result.scalar_one_or_none()
 
         if existing_user:
-            logger.debug(f"User with email {email} already exists: {existing_user.id}")
+            if delete_existing:
+                if dry_run:
+                    logger.info(
+                        f"DRY-RUN: Would delete existing user {existing_user.id} "
+                        f"with email {email}"
+                    )
+                else:
+                    existing_user.deleted_at = datetime.now(UTC)
+                    existing_user.deletion_reason = "Deleted by create_email_password_superuser script"
+                    existing_user.is_active = False
+                    await db.commit()
+                    logger.info(
+                        f"Deleted existing user {existing_user.id} with email {email}"
+                    )
+                # 删除后继续创建新用户，不返回现有用户
+            else:
+                logger.debug(f"User with email {email} already exists: {existing_user.id}")
 
-            # 检查现有用户的认证类型
-            if existing_user.auth_type != AuthType.EMAIL:
-                logger.warning(
-                    f"User {existing_user.id} exists but auth_type is {existing_user.auth_type}, "
-                    f"not {AuthType.EMAIL}"
-                )
-                return existing_user
+                # 检查现有用户的认证类型
+                if existing_user.auth_type != AuthType.EMAIL:
+                    logger.warning(
+                        f"User {existing_user.id} exists but auth_type is {existing_user.auth_type}, "
+                        f"not {AuthType.EMAIL}"
+                    )
+                    return existing_user
 
-            # 验证现有密码是否匹配
-            if existing_user.password:
-                password_matches = verify_password(password, existing_user.password)
-                if password_matches:
-                    logger.info(f"User already exists with matching password: {existing_user.id}")
+                # 验证现有密码是否匹配
+                if existing_user.password:
+                    password_matches = verify_password(password, existing_user.password)
+                    if password_matches:
+                        logger.info(f"User already exists with matching password: {existing_user.id}")
+                    else:
+                        logger.warning(
+                            f"User already exists but password does not match. "
+                            f"User ID: {existing_user.id}"
+                        )
+                        # 如果不是 dry-run 模式，询问是否更新密码
+                        if not dry_run:
+                            if confirm_action(
+                                f"Password does not match. Do you want to update the password for user {existing_user.id}?"
+                            ):
+                                hashed_password = get_password_hash(password)
+                                existing_user.password = hashed_password
+                                await db.commit()
+                                await db.refresh(existing_user)
+                                logger.info(
+                                    f"Password updated successfully for user {existing_user.id}"
+                                )
+                            else:
+                                logger.info("Password update cancelled by user")
+                        else:
+                            logger.info("DRY-RUN: Would update password for existing user")
                 else:
                     logger.warning(
-                        f"User already exists but password does not match. "
+                        f"User already exists but has no password set. "
                         f"User ID: {existing_user.id}"
                     )
-                    # 如果不是 dry-run 模式，询问是否更新密码
+                    # 如果不是 dry-run 模式，询问是否设置密码
                     if not dry_run:
                         if confirm_action(
-                            f"Password does not match. Do you want to update the password for user {existing_user.id}?"
+                            f"User has no password set. Do you want to set the password for user {existing_user.id}?"
                         ):
                             hashed_password = get_password_hash(password)
                             existing_user.password = hashed_password
                             await db.commit()
                             await db.refresh(existing_user)
                             logger.info(
-                                f"Password updated successfully for user {existing_user.id}"
+                                f"Password set successfully for user {existing_user.id}"
                             )
                         else:
-                            logger.info("Password update cancelled by user")
+                            logger.info("Password setting cancelled by user")
                     else:
-                        logger.info("DRY-RUN: Would update password for existing user")
-            else:
-                logger.warning(
-                    f"User already exists but has no password set. "
-                    f"User ID: {existing_user.id}"
-                )
-                # 如果不是 dry-run 模式，询问是否设置密码
-                if not dry_run:
-                    if confirm_action(
-                        f"User has no password set. Do you want to set the password for user {existing_user.id}?"
-                    ):
-                        hashed_password = get_password_hash(password)
-                        existing_user.password = hashed_password
-                        await db.commit()
-                        await db.refresh(existing_user)
-                        logger.info(
-                            f"Password set successfully for user {existing_user.id}"
-                        )
-                    else:
-                        logger.info("Password setting cancelled by user")
-                else:
-                    logger.info("DRY-RUN: Would set password for existing user")
+                        logger.info("DRY-RUN: Would set password for existing user")
 
-            return existing_user
+                return existing_user
 
         user_id = get_new_user_id()
         readable_id = await generate_next_readable_id(db)
@@ -134,8 +151,8 @@ async def create_email_password_user(
             email=email,
             password=hashed_password,
             nickname=nickname or f"User {user_id[:8]}",
-            system_language=system_language,
             is_active=True,
+            is_superuser=True,
         )
 
         if dry_run:
@@ -147,6 +164,7 @@ async def create_email_password_user(
             logger.info(f"  Auth Type: {user.auth_type}")
             logger.info(f"  System Language: {user.system_language}")
             logger.info(f"  Is Active: {user.is_active}")
+            logger.info(f"  Is Superuser: {user.is_superuser}")
             return user
 
         # 保存到数据库
@@ -160,6 +178,7 @@ async def create_email_password_user(
         logger.info(f"  Readable ID: {user.readable_id}")
         logger.info(f"  Email: {user.email}")
         logger.info(f"  Nickname: {user.nickname}")
+        logger.info(f"  Is Superuser: {user.is_superuser}")
         return user
 
 
@@ -185,14 +204,15 @@ async def main(
     email: str,
     password: str,
     nickname: str = "Test User",
-    system_language: str = "en",
     dry_run: bool = False,
+    delete_existing: bool = False,
 ):
     """
-    创建邮箱密码认证用户
+    创建邮箱密码认证超级用户
 
-    该脚本用于在数据库中创建带有邮箱密码认证的测试用户。
+    该脚本用于在数据库中创建带有邮箱密码认证的超级用户。
     支持幂等操作：如果用户已存在，将返回现有用户信息。
+    如果使用 --delete-existing 参数，将删除现有用户后创建新用户。
 
     注意：除非使用 --dry-run 模式，否则始终要求用户确认操作。
 
@@ -204,21 +224,24 @@ async def main(
         用户密码，明文（必需）
     nickname
         用户昵称（可选，如果不提供将自动生成）
-    system_language
-        系统语言（默认: en）
     dry_run
         试运行模式：显示将要执行的操作但不实际写入数据库，且不要求确认（默认: False）
+    delete_existing
+        如果为 True，删除现有用户后创建新用户（默认: False）
 
     Examples
     --------
-    # 创建用户（会要求确认）
-    python scripts/create_email_password_user.py --email test@gmail.com --password a_password
+    # 创建超级用户（会要求确认）
+    python scripts/create_email_password_superuser.py --email test@gmail.com --password a_password
 
     # 试运行模式（不实际写入数据库，不要求确认）
-    python scripts/create_email_password_user.py --email test@gmail.com --password a_password --dry-run
+    python scripts/create_email_password_superuser.py --email test@gmail.com --password a_password --dry-run
+
+    # 删除现有用户后创建新用户（会要求确认）
+    python scripts/create_email_password_superuser.py --email test@gmail.com --password a_password --delete-existing
 
     # 创建用户并指定昵称（会要求确认）
-    python scripts/create_email_password_user.py --email test@gmail.com --password a_password --nickname "Test User"
+    python scripts/create_email_password_superuser.py --email test@gmail.com --password a_password --nickname "Test User"
     """
     # 验证邮箱格式
     email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
@@ -239,12 +262,12 @@ async def main(
             logger.info("Operation cancelled by user")
             sys.exit(0)
 
-    user = await create_email_password_user(
+    user = await create_email_password_superuser(
         email=email,
         password=password,
         nickname=nickname,
-        system_language=system_language,
         dry_run=dry_run,
+        delete_existing=delete_existing,
     )
 
     if not dry_run:
