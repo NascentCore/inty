@@ -20,6 +20,7 @@ from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
 from app.services.voice_service import voice_service
 from app.utils.timing import Timer, log_time
+from app.api.tags import NOT_USED_TAG
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
@@ -68,6 +69,7 @@ class ChatCompletionResponse(BaseModel):
     deprecated=True,
     summary="【目前还未完成】返回与指定 Agent 聊天的下一条消息",
     description="可以处理包括图片在内的各种消息类型，媒体类型应该先上传，然后将 URL 作为索引发送到此 API",
+    tags=[NOT_USED_TAG],
 )
 async def agent_chat_completions(
     *,

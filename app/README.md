@@ -10,8 +10,14 @@ docker run --volume /opt/inty-pre-prod/config.yaml:/config.yaml -it ghcr.io/nasc
 ## API 使用标签
 
 - `app/api/used_api_endpoints.py` 保存最近一次后端真实流量的 API 路径与调用次数快照。
-- `app/main.py` 会在应用启动时自动遍历所有 `/api/*` 与 `/evaluation/*` 路由，并为不在快照列表内的接口追加 `NOT_USED` tag，方便在 Swagger/OpenAPI 中识别待下线接口。
-- 若有新的调用统计，请同步更新上述快照文件，以确保标记准确。
+- `scripts/tag_unused_endpoints.py` 会读取该文件，并直接修改 FastAPI 路由装饰器中的 `tags`，为未出现在快照内的接口追加 `NOT_USED`。
+- 更新调用统计后，请先编辑 `used_api_endpoints.py`，再运行：
+
+```bash
+uv run python scripts/tag_unused_endpoints.py
+```
+
+- 若使用其他 Python 运行方式，需确保已安装 `libcst` 依赖（脚本基于该库进行语法保持级别的代码修改）。
 
 ## Stainless OpenAPI generator
 

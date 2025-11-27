@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, INTERNAL_API_TAG, WEB_APP_TAG
+from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, INTERNAL_API_TAG, WEB_APP_TAG, NOT_USED_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
@@ -55,6 +55,7 @@ async def get_current_superuser(
     deprecated=True,
     include_in_schema=False,
     summary="[Deprecated, use /me, kept for v1.0.3 compatibility]",
+    tags=[NOT_USED_TAG],
 )
 @router.get(
     "/me",
@@ -85,7 +86,7 @@ async def list_agents(
     "/search",
     response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
     summary="Used by inty-eval to list all public AI characters",
-    tags=[INTY_EVAL_TAG, WEB_APP_TAG],
+    tags=[INTY_EVAL_TAG, WEB_APP_TAG, NOT_USED_TAG],
 )
 async def search_agents(
     q: str = Query(..., description="Search keyword"),
@@ -156,7 +157,7 @@ async def recommend_agents(
 @router.get(
     "/following",
     response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
-    tags=[WEB_APP_TAG],
+    tags=[WEB_APP_TAG, NOT_USED_TAG],
 )
 async def get_following_agents(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -197,6 +198,7 @@ async def get_following_agents(
     include_in_schema=False,
     summary="Deprecated, use /api/v1/ai/agents instead, kept for v1.0.3 compatibility",
     description="Deprecated, use /api/v1/ai/agents instead, kept for v1.0.3 compatibility",
+    tags=[NOT_USED_TAG],
 )
 @router.post(
     "",
@@ -273,7 +275,7 @@ async def get_agent(
 @router.post(
     "/{agent_id}/follow",
     response_model=schemas.APIResponse[dict],
-    tags=[WEB_APP_TAG],
+    tags=[WEB_APP_TAG, NOT_USED_TAG],
 )
 async def follow_agent(
     *,
@@ -297,7 +299,7 @@ async def follow_agent(
 @router.delete(
     "/{agent_id}/follow",
     response_model=schemas.APIResponse[dict],
-    tags=[WEB_APP_TAG],
+    tags=[WEB_APP_TAG, NOT_USED_TAG],
 )
 async def unfollow_agent(
     *,
@@ -379,7 +381,7 @@ async def delete_agent(
     response_model=schemas.APIResponse[schemas.Agent],
     summary="生成背景视频",
     description="通过 Google Veo3 API 生成视频并直接存储视频地址",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def generate_background_animated(
     *,
@@ -554,6 +556,7 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
     include_in_schema=False,
     summary="Deprecated, use /generate_background instead",
     description="Deprecated, use /generate_background instead",
+    tags=[NOT_USED_TAG],
 )
 @router.post(
     "/text-to-image",
@@ -734,7 +737,7 @@ async def generate_background(
     deprecated=True,
     include_in_schema=False,
     response_model=schemas.APIResponse[schemas.CreatorAgentStats],
-    tags=[INTERNAL_API_TAG],
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def get_creator_agent_stats(
     *,
@@ -763,7 +766,7 @@ async def get_creator_agent_stats(
     "/import-character-card",
     response_model=APIResponse[CharacterCardImportResponse],
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def import_character_card(
     request: CharacterCardImportRequest,
@@ -792,7 +795,7 @@ async def import_character_card(
     "/import-character-card-file",
     response_model=APIResponse[CharacterCardImportResponse],
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def import_character_card_file(
     file: UploadFile = File(...),
@@ -835,7 +838,7 @@ async def import_character_card_file(
     "/export-character-card",
     response_model=APIResponse[dict],
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def export_character_card(
     request: CharacterCardExportRequest,
@@ -868,7 +871,7 @@ async def export_character_card(
     "/{agent_id}/character-card",
     response_model=APIResponse[dict],
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_agent_character_card(
     agent_id: str,
@@ -904,7 +907,7 @@ async def get_agent_character_card(
     "/validate-character-card",
     response_model=APIResponse[CharacterCardValidationResponse],
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def validate_character_card(
     card_data: dict, current_user: schemas.User = Depends(deps.get_current_active_user)
@@ -925,7 +928,7 @@ async def validate_character_card(
     "/character-card/features",
     response_model=APIResponse[dict],
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_character_card_features(
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -1024,7 +1027,7 @@ async def get_openrouter_models(
     response_model=schemas.APIResponse[Dict[str, Any]],
     summary="获取图片生成配置",
     description="获取当前图片生成的提示词模板和默认参数配置",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_image_generation_config(
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -1049,7 +1052,7 @@ async def get_image_generation_config(
     response_model=schemas.APIResponse[Dict[str, Any]],
     summary="获取可用的 prompt 列表",
     description="获取可用的主提示词和模式提示词列表，以及 force_default_prompts 配置状态",
-    tags=[INTY_EVAL_TAG, WEB_APP_TAG],
+    tags=[INTY_EVAL_TAG, WEB_APP_TAG, NOT_USED_TAG],
 )
 async def get_available_prompts(
     include_content: bool = Query(False, description="是否包含完整的 prompt 内容"),
@@ -1101,7 +1104,7 @@ async def get_available_prompts(
     response_model=schemas.APIResponse[Dict[str, Any]],
     summary="更新图片生成配置",
     description="更新图片生成的提示词模板和默认参数配置（仅超级用户）",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def update_image_generation_config(
     config: Dict[str, Any],

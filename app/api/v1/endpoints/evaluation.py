@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
-from app.api.tags import INTY_EVAL_TAG
+from app.api.tags import INTY_EVAL_TAG, NOT_USED_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.services.evaluation_service import EvaluationService
 from app.services.question_parser_service import QuestionParserService
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/evaluation", route_class=LoggerRoute)
 @router.get(
     "/sessions",
     response_model=List[schemas.EvaluationSessionResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_sessions(
     *,
@@ -57,7 +57,7 @@ async def get_evaluation_sessions(
 @router.post(
     "/sessions",
     response_model=schemas.EvaluationSessionResponse,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def create_evaluation_session(
     *,
@@ -99,7 +99,7 @@ async def create_evaluation_session(
 
 @router.post(
     "/sessions/{session_id}/start",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def start_evaluation_session(
     *,
@@ -141,7 +141,7 @@ async def start_evaluation_session(
 @router.get(
     "/sessions/{session_id}",
     response_model=schemas.EvaluationSessionDetail,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_session(
     *,
@@ -177,7 +177,7 @@ async def get_evaluation_session(
 @router.get(
     "/sessions/{session_id}/results",
     response_model=List[schemas.EvaluationResultResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_results(
     *,
@@ -214,7 +214,7 @@ async def get_evaluation_results(
 
 @router.post(
     "/sessions/{session_id}/cancel",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def cancel_evaluation_session(
     *,
@@ -254,7 +254,7 @@ async def cancel_evaluation_session(
 @router.post(
     "/questions/parse",
     response_model=schemas.QuestionFileUpload,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def parse_questions_file(
     *,
@@ -309,7 +309,7 @@ async def parse_questions_file(
 @router.get(
     "/models",
     response_model=List[schemas.ScoringModelInfo],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_scoring_models(
     *,
@@ -333,7 +333,7 @@ async def get_scoring_models(
 
 @router.post(
     "/scoring-criteria/validate",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def validate_scoring_criteria(
     *,
@@ -361,7 +361,7 @@ async def validate_scoring_criteria(
 @router.get(
     "/stats",
     response_model=schemas.EvaluationStats,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_stats(
     *,
@@ -397,7 +397,7 @@ async def get_evaluation_stats(
 
 
 # WebSocket端点用于实时监控评测进度
-@router.websocket("/sessions/{session_id}/monitor")
+@router.websocket("/sessions/{session_id}/monitor", tags=[NOT_USED_TAG])
 async def monitor_evaluation_session(
     websocket,
     session_id: str,
@@ -461,7 +461,7 @@ async def monitor_evaluation_session(
 @router.get(
     "/agents",
     response_model=List[schemas.Agent],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_agents(
     *,
@@ -504,7 +504,7 @@ async def get_evaluation_agents(
 @router.post(
     "/agents",
     response_model=schemas.Agent,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def create_evaluation_agent(
     *,
@@ -538,7 +538,7 @@ async def create_evaluation_agent(
 @router.put(
     "/agents/{agent_id}",
     response_model=schemas.Agent,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def update_evaluation_agent(
     *,
@@ -582,7 +582,7 @@ async def update_evaluation_agent(
 
 @router.delete(
     "/agents/{agent_id}",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def delete_evaluation_agent(
     *,
@@ -623,7 +623,7 @@ async def delete_evaluation_agent(
 
 @router.post(
     "/agents/{agent_id}/deploy",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def deploy_agent_to_production(
     *,
@@ -665,7 +665,7 @@ async def deploy_agent_to_production(
 @router.post(
     "/templates",
     response_model=schemas.EvaluationTemplateResponse,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def create_evaluation_template(
     *,
@@ -716,7 +716,7 @@ async def create_evaluation_template(
 @router.get(
     "/templates",
     response_model=List[schemas.EvaluationTemplateResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_templates(
     *,
@@ -766,7 +766,7 @@ async def get_evaluation_templates(
 @router.post(
     "/sessions/batch",
     response_model=List[schemas.EvaluationSessionResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def create_batch_evaluation(
     *,
@@ -809,7 +809,7 @@ async def create_batch_evaluation(
 
 @router.post(
     "/results/export",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def export_evaluation_results(
     *,
@@ -846,7 +846,7 @@ async def export_evaluation_results(
 @router.post(
     "/sessions/compare",
     response_model=schemas.EvaluationComparison,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def compare_evaluation_sessions(
     *,
@@ -891,7 +891,7 @@ async def compare_evaluation_sessions(
 @router.get(
     "/user-analytics/new-users",
     response_model=List[schemas.user_analytics.DailyNewUsersResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_new_users(
     *,
@@ -941,7 +941,7 @@ async def get_new_users(
 @router.get(
     "/user-analytics/user-activity",
     response_model=List[schemas.user_analytics.UserChatActivityItem],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_user_activity(
     *,
@@ -991,7 +991,7 @@ async def get_user_activity(
 @router.get(
     "/user-analytics/conversation-rounds",
     response_model=List[schemas.user_analytics.ConversationRoundsResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_conversation_rounds(
     *,
@@ -1041,7 +1041,7 @@ async def get_conversation_rounds(
 @router.get(
     "/user-analytics/user-rounds-distribution",
     response_model=List[schemas.user_analytics.UserRoundsDistributionItem],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_user_rounds_distribution(
     *,
@@ -1091,7 +1091,7 @@ async def get_user_rounds_distribution(
 @router.get(
     "/user-analytics/popular-agents",
     response_model=List[schemas.user_analytics.PopularAgentsResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_popular_agents(
     *,
@@ -1222,7 +1222,7 @@ async def get_popular_agents(
 @router.get(
     "/user-analytics/users-hitting-limit",
     response_model=List[schemas.user_analytics.UsersHittingLimitResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_users_hitting_limit(
     *,
@@ -1272,7 +1272,7 @@ async def get_users_hitting_limit(
 @router.get(
     "/user-analytics/agent-analytics",
     response_model=List[schemas.user_analytics.AgentAnalyticsResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_agent_analytics(
     *,
@@ -1322,7 +1322,7 @@ async def get_agent_analytics(
 @router.get(
     "/user-analytics/user-sessions-detail",
     response_model=List[schemas.user_analytics.UserSessionsDetailResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_user_sessions_detail(
     *,
@@ -1372,7 +1372,7 @@ async def get_user_sessions_detail(
 @router.get(
     "/user-analytics/conversations-detail",
     response_model=List[schemas.user_analytics.ConversationsDetailResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_conversations_detail(
     *,
@@ -1468,7 +1468,7 @@ async def get_conversations_detail(
 @router.get(
     "/user-analytics/stats",
     response_model=schemas.user_analytics.UserAnalyticsStatsResponse,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_user_analytics_stats(
     *,

@@ -4,7 +4,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
-from fastapi.routing import APIRoute
 from jose.exceptions import JWTError
 from loguru import logger
 from pydantic import BaseModel, ValidationError
@@ -15,8 +14,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_async_db
-from app.api.tags import NOT_USED_TAG
-from app.api.used_api_endpoints import USED_API_ENDPOINT_PATHS
 from app.api.v1.router import api_router
 from app.api.v2.router import api_v2_router
 from app.core.agent.agent import agent_manager
@@ -379,28 +376,3 @@ async def root():
             version=global_config_loaded_from_config_yaml.app.version,
         )
     )
-
-
-def _should_tag_route(path: str) -> bool:
-    """仅关心 /api/*、/evaluation/* 以及根路径。"""
-    return path.startswith("/api/") or path.startswith("/evaluation") or path == "/"
-
-
-def _mark_unused_api_routes(fastapi_app: FastAPI) -> None:
-    """为未被真实流量访问的接口追加 NOT_USED tag。"""
-    for route in fastapi_app.routes:
-        if not isinstance(route, APIRoute):
-            continue
-        if not _should_tag_route(route.path):
-            continue
-        if route.path in USED_API_ENDPOINT_PATHS:
-            continue
-
-        existing_tags = list(route.tags) if route.tags else []
-        if NOT_USED_TAG in existing_tags:
-            continue
-        existing_tags.append(NOT_USED_TAG)
-        route.tags = existing_tags
-
-
-_mark_unused_api_routes(app)

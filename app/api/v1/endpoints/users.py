@@ -6,7 +6,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, EVALUATION_APP_TAG, WEB_APP_TAG
+from app.api.tags import ANDROID_APP_TAG, EVALUATION_APP_TAG, WEB_APP_TAG, NOT_USED_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.db.session import get_async_db
 from app.schemas.response import APIResponse
@@ -170,7 +170,7 @@ async def register_device_token(
 @router.get(
     "/deletion/check",
     response_model=APIResponse[DeletionCheckResponse],
-    tags=[ANDROID_APP_TAG, WEB_APP_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, NOT_USED_TAG],
     deprecated=True,
     summary="DEPRECATED: POST /api/v1/users/delete-account 已经做了此检查",
 )
@@ -207,7 +207,7 @@ async def check_deletion_eligibility(
 @router.post(
     "/delete-account",
     response_model=APIResponse[AccountDeletionResponse],
-    tags=[ANDROID_APP_TAG, WEB_APP_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, NOT_USED_TAG],
 )
 async def delete_user_account(
     db: AsyncSession = Depends(get_async_db),
@@ -254,7 +254,7 @@ async def delete_user_account(
     "",
     response_model=UserList,
     include_in_schema=False,
-    tags=[EVALUATION_APP_TAG],
+    tags=[EVALUATION_APP_TAG, NOT_USED_TAG],
 )
 async def get_all_users(
     *,
