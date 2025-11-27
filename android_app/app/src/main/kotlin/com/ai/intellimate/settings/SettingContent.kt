@@ -45,7 +45,8 @@ import com.ai.intellimate.vip.SubsManageActivity
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlinx.coroutines.flow.collectLatest
 
-private const val HELP_CENTER_URL = "https://tricorder.feishu.cn/wiki/LoW3wGWPMiJ4rukXBbmc8dydnFf"
+private const val HELP_CENTER_URL =
+    "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
 
 /** 设置页面主内容 */
 @OptIn(ExperimentalMaterial3Api::class)
