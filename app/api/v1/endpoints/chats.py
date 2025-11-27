@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, INTY_EVAL_TAG, WEB_APP_TAG
+from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, INTY_EVAL_TAG, WEB_APP_TAG, NOT_USED_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
@@ -82,7 +82,7 @@ async def create_chat(
     response_model=schemas.Chat,
     summary="Delete chat",
     description="Delete chat",
-    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def delete_chat(
     *,
@@ -105,7 +105,7 @@ async def delete_chat(
     deprecated=True,
     include_in_schema=False,
     description="No record of who is using this",
-    tags=[INTERNAL_API_TAG],
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def get_agent_status(
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -126,7 +126,7 @@ async def get_agent_status(
     deprecated=True,
     include_in_schema=False,
     description="No record of who is using this",
-    tags=[INTERNAL_API_TAG],
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def initialize_agents(
     *,
@@ -152,7 +152,7 @@ async def initialize_agents(
     deprecated=True,
     include_in_schema=False,
     description="No record of who is using this",
-    tags=[INTERNAL_API_TAG],
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def cleanup_idle_agents(
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -178,7 +178,7 @@ async def cleanup_idle_agents(
     "/{chat_id}/detail",
     deprecated=True,
     include_in_schema=False,
-    tags=[INTERNAL_API_TAG],
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
     summary="Get Chat Detail",
     description="Get chat details with paginated message records",
 )
@@ -244,7 +244,7 @@ async def get_chat_detail(
 
 @router.get(
     "/agents/{agent_id}/detail",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
     include_in_schema=False,
     deprecated=True,
     summary="Get Chat Detail for agent identified by agent_id",
@@ -382,7 +382,7 @@ async def get_agent_chat_messages(
 @router.post(
     "/messages/vote",
     response_model=APIResponse[Dict[str, Any]],
-    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG, NOT_USED_TAG],
     summary="Update Message Vote",
     description="Set, toggle, or remove vote (like/dislike) for a message. Only AI messages can be voted.",
 )
@@ -477,7 +477,7 @@ async def update_message_vote(
     include_in_schema=False,
     summary="用于支持 v1.0.3 app 新版 app 请勿使用本 API",
     description="基于Agent ID的OpenAI风格聊天接口，已弃用，请使用 /chat/completions/{agent_id} 代替",
-    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def agent_chat_completions(
     *,
@@ -908,7 +908,7 @@ async def generate_message_voice(
     "/voices/{voice_id}",
     deprecated=True,
     include_in_schema=True,
-    tags=[INTERNAL_API_TAG],
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
     summary="Get Voice Info",
     description="Get voice info by voice_id",
 )
@@ -1091,7 +1091,7 @@ async def get_agent_chat_settings(
     response_model=schemas.ChatDeletionResponse,
     deprecated=True,
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
     summary="Delete Agent Chats",
     description="[Deprecated, use /chats/{chat_id} instead] Delete all chats by Agent ID",
 )
@@ -1142,7 +1142,7 @@ async def delete_agent_chats(
     "/agents/{agent_id}/debug-messages",
     deprecated=True,
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
     summary="Get Agent Debug Messages",
     description="Get Agent Debug Messages by Agent ID",
 )
@@ -1208,7 +1208,7 @@ async def get_agent_debug_messages(
     "/agents/{agent_id}/clear-messages",
     response_model=schemas.ClearMessagesResponse,
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
     summary="Clear Agent Chat Messages",
     description="Clear chat messages by Agent ID, currently used by inty-eval, probably will be used by inty app as well.",
 )
@@ -1296,7 +1296,7 @@ async def clear_agent_chat_messages(
     response_model=schemas.APIResponse,
     summary="[Deprecated, use /api/v1/chat/images/{agent_id} instead] 基于聊天上下文生成图片",
     description="[Deprecated, use /api/v1/chat/images/{agent_id} instead] 根据Agent角色、聊天历史和用户消息生成图片，并保存到聊天历史中",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def generate_chat_image(
     *,

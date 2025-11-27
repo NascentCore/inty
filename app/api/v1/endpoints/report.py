@@ -7,7 +7,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, WEB_APP_TAG
+from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, WEB_APP_TAG, NOT_USED_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import get_async_db
@@ -35,7 +35,7 @@ router = APIRouter(prefix="/report", route_class=LoggerRoute)
     include_in_schema=False,
     summary="[Deprecated, use /api/v1/report/upload-image instead] Upload image for report",
     description="Used by app to upload image in their report of app content: AI characters, images, etc.",
-    tags=[ANDROID_APP_TAG],
+    tags=[ANDROID_APP_TAG, NOT_USED_TAG],
 )
 async def upload_report_image(
     file: UploadFile = File(...),
@@ -83,7 +83,7 @@ async def upload_report_image(
         return APIResponse.error(message="Image upload failed")
 
 
-@router.post("/", response_model=APIResponse, tags=[WEB_APP_TAG])
+@router.post("/", response_model=APIResponse, tags=[WEB_APP_TAG, NOT_USED_TAG])
 async def create_report(
     report_in: ReportCreate,
     db: AsyncSession = Depends(get_async_db),
@@ -106,7 +106,7 @@ async def create_report(
     deprecated=True,
     summary="Query report records (requires admin permission)",
     description="Query report records (requires admin permission), this should be moved out of the app's runtime.",
-    tags=[INTERNAL_API_TAG],
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def list_reports(
     reason_ids: Optional[List[int]] = Query(None),
