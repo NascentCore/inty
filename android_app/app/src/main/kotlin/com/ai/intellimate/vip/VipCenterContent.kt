@@ -7,13 +7,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
@@ -26,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -42,10 +44,6 @@ import com.ai.intellimate.ui.components.EmptyPlanState
 import com.ai.intellimate.ui.components.PremiumBenefitItem
 import com.ai.intellimate.ui.components.PremiumPlanList
 import com.ai.intellimate.ui.components.PurchaseButton
-
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.draw.clip
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -124,7 +122,7 @@ fun VipCenterContent(
             painter = painterResource(R.drawable.vip_bg),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
         )
         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f)))
         Image(
@@ -132,10 +130,10 @@ fun VipCenterContent(
             contentDescription = null,
             modifier = Modifier.fillMaxSize().padding(top = 100.dp).hazeSource(state = hazeState),
             alignment = Alignment.BottomCenter,
-            contentScale = ContentScale.FillHeight
+            contentScale = ContentScale.FillHeight,
         )
 
-        val scrollState = rememberScrollState();
+        val scrollState = rememberScrollState()
         Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
             VipCenterTopBar(onClose = onClose)
 
@@ -173,13 +171,7 @@ fun VipCenterContent(
 @Composable
 private fun VipCenterTopBar(onClose: () -> Unit) {
     CenterAlignedTopAppBar(
-        title = {
-            Text(
-                text = "",
-                fontWeight = FontWeight(600),
-                color = Color.White,
-            )
-        },
+        title = { Text(text = "", fontWeight = FontWeight(600), color = Color.White) },
         modifier = Modifier.fillMaxWidth(),
         navigationIcon = {
             IconButton(onClick = onClose) {
@@ -235,14 +227,14 @@ private fun VipCenterContentPreview() {
 }
 
 @Composable
-private  fun VipBenefitsDesc(hazeState: HazeState) {
+private fun VipBenefitsDesc(hazeState: HazeState) {
     Box(
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp)
-            .background(Color(0x806E5289).copy(alpha = 0.3f), shape = RoundedCornerShape(8.dp))
-            .clip(RoundedCornerShape(8.dp))
-            .hazeEffect(state = hazeState) {
-                blurRadius = 4.dp
-            }
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp)
+                .background(Color(0x806E5289).copy(alpha = 0.3f), shape = RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(8.dp))
+                .hazeEffect(state = hazeState) { blurRadius = 4.dp }
     ) {
         Column {
             Spacer(modifier = Modifier.height(16.dp))
@@ -250,7 +242,7 @@ private  fun VipBenefitsDesc(hazeState: HazeState) {
                 painter = painterResource(R.drawable.vip_desc_title),
                 contentDescription = null,
                 modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp),
-                contentScale = ContentScale.FillWidth
+                contentScale = ContentScale.FillWidth,
             )
 
             Spacer(modifier = Modifier.height(30.dp))
@@ -258,7 +250,7 @@ private  fun VipBenefitsDesc(hazeState: HazeState) {
                 painter = painterResource(R.drawable.vip_desc_content),
                 contentDescription = null,
                 modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp),
-                contentScale = ContentScale.FillWidth
+                contentScale = ContentScale.FillWidth,
             )
 
             Spacer(modifier = Modifier.height(20.dp))

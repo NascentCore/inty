@@ -80,20 +80,20 @@ class MainViewModel : BaseVM() {
             if (newTab != _selectedTab.value) {
                 LogUtils.d(
                     "MainViewModel",
-                    "根据 Remote Config 更新 tab: ${_selectedTab.value.name} -> ${newTab.name}"
+                    "根据 Remote Config 更新 tab: ${_selectedTab.value.name} -> ${newTab.name}",
                 )
-                withContext(Dispatchers.Main) {
-                    _selectedTab.value = newTab
-                }
+                withContext(Dispatchers.Main) { _selectedTab.value = newTab }
             }
         }
     }
 
     private fun getInitialTabFromRemoteConfig(): HomeTabIndex {
         return try {
-            val tabIndex = FirebaseManager.getRemoteConfigLong(
-                FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
-            ).toInt()
+            val tabIndex =
+                FirebaseManager.getRemoteConfigLong(
+                        FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
+                    )
+                    .toInt()
 
             LogUtils.d("MainViewModel", "Remote Config home_page_default_tab_index = $tabIndex")
 
@@ -103,7 +103,7 @@ class MainViewModel : BaseVM() {
             } else {
                 LogUtils.w(
                     "MainViewModel",
-                    "Remote Config tab index ($tabIndex) 越界（有效范围: 0-${tabEntries.size - 1}），使用默认值 Chat tab"
+                    "Remote Config tab index ($tabIndex) 越界（有效范围: 0-${tabEntries.size - 1}），使用默认值 Chat tab",
                 )
                 HomeTabIndex.Chat
             }

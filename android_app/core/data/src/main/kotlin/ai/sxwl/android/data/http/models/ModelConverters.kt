@@ -58,28 +58,29 @@ fun IntyAgent.toAgentInfo(): AgentInfo {
         }
 
     return AgentInfo(
-        avatar = this.avatar() ?: "",
-        background = this.background() ?: "",
-        backgroundAnimatedUrl = "", // SDK中没有此字段，需要从extensions中获取
-        backgroundImages = this.backgroundImages() ?: emptyList(),
-        category = this.category() ?: "",
-        gender = this.gender(),
-        id = this.id(),
-        readableId = this.readableId(),
-        isFollowed = this.isFollowed() ?: false,
-        name = this.name(),
-        opening = this.opening() ?: "",
-        opening_audio_url = this.openingAudioUrl() ?: "",
-        voicePreview = "", // SDK中没有此字段
-        createdAt = this.createdAt().toString(),
-        creator = creator,
-        intro = this.intro() ?: "",
-        tags = this.tags()?.map { it },
-        settings = null, // SDK中settings是Settings对象，需要转换为Map
-        visibility = this.visibility()?.toString() ?: "",
-        prompt = this.prompt() ?: "",
-        followerCount = this.followerCount()?.toInt() ?: 0,
-        connectorCount = this.connectorCount()?.toInt() ?: 0,
-        deletedAt = this.deletedAt(),
-    ).also { info -> info.isDeleted = this.deletedAt() != null }
+            avatar = this.avatar() ?: "",
+            background = this.background() ?: "",
+            backgroundAnimatedUrl = "", // SDK中没有此字段，需要从extensions中获取
+            backgroundImages = this.backgroundImages() ?: emptyList(),
+            category = this.category() ?: "",
+            gender = this.gender(),
+            id = this.id(),
+            readableId = this.readableId(),
+            isFollowed = this.isFollowed() ?: false,
+            name = this.name(),
+            opening = this.opening() ?: "",
+            opening_audio_url = this.openingAudioUrl() ?: "",
+            voicePreview = "", // SDK中没有此字段
+            createdAt = this.createdAt().toString(),
+            creator = creator,
+            intro = this.intro() ?: "",
+            tags = this.tags()?.map { it },
+            settings = null, // SDK中settings是Settings对象，需要转换为Map
+            visibility = this.visibility()?.toString() ?: "",
+            prompt = this.prompt() ?: "",
+            followerCount = this.followerCount()?.toInt() ?: 0,
+            connectorCount = this.connectorCount()?.toInt() ?: 0,
+            deletedAt = this.deletedAt(),
+        )
+        .also { info -> info.isDeleted = this.deletedAt() != null }
 }

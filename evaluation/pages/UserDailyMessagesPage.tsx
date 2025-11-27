@@ -260,8 +260,7 @@ export const UserDailyMessagesPage: React.FC = () => {
             ? dayjs(msg.created_at).format("YYYY-MM-DD HH:mm:ss")
             : "未知时间";
           const isUser =
-            msg.message_type === "human" ||
-            msg.message_type === "HumanMessage";
+            msg.message_type === "human" || msg.message_type === "HumanMessage";
           const sender = isUser ? "👤 用户" : "🤖 AI";
 
           lines.push(`[${timestamp}] ${sender}`);
@@ -288,9 +287,7 @@ export const UserDailyMessagesPage: React.FC = () => {
           if (msg.meta_data?.generated_image?.image_url) {
             lines.push("");
             lines.push(`[生成的图片]`);
-            lines.push(
-              `图片URL: ${msg.meta_data.generated_image.image_url}`,
-            );
+            lines.push(`图片URL: ${msg.meta_data.generated_image.image_url}`);
             if (
               msg.meta_data.generated_image.width &&
               msg.meta_data.generated_image.height

@@ -10,6 +10,7 @@
 - 用户可见的字符写入 `android_app/app/src/main/res/values/strings.xml`
   并以资源 ID 的形式在代码中使用
 - 无需使用 linter 检查修改代码
+- 对我提出的指示、完成基础要求，不要处理未提及的复杂场景，不要使用 defensive programming
 
 ## 架构状态说明
 

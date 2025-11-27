@@ -416,7 +416,8 @@ internal fun ChatPage(
                                                     item,
                                                     isCurrentPage = isCurrentPage,
                                                     chatViewModel = chatViewModel,
-                                                    isLatestMessage = isLatestAssistantTextMessage,
+                                                    isLatestMessage =
+                                                        isLatestAssistantTextMessage,
                                                     isGuideVisible = isGuideVisible
                                                 )
                                             }
