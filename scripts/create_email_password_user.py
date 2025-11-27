@@ -11,12 +11,13 @@ from app.core.security import get_password_hash, verify_password
 from app.core.uuid import get_new_user_id
 from app.db.session import AsyncSessionLocal
 from app.models.user import AuthType, User
+from app.services.user_service import generate_next_readable_id
 
 
 async def create_email_password_user(
     email: str,
     password: str,
-    nickname: str | None = None,
+    nickname: str,
     system_language: str = "en",
     dry_run: bool = False,
 ) -> User:
@@ -84,8 +85,10 @@ async def create_email_password_user(
             return existing_user
 
         user_id = get_new_user_id()
+        readable_id = await generate_next_readable_id(db)
 
         logger.debug(f"Generated user_id: {user_id}")
+        logger.debug(f"Generated readable_id: {readable_id}")
 
         # 哈希密码
         hashed_password = get_password_hash(password)
@@ -94,6 +97,7 @@ async def create_email_password_user(
         # 创建用户对象
         user = User(
             id=user_id,
+            readable_id=readable_id,
             auth_type=AuthType.EMAIL,
             email=email,
             password=hashed_password,
@@ -148,7 +152,7 @@ def confirm_action(message: str) -> bool:
 async def main(
     email: str,
     password: str,
-    nickname: str | None = None,
+    nickname: str = "Test User",
     system_language: str = "en",
     dry_run: bool = False,
 ):
