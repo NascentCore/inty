@@ -51,7 +51,7 @@ fun ReportScreen(
     onClickAddImage: () -> Unit,
     onSave: () -> Unit,
     isSubmitting: Boolean = false,
-    isFeedbackMode: Boolean = false,
+    pageType: ReportMode = ReportMode.REPORT,
 ) {
     val focusManager = LocalFocusManager.current
 
@@ -80,60 +80,70 @@ fun ReportScreen(
             Spacer(Modifier.height(16.dp))
 
             // 举报原因或反馈选项
-            ReportReasonsContainer(
-                title =
-                    if (isFeedbackMode) {
-                        stringResource(R.string.tell_us_what_you_think)
-                    } else {
-                        stringResource(R.string.npc_asterisk_full)
-                    }
-            ) {
+            val reasonTitle =
+                when (pageType) {
+                    ReportMode.REPORT -> stringResource(R.string.npc_asterisk_full)
+                    ReportMode.FEEDBACK -> stringResource(R.string.tell_us_what_you_think)
+                    ReportMode.FEATURE_REQUEST ->
+                        stringResource(R.string.feature_request_category_title)
+                }
+            ReportReasonsContainer(title = reasonTitle) {
                 reasons.forEach { reason ->
                     val isSelected = selectIDs.contains(reason.id)
                     val displayText =
-                        if (isFeedbackMode) {
-                            when (reason.code) {
-                                "CHAT_NOT_NATURAL" ->
-                                    stringResource(R.string.feedback_reason_chat_not_natural)
-
-                                "CHARACTER_MISMATCH" ->
-                                    stringResource(R.string.feedback_reason_character_mismatch)
-
-                                "APP_SLOW" -> stringResource(R.string.feedback_reason_app_slow)
-                                "FEATURE_HARD_TO_FIND" ->
-                                    stringResource(R.string.feedback_reason_feature_hard_to_find)
-
-                                "UI_INCONVENIENT" ->
-                                    stringResource(R.string.feedback_reason_ui_inconvenient)
-
-                                "NEW_FEATURE" ->
-                                    stringResource(R.string.feedback_reason_new_feature)
-
-                                "OTHER" -> stringResource(R.string.feedback_reason_other)
-                                else -> reason.description
-                            }
-                        } else {
-                            when (reason.code) {
-                                "SENSITIVE_CONTENT" ->
-                                    stringResource(R.string.report_reason_sensitive_content)
-
-                                "MISINFORMATION" ->
-                                    stringResource(R.string.report_reason_misinformation)
-
-                                "FRAUD_SCAMS" -> stringResource(R.string.report_reason_fraud_scams)
-
-                                "PRIVACY_VIOLATION" ->
-                                    stringResource(R.string.report_reason_privacy_violation)
-
-                                "HARMFUL_MINORS" ->
-                                    stringResource(R.string.report_reason_harmful_minors)
-
-                                "IP_VIOLATION" ->
-                                    stringResource(R.string.report_reason_ip_violation)
-
-                                "OTHER" -> stringResource(R.string.report_reason_other)
-                                else -> reason.description
-                            }
+                        when (pageType) {
+                            ReportMode.REPORT ->
+                                when (reason.code) {
+                                    "SENSITIVE_CONTENT" ->
+                                        stringResource(R.string.report_reason_sensitive_content)
+                                    "MISINFORMATION" ->
+                                        stringResource(R.string.report_reason_misinformation)
+                                    "FRAUD_SCAMS" ->
+                                        stringResource(R.string.report_reason_fraud_scams)
+                                    "PRIVACY_VIOLATION" ->
+                                        stringResource(R.string.report_reason_privacy_violation)
+                                    "HARMFUL_MINORS" ->
+                                        stringResource(R.string.report_reason_harmful_minors)
+                                    "IP_VIOLATION" ->
+                                        stringResource(R.string.report_reason_ip_violation)
+                                    "OTHER" -> stringResource(R.string.report_reason_other)
+                                    else -> reason.description
+                                }
+                            ReportMode.FEEDBACK ->
+                                when (reason.code) {
+                                    "CHAT_NOT_NATURAL" ->
+                                        stringResource(R.string.feedback_reason_chat_not_natural)
+                                    "CHARACTER_MISMATCH" ->
+                                        stringResource(R.string.feedback_reason_character_mismatch)
+                                    "APP_SLOW" ->
+                                        stringResource(R.string.feedback_reason_app_slow)
+                                    "FEATURE_HARD_TO_FIND" ->
+                                        stringResource(R.string.feedback_reason_feature_hard_to_find)
+                                    "UI_INCONVENIENT" ->
+                                        stringResource(R.string.feedback_reason_ui_inconvenient)
+                                    "NEW_FEATURE" ->
+                                        stringResource(R.string.feedback_reason_new_feature)
+                                    "OTHER" -> stringResource(R.string.feedback_reason_other)
+                                    else -> reason.description
+                                }
+                            ReportMode.FEATURE_REQUEST ->
+                                when (reason.code) {
+                                    "FEATURE_UI" ->
+                                        stringResource(R.string.feature_category_ui)
+                                    "FEATURE_AI_CHARACTER" ->
+                                        stringResource(R.string.feature_category_ai_character)
+                                    "FEATURE_AI_MODELS" ->
+                                        stringResource(R.string.feature_category_ai_models)
+                                    "FEATURE_VOICE" ->
+                                        stringResource(R.string.feature_category_voice)
+                                    "FEATURE_IMAGE" ->
+                                        stringResource(R.string.feature_category_image)
+                                    "FEATURE_SUBSCRIPTION" ->
+                                        stringResource(R.string.feature_category_subscription)
+                                    "FEATURE_OTHERS" ->
+                                        stringResource(R.string.feature_category_others)
+                                    else -> reason.description
+                                }
                         }
                     ReportItem(
                         text = displayText,
@@ -146,28 +156,39 @@ fun ReportScreen(
             Spacer(Modifier.height(24.dp))
 
             // 举报描述或反馈描述
+            val descriptionTitle =
+                when (pageType) {
+                    ReportMode.REPORT -> stringResource(R.string.report_description)
+                    ReportMode.FEEDBACK -> stringResource(R.string.feedback_description)
+                    ReportMode.FEATURE_REQUEST ->
+                        stringResource(R.string.feature_request_description_title)
+                }
+            val descriptionPlaceholder =
+                when (pageType) {
+                    ReportMode.REPORT -> stringResource(R.string.please_fill_feedback_full)
+                    ReportMode.FEEDBACK ->
+                        stringResource(R.string.feedback_description_placeholder)
+                    ReportMode.FEATURE_REQUEST ->
+                        stringResource(R.string.feature_request_description_placeholder)
+                }
             ReportDescriptionContainer(
-                title =
-                    if (isFeedbackMode) {
-                        stringResource(R.string.feedback_description)
-                    } else {
-                        stringResource(R.string.report_description)
-                    },
+                title = descriptionTitle,
                 description = description,
                 onDescriptionChange = onDescriptionChange,
-                placeholder =
-                    if (isFeedbackMode) {
-                        stringResource(R.string.feedback_description_placeholder)
-                    } else {
-                        stringResource(R.string.please_fill_feedback_full)
-                    },
+                placeholder = descriptionPlaceholder,
             )
 
             Spacer(Modifier.height(24.dp))
 
             // 图片证据
+            val imageSectionTitle =
+                when (pageType) {
+                    ReportMode.FEATURE_REQUEST ->
+                        stringResource(R.string.feature_request_image_label)
+                    else -> stringResource(R.string.image_evidence_full)
+                }
             ReportImageEvidenceContainer(
-                title = stringResource(R.string.image_evidence_full),
+                title = imageSectionTitle,
                 images = images,
                 onClickAddImage = onClickAddImage,
             )
@@ -184,13 +205,15 @@ fun ReportScreen(
                 TopAppBarDefaults.centerAlignedTopAppBarColors()
                     .copy(containerColor = Color(0XFF1C1523)),
             title = {
+                val appBarTitle =
+                    when (pageType) {
+                        ReportMode.REPORT -> stringResource(R.string.str_report)
+                        ReportMode.FEEDBACK -> stringResource(R.string.share_feedback)
+                        ReportMode.FEATURE_REQUEST ->
+                            stringResource(R.string.feature_request_title)
+                    }
                 Text(
-                    text =
-                        if (isFeedbackMode) {
-                            stringResource(R.string.share_feedback)
-                        } else {
-                            stringResource(R.string.str_report)
-                        },
+                    text = appBarTitle,
                     color = Color.White,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 20.sp,

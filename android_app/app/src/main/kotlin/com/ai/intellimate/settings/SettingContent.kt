@@ -190,6 +190,14 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
 
         SettingDivider()
 
+        // Feature request
+        SettingNavigationItem(
+            title = stringResource(R.string.settings_feature_request),
+            onClick = { ReportActivity.launchFeatureRequest(context) },
+        )
+
+        SettingDivider()
+
         // 举报
         SettingNavigationItem(
             title = stringResource(R.string.str_report),

@@ -160,6 +160,22 @@
     <string name="feedback_description_placeholder">Please describe your experience or suggestions…</string>
     <string name="toast_feedback_submitted">Thanks for helping improve the experience.</string>
 
+    <!-- Feature Request -->
+    <string name="settings_feature_request">Feature request</string>
+    <string name="feature_request_title">Feature request</string>
+    <string name="feature_request_category_title">Feature category</string>
+    <string name="feature_request_description_title">Feature description</string>
+    <string name="feature_request_description_placeholder">Describe what you'd like us to build next…</string>
+    <string name="feature_request_image_label">Optional image for explanation</string>
+    <string name="feature_category_ui">UI</string>
+    <string name="feature_category_ai_character">AI character</string>
+    <string name="feature_category_ai_models">AI models</string>
+    <string name="feature_category_voice">Voice</string>
+    <string name="feature_category_image">Image</string>
+    <string name="feature_category_subscription">Subscription</string>
+    <string name="feature_category_others">Others</string>
+    <string name="toast_feature_request_submitted">Thanks! Your feature idea is on our list.</string>
+
     <!-- Settings -->
     <string name="he_him">He/Him</string>
     <string name="she_her">She/Her</string>

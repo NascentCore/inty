@@ -37,7 +37,7 @@ class ReportViewModel : BaseVM() {
         viewModelScope.launch { _events.emit(event) }
     }
 
-    var isFeedbackMode: Boolean = false
+    var mode: ReportMode = ReportMode.REPORT
     var targetID: String = ""
     var targetType: String = "USER"
 
@@ -110,16 +110,30 @@ class ReportViewModel : BaseVM() {
             )
         )
 
+    private val _featureRequestReasons =
+        MutableStateFlow(
+            listOf(
+                ReportItem(id = 1, description = "UI", code = "FEATURE_UI"),
+                ReportItem(id = 2, description = "AI Character", code = "FEATURE_AI_CHARACTER"),
+                ReportItem(id = 3, description = "AI Models", code = "FEATURE_AI_MODELS"),
+                ReportItem(id = 4, description = "Voice", code = "FEATURE_VOICE"),
+                ReportItem(id = 5, description = "Image", code = "FEATURE_IMAGE"),
+                ReportItem(id = 6, description = "Subscription", code = "FEATURE_SUBSCRIPTION"),
+                ReportItem(id = 0, description = "Others", code = "FEATURE_OTHERS"),
+            )
+        )
+
     private val _reasons = MutableStateFlow(_reportReasons.value)
     val reasons = _reasons.asStateFlow()
 
     fun updateReasonsForMode() {
         _reasons.value =
-            if (isFeedbackMode) {
-                _feedbackReasons.value
-            } else {
-                _reportReasons.value
+            when (mode) {
+                ReportMode.REPORT -> _reportReasons.value
+                ReportMode.FEEDBACK -> _feedbackReasons.value
+                ReportMode.FEATURE_REQUEST -> _featureRequestReasons.value
             }
+        selectIDS.clear()
     }
 
     var selectIDS = mutableStateSetOf<Int>()
@@ -164,28 +178,32 @@ class ReportViewModel : BaseVM() {
                     }
                 }
 
+                val isReportMode = mode == ReportMode.REPORT
                 val result =
                     ReportService.createReport(
                         reasonIds = selectIDS.map { it.toLong() },
-                        targetId = if (isFeedbackMode) null else targetID,
-                        targetType = if (isFeedbackMode) null else targetType,
+                        targetId = if (isReportMode) targetID else null,
+                        targetType = if (isReportMode) targetType else null,
                         description = description.value.trim(),
                         imageUrls = uploadedImageUrls + remoteImages.toList(),
                         reportType =
-                            if (isFeedbackMode) {
-                                ReportService.ReportType.FEEDBACK
-                            } else {
+                            if (isReportMode) {
                                 ReportService.ReportType.REPORT
+                            } else {
+                                ReportService.ReportType.FEEDBACK
                             },
                     )
 
                 when (result) {
                     is ApiResult.Success -> {
-                        if (isFeedbackMode) {
-                            ToastUtils.showShort(R.string.toast_feedback_submitted)
-                        } else {
-                            ToastUtils.showShort(R.string.toast_submitted_successfully)
-                        }
+                        val successMessage =
+                            when (mode) {
+                                ReportMode.REPORT -> R.string.toast_submitted_successfully
+                                ReportMode.FEEDBACK -> R.string.toast_feedback_submitted
+                                ReportMode.FEATURE_REQUEST ->
+                                    R.string.toast_feature_request_submitted
+                            }
+                        ToastUtils.showShort(successMessage)
                         sendEvent(ViewModelEvent.ReportSubmitted)
                     }
                     is ApiResult.Error -> {

@@ -19,7 +19,7 @@ class ReportActivity : BaseActivity() {
     companion object {
         private const val INTENT_KEY_TARGET_ID = "intent_key_target_id"
         private const val INTENT_KEY_TARGET_TYPE = "intent_key_target_type"
-        private const val INTENT_KEY_IS_FEEDBACK = "intent_key_is_feedback"
+        private const val INTENT_KEY_MODE = "intent_key_mode"
 
         /**
          * 启动举报界面
@@ -33,7 +33,7 @@ class ReportActivity : BaseActivity() {
                 Intent(context, ReportActivity::class.java).also { intent ->
                     intent.putExtra(INTENT_KEY_TARGET_ID, targetId)
                     intent.putExtra(INTENT_KEY_TARGET_TYPE, targetType)
-                    intent.putExtra(INTENT_KEY_IS_FEEDBACK, false)
+                    intent.putExtra(INTENT_KEY_MODE, ReportMode.REPORT.ordinal)
                 }
             )
         }
@@ -46,7 +46,16 @@ class ReportActivity : BaseActivity() {
         fun launchFeedback(context: Context) {
             context.startActivity(
                 Intent(context, ReportActivity::class.java).also { intent ->
-                    intent.putExtra(INTENT_KEY_IS_FEEDBACK, true)
+                    intent.putExtra(INTENT_KEY_MODE, ReportMode.FEEDBACK.ordinal)
+                }
+            )
+        }
+
+        /** 启动功能需求提交界面 */
+        fun launchFeatureRequest(context: Context) {
+            context.startActivity(
+                Intent(context, ReportActivity::class.java).also { intent ->
+                    intent.putExtra(INTENT_KEY_MODE, ReportMode.FEATURE_REQUEST.ordinal)
                 }
             )
         }
@@ -56,13 +65,17 @@ class ReportActivity : BaseActivity() {
 
     override fun initConfigData() {
         super.initConfigData()
-        val isFeedback = intent.getBooleanExtra(INTENT_KEY_IS_FEEDBACK, false)
-        viewModel.isFeedbackMode = isFeedback
+        val modeOrdinal = intent.getIntExtra(INTENT_KEY_MODE, ReportMode.REPORT.ordinal)
+        val resolvedMode = ReportMode.values().getOrNull(modeOrdinal) ?: ReportMode.REPORT
+        viewModel.mode = resolvedMode
         viewModel.updateReasonsForMode()
 
-        if (!isFeedback) {
+        if (resolvedMode == ReportMode.REPORT) {
             viewModel.targetID = intent.getStringExtra(INTENT_KEY_TARGET_ID) ?: ""
             viewModel.targetType = intent.getStringExtra(INTENT_KEY_TARGET_TYPE) ?: "USER"
+        } else {
+            viewModel.targetID = ""
+            viewModel.targetType = "USER"
         }
 
         // 监听ViewModel事件
@@ -83,17 +96,13 @@ class ReportActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
-        ReportContent(
-            viewModel = viewModel,
-            onBack = { finish() },
-            isFeedbackMode = viewModel.isFeedbackMode,
-        )
+        ReportContent(viewModel = viewModel, onBack = { finish() }, mode = viewModel.mode)
     }
 }
 
 /** 举报内容组件 */
 @Composable
-private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit, isFeedbackMode: Boolean) {
+private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit, mode: ReportMode) {
     val reasons = viewModel.reasons.collectAsState()
     val selectIDs = viewModel.selectIDS
     val description = viewModel.description.collectAsState()
@@ -123,6 +132,6 @@ private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit, isFeed
         onSave = { viewModel.submit() },
         isSubmitting = isSubmitting.value,
         onBack = onBack,
-        isFeedbackMode = isFeedbackMode,
+        pageType = mode,
     )
 }
