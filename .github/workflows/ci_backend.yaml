@@ -17,9 +17,10 @@ on:
       - "app/**/*.py"
       - "tests/**/*.py"
       - "tests/alembic/test_custom_config.sh"
-      - "scripts/init_admin_user.py"
+      - "scripts/"
       - "requirements.txt"
       - "test_requirements.txt"
+      - "Dockerfile"
       # Alembic files
       - "alembic/**/*"
       - "alembic.ini"
