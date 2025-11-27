@@ -44,6 +44,7 @@ import com.ai.intellimate.ui.components.EmptyPlanState
 import com.ai.intellimate.ui.components.PremiumBenefitItem
 import com.ai.intellimate.ui.components.PremiumPlanList
 import com.ai.intellimate.ui.components.PurchaseButton
+import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -143,12 +144,15 @@ fun VipCenterContent(
             Spacer(Modifier.height(12.dp))
             // 动态显示订阅计划列表
             if (plans.isNotEmpty()) {
-                PremiumPlanList(
-                    plans = plans,
-                    selectedIndex = selectedPlanIndex,
-                    isSubscribed = vipStatus.isSubscribed,
-                    onPlanSelected = { index -> viewModel.selectPlan(index) },
-                )
+                IgnoreSystemFontScaling {
+                    PremiumPlanList(
+                        plans = plans,
+                        selectedIndex = selectedPlanIndex,
+                        isSubscribed = vipStatus.isSubscribed,
+                        onPlanSelected = { index -> viewModel.selectPlan(index) },
+                    )
+                }
+
 
                 PurchaseButton(
                     isSubscribed = vipStatus.isSubscribed,
