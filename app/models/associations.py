@@ -3,7 +3,7 @@ from sqlalchemy import Column, ForeignKey, String, Table
 from app.models import Base
 
 # 用户关注AI角色的关联表
-# TODO: 这个需要修改，跟其他表格定义要一致
+# DEPRECATED：已废弃，没有在使用
 agent_followers = Table(
     "agent_followers",
     Base.metadata,
