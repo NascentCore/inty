@@ -38,6 +38,8 @@
 
 ## Coding style
 
+- 各类语言函数体不应该超过 50 行，100 行以上的函数应该拆分为细分函数，50-100 行之间酌情处理
+
 ### Do not repeat in comments what's already obvious in the code
 
 Do not generate comments like below.
