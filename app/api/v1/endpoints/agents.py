@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, INTERNAL_API_TAG, WEB_APP_TAG
+from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, INTY_EVAL_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
@@ -516,11 +516,11 @@ def get_opposite_gender(gender: str) -> str:
     gender_mapping = {
         "male": "female",
         "female": "male",
-        "non-binary": "",
-        "they/them": "",
-        "nb": "",  # non-binary 的简写
-        "other": "",
-        "": "",
+        "non-binary": "female",
+        "they/them": "female",
+        "nb": "female",  # non-binary 的简写
+        "other": "female",
+        "": "female",
     }
     normalized_gender = gender.lower().strip()
     opposite = gender_mapping.get(normalized_gender, "")

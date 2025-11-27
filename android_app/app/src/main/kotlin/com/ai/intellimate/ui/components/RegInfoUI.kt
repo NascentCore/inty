@@ -41,9 +41,9 @@ internal fun GenderItem(gender: GENDER, selected: Boolean, onClick: () -> Unit) 
 
     val genderText =
         when (gender) {
-            GENDER.MALE -> "He/Him"
-            GENDER.FEMALE -> "She/Her"
-            GENDER.OTHER -> "They/Them"
+            GENDER.MALE -> getString(R.string.male_full)
+            GENDER.FEMALE -> getString(R.string.female_full)
+            GENDER.OTHER -> getString(R.string.non_binary_full)
         }
 
     Column(
