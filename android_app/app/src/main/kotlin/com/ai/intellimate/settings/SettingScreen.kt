@@ -23,6 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -40,6 +41,7 @@ import kotlinx.coroutines.flow.collectLatest
 
 private const val HELP_CENTER_URL =
     "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
+private const val GOOGLE_PLAY_APP_URL_PREFIX = "https://play.google.com/store/apps/details?id="
 
 /** 设置页面主内容 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -269,6 +271,7 @@ private fun SupportAndHelpSection(
         IntelliMateDivider()
 
         // 版本号
+        val defaultPlayStoreUrl = rememberUpdatedPlayStoreUrl()
         SettingsArrowItem(
             item =
                 SettingsItemData.CommonItemData(
@@ -288,12 +291,18 @@ private fun SupportAndHelpSection(
             showRedDot = hasAppUpdateTips,
             onItemClick = {
                 runCatching {
-                    val url = IntySetting.appGooglePlayUrl()
-                    if (url.isNotBlank()) uriHandler.openUri(url)
-                }
+                    val url = IntySetting.appGooglePlayUrl().ifBlank { defaultPlayStoreUrl }
+                    uriHandler.openUri(url)
+                }.onFailure { ToastUtils.showShort(R.string.toast_google_play_unavailable) }
             },
         )
     }
+}
+
+@Composable
+private fun rememberUpdatedPlayStoreUrl(): String {
+    val packageName = BuildConfig.APPLICATION_ID
+    return remember(packageName) { "$GOOGLE_PLAY_APP_URL_PREFIX$packageName" }
 }
 
 /** 设置对话框 */
