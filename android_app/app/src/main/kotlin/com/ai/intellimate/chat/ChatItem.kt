@@ -88,11 +88,12 @@ fun ChatItem(
     isCurrentPage: Boolean = true,
     chatViewModel: ChatViewModel? = null,
     isLatestMessage: Boolean = false,
+    isGuideVisible: Boolean = false,
 ) {
     runCatching {
             when (item.role) {
                 "assistant" -> {
-                    ChatItemAI(item, isCurrentPage, chatViewModel, isLatestMessage)
+                    ChatItemAI(item, isCurrentPage, chatViewModel, isLatestMessage, isGuideVisible)
                 }
 
                 "user" -> {
@@ -130,6 +131,7 @@ private fun ChatItemAI(
     isCurrentPage: Boolean = true,
     chatViewModel: ChatViewModel? = null,
     isLatestMessage: Boolean = false,
+    isGuideVisible: Boolean = false,
 ) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
 
@@ -176,7 +178,8 @@ private fun ChatItemAI(
                             isQueryMsgsCompleted &&
                             safeAgentId.isNotEmpty() &&
                             audioInfo.url.isNotEmpty() &&
-                            IntySetting.isAutoPlayAudio()
+                            IntySetting.isAutoPlayAudio() &&
+                                !isGuideVisible  // 未出现引导手势时
 
                     if (safeAgentId.isNotEmpty()) {
                         VoicePlayer(

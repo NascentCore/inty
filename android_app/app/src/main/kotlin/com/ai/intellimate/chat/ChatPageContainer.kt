@@ -206,6 +206,7 @@ fun ChatPageContainer(
                     chatViewModel = chatViewModel,
                     isCurrentPage = isPageCurrent,
                     shouldAutoFocusInput = isKeyboardVisibleChatPage,
+                    isGuideVisible = shouldShowGuide,
                     onInputFocusChange = { focused ->
                         if (!isPageCurrent) return@ChatPage
                         if (focused != autoFocusEnabled) {
