@@ -45,12 +45,13 @@ import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
-import kotlin.math.abs
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -315,7 +316,8 @@ class MainActivity : BaseActivity() {
                 // 显示设置界面
                 com.ai.intellimate.settings.SettingContent(
                     modifier =
-                        Modifier.fillMaxSize()
+                        Modifier
+                            .fillMaxSize()
                             .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
                     onBack = { mainViewModel.hideSettings() },
                     onLogout = { isDelete ->
@@ -454,6 +456,20 @@ class MainActivity : BaseActivity() {
     }
 }
 
+private fun reportLoginFailure(errorType: String, errorMessage: String?, exception: Throwable?) {
+    FirebaseManager.logEvent(
+        FirebaseManager.Events.AUTH_FAILURE,
+        FirebaseManager.safeEventParams(
+            "error_type" to errorType,
+            "error_message" to (errorMessage?.take(100) ?: "unknown"),
+            "login_method" to "google",
+        ),
+    )
+    exception?.let {
+        FirebaseManager.recordException(it, mapOf("error_type" to errorType))
+    }
+}
+
 /** Splash 登录界面 - 集成 Google 登录按钮和隐私政策 */
 @Composable
 private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainViewModel) {
@@ -537,6 +553,7 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
 
                             is com.architecture.httplib.core.HttpResult.Failure -> {
                                 LogUtils.e("Google login failed: ${loginResult.message}")
+                                reportLoginFailure("backend_error", loginResult.message, null)
                                 com.ai.intellimate.utils.NetworkErrorHandler.showNetworkAwareError(
                                     loginResult.message
                                 )
@@ -544,32 +561,45 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
                         }
                     },
                     onFailure = { exception ->
-                        // 检查是否为用户取消操作，如果是则不显示错误提示
                         when (exception) {
                             is androidx.credentials.exceptions.GetCredentialCancellationException -> {
-                                // 用户取消登录，无需记录日志
+                                // 用户取消登录，无需处理
                             }
 
                             is androidx.credentials.exceptions.GetCredentialInterruptedException -> {
-                                // 登录过程被中断，无需记录日志
+                                // 登录过程被中断，无需处理
+                            }
+
+                            is GoogleIdTokenParsingException -> {
+                                val errorMessage = context.getString(R.string.invalid_google_token)
+                                LogUtils.e("Google ID token parsing failed: ${exception.message}")
+                                reportLoginFailure(
+                                    "token_parsing_error",
+                                    exception.message,
+                                    exception
+                                )
+                                coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
 
                             is androidx.credentials.exceptions.NoCredentialException -> {
                                 val errorMessage =
                                     context.getString(R.string.no_credentials_available)
                                 LogUtils.e("Credential Manager sign-in failed: $errorMessage")
+                                reportLoginFailure("no_credential", errorMessage, exception)
                                 coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
 
                             is androidx.credentials.exceptions.GetCredentialException -> {
                                 val errorMessage = context.getString(R.string.get_credential_failed)
                                 LogUtils.e("Credential Manager sign-in failed: $errorMessage")
+                                reportLoginFailure("get_credential_error", errorMessage, exception)
                                 coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
 
                             else -> {
                                 val errorMessage = context.getString(R.string.login_failed)
                                 LogUtils.e("Credential Manager sign-in failed: $errorMessage")
+                                reportLoginFailure("unknown_error", exception.message, exception)
                                 coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
                         }
@@ -594,7 +624,9 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Image(
-                modifier = Modifier.size(120.dp).clip(RoundedCornerShape(10.dp)),
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(RoundedCornerShape(10.dp)),
                 painter = painterResource(R.drawable.icon_splash_icon),
                 contentDescription = "",
                 contentScale = ContentScale.Crop,
