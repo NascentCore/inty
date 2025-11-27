@@ -1,46 +1,39 @@
 package com.ai.intellimate.settings
 
-import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
-import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.design.ui.HeartTopAppBar
+import ai.sxwl.android.design.ui.IntelliMateDivider
+import ai.sxwl.android.design.ui.SettingsArrowItem
+import ai.sxwl.android.design.ui.SettingsItemData
+import ai.sxwl.android.design.ui.SettingsItemGroup
+import ai.sxwl.android.utils.ClipboardUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.ui.components.DeleteAccountDialog
-import com.ai.intellimate.ui.components.LogoutButton
-import com.ai.intellimate.ui.components.SettingCopyableInfoItem
-import com.ai.intellimate.ui.components.SettingDivider
-import com.ai.intellimate.ui.components.SettingNavigationItem
-import com.ai.intellimate.ui.components.SettingSection
 import com.ai.intellimate.vip.SubsManageActivity
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlinx.coroutines.flow.collectLatest
@@ -51,20 +44,22 @@ private const val HELP_CENTER_URL =
 /** 设置页面主内容 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingContent(
+fun SettingScreen(
     modifier: Modifier = Modifier,
     onBack: () -> Unit,
     onLogout: (isDelete: Boolean) -> Unit,
     viewModel: SettingViewModel = viewModel(),
 ) {
     val context = LocalContext.current
-    val dialogState by viewModel.dialogState.collectAsState()
+    val state = viewModel.state.collectAsState().value
 
     // 每次打开设置界面时，重置删除账号结果状态和对话框状态，避免残留状态导致误触发
     // 这可以防止在删除账号后，再次登录并打开设置界面时误触发 onLogout(true) 或显示对话框
     LaunchedEffect(Unit) {
         viewModel.resetDeleteAccountResult()
         viewModel.resetDialogState()
+        // 刷新用户数据，确保显示最新状态
+        viewModel.refreshUserData()
     }
 
     // 监听删除账号结果
@@ -83,17 +78,33 @@ fun SettingContent(
         }
     }
 
-    Scaffold(modifier = modifier, topBar = { SettingTopBar(onBack = onBack) }) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
-            AccountInfoSection(
-                userId = IntySetting.getCurUserID(),
-                onCopyUserId = { ToastUtils.showShort(R.string.toast_copied_to_clipboard) },
+    Scaffold(
+        modifier = modifier,
+        containerColor = HeartColor.primaryColor,
+        topBar = {
+            HeartTopAppBar(
+                modifier = Modifier.background(color = HeartColor.primaryColor),
+                title = stringResource(R.string.settings),
+                navIcon = R.drawable.back,
+                onBack = onBack,
             )
+        }
+    ) { innerPadding ->
+        val scrollState = rememberScrollState()
+        Column(
+            modifier = Modifier
+                .verticalScroll(scrollState)
+                .padding(innerPadding)
+                .padding(16.dp)
+        ) {
+            AccountInfoSection(userId = state.userId)
 
             Spacer(Modifier.height(16.dp))
 
             // 支持与帮助区域
             SupportAndHelpSection(
+                isVipSubscribed = state.isVipSubscribed,
+                hasAppUpdateTips = state.hasAppUpdateTips,
                 context = context,
                 onShowDeleteDialog = { viewModel.showDeleteAccountDialog() },
             )
@@ -105,12 +116,13 @@ fun SettingContent(
 
             // Debug 环境后端切换（仅 debug 可见）
             if (BuildConfig.BUILD_TYPE.equals("debug", ignoreCase = true)) {
+                Spacer(Modifier.height(16.dp))
                 DebugBackendSettingsEntry()
             }
 
             // 对话框
             SettingDialogs(
-                dialogState = dialogState,
+                dialogState = state.dialogState,
                 onHideDeleteDialog = { viewModel.hideDeleteAccountDialog() },
                 onConfirmDelete = { viewModel.deleteUserAccount() },
             )
@@ -118,90 +130,90 @@ fun SettingContent(
     }
 }
 
-/** 设置页面顶部栏 */
-@OptIn(ExperimentalMaterial3Api::class)
+/** 账号信息区域 */
 @Composable
-private fun SettingTopBar(onBack: () -> Unit) {
-    CenterAlignedTopAppBar(
-        title = {
-            Text(
-                text = stringResource(R.string.settings),
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 20.sp,
-            )
-        },
-        navigationIcon = {
-            Image(
-                modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
-                painter = painterResource(R.drawable.back),
-                contentDescription = null,
-            )
+private fun AccountInfoSection(userId: String) {
+    val context = LocalContext.current
+    val displayId =
+        userId.ifBlank { stringResource(R.string.settings_user_id_unavailable) }
+    val userIdTitle = stringResource(R.string.settings_user_id)
+    SettingsArrowItem(
+        item = SettingsItemData.CommonItemData(
+            title = userIdTitle,
+            content = displayId,
+            arrow = false,
+        ),
+        onLongClick = {
+            if (userId.isNotBlank()) {
+                ClipboardUtils.copyToClipboard(
+                    context,
+                    label = userIdTitle,
+                    text = userId,
+                )
+                ToastUtils.showShort(R.string.toast_copied_to_clipboard)
+            }
         },
     )
 }
 
-/** 账号信息区域 */
-@Composable
-private fun AccountInfoSection(userId: String, onCopyUserId: () -> Unit) {
-    SettingSection {
-        val displayId =
-            if (userId.isNotBlank()) userId else stringResource(R.string.settings_user_id_unavailable)
-        SettingCopyableInfoItem(
-            title = stringResource(R.string.settings_user_id),
-            value = displayId,
-            copyText = userId.takeIf { it.isNotBlank() },
-            onCopied = onCopyUserId,
-        )
-    }
-}
-
 /** 支持与帮助区域 */
 @Composable
-private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Unit) {
+private fun SupportAndHelpSection(
+    isVipSubscribed: Boolean,
+    hasAppUpdateTips: Boolean,
+    context: Context,
+    onShowDeleteDialog: () -> Unit,
+) {
     val uriHandler = LocalUriHandler.current
-    SettingSection {
+    SettingsItemGroup {
         // 邮件联系
         val email = stringResource(R.string.settings_email_inty)
-        SettingNavigationItem(
-            title = stringResource(R.string.settings_email_support),
-            subtitle = email,
-            onClick = { mailTo(context, email) },
+        SettingsArrowItem(
+            item = SettingsItemData.CommonItemData(
+                title = stringResource(R.string.settings_email_support),
+                content = email,
+            ),
+            isInGroup = true,
+            onItemClick = { mailTo(context, email) },
         )
 
-        SettingDivider()
+        IntelliMateDivider()
 
         // 帮助中心
-        SettingNavigationItem(
-            title = stringResource(R.string.settings_help),
-            onClick = {
+        SettingsArrowItem(
+            item = SettingsItemData.CommonItemData(title = stringResource(R.string.settings_help)),
+            isInGroup = true,
+            onItemClick = {
                 runCatching { uriHandler.openUri(HELP_CENTER_URL) }
                     .onFailure { ToastUtils.showShort(R.string.toast_navigation_failed) }
             },
         )
 
-        SettingDivider()
+        IntelliMateDivider()
 
         // Feedback
-        SettingNavigationItem(
-            title = stringResource(R.string.str_feedback),
-            onClick = { ReportActivity.launchFeedback(context) },
+        SettingsArrowItem(
+            item = SettingsItemData.CommonItemData(title = stringResource(R.string.str_feedback)),
+            isInGroup = true,
+            onItemClick = { ReportActivity.launchFeedback(context) },
         )
 
-        SettingDivider()
+        IntelliMateDivider()
 
         // 举报
-        SettingNavigationItem(
-            title = stringResource(R.string.str_report),
-            onClick = { ReportActivity.launch(context) },
+        SettingsArrowItem(
+            item = SettingsItemData.CommonItemData(title = stringResource(R.string.str_report)),
+            isInGroup = true,
+            onItemClick = { ReportActivity.launch(context) },
         )
 
-        SettingDivider()
+        IntelliMateDivider()
 
         // 用户协议
-        SettingNavigationItem(
-            title = stringResource(R.string.terms_of_use),
-            onClick = {
+        SettingsArrowItem(
+            item = SettingsItemData.CommonItemData(title = stringResource(R.string.terms_of_use)),
+            isInGroup = true,
+            onItemClick = {
                 val intent =
                     Intent(
                         Intent.ACTION_VIEW,
@@ -211,12 +223,13 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
             },
         )
 
-        SettingDivider()
+        IntelliMateDivider()
 
         // 隐私政策
-        SettingNavigationItem(
-            title = stringResource(R.string.privacy_policy),
-            onClick = {
+        SettingsArrowItem(
+            item = SettingsItemData.CommonItemData(title = stringResource(R.string.privacy_policy)),
+            isInGroup = true,
+            onItemClick = {
                 val intent =
                     Intent(
                         Intent.ACTION_VIEW,
@@ -226,29 +239,29 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
             },
         )
 
-        SettingDivider()
+        IntelliMateDivider()
 
         // 删除账号
-        SettingNavigationItem(
-            title = stringResource(R.string.settings_str_delete_account),
-            onClick = onShowDeleteDialog,
+        SettingsArrowItem(
+            item = SettingsItemData.CommonItemData(title = stringResource(R.string.settings_str_delete_account)),
+            isInGroup = true,
+            onItemClick = onShowDeleteDialog,
         )
 
-        SettingDivider()
+        IntelliMateDivider()
 
         // 订阅管理
-        // VIP状态
-        val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
-        val str =
-            if (vipStatus.isSubscribed) {
+        val subscriptionTitle =
+            if (isVipSubscribed) {
                 stringResource(R.string.settings_subscription_management)
             } else {
                 stringResource(R.string.settings_update_subscription)
             }
-        SettingNavigationItem(
-            title = str,
-            onClick = {
-                if (vipStatus.isSubscribed) {
+        SettingsArrowItem(
+            item = SettingsItemData.CommonItemData(title = subscriptionTitle),
+            isInGroup = true,
+            onItemClick = {
+                if (isVipSubscribed) {
                     SubsManageActivity.launch(context)
                 } else {
                     VipCenterActivity.launch(context, VipCenterActivity.SETTINGS_SUBSCRIPTION)
@@ -256,22 +269,28 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
             },
         )
 
-        SettingDivider()
+        IntelliMateDivider()
 
         // 版本号
-        SettingNavigationItem(
-            title = stringResource(R.string.settings_about),
-            subtitle =
-                if (IntySetting.hasAppUpdateTips())
-                    stringResource(R.string.version_update_available, BuildConfig.VERSION_NAME)
-                else BuildConfig.VERSION_NAME,
-            onClick = {
+        SettingsArrowItem(
+            item = SettingsItemData.CommonItemData(
+                title = stringResource(R.string.settings_version),
+                content =
+                    if (hasAppUpdateTips) {
+                        stringResource(R.string.version_update_available, BuildConfig.VERSION_NAME)
+                    } else {
+                        BuildConfig.VERSION_NAME
+                    },
+                arrow = true,
+            ),
+            isInGroup = true,
+            showRedDot = hasAppUpdateTips,
+            onItemClick = {
                 runCatching {
                     val url = IntySetting.appGooglePlayUrl()
                     if (url.isNotBlank()) uriHandler.openUri(url)
                 }
             },
-            showRedDot = IntySetting.hasAppUpdateTips(),
         )
     }
 }
@@ -297,10 +316,4 @@ private fun mailTo(context: Context, email: String) {
     } catch (e: Exception) {
         ToastUtils.showShort(R.string.toast_email_error)
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun SettingContentPreview() {
-    SettingContent(modifier = Modifier.fillMaxSize(), onBack = {}, onLogout = {})
 }

@@ -18,7 +18,7 @@
     <string name="settings_help">Help Center</string>
     <string name="settings_email_support">Email Support</string>
     <string name="settings_email_inty">IntelliMate@inty.cc</string>
-    <string name="settings_about">Version</string>
+    <string name="settings_version">Version</string>
     <string name="settings_user_id">User ID</string>
     <string name="settings_user_id_unavailable">Unavailable</string>
     <string name="logout">Log out</string>

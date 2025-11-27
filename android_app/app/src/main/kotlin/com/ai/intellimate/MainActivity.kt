@@ -314,7 +314,7 @@ class MainActivity : BaseActivity() {
 
             showSettings -> {
                 // 显示设置界面
-                com.ai.intellimate.settings.SettingContent(
+                com.ai.intellimate.settings.SettingScreen(
                     modifier =
                         Modifier
                             .fillMaxSize()

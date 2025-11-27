@@ -3,20 +3,19 @@ package com.ai.intellimate.chat.ui
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
+import ai.sxwl.android.design.ui.IntelliMateDivider
 import ai.sxwl.android.design.ui.SettingsArrowItem
 import ai.sxwl.android.design.ui.SettingsItemData
+import ai.sxwl.android.design.ui.SettingsItemGroup
 import ai.sxwl.android.design.ui.SettingsSwitchItem
 import ai.sxwl.android.firebase.FirebaseManager
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,7 +45,6 @@ import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
-import com.ai.intellimate.ui.components.ProfileInfoItem
 
 /** 聊天设置抽屉组件 */
 @Composable
@@ -107,7 +105,8 @@ fun ChatSettingsDrawer(
         drawerContent = {
             Column(
                 modifier =
-                    Modifier.width(319.dp)
+                    Modifier
+                        .width(319.dp)
                         .fillMaxHeight()
                         .background(
                             brush =
@@ -125,83 +124,86 @@ fun ChatSettingsDrawer(
                 )
 
                 Spacer(Modifier.height(14.dp))
-
-                Column(
-                    modifier =
-                        Modifier.padding(horizontal = horizontalPadding.dp)
-                            .fillMaxWidth()
-                            .border(
-                                brush =
-                                    Brush.linearGradient(
-                                        colors =
-                                            listOf(
-                                                Color.Transparent,
-                                                Color.White.copy(0.2f),
-                                                Color.Transparent,
-                                            )
-                                    ),
-                                width = 1.dp,
-                                shape = RoundedCornerShape(8.dp),
-                            )
-                            .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
-                ) {
-                    ProfileInfoItem(
-                        key = stringResource(R.string.str_name),
-                        value = userProfileState.nickname.ifEmpty { "Guest" },
-                        horizontalPadding = horizontalPadding,
-                        onClick = {
-                            // 检查是否已登录
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                FirebaseManager.logEvent(
-                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                    FirebaseManager.safeEventParams(
-                                        "click_type" to "edit_name",
-                                        "timestamp" to System.currentTimeMillis(),
-                                    ),
-                                )
-                                editKey = EditKey.Name
-                                editValue = userProfileState.nickname
-                            }
-                        },
-                    )
-                    ProfileInfoItem(
-                        key = stringResource(R.string.str_pronouns),
-                        value = userProfileState.pronouns(),
-                        horizontalPadding = horizontalPadding,
-                        onClick = {
-                            // 检查是否已登录
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                FirebaseManager.logEvent(
-                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                    FirebaseManager.safeEventParams(
-                                        "click_type" to "edit_pronouns",
-                                        "timestamp" to System.currentTimeMillis(),
-                                    ),
-                                )
-                                editKey = EditKey.Pronouns
-                                editValue = userProfileState.gender ?: ""
-                            }
-                        },
-                    )
-                    ProfileInfoItem(
-                        key = stringResource(R.string.str_persona),
-                        value = userProfileState.description ?: "Edit",
-                        horizontalPadding = horizontalPadding,
-                        onClick = {
-                            // 检查是否已登录
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                FirebaseManager.logEvent(
-                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                    FirebaseManager.safeEventParams(
-                                        "click_type" to "edit_persona",
-                                        "timestamp" to System.currentTimeMillis(),
-                                    ),
-                                )
-                                editKey = EditKey.Persona
-                                editValue = userProfileState.description ?: ""
-                            }
-                        },
-                    )
+                Column(modifier = Modifier.padding(horizontal = horizontalPadding.dp)) {
+                    SettingsItemGroup(modifier = Modifier) {
+                        SettingsArrowItem(
+                            item = SettingsItemData.CommonItemData(
+                                title = stringResource(R.string.str_name),
+                                content = userProfileState.nickname.ifEmpty { "Guest" },
+                            ),
+                            isInGroup = true,
+                            fontLight = true,
+                            horizontalPadding = horizontalPadding,
+                            onItemClick = {
+                                // 检查是否已登录
+                                if (IntySetting.isLogin() && IntySetting.getCurToken()
+                                        .isNotEmpty()
+                                ) {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "edit_name",
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    editKey = EditKey.Name
+                                    editValue = userProfileState.nickname
+                                }
+                            },
+                        )
+                        IntelliMateDivider()
+                        SettingsArrowItem(
+                            item = SettingsItemData.CommonItemData(
+                                title = stringResource(R.string.str_pronouns),
+                                content = userProfileState.pronouns(),
+                            ),
+                            isInGroup = true,
+                            fontLight = true,
+                            horizontalPadding = horizontalPadding,
+                            onItemClick = {
+                                // 检查是否已登录
+                                if (IntySetting.isLogin() && IntySetting.getCurToken()
+                                        .isNotEmpty()
+                                ) {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "edit_pronouns",
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    editKey = EditKey.Pronouns
+                                    editValue = userProfileState.gender ?: ""
+                                }
+                            },
+                        )
+                        IntelliMateDivider()
+                        SettingsArrowItem(
+                            item = SettingsItemData.CommonItemData(
+                                title = stringResource(R.string.str_persona),
+                                content = userProfileState.description ?: "Edit",
+                            ),
+                            isInGroup = true,
+                            fontLight = true,
+                            horizontalPadding = horizontalPadding,
+                            onItemClick = {
+                                // 检查是否已登录
+                                if (IntySetting.isLogin() && IntySetting.getCurToken()
+                                        .isNotEmpty()
+                                ) {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "edit_persona",
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    editKey = EditKey.Persona
+                                    editValue = userProfileState.description ?: ""
+                                }
+                            },
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(30.dp))
@@ -216,132 +218,124 @@ fun ChatSettingsDrawer(
 
                 Spacer(Modifier.height(14.dp))
 
-                // 参照My Persona的样式，使用Column包裹，外层padding，内层item也有padding
-                Column(
-                    modifier =
-                        Modifier.padding(horizontal = horizontalPadding.dp)
-                            .fillMaxWidth()
-                            .border(
-                                brush =
-                                    Brush.linearGradient(
-                                        colors =
-                                            listOf(
-                                                Color.Transparent,
-                                                Color.White.copy(0.2f),
-                                                Color.Transparent,
-                                            )
-                                    ),
-                                width = 1.dp,
-                                shape = RoundedCornerShape(8.dp),
-                            )
-                            .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
-                ) {
-                    // Show "Keep Talking" button开关
-                    SettingsSwitchItem(
-                        item =
-                            SettingsItemData.SwitchItemData(
-                                title = stringResource(R.string.chat_settings_show_keep_talking),
-                                checked = showKeepTalking,
-                            ),
-                        fontLight = true,
-                        isInGroup = true,
-                        horizontalPadding = horizontalPadding, // 使用与My Persona相同的padding
-                        openedIconRes = R.drawable.opened, // 传入app模块的资源
-                        closedIconRes = R.drawable.closed, // 传入app模块的资源
-                        onCheckChanged = { enabled ->
-                            FirebaseManager.logEvent(
-                                FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                FirebaseManager.safeEventParams(
-                                    "click_type" to "toggle_keep_talking",
-                                    "enabled" to enabled,
-                                    "timestamp" to System.currentTimeMillis(),
+                Column(modifier = Modifier.padding(horizontal = horizontalPadding.dp)) {
+                    SettingsItemGroup {
+                        // Show "Keep Talking" button开关
+                        SettingsSwitchItem(
+                            item =
+                                SettingsItemData.SwitchItemData(
+                                    title = stringResource(R.string.chat_settings_show_keep_talking) + "青青河边草，有有利到寒假工i哦啊个",
+                                    checked = showKeepTalking,
                                 ),
-                            )
-                            SettingStateManager.updateShowKeepTalking(enabled)
-                            onKeepTalkingChange(enabled)
-                        },
-                    )
-
-                    // Auto-play voice messages开关
-                    SettingsSwitchItem(
-                        item =
-                            SettingsItemData.SwitchItemData(
-                                title = stringResource(R.string.chat_settings_auto_play_voice),
-                                checked = autoPlayVoice,
-                            ),
-                        fontLight = true,
-                        isInGroup = true,
-                        horizontalPadding = horizontalPadding, // 使用与My Persona相同的padding
-                        openedIconRes = R.drawable.opened, // 传入app模块的资源
-                        closedIconRes = R.drawable.closed, // 传入app模块的资源
-                        onCheckChanged = { enabled ->
-                            FirebaseManager.logEvent(
-                                FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                FirebaseManager.safeEventParams(
-                                    "click_type" to "toggle_auto_play_voice",
-                                    "enabled" to enabled,
-                                    "timestamp" to System.currentTimeMillis(),
-                                ),
-                            )
-                            SettingStateManager.updateAutoPlayAudio(enabled)
-                        },
-                    )
-
-                    // Feedback入口
-                    SettingsArrowItem(
-                        item =
-                            SettingsItemData.CommonItemData(
-                                title = stringResource(R.string.str_feedback),
-                                content = "",
-                                arrow = true,
-                            ),
-                        fontLight = true,
-                        isInGroup = true,
-                        horizontalPadding = horizontalPadding, // 使用与My Persona相同的padding
-                        onItemClick = {
-                            // 检查是否已登录
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                            fontLight = true,
+                            isInGroup = true,
+                            horizontalPadding = horizontalPadding,
+                            openedIconRes = R.drawable.opened,
+                            closedIconRes = R.drawable.closed,
+                            onCheckChanged = { enabled ->
                                 FirebaseManager.logEvent(
                                     FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
                                     FirebaseManager.safeEventParams(
-                                        "click_type" to "feedback",
+                                        "click_type" to "toggle_keep_talking",
+                                        "enabled" to enabled,
                                         "timestamp" to System.currentTimeMillis(),
                                     ),
                                 )
-                                ReportActivity.launchFeedback(context)
-                            }
-                        },
-                    )
+                                SettingStateManager.updateShowKeepTalking(enabled)
+                                onKeepTalkingChange(enabled)
+                            },
+                        )
 
-                    agentInfo?.let { agent ->
-                        // 举报入口
+                        IntelliMateDivider()
+
+                        // Auto-play voice messages开关
+                        SettingsSwitchItem(
+                            item =
+                                SettingsItemData.SwitchItemData(
+                                    title = stringResource(R.string.chat_settings_auto_play_voice),
+                                    checked = autoPlayVoice,
+                                ),
+                            fontLight = true,
+                            isInGroup = true,
+                            horizontalPadding = horizontalPadding,
+                            openedIconRes = R.drawable.opened,
+                            closedIconRes = R.drawable.closed,
+                            onCheckChanged = { enabled ->
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "toggle_auto_play_voice",
+                                        "enabled" to enabled,
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                SettingStateManager.updateAutoPlayAudio(enabled)
+                            },
+                        )
+
+                        IntelliMateDivider()
+
+                        // Feedback入口
                         SettingsArrowItem(
                             item =
                                 SettingsItemData.CommonItemData(
-                                    title = stringResource(R.string.str_report),
+                                    title = stringResource(R.string.str_feedback),
                                     content = "",
                                     arrow = true,
                                 ),
                             fontLight = true,
                             isInGroup = true,
-                            horizontalPadding = horizontalPadding, // 使用与My Persona相同的padding
+                            horizontalPadding = horizontalPadding,
                             onItemClick = {
                                 // 检查是否已登录
-                                if (
-                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                                if (IntySetting.isLogin() && IntySetting.getCurToken()
+                                        .isNotEmpty()
                                 ) {
                                     FirebaseManager.logEvent(
                                         FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
                                         FirebaseManager.safeEventParams(
-                                            "click_type" to "report",
-                                            "agent_id" to agent.id,
+                                            "click_type" to "feedback",
                                             "timestamp" to System.currentTimeMillis(),
                                         ),
                                     )
-                                    ReportActivity.launch(context, agent.id, "AGENT")
+                                    ReportActivity.launchFeedback(context)
                                 }
                             },
                         )
+
+                        agentInfo?.let { agent ->
+                            IntelliMateDivider()
+
+                            // 举报入口
+                            SettingsArrowItem(
+                                item =
+                                    SettingsItemData.CommonItemData(
+                                        title = stringResource(R.string.str_report),
+                                        content = "",
+                                        arrow = true,
+                                    ),
+                                fontLight = true,
+                                isInGroup = true,
+                                horizontalPadding = horizontalPadding,
+                                onItemClick = {
+                                    // 检查是否已登录
+                                    if (
+                                        IntySetting.isLogin() &&
+                                        IntySetting.getCurToken().isNotEmpty()
+                                    ) {
+                                        FirebaseManager.logEvent(
+                                            FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                            FirebaseManager.safeEventParams(
+                                                "click_type" to "report",
+                                                "agent_id" to agent.id,
+                                                "timestamp" to System.currentTimeMillis(),
+                                            ),
+                                        )
+                                        ReportActivity.launch(context, agent.id, "AGENT")
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
             }

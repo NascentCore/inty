@@ -1,6 +1,5 @@
 package com.ai.intellimate.messages
 
-import ai.sxwl.android.data.api.model.ConversationItem
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +27,6 @@ import com.ai.intellimate.R
 
 @Composable
 fun ConversationItemMenu(
-    conversation: ConversationItem,
     isPinned: Boolean,
     isHidden: Boolean,
     onPinClick: () -> Unit,

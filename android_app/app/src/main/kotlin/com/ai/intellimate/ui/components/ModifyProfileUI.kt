@@ -4,6 +4,12 @@ import ai.sxwl.android.data.api.model.GENDER
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.design.ui.HeartPrimaryButton
+import ai.sxwl.android.design.ui.HeartTopAppBar
+import ai.sxwl.android.design.ui.IntelliMateDivider
+import ai.sxwl.android.design.ui.SettingsArrowItem
+import ai.sxwl.android.design.ui.SettingsItemData
+import ai.sxwl.android.design.ui.SettingsItemGroup
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,12 +30,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -43,8 +46,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,30 +90,20 @@ fun ProfileInfoScreen(
 ) {
     Scaffold(
         modifier = Modifier.background(HeartColor.primaryColor),
+        containerColor = HeartColor.primaryColor,
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.str_edit_my_persona),
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 20.sp,
-                    )
-                },
-                navigationIcon = {
-                    Image(
-                        modifier =
-                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
-                        painter = painterResource(R.drawable.back),
-                        contentDescription = null,
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+            HeartTopAppBar(
+                modifier = Modifier.background(color = HeartColor.primaryColor),
+                title = stringResource(R.string.str_edit_my_persona),
+                navIcon = R.drawable.back,
+                onBack = onBack,
             )
         },
-        containerColor = Color(0XFF1C1523),
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
+        Column(
+            modifier = Modifier.padding(innerPadding),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Spacer(Modifier.height(16.dp))
 
             // 头像区域
@@ -125,32 +116,45 @@ fun ProfileInfoScreen(
             val horizontalPadding = 16
 
             // 设置项区域
-            SettingSection {
-                ProfileInfoItem(
-                    key = stringResource(R.string.str_name),
-                    value = userProfile.nickname,
+            SettingsItemGroup {
+                SettingsArrowItem(
+                    item = SettingsItemData.CommonItemData(
+                        title = stringResource(R.string.str_name),
+                        content = userProfile.nickname,
+                    ),
+                    isInGroup = true,
                     horizontalPadding = horizontalPadding,
-                    onClick = onClickName,
+                    onItemClick = onClickName,
                 )
-                SettingDivider()
-                ProfileInfoItem(
-                    key = stringResource(R.string.str_pronouns),
-                    value = userProfile.pronouns(),
+                IntelliMateDivider()
+                SettingsArrowItem(
+                    item = SettingsItemData.CommonItemData(
+                        title = stringResource(R.string.str_pronouns),
+                        content = userProfile.pronouns(),
+                    ),
+                    isInGroup = true,
                     horizontalPadding = horizontalPadding,
-                    onClick = onClickPronouns,
+                    onItemClick = onClickPronouns,
                 )
-                SettingDivider()
-                ProfileInfoItem(
-                    key = stringResource(R.string.str_persona),
-                    value = userProfile.description ?: "",
+                IntelliMateDivider()
+                SettingsArrowItem(
+                    item = SettingsItemData.CommonItemData(
+                        title = stringResource(R.string.str_persona),
+                        content = userProfile.description ?: "",
+                    ),
+                    isInGroup = true,
                     horizontalPadding = horizontalPadding,
-                    onClick = onClickPersona,
+                    onItemClick = onClickPersona,
                 )
             }
 
             Spacer(Modifier.weight(1f))
 
-            SaveButton(onSave = onSave, isSaving = isSaving)
+            HeartPrimaryButton(
+                btnText = stringResource(R.string.save),
+                isLoading = isSaving,
+                onClick = onSave,
+            )
 
             Spacer(Modifier.height(60.dp))
         }
@@ -162,13 +166,16 @@ fun ProfileInfoScreen(
 private fun AvatarSection(avatar: String, onSelectAvatar: () -> Unit) {
     Box(
         modifier =
-            Modifier.size(120.dp)
+            Modifier
+                .size(120.dp)
                 .background(color = Color.White, shape = CircleShape)
                 .padding(4.dp),
         contentAlignment = Alignment.Center,
     ) {
         AsyncImage(
-            modifier = Modifier.fillMaxSize().clip(CircleShape),
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape),
             model = ImageRequest.Builder(LocalContext.current).data(avatar).build(),
             placeholder = painterResource(R.drawable.app_icon),
             error = painterResource(R.drawable.app_icon),
@@ -176,87 +183,18 @@ private fun AvatarSection(avatar: String, onSelectAvatar: () -> Unit) {
         )
         Image(
             modifier =
-                Modifier.size(40.dp).align(Alignment.BottomEnd).noRippleClickable {
-                    onSelectAvatar()
-                },
+                Modifier
+                    .size(40.dp)
+                    .align(Alignment.BottomEnd)
+                    .noRippleClickable {
+                        onSelectAvatar()
+                    },
             painter = painterResource(R.drawable.icon_camera),
             contentDescription = null,
         )
     }
 }
 
-/** 设置项组件 */
-@Composable
-fun ProfileInfoItem(
-    key: String,
-    value: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    horizontalPadding: Int,
-) {
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .padding(horizontal = horizontalPadding.dp)
-                .noRippleClickable { onClick() },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(text = key, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = value,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Normal,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = Color.White.copy(0.55f),
-            textAlign = TextAlign.End,
-            modifier = Modifier.weight(1f),
-        )
-        Spacer(Modifier.width(8.dp))
-        Image(painter = painterResource(R.drawable.icon_next), contentDescription = null)
-    }
-}
-
-/** 保存按钮组件 */
-@Composable
-fun SaveButton(onSave: () -> Unit, isSaving: Boolean = false) {
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .height(50.dp)
-                .background(
-                    brush =
-                        Brush.linearGradient(colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))),
-                    shape = RoundedCornerShape(25.dp),
-                )
-                .noRippleClickable {
-                    if (!isSaving) {
-                        onSave()
-                    }
-                }
-    ) {
-        if (isSaving) {
-            // 显示加载动画
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center).size(24.dp),
-                color = Color.White,
-                strokeWidth = 2.dp,
-            )
-        } else {
-            Text(
-                modifier = Modifier.align(Alignment.Center),
-                text = stringResource(R.string.save),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Normal,
-                color = Color.White,
-            )
-        }
-    }
-}
 
 /** 编辑对话框组件 */
 @Composable
@@ -267,10 +205,15 @@ fun EditDialog(
     onSave: (EditKey, String) -> Unit,
     onValueChange: (String) -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize().imePadding().noRippleClickable { onDismiss() }) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding()
+            .noRippleClickable { onDismiss() }) {
         Column(
             modifier =
-                Modifier.align(Alignment.BottomCenter)
+                Modifier
+                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .background(
                         brush =
@@ -286,7 +229,10 @@ fun EditDialog(
                 painter = painterResource(R.drawable.close),
                 contentDescription = null,
                 modifier =
-                    Modifier.padding(16.dp).align(Alignment.End).noRippleClickable { onDismiss() },
+                    Modifier
+                        .padding(16.dp)
+                        .align(Alignment.End)
+                        .noRippleClickable { onDismiss() },
             )
 
             // 标题
@@ -306,7 +252,10 @@ fun EditDialog(
             Spacer(Modifier.height(40.dp))
 
             // 保存按钮
-            SaveButton(onSave = { onSave(editKey, editValue) })
+            HeartPrimaryButton(
+                btnText = stringResource(R.string.save),
+                onClick = { onSave(editKey, editValue) },
+            )
 
             Spacer(Modifier.height(60.dp))
         }
@@ -350,7 +299,8 @@ private fun PersonaEditField(value: String, onValueChange: (String) -> Unit) {
     val focusRequester = remember { FocusRequester() }
     Box(
         modifier =
-            Modifier.padding(horizontal = 16.dp, vertical = 0.dp)
+            Modifier
+                .padding(horizontal = 16.dp, vertical = 0.dp)
                 .fillMaxWidth()
                 .height(112.dp)
                 .background(Color.White.copy(0.1f), RoundedCornerShape(8.dp))
@@ -362,7 +312,9 @@ private fun PersonaEditField(value: String, onValueChange: (String) -> Unit) {
                 .clickable { focusRequester.requestFocus() }
     ) {
         IntySmallTextField2(
-            modifier = Modifier.fillMaxSize().focusRequester(focusRequester),
+            modifier = Modifier
+                .fillMaxSize()
+                .focusRequester(focusRequester),
             value = value,
             onValueChange = onValueChange,
             maxLength = 400,
@@ -377,7 +329,9 @@ private fun PersonaEditField(value: String, onValueChange: (String) -> Unit) {
             },
         )
         Text(
-            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp, 8.dp),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(12.dp, 8.dp),
             text = stringResource(R.string.character_count_format_my, value.length),
             color = Color.White.copy(0.55f),
             fontSize = 12.sp,
@@ -391,7 +345,10 @@ private fun PersonaEditField(value: String, onValueChange: (String) -> Unit) {
 private fun PronounsEditField(value: String, onValueChange: (String) -> Unit) {
     Row(
         modifier =
-            Modifier.padding(horizontal = 16.dp, vertical = 0.dp).fillMaxWidth().height(48.dp),
+            Modifier
+                .padding(horizontal = 16.dp, vertical = 0.dp)
+                .fillMaxWidth()
+                .height(48.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PronounsItem(
@@ -423,7 +380,8 @@ private fun RowScope.PronounsItem(
 ) {
     Box(
         modifier =
-            Modifier.weight(1f)
+            Modifier
+                .weight(1f)
                 .fillMaxHeight()
                 .background(color = Color(0x3378599A), shape = RoundedCornerShape(24.dp))
                 .then(
@@ -469,16 +427,4 @@ private fun RowScope.PronounsItem(
 @Composable
 private fun ProfileInfoScreenPreview() {
     ProfileInfoScreen(userProfile = UserProfile(nickname = "nick", id = "12345", avatar = ""))
-}
-
-@Preview(showBackground = true)
-@Composable
-fun SaveButtonPreview() {
-    SaveButton(onSave = {}, isSaving = false)
-}
-
-@Preview(showBackground = true)
-@Composable
-fun SaveButtonLoadingPreview() {
-    SaveButton(onSave = {}, isSaving = true)
 }
