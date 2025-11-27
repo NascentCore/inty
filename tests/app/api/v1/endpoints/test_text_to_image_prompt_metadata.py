@@ -27,7 +27,6 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
                 readable_id=readable_id,
                 auth_type=models.AuthType.GOOGLE,
                 gender=models.Gender.FEMALE,
-                is_active=True,
                 is_superuser=False,
                 system_language="en",
                 created_at=datetime.now(timezone.utc),

@@ -63,7 +63,6 @@ async def test_user_with_password(db_session: AsyncSession):
         password=hashed_password,
         nickname=f"Test User {uuid.uuid4().hex[:6]}",
         system_language="en",
-        is_active=True,
     )
 
     db_session.add(user)
@@ -306,7 +305,6 @@ async def test_email_password_login_user_without_password(
         password=None,  # 没有设置密码
         nickname=f"Test User {uuid.uuid4().hex[:6]}",
         system_language="en",
-        is_active=True,
     )
 
     db_session.add(user)

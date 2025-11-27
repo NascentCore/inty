@@ -48,7 +48,7 @@ async def activate_user(user_id: str = None, readable_id: str = None):
             print(f"当前状态: {'活跃' if user.is_active else '不活跃'}")
             print(f"删除状态: {'已删除' if user.deleted_at else '正常'}")
 
-            if user.is_active and not user.deleted_at:
+            if not user.deleted_at:
                 print("✅ 用户已经是活跃状态，无需操作")
                 return
 
@@ -61,7 +61,9 @@ async def activate_user(user_id: str = None, readable_id: str = None):
 
             # 激活用户
             await db.execute(
-                update(User).where(User.id == user.id).values(is_active=True)
+                update(User)
+                .where(User.id == user.id)
+                .values(deleted_at=None, deletion_reason=None)
             )
             await db.commit()
 

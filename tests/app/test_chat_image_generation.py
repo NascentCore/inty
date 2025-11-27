@@ -266,7 +266,6 @@ class TestChatHistoryService:
             nickname="Chat Tester",
             email="test@example.com",
             system_language="en",
-            is_active=True,
         )
         session.add(user)
         await session.commit()

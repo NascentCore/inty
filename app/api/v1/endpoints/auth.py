@@ -169,7 +169,6 @@ async def google_login(
             system_language=(
                 login_in.user_info.system_language if login_in.user_info else "en"
             ),
-            is_active=True,
         )
 
         if login_in.user_info:

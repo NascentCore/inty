@@ -52,7 +52,6 @@ def create_user(
             gender=Gender.MALE,
             age_group="18-24",
             description="An admin user",
-            is_active=True,
             is_superuser=is_superuser,
             auth_type=AuthType.GOOGLE,
             readable_id=generate_readable_id(),

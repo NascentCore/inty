@@ -139,7 +139,7 @@ async def send_notification(
         # 2. Get recipient user list
         if request.all_users:
             # Send to all users, need to query all users based on actual situation
-            stmt = select(User.id).where(User.is_active == True)
+            stmt = select(User.id).where(User.deleted_at.is_(None))
             result = await db.execute(stmt)
             user_ids = [row[0] for row in result.all()]
         else:

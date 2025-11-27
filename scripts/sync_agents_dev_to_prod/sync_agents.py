@@ -185,7 +185,6 @@ async def ensure_operator_user(session: AsyncSession, user_config: dict) -> User
         gender=Gender[user_config["gender"]],
         age_group=user_config["age_group"],
         description=user_config["description"],
-        is_active=True,
         is_superuser=True,
         auth_type=AuthType.GOOGLE,
         readable_id=generate_readable_id(),
