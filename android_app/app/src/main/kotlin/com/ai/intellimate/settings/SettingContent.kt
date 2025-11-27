@@ -44,6 +44,8 @@ import com.ai.intellimate.vip.SubsManageActivity
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlinx.coroutines.flow.collectLatest
 
+private const val HELP_CENTER_URL = "https://tricorder.feishu.cn/wiki/LoW3wGWPMiJ4rukXBbmc8dydnFf"
+
 /** 设置页面主内容 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -134,6 +136,7 @@ private fun SettingTopBar(onBack: () -> Unit) {
 /** 支持与帮助区域 */
 @Composable
 private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Unit) {
+    val uriHandler = LocalUriHandler.current
     SettingSection {
         // 邮件联系
         val email = stringResource(R.string.settings_email_inty)
@@ -141,6 +144,17 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
             title = stringResource(R.string.settings_email_support),
             subtitle = email,
             onClick = { mailTo(context, email) },
+        )
+
+        SettingDivider()
+
+        // 帮助中心
+        SettingNavigationItem(
+            title = stringResource(R.string.settings_help),
+            onClick = {
+                runCatching { uriHandler.openUri(HELP_CENTER_URL) }
+                    .onFailure { ToastUtils.showShort(R.string.toast_navigation_failed) }
+            },
         )
 
         SettingDivider()
@@ -222,7 +236,6 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
         SettingDivider()
 
         // 版本号
-        val uriHandler = LocalUriHandler.current
         SettingNavigationItem(
             title = stringResource(R.string.settings_about),
             subtitle =
