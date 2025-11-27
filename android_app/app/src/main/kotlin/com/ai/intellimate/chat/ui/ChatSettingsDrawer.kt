@@ -3,8 +3,10 @@ package com.ai.intellimate.chat.ui
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
+import ai.sxwl.android.design.ui.IntelliMateDivider
 import ai.sxwl.android.design.ui.SettingsArrowItem
 import ai.sxwl.android.design.ui.SettingsItemData
+import ai.sxwl.android.design.ui.SettingsItemGroup
 import ai.sxwl.android.design.ui.SettingsSwitchItem
 import ai.sxwl.android.firebase.FirebaseManager
 import androidx.compose.foundation.background
@@ -46,7 +48,6 @@ import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
-import com.ai.intellimate.ui.components.ProfileInfoItem
 
 /** 聊天设置抽屉组件 */
 @Composable
@@ -107,7 +108,8 @@ fun ChatSettingsDrawer(
         drawerContent = {
             Column(
                 modifier =
-                    Modifier.width(319.dp)
+                    Modifier
+                        .width(319.dp)
                         .fillMaxHeight()
                         .background(
                             brush =
@@ -126,30 +128,15 @@ fun ChatSettingsDrawer(
 
                 Spacer(Modifier.height(14.dp))
 
-                Column(
-                    modifier =
-                        Modifier.padding(horizontal = horizontalPadding.dp)
-                            .fillMaxWidth()
-                            .border(
-                                brush =
-                                    Brush.linearGradient(
-                                        colors =
-                                            listOf(
-                                                Color.Transparent,
-                                                Color.White.copy(0.2f),
-                                                Color.Transparent,
-                                            )
-                                    ),
-                                width = 1.dp,
-                                shape = RoundedCornerShape(8.dp),
-                            )
-                            .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
-                ) {
-                    ProfileInfoItem(
-                        key = stringResource(R.string.str_name),
-                        value = userProfileState.nickname.ifEmpty { "Guest" },
+                SettingsItemGroup {
+                    SettingsArrowItem(
+                        item = SettingsItemData.CommonItemData(
+                            title = stringResource(R.string.str_name),
+                            content = userProfileState.nickname.ifEmpty { "Guest" },
+                        ),
+                        isInGroup = true,
                         horizontalPadding = horizontalPadding,
-                        onClick = {
+                        onItemClick = {
                             // 检查是否已登录
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 FirebaseManager.logEvent(
@@ -164,11 +151,15 @@ fun ChatSettingsDrawer(
                             }
                         },
                     )
-                    ProfileInfoItem(
-                        key = stringResource(R.string.str_pronouns),
-                        value = userProfileState.pronouns(),
+                    IntelliMateDivider()
+                    SettingsArrowItem(
+                        item = SettingsItemData.CommonItemData(
+                            title = stringResource(R.string.str_pronouns),
+                            content = userProfileState.pronouns(),
+                        ),
+                        isInGroup = true,
                         horizontalPadding = horizontalPadding,
-                        onClick = {
+                        onItemClick = {
                             // 检查是否已登录
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 FirebaseManager.logEvent(
@@ -183,11 +174,15 @@ fun ChatSettingsDrawer(
                             }
                         },
                     )
-                    ProfileInfoItem(
-                        key = stringResource(R.string.str_persona),
-                        value = userProfileState.description ?: "Edit",
+                    IntelliMateDivider()
+                    SettingsArrowItem(
+                        item = SettingsItemData.CommonItemData(
+                            title = stringResource(R.string.str_persona),
+                            content = userProfileState.description ?: "Edit",
+                        ),
+                        isInGroup = true,
                         horizontalPadding = horizontalPadding,
-                        onClick = {
+                        onItemClick = {
                             // 检查是否已登录
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 FirebaseManager.logEvent(
@@ -219,7 +214,8 @@ fun ChatSettingsDrawer(
                 // 参照My Persona的样式，使用Column包裹，外层padding，内层item也有padding
                 Column(
                     modifier =
-                        Modifier.padding(horizontal = horizontalPadding.dp)
+                        Modifier
+                            .padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =

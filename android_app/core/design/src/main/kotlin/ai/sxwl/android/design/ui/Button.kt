@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -31,36 +32,56 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun HeartPrimaryButton(btnText: String, enable: Boolean = true, onClick: () -> Unit = {}) {
-
+fun HeartPrimaryButton(
+    btnText: String,
+    enable: Boolean = true,
+    isLoading: Boolean = false,
+    onClick: () -> Unit = {},
+) {
     Box(
         modifier =
-            Modifier.fillMaxWidth(.95f)
+            Modifier
+                .fillMaxWidth(.90f)
                 .height(50.dp)
                 .clip(RoundedCornerShape(25.dp))
-                .alpha(if (enable) 1f else .4f)
+                .alpha(if (enable && !isLoading) 1f else .4f)
                 .background(brush = primaryBtnBrush)
-                .clickable(enabled = enable, onClick = onClick),
+                .clickable(enabled = enable && !isLoading, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = btnText,
-            fontSize = 16.sp,
-            lineHeight = 22.sp,
-            fontWeight = FontWeight.Normal,
-            color = Color.White,
-            textAlign = TextAlign.Center,
-        )
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = Color.White,
+                strokeWidth = 2.dp,
+            )
+        } else {
+            Text(
+                text = btnText,
+                fontSize = 16.sp,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.Normal,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
 @Preview
 @Composable
 private fun 按钮效果预览() {
-    Column(Modifier.background(Color.LightGray)) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         HeartPrimaryButton("Save")
         Spacer(Modifier.height(8.dp))
         HeartPrimaryButton("Save", enable = false)
+        Spacer(Modifier.height(8.dp))
+        HeartPrimaryButton("Save", isLoading = true)
 
         Spacer(Modifier.height(8.dp))
         HeartFollowButton()
@@ -73,7 +94,8 @@ private fun 按钮效果预览() {
 fun HeartFollowButton(isFollowing: Boolean = false, onClick: () -> Unit = {}) {
     Box(
         modifier =
-            Modifier.size(98.dp, 40.dp)
+            Modifier
+                .size(98.dp, 40.dp)
                 .clip(RoundedCornerShape(20.dp))
                 .border(width = 1.dp, brush = heartDivBrush, shape = RoundedCornerShape(20.dp))
                 .background(brush = if (isFollowing) commonBtnBrush else primaryBtnBrush)
