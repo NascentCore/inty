@@ -182,7 +182,7 @@ async def test_email_password_login_wrong_password(
         assert response.status_code == 200, f"Login request failed: {response.text}"
         data = response.json()
         assert data.get("code") != 200, "Login should have failed with wrong password"
-        assert "Invalid email or password" in data.get("message", "")
+        assert "Invalid Email password combination" in data.get("message", "")
 
     finally:
         client.close()
@@ -211,7 +211,7 @@ async def test_email_password_login_nonexistent_user():
         assert response.status_code == 200, f"Login request failed: {response.text}"
         data = response.json()
         assert data.get("code") != 200, "Login should have failed for nonexistent user"
-        assert "Invalid email or password" in data.get("message", "")
+        assert "Invalid Email password combination" in data.get("message", "")
 
     finally:
         client.close()
@@ -327,7 +327,7 @@ async def test_email_password_login_user_without_password(
         assert response.status_code == 200, f"Login request failed: {response.text}"
         data = response.json()
         assert data.get("code") != 200, "Login should have failed for user without password"
-        assert "Invalid email or password" in data.get("message", "")
+        assert "Invalid Email password combination" in data.get("message", "")
 
     finally:
         # 清理
