@@ -3,12 +3,11 @@ package com.ai.intellimate.settings
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.isInPreview
-import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.design.ui.HeartTopAppBar
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -17,26 +16,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.intellimate.BuildConfig
@@ -98,12 +90,21 @@ fun SettingContent(
 
     Scaffold(
         modifier = modifier,
-        topBar = { SettingTopBar(onBack = onBack) }
+        topBar = {
+            HeartTopAppBar(
+                modifier = Modifier.background(color = HeartColor.primaryColor),
+                title = stringResource(R.string.settings),
+                navIcon = R.drawable.back,
+                onBack = onBack,
+            )
+        }
     ) { innerPadding ->
         val scrollState = rememberScrollState()
-        Column(modifier = Modifier
-            .verticalScroll(scrollState)
-            .padding(innerPadding)) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(scrollState)
+                .padding(innerPadding)
+        ) {
             AccountInfoSection(
                 userId = if (isInPreview) "uid preview mode " else IntySetting.getCurUserID(),
                 onCopyUserId = { ToastUtils.showShort(R.string.toast_copied_to_clipboard) },
@@ -135,32 +136,6 @@ fun SettingContent(
             )
         }
     }
-}
-
-/** 设置页面顶部栏 */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SettingTopBar(onBack: () -> Unit) {
-    CenterAlignedTopAppBar(
-        title = {
-            Text(
-                text = stringResource(R.string.settings),
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 20.sp,
-            )
-        },
-        navigationIcon = {
-            Image(
-                modifier = Modifier
-                    .padding(horizontal = 12.dp)
-                    .noRippleClickable { onBack() },
-                painter = painterResource(R.drawable.back),
-                contentDescription = null,
-            )
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = HeartColor.primaryColor)
-    )
 }
 
 /** 账号信息区域 */
@@ -339,7 +314,13 @@ private fun SettingContentPreview() {
             .fillMaxSize()
             .background(HeartColor.primaryColor),
         containerColor = HeartColor.primaryColor,
-        topBar = { SettingTopBar(onBack = {}) }
+        topBar = {
+            HeartTopAppBar(
+                modifier = Modifier.background(color = HeartColor.primaryColor),
+                title = stringResource(R.string.settings),
+                navIcon = R.drawable.back,
+            )
+        }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             AccountInfoSection(
