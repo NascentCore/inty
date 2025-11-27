@@ -347,7 +347,9 @@ fun AnimatedBackground(
                                         override fun onVideoSizeChanged(videoSize: VideoSize) {
                                             // 关键：视频尺寸信息已加载，确保缩放模式正确应用
                                             // 这样可以避免因视频元数据加载导致的缩放效果变化
-//                                            videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                                            //
+                                            // videoScalingMode =
+                                            // C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
 
                                             // 关键修复：视频尺寸变化时，说明第一帧可能已经渲染
                                             // 这是一个更准确的信号，比固定延迟更可靠
@@ -405,7 +407,7 @@ fun AnimatedBackground(
                         TextureView(ctx).apply {
                             // 设置裁剪，防止视频超出边界
                             clipToOutline = true
-                            textureViewRef = this;
+                            textureViewRef = this
 
                             // 关键优化：在设置 TextureView 之前就设置缩放模式
                             // 这样可以避免视频在初始加载时被错误缩放

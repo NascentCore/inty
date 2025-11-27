@@ -40,8 +40,7 @@ fun HeartPrimaryButton(
 ) {
     Box(
         modifier =
-            Modifier
-                .fillMaxWidth(.90f)
+            Modifier.fillMaxWidth(.90f)
                 .height(50.dp)
                 .clip(RoundedCornerShape(25.dp))
                 .alpha(if (enable && !isLoading) 1f else .4f)
@@ -72,10 +71,8 @@ fun HeartPrimaryButton(
 @Composable
 private fun 按钮效果预览() {
     Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        Modifier.fillMaxWidth().padding(vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         HeartPrimaryButton("Save")
         Spacer(Modifier.height(8.dp))
@@ -94,8 +91,7 @@ private fun 按钮效果预览() {
 fun HeartFollowButton(isFollowing: Boolean = false, onClick: () -> Unit = {}) {
     Box(
         modifier =
-            Modifier
-                .size(98.dp, 40.dp)
+            Modifier.size(98.dp, 40.dp)
                 .clip(RoundedCornerShape(20.dp))
                 .border(width = 1.dp, brush = heartDivBrush, shape = RoundedCornerShape(20.dp))
                 .background(brush = if (isFollowing) commonBtnBrush else primaryBtnBrush)

@@ -53,8 +53,7 @@ fun SettingsCheckBoxItem(
     val modifier =
         if (isInGroup) Modifier
         else
-            Modifier
-                .clip(RoundedCornerShape(8.dp))
+            Modifier.clip(RoundedCornerShape(8.dp))
                 .background(Color(0x3378599A))
                 .border(
                     width = .05.dp,
@@ -68,8 +67,7 @@ fun SettingsCheckBoxItem(
 
     Row(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .height(56.dp)
                 .then(modifier)
                 .clickable { onCheckChanged(item.checked.not()) } // 让整个item可点击
@@ -90,9 +88,7 @@ fun SettingsCheckBoxItem(
         Image(
             painter = painterResource(iconRes),
             contentDescription = "",
-            modifier = Modifier
-                .size(20.dp)
-                .clip(CircleShape),
+            modifier = Modifier.size(20.dp).clip(CircleShape),
             // 移除checkbox的单独点击，因为整个item已经可点击了
         )
     }
@@ -112,8 +108,7 @@ fun SettingsSwitchItem(
     val modifier =
         if (isInGroup) Modifier
         else
-            Modifier
-                .clip(RoundedCornerShape(8.dp))
+            Modifier.clip(RoundedCornerShape(8.dp))
                 .background(Color(0x3378599A))
                 .border(
                     width = .05.dp,
@@ -127,8 +122,7 @@ fun SettingsSwitchItem(
 
     Row(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .heightIn(min = 48.dp)
                 .then(modifier)
                 .padding(horizontal = horizontalPadding.dp, vertical = 12.dp)
@@ -241,8 +235,7 @@ fun SettingsArrowItem(
     val modifier =
         if (isInGroup) Modifier
         else
-            Modifier
-                .clip(RoundedCornerShape(8.dp))
+            Modifier.clip(RoundedCornerShape(8.dp))
                 .background(Color(0x3378599A))
                 .border(
                     width = .05.dp,
@@ -255,8 +248,7 @@ fun SettingsArrowItem(
                 )
     Row(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .heightIn(min = 48.dp)
                 .then(modifier)
                 .combinedClickable(onClick = onItemClick, onLongClick = onLongClick)
@@ -324,12 +316,8 @@ private fun 预览普通设置条目() {
         SettingsArrowItem(item = SettingsItemData.CommonItemData("Light用户协议", "欢迎查看"), true)
         Spacer(Modifier.height(10.dp))
         SettingsArrowItem(
-            item = SettingsItemData.CommonItemData(
-                "关于App",
-                "v1.0.0",
-                arrow = false
-            ),
-            showRedDot = true
+            item = SettingsItemData.CommonItemData("关于App", "v1.0.0", arrow = false),
+            showRedDot = true,
         )
     }
 }
@@ -340,8 +328,7 @@ fun SettingsIconArrowItem(item: SettingsItemData.IconItemData, onItemClick: () -
 
     Row(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .height(56.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color(0x3378599A))
@@ -407,8 +394,7 @@ fun SettingsItemGroup(
     contents: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
-        Modifier
-            .clip(RoundedCornerShape(8.dp))
+        Modifier.clip(RoundedCornerShape(8.dp))
             .background(Color(0x3378599A))
             .border(
                 width = .05.dp,
@@ -432,10 +418,7 @@ private fun 预览设置分组容器() {
     SettingsItemGroup {
         SettingsArrowItem(item = SettingsItemData.CommonItemData("隐私政策"), isInGroup = true)
         IntelliMateDivider()
-        SettingsArrowItem(
-            item = SettingsItemData.CommonItemData("用户协议", "欢迎查看"),
-            isInGroup = true
-        )
+        SettingsArrowItem(item = SettingsItemData.CommonItemData("用户协议", "欢迎查看"), isInGroup = true)
         IntelliMateDivider()
         SettingsArrowItem(
             item = SettingsItemData.CommonItemData("关于App", "v1.0.0", arrow = false),

@@ -88,14 +88,11 @@ fun SettingScreen(
                 navIcon = R.drawable.back,
                 onBack = onBack,
             )
-        }
+        },
     ) { innerPadding ->
         val scrollState = rememberScrollState()
         Column(
-            modifier = Modifier
-                .verticalScroll(scrollState)
-                .padding(innerPadding)
-                .padding(16.dp)
+            modifier = Modifier.verticalScroll(scrollState).padding(innerPadding).padding(16.dp)
         ) {
             AccountInfoSection(userId = state.userId)
 
@@ -134,22 +131,18 @@ fun SettingScreen(
 @Composable
 private fun AccountInfoSection(userId: String) {
     val context = LocalContext.current
-    val displayId =
-        userId.ifBlank { stringResource(R.string.settings_user_id_unavailable) }
+    val displayId = userId.ifBlank { stringResource(R.string.settings_user_id_unavailable) }
     val userIdTitle = stringResource(R.string.settings_user_id)
     SettingsArrowItem(
-        item = SettingsItemData.CommonItemData(
-            title = userIdTitle,
-            content = displayId,
-            arrow = false,
-        ),
+        item =
+            SettingsItemData.CommonItemData(
+                title = userIdTitle,
+                content = displayId,
+                arrow = false,
+            ),
         onLongClick = {
             if (userId.isNotBlank()) {
-                ClipboardUtils.copyToClipboard(
-                    context,
-                    label = userIdTitle,
-                    text = userId,
-                )
+                ClipboardUtils.copyToClipboard(context, label = userIdTitle, text = userId)
                 ToastUtils.showShort(R.string.toast_copied_to_clipboard)
             }
         },
@@ -169,10 +162,11 @@ private fun SupportAndHelpSection(
         // 邮件联系
         val email = stringResource(R.string.settings_email_inty)
         SettingsArrowItem(
-            item = SettingsItemData.CommonItemData(
-                title = stringResource(R.string.settings_email_support),
-                content = email,
-            ),
+            item =
+                SettingsItemData.CommonItemData(
+                    title = stringResource(R.string.settings_email_support),
+                    content = email,
+                ),
             isInGroup = true,
             onItemClick = { mailTo(context, email) },
         )
@@ -243,7 +237,10 @@ private fun SupportAndHelpSection(
 
         // 删除账号
         SettingsArrowItem(
-            item = SettingsItemData.CommonItemData(title = stringResource(R.string.settings_str_delete_account)),
+            item =
+                SettingsItemData.CommonItemData(
+                    title = stringResource(R.string.settings_str_delete_account)
+                ),
             isInGroup = true,
             onItemClick = onShowDeleteDialog,
         )
@@ -273,16 +270,20 @@ private fun SupportAndHelpSection(
 
         // 版本号
         SettingsArrowItem(
-            item = SettingsItemData.CommonItemData(
-                title = stringResource(R.string.settings_version),
-                content =
-                    if (hasAppUpdateTips) {
-                        stringResource(R.string.version_update_available, BuildConfig.VERSION_NAME)
-                    } else {
-                        BuildConfig.VERSION_NAME
-                    },
-                arrow = true,
-            ),
+            item =
+                SettingsItemData.CommonItemData(
+                    title = stringResource(R.string.settings_version),
+                    content =
+                        if (hasAppUpdateTips) {
+                            stringResource(
+                                R.string.version_update_available,
+                                BuildConfig.VERSION_NAME,
+                            )
+                        } else {
+                            BuildConfig.VERSION_NAME
+                        },
+                    arrow = true,
+                ),
             isInGroup = true,
             showRedDot = hasAppUpdateTips,
             onItemClick = {

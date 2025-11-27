@@ -68,9 +68,7 @@ fun SubscriptionManagementScreen(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier
-                                .padding(horizontal = 12.dp)
-                                .noRippleClickable { onBack() },
+                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
                         painter = painterResource(R.drawable.back),
                         contentDescription = null,
                     )
@@ -81,17 +79,19 @@ fun SubscriptionManagementScreen(
         Column(modifier = Modifier.padding(innerPadding)) {
             SubscriptionManagementContainer {
                 SettingsArrowItem(
-                    item = SettingsItemData.CommonItemData(
-                        title = stringResource(R.string.cancel_subscription),
-                    ),
+                    item =
+                        SettingsItemData.CommonItemData(
+                            title = stringResource(R.string.cancel_subscription)
+                        ),
                     isInGroup = true,
                     onItemClick = { viewModel.navigateToGooglePlaySubscription() },
                 )
                 IntelliMateDivider()
                 SettingsArrowItem(
-                    item = SettingsItemData.CommonItemData(
-                        title = stringResource(R.string.restore_subscription),
-                    ),
+                    item =
+                        SettingsItemData.CommonItemData(
+                            title = stringResource(R.string.restore_subscription)
+                        ),
                     isInGroup = true,
                     onItemClick = { viewModel.navigateToGooglePlaySubscription() },
                 )

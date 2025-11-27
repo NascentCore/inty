@@ -75,7 +75,9 @@ object CredentialManagerHelper {
             when (val credential = response.credential) {
                 // 自定义凭证类型 (Google ID Token)
                 is CustomCredential -> {
-                    if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                    if (
+                        credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                    ) {
                         try {
                             // 使用 GoogleIdTokenCredential.createFrom 方法转换
                             val googleIdTokenCredential =

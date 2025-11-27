@@ -46,12 +46,12 @@ import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -316,8 +316,7 @@ class MainActivity : BaseActivity() {
                 // 显示设置界面
                 com.ai.intellimate.settings.SettingScreen(
                     modifier =
-                        Modifier
-                            .fillMaxSize()
+                        Modifier.fillMaxSize()
                             .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
                     onBack = { mainViewModel.hideSettings() },
                     onLogout = { isDelete ->
@@ -465,9 +464,7 @@ private fun reportLoginFailure(errorType: String, errorMessage: String?, excepti
             "login_method" to "google",
         ),
     )
-    exception?.let {
-        FirebaseManager.recordException(it, mapOf("error_type" to errorType))
-    }
+    exception?.let { FirebaseManager.recordException(it, mapOf("error_type" to errorType)) }
 }
 
 /** Splash 登录界面 - 集成 Google 登录按钮和隐私政策 */
@@ -576,7 +573,7 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
                                 reportLoginFailure(
                                     "token_parsing_error",
                                     exception.message,
-                                    exception
+                                    exception,
                                 )
                                 coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
@@ -624,9 +621,7 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Image(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(RoundedCornerShape(10.dp)),
+                modifier = Modifier.size(120.dp).clip(RoundedCornerShape(10.dp)),
                 painter = painterResource(R.drawable.icon_splash_icon),
                 contentDescription = "",
                 contentScale = ContentScale.Crop,
