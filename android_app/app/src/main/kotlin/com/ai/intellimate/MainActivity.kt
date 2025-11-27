@@ -42,7 +42,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.ui.components.EmailLoginButton
+import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
+import com.ai.intellimate.ui.components.LoginWithEmailScreen
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
@@ -467,12 +470,21 @@ private fun reportLoginFailure(errorType: String, errorMessage: String?, excepti
     exception?.let { FirebaseManager.recordException(it, mapOf("error_type" to errorType)) }
 }
 
+/** 登录页面状态 */
+private enum class LoginScreenState {
+    MAIN,
+    ENTER_EMAIL,
+    LOGIN_WITH_EMAIL,
+}
+
 /** Splash 登录界面 - 集成 Google 登录按钮和隐私政策 */
 @Composable
 private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainViewModel) {
     val context = LocalContext.current
     var isLoading by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
+    var loginScreenState by remember { mutableStateOf(LoginScreenState.MAIN) }
+    var enteredEmail by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
 
     fun performGoogleSignIn() {
@@ -608,35 +620,152 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
         }
     }
 
-    Box(modifier) {
-        Image(
-            modifier = Modifier.fillMaxSize(),
-            painter = painterResource(R.drawable.app_bg),
-            contentScale = ContentScale.Crop,
-            alignment = Alignment.TopCenter,
-            contentDescription = "",
-        )
-        Column(
-            modifier = Modifier.align(Alignment.BottomCenter),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Image(
-                modifier = Modifier.size(120.dp).clip(RoundedCornerShape(10.dp)),
-                painter = painterResource(R.drawable.icon_splash_icon),
-                contentDescription = "",
-                contentScale = ContentScale.Crop,
+    when (loginScreenState) {
+        LoginScreenState.MAIN -> {
+            Box(modifier) {
+                Image(
+                    modifier = Modifier.fillMaxSize(),
+                    painter = painterResource(R.drawable.app_bg),
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.TopCenter,
+                    contentDescription = "",
+                )
+                Column(
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Image(
+                        modifier = Modifier.size(120.dp).clip(RoundedCornerShape(10.dp)),
+                        painter = painterResource(R.drawable.icon_splash_icon),
+                        contentDescription = "",
+                        contentScale = ContentScale.Crop,
+                    )
+                    Spacer(modifier = Modifier.height(120.dp))
+
+                    // Google 登录按钮
+                    GoogleLoginButton(isLoading = isLoading, onLoginClick = { performGoogleSignIn() })
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Email 登录按钮
+                    EmailLoginButton(
+                        isLoading = isLoading,
+                        onLoginClick = {
+                            loginScreenState = LoginScreenState.ENTER_EMAIL
+                        },
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // 隐私政策文本
+                    com.ai.intellimate.ui.components.PolicyText()
+
+                    Spacer(modifier = Modifier.height(80.dp))
+                }
+            }
+        }
+
+        LoginScreenState.ENTER_EMAIL -> {
+            EnterEmailScreen(
+                onBack = { loginScreenState = LoginScreenState.MAIN },
+                onContinue = { email ->
+                    enteredEmail = email
+                    loginScreenState = LoginScreenState.LOGIN_WITH_EMAIL
+                },
             )
-            Spacer(modifier = Modifier.height(120.dp))
+        }
 
-            // Google 登录按钮
-            GoogleLoginButton(isLoading = isLoading, onLoginClick = { performGoogleSignIn() })
+        LoginScreenState.LOGIN_WITH_EMAIL -> {
+            LoginWithEmailScreen(
+                email = enteredEmail,
+                onBack = { loginScreenState = LoginScreenState.ENTER_EMAIL },
+                onLogin = { email, password ->
+                    performEmailLogin(email, password, context, mainViewModel, coroutineScope) {
+                        isLoading = it
+                    }
+                },
+                isLoading = isLoading,
+            )
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(24.dp))
+/** Email + Password 登录函数 */
+private fun performEmailLogin(
+    email: String,
+    password: String,
+    context: android.content.Context,
+    mainViewModel: MainViewModel,
+    coroutineScope: CoroutineScope,
+    setLoading: (Boolean) -> Unit,
+) {
+    coroutineScope.launch {
+        setLoading(true)
+        try {
+            val loginResult =
+                NetServiceMgr.getUserApi()
+                    .loginByGoogle(GoogleLoginRequest(email = email, password = password))
 
-            // 隐私政策文本
-            com.ai.intellimate.ui.components.PolicyText()
+            when (loginResult) {
+                is com.architecture.httplib.core.HttpResult.Success -> {
+                    val token = loginResult.data.token
+                    val userProfile = loginResult.data.user
 
-            Spacer(modifier = Modifier.height(80.dp))
+                    // 保存用户信息和 token
+                    IntySetting.login(userProfile.id, token)
+                    com.ai.intellimate.utils.UserProfileManager.saveUserProfile(userProfile)
+
+                    // 立即设置 Firebase user_id 用户属性
+                    FirebaseManager.setUserProperty(
+                        FirebaseManager.UserProperties.USER_ID,
+                        userProfile.id,
+                    )
+
+                    // 上报用户登录事件
+                    FirebaseManager.logEvent(
+                        FirebaseManager.Events.LOGIN,
+                        FirebaseManager.safeEventParams(
+                            "user_id" to userProfile.id,
+                            "user_name" to (userProfile.nickname),
+                            "login_method" to "email",
+                            "timestamp" to System.currentTimeMillis(),
+                        ),
+                    )
+
+                    // 登录成功后，主动获取并上报 FCM Token
+                    mainViewModel.uploadFCMTokenAfterLogin()
+
+                    // 检查用户信息是否完整（年龄和性别）
+                    val needsRegInfo =
+                        userProfile.gender.isNullOrEmpty() ||
+                            userProfile.ageGroup.isNullOrEmpty() ||
+                            userProfile.ageGroup == "<18"
+
+                    // 显示登录成功提示
+                    ToastUtils.showShort(R.string.login_successfully)
+
+                    mainViewModel.updateLoginState()
+                    UnifiedStartupManager.markUserAccountReady()
+
+                    if (needsRegInfo) {
+                        com.ai.intellimate.login.RegInfoActivity.launch(context)
+                    }
+                }
+
+                is com.architecture.httplib.core.HttpResult.Failure -> {
+                    LogUtils.e("Email login failed: ${loginResult.message}")
+                    reportLoginFailure("backend_error", loginResult.message, null)
+                    com.ai.intellimate.utils.NetworkErrorHandler.showNetworkAwareError(
+                        loginResult.message
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            LogUtils.e("Email login error: ${e.message}")
+            reportLoginFailure("unknown_error", e.message, e)
+            ToastUtils.showShort(R.string.login_failed)
+        } finally {
+            setLoading(false)
         }
     }
 }

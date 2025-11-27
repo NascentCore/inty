@@ -26,6 +26,7 @@ class AuthType(str, enum.Enum):
     PHONE = "PHONE"
     GOOGLE = "GOOGLE"
     GUEST = "GUEST"
+    EMAIL = "EMAIL"
 
 
 class Gender(str, enum.Enum):
@@ -70,6 +71,7 @@ class User(Base):
         Enum(AuthType), nullable=False, comment="认证类型：手机号/Google/游客"
     )
     google_id = Column(String, comment="Google账号ID，用于支持用户注册登录")
+    password = Column(String, nullable=True, comment="密码哈希，用于 email 登录")
     device_id = Column(String, unique=True, comment="设备ID，唯一，用于设备识别")
     system_language = Column(String, default="en", comment="系统语言偏好，默认英语")
     is_active = Column(Boolean, default=True, comment="账号是否激活")
