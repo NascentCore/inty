@@ -215,6 +215,7 @@ internal fun EnterEmailScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var emailError by remember { mutableStateOf<String?>(null) }
+    val invalidEmailErrorText = stringResource(R.string.invalid_email_format)
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1A1A2E))) {
         Column(
@@ -297,9 +298,9 @@ internal fun EnterEmailScreen(
             Button(
                 onClick = {
                     if (email.isBlank()) {
-                        emailError = stringResource(R.string.invalid_email_format)
+                        emailError = invalidEmailErrorText
                     } else if (!isValidEmail(email)) {
-                        emailError = stringResource(R.string.invalid_email_format)
+                        emailError = invalidEmailErrorText
                     } else {
                         onContinue(email)
                     }
@@ -424,8 +425,8 @@ internal fun LoginWithEmailScreen(
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
                             imageVector =
-                                if (passwordVisible) Icons.Default.VisibilityOff
-                                else Icons.Default.Visibility,
+                                if (passwordVisible) Icons.Filled.VisibilityOff
+                                else Icons.Filled.Visibility,
                             contentDescription =
                                 if (passwordVisible) "Hide password"
                                 else "Show password",
