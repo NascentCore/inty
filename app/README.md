@@ -7,18 +7,6 @@
 docker run --volume /opt/inty-pre-prod/config.yaml:/config.yaml -it ghcr.io/nascentcore/inty-backend/inty-server:<tag> bash
 ```
 
-## API 使用标签
-
-- `app/api/used_api_endpoints.py` 保存最近一次后端真实流量的 API 路径与调用次数快照。
-- `scripts/tag_unused_endpoints.py` 会读取该文件，并直接修改 FastAPI 路由装饰器中的 `tags`，为未出现在快照内的接口追加 `NOT_USED`。
-- 更新调用统计后，请先编辑 `used_api_endpoints.py`，再运行：
-
-```bash
-uv run python scripts/tag_unused_endpoints.py
-```
-
-- 若使用其他 Python 运行方式，需确保已安装 `libcst` 依赖（脚本基于该库进行语法保持级别的代码修改）。
-
 ## Stainless OpenAPI generator
 
 ```bash
