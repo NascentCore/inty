@@ -124,6 +124,7 @@
     <!-- Credential Manager Error Messages -->
     <string name="no_credentials_available">No credentials available</string>
     <string name="get_credential_failed">Failed to get credential</string>
+    <string name="invalid_google_token">Failed to parse Google ID token</string>
     <string name="login_failed">Login failed</string>
 
     <!-- Avatar Generation -->
