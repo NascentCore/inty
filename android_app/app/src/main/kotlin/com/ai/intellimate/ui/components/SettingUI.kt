@@ -2,9 +2,11 @@ package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.ui.HeartRedDot
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,8 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -136,6 +142,48 @@ fun SettingInfoItem(
             color = Color.White.copy(0.55f),
         )
         if (hasRedDot) HeartRedDot()
+    }
+}
+
+/** 设置项可复制信息组件（长按复制） */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun SettingCopyableInfoItem(
+    title: String,
+    value: String,
+    copyText: String? = value,
+    modifier: Modifier = Modifier,
+    onCopied: (() -> Unit)? = null,
+) {
+    val clipboardManager = LocalClipboardManager.current
+    val hapticFeedback = LocalHapticFeedback.current
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .padding(horizontal = 12.dp)
+                .combinedClickable(
+                    enabled = !copyText.isNullOrEmpty(),
+                    onClick = {},
+                    onLongClick = {
+                        copyText?.let {
+                            clipboardManager.setText(AnnotatedString(it))
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onCopied?.invoke()
+                        }
+                    },
+                ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = value,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            color = Color.White.copy(0.55f),
+        )
     }
 }
 
