@@ -34,7 +34,6 @@ def test_agent_extensions_field():
         nickname="Test User",
         email="test@example.com",
         system_language="en",
-        is_active=True,
     )
     db.add(test_user)
     db.commit()

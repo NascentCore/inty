@@ -66,7 +66,6 @@ class TestChatService:
             nickname="Test User",
             email="test@example.com",
             system_language="en",
-            is_active=True,
         )
         db_session.add(test_user)
         await db_session.commit()
@@ -215,7 +214,6 @@ class TestChatService:
             nickname="Guest User",
             email=None,
             system_language="en",
-            is_active=True,
         )
         db_session.add(test_user)
         await db_session.commit()
@@ -301,7 +299,6 @@ class TestChatService:
             nickname="Test User",
             email="test@example.com",
             system_language="en",
-            is_active=True,
         )
         db_session.add(test_user)
         await db_session.commit()

@@ -55,7 +55,6 @@ async def db_session():
             nickname="admin",
             email="admin@sxwl.ai",
             system_language="en",
-            is_active=True,
         )
         session.add(admin_user)
         await session.commit()

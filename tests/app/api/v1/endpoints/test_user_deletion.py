@@ -70,7 +70,7 @@ def test_delete_account_success(integration_client: TestClient):
     assert delete_data["data"]["user_id"] == user_id
 
     # Verify user can no longer access profile (should fail authentication)
-    # Note: Returns 400 because is_active is False, which is checked before deleted_at
+    # Note: Returns 400/401 because deleted_at 已被设置，账号视为已删除
     profile_response = test_client.client.get(
         f"{test_client.base_url}/api/v1/users/me",
         headers={"Authorization": f"Bearer {token}"},
@@ -168,7 +168,6 @@ async def test_delete_account_already_deleted(
     result = await db_session.execute(stmt)
     user = result.scalar_one()
     user.deleted_at = datetime.now(timezone.utc)
-    user.is_active = False
     await db_session.commit()
 
     # Try to delete the account again - should fail
@@ -221,7 +220,7 @@ def test_delete_account_with_reason(integration_client: TestClient):
     assert delete_data["data"]["user_id"] == user_id
 
     # Verify user can no longer access profile
-    # Note: Returns 400 because is_active is False, which is checked before deleted_at
+    # Note: Returns 400/401 because deleted_at 被设置后会阻止认证
     profile_response = test_client.client.get(
         f"{test_client.base_url}/api/v1/users/me",
         headers={"Authorization": f"Bearer {token}"},

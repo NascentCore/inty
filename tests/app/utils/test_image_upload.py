@@ -47,7 +47,6 @@ def create_test_user(db: Session, user_id: str) -> User:
         readable_id=readable_id,
         auth_type=AuthType.GUEST,
         system_language="en",
-        is_active=True,
     )
     db.add(test_user)
     db.commit()
@@ -68,7 +67,6 @@ def register_user(db: Session, user_in) -> User:
         system_language=(
             user_in.user_info.system_language if user_in.user_info else "en"
         ),
-        is_active=True,
     )
     if user_in.user_info:
         user.gender = user_in.user_info.gender

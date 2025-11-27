@@ -151,7 +151,6 @@ async def create_email_password_superuser(
             email=email,
             password=hashed_password,
             nickname=nickname or f"User {user_id[:8]}",
-            is_active=True,
             is_superuser=True,
         )
 
