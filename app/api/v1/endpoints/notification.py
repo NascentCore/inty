@@ -5,7 +5,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
-from app.api.tags import INTERNAL_API_TAG, WEB_APP_TAG
+from app.api.tags import INTERNAL_API_TAG, WEB_APP_TAG, NOT_USED_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.models.notification import TEMPLATE_TYPE_MAP
 from app.schemas.notification import (
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/notifications", route_class=LoggerRoute)
     "/",
     response_model=APIResponse,
     include_in_schema=False,
-    tags=[INTERNAL_API_TAG],
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def send_notification(
     request: NotificationSendRequest,
@@ -59,7 +59,7 @@ async def send_notification(
 @router.get(
     "/",
     response_model=APIResponse[NotificationList],
-    tags=[WEB_APP_TAG],
+    tags=[WEB_APP_TAG, NOT_USED_TAG],
 )
 async def list_notifications(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -110,7 +110,7 @@ async def list_notifications(
     "/templates/types",
     response_model=APIResponse[Dict[str, int]],
     include_in_schema=False,
-    tags=[INTERNAL_API_TAG],
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def get_template_types(
     current_user=Depends(deps.get_current_active_user),
@@ -136,7 +136,7 @@ async def get_template_types(
     "/templates",
     response_model=APIResponse[NotificationTemplateItem],
     include_in_schema=False,
-    tags=[INTERNAL_API_TAG],
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def create_notification_template(
     template_data: NotificationTemplateCreate,
@@ -173,7 +173,7 @@ async def create_notification_template(
     "/templates",
     response_model=APIResponse[PaginationData[NotificationTemplateItem]],
     include_in_schema=False,
-    tags=[INTERNAL_API_TAG],
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def list_templates(
     db: AsyncSession = Depends(deps.get_async_db),

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app import schemas
 from app.api import deps
-from app.api.tags import WEB_APP_TAG
+from app.api.tags import WEB_APP_TAG, NOT_USED_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.services.settings_service import create_settings, get_settings, update_settings
 
@@ -16,7 +16,7 @@ from loguru import logger
 router = APIRouter(prefix="/settings", route_class=LoggerRoute)
 
 
-@router.get("/", response_model=schemas.Settings, tags=[WEB_APP_TAG])
+@router.get("/", response_model=schemas.Settings, tags=[WEB_APP_TAG, NOT_USED_TAG])
 def get_settings_endpoint(
     db: Session = Depends(deps.get_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -46,7 +46,7 @@ def get_settings_endpoint(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.put("/", response_model=schemas.Settings, tags=[WEB_APP_TAG])
+@router.put("/", response_model=schemas.Settings, tags=[WEB_APP_TAG, NOT_USED_TAG])
 def update_settings_endpoint(
     *,
     db: Session = Depends(deps.get_db),

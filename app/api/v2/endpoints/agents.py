@@ -11,6 +11,7 @@ from app import schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
 from app.services import agent_service
+from app.api.tags import NOT_USED_TAG
 
 router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 
@@ -23,6 +24,7 @@ router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
         "返回公开且审核通过的 AI 角色列表，支持按创建时间、随机或基于评分的随机排序。"
         "若 sort 为 random 或 score_based_random，需要提供 sort_seed 以保证返回顺序稳定。"
     ),
+    tags=[NOT_USED_TAG],
 )
 async def recommend_agents_v2(
     request: schemas.AgentRecommendationRequest = Depends(),
