@@ -23,6 +23,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import ai.sxwl.android.data.store.SettingStateManager
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +59,9 @@ fun ChatInput(
     // 获取agent信息用于事件上报
     val agentInfo by chatViewModel.agentInfo.collectAsState()
 
+    // Show scene action button全局设置
+    val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
+
     val horizontalPadding = 16.dp
     val topPadding = 16.dp
 
@@ -81,7 +85,13 @@ fun ChatInput(
                 singleLine = false,
                 placeholder = {
                     Text(
-                        text = stringResource(R.string.chat_input_placeholder),
+                        text = stringResource(
+                            if (showSceneActionButton) {
+                                R.string.chat_input_with_scene_action_placeholder
+                            } else {
+                                R.string.chat_input_placeholder
+                            }
+                        ),
                         fontSize = 14.sp,
                         color = Color.White.copy(alpha = 0.5f),
                     )
@@ -143,10 +153,12 @@ fun ChatInput(
                 horizontalArrangement = Arrangement.spacedBy(SceneActionButtonSpacing),
                 verticalAlignment = Alignment.Bottom,
             ) {
-                SceneActionQuickButton(
-                    buttonHeight = buttonSize,
-                    onClick = onSceneActionClick,
-                )
+                if (showSceneActionButton) {
+                    SceneActionQuickButton(
+                        buttonHeight = buttonSize,
+                        onClick = onSceneActionClick,
+                    )
+                }
                 MultiUseAccessButton(
                     buttonSize = buttonSize,
                     hasInput = inputData.value.isNotEmpty(),

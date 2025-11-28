@@ -61,6 +61,9 @@ fun ChatSettingsDrawer(
     // Auto-play voice messages全局设置 - 使用SettingStateManager的Flow来监听设置变化
     val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState()
 
+    // Show scene action button全局设置 - 使用SettingStateManager的Flow来监听设置变化
+    val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
+
     val horizontalPadding = 16
 
     // 在组件初始化时立即更新用户信息,未添加这部分触发更新userInfo的时候，会因为在chatViewModel中虽然更新了userProfile
@@ -277,6 +280,33 @@ fun ChatSettingsDrawer(
                                     ),
                                 )
                                 SettingStateManager.updateAutoPlayAudio(enabled)
+                            },
+                        )
+
+                        IntelliMateDivider()
+
+                        // Show scene action button开关
+                        SettingsSwitchItem(
+                            item =
+                                SettingsItemData.SwitchItemData(
+                                    title = stringResource(R.string.chat_settings_show_scene_action_button),
+                                    checked = showSceneActionButton,
+                                ),
+                            fontLight = true,
+                            isInGroup = true,
+                            horizontalPadding = horizontalPadding,
+                            openedIconRes = R.drawable.opened,
+                            closedIconRes = R.drawable.closed,
+                            onCheckChanged = { enabled ->
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "toggle_show_scene_action_button",
+                                        "enabled" to enabled,
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                SettingStateManager.updateShowSceneActionButton(enabled)
                             },
                         )
 
