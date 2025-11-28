@@ -73,7 +73,9 @@ async def google_login(
 
         # 否则使用 Google ID token 登录（向后兼容）
         if not login_in.id_token:
-            return APIResponse.error(message="Either id_token or email+password must be provided")
+            return APIResponse.error(
+                message="Either id_token or email+password must be provided"
+            )
 
         # 验证 Google ID Token
         idinfo = id_token.verify_oauth2_token(
@@ -242,7 +244,11 @@ async def email_password_login(
 
         # 查询用户
         stmt = select(User).where(
-            and_(User.email == email, User.deleted_at == None, User.auth_type == AuthType.EMAIL)
+            and_(
+                User.email == email,
+                User.deleted_at == None,
+                User.auth_type == AuthType.EMAIL,
+            )
         )
         result = await db.execute(stmt)
         user = result.scalar_one_or_none()
