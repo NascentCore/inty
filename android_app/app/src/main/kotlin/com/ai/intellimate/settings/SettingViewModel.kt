@@ -85,9 +85,19 @@ class SettingViewModel : BaseVM() {
         _dialogState.value = _dialogState.value.copy(showDeleteAccountDialog = true)
     }
 
+    /** 显示退出登录确认对话框 */
+    fun showLogoutConfirmDialog() {
+        _dialogState.value = _dialogState.value.copy(showLogoutConfirmDialog = true)
+    }
+
     /** 隐藏删除账号对话框 */
     fun hideDeleteAccountDialog() {
         _dialogState.value = _dialogState.value.copy(showDeleteAccountDialog = false)
+    }
+
+    /** 隐藏退出登录确认对话框 */
+    fun hideLogoutConfirmDialog() {
+        _dialogState.value = _dialogState.value.copy(showLogoutConfirmDialog = false)
     }
 
     // 删除账号的结果
@@ -177,4 +187,7 @@ class SettingViewModel : BaseVM() {
 }
 
 /** 对话框状态数据类 */
-data class DialogState(val showDeleteAccountDialog: Boolean = false)
+data class DialogState(
+    val showDeleteAccountDialog: Boolean = false,
+    val showLogoutConfirmDialog: Boolean = false,
+)
