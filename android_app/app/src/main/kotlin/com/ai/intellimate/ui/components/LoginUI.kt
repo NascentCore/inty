@@ -214,10 +214,11 @@ private fun isValidEmail(email: String): Boolean {
 internal fun EnterEmailScreen(
     onBack: () -> Unit,
     onContinue: (String) -> Unit,
+    initialEmail: String = "",
 ) {
     BackHandler(enabled = true) { onBack() }
 
-    var email by remember { mutableStateOf("") }
+    var email by remember(initialEmail) { mutableStateOf(initialEmail) }
     var emailError by remember { mutableStateOf<String?>(null) }
     val invalidEmailErrorText = stringResource(R.string.invalid_email_format)
 
