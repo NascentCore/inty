@@ -1,4 +1,4 @@
-name: Android App Tests
+name: CI - 安卓 IntelliMate App
 
 on:
   push:
