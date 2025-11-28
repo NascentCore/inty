@@ -165,10 +165,10 @@ private fun AppVersionLogic(mainViewModel: MainViewModel) {
     }
 }
 
-private val RESUB_REMINDER_CYCLE_MILLIS = TimeUnit.DAYS.toMillis(1)
-private val MAX_RESUB_REMINDER_CYCLE_MILLIS = TimeUnit.DAYS.toMillis(32)
+private val RESUB_REMINDER_CYCLE_SECONDS = TimeUnit.DAYS.toSeconds(1)
+private val MAX_RESUB_REMINDER_CYCLE_SECONDS = TimeUnit.DAYS.toSeconds(32)
 private val MAX_RESUB_REMINDER_MULTIPLIER =
-    (MAX_RESUB_REMINDER_CYCLE_MILLIS / RESUB_REMINDER_CYCLE_MILLIS).toInt()
+    (MAX_RESUB_REMINDER_CYCLE_SECONDS / RESUB_REMINDER_CYCLE_SECONDS).toInt()
 
 @Composable
 private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
@@ -179,13 +179,13 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
     LifecycleResumeEffect(mainViewModel) {
         if (!vipStatue.isSubscribed && vipStatue.everSubscribed) {
             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                val now = System.currentTimeMillis()
+                val nowSeconds = System.currentTimeMillis() / 1000
                 val lastShowTime = IntySetting.getLastResubReminderDialogShowTime()
                 val showCount = IntySetting.getResubReminderDialogShowCount()
                 val shouldShowReminder =
-                    shouldShowResubReminderDialog(now, lastShowTime, showCount)
+                    shouldShowResubReminderDialog(nowSeconds, lastShowTime, showCount)
                 if (shouldShowReminder) {
-                    IntySetting.setLastResubReminderDialogShowTime(now)
+                    IntySetting.setLastResubReminderDialogShowTime(nowSeconds)
                     IntySetting.setResubReminderDialogShowCount(showCount + 1)
                     showExpiredDialog = true
                 }
@@ -229,16 +229,16 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
     }
 }
 
-private fun shouldShowResubReminderDialog(now: Long, lastShowTime: Long, showCount: Int): Boolean {
-    if (lastShowTime == 0L) return true
-    val delayMillis = calculateResubReminderDelayMillis(showCount)
-    return now - lastShowTime >= delayMillis
+private fun shouldShowResubReminderDialog(nowSeconds: Long, lastShowTimeSeconds: Long, showCount: Int): Boolean {
+    if (lastShowTimeSeconds == 0L) return true
+    val delaySeconds = calculateResubReminderDelaySeconds(showCount)
+    return nowSeconds - lastShowTimeSeconds >= delaySeconds
 }
 
-private fun calculateResubReminderDelayMillis(showCount: Int): Long {
+private fun calculateResubReminderDelaySeconds(showCount: Int): Long {
     val safeCount = showCount.coerceAtMost(30)
     val multiplier = (1 shl safeCount).coerceAtMost(MAX_RESUB_REMINDER_MULTIPLIER)
-    return RESUB_REMINDER_CYCLE_MILLIS * multiplier
+    return RESUB_REMINDER_CYCLE_SECONDS * multiplier
 }
 
 /** 处理Tab选择逻辑（带 launcher） */
