@@ -9,6 +9,9 @@ import android.os.Looper
 import com.tencent.mmkv.MMKV
 import kotlin.random.Random
 
+private const val KEY_RESUB_REMINDER_LAST_TIME = "resub_reminder_last_time"
+private const val KEY_RESUB_REMINDER_SHOW_COUNT = "resub_reminder_show_count"
+
 object IntySetting {
 
     // App级通用标记的存储 使用的对象
@@ -122,13 +125,20 @@ object IntySetting {
         curUserSetting.putBoolean("user_set_auto_play_voice", true)
     }
 
-    // 标记是否已经提示过订阅过期的弹窗
-    fun hasTipsVipExpired(): Boolean {
-        return curUserSetting.getBoolean("has_tips_vip_expired", false)
+    fun getLastResubReminderDialogShowTime(): Long {
+        return curUserSetting.decodeLong(KEY_RESUB_REMINDER_LAST_TIME, 0L)
     }
 
-    fun setTipsVipExpired(showed: Boolean) {
-        curUserSetting.putBoolean("has_tips_vip_expired", showed)
+    fun setLastResubReminderDialogShowTime(timestampSeconds: Long) {
+        curUserSetting.putLong(KEY_RESUB_REMINDER_LAST_TIME, timestampSeconds)
+    }
+
+    fun getResubReminderDialogShowCount(): Int {
+        return curUserSetting.decodeInt(KEY_RESUB_REMINDER_SHOW_COUNT, 0)
+    }
+
+    fun setResubReminderDialogShowCount(count: Int) {
+        curUserSetting.putInt(KEY_RESUB_REMINDER_SHOW_COUNT, count)
     }
 
     // 标记是否已经有可用的App更新，用于红点标记

@@ -51,6 +51,7 @@ import com.ai.intellimate.ui.ExpiredVipDialog
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ForceUpgradeDialog
 import com.ai.intellimate.vip.VipCenterActivity
+import java.util.concurrent.TimeUnit
 
 /** 主页面，包含五个tab */
 @Composable
@@ -164,6 +165,11 @@ private fun AppVersionLogic(mainViewModel: MainViewModel) {
     }
 }
 
+private val RESUB_REMINDER_CYCLE_SECONDS = TimeUnit.DAYS.toSeconds(1)
+private val MAX_RESUB_REMINDER_CYCLE_SECONDS = TimeUnit.DAYS.toSeconds(32)
+private val MAX_RESUB_REMINDER_MULTIPLIER =
+    (MAX_RESUB_REMINDER_CYCLE_SECONDS / RESUB_REMINDER_CYCLE_SECONDS).toInt()
+
 @Composable
 private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
     // 感知vip订阅过期的提示弹窗
@@ -172,13 +178,17 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
     val vipPlan by mainViewModel.vipPlanFlow.collectAsState()
     LifecycleResumeEffect(mainViewModel) {
         if (!vipStatue.isSubscribed && vipStatue.everSubscribed) {
-            // 未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
-            if (
-                !IntySetting.hasTipsVipExpired() &&
-                    IntySetting.isLogin() &&
-                    IntySetting.getCurToken().isNotEmpty()
-            ) {
-                showExpiredDialog = true
+            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                val nowSeconds = System.currentTimeMillis() / 1000
+                val lastShowTime = IntySetting.getLastResubReminderDialogShowTime()
+                val showCount = IntySetting.getResubReminderDialogShowCount()
+                val shouldShowReminder =
+                    shouldShowResubReminderDialog(nowSeconds, lastShowTime, showCount)
+                if (shouldShowReminder) {
+                    IntySetting.setLastResubReminderDialogShowTime(nowSeconds)
+                    IntySetting.setResubReminderDialogShowCount(showCount + 1)
+                    showExpiredDialog = true
+                }
             }
         }
         onPauseOrDispose {}
@@ -216,9 +226,19 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
                 showExpiredDialog = false
             },
         )
-        // 标记已经展示了tips的dialog
-        IntySetting.setTipsVipExpired(true)
     }
+}
+
+private fun shouldShowResubReminderDialog(nowSeconds: Long, lastShowTimeSeconds: Long, showCount: Int): Boolean {
+    if (lastShowTimeSeconds == 0L) return true
+    val delaySeconds = calculateResubReminderDelaySeconds(showCount)
+    return nowSeconds - lastShowTimeSeconds >= delaySeconds
+}
+
+private fun calculateResubReminderDelaySeconds(showCount: Int): Long {
+    val safeCount = showCount.coerceAtMost(30)
+    val multiplier = (1 shl safeCount).coerceAtMost(MAX_RESUB_REMINDER_MULTIPLIER)
+    return RESUB_REMINDER_CYCLE_SECONDS * multiplier
 }
 
 /** 处理Tab选择逻辑（带 launcher） */
