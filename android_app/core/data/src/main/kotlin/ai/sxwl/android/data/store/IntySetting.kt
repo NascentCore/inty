@@ -126,17 +126,7 @@ object IntySetting {
     }
 
     fun getLastResubReminderDialogShowTime(): Long {
-        val stored = curUserSetting.decodeLong(KEY_RESUB_REMINDER_LAST_TIME, 0L)
-        if (stored == 0L) return 0L
-        val nowSeconds = System.currentTimeMillis() / 1000
-        val isMillisValue = stored > nowSeconds * 10
-        return if (isMillisValue) {
-            val converted = stored / 1000
-            setLastResubReminderDialogShowTime(converted)
-            converted
-        } else {
-            stored
-        }
+        return curUserSetting.decodeLong(KEY_RESUB_REMINDER_LAST_TIME, 0L)
     }
 
     fun setLastResubReminderDialogShowTime(timestampSeconds: Long) {
