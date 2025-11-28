@@ -17,6 +17,10 @@ object SettingStateManager {
     private val _autoPlayAudioFlow = MutableStateFlow(IntySetting.isAutoPlayAudio())
     val autoPlayAudioFlow: StateFlow<Boolean> = _autoPlayAudioFlow.asStateFlow()
 
+    // 显示场景动作输入按钮状态
+    private val _showSceneActionButtonFlow = MutableStateFlow(IntySetting.isShowSceneActionButton())
+    val showSceneActionButtonFlow: StateFlow<Boolean> = _showSceneActionButtonFlow.asStateFlow()
+
     // 标记是否已经初始化过（避免重复初始化）
     @Volatile private var initialized = false
 
@@ -104,5 +108,12 @@ object SettingStateManager {
         IntySetting.setAutoPlayAudio(enabled)
         IntySetting.markUserSetAutoPlayVoice()
         _autoPlayAudioFlow.value = enabled
+    }
+
+    /** 更新显示场景动作输入按钮状态 */
+    fun updateShowSceneActionButton(enabled: Boolean) {
+        IntySetting.setShowSceneActionButton(enabled)
+        IntySetting.markUserSetSceneActionButton()
+        _showSceneActionButtonFlow.value = enabled
     }
 }

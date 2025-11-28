@@ -125,6 +125,26 @@ object IntySetting {
         curUserSetting.putBoolean("user_set_auto_play_voice", true)
     }
 
+    /** 显示场景动作输入按钮（全局设置，默认关闭） */
+    fun setShowSceneActionButton(show: Boolean) {
+        curUserSetting.putBoolean("show_scene_action_button", show)
+    }
+
+    fun isShowSceneActionButton(): Boolean {
+        // 默认值为false（关闭）
+        return curUserSetting.decodeBool("show_scene_action_button", false)
+    }
+
+    /** 检查用户是否手动设置过 Show Scene Action Button（用于判断是否使用 Remote Config 默认值） */
+    fun hasUserSetSceneActionButton(): Boolean {
+        return curUserSetting.decodeBool("user_set_scene_action_button", false)
+    }
+
+    /** 标记用户已手动设置过 Show Scene Action Button */
+    fun markUserSetSceneActionButton() {
+        curUserSetting.putBoolean("user_set_scene_action_button", true)
+    }
+
     fun getLastResubReminderDialogShowTime(): Long {
         return curUserSetting.decodeLong(KEY_RESUB_REMINDER_LAST_TIME, 0L)
     }
