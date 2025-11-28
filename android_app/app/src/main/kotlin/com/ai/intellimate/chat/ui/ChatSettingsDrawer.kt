@@ -134,6 +134,7 @@ fun ChatSettingsDrawer(
                             isInGroup = true,
                             fontLight = true,
                             horizontalPadding = horizontalPadding,
+                            contentMaxLines = 1,
                             onItemClick = {
                                 // 检查是否已登录
                                 if (
@@ -161,6 +162,7 @@ fun ChatSettingsDrawer(
                             isInGroup = true,
                             fontLight = true,
                             horizontalPadding = horizontalPadding,
+                            contentMaxLines = 1,
                             onItemClick = {
                                 // 检查是否已登录
                                 if (
@@ -188,6 +190,7 @@ fun ChatSettingsDrawer(
                             isInGroup = true,
                             fontLight = true,
                             horizontalPadding = horizontalPadding,
+                            contentMaxLines = 1,
                             onItemClick = {
                                 // 检查是否已登录
                                 if (
