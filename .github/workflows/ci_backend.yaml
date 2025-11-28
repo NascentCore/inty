@@ -1,4 +1,4 @@
-name: CI - Backend
+name: CI - Inty 后端
 
 on:
   workflow_dispatch:
