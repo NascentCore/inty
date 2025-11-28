@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- CREATED_BY_AGENT -->
+<resources>
+    <string name="app_name">Firebase Events Demo</string>
+    <string name="label_header">Firebase Analytics 示例事件触发器</string>
+    <string name="btn_tutorial_begin">tutorial_begin（开始教程）</string>
+    <string name="btn_level_up">level_up（角色升级）</string>
+    <string name="btn_sign_up">sign_up（注册完成）</string>
+    <string name="btn_purchase">in_app_purchase（内购）</string>
+    <string name="toast_tutorial_begin">已触发 tutorial_begin</string>
+    <string name="toast_level_up">已触发 level_up</string>
+    <string name="toast_sign_up">已触发 sign_up</string>
+    <string name="toast_purchase">已触发 in_app_purchase</string>
+</resources>
