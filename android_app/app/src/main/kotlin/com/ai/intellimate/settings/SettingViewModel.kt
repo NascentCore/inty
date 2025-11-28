@@ -12,6 +12,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.utils.HttpErrorHandler
+import com.ai.intellimate.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,7 @@ import retrofit2.HttpException
 @Immutable
 data class SettingState(
     val userId: String = "",
+    val userEmail: String = "",
     val hasAppUpdateTips: Boolean = false,
     val vipStatus: VipStatus = VipStatus(false),
     val dialogState: DialogState = DialogState(),
@@ -41,6 +43,7 @@ class SettingViewModel : BaseVM() {
         MutableStateFlow(
             SettingState(
                 userId = IntySetting.getCurUserID(),
+                userEmail = UserProfileManager.getUserProfile().email.orEmpty(),
                 hasAppUpdateTips = IntySetting.hasAppUpdateTips(),
                 vipStatus = BillingRepository.vipStatusFlow.value,
             )
@@ -72,6 +75,7 @@ class SettingViewModel : BaseVM() {
         _state.value =
             _state.value.copy(
                 userId = IntySetting.getCurUserID(),
+                userEmail = UserProfileManager.getUserProfile().email.orEmpty(),
                 hasAppUpdateTips = IntySetting.hasAppUpdateTips(),
             )
     }
