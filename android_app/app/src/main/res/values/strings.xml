@@ -182,6 +182,8 @@
     <string name="please_read_warning">Please read the warning carefully and proceed with caution.</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
+    <string name="logout_confirm_title">Log out?</string>
+    <string name="logout_confirm_description">You\'ll sign out of IntelliMate and need to log in again to keep chatting. Your chats and characters stay safe.</string>
 
 
     <!-- Subscription popup title -->

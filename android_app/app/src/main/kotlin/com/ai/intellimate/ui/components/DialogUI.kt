@@ -102,10 +102,67 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     }
 }
 
+/** 退出登录确认对话框 */
+@Composable
+fun LogoutConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(UiConfigs.Shape.Dialog))
+                    .background(color = UiConfigs.Colors.DialogSurface)
+                    .padding(UiConfigs.Padding.DialogInner)
+        ) {
+            Text(
+                text = stringResource(R.string.logout_confirm_title),
+                fontSize = UiConfigs.Typography.Title,
+                color = Color.White,
+            )
+
+            Spacer(Modifier.height(UiConfigs.Spacing.Small))
+
+            Text(
+                text = stringResource(R.string.logout_confirm_description),
+                fontSize = UiConfigs.Typography.Body,
+                color = Color.White,
+            )
+
+            Spacer(Modifier.height(UiConfigs.Spacing.MediumPlus))
+
+            Button(
+                onClick = onConfirm,
+                modifier =
+                    Modifier.fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
+                        .align(Alignment.CenterHorizontally),
+            ) {
+                Text(
+                    text = stringResource(R.string.logout),
+                    fontSize = UiConfigs.Typography.ButtonLarge,
+                    color = Color.White,
+                )
+            }
+
+            TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Text(
+                    text = stringResource(R.string.cancel),
+                    fontSize = UiConfigs.Typography.Body,
+                    color = Color.White,
+                )
+            }
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun DeleteAccountDialogPreview() {
     DeleteAccountDialog(onDismiss = {}, onConfirm = {})
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun LogoutConfirmDialogPreview() {
+    LogoutConfirmDialog(onDismiss = {}, onConfirm = {})
 }
 
 /** App强制更新的Dialog */

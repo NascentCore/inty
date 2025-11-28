@@ -35,6 +35,7 @@ import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.ui.components.DeleteAccountDialog
+import com.ai.intellimate.ui.components.LogoutConfirmDialog
 import com.ai.intellimate.vip.SubsManageActivity
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlinx.coroutines.flow.collectLatest
@@ -111,7 +112,7 @@ fun SettingScreen(
 
             // 退出登录按钮
             LogoutButton(
-                onLogout = { onLogout(false) },
+                onLogout = { viewModel.showLogoutConfirmDialog() },
                 onDeleteAccount = { viewModel.showDeleteAccountDialog() },
             )
 
@@ -126,6 +127,11 @@ fun SettingScreen(
                 dialogState = state.dialogState,
                 onHideDeleteDialog = { viewModel.hideDeleteAccountDialog() },
                 onConfirmDelete = { viewModel.deleteUserAccount() },
+                onHideLogoutDialog = { viewModel.hideLogoutConfirmDialog() },
+                onConfirmLogout = {
+                    viewModel.hideLogoutConfirmDialog()
+                    onLogout(false)
+                },
             )
         }
     }
@@ -301,10 +307,17 @@ private fun SettingDialogs(
     dialogState: DialogState,
     onHideDeleteDialog: () -> Unit,
     onConfirmDelete: () -> Unit,
+    onHideLogoutDialog: () -> Unit,
+    onConfirmLogout: () -> Unit,
 ) {
     // 删除账号对话框
     if (dialogState.showDeleteAccountDialog) {
         DeleteAccountDialog(onDismiss = onHideDeleteDialog, onConfirm = onConfirmDelete)
+    }
+
+    // 退出登录对话框
+    if (dialogState.showLogoutConfirmDialog) {
+        LogoutConfirmDialog(onDismiss = onHideLogoutDialog, onConfirm = onConfirmLogout)
     }
 }
 
