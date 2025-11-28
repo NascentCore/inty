@@ -136,4 +136,57 @@ object UiConfigs {
         val TabIconSize = 24.dp
         val TabIconLabelSpacing = (-6).dp
     }
+
+    object MePage {
+        object TopIconsRow {
+            val Size = 24.dp
+            val Spacing = 8.dp
+            val RightPadding = 16.dp
+        }
+        val TopSpacerOffset = 28.dp
+
+        // 顶部折叠效果参数
+        val HeaderMaxHeight = 280.dp
+        val HeaderMinHeight = 80.dp
+
+        // Avatar
+        val AvatarFullSize = 120.dp
+        val AvatarPadding = 4.dp
+        val AvatarToNicknameSpacing = 19.dp
+
+        // Spacing
+        val SectionSpacing = 24.dp
+        val BottomSpacing = 8.dp
+
+        // Edit button
+        val EditButtonSize = 40.dp
+
+        // VIP Banner
+        val VipBannerHeight = 120.dp
+
+        // Agent card
+        val AgentCardWidth = 165.dp
+        val AgentCardHeight = 220.dp
+        val AgentCardCornerRadius = 12.dp
+        val AgentCardPadding = 8.dp
+        val AgentCardMenuButtonSize = 28.dp
+        val AgentCardMenuIconSize = 20.dp
+        val AgentCardMenuButtonCornerRadius = 4.dp
+        val AgentCardTextSpacing = 4.dp
+
+        // Grid
+        val GridHorizontalSpacing = 13.dp
+        val GridVerticalSpacing = 16.dp
+        val GridHorizontalPadding = 16.dp
+        val GridContentBottomPadding = 100.dp
+
+        // Empty state
+        val EmptyStateTopSpacing = 48.dp
+        val EmptyStateBottomSpacing = 16.dp
+        val EmptyStateContentSpacing = 10.dp
+
+        // Intro section
+        val IntroSectionCollapsedHeight = 40.dp
+        val IntroSectionExpandedHeight = 60.dp
+    }
 }

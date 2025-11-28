@@ -39,7 +39,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.VolunteerActivism
+import androidx.compose.material.icons.automirrored.rounded.HelpCenter
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -122,9 +122,7 @@ internal fun ProfilePage(
     }
 
     // 折叠相关状态
-    val headerMaxHeight = 280.dp // Header 的完整高度
-    val headerMinHeight = 80.dp // 折叠后的最小高度
-    val maxCollapseOffset = with(density) { (headerMaxHeight - headerMinHeight).toPx() } // 最大折叠距离
+    val maxCollapseOffset = with(density) { (UiConfigs.MePage.HeaderMaxHeight - UiConfigs.MePage.HeaderMinHeight).toPx() } // 最大折叠距离
 
     val collapseOffset = remember { Animatable(0f) }
 
@@ -247,7 +245,7 @@ internal fun ProfilePage(
 
                 // LazyGrid 区域
                 if (agents.isEmpty()) {
-                    Spacer(Modifier.height(48.dp))
+                    Spacer(Modifier.height(UiConfigs.MePage.EmptyStateTopSpacing))
 
                     AsyncImage(
                         modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -255,11 +253,11 @@ internal fun ProfilePage(
                         contentDescription = null,
                     )
 
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(UiConfigs.MePage.EmptyStateBottomSpacing))
 
                     Text(
                         modifier =
-                            Modifier.padding(horizontal = 16.dp)
+                            Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
                                 .align(Alignment.CenterHorizontally),
                         text = stringResource(R.string.no_agent),
                         color = Color.White.copy(0.55f),
@@ -269,7 +267,7 @@ internal fun ProfilePage(
                         overflow = TextOverflow.Ellipsis,
                     )
                 } else {
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(UiConfigs.MePage.EmptyStateContentSpacing))
 
                     // Detect when user scrolls to bottom
                     LaunchedEffect(listState) {
@@ -292,12 +290,12 @@ internal fun ProfilePage(
 
                     LazyVerticalGrid(
                         state = listState,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = UiConfigs.MePage.GridHorizontalPadding),
                         columns = GridCells.Fixed(2),
                         contentPadding =
-                            PaddingValues(bottom = innerPadding.calculateBottomPadding() + 100.dp),
-                        horizontalArrangement = Arrangement.spacedBy(13.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                            PaddingValues(bottom = innerPadding.calculateBottomPadding() + UiConfigs.MePage.GridContentBottomPadding),
+                        horizontalArrangement = Arrangement.spacedBy(UiConfigs.MePage.GridHorizontalSpacing),
+                        verticalArrangement = Arrangement.spacedBy(UiConfigs.MePage.GridVerticalSpacing),
                     ) {
                         runCatching {
                                 if (agents.isNotEmpty()) {
@@ -321,12 +319,12 @@ internal fun ProfilePage(
                         if (isLoading && agents.isEmpty()) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 Box(
-                                    modifier = Modifier.padding(16.dp),
+                                    modifier = Modifier.padding(UiConfigs.Padding.ScreenHorizontal),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     CircularProgressIndicator(
                                         color = Color.White,
-                                        modifier = Modifier.size(24.dp),
+                                        modifier = Modifier.size(UiConfigs.MePage.TopIconsRow.Size),
                                     )
                                 }
                             }
@@ -358,7 +356,7 @@ private fun ProfileHeader(
     val currentVipStatus = vipStatus ?: vipStatusFromFlow
 
     // Settings 图标位置固定，不响应折叠状态
-    val topSpacerHeight = innerPadding.calculateTopPadding() + 28.dp
+    val topSpacerHeight = innerPadding.calculateTopPadding() + UiConfigs.MePage.TopSpacerOffset
 
     Column(modifier = modifier.fillMaxWidth()) {
         // 顶部间距和设置按钮 - 始终显示，位置固定
@@ -369,9 +367,32 @@ private fun ProfileHeader(
             Spacer(Modifier.weight(1f))
             var lastClickTime by remember { mutableLongStateOf(0L) }
 
+            Icon(
+                modifier =
+                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
+                        val currentTime = System.currentTimeMillis()
+                        if (AntiClick.isValidClick(lastClickTime)) {
+                            lastClickTime = currentTime
+                            try {
+                                val intent =
+                                    Intent(Intent.ACTION_VIEW, UiConfigs.Urls.HelpCenter.toUri())
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                ToastUtils.showLargeText(e.toString())
+                            }
+                        }
+                    },
+                imageVector = Icons.AutoMirrored.Rounded.HelpCenter,
+                contentDescription = stringResource(R.string.me_icons_row_help),
+                tint = Color.White,
+            )
+
+            Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
+
             AsyncImage(
                 modifier =
-                    Modifier.size(24.dp).clickable {
+                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
                         val currentTime = System.currentTimeMillis()
                         if (AntiClick.isValidClick(lastClickTime)) {
                             lastClickTime = currentTime
@@ -387,35 +408,14 @@ private fun ProfileHeader(
                         }
                     },
                 model = R.drawable.ic_discord,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.me_icons_row_discord),
             )
-            Spacer(Modifier.width(8.dp))
 
-            Icon(
-                modifier =
-                    Modifier.size(24.dp).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            try {
-                                val intent =
-                                    Intent(Intent.ACTION_VIEW, UiConfigs.Urls.HelpCenter.toUri())
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                ToastUtils.showLargeText(e.toString())
-                            }
-                        }
-                    },
-                imageVector = Icons.Rounded.VolunteerActivism,
-                contentDescription = stringResource(R.string.settings_help),
-                tint = Color.White,
-            )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
 
             AsyncImage(
                 modifier =
-                    Modifier.size(24.dp).clickable {
+                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
                         val currentTime = System.currentTimeMillis()
                         if (AntiClick.isValidClick(lastClickTime)) {
                             lastClickTime = currentTime
@@ -425,18 +425,18 @@ private fun ProfileHeader(
                                         Intent.ACTION_VIEW,
                                         UiConfigs.Urls.WhatsAppGroupInvite.toUri(),
                                     )
-                                // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
+                                    // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(intent)
                             } catch (e: Exception) {
                                 ToastUtils.showLargeText(e.toString())
                             }
                         }
                     },
                 model = R.drawable.ic_whatsapp,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.me_icons_row_whatsapp),
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
             //
             //            AsyncImage(
             //                modifier =
@@ -460,7 +460,7 @@ private fun ProfileHeader(
 
             AsyncImage(
                 modifier =
-                    Modifier.size(24.dp).clickable {
+                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
                         val currentTime = System.currentTimeMillis()
                         if (AntiClick.isValidClick(lastClickTime)) {
                             lastClickTime = currentTime
@@ -470,26 +470,26 @@ private fun ProfileHeader(
                         }
                     },
                 model = R.drawable.icon_setting,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.me_icons_row_settings),
             )
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.RightPadding))
         }
 
         // 头像和昵称之间的间距根据折叠状态调整
-        Spacer(Modifier.height(24.dp * (1f - collapseProgress * 0.5f)))
+        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress * 0.5f)))
 
         // 头像和昵称 - 始终显示，但大小会变化
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(UiConfigs.Padding.ScreenHorizontal))
 
             // 头像大小根据折叠状态调整：展开时 120.dp，折叠时 60.dp
-            val avatarSize = remember(collapseProgress) { 120.dp * (1f - collapseProgress * 0.5f) }
+            val avatarSize = remember(collapseProgress) { UiConfigs.MePage.AvatarFullSize * (1f - collapseProgress * 0.5f) }
 
             Box(
                 modifier =
                     Modifier.size(avatarSize)
                         .background(color = Color.White, shape = CircleShape)
-                        .padding(4.dp)
+                        .padding(UiConfigs.MePage.AvatarPadding)
             ) {
                 AsyncImage(
                     modifier = Modifier.fillMaxSize().clip(CircleShape),
@@ -504,7 +504,7 @@ private fun ProfileHeader(
             }
 
             // 头像和昵称之间的间距根据折叠状态调整
-            Spacer(Modifier.width(19.dp * (1f - collapseProgress * 0.3f)))
+            Spacer(Modifier.width(UiConfigs.MePage.AvatarToNicknameSpacing * (1f - collapseProgress * 0.3f)))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -517,20 +517,20 @@ private fun ProfileHeader(
                 )
             }
 
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(UiConfigs.Padding.ScreenHorizontal))
         }
 
         // Intro 和编辑按钮之间的间距 - 折叠时减少
-        Spacer(Modifier.height(24.dp * (1f - collapseProgress)))
+        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress)))
 
         // Intro 和编辑按钮 - 折叠时隐藏编辑按钮，但可以显示一行 intro
         Row(
             modifier =
                 Modifier.fillMaxWidth()
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
                     .height(
-                        if (collapseProgress >= 1f) 40.dp // 折叠时只显示一行 intro 的高度
-                        else 60.dp * (1f - collapseProgress * 0.33f) // 展开时正常高度，折叠时逐渐减少
+                        if (collapseProgress >= 1f) UiConfigs.MePage.IntroSectionCollapsedHeight // 折叠时只显示一行 intro 的高度
+                        else UiConfigs.MePage.IntroSectionExpandedHeight * (1f - collapseProgress * 0.33f) // 展开时正常高度，折叠时逐渐减少
                     ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -546,7 +546,7 @@ private fun ProfileHeader(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
 
             // 编辑按钮 - 折叠时隐藏
             Box(modifier = Modifier.alpha(1f - collapseProgress)) {
@@ -554,7 +554,7 @@ private fun ProfileHeader(
 
                 AsyncImage(
                     modifier =
-                        Modifier.size(40.dp).clickable {
+                        Modifier.size(UiConfigs.MePage.EditButtonSize).clickable {
                             val currentTime = System.currentTimeMillis()
                             if (AntiClick.isValidClick(lastClickTimeEdit)) {
                                 lastClickTimeEdit = currentTime
@@ -572,7 +572,7 @@ private fun ProfileHeader(
         }
 
         // Intro 和 VIP Banner 之间的间距 - 折叠时减少
-        Spacer(Modifier.height(24.dp * (1f - collapseProgress)))
+        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress)))
 
         // VIP Banner - 折叠时隐藏，宽度适配屏幕（不含padding），高度 120.dp
         if (collapseProgress < 1f) {
@@ -580,7 +580,7 @@ private fun ProfileHeader(
                 modifier =
                     Modifier.fillMaxWidth()
                         .alpha(1f - collapseProgress)
-                        .height(120.dp * (1f - collapseProgress)),
+                        .height(UiConfigs.MePage.VipBannerHeight * (1f - collapseProgress)),
                 contentAlignment = Alignment.Center,
             ) {
                 PremiumBanner(
@@ -594,7 +594,7 @@ private fun ProfileHeader(
             }
         }
 
-        Spacer(Modifier.height(8.dp * (1f - collapseProgress)))
+        Spacer(Modifier.height(UiConfigs.MePage.BottomSpacing * (1f - collapseProgress)))
     }
 }
 
@@ -615,11 +615,11 @@ private fun MyAgentCard(
     // 图片加载状态
     var imageLoaded by remember { mutableStateOf(false) }
 
-    Box(modifier = modifier.size(165.dp, 220.dp).clip(RoundedCornerShape(12.dp))) {
+    Box(modifier = modifier.size(UiConfigs.MePage.AgentCardWidth, UiConfigs.MePage.AgentCardHeight).clip(RoundedCornerShape(UiConfigs.MePage.AgentCardCornerRadius))) {
         if (hasAvatarToLoad) {
             // 有头像需要加载时，使用 Shimmer 占位符
             if (!imageLoaded) {
-                ShimmerPlaceholder(modifier = Modifier.fillMaxSize(), cornerRadius = 12.dp)
+                ShimmerPlaceholder(modifier = Modifier.fillMaxSize(), cornerRadius = UiConfigs.MePage.AgentCardCornerRadius)
             }
 
             AsyncImage(
@@ -653,9 +653,9 @@ private fun MyAgentCard(
             modifier =
                 Modifier.fillMaxWidth()
                     .background(brush = gradientBrush)
-                    .padding(8.dp)
+                    .padding(UiConfigs.MePage.AgentCardPadding)
                     .align(Alignment.BottomCenter),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(UiConfigs.MePage.AgentCardTextSpacing),
         ) {
             Text(
                 modifier = Modifier,
@@ -677,11 +677,11 @@ private fun MyAgentCard(
 
         // 右下角的菜单按钮
         if (onEditAgent != null || onDeleteAgent != null) {
-            Box(modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)) {
+            Box(modifier = Modifier.align(Alignment.BottomEnd).padding(UiConfigs.MePage.AvatarPadding)) {
                 Box(
                     modifier =
-                        Modifier.size(28.dp)
-                            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                        Modifier.size(UiConfigs.MePage.AgentCardMenuButtonSize)
+                            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(UiConfigs.MePage.AgentCardMenuButtonCornerRadius))
                             .noRippleClickable(
                                 onClick = {
                                     val currentTime = System.currentTimeMillis()
@@ -694,7 +694,7 @@ private fun MyAgentCard(
                     contentAlignment = Alignment.Center,
                 ) {
                     AsyncImage(
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(UiConfigs.MePage.AgentCardMenuIconSize),
                         model = R.drawable.icon_more2,
                         contentDescription = null,
                     )
@@ -804,7 +804,7 @@ private fun PremiumBanner(
     // 使用 fillMaxWidth 适配屏幕宽度（不含padding），高度保持 120.dp
     Box(
         modifier =
-            Modifier.fillMaxWidth().height(120.dp).clickable {
+            Modifier.fillMaxWidth().height(UiConfigs.MePage.VipBannerHeight).clickable {
                 val currentTime = System.currentTimeMillis()
                 if (AntiClick.isValidClick(lastClickTimePremium)) {
                     lastClickTimePremium = currentTime
@@ -826,10 +826,10 @@ private fun PremiumBanner(
             Modifier.border(
                     width = 0.5.dp,
                     color = Color(0x61D523FF),
-                    shape = RoundedCornerShape(size = 12.dp),
+                    shape = RoundedCornerShape(size = UiConfigs.MePage.AgentCardCornerRadius),
                 )
-                .background(color = Color(0x33D216FF), shape = RoundedCornerShape(size = 12.dp))
-                .padding(horizontal = 8.dp)
+                .background(color = Color(0x33D216FF), shape = RoundedCornerShape(size = UiConfigs.MePage.AgentCardCornerRadius))
+                .padding(horizontal = UiConfigs.MePage.TopIconsRow.Spacing)
                 .align(BiasAlignment(.95f, .1f)),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
