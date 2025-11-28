@@ -6,7 +6,7 @@ import time
 import logging
 from PIL import Image as PILImage
 from io import BytesIO
-from typing import List
+from typing import List, Dict, Any
 from config import Config
 from models import CharacterProfile, CharacterBackground, CharacterEncounter
 from utils import safe_json_loads, validate_character_data
@@ -343,3 +343,19 @@ class GeminiClient:
             self.logger.error(f"Failed to enhance character details: {str(e)}")
 
         return character
+
+    def generate_structured_json(self, prompt: str) -> Dict[str, Any]:
+        """Helper for arbitrary structured outputs in downstream pipelines"""
+
+        self.logger.info("Generating structured JSON payload via Gemini")
+        self.logger.debug(f"Structured prompt length: {len(prompt)} characters")
+
+        try:
+            response = self.client.models.generate_content(
+                model=Config.CHARACTER_GENERATION_MODEL, contents=prompt
+            )
+            self.logger.info("Structured response received successfully")
+            return safe_json_loads(response.text, self.logger)
+        except Exception as exc:
+            self.logger.error(f"Failed to build structured JSON: {exc}")
+            raise

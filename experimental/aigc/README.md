@@ -29,6 +29,7 @@ python -m pytest test_character_generation.py
 - **CLI Interface**: Command-line tool for easy character generation
 - **Export Formats**: JSON and human-readable text formats
 - **Validation**: Comprehensive character validation and consistency checks
+- **Multistage Pipeline**: Optional staged generator that streams identity, introduction, role-play prompts, image blueprints, and audio profiles
 
 ## Quick Start
 
@@ -86,6 +87,12 @@ Show only character summary:
 python cli.py "A wise librarian" --summary-only
 ```
 
+Multistage identity/prompt generation:
+
+```bash
+python cli.py "A neon-dusted android lounge singer" --multistage --export-format text
+```
+
 #### Web API
 
 Start the API server:
@@ -119,6 +126,22 @@ curl "http://localhost:8000/examples"
 **View API documentation:**
 Visit `http://localhost:8000/docs` for interactive API documentation.
 
+### Multistage API
+
+The staged generator is available via `POST /generate/multistage`. It reuses the same request model and returns structured stages along with identity, introductions, role-play prompts, image prompt blueprints, and an audio profile:
+
+```bash
+curl -X POST "http://localhost:8000/generate/multistage" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "brief_description": "A neon-dusted android lounge singer",
+    "genre": "sci-fi",
+    "tone": "edgy",
+    "image_style": "cyberpunk",
+    "num_images": 4
+  }'
+```
+
 ## API Endpoints
 
 | Endpoint          | Method | Description                               |
@@ -126,6 +149,7 @@ Visit `http://localhost:8000/docs` for interactive API documentation.
 | `/`               | GET    | API information and available endpoints   |
 | `/health`         | GET    | Health check                              |
 | `/generate`       | POST   | Generate a complete character profile     |
+| `/generate/multistage` | POST | Run staged generator with prompts & assets |
 | `/generate/async` | POST   | Generate character asynchronously         |
 | `/examples`       | GET    | Get example character generation requests |
 | `/docs`           | GET    | Interactive API documentation             |

@@ -6,8 +6,13 @@ import logging
 import time
 
 from config import Config
-from models import CharacterGenerationRequest, CharacterGenerationResponse
+from models import (
+    CharacterGenerationRequest,
+    CharacterGenerationResponse,
+    MultiStageGenerationResponse,
+)
 from character_agent import CharacterAgent
+from multistage_generator import MultiStageCharacterGenerator
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -27,13 +32,14 @@ app.add_middleware(
 
 # Initialize character agent
 character_agent = None
+multistage_generator = None
 logger = logging.getLogger(__name__)
 
 
 @app.on_event("startup")
 async def startup_event():
     """Validate configuration on startup"""
-    global character_agent
+    global character_agent, multistage_generator
 
     logger.info("Starting AI Character Generator API...")
 
@@ -45,6 +51,10 @@ async def startup_event():
         logger.info("Initializing Character Agent...")
         character_agent = CharacterAgent()
         logger.info("✅ Character Agent initialized successfully")
+
+        logger.info("Initializing Multistage Character Generator...")
+        multistage_generator = MultiStageCharacterGenerator()
+        logger.info("✅ Multistage generator initialized successfully")
 
         logger.info(f"🚀 API server ready on {Config.HOST}:{Config.PORT}")
 
@@ -142,6 +152,28 @@ async def generate_character(request: CharacterGenerationRequest):
         logger.error(f"❌ Unexpected error in character generation: {str(e)}")
         logger.exception("Full exception details:")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@app.post("/generate/multistage", response_model=MultiStageGenerationResponse)
+async def generate_character_multistage(request: CharacterGenerationRequest):
+    """Generate character assets via the multi-stage pipeline"""
+
+    logger.info("🧩 Multistage character generation request received")
+    if multistage_generator is None:
+        logger.error("Multistage generator not initialized")
+        raise HTTPException(
+            status_code=500, detail="Multistage generator not initialized"
+        )
+
+    result = multistage_generator.generate(request)
+    if result.success:
+        logger.info(
+            "✅ Multistage character payload ready in %.2fs", result.generation_time
+        )
+        return result
+
+    logger.error(f"❌ Multistage generation failed: {result.error}")
+    raise HTTPException(status_code=500, detail=result.error or "Multistage failure")
 
 
 @app.post("/generate/async")
