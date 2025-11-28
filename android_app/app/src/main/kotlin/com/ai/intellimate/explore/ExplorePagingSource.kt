@@ -1,5 +1,6 @@
 package com.ai.intellimate.explore
 
+import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
@@ -17,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 
 /** Explore接口调用结果回调 用于将接口调用情况传递给ViewModel进行事件上报 */
 interface ExploreFetchCallback {
@@ -51,7 +53,11 @@ class ExplorePagingSource(
     private val sortSeed: Int = IntySetting.sortSeed(),
     private val cacheProvider: RecommendedAgentCacheProvider? = null,
     private val fetchCallback: ExploreFetchCallback? = null,
+    private val agentApiProvider: () -> IAgentApi = { NetServiceMgr.getAgentApi() },
 ) : PagingSource<Int, AgentInfo>() {
+
+    private val emittedAgentIds = ConcurrentHashMap.newKeySet<String>()
+    private val agentApi by lazy(agentApiProvider)
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, AgentInfo> {
         return withContext(Dispatchers.IO) {
@@ -61,20 +67,16 @@ class ExplorePagingSource(
 
                 if (page == UiConfigs.Explore.INITIAL_PAGE && useCache && cacheProvider != null) {
                     val cachedAgents = cacheProvider.getCachedRecommendedAgents()
-                    if (cachedAgents.isNotEmpty()) {
-                        val validCachedAgents =
-                            cachedAgents.filter { agent ->
-                                agent.id.isNotEmpty() &&
-                                    !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
-                            }
+                    val normalizedCachedAgents = normalizeAgents(cachedAgents)
+                    if (normalizedCachedAgents.isNotEmpty()) {
+                        if (cacheProvider.shouldUpdateFromNetwork()) {
+                            loadFromNetworkAsync(page, pageSize)
+                        }
 
-                        if (validCachedAgents.isNotEmpty()) {
-                            if (cacheProvider.shouldUpdateFromNetwork()) {
-                                loadFromNetworkAsync(page, pageSize)
-                            }
-
+                        val cachePageAgents = consumeNewAgents(normalizedCachedAgents)
+                        if (cachePageAgents.isNotEmpty()) {
                             return@withContext LoadResult.Page(
-                                data = validCachedAgents,
+                                data = cachePageAgents,
                                 prevKey = null,
                                 nextKey = page + 1,
                             )
@@ -104,11 +106,8 @@ class ExplorePagingSource(
                 when (result) {
                     is NetworkResult.Success -> {
                         val agents = result.data.list ?: emptyList()
-                        val validAgents =
-                            agents.filter { agent ->
-                                agent.id.isNotEmpty() &&
-                                    !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
-                            }
+                        val normalizedAgents = result.normalizedAgents
+                        val agentsForUi = consumeNewAgents(normalizedAgents)
 
                         val hasMore =
                             if (result.data.totalPages > 0) {
@@ -120,15 +119,15 @@ class ExplorePagingSource(
 
                         if (
                             page == UiConfigs.Explore.INITIAL_PAGE &&
-                                validAgents.isNotEmpty() &&
+                                normalizedAgents.isNotEmpty() &&
                                 cacheProvider != null
                         ) {
-                            cacheProvider.cacheRecommendedAgents(validAgents)
+                            cacheProvider.cacheRecommendedAgents(normalizedAgents)
                             cacheProvider.refreshRecommendedAgents()
                         }
 
                         LoadResult.Page(
-                            data = validAgents,
+                            data = agentsForUi,
                             prevKey =
                                 if (page == UiConfigs.Explore.INITIAL_PAGE) null else page - 1,
                             nextKey = if (hasMore) page + 1 else null,
@@ -157,32 +156,26 @@ class ExplorePagingSource(
         val startTime = System.currentTimeMillis()
         return try {
             val result =
-                NetServiceMgr.getAgentApi()
-                    .exploreAgents(
-                        page = page,
-                        pageSize = pageSize,
-                        sort_seed = sortSeed.toString(),
-                    )
+                agentApi.exploreAgents(
+                    page = page,
+                    pageSize = pageSize,
+                    sort_seed = sortSeed.toString(),
+                )
 
             val responseTime = System.currentTimeMillis() - startTime
 
             when (result) {
                 is HttpResult.Success -> {
                     val agents = result.data.list ?: emptyList()
-                    val validAgents =
-                        agents.filter { agent ->
-                            agent.id.isNotEmpty() &&
-                                !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
-                        }
-
+                    val normalizedAgents = normalizeAgents(agents)
                     fetchCallback?.onSuccess(
                         page,
                         pageSize,
                         responseTime,
-                        validAgents.size,
+                        normalizedAgents.size,
                         sortSeed,
                     )
-                    NetworkResult.Success(result.data)
+                    NetworkResult.Success(result.data, normalizedAgents)
                 }
                 is HttpResult.Failure -> {
                     fetchCallback?.onFailure(page, pageSize, responseTime, result.message, sortSeed)
@@ -202,14 +195,9 @@ class ExplorePagingSource(
             try {
                 val result = loadFromNetwork(page, pageSize)
                 if (result is NetworkResult.Success) {
-                    val agents = result.data.list ?: emptyList()
-                    val validAgents =
-                        agents.filter { agent ->
-                            agent.id.isNotEmpty() &&
-                                !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
-                        }
-                    if (validAgents.isNotEmpty() && cacheProvider != null) {
-                        cacheProvider.cacheRecommendedAgents(validAgents)
+                    val normalizedAgents = result.normalizedAgents
+                    if (normalizedAgents.isNotEmpty() && cacheProvider != null) {
+                        cacheProvider.cacheRecommendedAgents(normalizedAgents)
                         cacheProvider.refreshRecommendedAgents()
                     }
                 }
@@ -218,10 +206,38 @@ class ExplorePagingSource(
             }
         }
     }
+
+    private fun normalizeAgents(agents: List<AgentInfo>): List<AgentInfo> {
+        if (agents.isEmpty()) {
+            return emptyList()
+        }
+
+        return agents
+            .filter { agent ->
+                agent.id.isNotEmpty() &&
+                    !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
+            }
+            .distinctBy { it.id }
+    }
+
+    private fun consumeNewAgents(agents: List<AgentInfo>): List<AgentInfo> {
+        if (agents.isEmpty()) {
+            return emptyList()
+        }
+
+        val newAgents = mutableListOf<AgentInfo>()
+        agents.forEach { agent ->
+            if (emittedAgentIds.add(agent.id)) {
+                newAgents += agent
+            }
+        }
+        return newAgents
+    }
 }
 
 sealed class NetworkResult {
-    data class Success(val data: AgentInfoResponse) : NetworkResult()
+    data class Success(val data: AgentInfoResponse, val normalizedAgents: List<AgentInfo>) :
+        NetworkResult()
 
     data class Error(val error: String) : NetworkResult()
 }
