@@ -35,14 +35,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.DeleteAccountDialog
 import com.ai.intellimate.ui.components.LogoutConfirmDialog
 import com.ai.intellimate.vip.SubsManageActivity
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlinx.coroutines.flow.collectLatest
 
-private const val HELP_CENTER_URL =
-    "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
 private const val GOOGLE_PLAY_APP_URL_PREFIX = "https://play.google.com/store/apps/details?id="
 private const val GOOGLE_PLAY_MARKET_URL_PREFIX = "market://details?id="
 
@@ -214,7 +213,7 @@ private fun SupportAndHelpSection(
             item = SettingsItemData.CommonItemData(title = stringResource(R.string.settings_help)),
             isInGroup = true,
             onItemClick = {
-                runCatching { uriHandler.openUri(HELP_CENTER_URL) }
+                runCatching { uriHandler.openUri(UiConfigs.Urls.HelpCenter) }
                     .onFailure { ToastUtils.showShort(R.string.toast_navigation_failed) }
             },
         )
