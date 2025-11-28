@@ -1,9 +1,10 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 import uvicorn
 import logging
 import time
+from pathlib import Path
 
 from config import Config
 from models import (
@@ -34,6 +35,7 @@ app.add_middleware(
 character_agent = None
 multistage_generator = None
 logger = logging.getLogger(__name__)
+WEBUI_PATH = Path(__file__).with_name("webui.html")
 
 
 @app.on_event("startup")
@@ -102,6 +104,7 @@ async def root():
         "version": "1.0.0",
         "endpoints": {
             "generate_character": "/generate",
+            "multistage_ui": "/ui",
             "health": "/health",
             "docs": "/docs",
         },
@@ -174,6 +177,17 @@ async def generate_character_multistage(request: CharacterGenerationRequest):
 
     logger.error(f"❌ Multistage generation failed: {result.error}")
     raise HTTPException(status_code=500, detail=result.error or "Multistage failure")
+
+
+@app.get("/ui", response_class=HTMLResponse)
+async def serve_webui():
+    """Serve minimal browser UI for local usage"""
+
+    if not WEBUI_PATH.exists():
+        logger.error("webui.html not found")
+        raise HTTPException(status_code=500, detail="Web UI asset missing")
+
+    return HTMLResponse(WEBUI_PATH.read_text(encoding="utf-8"))
 
 
 @app.post("/generate/async")

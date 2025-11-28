@@ -142,6 +142,14 @@ curl -X POST "http://localhost:8000/generate/multistage" \
   }'
 ```
 
+### Minimal Web UI
+
+Prefer using a browser? Launch the FastAPI server and open `http://localhost:8000/ui`. The Web UI lets you：
+
+- 输入人物简述、类型、气质与图片风格，并一键触发多阶段生成
+- 实时查看各阶段状态、身份卡、长短介绍、角色扮演提示
+- 浏览图片提示与音频人设，可直接复制到图像/语音工具
+
 ## API Endpoints
 
 | Endpoint          | Method | Description                               |
