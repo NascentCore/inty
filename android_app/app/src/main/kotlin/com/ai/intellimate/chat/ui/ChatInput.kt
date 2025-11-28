@@ -117,18 +117,18 @@ fun ChatInput(
                 val currentText = chatViewModel.inputData.value
                 if (currentText.length > CHAT_INPUT_MAX_LENGTH - templateLength) {
                     ToastUtils.showShort(R.string.str_message_is_too_long)
-                    return@onSceneActionClick
+                } else {
+                    val safeSelection = inputSelection.value.coerceIn(0, currentText.length)
+                    val newText =
+                        buildString(currentText.length + templateLength) {
+                            append(currentText.substring(0, safeSelection))
+                            append(SCENE_ACTION_TEMPLATE)
+                            append(currentText.substring(safeSelection))
+                        }
+                    chatViewModel.inputData.value = newText
+                    chatViewModel.inputSelection.value = safeSelection + 1
+                    focusRequester?.requestFocus()
                 }
-                val safeSelection = inputSelection.value.coerceIn(0, currentText.length)
-                val newText =
-                    buildString(currentText.length + templateLength) {
-                        append(currentText.substring(0, safeSelection))
-                        append(SCENE_ACTION_TEMPLATE)
-                        append(currentText.substring(safeSelection))
-                    }
-                chatViewModel.inputData.value = newText
-                chatViewModel.inputSelection.value = safeSelection + 1
-                focusRequester?.requestFocus()
             }
 
             val buttonSize = 30.dp
