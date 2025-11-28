@@ -1,12 +1,16 @@
 package com.ai.intellimate
 
 import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.common.event.EventBus
+import ai.sxwl.android.common.event.EventSubscriber
+import ai.sxwl.android.common.event.PushNotificationEvent
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AppVersionRsp
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
@@ -45,6 +49,9 @@ class MainViewModel : BaseVM() {
     private val _currentChatPageIndex = MutableStateFlow(0)
     val currentChatPageIndex = _currentChatPageIndex.asStateFlow()
 
+    private val _messagesTabHasUnread = MutableStateFlow(IntySetting.hasMessagesTabUnread())
+    val messagesTabHasUnread = _messagesTabHasUnread.asStateFlow()
+
     // 使用flow数据流的形式，感知用户数据
     private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile = _userProfile.asStateFlow()
@@ -58,9 +65,25 @@ class MainViewModel : BaseVM() {
     private val _showSettings = MutableStateFlow(false)
     val showSettings: StateFlow<Boolean> = _showSettings.asStateFlow()
 
+    private val pushMessageSubscriber =
+        object : EventSubscriber<PushNotificationEvent.MessageReceived> {
+            override fun onEvent(event: PushNotificationEvent.MessageReceived) {
+                if (event.type == FCMConstants.TYPE_AGENT_MESSAGE) {
+                    if (_selectedTab.value != HomeTabIndex.Messages) {
+                        setMessagesTabBadge(true)
+                    }
+                }
+            }
+        }
+
     init {
         loadStartupData()
         updateLoginState()
+        if (_selectedTab.value == HomeTabIndex.Messages) {
+            clearMessagesTabBadge()
+        }
+
+        EventBus.subscribe(PushNotificationEvent.MessageReceived::class, pushMessageSubscriber)
 
         viewModelScope.launch(Dispatchers.IO) {
             val initialFetchTime = FirebaseManager.getRemoteConfigLastFetchTime()
@@ -153,7 +176,11 @@ class MainViewModel : BaseVM() {
         // 切换tab时停止所有音频播放
         stopAllAudioPlayback()
 
-        _selectedTab.value = tabEntries[tab]
+        val targetTab = tabEntries[tab]
+        _selectedTab.value = targetTab
+        if (targetTab == HomeTabIndex.Messages) {
+            clearMessagesTabBadge()
+        }
     }
 
     /** 停止所有音频播放 用于tab切换时确保音频停止 */
@@ -169,6 +196,18 @@ class MainViewModel : BaseVM() {
 
     fun updateCurrentChatPageIndex(index: Int) {
         _currentChatPageIndex.value = index
+    }
+
+    fun clearMessagesTabBadge() {
+        setMessagesTabBadge(false)
+    }
+
+    private fun setMessagesTabBadge(hasUnread: Boolean) {
+        if (_messagesTabHasUnread.value == hasUnread) {
+            return
+        }
+        _messagesTabHasUnread.value = hasUnread
+        IntySetting.setMessagesTabUnread(hasUnread)
     }
 
     /** 接口请求获取用户信息 */
@@ -308,5 +347,10 @@ class MainViewModel : BaseVM() {
                 LogUtils.w("result.message")
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        EventBus.unsubscribe(PushNotificationEvent.MessageReceived::class, pushMessageSubscriber)
     }
 }

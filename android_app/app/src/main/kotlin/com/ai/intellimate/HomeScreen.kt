@@ -61,6 +61,7 @@ fun HomeScreen(
     viewModelFactory: ViewModelProvider.Factory,
 ) {
     val selectedTab = mainViewModel.selectedTab.collectAsState()
+    val showMessagesRedDot by mainViewModel.messagesTabHasUnread.collectAsState()
 
     // 页面跟踪，包含当前和默认首页 tab（只在首次加载时上报）
     LaunchedEffect(Unit) {
@@ -111,6 +112,23 @@ fun HomeScreen(
             }
         }
 
+    LaunchedEffect(selectedTab.value) {
+        if (selectedTab.value == HomeTabIndex.Messages) {
+            mainViewModel.clearMessagesTabBadge()
+        }
+    }
+
+    val tabItemsForDisplay =
+        remember(showMessagesRedDot) {
+            homeTabItems.map { tab ->
+                if (tab.index == HomeTabIndex.Messages.ordinal) {
+                    tab.copy(hasRedDot = showMessagesRedDot)
+                } else {
+                    tab
+                }
+            }
+        }
+
     Scaffold(
         modifier =
             modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
@@ -120,7 +138,7 @@ fun HomeScreen(
             HeartBottomAppBar(
                 modifier = Modifier,
                 selectedTab = selectedTab.value.ordinal,
-                tabItems = homeTabItems,
+                tabItems = tabItemsForDisplay,
                 onTabSelected = { tabIndex ->
                     handleTabSelectionWithLauncher(
                         tabIndex,

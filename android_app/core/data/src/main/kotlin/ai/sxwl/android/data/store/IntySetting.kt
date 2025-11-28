@@ -12,6 +12,8 @@ import kotlin.random.Random
 private const val KEY_RESUB_REMINDER_LAST_TIME = "resub_reminder_last_time"
 private const val KEY_RESUB_REMINDER_SHOW_COUNT = "resub_reminder_show_count"
 
+private const val KEY_MESSAGES_TAB_UNREAD = "messages_tab_has_unread"
+
 object IntySetting {
 
     // App级通用标记的存储 使用的对象
@@ -148,6 +150,15 @@ object IntySetting {
 
     fun setAppUpdateTips(showed: Boolean) {
         curUserSetting.putBoolean("has_app_update_tips", showed)
+    }
+
+    /** 首页消息 Tab 红点状态 */
+    fun hasMessagesTabUnread(): Boolean {
+        return curUserSetting.decodeBool(KEY_MESSAGES_TAB_UNREAD, false)
+    }
+
+    fun setMessagesTabUnread(hasUnread: Boolean) {
+        curUserSetting.putBoolean(KEY_MESSAGES_TAB_UNREAD, hasUnread)
     }
 
     fun appGooglePlayUrl(): String {

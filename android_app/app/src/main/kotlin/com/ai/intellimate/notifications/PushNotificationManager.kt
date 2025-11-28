@@ -3,6 +3,7 @@ package com.ai.intellimate.notifications
 import ai.sxwl.android.common.event.EventBus
 import ai.sxwl.android.common.event.EventSubscriber
 import ai.sxwl.android.common.event.PushNotificationEvent
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.DirectBootStorage
 import ai.sxwl.android.firebase.DirectBootUtils
 import ai.sxwl.android.firebase.FCMConstants
@@ -68,6 +69,16 @@ class PushNotificationManager private constructor(private val application: Appli
             object : EventSubscriber<PushNotificationEvent.ShowNotification> {
                 override fun onEvent(event: PushNotificationEvent.ShowNotification) {
                     showNotification(event.title, event.body, event.data)
+                }
+            },
+        )
+        EventBus.subscribe(
+            PushNotificationEvent.MessageReceived::class,
+            object : EventSubscriber<PushNotificationEvent.MessageReceived> {
+                override fun onEvent(event: PushNotificationEvent.MessageReceived) {
+                    if (event.type == FCMConstants.TYPE_AGENT_MESSAGE) {
+                        IntySetting.setMessagesTabUnread(true)
+                    }
                 }
             },
         )
