@@ -57,9 +57,21 @@ class GooglePlayService:
             return is_valid, purchase_info
 
         except HttpError as e:
-            logger.error(
-                f"Google Play API调用失败: {e}, product_id: {product_id}, purchase_token: {purchase_token}"
+            # HttpError 400 通常是产品ID不匹配的预期情况，降级为 DEBUG
+            # 其他错误（401, 403, 500等）保持 ERROR 级别
+            status_code = (
+                e.resp.status
+                if hasattr(e, "resp") and hasattr(e.resp, "status")
+                else None
             )
+            if status_code == 400:
+                logger.debug(
+                    f"Google Play API调用失败 (产品ID不匹配): {e}, product_id: {product_id}, purchase_token: {purchase_token[:10]}..."
+                )
+            else:
+                logger.error(
+                    f"Google Play API调用失败: {e}, product_id: {product_id}, purchase_token: {purchase_token[:10]}..., status_code: {status_code}"
+                )
             return False, {"error": str(e)}
         except Exception as e:
             logger.error(f"订阅验证失败: {str(e)}")
