@@ -280,9 +280,10 @@ private fun SupportAndHelpSection(
             showRedDot = hasAppUpdateTips,
             onItemClick = {
                 runCatching {
-                    val url = IntySetting.appGooglePlayUrl().ifBlank { defaultPlayStoreUrl }
-                    uriHandler.openUri(url)
-                }.onFailure { ToastUtils.showShort(R.string.toast_google_play_unavailable) }
+                        val url = IntySetting.appGooglePlayUrl().ifBlank { defaultPlayStoreUrl }
+                        uriHandler.openUri(url)
+                    }
+                    .onFailure { ToastUtils.showShort(R.string.toast_google_play_unavailable) }
             },
         )
     }

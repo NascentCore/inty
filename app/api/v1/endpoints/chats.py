@@ -10,7 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, INTY_EVAL_TAG, WEB_APP_TAG, NOT_USED_TAG
+from app.api.tags import (
+    ANDROID_APP_TAG,
+    INTERNAL_API_TAG,
+    INTY_EVAL_TAG,
+    WEB_APP_TAG,
+    NOT_USED_TAG,
+)
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream

@@ -50,9 +50,7 @@ async def create_email_password_superuser(
         logger.debug(f"Checking if user with email {email} already exists")
 
         # 检查邮箱是否已存在
-        stmt = select(User).where(
-            and_(User.email == email, User.deleted_at == None)
-        )
+        stmt = select(User).where(and_(User.email == email, User.deleted_at == None))
         result = await db.execute(stmt)
         existing_user = result.scalar_one_or_none()
 
@@ -65,7 +63,9 @@ async def create_email_password_superuser(
                     )
                 else:
                     existing_user.deleted_at = datetime.now(UTC)
-                    existing_user.deletion_reason = "Deleted by create_email_password_superuser script"
+                    existing_user.deletion_reason = (
+                        "Deleted by create_email_password_superuser script"
+                    )
                     existing_user.is_active = False
                     await db.commit()
                     logger.info(
@@ -73,7 +73,9 @@ async def create_email_password_superuser(
                     )
                 # 删除后继续创建新用户，不返回现有用户
             else:
-                logger.debug(f"User with email {email} already exists: {existing_user.id}")
+                logger.debug(
+                    f"User with email {email} already exists: {existing_user.id}"
+                )
 
                 # 检查现有用户的认证类型
                 if existing_user.auth_type != AuthType.EMAIL:
@@ -87,7 +89,9 @@ async def create_email_password_superuser(
                 if existing_user.password:
                     password_matches = verify_password(password, existing_user.password)
                     if password_matches:
-                        logger.info(f"User already exists with matching password: {existing_user.id}")
+                        logger.info(
+                            f"User already exists with matching password: {existing_user.id}"
+                        )
                     else:
                         logger.warning(
                             f"User already exists but password does not match. "
@@ -108,7 +112,9 @@ async def create_email_password_superuser(
                             else:
                                 logger.info("Password update cancelled by user")
                         else:
-                            logger.info("DRY-RUN: Would update password for existing user")
+                            logger.info(
+                                "DRY-RUN: Would update password for existing user"
+                            )
                 else:
                     logger.warning(
                         f"User already exists but has no password set. "

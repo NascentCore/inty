@@ -153,7 +153,6 @@ fun VipCenterContent(
                     )
                 }
 
-
                 PurchaseButton(
                     isSubscribed = vipStatus.isSubscribed,
                     hasSelectedPlan = viewModel.hasSelectedPlan(),
