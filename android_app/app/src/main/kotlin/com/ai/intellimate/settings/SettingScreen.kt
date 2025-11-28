@@ -9,6 +9,7 @@ import ai.sxwl.android.design.ui.SettingsItemData
 import ai.sxwl.android.design.ui.SettingsItemGroup
 import ai.sxwl.android.utils.ClipboardUtils
 import ai.sxwl.android.utils.ToastUtils
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
@@ -43,6 +44,7 @@ import kotlinx.coroutines.flow.collectLatest
 private const val HELP_CENTER_URL =
     "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
 private const val GOOGLE_PLAY_APP_URL_PREFIX = "https://play.google.com/store/apps/details?id="
+private const val GOOGLE_PLAY_MARKET_URL_PREFIX = "market://details?id="
 
 /** 设置页面主内容 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -317,6 +319,24 @@ private fun SupportAndHelpSection(
                     .onFailure { ToastUtils.showShort(R.string.toast_google_play_unavailable) }
             },
         )
+
+        IntelliMateDivider()
+
+        // Rate us
+        SettingsArrowItem(
+            item =
+                SettingsItemData.CommonItemData(
+                    title = stringResource(R.string.settings_rate_us),
+                    arrow = true,
+                ),
+            isInGroup = true,
+            onItemClick = {
+                val fallbackUrl = IntySetting.appGooglePlayUrl().ifBlank { defaultPlayStoreUrl }
+                if (!openRateUsPage(context = context, fallbackUrl = fallbackUrl)) {
+                    ToastUtils.showShort(R.string.toast_google_play_unavailable)
+                }
+            },
+        )
     }
 }
 
@@ -324,6 +344,31 @@ private fun SupportAndHelpSection(
 private fun rememberUpdatedPlayStoreUrl(): String {
     val packageName = BuildConfig.APPLICATION_ID
     return remember(packageName) { "$GOOGLE_PLAY_APP_URL_PREFIX$packageName" }
+}
+
+/** 打开 Google Play 评价 */
+private fun openRateUsPage(context: Context, fallbackUrl: String): Boolean {
+    val packageName = BuildConfig.APPLICATION_ID
+    val marketUri = "$GOOGLE_PLAY_MARKET_URL_PREFIX$packageName".toUri()
+    val marketIntent =
+        Intent(Intent.ACTION_VIEW, marketUri).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
+        }
+
+    return try {
+        context.startActivity(marketIntent)
+        true
+    } catch (marketError: ActivityNotFoundException) {
+        runCatching {
+            val webIntent =
+                Intent(Intent.ACTION_VIEW, fallbackUrl.toUri()).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
+                }
+            context.startActivity(webIntent)
+        }.isSuccess
+    } catch (error: Exception) {
+        false
+    }
 }
 
 /** 设置对话框 */
