@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.Text
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
@@ -122,7 +123,7 @@ fun ChatPageContainer(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var autoFocusEnabled by rememberSaveable { mutableStateOf(false) }
-    val isDebugMode = remember { HeartAppUtils.isAppDebugMode() }
+    val isDebugMode = HeartAppUtils.isAppDebugMode()
 
     // 新用户引导状态
     var hasShowGuest by remember { mutableStateOf(IntySetting.hasShowGuest()) }
