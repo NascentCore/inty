@@ -38,12 +38,15 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.VolunteerActivism
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -385,6 +388,28 @@ private fun ProfileHeader(
                     },
                 model = R.drawable.ic_discord,
                 contentDescription = null,
+            )
+            Spacer(Modifier.width(8.dp))
+
+            Icon(
+                modifier =
+                    Modifier.size(24.dp).clickable {
+                        val currentTime = System.currentTimeMillis()
+                        if (AntiClick.isValidClick(lastClickTime)) {
+                            lastClickTime = currentTime
+                            try {
+                                val intent =
+                                    Intent(Intent.ACTION_VIEW, UiConfigs.Urls.HelpCenter.toUri())
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                ToastUtils.showLargeText(e.toString())
+                            }
+                        }
+                    },
+                imageVector = Icons.Rounded.VolunteerActivism,
+                contentDescription = stringResource(R.string.settings_help),
+                tint = Color.White,
             )
             Spacer(Modifier.width(8.dp))
 
