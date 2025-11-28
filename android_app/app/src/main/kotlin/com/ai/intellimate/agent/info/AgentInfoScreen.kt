@@ -77,6 +77,7 @@ internal fun AiAgentInfoScreen(
     agent: AgentInfo,
     galleryItems: List<AgentImageGalleryItem>,
     onBack: () -> Unit,
+    onEdit: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val isDebugMode = HeartAppUtils.isAppDebugMode()
@@ -109,14 +110,26 @@ internal fun AiAgentInfoScreen(
                         )
                     },
                     actions = {
-                        Image(
-                            modifier =
-                                Modifier.padding(horizontal = 12.dp).noRippleClickable {
-                                    showBottomSheet = true
-                                },
-                            painter = painterResource(R.drawable.icon_more2),
-                            contentDescription = null,
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            onEdit?.let {
+                                Image(
+                                    modifier =
+                                        Modifier.padding(horizontal = 12.dp).noRippleClickable {
+                                            it()
+                                        },
+                                    painter = painterResource(R.drawable.icon_edit),
+                                    contentDescription = stringResource(R.string.edit_button),
+                                )
+                            }
+                            Image(
+                                modifier =
+                                    Modifier.padding(horizontal = 12.dp).noRippleClickable {
+                                        showBottomSheet = true
+                                    },
+                                painter = painterResource(R.drawable.icon_more2),
+                                contentDescription = null,
+                            )
+                        }
                     },
                 )
             },

@@ -2,12 +2,16 @@ package com.ai.intellimate.agent.info
 
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.store.IntySetting
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import com.ai.intellimate.agent.generate.CreateRoleActivity
 
 /** Ai模型的信息介绍页面 */
 class AgentInfoActivity : BaseActivity() {
@@ -36,6 +40,13 @@ class AgentInfoActivity : BaseActivity() {
     private var agent: AgentInfo? = null
     private var agentId: String? = null
     private val viewModel: AgentInfoViewModel by viewModels()
+    private val editAgentLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val refreshId = viewModel.agentInfo.value?.id ?: agent?.id ?: agentId
+                refreshId?.let { viewModel.setAgentID(it) }
+            }
+        }
 
     override fun initConfigData() {
         super.initConfigData()
@@ -65,10 +76,19 @@ class AgentInfoActivity : BaseActivity() {
         val agentInfo = viewModel.agentInfo.collectAsState()
         val galleryImages = viewModel.chatImageGallery.collectAsState()
         agentInfo.value?.let { agent ->
+            val currentUserId = IntySetting.getCurUserID()
+            val canEdit = IntySetting.isLogin() && currentUserId.isNotEmpty() && agent.creator?.id == currentUserId
             AiAgentInfoScreen(
                 agent = agent,
                 galleryItems = galleryImages.value,
                 onBack = { finish() },
+                onEdit = if (canEdit) {
+                    {
+                        editAgentLauncher.launch(CreateRoleActivity.getIntent(this@AgentInfoActivity, agent))
+                    }
+                } else {
+                    null
+                },
             )
         }
     }
