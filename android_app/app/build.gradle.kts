@@ -112,4 +112,5 @@ dependencies {
     androidTestImplementation(libs.androidx.uiautomator)
 
     implementation(libs.haze)
+    testImplementation(libs.robolectric)
 }

@@ -10,15 +10,19 @@ import ai.sxwl.android.data.api.model.GenerateBackgroundResponse
 import ai.sxwl.android.data.api.model.UploadAvatarResponse
 import ai.sxwl.android.data.cache.RecommendedAgentCacheProvider
 import androidx.paging.PagingSource
-import com.ai.intellimate.ui.UiConfigs
 import com.architecture.httplib.core.HttpResult
 import kotlin.test.assertEquals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import okhttp3.MultipartBody
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(manifest = Config.NONE)
 class ExplorePagingSourceTest {
 
     @Test
@@ -48,7 +52,7 @@ class ExplorePagingSourceTest {
             pagingSource.load(
                 PagingSource.LoadParams.Refresh(
                     key = null,
-                    loadSize = UiConfigs.Explore.PAGE_SIZE,
+                    loadSize = PAGE_SIZE_FOR_TEST,
                     placeholdersEnabled = false,
                 )
             ) as PagingSource.LoadResult.Page<Int, AgentInfo>
@@ -58,7 +62,7 @@ class ExplorePagingSourceTest {
             pagingSource.load(
                 PagingSource.LoadParams.Append(
                     key = 2,
-                    loadSize = UiConfigs.Explore.PAGE_SIZE,
+                    loadSize = PAGE_SIZE_FOR_TEST,
                     placeholdersEnabled = false,
                 )
             ) as PagingSource.LoadResult.Page<Int, AgentInfo>
@@ -137,5 +141,9 @@ class ExplorePagingSourceTest {
         override suspend fun uploadAvatar(
             file: MultipartBody.Part
         ): HttpResult<UploadAvatarResponse> = error("Unused in tests")
+    }
+
+    companion object {
+        private const val PAGE_SIZE_FOR_TEST = 8
     }
 }
