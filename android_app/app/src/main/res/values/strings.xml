@@ -19,6 +19,7 @@
     <string name="me_icons_row_whatsapp">Whatsapp</string>
     <string name="me_icons_row_settings">Settings</string>
     <string name="settings">Settings</string>
+    <string name="settings_help">Help Center</string>
     <string name="settings_email_support">Email Support</string>
     <string name="settings_email_inty">IntelliMate@inty.cc</string>
     <string name="settings_version">Version</string>
