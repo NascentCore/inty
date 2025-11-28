@@ -1,0 +1,5 @@
+# CREATED_BY_AGENT
+fastapi==0.115.4
+uvicorn==0.30.6
+pydantic==2.9.2
+python-multipart==0.0.9

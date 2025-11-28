@@ -1,0 +1,90 @@
+{
+  "created_by": "CREATED_BY_AGENT",
+  "events": [
+    {
+      "event_name": "tutorial_begin",
+      "event_timestamp": "2024-11-18T08:00:00Z",
+      "user_pseudo_id": "user_001",
+      "device": {"category": "phone", "os_version": "34"},
+      "geo": {"country": "US", "city": "Seattle"},
+      "app": {"version": "1.0.0"},
+      "screen_class": "TutorialActivity",
+      "event_params": {
+        "level": 1,
+        "engagement_time_msec": 12000,
+        "tutorial_name": "basic_onboarding"
+      }
+    },
+    {
+      "event_name": "level_up",
+      "event_timestamp": "2024-11-18T08:05:00Z",
+      "user_pseudo_id": "user_001",
+      "device": {"category": "phone", "os_version": "34"},
+      "geo": {"country": "US", "city": "Seattle"},
+      "app": {"version": "1.0.0"},
+      "screen_class": "BattleActivity",
+      "event_params": {
+        "level": 7,
+        "character_id": "char_arisa",
+        "time_spent_ms": 480000,
+        "score": 840
+      }
+    },
+    {
+      "event_name": "sign_up",
+      "event_timestamp": "2024-11-18T09:10:00Z",
+      "user_pseudo_id": "user_002",
+      "device": {"category": "tablet", "os_version": "33"},
+      "geo": {"country": "JP", "city": "Tokyo"},
+      "app": {"version": "1.0.1"},
+      "screen_class": "SignUpActivity",
+      "event_params": {
+        "method": "google",
+        "user_tier": "premium_trial"
+      }
+    },
+    {
+      "event_name": "purchase",
+      "event_timestamp": "2024-11-18T09:12:00Z",
+      "user_pseudo_id": "user_002",
+      "device": {"category": "tablet", "os_version": "33"},
+      "geo": {"country": "JP", "city": "Tokyo"},
+      "app": {"version": "1.0.1"},
+      "screen_class": "CheckoutActivity",
+      "event_params": {
+        "item_id": "gem_pack_large",
+        "currency": "JPY",
+        "value": 1800.0
+      }
+    },
+    {
+      "event_name": "tutorial_begin",
+      "event_timestamp": "2024-11-18T10:00:00Z",
+      "user_pseudo_id": "user_003",
+      "device": {"category": "phone", "os_version": "32"},
+      "geo": {"country": "BR", "city": "Sao Paulo"},
+      "app": {"version": "1.1.0"},
+      "screen_class": "TutorialActivity",
+      "event_params": {
+        "level": 1,
+        "engagement_time_msec": 9000,
+        "tutorial_name": "basic_onboarding"
+      }
+    },
+    {
+      "event_name": "level_up",
+      "event_timestamp": "2024-11-18T10:08:00Z",
+      "user_pseudo_id": "user_003",
+      "device": {"category": "phone", "os_version": "32"},
+      "geo": {"country": "BR", "city": "Sao Paulo"},
+      "app": {"version": "1.1.0"},
+      "screen_class": "BattleActivity",
+      "event_params": {
+        "level": 5,
+        "character_id": "char_luna",
+        "time_spent_ms": 360000,
+        "score": 600
+      }
+    }
+  ]
+}
