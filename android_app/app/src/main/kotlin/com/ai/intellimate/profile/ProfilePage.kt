@@ -88,6 +88,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.ui.components.CharacterCard
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlin.math.abs
@@ -609,132 +610,84 @@ private fun MyAgentCard(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
 
-    // 判断是否有头像需要加载
-    val hasAvatarToLoad = agentInfo.avatar.isNotEmpty()
-
-    // 图片加载状态
-    var imageLoaded by remember { mutableStateOf(false) }
-
-    Box(modifier = modifier.size(UiConfigs.MePage.AgentCardWidth, UiConfigs.MePage.AgentCardHeight).clip(RoundedCornerShape(UiConfigs.MePage.AgentCardCornerRadius))) {
-        if (hasAvatarToLoad) {
-            // 有头像需要加载时，使用 Shimmer 占位符
-            if (!imageLoaded) {
-                ShimmerPlaceholder(modifier = Modifier.fillMaxSize(), cornerRadius = UiConfigs.MePage.AgentCardCornerRadius)
-            }
-
-            AsyncImage(
-                modifier = Modifier.fillMaxSize(),
-                model = ImageRequest.Builder(LocalContext.current).data(agentInfo.avatar).build(),
-                contentDescription = null,
-                placeholder = null, // 使用自定义的 Shimmer 占位显示
-                error = null, // 加载失败时也使用 Shimmer 占位显示
-                onSuccess = { imageLoaded = true },
-                onError = { imageLoaded = false },
-                contentScale = ContentScale.Crop,
-                alignment = Alignment.TopCenter,
-            )
-        } else {
-            // 没有头像需要加载时，直接显示默认头像
-            Image(
-                modifier = Modifier.fillMaxSize(),
-                painter = painterResource(R.drawable.img_default_avatar),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-            )
-        }
-
-        // 缓存渐变画笔，避免每次重组时重新创建
-        val gradientBrush = remember {
+    CharacterCard(
+        modifier =
+            modifier
+                .size(UiConfigs.MePage.AgentCardWidth, UiConfigs.MePage.AgentCardHeight),
+        imageUrl = agentInfo.avatar,
+        title = agentInfo.name,
+        subtitle = agentInfo.intro,
+        subtitleMaxLines = 2,
+        shape = RoundedCornerShape(UiConfigs.MePage.AgentCardCornerRadius),
+        gradientBrush =
             Brush.verticalGradient(
                 colors = listOf(Color.Transparent, Color.Black.copy(.5f), Color.Black.copy(.9f))
-            )
-        }
-        Column(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .background(brush = gradientBrush)
-                    .padding(UiConfigs.MePage.AgentCardPadding)
-                    .align(Alignment.BottomCenter),
-            verticalArrangement = Arrangement.spacedBy(UiConfigs.MePage.AgentCardTextSpacing),
-        ) {
-            Text(
-                modifier = Modifier,
-                text = agentInfo.name,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
-            )
-            Text(
-                modifier = Modifier,
-                text = agentInfo.intro,
-                fontSize = 12.sp,
-                lineHeight = 12.sp,
-                color = Color.White.copy(.7f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        // 右下角的菜单按钮
-        if (onEditAgent != null || onDeleteAgent != null) {
-            Box(modifier = Modifier.align(Alignment.BottomEnd).padding(UiConfigs.MePage.AvatarPadding)) {
-                Box(
-                    modifier =
-                        Modifier.size(UiConfigs.MePage.AgentCardMenuButtonSize)
-                            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(UiConfigs.MePage.AgentCardMenuButtonCornerRadius))
-                            .noRippleClickable(
-                                onClick = {
-                                    val currentTime = System.currentTimeMillis()
-                                    if (AntiClick.isValidClick(lastClickTime)) {
-                                        lastClickTime = currentTime
-                                        showMenu = true
+            ),
+        textPadding = PaddingValues(UiConfigs.MePage.AgentCardPadding),
+        shimmerCornerRadius = UiConfigs.MePage.AgentCardCornerRadius,
+        placeholderResId = R.drawable.img_default_avatar,
+        overlayContent = {
+            if (onEditAgent != null || onDeleteAgent != null) {
+                Box(modifier = Modifier.align(Alignment.BottomEnd).padding(UiConfigs.MePage.AvatarPadding)) {
+                    Box(
+                        modifier =
+                            Modifier.size(UiConfigs.MePage.AgentCardMenuButtonSize)
+                                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(UiConfigs.MePage.AgentCardMenuButtonCornerRadius))
+                                .noRippleClickable(
+                                    onClick = {
+                                        val currentTime = System.currentTimeMillis()
+                                        if (AntiClick.isValidClick(lastClickTime)) {
+                                            lastClickTime = currentTime
+                                            showMenu = true
+                                        }
                                     }
-                                }
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AsyncImage(
-                        modifier = Modifier.size(UiConfigs.MePage.AgentCardMenuIconSize),
-                        model = R.drawable.icon_more2,
-                        contentDescription = null,
-                    )
-                }
-
-                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                    onEditAgent?.let { editCallback ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = stringResource(R.string.edit_button),
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                )
-                            },
-                            onClick = {
-                                showMenu = false
-                                editCallback(agentInfo)
-                            },
+                                ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        AsyncImage(
+                            modifier = Modifier.size(UiConfigs.MePage.AgentCardMenuIconSize),
+                            model = R.drawable.icon_more2,
+                            contentDescription = null,
                         )
                     }
 
-                    onDeleteAgent?.let { deleteCallback ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = stringResource(R.string.delete_button),
-                                    color = Color.Red,
-                                    fontSize = 14.sp,
-                                )
-                            },
-                            onClick = {
-                                showMenu = false
-                                showDeleteDialog = true
-                            },
-                        )
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        onEditAgent?.let { editCallback ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = stringResource(R.string.edit_button),
+                                        color = Color.White,
+                                        fontSize = 14.sp,
+                                    )
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    editCallback(agentInfo)
+                                },
+                            )
+                        }
+
+                        onDeleteAgent?.let { deleteCallback ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = stringResource(R.string.delete_button),
+                                        color = Color.Red,
+                                        fontSize = 14.sp,
+                                    )
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    showDeleteDialog = true
+                                },
+                            )
+                        }
                     }
                 }
             }
-        }
+        },
+    )
 
         // Delete confirmation dialog
         if (showDeleteDialog) {

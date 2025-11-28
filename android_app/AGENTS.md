@@ -305,6 +305,7 @@ suspend fun login(request: LoginRequest): ApiResult<LoginResponse>
   }
   Arrangement.spacedBy(Config.ChipSpacing),
   ```
+- Explore、Me 等页面的角色卡片应统一复用 `ui/components/CharacterCard` 基础组件，只在调用处通过 `overlayContent`、`footerContent` 扩展交互或标签。
 
 ## Firebase 事件（events）
 - 与用户行为相关的事件以行为命名：
