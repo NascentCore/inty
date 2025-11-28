@@ -628,5 +628,10 @@ private fun PreviewAgentInfoScreen() {
             ),
         )
 
-    AiAgentInfoScreen(agent = agent, galleryItems = gallery) {}
+    AiAgentInfoScreen(
+        agent = agent,
+        galleryItems = gallery,
+        onBack = {},
+        onEdit = null,
+    )
 }
