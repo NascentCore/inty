@@ -30,6 +30,7 @@ python -m pytest test_character_generation.py
 - **Export Formats**: JSON and human-readable text formats
 - **Validation**: Comprehensive character validation and consistency checks
 - **Multistage Pipeline**: Optional staged generator that streams identity, introduction, role-play prompts, image blueprints, and audio profiles
+- **Multistage Pipeline**: Optional staged generator that streams identity, introduction, role-play prompts, image blueprints, and audio profiles
 
 ## Quick Start
 

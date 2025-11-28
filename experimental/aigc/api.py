@@ -1,18 +1,18 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse
-import uvicorn
 import logging
 import time
 from pathlib import Path
 
+import uvicorn
+from character_agent import CharacterAgent
 from config import Config
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse
 from models import (
     CharacterGenerationRequest,
     CharacterGenerationResponse,
     MultiStageGenerationResponse,
 )
-from character_agent import CharacterAgent
 from multistage_generator import MultiStageCharacterGenerator
 
 # Initialize FastAPI app
