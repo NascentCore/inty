@@ -87,8 +87,8 @@ import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
+import com.ai.intellimate.explore.ExploreCharacterCard
 import com.ai.intellimate.ui.UiConfigs
-import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlin.math.abs
 import kotlin.math.min
@@ -304,9 +304,8 @@ internal fun ProfilePage(
                                         key = { index, agent -> "${agent.id}_$index" },
                                     ) { index, agent ->
                                         MyAgentCard(
-                                            modifier =
-                                                Modifier.noRippleClickable { onClickAgent(agent) },
                                             agentInfo = agent,
+                                            onClickAgent = { onClickAgent(agent) },
                                             onEditAgent = onEditAgent,
                                             onDeleteAgent = onDeleteAgent,
                                         )
@@ -600,8 +599,9 @@ private fun ProfileHeader(
 
 @Composable
 private fun MyAgentCard(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     agentInfo: AgentInfo,
+    onClickAgent: () -> Unit,
     onEditAgent: ((AgentInfo) -> Unit)? = null,
     onDeleteAgent: ((AgentInfo) -> Unit)? = null,
 ) {
@@ -735,59 +735,57 @@ private fun MyAgentCard(
                 }
             }
         }
+    }
 
-        // Delete confirmation dialog
-        if (showDeleteDialog) {
-            AlertDialog(
-                onDismissRequest = { showDeleteDialog = false },
-                title = {
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.delete_character_full),
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.delete_character_confirm_full, agentInfo.name),
+                    color = Color.White,
+                    fontSize = 14.sp,
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDeleteAgent?.invoke(agentInfo)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                ) {
                     Text(
-                        text = stringResource(R.string.delete_character_full),
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                },
-                text = {
-                    Text(
-                        text =
-                            stringResource(R.string.delete_character_confirm_full, agentInfo.name),
+                        text = stringResource(R.string.delete_button),
                         color = Color.White,
                         fontSize = 14.sp,
                     )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showDeleteDialog = false
-                            onDeleteAgent?.invoke(agentInfo)
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.delete_button),
-                            color = Color.White,
-                            fontSize = 14.sp,
-                        )
-                    }
-                },
-                dismissButton = {
-                    Button(
-                        onClick = { showDeleteDialog = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.cancel_button_full),
-                            color = Color.White,
-                            fontSize = 14.sp,
-                        )
-                    }
-                },
-                containerColor = Color(0xFF2A2A2A),
-                titleContentColor = Color.White,
-                textContentColor = Color.White,
-            )
-        }
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showDeleteDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                ) {
+                    Text(
+                        text = stringResource(R.string.cancel_button_full),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                    )
+                }
+            },
+            containerColor = Color(0xFF2A2A2A),
+            titleContentColor = Color.White,
+            textContentColor = Color.White,
+        )
     }
 }
 
