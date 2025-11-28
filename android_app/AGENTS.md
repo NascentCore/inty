@@ -4,8 +4,8 @@
 
 ## 一般指示
 
-- 颜色常量应该都写入：`android_app/core/design/src/main/kotlin/ai/sxwl/android/design/theme/Color.kt`，
-  不要使用如 `0xFAB...` 之类的 RGB 颜色值
+- 颜色常亮写入 `android_app/core/design/src/main/kotlin/ai/sxwl/android/design/theme/Color.kt`，不要直接使用 Hex 值、如 `0xFAB...` 之类的 RGB 颜色值
+- 界面元素尺寸、大小写入 `android_app/app/src/main/kotlin/com/ai/intellimate/ui/ui_configs.kt`，不要直接使用数字值、如 `10.sp` `10.dp` 之类的
 - URL 定义为常量写入 `app/src/main/kotlin/com/ai/intellimate/ui/ui_configs.kt`
 - 用户可见的字符写入 `android_app/app/src/main/res/values/strings.xml`
   并以资源 ID 的形式在代码中使用

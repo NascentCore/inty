@@ -233,6 +233,8 @@ object AppColors {
     val DiscountLightBlue = Color(0xFFC1F9FD)
     val DiscountLightPurple = Color(0xFFD4AEFD)
     val DiscountBlue = Color(0xFF7B96FB)
+    val EmailLoginButtonGray = Color(0xFF241D27)
+    val EmailLoginButtonText = Color(0x99FFFFFF)
 }
 
 // endregion

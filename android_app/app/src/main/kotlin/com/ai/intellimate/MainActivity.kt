@@ -672,6 +672,7 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
                     enteredEmail = email
                     loginScreenState = LoginScreenState.LOGIN_WITH_EMAIL
                 },
+                initialEmail = enteredEmail,
             )
         }
 

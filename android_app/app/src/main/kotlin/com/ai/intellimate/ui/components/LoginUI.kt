@@ -1,6 +1,7 @@
 package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.AppColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -49,7 +50,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.BackHandler
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.UiConfigs
 import java.util.regex.Pattern
 
 /** 登录页面关闭按钮组件 */
@@ -119,12 +122,12 @@ internal fun GoogleLoginButton(isLoading: Boolean, onLoginClick: () -> Unit) {
             Image(
                 painter = painterResource(id = R.drawable.google),
                 contentDescription = stringResource(R.string.content_desc_google_login),
-                modifier = Modifier.align(Alignment.CenterStart).padding(start = 20.dp).size(24.dp),
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 20.dp).size(30.dp),
             )
             Text(
                 text = stringResource(R.string.continue_with_google),
                 color = Color.Black,
-                fontSize = 14.sp,
+                fontSize = UiConfigs.Typography.GoogleLoginButton,
                 fontWeight = FontWeight.SemiBold,
             )
             if (isLoading) {
@@ -173,8 +176,8 @@ internal fun EmailLoginButton(isLoading: Boolean, onLoginClick: () -> Unit) {
         shape = RoundedCornerShape(30.dp),
         colors =
             ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF8B5CF6),
-                disabledContainerColor = Color(0xFF8B5CF6).copy(.7f),
+                containerColor = AppColors.EmailLoginButtonGray,
+                disabledContainerColor = AppColors.EmailLoginButtonGray.copy(.7f),
             ),
         contentPadding = PaddingValues(0.dp),
         enabled = !isLoading,
@@ -182,7 +185,7 @@ internal fun EmailLoginButton(isLoading: Boolean, onLoginClick: () -> Unit) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 text = stringResource(R.string.continue_with_email),
-                color = Color.White,
+                color = AppColors.EmailLoginButtonText,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -212,8 +215,11 @@ private fun isValidEmail(email: String): Boolean {
 internal fun EnterEmailScreen(
     onBack: () -> Unit,
     onContinue: (String) -> Unit,
+    initialEmail: String = "",
 ) {
-    var email by remember { mutableStateOf("") }
+    BackHandler(enabled = true) { onBack() }
+
+    var email by remember(initialEmail) { mutableStateOf(initialEmail) }
     var emailError by remember { mutableStateOf<String?>(null) }
     val invalidEmailErrorText = stringResource(R.string.invalid_email_format)
 
@@ -231,7 +237,7 @@ internal fun EnterEmailScreen(
                     Modifier.align(Alignment.Start)
                         .size(18.dp, 18.dp)
                         .noRippleClickable { onBack() },
-                painter = painterResource(R.drawable.close),
+                painter = painterResource(R.drawable.back),
                 contentDescription = stringResource(R.string.content_desc_back),
             )
 
@@ -336,6 +342,8 @@ internal fun LoginWithEmailScreen(
     onLogin: (String, String) -> Unit,
     isLoading: Boolean = false,
 ) {
+    BackHandler(enabled = true) { onBack() }
+
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -353,7 +361,7 @@ internal fun LoginWithEmailScreen(
                     Modifier.align(Alignment.Start)
                         .size(18.dp, 18.dp)
                         .noRippleClickable { onBack() },
-                painter = painterResource(R.drawable.close),
+                painter = painterResource(R.drawable.back),
                 contentDescription = stringResource(R.string.content_desc_back),
             )
 
