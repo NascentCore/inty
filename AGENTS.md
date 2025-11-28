@@ -87,6 +87,7 @@ else:
 - 测试用例目录不应被声明为包：包含 `test_*.py` 的测试目录不要放置 `__init__.py`；但用于复用的测试辅助库目录应当作为包存在，并包含 `__init__.py`。
 - 所有正式 Python 包必须包含空的 `__init__.py`（仅用于声明包）
 - 严进向已有的 __init__.py 内添加新的代码
+- 使用 cyclopts 来暴露 scripts 命令行界面
 
 ## Android App
 
