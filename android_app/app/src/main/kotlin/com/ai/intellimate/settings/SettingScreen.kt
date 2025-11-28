@@ -96,7 +96,7 @@ fun SettingScreen(
         Column(
             modifier = Modifier.verticalScroll(scrollState).padding(innerPadding).padding(16.dp)
         ) {
-            AccountInfoSection(userId = state.userId)
+            AccountInfoSection(userId = state.userId, userEmail = state.userEmail)
 
             Spacer(Modifier.height(16.dp))
 
@@ -133,24 +133,49 @@ fun SettingScreen(
 
 /** 账号信息区域 */
 @Composable
-private fun AccountInfoSection(userId: String) {
+private fun AccountInfoSection(userId: String, userEmail: String) {
     val context = LocalContext.current
     val displayId = userId.ifBlank { stringResource(R.string.settings_user_id_unavailable) }
+    val displayEmail = userEmail.ifBlank { stringResource(R.string.settings_user_email_unavailable) }
     val userIdTitle = stringResource(R.string.settings_user_id)
-    SettingsArrowItem(
-        item =
-            SettingsItemData.CommonItemData(
-                title = userIdTitle,
-                content = displayId,
-                arrow = false,
-            ),
-        onLongClick = {
-            if (userId.isNotBlank()) {
-                ClipboardUtils.copyToClipboard(context, label = userIdTitle, text = userId)
-                ToastUtils.showShort(R.string.toast_copied_to_clipboard)
-            }
-        },
-    )
+    val userEmailTitle = stringResource(R.string.settings_user_email)
+
+    SettingsItemGroup {
+        SettingsArrowItem(
+            item =
+                SettingsItemData.CommonItemData(
+                    title = userIdTitle,
+                    content = displayId,
+                    arrow = false,
+                ),
+            isInGroup = true,
+            onLongClick = {
+                if (userId.isNotBlank()) {
+                    ClipboardUtils.copyToClipboard(context, label = userIdTitle, text = userId)
+                    ToastUtils.showShort(R.string.toast_copied_to_clipboard)
+                }
+            },
+        )
+
+        IntelliMateDivider()
+
+        SettingsArrowItem(
+            item =
+                SettingsItemData.CommonItemData(
+                    title = userEmailTitle,
+                    content = displayEmail,
+                    arrow = false,
+                ),
+            isInGroup = true,
+            selectableContent = true,
+            onLongClick = {
+                if (userEmail.isNotBlank()) {
+                    ClipboardUtils.copyToClipboard(context, label = userEmailTitle, text = userEmail)
+                    ToastUtils.showShort(R.string.toast_copied_to_clipboard)
+                }
+            },
+        )
+    }
 }
 
 /** 支持与帮助区域 */
