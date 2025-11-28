@@ -14,6 +14,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,6 +25,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 
@@ -105,6 +109,10 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
 /** 退出登录确认对话框 */
 @Composable
 fun LogoutConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    val cancelFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) { cancelFocusRequester.requestFocus() }
+
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier =
@@ -142,7 +150,11 @@ fun LogoutConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
                 )
             }
 
-            TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+            TextButton(
+                onClick = onDismiss,
+                modifier =
+                    Modifier.align(Alignment.CenterHorizontally).focusRequester(cancelFocusRequester)
+            ) {
                 Text(
                     text = stringResource(R.string.cancel),
                     fontSize = UiConfigs.Typography.Body,
