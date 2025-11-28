@@ -80,6 +80,7 @@ object UiConfigs {
         const val PrimaryButtonWidth = 0.95f
         const val DialogButtonWidth = 0.85f
         const val TextFieldCornerRadiusRatio = 0.7f
+        const val ChatPaneWidthRatio = 0.9f
     }
 
     object Alpha {
