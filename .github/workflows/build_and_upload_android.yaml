@@ -51,7 +51,7 @@ jobs:
       - name: Build release bundle and APK
         run: |
           cd android_app
-          ./gradlew bundleRelease assembleRelease --stacktrace --info
+          ./gradlew bundleRelease --stacktrace --info
 
       - id: gen-release-info
         run: |
