@@ -125,6 +125,7 @@ fun ProfileInfoScreen(
                         ),
                     isInGroup = true,
                     horizontalPadding = horizontalPadding,
+                    contentMaxLines = 1,
                     onItemClick = onClickName,
                 )
                 IntelliMateDivider()
@@ -147,6 +148,7 @@ fun ProfileInfoScreen(
                         ),
                     isInGroup = true,
                     horizontalPadding = horizontalPadding,
+                    contentMaxLines = 1,
                     onItemClick = onClickPersona,
                 )
             }
