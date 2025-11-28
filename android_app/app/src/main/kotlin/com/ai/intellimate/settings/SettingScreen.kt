@@ -105,13 +105,15 @@ fun SettingScreen(
                 isVipSubscribed = state.isVipSubscribed,
                 hasAppUpdateTips = state.hasAppUpdateTips,
                 context = context,
-                onShowDeleteDialog = { viewModel.showDeleteAccountDialog() },
             )
 
             Spacer(Modifier.height(16.dp))
 
             // 退出登录按钮
-            LogoutButton(onLogout = { onLogout(false) })
+            LogoutButton(
+                onLogout = { onLogout(false) },
+                onDeleteAccount = { viewModel.showDeleteAccountDialog() },
+            )
 
             // Debug 环境后端切换（仅 debug 可见）
             if (BuildConfig.BUILD_TYPE.equals("debug", ignoreCase = true)) {
@@ -157,7 +159,6 @@ private fun SupportAndHelpSection(
     isVipSubscribed: Boolean,
     hasAppUpdateTips: Boolean,
     context: Context,
-    onShowDeleteDialog: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
     SettingsItemGroup {
@@ -233,18 +234,6 @@ private fun SupportAndHelpSection(
                     )
                 context.startActivity(intent)
             },
-        )
-
-        IntelliMateDivider()
-
-        // 删除账号
-        SettingsArrowItem(
-            item =
-                SettingsItemData.CommonItemData(
-                    title = stringResource(R.string.settings_str_delete_account)
-                ),
-            isInGroup = true,
-            onItemClick = onShowDeleteDialog,
         )
 
         IntelliMateDivider()
