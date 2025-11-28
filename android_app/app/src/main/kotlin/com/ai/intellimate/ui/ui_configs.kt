@@ -49,6 +49,7 @@ object UiConfigs {
         val SheetTitle = 20.sp
         val Button = 16.sp
         val ButtonLarge = 18.sp
+        val GoogleLoginButton = 18.sp
         val BodyLarge = 16.sp
         val Body = 14.sp
         val Support = 13.sp

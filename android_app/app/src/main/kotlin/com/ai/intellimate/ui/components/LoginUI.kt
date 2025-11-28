@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.activity.compose.BackHandler
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.UiConfigs
 import java.util.regex.Pattern
 
 /** 登录页面关闭按钮组件 */
@@ -121,12 +122,12 @@ internal fun GoogleLoginButton(isLoading: Boolean, onLoginClick: () -> Unit) {
             Image(
                 painter = painterResource(id = R.drawable.google),
                 contentDescription = stringResource(R.string.content_desc_google_login),
-                modifier = Modifier.align(Alignment.CenterStart).padding(start = 20.dp).size(24.dp),
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 20.dp).size(30.dp),
             )
             Text(
                 text = stringResource(R.string.continue_with_google),
                 color = Color.Black,
-                fontSize = 14.sp,
+                fontSize = UiConfigs.Typography.GoogleLoginButton,
                 fontWeight = FontWeight.SemiBold,
             )
             if (isLoading) {
@@ -184,7 +185,7 @@ internal fun EmailLoginButton(isLoading: Boolean, onLoginClick: () -> Unit) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 text = stringResource(R.string.continue_with_email),
-                color = Color.White,
+                color = AppColors.EmailLoginButtonText,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
             )
