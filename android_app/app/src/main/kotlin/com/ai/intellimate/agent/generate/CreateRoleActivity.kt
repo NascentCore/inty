@@ -1288,6 +1288,33 @@ private fun AvatarUploadSection(
                         },
                     )
                 }
+                // 优先显示裁剪后的头像（如果存在），因为这是最终要使用的头像
+                croppedAvatarUrl != null -> {
+                    LogUtils.d("AvatarUploadSection: Displaying cropped avatar with URL: $croppedAvatarUrl")
+
+                    val previewUrl =
+                        getCdnImageUrl(
+                            croppedAvatarUrl,
+                            width = Config.TextToImage.Preview.WIDTH,
+                            quality = Config.TextToImage.Preview.QUALITY,
+                        )
+                    AsyncImage(
+                        model = previewUrl ?: croppedAvatarUrl,
+                        contentDescription = stringResource(R.string.content_desc_generated_avatar),
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop,
+                        onSuccess = {
+                            LogUtils.d(
+                                "AvatarUploadSection: Cropped avatar image loaded successfully: $croppedAvatarUrl, preview: $previewUrl"
+                            )
+                        },
+                        onError = {
+                            LogUtils.e(
+                                "AvatarUploadSection: Failed to load cropped avatar image: $croppedAvatarUrl"
+                            )
+                        },
+                    )
+                }
                 // 单选模式：单个头像（编辑模式/用户上传/AI生成单个头像）
                 avatarUrl != null -> {
                     LogUtils.d("AvatarUploadSection: Displaying single avatar with URL: $avatarUrl")

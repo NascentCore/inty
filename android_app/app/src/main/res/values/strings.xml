@@ -262,7 +262,7 @@
     <string name="gender_unmodified_full">Gender (Unmodified after Creation) *</string>
     <string name="male_full">Male</string>
     <string name="female_full">Female</string>
-    <string name="non_binary_full">Non-Binary</string>
+    <string name="non_binary_full">They/Them</string>
     <string name="music_note_symbol">🎵</string>
     <string name="sound_required_full">Sound *</string>
     <string name="inty_voice_option_full">Inty Voice</string>
