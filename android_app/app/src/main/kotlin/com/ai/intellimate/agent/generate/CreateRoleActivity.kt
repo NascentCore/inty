@@ -1231,11 +1231,11 @@ private fun AvatarUploadSection(
     onUploadFromGallery: () -> Unit = {},
 ) {
     val isEmpty = avatarUrls.isEmpty() && avatarUrl == null
-    Column(modifier = Modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier =
                 Modifier.then(
-                        if (isEmpty) Modifier.size(200.dp)
+                        if (isEmpty) Modifier.fillMaxWidth().height(200.dp)
                         else Modifier.fillMaxWidth().aspectRatio(9.div(16f))
                     )
                     .let { modifier ->
