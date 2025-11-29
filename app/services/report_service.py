@@ -33,13 +33,21 @@ async def create_report(
         reason_map = {r.id: r.code for r in reason_result.scalars().all()}
         # 将 reason_ids 转换为 reason_codes，如果 reason_codes 未提供则使用转换后的
         if not reason_codes:
-            reason_codes = [reason_map.get(rid, "") for rid in report_in.reason_ids]
+            # 验证所有 reason_ids 都存在，如果不存在则抛出错误
+            missing_ids = [rid for rid in report_in.reason_ids if rid not in reason_map]
+            if missing_ids:
+                raise ValueError(
+                    f"Invalid reason_ids: {missing_ids}. These reason IDs do not exist."
+                )
+            reason_codes = [reason_map[rid] for rid in report_in.reason_ids]
         # 为了向后兼容，仍然保存 reason_ids
         reason_ids = report_in.reason_ids
 
-    # 验证至少提供了 reason_codes 或 reason_ids
-    if not reason_codes:
-        raise ValueError("Either reason_codes or reason_ids must be provided")
+    # 验证至少提供了 reason_codes 或 reason_ids，且 reason_codes 包含至少一个非空值
+    if not reason_codes or not any(reason_codes):
+        raise ValueError(
+            "Either reason_codes or reason_ids must be provided, and reason_codes must contain at least one non-empty value"
+        )
 
     # 如果 report_type 为 None，则存储为 None（数据库为 NULL），业务逻辑中视为 REPORT
     report = Report(
@@ -109,8 +117,15 @@ async def query_reports(db: AsyncSession, query: ReportQuery):
             if not item.reason_codes and item.reason_ids:
                 item.reason_codes = [reason_map.get(rid, "") for rid in item.reason_ids]
 
-    # 如果 report_type 为 None，在序列化时视为 "REPORT"
+    # 确保所有字段在序列化前都是正确的类型（处理 None 值）
     for item in items:
+        # 确保 reason_ids 是列表（不能是 None）
+        if item.reason_ids is None:
+            item.reason_ids = []
+        # 确保 reason_codes 是列表（不能是 None）
+        if item.reason_codes is None:
+            item.reason_codes = []
+        # 如果 report_type 为 None，在序列化时视为 "REPORT"
         if item.report_type is None:
             item.report_type = ReportType.REPORT
 
