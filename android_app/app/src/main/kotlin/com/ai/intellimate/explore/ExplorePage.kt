@@ -46,6 +46,8 @@ fun ExplorePage(
     innerPadding: PaddingValues,
     onClickAgent: (AgentInfo) -> Unit,
     viewModel: ExploreViewModel = viewModel(),
+    /** 外部重置信号（来自底部导航栏双击），当值变化时触发滚动到顶部并刷新 */
+    externalResetSignal: Int = 0,
 ) {
     val context = LocalContext.current
 
@@ -68,9 +70,6 @@ fun ExplorePage(
     // 初始化图片尺寸缓存管理器和图片预加载管理器
     LaunchedEffect(Unit) { ImagePreloadManager.init(context) }
 
-    // 初始化Paging数据
-    LaunchedEffect(Unit) { viewModel.initializePagingData() }
-
     Box(modifier = modifier) {
         AsyncImage(
             modifier = Modifier.align(Alignment.TopEnd),
@@ -89,7 +88,6 @@ fun ExplorePage(
                         alignment = Alignment.CenterStart,
                     )
                 },
-                modifier = Modifier,
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
 
@@ -175,6 +173,8 @@ fun ExplorePage(
                     onClickAgent = onClickAgent,
                     isRefreshing = isRefreshing,
                     onRetry = { viewModel.refreshRecommendAgents() },
+                    viewModel = viewModel,
+                    resetToTopSignal = externalResetSignal,
                 )
             }
         }
