@@ -19,13 +19,36 @@ async def create_report(
     db: AsyncSession, report_in: ReportCreate, reporter_id: str
 ) -> Report:
     report_id = get_new_report_id()
+
+    # 处理 reason_codes 和向后兼容的 reason_ids
+    reason_codes = report_in.reason_codes
+    reason_ids = []
+
+    # 如果提供了 reason_ids（向后兼容），转换为 reason_codes
+    if report_in.reason_ids:
+        reason_stmt = select(ReportReason).where(
+            ReportReason.id.in_(report_in.reason_ids)
+        )
+        reason_result = await db.execute(reason_stmt)
+        reason_map = {r.id: r.code for r in reason_result.scalars().all()}
+        # 将 reason_ids 转换为 reason_codes，如果 reason_codes 未提供则使用转换后的
+        if not reason_codes:
+            reason_codes = [reason_map.get(rid, "") for rid in report_in.reason_ids]
+        # 为了向后兼容，仍然保存 reason_ids
+        reason_ids = report_in.reason_ids
+
+    # 验证至少提供了 reason_codes 或 reason_ids
+    if not reason_codes:
+        raise ValueError("Either reason_codes or reason_ids must be provided")
+
     # 如果 report_type 为 None，则存储为 None（数据库为 NULL），业务逻辑中视为 REPORT
     report = Report(
         id=report_id,
         target_id=report_in.target_id,
         target_type=report_in.target_type,
         reporter_id=reporter_id,
-        reason_ids=report_in.reason_ids,
+        reason_ids=reason_ids or [],  # 向后兼容，如果只有 reason_codes 则为空列表
+        reason_codes=reason_codes,
         image_urls=report_in.image_urls or [],
         description=report_in.description,
         report_type=report_in.report_type,
@@ -38,8 +61,12 @@ async def create_report(
 
 async def query_reports(db: AsyncSession, query: ReportQuery):
     filters = []
+    # DEPRECATED: 支持通过 reason_ids 查询（向后兼容）
     if query.reason_ids:
         filters.append(Report.reason_ids.overlap(query.reason_ids))
+    # 支持通过 reason_codes 查询
+    if query.reason_codes:
+        filters.append(Report.reason_codes.overlap(query.reason_codes))
     if query.target_id:
         filters.append(Report.target_id == query.target_id)
     if query.target_type:
@@ -67,18 +94,23 @@ async def query_reports(db: AsyncSession, query: ReportQuery):
     result = await db.execute(stmt)
     items = result.scalars().all()
 
-    # reason_ids 转 reason_codes
+    # 确保 reason_codes 存在（向后兼容：如果只有 reason_ids，转换为 reason_codes）
     all_reason_ids = set()
     for item in items:
-        all_reason_ids.update(item.reason_ids)
-    reason_map = {}
+        if item.reason_ids:
+            all_reason_ids.update(item.reason_ids)
+
     if all_reason_ids:
         reason_stmt = select(ReportReason).where(ReportReason.id.in_(all_reason_ids))
         reason_result = await db.execute(reason_stmt)
         reason_map = {r.id: r.code for r in reason_result.scalars().all()}
+        for item in items:
+            # 如果 reason_codes 为空但 reason_ids 存在，从 reason_ids 转换
+            if not item.reason_codes and item.reason_ids:
+                item.reason_codes = [reason_map.get(rid, "") for rid in item.reason_ids]
+
+    # 如果 report_type 为 None，在序列化时视为 "REPORT"
     for item in items:
-        item.reason_codes = [reason_map.get(rid, "") for rid in item.reason_ids]
-        # 如果 report_type 为 None，在序列化时视为 "REPORT"
         if item.report_type is None:
             item.report_type = ReportType.REPORT
 

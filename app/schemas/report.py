@@ -26,7 +26,10 @@ class TargetType(str, Enum):
 class ReportCreate(BaseModel):
     target_id: str
     target_type: TargetType
-    reason_ids: List[int]
+    reason_ids: Optional[List[int]] = None  # DEPRECATED: 使用 reason_codes 代替
+    reason_codes: Optional[List[str]] = (
+        None  # 如果未提供且提供了 reason_ids，将从 reason_ids 转换
+    )
     image_urls: Optional[List[str]] = []
     description: Optional[str] = None
     request_id: Optional[str] = None
@@ -34,7 +37,8 @@ class ReportCreate(BaseModel):
 
 
 class ReportQuery(BaseModel):
-    reason_ids: Optional[List[int]] = None
+    reason_ids: Optional[List[int]] = None  # DEPRECATED: 使用 reason_codes 代替
+    reason_codes: Optional[List[str]] = None
     target_id: Optional[str] = None
     target_type: Optional[TargetType] = None
     status: Optional[ReportStatus] = None
@@ -49,7 +53,7 @@ class ReportOut(BaseModel):
     target_id: str
     target_type: str
     reporter_id: str
-    reason_ids: List[int]
+    reason_ids: List[int]  # DEPRECATED: 使用 reason_codes 代替
     reason_codes: List[str]
     image_urls: List[str]
     description: Optional[str]
