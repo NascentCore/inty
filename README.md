@@ -53,6 +53,11 @@ git submodule update --init --recursive
 
 更新子模块使用 [update_inty_sdk_submodule.sh](update_inty_sdk_submodule.sh)
 
+### 相关链接
+
+1. [Figma 设计稿](https://www.figma.com/design/ASvjVuWFM13S3u5GdIJlTL/HeartMate?node-id=0-1&p=f&t=nxD7Qrq5d8fZXSYl-0)
+2. [飞书需求池文档](https://tricorder.feishu.cn/wiki/Vx8zwSRiwigRUlkOyF5czkmdnDg?table=tblrLV9XLqUmPBu8&view=vewP2B92zv)
+
 ## 使用 Docker 容器本地运行后端服务和 Android app（适用于 app 开发者）
 
 1. 访问 <https://docs.docker.com/desktop/setup/install/mac-install/> 安装 Docker Desktop。
