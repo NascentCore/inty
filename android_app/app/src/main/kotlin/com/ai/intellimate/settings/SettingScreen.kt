@@ -9,6 +9,7 @@ import ai.sxwl.android.design.ui.SettingsItemData
 import ai.sxwl.android.design.ui.SettingsItemGroup
 import ai.sxwl.android.utils.ClipboardUtils
 import ai.sxwl.android.utils.ToastUtils
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
@@ -23,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -33,13 +35,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.DeleteAccountDialog
+import com.ai.intellimate.ui.components.LogoutConfirmDialog
 import com.ai.intellimate.vip.SubsManageActivity
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlinx.coroutines.flow.collectLatest
 
-private const val HELP_CENTER_URL =
-    "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
+private const val GOOGLE_PLAY_APP_URL_PREFIX = "https://play.google.com/store/apps/details?id="
+private const val GOOGLE_PLAY_MARKET_URL_PREFIX = "market://details?id="
 
 /** 设置页面主内容 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -94,7 +98,7 @@ fun SettingScreen(
         Column(
             modifier = Modifier.verticalScroll(scrollState).padding(innerPadding).padding(16.dp)
         ) {
-            AccountInfoSection(userId = state.userId)
+            AccountInfoSection(userId = state.userId, userEmail = state.userEmail)
 
             Spacer(Modifier.height(16.dp))
 
@@ -103,13 +107,15 @@ fun SettingScreen(
                 isVipSubscribed = state.isVipSubscribed,
                 hasAppUpdateTips = state.hasAppUpdateTips,
                 context = context,
-                onShowDeleteDialog = { viewModel.showDeleteAccountDialog() },
             )
 
             Spacer(Modifier.height(16.dp))
 
             // 退出登录按钮
-            LogoutButton(onLogout = { onLogout(false) })
+            LogoutButton(
+                onLogout = { viewModel.showLogoutConfirmDialog() },
+                onDeleteAccount = { viewModel.showDeleteAccountDialog() },
+            )
 
             // Debug 环境后端切换（仅 debug 可见）
             if (BuildConfig.BUILD_TYPE.equals("debug", ignoreCase = true)) {
@@ -122,6 +128,11 @@ fun SettingScreen(
                 dialogState = state.dialogState,
                 onHideDeleteDialog = { viewModel.hideDeleteAccountDialog() },
                 onConfirmDelete = { viewModel.deleteUserAccount() },
+                onHideLogoutDialog = { viewModel.hideLogoutConfirmDialog() },
+                onConfirmLogout = {
+                    viewModel.hideLogoutConfirmDialog()
+                    onLogout(false)
+                },
             )
         }
     }
@@ -129,24 +140,49 @@ fun SettingScreen(
 
 /** 账号信息区域 */
 @Composable
-private fun AccountInfoSection(userId: String) {
+private fun AccountInfoSection(userId: String, userEmail: String) {
     val context = LocalContext.current
     val displayId = userId.ifBlank { stringResource(R.string.settings_user_id_unavailable) }
+    val displayEmail = userEmail.ifBlank { stringResource(R.string.settings_user_email_unavailable) }
     val userIdTitle = stringResource(R.string.settings_user_id)
-    SettingsArrowItem(
-        item =
-            SettingsItemData.CommonItemData(
-                title = userIdTitle,
-                content = displayId,
-                arrow = false,
-            ),
-        onLongClick = {
-            if (userId.isNotBlank()) {
-                ClipboardUtils.copyToClipboard(context, label = userIdTitle, text = userId)
-                ToastUtils.showShort(R.string.toast_copied_to_clipboard)
-            }
-        },
-    )
+    val userEmailTitle = stringResource(R.string.settings_user_email)
+
+    SettingsItemGroup {
+        SettingsArrowItem(
+            item =
+                SettingsItemData.CommonItemData(
+                    title = userIdTitle,
+                    content = displayId,
+                    arrow = false,
+                ),
+            isInGroup = true,
+            onLongClick = {
+                if (userId.isNotBlank()) {
+                    ClipboardUtils.copyToClipboard(context, label = userIdTitle, text = userId)
+                    ToastUtils.showShort(R.string.toast_copied_to_clipboard)
+                }
+            },
+        )
+
+        IntelliMateDivider()
+
+        SettingsArrowItem(
+            item =
+                SettingsItemData.CommonItemData(
+                    title = userEmailTitle,
+                    content = displayEmail,
+                    arrow = false,
+                ),
+            isInGroup = true,
+            selectableContent = true,
+            onLongClick = {
+                if (userEmail.isNotBlank()) {
+                    ClipboardUtils.copyToClipboard(context, label = userEmailTitle, text = userEmail)
+                    ToastUtils.showShort(R.string.toast_copied_to_clipboard)
+                }
+            },
+        )
+    }
 }
 
 /** 支持与帮助区域 */
@@ -155,7 +191,6 @@ private fun SupportAndHelpSection(
     isVipSubscribed: Boolean,
     hasAppUpdateTips: Boolean,
     context: Context,
-    onShowDeleteDialog: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
     SettingsItemGroup {
@@ -178,7 +213,7 @@ private fun SupportAndHelpSection(
             item = SettingsItemData.CommonItemData(title = stringResource(R.string.settings_help)),
             isInGroup = true,
             onItemClick = {
-                runCatching { uriHandler.openUri(HELP_CENTER_URL) }
+                runCatching { uriHandler.openUri(UiConfigs.Urls.HelpCenter) }
                     .onFailure { ToastUtils.showShort(R.string.toast_navigation_failed) }
             },
         )
@@ -243,18 +278,6 @@ private fun SupportAndHelpSection(
 
         IntelliMateDivider()
 
-        // 删除账号
-        SettingsArrowItem(
-            item =
-                SettingsItemData.CommonItemData(
-                    title = stringResource(R.string.settings_str_delete_account)
-                ),
-            isInGroup = true,
-            onItemClick = onShowDeleteDialog,
-        )
-
-        IntelliMateDivider()
-
         // 订阅管理
         val subscriptionTitle =
             if (isVipSubscribed) {
@@ -277,6 +300,7 @@ private fun SupportAndHelpSection(
         IntelliMateDivider()
 
         // 版本号
+        val defaultPlayStoreUrl = rememberUpdatedPlayStoreUrl()
         SettingsArrowItem(
             item =
                 SettingsItemData.CommonItemData(
@@ -296,11 +320,61 @@ private fun SupportAndHelpSection(
             showRedDot = hasAppUpdateTips,
             onItemClick = {
                 runCatching {
-                    val url = IntySetting.appGooglePlayUrl()
-                    if (url.isNotBlank()) uriHandler.openUri(url)
+                        val url = IntySetting.appGooglePlayUrl().ifBlank { defaultPlayStoreUrl }
+                        uriHandler.openUri(url)
+                    }
+                    .onFailure { ToastUtils.showShort(R.string.toast_google_play_unavailable) }
+            },
+        )
+
+        IntelliMateDivider()
+
+        // Rate us
+        SettingsArrowItem(
+            item =
+                SettingsItemData.CommonItemData(
+                    title = stringResource(R.string.settings_rate_us),
+                    arrow = true,
+                ),
+            isInGroup = true,
+            onItemClick = {
+                val fallbackUrl = IntySetting.appGooglePlayUrl().ifBlank { defaultPlayStoreUrl }
+                if (!openRateUsPage(context = context, fallbackUrl = fallbackUrl)) {
+                    ToastUtils.showShort(R.string.toast_google_play_unavailable)
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun rememberUpdatedPlayStoreUrl(): String {
+    val packageName = BuildConfig.APPLICATION_ID
+    return remember(packageName) { "$GOOGLE_PLAY_APP_URL_PREFIX$packageName" }
+}
+
+/** 打开 Google Play 评价 */
+private fun openRateUsPage(context: Context, fallbackUrl: String): Boolean {
+    val packageName = BuildConfig.APPLICATION_ID
+    val marketUri = "$GOOGLE_PLAY_MARKET_URL_PREFIX$packageName".toUri()
+    val marketIntent =
+        Intent(Intent.ACTION_VIEW, marketUri).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
+        }
+
+    return try {
+        context.startActivity(marketIntent)
+        true
+    } catch (marketError: ActivityNotFoundException) {
+        runCatching {
+            val webIntent =
+                Intent(Intent.ACTION_VIEW, fallbackUrl.toUri()).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
+                }
+            context.startActivity(webIntent)
+        }.isSuccess
+    } catch (error: Exception) {
+        false
     }
 }
 
@@ -310,10 +384,17 @@ private fun SettingDialogs(
     dialogState: DialogState,
     onHideDeleteDialog: () -> Unit,
     onConfirmDelete: () -> Unit,
+    onHideLogoutDialog: () -> Unit,
+    onConfirmLogout: () -> Unit,
 ) {
     // 删除账号对话框
     if (dialogState.showDeleteAccountDialog) {
         DeleteAccountDialog(onDismiss = onHideDeleteDialog, onConfirm = onConfirmDelete)
+    }
+
+    // 退出登录对话框
+    if (dialogState.showLogoutConfirmDialog) {
+        LogoutConfirmDialog(onDismiss = onHideLogoutDialog, onConfirm = onConfirmLogout)
     }
 }
 
