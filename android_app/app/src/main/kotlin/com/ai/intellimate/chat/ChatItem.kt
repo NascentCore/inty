@@ -220,7 +220,7 @@ private fun ChatItemAI(
                                     horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
                                     vertical = UiConfigs.ChatMessagePane.PaddingVertical,
                                 )
-                                .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
+                                .widthIn(min = 1.dp)
                     ) {
                         LoadingAnimation()
                     }
