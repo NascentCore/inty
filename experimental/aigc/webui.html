@@ -1,0 +1,400 @@
+<!-- CREATED_BY_AGENT -->
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Character Multistage Lab</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Inter", "PingFang SC", system-ui, -apple-system, sans-serif;
+        --border: rgba(255, 255, 255, 0.12);
+        --bg-card: rgba(20, 20, 20, 0.8);
+        --bg-body: #050510;
+        --accent: #8be9fd;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at top, #1a1a3a, #050510 60%);
+        color: #f6f6f6;
+        padding: 32px 16px 64px;
+        display: flex;
+        justify-content: center;
+      }
+
+      main {
+        width: min(1100px, 100%);
+        display: grid;
+        gap: 24px;
+      }
+
+      header h1 {
+        margin: 0 0 8px;
+        font-size: clamp(28px, 3vw, 42px);
+        letter-spacing: 0.03em;
+      }
+
+      header p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px clamp(20px, 4vw, 32px);
+        background: var(--bg-card);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      }
+
+      form {
+        display: grid;
+        gap: 16px;
+      }
+
+      label {
+        font-size: 14px;
+        font-weight: 600;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      input,
+      select,
+      textarea {
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: rgba(0, 0, 0, 0.35);
+        color: inherit;
+        padding: 12px;
+        font-size: 15px;
+        font-family: inherit;
+        outline: none;
+        transition: border 0.2s;
+      }
+
+      textarea {
+        min-height: 90px;
+        resize: vertical;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: var(--accent);
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      @media (min-width: 640px) {
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 14px 20px;
+        font-size: 16px;
+        font-weight: 600;
+        background: linear-gradient(120deg, #8be9fd, #bd93f9);
+        color: #050510;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 30px rgba(141, 147, 249, 0.35);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      #status {
+        min-height: 24px;
+        font-size: 14px;
+        color: var(--accent);
+      }
+
+      section h2 {
+        margin: 0 0 8px;
+        font-size: 20px;
+      }
+
+      section p,
+      section li {
+        margin: 4px 0;
+        color: rgba(255, 255, 255, 0.85);
+      }
+
+      .tag {
+        display: inline-block;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 3px 10px;
+        font-size: 12px;
+        margin: 4px 8px 4px 0;
+      }
+
+      .prompt {
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 12px 14px;
+        margin: 12px 0;
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .stages {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .stage-pill {
+        border-radius: 999px;
+        padding: 6px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 13px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <header>
+        <h1>AI Character Multistage Lab</h1>
+        <p>本地浏览器体验：生成名字、介绍、角色扮演提示、图片与音频模板。</p>
+      </header>
+
+      <div class="card">
+        <form id="character-form">
+          <label>
+            人物简述
+            <textarea
+              name="brief_description"
+              placeholder="例如：一位在浮空都市演奏的霓虹钢琴师"
+              required
+            ></textarea>
+          </label>
+
+          <div class="grid">
+            <label>
+              类型
+              <select name="genre">
+                <option value="fantasy">fantasy</option>
+                <option value="sci-fi">sci-fi</option>
+                <option value="mystery">mystery</option>
+                <option value="romance">romance</option>
+                <option value="adventure">adventure</option>
+                <option value="slice_of_life">slice_of_life</option>
+                <option value="horror">horror</option>
+              </select>
+            </label>
+
+            <label>
+              气质
+              <select name="tone">
+                <option value="neutral">neutral</option>
+                <option value="serious">serious</option>
+                <option value="humorous">humorous</option>
+                <option value="mysterious">mysterious</option>
+                <option value="edgy">edgy</option>
+                <option value="cheerful">cheerful</option>
+                <option value="wise">wise</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="grid">
+            <label>
+              图片风格
+              <select name="image_style">
+                <option value="realistic">realistic</option>
+                <option value="fantasy_art">fantasy_art</option>
+                <option value="anime">anime</option>
+                <option value="cyberpunk">cyberpunk</option>
+                <option value="cartoon">cartoon</option>
+                <option value="painting">painting</option>
+              </select>
+            </label>
+
+            <label>
+              图片数量
+              <input
+                name="num_images"
+                type="number"
+                min="3"
+                max="6"
+                value="4"
+              />
+            </label>
+          </div>
+
+          <button type="submit">生成角色</button>
+          <div id="status"></div>
+        </form>
+      </div>
+
+      <div id="result" class="card" hidden>
+        <div class="stages" id="stage-pills"></div>
+        <section>
+          <h2 id="identity-name"></h2>
+          <p id="identity-vibe"></p>
+          <div id="identity-traits"></div>
+        </section>
+
+        <section>
+          <h2>介绍</h2>
+          <p id="intro-pitch"></p>
+          <p id="intro-detail"></p>
+          <h3>关系钩子</h3>
+          <ul id="intro-hooks"></ul>
+          <h3>边界</h3>
+          <ul id="intro-boundaries"></ul>
+        </section>
+
+        <section>
+          <h2>角色扮演提示</h2>
+          <div id="roleplay-prompts"></div>
+        </section>
+
+        <section>
+          <h2>图片提示</h2>
+          <div id="image-prompts"></div>
+        </section>
+
+        <section>
+          <h2>音频人设</h2>
+          <p id="audio-summary"></p>
+          <ul id="audio-lines"></ul>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const form = document.getElementById("character-form");
+      const statusEl = document.getElementById("status");
+      const resultCard = document.getElementById("result");
+
+      const stagePills = document.getElementById("stage-pills");
+      const identityName = document.getElementById("identity-name");
+      const identityVibe = document.getElementById("identity-vibe");
+      const identityTraits = document.getElementById("identity-traits");
+      const introPitch = document.getElementById("intro-pitch");
+      const introDetail = document.getElementById("intro-detail");
+      const introHooks = document.getElementById("intro-hooks");
+      const introBoundaries = document.getElementById("intro-boundaries");
+      const roleplayPrompts = document.getElementById("roleplay-prompts");
+      const imagePrompts = document.getElementById("image-prompts");
+      const audioSummary = document.getElementById("audio-summary");
+      const audioLines = document.getElementById("audio-lines");
+
+      const setStatus = (message, isError = false) => {
+        statusEl.textContent = message;
+        statusEl.style.color = isError ? "#ff79c6" : "var(--accent)";
+      };
+
+      const listToHTML = (items) =>
+        items.map((item) => `<li>${item}</li>`).join("");
+
+      const renderPayload = (payload, stages) => {
+        resultCard.hidden = false;
+        stagePills.innerHTML = stages
+          .map(
+            (stage) =>
+              `<span class="stage-pill">${stage.title} · ${stage.status}</span>`
+          )
+          .join("");
+
+        identityName.textContent = `${payload.identity.name} (${payload.identity.alias})`;
+        identityVibe.textContent = `${payload.identity.archetype} · ${payload.identity.vibe}`;
+        identityTraits.innerHTML = payload.identity.key_traits
+          .map((trait) => `<span class="tag">${trait}</span>`)
+          .join("");
+
+        introPitch.textContent = payload.introduction.elevator_pitch;
+        introDetail.textContent = payload.introduction.detailed_introduction;
+        introHooks.innerHTML = listToHTML(payload.introduction.relationship_hooks);
+        introBoundaries.innerHTML = listToHTML(payload.introduction.boundaries);
+
+        roleplayPrompts.innerHTML = payload.roleplay_prompts
+          .map(
+            (prompt) => `
+              <div class="prompt">
+                <strong>${prompt.title}</strong>
+                <p>${prompt.prompt}</p>
+                <p><em>${prompt.sample_dialogue}</em></p>
+                <div>${prompt.tags
+                  .map((tag) => `<span class="tag">${tag}</span>`)
+                  .join("")}</div>
+              </div>
+            `
+          )
+          .join("");
+
+        imagePrompts.innerHTML = payload.image_prompts
+          .map(
+            (img) => `
+              <div class="prompt">
+                <strong>${img.title}</strong>
+                <p>${img.prompt}</p>
+                <p>风格：${img.style} · 机位：${img.camera}</p>
+                <p>光线：${img.lighting} · 配色：${img.color_palette}</p>
+              </div>
+            `
+          )
+          .join("");
+
+        audioSummary.textContent = `${payload.audio_profile.archetype} · ${payload.audio_profile.accent} · ${payload.audio_profile.timbre}`;
+        audioLines.innerHTML = listToHTML(payload.audio_profile.sample_lines);
+      };
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        resultCard.hidden = true;
+
+        const formData = new FormData(form);
+        const payload = Object.fromEntries(formData.entries());
+        payload.num_images = Number(payload.num_images);
+
+        setStatus("正在生成角色，请稍候…");
+        form.querySelector("button").disabled = true;
+
+        try {
+          const response = await fetch("/generate/multistage", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await response.json();
+          if (!response.ok || !data.success) {
+            throw new Error(data.detail || data.error || "生成失败");
+          }
+
+          renderPayload(data.payload, data.stages);
+          setStatus(`完成，用时 ${data.generation_time.toFixed(2)} 秒`);
+        } catch (error) {
+          console.error(error);
+          setStatus(error.message || "生成失败", true);
+        } finally {
+          form.querySelector("button").disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
