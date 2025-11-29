@@ -47,6 +47,12 @@ class TestClient:
         if not self.token:
             return
 
+        # Try to clean up agents created during the test run BEFORE deleting user
+        # This is important because deleting user may invalidate the token
+        for agent_id in list(self._created_agents):
+            self.delete_agent(agent_id)
+        self._created_agents.clear()
+
         headers = {"Authorization": f"Bearer {self.token}"}
         response = self.client.post(
             f"{self.base_url}/api/v1/users/delete-account",
@@ -59,11 +65,6 @@ class TestClient:
                 response.text,
             )
             return
-
-        # Try to clean up agents created during the test run
-        for agent_id in list(self._created_agents):
-            self.delete_agent(agent_id)
-        self._created_agents.clear()
 
     def create_agent(
         self,

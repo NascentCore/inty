@@ -7,7 +7,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, WEB_APP_TAG, NOT_USED_TAG
+from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, NOT_USED_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import get_async_db
@@ -109,7 +109,10 @@ async def create_report(
     tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def list_reports(
-    reason_ids: Optional[List[int]] = Query(None),
+    reason_ids: Optional[List[int]] = Query(
+        None, deprecated=True
+    ),  # DEPRECATED: 使用 reason_codes 代替
+    reason_codes: Optional[List[str]] = Query(None),
     target_id: Optional[str] = None,
     target_type: Optional[TargetType] = None,
     status: Optional[ReportStatus] = None,
@@ -126,6 +129,7 @@ async def list_reports(
         skip = (page - 1) * page_size
         query = ReportQuery(
             reason_ids=reason_ids,
+            reason_codes=reason_codes,
             target_id=target_id,
             target_type=target_type,
             status=status,
