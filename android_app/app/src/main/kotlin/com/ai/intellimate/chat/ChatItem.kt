@@ -456,7 +456,7 @@ private fun ChatItemUser(item: MsgInfo) {
             }
         }
     }
-    // 如果渲染失败，显示空消息气泡
+    // 如果渲染失败，显示空消息气泡；应无可能发生，仅作为保守的兜底处理。
     .onFailure { e ->
         Row(
             modifier = Modifier.fillMaxWidth(),
