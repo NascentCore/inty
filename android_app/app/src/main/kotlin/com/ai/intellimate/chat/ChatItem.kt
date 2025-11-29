@@ -206,18 +206,10 @@ private fun ChatItemAI(
                         if (timestampText != null) {
                             ChatMessageTimestamp(
                                 timestampText = timestampText,
-                                modifier = Modifier.weight(1f),
                                 textAlign = TextAlign.Start,
                             )
                         }
                     }
-                } else if (timestampText != null) {
-                    // Show timestamp even when there's no content/audio
-                    ChatMessageTimestamp(
-                        timestampText = timestampText,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Start,
-                    )
                 }
                 val msgShape =
                     if (item.content.isNotEmpty() && item.content != "loading_animation")
