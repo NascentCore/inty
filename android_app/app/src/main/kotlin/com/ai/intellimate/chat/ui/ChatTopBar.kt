@@ -35,6 +35,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.info.AgentInfoActivity
+import com.ai.intellimate.ui.UiConfigs
 import kotlinx.coroutines.launch
 
 private const val CHAT_TOP_BAR_AVATAR_SIZE = 30
@@ -120,26 +121,28 @@ fun ChatTopBar(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Box(
-            modifier =
-                Modifier
-                    .size(avatarWidth)
-                    .clip(CircleShape)
-                    .background(color = CHAT_TOP_BAR_BACKGROUND_COLOR)
-                    .noRippleClickable {
-                        ToastUtils.showShort(R.string.str_remix_feature_under_construction)
-                    },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                modifier = Modifier.size(REMIX_ICON_SIZE.dp),
-                imageVector = Icons.Rounded.AutoAwesome,
-                contentDescription = null,
-                tint = Color.White,
-            )
-        }
+        if (UiConfigs.ChatPage.ENABLE_REMIX) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(avatarWidth)
+                        .clip(CircleShape)
+                        .background(color = CHAT_TOP_BAR_BACKGROUND_COLOR)
+                        .noRippleClickable {
+                            ToastUtils.showShort(R.string.str_remix_feature_under_construction)
+                        },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    modifier = Modifier.size(REMIX_ICON_SIZE.dp),
+                    imageVector = Icons.Rounded.AutoAwesome,
+                    contentDescription = null,
+                    tint = Color.White,
+                )
+            }
 
-        Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+        }
 
         Box(
             modifier =
