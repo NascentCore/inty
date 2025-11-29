@@ -3,16 +3,11 @@ import time
 from pathlib import Path
 
 import uvicorn
-from character_agent import CharacterAgent
 from config import Config
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
-from models import (
-    CharacterGenerationRequest,
-    CharacterGenerationResponse,
-    MultiStageGenerationResponse,
-)
+from models import CharacterGenerationRequest, MultiStageGenerationResponse
 from multistage_generator import MultiStageCharacterGenerator
 
 # Initialize FastAPI app
@@ -31,8 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize character agent
-character_agent = None
+# Initialize multistage generator
 multistage_generator = None
 logger = logging.getLogger(__name__)
 WEBUI_PATH = Path(__file__).with_name("webui.html")
@@ -41,18 +35,13 @@ WEBUI_PATH = Path(__file__).with_name("webui.html")
 @app.on_event("startup")
 async def startup_event():
     """Validate configuration on startup"""
-    global character_agent, multistage_generator
+    global multistage_generator
 
     logger.info("Starting AI Character Generator API...")
 
     try:
         Config.validate()
         logger.info("✅ Configuration validated successfully")
-
-        # Initialize character agent
-        logger.info("Initializing Character Agent...")
-        character_agent = CharacterAgent()
-        logger.info("✅ Character Agent initialized successfully")
 
         logger.info("Initializing Multistage Character Generator...")
         multistage_generator = MultiStageCharacterGenerator()
@@ -103,7 +92,7 @@ async def root():
         "message": "AI Character Generator API",
         "version": "1.0.0",
         "endpoints": {
-            "generate_character": "/generate",
+            "multistage_generate": "/generate/multistage",
             "multistage_ui": "/ui",
             "health": "/health",
             "docs": "/docs",
@@ -116,45 +105,6 @@ async def health_check():
     """Health check endpoint"""
     logger.debug("Health check requested")
     return {"status": "healthy", "service": "ai-character-generator"}
-
-
-@app.post("/generate", response_model=CharacterGenerationResponse)
-async def generate_character(request: CharacterGenerationRequest):
-    """Generate a complete character profile"""
-
-    logger.info(f"📝 Character generation request received")
-    logger.info(f"Description: {request.brief_description}")
-    logger.debug(f"Genre: {request.genre}, Tone: {request.tone}")
-    logger.debug(
-        f"Image style: {request.image_style}, Num images: {request.num_images}"
-    )
-
-    if character_agent is None:
-        logger.error("Character agent not initialized")
-        raise HTTPException(status_code=500, detail="Character agent not initialized")
-
-    try:
-        # Generate character using the agent
-        logger.info("Starting character generation process...")
-        response = character_agent.generate_character(request)
-
-        if response.success:
-            logger.info(
-                f"✅ Character generated successfully: {response.character.name}"
-            )
-            logger.info(f"⏱️ Generation time: {response.generation_time:.2f} seconds")
-            return response
-        else:
-            logger.error(f"❌ Character generation failed: {response.error}")
-            raise HTTPException(status_code=500, detail=response.error)
-
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
-        raise
-    except Exception as e:
-        logger.error(f"❌ Unexpected error in character generation: {str(e)}")
-        logger.exception("Full exception details:")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @app.post("/generate/multistage", response_model=MultiStageGenerationResponse)
@@ -188,92 +138,6 @@ async def serve_webui():
         raise HTTPException(status_code=500, detail="Web UI asset missing")
 
     return HTMLResponse(WEBUI_PATH.read_text(encoding="utf-8"))
-
-
-@app.post("/generate/async")
-async def generate_character_async(
-    request: CharacterGenerationRequest, background_tasks: BackgroundTasks
-):
-    """Generate character asynchronously (for long-running requests)"""
-
-    logger.info(f"📝 Async character generation request received")
-    logger.info(f"Description: {request.brief_description}")
-
-    if character_agent is None:
-        logger.error("Character agent not initialized")
-        raise HTTPException(status_code=500, detail="Character agent not initialized")
-
-    # For now, we'll return a simple response
-    # In a full implementation, you'd use a task queue like Celery
-    background_tasks.add_task(character_agent.generate_character, request)
-
-    request_id = f"char_{hash(request.brief_description)}"
-    logger.info(f"✅ Async task queued with ID: {request_id}")
-
-    return {
-        "message": "Character generation started",
-        "request_id": request_id,
-        "status": "processing",
-    }
-
-
-@app.get("/characters/{character_id}")
-async def get_character(character_id: str):
-    """Get a previously generated character (placeholder)"""
-    logger.info(f"📝 Character retrieval request for ID: {character_id}")
-    logger.warning("Character retrieval not implemented yet")
-    # This would typically fetch from a database
-    raise HTTPException(status_code=404, detail="Character not found")
-
-
-@app.get("/export/{character_id}")
-async def export_character(character_id: str, format: str = "json"):
-    """Export character in specified format"""
-    logger.info(f"📝 Character export request for ID: {character_id}, format: {format}")
-    logger.warning("Character export not implemented yet")
-    # This would typically fetch from a database and export
-    raise HTTPException(status_code=404, detail="Character not found")
-
-
-@app.get("/examples")
-async def get_example_requests():
-    """Get example character generation requests"""
-
-    logger.info("📝 Example requests endpoint accessed")
-
-    examples = [
-        {
-            "brief_description": "A mysterious wizard who lives in a floating tower",
-            "genre": "fantasy",
-            "tone": "mysterious",
-            "image_style": "fantasy_art",
-            "num_images": 4,
-        },
-        {
-            "brief_description": "A cyberpunk hacker with neon-colored hair",
-            "genre": "sci-fi",
-            "tone": "edgy",
-            "image_style": "cyberpunk",
-            "num_images": 3,
-        },
-        {
-            "brief_description": "A wise old librarian who knows ancient secrets",
-            "genre": "mystery",
-            "tone": "wise",
-            "image_style": "realistic",
-            "num_images": 4,
-        },
-        {
-            "brief_description": "A cheerful barista who dreams of opening their own cafe",
-            "genre": "slice_of_life",
-            "tone": "cheerful",
-            "image_style": "anime",
-            "num_images": 3,
-        },
-    ]
-
-    logger.info(f"✅ Returning {len(examples)} example requests")
-    return {"examples": examples}
 
 
 @app.exception_handler(Exception)
