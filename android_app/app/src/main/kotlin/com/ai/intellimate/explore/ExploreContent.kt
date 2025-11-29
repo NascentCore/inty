@@ -56,9 +56,11 @@ fun ExploreContent(
     onClickAgent: (AgentInfo) -> Unit,
     isRefreshing: Boolean = false,
     onRetry: (() -> Unit)? = null,
+    viewModel: ExploreViewModel = viewModel(),
+    resetToTopSignal: Int = 0,
 ) {
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
-    val vm: ExploreViewModel = viewModel()
+    val vm: ExploreViewModel = viewModel
     val context = LocalContext.current
 
     // 更新当前UI中显示的agents总数
@@ -165,6 +167,18 @@ fun ExploreContent(
 
     // 检查加载状态
     val loadState = lazyPagingItems?.loadState?.refresh
+
+    LaunchedEffect(resetToTopSignal) {
+        if (resetToTopSignal > 0) {
+            gridState.scrollToItem(0)
+            vm.saveScrollPosition(0, 0)
+            if (lazyPagingItems != null) {
+                lazyPagingItems.refresh()
+            } else {
+                vm.refreshRecommendAgents()
+            }
+        }
+    }
 
     // 如果是错误状态且没有数据，显示错误状态
     if (loadState is LoadState.Error && lazyPagingItems.itemCount == 0) {
