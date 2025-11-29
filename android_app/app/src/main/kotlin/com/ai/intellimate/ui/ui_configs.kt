@@ -80,7 +80,6 @@ object UiConfigs {
         const val PrimaryButtonWidth = 0.95f
         const val DialogButtonWidth = 0.85f
         const val TextFieldCornerRadiusRatio = 0.7f
-        const val ChatPaneWidthRatio = 0.9f
     }
 
     object Alpha {
@@ -189,5 +188,11 @@ object UiConfigs {
         // Intro section
         val IntroSectionCollapsedHeight = 40.dp
         val IntroSectionExpandedHeight = 60.dp
+    }
+
+    object ChatMessagePane {
+        val PaddingHorizontal = 12.dp
+        val PaddingVertical = 13.dp
+        const val WIDTH_RATIO = 0.9f
     }
 }

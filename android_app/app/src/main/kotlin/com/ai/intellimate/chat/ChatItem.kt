@@ -137,7 +137,7 @@ private fun ChatItemAI(
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
 
     runCatching {
-            Column(modifier = Modifier.fillMaxWidth(UiConfigs.Fractions.ChatPaneWidthRatio)) {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 val hasGeneratedImage = item.hasGeneratedImage()
                 val generatedImageUrl = item.getGeneratedImageUrl()
                 val isImageLoading =
@@ -216,8 +216,11 @@ private fun ChatItemAI(
                     Box(
                         modifier =
                             Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
-                                .padding(12.dp, 13.dp)
-                                .widthIn(1.dp, 300.dp)
+                                .padding(
+                                    horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                    vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                                )
+                                .fillMaxWidth(UiConfigs.ChatMessagePane.WIDTH_RATIO)
                     ) {
                         LoadingAnimation()
                     }
@@ -227,8 +230,11 @@ private fun ChatItemAI(
                         Box(
                             modifier =
                                 Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
-                                    .padding(12.dp, 13.dp)
-                                    .widthIn(1.dp, 300.dp)
+                                    .padding(
+                                        horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                        vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                                    )
+                                    .fillMaxWidth(UiConfigs.ChatMessagePane.WIDTH_RATIO)
                                     .pointerInput(item.content) {
                                         detectTapGestures(
                                             onLongPress = {
@@ -390,7 +396,7 @@ private fun ChatItemAI(
                                 RoundedCornerShape(12.dp),
                             )
                             .padding(12.dp, 13.dp)
-                            .widthIn(1.dp, 300.dp)
+                            .fillMaxWidth(UiConfigs.ChatMessagePane.WIDTH_RATIO)
                             .pointerInput(item.content) {
                                 detectTapGestures(
                                     onLongPress = {
@@ -423,7 +429,7 @@ private fun ChatItemUser(item: MsgInfo) {
                                 RoundedCornerShape(12.dp),
                             )
                             .padding(12.dp, 13.dp)
-                            .widthIn(1.dp, 300.dp)
+                            .weight(1f)
                             .pointerInput(item.content) {
                                 detectTapGestures(
                                     onLongPress = {
@@ -453,7 +459,7 @@ private fun ChatItemUser(item: MsgInfo) {
                                 RoundedCornerShape(12.dp),
                             )
                             .padding(12.dp, 13.dp)
-                            .widthIn(1.dp, 300.dp)
+                            .weight(1f)
                             .pointerInput(item.content) {
                                 detectTapGestures(
                                     onLongPress = {
