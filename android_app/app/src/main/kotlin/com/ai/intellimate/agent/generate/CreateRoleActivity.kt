@@ -860,7 +860,17 @@ private fun CreateRolePage(
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Avatar Upload Section
+            // 视觉形象编辑区域标题
+            Text(
+                text = "Visual Appearance",
+                fontSize = 16.sp,
+                color = Color.White,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Start,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
             val promptForGeneration = if (avatarPrompt.isNotBlank()) avatarPrompt else settings
             AvatarUploadSection(
                 avatarUrl = avatarUrl,
