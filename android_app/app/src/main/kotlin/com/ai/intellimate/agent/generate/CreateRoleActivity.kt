@@ -25,6 +25,9 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -1334,10 +1337,11 @@ private fun AvatarUploadSection(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier.padding(vertical = 8.dp),
                                 ) {
-                                    Image(
-                                        painter = painterResource(R.drawable.btn_add),
+                                    Icon(
+                                        painter = painterResource(R.drawable.instant_mix_24px),
                                         contentDescription = null,
                                         modifier = Modifier.size(32.dp),
+                                        tint = Color.White,
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
@@ -1360,10 +1364,11 @@ private fun AvatarUploadSection(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier.padding(vertical = 8.dp),
                                 ) {
-                                    Image(
-                                        painter = painterResource(R.drawable.btn_add),
+                                    Icon(
+                                        imageVector = Icons.Outlined.Upload,
                                         contentDescription = null,
                                         modifier = Modifier.size(32.dp),
+                                        tint = Color.White,
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
