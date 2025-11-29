@@ -1,6 +1,7 @@
 # IntelliMate Resource Guide
 
 > CREATED_BY_AGENT
+
 > Content should be copied to https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322
 
 This guide gives IntelliMate users a clear, plain-language map of where to find help when they feel lost. It consolidates the Android client documentation and reorganizes it for non-technical readers.
