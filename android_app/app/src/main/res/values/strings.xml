@@ -257,8 +257,8 @@
     <string name="reply_style">Chat Style</string>
     <string name="str_reset">Reset</string>
     <string name="cancel_button">Cancel</string>
-    <string name="generate_avatar_title_full">Generate\nAvatar</string>
-    <string name="upload_from_gallery">Upload from Phone</string>
+    <string name="generate_avatar_title_full">Generate</string>
+    <string name="upload_from_gallery">Upload</string>
     <string name="gender_unmodified_full">Gender (Unmodified after Creation) *</string>
     <string name="male_full">Male</string>
     <string name="female_full">Female</string>
