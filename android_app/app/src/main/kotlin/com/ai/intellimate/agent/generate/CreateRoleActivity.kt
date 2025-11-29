@@ -554,6 +554,18 @@ private fun CreateRolePage(
                     val fileSize = getFileSize(context, uri)
                     val maxSizeMB = 10
                     val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
+                    
+                    // 如果无法确定文件大小（返回 0），拒绝上传以确保安全
+                    if (fileSize == 0L) {
+                        ToastUtils.showShort(
+                            context.getString(
+                                R.string.toast_failed_prepare_upload_with_message,
+                                "Unable to determine file size",
+                            )
+                        )
+                        return@let
+                    }
+                    
                     if (fileSize > maxSizeBytes) {
                         val maxSizeMBStr =
                             String.format(Locale.getDefault(), "%dMB", maxSizeMB)
@@ -590,6 +602,30 @@ private fun CreateRolePage(
                                             "Failed to read image file",
                                         )
                                     )
+                                }
+                                return@launch
+                            }
+                            
+                            // 验证临时文件大小（双重检查，确保文件大小限制）
+                            val tempFileSize = tempFile.length()
+                            if (tempFileSize > maxSizeBytes) {
+                                withContext(Dispatchers.Main) {
+                                    isUploadingFromGallery = false
+                                    val maxSizeMBStr =
+                                        String.format(Locale.getDefault(), "%dMB", maxSizeMB)
+                                    val fileSizeMBStr =
+                                        String.format(
+                                            Locale.getDefault(),
+                                            "%.1fMB",
+                                            tempFileSize / (1024.0 * 1024.0),
+                                        )
+                                    val msg =
+                                        context.getString(
+                                            R.string.user_avatar_size_too_large_with_size_format,
+                                            maxSizeMBStr,
+                                            fileSizeMBStr,
+                                        )
+                                    ToastUtils.showShort(msg)
                                 }
                                 return@launch
                             }
@@ -1233,7 +1269,9 @@ private fun AvatarUploadSection(
     onFaceEdit: () -> Unit = {},
     onUploadFromGallery: () -> Unit = {},
 ) {
-    val isEmpty = avatarUrls.isEmpty() && avatarUrl == null
+    // 空状态检查：只有当所有头像 URL 都为空时才认为是空状态
+    // 需要检查 avatarUrls、avatarUrl 和 croppedAvatarUrl
+    val isEmpty = avatarUrls.isEmpty() && avatarUrl == null && croppedAvatarUrl == null
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier =
@@ -1412,7 +1450,8 @@ private fun AvatarUploadSection(
             }
 
             // Dashed border for empty state
-            if (avatarUrls.isEmpty() && avatarUrl == null) {
+            // 需要检查所有头像 URL 都为空才显示虚线边框
+            if (avatarUrls.isEmpty() && avatarUrl == null && croppedAvatarUrl == null) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val strokeWidth = 1.dp.toPx()
                     val cornerRadius = 16.dp.toPx()
