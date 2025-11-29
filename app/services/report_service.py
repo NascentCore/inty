@@ -115,7 +115,11 @@ async def query_reports(db: AsyncSession, query: ReportQuery):
         for item in items:
             # 如果 reason_codes 为空但 reason_ids 存在，从 reason_ids 转换
             if not item.reason_codes and item.reason_ids:
-                item.reason_codes = [reason_map.get(rid, "") for rid in item.reason_ids]
+                # 只转换存在的 ID，过滤掉不存在的 ID 和空字符串
+                converted_codes = [
+                    reason_map[rid] for rid in item.reason_ids if rid in reason_map and reason_map[rid]
+                ]
+                item.reason_codes = converted_codes if converted_codes else []
 
     # 确保所有字段在序列化前都是正确的类型（处理 None 值）
     for item in items:
