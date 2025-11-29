@@ -515,7 +515,6 @@ private fun ChatItemUser(item: MsgInfo) {
 @Composable
 private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = null) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
-    val timestampText = remember(item.timestamp) { formatTimestamp(item.timestamp) }
 
     val displayText =
         if (item.content == "image_generation_error_tip") {
@@ -528,29 +527,19 @@ private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = nu
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(
-                modifier = Modifier.noRippleClickable { viewModel.deleteMessage(item.localMsgId) },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(text = displayText, color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    painter = painterResource(ai.sxwl.android.design.R.drawable.ic_delete),
-                    contentDescription = "Delete tip",
-                    tint = Color.White.copy(alpha = 0.5f),
-                    modifier = Modifier.size(16.dp),
-                )
-            }
-
-            if (timestampText != null) {
-                // Spacer(modifier = Modifier.height(4.dp))
-                ChatMessageTimestamp(
-                    timestampText = timestampText,
-                    textAlign = TextAlign.Center,
-                )
-            }
+        Row(
+            modifier = Modifier.noRippleClickable { viewModel.deleteMessage(item.localMsgId) },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = displayText, color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                painter = painterResource(ai.sxwl.android.design.R.drawable.ic_delete),
+                contentDescription = "Delete tip",
+                tint = Color.White.copy(alpha = 0.5f),
+                modifier = Modifier.size(16.dp),
+            )
         }
     }
 }
