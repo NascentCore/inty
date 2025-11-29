@@ -76,6 +76,10 @@ class MainViewModel : BaseVM() {
             }
         }
 
+    // Explore页面重置到顶部信号（用于底部导航栏双击）
+    private val _exploreResetSignal = MutableStateFlow(0)
+    val exploreResetSignal: StateFlow<Int> = _exploreResetSignal.asStateFlow()
+
     init {
         loadStartupData()
         updateLoginState()
@@ -208,6 +212,9 @@ class MainViewModel : BaseVM() {
         }
         _messagesTabHasUnread.value = hasUnread
         IntySetting.setMessagesTabUnread(hasUnread)
+    /** 触发Explore页面重置到顶部（用于底部导航栏双击） */
+    fun triggerExploreReset() {
+        _exploreResetSignal.value += 1
     }
 
     /** 接口请求获取用户信息 */

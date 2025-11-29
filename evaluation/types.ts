@@ -9,7 +9,7 @@ import type {
 // 扩展 Agent 类型以包含 meta_data 和 background_animated 字段
 export interface Agent extends BaseAgent {
   meta_data?: AgentMetaData;
-  background_animated?: string; // 视频URL
+  background_animated?: string; // webp 动图 URL
   description?: string; // 描述字段
 }
 
@@ -54,7 +54,7 @@ export interface AgentCreateRequest {
   avatar?: string;
   background?: string;
   background_images?: string[];
-  background_animated?: string; // 视频URL
+  background_animated?: string; // webp 动图 URL
   voice_id?: string;
   llm_config?: LLMConfig;
   meta_data?: AgentMetaData;
@@ -74,7 +74,7 @@ export interface AgentUpdateRequest {
   avatar?: string;
   background?: string;
   background_images?: string[];
-  background_animated?: string; // 视频URL
+  background_animated?: string; // webp 动图 URL
   voice_id?: string;
   llm_config?: LLMConfig | null;
   meta_data?: AgentMetaData;

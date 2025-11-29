@@ -73,6 +73,7 @@ import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.chat.ui.MessageActionBar
 import com.ai.intellimate.chat.ui.MessageCornerActions
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.ChatTextFormatter
 
@@ -136,7 +137,7 @@ private fun ChatItemAI(
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
 
     runCatching {
-            Column(modifier = Modifier.fillMaxWidth(.9f)) {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 val hasGeneratedImage = item.hasGeneratedImage()
                 val generatedImageUrl = item.getGeneratedImageUrl()
                 val isImageLoading =
@@ -215,8 +216,11 @@ private fun ChatItemAI(
                     Box(
                         modifier =
                             Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
-                                .padding(12.dp, 13.dp)
-                                .widthIn(1.dp, 300.dp)
+                                .padding(
+                                    horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                    vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                                )
+                                .widthIn(min = 1.dp)
                     ) {
                         LoadingAnimation()
                     }
@@ -226,8 +230,11 @@ private fun ChatItemAI(
                         Box(
                             modifier =
                                 Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
-                                    .padding(12.dp, 13.dp)
-                                    .widthIn(1.dp, 300.dp)
+                                    .padding(
+                                        horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                        vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                                    )
+                                    .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
                                     .pointerInput(item.content) {
                                         detectTapGestures(
                                             onLongPress = {
@@ -389,7 +396,7 @@ private fun ChatItemAI(
                                 RoundedCornerShape(12.dp),
                             )
                             .padding(12.dp, 13.dp)
-                            .widthIn(1.dp, 300.dp)
+                            .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
                             .pointerInput(item.content) {
                                 detectTapGestures(
                                     onLongPress = {
@@ -409,11 +416,16 @@ private fun ChatItemAI(
         }
 }
 
+/**
+ * 用户消息气泡布局，靠右对齐。
+ */
 @Composable
 private fun ChatItemUser(item: MsgInfo) {
     runCatching {
-            Row {
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
                 val context = LocalContext.current
                 Box(
                     modifier =
@@ -421,8 +433,11 @@ private fun ChatItemUser(item: MsgInfo) {
                                 Color.White.copy(alpha = 0.6f),
                                 RoundedCornerShape(12.dp),
                             )
-                            .padding(12.dp, 13.dp)
-                            .widthIn(1.dp, 300.dp)
+                            .padding(
+                                horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                            )
+                            .widthIn(min = 1.dp, max = UiConfigs.ChatMessagePane.UserMessageMaxWidth)
                             .pointerInput(item.content) {
                                 detectTapGestures(
                                     onLongPress = {
@@ -441,9 +456,12 @@ private fun ChatItemUser(item: MsgInfo) {
                 }
             }
         }
+        // 如果渲染失败，显示空消息气泡；应无可能发生，仅作为保守的兜底处理。
         .onFailure { e ->
-            Row {
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
                 val context = LocalContext.current
                 Box(
                     modifier =
@@ -451,8 +469,11 @@ private fun ChatItemUser(item: MsgInfo) {
                                 Color.White.copy(alpha = 0.6f),
                                 RoundedCornerShape(12.dp),
                             )
-                            .padding(12.dp, 13.dp)
-                            .widthIn(1.dp, 300.dp)
+                            .padding(
+                                horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                            )
+                            .widthIn(min = 1.dp, max = UiConfigs.ChatMessagePane.UserMessageMaxWidth)
                             .pointerInput(item.content) {
                                 detectTapGestures(
                                     onLongPress = {
@@ -511,6 +532,7 @@ private fun StyledMessageText(
     normalColor: Color,
     actionColor: Color,
 ) {
+    // TODO：此处 runCatching 可以去掉，因为调用处已经包裹在 runCatching 中。
     runCatching {
             Text(
                 text =

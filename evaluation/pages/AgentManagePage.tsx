@@ -510,18 +510,18 @@ export const AgentManagePage: React.FC = () => {
             background_animated: updatedAgent.background_animated,
           });
         }
-        message.success("背景视频生成成功");
+        message.success("背景动图生成成功");
         setGenerateAnimatedModalVisible(false);
         setGenerateAnimatedPrompt("");
         return true; // 允许 Modal 关闭
       } else {
-        message.error("背景视频生成失败");
+        message.error("背景动图生成失败");
         return false; // 阻止 Modal 关闭
       }
     } catch (error) {
-      console.error("生成背景视频失败:", error);
+      console.error("生成背景动图失败:", error);
       message.error(
-        `生成背景视频失败: ${
+        `生成背景动图失败: ${
           error instanceof Error ? error.message : "未知错误"
         }`,
       );
@@ -1090,7 +1090,7 @@ export const AgentManagePage: React.FC = () => {
                 style={{ width: "100%" }}
                 disabled={!currentAgent?.background}
               >
-                生成背景视频
+                生成背景动图
               </Button>
             )}
             {((isEdit && agentCopy?.background_animated) ||
@@ -1122,7 +1122,7 @@ export const AgentManagePage: React.FC = () => {
                     return (
                       <img
                         src={previewUrl}
-                        alt="背景视频预览"
+                        alt="背景动图预览"
                         style={{
                           maxWidth: "100%",
                           maxHeight: "200px",

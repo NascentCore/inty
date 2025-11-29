@@ -129,6 +129,11 @@ fun HomeScreen(
             }
         }
 
+    // 双击检测：跟踪最后点击的tab和时间
+    var lastTabClickTime by remember { mutableStateOf(0L) }
+    var lastTabIndex by remember { mutableStateOf(-1) }
+    val doubleTapTimeoutMs = 300L // 双击检测时间窗口（毫秒）
+
     Scaffold(
         modifier =
             modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
@@ -140,12 +145,31 @@ fun HomeScreen(
                 selectedTab = selectedTab.value.ordinal,
                 tabItems = tabItemsForDisplay,
                 onTabSelected = { tabIndex ->
-                    handleTabSelectionWithLauncher(
-                        tabIndex,
-                        context,
-                        mainViewModel,
-                        createRoleLauncher,
-                    )
+                    val currentTime = System.currentTimeMillis()
+                    val exploreTabIndex = HomeTabIndex.Explore.ordinal
+                    
+                    // 检测双击：如果点击的是Explore tab，且与上次点击相同，且在时间窗口内
+                    if (tabIndex == exploreTabIndex && 
+                        tabIndex == lastTabIndex && 
+                        currentTime - lastTabClickTime < doubleTapTimeoutMs) {
+                        // 双击Explore tab，触发重置
+                        if (selectedTab.value == HomeTabIndex.Explore) {
+                            mainViewModel.triggerExploreReset()
+                        }
+                        // 重置计时器，避免连续触发
+                        lastTabClickTime = 0
+                        lastTabIndex = -1
+                    } else {
+                        // 正常点击，更新记录
+                        lastTabClickTime = currentTime
+                        lastTabIndex = tabIndex
+                        handleTabSelectionWithLauncher(
+                            tabIndex,
+                            context,
+                            mainViewModel,
+                            createRoleLauncher,
+                        )
+                    }
                 },
                 iconSize = UiConfigs.BottomBar.TabIconSize,
                 textSize = (UiConfigs.BottomBar.TabIconSize.value * 0.45f).sp,
@@ -301,7 +325,7 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Explore -> {
-            ExploreTabContent(innerPadding = innerPadding)
+            ExploreTabContent(innerPadding = innerPadding, mainViewModel = mainViewModel)
         }
 
         HomeTabIndex.Profile -> {
@@ -365,9 +389,13 @@ private fun MessagesTabContent() {
 
 /** 推荐Tab内容 */
 @Composable
-private fun ExploreTabContent(innerPadding: PaddingValues) {
+private fun ExploreTabContent(
+    innerPadding: PaddingValues,
+    mainViewModel: MainViewModel,
+) {
     val context = LocalContext.current
     val exploreViewModel: ExploreViewModel = viewModel()
+    val exploreResetSignal by mainViewModel.exploreResetSignal.collectAsState()
 
     // 初始化 ExploreTab 数据
     LaunchedEffect(Unit) {
@@ -383,6 +411,7 @@ private fun ExploreTabContent(innerPadding: PaddingValues) {
             ChatActivity.launch(context, agent, pageSource = ChatActivity.EXPLORE_TAB)
         },
         viewModel = exploreViewModel,
+        externalResetSignal = exploreResetSignal,
     )
 }
 
