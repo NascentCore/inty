@@ -202,12 +202,10 @@ private fun ChatItemAI(
                                 },
                                 serverMessageId = item.id,
                             )
-                            if (timestampText != null) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                            }
                         }
                         // 显示时间戳
                         if (timestampText != null) {
+                            Spacer(modifier = Modifier.width(UiConfigs.ChatMessagePane.AudioPlayerToTimestampSpacing))
                             ChatMessageTimestamp(
                                 timestampText = timestampText,
                                 fontSize = UiConfigs.ChatMessagePane.TimestampFontSize,

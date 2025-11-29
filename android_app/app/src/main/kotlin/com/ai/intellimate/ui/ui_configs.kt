@@ -197,5 +197,6 @@ object UiConfigs {
         const val USER_WIDTH_RATIO = 0.3f
         val UserMessageMaxWidth = 300.dp
         val TimestampFontSize = 10.sp
+        val AudioPlayerToTimestampSpacing = 8.dp
     }
 }
