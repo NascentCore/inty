@@ -1297,7 +1297,9 @@ export const ChatPage: React.FC = () => {
                             width: "100%",
                             height: "100%",
                             objectFit: "cover",
-                            filter: backgroundAnimatedUrl ? "blur(6px)" : "none",
+                            filter: backgroundAnimatedUrl
+                              ? "blur(6px)"
+                              : "none",
                             transform: "scale(1.05)",
                             opacity: backgroundAnimatedUrl ? 0.4 : 0.85,
                             transition: "opacity 0.3s ease",

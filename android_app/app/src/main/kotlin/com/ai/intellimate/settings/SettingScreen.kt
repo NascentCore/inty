@@ -143,7 +143,8 @@ fun SettingScreen(
 private fun AccountInfoSection(userId: String, userEmail: String) {
     val context = LocalContext.current
     val displayId = userId.ifBlank { stringResource(R.string.settings_user_id_unavailable) }
-    val displayEmail = userEmail.ifBlank { stringResource(R.string.settings_user_email_unavailable) }
+    val displayEmail =
+        userEmail.ifBlank { stringResource(R.string.settings_user_email_unavailable) }
     val userIdTitle = stringResource(R.string.settings_user_id)
     val userEmailTitle = stringResource(R.string.settings_user_email)
 
@@ -177,7 +178,11 @@ private fun AccountInfoSection(userId: String, userEmail: String) {
             selectableContent = true,
             onLongClick = {
                 if (userEmail.isNotBlank()) {
-                    ClipboardUtils.copyToClipboard(context, label = userEmailTitle, text = userEmail)
+                    ClipboardUtils.copyToClipboard(
+                        context,
+                        label = userEmailTitle,
+                        text = userEmail,
+                    )
                     ToastUtils.showShort(R.string.toast_copied_to_clipboard)
                 }
             },
@@ -359,12 +364,15 @@ private fun openRateUsPage(context: Context, fallbackUrl: String): Boolean {
         true
     } catch (marketError: ActivityNotFoundException) {
         runCatching {
-            val webIntent =
-                Intent(Intent.ACTION_VIEW, fallbackUrl.toUri()).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
-                }
-            context.startActivity(webIntent)
-        }.isSuccess
+                val webIntent =
+                    Intent(Intent.ACTION_VIEW, fallbackUrl.toUri()).apply {
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_ACTIVITY_NEW_DOCUMENT
+                        )
+                    }
+                context.startActivity(webIntent)
+            }
+            .isSuccess
     } catch (error: Exception) {
         false
     }

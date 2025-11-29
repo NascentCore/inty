@@ -1,5 +1,6 @@
 package com.ai.intellimate.chat.ui
 
+import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.AppColors
 import ai.sxwl.android.utils.ToastUtils
@@ -23,7 +24,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import ai.sxwl.android.data.store.SettingStateManager
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,13 +85,14 @@ fun ChatInput(
                 singleLine = false,
                 placeholder = {
                     Text(
-                        text = stringResource(
-                            if (showSceneActionButton) {
-                                R.string.chat_input_with_scene_action_placeholder
-                            } else {
-                                R.string.chat_input_placeholder
-                            }
-                        ),
+                        text =
+                            stringResource(
+                                if (showSceneActionButton) {
+                                    R.string.chat_input_with_scene_action_placeholder
+                                } else {
+                                    R.string.chat_input_placeholder
+                                }
+                            ),
                         fontSize = 14.sp,
                         color = Color.White.copy(alpha = 0.5f),
                     )
@@ -154,10 +155,7 @@ fun ChatInput(
                 verticalAlignment = Alignment.Bottom,
             ) {
                 if (showSceneActionButton) {
-                    SceneActionQuickButton(
-                        buttonHeight = buttonSize,
-                        onClick = onSceneActionClick,
-                    )
+                    SceneActionQuickButton(buttonHeight = buttonSize, onClick = onSceneActionClick)
                 }
                 MultiUseAccessButton(
                     buttonSize = buttonSize,

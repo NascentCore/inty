@@ -129,11 +129,13 @@ fun HomeScreen(
                 onTabSelected = { tabIndex ->
                     val currentTime = System.currentTimeMillis()
                     val exploreTabIndex = HomeTabIndex.Explore.ordinal
-                    
+
                     // 检测双击：如果点击的是Explore tab，且与上次点击相同，且在时间窗口内
-                    if (tabIndex == exploreTabIndex && 
-                        tabIndex == lastTabIndex && 
-                        currentTime - lastTabClickTime < doubleTapTimeoutMs) {
+                    if (
+                        tabIndex == exploreTabIndex &&
+                            tabIndex == lastTabIndex &&
+                            currentTime - lastTabClickTime < doubleTapTimeoutMs
+                    ) {
                         // 双击Explore tab，触发重置
                         if (selectedTab.value == HomeTabIndex.Explore) {
                             mainViewModel.triggerExploreReset()
@@ -253,7 +255,11 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
     }
 }
 
-private fun shouldShowResubReminderDialog(nowSeconds: Long, lastShowTimeSeconds: Long, showCount: Int): Boolean {
+private fun shouldShowResubReminderDialog(
+    nowSeconds: Long,
+    lastShowTimeSeconds: Long,
+    showCount: Int,
+): Boolean {
     if (lastShowTimeSeconds == 0L) return true
     val delaySeconds = calculateResubReminderDelaySeconds(showCount)
     return nowSeconds - lastShowTimeSeconds >= delaySeconds
@@ -371,10 +377,7 @@ private fun MessagesTabContent() {
 
 /** 推荐Tab内容 */
 @Composable
-private fun ExploreTabContent(
-    innerPadding: PaddingValues,
-    mainViewModel: MainViewModel,
-) {
+private fun ExploreTabContent(innerPadding: PaddingValues, mainViewModel: MainViewModel) {
     val context = LocalContext.current
     val exploreViewModel: ExploreViewModel = viewModel()
     val exploreResetSignal by mainViewModel.exploreResetSignal.collectAsState()

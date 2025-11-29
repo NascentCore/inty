@@ -56,7 +56,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
@@ -196,7 +195,8 @@ private fun ChatItemAI(
                             VoicePlayer(
                                 audioInfo = audioInfo,
                                 autoPlay = shouldAutoPlay,
-                                modifier = Modifier.widthIn(UiConfigs.ChatMessagePane.AudioPlayerMinWidth),
+                                modifier =
+                                    Modifier.widthIn(UiConfigs.ChatMessagePane.AudioPlayerMinWidth),
                                 onTtsGenerated = { audioUrl ->
                                     viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
                                 },
@@ -205,7 +205,12 @@ private fun ChatItemAI(
                         }
                         // 显示时间戳
                         if (timestampText != null) {
-                            Spacer(modifier = Modifier.width(UiConfigs.ChatMessagePane.AudioPlayerToTimestampSpacing))
+                            Spacer(
+                                modifier =
+                                    Modifier.width(
+                                        UiConfigs.ChatMessagePane.AudioPlayerToTimestampSpacing
+                                    )
+                            )
                             ChatMessageTimestamp(
                                 timestampText = timestampText,
                                 fontSize = UiConfigs.ChatMessagePane.TimestampFontSize,
@@ -435,16 +440,11 @@ private fun ChatItemAI(
         }
 }
 
-/**
- * 用户消息气泡布局，靠右对齐。
- */
+/** 用户消息气泡布局，靠右对齐。 */
 @Composable
 private fun ChatItemUser(item: MsgInfo) {
     runCatching {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 val context = LocalContext.current
                 Box(
                     modifier =
@@ -456,7 +456,10 @@ private fun ChatItemUser(item: MsgInfo) {
                                 horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
                                 vertical = UiConfigs.ChatMessagePane.PaddingVertical,
                             )
-                            .widthIn(min = 1.dp, max = UiConfigs.ChatMessagePane.UserMessageMaxWidth)
+                            .widthIn(
+                                min = 1.dp,
+                                max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
+                            )
                             .pointerInput(item.content) {
                                 detectTapGestures(
                                     onLongPress = {
@@ -477,10 +480,7 @@ private fun ChatItemUser(item: MsgInfo) {
         }
         // 如果渲染失败，显示空消息气泡；应无可能发生，仅作为保守的兜底处理。
         .onFailure { e ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 val context = LocalContext.current
                 Box(
                     modifier =
@@ -492,7 +492,10 @@ private fun ChatItemUser(item: MsgInfo) {
                                 horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
                                 vertical = UiConfigs.ChatMessagePane.PaddingVertical,
                             )
-                            .widthIn(min = 1.dp, max = UiConfigs.ChatMessagePane.UserMessageMaxWidth)
+                            .widthIn(
+                                min = 1.dp,
+                                max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
+                            )
                             .pointerInput(item.content) {
                                 detectTapGestures(
                                     onLongPress = {
@@ -681,9 +684,7 @@ private fun ExpandableTextWithButton(
 }
 
 @Composable
-private fun ChatMessageTimestamp(
-    timestampText: String?, fontSize: TextUnit,
-) {
+private fun ChatMessageTimestamp(timestampText: String?, fontSize: TextUnit) {
     if (timestampText.isNullOrEmpty()) {
         return
     }

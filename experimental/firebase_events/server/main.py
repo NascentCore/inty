@@ -1,4 +1,5 @@
 """CREATED_BY_AGENT"""
+
 from __future__ import annotations
 
 import json
@@ -34,8 +35,7 @@ def _dimension_breakdown(rows: List[Dict[str, Any]]) -> Dict[str, List[Dict[str,
         for row in rows:
             counter[str(extractor(row))] += 1
         result[name] = [
-            {"value": value, "count": count}
-            for value, count in counter.most_common(3)
+            {"value": value, "count": count} for value, count in counter.most_common(3)
         ]
     return result
 

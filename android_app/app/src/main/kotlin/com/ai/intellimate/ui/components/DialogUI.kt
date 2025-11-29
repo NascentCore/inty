@@ -19,14 +19,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 
@@ -153,7 +153,8 @@ fun LogoutConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             TextButton(
                 onClick = onDismiss,
                 modifier =
-                    Modifier.align(Alignment.CenterHorizontally).focusRequester(cancelFocusRequester)
+                    Modifier.align(Alignment.CenterHorizontally)
+                        .focusRequester(cancelFocusRequester),
             ) {
                 Text(
                     text = stringResource(R.string.cancel),
