@@ -542,6 +542,16 @@ private fun CreateRolePage(
                         context.getString(R.string.toast_crop_failed, cropError?.message ?: "")
                     )
                 }
+            } else if (result.resultCode == Activity.RESULT_CANCELED) {
+                // 用户取消了裁剪操作（按返回键），清除图库上传标志
+                LogUtils.i("Crop operation cancelled by user")
+                isUploadingFromGallery = false
+                originalUploadedImageUrl = null
+            } else {
+                // 处理其他未知结果代码，确保清除标志
+                LogUtils.w("Unknown crop result code: ${result.resultCode}")
+                isUploadingFromGallery = false
+                originalUploadedImageUrl = null
             }
         }
 
