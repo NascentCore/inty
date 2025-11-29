@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -187,7 +188,7 @@ private fun ChatItemAI(
 
                     // 消息气泡上方的辅助内容条
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         // 显示音频播放按钮
@@ -207,7 +208,10 @@ private fun ChatItemAI(
                         }
                         // 显示时间戳
                         if (timestampText != null) {
-                            ChatMessageTimestamp(timestampText = timestampText)
+                            ChatMessageTimestamp(
+                                timestampText = timestampText,
+                                fontSize = UiConfigs.ChatMessagePane.TimestampFontSize,
+                            )
                         }
                     }
                 }
@@ -680,7 +684,7 @@ private fun ExpandableTextWithButton(
 
 @Composable
 private fun ChatMessageTimestamp(
-    timestampText: String?,
+    timestampText: String?, fontSize: TextUnit,
 ) {
     if (timestampText.isNullOrEmpty()) {
         return
@@ -688,10 +692,10 @@ private fun ChatMessageTimestamp(
 
     Text(
         text = timestampText,
-        modifier = Modifier.fillMaxWidth(),
         color = Color.White.copy(alpha = 0.55f),
-        fontSize = 10.sp,
-        textAlign = TextAlign.Start,
+        fontSize = fontSize,
+        // 保证行高与字体大小一致，保证居中对齐有效
+        lineHeight = fontSize,
     )
 }
 
