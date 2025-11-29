@@ -198,5 +198,6 @@ object UiConfigs {
         val UserMessageMaxWidth = 300.dp
         val TimestampFontSize = 10.sp
         val AudioPlayerToTimestampSpacing = 8.dp
+        val AudioPlayerMinWidth = 38.dp
     }
 }

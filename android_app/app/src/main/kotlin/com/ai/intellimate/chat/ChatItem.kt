@@ -196,7 +196,7 @@ private fun ChatItemAI(
                             VoicePlayer(
                                 audioInfo = audioInfo,
                                 autoPlay = shouldAutoPlay,
-                                modifier = Modifier.widthIn(38.dp),
+                                modifier = Modifier.widthIn(UiConfigs.ChatMessagePane.AudioPlayerMinWidth),
                                 onTtsGenerated = { audioUrl ->
                                     viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
                                 },
