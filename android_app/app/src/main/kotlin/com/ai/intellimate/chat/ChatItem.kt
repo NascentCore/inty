@@ -422,74 +422,74 @@ private fun ChatItemAI(
 @Composable
 private fun ChatItemUser(item: MsgInfo) {
     runCatching {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            val context = LocalContext.current
-            Box(
-                modifier =
-                    Modifier.background(
-                            Color.White.copy(alpha = 0.6f),
-                            RoundedCornerShape(12.dp),
-                        )
-                        .padding(
-                            horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
-                            vertical = UiConfigs.ChatMessagePane.PaddingVertical,
-                        )
-                        .widthIn(min = 1.dp, max = UiConfigs.ChatMessagePane.UserMessageMaxWidth)
-                        .pointerInput(item.content) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    debugOnlyCopyToClipboard(context, item.content)
-                                }
-                            )
-                        }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
             ) {
-                StyledMessageText(
-                    text = item.content,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Normal,
-                    normalColor = Color(0xff090909),
-                    actionColor = Color(0xff090909).copy(0.6f),
-                )
+                val context = LocalContext.current
+                Box(
+                    modifier =
+                        Modifier.background(
+                                Color.White.copy(alpha = 0.6f),
+                                RoundedCornerShape(12.dp),
+                            )
+                            .padding(
+                                horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                            )
+                            .widthIn(min = 1.dp, max = UiConfigs.ChatMessagePane.UserMessageMaxWidth)
+                            .pointerInput(item.content) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        debugOnlyCopyToClipboard(context, item.content)
+                                    }
+                                )
+                            }
+                ) {
+                    StyledMessageText(
+                        text = item.content,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Normal,
+                        normalColor = Color(0xff090909),
+                        actionColor = Color(0xff090909).copy(0.6f),
+                    )
+                }
             }
         }
-    }
-    // 如果渲染失败，显示空消息气泡；应无可能发生，仅作为保守的兜底处理。
-    .onFailure { e ->
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            val context = LocalContext.current
-            Box(
-                modifier =
-                    Modifier.background(
-                            Color.White.copy(alpha = 0.6f),
-                            RoundedCornerShape(12.dp),
-                        )
-                        .padding(
-                            horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
-                            vertical = UiConfigs.ChatMessagePane.PaddingVertical,
-                        )
-                        .widthIn(min = 1.dp, max = UiConfigs.ChatMessagePane.UserMessageMaxWidth)
-                        .pointerInput(item.content) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    debugOnlyCopyToClipboard(context, item.content)
-                                }
-                            )
-                        }
+        // 如果渲染失败，显示空消息气泡；应无可能发生，仅作为保守的兜底处理。
+        .onFailure { e ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
             ) {
-                Text(
-                    text = item.content.ifEmpty { "Message content is empty" },
-                    color = Color(0xff090909),
-                    fontSize = 14.sp,
-                )
+                val context = LocalContext.current
+                Box(
+                    modifier =
+                        Modifier.background(
+                                Color.White.copy(alpha = 0.6f),
+                                RoundedCornerShape(12.dp),
+                            )
+                            .padding(
+                                horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                            )
+                            .widthIn(min = 1.dp, max = UiConfigs.ChatMessagePane.UserMessageMaxWidth)
+                            .pointerInput(item.content) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        debugOnlyCopyToClipboard(context, item.content)
+                                    }
+                                )
+                            }
+                ) {
+                    Text(
+                        text = item.content.ifEmpty { "Message content is empty" },
+                        color = Color(0xff090909),
+                        fontSize = 14.sp,
+                    )
+                }
             }
         }
-    }
 }
 
 @Composable
