@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -41,6 +44,7 @@ private val CHAT_TOP_BAR_BACKGROUND_COLOR = Color(33, 0, 0, 77)
 
 private const val BACK_BUTTON_SIZE = 24
 private const val MORE_BUTTON_SIZE = 20
+private const val REMIX_ICON_SIZE = 18
 
 /** 聊天页面顶部栏组件 */
 @Composable
@@ -115,6 +119,27 @@ fun ChatTopBar(
         }
 
         Spacer(modifier = Modifier.weight(1f))
+
+        Box(
+            modifier =
+                Modifier
+                    .size(avatarWidth)
+                    .clip(CircleShape)
+                    .background(color = CHAT_TOP_BAR_BACKGROUND_COLOR)
+                    .noRippleClickable {
+                        ToastUtils.showShort(R.string.str_remix_feature_under_construction)
+                    },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                modifier = Modifier.size(REMIX_ICON_SIZE.dp),
+                imageVector = Icons.Rounded.AutoAwesome,
+                contentDescription = null,
+                tint = Color.White,
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
 
         Box(
             modifier =
