@@ -125,6 +125,10 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
 
+        <activity
+            android:name=".settings.check.CheckInActivity"
+            android:launchMode="singleTop" />
+
     </application>
 
 </manifest>
