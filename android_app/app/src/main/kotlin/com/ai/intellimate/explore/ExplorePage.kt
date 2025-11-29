@@ -49,6 +49,7 @@ fun ExplorePage(
     innerPadding: PaddingValues,
     onClickAgent: (AgentInfo) -> Unit,
     viewModel: ExploreViewModel = viewModel(),
+    externalResetSignal: Int = 0,
 ) {
     val context = LocalContext.current
 
@@ -71,10 +72,12 @@ fun ExplorePage(
     // 初始化图片尺寸缓存管理器和图片预加载管理器
     LaunchedEffect(Unit) { ImagePreloadManager.init(context) }
 
-    // 初始化Paging数据
-    LaunchedEffect(Unit) { viewModel.initializePagingData() }
-
     var doubleTapResetSignal by remember { mutableIntStateOf(0) }
+
+    // 合并外部重置信号（来自底部导航栏双击）和内部双击信号（来自顶部栏）
+    val combinedResetSignal = remember(doubleTapResetSignal, externalResetSignal) {
+        doubleTapResetSignal + externalResetSignal
+    }
 
     Box(modifier = modifier) {
         AsyncImage(
@@ -186,7 +189,7 @@ fun ExplorePage(
                     isRefreshing = isRefreshing,
                     onRetry = { viewModel.refreshRecommendAgents() },
                     viewModel = viewModel,
-                    resetToTopSignal = doubleTapResetSignal,
+                    resetToTopSignal = combinedResetSignal,
                 )
             }
         }
