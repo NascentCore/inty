@@ -532,6 +532,7 @@ private fun StyledMessageText(
     normalColor: Color,
     actionColor: Color,
 ) {
+    // TODO：此处 runCatching 可以去掉，因为调用处已经包裹在 runCatching 中。
     runCatching {
             Text(
                 text =
