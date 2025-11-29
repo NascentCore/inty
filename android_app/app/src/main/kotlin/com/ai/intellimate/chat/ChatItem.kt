@@ -207,10 +207,7 @@ private fun ChatItemAI(
                         }
                         // 显示时间戳
                         if (timestampText != null) {
-                            ChatMessageTimestamp(
-                                timestampText = timestampText,
-                                textAlign = TextAlign.Start,
-                            )
+                            ChatMessageTimestamp(timestampText = timestampText)
                         }
                     }
                 }
@@ -684,8 +681,6 @@ private fun ExpandableTextWithButton(
 @Composable
 private fun ChatMessageTimestamp(
     timestampText: String?,
-    textAlign: TextAlign,
-    textColor: Color = Color.White.copy(alpha = 0.55f),
 ) {
     if (timestampText.isNullOrEmpty()) {
         return
@@ -694,9 +689,9 @@ private fun ChatMessageTimestamp(
     Text(
         text = timestampText,
         modifier = Modifier.fillMaxWidth(),
-        color = textColor,
+        color = Color.White.copy(alpha = 0.55f),
         fontSize = 10.sp,
-        textAlign = textAlign,
+        textAlign = TextAlign.Start,
     )
 }
 
