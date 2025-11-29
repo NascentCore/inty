@@ -5,6 +5,7 @@ import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.TimeUtils
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -54,6 +56,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
@@ -135,6 +138,7 @@ private fun ChatItemAI(
     isGuideVisible: Boolean = false,
 ) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
+    val timestampText = remember(item.timestamp) { formatTimestamp(item.timestamp) }
 
     runCatching {
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -182,16 +186,31 @@ private fun ChatItemAI(
                             IntySetting.isAutoPlayAudio() &&
                             !isGuideVisible // 未出现引导手势时
 
-                    if (safeAgentId.isNotEmpty()) {
-                        VoicePlayer(
-                            audioInfo = audioInfo,
-                            autoPlay = shouldAutoPlay,
-                            modifier = Modifier.widthIn(38.dp),
-                            onTtsGenerated = { audioUrl ->
-                                viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
-                            },
-                            serverMessageId = item.id,
-                        )
+                    // 消息气泡上方的辅助内容条
+                    Row(
+                        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // 显示音频播放按钮
+                        if (safeAgentId.isNotEmpty()) {
+                            VoicePlayer(
+                                audioInfo = audioInfo,
+                                autoPlay = shouldAutoPlay,
+                                modifier = Modifier.widthIn(UiConfigs.ChatMessagePane.AudioPlayerMinWidth),
+                                onTtsGenerated = { audioUrl ->
+                                    viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
+                                },
+                                serverMessageId = item.id,
+                            )
+                        }
+                        // 显示时间戳
+                        if (timestampText != null) {
+                            Spacer(modifier = Modifier.width(UiConfigs.ChatMessagePane.AudioPlayerToTimestampSpacing))
+                            ChatMessageTimestamp(
+                                timestampText = timestampText,
+                                fontSize = UiConfigs.ChatMessagePane.TimestampFontSize,
+                            )
+                        }
                     }
                 }
                 val msgShape =
@@ -659,4 +678,26 @@ private fun ExpandableTextWithButton(
             )
         }
     }
+}
+
+@Composable
+private fun ChatMessageTimestamp(
+    timestampText: String?, fontSize: TextUnit,
+) {
+    if (timestampText.isNullOrEmpty()) {
+        return
+    }
+
+    Text(
+        text = timestampText,
+        color = Color.White.copy(alpha = 0.55f),
+        fontSize = fontSize,
+        // 保证行高与字体大小一致，保证居中对齐有效
+        lineHeight = fontSize,
+    )
+}
+
+private fun formatTimestamp(rawTimestamp: String?): String? {
+    if (rawTimestamp.isNullOrBlank()) return null
+    return TimeUtils.convertUtcToLocalFull(rawTimestamp).takeIf { it.isNotBlank() }
 }
