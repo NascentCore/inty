@@ -193,6 +193,8 @@ object UiConfigs {
     object ChatMessagePane {
         val PaddingHorizontal = 12.dp
         val PaddingVertical = 13.dp
-        const val WIDTH_RATIO = 0.9f
+        const val AI_WIDTH_RATIO = 0.9f
+        const val USER_WIDTH_RATIO = 0.3f
+        val UserMessageMaxWidth = 300.dp
     }
 }

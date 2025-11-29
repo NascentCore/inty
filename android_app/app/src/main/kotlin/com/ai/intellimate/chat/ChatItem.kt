@@ -220,7 +220,7 @@ private fun ChatItemAI(
                                     horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
                                     vertical = UiConfigs.ChatMessagePane.PaddingVertical,
                                 )
-                                .fillMaxWidth(UiConfigs.ChatMessagePane.WIDTH_RATIO)
+                                .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
                     ) {
                         LoadingAnimation()
                     }
@@ -234,7 +234,7 @@ private fun ChatItemAI(
                                         horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
                                         vertical = UiConfigs.ChatMessagePane.PaddingVertical,
                                     )
-                                    .fillMaxWidth(UiConfigs.ChatMessagePane.WIDTH_RATIO)
+                                    .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
                                     .pointerInput(item.content) {
                                         detectTapGestures(
                                             onLongPress = {
@@ -396,7 +396,7 @@ private fun ChatItemAI(
                                 RoundedCornerShape(12.dp),
                             )
                             .padding(12.dp, 13.dp)
-                            .fillMaxWidth(UiConfigs.ChatMessagePane.WIDTH_RATIO)
+                            .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
                             .pointerInput(item.content) {
                                 detectTapGestures(
                                     onLongPress = {
@@ -420,7 +420,7 @@ private fun ChatItemAI(
 private fun ChatItemUser(item: MsgInfo) {
     runCatching {
             Row {
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                Spacer(modifier = Modifier.weight(1f))
                 val context = LocalContext.current
                 Box(
                     modifier =
@@ -428,8 +428,11 @@ private fun ChatItemUser(item: MsgInfo) {
                                 Color.White.copy(alpha = 0.6f),
                                 RoundedCornerShape(12.dp),
                             )
-                            .padding(12.dp, 13.dp)
-                            .weight(1f)
+                            .padding(
+                                horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                            )
+                            .widthIn(min = 1.dp, max = UiConfigs.ChatMessagePane.UserMessageMaxWidth)
                             .pointerInput(item.content) {
                                 detectTapGestures(
                                     onLongPress = {
@@ -450,7 +453,7 @@ private fun ChatItemUser(item: MsgInfo) {
         }
         .onFailure { e ->
             Row {
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                Spacer(modifier = Modifier.weight(1f))
                 val context = LocalContext.current
                 Box(
                     modifier =
@@ -458,8 +461,11 @@ private fun ChatItemUser(item: MsgInfo) {
                                 Color.White.copy(alpha = 0.6f),
                                 RoundedCornerShape(12.dp),
                             )
-                            .padding(12.dp, 13.dp)
-                            .weight(1f)
+                            .padding(
+                                horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                            )
+                            .widthIn(min = 1.dp, max = UiConfigs.ChatMessagePane.UserMessageMaxWidth)
                             .pointerInput(item.content) {
                                 detectTapGestures(
                                     onLongPress = {
