@@ -5,6 +5,7 @@ import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.TimeUtils
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -54,6 +55,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
@@ -135,6 +137,7 @@ private fun ChatItemAI(
     isGuideVisible: Boolean = false,
 ) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
+    val timestampText = remember(item.timestamp) { formatTimestamp(item.timestamp) }
 
     runCatching {
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -211,6 +214,7 @@ private fun ChatItemAI(
                         generatedImageUrl != "loading"
 
                 val shouldHideText = isImageOnlyMessage || isNormalLoading
+                val shouldPlaceTimestampAfterMedia = hasGeneratedImage || isImageLoading
 
                 if (isNormalLoading) {
                     Box(
@@ -265,6 +269,15 @@ private fun ChatItemAI(
                         }
                         Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
                     }
+                }
+
+                if (!shouldHideText && timestampText != null && !shouldPlaceTimestampAfterMedia) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    ChatMessageTimestamp(
+                        timestampText = timestampText,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Start,
+                    )
                 }
 
                 if (!hasGeneratedImage && isLatestMessage) {
@@ -365,6 +378,15 @@ private fun ChatItemAI(
                                 cornerRadius = 12.dp,
                             )
                         }
+
+                        if (timestampText != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            ChatMessageTimestamp(
+                                timestampText = timestampText,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Start,
+                            )
+                        }
                     }
 
                     if (showFullScreenImage && generatedImageUrl != null && !imageLoadError) {
@@ -421,6 +443,7 @@ private fun ChatItemAI(
  */
 @Composable
 private fun ChatItemUser(item: MsgInfo) {
+    val timestampText = remember(item.timestamp) { formatTimestamp(item.timestamp) }
     runCatching {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -495,6 +518,7 @@ private fun ChatItemUser(item: MsgInfo) {
 @Composable
 private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = null) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
+    val timestampText = remember(item.timestamp) { formatTimestamp(item.timestamp) }
 
     val displayText =
         if (item.content == "image_generation_error_tip") {
@@ -507,19 +531,30 @@ private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = nu
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Row(
-            modifier = Modifier.noRippleClickable { viewModel.deleteMessage(item.localMsgId) },
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(text = displayText, color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                painter = painterResource(ai.sxwl.android.design.R.drawable.ic_delete),
-                contentDescription = "Delete tip",
-                tint = Color.White.copy(alpha = 0.5f),
-                modifier = Modifier.size(16.dp),
-            )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(
+                modifier = Modifier.noRippleClickable { viewModel.deleteMessage(item.localMsgId) },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(text = displayText, color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    painter = painterResource(ai.sxwl.android.design.R.drawable.ic_delete),
+                    contentDescription = "Delete tip",
+                    tint = Color.White.copy(alpha = 0.5f),
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+
+            if (timestampText != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                ChatMessageTimestamp(
+                    timestampText = timestampText,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }
@@ -659,4 +694,29 @@ private fun ExpandableTextWithButton(
             )
         }
     }
+}
+
+@Composable
+private fun ChatMessageTimestamp(
+    timestampText: String?,
+    modifier: Modifier = Modifier,
+    textAlign: TextAlign,
+    textColor: Color = Color.White.copy(alpha = 0.55f),
+) {
+    if (timestampText.isNullOrEmpty()) {
+        return
+    }
+
+    Text(
+        text = timestampText,
+        modifier = modifier,
+        color = textColor,
+        fontSize = 10.sp,
+        textAlign = textAlign,
+    )
+}
+
+private fun formatTimestamp(rawTimestamp: String?): String? {
+    if (rawTimestamp.isNullOrBlank()) return null
+    return TimeUtils.convertUtcToLocalFull(rawTimestamp).takeIf { it.isNotBlank() }
 }
