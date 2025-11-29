@@ -1,4 +1,4 @@
-name: Build and deploy IntelliMate web app
+name: Release - Build and deploy IntelliMate web app
 
 on:
   workflow_dispatch:

@@ -643,16 +643,17 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
                     Spacer(modifier = Modifier.height(120.dp))
 
                     // Google 登录按钮
-                    GoogleLoginButton(isLoading = isLoading, onLoginClick = { performGoogleSignIn() })
+                    GoogleLoginButton(
+                        isLoading = isLoading,
+                        onLoginClick = { performGoogleSignIn() },
+                    )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
                     // Email 登录按钮
                     EmailLoginButton(
                         isLoading = isLoading,
-                        onLoginClick = {
-                            loginScreenState = LoginScreenState.ENTER_EMAIL
-                        },
+                        onLoginClick = { loginScreenState = LoginScreenState.ENTER_EMAIL },
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))

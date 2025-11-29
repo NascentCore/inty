@@ -228,6 +228,7 @@ fun SettingsArrowItem(
     horizontalPadding: Int = 12, // 支持自定义padding，默认12dp
     selectableContent: Boolean = false, // 是否允许选择 content 文本
     showRedDot: Boolean = false, // 是否显示红点提示
+    contentMaxLines: Int = 2, // 限制内容展示行数，默认与之前一致
     onItemClick: () -> Unit = {},
     onLongClick: () -> Unit = {}, // 长按回调
 ) {
@@ -275,7 +276,7 @@ fun SettingsArrowItem(
                         lineHeight = 22.sp,
                         fontWeight = FontWeight(400),
                         color = Color(0x8CFFFFFF),
-                        maxLines = 2,
+                        maxLines = contentMaxLines,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Right,
                     )
@@ -288,7 +289,7 @@ fun SettingsArrowItem(
                     lineHeight = 22.sp,
                     fontWeight = FontWeight(400),
                     color = Color(0x8CFFFFFF),
-                    maxLines = 2,
+                    maxLines = contentMaxLines,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Right,
                 )

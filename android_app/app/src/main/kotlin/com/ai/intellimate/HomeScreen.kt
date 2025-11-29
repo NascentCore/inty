@@ -51,6 +51,7 @@ import com.ai.intellimate.ui.ExpiredVipDialog
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ForceUpgradeDialog
 import com.ai.intellimate.vip.VipCenterActivity
+import java.util.concurrent.TimeUnit
 
 /** 主页面，包含五个tab */
 @Composable
@@ -110,6 +111,11 @@ fun HomeScreen(
             }
         }
 
+    // 双击检测：跟踪最后点击的tab和时间
+    var lastTabClickTime by remember { mutableStateOf(0L) }
+    var lastTabIndex by remember { mutableStateOf(-1) }
+    val doubleTapTimeoutMs = 300L // 双击检测时间窗口（毫秒）
+
     Scaffold(
         modifier =
             modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
@@ -121,12 +127,33 @@ fun HomeScreen(
                 selectedTab = selectedTab.value.ordinal,
                 tabItems = homeTabItems,
                 onTabSelected = { tabIndex ->
-                    handleTabSelectionWithLauncher(
-                        tabIndex,
-                        context,
-                        mainViewModel,
-                        createRoleLauncher,
-                    )
+                    val currentTime = System.currentTimeMillis()
+                    val exploreTabIndex = HomeTabIndex.Explore.ordinal
+
+                    // 检测双击：如果点击的是Explore tab，且与上次点击相同，且在时间窗口内
+                    if (
+                        tabIndex == exploreTabIndex &&
+                            tabIndex == lastTabIndex &&
+                            currentTime - lastTabClickTime < doubleTapTimeoutMs
+                    ) {
+                        // 双击Explore tab，触发重置
+                        if (selectedTab.value == HomeTabIndex.Explore) {
+                            mainViewModel.triggerExploreReset()
+                        }
+                        // 重置计时器，避免连续触发
+                        lastTabClickTime = 0
+                        lastTabIndex = -1
+                    } else {
+                        // 正常点击，更新记录
+                        lastTabClickTime = currentTime
+                        lastTabIndex = tabIndex
+                        handleTabSelectionWithLauncher(
+                            tabIndex,
+                            context,
+                            mainViewModel,
+                            createRoleLauncher,
+                        )
+                    }
                 },
                 iconSize = UiConfigs.BottomBar.TabIconSize,
                 textSize = (UiConfigs.BottomBar.TabIconSize.value * 0.45f).sp,
@@ -164,6 +191,11 @@ private fun AppVersionLogic(mainViewModel: MainViewModel) {
     }
 }
 
+private val RESUB_REMINDER_CYCLE_SECONDS = TimeUnit.DAYS.toSeconds(1)
+private val MAX_RESUB_REMINDER_CYCLE_SECONDS = TimeUnit.DAYS.toSeconds(32)
+private val MAX_RESUB_REMINDER_MULTIPLIER =
+    (MAX_RESUB_REMINDER_CYCLE_SECONDS / RESUB_REMINDER_CYCLE_SECONDS).toInt()
+
 @Composable
 private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
     // 感知vip订阅过期的提示弹窗
@@ -172,13 +204,17 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
     val vipPlan by mainViewModel.vipPlanFlow.collectAsState()
     LifecycleResumeEffect(mainViewModel) {
         if (!vipStatue.isSubscribed && vipStatue.everSubscribed) {
-            // 未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
-            if (
-                !IntySetting.hasTipsVipExpired() &&
-                    IntySetting.isLogin() &&
-                    IntySetting.getCurToken().isNotEmpty()
-            ) {
-                showExpiredDialog = true
+            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                val nowSeconds = System.currentTimeMillis() / 1000
+                val lastShowTime = IntySetting.getLastResubReminderDialogShowTime()
+                val showCount = IntySetting.getResubReminderDialogShowCount()
+                val shouldShowReminder =
+                    shouldShowResubReminderDialog(nowSeconds, lastShowTime, showCount)
+                if (shouldShowReminder) {
+                    IntySetting.setLastResubReminderDialogShowTime(nowSeconds)
+                    IntySetting.setResubReminderDialogShowCount(showCount + 1)
+                    showExpiredDialog = true
+                }
             }
         }
         onPauseOrDispose {}
@@ -216,9 +252,23 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
                 showExpiredDialog = false
             },
         )
-        // 标记已经展示了tips的dialog
-        IntySetting.setTipsVipExpired(true)
     }
+}
+
+private fun shouldShowResubReminderDialog(
+    nowSeconds: Long,
+    lastShowTimeSeconds: Long,
+    showCount: Int,
+): Boolean {
+    if (lastShowTimeSeconds == 0L) return true
+    val delaySeconds = calculateResubReminderDelaySeconds(showCount)
+    return nowSeconds - lastShowTimeSeconds >= delaySeconds
+}
+
+private fun calculateResubReminderDelaySeconds(showCount: Int): Long {
+    val safeCount = showCount.coerceAtMost(30)
+    val multiplier = (1 shl safeCount).coerceAtMost(MAX_RESUB_REMINDER_MULTIPLIER)
+    return RESUB_REMINDER_CYCLE_SECONDS * multiplier
 }
 
 /** 处理Tab选择逻辑（带 launcher） */
@@ -263,7 +313,7 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Explore -> {
-            ExploreTabContent(innerPadding = innerPadding)
+            ExploreTabContent(innerPadding = innerPadding, mainViewModel = mainViewModel)
         }
 
         HomeTabIndex.Profile -> {
@@ -327,9 +377,10 @@ private fun MessagesTabContent() {
 
 /** 推荐Tab内容 */
 @Composable
-private fun ExploreTabContent(innerPadding: PaddingValues) {
+private fun ExploreTabContent(innerPadding: PaddingValues, mainViewModel: MainViewModel) {
     val context = LocalContext.current
     val exploreViewModel: ExploreViewModel = viewModel()
+    val exploreResetSignal by mainViewModel.exploreResetSignal.collectAsState()
 
     // 初始化 ExploreTab 数据
     LaunchedEffect(Unit) {
@@ -345,6 +396,7 @@ private fun ExploreTabContent(innerPadding: PaddingValues) {
             ChatActivity.launch(context, agent, pageSource = ChatActivity.EXPLORE_TAB)
         },
         viewModel = exploreViewModel,
+        externalResetSignal = exploreResetSignal,
     )
 }
 

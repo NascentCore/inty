@@ -14,13 +14,20 @@
     <string name="app_name">IntelliMate</string>
     <string name="ID">ID:%s</string>
     <string name="no_agent">Create your own characters now!</string>
+    <string name="me_icons_row_help">Help Center</string>
+    <string name="me_icons_row_discord">Discord</string>
+    <string name="me_icons_row_whatsapp">Whatsapp</string>
+    <string name="me_icons_row_settings">Settings</string>
     <string name="settings">Settings</string>
     <string name="settings_help">Help Center</string>
     <string name="settings_email_support">Email Support</string>
     <string name="settings_email_inty">IntelliMate@inty.cc</string>
     <string name="settings_version">Version</string>
+    <string name="settings_rate_us">Rate IntelliMate</string>
     <string name="settings_user_id">User ID</string>
     <string name="settings_user_id_unavailable">Unavailable</string>
+    <string name="settings_user_email">User Email</string>
+    <string name="settings_user_email_unavailable">Unavailable</string>
     <string name="logout">Log out</string>
     <string name="crop_image">Crop Image</string>
     <string name="introduction">Introduction</string>
@@ -96,7 +103,7 @@
     <string name="settings_str_delete_account">Delete My Account</string>
     <string name="url_user_agreement">https://app.termly.io/policy-viewer/policy.html?policyUUID=97416d63-aebb-4ea5-b990-eccc5aa6cff1</string>
     <string name="url_privacy_policy">https://app.termly.io/policy-viewer/policy.html?policyUUID=c82c3bfa-10a0-4075-a7f1-a98d5146d71c</string>
-    <string name="str_expired_vip_dialog_content">Your Premium subscription has expired and you\'ll lose access to unlimited chat and other premium features. Resubscribe to resume the benefits!</string>
+    <string name="str_expired_vip_dialog_content">You have enjoyed IntelliMate Premium before. Come back and check out IntelliMate Premium\'s newest benefits and perks!</string>
     <string name="str_unlimit_dialog_content">Daily Free Chat Limit Reached! Go Premium for unlimited chats and exclusive features! Free chats refresh tomorrow — come back and keep chatting. ❤️</string>
     <string name="str_unlimit_btn_text">Unlimited Chat and More! 🔥</string>
     <!-- Image Generation Error Messages -->
@@ -182,6 +189,8 @@
     <string name="please_read_warning">Please read the warning carefully and proceed with caution.</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
+    <string name="logout_confirm_title">Log out?</string>
+    <string name="logout_confirm_description">You\'ll sign out of IntelliMate and need to log in again to keep chatting. Your chats and characters stay safe.</string>
 
 
     <!-- Subscription popup title -->
@@ -196,7 +205,9 @@
     <string name="chat_settings_settings_title">Settings</string>
     <string name="chat_settings_show_keep_talking">Show \"Keep Talking\" button</string>
     <string name="chat_settings_auto_play_voice">Auto-play voice messages</string>
-    <string name="chat_input_placeholder">Write something to your AI companion</string>
+    <string name="chat_settings_show_scene_action_button">Show action button</string>
+    <string name="chat_input_placeholder">Write something to your IntelliMate here...</string>
+    <string name="chat_input_with_scene_action_placeholder">Click \"()\" to write actions, feelings, etc...</string>
 
     <!-- VIP Components -->
     <string name="discount_save">OFF</string>

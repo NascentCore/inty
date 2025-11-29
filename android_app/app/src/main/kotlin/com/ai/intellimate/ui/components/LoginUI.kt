@@ -2,6 +2,7 @@ package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.AppColors
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,12 +19,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -50,7 +51,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.activity.compose.BackHandler
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import java.util.regex.Pattern
@@ -234,9 +234,9 @@ internal fun EnterEmailScreen(
             // 返回按钮
             Image(
                 modifier =
-                    Modifier.align(Alignment.Start)
-                        .size(18.dp, 18.dp)
-                        .noRippleClickable { onBack() },
+                    Modifier.align(Alignment.Start).size(18.dp, 18.dp).noRippleClickable {
+                        onBack()
+                    },
                 painter = painterResource(R.drawable.back),
                 contentDescription = stringResource(R.string.content_desc_back),
             )
@@ -272,10 +272,7 @@ internal fun EnterEmailScreen(
                 },
                 singleLine = true,
                 keyboardOptions =
-                    KeyboardOptions(
-                        keyboardType = KeyboardType.Email,
-                        imeAction = ImeAction.Next,
-                    ),
+                    KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                 colors =
                     OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
@@ -313,10 +310,7 @@ internal fun EnterEmailScreen(
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(30.dp),
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF8B5CF6),
-                    ),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
             ) {
                 Text(
                     text = stringResource(R.string.continue_button),
@@ -358,9 +352,9 @@ internal fun LoginWithEmailScreen(
             // 返回按钮
             Image(
                 modifier =
-                    Modifier.align(Alignment.Start)
-                        .size(18.dp, 18.dp)
-                        .noRippleClickable { onBack() },
+                    Modifier.align(Alignment.Start).size(18.dp, 18.dp).noRippleClickable {
+                        onBack()
+                    },
                 painter = painterResource(R.drawable.back),
                 contentDescription = stringResource(R.string.content_desc_back),
             )
@@ -386,10 +380,7 @@ internal fun LoginWithEmailScreen(
                 enabled = false,
                 singleLine = true,
                 keyboardOptions =
-                    KeyboardOptions(
-                        keyboardType = KeyboardType.Email,
-                        imeAction = ImeAction.Next,
-                    ),
+                    KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                 colors =
                     OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
@@ -436,8 +427,7 @@ internal fun LoginWithEmailScreen(
                                 if (passwordVisible) Icons.Filled.VisibilityOff
                                 else Icons.Filled.Visibility,
                             contentDescription =
-                                if (passwordVisible) "Hide password"
-                                else "Show password",
+                                if (passwordVisible) "Hide password" else "Show password",
                             tint = Color.White.copy(alpha = 0.7f),
                         )
                     }

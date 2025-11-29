@@ -1,4 +1,4 @@
-name: Build and deploy Inty push worker
+name: Release- Build and deploy Inty push worker
 
 on:
   push:

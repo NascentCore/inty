@@ -1,5 +1,5 @@
 # 构建 release 构建类型并上传到 Google Play Internal Testing 轨道。
-name: Build and upload release bundle to Google Play internal testing
+name: Release - Build and upload aab to Google Play internal testing track
 
 on:
   workflow_dispatch:
@@ -51,7 +51,7 @@ jobs:
       - name: Build release bundle and APK
         run: |
           cd android_app
-          ./gradlew bundleRelease assembleRelease --stacktrace --info
+          ./gradlew bundleRelease --stacktrace --info
 
       - id: gen-release-info
         run: |

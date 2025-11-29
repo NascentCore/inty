@@ -34,6 +34,10 @@
 - Compose/Recycler 需避免无意义重组；图片与音频加载注意内存与缓存策略。
 - 现有并行网络栈：Retrofit/Moshi 与 Inty SDK；避免新增第三套；复用统一鉴权/环境/日志配置，避免重复创建 `OkHttpClient`。
 
+## Explore 页面交互
+
+- Explore 顶部栏支持双击手势，用于回到推荐列表第一页：需要同时滚动 `LazyVerticalGrid` 到索引 0 并触发 Paging 刷新，以确保展示第一屏数据。
+
 ## AI 使用规范（2025.10）
 
 - 在 UI 中明确标识 AI 生成内容，符合 GB45438-2025。

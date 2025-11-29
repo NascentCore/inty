@@ -14,9 +14,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -102,10 +106,76 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     }
 }
 
+/** 退出登录确认对话框 */
+@Composable
+fun LogoutConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    val cancelFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) { cancelFocusRequester.requestFocus() }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(UiConfigs.Shape.Dialog))
+                    .background(color = UiConfigs.Colors.DialogSurface)
+                    .padding(UiConfigs.Padding.DialogInner)
+        ) {
+            Text(
+                text = stringResource(R.string.logout_confirm_title),
+                fontSize = UiConfigs.Typography.Title,
+                color = Color.White,
+            )
+
+            Spacer(Modifier.height(UiConfigs.Spacing.Small))
+
+            Text(
+                text = stringResource(R.string.logout_confirm_description),
+                fontSize = UiConfigs.Typography.Body,
+                color = Color.White,
+            )
+
+            Spacer(Modifier.height(UiConfigs.Spacing.MediumPlus))
+
+            Button(
+                onClick = onConfirm,
+                modifier =
+                    Modifier.fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
+                        .align(Alignment.CenterHorizontally),
+            ) {
+                Text(
+                    text = stringResource(R.string.logout),
+                    fontSize = UiConfigs.Typography.ButtonLarge,
+                    color = Color.White,
+                )
+            }
+
+            TextButton(
+                onClick = onDismiss,
+                modifier =
+                    Modifier.align(Alignment.CenterHorizontally)
+                        .focusRequester(cancelFocusRequester),
+            ) {
+                Text(
+                    text = stringResource(R.string.cancel),
+                    fontSize = UiConfigs.Typography.Body,
+                    color = Color.White,
+                )
+            }
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun DeleteAccountDialogPreview() {
     DeleteAccountDialog(onDismiss = {}, onConfirm = {})
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun LogoutConfirmDialogPreview() {
+    LogoutConfirmDialog(onDismiss = {}, onConfirm = {})
 }
 
 /** App强制更新的Dialog */
