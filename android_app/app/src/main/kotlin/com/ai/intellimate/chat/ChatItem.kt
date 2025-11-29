@@ -185,10 +185,12 @@ private fun ChatItemAI(
                             IntySetting.isAutoPlayAudio() &&
                             !isGuideVisible // 未出现引导手势时
 
+                    // 消息气泡上方的辅助内容条
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        // 显示音频播放按钮
                         if (safeAgentId.isNotEmpty()) {
                             VoicePlayer(
                                 audioInfo = audioInfo,
@@ -203,6 +205,7 @@ private fun ChatItemAI(
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
                         }
+                        // 显示时间戳
                         if (timestampText != null) {
                             ChatMessageTimestamp(
                                 timestampText = timestampText,
