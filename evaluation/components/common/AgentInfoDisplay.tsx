@@ -233,7 +233,7 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
           </Col>
           <Col xs={24} md={8}>
             <p>
-              <strong>动态背景视频:</strong>
+              <strong>动态背景动图:</strong>
             </p>
             {agent.background_animated ? (
               <div
@@ -246,18 +246,14 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
                   backgroundColor: "#000",
                 }}
               >
-                <video
+                <img
                   key={agent.background_animated}
                   src={agent.background_animated}
-                  controls
-                  loop
-                  muted
-                  playsInline
+                  alt="背景动图"
                   style={{
                     width: "100%",
                     display: "block",
                   }}
-                  poster={agent.background || undefined}
                 />
                 <div
                   style={{

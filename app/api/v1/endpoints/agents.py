@@ -385,8 +385,8 @@ async def delete_agent(
 @router.post(
     "/{agent_id}/generate-background-animated",
     response_model=schemas.APIResponse[schemas.Agent],
-    summary="生成背景视频",
-    description="通过 Google Veo3 API 生成视频并直接存储视频地址",
+    summary="生成背景动图",
+    description="通过 Google Veo3 API 生成视频并转换为 webp 动图格式存储",
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def generate_background_animated(
@@ -397,7 +397,9 @@ async def generate_background_animated(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    生成背景视频并更新到 Agent
+    生成背景动图并更新到 Agent
+    
+    通过 Google Veo3 API 生成视频，然后转换为 webp 动图格式存储
     """
     # 验证 Agent 存在且用户有权限
     agent = await agent_service.get_agent(db, agent_id=agent_id)
@@ -472,19 +474,33 @@ async def generate_background_animated(
             image_uri=background_gcs_uri,
         )
 
-        # 4. 将 GCS URI 转换为 CDN URL
-        logger.info(f"开始转换视频 GCS URI 为 CDN URL: {video_gcs_uri}")
+        # 4. 将视频转换为 webp 动图
+        logger.info(f"开始将视频转换为 webp 动图: {video_gcs_uri}")
+        from app.utils.video_to_animated_image import (
+            convert_video_to_animated_image_and_upload,
+        )
+
+        # 将 GCS URI 转换为 CDN URL 用于下载
         video_url = image_transform_service.transform_desktop(video_gcs_uri)
+
+        # 转换为 webp 动图并上传
+        webp_url = await convert_video_to_animated_image_and_upload(
+            video_url=video_url,
+            user_id=current_user.id,
+            output_format="webp",
+            duration=4,
+            base_path="uploads/animated_images",
+        )
 
         # 5. 更新 Agent 的 background_animated 字段
         from app.schemas.agent import AgentUpdate
 
-        agent_update = AgentUpdate(background_animated=video_url)
+        agent_update = AgentUpdate(background_animated=webp_url)
         updated_agent = await agent_service.update_agent(
             db, db_agent=agent, agent_in=agent_update
         )
 
-        logger.info(f"背景视频生成成功，URL: {video_url}")
+        logger.info(f"背景动图生成成功，webp URL: {webp_url}")
         return schemas.APIResponse.success(data=updated_agent)
 
     except HTTPException:
