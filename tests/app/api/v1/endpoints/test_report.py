@@ -1,0 +1,148 @@
+"""
+端到端测试：Report API
+
+测试后端服务的举报功能，包括：
+- 使用 reason_codes 创建举报（新 API）
+- 使用 reason_ids 创建举报（向后兼容，旧 API）
+"""
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from app.core.config import global_config_loaded_from_config_yaml
+from app.models.report import Report
+from tests.app.api.v1.endpoints.conftest import integration_client
+
+
+@pytest.fixture
+def db_session():
+    engine = create_engine(global_config_loaded_from_config_yaml.database.url)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    yield session
+    session.close()
+
+
+def _get_reporter_id(integration_client):
+    """获取当前用户 ID 的辅助函数"""
+    user_response = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/users/me"
+    )
+    assert user_response.status_code == 200, f"Failed to get user info: {user_response.text}"
+    user_data = user_response.json()
+    assert user_data.get("code") == 200, f"Get user info returned error: {user_data}"
+    return user_data["data"]["id"]
+
+
+def _find_report(db_session, agent_id, reporter_id):
+    """查找举报记录的辅助函数"""
+    return (
+        db_session.query(Report)
+        .filter(
+            Report.target_id == agent_id,
+            Report.target_type == "AGENT",
+            Report.reporter_id == reporter_id,
+        )
+        .order_by(Report.created_at.desc())
+        .first()
+    )
+
+
+def test_create_report_with_reason_codes(integration_client, db_session):
+    """测试使用 reason_codes 创建举报（新 API）"""
+    # 创建一个 agent 作为被举报的目标
+    agent_id = integration_client.create_agent(
+        name="Test Report Agent Codes",
+        visibility="PUBLIC",
+    )
+
+    # 准备举报数据，使用新的 reason_codes API
+    report_payload = {
+        "target_id": agent_id,
+        "target_type": "AGENT",
+        "reason_codes": ["SENSITIVE_OR_SEXUAL_CONTENT", "MISINFORMATION"],
+        "description": "Test report with reason_codes",
+        "image_urls": [],
+    }
+
+    # 提交举报
+    response = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=report_payload,
+    )
+
+    # 验证响应
+    assert response.status_code == 200, f"Report creation failed: {response.text}"
+
+    response_data = response.json()
+    assert response_data.get("code") == 200, f"Report creation returned error: {response_data}"
+    assert response_data.get("message") == "success", \
+        f"Unexpected response structure: {response_data}"
+
+    # 获取当前用户 ID
+    reporter_id = _get_reporter_id(integration_client)
+
+    # 检查数据库内的举报记录
+    report = _find_report(db_session, agent_id, reporter_id)
+
+    assert report is not None, "Report not found in database"
+    assert report.target_id == agent_id, "Report target ID mismatch"
+    assert report.target_type == "AGENT", "Report target type mismatch"
+    assert report.reason_codes == ["SENSITIVE_OR_SEXUAL_CONTENT", "MISINFORMATION"], \
+        "Report reason codes mismatch"
+    # 只使用 reason_codes 时，reason_ids 应该为空列表
+    assert report.reason_ids == [], "Report reason IDs should be empty when only reason_codes provided"
+    assert report.description == "Test report with reason_codes", "Report description mismatch"
+    assert report.image_urls == [], "Report image URLs mismatch"
+
+
+def test_create_report_with_reason_ids(integration_client, db_session):
+    """测试使用 reason_ids 创建举报（向后兼容，旧 API）"""
+    # 创建一个 agent 作为被举报的目标
+    agent_id = integration_client.create_agent(
+        name="Test Report Agent IDs",
+        visibility="PUBLIC",
+    )
+
+    # 准备举报数据，使用旧的 reason_ids API（向后兼容）
+    # 注意：reason_ids 会被自动转换为 reason_codes
+    report_payload = {
+        "target_id": agent_id,
+        "target_type": "AGENT",
+        "reason_ids": [1],  # SENSITIVE_OR_SEXUAL_CONTENT
+        # reason_codes 不提供，会从 reason_ids 自动转换
+        "description": "Test report with reason_ids (backward compatibility)",
+        "image_urls": [],
+    }
+
+    # 提交举报
+    response = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=report_payload,
+    )
+
+    # 验证响应
+    assert response.status_code == 200, f"Report creation failed: {response.text}"
+
+    response_data = response.json()
+    assert response_data.get("code") == 200, f"Report creation returned error: {response_data}"
+    assert response_data.get("message") == "success", \
+        f"Unexpected response structure: {response_data}"
+
+    # 获取当前用户 ID
+    reporter_id = _get_reporter_id(integration_client)
+
+    # 检查数据库内的举报记录
+    report = _find_report(db_session, agent_id, reporter_id)
+
+    assert report is not None, "Report not found in database"
+    assert report.target_id == agent_id, "Report target ID mismatch"
+    assert report.target_type == "AGENT", "Report target type mismatch"
+    # reason_ids 应该被保存（向后兼容）
+    assert report.reason_ids == [1], "Report reason IDs mismatch"
+    # reason_codes 应该从 reason_ids 转换而来
+    assert report.reason_codes == ["SENSITIVE_OR_SEXUAL_CONTENT"], \
+        "Report reason codes mismatch (should be converted from reason_ids)"
+    assert report.description == "Test report with reason_ids (backward compatibility)", \
+        "Report description mismatch"
+    assert report.image_urls == [], "Report image URLs mismatch"

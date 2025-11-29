@@ -19,13 +19,44 @@ async def create_report(
     db: AsyncSession, report_in: ReportCreate, reporter_id: str
 ) -> Report:
     report_id = get_new_report_id()
+
+    # 处理 reason_codes 和向后兼容的 reason_ids
+    reason_codes = report_in.reason_codes
+    reason_ids = []
+
+    # 如果提供了 reason_ids（向后兼容），转换为 reason_codes
+    if report_in.reason_ids:
+        reason_stmt = select(ReportReason).where(
+            ReportReason.id.in_(report_in.reason_ids)
+        )
+        reason_result = await db.execute(reason_stmt)
+        reason_map = {r.id: r.code for r in reason_result.scalars().all()}
+        # 将 reason_ids 转换为 reason_codes，如果 reason_codes 未提供则使用转换后的
+        if not reason_codes:
+            # 验证所有 reason_ids 都存在，如果不存在则抛出错误
+            missing_ids = [rid for rid in report_in.reason_ids if rid not in reason_map]
+            if missing_ids:
+                raise ValueError(
+                    f"Invalid reason_ids: {missing_ids}. These reason IDs do not exist."
+                )
+            reason_codes = [reason_map[rid] for rid in report_in.reason_ids]
+        # 为了向后兼容，仍然保存 reason_ids
+        reason_ids = report_in.reason_ids
+
+    # 验证至少提供了 reason_codes 或 reason_ids，且 reason_codes 包含至少一个非空值
+    if not reason_codes or not any(reason_codes):
+        raise ValueError(
+            "Either reason_codes or reason_ids must be provided, and reason_codes must contain at least one non-empty value"
+        )
+
     # 如果 report_type 为 None，则存储为 None（数据库为 NULL），业务逻辑中视为 REPORT
     report = Report(
         id=report_id,
         target_id=report_in.target_id,
         target_type=report_in.target_type,
         reporter_id=reporter_id,
-        reason_ids=report_in.reason_ids,
+        reason_ids=reason_ids or [],  # 向后兼容，如果只有 reason_codes 则为空列表
+        reason_codes=reason_codes,
         image_urls=report_in.image_urls or [],
         description=report_in.description,
         report_type=report_in.report_type,
@@ -38,8 +69,12 @@ async def create_report(
 
 async def query_reports(db: AsyncSession, query: ReportQuery):
     filters = []
+    # DEPRECATED: 支持通过 reason_ids 查询（向后兼容）
     if query.reason_ids:
         filters.append(Report.reason_ids.overlap(query.reason_ids))
+    # 支持通过 reason_codes 查询
+    if query.reason_codes:
+        filters.append(Report.reason_codes.overlap(query.reason_codes))
     if query.target_id:
         filters.append(Report.target_id == query.target_id)
     if query.target_type:
@@ -67,17 +102,33 @@ async def query_reports(db: AsyncSession, query: ReportQuery):
     result = await db.execute(stmt)
     items = result.scalars().all()
 
-    # reason_ids 转 reason_codes
+    # 确保 reason_codes 存在（向后兼容：如果只有 reason_ids，转换为 reason_codes）
     all_reason_ids = set()
     for item in items:
-        all_reason_ids.update(item.reason_ids)
-    reason_map = {}
+        if item.reason_ids:
+            all_reason_ids.update(item.reason_ids)
+
     if all_reason_ids:
         reason_stmt = select(ReportReason).where(ReportReason.id.in_(all_reason_ids))
         reason_result = await db.execute(reason_stmt)
         reason_map = {r.id: r.code for r in reason_result.scalars().all()}
+        for item in items:
+            # 如果 reason_codes 为空但 reason_ids 存在，从 reason_ids 转换
+            if not item.reason_codes and item.reason_ids:
+                # 只转换存在的 ID，过滤掉不存在的 ID 和空字符串
+                converted_codes = [
+                    reason_map[rid] for rid in item.reason_ids if rid in reason_map and reason_map[rid]
+                ]
+                item.reason_codes = converted_codes if converted_codes else []
+
+    # 确保所有字段在序列化前都是正确的类型（处理 None 值）
     for item in items:
-        item.reason_codes = [reason_map.get(rid, "") for rid in item.reason_ids]
+        # 确保 reason_ids 是列表（不能是 None）
+        if item.reason_ids is None:
+            item.reason_ids = []
+        # 确保 reason_codes 是列表（不能是 None）
+        if item.reason_codes is None:
+            item.reason_codes = []
         # 如果 report_type 为 None，在序列化时视为 "REPORT"
         if item.report_type is None:
             item.report_type = ReportType.REPORT
