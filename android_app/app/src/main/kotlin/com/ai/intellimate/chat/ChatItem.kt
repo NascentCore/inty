@@ -441,7 +441,6 @@ private fun ChatItemAI(
  */
 @Composable
 private fun ChatItemUser(item: MsgInfo) {
-    val timestampText = remember(item.timestamp) { formatTimestamp(item.timestamp) }
     runCatching {
             Row(
                 modifier = Modifier.fillMaxWidth(),
