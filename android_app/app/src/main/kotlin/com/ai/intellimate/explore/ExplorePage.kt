@@ -19,7 +19,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -35,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
-import androidx.compose.foundation.gestures.detectTapGestures
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import kotlinx.coroutines.delay
@@ -49,6 +46,7 @@ fun ExplorePage(
     innerPadding: PaddingValues,
     onClickAgent: (AgentInfo) -> Unit,
     viewModel: ExploreViewModel = viewModel(),
+    /** 外部重置信号（来自底部导航栏双击），当值变化时触发滚动到顶部并刷新 */
     externalResetSignal: Int = 0,
 ) {
     val context = LocalContext.current
@@ -72,13 +70,6 @@ fun ExplorePage(
     // 初始化图片尺寸缓存管理器和图片预加载管理器
     LaunchedEffect(Unit) { ImagePreloadManager.init(context) }
 
-    var doubleTapResetSignal by remember { mutableIntStateOf(0) }
-
-    // 合并外部重置信号（来自底部导航栏双击）和内部双击信号（来自顶部栏）
-    val combinedResetSignal = remember(doubleTapResetSignal, externalResetSignal) {
-        doubleTapResetSignal + externalResetSignal
-    }
-
     Box(modifier = modifier) {
         AsyncImage(
             modifier = Modifier.align(Alignment.TopEnd),
@@ -97,12 +88,6 @@ fun ExplorePage(
                         alignment = Alignment.CenterStart,
                     )
                 },
-                modifier =
-                    Modifier.pointerInput(Unit) {
-                        detectTapGestures(
-                            onDoubleTap = { doubleTapResetSignal += 1 },
-                        )
-                    },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
 
@@ -189,7 +174,7 @@ fun ExplorePage(
                     isRefreshing = isRefreshing,
                     onRetry = { viewModel.refreshRecommendAgents() },
                     viewModel = viewModel,
-                    resetToTopSignal = combinedResetSignal,
+                    resetToTopSignal = externalResetSignal,
                 )
             }
         }
