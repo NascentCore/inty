@@ -5,14 +5,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.core.uuid import get_new_report_id
-from app.models.report import Report, ReportReason, ReportType
-from app.schemas.report import ReportCreate, ReportQuery
+from app.models.report import REASON_ID_TO_CODE, Report, ReportType
+from app.schemas.report import ReportCreate, ReportQuery, ReportReason
 
 
-async def list_report_reasons(db: AsyncSession) -> List[ReportReason]:
-    stmt = select(ReportReason).where(ReportReason.is_active == True)
-    result = await db.execute(stmt)
-    return result.scalars().all()
+def list_report_reasons() -> List[ReportReason]:
+    """返回硬编码的举报原因列表（不再从数据库查询）"""
+    return [
+        ReportReason(
+            id=id,
+            code=code,
+            description=None,
+            is_active=True,
+        )
+        for id, code in REASON_ID_TO_CODE.items()
+    ]
 
 
 async def create_report(
@@ -26,20 +33,17 @@ async def create_report(
 
     # 如果提供了 reason_ids（向后兼容），转换为 reason_codes
     if report_in.reason_ids:
-        reason_stmt = select(ReportReason).where(
-            ReportReason.id.in_(report_in.reason_ids)
-        )
-        reason_result = await db.execute(reason_stmt)
-        reason_map = {r.id: r.code for r in reason_result.scalars().all()}
-        # 将 reason_ids 转换为 reason_codes，如果 reason_codes 未提供则使用转换后的
+        # 使用硬编码的映射关系转换
         if not reason_codes:
             # 验证所有 reason_ids 都存在，如果不存在则抛出错误
-            missing_ids = [rid for rid in report_in.reason_ids if rid not in reason_map]
+            missing_ids = [
+                rid for rid in report_in.reason_ids if rid not in REASON_ID_TO_CODE
+            ]
             if missing_ids:
                 raise ValueError(
                     f"Invalid reason_ids: {missing_ids}. These reason IDs do not exist."
                 )
-            reason_codes = [reason_map[rid] for rid in report_in.reason_ids]
+            reason_codes = [REASON_ID_TO_CODE[rid] for rid in report_in.reason_ids]
         # 为了向后兼容，仍然保存 reason_ids
         reason_ids = report_in.reason_ids
 
@@ -103,23 +107,16 @@ async def query_reports(db: AsyncSession, query: ReportQuery):
     items = result.scalars().all()
 
     # 确保 reason_codes 存在（向后兼容：如果只有 reason_ids，转换为 reason_codes）
-    all_reason_ids = set()
     for item in items:
-        if item.reason_ids:
-            all_reason_ids.update(item.reason_ids)
-
-    if all_reason_ids:
-        reason_stmt = select(ReportReason).where(ReportReason.id.in_(all_reason_ids))
-        reason_result = await db.execute(reason_stmt)
-        reason_map = {r.id: r.code for r in reason_result.scalars().all()}
-        for item in items:
-            # 如果 reason_codes 为空但 reason_ids 存在，从 reason_ids 转换
-            if not item.reason_codes and item.reason_ids:
-                # 只转换存在的 ID，过滤掉不存在的 ID 和空字符串
-                converted_codes = [
-                    reason_map[rid] for rid in item.reason_ids if rid in reason_map and reason_map[rid]
-                ]
-                item.reason_codes = converted_codes if converted_codes else []
+        # 如果 reason_codes 为空但 reason_ids 存在，从 reason_ids 转换
+        if not item.reason_codes and item.reason_ids:
+            # 使用硬编码的映射关系转换，只转换存在的 ID
+            converted_codes = [
+                REASON_ID_TO_CODE[rid]
+                for rid in item.reason_ids
+                if rid in REASON_ID_TO_CODE
+            ]
+            item.reason_codes = converted_codes if converted_codes else []
 
     # 确保所有字段在序列化前都是正确的类型（处理 None 值）
     for item in items:

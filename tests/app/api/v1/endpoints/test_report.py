@@ -60,7 +60,7 @@ def test_create_report_with_reason_codes(integration_client, db_session):
     report_payload = {
         "target_id": agent_id,
         "target_type": "AGENT",
-        "reason_codes": ["SENSITIVE_OR_SEXUAL_CONTENT", "MISINFORMATION"],
+        "reason_codes": ["SENSITIVE_CONTENT", "MISINFORMATION"],
         "description": "Test report with reason_codes",
         "image_urls": [],
     }
@@ -88,7 +88,7 @@ def test_create_report_with_reason_codes(integration_client, db_session):
     assert report is not None, "Report not found in database"
     assert report.target_id == agent_id, "Report target ID mismatch"
     assert report.target_type == "AGENT", "Report target type mismatch"
-    assert report.reason_codes == ["SENSITIVE_OR_SEXUAL_CONTENT", "MISINFORMATION"], \
+    assert report.reason_codes == ["SENSITIVE_CONTENT", "MISINFORMATION"], \
         "Report reason codes mismatch"
     # 只使用 reason_codes 时，reason_ids 应该为空列表
     assert report.reason_ids == [], "Report reason IDs should be empty when only reason_codes provided"
@@ -109,7 +109,7 @@ def test_create_report_with_reason_ids(integration_client, db_session):
     report_payload = {
         "target_id": agent_id,
         "target_type": "AGENT",
-        "reason_ids": [1],  # SENSITIVE_OR_SEXUAL_CONTENT
+        "reason_ids": [1],  # SENSITIVE_CONTENT
         # reason_codes 不提供，会从 reason_ids 自动转换
         "description": "Test report with reason_ids (backward compatibility)",
         "image_urls": [],
@@ -141,7 +141,7 @@ def test_create_report_with_reason_ids(integration_client, db_session):
     # reason_ids 应该被保存（向后兼容）
     assert report.reason_ids == [1], "Report reason IDs mismatch"
     # reason_codes 应该从 reason_ids 转换而来
-    assert report.reason_codes == ["SENSITIVE_OR_SEXUAL_CONTENT"], \
+    assert report.reason_codes == ["SENSITIVE_CONTENT"], \
         "Report reason codes mismatch (should be converted from reason_ids)"
     assert report.description == "Test report with reason_ids (backward compatibility)", \
         "Report description mismatch"
