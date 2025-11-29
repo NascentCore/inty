@@ -361,19 +361,12 @@ private fun CreateRolePage(
     }
 
     // 使用 snapshotFlow 监听生命周期状态变化，在组合周期内安全地更新状态
-    // 当活动停止或销毁时清除图库上传标志，防止状态过期
+    // 当活动销毁时清除图库上传标志，防止状态过期
+    // 注意：不在 CREATED 状态清除，因为从 UCrop 返回时可能经过 CREATED，会过早清除标志
     LaunchedEffect(lifecycleOwner) {
         snapshotFlow { lifecycleOwner.lifecycle.currentState }
             .collect { state ->
                 when (state) {
-                    Lifecycle.State.CREATED -> {
-                        // 活动刚创建时，清除可能过期的标志（用户可能从其他活动返回）
-                        if (isUploadingFromGallery) {
-                            LogUtils.i("Activity lifecycle CREATED: clearing stale gallery upload flags")
-                            isUploadingFromGallery = false
-                            originalUploadedImageUrl = null
-                        }
-                    }
                     Lifecycle.State.DESTROYED -> {
                         // 活动销毁时清除标志
                         LogUtils.i("Activity lifecycle DESTROYED: clearing gallery upload flags")
@@ -574,10 +567,12 @@ private fun CreateRolePage(
                                 fileSizeMBStr,
                             )
                         ToastUtils.showShort(msg)
+                        // 文件大小检查失败，不设置上传标志，直接返回
                         return@let
                     }
 
                     // Upload original image first (as background)
+                    // 只有在文件大小检查通过后才设置上传标志
                     isUploadingFromGallery = true
                     createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
                         try {
