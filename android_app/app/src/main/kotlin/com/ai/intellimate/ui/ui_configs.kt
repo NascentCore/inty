@@ -201,4 +201,9 @@ object UiConfigs {
         val AudioPlayerToTimestampSpacing = 8.dp
         val AudioPlayerMinWidth = 38.dp
     }
+
+    object ChatPage {
+        /** 是否启用 Remix 按钮 */
+        const val ENABLE_REMIX = true
+    }
 }
