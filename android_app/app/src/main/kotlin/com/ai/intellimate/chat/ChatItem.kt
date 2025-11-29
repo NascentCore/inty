@@ -185,17 +185,39 @@ private fun ChatItemAI(
                             IntySetting.isAutoPlayAudio() &&
                             !isGuideVisible // 未出现引导手势时
 
-                    if (safeAgentId.isNotEmpty()) {
-                        VoicePlayer(
-                            audioInfo = audioInfo,
-                            autoPlay = shouldAutoPlay,
-                            modifier = Modifier.widthIn(38.dp),
-                            onTtsGenerated = { audioUrl ->
-                                viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
-                            },
-                            serverMessageId = item.id,
-                        )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (safeAgentId.isNotEmpty()) {
+                            VoicePlayer(
+                                audioInfo = audioInfo,
+                                autoPlay = shouldAutoPlay,
+                                modifier = Modifier.widthIn(38.dp),
+                                onTtsGenerated = { audioUrl ->
+                                    viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
+                                },
+                                serverMessageId = item.id,
+                            )
+                            if (timestampText != null) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                        }
+                        if (timestampText != null) {
+                            ChatMessageTimestamp(
+                                timestampText = timestampText,
+                                modifier = Modifier.weight(1f),
+                                textAlign = TextAlign.Start,
+                            )
+                        }
                     }
+                } else if (timestampText != null) {
+                    // Show timestamp even when there's no content/audio
+                    ChatMessageTimestamp(
+                        timestampText = timestampText,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Start,
+                    )
                 }
                 val msgShape =
                     if (item.content.isNotEmpty() && item.content != "loading_animation")
@@ -214,7 +236,6 @@ private fun ChatItemAI(
                         generatedImageUrl != "loading"
 
                 val shouldHideText = isImageOnlyMessage || isNormalLoading
-                val shouldPlaceTimestampAfterMedia = hasGeneratedImage || isImageLoading
 
                 if (isNormalLoading) {
                     Box(
@@ -269,15 +290,6 @@ private fun ChatItemAI(
                         }
                         Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
                     }
-                }
-
-                if (!shouldHideText && timestampText != null && !shouldPlaceTimestampAfterMedia) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    ChatMessageTimestamp(
-                        timestampText = timestampText,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Start,
-                    )
                 }
 
                 if (!hasGeneratedImage && isLatestMessage) {
@@ -376,15 +388,6 @@ private fun ChatItemAI(
                             ShimmerPlaceholder(
                                 modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
                                 cornerRadius = 12.dp,
-                            )
-                        }
-
-                        if (timestampText != null) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            ChatMessageTimestamp(
-                                timestampText = timestampText,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Start,
                             )
                         }
                     }
@@ -548,10 +551,9 @@ private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = nu
             }
 
             if (timestampText != null) {
-                Spacer(modifier = Modifier.height(4.dp))
+                // Spacer(modifier = Modifier.height(4.dp))
                 ChatMessageTimestamp(
                     timestampText = timestampText,
-                    modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
                 )
             }
@@ -699,7 +701,6 @@ private fun ExpandableTextWithButton(
 @Composable
 private fun ChatMessageTimestamp(
     timestampText: String?,
-    modifier: Modifier = Modifier,
     textAlign: TextAlign,
     textColor: Color = Color.White.copy(alpha = 0.55f),
 ) {
@@ -709,7 +710,7 @@ private fun ChatMessageTimestamp(
 
     Text(
         text = timestampText,
-        modifier = modifier,
+        modifier = Modifier.fillMaxWidth(),
         color = textColor,
         fontSize = 10.sp,
         textAlign = textAlign,
