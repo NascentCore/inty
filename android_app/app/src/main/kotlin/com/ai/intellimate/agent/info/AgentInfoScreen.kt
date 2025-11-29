@@ -15,6 +15,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -68,8 +69,28 @@ import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
 import com.ai.intellimate.utils.formatDisplayId
+import java.util.Locale
 
 private const val CLIPBOARD_LABEL_AGENT_ID = "Agent ID"
+
+private enum class AgentGenderPronoun(@StringRes val labelRes: Int) {
+    Female(R.string.she_her),
+    Male(R.string.he_him),
+    Other(R.string.they_them),
+    ;
+
+    companion object {
+        fun from(rawGender: String): AgentGenderPronoun? {
+            if (rawGender.isBlank()) return null
+            return when (rawGender.trim().lowercase(Locale.ROOT)) {
+                "female" -> Female
+                "male" -> Male
+                "other" -> Other
+                else -> null
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -162,13 +183,33 @@ internal fun AiAgentInfoScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    modifier = Modifier.padding(start = 16.dp),
-                                    text = agent.name,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color.White,
-                                )
+                                val genderPronoun =
+                                    remember(agent.gender) {
+                                        AgentGenderPronoun.from(agent.gender)
+                                    }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        modifier = Modifier.weight(1f),
+                                        text = agent.name,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    genderPronoun?.let {
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            text = stringResource(id = it.labelRes),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color.White.copy(alpha = 0.85f),
+                                        )
+                                    }
+                                }
                                 Spacer(Modifier.height(5.dp))
                                 Row(
                                     modifier =
