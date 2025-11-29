@@ -398,7 +398,7 @@ async def generate_background_animated(
 ) -> Any:
     """
     生成背景动图并更新到 Agent
-    
+
     通过 Google Veo3 API 生成视频，然后转换为 webp 动图格式存储
     """
     # 验证 Agent 存在且用户有权限

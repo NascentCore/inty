@@ -143,6 +143,7 @@ object UiConfigs {
             val Spacing = 8.dp
             val RightPadding = 16.dp
         }
+
         val TopSpacerOffset = 28.dp
 
         // 顶部折叠效果参数

@@ -289,7 +289,10 @@ fun ChatSettingsDrawer(
                         SettingsSwitchItem(
                             item =
                                 SettingsItemData.SwitchItemData(
-                                    title = stringResource(R.string.chat_settings_show_scene_action_button),
+                                    title =
+                                        stringResource(
+                                            R.string.chat_settings_show_scene_action_button
+                                        ),
                                     checked = showSceneActionButton,
                                 ),
                             fontLight = true,
