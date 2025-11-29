@@ -29,10 +29,10 @@ const CreateReport: React.FC = () => {
           placeholder: '请输入目标ID',
         },
         {
-          name: 'reason_ids',
-          label: '举报原因ID（逗号分隔）',
+          name: 'reason_codes',
+          label: '举报原因字符串ID（逗号分隔）',
           required: true,
-          placeholder: '如: 1,2',
+          placeholder: '如: SENSITIVE_CONTENT,OTHER',
         },
         {
           name: 'description',
@@ -45,9 +45,10 @@ const CreateReport: React.FC = () => {
         const params: any = {
           target_type: values.target_type,
           target_id: values.target_id,
-          reason_ids: values.reason_ids
+          reason_codes: values.reason_codes
             .split(',')
-            .map((id: string) => Number.parseInt(id.trim(), 10)),
+            .map((code: string) => code.trim().toUpperCase())
+            .filter((code: string) => code.length > 0),
         };
 
         if (values.description) {

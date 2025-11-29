@@ -109,7 +109,14 @@ async def create_report(
     tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def list_reports(
-    reason_ids: Optional[List[int]] = Query(None),
+    reason_codes: Optional[List[str]] = Query(
+        None, description="举报/反馈原因的字符串 ID"
+    ),
+    reason_ids: Optional[List[int]] = Query(
+        None,
+        description="兼容旧版的整型原因 ID",
+        deprecated=True,
+    ),
     target_id: Optional[str] = None,
     target_type: Optional[TargetType] = None,
     status: Optional[ReportStatus] = None,
@@ -125,6 +132,7 @@ async def list_reports(
     try:
         skip = (page - 1) * page_size
         query = ReportQuery(
+            reason_codes=reason_codes,
             reason_ids=reason_ids,
             target_id=target_id,
             target_type=target_type,

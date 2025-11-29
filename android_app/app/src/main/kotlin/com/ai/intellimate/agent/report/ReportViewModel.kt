@@ -122,7 +122,7 @@ class ReportViewModel : BaseVM() {
             }
     }
 
-    var selectIDS = mutableStateSetOf<Int>()
+    var selectedReasonCodes = mutableStateSetOf<String>()
 
     private val _description = MutableStateFlow("")
     val description = _description.asStateFlow()
@@ -139,7 +139,7 @@ class ReportViewModel : BaseVM() {
     }
 
     fun submit() {
-        if (selectIDS.isEmpty()) {
+        if (selectedReasonCodes.isEmpty()) {
             ToastUtils.showShort(R.string.toast_please_select_reason)
             return
         }
@@ -166,7 +166,7 @@ class ReportViewModel : BaseVM() {
 
                 val result =
                     ReportService.createReport(
-                        reasonIds = selectIDS.map { it.toLong() },
+                        reasonCodes = selectedReasonCodes.toList(),
                         targetId = if (isFeedbackMode) null else targetID,
                         targetType = if (isFeedbackMode) null else targetType,
                         description = description.value.trim(),

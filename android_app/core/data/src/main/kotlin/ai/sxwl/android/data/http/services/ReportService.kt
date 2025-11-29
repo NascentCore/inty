@@ -20,7 +20,7 @@ object ReportService {
 
     /** 创建举报 */
     suspend fun createReport(
-        reasonIds: List<Long>,
+        reasonCodes: List<String>,
         targetId: String?,
         targetType: String?,
         description: String,
@@ -46,7 +46,7 @@ object ReportService {
 
             val reportParams =
                 ReportCreateParams.builder()
-                    .reasonIds(reasonIds)
+                    .reasonCodes(reasonCodes)
                     .targetId(finalTargetId)
                     .targetType(finalTargetType)
                     .description(description.trim())

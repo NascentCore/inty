@@ -43,8 +43,8 @@ import com.ai.intellimate.ui.components.SaveBtn
 fun ReportScreen(
     onBack: () -> Unit = {},
     reasons: List<ReportItem>,
-    selectIDs: Set<Int>,
-    onClickReason: (Int, Boolean) -> Unit,
+    selectedReasonCodes: Set<String>,
+    onClickReason: (String, Boolean) -> Unit,
     description: String,
     onDescriptionChange: (String) -> Unit,
     images: List<String>,
@@ -89,7 +89,7 @@ fun ReportScreen(
                     }
             ) {
                 reasons.forEach { reason ->
-                    val isSelected = selectIDs.contains(reason.id)
+                    val isSelected = selectedReasonCodes.contains(reason.code)
                     val displayText =
                         if (isFeedbackMode) {
                             when (reason.code) {
@@ -138,7 +138,7 @@ fun ReportScreen(
                     ReportItem(
                         text = displayText,
                         selected = isSelected,
-                        onClick = { onClickReason(reason.id, !isSelected) },
+                        onClick = { onClickReason(reason.code, !isSelected) },
                     )
                 }
             }
@@ -212,15 +212,15 @@ fun ReportScreen(
 fun ReportScreenPreview() {
     val mockReasons =
         listOf(
-            ReportItem(id = 1, description = "不当内容"),
-            ReportItem(id = 2, description = "垃圾信息"),
-            ReportItem(id = 3, description = "骚扰行为"),
+            ReportItem(id = 1, description = "不当内容", code = "SENSITIVE_CONTENT"),
+            ReportItem(id = 2, description = "垃圾信息", code = "MISINFORMATION"),
+            ReportItem(id = 3, description = "骚扰行为", code = "FRAUD_SCAMS"),
         )
 
     ReportScreen(
         onBack = {},
         reasons = mockReasons,
-        selectIDs = setOf(1),
+        selectedReasonCodes = setOf("SENSITIVE_CONTENT"),
         onClickReason = { _, _ -> },
         description = "这是一条举报描述",
         onDescriptionChange = {},

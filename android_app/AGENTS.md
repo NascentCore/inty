@@ -11,6 +11,7 @@
   并以资源 ID 的形式在代码中使用
 - 无需使用 linter 检查修改代码
 - 对我提出的指示、完成基础要求，不要处理未提及的复杂场景，不要使用 defensive programming
+- 举报/反馈原因上报仅支持字符串 ID（`reasonCodes`），`ReportService` 不再接受整型 `reasonIds`
 
 ## 架构状态说明
 

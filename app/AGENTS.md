@@ -23,3 +23,8 @@
 ## 测试与文档
 - 新增/变更功能需在 `tests/` 添加或更新用例
 - 测试时假设本地已有测试用后端服务器运行在 http://localhost:8000/
+
+## 举报/反馈 API 约定
+- 举报与反馈原因仅保留字符串 ID（`reason_codes`），静态配置见 `app/constants/report_reasons.py`。
+- 输入 payload 如需兼容旧版可带上 `reason_ids`，但该字段已被标记为 deprecated，最终仍会转换为字符串 ID。
+- 数据库中的 `report_reason` 表已移除，`report.reason_codes` 为唯一来源，所有查询/过滤都应基于字符串 ID。
