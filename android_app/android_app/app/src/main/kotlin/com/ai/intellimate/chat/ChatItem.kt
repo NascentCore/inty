@@ -446,14 +446,27 @@ private fun ChatItemUser(item: MsgInfo) {
     val timestampText = remember(item.timestamp) { formatTimestamp(item.timestamp) }
     runCatching {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Row {
-                    Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
-                    val context = LocalContext.current
-                    Box(
-                        modifier =
-                            Modifier.background(
-                                    Color.White.copy(alpha = 0.6f),
-                                    RoundedCornerShape(12.dp),
+                Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                val context = LocalContext.current
+                Box(
+                    modifier =
+                        Modifier.background(
+                                Color.White.copy(alpha = 0.6f),
+                                RoundedCornerShape(12.dp),
+                            )
+                            .padding(
+                                horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                            )
+                            .widthIn(min = 1.dp, max = UiConfigs.ChatMessagePane.UserMessageMaxWidth)
+                            .pointerInput(item.content) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        debugOnlyCopyToClipboard(context, item.content)
+                                    }
                                 )
                                 .padding(12.dp, 13.dp)
                                 .widthIn(1.dp, 300.dp)
