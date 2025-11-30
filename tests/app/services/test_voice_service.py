@@ -2,10 +2,10 @@ import pytest
 
 # CREATED_BY_AGENT
 
-from app.services.voice_service import (
+from app.services.voice_service import VoiceService
+from app.services.voices.mixer import (
     GEMINI_TO_ELEVEN_VOICE_ID,
     VoiceProvider,
-    VoiceService,
 )
 
 

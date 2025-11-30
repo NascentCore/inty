@@ -36,7 +36,8 @@ from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.services.cache_service import cache_service
 from app.services.image_transform_service import image_transform_service
 from app.services.resource_service import async_create_image_resource
-from app.services.voice_service import GENDER_VOICE_MAPPING, VoiceService
+from app.services.voice_service import VoiceService
+from app.services.voices.mixer import GENDER_VOICE_MAPPING
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.image import ImageFormat, ImageSize, get_jpg_bytes_from_pil_image
 

@@ -34,7 +34,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.models.agent import Agent
-from app.services.voice_service import VoiceService, GENDER_VOICE_MAPPING
+from app.services.voice_service import VoiceService
+from app.services.voices.mixer import GENDER_VOICE_MAPPING
 from app.core.agent.prompt_template import (
     has_template_variable,
     render_prompt_jinja2_template,
