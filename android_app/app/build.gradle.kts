@@ -91,6 +91,9 @@ dependencies {
     // 注意：版本必须与 core/data/build.gradle.kts 保持一致，统一在 libs.versions.toml 中管理
     implementation(libs.inty.kotlin)
 
+    // ===== 存储库 =====
+    implementation(libs.mmkv)
+
     // ===== 项目模块 =====
     implementation(projects.core.common)
     implementation(projects.core.data)
