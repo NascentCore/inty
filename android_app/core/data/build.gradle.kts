@@ -25,8 +25,8 @@ android {
 dependencies {
 
     // ===== Inty SDK（Stainless https://app.stainless.com/ 根据 app/openapi.json 生成的代码）=====
-    // 使用本地 library/inty_sdk 的版本，避免动态版本在测试时的依赖解析问题
-    implementation("com.inty.api:inty-kotlin:0.17.0")
+    // 注意：版本必须与 app/build.gradle.kts 保持一致，统一在 libs.versions.toml 中管理
+    implementation(libs.inty.kotlin)
 
     implementation(libs.androidx.dataStore.preferences)
     implementation(libs.mmkv)
