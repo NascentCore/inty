@@ -15,24 +15,17 @@ Report API 包含以下端点：
 
 ### 请求类型：`ReportCreate`
 
-```python
-class ReportCreate(BaseModel):
-    target_id: str                    # 必填：被举报对象ID（feedback 模式下可为空字符串）
-    target_type: TargetType           # 必填：被举报对象类型（USER 或 AGENT）
-    reason_ids: Optional[List[int]]   # 可选：原因ID列表（已废弃，使用 reason_codes）
-    reason_codes: Optional[List[str]]  # 可选：原因代码列表（推荐使用）
-    image_urls: Optional[List[str]]   # 可选：图片URL列表，默认 []
-    description: Optional[str]         # 可选：描述信息
-    request_id: Optional[str]         # 可选：请求ID（用于追踪）
-    report_type: Optional[ReportType] # 可选：记录类型（REPORT 或 FEEDBACK），默认为 REPORT
-```
+定义见 ```26:50:app/schemas/report.py```
 
 #### 字段说明
 
+各字段的详细说明见 ```30:51:app/schemas/report.py``` 中的 `Field` description。
+
+关键点：
 - **target_id**: Report 模式需提供有效对象ID，Feedback 模式可为空字符串
 - **target_type**: `"USER"` 或 `"AGENT"`，Feedback 模式通常使用 `"USER"`
 - **reason_codes** (推荐): 原因代码列表，详见下方映射表。如果未提供，可从 `reason_ids` 自动转换
-- **reason_ids** (已废弃): 原因ID列表，后端会根据 `report_type` 自动转换为 `reason_codes`
+- **reason_ids** (已废弃): 原因ID列表，后端会根据 `report_type` 自动转换为 `reason_codes`，转换逻辑见 ```40:58:app/services/report_service.py```
 - **report_type**: `"REPORT"`（默认）或 `"FEEDBACK"`
 
 #### 请求示例
@@ -63,12 +56,7 @@ class ReportCreate(BaseModel):
 
 ### 响应类型：`APIResponse[None]`
 
-```python
-class APIResponse(BaseModel, Generic[T]):
-    code: int = 200              # HTTP 状态码
-    message: str = "success"     # 响应消息
-    data: Optional[T] = None     # 响应数据（创建成功时为 None）
-```
+定义见 ```28:43:app/schemas/response.py```
 
 #### 成功响应示例
 
@@ -96,43 +84,14 @@ class APIResponse(BaseModel, Generic[T]):
 
 ### 请求参数（Query Parameters）
 
-```python
-reason_ids: Optional[List[int]] = None      # 已废弃：使用 reason_codes
-reason_codes: Optional[List[str]] = None    # 原因代码列表
-target_id: Optional[str] = None             # 被举报对象ID
-target_type: Optional[TargetType] = None   # 被举报对象类型
-status: Optional[ReportStatus] = None       # 状态（PENDING, PROCESSING, RESOLVED, REJECTED）
-reporter_id: Optional[str] = None           # 举报人ID
-report_type: Optional[ReportType] = None   # 记录类型（REPORT 或 FEEDBACK）
-page: int = 1                                # 页码，默认 1
-page_size: int = 20                          # 每页数量，默认 20
-```
+定义见 ```54:63:app/schemas/report.py``` (`ReportQuery`)
 
-**注意**：此端点需要管理员权限（`is_superuser`）
+**注意**：此端点需要管理员权限（`is_superuser`），见 ```126:127:app/api/v1/endpoints/report.py```
 
 ### 响应类型：`APIResponse[PaginationData[ReportOut]]`
 
-```python
-class PaginationData(BaseModel, Generic[T]):
-    list: List[T] = []         # 数据列表
-    total: int = 0             # 总记录数
-    page: int = 1              # 当前页码
-    page_size: int = 10        # 每页数量
-    total_pages: int = 0       # 总页数
-
-class ReportOut(BaseModel):
-    id: str                    # 举报记录ID
-    target_id: str             # 被举报对象ID
-    target_type: str           # 被举报对象类型
-    reporter_id: str           # 举报人ID
-    reason_ids: List[int]      # 已废弃：原因ID列表
-    reason_codes: List[str]    # 原因代码列表
-    image_urls: List[str]      # 图片URL列表
-    description: Optional[str] # 描述信息
-    status: str                # 状态（PENDING, PROCESSING, RESOLVED, REJECTED）
-    report_type: Optional[str] # 记录类型（REPORT 或 FEEDBACK，None 视为 REPORT）
-    created_at: datetime       # 创建时间
-```
+- `PaginationData` 定义见 ```8:16:app/schemas/response.py```
+- `ReportOut` 定义见 ```65:76:app/schemas/report.py```
 
 #### 成功响应示例
 
@@ -178,37 +137,24 @@ class ReportOut(BaseModel):
 
 ## 原因代码映射
 
-### Report 原因代码
+原因代码映射定义在 `app/models/report.py` 中：
 
-| ID | Code | 描述 |
-|---|---|---|
-| 1 | `SENSITIVE_CONTENT` | Sensitive or sexual content |
-| 2 | `MISINFORMATION` | Misinformation |
-| 3 | `FRAUD_SCAMS` | Fraud or scams |
-| 4 | `PRIVACY_VIOLATION` | Violation of privacy |
-| 5 | `HARMFUL_MINORS` | Harmful to minors |
-| 6 | `IP_VIOLATION` | Violations of my intellectual property |
+- **Report 原因代码映射**：见 `REASON_ID_TO_CODE` (```14:21:app/models/report.py```)
+- **Feedback 原因代码映射**：见 `FEEDBACK_REASON_ID_TO_CODE` (```26:34:app/models/report.py```)
 
-### Feedback 原因代码
-
-| ID | Code | 描述 |
-|---|---|---|
-| 0 | `OTHER` | Other, please describe below |
-| 1 | `CHAT_NOT_NATURAL` | Chat replies don't feel natural / off-topic |
-| 2 | `CHARACTER_MISMATCH` | The character doesn't match its persona |
-| 3 | `APP_SLOW` | The app is slow or gets stuck |
-| 4 | `FEATURE_HARD_TO_FIND` | I couldn't find / how to use this feature |
-| 5 | `UI_INCONVENIENT` | UI or interaction feels inconvenient |
-| 6 | `NEW_FEATURE` | I'd like to see a new feature or improvement |
+Android 端的对应关系定义在 `android_app/app/src/main/kotlin/com/ai/intellimate/agent/report/ReportViewModel.kt`：
+- **Report reasons**：见 `_reportReasons` (```45:72:android_app/app/src/main/kotlin/com/ai/intellimate/agent/report/ReportViewModel.kt```)
+- **Feedback reasons**：见 `_feedbackReasons` (```76:111:android_app/app/src/main/kotlin/com/ai/intellimate/agent/report/ReportViewModel.kt```)
 
 ---
 
 ## 验证规则与注意事项
 
+验证逻辑实现见 ```30:66:app/services/report_service.py``` (`create_report` 函数)：
+
 1. **必填字段**：`target_id`（Feedback 模式可为空字符串）、`target_type`
-2. **原因验证**：必须提供 `reason_codes` 或 `reason_ids` 中的至少一个，且包含至少一个非空值
-3. **类型转换**：如果只提供 `reason_ids`，后端会根据 `report_type` 自动转换为 `reason_codes`
+2. **原因验证**：必须提供 `reason_codes` 或 `reason_ids` 中的至少一个，且包含至少一个非空值（见 ```62:66:app/services/report_service.py```）
+3. **类型转换**：如果只提供 `reason_ids`，后端会根据 `report_type` 自动转换为 `reason_codes`（见 ```40:58:app/services/report_service.py```）
 4. **Feedback 模式**：`target_id` 可为空字符串，`target_type` 通常为 `"USER"`，必须设置 `report_type: "FEEDBACK"`
 5. **图片上传**：使用 `/api/v1/images` 端点上传，获取 URL 后放入 `image_urls` 字段
-6. **权限要求**：创建需要已登录用户，查询列表需要管理员权限（`is_superuser`）
-
+6. **权限要求**：创建需要已登录用户（见 ```90:90:app/api/v1/endpoints/report.py```），查询列表需要管理员权限（见 ```126:127:app/api/v1/endpoints/report.py```）
