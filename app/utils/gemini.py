@@ -19,7 +19,7 @@ import io
 import json
 import os
 from enum import StrEnum
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import google.genai as genai
 import PIL
@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import download_from_gcs
-from app.utils.image import ImageFormat, ImageSize
+from app.utils.image import AspectRatio, ImageFormat, ImageSize
 
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
@@ -253,7 +253,7 @@ def text_to_image(
     negative_prompt: str,
     enhanced_prompt: bool,
     gender: str,
-    aspect_ratio: str,
+    aspect_ratio: Union[AspectRatio, str],
     gcs_uri_base: str,
     count: int,
 ) -> List[ImagenGeneratedImage]:
@@ -280,11 +280,15 @@ def text_to_image(
             f"aspect_ratio: {aspect_ratio}"
         )
 
+        aspect_ratio_value = (
+            aspect_ratio.value if isinstance(aspect_ratio, AspectRatio) else aspect_ratio
+        )
+
         # 使用新的Google Gen AI SDK生成图片
         config = types.GenerateImagesConfig(
             negative_prompt=negative_prompt,
             number_of_images=count,
-            aspect_ratio=aspect_ratio,
+            aspect_ratio=aspect_ratio_value,
             # TODO: 上架期间仅生成低风险图片，选择屏蔽低风险和以上风险图片。
             safety_filter_level=types.SafetyFilterLevel.BLOCK_LOW_AND_ABOVE,
             person_generation=types.PersonGeneration.ALLOW_ADULT,

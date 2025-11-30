@@ -4,6 +4,8 @@ from typing import Iterable, List, Optional
 import httpx
 from loguru import logger
 
+from app.utils.image import AspectRatio
+
 
 class TestClient:
     """
@@ -160,7 +162,11 @@ class TestClient:
 
     def text_to_image(self, text: str, count: int = 1) -> List[str]:
         url = f"{self.base_url}/api/v1/ai/agents/text-to-image"
-        payload = {"prompt": text, "count": count}
+        payload = {
+            "prompt": text,
+            "count": count,
+            "aspect_ratio": AspectRatio.PORTRAIT.value,
+        }
         headers = self.client.headers.copy()
 
         logger.debug(f"Making POST request to: {url}")

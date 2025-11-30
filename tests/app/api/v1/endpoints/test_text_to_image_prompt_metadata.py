@@ -11,6 +11,7 @@ from app.api.v1.endpoints.agents import generate_background
 from app.db.session import AsyncSessionLocal
 from app.services.global_services import subscription_service
 from app.utils import gemini as gemini_utils
+from app.utils.image import AspectRatio
 from tests.fakes.gemini import FakeGeminiClient
 
 
@@ -61,6 +62,7 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
             prompt=request_prompt,
             count=2,
             enhance_prompt=False,
+            aspect_ratio=AspectRatio.LANDSCAPE,
         )
         current_user = schemas.User(
             id=user_id,

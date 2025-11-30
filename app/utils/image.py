@@ -23,7 +23,17 @@ class ImageFormat(StrEnum):
 
 
 class AspectRatio(StrEnum):
+    """
+    Supported aspect ratios for Gemini text-to-image requests.
+
+    枚举值基于 Vertex Imagen 文生图 API 文档允许的比例，后端按字符串传递。
+    """
+
     PORTRAIT = "9:16"
+    LANDSCAPE = "16:9"
+    SQUARE = "1:1"
+    PHOTO_PORTRAIT = "3:4"
+    PHOTO_LANDSCAPE = "4:3"
 
 
 def compress_png_to_jpeg(image_data: bytes, quality: int = 80) -> bytes:

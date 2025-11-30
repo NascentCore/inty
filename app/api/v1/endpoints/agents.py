@@ -640,7 +640,7 @@ async def generate_background(
             request.negative_prompt,
             request.enhance_prompt,
             gender=opposite_gender,
-            aspect_ratio=AspectRatio.PORTRAIT,
+            aspect_ratio=request.aspect_ratio,
             gcs_uri_base=gcs_uri_base,
             count=request.count,
         )

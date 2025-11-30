@@ -117,7 +117,14 @@ data class CreateAgentRequest(
     val prompt: String,
 )
 
-@JsonClass(generateAdapter = true) data class GenerateBackgroundRequest(val prompt: String)
+@JsonClass(generateAdapter = true)
+data class GenerateBackgroundRequest(
+    val prompt: String,
+    @Json(name = "negative_prompt") val negativePrompt: String? = null,
+    @Json(name = "enhance_prompt") val enhancePrompt: Boolean? = null,
+    val count: Int? = null,
+    @Json(name = "aspect_ratio") val aspectRatio: String? = null,
+)
 
 @JsonClass(generateAdapter = true)
 data class GenerateBackgroundResponse(

@@ -10,7 +10,7 @@ from app.core.agent.prompt_template import (
 )
 from app.models.agent import AgentStatus, AgentVisibility
 from app.schemas.user import User
-from app.utils.image import ImageSize
+from app.utils.image import AspectRatio, ImageSize
 from app.schemas.response import APIResponse, PaginationData
 
 
@@ -553,6 +553,13 @@ class TextToImageRequest(BaseModel):
         le=4,
         description="Number of images to generate",
     )
+    aspect_ratio: AspectRatio = Field(
+        default=AspectRatio.PORTRAIT,
+        description=(
+            "Aspect ratio for generated images. "
+            "Allowed values: 9:16, 16:9, 1:1, 3:4, 4:3"
+        ),
+    )
     request_id: Optional[str] = None
 
     class Config:
@@ -562,6 +569,7 @@ class TextToImageRequest(BaseModel):
                 "negative_prompt": "blurry, low quality, explicit, NSFW",
                 "enhance_prompt": True,
                 "count": 2,
+                "aspect_ratio": AspectRatio.PORTRAIT.value,
             }
         }
 

@@ -1069,6 +1069,9 @@ export const userApi = {
 // 图片生成API
 // =============================================================================
 
+const IMAGE_ASPECT_RATIOS = ["9:16", "16:9", "1:1", "3:4", "4:3"] as const;
+type ImageAspectRatio = (typeof IMAGE_ASPECT_RATIOS)[number];
+
 export const imageApi = {
   // 文本生成图片 - 使用与 Inty SDK 相同的认证方式
   textToImage: (data: {
@@ -1076,6 +1079,7 @@ export const imageApi = {
     negative_prompt?: string;
     enhance_prompt?: boolean;
     count?: number;
+    aspect_ratio?: ImageAspectRatio;
   }): Promise<{
     urls: string[];
     count: number;
