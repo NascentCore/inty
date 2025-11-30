@@ -26,13 +26,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * 举报原因项，包含 SDK 的 ReasonCode 和对应的字符串资源ID
- */
-data class ReportReasonItem(
-    val reasonCode: ReportCreateParams.ReasonCode,
-    val stringResId: Int,
-)
+/** 举报原因项，包含 SDK 的 ReasonCode 和对应的字符串资源ID */
+data class ReportReasonItem(val reasonCode: ReportCreateParams.ReasonCode, val stringResId: Int)
 
 class ReportViewModel : BaseVM() {
 

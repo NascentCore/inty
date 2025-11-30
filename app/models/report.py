@@ -64,7 +64,11 @@ class Report(Base):
         nullable=True,
         comment="[DEPRECATED] 举报原因ID列表，使用 reason_codes 代替",
     )
-    reason_codes = Column(ARRAY(String), nullable=True, comment="举报原因代码列表，用来替代 reason_ids，因为 id 很难维护")
+    reason_codes = Column(
+        ARRAY(String),
+        nullable=True,
+        comment="举报原因代码列表，用来替代 reason_ids，因为 id 很难维护",
+    )
     image_urls = Column(ARRAY(String), default=[], comment="举报图片URL列表")
     description = Column(Text, nullable=True, comment="举报描述")
     status = Column(

@@ -39,21 +39,25 @@ class GeminiClient:
             # Check if we should use Vertex AI or Gemini API (Google AI Studio)
             # Vertex AI requires service account credentials, not API key
             use_vertex_ai = os.getenv("GOOGLE_APPLICATION_CREDENTIALS") is not None
-            
+
             if use_vertex_ai:
                 # Use Vertex AI with service account credentials
                 self.logger.info("Using Vertex AI with service account credentials")
                 project_id = os.getenv("GOOGLE_CLOUD_PROJECT", "inty-backend")
                 location = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
-                self.client = genai.Client(vertexai=True, project=project_id, location=location)
+                self.client = genai.Client(
+                    vertexai=True, project=project_id, location=location
+                )
             else:
                 # Use Gemini API (Google AI Studio) with API key
                 if not Config.GEMINI_API_KEY:
-                    raise ValueError("GEMINI_API_KEY is required for Gemini API (Google AI Studio)")
-                
+                    raise ValueError(
+                        "GEMINI_API_KEY is required for Gemini API (Google AI Studio)"
+                    )
+
                 self.logger.info("Using Gemini API (Google AI Studio) with API key")
                 self.client = genai.Client(api_key=Config.GEMINI_API_KEY)
-            
+
             self.logger.info(f"Gemini client initialized successfully")
             self.logger.debug(f"Character model: {Config.CHARACTER_GENERATION_MODEL}")
             self.logger.debug(f"Image model: {Config.IMAGE_GENERATION_MODEL}")

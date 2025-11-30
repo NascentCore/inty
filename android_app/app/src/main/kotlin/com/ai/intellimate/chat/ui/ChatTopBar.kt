@@ -125,8 +125,7 @@ fun ChatTopBar(
         if (enableRemix) {
             Box(
                 modifier =
-                    Modifier
-                        .size(avatarWidth)
+                    Modifier.size(avatarWidth)
                         .clip(CircleShape)
                         .background(color = CHAT_TOP_BAR_BACKGROUND_COLOR)
                         .noRippleClickable {

@@ -26,7 +26,9 @@ class MultiStageCharacterGenerator:
         self.logger = logging.getLogger(__name__)
         self.client = gemini_client or GeminiClient()
 
-    def generate(self, request: CharacterGenerationRequest) -> MultiStageGenerationResponse:
+    def generate(
+        self, request: CharacterGenerationRequest
+    ) -> MultiStageGenerationResponse:
         """Execute the staged pipeline and return a telemetry-rich response."""
 
         self.logger.info("Launching multistage character generation")
@@ -179,10 +181,12 @@ class MultiStageCharacterGenerator:
             detailed_introduction=data.get("detailed_introduction")
             or f"I'm {identity.name}, {identity.short_bio}.",
             relationship_hooks=self._ensure_list(
-                data.get("relationship_hooks"), fallback=["We grow through shared scenes."]
+                data.get("relationship_hooks"),
+                fallback=["We grow through shared scenes."],
             ),
             boundaries=self._ensure_list(
-                data.get("boundaries"), fallback=["Keep content collaborative and respectful."]
+                data.get("boundaries"),
+                fallback=["Keep content collaborative and respectful."],
             ),
             conversation_openers=self._ensure_list(
                 data.get("conversation_openers"),
@@ -424,7 +428,8 @@ class MultiStageCharacterGenerator:
         self, audio_raw: Dict[str, Any], identity: CharacterIdentityCard
     ) -> AudioProfile:
         return AudioProfile(
-            archetype=audio_raw.get("archetype") or f"{identity.vibe.title()} confidante",
+            archetype=audio_raw.get("archetype")
+            or f"{identity.vibe.title()} confidante",
             accent=audio_raw.get("accent") or "Neutral global English",
             energy=audio_raw.get("energy") or "medium",
             pace=audio_raw.get("pace") or "measured",
