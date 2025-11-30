@@ -1,7 +1,6 @@
 package com.ai.intellimate.agent.report
 
 import ai.sxwl.android.common.base.BaseVM
-import ai.sxwl.android.data.api.model.ReportItem
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.services.ReportService
 import ai.sxwl.android.utils.ImageCompressUtils
@@ -14,6 +13,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.ViewModelEvent
+import com.inty.api.models.api.v1.report.ReportCreateParams
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -25,6 +25,14 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/**
+ * 举报原因项，包含 SDK 的 ReasonCode 和对应的字符串资源ID
+ */
+data class ReportReasonItem(
+    val reasonCode: ReportCreateParams.ReasonCode,
+    val stringResId: Int,
+)
 
 class ReportViewModel : BaseVM() {
 
@@ -41,72 +49,73 @@ class ReportViewModel : BaseVM() {
     var targetID: String = ""
     var targetType: String = "USER"
 
-    // Hard-coded list of report reasons
+    // 使用 SDK 的 ReasonCode 枚举和映射
     private val _reportReasons =
         MutableStateFlow(
             listOf(
-                ReportItem(
-                    id = 1,
-                    description = "Sensitive or sexual content",
-                    code = "SENSITIVE_CONTENT",
+                ReportReasonItem(
+                    ReportCreateParams.ReasonCode.SENSITIVE_CONTENT,
+                    R.string.report_reason_sensitive_content,
                 ),
-                ReportItem(id = 2, description = "Misinformation", code = "MISINFORMATION"),
-                ReportItem(id = 3, description = "Fraud or scams", code = "FRAUD_SCAMS"),
-                ReportItem(
-                    id = 4,
-                    description = "Violation of privacy",
-                    code = "PRIVACY_VIOLATION",
+                ReportReasonItem(
+                    ReportCreateParams.ReasonCode.MISINFORMATION,
+                    R.string.report_reason_misinformation,
                 ),
-                ReportItem(id = 5, description = "Harmful to minors", code = "HARMFUL_MINORS"),
-                ReportItem(
-                    id = 6,
-                    description = "Violations of my intellectual property",
-                    code = "IP_VIOLATION",
+                ReportReasonItem(
+                    ReportCreateParams.ReasonCode.FRAUD_SCAMS,
+                    R.string.report_reason_fraud_scams,
                 ),
-                ReportItem(
-                    id = 0,
-                    description = "Other, details in report description",
-                    code = "OTHER",
+                ReportReasonItem(
+                    ReportCreateParams.ReasonCode.PRIVACY_VIOLATION,
+                    R.string.report_reason_privacy_violation,
+                ),
+                ReportReasonItem(
+                    ReportCreateParams.ReasonCode.HARMFUL_MINORS,
+                    R.string.report_reason_harmful_minors,
+                ),
+                ReportReasonItem(
+                    ReportCreateParams.ReasonCode.IP_VIOLATION,
+                    R.string.report_reason_ip_violation,
+                ),
+                ReportReasonItem(
+                    ReportCreateParams.ReasonCode.OTHER,
+                    R.string.report_reason_other,
                 ),
             )
         )
 
-    // Hard-coded list of feedback reasons
-    // Note: These descriptions will be replaced with string resources in the UI layer
+    // 使用 SDK 的 ReasonCode 枚举和映射
     private val _feedbackReasons =
         MutableStateFlow(
             listOf(
-                ReportItem(
-                    id = 1,
-                    description = "Chat replies don't feel natural / off-topic",
-                    code = "CHAT_NOT_NATURAL",
+                ReportReasonItem(
+                    ReportCreateParams.ReasonCode.CHAT_NOT_NATURAL,
+                    R.string.feedback_reason_chat_not_natural,
                 ),
-                ReportItem(
-                    id = 2,
-                    description = "The character doesn't match its persona",
-                    code = "CHARACTER_MISMATCH",
+                ReportReasonItem(
+                    ReportCreateParams.ReasonCode.CHARACTER_MISMATCH,
+                    R.string.feedback_reason_character_mismatch,
                 ),
-                ReportItem(
-                    id = 3,
-                    description = "The app is slow or gets stuck",
-                    code = "APP_SLOW",
+                ReportReasonItem(
+                    ReportCreateParams.ReasonCode.APP_SLOW,
+                    R.string.feedback_reason_app_slow,
                 ),
-                ReportItem(
-                    id = 4,
-                    description = "I couldn't find / how to use this feature",
-                    code = "FEATURE_HARD_TO_FIND",
+                ReportReasonItem(
+                    ReportCreateParams.ReasonCode.FEATURE_HARD_TO_FIND,
+                    R.string.feedback_reason_feature_hard_to_find,
                 ),
-                ReportItem(
-                    id = 5,
-                    description = "UI or interaction feels inconvenient",
-                    code = "UI_INCONVENIENT",
+                ReportReasonItem(
+                    ReportCreateParams.ReasonCode.UI_INCONVENIENT,
+                    R.string.feedback_reason_ui_inconvenient,
                 ),
-                ReportItem(
-                    id = 6,
-                    description = "I'd like to see a new feature or improvement",
-                    code = "NEW_FEATURE",
+                ReportReasonItem(
+                    ReportCreateParams.ReasonCode.NEW_FEATURE,
+                    R.string.feedback_reason_new_feature,
                 ),
-                ReportItem(id = 0, description = "Other, please describe below", code = "OTHER"),
+                ReportReasonItem(
+                    ReportCreateParams.ReasonCode.OTHER,
+                    R.string.feedback_reason_other,
+                ),
             )
         )
 
@@ -122,7 +131,8 @@ class ReportViewModel : BaseVM() {
             }
     }
 
-    var selectIDS = mutableStateSetOf<Int>()
+    // 使用 ReasonCode 而不是 Int ID
+    var selectedReasonCodes = mutableStateSetOf<ReportCreateParams.ReasonCode>()
 
     private val _description = MutableStateFlow("")
     val description = _description.asStateFlow()
@@ -139,7 +149,7 @@ class ReportViewModel : BaseVM() {
     }
 
     fun submit() {
-        if (selectIDS.isEmpty()) {
+        if (selectedReasonCodes.isEmpty()) {
             ToastUtils.showShort(R.string.toast_please_select_reason)
             return
         }
@@ -166,7 +176,7 @@ class ReportViewModel : BaseVM() {
 
                 val result =
                     ReportService.createReport(
-                        reasonIds = selectIDS.map { it.toLong() },
+                        reasonCodes = selectedReasonCodes.toList(),
                         targetId = if (isFeedbackMode) null else targetID,
                         targetType = if (isFeedbackMode) null else targetType,
                         description = description.value.trim(),

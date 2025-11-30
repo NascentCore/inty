@@ -1,6 +1,5 @@
 package com.ai.intellimate.agent.report
 
-import ai.sxwl.android.data.api.model.ReportItem
 import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -33,18 +32,19 @@ import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.ReportDescriptionContainer
 import com.ai.intellimate.ui.components.ReportImageEvidenceContainer
-import com.ai.intellimate.ui.components.ReportItem
+import com.ai.intellimate.ui.components.ReportItem as ReportItemComponent
 import com.ai.intellimate.ui.components.ReportReasonsContainer
 import com.ai.intellimate.ui.components.SaveBtn
+import com.inty.api.models.api.v1.report.ReportCreateParams
 
 /** 举报屏幕 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportScreen(
     onBack: () -> Unit = {},
-    reasons: List<ReportItem>,
-    selectIDs: Set<Int>,
-    onClickReason: (Int, Boolean) -> Unit,
+    reasons: List<ReportReasonItem>,
+    selectedReasonCodes: Set<ReportCreateParams.ReasonCode>,
+    onClickReason: (ReportCreateParams.ReasonCode, Boolean) -> Unit,
     description: String,
     onDescriptionChange: (String) -> Unit,
     images: List<String>,
@@ -88,57 +88,13 @@ fun ReportScreen(
                         stringResource(R.string.npc_asterisk_full)
                     }
             ) {
-                reasons.forEach { reason ->
-                    val isSelected = selectIDs.contains(reason.id)
-                    val displayText =
-                        if (isFeedbackMode) {
-                            when (reason.code) {
-                                "CHAT_NOT_NATURAL" ->
-                                    stringResource(R.string.feedback_reason_chat_not_natural)
-
-                                "CHARACTER_MISMATCH" ->
-                                    stringResource(R.string.feedback_reason_character_mismatch)
-
-                                "APP_SLOW" -> stringResource(R.string.feedback_reason_app_slow)
-                                "FEATURE_HARD_TO_FIND" ->
-                                    stringResource(R.string.feedback_reason_feature_hard_to_find)
-
-                                "UI_INCONVENIENT" ->
-                                    stringResource(R.string.feedback_reason_ui_inconvenient)
-
-                                "NEW_FEATURE" ->
-                                    stringResource(R.string.feedback_reason_new_feature)
-
-                                "OTHER" -> stringResource(R.string.feedback_reason_other)
-                                else -> reason.description
-                            }
-                        } else {
-                            when (reason.code) {
-                                "SENSITIVE_CONTENT" ->
-                                    stringResource(R.string.report_reason_sensitive_content)
-
-                                "MISINFORMATION" ->
-                                    stringResource(R.string.report_reason_misinformation)
-
-                                "FRAUD_SCAMS" -> stringResource(R.string.report_reason_fraud_scams)
-
-                                "PRIVACY_VIOLATION" ->
-                                    stringResource(R.string.report_reason_privacy_violation)
-
-                                "HARMFUL_MINORS" ->
-                                    stringResource(R.string.report_reason_harmful_minors)
-
-                                "IP_VIOLATION" ->
-                                    stringResource(R.string.report_reason_ip_violation)
-
-                                "OTHER" -> stringResource(R.string.report_reason_other)
-                                else -> reason.description
-                            }
-                        }
-                    ReportItem(
+                reasons.forEach { reasonItem ->
+                    val isSelected = selectedReasonCodes.contains(reasonItem.reasonCode)
+                    val displayText = stringResource(reasonItem.stringResId)
+                    ReportItemComponent(
                         text = displayText,
                         selected = isSelected,
-                        onClick = { onClickReason(reason.id, !isSelected) },
+                        onClick = { onClickReason(reasonItem.reasonCode, !isSelected) },
                     )
                 }
             }
@@ -212,15 +168,24 @@ fun ReportScreen(
 fun ReportScreenPreview() {
     val mockReasons =
         listOf(
-            ReportItem(id = 1, description = "不当内容"),
-            ReportItem(id = 2, description = "垃圾信息"),
-            ReportItem(id = 3, description = "骚扰行为"),
+            ReportReasonItem(
+                ReportCreateParams.ReasonCode.SENSITIVE_CONTENT,
+                R.string.report_reason_sensitive_content,
+            ),
+            ReportReasonItem(
+                ReportCreateParams.ReasonCode.MISINFORMATION,
+                R.string.report_reason_misinformation,
+            ),
+            ReportReasonItem(
+                ReportCreateParams.ReasonCode.FRAUD_SCAMS,
+                R.string.report_reason_fraud_scams,
+            ),
         )
 
     ReportScreen(
         onBack = {},
         reasons = mockReasons,
-        selectIDs = setOf(1),
+        selectedReasonCodes = setOf(ReportCreateParams.ReasonCode.SENSITIVE_CONTENT),
         onClickReason = { _, _ -> },
         description = "这是一条举报描述",
         onDescriptionChange = {},
