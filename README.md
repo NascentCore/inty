@@ -57,6 +57,8 @@ cp devops/config.yaml.local config.yaml
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+# 启动 postgres 数据库
+docker compose up pgvector -d
 # 注意拷贝 admin bearer token 用来登录 http://localhost:8000/evaluation
 ./start.sh --dev
 ```
