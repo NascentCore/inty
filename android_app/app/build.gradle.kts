@@ -87,6 +87,9 @@ dependencies {
     implementation(libs.androidx.paging.compose)
     implementation(libs.androidx.compose.material.icons.extended)
 
+    // ===== Inty SDK（用于 ReportReasonMappings 等直接使用 SDK 类型的代码）=====
+    implementation("com.inty.api:inty-kotlin:0.17.0")
+
     // ===== 项目模块 =====
     implementation(projects.core.common)
     implementation(projects.core.data)
