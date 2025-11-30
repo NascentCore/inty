@@ -8,42 +8,41 @@ from sqlalchemy.orm import relationship
 
 from app.models import Base
 
+# 举报原因 ID 到代码的映射（硬编码，不再使用数据库表）
+# 对应关系与 Android 端保持一致（参考 ReportViewModel.kt）：
+#   1 -> SENSITIVE_CONTENT (Sensitive or sexual content)
+#   2 -> MISINFORMATION (Misinformation)
+#   3 -> FRAUD_SCAMS (Fraud or scams)
+#   4 -> PRIVACY_VIOLATION (Violation of privacy)
+#   5 -> HARMFUL_MINORS (Harmful to minors)
+#   6 -> IP_VIOLATION (Violations of my intellectual property)
+REASON_ID_TO_CODE = {
+    1: "SENSITIVE_CONTENT",
+    2: "MISINFORMATION",
+    3: "FRAUD_SCAMS",
+    4: "PRIVACY_VIOLATION",
+    5: "HARMFUL_MINORS",
+    6: "IP_VIOLATION",
+}
 
-# DEPRECATED: 该表格内的数据会转为代码中的静态数据，不会在数据库中存储
-class ReportReason(Base):
-    """
-    目前举报原因如下，会转为代码中的静态数据，不会在数据库中存储
-    devdb=# select * from report_reason;
-     id |                code                |              description               | is_active |          created_at           | updated_at
-    ----+------------------------------------+----------------------------------------+-----------+-------------------------------+------------
-      1 | SENSITIVE_OR_SEXUAL_CONTENT        | Sensitive or sexual content            | t         | 2025-06-05 11:47:00.713535+00 |
-      2 | MISINFORMATION                     | Misinformation                         | t         | 2025-06-05 11:47:00.713535+00 |
-      3 | FRAUD_OR_SCAMS                     | Fraud or scams                         | t         | 2025-06-05 11:47:00.713535+00 |
-      4 | VIOLATION_OF_PRIVACY               | Violation of privacy                   | t         | 2025-06-05 11:47:00.713535+00 |
-      5 | HARMFUL_TO_MINORS                  | Harmful to minors                      | t         | 2025-06-05 11:47:00.713535+00 |
-      6 | VIOLATION_OF_INTELLECTUAL_PROPERTY | Violations of my intellectual property | t         | 2025-06-05 11:47:00.713535+00 |
-    """
-
-    # TODO: Remove this table.
-    # Reasons are hardcoded in the app.
-    # When reporting, use the actual reason code instead of reason ID.
-    # App currenctly uses reason ID to report issue, we need to change it to reason code.
-    # Only after that, this table can be removed.
-    __tablename__ = "report_reason"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    code = Column(String(50), unique=True, nullable=False, comment="举报原因代码")
-    description = Column(Text, nullable=True, comment="举报原因描述")
-    is_active = Column(Boolean, default=True, comment="是否启用")
-    created_at = Column(
-        DateTime(timezone=True), server_default=sa.text("now()"), comment="创建时间"
-    )
-    updated_at = Column(
-        DateTime(timezone=True), onupdate=sa.text("now()"), comment="更新时间"
-    )
-
-    # 关系
-    # reports = relationship("Report", back_populates="reasons")
+# 反馈原因 ID 到代码的映射（硬编码，不再使用数据库表）
+# 对应关系与 Android 端保持一致（参考 ReportViewModel.kt）：
+#   0 -> OTHER (Other, please describe below)
+#   1 -> CHAT_NOT_NATURAL (Chat replies don't feel natural / off-topic)
+#   2 -> CHARACTER_MISMATCH (The character doesn't match its persona)
+#   3 -> APP_SLOW (The app is slow or gets stuck)
+#   4 -> FEATURE_HARD_TO_FIND (I couldn't find / how to use this feature)
+#   5 -> UI_INCONVENIENT (UI or interaction feels inconvenient)
+#   6 -> NEW_FEATURE (I'd like to see a new feature or improvement)
+FEEDBACK_REASON_ID_TO_CODE = {
+    0: "OTHER",
+    1: "CHAT_NOT_NATURAL",
+    2: "CHARACTER_MISMATCH",
+    3: "APP_SLOW",
+    4: "FEATURE_HARD_TO_FIND",
+    5: "UI_INCONVENIENT",
+    6: "NEW_FEATURE",
+}
 
 
 class ReportStatus(str, enum.Enum):
