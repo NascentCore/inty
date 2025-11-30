@@ -23,8 +23,8 @@ Bottom navigation bar host entry points of IntelliMate App's primary features. T
 - **Chats** for you to chat and interact with IntelliMate, and the main portal to IntelliMate's long-term AI companionship experience
 - **Messages** for you to return to your IntelliMate AI companions
 - **Create IntelliMate** for you to create your own IntelliMate for long-term AI companionship
-- **Explore IntelliMates** for you to explore and find your IntelliMates
-- **Me** for your account and general settings of the app
+- **Explore IntelliMates** for you to explore and find your desired IntelliMates
+- **Me** for managing your **Premium subscription** and general settings of the app
 
 <img width="480" height="96" alt="image" src="https://github.com/user-attachments/assets/349658de-d749-40af-a3cc-4e9613fcf6ac" />
 
