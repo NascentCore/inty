@@ -19,7 +19,7 @@ git submodule update --init --recursive
 
 ```bash
 # 构建前端并拷贝到 app/static/evaluation
-./build_evaluation.sh
+./evaluation/build.sh
 
 # 启动后端
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -81,7 +81,7 @@ git push
 
 ```bash
 # 在仓库根目录运行
-./build_evaluation.sh
+./evaluation/build.sh
 
 # 若 evaluation/package-lock.json 中的 inty_sdk/dist 版本发生变化
 # 请提交改动，创建 PR 并合并
@@ -143,7 +143,7 @@ git push
 
 ## 与后端集成（代码位置）
 
-- 构建与拷贝脚本：`build_evaluation.sh`（构建 `evaluation/`，拷贝至 `app/static/evaluation/`）
+- 构建与拷贝脚本：`evaluation/build.sh`（构建 `evaluation/`，拷贝至 `app/static/evaluation/`）
 - FastAPI 路由：`app/main.py`
   - 静态资源挂载：`/static` 指向 `app/static`
   - 页面入口：`GET /evaluation` 返回 `app/static/evaluation/index.html`
