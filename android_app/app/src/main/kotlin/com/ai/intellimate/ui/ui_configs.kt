@@ -1,8 +1,13 @@
 package com.ai.intellimate.ui
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ai.intellimate.settings.RemixButtonVisibilityManager
 
 /** 聚合 UI 层常用尺寸、颜色、比例等配置，避免在组件中直接写裸数字。 */
 object UiConfigs {
@@ -203,7 +208,16 @@ object UiConfigs {
     }
 
     object ChatPage {
-        /** 是否启用 Remix 按钮 */
-        const val ENABLE_REMIX = true
+        @Composable
+        fun enableRemix(): Boolean {
+            val visibilityState by RemixButtonVisibilityManager.visibility.collectAsState()
+            LaunchedEffect(Unit) {
+                if (visibilityState == null) {
+                    val current = RemixButtonVisibilityManager.getCurrentVisibility()
+                    RemixButtonVisibilityManager.updateVisibility(current)
+                }
+            }
+            return visibilityState ?: RemixButtonVisibilityManager.getCurrentVisibility()
+        }
     }
 }

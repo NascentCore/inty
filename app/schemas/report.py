@@ -24,7 +24,10 @@ class TargetType(str, Enum):
 
 
 class ReasonCode(str, Enum):
-    """原因代码枚举，包含 Report 和 Feedback 的所有可能值"""
+    """
+    原因代码枚举，包含 Report 和 Feedback 的所有可能值
+    这些枚举值经过 stainless 转换进入到 android_app 内的表单展示页面
+    """
 
     # Report 原因代码
     SENSITIVE_CONTENT = "SENSITIVE_CONTENT"

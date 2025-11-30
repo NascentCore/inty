@@ -60,6 +60,7 @@ fun ChatTopBar(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val enableRemix = UiConfigs.ChatPage.enableRemix()
 
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         // 返回按钮
@@ -121,7 +122,7 @@ fun ChatTopBar(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        if (UiConfigs.ChatPage.ENABLE_REMIX) {
+        if (enableRemix) {
             Box(
                 modifier =
                     Modifier
