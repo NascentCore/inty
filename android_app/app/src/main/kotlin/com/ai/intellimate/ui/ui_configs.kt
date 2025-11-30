@@ -208,15 +208,9 @@ object UiConfigs {
     }
 
     object ChatPage {
-        /**
-         * 是否启用 Remix 按钮
-         * - Release 构建：始终返回 false（隐藏）
-         * - Debug 构建：如果存在运行时覆盖，返回覆盖值；否则返回 true（可见）
-         */
         @Composable
-        fun ENABLE_REMIX(): Boolean {
+        fun enableRemix(): Boolean {
             val visibilityState by RemixButtonVisibilityManager.visibility.collectAsState()
-            // 如果状态为 null，初始化状态
             LaunchedEffect(Unit) {
                 if (visibilityState == null) {
                     val current = RemixButtonVisibilityManager.getCurrentVisibility()
