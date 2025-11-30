@@ -14,8 +14,8 @@ from app.api.tags import (
     ANDROID_APP_TAG,
     INTERNAL_API_TAG,
     INTY_EVAL_TAG,
-    NOT_USED_TAG,
     WEB_APP_TAG,
+    NOT_USED_TAG,
 )
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
