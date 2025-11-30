@@ -7,6 +7,7 @@ import com.inty.api.models.api.v1.report.ReportCreateParams
  * 举报和反馈原因代码到字符串资源ID的映射
  * 
  * 提供从 Inty SDK 的 ReasonCode 到 strings.xml 中字符串资源ID的完整映射
+ * * 来自：app/schemas/report.py，经过 openapi.json+Stainless 生成 inty sdk
  */
 object ReportReasonMappings {
 
