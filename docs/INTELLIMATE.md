@@ -39,10 +39,6 @@ Click the
 
 <img width="480" height="2207" alt="image" src="https://github.com/user-attachments/assets/2dd7c9b6-d6c4-4fc4-b26d-885bf8541c01" />
 
-![Home screen placeholder](<ADD_HOME_SCREENSHOT_URL_HERE>)
-
-> Replace with a current screenshot that shows the bottom navigation (Explore / Chats / Profile).
-
 ## Where do I go to…?
 
 | Task | App path | Tips & references |
