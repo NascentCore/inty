@@ -739,6 +739,7 @@ async def agent_chat_completions(
             message = {"role": "assistant", "content": response_content}
 
             if request.message_id:
+                # app 需要产生 uuid 来确认消息，该消息用来在前后端定位该消息
                 message["reply_to"] = request.message_id
 
             # 如果生成了语音，添加到响应中
