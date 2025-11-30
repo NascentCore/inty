@@ -447,6 +447,7 @@ internal fun AiAgentInfoScreen(
                         ToastUtils.showShort(
                             context.getString(R.string.boost_toast_daily_reward_claimed, claimed)
                         )
+                        showBoostSheet = false
                     } catch (e: BoostException) {
                         showBoostError(e.error)
                     } catch (e: Exception) {

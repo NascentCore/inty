@@ -713,6 +713,7 @@ internal fun ChatPage(
                                         claimed,
                                     ),
                                 )
+                                showBoostSheet = false
                             } catch (e: BoostException) {
                                 showBoostError(e.error)
                             } catch (e: Exception) {
