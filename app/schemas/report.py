@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.report import ReportStatus, ReportType
 from app.schemas.response import PagedResponse
@@ -24,16 +24,31 @@ class TargetType(str, Enum):
 
 
 class ReportCreate(BaseModel):
-    target_id: str
-    target_type: TargetType
-    reason_ids: Optional[List[int]] = None  # DEPRECATED: 使用 reason_codes 代替
-    reason_codes: Optional[List[str]] = (
-        None  # 如果未提供且提供了 reason_ids，将从 reason_ids 转换
+    """
+    Report API 端点的请求数据结构。
+    """
+    target_id: str = Field(
+        ..., description="举报或者反馈的目标对象的 ID，角色或者用户的 ID。"
     )
-    image_urls: Optional[List[str]] = []
-    description: Optional[str] = None
-    request_id: Optional[str] = None
-    report_type: Optional[ReportType] = None
+    target_type: TargetType = Field(
+        ..., description="举报或者反馈的目标对象的类型，角色或者用户。"
+    )
+    reason_ids: Optional[List[int]] = None  # DEPRECATED: 使用 reason_codes 代替
+    reason_codes: Optional[List[str]] = Field(
+        None,
+        description="举报或者反馈的原因代码列表。如果未提供且提供了 reason_ids，将从 reason_ids 自动转换",
+    )
+    image_urls: Optional[List[str]] = Field(
+        [],
+        description="举报或者反馈附图的链接，该链接来自 /api/v1/images 端点上传图片返回的 gcs URL（可能是 cdn 链接）",
+    )
+    description: Optional[str] = Field(
+        None, description="The description of the report."
+    )
+    request_id: Optional[str] = Field(None, description="The ID of the request.")
+    report_type: Optional[ReportType] = Field(
+        None, description="举报或者反馈的类型，为空时默认为 REPORT"
+    )
 
 
 class ReportQuery(BaseModel):

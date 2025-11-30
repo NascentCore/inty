@@ -9,13 +9,8 @@ from sqlalchemy.orm import relationship
 from app.models import Base
 
 # 举报原因 ID 到代码的映射（硬编码，不再使用数据库表）
-# 对应关系与 Android 端保持一致（参考 ReportViewModel.kt）：
-#   1 -> SENSITIVE_CONTENT (Sensitive or sexual content)
-#   2 -> MISINFORMATION (Misinformation)
-#   3 -> FRAUD_SCAMS (Fraud or scams)
-#   4 -> PRIVACY_VIOLATION (Violation of privacy)
-#   5 -> HARMFUL_MINORS (Harmful to minors)
-#   6 -> IP_VIOLATION (Violations of my intellectual property)
+# 对应关系与 Android 端老版本保持一致（参考 ReportViewModel.kt）：
+# 用来兼容旧版本的 android app，因为旧版本没有 reason_codes 字段
 REASON_ID_TO_CODE = {
     1: "SENSITIVE_CONTENT",
     2: "MISINFORMATION",
@@ -26,14 +21,8 @@ REASON_ID_TO_CODE = {
 }
 
 # 反馈原因 ID 到代码的映射（硬编码，不再使用数据库表）
-# 对应关系与 Android 端保持一致（参考 ReportViewModel.kt）：
-#   0 -> OTHER (Other, please describe below)
-#   1 -> CHAT_NOT_NATURAL (Chat replies don't feel natural / off-topic)
-#   2 -> CHARACTER_MISMATCH (The character doesn't match its persona)
-#   3 -> APP_SLOW (The app is slow or gets stuck)
-#   4 -> FEATURE_HARD_TO_FIND (I couldn't find / how to use this feature)
-#   5 -> UI_INCONVENIENT (UI or interaction feels inconvenient)
-#   6 -> NEW_FEATURE (I'd like to see a new feature or improvement)
+# 对应关系与 Android 端老版本保持一致（参考 ReportViewModel.kt）：
+# 用来兼容旧版本的 android app
 FEEDBACK_REASON_ID_TO_CODE = {
     0: "OTHER",
     1: "CHAT_NOT_NATURAL",
