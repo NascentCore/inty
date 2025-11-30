@@ -29,8 +29,9 @@ object BoostConfig {
     /** 排行榜展示数量上限。 */
     const val LEADERBOARD_LIMIT = 100
 
-    /** DataStore 文件名。 */
-    const val STORAGE_FILE_NAME = "boost_state.json"
+    /** MMKV 存储键名（已废弃，保留用于兼容性）。 */
+    @Deprecated("使用 BoostStorage 内部常量", ReplaceWith(""))
+    const val STORAGE_FILE_NAME = "boost_state"
 }
 
 /** 排行榜趋势展示类型。 */

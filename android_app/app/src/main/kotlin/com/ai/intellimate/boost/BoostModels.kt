@@ -3,10 +3,7 @@
  */
 package com.ai.intellimate.boost
 
-import kotlinx.serialization.Serializable
-
-/** DataStore 中的原始快照，用于序列化存储。 */
-@Serializable
+/** MMKV 中的原始快照，用于序列化存储。 */
 data class BoostStateSnapshot(
     val availablePoints: Int = 0,
     val dailyEnergyEarned: Int = 0,
@@ -15,8 +12,7 @@ data class BoostStateSnapshot(
     val boostsByAgent: Map<String, AgentBoostInfoSnapshot> = emptyMap(),
 )
 
-/** 单个角色在 DataStore 中的快照。 */
-@Serializable
+/** 单个角色在 MMKV 中的快照。 */
 data class AgentBoostInfoSnapshot(
     val agentId: String = "",
     val agentName: String = "",

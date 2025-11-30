@@ -31,32 +31,178 @@
 
 ## 当前实现状态（本地 MVP）
 
-### 核心组件
+### 初始化与生命周期
 
-1. **BoostManager** (`android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostManager.kt`)
-   - Boost 功能的统一入口
-   - 提供 `boostState` 和 `leaderboard` 的 StateFlow
-   - 协调仓库与业务逻辑
+**初始化位置**：`IntelliMateApp.onCreate()`
+- 仅在 **debug 模式**下初始化（通过 `HeartAppUtils.isAppDebugMode()` 判断）
+- 调用 `BoostManager.initialize(context)` 创建 `BoostRepository` 实例
+- 初始化时机：应用启动时，在其他服务初始化之后
 
-2. **BoostRepository** (`android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostRepository.kt`)
-   - 管理本地持久化状态（DataStore）
-   - 构建排行榜数据
-   - 处理每日重置逻辑
+**生命周期管理**：
+- `BoostManager` 为单例对象，生命周期与 Application 一致
+- `BoostRepository` 在 `BoostManager.initialize()` 时创建，持有 Application Context
+- 使用独立的 `CoroutineScope(SupervisorJob() + Dispatchers.IO)` 处理异步操作
+- MMKV 自动处理数据持久化，无需手动管理生命周期
+- MMKV 在 `IntySetting.init` 中已初始化，无需额外初始化
 
-3. **BoostConfig** (`android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostConfig.kt`)
-   - 集中管理所有配置常量
-   - 避免魔法数字/字符串
+### 核心组件架构
 
-4. **BoostCalculator** (`android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostCalculator.kt`)
-   - Token ↔ Point 的估算与转换
-   - 积分校验与规范化
+#### 1. **BoostManager** (`android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostManager.kt`)
+
+**设计模式**：单例对象（Singleton Object）
+
+**核心职责**：
+- Boost 功能的统一入口，负责协调仓库与业务方
+- 提供 `boostState` 和 `leaderboard` 的 StateFlow
+- 管理事件流（`BoostEvent`）和 Firebase 埋点
+- 封装积分记录方法（`recordChatTokens`, `recordImageGeneration`, `recordAudioPlayback`）
+
+**关键特性**：
+- **延迟初始化**：`repository` 为可空类型，未初始化时返回默认空状态
+- **默认状态流**：未初始化时提供 `defaultState` 和 `defaultLeaderboard`，避免空指针
+- **事件系统**：使用 `SharedFlow<BoostEvent>` 发布内部事件（`PointsEarned`, `BoostSuccess`, `Error`）
+- **协程作用域**：使用 `SupervisorJob` 确保子协程异常不影响其他操作
+
+**公共 API**：
+```kotlin
+// 初始化（仅需调用一次）
+fun initialize(context: Context)
+
+// 积分记录方法
+fun recordChatTokens(agentInfo: AgentInfo?, message: String)
+fun recordImageGeneration(agentInfo: AgentInfo?)
+fun recordAudioPlayback(agentId: String, agentName: String?)
+
+// Boost 操作
+suspend fun boostAgent(agentInfo: AgentInfo, requestedPoints: Int): BoostResult
+suspend fun claimDailyReward(): Int
+
+// 状态流
+val boostState: StateFlow<BoostState>
+val leaderboard: StateFlow<List<BoostLeaderboardEntry>>
+val events: SharedFlow<BoostEvent>
+```
+
+#### 2. **BoostRepository** (`android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostRepository.kt`)
+
+**设计模式**：仓库模式（Repository Pattern）
+
+**核心职责**：
+- 管理本地持久化状态（DataStore）
+- 构建排行榜数据（合并真实数据与 Seed 数据）
+- 处理每日重置逻辑（`runDailyResetIfNeeded()`）
+- 提供数据操作的原子性保证
+
+**关键特性**：
+- **MMKV 集成**：使用 `BoostStorage` 对象进行持久化（独立的 MMKV 实例）
+- **手动状态更新**：每次写入后手动更新 StateFlow，确保 UI 及时响应
+- **自动每日重置**：在 `init` 中启动协程检查并执行每日重置
+- **依赖注入**：`seedProvider` 可通过构造函数注入，便于测试
+- **线程安全**：MMKV 支持多进程模式，保证并发安全
+
+**数据流**：
+```
+MMKV 写入操作
+    ↓
+BoostStorage.saveBoostState()
+    ↓
+MMKV 持久化
+    ↓
+BoostStorage.getBoostState() → 读取最新状态
+    ↓
+snapshot.toDomain() → 更新 _state
+    ↓
+buildLeaderboard(snapshot) → 更新 _leaderboard
+    ↓
+StateFlow 通知 UI
+```
+
+**公共 API**：
+```kotlin
+// 状态流
+val stateFlow: StateFlow<BoostState>
+val leaderboardFlow: StateFlow<List<BoostLeaderboardEntry>>
+
+// 数据操作
+suspend fun addPoints(points: Int, source: PointSource)
+suspend fun claimDailyReward(): Int
+suspend fun boostAgent(agentInfo: AgentInfo, points: Int): AgentBoostInfo
+suspend fun runDailyResetIfNeeded()
+```
+
+#### 3. **BoostConfig** (`android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostConfig.kt`)
+
+**设计模式**：配置对象（Configuration Object）
+
+**核心职责**：
+- 集中管理所有配置常量
+- 避免魔法数字/字符串散布在代码中
+- 便于后续通过远程配置动态调整
+
+**配置项**：
+- `BOOST_STEP_POINTS = 100`：每次 Boost 的最小积分步长
+- `DAILY_SIGN_IN_REWARD = 200`：每日签到奖励
+- `AVG_CHARS_PER_TOKEN = 4.0`：字符到 Token 的估算比例
+- `TOKEN_TO_POINT_RATIO = 1.0`：Token 到 Points 的转换比例
+- `IMAGE_TOKEN_COST = 600`：图片生成的 Token 成本
+- `AUDIO_TOKEN_COST = 120`：语音播放的 Token 成本
+- `MAX_POINTS_PER_DAY = 10_000`：每日积分上限
+- `LEADERBOARD_LIMIT = 100`：排行榜展示上限
+
+#### 4. **BoostCalculator** (`android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostCalculator.kt`)
+
+**设计模式**：工具对象（Utility Object）
+
+**核心职责**：
+- Token ↔ Point 的估算与转换
+- 积分校验与规范化
+- 每日积分上限校验
+
+**关键方法**：
+- `estimateTokensFromMessage(message: String): Int`：估算消息的 Token 数量
+- `tokensToPoints(tokens: Int): Int`：将 Token 转换为 Points
+- `imageGenerationPoints(): Int`：图片生成的固定积分
+- `audioPlaybackPoints(): Int`：语音播放的固定积分
+- `clampDailyGain(current: Int, delta: Int): Int`：限制每日积分增长
+- `normalizeBoostAmount(requested: Int, available: Int): Int`：规范化 Boost 投入金额（确保是步长的整数倍）
+
+#### 5. **事件系统**
+
+**BoostEvent** (`BoostManager.kt`)：
+```kotlin
+sealed class BoostEvent {
+    data class PointsEarned(val source: PointSource, val points: Int)
+    data class BoostSuccess(
+        val agentId: String,
+        val agentName: String,
+        val pointsSpent: Int,
+        val totalBoosts: Int,
+    )
+    data class Error(val error: BoostError)
+}
+```
+
+**错误类型** (`BoostModels.kt`)：
+```kotlin
+sealed class BoostError {
+    data object NotEnoughPoints
+    data object DailyRewardAlreadyClaimed
+    data object InvalidAmount
+    data object NotInitialized
+}
+```
+
+**事件发布**：
+- `BoostManager` 通过 `_events.emit()` 发布事件
+- UI 层可通过 `BoostManager.events.collectAsState()` 监听事件
+- Firebase 埋点与事件系统并行，互不干扰
 
 ### 数据来源
 
 #### 1. 真实数据（主要来源）
 
-**存储位置**：本地 DataStore
-- 文件：`boost_state.json`（通过 `BoostStateSerializer` 序列化）
+**存储位置**：本地 MMKV
+- MMKV 实例：`boost_state`（通过 `BoostStorage` 管理）
 - 数据结构：`BoostStateSnapshot`
   ```kotlin
   data class BoostStateSnapshot(
@@ -77,6 +223,11 @@
 **数据更新时机**：
 - 用户执行 boost 操作时（`BoostManager.boostAgent()`）
 - 用户获得积分时（聊天、图片生成、语音播放等）
+
+**存储实现**：
+- 使用 `BoostStorage` 对象管理 MMKV 存储
+- 通过 Moshi 进行 JSON 序列化/反序列化
+- 支持多进程模式（`MMKV.MULTI_PROCESS_MODE`）
 
 #### 2. 假数据（Seed，占位展示）
 
@@ -121,16 +272,67 @@ private fun buildLeaderboard(snapshot: BoostStateSnapshot): List<BoostLeaderboar
 
 ### 数据流
 
+**完整数据流图**：
+
 ```
-用户操作（聊天/图片/语音）
+用户操作（聊天/图片/语音/签到）
     ↓
-BoostManager.record*() 
+业务层调用 BoostManager.record*()
     ↓
-BoostRepository.addPoints() → 更新 DataStore
+BoostManager 计算积分（BoostCalculator）
     ↓
-DataStore.data.collectLatest → 触发 buildLeaderboard()
+BoostRepository.addPoints() → BoostStorage.saveBoostState()
     ↓
-BoostManager.leaderboard (StateFlow) → UI 展示
+MMKV 持久化到磁盘（boost_state MMKV 实例）
+    ↓
+手动调用 updateStateFlows()
+    ↓
+snapshot.toDomain() → 更新 _state (StateFlow)
+    ↓
+buildLeaderboard(snapshot) → 更新 _leaderboard (StateFlow)
+    ↓
+BoostManager.boostState / leaderboard (StateFlow)
+    ↓
+UI 层 collectAsState() → Compose 重组
+```
+
+**Boost 操作数据流**：
+
+```
+用户点击 Boost 按钮
+    ↓
+BoostManager.boostAgent(agentInfo, points)
+    ↓
+BoostCalculator.normalizeBoostAmount() 规范化金额
+    ↓
+BoostRepository.boostAgent() → BoostStorage.saveBoostState()
+    ↓
+扣除积分 + 更新角色 Boost 信息
+    ↓
+MMKV 持久化
+    ↓
+手动触发状态流更新（updateStateFlows()）
+    ↓
+发布 BoostEvent.BoostSuccess
+    ↓
+UI 显示成功提示 + 插入系统消息（ChatViewModel.appendBoostSystemMessage）
+```
+
+**每日重置流程**：
+
+```
+应用启动 / 每日首次访问
+    ↓
+BoostRepository.init → runDailyResetIfNeeded()
+    ↓
+检查 lastResetDate != 今天
+    ↓
+BoostStorage.saveBoostState() 重置：
+  - dailyEnergyEarned = 0
+  - hasClaimedDailyReward = false
+  - lastResetDate = 今天
+    ↓
+手动触发状态流更新（updateStateFlows()）
 ```
 
 ### 积分获取规则
@@ -148,18 +350,158 @@ BoostManager.leaderboard (StateFlow) → UI 展示
 
 ### UI 集成点
 
-1. **Chat 页面** (`ChatPage.kt`)
-   - 已移除 Boost Points 面板（迁移到角色主页）
-   - 保留 `BoostSheet` 支持（用于从 Explore 跳转时自动打开）
+#### 1. **Chat 页面** (`ChatPage.kt`)
 
-2. **角色主页** (`AgentInfoScreen.kt`)
-   - 显示 `BoostStatusChip`（积分面板）
-   - 支持打开 `BoostSheet` 进行 boost 操作
+**集成方式**：
+- 已移除 Boost Points 面板（迁移到角色主页）
+- 保留 `BoostSheet` 支持，用于从 Explore 跳转时自动打开
 
-3. **Explore 页面** (`ExplorePage.kt`)
-   - Boost Tab 展示排行榜（`BoostLeaderboardTab`）
-   - 支持点击 Chat/Boost 按钮跳转到聊天页面
-   - Seed 数据点击时显示提示，无法打开聊天
+**关键实现**：
+- **参数**：`shouldShowBoostSheetOnOpen: Boolean` - 控制是否在打开时显示 BoostSheet
+- **状态管理**：使用 `pendingBoostSheet` 状态，在 `LaunchedEffect` 中延迟显示（确保 agentInfo 已加载）
+- **Boost 操作**：调用 `BoostManager.boostAgent()` 后，通过 `ChatViewModel.appendBoostSystemMessage()` 插入系统消息
+- **事件处理**：监听 `BoostManager.events`，处理成功/失败事件并显示 Toast
+
+**代码片段**：
+```kotlin
+LaunchedEffect(agentInfo?.id, pendingBoostSheet, isDebugMode) {
+    if (isDebugMode && agentInfo != null && pendingBoostSheet) {
+        showBoostSheet = true
+        pendingBoostSheet = false
+    }
+}
+
+// BoostSheet 显示逻辑
+if (isDebugMode && showBoostSheet) {
+    BoostSheet(
+        agentInfo = info,
+        availablePoints = boostState.availablePoints,
+        hasDailyReward = boostState.hasClaimedDailyReward,
+        onBoostConfirmed = { points ->
+            scope.launch {
+                val result = BoostManager.boostAgent(info, points)
+                chatViewModel.appendBoostSystemMessage(
+                    agent = info,
+                    points = result.pointsSpent,
+                    totalBoosts = result.info.boostCount,
+                )
+            }
+        },
+        // ...
+    )
+}
+```
+
+#### 2. **角色主页** (`AgentInfoScreen.kt`)
+
+**集成方式**：
+- 显示 `BoostStatusChip`（积分面板），展示可用积分
+- 点击后打开 `BoostSheet` 进行 boost 操作
+
+**关键实现**：
+- **条件显示**：仅在 `isDebugMode` 下显示 Boost 相关 UI
+- **状态订阅**：通过 `BoostManager.boostState.collectAsState()` 获取实时积分状态
+- **Boost 操作**：与 Chat 页面类似，成功后显示 Toast 提示
+- **错误处理**：统一的错误处理函数 `showBoostError`，根据错误类型显示对应提示
+
+**代码片段**：
+```kotlin
+val boostState by if (isDebugMode) 
+    BoostManager.boostState.collectAsState() 
+else 
+    remember { mutableStateOf(BoostState()) }
+
+if (isDebugMode) {
+    BoostStatusChip(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        availablePoints = boostState.availablePoints,
+        onClick = {
+            if (boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS) {
+                ToastUtils.showShort(R.string.boost_toast_not_enough_points)
+            } else {
+                showBoostSheet = true
+            }
+        },
+    )
+}
+```
+
+#### 3. **Explore 页面** (`ExplorePage.kt`)
+
+**集成方式**：
+- Boost Tab 展示排行榜（`BoostLeaderboardTab`）
+- 支持点击 Chat/Boost 按钮跳转到聊天页面
+- Seed 数据点击时显示提示，无法打开聊天
+
+**关键实现**：
+- **Tab 切换**：使用 `ExploreSubTab` 枚举（`Recommended`, `Boost`）控制显示内容
+- **排行榜数据**：通过 `BoostManager.leaderboard.collectAsState()` 获取
+- **跳转逻辑**：`handleLeaderboardAction` 函数处理点击事件，通过 `ChatActivity.launch()` 跳转并传递 `showBoostSheet` 参数
+- **Seed 数据处理**：检查 `entry.isSeed`，显示提示 Toast 而不跳转
+
+**代码片段**：
+```kotlin
+val leaderboard by if (isDebugMode) 
+    BoostManager.leaderboard.collectAsState() 
+else 
+    remember { mutableStateOf(emptyList<BoostLeaderboardEntry>()) }
+
+val handleLeaderboardAction: (BoostLeaderboardEntry, Boolean) -> Unit =
+    { entry, showSheet ->
+        if (entry.isSeed || entry.agentId.isBlank()) {
+            ToastUtils.showShort(R.string.boost_seed_placeholder_toast)
+        } else {
+            ChatActivity.launch(
+                context,
+                agentInfo = null,
+                agentId = entry.agentId,
+                pageSource = ChatActivity.EXPLORE_TAB,
+                showBoostSheet = showSheet,
+            )
+        }
+    }
+```
+
+#### 4. **ChatViewModel 集成** (`ChatViewModel.kt`)
+
+**积分记录点**：
+- **发送消息**：`sendMessage()` 方法中，记录用户输入和助手回复的 Token
+- **Keep Talking**：`keepTalking()` 方法中，记录用户输入和助手回复的 Token
+- **图片生成**：`generateImage()` 方法中，记录图片生成的固定积分（600 points）
+
+**关键实现**：
+```kotlin
+// 发送消息时记录
+if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
+    BoostManager.recordChatTokens(agent, inputMsg)
+    assistantContent?.let { BoostManager.recordChatTokens(agent, it) }
+}
+
+// 图片生成时记录
+if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
+    agent?.let { BoostManager.recordImageGeneration(it) }
+}
+```
+
+**系统消息插入**：
+- `appendBoostSystemMessage()` 方法：在 Boost 成功后，向聊天记录插入系统提示消息
+- 消息格式：`"You invested %1$d pts in %2$s. Total boosts: %3$d."`
+
+#### 5. **AudioManager 集成** (`AudioManager.kt`)
+
+**积分记录点**：
+- **语音播放**：在 `playAudio()` 方法中，当音频开始播放时记录积分（120 points）
+
+**关键实现**：
+```kotlin
+if (HeartAppUtils.isAppDebugMode(context)) {
+    BoostManager.recordAudioPlayback(agentId, agentName ?: "")
+}
+```
+
+**注意事项**：
+- 仅在 debug 模式下记录，避免影响生产环境性能
+- 每次播放都会记录，不区分自动播放或手动播放
 
 ## 客户端数据模型（本地）
 
@@ -191,17 +533,57 @@ data class BoostState(
   - 客户端根据 `boostCount` 排序，截取前 100。
   - 真实数据与 Seed 数据合并展示。
 
-## 实现分层
-1. **Domain 层**
-   - `BoostRepository`: 管理积分余额、Boost 记录、排行榜。
-   - `BoostCalculator`: 负责 Token → Points 折算策略。
-   - `BoostManager`: 统一入口，协调业务逻辑。
-2. **ViewModel 层**
-   - `ChatViewModel`：集成 Boost 记录逻辑（聊天、图片、语音）。
-   - `ExploreViewModel`：新增 `Boost` Tab 状态，支持切换过滤条件（热门、推荐、Boost）。
-3. **UI 层**
-   - Compose 组件：`BoostStatusChip`, `BoostSheet`, `BoostLeaderboardTab`。
-   - 动画与可访问性：按钮禁用、积分变化过渡、TalkBack 描述。
+## 架构分层
+
+### 1. **Domain 层**（数据与业务逻辑）
+
+**组件**：
+- `BoostRepository`: 管理积分余额、Boost 记录、排行榜，负责数据持久化
+- `BoostCalculator`: 负责 Token → Points 折算策略，提供工具方法
+- `BoostManager`: 统一入口，协调业务逻辑，管理事件流
+- `BoostConfig`: 配置常量集中管理
+- `BoostModels`: 数据模型定义（`BoostState`, `BoostLeaderboardEntry`, `BoostError` 等）
+- `BoostStorage`: MMKV 存储管理类，负责序列化/反序列化
+- `BoostSeedProvider`: Seed 数据提供者
+
+**职责**：
+- 数据持久化（DataStore）
+- 业务逻辑封装
+- 数据转换与校验
+- 排行榜构建
+
+### 2. **ViewModel 层**（状态管理）
+
+**组件**：
+- `ChatViewModel`：集成 Boost 记录逻辑
+  - `sendMessage()` → `BoostManager.recordChatTokens()`
+  - `keepTalking()` → `BoostManager.recordChatTokens()`
+  - `generateImage()` → `BoostManager.recordImageGeneration()`
+  - `appendBoostSystemMessage()` → 插入系统消息
+
+**职责**：
+- 在业务操作中调用 Boost 记录方法
+- 不直接管理 Boost 状态（通过 `BoostManager` 的状态流获取）
+
+### 3. **UI 层**（界面展示）
+
+**组件**：
+- `BoostStatusChip` (`BoostUiComponents.kt`): 积分状态展示芯片
+- `BoostSheet` (`BoostUiComponents.kt`): Boost 操作弹窗
+- `BoostLeaderboardTab` (`BoostLeaderboardTab.kt`): 排行榜 Tab 页面
+- `BoostLeaderboardRow` (`BoostLeaderboardTab.kt`): 排行榜条目行
+- `TrendPill` (`BoostLeaderboardTab.kt`): 趋势标签
+
+**集成页面**：
+- `ChatPage.kt`: 支持从外部跳转时自动打开 BoostSheet
+- `AgentInfoScreen.kt`: 显示 BoostStatusChip 和 BoostSheet
+- `ExplorePage.kt`: 显示 Boost Tab 和排行榜
+
+**职责**：
+- 展示 Boost 相关 UI
+- 处理用户交互
+- 订阅状态流并响应变化
+- 错误提示和成功反馈
 
 ## 与推荐系统的集成计划
 - 在现有「推荐角色」请求参数中加入 `variant = BOOSTED_TOP`.
@@ -209,13 +591,74 @@ data class BoostState(
 - 当后端接口上线时，仅需在 Repository 内切换数据源即可。
 
 ## 事件与埋点
-- `boost_token_earned`：来源（签到/聊天/图片/语音）、数量。
-- `boost_invested`：角色 ID、投入 Points、剩余余额、总 Boost 次数。
-- `boost_daily_reward_claimed`：领取的积分数量。
-- `boost_leaderboard_viewed`：序号区间（待实现）。
-- `boost_shortage_prompted`：触发缺口弹窗（待实现）。
 
-> 当前已接入 Firebase Analytics，事件通过 `BoostManager` 记录。
+### Firebase Analytics 事件
+
+**已实现事件**：
+
+1. **`boost_token_earned`** - 积分获得事件
+   - **触发时机**：用户通过聊天、图片生成、语音播放获得积分时
+   - **参数**：
+     - `source`: 积分来源（`"chat"`, `"image"`, `"audio"`, `"sign_in"`, `"manual"`）
+     - `points`: 获得的积分数量
+     - `agent_name`: 关联的角色名称（可选）
+   - **实现位置**：`BoostManager.logPointsEvent()`
+
+2. **`boost_invested`** - Boost 投入事件
+   - **触发时机**：用户成功执行 Boost 操作时
+   - **参数**：
+     - `agent_id`: 角色 ID
+     - `agent_name`: 角色名称
+     - `points`: 投入的积分数量
+     - `total_boosts`: 该角色的总 Boost 次数
+   - **实现位置**：`BoostManager.boostAgent()`
+
+3. **`boost_daily_reward_claimed`** - 每日奖励领取事件
+   - **触发时机**：用户领取每日签到奖励时
+   - **参数**：
+     - `points`: 领取的积分数量（固定 200）
+   - **实现位置**：`BoostManager.claimDailyReward()`
+
+**待实现事件**：
+
+4. **`boost_leaderboard_viewed`** - 排行榜查看事件
+   - **计划参数**：
+     - `viewed_count`: 查看的条目数量
+     - `time_spent`: 停留时间（秒）
+
+5. **`boost_shortage_prompted`** - 积分不足提示事件
+   - **计划参数**：
+     - `required_points`: 需要的积分数量
+     - `available_points`: 当前可用积分
+
+### 内部事件系统
+
+**BoostEvent** (`BoostManager.kt`)：
+- `PointsEarned(source: PointSource, points: Int)` - 积分获得事件
+- `BoostSuccess(agentId, agentName, pointsSpent, totalBoosts)` - Boost 成功事件
+- `Error(error: BoostError)` - 错误事件
+
+**使用方式**：
+```kotlin
+// UI 层可以监听事件
+LaunchedEffect(Unit) {
+    BoostManager.events.collect { event ->
+        when (event) {
+            is BoostEvent.PointsEarned -> {
+                // 处理积分获得
+            }
+            is BoostEvent.BoostSuccess -> {
+                // 处理 Boost 成功
+            }
+            is BoostEvent.Error -> {
+                // 处理错误
+            }
+        }
+    }
+}
+```
+
+> **注意**：当前 UI 层主要通过状态流（`boostState`, `leaderboard`）响应变化，事件系统主要用于内部协调和未来扩展。
 
 ## 风险与对策
 - **本地排行榜与真实数据不一致**：在文案中标注「本地体验版」，Seed 数据点击时显示提示。
@@ -574,28 +1017,38 @@ data class BoostState(
 
 ## 相关文件
 
-### 核心代码
-- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostManager.kt` - Boost 功能统一入口
-- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostRepository.kt` - 数据仓库
-- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostCalculator.kt` - 积分计算
-- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostConfig.kt` - 配置常量
-- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostModels.kt` - 数据模型
-- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostStateSerializer.kt` - 序列化
-- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostSeedProvider.kt` - Seed 数据
+### 核心代码（Domain 层）
+- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostManager.kt` - Boost 功能统一入口，单例对象
+- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostRepository.kt` - 数据仓库，管理持久化和排行榜
+- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostCalculator.kt` - 积分计算工具类
+- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostConfig.kt` - 配置常量集中管理
+- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostModels.kt` - 数据模型定义（State, Entry, Error 等）
+- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostStorage.kt` - MMKV 存储管理类
+- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostSeedProvider.kt` - Seed 数据提供者
 
-### UI 组件
-- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/ui/BoostUiComponents.kt` - UI 组件
-- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/ui/BoostLeaderboardTab.kt` - 排行榜 Tab
-- `android_app/app/src/main/kotlin/com/ai/intellimate/agent/info/AgentInfoScreen.kt` - 角色主页（集成 Boost）
-- `android_app/app/src/main/kotlin/com/ai/intellimate/explore/ExplorePage.kt` - Explore 页面（Boost Tab）
+### UI 组件（UI 层）
+- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/ui/BoostUiComponents.kt` - UI 组件（BoostStatusChip, BoostSheet）
+- `android_app/app/src/main/kotlin/com/ai/intellimate/boost/ui/BoostLeaderboardTab.kt` - 排行榜 Tab 页面
+
+### 集成点（ViewModel/UI 层）
+- `android_app/app/src/main/kotlin/com/ai/intellimate/chat/ChatPage.kt` - Chat 页面，支持 BoostSheet 自动打开
+- `android_app/app/src/main/kotlin/com/ai/intellimate/chat/ChatPageContainer.kt` - Chat 页面容器
+- `android_app/app/src/main/kotlin/com/ai/intellimate/chat/ChatActivity.kt` - Chat Activity，支持跳转参数
+- `android_app/app/src/main/kotlin/com/ai/intellimate/chat/viewmodel/ChatViewModel.kt` - Chat ViewModel，集成积分记录
+- `android_app/app/src/main/kotlin/com/ai/intellimate/agent/info/AgentInfoScreen.kt` - 角色主页，显示 BoostStatusChip
+- `android_app/app/src/main/kotlin/com/ai/intellimate/explore/ExplorePage.kt` - Explore 页面，Boost Tab 展示
+- `android_app/app/src/main/kotlin/com/ai/intellimate/audio/AudioManager.kt` - 音频管理器，集成语音播放积分记录
+
+### 初始化
+- `android_app/app/src/main/kotlin/com/ai/intellimate/IntelliMateApp.kt` - Application 类，初始化 BoostManager
 
 ### 资源文件
-- `android_app/app/src/main/res/values/strings.xml` - Boost 相关文案
-- `android_app/app/src/main/res/drawable/ic_boost_fire.xml` - Boost 图标
+- `android_app/app/src/main/res/values/strings.xml` - Boost 相关文案（所有用户可见文本）
+- `android_app/app/src/main/res/drawable/ic_boost_fire.xml` - Boost 火焰图标
 
 ### 文档
-- `android_app/AGENTS.md` - Boost 功能简要说明
-- `android_app/doc/CHAR_BOOSTING_PLAN.md` - 详细实现计划（已合并到本文档）
+- `android_app/AGENTS.md` - Boost 功能简要说明（在 "Boost AI Characters 本地 MVP" 章节）
+- `docs/FR_CHAR_BOOSTING.md` - 本文档，完整的功能设计与实现文档
 
 ## 后续待办
 - 拟定后端接口：`GET /agents/boosted`, `POST /agents/{id}/boost`。

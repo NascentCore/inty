@@ -15,7 +15,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -27,7 +26,6 @@ class BoostRepository(
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
-    private val dataStore = context.applicationContext.boostStateDataStore
 
     private val _state = MutableStateFlow(BoostState())
     val stateFlow: StateFlow<BoostState> = _state.asStateFlow()
@@ -36,59 +34,71 @@ class BoostRepository(
     val leaderboardFlow: StateFlow<List<BoostLeaderboardEntry>> = _leaderboard.asStateFlow()
 
     init {
+        // 加载初始状态
+        val initialSnapshot = BoostStorage.getBoostState()
+        _state.value = initialSnapshot.toDomain()
+        _leaderboard.value = buildLeaderboard(initialSnapshot)
+
+        // 执行每日重置检查
         scope.launch { runDailyResetIfNeeded() }
-        scope.launch {
-            dataStore.data.collectLatest { snapshot ->
-                _state.value = snapshot.toDomain()
-                _leaderboard.value = buildLeaderboard(snapshot)
-            }
-        }
+    }
+
+    /** 更新状态流（在每次写入后调用） */
+    private fun updateStateFlows() {
+        val snapshot = BoostStorage.getBoostState()
+        _state.value = snapshot.toDomain()
+        _leaderboard.value = buildLeaderboard(snapshot)
     }
 
     suspend fun addPoints(points: Int, source: PointSource) {
         if (points <= 0) return
-        dataStore.updateData { snapshot ->
+        withContext(scope.coroutineContext) {
+            val current = BoostStorage.getBoostState()
             val gain =
                 when (source) {
                     PointSource.SignIn, PointSource.Manual -> points
-                    else -> BoostCalculator.clampDailyGain(snapshot.dailyEnergyEarned, points)
+                    else -> BoostCalculator.clampDailyGain(current.dailyEnergyEarned, points)
                 }
-            if (gain <= 0) {
-                snapshot
-            } else {
-                snapshot.copy(
-                    availablePoints = snapshot.availablePoints + gain,
-                    dailyEnergyEarned = snapshot.dailyEnergyEarned + gain,
+            if (gain > 0) {
+                val updated = current.copy(
+                    availablePoints = current.availablePoints + gain,
+                    dailyEnergyEarned = current.dailyEnergyEarned + gain,
                 )
+                BoostStorage.saveBoostState(updated)
+                updateStateFlows()
             }
         }
     }
 
     suspend fun claimDailyReward(): Int {
-        var claimed = 0
-        dataStore.updateData { snapshot ->
-            if (snapshot.hasClaimedDailyReward) {
+        return withContext(scope.coroutineContext) {
+            val current = BoostStorage.getBoostState()
+            if (current.hasClaimedDailyReward) {
                 throw BoostException(BoostError.DailyRewardAlreadyClaimed)
             }
-            claimed = BoostConfig.DAILY_SIGN_IN_REWARD
-            snapshot.copy(
-                availablePoints = snapshot.availablePoints + BoostConfig.DAILY_SIGN_IN_REWARD,
+            val claimed = BoostConfig.DAILY_SIGN_IN_REWARD
+            val updated = current.copy(
+                availablePoints = current.availablePoints + BoostConfig.DAILY_SIGN_IN_REWARD,
                 hasClaimedDailyReward = true,
             )
+            BoostStorage.saveBoostState(updated)
+            updateStateFlows()
+            claimed
         }
-        return claimed
     }
 
     suspend fun boostAgent(agentInfo: AgentInfo, points: Int): AgentBoostInfo {
         if (points <= 0 || points % BoostConfig.BOOST_STEP_POINTS != 0) {
             throw BoostException(BoostError.InvalidAmount)
         }
-        var updatedInfo: AgentBoostInfoSnapshot? = null
-        dataStore.updateData { snapshot ->
-            if (snapshot.availablePoints < points) throw BoostException(BoostError.NotEnoughPoints)
+        return withContext(scope.coroutineContext) {
+            val current = BoostStorage.getBoostState()
+            if (current.availablePoints < points) {
+                throw BoostException(BoostError.NotEnoughPoints)
+            }
             val now = System.currentTimeMillis()
             val existing =
-                snapshot.boostsByAgent[agentInfo.id]
+                current.boostsByAgent[agentInfo.id]
                     ?: AgentBoostInfoSnapshot(
                         agentId = agentInfo.id,
                         agentName = agentInfo.name,
@@ -99,30 +109,29 @@ class BoostRepository(
                     .copy(agentName = agentInfo.name, avatarUrl = agentInfo.avatar)
                     .increment(points, now)
 
-            updatedInfo = merged
-
-            snapshot.copy(
-                availablePoints = snapshot.availablePoints - points,
-                boostsByAgent = snapshot.boostsByAgent + (agentInfo.id to merged),
+            val updated = current.copy(
+                availablePoints = current.availablePoints - points,
+                boostsByAgent = current.boostsByAgent + (agentInfo.id to merged),
             )
+            BoostStorage.saveBoostState(updated)
+            updateStateFlows()
+            merged.toDomain()
         }
-        return checkNotNull(updatedInfo).toDomain()
     }
 
     suspend fun runDailyResetIfNeeded() =
         withContext(scope.coroutineContext) {
             val today = LocalDate.now(ZoneId.systemDefault()).toString()
             runCatching {
-                    dataStore.updateData { snapshot ->
-                        if (snapshot.lastResetDate == today) {
-                            snapshot
-                        } else {
-                            snapshot.copy(
-                                dailyEnergyEarned = 0,
-                                hasClaimedDailyReward = false,
-                                lastResetDate = today,
-                            )
-                        }
+                    val current = BoostStorage.getBoostState()
+                    if (current.lastResetDate != today) {
+                        val updated = current.copy(
+                            dailyEnergyEarned = 0,
+                            hasClaimedDailyReward = false,
+                            lastResetDate = today,
+                        )
+                        BoostStorage.saveBoostState(updated)
+                        updateStateFlows()
                     }
                 }
                 .onFailure { LogUtils.e("BoostRepository", "Daily reset failed: ${it.message}") }
