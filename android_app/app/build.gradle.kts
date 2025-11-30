@@ -115,5 +115,7 @@ dependencies {
     // ===== UI 测试依赖 =====
     androidTestImplementation(libs.androidx.uiautomator)
 
+    // ===== 背景/前景虚化库 =====
+    // https://chrisbanes.github.io/haze/latest/usage/
     implementation(libs.haze)
 }
