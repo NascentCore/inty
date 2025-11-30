@@ -2,6 +2,7 @@ package com.ai.intellimate.settings.check
 
 import AttendanceStatus
 import AttendanceViewModel
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -55,6 +56,7 @@ import java.time.LocalDate
 
 @Composable
 fun CheckInScreen(
+    context: Context,
     onClose: () -> Unit,
     viewModel: AttendanceViewModel = viewModel()
 ) {
@@ -65,7 +67,7 @@ fun CheckInScreen(
     val uiState by viewModel.uiState.collectAsState()
     val today = LocalDate.now()
     val isCheckedToday = uiState.isTodaySignedIn;
-    Log.d("SLLog", "----------->${uiState.isTodaySignedIn}");
+    Log.d("SLLog", "----------->${uiState.isTodaySignedIn}")
 
     Box(modifier = Modifier.fillMaxSize().background(ai.sxwl.android.design.theme.HeartColor.primaryColor)) {
         Image(
@@ -99,7 +101,10 @@ fun CheckInScreen(
 
             Spacer(modifier = Modifier.height(screenHeightDp * 0.06f))
             Row(modifier = Modifier.fillMaxWidth().height(86.dp)) {
-                DaySelectorRow(isCheck = isCheckedToday)
+                DaySelectorRow(context = context, onTodayIsChecked = {
+//                    Log.d("SLTag", "on is Checked today si --------->");
+//                    isCheckedToday = true
+                })
             }
 
             // 签到按钮
@@ -115,6 +120,9 @@ fun CheckInScreen(
                 )
                 .clickable {
                     viewModel.signInToday()
+                    // 写入 SharedPreferences
+                    CheckInRepository.checkInDay(today.dayOfMonth)
+                    CheckInRepository.getCheckedInDays()
                 }
                 .align(Alignment.CenterHorizontally),
                 contentAlignment = Alignment.Center,
@@ -156,9 +164,18 @@ fun CheckInNavigation(onClose: () -> Unit) {
 }
 
 @Composable
-fun DaySelectorRow(isCheck: Boolean) {
+fun DaySelectorRow(context: Context, onTodayIsChecked: () -> Unit) {
+    // 本地数据加载
+     LaunchedEffect(Unit) { CheckInRepository.initialize(context) }
+
     // 1. 获取月份信息
     val (daysInMonth, today) = remember { getCurrentMonthInfo() }
+    // 1. SharedPreferences 数据状态：存储当前月所有已签到的日期集合
+    var checkedInDays by remember {
+        // 首次加载时，从 SharedPreferences 读取数据
+        mutableStateOf(CheckInRepository.getCheckedInDays())
+    }
+    Log.d("SLTag", "checked in days i -- -------->$checkedInDays")
 
     // 2. 创建一个包含当月所有天数的列表（1, 2, 3, ..., daysInMonth）
     val daysList = remember { (1..daysInMonth).toList() }
@@ -200,7 +217,10 @@ fun DaySelectorRow(isCheck: Boolean) {
     ) {
         items(daysList) { day ->
             // 7. 渲染每一天的 Box
-            DayItem(day = day, isToday = (day == today), isCheck = isCheck)
+            if (checkedInDays.contains(day)) {
+                onTodayIsChecked()
+            }
+            DayItem(day = day, isToday = (day == today), isCheck = checkedInDays.contains(day))
         }
     }
 }
@@ -212,7 +232,6 @@ fun DaySelectorRow(isCheck: Boolean) {
 fun DayItem(day: Int, isToday: Boolean, isCheck: Boolean) {
     val backgroundColor = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
     val textColor = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-
     if (isToday) {
         DayItemToday(
             isCheck = isCheck,

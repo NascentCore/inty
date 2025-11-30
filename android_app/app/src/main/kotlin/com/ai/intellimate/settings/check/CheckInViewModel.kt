@@ -1,3 +1,4 @@
+import ai.sxwl.android.utils.ToastUtils
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -85,6 +86,7 @@ class AttendanceViewModel : ViewModel() {
         // 避免重复签到
         if (_uiState.value.isTodaySignedIn) return
 
+        ToastUtils.showLong("Check-in complete! See you again tomorrow.")
         viewModelScope.launch {
             // 模拟将签到记录保存到服务器/本地，并更新本地状态
 

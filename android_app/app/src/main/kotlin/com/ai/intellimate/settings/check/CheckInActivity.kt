@@ -30,6 +30,7 @@ class CheckInActivity  : BaseActivity() {
         super.ConfigComposeUI()
 
         CheckInScreen (
+            this,
             onClose = { finish() }
         )
     }
