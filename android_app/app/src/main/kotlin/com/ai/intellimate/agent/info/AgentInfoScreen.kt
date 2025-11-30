@@ -71,6 +71,7 @@ import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.BoostState
 import com.ai.intellimate.boost.ui.BoostSheet
 import com.ai.intellimate.boost.ui.BoostStatusChip
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
@@ -112,7 +113,7 @@ internal fun AiAgentInfoScreen(
     var showBottomSheet by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState()
     val displayId = remember(agent.id, context) { formatDisplayId(agent.id, context = context) }
-    val boostState by BoostManager.boostState.collectAsState()
+    val boostState by if (isDebugMode) BoostManager.boostState.collectAsState() else remember { mutableStateOf(BoostState()) }
     var showBoostSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val showBoostError: (BoostError) -> Unit = { error ->
@@ -269,17 +270,21 @@ internal fun AiAgentInfoScreen(
 
                         Spacer(Modifier.height(16.dp))
 
-                        BoostStatusChip(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                            availablePoints = boostState.availablePoints,
-                            onClick = {
-                                if (boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS) {
-                                    ToastUtils.showShort(R.string.boost_toast_not_enough_points)
-                                } else {
-                                    showBoostSheet = true
-                                }
-                            },
-                        )
+                        if (isDebugMode) {
+                            BoostStatusChip(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                availablePoints = boostState.availablePoints,
+                                onClick = {
+                                    if (boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS) {
+                                        ToastUtils.showShort(R.string.boost_toast_not_enough_points)
+                                    } else {
+                                        showBoostSheet = true
+                                    }
+                                },
+                            )
+
+                            Spacer(Modifier.height(16.dp))
+                        }
 
                         Spacer(Modifier.height(24.dp))
 
@@ -412,8 +417,8 @@ internal fun AiAgentInfoScreen(
         }
     }
 
-    // Boost Sheet
-    if (showBoostSheet) {
+    // Boost Sheet (仅在 debug 模式下)
+    if (isDebugMode && showBoostSheet) {
         BoostSheet(
             agentInfo = agent,
             availablePoints = boostState.availablePoints,

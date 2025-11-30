@@ -15,6 +15,7 @@ import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
@@ -382,8 +383,10 @@ class ChatViewModel : BaseVM() {
 
                           val assistantContent =
                               result.data.data?.choices?.lastOrNull()?.message?.content
-                          BoostManager.recordChatTokens(agent, inputMsg)
-                          assistantContent?.let { BoostManager.recordChatTokens(agent, it) }
+                          if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
+                              BoostManager.recordChatTokens(agent, inputMsg)
+                              assistantContent?.let { BoostManager.recordChatTokens(agent, it) }
+                          }
 
                         runCatching {
                                 // 有免费次数限制，需要vip订阅
@@ -683,8 +686,10 @@ class ChatViewModel : BaseVM() {
 
                             val assistantContent =
                                 result.data.data?.choices?.lastOrNull()?.message?.content
-                            BoostManager.recordChatTokens(agent, keepTalkingMsg)
-                            assistantContent?.let { BoostManager.recordChatTokens(agent, it) }
+                            if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
+                                BoostManager.recordChatTokens(agent, keepTalkingMsg)
+                                assistantContent?.let { BoostManager.recordChatTokens(agent, it) }
+                            }
 
                             runCatching {
                                     // 有免费次数限制，需要vip订阅
@@ -991,7 +996,9 @@ class ChatViewModel : BaseVM() {
 
                 when (result) {
                     is HttpResult.Success -> {
-                        agent?.let { BoostManager.recordImageGeneration(it) }
+                        if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
+                            agent?.let { BoostManager.recordImageGeneration(it) }
+                        }
                         // Firebase Analytics - 记录图片生成成功
                         FirebaseManager.logEvent(
                             FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_SUCCESS,

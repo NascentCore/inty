@@ -2,6 +2,7 @@ package com.ai.intellimate.explore
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.startup.ImagePreloadManager
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.AgentInfo
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
@@ -43,8 +44,9 @@ import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
-import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.BoostLeaderboardEntry
+import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.BoostState
 import com.ai.intellimate.boost.ui.BoostLeaderboardTab
 import com.ai.intellimate.chat.ChatActivity
 import ai.sxwl.android.utils.ToastUtils
@@ -70,9 +72,10 @@ fun ExplorePage(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val isDebugMode = HeartAppUtils.isAppDebugMode()
     var selectedTab by remember { mutableStateOf(ExploreSubTab.Recommended) }
-    val boostState by BoostManager.boostState.collectAsState()
-    val leaderboard by BoostManager.leaderboard.collectAsState()
+    val boostState by if (isDebugMode) BoostManager.boostState.collectAsState() else remember { mutableStateOf(BoostState()) }
+    val leaderboard by if (isDebugMode) BoostManager.leaderboard.collectAsState() else remember { mutableStateOf(emptyList<BoostLeaderboardEntry>()) }
 
     // 获取Paging数据流
     val agentsFlow = viewModel.getRecommendAgentsFlow()
@@ -129,31 +132,33 @@ fun ExplorePage(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
 
-            TabRow(
-                selectedTabIndex = selectedTab.ordinal,
-                containerColor = Color.Transparent,
-                contentColor = Color.White,
-            ) {
-                ExploreSubTab.entries.forEach { tab ->
-                    Tab(
-                        selected = selectedTab == tab,
-                        onClick = { selectedTab = tab },
-                        text = {
-                            Text(
-                                text =
-                                    stringResource(
-                                        if (tab == ExploreSubTab.Recommended)
-                                            R.string.boost_tab_recommend
-                                        else R.string.boost_tab_leaderboard
-                                    ),
-                                color = Color.White,
-                            )
-                        },
-                    )
+            if (isDebugMode) {
+                TabRow(
+                    selectedTabIndex = selectedTab.ordinal,
+                    containerColor = Color.Transparent,
+                    contentColor = Color.White,
+                ) {
+                    ExploreSubTab.entries.forEach { tab ->
+                        Tab(
+                            selected = selectedTab == tab,
+                            onClick = { selectedTab = tab },
+                            text = {
+                                Text(
+                                    text =
+                                        stringResource(
+                                            if (tab == ExploreSubTab.Recommended)
+                                                R.string.boost_tab_recommend
+                                            else R.string.boost_tab_leaderboard
+                                        ),
+                                    color = Color.White,
+                                )
+                            },
+                        )
+                    }
                 }
             }
 
-            if (selectedTab == ExploreSubTab.Recommended) {
+            if (!isDebugMode || selectedTab == ExploreSubTab.Recommended) {
                 var isRefreshing by remember { mutableStateOf(false) }
                 var refreshStartTime by remember { mutableLongStateOf(0L) }
 
@@ -231,7 +236,7 @@ fun ExplorePage(
                         resetToTopSignal = externalResetSignal,
                     )
                 }
-            } else {
+            } else if (isDebugMode && selectedTab == ExploreSubTab.Boost) {
                 BoostLeaderboardTab(
                     modifier = Modifier.fillMaxSize(),
                     availablePoints = boostState.availablePoints,

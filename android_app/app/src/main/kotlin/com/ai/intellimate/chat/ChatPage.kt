@@ -1,6 +1,7 @@
 package com.ai.intellimate.chat
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
@@ -58,6 +59,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.BoostState
 import com.ai.intellimate.boost.ui.BoostSheet
 import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatMorePanel
@@ -105,12 +107,13 @@ internal fun ChatPage(
 ) {
 
     val context = LocalContext.current
+    val isDebugMode = HeartAppUtils.isAppDebugMode()
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val isQueryMsgsCompleted by chatViewModel.isQueryMsgsCompleted.collectAsState()
     val chatMessages by chatViewModel.msgs.collectAsState()
-    val boostState by BoostManager.boostState.collectAsState()
+    val boostState by if (isDebugMode) BoostManager.boostState.collectAsState() else remember { mutableStateOf(BoostState()) }
     var showBoostSheet by remember { mutableStateOf(false) }
-    var pendingBoostSheet by remember(shouldShowBoostSheetOnOpen) { mutableStateOf(shouldShowBoostSheetOnOpen) }
+    var pendingBoostSheet by remember(shouldShowBoostSheetOnOpen && isDebugMode) { mutableStateOf(shouldShowBoostSheetOnOpen && isDebugMode) }
     val scope = rememberCoroutineScope()
     val showBoostError: (BoostError) -> Unit = { error ->
         val messageRes =
@@ -228,8 +231,8 @@ internal fun ChatPage(
         }
     }
 
-    LaunchedEffect(agentInfo?.id, pendingBoostSheet) {
-        if (agentInfo != null && pendingBoostSheet) {
+    LaunchedEffect(agentInfo?.id, pendingBoostSheet, isDebugMode) {
+        if (isDebugMode && agentInfo != null && pendingBoostSheet) {
             showBoostSheet = true
             pendingBoostSheet = false
         }
@@ -676,7 +679,7 @@ internal fun ChatPage(
         ShowImageGenerationDialog(chatViewModel)
 
         agentInfo?.let { info ->
-            if (showBoostSheet) {
+            if (isDebugMode && showBoostSheet) {
                 BoostSheet(
                     agentInfo = info,
                     availablePoints = boostState.availablePoints,
