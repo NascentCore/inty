@@ -3,6 +3,7 @@ import uuid
 from typing import List, Optional, Union
 
 from fastapi import HTTPException
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,8 +16,6 @@ from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
 from app.services import agent_service, chat_history_service
 from app.services.cache_service import cache_service
 from app.services.global_services import subscription_service
-
-logger = logging.getLogger(__name__)
 
 
 def generate_session_id(chat_id: str) -> str:
@@ -513,6 +512,14 @@ async def get_or_create_chat_by_agent(
             else:
                 # 如果agent信息已经加载过，从缓存获取以备后续使用
                 cached_agent = cache_service.get_agent_config(agent_id)
+                # 即使agent信息已加载，也需要检查deleted_at状态，因为它可能已更新
+                agent_result = await db.execute(
+                    select(models.Agent.deleted_at).where(models.Agent.id == agent_id)
+                )
+                agent_info = agent_result.first()
+                existing_chat.agent_is_deleted = (
+                    agent_info[0] is not None if agent_info else None
+                )
 
             # 4. 检查现有聊天是否有消息，如果为空则添加Agent开场白
             try:
