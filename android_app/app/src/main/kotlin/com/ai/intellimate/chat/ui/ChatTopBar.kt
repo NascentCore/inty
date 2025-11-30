@@ -18,8 +18,6 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +35,6 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.info.AgentInfoActivity
-import com.ai.intellimate.settings.RemixButtonVisibilityManager
 import com.ai.intellimate.ui.UiConfigs
 import kotlinx.coroutines.launch
 
@@ -63,9 +60,7 @@ fun ChatTopBar(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    
-    // 响应运行时 remix 按钮可见性配置变化
-    val enableRemix = UiConfigs.ChatPage.ENABLE_REMIX()
+    val enableRemix = UiConfigs.ChatPage.enableRemix()
 
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         // 返回按钮
