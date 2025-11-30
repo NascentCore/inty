@@ -292,6 +292,7 @@ class ChatCompletionRequest(BaseModel):
     # DEPRECATED: Currently this parameter has no use.
     language: str = "zh"  # 添加语言字段，默认中文
     request_id: Optional[str] = None
+    message_id: Optional[str] = None  # Android 端生成的消息唯一标识
 
     @model_validator(mode="after")
     def check_deprecated_fields(self) -> "ChatCompletionRequest":

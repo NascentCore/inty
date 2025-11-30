@@ -738,6 +738,9 @@ async def agent_chat_completions(
             # 构建响应消息
             message = {"role": "assistant", "content": response_content}
 
+            if request.message_id:
+                message["reply_to"] = request.message_id
+
             # 如果生成了语音，添加到响应中
             if audio_url:
                 message["audio_url"] = audio_url
