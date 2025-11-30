@@ -20,22 +20,17 @@ This guide gives IntelliMate users a clear, plain-language map of where to find 
 ### Bottom navigation bar
 
 Bottom navigation bar host entry points of IntelliMate App's primary features. The icons are (from left to right):
+- **Chats** for you to chat and interact with IntelliMate, and the main portal to IntelliMate's long-term AI companionship experience
+- **Messages** for you to return to your IntelliMate AI companions
+- **Create IntelliMate** for you to create your own IntelliMate for long-term AI companionship
+- **Explore IntelliMates** for you to explore and find your IntelliMates
+- **Me** for your account and general settings of the app
 
 <img width="480" height="96" alt="image" src="https://github.com/user-attachments/assets/349658de-d749-40af-a3cc-4e9613fcf6ac" />
 
-**Chats** for you to chat and interact with IntelliMate, and the main portal to IntelliMate's long-term AI companionship experience
-
-**Messages** for you to return to your IntelliMate AI companions
-
-**Create IntelliMate** for you to create your own IntelliMate for long-term AI companionship
-
-**Explore IntelliMates** for you to explore and find your IntelliMates
-
-**Me** for your account and general settings of the app
-
 ### Chat page
 
-Click the 
+Click the **Chats** icon to open the chat page. Below is an overview of the functionality on the page.
 
 <img width="480" height="2207" alt="image" src="https://github.com/user-attachments/assets/2dd7c9b6-d6c4-4fc4-b26d-885bf8541c01" />
 
