@@ -28,7 +28,7 @@
 - **数据层**：Repository/UseCase 模式 + DataModule 手动依赖注入
 - **网络层**：双网络栈并存（Retrofit + Inty SDK）
 - **导航**：多 Activity + 自定义导航
-- **存储**：MMKV（聊天持久化当前禁用）
+- **存储**：MMKV（聊天持久化当前禁用）Room Database（持久化本地存储）
 
 ## 适用范围与平台约束
 
