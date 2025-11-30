@@ -30,8 +30,10 @@ import kotlinx.coroutines.withContext
  * - 所有 UI 读取来自本地数据库（StateFlow）
  * - 网络同步只负责刷新数据库
  * - 分页状态（hasMore/offset）持久化到 sync 表
+ *
+ * 目前还未接入 IntelliMate，是引入 Room IntelliMate 中的一步
  */
-class ChatLocalDataSource(
+class RoomDataSource(
     private val database: IntyChatDatabase? = null,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
