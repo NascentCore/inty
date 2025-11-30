@@ -19,7 +19,7 @@ on:
       - "tests/alembic/test_custom_config.sh"
       - "scripts/"
       - "requirements.txt"
-      - "test_requirements.txt"
+      - "tests/requirements.txt"
       - "Dockerfile"
       # Alembic files
       - "alembic/**/*"
@@ -68,7 +68,7 @@ jobs:
         with:
           path: .venv
           # Unique key for the cache
-          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt', 'test_requirements.txt') }}
+          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt', 'tests/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-venv-
 
@@ -77,7 +77,7 @@ jobs:
           python -m venv .venv
           source .venv/bin/activate
           python -m pip install -r requirements.txt
-          python -m pip install -r test_requirements.txt
+          python -m pip install -r tests/requirements.txt
           # https://stackoverflow.com/a/74669486
           echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
