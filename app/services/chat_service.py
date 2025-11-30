@@ -565,12 +565,12 @@ async def get_or_create_chat_by_agent(
                                 models.User.id == user_id
                             )
                         )
-                        user_nickname = user_result.scalar_one_or_none() or "you"
+                        user_nickname = user_result.scalar_one()
 
                         agent_result = await db.execute(
                             select(models.Agent.name).where(models.Agent.id == agent_id)
                         )
-                        agent_name = agent_result.scalar_one_or_none() or "Agent"
+                        agent_name = agent_result.scalar_one()
 
                         await chat_history_service.add_agent_opening_message(
                             db,

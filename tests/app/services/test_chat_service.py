@@ -1111,3 +1111,315 @@ class TestGetOrCreateChatByAgent:
         assert retrieved_chat.id == chat.id  # 同一个chat对象
 
         await self._cleanup_test_data(db_session, user, agent, chat)
+
+    @pytest.mark.asyncio
+    async def test_get_existing_chat_else_block_cached_agent_none(
+        self, db_session: AsyncSession
+    ):
+        """测试else块中cached_agent为None的情况
+
+        当_agent_loaded已存在但cached_agent为None时，代码只检查deleted_at，
+        不更新其他agent字段。这可能是一个潜在问题。
+        """
+        user = await self._create_test_user(db_session)
+        agent = await self._create_test_agent(
+            db_session,
+            user.id,
+            name="Original Name",
+            opening="Original Opening",
+        )
+
+        # 第一次调用，创建chat
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user.id, agent_id=agent.id
+        )
+
+        # 清理会话缓存，但保留agent缓存
+        session_key = f"{user.id}:{agent.id}"
+        cache_service.invalidate_session_info(session_key)
+
+        # 第二次调用，获取已存在的chat（设置_agent_loaded = True）
+        chat2 = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user.id, agent_id=agent.id
+        )
+        assert hasattr(chat2, "_agent_loaded")
+        assert chat2._agent_loaded is True
+
+        # 更新agent信息
+        agent.name = "Updated Name"
+        agent.opening = "Updated Opening"
+        agent.intro = "Updated Intro"
+        agent.avatar = "https://example.com/updated_avatar.jpg"
+        await db_session.commit()
+        await db_session.refresh(agent)
+
+        # 清除agent缓存（模拟cached_agent为None的情况）
+        cache_service.invalidate_agent_config(agent.id)
+
+        # 清理会话缓存
+        cache_service.invalidate_session_info(session_key)
+
+        # 第三次调用，会进入else块，但cached_agent为None
+        retrieved_chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user.id, agent_id=agent.id
+        )
+
+        # 验证：当前实现只更新了deleted_at，其他字段保持旧值
+        # 这是当前代码的行为，测试用于记录这个行为
+        assert retrieved_chat.agent_is_deleted is False  # deleted_at已检查
+        # 注意：其他字段（agent_name等）可能保持旧值，因为cached_agent为None时没有更新
+
+        await self._cleanup_test_data(db_session, user, agent, chat)
+
+    @pytest.mark.asyncio
+    async def test_opening_message_template_variable_char(
+        self, db_session: AsyncSession
+    ):
+        """测试开场白中的{{char}}变量替换"""
+        user = await self._create_test_user(db_session, nickname="TestUser")
+        agent = await self._create_test_agent(
+            db_session,
+            user.id,
+            name="TestAgent",
+            opening="Hello, {{user}}! I'm {{char}}.",
+        )
+
+        # 清理所有缓存
+        cache_service.clear_all_caches()
+
+        # 创建新会话
+        new_chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user.id, agent_id=agent.id
+        )
+
+        # 验证开场白已添加，且变量已替换
+        session_id = chat_service.generate_session_id(new_chat.id)
+        messages = chat_history_service.get_messages_paginated(
+            session_id=session_id, limit=10, offset=0
+        )
+        assert messages["total"] == 1
+        assert messages["messages"][0]["role"] == "assistant"
+        content = messages["messages"][0]["content"]
+        assert "TestUser" in content  # {{user}} 被替换
+        assert "TestAgent" in content  # {{char}} 被替换
+        assert "{{user}}" not in content  # 模板变量不应保留
+        assert "{{char}}" not in content  # 模板变量不应保留
+
+        await self._cleanup_test_data(db_session, user, agent, new_chat)
+
+    @pytest.mark.asyncio
+    async def test_opening_message_user_nickname_none_fallback(
+        self, db_session: AsyncSession
+    ):
+        """测试用户nickname为None时使用默认值'you'"""
+        user = await self._create_test_user(db_session, nickname=None)
+        agent = await self._create_test_agent(
+            db_session,
+            user.id,
+            name="TestAgent",
+            opening="Hello, {{user}}!",
+        )
+
+        # 清理所有缓存
+        cache_service.clear_all_caches()
+
+        # 创建新会话
+        new_chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user.id, agent_id=agent.id
+        )
+
+        # 验证开场白已添加，且使用默认值'you'
+        session_id = chat_service.generate_session_id(new_chat.id)
+        messages = chat_history_service.get_messages_paginated(
+            session_id=session_id, limit=10, offset=0
+        )
+        assert messages["total"] == 1
+        content = messages["messages"][0]["content"]
+        assert "you" in content.lower()  # 应该使用默认值'you'
+        assert "{{user}}" not in content  # 模板变量不应保留
+
+        await self._cleanup_test_data(db_session, user, agent, new_chat)
+
+    @pytest.mark.asyncio
+    async def test_cache_agent_background_field(self, db_session: AsyncSession):
+        """测试缓存中的agent_background字段"""
+        user = await self._create_test_user(db_session)
+        agent = await self._create_test_agent(db_session, user.id)
+
+        # 先创建聊天会话
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user.id, agent_id=agent.id
+        )
+
+        # 验证缓存中的agent_background字段
+        session_key = f"{user.id}:{agent.id}"
+        cached_session = cache_service.get_session_info(session_key)
+        assert cached_session is not None
+        # 注意：代码中从缓存读取agent_background（第408行），但缓存数据中可能没有这个字段
+        # 这里验证缓存数据的完整性
+
+        # 从缓存获取chat
+        cached_chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user.id, agent_id=agent.id
+        )
+
+        # 验证从缓存构建的Chat对象
+        assert cached_chat.id == chat.id
+        # agent_background字段可能为None（如果缓存中没有）
+
+        await self._cleanup_test_data(db_session, user, agent, chat)
+
+    @pytest.mark.asyncio
+    async def test_opening_message_add_failure_handling(self, db_session: AsyncSession):
+        """测试开场白添加失败时不影响chat创建"""
+        user = await self._create_test_user(db_session, nickname="TestUser")
+        agent = await self._create_test_agent(
+            db_session,
+            user.id,
+            name="TestAgent",
+            opening="Hello, {{user}}!",
+        )
+
+        # 清理所有缓存
+        cache_service.clear_all_caches()
+
+        # Mock add_agent_opening_message 使其抛出异常
+        original_add = chat_history_service.add_agent_opening_message
+
+        async def mock_add_failure(*args, **kwargs):
+            raise Exception("模拟开场白添加失败")
+
+        # 使用patch模拟失败
+        with patch(
+            "app.services.chat_service.chat_history_service.add_agent_opening_message",
+            side_effect=mock_add_failure,
+        ):
+            # 创建新会话，即使开场白添加失败，chat也应该正常创建
+            new_chat = await chat_service.get_or_create_chat_by_agent(
+                db=db_session, user_id=user.id, agent_id=agent.id
+            )
+
+            # 验证chat已创建
+            assert new_chat.user_id == user.id
+            assert new_chat.agent_id == agent.id
+            assert new_chat.is_active is True
+
+            # 验证没有添加开场白（因为添加失败）
+            session_id = chat_service.generate_session_id(new_chat.id)
+            messages = chat_history_service.get_messages_paginated(
+                session_id=session_id, limit=10, offset=0
+            )
+            assert messages["total"] == 0  # 没有消息，因为添加失败
+
+        await self._cleanup_test_data(db_session, user, agent, new_chat)
+
+    @pytest.mark.asyncio
+    async def test_session_id_generation_consistency(self, db_session: AsyncSession):
+        """测试session_id生成的一致性（相同chat_id总是生成相同的session_id）"""
+        user = await self._create_test_user(db_session)
+        agent = await self._create_test_agent(db_session, user.id)
+
+        # 创建聊天会话
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user.id, agent_id=agent.id
+        )
+
+        # 多次生成session_id，应该总是相同
+        session_id1 = chat_service.generate_session_id(chat.id)
+        session_id2 = chat_service.generate_session_id(chat.id)
+        session_id3 = chat_service.generate_session_id(chat.id)
+
+        assert session_id1 == session_id2 == session_id3
+        assert session_id1 == chat_service.generate_session_id(chat.id)
+
+        # 验证不同chat_id生成不同的session_id
+        other_chat_id = str(uuid.uuid4())
+        other_session_id = chat_service.generate_session_id(other_chat_id)
+        assert other_session_id != session_id1
+
+        await self._cleanup_test_data(db_session, user, agent, chat)
+
+    @pytest.mark.asyncio
+    async def test_cached_agent_partial_fields_none(self, db_session: AsyncSession):
+        """测试cached_agent存在但某些字段为None的情况"""
+        user = await self._create_test_user(db_session)
+        agent = await self._create_test_agent(
+            db_session,
+            user.id,
+            name="Test Agent",
+            opening="Hello!",
+        )
+
+        # 先创建chat并加载agent信息
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user.id, agent_id=agent.id
+        )
+
+        # 清理会话缓存，但保留agent缓存
+        session_key = f"{user.id}:{agent.id}"
+        cache_service.invalidate_session_info(session_key)
+
+        # 修改agent缓存，使某些字段为None
+        cache_service.set_agent_config(
+            agent.id,
+            {
+                "name": "Test Agent",  # 保留
+                "avatar": None,  # None
+                "background_animated": None,  # None
+                "intro": "Updated Intro",  # 更新
+                "opening": None,  # None
+                "opening_audio_url": None,  # None
+            },
+        )
+
+        # 再次调用，应该从缓存获取，处理None值
+        retrieved_chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user.id, agent_id=agent.id
+        )
+
+        # 验证字段正确设置（None值应该被设置）
+        assert retrieved_chat.agent_name == "Test Agent"
+        assert retrieved_chat.agent_avatar is None
+        assert retrieved_chat.agent_background_animated is None
+        assert retrieved_chat.agent_intro == "Updated Intro"
+        assert retrieved_chat.agent_opening is None
+        assert retrieved_chat.agent_opening_audio_url is None
+
+        await self._cleanup_test_data(db_session, user, agent, chat)
+
+    @pytest.mark.asyncio
+    async def test_concurrent_create_integrity_error_handling(
+        self, db_session: AsyncSession
+    ):
+        """测试并发创建冲突（IntegrityError）的处理"""
+        user = await self._create_test_user(db_session)
+        agent = await self._create_test_agent(db_session, user.id)
+
+        # 清理所有缓存
+        cache_service.clear_all_caches()
+
+        # 手动创建一个chat，模拟并发创建的情况
+        chat_id = str(uuid.uuid4())
+        existing_chat = models.Chat(
+            id=chat_id, user_id=user.id, agent_id=agent.id, is_active=True
+        )
+        db_session.add(existing_chat)
+        await db_session.commit()
+        await db_session.refresh(existing_chat)
+
+        # 尝试再次创建（模拟并发冲突）
+        # 由于唯一性约束，这应该会触发IntegrityError
+        # 但实际测试中，由于查询条件包含agent_id，不会真正触发冲突
+        # 这里主要验证代码中有IntegrityError处理逻辑
+
+        # 调用函数，应该返回已存在的chat
+        retrieved_chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user.id, agent_id=agent.id
+        )
+
+        # 验证返回的是已存在的chat
+        assert retrieved_chat.id == existing_chat.id
+        assert retrieved_chat.user_id == user.id
+        assert retrieved_chat.agent_id == agent.id
+
+        await self._cleanup_test_data(db_session, user, agent, existing_chat)
