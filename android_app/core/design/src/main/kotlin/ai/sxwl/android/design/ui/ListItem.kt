@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -266,7 +267,7 @@ fun SettingsArrowItem(
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.width(8.dp))
-        Box(modifier = Modifier.weight(1f)) {
+        Box(modifier = Modifier.weight(1f).wrapContentHeight()) {
             if (selectableContent && item.content.isNotEmpty()) {
                 SelectionContainer {
                     Text(

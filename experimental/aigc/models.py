@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from enum import Enum
 
 
 class CharacterImage(BaseModel):
@@ -82,3 +83,99 @@ class CharacterGenerationResponse(BaseModel):
     character: Optional[CharacterProfile] = None
     error: Optional[str] = None
     generation_time: float
+
+
+class StageStatus(str, Enum):
+    """Status flag for each multistage generation step"""
+
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class CharacterIdentityCard(BaseModel):
+    """Lightweight identity used in the multistage generator"""
+
+    name: str
+    alias: str
+    archetype: str
+    short_bio: str
+    vibe: str
+    session_goal: str
+    key_traits: List[str] = Field(default_factory=list)
+
+
+class CharacterIntroPack(BaseModel):
+    """Public-facing intro & onboarding guidance"""
+
+    elevator_pitch: str
+    detailed_introduction: str
+    relationship_hooks: List[str] = Field(default_factory=list)
+    boundaries: List[str] = Field(default_factory=list)
+    conversation_openers: List[str] = Field(default_factory=list)
+
+
+class RoleplayPrompt(BaseModel):
+    """Reusable prompts for immersive role play sessions"""
+
+    title: str
+    prompt: str
+    npc_goal: str
+    player_hook: str
+    sample_dialogue: str
+    tags: List[str] = Field(default_factory=list)
+
+
+class ImagePrompt(BaseModel):
+    """Blueprint for generating consistent images"""
+
+    title: str
+    prompt: str
+    style: str
+    camera: str
+    lighting: str
+    color_palette: str
+
+
+class AudioProfile(BaseModel):
+    """Voice guidance for TTS or dubbing"""
+
+    archetype: str
+    accent: str
+    energy: str
+    pace: str
+    timbre: str
+    sample_lines: List[str] = Field(default_factory=list)
+
+
+class GenerationStage(BaseModel):
+    """Telemetry for each step in the multistage pipeline"""
+
+    key: str
+    title: str
+    description: str
+    status: StageStatus = StageStatus.PENDING
+    duration_seconds: float = 0.0
+    artifacts: Dict[str, Any] = Field(default_factory=dict)
+
+
+class MultiStageCharacterPayload(BaseModel):
+    """Aggregate payload returned by the multistage generator"""
+
+    identity: CharacterIdentityCard
+    introduction: CharacterIntroPack
+    roleplay_prompts: List[RoleplayPrompt]
+    image_prompts: List[ImagePrompt]
+    audio_profile: AudioProfile
+
+
+class MultiStageGenerationResponse(BaseModel):
+    """Response envelope for the multistage generation endpoint"""
+
+    success: bool
+    request: CharacterGenerationRequest
+    payload: Optional[MultiStageCharacterPayload] = None
+    stages: List[GenerationStage] = Field(default_factory=list)
+    error: Optional[str] = None
+    generation_time: float = 0.0

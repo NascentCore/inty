@@ -29,7 +29,7 @@ class Config:
     IMAGE_QUALITY = os.getenv("IMAGE_QUALITY", "high")
 
     # Character Generation Settings
-    CHARACTER_GENERATION_MODEL = "gemini-1.5-pro"
+    CHARACTER_GENERATION_MODEL = "gemini-2.5-flash"
     IMAGE_GENERATION_MODEL = "imagen-4.0-generate-preview-06-06"
 
     # Logging Configuration

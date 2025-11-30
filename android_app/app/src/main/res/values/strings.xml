@@ -231,6 +231,7 @@
     <string name="toast_check_account_deletion_error">Check Account Deletion Server Error !</string>
     <string name="toast_account_deletion_error">Account Deletion Server Error !</string>
     <string name="toast_copied_to_clipboard">Copied to clipboard</string>
+    <string name="str_remix_feature_under_construction">Remix feature is under construction</string>
 
     <!-- Content Descriptions -->
     <string name="content_desc_google_login">Google Login</string>
@@ -256,11 +257,12 @@
     <string name="reply_style">Chat Style</string>
     <string name="str_reset">Reset</string>
     <string name="cancel_button">Cancel</string>
-    <string name="generate_avatar_title_full">Generate\nAvatar</string>
+    <string name="generate_avatar_title_full">Generate</string>
+    <string name="upload_from_gallery">Upload</string>
     <string name="gender_unmodified_full">Gender (Unmodified after Creation) *</string>
     <string name="male_full">Male</string>
     <string name="female_full">Female</string>
-    <string name="non_binary_full">Non-Binary</string>
+    <string name="non_binary_full">They/Them</string>
     <string name="music_note_symbol">🎵</string>
     <string name="sound_required_full">Sound *</string>
     <string name="inty_voice_option_full">Inty Voice</string>
@@ -314,7 +316,7 @@
     <string name="str_pronouns">Pronouns</string>
     <string name="str_persona">Persona Description</string>
     <string name="str_message_is_too_long">message is too long. Please send it in parts.</string>
-    <string name="version_update_available">%s\n(new version available)</string>
+    <string name="version_update_available">%s\nClick to update</string>
 
     <!-- Toast Messages - Additional -->
     <string name="toast_avatar_cropped_uploaded">Avatar cropped and uploaded</string>

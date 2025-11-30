@@ -1,4 +1,5 @@
 import base64
+import os
 from google import genai
 from google.genai import types as gemini_types
 import json
@@ -6,7 +7,7 @@ import time
 import logging
 from PIL import Image as PILImage
 from io import BytesIO
-from typing import List
+from typing import List, Dict, Any
 from config import Config
 from models import CharacterProfile, CharacterBackground, CharacterEncounter
 from utils import safe_json_loads, validate_character_data
@@ -35,8 +36,24 @@ class GeminiClient:
         self.logger.info("Initializing Gemini client...")
 
         try:
-            # genai.configure(api_key=Config.GEMINI_API_KEY)
-            self.client = genai.Client()
+            # Check if we should use Vertex AI or Gemini API (Google AI Studio)
+            # Vertex AI requires service account credentials, not API key
+            use_vertex_ai = os.getenv("GOOGLE_APPLICATION_CREDENTIALS") is not None
+            
+            if use_vertex_ai:
+                # Use Vertex AI with service account credentials
+                self.logger.info("Using Vertex AI with service account credentials")
+                project_id = os.getenv("GOOGLE_CLOUD_PROJECT", "inty-backend")
+                location = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+                self.client = genai.Client(vertexai=True, project=project_id, location=location)
+            else:
+                # Use Gemini API (Google AI Studio) with API key
+                if not Config.GEMINI_API_KEY:
+                    raise ValueError("GEMINI_API_KEY is required for Gemini API (Google AI Studio)")
+                
+                self.logger.info("Using Gemini API (Google AI Studio) with API key")
+                self.client = genai.Client(api_key=Config.GEMINI_API_KEY)
+            
             self.logger.info(f"Gemini client initialized successfully")
             self.logger.debug(f"Character model: {Config.CHARACTER_GENERATION_MODEL}")
             self.logger.debug(f"Image model: {Config.IMAGE_GENERATION_MODEL}")
@@ -343,3 +360,19 @@ class GeminiClient:
             self.logger.error(f"Failed to enhance character details: {str(e)}")
 
         return character
+
+    def generate_structured_json(self, prompt: str) -> Dict[str, Any]:
+        """Helper for arbitrary structured outputs in downstream pipelines"""
+
+        self.logger.info("Generating structured JSON payload via Gemini")
+        self.logger.debug(f"Structured prompt length: {len(prompt)} characters")
+
+        try:
+            response = self.client.models.generate_content(
+                model=Config.CHARACTER_GENERATION_MODEL, contents=prompt
+            )
+            self.logger.info("Structured response received successfully")
+            return safe_json_loads(response.text, self.logger)
+        except Exception as exc:
+            self.logger.error(f"Failed to build structured JSON: {exc}")
+            raise

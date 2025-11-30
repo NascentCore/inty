@@ -57,7 +57,7 @@
                     "web_app"
                 ],
                 "summary": "Google Login",
-                "description": "Google\u767b\u5f55",
+                "description": "Google\u767b\u5f55\u6216Email\u5bc6\u7801\u767b\u5f55",
                 "operationId": "google_login_api_v1_auth_google_login_post",
                 "requestBody": {
                     "content": {
@@ -181,7 +181,8 @@
                 "tags": [
                     "users",
                     "android_app",
-                    "web_app"
+                    "web_app",
+                    "NOT_USED"
                 ],
                 "summary": "DEPRECATED: POST /api/v1/users/delete-account \u5df2\u7ecf\u505a\u4e86\u6b64\u68c0\u67e5",
                 "description": "\u68c0\u67e5\u7528\u6237\u662f\u5426\u53ef\u4ee5\u5220\u9664\u8d26\u6237\n\n.. deprecated::\n    \u6b64\u7aef\u70b9\u5df2\u5e9f\u5f03\uff0c\u8bf7\u4f7f\u7528 POST /api/v1/users/delete-account \u7aef\u70b9\u3002\n    \u5220\u9664\u8d26\u6237\u65f6\u4f1a\u81ea\u52a8\u6267\u884c\u76f8\u540c\u7684\u68c0\u67e5\u3002",
@@ -211,7 +212,8 @@
                 "tags": [
                     "users",
                     "android_app",
-                    "web_app"
+                    "web_app",
+                    "NOT_USED"
                 ],
                 "summary": "Delete User Account",
                 "description": "\u5220\u9664\u7528\u6237\u8d26\u6237",
@@ -266,7 +268,8 @@
             "get": {
                 "tags": [
                     "notification",
-                    "web_app"
+                    "web_app",
+                    "NOT_USED"
                 ],
                 "summary": "List Notifications",
                 "description": "\u5206\u9875\u67e5\u8be2\u7528\u6237\u7684\u6d88\u606f\u5217\u8868\uff1b\u8fd4\u56de\u7528\u6237\u6536\u5230\u7684\u901a\u77e5\u3002",
@@ -344,7 +347,8 @@
             "post": {
                 "tags": [
                     "report",
-                    "web_app"
+                    "web_app",
+                    "NOT_USED"
                 ],
                 "summary": "Create Report",
                 "description": "Submit report",
@@ -457,7 +461,8 @@
                     "agents",
                     "characters",
                     "evaluation",
-                    "web_app"
+                    "web_app",
+                    "NOT_USED"
                 ],
                 "summary": "Used by inty-eval to list all public AI characters",
                 "description": "Search public AI agents\nSupport fuzzy search by name, description, category",
@@ -629,7 +634,8 @@
                 "tags": [
                     "agents",
                     "characters",
-                    "web_app"
+                    "web_app",
+                    "NOT_USED"
                 ],
                 "summary": "Get Following Agents",
                 "description": "Get current user's followed AI agents list",
@@ -910,7 +916,8 @@
                 "tags": [
                     "agents",
                     "characters",
-                    "web_app"
+                    "web_app",
+                    "NOT_USED"
                 ],
                 "summary": "Follow Agent",
                 "description": "Follow AI agent",
@@ -958,7 +965,8 @@
                 "tags": [
                     "agents",
                     "characters",
-                    "web_app"
+                    "web_app",
+                    "NOT_USED"
                 ],
                 "summary": "Unfollow Agent",
                 "description": "Unfollow AI agent",
@@ -1008,10 +1016,11 @@
                 "tags": [
                     "agents",
                     "characters",
-                    "evaluation"
+                    "evaluation",
+                    "NOT_USED"
                 ],
-                "summary": "\u751f\u6210\u80cc\u666f\u89c6\u9891",
-                "description": "\u901a\u8fc7 Google Veo3 API \u751f\u6210\u89c6\u9891\u5e76\u76f4\u63a5\u5b58\u50a8\u89c6\u9891\u5730\u5740",
+                "summary": "\u751f\u6210\u80cc\u666f\u52a8\u56fe",
+                "description": "\u901a\u8fc7 Google Veo3 API \u751f\u6210\u89c6\u9891\u5e76\u8f6c\u6362\u4e3a webp \u52a8\u56fe\u683c\u5f0f\u5b58\u50a8",
                 "operationId": "generate_background_animated_api_v1_ai_agents__agent_id__generate_background_animated_post",
                 "security": [
                     {
@@ -1068,7 +1077,8 @@
                 "tags": [
                     "agents",
                     "characters",
-                    "evaluation"
+                    "evaluation",
+                    "NOT_USED"
                 ],
                 "summary": "\u83b7\u53d6\u56fe\u7247\u751f\u6210\u914d\u7f6e",
                 "description": "\u83b7\u53d6\u5f53\u524d\u56fe\u7247\u751f\u6210\u7684\u63d0\u793a\u8bcd\u6a21\u677f\u548c\u9ed8\u8ba4\u53c2\u6570\u914d\u7f6e",
@@ -1095,7 +1105,8 @@
                 "tags": [
                     "agents",
                     "characters",
-                    "evaluation"
+                    "evaluation",
+                    "NOT_USED"
                 ],
                 "summary": "\u66f4\u65b0\u56fe\u7247\u751f\u6210\u914d\u7f6e",
                 "description": "\u66f4\u65b0\u56fe\u7247\u751f\u6210\u7684\u63d0\u793a\u8bcd\u6a21\u677f\u548c\u9ed8\u8ba4\u53c2\u6570\u914d\u7f6e\uff08\u4ec5\u8d85\u7ea7\u7528\u6237\uff09",
@@ -1147,7 +1158,8 @@
                     "agents",
                     "characters",
                     "evaluation",
-                    "web_app"
+                    "web_app",
+                    "NOT_USED"
                 ],
                 "summary": "\u83b7\u53d6\u53ef\u7528\u7684 prompt \u5217\u8868",
                 "description": "\u83b7\u53d6\u53ef\u7528\u7684\u4e3b\u63d0\u793a\u8bcd\u548c\u6a21\u5f0f\u63d0\u793a\u8bcd\u5217\u8868\uff0c\u4ee5\u53ca force_default_prompts \u914d\u7f6e\u72b6\u6001",
@@ -1315,7 +1327,8 @@
                     "chats",
                     "android_app",
                     "web_app",
-                    "evaluation"
+                    "evaluation",
+                    "NOT_USED"
                 ],
                 "summary": "Delete chat",
                 "description": "Delete chat",
@@ -1457,7 +1470,8 @@
                     "chats",
                     "android_app",
                     "web_app",
-                    "evaluation"
+                    "evaluation",
+                    "NOT_USED"
                 ],
                 "summary": "Update Message Vote",
                 "description": "Set, toggle, or remove vote (like/dislike) for a message. Only AI messages can be voted.",
@@ -1575,7 +1589,8 @@
             "get": {
                 "tags": [
                     "chats",
-                    "internal"
+                    "internal",
+                    "NOT_USED"
                 ],
                 "summary": "Get Voice Info",
                 "description": "Get voice info by voice_id",
@@ -1864,7 +1879,8 @@
                     "images",
                     "android_app",
                     "web_app",
-                    "evaluation"
+                    "evaluation",
+                    "NOT_USED"
                 ],
                 "summary": "Upload image and get the URL of the image",
                 "description": "Upload image file with validation, compression, and GCS storage",
@@ -1912,7 +1928,8 @@
             "get": {
                 "tags": [
                     "settings",
-                    "web_app"
+                    "web_app",
+                    "NOT_USED"
                 ],
                 "summary": "Get Settings Endpoint",
                 "description": "Get current user settings",
@@ -1938,7 +1955,8 @@
             "put": {
                 "tags": [
                     "settings",
-                    "web_app"
+                    "web_app",
+                    "NOT_USED"
                 ],
                 "summary": "Update Settings Endpoint",
                 "description": "Update current user settings",
@@ -2015,7 +2033,8 @@
             "get": {
                 "tags": [
                     "subscription",
-                    "web_app"
+                    "web_app",
+                    "NOT_USED"
                 ],
                 "summary": "Get Subscription Status",
                 "description": "\u83b7\u53d6\u7528\u6237\u8ba2\u9605\u72b6\u6001",
@@ -2043,7 +2062,8 @@
             "get": {
                 "tags": [
                     "subscription",
-                    "web_app"
+                    "web_app",
+                    "NOT_USED"
                 ],
                 "summary": "Get Usage Statistics",
                 "description": "\u83b7\u53d6\u7528\u6237\u4f7f\u7528\u7edf\u8ba1",
@@ -2072,7 +2092,8 @@
                 "tags": [
                     "subscription",
                     "android_app",
-                    "web_app"
+                    "web_app",
+                    "NOT_USED"
                 ],
                 "summary": "Verify Google Play purchase",
                 "description": "Used by app to prove user has purchased a subscription",
@@ -2152,7 +2173,8 @@
             "post": {
                 "tags": [
                     "subscription",
-                    "internal"
+                    "internal",
+                    "NOT_USED"
                 ],
                 "summary": "Create Subscription Plan",
                 "description": "\u521b\u5efa\u8ba2\u9605\u8ba1\u5212\uff08\u7ba1\u7406\u5458\u63a5\u53e3\uff09",
@@ -2198,7 +2220,8 @@
             "get": {
                 "tags": [
                     "subscription",
-                    "internal"
+                    "internal",
+                    "NOT_USED"
                 ],
                 "summary": "Get All Subscription Plans",
                 "description": "\u83b7\u53d6\u6240\u6709\u8ba2\u9605\u8ba1\u5212\uff08\u7ba1\u7406\u5458\u63a5\u53e3\uff09",
@@ -2248,7 +2271,8 @@
             "get": {
                 "tags": [
                     "subscription",
-                    "internal"
+                    "internal",
+                    "NOT_USED"
                 ],
                 "summary": "Get User Subscription Status Admin",
                 "description": "\u83b7\u53d6\u6307\u5b9a\u7528\u6237\u7684\u8ba2\u9605\u72b6\u6001\uff08\u7ba1\u7406\u5458\u63a5\u53e3\uff09",
@@ -2297,7 +2321,8 @@
             "get": {
                 "tags": [
                     "subscription",
-                    "internal"
+                    "internal",
+                    "NOT_USED"
                 ],
                 "summary": "Get User Usage Statistics Admin",
                 "description": "\u83b7\u53d6\u6307\u5b9a\u7528\u6237\u7684\u4f7f\u7528\u7edf\u8ba1\uff08\u7ba1\u7406\u5458\u63a5\u53e3\uff09",
@@ -2346,7 +2371,8 @@
             "post": {
                 "tags": [
                     "subscription",
-                    "internal"
+                    "internal",
+                    "NOT_USED"
                 ],
                 "summary": "Process Manual Refund",
                 "description": "\u624b\u52a8\u5904\u7406\u9000\u6b3e\uff08\u7ba1\u7406\u5458\u63a5\u53e3\uff09",
@@ -2584,7 +2610,8 @@
         "/api/v2/chat/completions/{agent_id}": {
             "post": {
                 "tags": [
-                    "chat"
+                    "chat",
+                    "NOT_USED"
                 ],
                 "summary": "\u3010\u76ee\u524d\u8fd8\u672a\u5b8c\u6210\u3011\u8fd4\u56de\u4e0e\u6307\u5b9a Agent \u804a\u5929\u7684\u4e0b\u4e00\u6761\u6d88\u606f",
                 "description": "\u53ef\u4ee5\u5904\u7406\u5305\u62ec\u56fe\u7247\u5728\u5185\u7684\u5404\u79cd\u6d88\u606f\u7c7b\u578b\uff0c\u5a92\u4f53\u7c7b\u578b\u5e94\u8be5\u5148\u4e0a\u4f20\uff0c\u7136\u540e\u5c06 URL \u4f5c\u4e3a\u7d22\u5f15\u53d1\u9001\u5230\u6b64 API",
@@ -2643,7 +2670,8 @@
         "/api/v2/ai/agents/recommend": {
             "get": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "NOT_USED"
                 ],
                 "summary": "\u83b7\u53d6\u63a8\u8350 AI \u89d2\u8272\u5217\u8868\uff08v2\uff09",
                 "description": "\u8fd4\u56de\u516c\u5f00\u4e14\u5ba1\u6838\u901a\u8fc7\u7684 AI \u89d2\u8272\u5217\u8868\uff0c\u652f\u6301\u6309\u521b\u5efa\u65f6\u95f4\u3001\u968f\u673a\u6216\u57fa\u4e8e\u8bc4\u5206\u7684\u968f\u673a\u6392\u5e8f\u3002\u82e5 sort \u4e3a random \u6216 score_based_random\uff0c\u9700\u8981\u63d0\u4f9b sort_seed \u4ee5\u4fdd\u8bc1\u8fd4\u56de\u987a\u5e8f\u7a33\u5b9a\u3002",
@@ -4709,7 +4737,8 @@
                 "enum": [
                     "PHONE",
                     "GOOGLE",
-                    "GUEST"
+                    "GUEST",
+                    "EMAIL"
                 ],
                 "title": "AuthType",
                 "description": "\u8ba4\u8bc1\u7c7b\u578b"
@@ -5345,8 +5374,37 @@
             "GoogleAuthRequest": {
                 "properties": {
                     "id_token": {
-                        "type": "string",
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
                         "title": "Id Token"
+                    },
+                    "email": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Email"
+                    },
+                    "password": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Password"
                     },
                     "user_info": {
                         "anyOf": [
@@ -5371,9 +5429,6 @@
                     }
                 },
                 "type": "object",
-                "required": [
-                    "id_token"
-                ],
                 "title": "GoogleAuthRequest",
                 "description": "Google\u8ba4\u8bc1\u8bf7\u6c42"
             },
@@ -5513,7 +5568,14 @@
                         "title": "Nickname"
                     },
                     "avatar": {
-                        "type": "string",
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
                         "title": "Avatar"
                     },
                     "email": {
@@ -5586,7 +5648,6 @@
                 "required": [
                     "id",
                     "nickname",
-                    "avatar",
                     "email",
                     "auth_type",
                     "is_new_user"
@@ -6024,6 +6085,26 @@
                 "title": "PurchaseVerificationResponse",
                 "description": "\u8d2d\u4e70\u9a8c\u8bc1\u54cd\u5e94"
             },
+            "ReasonCode": {
+                "type": "string",
+                "enum": [
+                    "SENSITIVE_CONTENT",
+                    "MISINFORMATION",
+                    "FRAUD_SCAMS",
+                    "PRIVACY_VIOLATION",
+                    "HARMFUL_MINORS",
+                    "IP_VIOLATION",
+                    "OTHER",
+                    "CHAT_NOT_NATURAL",
+                    "CHARACTER_MISMATCH",
+                    "APP_SLOW",
+                    "FEATURE_HARD_TO_FIND",
+                    "UI_INCONVENIENT",
+                    "NEW_FEATURE"
+                ],
+                "title": "ReasonCode",
+                "description": "\u539f\u56e0\u4ee3\u7801\u679a\u4e3e\uff0c\u5305\u542b Report \u548c Feedback \u7684\u6240\u6709\u53ef\u80fd\u503c"
+            },
             "RefundRequest": {
                 "properties": {
                     "subscription_id": {
@@ -6118,17 +6199,41 @@
                 "properties": {
                     "target_id": {
                         "type": "string",
-                        "title": "Target Id"
+                        "title": "Target Id",
+                        "description": "\u4e3e\u62a5\u6216\u8005\u53cd\u9988\u7684\u76ee\u6807\u5bf9\u8c61\u7684 ID\uff0c\u89d2\u8272\u6216\u8005\u7528\u6237\u7684 ID\u3002"
                     },
                     "target_type": {
-                        "$ref": "#/components/schemas/TargetType"
+                        "$ref": "#/components/schemas/TargetType",
+                        "description": "\u4e3e\u62a5\u6216\u8005\u53cd\u9988\u7684\u76ee\u6807\u5bf9\u8c61\u7684\u7c7b\u578b\uff0c\u89d2\u8272\u6216\u8005\u7528\u6237\u3002"
                     },
                     "reason_ids": {
-                        "items": {
-                            "type": "integer"
-                        },
-                        "type": "array",
+                        "anyOf": [
+                            {
+                                "items": {
+                                    "type": "integer"
+                                },
+                                "type": "array"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
                         "title": "Reason Ids"
+                    },
+                    "reason_codes": {
+                        "anyOf": [
+                            {
+                                "items": {
+                                    "$ref": "#/components/schemas/ReasonCode"
+                                },
+                                "type": "array"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Reason Codes",
+                        "description": "\u4e3e\u62a5\u6216\u8005\u53cd\u9988\u7684\u539f\u56e0\u4ee3\u7801\u5217\u8868\u3002\u5982\u679c\u672a\u63d0\u4f9b\u4e14\u63d0\u4f9b\u4e86 reason_ids\uff0c\u5c06\u4ece reason_ids \u81ea\u52a8\u8f6c\u6362"
                     },
                     "image_urls": {
                         "anyOf": [
@@ -6143,6 +6248,7 @@
                             }
                         ],
                         "title": "Image Urls",
+                        "description": "\u4e3e\u62a5\u6216\u8005\u53cd\u9988\u9644\u56fe\u7684\u94fe\u63a5\uff0c\u8be5\u94fe\u63a5\u6765\u81ea /api/v1/images \u7aef\u70b9\u4e0a\u4f20\u56fe\u7247\u8fd4\u56de\u7684 gcs URL\uff08\u53ef\u80fd\u662f cdn \u94fe\u63a5\uff09",
                         "default": []
                     },
                     "description": {
@@ -6154,7 +6260,8 @@
                                 "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "description": "The description of the report."
                     },
                     "request_id": {
                         "anyOf": [
@@ -6165,7 +6272,8 @@
                                 "type": "null"
                             }
                         ],
-                        "title": "Request Id"
+                        "title": "Request Id",
+                        "description": "The ID of the request."
                     },
                     "report_type": {
                         "anyOf": [
@@ -6175,16 +6283,17 @@
                             {
                                 "type": "null"
                             }
-                        ]
+                        ],
+                        "description": "\u4e3e\u62a5\u6216\u8005\u53cd\u9988\u7684\u7c7b\u578b\uff0c\u4e3a\u7a7a\u65f6\u9ed8\u8ba4\u4e3a REPORT"
                     }
                 },
                 "type": "object",
                 "required": [
                     "target_id",
-                    "target_type",
-                    "reason_ids"
+                    "target_type"
                 ],
-                "title": "ReportCreate"
+                "title": "ReportCreate",
+                "description": "Report API \u7aef\u70b9\u7684\u8bf7\u6c42\u6570\u636e\u7ed3\u6784\u3002"
             },
             "ReportType": {
                 "type": "string",
