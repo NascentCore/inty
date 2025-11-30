@@ -1,4 +1,4 @@
-# IntelliMate Resource Guide
+# IntelliMate User Guide
 
 > CREATED_BY_AGENT
 
