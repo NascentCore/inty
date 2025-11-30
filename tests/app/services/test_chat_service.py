@@ -1032,3 +1032,82 @@ class TestGetOrCreateChatByAgent:
         assert new_chat.agent_is_deleted is True
 
         await self._cleanup_test_data(db_session, user, agent, new_chat)
+
+    @pytest.mark.asyncio
+    async def test_get_existing_chat_updates_agent_fields_when_reused(
+        self, db_session: AsyncSession
+    ):
+        """测试当Chat对象在同一session中重用时，正确更新所有agent字段
+        
+        这个测试重现了一个bug：当Chat对象在同一个SQLAlchemy session中被重用时
+        （通过identity map），else块只更新了agent_is_deleted，但没有更新其他
+        agent字段（agent_name, agent_avatar等）从cached_agent中获取的值。
+        """
+        user = await self._create_test_user(db_session)
+        agent = await self._create_test_agent(
+            db_session,
+            user.id,
+            name="Original Name",
+            opening="Original Opening",
+        )
+
+        # 第一次调用，创建chat（走"创建新会话"路径）
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user.id, agent_id=agent.id
+        )
+
+        # 清理会话缓存，但保留agent缓存
+        session_key = f"{user.id}:{agent.id}"
+        cache_service.invalidate_session_info(session_key)
+
+        # 第二次调用，获取已存在的chat（走"获取已存在会话"路径）
+        # 这次会设置_agent_loaded = True
+        chat2 = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user.id, agent_id=agent.id
+        )
+
+        # 验证agent信息已加载，并且_agent_loaded已设置
+        assert chat2.agent_name == "Original Name"
+        assert chat2.agent_opening == "Original Opening"
+        assert hasattr(chat2, "_agent_loaded")
+        assert chat2._agent_loaded is True
+        assert chat2.id == chat.id  # 同一个chat对象
+
+        # 更新agent信息（模拟数据库中的变更）
+        agent.name = "Updated Name"
+        agent.opening = "Updated Opening"
+        agent.intro = "Updated Intro"
+        agent.avatar = "https://example.com/updated_avatar.jpg"
+        await db_session.commit()
+        await db_session.refresh(agent)
+
+        # 更新agent缓存以反映新的agent信息
+        cache_service.set_agent_config(
+            agent.id,
+            {
+                "name": "Updated Name",
+                "opening": "Updated Opening",
+                "intro": "Updated Intro",
+                "avatar": "https://example.com/updated_avatar.jpg",
+                "background_animated": agent.background_animated,
+                "opening_audio_url": agent.opening_audio_url,
+            },
+        )
+
+        # 清理会话缓存，但保留agent缓存
+        cache_service.invalidate_session_info(session_key)
+
+        # 第三次调用，Chat对象会被重用（因为它在同一个session中）
+        # 此时_agent_loaded已经存在，会进入else块
+        retrieved_chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user.id, agent_id=agent.id
+        )
+
+        # 验证所有agent字段都已更新（这是bug修复后应该通过的部分）
+        assert retrieved_chat.agent_name == "Updated Name"
+        assert retrieved_chat.agent_opening == "Updated Opening"
+        assert retrieved_chat.agent_intro == "Updated Intro"
+        assert retrieved_chat.agent_avatar == "https://example.com/updated_avatar.jpg"
+        assert retrieved_chat.id == chat.id  # 同一个chat对象
+
+        await self._cleanup_test_data(db_session, user, agent, chat)

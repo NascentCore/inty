@@ -511,7 +511,19 @@ async def get_or_create_chat_by_agent(
             else:
                 # 如果agent信息已经加载过，从缓存获取以备后续使用
                 cached_agent = cache_service.get_agent_config(agent_id)
-                # 即使agent信息已加载，也需要检查deleted_at状态，因为它可能已更新
+                # 即使agent信息已加载，也需要更新所有agent字段，因为它们可能已更新
+                if cached_agent:
+                    existing_chat.agent_name = cached_agent.get("name")
+                    existing_chat.agent_avatar = cached_agent.get("avatar")
+                    existing_chat.agent_background_animated = cached_agent.get(
+                        "background_animated"
+                    )
+                    existing_chat.agent_intro = cached_agent.get("intro")
+                    existing_chat.agent_opening = cached_agent.get("opening")
+                    existing_chat.agent_opening_audio_url = cached_agent.get(
+                        "opening_audio_url"
+                    )
+                # 检查deleted_at状态，因为它可能已更新
                 agent_result = await db.execute(
                     select(models.Agent.deleted_at).where(models.Agent.id == agent_id)
                 )
