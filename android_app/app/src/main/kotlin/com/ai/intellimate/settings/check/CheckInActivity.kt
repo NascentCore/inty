@@ -4,6 +4,7 @@ import ai.sxwl.android.common.base.BaseActivity
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
+import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 
 class CheckInActivity  : BaseActivity() {
     companion object {
@@ -29,9 +30,10 @@ class CheckInActivity  : BaseActivity() {
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
 
-        CheckInScreen (
-            this,
-            onClose = { finish() }
-        )
+        IgnoreSystemFontScaling {
+            CheckInScreen (
+                onClose = { finish() }
+            )
+        }
     }
 }

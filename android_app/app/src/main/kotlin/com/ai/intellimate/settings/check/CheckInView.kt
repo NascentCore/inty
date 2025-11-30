@@ -1,27 +1,19 @@
 package com.ai.intellimate.settings.check
 
-import AttendanceStatus
-import AttendanceViewModel
-import android.content.Context
-import android.util.Log
+import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -39,35 +31,34 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.ai.intellimate.R
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 
 @Composable
 fun CheckInScreen(
-    context: Context,
     onClose: () -> Unit,
-    viewModel: AttendanceViewModel = viewModel()
 ) {
     val configuration = LocalConfiguration.current
     val screenHeightDp = configuration.screenHeightDp.dp
     val screenWidthDp = configuration.screenWidthDp.dp
 
-    val uiState by viewModel.uiState.collectAsState()
-    val today = LocalDate.now()
-    val isCheckedToday = uiState.isTodaySignedIn;
-    Log.d("SLLog", "----------->${uiState.isTodaySignedIn}")
+    // 1. 获取月份信息
+    val (daysInMonth, today) = remember { getCurrentMonthInfo() }
+    // 2. SharedPreferences 数据状态：存储当前月所有已签到的日期集合
+    var checkedInDays by remember {
+        // 首次加载时，从 SharedPreferences 读取数据
+        mutableStateOf(CheckInRepository.getCheckedInDays())
+    }
+    val isCheckedToday = checkedInDays.contains(today)
 
     Box(modifier = Modifier.fillMaxSize().background(ai.sxwl.android.design.theme.HeartColor.primaryColor)) {
         Image(
@@ -83,28 +74,31 @@ fun CheckInScreen(
             )
 
             Spacer(modifier = Modifier.height(screenHeightDp * 0.08f))
-            Image(
-                painter = painterResource(R.drawable.check_in_title),
-                contentDescription = null,
-                modifier = Modifier.width(343.dp).height(46.dp).align(Alignment.CenterHorizontally),
-                contentScale = ContentScale.FillHeight
+            Text(
+                text = "💗 Day $today Together",
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+                letterSpacing = 0.6.sp,
+                style = TextStyle(fontSize = 26.sp, color = Color.White, fontWeight = FontWeight.Bold, shadow = Shadow(
+                    // 淡淡的白色阴影
+                    color = Color.White.copy(alpha = 0.8f), // 稍微透明的白色
+                    // 阴影的偏移量，微小的右下方偏移
+                    offset = Offset(6f, 6f),
+                    // 模糊半径，让阴影更柔和
+                    blurRadius = 8f
+                )
+                ),
             )
 
             Spacer(modifier = Modifier.height(screenHeightDp * 0.03f))
-            IgnoreSystemFontScaling {
-                Text(
-                    text = "Keep a record of your daily moment with IntelliMate",
-                    style = TextStyle(fontSize = 13.sp, color = Color.White),
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-            }
+            Text(
+                text = "Keep a record of your daily moment with IntelliMate",
+                style = TextStyle(fontSize = 13.sp, color = Color.White),
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
 
             Spacer(modifier = Modifier.height(screenHeightDp * 0.06f))
             Row(modifier = Modifier.fillMaxWidth().height(86.dp)) {
-                DaySelectorRow(context = context, onTodayIsChecked = {
-//                    Log.d("SLTag", "on is Checked today si --------->");
-//                    isCheckedToday = true
-                })
+                DaySelectorRow(daysInMonth, today, checkedInDays)
             }
 
             // 签到按钮
@@ -119,10 +113,14 @@ fun CheckInScreen(
                     shape = RoundedCornerShape(28.dp)
                 )
                 .clickable {
-                    viewModel.signInToday()
+                    if (isCheckedToday) {
+                        return@clickable
+                    }
+
+                    ToastUtils.showLong("Check-in complete! See you again tomorrow.")
                     // 写入 SharedPreferences
-                    CheckInRepository.checkInDay(today.dayOfMonth)
-                    CheckInRepository.getCheckedInDays()
+                    CheckInRepository.checkInDay(today)
+                    checkedInDays = CheckInRepository.getCheckedInDays()
                 }
                 .align(Alignment.CenterHorizontally),
                 contentAlignment = Alignment.Center,
@@ -132,13 +130,11 @@ fun CheckInScreen(
 
             // 底部文字
             Spacer(modifier = Modifier.height(screenHeightDp * 0.02f))
-            IgnoreSystemFontScaling {
-                Text(
-                    text = "More benefits coming soon",
-                    style = TextStyle(fontSize = 12.sp, color = Color.White.copy(0.6f)),
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-            }
+            Text(
+                text = "More benefits coming soon",
+                style = TextStyle(fontSize = 12.sp, color = Color.White.copy(0.6f)),
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
         }
 
 
@@ -164,19 +160,7 @@ fun CheckInNavigation(onClose: () -> Unit) {
 }
 
 @Composable
-fun DaySelectorRow(context: Context, onTodayIsChecked: () -> Unit) {
-    // 本地数据加载
-     LaunchedEffect(Unit) { CheckInRepository.initialize(context) }
-
-    // 1. 获取月份信息
-    val (daysInMonth, today) = remember { getCurrentMonthInfo() }
-    // 1. SharedPreferences 数据状态：存储当前月所有已签到的日期集合
-    var checkedInDays by remember {
-        // 首次加载时，从 SharedPreferences 读取数据
-        mutableStateOf(CheckInRepository.getCheckedInDays())
-    }
-    Log.d("SLTag", "checked in days i -- -------->$checkedInDays")
-
+fun DaySelectorRow(daysInMonth: Int, today: Int, checkedInDays: Set<Int>) {
     // 2. 创建一个包含当月所有天数的列表（1, 2, 3, ..., daysInMonth）
     val daysList = remember { (1..daysInMonth).toList() }
 
@@ -217,10 +201,7 @@ fun DaySelectorRow(context: Context, onTodayIsChecked: () -> Unit) {
     ) {
         items(daysList) { day ->
             // 7. 渲染每一天的 Box
-            if (checkedInDays.contains(day)) {
-                onTodayIsChecked()
-            }
-            DayItem(day = day, isToday = (day == today), isCheck = checkedInDays.contains(day))
+            DayItem(day = day, today = today, isCheck = checkedInDays.contains(day))
         }
     }
 }
@@ -229,16 +210,20 @@ fun DaySelectorRow(context: Context, onTodayIsChecked: () -> Unit) {
  * 单个日期的 Composable
  */
 @Composable
-fun DayItem(day: Int, isToday: Boolean, isCheck: Boolean) {
-    val backgroundColor = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-    val textColor = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+fun DayItem(day: Int, today: Int, isCheck: Boolean) {
+    val strMonth = getCurrentMonthAbbreviation();
+    val isToday = day == today;
+    val isMissed = day < today && !isCheck
     if (isToday) {
-        DayItemToday(
-            isCheck = isCheck,
-            day
-        )
+        DayItemToday(isCheck = isCheck, day)
+    } else if (isCheck) {  // 已签到
+        DayItemChecked(day, strMonth)
     } else {
-        DayItemUncheck(day)
+        if (isMissed) {  // 历史未签到
+            DayItemUncheck(day)
+        } else {  // 未来未签到
+            DayItemWaitToCheck(day, strMonth)
+        }
     }
 }
 
@@ -299,9 +284,19 @@ fun DayItemUncheck(day: Int) {
         )
     ) {
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Spacer(modifier = Modifier.weight(1f))
-            Text(text = "Unchecked", style = TextStyle(fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f)))
-            Spacer(modifier = Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .width(76.dp)
+                    .height(28.dp)
+                    .background(
+                        Color(93,91,96),
+                        shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+                    )
+            ) {
+                Text(text = "Unchecked", modifier = Modifier.align(Alignment.Center), style = TextStyle(fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold))
+            }
+
+            Spacer(modifier = Modifier.height(5.dp))
             Image(
                 painter = painterResource( R.drawable.ic_checkin),
                 contentDescription = null,
@@ -313,96 +308,84 @@ fun DayItemUncheck(day: Int) {
             Spacer(modifier = Modifier.weight(1f))
         }
 
+        Box(modifier = Modifier.fillMaxSize().background(
+            Color.Black.copy(alpha = 0.4f),
+            shape = RoundedCornerShape(8.dp)
+        ))
+
     }
 }
 
-// 渲染日历网格
 @Composable
-fun DateGrid(datesInMonth: Map<LocalDate, AttendanceStatus>, today: LocalDate) {
-    val daysOfWeek = listOf("日", "一", "二", "三", "四", "五", "六")
-
-    // 星期标题
-    Row(modifier = Modifier.fillMaxWidth()) {
-        daysOfWeek.forEach { day ->
-            Text(
-                text = day,
-                modifier = Modifier.weight(1f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-
-    // 日期列表
-    val sortedDates = datesInMonth.keys.sorted()
-    if (sortedDates.isEmpty()) return
-
-    // 找出月份第一天是星期几，用于确定网格的偏移量
-    val firstDayOfMonth = sortedDates.first()
-    val offset = firstDayOfMonth.dayOfWeek.value % 7 // 周日为 0，周一为 1...
-
-    // 创建一个包含所有单元格的扁平列表
-    val calendarCells = buildList<LocalDate?> {
-        // 填充月份开始前的空白单元格
-        repeat(offset) { add(null) }
-        // 添加当月日期
-        addAll(sortedDates)
-    }
-
-    // 将扁平列表转换为 7 列的网格
-    LazyColumn(
-        contentPadding = PaddingValues(horizontal = 8.dp)
+fun DayItemChecked(day: Int, strMonth: String) {
+    Box(modifier = Modifier
+        .width(76.dp)
+        .height(88.dp)
+        .background(
+            brush = Brush.linearGradient(
+                colors = listOf(Color(0xFF9756FF), Color(0xFF350D5D)),
+                start = Offset(0f, 0f),
+                end = Offset(0f, Float.POSITIVE_INFINITY)
+            ),
+            shape = RoundedCornerShape(8.dp)
+        )
     ) {
-        items(calendarCells.chunked(7)) { week ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                week.forEach { date ->
-                    val status = date?.let { datesInMonth[it] }
-                    DateCell(date = date, status = status, isToday = date == today)
-                }
+        Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(modifier = Modifier.weight(1f))
+            Text(text = "Day $day", style = TextStyle(fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold))
+            Spacer(modifier = Modifier.height(5.dp))
+            Image(
+                painter = painterResource( R.drawable.check_in_ok),
+                contentDescription = null,
+                modifier = Modifier.width(20.dp).height(20.dp),
+                contentScale = ContentScale.Fit
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "$strMonth $day", style = TextStyle(fontSize = 12.sp, color = Color.White))
+            Spacer(modifier = Modifier.weight(1f))
+        }
+
+        Box(modifier = Modifier.fillMaxSize().background(
+            Color.Black.copy(alpha = 0.6f),
+            shape = RoundedCornerShape(8.dp)
+        ))
+    }
+}
+
+@Composable
+fun DayItemWaitToCheck(day: Int, strMonth: String) {
+    Box(modifier = Modifier
+        .width(76.dp)
+        .height(88.dp)
+        .background(
+            Color(red = 83, green = 64, blue = 108),
+            shape = RoundedCornerShape(8.dp)
+        )
+    ) {
+        Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .width(76.dp)
+                    .height(28.dp)
+                    .background(
+                        Color(69,44,88),
+                        shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+                    )
+            ) {
+                Text(text = "Day $day", modifier = Modifier.align(Alignment.Center), style = TextStyle(fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold))
             }
+
+            Spacer(modifier = Modifier.height(5.dp))
+            Image(
+                painter = painterResource( R.drawable.check_in_calendar),
+                contentDescription = null,
+                modifier = Modifier.width(20.dp).height(20.dp),
+                contentScale = ContentScale.Fit
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "$strMonth $day", style = TextStyle(fontSize = 12.sp, color = Color.White))
+            Spacer(modifier = Modifier.weight(1f))
         }
-    }
-}
 
-
-// 单个日期单元格
-@Composable
-fun RowScope.DateCell(date: LocalDate?, status: AttendanceStatus?, isToday: Boolean) {
-
-    val backgroundColor = when (status) {
-        is AttendanceStatus.Signed -> Color.Red         // 当月已签到
-        is AttendanceStatus.Missed -> Color.Blue        // 历史未签到
-        is AttendanceStatus.Future -> Color.Yellow      // 当日/未来未签到
-        else -> Color.Transparent
-    }
-
-    // 设置边框颜色，当日日期更明显
-    val borderColor = if (isToday) Color.Black else Color.LightGray
-
-    Box(
-        modifier = Modifier
-            .weight(1f) // 确保单元格均匀分配宽度
-            .aspectRatio(1f) // 使单元格为正方形
-            .padding(4.dp)
-            .background(
-                color = if (date != null) backgroundColor.copy(alpha = 0.8f) else Color.Transparent,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .border(
-                width = if (isToday) 2.dp else 1.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .clickable(enabled = false) {}, // 防止误点
-        contentAlignment = Alignment.Center
-    ) {
-        if (date != null) {
-            Text(
-                text = date.dayOfMonth.toString(),
-                color = Color.White,
-                fontWeight = if (isToday) FontWeight.ExtraBold else FontWeight.Normal,
-                fontSize = 14.sp
-            )
-        }
     }
 }
