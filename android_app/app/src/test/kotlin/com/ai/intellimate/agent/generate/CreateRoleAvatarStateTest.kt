@@ -6,8 +6,8 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Hermetic tests for avatar state management logic in CreateRoleActivity.
- * Tests pure Kotlin logic without Android framework dependencies.
+ * Hermetic tests for avatar state management logic in CreateRoleActivity. Tests pure Kotlin logic
+ * without Android framework dependencies.
  */
 class CreateRoleAvatarStateTest {
 
@@ -210,4 +210,3 @@ class CreateRoleAvatarStateTest {
         assertNull(normalizedEmptyUrl)
     }
 }
-

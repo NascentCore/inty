@@ -9,13 +9,13 @@ import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.utils.ToastUtils
 import android.content.ClipData
 import android.content.ClipboardManager
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -76,8 +76,7 @@ private const val CLIPBOARD_LABEL_AGENT_ID = "Agent ID"
 private enum class AgentGenderPronoun(@StringRes val labelRes: Int) {
     Female(R.string.she_her),
     Male(R.string.he_him),
-    Other(R.string.they_them),
-    ;
+    Other(R.string.they_them);
 
     companion object {
         fun from(rawGender: String): AgentGenderPronoun? {
@@ -184,9 +183,7 @@ internal fun AiAgentInfoScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 val genderPronoun =
-                                    remember(agent.gender) {
-                                        AgentGenderPronoun.from(agent.gender)
-                                    }
+                                    remember(agent.gender) { AgentGenderPronoun.from(agent.gender) }
                                 Row(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                                     verticalAlignment = Alignment.CenterVertically,

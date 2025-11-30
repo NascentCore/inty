@@ -13,11 +13,10 @@ import ai.sxwl.android.utils.ToastUtils
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.database.Cursor
 import android.graphics.Color as AndroidColor
 import android.net.Uri
-import android.provider.OpenableColumns
 import android.os.Build
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,9 +24,6 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.material3.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -48,11 +44,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -296,7 +295,7 @@ private fun CreateRolePage(
     var croppedAvatarUrl by remember(croppedInitial) { mutableStateOf<String?>(croppedInitial) }
     val avatarPromptInitial = if (isEditMode) "" else savedDraft?.avatarPrompt.orEmpty()
     var avatarPrompt by remember(avatarPromptInitial) { mutableStateOf(avatarPromptInitial) }
-    
+
     // Track original uploaded image URL (for background) when uploading from gallery
     var originalUploadedImageUrl by remember { mutableStateOf<String?>(null) }
     var isUploadingFromGallery by remember { mutableStateOf(false) }
@@ -427,9 +426,7 @@ private fun CreateRolePage(
         return try {
             val tempFile = File(context.cacheDir, "temp_gallery_${UUID.randomUUID()}.jpg")
             context.contentResolver.openInputStream(uri)?.use { input ->
-                FileOutputStream(tempFile).use { output ->
-                    input.copyTo(output)
-                }
+                FileOutputStream(tempFile).use { output -> input.copyTo(output) }
             }
             if (tempFile.exists() && tempFile.length() > 0) {
                 tempFile
@@ -471,8 +468,12 @@ private fun CreateRolePage(
 
                                             // Update UI on main thread
                                             withContext(Dispatchers.Main) {
-                                                if (isUploadingFromGallery && originalUploadedImageUrl != null) {
-                                                    // Gallery upload: original is background, cropped is avatar
+                                                if (
+                                                    isUploadingFromGallery &&
+                                                        originalUploadedImageUrl != null
+                                                ) {
+                                                    // Gallery upload: original is background,
+                                                    // cropped is avatar
                                                     croppedAvatarUrl = uploadedUrl
                                                     avatarUrl = originalUploadedImageUrl
                                                     avatarUrls = emptyList()
@@ -482,8 +483,10 @@ private fun CreateRolePage(
                                                         R.string.toast_avatar_cropped_uploaded
                                                     )
                                                 } else {
-                                                    // Face edit: update cropped avatar and clear avatarUrls
-                                                    // Clear avatarUrls to ensure cropped avatar is displayed (not old multi-choice avatars)
+                                                    // Face edit: update cropped avatar and clear
+                                                    // avatarUrls
+                                                    // Clear avatarUrls to ensure cropped avatar is
+                                                    // displayed (not old multi-choice avatars)
                                                     croppedAvatarUrl = uploadedUrl
                                                     avatarUrls = emptyList()
                                                     ToastUtils.showShort(
@@ -562,141 +565,156 @@ private fun CreateRolePage(
         rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
             imageUri?.let { uri ->
                 runCatching {
-                    // Check file size before processing - limit to 10MB
-                    val fileSize = getFileSize(context, uri)
-                    val maxSizeMB = 10
-                    val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
-                    
-                    // 如果无法确定文件大小（返回 0），拒绝上传以确保安全
-                    if (fileSize == 0L) {
-                        ToastUtils.showShort(
-                            context.getString(
-                                R.string.toast_failed_prepare_upload_with_message,
-                                "Unable to determine file size",
+                        // Check file size before processing - limit to 10MB
+                        val fileSize = getFileSize(context, uri)
+                        val maxSizeMB = 10
+                        val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
+
+                        // 如果无法确定文件大小（返回 0），拒绝上传以确保安全
+                        if (fileSize == 0L) {
+                            ToastUtils.showShort(
+                                context.getString(
+                                    R.string.toast_failed_prepare_upload_with_message,
+                                    "Unable to determine file size",
+                                )
                             )
-                        )
-                        return@let
-                    }
-                    
-                    if (fileSize > maxSizeBytes) {
-                        val maxSizeMBStr =
-                            String.format(Locale.getDefault(), "%dMB", maxSizeMB)
-                        val fileSizeMBStr =
-                            String.format(
-                                Locale.getDefault(),
-                                "%.1fMB",
-                                fileSize / (1024.0 * 1024.0),
-                            )
-                        val msg =
-                            context.getString(
-                                R.string.user_avatar_size_too_large_with_size_format,
-                                maxSizeMBStr,
-                                fileSizeMBStr,
-                            )
-                        ToastUtils.showShort(msg)
-                        // 文件大小检查失败，不设置上传标志，直接返回
-                        return@let
-                    }
+                            return@let
+                        }
 
-                    // Upload original image first (as background)
-                    // 只有在文件大小检查通过后才设置上传标志
-                    isUploadingFromGallery = true
-                    createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
-                        try {
-                            // Copy URI to temp file for upload
-                            val tempFile = copyUriToTempFile(context, uri)
-                            if (tempFile == null) {
-                                withContext(Dispatchers.Main) {
-                                    isUploadingFromGallery = false
-                                    ToastUtils.showShort(
-                                        context.getString(
-                                            R.string.toast_failed_prepare_upload_with_message,
-                                            "Failed to read image file",
-                                        )
-                                    )
-                                }
-                                return@launch
-                            }
-                            
-                            // 验证临时文件大小（双重检查，确保文件大小限制）
-                            val tempFileSize = tempFile.length()
-                            if (tempFileSize > maxSizeBytes) {
-                                withContext(Dispatchers.Main) {
-                                    isUploadingFromGallery = false
-                                    val maxSizeMBStr =
-                                        String.format(Locale.getDefault(), "%dMB", maxSizeMB)
-                                    val fileSizeMBStr =
-                                        String.format(
-                                            Locale.getDefault(),
-                                            "%.1fMB",
-                                            tempFileSize / (1024.0 * 1024.0),
-                                        )
-                                    val msg =
-                                        context.getString(
-                                            R.string.user_avatar_size_too_large_with_size_format,
-                                            maxSizeMBStr,
-                                            fileSizeMBStr,
-                                        )
-                                    ToastUtils.showShort(msg)
-                                }
-                                return@launch
-                            }
+                        if (fileSize > maxSizeBytes) {
+                            val maxSizeMBStr = String.format(Locale.getDefault(), "%dMB", maxSizeMB)
+                            val fileSizeMBStr =
+                                String.format(
+                                    Locale.getDefault(),
+                                    "%.1fMB",
+                                    fileSize / (1024.0 * 1024.0),
+                                )
+                            val msg =
+                                context.getString(
+                                    R.string.user_avatar_size_too_large_with_size_format,
+                                    maxSizeMBStr,
+                                    fileSizeMBStr,
+                                )
+                            ToastUtils.showShort(msg)
+                            // 文件大小检查失败，不设置上传标志，直接返回
+                            return@let
+                        }
 
-                            val requestFile = tempFile.asRequestBody("image/*".toMediaTypeOrNull())
-                            val body =
-                                MultipartBody.Part.createFormData("file", tempFile.name, requestFile)
-
-                            val response = NetServiceMgr.getAgentApi().uploadAvatar(body)
-                            when (response) {
-                                is HttpResult.Success -> {
-                                    val originalUrl = response.data.url
-                                    LogUtils.i("Original image uploaded successfully: $originalUrl")
-
-                                    // Store original URL and launch UCrop
-                                    withContext(Dispatchers.Main) {
-                                        originalUploadedImageUrl = originalUrl
-                                        // Launch UCrop with the original URI
-                                        val intentCrop = UCropHelper.getIntent(context, uri, context.getString(R.string.crop_image))
-                                        cropLauncher.launch(intentCrop)
-                                    }
-                                }
-
-                                is HttpResult.Failure -> {
-                                    LogUtils.e("Original image upload failed: ${response.message}")
+                        // Upload original image first (as background)
+                        // 只有在文件大小检查通过后才设置上传标志
+                        isUploadingFromGallery = true
+                        createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                // Copy URI to temp file for upload
+                                val tempFile = copyUriToTempFile(context, uri)
+                                if (tempFile == null) {
                                     withContext(Dispatchers.Main) {
                                         isUploadingFromGallery = false
                                         ToastUtils.showShort(
                                             context.getString(
-                                                R.string.toast_upload_failed_with_message,
-                                                response.message ?: "Unknown error",
+                                                R.string.toast_failed_prepare_upload_with_message,
+                                                "Failed to read image file",
                                             )
                                         )
                                     }
+                                    return@launch
                                 }
-                            }
-                        } catch (e: Exception) {
-                            LogUtils.e("Upload original image exception: ${e.message}")
-                            withContext(Dispatchers.Main) {
-                                isUploadingFromGallery = false
-                                ToastUtils.showShort(
-                                    context.getString(
-                                        R.string.toast_upload_failed_with_message,
-                                        e.message ?: "Unknown error",
+
+                                // 验证临时文件大小（双重检查，确保文件大小限制）
+                                val tempFileSize = tempFile.length()
+                                if (tempFileSize > maxSizeBytes) {
+                                    withContext(Dispatchers.Main) {
+                                        isUploadingFromGallery = false
+                                        val maxSizeMBStr =
+                                            String.format(Locale.getDefault(), "%dMB", maxSizeMB)
+                                        val fileSizeMBStr =
+                                            String.format(
+                                                Locale.getDefault(),
+                                                "%.1fMB",
+                                                tempFileSize / (1024.0 * 1024.0),
+                                            )
+                                        val msg =
+                                            context.getString(
+                                                R.string
+                                                    .user_avatar_size_too_large_with_size_format,
+                                                maxSizeMBStr,
+                                                fileSizeMBStr,
+                                            )
+                                        ToastUtils.showShort(msg)
+                                    }
+                                    return@launch
+                                }
+
+                                val requestFile =
+                                    tempFile.asRequestBody("image/*".toMediaTypeOrNull())
+                                val body =
+                                    MultipartBody.Part.createFormData(
+                                        "file",
+                                        tempFile.name,
+                                        requestFile,
                                     )
-                                )
+
+                                val response = NetServiceMgr.getAgentApi().uploadAvatar(body)
+                                when (response) {
+                                    is HttpResult.Success -> {
+                                        val originalUrl = response.data.url
+                                        LogUtils.i(
+                                            "Original image uploaded successfully: $originalUrl"
+                                        )
+
+                                        // Store original URL and launch UCrop
+                                        withContext(Dispatchers.Main) {
+                                            originalUploadedImageUrl = originalUrl
+                                            // Launch UCrop with the original URI
+                                            val intentCrop =
+                                                UCropHelper.getIntent(
+                                                    context,
+                                                    uri,
+                                                    context.getString(R.string.crop_image),
+                                                )
+                                            cropLauncher.launch(intentCrop)
+                                        }
+                                    }
+
+                                    is HttpResult.Failure -> {
+                                        LogUtils.e(
+                                            "Original image upload failed: ${response.message}"
+                                        )
+                                        withContext(Dispatchers.Main) {
+                                            isUploadingFromGallery = false
+                                            ToastUtils.showShort(
+                                                context.getString(
+                                                    R.string.toast_upload_failed_with_message,
+                                                    response.message ?: "Unknown error",
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                LogUtils.e("Upload original image exception: ${e.message}")
+                                withContext(Dispatchers.Main) {
+                                    isUploadingFromGallery = false
+                                    ToastUtils.showShort(
+                                        context.getString(
+                                            R.string.toast_upload_failed_with_message,
+                                            e.message ?: "Unknown error",
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
-                }.onFailure { e ->
-                    LogUtils.e("Gallery selection error: ${e.message}")
-                    isUploadingFromGallery = false
-                    ToastUtils.showShort(
-                        context.getString(
-                            R.string.toast_failed_prepare_upload_with_message,
-                            e.message ?: "Unknown error",
+                    .onFailure { e ->
+                        LogUtils.e("Gallery selection error: ${e.message}")
+                        isUploadingFromGallery = false
+                        ToastUtils.showShort(
+                            context.getString(
+                                R.string.toast_failed_prepare_upload_with_message,
+                                e.message ?: "Unknown error",
+                            )
                         )
-                    )
-                }
+                    }
             }
         }
 
@@ -1031,9 +1049,7 @@ private fun CreateRolePage(
                         ToastUtils.showShort(R.string.toast_no_avatar_image)
                     }
                 },
-                onUploadFromGallery = {
-                    galleryLauncher.launch("image/*")
-                },
+                onUploadFromGallery = { galleryLauncher.launch("image/*") },
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -1350,7 +1366,9 @@ private fun AvatarUploadSection(
                 }
                 // 优先显示裁剪后的头像（如果存在），因为这是最终要使用的头像
                 croppedAvatarUrl != null -> {
-                    LogUtils.d("AvatarUploadSection: Displaying cropped avatar with URL: $croppedAvatarUrl")
+                    LogUtils.d(
+                        "AvatarUploadSection: Displaying cropped avatar with URL: $croppedAvatarUrl"
+                    )
 
                     val previewUrl =
                         getCdnImageUrl(
@@ -1417,7 +1435,8 @@ private fun AvatarUploadSection(
                             Button(
                                 onClick = onGenerateClick,
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0x1A78599A)),
+                                colors =
+                                    ButtonDefaults.buttonColors(containerColor = Color(0x1A78599A)),
                                 shape = RoundedCornerShape(12.dp),
                             ) {
                                 Column(
@@ -1444,7 +1463,8 @@ private fun AvatarUploadSection(
                             Button(
                                 onClick = onUploadFromGallery,
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0x1A78599A)),
+                                colors =
+                                    ButtonDefaults.buttonColors(containerColor = Color(0x1A78599A)),
                                 shape = RoundedCornerShape(12.dp),
                             ) {
                                 Column(

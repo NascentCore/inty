@@ -59,7 +59,10 @@ object DebugBackendEndpointStore {
             "Runtime remix button override is only available for debug builds"
         }
         prefs.edit().putBoolean(KEY_REMIX_BUTTON_VISIBLE, visible).apply()
-        LogUtils.i("DebugBackendEndpointStore", "Runtime remix button visibility updated to $visible")
+        LogUtils.i(
+            "DebugBackendEndpointStore",
+            "Runtime remix button visibility updated to $visible",
+        )
     }
 
     fun clearRemixButtonOverride() {

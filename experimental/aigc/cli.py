@@ -319,7 +319,7 @@ def _format_multistage_text(payload: MultiStageCharacterPayload) -> str:
                 f"{prompt.prompt}",
                 f"- NPC goal: {prompt.npc_goal}",
                 f"- Player hook: {prompt.player_hook}",
-                f'- Opening line: {prompt.sample_dialogue}',
+                f"- Opening line: {prompt.sample_dialogue}",
                 f"- Tags: {', '.join(prompt.tags)}",
                 "",
             ]

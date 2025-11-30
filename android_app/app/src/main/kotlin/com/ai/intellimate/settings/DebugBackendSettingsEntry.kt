@@ -76,7 +76,7 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
             TextButton(onClick = viewModel::resetOverride) {
                 Text(text = "恢复默认", color = Color.White)
             }
-            
+
             // Remix 按钮可见性配置
             Spacer(Modifier.height(Spacing.MediumSpacer * 2))
             Text(
