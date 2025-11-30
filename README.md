@@ -49,9 +49,12 @@ git submodule deinit -f .
 
 # 重新拉取子模块代码
 git submodule update --init --recursive
-```
 
-更新子模块使用 [update_inty_sdk_submodule.sh](update_inty_sdk_submodule.sh)
+# 启动后端服务
+# 注意拷贝 admin bearer token 用来登录 http://localhost:8000/evaluation
+cp devops/config.yaml.local config.yaml
+./start.sh --dev
+```
 
 ### 相关链接
 
