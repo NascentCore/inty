@@ -402,7 +402,7 @@
     <string name="boost_tab_recommend">Featured</string>
     <string name="boost_tab_leaderboard">Boost</string>
     <string name="boost_system_message">You invested %1$d pts in %2$s. Total boosts: %3$d.</string>
-    <string name="boost_seed_placeholder_toast">Local preview only. Start chatting to unlock this board.</string>
+    <string name="boost_seed_placeholder_toast">This is preview data. Start chatting with real characters to unlock this board.</string>
     <string name="boost_toast_not_enough_points">Not enough points yet. Chat more to earn boosts.</string>
     <string name="boost_toast_success">Boost sent to %1$s!</string>
     <string name="boost_toast_daily_reward_claimed">+%1$d pts added</string>
