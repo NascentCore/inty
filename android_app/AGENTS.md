@@ -1,4 +1,4 @@
-# AGENTS.md · android_app/（Android 客户端）
+# IntelliMate Android app
 
 本文件覆盖并补充根 `AGENTS.md`，仅适用于 `android_app/`。
 
