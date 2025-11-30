@@ -5,7 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.core.uuid import get_new_report_id
-from app.models.report import REASON_ID_TO_CODE, Report, ReportType
+from app.models.report import (
+    FEEDBACK_REASON_ID_TO_CODE,
+    REASON_ID_TO_CODE,
+    Report,
+    ReportType,
+)
 from app.schemas.report import ReportCreate, ReportQuery, ReportReason
 
 
@@ -33,17 +38,24 @@ async def create_report(
 
     # 如果提供了 reason_ids（向后兼容），转换为 reason_codes
     if report_in.reason_ids:
+        # 根据 report_type 选择使用哪个映射
+        # 如果 report_type 为 None，默认为 REPORT
+        is_feedback = report_in.report_type == ReportType.FEEDBACK
+        id_to_code_map = (
+            FEEDBACK_REASON_ID_TO_CODE if is_feedback else REASON_ID_TO_CODE
+        )
+
         # 使用硬编码的映射关系转换
         if not reason_codes:
             # 验证所有 reason_ids 都存在，如果不存在则抛出错误
             missing_ids = [
-                rid for rid in report_in.reason_ids if rid not in REASON_ID_TO_CODE
+                rid for rid in report_in.reason_ids if rid not in id_to_code_map
             ]
             if missing_ids:
                 raise ValueError(
                     f"Invalid reason_ids: {missing_ids}. These reason IDs do not exist."
                 )
-            reason_codes = [REASON_ID_TO_CODE[rid] for rid in report_in.reason_ids]
+            reason_codes = [id_to_code_map[rid] for rid in report_in.reason_ids]
         # 为了向后兼容，仍然保存 reason_ids
         reason_ids = report_in.reason_ids
 
@@ -110,11 +122,15 @@ async def query_reports(db: AsyncSession, query: ReportQuery):
     for item in items:
         # 如果 reason_codes 为空但 reason_ids 存在，从 reason_ids 转换
         if not item.reason_codes and item.reason_ids:
+            # 根据 report_type 选择使用哪个映射
+            # 如果 report_type 为 None，默认为 REPORT
+            is_feedback = item.report_type == ReportType.FEEDBACK
+            id_to_code_map = (
+                FEEDBACK_REASON_ID_TO_CODE if is_feedback else REASON_ID_TO_CODE
+            )
             # 使用硬编码的映射关系转换，只转换存在的 ID
             converted_codes = [
-                REASON_ID_TO_CODE[rid]
-                for rid in item.reason_ids
-                if rid in REASON_ID_TO_CODE
+                id_to_code_map[rid] for rid in item.reason_ids if rid in id_to_code_map
             ]
             item.reason_codes = converted_codes if converted_codes else []
 
