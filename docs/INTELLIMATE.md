@@ -28,11 +28,29 @@ Bottom navigation bar host entry points of IntelliMate App's primary features. T
 
 <img width="480" height="96" alt="image" src="https://github.com/user-attachments/assets/349658de-d749-40af-a3cc-4e9613fcf6ac" />
 
-### Chat page
+We'll go through each of these pages one by one as follows:
 
-Click the **Chats** icon to open the chat page. Below is an overview of the functionality on the page.
+### Chats page
+
+Click the **Chats** or the **left-most** icon to open the chat page. Below is an overview of the functionality on the page.
 
 <img width="480" height="2207" alt="image" src="https://github.com/user-attachments/assets/2dd7c9b6-d6c4-4fc4-b26d-885bf8541c01" />
+
+### Messages page
+
+Click the **Messages** or the **2nd** icon from the left
+
+### Create IntelliMate page
+
+Click the **Create** or the **middle** to open the Create IntelliMate page.
+
+### Explore IntelliMate page
+
+Click the **Explore** icon to open the Explore IntelliMates page.
+
+### Me page
+
+Click the **Me** or the **right-most** icon
 
 ## Where do I go to…?
 
