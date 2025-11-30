@@ -55,7 +55,12 @@ async def create_report(
                 raise ValueError(
                     f"Invalid reason_ids: {missing_ids}. These reason IDs do not exist."
                 )
-            reason_codes = [id_to_code_map[rid] for rid in report_in.reason_ids]
+            # id_to_code_map 返回的是字符串，需要转换为枚举
+            from app.schemas.report import ReasonCode
+
+            reason_codes = [
+                ReasonCode(id_to_code_map[rid]) for rid in report_in.reason_ids
+            ]
         # 为了向后兼容，仍然保存 reason_ids
         reason_ids = report_in.reason_ids
 
@@ -65,6 +70,15 @@ async def create_report(
             "Either reason_codes or reason_ids must be provided, and reason_codes must contain at least one non-empty value"
         )
 
+    # 将枚举值转换为字符串（如果 reason_codes 是枚举列表）
+    # 用于存储到数据库（数据库字段是 ARRAY(String)）
+    if reason_codes:
+        reason_codes_str = [
+            code.value if hasattr(code, "value") else str(code) for code in reason_codes
+        ]
+    else:
+        reason_codes_str = []
+
     # 如果 report_type 为 None，则存储为 None（数据库为 NULL），业务逻辑中视为 REPORT
     report = Report(
         id=report_id,
@@ -72,7 +86,7 @@ async def create_report(
         target_type=report_in.target_type,
         reporter_id=reporter_id,
         reason_ids=reason_ids or [],  # 向后兼容，如果只有 reason_codes 则为空列表
-        reason_codes=reason_codes,
+        reason_codes=reason_codes_str,
         image_urls=report_in.image_urls or [],
         description=report_in.description,
         report_type=report_in.report_type,
@@ -90,7 +104,12 @@ async def query_reports(db: AsyncSession, query: ReportQuery):
         filters.append(Report.reason_ids.overlap(query.reason_ids))
     # 支持通过 reason_codes 查询
     if query.reason_codes:
-        filters.append(Report.reason_codes.overlap(query.reason_codes))
+        # 将枚举值转换为字符串（如果 reason_codes 是枚举列表）
+        reason_codes_str = [
+            code.value if hasattr(code, "value") else code
+            for code in query.reason_codes
+        ]
+        filters.append(Report.reason_codes.overlap(reason_codes_str))
     if query.target_id:
         filters.append(Report.target_id == query.target_id)
     if query.target_type:

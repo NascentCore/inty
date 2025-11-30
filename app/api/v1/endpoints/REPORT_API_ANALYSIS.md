@@ -5,9 +5,8 @@
 Report API 包含以下端点：
 
 1. **POST `/api/v1/report/`** - 创建举报/反馈（主要端点）
-2. **GET `/api/v1/report/`** - 查询举报记录列表（已废弃，仅内部使用）
 
-**注意**：图片上传请使用通用的 `/api/v1/images` 端点，而不是已废弃的 `/api/v1/report/upload-image`。
+**注意**：图片上传请使用通用的 `/api/v1/images` 端点。
 
 ---
 
@@ -80,61 +79,6 @@ Report API 包含以下端点：
 
 ---
 
-## 2. GET `/api/v1/report/` - 查询举报记录（已废弃，仅内部使用）
-
-### 请求参数（Query Parameters）
-
-定义见 ```54:63:app/schemas/report.py``` (`ReportQuery`)
-
-**注意**：此端点需要管理员权限（`is_superuser`），见 ```126:127:app/api/v1/endpoints/report.py```
-
-### 响应类型：`APIResponse[PaginationData[ReportOut]]`
-
-- `PaginationData` 定义见 ```8:16:app/schemas/response.py```
-- `ReportOut` 定义见 ```65:76:app/schemas/report.py```
-
-#### 成功响应示例
-
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "list": [
-      {
-        "id": "report_123",
-        "target_id": "agent_456",
-        "target_type": "AGENT",
-        "reporter_id": "user_789",
-        "reason_ids": [1, 2],
-        "reason_codes": ["SENSITIVE_CONTENT", "MISINFORMATION"],
-        "image_urls": ["https://example.com/image1.jpg"],
-        "description": "Inappropriate content",
-        "status": "PENDING",
-        "report_type": "REPORT",
-        "created_at": "2024-01-01T12:00:00Z"
-      }
-    ],
-    "total": 100,
-    "page": 1,
-    "page_size": 20,
-    "total_pages": 5
-  }
-}
-```
-
-#### 错误响应示例
-
-```json
-{
-  "code": 400,
-  "message": "Unauthorized access",
-  "data": null
-}
-```
-
----
-
 ## 原因代码映射
 
 原因代码映射定义在 `app/models/report.py` 中：
@@ -157,4 +101,4 @@ Android 端的对应关系定义在 `android_app/app/src/main/kotlin/com/ai/inte
 3. **类型转换**：如果只提供 `reason_ids`，后端会根据 `report_type` 自动转换为 `reason_codes`（见 ```40:58:app/services/report_service.py```）
 4. **Feedback 模式**：`target_id` 可为空字符串，`target_type` 通常为 `"USER"`，必须设置 `report_type: "FEEDBACK"`
 5. **图片上传**：使用 `/api/v1/images` 端点上传，获取 URL 后放入 `image_urls` 字段
-6. **权限要求**：创建需要已登录用户（见 ```90:90:app/api/v1/endpoints/report.py```），查询列表需要管理员权限（见 ```126:127:app/api/v1/endpoints/report.py```）
+6. **权限要求**：创建需要已登录用户（见 ```90:90:app/api/v1/endpoints/report.py```）

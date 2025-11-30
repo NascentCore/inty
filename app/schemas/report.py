@@ -23,6 +23,27 @@ class TargetType(str, Enum):
     agent = "AGENT"
 
 
+class ReasonCode(str, Enum):
+    """原因代码枚举，包含 Report 和 Feedback 的所有可能值"""
+
+    # Report 原因代码
+    SENSITIVE_CONTENT = "SENSITIVE_CONTENT"
+    MISINFORMATION = "MISINFORMATION"
+    FRAUD_SCAMS = "FRAUD_SCAMS"
+    PRIVACY_VIOLATION = "PRIVACY_VIOLATION"
+    HARMFUL_MINORS = "HARMFUL_MINORS"
+    IP_VIOLATION = "IP_VIOLATION"
+
+    # Feedback 原因代码
+    OTHER = "OTHER"
+    CHAT_NOT_NATURAL = "CHAT_NOT_NATURAL"
+    CHARACTER_MISMATCH = "CHARACTER_MISMATCH"
+    APP_SLOW = "APP_SLOW"
+    FEATURE_HARD_TO_FIND = "FEATURE_HARD_TO_FIND"
+    UI_INCONVENIENT = "UI_INCONVENIENT"
+    NEW_FEATURE = "NEW_FEATURE"
+
+
 class ReportCreate(BaseModel):
     """
     Report API 端点的请求数据结构。
@@ -34,7 +55,7 @@ class ReportCreate(BaseModel):
         ..., description="举报或者反馈的目标对象的类型，角色或者用户。"
     )
     reason_ids: Optional[List[int]] = None  # DEPRECATED: 使用 reason_codes 代替
-    reason_codes: Optional[List[str]] = Field(
+    reason_codes: Optional[List[ReasonCode]] = Field(
         None,
         description="举报或者反馈的原因代码列表。如果未提供且提供了 reason_ids，将从 reason_ids 自动转换",
     )
@@ -53,7 +74,7 @@ class ReportCreate(BaseModel):
 
 class ReportQuery(BaseModel):
     reason_ids: Optional[List[int]] = None  # DEPRECATED: 使用 reason_codes 代替
-    reason_codes: Optional[List[str]] = None
+    reason_codes: Optional[List[ReasonCode]] = None
     target_id: Optional[str] = None
     target_type: Optional[TargetType] = None
     status: Optional[ReportStatus] = None
