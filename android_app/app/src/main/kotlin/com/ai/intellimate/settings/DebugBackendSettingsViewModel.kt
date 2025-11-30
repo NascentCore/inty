@@ -25,6 +25,8 @@ class DebugBackendSettingsViewModel : ViewModel() {
         val buildType: String,
         // 当前生效的后端地址
         val activeBaseUrl: String,
+        // Remix 按钮可见性（仅在 debug 构建中有效）
+        val remixButtonVisible: Boolean,
     )
 
     val quickPresets =
@@ -37,12 +39,31 @@ class DebugBackendSettingsViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(createInitialState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
+    init {
+        // 初始化时通知全局状态管理器
+        val initialVisibility = getRemixButtonEffectiveVisibility()
+        RemixButtonVisibilityManager.updateVisibility(initialVisibility)
+    }
+
     private fun createInitialState(): UiState {
         val activeBaseUrl = NetworkConfig.getBaseUrl()
+        val remixButtonVisible = getRemixButtonEffectiveVisibility()
         return UiState(
             buildType = NetworkConfig.getCurrentBuildType().value,
             activeBaseUrl = activeBaseUrl,
+            remixButtonVisible = remixButtonVisible,
         )
+    }
+    
+    private fun getRemixButtonEffectiveVisibility(): Boolean {
+        val buildType = NetworkConfig.getCurrentBuildType()
+        // Release 构建始终隐藏
+        if (buildType == NetworkConfig.BuildType.RELEASE) {
+            return false
+        }
+        // Debug 构建：检查运行时覆盖
+        val override = DebugBackendEndpointStore.getRemixButtonOverride()
+        return override ?: true // 默认可见
     }
 
     fun applySelectedOverride(url: String) {
@@ -67,5 +88,51 @@ class DebugBackendSettingsViewModel : ViewModel() {
 
         val active = NetworkConfig.getBaseUrl()
         _uiState.update { it.copy(activeBaseUrl = active) }
+    }
+    
+    fun toggleRemixButton() {
+        val currentVisibility = _uiState.value.remixButtonVisible
+        val newVisibility = !currentVisibility
+        DebugBackendEndpointStore.persistRemixButtonOverride(newVisibility)
+        _uiState.update { it.copy(remixButtonVisible = newVisibility) }
+        // 通知全局状态变化（通过更新 RemixButtonVisibilityManager）
+        RemixButtonVisibilityManager.updateVisibility(newVisibility)
+    }
+    
+    fun resetRemixButtonOverride() {
+        DebugBackendEndpointStore.clearRemixButtonOverride()
+        val defaultVisibility = getRemixButtonEffectiveVisibility()
+        _uiState.update { it.copy(remixButtonVisible = defaultVisibility) }
+        // 通知全局状态变化
+        RemixButtonVisibilityManager.updateVisibility(defaultVisibility)
+    }
+}
+
+/**
+ * 全局 Remix 按钮可见性管理器
+ * 用于在设置页面和聊天页面之间同步状态
+ */
+object RemixButtonVisibilityManager {
+    private val _visibility = MutableStateFlow<Boolean?>(null)
+    val visibility: StateFlow<Boolean?> = _visibility.asStateFlow()
+    
+    fun updateVisibility(visible: Boolean) {
+        _visibility.value = visible
+    }
+    
+    fun getCurrentVisibility(): Boolean {
+        val buildType = NetworkConfig.getCurrentBuildType()
+        // Release 构建始终隐藏
+        if (buildType == NetworkConfig.BuildType.RELEASE) {
+            return false
+        }
+        // Debug 构建：检查运行时覆盖
+        val override = DebugBackendEndpointStore.getRemixButtonOverride()
+        return override ?: true // 默认可见
+    }
+    
+    init {
+        // 初始化时设置当前可见性
+        _visibility.value = getCurrentVisibility()
     }
 }
