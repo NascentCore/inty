@@ -559,18 +559,18 @@ async def get_or_create_chat_by_agent(
 
                     # 如果有开场白，添加到聊天历史
                     if agent_opening:
-                        # 获取用户和Agent信息用于变量替换
+                        # 获取用户和 Agent 信息用于变量替换
                         user_result = await db.execute(
                             select(models.User.nickname).where(
                                 models.User.id == user_id
                             )
                         )
-                        user_nickname = user_result.scalar_one()
+                        user_nickname = user_result.scalar_one_or_none() or "you"
 
                         agent_result = await db.execute(
                             select(models.Agent.name).where(models.Agent.id == agent_id)
                         )
-                        agent_name = agent_result.scalar_one()
+                        agent_name = agent_result.scalar_one_or_none() or "IntelliMate"
 
                         await chat_history_service.add_agent_opening_message(
                             db,
