@@ -4,13 +4,16 @@
 测试后端服务的举报功能，包括：
 - 使用 reason_codes 创建举报（新 API）
 - 使用 reason_ids 创建举报（向后兼容，旧 API）
+- 使用 reason_codes 创建反馈（新 API）
+- 使用 reason_ids 创建反馈（向后兼容，旧 API）
 """
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.models.report import Report
+from app.models.report import Report, ReportStatus, ReportType
 from tests.app.api.v1.endpoints.conftest import integration_client
 
 
@@ -48,6 +51,19 @@ def _find_report(db_session, agent_id, reporter_id):
     )
 
 
+def _find_feedback(db_session, reporter_id):
+    """查找反馈记录的辅助函数"""
+    return (
+        db_session.query(Report)
+        .filter(
+            Report.reporter_id == reporter_id,
+            Report.report_type == ReportType.FEEDBACK,
+        )
+        .order_by(Report.created_at.desc())
+        .first()
+    )
+
+
 def test_create_report_with_reason_codes(integration_client, db_session):
     """测试使用 reason_codes 创建举报（新 API）"""
     # 创建一个 agent 作为被举报的目标
@@ -60,7 +76,7 @@ def test_create_report_with_reason_codes(integration_client, db_session):
     report_payload = {
         "target_id": agent_id,
         "target_type": "AGENT",
-        "reason_codes": ["SENSITIVE_OR_SEXUAL_CONTENT", "MISINFORMATION"],
+        "reason_codes": ["SENSITIVE_CONTENT", "MISINFORMATION"],
         "description": "Test report with reason_codes",
         "image_urls": [],
     }
@@ -88,12 +104,16 @@ def test_create_report_with_reason_codes(integration_client, db_session):
     assert report is not None, "Report not found in database"
     assert report.target_id == agent_id, "Report target ID mismatch"
     assert report.target_type == "AGENT", "Report target type mismatch"
-    assert report.reason_codes == ["SENSITIVE_OR_SEXUAL_CONTENT", "MISINFORMATION"], \
+    assert report.reason_codes == ["SENSITIVE_CONTENT", "MISINFORMATION"], \
         "Report reason codes mismatch"
     # 只使用 reason_codes 时，reason_ids 应该为空列表
     assert report.reason_ids == [], "Report reason IDs should be empty when only reason_codes provided"
     assert report.description == "Test report with reason_codes", "Report description mismatch"
     assert report.image_urls == [], "Report image URLs mismatch"
+    # 验证 report_type 为 None 或 REPORT（向后兼容）
+    assert (
+        report.report_type is None or report.report_type == ReportType.REPORT
+    ), f"Report type should be None or REPORT, got {report.report_type}"
 
 
 def test_create_report_with_reason_ids(integration_client, db_session):
@@ -109,7 +129,7 @@ def test_create_report_with_reason_ids(integration_client, db_session):
     report_payload = {
         "target_id": agent_id,
         "target_type": "AGENT",
-        "reason_ids": [1],  # SENSITIVE_OR_SEXUAL_CONTENT
+        "reason_ids": [1],  # SENSITIVE_CONTENT
         # reason_codes 不提供，会从 reason_ids 自动转换
         "description": "Test report with reason_ids (backward compatibility)",
         "image_urls": [],
@@ -141,8 +161,186 @@ def test_create_report_with_reason_ids(integration_client, db_session):
     # reason_ids 应该被保存（向后兼容）
     assert report.reason_ids == [1], "Report reason IDs mismatch"
     # reason_codes 应该从 reason_ids 转换而来
-    assert report.reason_codes == ["SENSITIVE_OR_SEXUAL_CONTENT"], \
+    assert report.reason_codes == ["SENSITIVE_CONTENT"], \
         "Report reason codes mismatch (should be converted from reason_ids)"
     assert report.description == "Test report with reason_ids (backward compatibility)", \
         "Report description mismatch"
     assert report.image_urls == [], "Report image URLs mismatch"
+    # 验证 report_type 为 None 或 REPORT（向后兼容）
+    assert (
+        report.report_type is None or report.report_type == ReportType.REPORT
+    ), "Report type should be None or REPORT for legacy reports"
+
+
+def test_create_feedback_with_reason_codes(integration_client, db_session):
+    """测试使用 reason_codes 创建反馈（新 API）"""
+    # 准备反馈数据，使用新的 reason_codes API
+    # 注意：feedback 模式下，target_id 和 target_type 可以为空字符串（Android 端的实现）
+    feedback_payload = {
+        "target_id": "",  # feedback 模式下为空字符串
+        "target_type": "USER",  # feedback 模式下使用默认类型
+        "reason_codes": ["CHAT_NOT_NATURAL", "UI_INCONVENIENT"],
+        "description": "Test feedback with reason_codes",
+        "image_urls": [],
+        "report_type": "FEEDBACK",
+    }
+
+    # 提交反馈
+    response = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=feedback_payload,
+    )
+
+    # 验证响应
+    assert response.status_code == 200, f"Feedback creation failed: {response.text}"
+
+    response_data = response.json()
+    assert (
+        response_data.get("code") == 200
+    ), f"Feedback creation returned error: {response_data}"
+    assert (
+        response_data.get("message") == "success"
+    ), f"Unexpected response structure: {response_data}"
+
+    # 获取当前用户 ID
+    reporter_id = _get_reporter_id(integration_client)
+
+    # 检查数据库内的反馈记录
+    feedback = _find_feedback(db_session, reporter_id)
+
+    assert feedback is not None, "Feedback not found in database"
+    assert feedback.target_id == "", "Feedback target ID should be empty string"
+    assert feedback.target_type == "USER", "Feedback target type mismatch"
+    assert feedback.reason_codes == [
+        "CHAT_NOT_NATURAL",
+        "UI_INCONVENIENT",
+    ], "Feedback reason codes mismatch"
+    # 只使用 reason_codes 时，reason_ids 应该为空列表
+    assert (
+        feedback.reason_ids == []
+    ), "Feedback reason IDs should be empty when only reason_codes provided"
+    assert (
+        feedback.description == "Test feedback with reason_codes"
+    ), "Feedback description mismatch"
+    assert feedback.image_urls == [], "Feedback image URLs mismatch"
+    # 验证 report_type 为 FEEDBACK
+    assert (
+        feedback.report_type == ReportType.FEEDBACK
+    ), f"Feedback report_type should be FEEDBACK, got {feedback.report_type}"
+    # 验证 status 为 PENDING（默认值）
+    assert (
+        feedback.status == ReportStatus.PENDING
+    ), f"Feedback status should be PENDING, got {feedback.status}"
+
+
+def test_create_feedback_with_reason_ids(integration_client, db_session):
+    """测试使用 reason_ids 创建反馈（向后兼容，旧 API）
+
+    验证 feedback 使用 reason_ids 时，会被正确转换为 feedback 的 reason_codes。
+    """
+    # 准备反馈数据，使用旧的 reason_ids API（向后兼容）
+    # 注意：reason_ids 会被自动转换为 reason_codes（使用 feedback 的映射）
+    feedback_payload = {
+        "target_id": "",  # feedback 模式下为空字符串
+        "target_type": "USER",  # feedback 模式下使用默认类型
+        "reason_ids": [
+            1,
+            5,
+        ],  # 会被转换为 CHAT_NOT_NATURAL, UI_INCONVENIENT（feedback 的映射）
+        # reason_codes 不提供，会从 reason_ids 自动转换
+        "description": "Test feedback with reason_ids (backward compatibility)",
+        "image_urls": [],
+        "report_type": "FEEDBACK",
+    }
+
+    # 提交反馈
+    response = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=feedback_payload,
+    )
+
+    # 验证响应
+    assert response.status_code == 200, f"Feedback creation failed: {response.text}"
+
+    response_data = response.json()
+    assert (
+        response_data.get("code") == 200
+    ), f"Feedback creation returned error: {response_data}"
+    assert (
+        response_data.get("message") == "success"
+    ), f"Unexpected response structure: {response_data}"
+
+    # 获取当前用户 ID
+    reporter_id = _get_reporter_id(integration_client)
+
+    # 检查数据库内的反馈记录
+    feedback = _find_feedback(db_session, reporter_id)
+
+    assert feedback is not None, "Feedback not found in database"
+    assert feedback.target_id == "", "Feedback target ID should be empty string"
+    assert feedback.target_type == "USER", "Feedback target type mismatch"
+    # reason_ids 应该被保存（向后兼容）
+    assert feedback.reason_ids == [1, 5], "Feedback reason IDs mismatch"
+    # reason_codes 应该从 reason_ids 转换而来（使用 feedback 的映射）
+    assert feedback.reason_codes == [
+        "CHAT_NOT_NATURAL",
+        "UI_INCONVENIENT",
+    ], "Feedback reason codes mismatch (should be converted from reason_ids using feedback mapping)"
+    assert (
+        feedback.description == "Test feedback with reason_ids (backward compatibility)"
+    ), "Feedback description mismatch"
+    assert feedback.image_urls == [], "Feedback image URLs mismatch"
+    # 验证 report_type 为 FEEDBACK
+    assert (
+        feedback.report_type == ReportType.FEEDBACK
+    ), f"Feedback report_type should be FEEDBACK, got {feedback.report_type}"
+    # 验证 status 为 PENDING（默认值）
+    assert (
+        feedback.status == ReportStatus.PENDING
+    ), f"Feedback status should be PENDING, got {feedback.status}"
+
+
+def test_create_feedback_with_reason_id_zero(integration_client, db_session):
+    """测试使用 reason_id 0 (OTHER) 创建反馈
+
+    验证 feedback 使用 reason_id 0 时，会被正确转换为 "OTHER"。
+    """
+    # 准备反馈数据，使用 reason_id 0（OTHER）
+    feedback_payload = {
+        "target_id": "",
+        "target_type": "USER",
+        "reason_ids": [0],  # OTHER
+        "description": "Test feedback with reason_id 0 (OTHER)",
+        "image_urls": [],
+        "report_type": "FEEDBACK",
+    }
+
+    # 提交反馈
+    response = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=feedback_payload,
+    )
+
+    # 验证响应
+    assert response.status_code == 200, f"Feedback creation failed: {response.text}"
+
+    response_data = response.json()
+    assert (
+        response_data.get("code") == 200
+    ), f"Feedback creation returned error: {response_data}"
+
+    # 获取当前用户 ID
+    reporter_id = _get_reporter_id(integration_client)
+
+    # 检查数据库内的反馈记录
+    feedback = _find_feedback(db_session, reporter_id)
+
+    assert feedback is not None, "Feedback not found in database"
+    assert feedback.reason_ids == [0], "Feedback reason IDs mismatch"
+    # reason_id 0 应该被转换为 "OTHER"
+    assert feedback.reason_codes == [
+        "OTHER"
+    ], "Feedback reason code should be OTHER for reason_id 0"
+    assert (
+        feedback.report_type == ReportType.FEEDBACK
+    ), f"Feedback report_type should be FEEDBACK, got {feedback.report_type}"
