@@ -49,85 +49,27 @@ class ReportViewModel : BaseVM() {
     var targetID: String = ""
     var targetType: String = "USER"
 
-    // 使用 SDK 的 ReasonCode 枚举和映射
-    private val _reportReasons =
-        MutableStateFlow(
-            listOf(
-                ReportReasonItem(
-                    ReportCreateParams.ReasonCode.SENSITIVE_CONTENT,
-                    R.string.report_reason_sensitive_content,
-                ),
-                ReportReasonItem(
-                    ReportCreateParams.ReasonCode.MISINFORMATION,
-                    R.string.report_reason_misinformation,
-                ),
-                ReportReasonItem(
-                    ReportCreateParams.ReasonCode.FRAUD_SCAMS,
-                    R.string.report_reason_fraud_scams,
-                ),
-                ReportReasonItem(
-                    ReportCreateParams.ReasonCode.PRIVACY_VIOLATION,
-                    R.string.report_reason_privacy_violation,
-                ),
-                ReportReasonItem(
-                    ReportCreateParams.ReasonCode.HARMFUL_MINORS,
-                    R.string.report_reason_harmful_minors,
-                ),
-                ReportReasonItem(
-                    ReportCreateParams.ReasonCode.IP_VIOLATION,
-                    R.string.report_reason_ip_violation,
-                ),
-                ReportReasonItem(
-                    ReportCreateParams.ReasonCode.OTHER,
-                    R.string.report_reason_other,
-                ),
-            )
-        )
+    // 使用 SDK 的 ReasonCode 枚举和映射（从 ReportReasonMappings 生成，避免硬编码）
+    private val reportReasons =
+        ReportReasonMappings.REPORT_REASON_CODE_TO_STRING_RES.map { (reasonCode, stringResId) ->
+            ReportReasonItem(reasonCode, stringResId)
+        }
 
-    // 使用 SDK 的 ReasonCode 枚举和映射
-    private val _feedbackReasons =
-        MutableStateFlow(
-            listOf(
-                ReportReasonItem(
-                    ReportCreateParams.ReasonCode.CHAT_NOT_NATURAL,
-                    R.string.feedback_reason_chat_not_natural,
-                ),
-                ReportReasonItem(
-                    ReportCreateParams.ReasonCode.CHARACTER_MISMATCH,
-                    R.string.feedback_reason_character_mismatch,
-                ),
-                ReportReasonItem(
-                    ReportCreateParams.ReasonCode.APP_SLOW,
-                    R.string.feedback_reason_app_slow,
-                ),
-                ReportReasonItem(
-                    ReportCreateParams.ReasonCode.FEATURE_HARD_TO_FIND,
-                    R.string.feedback_reason_feature_hard_to_find,
-                ),
-                ReportReasonItem(
-                    ReportCreateParams.ReasonCode.UI_INCONVENIENT,
-                    R.string.feedback_reason_ui_inconvenient,
-                ),
-                ReportReasonItem(
-                    ReportCreateParams.ReasonCode.NEW_FEATURE,
-                    R.string.feedback_reason_new_feature,
-                ),
-                ReportReasonItem(
-                    ReportCreateParams.ReasonCode.OTHER,
-                    R.string.feedback_reason_other,
-                ),
-            )
-        )
+    // 使用 SDK 的 ReasonCode 枚举和映射（从 ReportReasonMappings 生成，避免硬编码）
+    private val feedbackReasons =
+        ReportReasonMappings.FEEDBACK_REASON_CODE_TO_STRING_RES.map { (reasonCode, stringResId) ->
+            ReportReasonItem(reasonCode, stringResId)
+        }
 
-    private val _reasons = MutableStateFlow(_reportReasons.value)
+    private val _reasons = MutableStateFlow(reportReasons)
     val reasons = _reasons.asStateFlow()
 
     fun updateReasonsForMode() {
         _reasons.value =
             if (isFeedbackMode) {
-                _feedbackReasons.value
+                feedbackReasons
             } else {
-                _reportReasons.value
+                reportReasons
             }
     }
 
