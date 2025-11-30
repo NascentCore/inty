@@ -47,8 +47,9 @@ import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.BoostLeaderboardEntry
 import com.ai.intellimate.boost.ui.BoostLeaderboardTab
 import com.ai.intellimate.chat.ChatActivity
-import com.ai.intellimate.utils.ToastUtils
+import ai.sxwl.android.utils.ToastUtils
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private enum class ExploreSubTab {
     Recommended,

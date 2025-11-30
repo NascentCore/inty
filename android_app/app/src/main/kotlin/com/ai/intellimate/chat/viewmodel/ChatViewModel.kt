@@ -1250,7 +1250,7 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    fun appendBoostSystemMessage(agent: AgentInfo, points: Int, totalBoosts: Int) {
+    suspend fun appendBoostSystemMessage(agent: AgentInfo, points: Int, totalBoosts: Int) {
         val message =
             MsgInfo(
                 content =
