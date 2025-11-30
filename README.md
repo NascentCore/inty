@@ -53,6 +53,10 @@ git submodule update --init --recursive
 # 使用下面步骤启动后端服务
 evaluation/build.sh # 构建评测 web ui 静态文件
 cp devops/config.yaml.local config.yaml
+# 创建虚拟环境供后端 python 代码运行
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 # 注意拷贝 admin bearer token 用来登录 http://localhost:8000/evaluation
 ./start.sh --dev
 ```
