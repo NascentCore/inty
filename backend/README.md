@@ -109,7 +109,7 @@ python -m venv venv
 source venv/bin/activate
 
 pip install -r requirements.txt
-pip install -r test_requirements.txt
+pip install -r tests/requirements.txt
 
 # 复制示例配置并根据实际需求修改
 cp devops/config.yaml.local config.yaml
