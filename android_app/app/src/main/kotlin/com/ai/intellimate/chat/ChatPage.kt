@@ -55,12 +55,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.ai.intellimate.R
-import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.ui.BoostSheet
-import com.ai.intellimate.boost.ui.BoostStatusChip
 import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatMorePanel
 import com.ai.intellimate.chat.ui.ChatSettingsDrawer
@@ -346,21 +344,6 @@ internal fun ChatPage(
                     }
 
                     Spacer(Modifier.height(16.dp))
-
-                    agentInfo?.let {
-                        BoostStatusChip(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                            availablePoints = boostState.availablePoints,
-                            onClick = {
-                                if (boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS) {
-                                    ToastUtils.showShort(R.string.boost_toast_not_enough_points)
-                                } else {
-                                    showBoostSheet = true
-                                }
-                            },
-                        )
-                        Spacer(Modifier.height(12.dp))
-                    }
 
                     if (agentInfo != null && !vipStatus.isSubscribed) {
                         PremiumModelTag(

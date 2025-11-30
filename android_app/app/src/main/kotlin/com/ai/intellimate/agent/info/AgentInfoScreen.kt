@@ -40,9 +40,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,10 +67,17 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
+import com.ai.intellimate.boost.BoostConfig
+import com.ai.intellimate.boost.BoostError
+import com.ai.intellimate.boost.BoostException
+import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.ui.BoostSheet
+import com.ai.intellimate.boost.ui.BoostStatusChip
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
 import com.ai.intellimate.utils.formatDisplayId
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 private const val CLIPBOARD_LABEL_AGENT_ID = "Agent ID"
@@ -103,6 +112,18 @@ internal fun AiAgentInfoScreen(
     var showBottomSheet by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState()
     val displayId = remember(agent.id, context) { formatDisplayId(agent.id, context = context) }
+    val boostState by BoostManager.boostState.collectAsState()
+    var showBoostSheet by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val showBoostError: (BoostError) -> Unit = { error ->
+        val messageRes =
+            when (error) {
+                BoostError.NotEnoughPoints -> R.string.boost_toast_not_enough_points
+                BoostError.DailyRewardAlreadyClaimed -> R.string.boost_daily_reward_already
+                else -> R.string.boost_toast_generic_error
+            }
+        ToastUtils.showShort(messageRes)
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AgentBackground(
@@ -246,6 +267,20 @@ internal fun AiAgentInfoScreen(
                             Spacer(Modifier.width(16.dp))
                         }
 
+                        Spacer(Modifier.height(16.dp))
+
+                        BoostStatusChip(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            availablePoints = boostState.availablePoints,
+                            onClick = {
+                                if (boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS) {
+                                    ToastUtils.showShort(R.string.boost_toast_not_enough_points)
+                                } else {
+                                    showBoostSheet = true
+                                }
+                            },
+                        )
+
                         Spacer(Modifier.height(24.dp))
 
                         Column(
@@ -375,6 +410,47 @@ internal fun AiAgentInfoScreen(
                 onCancelClick = { showBottomSheet = false },
             )
         }
+    }
+
+    // Boost Sheet
+    if (showBoostSheet) {
+        BoostSheet(
+            agentInfo = agent,
+            availablePoints = boostState.availablePoints,
+            hasDailyReward = boostState.hasClaimedDailyReward,
+            onBoostConfirmed = { points ->
+                scope.launch {
+                    try {
+                        val result = BoostManager.boostAgent(agent, points)
+                        ToastUtils.showShort(
+                            context.getString(R.string.boost_toast_success, agent.name)
+                        )
+                        showBoostSheet = false
+                    } catch (e: BoostException) {
+                        showBoostError(e.error)
+                        showBoostSheet = false
+                    } catch (e: Exception) {
+                        showBoostError(BoostError.NotEnoughPoints)
+                        showBoostSheet = false
+                    }
+                }
+            },
+            onClaimDailyReward = {
+                scope.launch {
+                    try {
+                        val claimed = BoostManager.claimDailyReward()
+                        ToastUtils.showShort(
+                            context.getString(R.string.boost_toast_daily_reward_claimed, claimed)
+                        )
+                    } catch (e: BoostException) {
+                        showBoostError(e.error)
+                    } catch (e: Exception) {
+                        showBoostError(BoostError.NotEnoughPoints)
+                    }
+                }
+            },
+            onDismiss = { showBoostSheet = false },
+        )
     }
 }
 
