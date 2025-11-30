@@ -11,9 +11,11 @@ import com.inty.api.models.api.v1.report.ReportCreateParams
 object ReportReasonMappings {
 
     /**
-     * 举报原因代码到字符串资源ID的映射
+     * 举报原因代码到字符串资源ID的映射（常量，不可变）
      * 映射 SDK 的 ReasonCode 到 strings.xml 中的资源ID
      * 后端更新新的 code 之后这里需要更新
+     * 
+     * 注意：使用 val 而非 const val，因为 const val 仅支持基本类型和 String，不支持 Map 类型
      */
     val REPORT_REASON_CODE_TO_STRING_RES: Map<ReportCreateParams.ReasonCode, Int> =
         mapOf(
@@ -27,9 +29,11 @@ object ReportReasonMappings {
         )
 
     /**
-     * 反馈原因代码到字符串资源ID的映射
+     * 反馈原因代码到字符串资源ID的映射（常量，不可变）
      * 映射 SDK 的 ReasonCode 到 strings.xml 中的资源ID
      * 后端更新新的 code 之后这里需要更新
+     * 
+     * 注意：使用 val 而非 const val，因为 const val 仅支持基本类型和 String，不支持 Map 类型
      */
     val FEEDBACK_REASON_CODE_TO_STRING_RES: Map<ReportCreateParams.ReasonCode, Int> =
         mapOf(
