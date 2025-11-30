@@ -84,7 +84,7 @@ def test_build_provider_sequence_respects_flags(voice_service):
 def test_normalize_gemini_audio_returns_wav(voice_service):
     pcm_bytes = (b"\x00\x00\x10\x00") * 50  # 简单的 PCM 采样
     audio_bytes, duration, content_type, extension = (
-        voice_service._normalize_gemini_audio(
+        voice_service.gemini_provider.normalize_audio(
             pcm_bytes, "audio/L16;rate=8000"
         )
     )

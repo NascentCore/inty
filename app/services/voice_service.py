@@ -8,22 +8,19 @@ import base64
 import hashlib
 import io
 import re
-import struct
-import wave
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 from elevenlabs import VoiceSettings
 from elevenlabs.client import ElevenLabs
-from google import genai
-from google.genai import types
 from loguru import logger
 from mutagen.mp3 import MP3
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.services.gcs_service import GCSService
+from app.services.voices.gemini import GeminiVoiceProvider
 
 # 性别到音色ID的映射
 GENDER_VOICE_MAPPING = {
@@ -45,11 +42,6 @@ GEMINI_TO_ELEVEN_VOICE_ID = {
 }
 
 ELEVEN_TO_GEMINI_VOICE_ID = {value: key for key, value in GEMINI_TO_ELEVEN_VOICE_ID.items()}
-
-LANGUAGE_CODE_ALIAS = {
-    "zh": "cmn-CN",
-    "en": "en-US",
-}
 
 
 class VoiceProvider(str, Enum):
@@ -80,7 +72,7 @@ class VoiceService:
         self.gemini_config = global_config_loaded_from_config_yaml.gemini_voice
         self.gcs_service = GCSService()
         self._elevenlabs_client: Optional[ElevenLabs] = None
-        self._gemini_client: Optional[genai.Client] = None
+        self.gemini_provider = GeminiVoiceProvider(self.gemini_config)
         if self.config.enabled:
             self._elevenlabs_client = ElevenLabs(api_key=self.config.api_key)
 
@@ -88,14 +80,6 @@ class VoiceService:
         if self._elevenlabs_client is None:
             self._elevenlabs_client = ElevenLabs(api_key=self.config.api_key)
         return self._elevenlabs_client
-
-    def _get_gemini_client(self) -> genai.Client:
-        if self._gemini_client is None:
-            client_kwargs: Dict[str, Any] = {}
-            if self.gemini_config.api_key:
-                client_kwargs["api_key"] = self.gemini_config.api_key
-            self._gemini_client = genai.Client(**client_kwargs)
-        return self._gemini_client
 
     def _clean_text_for_voice(self, text: str) -> str:
         """
@@ -330,7 +314,9 @@ class VoiceService:
             if not voice_name:
                 logger.warning("Gemini 未配置默认音色，跳过")
                 return None
-            return await self._call_gemini_tts_api(text, voice_name, model, language)
+            return await self.gemini_provider.generate_voice(
+                text, voice_name, model, language
+            )
 
         if not selection.elevenlabs_voice_id:
             logger.warning("ElevenLabs 未配置可用音色，跳过")
@@ -413,33 +399,6 @@ class VoiceService:
         except Exception as e:
             logger.warning(f"记录语音生成用量失败: {str(e)}")
 
-    def _normalize_gemini_audio(
-        self, audio_data: bytes, mime_type: str
-    ) -> Optional[Tuple[bytes, float, str, str]]:
-        mime = (mime_type or "").lower()
-        if mime.startswith("audio/l"):
-            sample_rate, bits_per_sample = _parse_audio_mime_type(mime_type)
-            wav_bytes = _pcm_to_wav(audio_data, sample_rate, bits_per_sample)
-            duration = _calculate_pcm_duration(audio_data, sample_rate, bits_per_sample)
-            return wav_bytes, duration, "audio/wav", ".wav"
-        if "wav" in mime or "wave" in mime:
-            duration = self._calculate_wav_duration(audio_data)
-            return audio_data, duration, "audio/wav", ".wav"
-        if "mpeg" in mime or "mp3" in mime:
-            duration = self._calculate_audio_duration(audio_data)
-            return audio_data, duration, "audio/mpeg", ".mp3"
-
-        sample_rate, bits_per_sample = _parse_audio_mime_type("audio/L16;rate=24000")
-        wav_bytes = _pcm_to_wav(audio_data, sample_rate, bits_per_sample)
-        duration = _calculate_pcm_duration(audio_data, sample_rate, bits_per_sample)
-        return wav_bytes, duration, "audio/wav", ".wav"
-
-    def _resolve_language_code(self, language: str) -> Optional[str]:
-        lang_key = (language or "").lower()
-        if lang_key in LANGUAGE_CODE_ALIAS:
-            return LANGUAGE_CODE_ALIAS[lang_key]
-        return self.gemini_config.default_language_code
-
     async def _call_elevenlabs_api(
         self, text: str, voice_id: str, model: str, language: str
     ) -> Optional[Tuple[bytes, float, str, str]]:
@@ -491,70 +450,6 @@ class VoiceService:
             logger.exception("ElevenLabs API调用异常详细信息:")
             return None
 
-    async def _call_gemini_tts_api(
-        self, text: str, voice_name: str, model: str, language: str
-    ) -> Optional[Tuple[bytes, float, str, str]]:
-        """
-        调用 Gemini 语音模型生成音频。
-        """
-        if not self.gemini_config.enabled:
-            return None
-
-        try:
-            client = self._get_gemini_client()
-            contents = [
-                types.Content(
-                    role="user",
-                    parts=[
-                        types.Part.from_text(text=text),
-                    ],
-                )
-            ]
-            speech_config = types.SpeechConfig(
-                voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                        voice_name=voice_name
-                    )
-                ),
-                language_code=self._resolve_language_code(language),
-            )
-            generate_config = types.GenerateContentConfig(
-                response_modalities=["AUDIO"],
-                speech_config=speech_config,
-                temperature=self.gemini_config.temperature,
-                top_p=self.gemini_config.top_p,
-            )
-
-            logger.debug(
-                f"调用Gemini语音模型: voice_name={voice_name}, model={model}, text_length={len(text)}"
-            )
-            response = client.models.generate_content(
-                model=model, contents=contents, config=generate_config
-            )
-            inline_part = _extract_inline_audio_part(response)
-            if (
-                inline_part is None
-                or inline_part.inline_data is None
-                or not inline_part.inline_data.data
-            ):
-                logger.error("Gemini 语音生成未返回音频数据")
-                return None
-
-            audio_bytes = inline_part.inline_data.data
-            mime_type = inline_part.inline_data.mime_type or "audio/L16;rate=24000"
-            normalized = self._normalize_gemini_audio(audio_bytes, mime_type)
-            if not normalized:
-                return None
-
-            logger.debug(
-                f"Gemini 语音生成成功，mime_type={mime_type}, 大小={len(audio_bytes)} bytes"
-            )
-            return normalized
-        except Exception as e:
-            logger.error(f"Gemini 语音生成失败: {str(e)}")
-            logger.exception("Gemini 语音生成异常详细信息:")
-            return None
-
     def _generate_file_name(
         self, text: str, voice_id: str, model: str, extension: str = ".mp3"
     ) -> str:
@@ -588,21 +483,6 @@ class VoiceService:
             return duration_seconds
         except Exception as e:
             logger.error(f"计算音频时长失败: {str(e)}")
-            return 0.0
-
-    def _calculate_wav_duration(self, audio_data: bytes) -> float:
-        """
-        计算 WAV 音频的时长
-        """
-        try:
-            with wave.open(io.BytesIO(audio_data), "rb") as wav_file:
-                frames = wav_file.getnframes()
-                frame_rate = wav_file.getframerate()
-                if frame_rate == 0:
-                    return 0.0
-                return frames / frame_rate
-        except Exception as e:
-            logger.error(f"计算WAV音频时长失败: {str(e)}")
             return 0.0
 
     async def get_available_voices(
@@ -848,70 +728,4 @@ class VoiceService:
 
 
 # 创建全局实例
-def _parse_audio_mime_type(mime_type: str) -> Tuple[int, int]:
-    sample_rate = 24000
-    bits_per_sample = 16
-    parts = [part.strip() for part in mime_type.split(";")]
-    for part in parts:
-        if part.lower().startswith("rate="):
-            try:
-                sample_rate = int(part.split("=", 1)[1])
-            except (ValueError, IndexError):
-                pass
-        if part.lower().startswith("audio/l"):
-            try:
-                bits_per_sample = int(part.split("l", 1)[1])
-            except (ValueError, IndexError):
-                pass
-    return sample_rate, bits_per_sample
-
-
-def _pcm_to_wav(
-    audio_data: bytes, sample_rate: int, bits_per_sample: int, num_channels: int = 1
-) -> bytes:
-    bytes_per_sample = bits_per_sample // 8
-    byte_rate = sample_rate * num_channels * bytes_per_sample
-    block_align = num_channels * bytes_per_sample
-    header = struct.pack(
-        "<4sI4s4sIHHIIHH4sI",
-        b"RIFF",
-        36 + len(audio_data),
-        b"WAVE",
-        b"fmt ",
-        16,
-        1,
-        num_channels,
-        sample_rate,
-        byte_rate,
-        block_align,
-        bits_per_sample,
-        b"data",
-        len(audio_data),
-    )
-    return header + audio_data
-
-
-def _calculate_pcm_duration(
-    audio_data: bytes, sample_rate: int, bits_per_sample: int, num_channels: int = 1
-) -> float:
-    if sample_rate <= 0 or bits_per_sample <= 0 or num_channels <= 0:
-        return 0.0
-    bytes_per_second = sample_rate * num_channels * (bits_per_sample // 8)
-    if bytes_per_second == 0:
-        return 0.0
-    return len(audio_data) / bytes_per_second
-
-
-def _extract_inline_audio_part(response: Any) -> Optional[Any]:
-    candidates = getattr(response, "candidates", []) or []
-    for candidate in candidates:
-        content = getattr(candidate, "content", None)
-        if not content or not getattr(content, "parts", None):
-            continue
-        for part in content.parts:
-            if getattr(part, "inline_data", None):
-                return part
-    return None
-
-
 voice_service = VoiceService()
