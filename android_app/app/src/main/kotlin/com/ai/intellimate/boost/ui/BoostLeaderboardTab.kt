@@ -60,7 +60,8 @@ fun BoostLeaderboardTab(
             modifier = Modifier.fillMaxWidth(),
             availablePoints = availablePoints,
             onClick = {
-                entries.firstOrNull()?.let(onBoost)
+                // 状态芯片仅用于展示可用积分，不触发任何操作
+                // 用户应通过点击排行榜条目来执行 Boost 操作
             },
         )
 
