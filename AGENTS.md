@@ -29,6 +29,7 @@
 - Always review the changes afterwards
 - 新建任意文件时，需在适当格式中加入 `CREATED_BY_AGENT` 标记，用于记录创建者身份。
 - 测试步骤写入 tests/docs/ 如 tests/docs/TEST_STEPS_RUNTIME_URL_SWITCH.md
+- 新功能/需求开发对应的文档应该添加 FR_ 前缀，如 docs/FR_CHAR_BOOSTING.md
 
 ## 提交与变更请求记录规范
 
