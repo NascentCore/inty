@@ -601,6 +601,10 @@ async def get_or_create_chat_by_agent(
                 "agent_id": agent_id,
                 "agent_name": getattr(existing_chat, "agent_name", None),
                 "agent_avatar": getattr(existing_chat, "agent_avatar", None),
+                "agent_background": getattr(existing_chat, "agent_background", None),
+                "agent_background_animated": getattr(
+                    existing_chat, "agent_background_animated", None
+                ),
                 "agent_intro": getattr(existing_chat, "agent_intro", None),
                 "agent_opening": getattr(existing_chat, "agent_opening", None),
                 "agent_opening_audio_url": getattr(
@@ -760,6 +764,7 @@ async def get_or_create_chat_by_agent(
             "agent_id": agent_id,
             "agent_name": agent_name,
             "agent_avatar": agent_avatar,
+            "agent_background": getattr(db_chat, "agent_background", None),
             "agent_background_animated": (
                 cached_agent.get("background_animated")
                 if cached_agent
