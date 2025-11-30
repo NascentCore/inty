@@ -50,9 +50,10 @@ git submodule deinit -f .
 # 重新拉取子模块代码
 git submodule update --init --recursive
 
-# 启动后端服务
-# 注意拷贝 admin bearer token 用来登录 http://localhost:8000/evaluation
+# 使用下面步骤启动后端服务
+evaluation/build.sh # 构建评测 web ui 静态文件
 cp devops/config.yaml.local config.yaml
+# 注意拷贝 admin bearer token 用来登录 http://localhost:8000/evaluation
 ./start.sh --dev
 ```
 
