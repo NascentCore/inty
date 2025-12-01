@@ -51,7 +51,8 @@ class IntelliMateApp : Application() {
 
         UnifiedStartupManager.initializeEssential(this)
 
-        // 初始化本地 Boost 体系（仅在 debug 模式下）
+        // 初始化本地 为角色应援/Boost 体系（仅在 debug 模式下）
+        // TODO：是否可以讲 IntySetting 初始化也转移到这里。
         if (HeartAppUtils.isAppDebugMode(this)) {
             BoostManager.initialize(this)
         }
