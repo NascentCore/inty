@@ -32,6 +32,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.reduce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -53,6 +55,10 @@ class ChatViewModel : BaseVM() {
     // 使用 StateFlow 替代 mutableStateListOf 来解决并发问题
     private val _msgs = MutableStateFlow<List<MsgInfo>>(emptyList())
     val msgs = _msgs.asStateFlow()
+
+    private var lastAiMsgInfo: MsgInfo? = null
+    private val _shouldFlowShow = MutableStateFlow(false)
+    val shouldFlowShow = _shouldFlowShow.asStateFlow()
 
     // 分页相关状态
     private val _isLoadingMore = MutableStateFlow(false)
@@ -200,6 +206,7 @@ class ChatViewModel : BaseVM() {
 
     private fun bindToAgentSession(agentId: String) {
         if (boundAgentId == agentId) return
+        lastAiMsgInfo = null
         boundAgentId = agentId
         messagesJob?.cancel()
         loadingMoreJob?.cancel()
@@ -213,7 +220,14 @@ class ChatViewModel : BaseVM() {
 
         messagesJob =
             viewModelScope.launch(Dispatchers.IO) {
-                chatRepository.getMessagesFlow(agentId).collect { list -> _msgs.value = list }
+                chatRepository.getMessagesFlow(agentId).collect { list ->
+                    _msgs.value = list
+
+                    val latestAiMsg = list.find { msg -> msg.role == "assistant" }
+                    _shouldFlowShow.value = lastAiMsgInfo != null && latestAiMsg?.id != lastAiMsgInfo?.id
+
+                    lastAiMsgInfo = latestAiMsg
+                }
             }
         loadingMoreJob =
             viewModelScope.launch(Dispatchers.IO) {
@@ -254,6 +268,10 @@ class ChatViewModel : BaseVM() {
                 LogUtils.e("ChatViewModel.syncLatestMessages error: ${e.message}")
             }
         }
+    }
+
+    fun newMsgFlowFinish() {
+        _shouldFlowShow.value = false
     }
 
     /** 发送消息 - 使用新架构 */
