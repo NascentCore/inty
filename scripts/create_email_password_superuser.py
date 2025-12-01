@@ -37,9 +37,9 @@ async def create_email_password_superuser(
     nickname
         用户昵称（可选，如果不提供将自动生成）
     dry_run
-        试运行模式：显示将要执行的操作但不实际写入数据库（默认: False）
+        试运行模式：显示将要执行的操作但不实际写入数据库
     delete_existing
-        如果为 True，删除现有用户后创建新用户（默认: False）
+        如果为 True，删除现有用户后创建新用户
 
     Returns
     -------
