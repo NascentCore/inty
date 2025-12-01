@@ -21,6 +21,18 @@ import './index.less';
  */
 const VersionBadge: React.FC = () => {
   /**
+   * 根据 localStorage 中的 debugger 字段控制展示
+   */
+  const shouldShowBadge = useMemo(() => {
+    try {
+      const storedValue = window.localStorage.getItem('debugger');
+      return storedValue === 'true';
+    } catch {
+      return false;
+    }
+  }, []);
+
+  /**
    * 格式化构建时间为易读格式
    */
   const formattedVersion = useMemo(() => {
@@ -53,6 +65,10 @@ const VersionBadge: React.FC = () => {
       return '';
     }
   }, []);
+
+  if (!shouldShowBadge) {
+    return null;
+  }
 
   return (
     <div className="version-badge" title={`Build Time: ${fullBuildTime}`}>
