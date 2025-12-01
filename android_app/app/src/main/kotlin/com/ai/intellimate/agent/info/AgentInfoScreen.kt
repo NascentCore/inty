@@ -40,9 +40,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,11 +66,20 @@ import androidx.core.content.getSystemService
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.report.ReportActivity
+import com.ai.intellimate.boost.BoostConfig
+import com.ai.intellimate.boost.BoostError
+import com.ai.intellimate.boost.BoostException
+import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.BoostState
+import com.ai.intellimate.boost.ui.BoostSheet
+import com.ai.intellimate.boost.ui.BoostStatusChip
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.formatDisplayId
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 private const val CLIPBOARD_LABEL_AGENT_ID = "Agent ID"
@@ -102,6 +113,20 @@ internal fun AiAgentInfoScreen(
     val isDebugMode = HeartAppUtils.isAppDebugMode()
     val enableRemix = UiConfigs.ChatPage.enableRemix()
     val displayId = remember(agent.id, context) { formatDisplayId(agent.id, context = context) }
+
+    // 为角色应援/Boost 功能
+    val boostState by if (isDebugMode) BoostManager.boostState.collectAsState() else remember { mutableStateOf(BoostState()) }
+    var showBoostSheet by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val showBoostError: (BoostError) -> Unit = { error ->
+        val messageRes =
+            when (error) {
+                BoostError.NotEnoughPoints -> R.string.boost_toast_not_enough_points
+                BoostError.DailyRewardAlreadyClaimed -> R.string.boost_daily_reward_already
+                else -> R.string.boost_toast_generic_error
+            }
+        ToastUtils.showShort(messageRes)
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AgentBackground(
@@ -259,6 +284,25 @@ internal fun AiAgentInfoScreen(
                             Spacer(Modifier.width(16.dp))
                         }
 
+                        // 角色应援/Boost 功能（仅在 debug 模式下显示）
+                        if (isDebugMode) {
+                            Spacer(Modifier.height(16.dp))
+
+                            BoostStatusChip(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                availablePoints = boostState.availablePoints,
+                                onClick = {
+                                    if (boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS) {
+                                        ToastUtils.showShort(R.string.boost_toast_not_enough_points)
+                                    } else {
+                                        showBoostSheet = true
+                                    }
+                                },
+                            )
+
+                            Spacer(Modifier.height(16.dp))
+                        }
+
                         Spacer(Modifier.height(24.dp))
 
                         Column(
@@ -369,6 +413,63 @@ internal fun AiAgentInfoScreen(
         }
     }
 
+    // Boost Sheet 弹窗（仅在 debug 模式下显示）
+    // 显示位置：角色主页（AgentInfoScreen）底部，以半屏弹窗形式展示
+    // 显示时机：
+    //   1. 必须在 debug 模式下（isDebugMode == true）
+    //   2. 用户点击了角色主页中的 BoostStatusChip（第 291-301 行），且可用积分 >= 100 pts
+    //   3. 此时 showBoostSheet 被设置为 true，触发此弹窗显示
+    // UI 效果：半屏底部弹窗，包含：
+    //   - 当前角色的 Boost 信息
+    //   - 可用积分显示
+    //   - 积分投入滑条/步进器（每步 100 pts）
+    //   - Boost 确认按钮
+    //   - 每日签到奖励按钮
+    // 交互流程：
+    //   - 用户点击 BoostStatusChip → 打开此弹窗
+    //   - 用户选择投入积分并确认 → 执行 Boost 操作 → 显示成功 Toast → 关闭弹窗
+    //   - 用户点击每日签到 → 领取奖励 → 显示奖励 Toast → 关闭弹窗（如果已领取）
+    //   - 用户点击关闭/取消 → 关闭弹窗
+    if (isDebugMode && showBoostSheet) {
+        BoostSheet(
+            agentInfo = agent,
+            availablePoints = boostState.availablePoints,
+            hasDailyReward = boostState.hasClaimedDailyReward,
+            onBoostConfirmed = { points ->
+                scope.launch {
+                    try {
+                        val result = BoostManager.boostAgent(agent, points)
+                        ToastUtils.showShort(
+                            context.getString(R.string.boost_toast_success, agent.name)
+                        )
+                        showBoostSheet = false
+                    } catch (e: BoostException) {
+                        showBoostError(e.error)
+                        showBoostSheet = false
+                    } catch (e: Exception) {
+                        showBoostError(BoostError.NotEnoughPoints)
+                        showBoostSheet = false
+                    }
+                }
+            },
+            onClaimDailyReward = {
+                scope.launch {
+                    try {
+                        val claimed = BoostManager.claimDailyReward()
+                        ToastUtils.showShort(
+                            context.getString(R.string.boost_toast_daily_reward_claimed, claimed)
+                        )
+                        showBoostSheet = false
+                    } catch (e: BoostException) {
+                        showBoostError(e.error)
+                    } catch (e: Exception) {
+                        showBoostError(BoostError.NotEnoughPoints)
+                    }
+                }
+            },
+            onDismiss = { showBoostSheet = false },
+        )
+    }
 }
 
 private object AgentGalleryConfig {

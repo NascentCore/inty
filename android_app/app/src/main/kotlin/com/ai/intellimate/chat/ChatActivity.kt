@@ -27,6 +27,7 @@ class ChatActivity : BaseActivity() {
         private const val INTENT_KEY_AGENT_ID = "intent_key_agent_id"
         private const val INTENT_KEY_AGENT_INFO = "intent_key_agent_info"
         private const val INTENT_KEY_PAGE_SOURCE = "intent_key_page_source"
+        private const val INTENT_KEY_AUTO_BOOST = "intent_key_auto_boost"
         private const val DEFAULT_PAGE_SOURCE = "unknown"
 
         /** 页面来源常量 - 用于统计曝光事件 */
@@ -48,12 +49,14 @@ class ChatActivity : BaseActivity() {
             agentInfo: AgentInfo? = null,
             agentId: String? = null,
             pageSource: String = DEFAULT_PAGE_SOURCE,
+            showBoostSheet: Boolean = false,
         ) {
             context.startActivity(
                 Intent(context, ChatActivity::class.java).also { intent ->
                     intent.putExtra(INTENT_KEY_AGENT_ID, agentId)
                     intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
                     intent.putExtra(INTENT_KEY_PAGE_SOURCE, pageSource)
+                    intent.putExtra(INTENT_KEY_AUTO_BOOST, showBoostSheet)
                 }
             )
         }
@@ -73,6 +76,9 @@ class ChatActivity : BaseActivity() {
     private var agentId: String? = null
     private val pageSource: String by lazy {
         intent.getStringExtra(INTENT_KEY_PAGE_SOURCE) ?: DEFAULT_PAGE_SOURCE
+    }
+    private val shouldShowBoostSheet: Boolean by lazy {
+        intent.getBooleanExtra(INTENT_KEY_AUTO_BOOST, false)
     }
 
     override fun getPageName(): String = "ChatPage"
@@ -147,6 +153,7 @@ class ChatActivity : BaseActivity() {
                 showBackButton = true,
                 onBack = { finish() },
                 pageSourceOverride = pageSource, // 传递 ChatActivity 的 pageSource，避免重复追踪
+                shouldShowBoostSheetOnOpen = shouldShowBoostSheet,
             )
         }
     }

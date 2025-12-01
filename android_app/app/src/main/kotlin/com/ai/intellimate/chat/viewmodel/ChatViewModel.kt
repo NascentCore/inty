@@ -15,12 +15,14 @@ import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
+import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
@@ -379,6 +381,13 @@ class ChatViewModel : BaseVM() {
                             ),
                         )
 
+                          val assistantContent =
+                              result.data.data?.choices?.lastOrNull()?.message?.content
+                          if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
+                              BoostManager.recordChatTokens(agent, inputMsg)
+                              assistantContent?.let { BoostManager.recordChatTokens(agent, it) }
+                          }
+
                         runCatching {
                                 // 有免费次数限制，需要vip订阅
                                 if (
@@ -675,6 +684,13 @@ class ChatViewModel : BaseVM() {
                                     "end_to_end_time" to endToEndTime,
                                 ),
                             )
+
+                            val assistantContent =
+                                result.data.data?.choices?.lastOrNull()?.message?.content
+                            if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
+                                BoostManager.recordChatTokens(agent, keepTalkingMsg)
+                                assistantContent?.let { BoostManager.recordChatTokens(agent, it) }
+                            }
 
                             runCatching {
                                     // 有免费次数限制，需要vip订阅
@@ -981,7 +997,9 @@ class ChatViewModel : BaseVM() {
 
                 when (result) {
                     is HttpResult.Success -> {
-
+                        if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
+                            agent?.let { BoostManager.recordImageGeneration(it) }
+                        }
                         // Firebase Analytics - 记录图片生成成功
                         FirebaseManager.logEvent(
                             FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_SUCCESS,
@@ -989,6 +1007,7 @@ class ChatViewModel : BaseVM() {
                                 "agent_id" to agentId,
                                 "agent_name" to agent.name,
                                 "message_id" to messageId,
+                                "image_url" to result.data.imageUrl,
                                 "image_width" to result.data.width,
                                 "image_height" to result.data.height,
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
@@ -1237,5 +1256,18 @@ class ChatViewModel : BaseVM() {
         if (UserProfileManager.hasUserProfile()) {
             _userProfile.value = UserProfileManager.getUserProfile()
         }
+    }
+
+    suspend fun appendBoostSystemMessage(agent: AgentInfo, points: Int, totalBoosts: Int) {
+        val message =
+            MsgInfo(
+                content =
+                    Utils.getApp()
+                        .getString(R.string.boost_system_message, points, agent.name, totalBoosts),
+                role = "system",
+                localMsgId = "boost_${System.nanoTime()}",
+                meta_data = MsgInfo.MsgMetaData(agentId = agent.id),
+            )
+        chatRepository.addMessage(agent.id, message)
     }
 }

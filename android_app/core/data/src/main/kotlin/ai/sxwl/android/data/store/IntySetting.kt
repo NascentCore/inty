@@ -24,7 +24,7 @@ object IntySetting {
     private var curUid: String = ""
 
     init {
-        MMKV.initialize(Utils.getApp())
+        // MKKV.initialize(app) 已经在 IntelliMateApp.onCreate() 中调用
         allUserSetting = MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
 
         curUid = getCurUserID()

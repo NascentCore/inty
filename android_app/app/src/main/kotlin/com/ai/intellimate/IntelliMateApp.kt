@@ -12,9 +12,13 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.firebase.FCMTokenUploadCallback
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.Utils
 import android.app.Application
+import com.tencent.mmkv.MMKV
+import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.notifications.PushNotificationManager
 import com.ai.intellimate.utils.AgentCacheProviderImpl
 import com.ai.intellimate.utils.RecommendedAgentCacheProviderImpl
@@ -28,6 +32,11 @@ class IntelliMateApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        
+        // 初始化 MMKV（必须在所有使用 MMKV 的代码之前）
+        // 使用 MKKV 的代码包括：IntySetting, BoostManager, BoostRepository
+        MMKV.initialize(this)
+        
         IntyNetworkManager.initialize(this, buildType = BuildConfig.BUILD_TYPE)
 
         // 验证 baseUrl 配置（必须在其他初始化之前，如果失败会退出应用）
@@ -41,6 +50,12 @@ class IntelliMateApp : Application() {
         DataModule.setRecommendedCacheProvider(recommendedCacheProvider)
 
         UnifiedStartupManager.initializeEssential(this)
+
+        // 初始化本地 为角色应援/Boost 体系（仅在 debug 模式下）
+        // TODO：是否可以讲 IntySetting 初始化也转移到这里。
+        if (HeartAppUtils.isAppDebugMode(this)) {
+            BoostManager.initialize(this)
+        }
         initializeFirebaseAnalytics()
         initializeRemoteConfigDefaults()
         setupFCMessageHandler()
