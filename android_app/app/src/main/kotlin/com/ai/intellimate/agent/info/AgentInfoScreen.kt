@@ -412,6 +412,7 @@ internal fun AiAgentInfoScreen(
             }
         }
     }
+
     // Boost Sheet (仅在 debug 模式下)
     if (isDebugMode && showBoostSheet) {
         BoostSheet(
