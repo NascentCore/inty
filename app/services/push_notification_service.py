@@ -13,6 +13,7 @@ from langchain_core.messages import HumanMessage
 from loguru import logger
 from sqlalchemy import Integer, and_, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import load_only
 
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
@@ -377,8 +378,10 @@ async def _check_read_push_users_for_recall(
             else:
                 # 用户没有最近聊天，检查用户注册时间（仅对24h/48h阶段）
                 if stage in ("24h", "48h"):
-                    user_stmt = select(User).where(
-                        and_(User.id == read_user_id, User.deleted_at.is_(None))
+                    user_stmt = (
+                        select(User)
+                        .options(load_only(User.id, User.created_at, User.deleted_at))
+                        .where(and_(User.id == read_user_id, User.deleted_at.is_(None)))
                     )
                     user_result = await db.execute(user_stmt)
                     user = user_result.scalar_one_or_none()
@@ -448,8 +451,10 @@ async def _filter_users_by_push_conditions(
     for user_id in user_ids:
         try:
             # 获取用户信息
-            user_stmt = select(User).where(
-                and_(User.id == user_id, User.deleted_at.is_(None))
+            user_stmt = (
+                select(User)
+                .options(load_only(User.id, User.created_at, User.deleted_at))
+                .where(and_(User.id == user_id, User.deleted_at.is_(None)))
             )
             user_result = await db.execute(user_stmt)
             user = user_result.scalar_one_or_none()
@@ -633,8 +638,10 @@ async def _get_user_by_id(
         用户对象，如果不存在则返回 None
     """
     try:
-        user_stmt = select(User).where(
-            and_(User.id == user_id, User.deleted_at.is_(None))
+        user_stmt = (
+            select(User)
+            .options(load_only(User.id, User.created_at, User.deleted_at))
+            .where(and_(User.id == user_id, User.deleted_at.is_(None)))
         )
         user_result = await db.execute(user_stmt)
         return user_result.scalar_one_or_none()
@@ -2463,6 +2470,7 @@ async def get_users_without_chats(
         # 查询有 device_token 但没有活跃聊天的用户
         stmt = (
             select(User)
+            .options(load_only(User.id, User.created_at, User.deleted_at))
             .join(DeviceToken, User.id == DeviceToken.user_id)
             .outerjoin(
                 Chat,
@@ -2904,8 +2912,10 @@ async def get_users_needing_no_chat_push(
                         continue
 
                     # 用户没有聊天，检查是否达到推送时间阈值
-                    user_stmt = select(User).where(
-                        and_(User.id == read_user_id, User.deleted_at.is_(None))
+                    user_stmt = (
+                        select(User)
+                        .options(load_only(User.id, User.created_at, User.deleted_at))
+                        .where(and_(User.id == read_user_id, User.deleted_at.is_(None)))
                     )
                     user_result = await db.execute(user_stmt)
                     user = user_result.scalar_one_or_none()
