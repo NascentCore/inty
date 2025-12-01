@@ -113,6 +113,8 @@ internal fun AiAgentInfoScreen(
     var showBottomSheet by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState()
     val displayId = remember(agent.id, context) { formatDisplayId(agent.id, context = context) }
+
+    // 为角色应援/Boost 功能
     val boostState by if (isDebugMode) BoostManager.boostState.collectAsState() else remember { mutableStateOf(BoostState()) }
     var showBoostSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -268,9 +270,10 @@ internal fun AiAgentInfoScreen(
                             Spacer(Modifier.width(16.dp))
                         }
 
-                        Spacer(Modifier.height(16.dp))
-
+                        // 角色应援/Boost 功能（仅在 debug 模式下显示）
                         if (isDebugMode) {
+                            Spacer(Modifier.height(16.dp))
+
                             BoostStatusChip(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                                 availablePoints = boostState.availablePoints,

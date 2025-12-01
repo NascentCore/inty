@@ -34,16 +34,24 @@
 ### 初始化与生命周期
 
 **初始化位置**：`IntelliMateApp.onCreate()`
-- 仅在 **debug 模式**下初始化（通过 `HeartAppUtils.isAppDebugMode()` 判断）
-- 调用 `BoostManager.initialize(context)` 创建 `BoostRepository` 实例
-- 初始化时机：应用启动时，在其他服务初始化之后
+
+**初始化顺序**（重要）：
+1. **MMKV 初始化**（第一优先级）：
+   - 在 `IntelliMateApp.onCreate()` 的最开始调用 `MMKV.initialize(this)`
+   - 必须在所有使用 MMKV 的代码之前初始化（包括 `IntySetting` 和 `BoostStorage`）
+   - 这是全局单次初始化，确保所有 MMKV 实例都能正常工作
+
+2. **BoostManager 初始化**（仅在 debug 模式）：
+   - 通过 `HeartAppUtils.isAppDebugMode()` 判断是否启用
+   - 调用 `BoostManager.initialize(context)` 创建 `BoostRepository` 实例
+   - 初始化时机：在 MMKV 初始化之后，其他服务初始化之后
 
 **生命周期管理**：
 - `BoostManager` 为单例对象，生命周期与 Application 一致
 - `BoostRepository` 在 `BoostManager.initialize()` 时创建，持有 Application Context
 - 使用独立的 `CoroutineScope(SupervisorJob() + Dispatchers.IO)` 处理异步操作
 - MMKV 自动处理数据持久化，无需手动管理生命周期
-- MMKV 在 `IntySetting.init` 中已初始化，无需额外初始化
+- `BoostStorage` 使用 `by lazy` 延迟初始化 MMKV 实例，确保在 MMKV 全局初始化之后才创建
 
 ### 核心组件架构
 
@@ -62,6 +70,24 @@
 - **默认状态流**：未初始化时提供 `defaultState` 和 `defaultLeaderboard`，避免空指针
 - **事件系统**：使用 `SharedFlow<BoostEvent>` 发布内部事件（`PointsEarned`, `BoostSuccess`, `Error`）
 - **协程作用域**：使用 `SupervisorJob` 确保子协程异常不影响其他操作
+
+**MMKV 使用说明**：
+- **间接使用**：`BoostManager` 不直接使用 MMKV，而是通过以下调用链间接使用：
+  ```
+  BoostManager
+      ↓ (creates & uses)
+  BoostRepository
+      ↓ (calls)
+  BoostStorage
+      ↓ (directly uses)
+  MMKV
+  ```
+- **初始化要求**：MMKV 必须在 `BoostManager.initialize()` 之前初始化，这已在 `IntelliMateApp.onCreate()` 中通过 `MMKV.initialize(this)` 完成
+- **数据隔离**：Boost 功能使用独立的 MMKV 实例（`"boost_state"`），与 `IntySetting` 使用的 MMKV 实例完全隔离
+- **设计优势**：这种分层设计实现了关注点分离：
+  - `BoostManager`：业务逻辑和事件管理
+  - `BoostRepository`：数据管理和状态同步
+  - `BoostStorage`：持久化抽象（MMKV 的具体实现）
 
 **公共 API**：
 ```kotlin
@@ -202,8 +228,25 @@ sealed class BoostError {
 #### 1. 真实数据（主要来源）
 
 **存储位置**：本地 MMKV
-- MMKV 实例：`boost_state`（通过 `BoostStorage` 管理）
-- 数据结构：`BoostStateSnapshot`
+
+**MMKV 实例配置**：
+- **实例 ID**：`"boost_state"`（独立的 MMKV 实例，与 `IntySetting` 隔离）
+- **模式**：`MMKV.MULTI_PROCESS_MODE`（支持多进程访问）
+- **管理类**：`BoostStorage`（内部对象，封装 MMKV 操作）
+- **存储键**：`"boost_state_snapshot"`（单个键存储完整状态快照）
+
+**MMKV 使用链**：
+```
+BoostManager (业务逻辑层)
+    ↓ 调用
+BoostRepository (数据管理层)
+    ↓ 调用
+BoostStorage (持久化抽象层)
+    ↓ 直接使用
+MMKV.mmkvWithID("boost_state", MMKV.MULTI_PROCESS_MODE)
+```
+
+**数据结构**：`BoostStateSnapshot`
   ```kotlin
   data class BoostStateSnapshot(
       val availablePoints: Int = 0,              // 可用积分
@@ -225,9 +268,12 @@ sealed class BoostError {
 - 用户获得积分时（聊天、图片生成、语音播放等）
 
 **存储实现**：
-- 使用 `BoostStorage` 对象管理 MMKV 存储
-- 通过 Moshi 进行 JSON 序列化/反序列化
-- 支持多进程模式（`MMKV.MULTI_PROCESS_MODE`）
+- **存储抽象**：使用 `BoostStorage` 内部对象封装 MMKV 操作，`BoostManager` 不直接访问 MMKV
+- **序列化**：通过 Moshi 进行 JSON 序列化/反序列化（`MoshiUtils.toJson()` / `MoshiUtils.fromJson()`）
+- **多进程支持**：使用 `MMKV.MULTI_PROCESS_MODE` 确保多进程环境下的数据一致性
+- **延迟初始化**：`BoostStorage` 中的 MMKV 实例使用 `by lazy` 延迟初始化，确保在全局 `MMKV.initialize()` 之后才创建
+- **错误处理**：包含完整的异常捕获和损坏数据清理机制
+- **数据隔离**：使用独立的 MMKV 实例（`"boost_state"`），与应用的其它存储（如 `IntySetting`）完全隔离
 
 #### 2. 假数据（Seed，占位展示）
 

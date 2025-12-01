@@ -15,7 +15,9 @@ import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.Utils
 import android.app.Application
+import com.tencent.mmkv.MMKV
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.notifications.PushNotificationManager
 import com.ai.intellimate.utils.AgentCacheProviderImpl
@@ -30,6 +32,11 @@ class IntelliMateApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        
+        // 初始化 MMKV（必须在所有使用 MMKV 的代码之前）
+        // 使用 MKKV 的代码包括：IntySetting, BoostManager, BoostRepository
+        MMKV.initialize(this)
+        
         IntyNetworkManager.initialize(this, buildType = BuildConfig.BUILD_TYPE)
 
         // 验证 baseUrl 配置（必须在其他初始化之前，如果失败会退出应用）

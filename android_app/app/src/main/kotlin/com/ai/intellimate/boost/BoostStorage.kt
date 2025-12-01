@@ -10,7 +10,10 @@ import com.tencent.mmkv.MMKV
 /** Boost 状态本地存储管理类，使用 MMKV 持久化。 */
 internal object BoostStorage {
 
-    private val mmkv: MMKV = MMKV.mmkvWithID("boost_state", MMKV.MULTI_PROCESS_MODE)
+    private val mmkv: MMKV by lazy {
+        // MKKV.initialize(app) 在 IntelliMateApp.onCreate() 中调用
+        MMKV.mmkvWithID("boost_state", MMKV.MULTI_PROCESS_MODE)
+    }
     private const val KEY_BOOST_STATE = "boost_state_snapshot"
 
     /** 保存 Boost 状态快照 */
