@@ -86,7 +86,7 @@ fun BoostStatusChip(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(
-            painter = painterResource(R.drawable.ic_boost_fire),
+            painter = painterResource(R.drawable.rocket_launch_24px),
             contentDescription = null,
             tint = Color.White,
             modifier = Modifier.size(20.dp),

@@ -317,7 +317,7 @@ suspend fun login(request: LoginRequest): ApiResult<LoginResponse>
 - 🔥 Chat 页顶部加入 Boost 胶囊与半屏 `BoostSheet`，可查看积分、按 100 pts 步长投入、领取每日 200 pts，并在对话流插入系统提示。
 - 🏆 Explore 引入 `Featured/Boost` 子 Tab，Boost Tab 使用 `BoostLeaderboardTab` 展示本地榜单、签到按钮以及跳转聊天并自动打开 Boost 弹层的操作。
 - 🎧 文本发送、Keep Talking、图片生成、手动语音播放都会调用 `BoostManager.record*`，根据 `BoostConfig` 折算 token→points，满足“token usage → points → boost”闭环。
-- 🧪 所有可见文案与图标（`ic_boost_fire`）集中在 `strings.xml`/`drawable/`，并在此文档记录接入点，便于后续扩展为远程排行榜。
+- 🧪 所有可见文案与图标（`rocket_launch_24px`）集中在 `strings.xml`/`drawable/`，并在此文档记录接入点，便于后续扩展为远程排行榜。
 
 ## Firebase 事件（events）
 - 与用户行为相关的事件以行为命名：
