@@ -27,8 +27,8 @@ import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.ui.components.ProfileInfoScreen
 import com.ai.intellimate.utils.UCropHelper
 import com.yalantis.ucrop.UCrop
-import java.util.Locale
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 /** 个人设置页面 */
 class ModifyProfileActivity : BaseActivity() {
@@ -162,7 +162,9 @@ class ModifyProfileActivity : BaseActivity() {
                     editValue = editValue,
                     onDismiss = { editKey = EditKey.None },
                     onSave = { key, value ->
-                        viewModel.changeUserProfile(key, value)
+                        // 在各自的 sheet 中点击 save 时，立即调用接口更新
+                        // updateFieldAndSave 会判断是否变化，并更新本地状态
+                        viewModel.updateFieldAndSave(key, value)
                         editKey = EditKey.None
                     },
                     onValueChange = { editValue = it },
