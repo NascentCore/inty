@@ -109,18 +109,39 @@ jobs:
               --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \
               ${{ env.INTY_PUSH_WORKER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
             echo "Waiting for push worker service startup..."
-            sleep 5
-            # 检查容器是否正在运行
-            if sudo docker ps | grep -q "inty-push-worker-${{ steps.set-environment.outputs.environment }}"; then
+            # 使用循环等待容器启动，最多等待 30 秒
+            max_wait=30
+            wait_interval=2
+            elapsed=0
+            container_started=false
+            while [ $elapsed -lt $max_wait ]; do
+              if sudo docker ps | grep -q "inty-push-worker-${{ steps.set-environment.outputs.environment }}"; then
+                container_started=true
+                echo "Push worker service container is running"
+                break
+              fi
+              sleep $wait_interval
+              elapsed=$((elapsed + wait_interval))
+              echo "Waiting for container to start... (${elapsed}s/${max_wait}s)"
+            done
+            # 检查容器是否成功启动
+            if [ "$container_started" = true ]; then
               echo "Push worker service started successfully!"
-              # 检查日志中是否有初始化成功的消息
-              if sudo docker logs inty-push-worker-${{ steps.set-environment.outputs.environment }} 2>&1 | grep -q "推送服务初始化完成\|推送服务启动成功"; then
-                echo "Push worker service initialized successfully!"
+              # 由于使用了 gcplogs，日志不会输出到 docker logs，所以日志检查改为可选
+              # 尝试检查日志（可能为空），但不作为失败条件
+              log_check=$(sudo docker logs inty-push-worker-${{ steps.set-environment.outputs.environment }} 2>&1 | grep -q "推送服务初始化完成\|推送服务启动成功" && echo "found" || echo "not_found")
+              if [ "$log_check" = "found" ]; then
+                echo "Push worker service initialized successfully (found in logs)!"
               else
-                echo "Warning: Push worker service is running but initialization message not found in logs"
+                echo "Note: Initialization message not found in docker logs (expected when using gcplogs driver)."
+                echo "Service is running. Check Google Cloud Logging for detailed logs."
               fi
             else
-              echo "Error: Push worker service failed to start"
+              echo "Error: Push worker service failed to start within ${max_wait} seconds"
+              # 尝试获取容器状态和日志（可能为空）
+              echo "Container status:"
+              sudo docker ps -a | grep "inty-push-worker-${{ steps.set-environment.outputs.environment }}" || echo "Container not found"
+              echo "Attempting to get logs (may be empty with gcplogs):"
               sudo docker logs inty-push-worker-${{ steps.set-environment.outputs.environment }} 2>&1 || true
               exit 1
             fi
