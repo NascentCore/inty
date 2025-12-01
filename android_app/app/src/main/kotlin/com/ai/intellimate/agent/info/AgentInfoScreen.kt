@@ -3,7 +3,6 @@ package com.ai.intellimate.agent.info
 import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.utils.ToastUtils
@@ -23,22 +22,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -77,6 +77,7 @@ import com.ai.intellimate.boost.ui.BoostStatusChip
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.formatDisplayId
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -110,8 +111,7 @@ internal fun AiAgentInfoScreen(
 ) {
     val context = LocalContext.current
     val isDebugMode = HeartAppUtils.isAppDebugMode()
-    var showBottomSheet by remember { mutableStateOf(false) }
-    val bottomSheetState = rememberModalBottomSheetState()
+    val enableRemix = UiConfigs.ChatPage.enableRemix()
     val displayId = remember(agent.id, context) { formatDisplayId(agent.id, context = context) }
 
     // 为角色应援/Boost 功能
@@ -153,14 +153,28 @@ internal fun AiAgentInfoScreen(
                         )
                     },
                     actions = {
-                        Image(
-                            modifier =
-                                Modifier.padding(horizontal = 12.dp).noRippleClickable {
-                                    showBottomSheet = true
-                                },
-                            painter = painterResource(R.drawable.icon_more2),
-                            contentDescription = null,
-                        )
+                        if (enableRemix) {
+                            Box(
+                                modifier =
+                                    Modifier.padding(horizontal = 12.dp)
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.35f))
+                                        .noRippleClickable {
+                                            ToastUtils.showShort(
+                                                R.string.str_remix_feature_under_construction
+                                            )
+                                        },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AutoAwesome,
+                                    contentDescription =
+                                        stringResource(R.string.str_remix_feature_under_construction),
+                                    tint = Color.White,
+                                )
+                            }
+                        }
                     },
                 )
             },
@@ -398,28 +412,6 @@ internal fun AiAgentInfoScreen(
             }
         }
     }
-
-    // 底部菜单
-    if (showBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showBottomSheet = false },
-            sheetState = bottomSheetState,
-            containerColor = HeartColor.primaryColor,
-            contentColor = Color.White,
-        ) {
-            BottomSheetContent(
-                onReportClick = {
-                    showBottomSheet = false
-                    // 检查是否已登录
-                    if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                        ReportActivity.Companion.launch(context, agent.id, "AGENT")
-                    }
-                },
-                onCancelClick = { showBottomSheet = false },
-            )
-        }
-    }
-
     // Boost Sheet (仅在 debug 模式下)
     if (isDebugMode && showBoostSheet) {
         BoostSheet(
@@ -573,45 +565,6 @@ private fun AgentSpacerLine() {
                 )
     ) {}
     Spacer(Modifier.height(4.dp))
-}
-
-@Composable
-private fun BottomSheetContent(onReportClick: () -> Unit, onCancelClick: () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp)) {
-        // Report按钮
-        Button(
-            onClick = onReportClick,
-            modifier = Modifier.fillMaxWidth().height(60.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0x3378599A)),
-            shape = RoundedCornerShape(16.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.str_report),
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Normal,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Cancel按钮
-        Button(
-            onClick = onCancelClick,
-            modifier = Modifier.fillMaxWidth().height(60.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0x3378599A)),
-            shape = RoundedCornerShape(16.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.cancel_button),
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Normal,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-    }
 }
 
 @Composable

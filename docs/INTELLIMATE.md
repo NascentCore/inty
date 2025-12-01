@@ -1,4 +1,4 @@
-# IntelliMate Resource Guide
+# IntelliMate User Guide
 
 > CREATED_BY_AGENT
 
@@ -17,9 +17,40 @@ This guide gives IntelliMate users a clear, plain-language map of where to find 
 
 ## App Overview (placeholder)
 
-![Home screen placeholder](<ADD_HOME_SCREENSHOT_URL_HERE>)
+### Bottom navigation bar
 
-> Replace with a current screenshot that shows the bottom navigation (Explore / Chats / Profile).
+Bottom navigation bar host entry points of IntelliMate App's primary features. The icons are (from left to right):
+- **Chats** for you to chat and interact with IntelliMate, and the main portal to IntelliMate's long-term AI companionship experience
+- **Messages** for you to return to your IntelliMate AI companions
+- **Create IntelliMate** for you to create your own IntelliMate for long-term AI companionship
+- **Explore IntelliMates** for you to explore and find your desired IntelliMates
+- **Me** for managing your **Premium subscription** and general settings of the app
+
+<img width="480" height="96" alt="image" src="https://github.com/user-attachments/assets/349658de-d749-40af-a3cc-4e9613fcf6ac" />
+
+We'll go through each of these pages one by one as follows:
+
+### Chats page
+
+Click the **Chats** or the **left-most** icon to open the chat page. Below is an overview of the functionality on the page.
+
+<img width="480" height="2207" alt="image" src="https://github.com/user-attachments/assets/2dd7c9b6-d6c4-4fc4-b26d-885bf8541c01" />
+
+### Messages page
+
+Click the **Messages** or the **2nd** icon from the left
+
+### Create IntelliMate page
+
+Click the **Create** or the **middle** to open the Create IntelliMate page.
+
+### Explore IntelliMate page
+
+Click the **Explore** icon to open the Explore IntelliMates page.
+
+### Me page
+
+Click the **Me** or the **right-most** icon
 
 ## Where do I go to…?
 
