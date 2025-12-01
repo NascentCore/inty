@@ -17,12 +17,10 @@ interface ChatSyncStateDao {
     @Query("SELECT * FROM chat_sync_state WHERE agentId = :agentId LIMIT 1")
     suspend fun get(agentId: String): ChatSyncStateEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(entity: ChatSyncStateEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(entity: ChatSyncStateEntity)
 
     @Query("DELETE FROM chat_sync_state WHERE agentId = :agentId")
     suspend fun delete(agentId: String)
 
-    @Query("DELETE FROM chat_sync_state")
-    suspend fun deleteAll()
+    @Query("DELETE FROM chat_sync_state") suspend fun deleteAll()
 }

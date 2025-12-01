@@ -58,24 +58,28 @@ data class BoostLeaderboardEntry(
 /** 记录积分来源，方便事件与 UI 展示。 */
 sealed class PointSource(val analyticsName: String) {
     data class Chat(val agentId: String) : PointSource("chat")
+
     data class Image(val agentId: String) : PointSource("image")
+
     data class Audio(val agentId: String) : PointSource("audio")
+
     object SignIn : PointSource("sign_in")
+
     object Manual : PointSource("manual")
 }
 
 /** Boost 功能相关的错误类型。 */
 sealed class BoostError {
     data object NotEnoughPoints : BoostError()
+
     data object DailyRewardAlreadyClaimed : BoostError()
+
     data object InvalidAmount : BoostError()
+
     data object NotInitialized : BoostError()
 }
 
-data class BoostResult(
-    val info: AgentBoostInfo,
-    val pointsSpent: Int,
-)
+data class BoostResult(val info: AgentBoostInfo, val pointsSpent: Int)
 
 class BoostException(val error: BoostError) : IllegalStateException(error.toString())
 
@@ -113,7 +117,10 @@ internal fun AgentBoostInfo.toSnapshot(): AgentBoostInfoSnapshot {
     )
 }
 
-internal fun AgentBoostInfoSnapshot.increment(points: Int, timestamp: Long): AgentBoostInfoSnapshot {
+internal fun AgentBoostInfoSnapshot.increment(
+    points: Int,
+    timestamp: Long,
+): AgentBoostInfoSnapshot {
     val additionalBoosts = points / BoostConfig.BOOST_STEP_POINTS
     return copy(
         pointsInvested = pointsInvested + points,

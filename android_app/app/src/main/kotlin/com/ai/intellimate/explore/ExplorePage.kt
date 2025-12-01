@@ -4,6 +4,7 @@ import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.startup.ImagePreloadManager
 import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.utils.ToastUtils
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,18 +17,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,7 +38,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.Text
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -49,7 +50,6 @@ import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.BoostState
 import com.ai.intellimate.boost.ui.BoostLeaderboardTab
 import com.ai.intellimate.chat.ChatActivity
-import ai.sxwl.android.utils.ToastUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -74,27 +74,30 @@ fun ExplorePage(
     val scope = rememberCoroutineScope()
     val isDebugMode = HeartAppUtils.isAppDebugMode()
     var selectedTab by remember { mutableStateOf(ExploreSubTab.Recommended) }
-    val boostState by if (isDebugMode) BoostManager.boostState.collectAsState() else remember { mutableStateOf(BoostState()) }
-    val leaderboard by if (isDebugMode) BoostManager.leaderboard.collectAsState() else remember { mutableStateOf(emptyList<BoostLeaderboardEntry>()) }
+    val boostState by
+        if (isDebugMode) BoostManager.boostState.collectAsState()
+        else remember { mutableStateOf(BoostState()) }
+    val leaderboard by
+        if (isDebugMode) BoostManager.leaderboard.collectAsState()
+        else remember { mutableStateOf(emptyList<BoostLeaderboardEntry>()) }
 
     // 获取Paging数据流
     val agentsFlow = viewModel.getRecommendAgentsFlow()
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
 
-    val handleLeaderboardAction: (BoostLeaderboardEntry, Boolean) -> Unit =
-        { entry, showSheet ->
-            if (entry.isSeed || entry.agentId.isBlank()) {
-                ToastUtils.showShort(R.string.boost_seed_placeholder_toast)
-            } else {
-                ChatActivity.launch(
-                    context,
-                    agentInfo = null,
-                    agentId = entry.agentId,
-                    pageSource = ChatActivity.EXPLORE_TAB,
-                    showBoostSheet = showSheet,
-                )
-            }
+    val handleLeaderboardAction: (BoostLeaderboardEntry, Boolean) -> Unit = { entry, showSheet ->
+        if (entry.isSeed || entry.agentId.isBlank()) {
+            ToastUtils.showShort(R.string.boost_seed_placeholder_toast)
+        } else {
+            ChatActivity.launch(
+                context,
+                agentInfo = null,
+                agentId = entry.agentId,
+                pageSource = ChatActivity.EXPLORE_TAB,
+                showBoostSheet = showSheet,
+            )
         }
+    }
 
     // 使用 PageTrackingHelper 进行页面跟踪
     LaunchedEffect(Unit) {

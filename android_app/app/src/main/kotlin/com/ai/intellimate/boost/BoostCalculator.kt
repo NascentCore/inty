@@ -29,8 +29,7 @@ object BoostCalculator {
 
     fun clampDailyGain(current: Int, delta: Int): Int {
         if (delta <= 0) return 0
-        val allowed =
-            BoostConfig.MAX_POINTS_PER_DAY
+        val allowed = BoostConfig.MAX_POINTS_PER_DAY
         if (current >= allowed) return 0
         return min(delta, allowed - current)
     }

@@ -42,7 +42,8 @@ object BoostManager {
     fun recordChatTokens(agentInfo: AgentInfo?, message: String) {
         if (agentInfo == null || message.isBlank()) return
         val repo = repository ?: return
-        val points = BoostCalculator.tokensToPoints(BoostCalculator.estimateTokensFromMessage(message))
+        val points =
+            BoostCalculator.tokensToPoints(BoostCalculator.estimateTokensFromMessage(message))
         if (points <= 0) return
         scope.launch {
             repo.addPoints(points, PointSource.Chat(agentInfo.id))
@@ -99,7 +100,7 @@ object BoostManager {
                 "agent_name" to agentInfo.name,
                 "points" to normalized,
                 "total_boosts" to info.boostCount,
-            )
+            ),
         )
         return result
     }
@@ -113,7 +114,11 @@ object BoostManager {
         }
     }
 
-    private suspend fun logPointsEvent(source: PointSource, points: Int, agentName: String? = null) {
+    private suspend fun logPointsEvent(
+        source: PointSource,
+        points: Int,
+        agentName: String? = null,
+    ) {
         _events.emit(BoostEvent.PointsEarned(source, points))
         val params =
             FirebaseManager.safeEventParams(
@@ -132,6 +137,7 @@ object BoostManager {
 
 sealed class BoostEvent {
     data class PointsEarned(val source: PointSource, val points: Int) : BoostEvent()
+
     data class BoostSuccess(
         val agentId: String,
         val agentName: String,
