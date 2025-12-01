@@ -6,6 +6,7 @@ from googleapiclient.errors import HttpError
 from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.schemas.version import VersionReminderAction
 
 
 class GooglePlayService:
@@ -529,6 +530,7 @@ class GooglePlayService:
                     "update_required": False,
                     "force_update": False,
                     "message": "Version check disabled",
+                    "reminder_action": VersionReminderAction.SETTINGS_REMINDER,
                 }
 
             # 获取最新版本信息
@@ -543,6 +545,7 @@ class GooglePlayService:
                     "force_update": False,
                     "message": "Unable to fetch version info",
                     "error": version_info["error"],
+                    "reminder_action": VersionReminderAction.SETTINGS_REMINDER,
                 }
 
             latest_version_name = version_info.get("version_name", "")
@@ -596,6 +599,14 @@ class GooglePlayService:
             else:
                 result["message"] = "App is up to date"
 
+            reminder_action: Optional[VersionReminderAction] = None
+            if force_update:
+                reminder_action = VersionReminderAction.BLOCK_ACCESS
+            elif update_required:
+                reminder_action = VersionReminderAction.POP_UP_REMINDER
+
+            result["reminder_action"] = reminder_action
+
             # 详细日志记录
             log_msg = (
                 f"版本检查完成: 客户端={client_version_code}, 最新={latest_version_code}, "
@@ -616,6 +627,7 @@ class GooglePlayService:
                 "force_update": False,
                 "message": "Version check failed",
                 "error": str(e),
+                "reminder_action": VersionReminderAction.SETTINGS_REMINDER,
             }
 
     def _compare_versions(self, version_code1, version_code2) -> bool:

@@ -34,7 +34,8 @@ Check if the client app needs to update.
     "minimum_version": "1.0.0",
     "changelog": "Bug fixes and performance improvements",
     "download_url": "https://play.google.com/store/apps/details?id=com.ai.inty",
-    "message": "Update available"
+    "message": "Update available",
+    "reminder_action": "POP_UP_REMINDER"
   }
 }
 ```
@@ -100,6 +101,7 @@ google_play:
 - `minimum_version`: Minimum supported version (below this requires force update)
 - `changelog`: Release notes from Google Play Console
 - `download_url`: Direct link to app on Play Store
+- `reminder_action`: 客户端需要展示的提醒动作，可能为 `POP_UP_REMINDER`（普通提醒弹窗）、`SETTINGS_REMINDER`（提示用户前往设置/应用商店查看版本）、`BLOCK_ACCESS`（强制拦截继续使用）
 
 ## Error Handling
 
@@ -112,7 +114,8 @@ If the Google Play API is unavailable, the service will return a safe response a
   "update_required": false,
   "force_update": false,
   "message": "Version check failed but app can continue",
-  "error": "API connection failed"
+  "error": "API connection failed",
+  "reminder_action": "SETTINGS_REMINDER"
 }
 ```
 
@@ -136,12 +139,19 @@ async function checkForUpdates() {
     const result = await response.json();
     const versionData = result.data;
 
-    if (versionData.force_update) {
-      // Show mandatory update dialog
-      showForceUpdateDialog(versionData);
-    } else if (versionData.update_required) {
-      // Show optional update prompt
-      showUpdatePrompt(versionData);
+    switch (versionData.reminder_action) {
+      case "BLOCK_ACCESS":
+        showForceUpdateDialog(versionData);
+        break;
+      case "POP_UP_REMINDER":
+        showUpdatePrompt(versionData);
+        break;
+      case "SETTINGS_REMINDER":
+        showSettingsReminder(versionData);
+        break;
+      default:
+        // No additional reminder required
+        break;
     }
   } catch (error) {
     console.log("Version check failed, continuing normally");
