@@ -52,7 +52,7 @@ import sys
 import types
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from googleapiclient.errors import HttpError
@@ -89,13 +89,14 @@ def fake_service():
 
 
 @pytest.fixture
-def google_play_service(fake_service, mock_config):
+def google_play_service(fake_service, mock_config, monkeypatch):
     """创建 GooglePlayService 实例"""
-    with patch(
+    # 使用 monkeypatch 在整个测试期间保持 patch 活跃
+    monkeypatch.setattr(
         "app.external_services.google_play_service.global_config_loaded_from_config_yaml",
         mock_config,
-    ):
-        return GooglePlayService(fake_service)
+    )
+    return GooglePlayService(fake_service)
 
 
 class TestVerifySubscriptionPurchase:
