@@ -10,4 +10,8 @@ docker exec -it inty-backend-dev bash
 export PYTHONPATH=.
 python scripts/create_email_password_superuser.py --help
 python scripts/create_email_password_superuser.py --email <email> --password <password>
+
+# 如需删除账户
+psql -h localhost -U postgres -d inty
+inty=# delete from users where email = 'test@gmail.com';
 ```
