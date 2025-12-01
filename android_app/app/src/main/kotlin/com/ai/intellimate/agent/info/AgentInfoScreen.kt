@@ -413,7 +413,23 @@ internal fun AiAgentInfoScreen(
         }
     }
 
-    // Boost Sheet (仅在 debug 模式下)
+    // Boost Sheet 弹窗（仅在 debug 模式下显示）
+    // 显示位置：角色主页（AgentInfoScreen）底部，以半屏弹窗形式展示
+    // 显示时机：
+    //   1. 必须在 debug 模式下（isDebugMode == true）
+    //   2. 用户点击了角色主页中的 BoostStatusChip（第 291-301 行），且可用积分 >= 100 pts
+    //   3. 此时 showBoostSheet 被设置为 true，触发此弹窗显示
+    // UI 效果：半屏底部弹窗，包含：
+    //   - 当前角色的 Boost 信息
+    //   - 可用积分显示
+    //   - 积分投入滑条/步进器（每步 100 pts）
+    //   - Boost 确认按钮
+    //   - 每日签到奖励按钮
+    // 交互流程：
+    //   - 用户点击 BoostStatusChip → 打开此弹窗
+    //   - 用户选择投入积分并确认 → 执行 Boost 操作 → 显示成功 Toast → 关闭弹窗
+    //   - 用户点击每日签到 → 领取奖励 → 显示奖励 Toast → 关闭弹窗（如果已领取）
+    //   - 用户点击关闭/取消 → 关闭弹窗
     if (isDebugMode && showBoostSheet) {
         BoostSheet(
             agentInfo = agent,
