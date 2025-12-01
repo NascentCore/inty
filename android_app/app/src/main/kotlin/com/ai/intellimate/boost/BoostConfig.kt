@@ -30,8 +30,7 @@ object BoostConfig {
     const val LEADERBOARD_LIMIT = 100
 
     /** MMKV 存储键名（已废弃，保留用于兼容性）。 */
-    @Deprecated("使用 BoostStorage 内部常量", ReplaceWith(""))
-    const val STORAGE_FILE_NAME = "boost_state"
+    @Deprecated("使用 BoostStorage 内部常量", ReplaceWith("")) const val STORAGE_FILE_NAME = "boost_state"
 }
 
 /** 排行榜趋势展示类型。 */

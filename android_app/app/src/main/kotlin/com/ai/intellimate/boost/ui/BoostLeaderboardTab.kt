@@ -27,12 +27,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
@@ -50,12 +50,7 @@ fun BoostLeaderboardTab(
     onBoost: (BoostLeaderboardEntry) -> Unit,
     onClaimReward: () -> Unit,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
+    Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
         BoostStatusChip(
             modifier = Modifier.fillMaxWidth(),
             availablePoints = availablePoints,
@@ -77,9 +72,13 @@ fun BoostLeaderboardTab(
                 ),
             border = ButtonDefaults.outlinedButtonBorder(enabled = !hasDailyReward),
         ) {
-            Text(text = stringResource(
-                if (hasDailyReward) R.string.boost_daily_reward_claimed else R.string.boost_daily_reward_cta
-            ))
+            Text(
+                text =
+                    stringResource(
+                        if (hasDailyReward) R.string.boost_daily_reward_claimed
+                        else R.string.boost_daily_reward_cta
+                    )
+            )
         }
 
         Spacer(Modifier.height(24.dp))
@@ -113,7 +112,8 @@ fun BoostLeaderboardTab(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                itemsIndexed(entries, key = { _, item -> item.agentId + item.rank }) { index, entry ->
+                itemsIndexed(entries, key = { _, item -> item.agentId + item.rank }) { index, entry
+                    ->
                     BoostLeaderboardRow(
                         entry = entry,
                         onBoost = { onBoost(entry) },
@@ -139,7 +139,7 @@ private fun BoostLeaderboardRow(
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color(0xFF15151A))
-                .padding(16.dp),
+                .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -151,19 +151,25 @@ private fun BoostLeaderboardRow(
             Spacer(Modifier.size(12.dp))
             AsyncImage(
                 modifier = Modifier.size(48.dp).clip(CircleShape),
-                model =
-                    ImageRequest.Builder(LocalContext.current)
-                        .data(entry.avatarUrl)
-                        .build(),
+                model = ImageRequest.Builder(LocalContext.current).data(entry.avatarUrl).build(),
                 placeholder = painterResource(R.drawable.img_default_avatar),
                 error = painterResource(R.drawable.img_default_avatar),
                 contentDescription = null,
             )
             Spacer(Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = entry.agentName, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Text(
-                    text = stringResource(R.string.boost_points_value, entry.boostCount * BoostConfig.BOOST_STEP_POINTS),
+                    text = entry.agentName,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.boost_points_value,
+                            entry.boostCount * BoostConfig.BOOST_STEP_POINTS,
+                        ),
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 12.sp,
                 )

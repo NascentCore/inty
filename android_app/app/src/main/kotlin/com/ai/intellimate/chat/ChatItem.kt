@@ -35,16 +35,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,6 +80,7 @@ import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.ChatTextFormatter
+import kotlinx.coroutines.delay
 
 private fun debugOnlyCopyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService<ClipboardManager>()
@@ -170,7 +169,6 @@ private fun ChatItemAI(
                             agentName = agentInfo?.name,
                         )
 
-
                     val allMessages by viewModel.msgs.collectAsState()
                     val actualChatMessages =
                         allMessages.filter { !it.isOpening() && it.role != "system" }
@@ -257,27 +255,31 @@ private fun ChatItemAI(
                     val allMessages by viewModel.msgs.collectAsState()
                     val agentInfo by viewModel.agentInfo.collectAsState()
                     val agentId = agentInfo?.id ?: ""
-                    
+
                     // 记录查询完成时已存在的消息ID列表，用于区分历史消息和新消息
                     // 使用 LaunchedEffect 在查询完成的瞬间记录消息列表
                     // 使用 agentId 作为 key，确保切换会话时重置状态
-                    var messagesAtQueryComplete by remember(agentId) { mutableStateOf<Set<String>>(emptySet()) }
-                    
+                    var messagesAtQueryComplete by
+                        remember(agentId) { mutableStateOf<Set<String>>(emptySet()) }
+
                     LaunchedEffect(isQueryMsgsCompleted, agentId) {
                         if (isQueryMsgsCompleted) {
                             if (messagesAtQueryComplete.isEmpty()) {
                                 // 查询完成的瞬间，记录当前所有消息的ID
                                 // 优先使用服务器ID，如果没有则使用localMsgId
-                                messagesAtQueryComplete = allMessages.mapNotNull { 
-                                    it.id.takeIf { id -> id.isNotEmpty() } ?: it.localMsgId 
-                                }.toSet()
+                                messagesAtQueryComplete =
+                                    allMessages
+                                        .mapNotNull {
+                                            it.id.takeIf { id -> id.isNotEmpty() } ?: it.localMsgId
+                                        }
+                                        .toSet()
                             }
                         } else {
                             // 查询未完成时，重置状态（切换会话时会触发）
                             messagesAtQueryComplete = emptySet()
                         }
                     }
-                    
+
                     Row(modifier = Modifier.fillMaxWidth()) {
                         val context = LocalContext.current
                         Box(
@@ -296,7 +298,8 @@ private fun ChatItemAI(
                                         )
                                     }
                         ) {
-                            val isFlow = isLatestMessage &&
+                            val isFlow =
+                                isLatestMessage &&
                                     shouldFlowShow &&
                                     item.role == "assistant" &&
                                     item.content.isNotEmpty() &&
@@ -313,7 +316,7 @@ private fun ChatItemAI(
                                     onDisplayComplete = {
                                         // 标记消息已完整显示，避免再次流式显示
                                         viewModel.newMsgFlowFinish()
-                                    }
+                                    },
                                 )
                             }
 
@@ -594,44 +597,43 @@ private fun StyledMessageText(
     normalColor: Color,
     actionColor: Color,
     isFlow: Boolean = false,
-    onDisplayComplete: (() -> Unit)? = null
+    onDisplayComplete: (() -> Unit)? = null,
 ) {
 
     // 构建当前显示的文本
-    val displayedText = if (isFlow) {
-        // 将文本分割为单词（保留空格和标点）
-        val words = remember(text) {
-            splitIntoWords(text)
-        }
+    val displayedText =
+        if (isFlow) {
+            // 将文本分割为单词（保留空格和标点）
+            val words = remember(text) { splitIntoWords(text) }
 
-        // 当前显示的单词数量
-        var displayedWordCount by remember(text) { mutableIntStateOf(0) }
-        val displayCompleteCall by rememberUpdatedState(onDisplayComplete)
+            // 当前显示的单词数量
+            var displayedWordCount by remember(text) { mutableIntStateOf(0) }
+            val displayCompleteCall by rememberUpdatedState(onDisplayComplete)
 
-        // 流式显示逻辑
-        LaunchedEffect(text) {
-            displayedWordCount = 0
-            words.forEachIndexed { index, _ ->
-                delay(50) // 每个单词延迟50ms
-                displayedWordCount = index + 1
+            // 流式显示逻辑
+            LaunchedEffect(text) {
+                displayedWordCount = 0
+                words.forEachIndexed { index, _ ->
+                    delay(50) // 每个单词延迟50ms
+                    displayedWordCount = index + 1
+                }
+                // 所有单词显示完成后，调用回调
+                displayCompleteCall?.invoke()
             }
-            // 所有单词显示完成后，调用回调
-            displayCompleteCall?.invoke()
+
+            /*DisposableEffect(Unit) {
+                onDispose { displayCompleteCall?.invoke() }
+            }*/
+
+            remember(displayedWordCount, words, text) {
+                val partialText = words.take(displayedWordCount).joinToString("")
+                // 检查并补完括号，确保括号始终完整
+                ensureBracketsComplete(partialText, text)
+            }
+        } else {
+            text
         }
 
-        /*DisposableEffect(Unit) {
-            onDispose { displayCompleteCall?.invoke() }
-        }*/
-
-        remember(displayedWordCount, words, text) {
-            val partialText = words.take(displayedWordCount).joinToString("")
-            // 检查并补完括号，确保括号始终完整
-            ensureBracketsComplete(partialText, text)
-        }
-    } else {
-        text
-    }
-    
     Text(
         text =
             ChatTextFormatter.formatChatMessage(
@@ -645,18 +647,16 @@ private fun StyledMessageText(
 }
 
 /**
- * 将文本分割为单词，保留空格和标点符号
- * 使用正则表达式按单词边界分割，保留空格
- * 例如："Hello (world) test" -> ["Hello ", "(world) ", "test"]
+ * 将文本分割为单词，保留空格和标点符号 使用正则表达式按单词边界分割，保留空格 例如："Hello (world) test" -> ["Hello ", "(world) ", "test"]
  */
 private fun splitIntoWords(text: String): List<String> {
     if (text.isEmpty()) return emptyList()
-    
+
     val words = mutableListOf<String>()
     // 使用正则表达式匹配：非空白字符序列（单词，包括括号、标点等）和后续的空白字符
     val pattern = Regex("""\S+\s*""")
     var lastIndex = 0
-    
+
     pattern.findAll(text).forEach { matchResult ->
         // 如果匹配结果之前有未匹配的字符（如开头的空格），先添加它们
         if (matchResult.range.first > lastIndex) {
@@ -665,22 +665,23 @@ private fun splitIntoWords(text: String): List<String> {
         words.add(matchResult.value)
         lastIndex = matchResult.range.last + 1
     }
-    
+
     // 添加剩余的文本（如末尾的空格）
     if (lastIndex < text.length) {
         words.add(text.substring(lastIndex))
     }
-    
+
     // 如果正则没有匹配到任何内容，返回原文本
     if (words.isEmpty()) {
         return listOf(text)
     }
-    
+
     return words
 }
 
 /**
  * 确保括号完整：检查部分文本中的括号是否完整，如果不完整则补完
+ *
  * @param partialText 部分显示的文本
  * @param fullText 完整文本
  * @return 补完括号后的文本
@@ -689,21 +690,21 @@ private fun ensureBracketsComplete(partialText: String, fullText: String): Strin
     if (partialText.isEmpty() || partialText.length >= fullText.length) {
         return partialText
     }
-    
+
     // 找到完整文本中的所有括号对
     val bracketPairs = findBracketPairs(fullText)
-    
+
     // 检查部分文本中是否有未完成的括号
     val result = StringBuilder(partialText)
-    
+
     bracketPairs.forEach { (start, end) ->
         val bracketStartChar = fullText[start]
         val bracketEndChar = fullText[end]
-        
+
         // 统计部分文本中开始括号和结束括号的数量
         var startCount = 0
         var endCount = 0
-        
+
         for (i in 0 until minOf(partialText.length, fullText.length)) {
             if (i < partialText.length && i < fullText.length) {
                 when (partialText[i]) {
@@ -712,7 +713,7 @@ private fun ensureBracketsComplete(partialText: String, fullText: String): Strin
                 }
             }
         }
-        
+
         // 如果部分文本中有开始括号但没有对应的结束括号，需要补完
         if (startCount > endCount) {
             // 检查部分文本是否已经包含了括号内的部分内容
@@ -720,16 +721,17 @@ private fun ensureBracketsComplete(partialText: String, fullText: String): Strin
             if (partialText.length > start) {
                 // 获取括号后的空格（如果有）
                 val afterBracket = end + 1
-                val trailingSpace = if (afterBracket < fullText.length && fullText[afterBracket].isWhitespace()) {
-                    var spaceEnd = afterBracket
-                    while (spaceEnd < fullText.length && fullText[spaceEnd].isWhitespace()) {
-                        spaceEnd++
+                val trailingSpace =
+                    if (afterBracket < fullText.length && fullText[afterBracket].isWhitespace()) {
+                        var spaceEnd = afterBracket
+                        while (spaceEnd < fullText.length && fullText[spaceEnd].isWhitespace()) {
+                            spaceEnd++
+                        }
+                        fullText.substring(afterBracket, spaceEnd)
+                    } else {
+                        ""
                     }
-                    fullText.substring(afterBracket, spaceEnd)
-                } else {
-                    ""
-                }
-                
+
                 // 在部分文本的末尾添加结束括号和后续空格
                 // 但需要检查是否已经添加过了
                 if (!result.endsWith(bracketEndChar)) {
@@ -738,14 +740,11 @@ private fun ensureBracketsComplete(partialText: String, fullText: String): Strin
             }
         }
     }
-    
+
     return result.toString()
 }
 
-/**
- * 查找匹配的括号对（包括中英文括号）
- * 复用 ChatTextFormatter 的逻辑
- */
+/** 查找匹配的括号对（包括中英文括号） 复用 ChatTextFormatter 的逻辑 */
 private fun findBracketPairs(text: String): List<Pair<Int, Int>> {
     val bracketPairs = mutableListOf<Pair<Int, Int>>()
     val stack = mutableListOf<Pair<Char, Int>>()

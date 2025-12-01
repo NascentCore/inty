@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -23,7 +22,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -55,11 +53,7 @@ import com.ai.intellimate.boost.BoostConfig
 import kotlinx.coroutines.launch
 
 @Composable
-fun BoostStatusChip(
-    modifier: Modifier = Modifier,
-    availablePoints: Int,
-    onClick: () -> Unit,
-) {
+fun BoostStatusChip(modifier: Modifier = Modifier, availablePoints: Int, onClick: () -> Unit) {
     val canBoost = availablePoints >= BoostConfig.BOOST_STEP_POINTS
     val gradient =
         Brush.horizontalGradient(
@@ -105,7 +99,11 @@ fun BoostStatusChip(
             )
         }
         Text(
-            text = stringResource(if (canBoost) R.string.boost_points_action else R.string.boost_points_action_disabled),
+            text =
+                stringResource(
+                    if (canBoost) R.string.boost_points_action
+                    else R.string.boost_points_action_disabled
+                ),
             color = if (canBoost) Color.White else Color.White.copy(alpha = 0.4f),
             fontSize = 12.sp,
             modifier = Modifier.padding(start = 8.dp),
@@ -125,14 +123,12 @@ fun BoostSheet(
 ) {
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var desiredPoints by remember(availablePoints) {
-        mutableIntStateOf(
-            BoostCalculator.normalizeBoostAmount(
-                BoostConfig.BOOST_STEP_POINTS,
-                availablePoints,
+    var desiredPoints by
+        remember(availablePoints) {
+            mutableIntStateOf(
+                BoostCalculator.normalizeBoostAmount(BoostConfig.BOOST_STEP_POINTS, availablePoints)
             )
-        )
-    }
+        }
 
     LaunchedEffect(availablePoints) {
         desiredPoints =
@@ -147,7 +143,10 @@ fun BoostSheet(
         sheetState = sheetState,
         containerColor = Color(0xFF0F0F11),
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             BoostSheetHeader(agentInfo = agentInfo)
 
             BoostPointsSummary(availablePoints = availablePoints, desiredPoints = desiredPoints)
@@ -157,12 +156,15 @@ fun BoostSheet(
                 availablePoints = availablePoints,
                 onIncrease = {
                     desiredPoints =
-                        (desiredPoints + BoostConfig.BOOST_STEP_POINTS).coerceAtMost(availablePoints)
+                        (desiredPoints + BoostConfig.BOOST_STEP_POINTS).coerceAtMost(
+                            availablePoints
+                        )
                 },
                 onDecrease = {
                     desiredPoints =
-                        (desiredPoints - BoostConfig.BOOST_STEP_POINTS)
-                            .coerceAtLeast(BoostConfig.BOOST_STEP_POINTS)
+                        (desiredPoints - BoostConfig.BOOST_STEP_POINTS).coerceAtLeast(
+                            BoostConfig.BOOST_STEP_POINTS
+                        )
                 },
             )
 
@@ -181,8 +183,9 @@ fun BoostSheet(
                         onBoostConfirmed(desiredPoints)
                     }
                 },
-                enabled = desiredPoints >= BoostConfig.BOOST_STEP_POINTS &&
-                    availablePoints >= BoostConfig.BOOST_STEP_POINTS,
+                enabled =
+                    desiredPoints >= BoostConfig.BOOST_STEP_POINTS &&
+                        availablePoints >= BoostConfig.BOOST_STEP_POINTS,
                 modifier = Modifier.fillMaxWidth(),
                 colors =
                     ButtonDefaults.buttonColors(
@@ -194,21 +197,12 @@ fun BoostSheet(
                 Text(text = stringResource(R.string.boost_sheet_confirm))
             }
 
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = stringResource(R.string.boost_sheet_cancel),
-                    color = Color.White,
-                )
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                Text(text = stringResource(R.string.boost_sheet_cancel), color = Color.White)
             }
 
             if (!hasDailyReward) {
-                TextButton(
-                    onClick = onClaimDailyReward,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
+                TextButton(onClick = onClaimDailyReward, modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = stringResource(R.string.boost_daily_reward_cta),
                         color = Color(0xFFFFB347),
@@ -221,7 +215,10 @@ fun BoostSheet(
 
 @Composable
 private fun BoostSheetHeader(agentInfo: AgentInfo) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         AsyncImage(
             modifier = Modifier.size(52.dp).clip(CircleShape),
             model =
@@ -234,8 +231,17 @@ private fun BoostSheetHeader(agentInfo: AgentInfo) {
             contentDescription = null,
         )
         Column {
-            Text(text = stringResource(R.string.boost_sheet_title), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
-            Text(text = agentInfo.name, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                text = stringResource(R.string.boost_sheet_title),
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 12.sp,
+            )
+            Text(
+                text = agentInfo.name,
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }
@@ -280,10 +286,7 @@ private fun BoostStepper(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(
-            onClick = onDecrease,
-            enabled = desiredPoints > BoostConfig.BOOST_STEP_POINTS,
-        ) {
+        IconButton(onClick = onDecrease, enabled = desiredPoints > BoostConfig.BOOST_STEP_POINTS) {
             Icon(
                 painter = painterResource(R.drawable.ic_arrow_down),
                 contentDescription = "Decrease",
@@ -298,7 +301,8 @@ private fun BoostStepper(
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = stringResource(R.string.boost_points_step_hint, BoostConfig.BOOST_STEP_POINTS),
+                text =
+                    stringResource(R.string.boost_points_step_hint, BoostConfig.BOOST_STEP_POINTS),
                 color = Color.White.copy(alpha = 0.6f),
                 fontSize = 12.sp,
             )

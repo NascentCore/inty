@@ -114,9 +114,14 @@ internal fun ChatPage(
     // 为角色应援/Boost 功能
     // 这里是 AI 生成代码，不清楚 UI 上有什么影响
     val isDebugMode = HeartAppUtils.isAppDebugMode()
-    val boostState by if (isDebugMode) BoostManager.boostState.collectAsState() else remember { mutableStateOf(BoostState()) }
+    val boostState by
+        if (isDebugMode) BoostManager.boostState.collectAsState()
+        else remember { mutableStateOf(BoostState()) }
     var showBoostSheet by remember { mutableStateOf(false) }
-    var pendingBoostSheet by remember(shouldShowBoostSheetOnOpen && isDebugMode) { mutableStateOf(shouldShowBoostSheetOnOpen && isDebugMode) }
+    var pendingBoostSheet by
+        remember(shouldShowBoostSheetOnOpen && isDebugMode) {
+            mutableStateOf(shouldShowBoostSheetOnOpen && isDebugMode)
+        }
     val scope = rememberCoroutineScope()
     val showBoostError: (BoostError) -> Unit = { error ->
         val messageRes =
@@ -729,7 +734,7 @@ internal fun ChatPage(
                                     context.getString(
                                         R.string.boost_toast_daily_reward_claimed,
                                         claimed,
-                                    ),
+                                    )
                                 )
                                 showBoostSheet = false
                             } catch (e: BoostException) {

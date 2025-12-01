@@ -19,8 +19,7 @@ interface ChatMessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(messages: List<ChatMessageEntity>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(entity: ChatMessageEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(entity: ChatMessageEntity)
 
     @Query(
         "SELECT * FROM chat_messages WHERE agentId = :agentId AND (localId = :messageId OR remoteId = :messageId) LIMIT 1"
@@ -35,8 +34,7 @@ interface ChatMessageDao {
     @Query("DELETE FROM chat_messages WHERE agentId = :agentId")
     suspend fun deleteByAgent(agentId: String)
 
-    @Query("DELETE FROM chat_messages")
-    suspend fun deleteAll()
+    @Query("DELETE FROM chat_messages") suspend fun deleteAll()
 
     @Query(
         "UPDATE chat_messages SET audioUrl = :audioUrl, updatedAt = :updatedAt WHERE agentId = :agentId AND (localId = :messageId OR remoteId = :messageId)"

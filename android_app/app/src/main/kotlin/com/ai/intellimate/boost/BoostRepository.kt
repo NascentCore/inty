@@ -56,14 +56,16 @@ class BoostRepository(
             val current = BoostStorage.getBoostState()
             val gain =
                 when (source) {
-                    PointSource.SignIn, PointSource.Manual -> points
+                    PointSource.SignIn,
+                    PointSource.Manual -> points
                     else -> BoostCalculator.clampDailyGain(current.dailyEnergyEarned, points)
                 }
             if (gain > 0) {
-                val updated = current.copy(
-                    availablePoints = current.availablePoints + gain,
-                    dailyEnergyEarned = current.dailyEnergyEarned + gain,
-                )
+                val updated =
+                    current.copy(
+                        availablePoints = current.availablePoints + gain,
+                        dailyEnergyEarned = current.dailyEnergyEarned + gain,
+                    )
                 BoostStorage.saveBoostState(updated)
                 updateStateFlows()
             }
@@ -77,10 +79,11 @@ class BoostRepository(
                 throw BoostException(BoostError.DailyRewardAlreadyClaimed)
             }
             val claimed = BoostConfig.DAILY_SIGN_IN_REWARD
-            val updated = current.copy(
-                availablePoints = current.availablePoints + BoostConfig.DAILY_SIGN_IN_REWARD,
-                hasClaimedDailyReward = true,
-            )
+            val updated =
+                current.copy(
+                    availablePoints = current.availablePoints + BoostConfig.DAILY_SIGN_IN_REWARD,
+                    hasClaimedDailyReward = true,
+                )
             BoostStorage.saveBoostState(updated)
             updateStateFlows()
             claimed
@@ -109,10 +112,11 @@ class BoostRepository(
                     .copy(agentName = agentInfo.name, avatarUrl = agentInfo.avatar)
                     .increment(points, now)
 
-            val updated = current.copy(
-                availablePoints = current.availablePoints - points,
-                boostsByAgent = current.boostsByAgent + (agentInfo.id to merged),
-            )
+            val updated =
+                current.copy(
+                    availablePoints = current.availablePoints - points,
+                    boostsByAgent = current.boostsByAgent + (agentInfo.id to merged),
+                )
             BoostStorage.saveBoostState(updated)
             updateStateFlows()
             merged.toDomain()
@@ -125,11 +129,12 @@ class BoostRepository(
             runCatching {
                     val current = BoostStorage.getBoostState()
                     if (current.lastResetDate != today) {
-                        val updated = current.copy(
-                            dailyEnergyEarned = 0,
-                            hasClaimedDailyReward = false,
-                            lastResetDate = today,
-                        )
+                        val updated =
+                            current.copy(
+                                dailyEnergyEarned = 0,
+                                hasClaimedDailyReward = false,
+                                lastResetDate = today,
+                            )
                         BoostStorage.saveBoostState(updated)
                         updateStateFlows()
                     }
@@ -156,11 +161,9 @@ class BoostRepository(
                 }
 
         val seeds =
-            seedProvider
-                .seeds(snapshot.boostsByAgent.keys)
-                .mapIndexed { index, entry ->
-                    entry.copy(rank = actual.size + index + 1)
-                }
+            seedProvider.seeds(snapshot.boostsByAgent.keys).mapIndexed { index, entry ->
+                entry.copy(rank = actual.size + index + 1)
+            }
 
         return (actual + seeds)
             .sortedWith(

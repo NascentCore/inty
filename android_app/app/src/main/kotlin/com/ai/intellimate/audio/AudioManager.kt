@@ -2,11 +2,11 @@ package com.ai.intellimate.audio
 
 import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.firebase.FirebaseManager
-import com.ai.intellimate.boost.BoostManager
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import com.ai.intellimate.boost.BoostManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch

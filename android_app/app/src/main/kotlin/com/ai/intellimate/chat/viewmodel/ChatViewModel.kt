@@ -2,6 +2,7 @@ package com.ai.intellimate.chat.viewmodel
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ChatSettingsReq
@@ -15,7 +16,6 @@ import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
-import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
@@ -32,8 +32,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.reduce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -224,7 +222,8 @@ class ChatViewModel : BaseVM() {
                     _msgs.value = list
 
                     val latestAiMsg = list.find { msg -> msg.role == "assistant" }
-                    _shouldFlowShow.value = lastAiMsgInfo != null && latestAiMsg?.id != lastAiMsgInfo?.id
+                    _shouldFlowShow.value =
+                        lastAiMsgInfo != null && latestAiMsg?.id != lastAiMsgInfo?.id
 
                     lastAiMsgInfo = latestAiMsg
                 }
@@ -399,12 +398,12 @@ class ChatViewModel : BaseVM() {
                             ),
                         )
 
-                          val assistantContent =
-                              result.data.data?.choices?.lastOrNull()?.message?.content
-                          if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
-                              BoostManager.recordChatTokens(agent, inputMsg)
-                              assistantContent?.let { BoostManager.recordChatTokens(agent, it) }
-                          }
+                        val assistantContent =
+                            result.data.data?.choices?.lastOrNull()?.message?.content
+                        if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
+                            BoostManager.recordChatTokens(agent, inputMsg)
+                            assistantContent?.let { BoostManager.recordChatTokens(agent, it) }
+                        }
 
                         runCatching {
                                 // 有免费次数限制，需要vip订阅

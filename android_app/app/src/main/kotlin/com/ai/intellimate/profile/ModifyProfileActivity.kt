@@ -27,8 +27,8 @@ import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.ui.components.ProfileInfoScreen
 import com.ai.intellimate.utils.UCropHelper
 import com.yalantis.ucrop.UCrop
-import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 /** 个人设置页面 */
 class ModifyProfileActivity : BaseActivity() {

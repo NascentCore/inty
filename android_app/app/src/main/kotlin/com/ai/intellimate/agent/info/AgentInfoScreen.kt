@@ -31,14 +31,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.Icon
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -66,7 +66,6 @@ import androidx.core.content.getSystemService
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
-import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
@@ -75,12 +74,12 @@ import com.ai.intellimate.boost.BoostState
 import com.ai.intellimate.boost.ui.BoostSheet
 import com.ai.intellimate.boost.ui.BoostStatusChip
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
-import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.formatDisplayId
-import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 private const val CLIPBOARD_LABEL_AGENT_ID = "Agent ID"
 
@@ -115,7 +114,9 @@ internal fun AiAgentInfoScreen(
     val displayId = remember(agent.id, context) { formatDisplayId(agent.id, context = context) }
 
     // 为角色应援/Boost 功能
-    val boostState by if (isDebugMode) BoostManager.boostState.collectAsState() else remember { mutableStateOf(BoostState()) }
+    val boostState by
+        if (isDebugMode) BoostManager.boostState.collectAsState()
+        else remember { mutableStateOf(BoostState()) }
     var showBoostSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val showBoostError: (BoostError) -> Unit = { error ->
@@ -170,7 +171,9 @@ internal fun AiAgentInfoScreen(
                                 Icon(
                                     imageVector = Icons.Rounded.AutoAwesome,
                                     contentDescription =
-                                        stringResource(R.string.str_remix_feature_under_construction),
+                                        stringResource(
+                                            R.string.str_remix_feature_under_construction
+                                        ),
                                     tint = Color.White,
                                 )
                             }
@@ -292,7 +295,9 @@ internal fun AiAgentInfoScreen(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                                 availablePoints = boostState.availablePoints,
                                 onClick = {
-                                    if (boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS) {
+                                    if (
+                                        boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS
+                                    ) {
                                         ToastUtils.showShort(R.string.boost_toast_not_enough_points)
                                     } else {
                                         showBoostSheet = true
