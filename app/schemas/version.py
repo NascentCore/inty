@@ -1,6 +1,15 @@
+from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
+
+
+class VersionReminderAction(str, Enum):
+    """客户端需要展示的提醒类型"""
+
+    POP_UP_REMINDER = "POP_UP_REMINDER"
+    SETTINGS_REMINDER = "SETTINGS_REMINDER"
+    BLOCK_ACCESS = "BLOCK_ACCESS"
 
 
 class VersionCheckRequest(BaseModel):
@@ -27,6 +36,10 @@ class VersionCheckResponse(BaseModel):
     download_url: str = Field(..., description="下载链接")
     message: str = Field(..., description="状态消息")
     error: Optional[str] = Field(None, description="错误信息")
+    reminder_action: Optional[VersionReminderAction] = Field(
+        default=None,
+        description="客户端需要展示的提醒动作，None 表示无需额外提醒",
+    )
 
 
 class AppVersionInfo(BaseModel):
