@@ -71,7 +71,7 @@ const HomePage: React.FC = () => {
 
       <div className="page-content">
         {/* 首页上方 横向广告 */}
-        <AdHomeTop />
+        {/* <AdHomeTop /> */}
         <CharacterList
           recommendList={recommendList}
           loading={loading}
