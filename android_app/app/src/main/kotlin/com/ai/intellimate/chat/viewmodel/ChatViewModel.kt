@@ -406,9 +406,10 @@ class ChatViewModel : BaseVM() {
                                     )
                                     showLimitDialog.emit(true)
                                 }
-                                  assistantContent?.let {
-                                      IntySetting.setConversationReaded(agentId, it)
-                                  }
+                                result.data.data?.choices?.lastOrNull()?.message?.content?.let {
+                                    content ->
+                                    IntySetting.setConversationReaded(agentId, content)
+                                }
                             }
                             .onFailure {
                                 LogUtils.e("Error processing AI response: ${it.message}")
