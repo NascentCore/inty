@@ -13,9 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -35,7 +32,6 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.info.AgentInfoActivity
-import com.ai.intellimate.ui.UiConfigs
 import kotlinx.coroutines.launch
 
 private const val CHAT_TOP_BAR_AVATAR_SIZE = 30
@@ -45,7 +41,6 @@ private val CHAT_TOP_BAR_BACKGROUND_COLOR = Color(33, 0, 0, 77)
 
 private const val BACK_BUTTON_SIZE = 24
 private const val MORE_BUTTON_SIZE = 20
-private const val REMIX_ICON_SIZE = 18
 
 /** 聊天页面顶部栏组件 */
 @Composable
@@ -60,7 +55,6 @@ fun ChatTopBar(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val enableRemix = UiConfigs.ChatPage.enableRemix()
 
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         // 返回按钮
@@ -121,28 +115,6 @@ fun ChatTopBar(
         }
 
         Spacer(modifier = Modifier.weight(1f))
-
-        if (enableRemix) {
-            Box(
-                modifier =
-                    Modifier.size(avatarWidth)
-                        .clip(CircleShape)
-                        .background(color = CHAT_TOP_BAR_BACKGROUND_COLOR)
-                        .noRippleClickable {
-                            ToastUtils.showShort(R.string.str_remix_feature_under_construction)
-                        },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    modifier = Modifier.size(REMIX_ICON_SIZE.dp),
-                    imageVector = Icons.Rounded.AutoAwesome,
-                    contentDescription = null,
-                    tint = Color.White,
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-        }
 
         Box(
             modifier =
