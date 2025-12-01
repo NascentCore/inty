@@ -66,7 +66,6 @@ async def create_email_password_superuser(
                     existing_user.deletion_reason = (
                         "Deleted by create_email_password_superuser script"
                     )
-                    existing_user.is_active = False
                     await db.commit()
                     logger.info(
                         f"Deleted existing user {existing_user.id} with email {email}"
@@ -168,7 +167,6 @@ async def create_email_password_superuser(
             logger.info(f"  Nickname: {user.nickname}")
             logger.info(f"  Auth Type: {user.auth_type}")
             logger.info(f"  System Language: {user.system_language}")
-            logger.info(f"  Is Active: {user.is_active}")
             logger.info(f"  Is Superuser: {user.is_superuser}")
             return user
 
