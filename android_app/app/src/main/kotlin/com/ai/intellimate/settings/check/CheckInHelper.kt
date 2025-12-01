@@ -14,8 +14,7 @@ fun getCurrentMonthInfo(): Pair<Int, Int> {
     // 获取当月最大天数
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
     // 获取今天是第几天（1-based）
-//    val today = calendar.get(Calendar.DAY_OF_MONTH)
-    val today = 14  // 测试代码
+    val today = calendar.get(Calendar.DAY_OF_MONTH)
     return Pair(daysInMonth, today)
 }
 

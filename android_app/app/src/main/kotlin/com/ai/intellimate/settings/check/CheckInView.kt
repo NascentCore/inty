@@ -75,7 +75,7 @@ fun CheckInScreen(
 
             Spacer(modifier = Modifier.height(screenHeightDp * 0.08f))
             Text(
-                text = "💗 Day $today Together",
+                text = "💗 Day ${checkedInDays.count()} Together",
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 letterSpacing = 0.6.sp,
                 style = TextStyle(fontSize = 26.sp, color = Color.White, fontWeight = FontWeight.Bold, shadow = Shadow(
@@ -201,7 +201,8 @@ fun DaySelectorRow(daysInMonth: Int, today: Int, checkedInDays: Set<Int>) {
     ) {
         items(daysList) { day ->
             // 7. 渲染每一天的 Box
-            DayItem(day = day, today = today, isCheck = checkedInDays.contains(day))
+            val index = checkedInDays.indexOf(day);
+            DayItem(day = day, today = today, index)
         }
     }
 }
@@ -210,17 +211,18 @@ fun DaySelectorRow(daysInMonth: Int, today: Int, checkedInDays: Set<Int>) {
  * 单个日期的 Composable
  */
 @Composable
-fun DayItem(day: Int, today: Int, isCheck: Boolean) {
+fun DayItem(day: Int, today: Int, index: Int) {
+    val isCheck = index >= 0
     val strMonth = getCurrentMonthAbbreviation();
     val isToday = day == today;
     val isMissed = day < today && !isCheck
     if (isToday) {
         DayItemToday(isCheck = isCheck, day)
     } else if (isCheck) {  // 已签到
-        DayItemChecked(day, strMonth)
+        DayItemChecked(day, strMonth, index)
     } else {
         if (isMissed) {  // 历史未签到
-            DayItemUncheck(day)
+            DayItemUncheck(day, strMonth)
         } else {  // 未来未签到
             DayItemWaitToCheck(day, strMonth)
         }
@@ -256,7 +258,7 @@ fun DayItemToday(isCheck: Boolean, day: Int) {
         ) {
             Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(modifier = Modifier.weight(1f))
-                Text(text = "Day $day", style = TextStyle(fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold))
+                Text(text = "NOW", style = TextStyle(fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold))
                 Spacer(modifier = Modifier.height(12.dp))
                 Image(
                     painter = painterResource( if (isCheck) R.drawable.check_in_ok else R.drawable.check_in_calendar),
@@ -274,7 +276,7 @@ fun DayItemToday(isCheck: Boolean, day: Int) {
 }
 
 @Composable
-fun DayItemUncheck(day: Int) {
+fun DayItemUncheck(day: Int, strMonth: String) {
     Box(modifier = Modifier
         .width(76.dp)
         .height(88.dp)
@@ -304,7 +306,7 @@ fun DayItemUncheck(day: Int) {
                 contentScale = ContentScale.Fit
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "Nov $day", style = TextStyle(fontSize = 12.sp, color = Color.White))
+            Text(text = "$strMonth $day", style = TextStyle(fontSize = 12.sp, color = Color.White))
             Spacer(modifier = Modifier.weight(1f))
         }
 
@@ -317,7 +319,7 @@ fun DayItemUncheck(day: Int) {
 }
 
 @Composable
-fun DayItemChecked(day: Int, strMonth: String) {
+fun DayItemChecked(day: Int, strMonth: String, index: Int) {
     Box(modifier = Modifier
         .width(76.dp)
         .height(88.dp)
@@ -332,7 +334,7 @@ fun DayItemChecked(day: Int, strMonth: String) {
     ) {
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(modifier = Modifier.weight(1f))
-            Text(text = "Day $day", style = TextStyle(fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold))
+            Text(text = "Day ${index + 1}", style = TextStyle(fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold))
             Spacer(modifier = Modifier.height(5.dp))
             Image(
                 painter = painterResource( R.drawable.check_in_ok),
@@ -372,7 +374,7 @@ fun DayItemWaitToCheck(day: Int, strMonth: String) {
                         shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
                     )
             ) {
-                Text(text = "Day $day", modifier = Modifier.align(Alignment.Center), style = TextStyle(fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold))
+                Text(text = "Upcoming", modifier = Modifier.align(Alignment.Center), style = TextStyle(fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold))
             }
 
             Spacer(modifier = Modifier.height(5.dp))
