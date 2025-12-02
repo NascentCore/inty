@@ -9,7 +9,7 @@ on:
     - cron: "0 1 * * *"
 
 jobs:
-  build-apk:
+  build-aab:
     runs-on: android-builder
     timeout-minutes: 60
     steps:
@@ -43,7 +43,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-
 
-      - name: Build release bundle and APK
+      - name: Build release bundle (AAB)
         run: |
           cd android_app
           ./gradlew bundleRelease
@@ -55,3 +55,12 @@ jobs:
           releaseFiles: android_app/app/build/outputs/bundle/release/app-release.aab
           track: internal
           status: completed
+      - name: Publish upload summary
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          {
+            echo "## 上传产物摘要"
+            echo
+            echo "- 提交短 SHA: \`$SHORT_SHA\`"
+            echo "- AAB 路径: \`android_app/app/build/outputs/bundle/release/app-release.aab\`"
+          } >> "$GITHUB_STEP_SUMMARY"
