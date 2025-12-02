@@ -3,6 +3,7 @@ package com.ai.intellimate.chat
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.TimeUtils
@@ -95,15 +96,23 @@ fun ChatItem(
     chatViewModel: ChatViewModel? = null,
     isLatestMessage: Boolean = false,
     isGuideVisible: Boolean = false,
+    messageFontSizeSp: Float = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP,
 ) {
     runCatching {
             when (item.role) {
                 "assistant" -> {
-                    ChatItemAI(item, isCurrentPage, chatViewModel, isLatestMessage, isGuideVisible)
+                    ChatItemAI(
+                        item,
+                        isCurrentPage,
+                        chatViewModel,
+                        isLatestMessage,
+                        isGuideVisible,
+                        messageFontSizeSp,
+                    )
                 }
 
                 "user" -> {
-                    ChatItemUser(item)
+                    ChatItemUser(item, messageFontSizeSp)
                 }
 
                 "system" -> {
@@ -112,7 +121,7 @@ fun ChatItem(
 
                 else -> {
                     LogUtils.w("ChatItem - 未知角色: ${item.role}")
-                    ChatItemUser(item)
+                    ChatItemUser(item, messageFontSizeSp)
                 }
             }
         }
@@ -138,9 +147,11 @@ private fun ChatItemAI(
     chatViewModel: ChatViewModel? = null,
     isLatestMessage: Boolean = false,
     isGuideVisible: Boolean = false,
+    messageFontSizeSp: Float,
 ) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
     val timestampText = remember(item.timestamp) { formatTimestamp(item.timestamp) }
+    val messageFontSize = messageFontSizeSp.sp
 
     runCatching {
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -308,7 +319,7 @@ private fun ChatItemAI(
                             if (item.content.isNotEmpty()) {
                                 StyledMessageText(
                                     text = item.content,
-                                    fontSize = 14.sp,
+                                    fontSize = messageFontSize,
                                     fontWeight = FontWeight.Normal,
                                     normalColor = Color.White,
                                     actionColor = Color.White.copy(0.55f),
@@ -475,7 +486,7 @@ private fun ChatItemAI(
                     Text(
                         text = item.content.ifEmpty { "Message content is empty" },
                         color = Color.White,
-                        fontSize = 14.sp,
+                        fontSize = messageFontSize,
                     )
                 }
                 Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
@@ -485,7 +496,8 @@ private fun ChatItemAI(
 
 /** 用户消息气泡布局，靠右对齐。 */
 @Composable
-private fun ChatItemUser(item: MsgInfo) {
+private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
+    val messageFontSize = messageFontSizeSp.sp
     runCatching {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 val context = LocalContext.current
@@ -513,7 +525,7 @@ private fun ChatItemUser(item: MsgInfo) {
                 ) {
                     StyledMessageText(
                         text = item.content,
-                        fontSize = 14.sp,
+                        fontSize = messageFontSize,
                         fontWeight = FontWeight.Normal,
                         normalColor = Color(0xff090909),
                         actionColor = Color(0xff090909).copy(0.6f),
@@ -550,7 +562,7 @@ private fun ChatItemUser(item: MsgInfo) {
                     Text(
                         text = item.content.ifEmpty { "Message content is empty" },
                         color = Color(0xff090909),
-                        fontSize = 14.sp,
+                        fontSize = messageFontSize,
                     )
                 }
             }

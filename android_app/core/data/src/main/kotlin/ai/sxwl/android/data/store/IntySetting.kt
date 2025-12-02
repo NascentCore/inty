@@ -10,6 +10,8 @@ import kotlin.random.Random
 
 private const val KEY_RESUB_REMINDER_LAST_TIME = "resub_reminder_last_time"
 private const val KEY_RESUB_REMINDER_SHOW_COUNT = "resub_reminder_show_count"
+private const val KEY_CHAT_FONT_SIZE_SP = "chat_font_size_sp"
+private const val DEFAULT_CHAT_FONT_SIZE_SP = 14f
 
 object IntySetting {
 
@@ -142,6 +144,15 @@ object IntySetting {
     /** 标记用户已手动设置过 Show Scene Action Button */
     fun markUserSetSceneActionButton() {
         curUserSetting.putBoolean("user_set_scene_action_button", true)
+    }
+
+    /** 聊天消息字体大小（单位 sp，默认 14f） */
+    fun setChatFontSizeSp(size: Float) {
+        curUserSetting.putFloat(KEY_CHAT_FONT_SIZE_SP, size)
+    }
+
+    fun getChatFontSizeSp(): Float {
+        return curUserSetting.decodeFloat(KEY_CHAT_FONT_SIZE_SP, DEFAULT_CHAT_FONT_SIZE_SP)
     }
 
     fun getLastResubReminderDialogShowTime(): Long {

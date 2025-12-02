@@ -9,6 +9,10 @@ import kotlinx.coroutines.flow.asStateFlow
 /** 全局设置状态管理器 用于在多个Compose屏幕之间同步设置状态 */
 object SettingStateManager {
 
+    const val CHAT_FONT_SIZE_MIN_SP = 12f
+    const val CHAT_FONT_SIZE_MAX_SP = 20f
+    const val CHAT_FONT_SIZE_DEFAULT_SP = 14f
+
     // Keep Talking按钮显示状态
     private val _showKeepTalkingFlow = MutableStateFlow(IntySetting.isShowKeepTalking())
     val showKeepTalkingFlow: StateFlow<Boolean> = _showKeepTalkingFlow.asStateFlow()
@@ -20,6 +24,15 @@ object SettingStateManager {
     // 显示场景动作输入按钮状态
     private val _showSceneActionButtonFlow = MutableStateFlow(IntySetting.isShowSceneActionButton())
     val showSceneActionButtonFlow: StateFlow<Boolean> = _showSceneActionButtonFlow.asStateFlow()
+
+    // 聊天字体大小设置
+    private val _chatFontSizeFlow =
+        MutableStateFlow(
+            IntySetting
+                .getChatFontSizeSp()
+                .coerceIn(CHAT_FONT_SIZE_MIN_SP, CHAT_FONT_SIZE_MAX_SP)
+        )
+    val chatFontSizeFlow: StateFlow<Float> = _chatFontSizeFlow.asStateFlow()
 
     // 标记是否已经初始化过（避免重复初始化）
     @Volatile private var initialized = false
@@ -115,5 +128,12 @@ object SettingStateManager {
         IntySetting.setShowSceneActionButton(enabled)
         IntySetting.markUserSetSceneActionButton()
         _showSceneActionButtonFlow.value = enabled
+    }
+
+    /** 更新聊天消息字体大小（sp） */
+    fun updateChatFontSize(fontSizeSp: Float) {
+        val clamped = fontSizeSp.coerceIn(CHAT_FONT_SIZE_MIN_SP, CHAT_FONT_SIZE_MAX_SP)
+        IntySetting.setChatFontSizeSp(clamped)
+        _chatFontSizeFlow.value = clamped
     }
 }
