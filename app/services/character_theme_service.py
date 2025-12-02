@@ -32,9 +32,9 @@ async def create_theme(
         select(models.CharacterTheme)
         .where(models.CharacterTheme.id == theme.id)
         .options(
-            selectinload(models.CharacterTheme.agents).selectinload(
-                models.CharacterThemeAgent.agent
-            )
+            selectinload(models.CharacterTheme.agents)
+            .selectinload(models.CharacterThemeAgent.agent)
+            .selectinload(models.Agent.creator)
         )
     )
     result = await db.execute(stmt)
@@ -50,9 +50,9 @@ async def get_theme(db: AsyncSession, theme_id: str) -> Optional[models.Characte
         select(models.CharacterTheme)
         .where(models.CharacterTheme.id == theme_id)
         .options(
-            selectinload(models.CharacterTheme.agents).selectinload(
-                models.CharacterThemeAgent.agent
-            )
+            selectinload(models.CharacterTheme.agents)
+            .selectinload(models.CharacterThemeAgent.agent)
+            .selectinload(models.Agent.creator)
         )
     )
     result = await db.execute(stmt)
@@ -69,9 +69,9 @@ async def list_themes(
         .offset(skip)
         .limit(limit)
         .options(
-            selectinload(models.CharacterTheme.agents).selectinload(
-                models.CharacterThemeAgent.agent
-            )
+            selectinload(models.CharacterTheme.agents)
+            .selectinload(models.CharacterThemeAgent.agent)
+            .selectinload(models.Agent.creator)
         )
     )
     result = await db.execute(stmt)
@@ -108,9 +108,9 @@ async def update_theme(
         select(models.CharacterTheme)
         .where(models.CharacterTheme.id == theme.id)
         .options(
-            selectinload(models.CharacterTheme.agents).selectinload(
-                models.CharacterThemeAgent.agent
-            )
+            selectinload(models.CharacterTheme.agents)
+            .selectinload(models.CharacterThemeAgent.agent)
+            .selectinload(models.Agent.creator)
         )
     )
     result = await db.execute(stmt)
@@ -185,7 +185,11 @@ async def add_agent_to_theme(
             models.CharacterThemeAgent.theme_id == theme_id,
             models.CharacterThemeAgent.agent_id == agent_id,
         )
-        .options(selectinload(models.CharacterThemeAgent.agent))
+        .options(
+            selectinload(models.CharacterThemeAgent.agent).selectinload(
+                models.Agent.creator
+            )
+        )
     )
     result = await db.execute(stmt)
     theme_agent = result.scalar_one()
