@@ -10,7 +10,8 @@ on:
 
 jobs:
   build-apk:
-    runs-on: yaxiong-zhao
+    # runs-on: yaxiong-zhao
+    runs-on: zyx
     permissions:
       contents: read
     timeout-minutes: 60
