@@ -59,6 +59,7 @@ fun CheckInScreen(
         mutableStateOf(CheckInRepository.getCheckedInDays())
     }
     val isCheckedToday = checkedInDays.contains(today)
+    val btnText = if (isCheckedToday) "Checked in today" else "Check in"
 
     Box(modifier = Modifier.fillMaxSize().background(ai.sxwl.android.design.theme.HeartColor.primaryColor)) {
         Image(
@@ -125,7 +126,7 @@ fun CheckInScreen(
                 .align(Alignment.CenterHorizontally),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = "Check in", style = TextStyle(fontSize = 17.sp, color = Color.White.copy(alpha = if (isCheckedToday) 0.5f else 1f), fontWeight = FontWeight.Bold))
+                Text(text = btnText, style = TextStyle(fontSize = 17.sp, color = Color.White.copy(alpha = if (isCheckedToday) 0.5f else 1f), fontWeight = FontWeight.Bold))
             }
 
             // 底部文字
