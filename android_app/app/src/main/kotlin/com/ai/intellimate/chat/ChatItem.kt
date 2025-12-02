@@ -121,7 +121,7 @@ fun ChatItem(
 
                 else -> {
                     LogUtils.w("ChatItem - 未知角色: ${item.role}")
-                    ChatItemUser(item)
+                    ChatItemUser(item, messageFontSizeSp)
                 }
             }
         }
