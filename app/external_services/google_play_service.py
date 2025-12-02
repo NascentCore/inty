@@ -12,9 +12,7 @@ from app.schemas.version import VersionReminderAction
 class GooglePlayService:
     """Google Play Developer API服务"""
 
-    def __init__(
-        self, android_publisher_service: Resource, config: GooglePlayConfig
-    ):
+    def __init__(self, android_publisher_service: Resource, config: GooglePlayConfig):
         """初始化Google Play服务"""
         self.service = android_publisher_service
         self.config = config

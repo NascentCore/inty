@@ -22,10 +22,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * 测试并发场景的事务保护
- * 验证多个线程同时调用 appendMessages/prependMessages 时，不会产生 sortKey 冲突
- */
+/** 测试并发场景的事务保护 验证多个线程同时调用 appendMessages/prependMessages 时，不会产生 sortKey 冲突 */
 @RunWith(AndroidJUnit4::class)
 class ConcurrencyTest {
 
@@ -45,9 +42,7 @@ class ConcurrencyTest {
 
     @After
     fun tearDown() {
-        runBlocking {
-            delay(100)
-        }
+        runBlocking { delay(100) }
         database.close()
     }
 
@@ -71,21 +66,22 @@ class ConcurrencyTest {
         assertEquals("初始应该没有消息", 0, initialMessages.size)
 
         // When: 并发调用 appendMessages（10 个协程，每个插入 1 条消息）
-        val jobs = (1..10).map { i ->
-            async {
-                dataSource.appendMessages(
-                    agentId,
-                    listOf(
-                        MsgInfo(
-                            id = "msg-$i",
-                            content = "Concurrent message $i",
-                            role = "user",
-                            timestamp = "2025-01-15T10:30:0$i.000000Z",
+        val jobs =
+            (1..10).map { i ->
+                async {
+                    dataSource.appendMessages(
+                        agentId,
+                        listOf(
+                            MsgInfo(
+                                id = "msg-$i",
+                                content = "Concurrent message $i",
+                                role = "user",
+                                timestamp = "2025-01-15T10:30:0$i.000000Z",
+                            )
                         ),
-                    ),
-                )
+                    )
+                }
             }
-        }
         jobs.awaitAll()
 
         // Then: 所有消息应该被插入，且 sortKey 不重复
@@ -106,39 +102,41 @@ class ConcurrencyTest {
     @Test
     fun concurrentPrependMessagesDoesNotCreateDuplicateSortKeys() = runBlocking {
         // Given: 已有一些消息
-        val existingMessages = listOf(
-            MsgInfo(
-                id = "existing-1",
-                content = "Existing message 1",
-                role = "assistant",
-                timestamp = "2025-01-15T10:30:00.000000Z",
-            ),
-            MsgInfo(
-                id = "existing-2",
-                content = "Existing message 2",
-                role = "user",
-                timestamp = "2025-01-15T10:31:00.000000Z",
-            ),
-        )
+        val existingMessages =
+            listOf(
+                MsgInfo(
+                    id = "existing-1",
+                    content = "Existing message 1",
+                    role = "assistant",
+                    timestamp = "2025-01-15T10:30:00.000000Z",
+                ),
+                MsgInfo(
+                    id = "existing-2",
+                    content = "Existing message 2",
+                    role = "user",
+                    timestamp = "2025-01-15T10:31:00.000000Z",
+                ),
+            )
         dataSource.appendMessages(agentId, existingMessages)
         waitForMessages(agentId, expectedSize = 2)
 
         // When: 并发调用 prependMessages（5 个协程，每个插入 1 条历史消息）
-        val jobs = (1..5).map { i ->
-            async {
-                dataSource.prependMessages(
-                    agentId,
-                    listOf(
-                        MsgInfo(
-                            id = "older-$i",
-                            content = "Older message $i",
-                            role = "assistant",
-                            timestamp = "2025-01-15T10:2$i:00.000000Z",
+        val jobs =
+            (1..5).map { i ->
+                async {
+                    dataSource.prependMessages(
+                        agentId,
+                        listOf(
+                            MsgInfo(
+                                id = "older-$i",
+                                content = "Older message $i",
+                                role = "assistant",
+                                timestamp = "2025-01-15T10:2$i:00.000000Z",
+                            )
                         ),
-                    ),
-                )
+                    )
+                }
             }
-        }
         jobs.awaitAll()
 
         // Then: 所有消息应该被插入，且 sortKey 不重复
@@ -152,16 +150,18 @@ class ConcurrencyTest {
         assertEquals("sortKey 应该不重复", 7, sortKeys.size)
 
         // 验证历史消息的 sortKey 小于现有消息的 sortKey
-        val existingSortKeys = existingMessages.mapNotNull { msg ->
-            finalMessages.find { it.id == msg.id }?.let {
-                dao.getMessage(agentId, it.localMsgId)?.sortKey
+        val existingSortKeys =
+            existingMessages.mapNotNull { msg ->
+                finalMessages
+                    .find { it.id == msg.id }
+                    ?.let { dao.getMessage(agentId, it.localMsgId)?.sortKey }
             }
-        }
-        val olderSortKeys = (1..5).mapNotNull { i ->
-            finalMessages.find { it.id == "older-$i" }?.let {
-                dao.getMessage(agentId, it.localMsgId)?.sortKey
+        val olderSortKeys =
+            (1..5).mapNotNull { i ->
+                finalMessages
+                    .find { it.id == "older-$i" }
+                    ?.let { dao.getMessage(agentId, it.localMsgId)?.sortKey }
             }
-        }
 
         val maxOlderSortKey = olderSortKeys.maxOrNull() ?: Long.MAX_VALUE
         val minExistingSortKey = existingSortKeys.minOrNull() ?: Long.MIN_VALUE
@@ -171,53 +171,57 @@ class ConcurrencyTest {
     @Test
     fun concurrentAppendAndPrependMessagesDoesNotCreateConflicts() = runBlocking {
         // Given: 已有一些消息
-        val existingMessages = listOf(
-            MsgInfo(
-                id = "existing-1",
-                content = "Existing message",
-                role = "assistant",
-                timestamp = "2025-01-15T10:30:00.000000Z",
-            ),
-        )
+        val existingMessages =
+            listOf(
+                MsgInfo(
+                    id = "existing-1",
+                    content = "Existing message",
+                    role = "assistant",
+                    timestamp = "2025-01-15T10:30:00.000000Z",
+                )
+            )
         dataSource.appendMessages(agentId, existingMessages)
         waitForMessages(agentId, expectedSize = 1)
 
         // When: 并发调用 appendMessages 和 prependMessages
-        val appendJobs = (1..5).map { i ->
-            async {
-                dataSource.appendMessages(
-                    agentId,
-                    listOf(
-                        MsgInfo(
-                            id = "newer-$i",
-                            content = "Newer message $i",
-                            role = "user",
-                            timestamp = "2025-01-15T10:3$i:00.000000Z",
+        val appendJobs =
+            (1..5).map { i ->
+                async {
+                    dataSource.appendMessages(
+                        agentId,
+                        listOf(
+                            MsgInfo(
+                                id = "newer-$i",
+                                content = "Newer message $i",
+                                role = "user",
+                                timestamp = "2025-01-15T10:3$i:00.000000Z",
+                            )
                         ),
-                    ),
-                )
+                    )
+                }
             }
-        }
-        val prependJobs = (1..5).map { i ->
-            async {
-                dataSource.prependMessages(
-                    agentId,
-                    listOf(
-                        MsgInfo(
-                            id = "older-$i",
-                            content = "Older message $i",
-                            role = "assistant",
-                            timestamp = "2025-01-15T10:2$i:00.000000Z",
+        val prependJobs =
+            (1..5).map { i ->
+                async {
+                    dataSource.prependMessages(
+                        agentId,
+                        listOf(
+                            MsgInfo(
+                                id = "older-$i",
+                                content = "Older message $i",
+                                role = "assistant",
+                                timestamp = "2025-01-15T10:2$i:00.000000Z",
+                            )
                         ),
-                    ),
-                )
+                    )
+                }
             }
-        }
 
         (appendJobs + prependJobs).awaitAll()
 
         // Then: 所有消息应该被插入，且 sortKey 不重复
-        val finalMessages = waitForMessages(agentId, expectedSize = 11) // 1 existing + 5 newer + 5 older
+        val finalMessages =
+            waitForMessages(agentId, expectedSize = 11) // 1 existing + 5 newer + 5 older
         assertEquals("应该有 11 条消息", 11, finalMessages.size)
 
         // 验证 sortKey 不重复
@@ -227,19 +231,22 @@ class ConcurrencyTest {
         assertEquals("sortKey 应该不重复", 11, sortKeys.size)
 
         // 验证消息顺序：older < existing < newer
-        val olderSortKeys = (1..5).mapNotNull { i ->
-            finalMessages.find { it.id == "older-$i" }?.let {
-                dao.getMessage(agentId, it.localMsgId)?.sortKey
+        val olderSortKeys =
+            (1..5).mapNotNull { i ->
+                finalMessages
+                    .find { it.id == "older-$i" }
+                    ?.let { dao.getMessage(agentId, it.localMsgId)?.sortKey }
             }
-        }
-        val existingSortKey = finalMessages.find { it.id == "existing-1" }?.let {
-            dao.getMessage(agentId, it.localMsgId)?.sortKey
-        }
-        val newerSortKeys = (1..5).mapNotNull { i ->
-            finalMessages.find { it.id == "newer-$i" }?.let {
-                dao.getMessage(agentId, it.localMsgId)?.sortKey
+        val existingSortKey =
+            finalMessages
+                .find { it.id == "existing-1" }
+                ?.let { dao.getMessage(agentId, it.localMsgId)?.sortKey }
+        val newerSortKeys =
+            (1..5).mapNotNull { i ->
+                finalMessages
+                    .find { it.id == "newer-$i" }
+                    ?.let { dao.getMessage(agentId, it.localMsgId)?.sortKey }
             }
-        }
 
         val maxOlderSortKey = olderSortKeys.maxOrNull() ?: Long.MAX_VALUE
         val existingSortKeyValue = existingSortKey ?: Long.MIN_VALUE
@@ -256,19 +263,20 @@ class ConcurrencyTest {
         assertEquals("初始应该没有消息", 0, initialMessages.size)
 
         // When: 并发调用 addMessage（10 个协程，每个插入 1 条消息）
-        val jobs = (1..10).map { i ->
-            async {
-                dataSource.addMessage(
-                    agentId,
-                    MsgInfo(
-                        id = "msg-$i",
-                        content = "Concurrent message $i",
-                        role = "user",
-                        timestamp = "2025-01-15T10:30:0$i.000000Z",
-                    ),
-                )
+        val jobs =
+            (1..10).map { i ->
+                async {
+                    dataSource.addMessage(
+                        agentId,
+                        MsgInfo(
+                            id = "msg-$i",
+                            content = "Concurrent message $i",
+                            role = "user",
+                            timestamp = "2025-01-15T10:30:0$i.000000Z",
+                        ),
+                    )
+                }
             }
-        }
         jobs.awaitAll()
 
         // Then: 所有消息应该被插入，且 sortKey 不重复
@@ -285,45 +293,48 @@ class ConcurrencyTest {
     @Test
     fun concurrentUpdateMessagesPreservesSortKeys() = runBlocking {
         // Given: 已有消息
-        val originalMessages = (1..5).map { i ->
-            MsgInfo(
-                id = "remote-$i",
-                content = "Message $i",
-                role = if (i % 2 == 0) "assistant" else "user",
-                timestamp = "2025-01-15T10:30:0$i.000000Z",
-            )
-        }
+        val originalMessages =
+            (1..5).map { i ->
+                MsgInfo(
+                    id = "remote-$i",
+                    content = "Message $i",
+                    role = if (i % 2 == 0) "assistant" else "user",
+                    timestamp = "2025-01-15T10:30:0$i.000000Z",
+                )
+            }
         dataSource.appendMessages(agentId, originalMessages)
         val initialMessages = waitForMessages(agentId, expectedSize = 5)
 
         // 记录原始 sortKey
-        val originalSortKeys = initialMessages.mapNotNull { msg ->
-            database.chatMessageDao().getMessage(agentId, msg.localMsgId)?.sortKey
-        }.toSet()
+        val originalSortKeys =
+            initialMessages
+                .mapNotNull { msg ->
+                    database.chatMessageDao().getMessage(agentId, msg.localMsgId)?.sortKey
+                }
+                .toSet()
 
         // When: 并发更新消息
-        val jobs = initialMessages.mapIndexed { index, msg ->
-            async {
-                dataSource.updateMessages(
-                    agentId,
-                    listOf(
-                        msg.copy(
-                            content = "Updated message ${index + 1}",
-                        ),
-                    ),
-                )
+        val jobs =
+            initialMessages.mapIndexed { index, msg ->
+                async {
+                    dataSource.updateMessages(
+                        agentId,
+                        listOf(msg.copy(content = "Updated message ${index + 1}")),
+                    )
+                }
             }
-        }
         jobs.awaitAll()
 
         // Then: sortKey 应该被保留
         delay(500) // 等待所有并发更新完成并让 Flow 更新（并发测试需要更长时间）
         val finalMessages = waitForMessages(agentId, expectedSize = 5)
-        val finalSortKeys = finalMessages.mapNotNull { msg ->
-            database.chatMessageDao().getMessage(agentId, msg.localMsgId)?.sortKey
-        }.toSet()
+        val finalSortKeys =
+            finalMessages
+                .mapNotNull { msg ->
+                    database.chatMessageDao().getMessage(agentId, msg.localMsgId)?.sortKey
+                }
+                .toSet()
 
         assertEquals("sortKey 应该被保留", originalSortKeys, finalSortKeys)
     }
 }
-

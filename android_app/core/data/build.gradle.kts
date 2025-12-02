@@ -15,7 +15,7 @@ android {
     packaging {
         resources {
             // 解决 META-INF 文件冲突问题
-            // 
+            //
             // 问题原因：
             // 多个依赖库（特别是 Apache HTTP Components 相关库，如 httpclient5、httpcore5、httpcore5-h2）
             // 都在其 JAR 文件中包含了相同的 META-INF 文件（LICENSE、NOTICE、DEPENDENCIES 等）。
