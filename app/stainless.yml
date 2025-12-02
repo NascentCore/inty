@@ -169,6 +169,13 @@ resources:
           text_to_speech:
             methods:
               list_voices: get /api/v1/text-to-speech/list-voices
+          character_themes:
+            models:
+              api_response_list_character_theme: "#/components/schemas/APIResponse_List_CharacterTheme__"
+              character_theme: "#/components/schemas/CharacterTheme"
+              character_theme_visibility: "#/components/schemas/CharacterThemeVisibility"
+            methods:
+              list: get /api/v1/character-themes/
   v2:
     subresources:
       chat:
