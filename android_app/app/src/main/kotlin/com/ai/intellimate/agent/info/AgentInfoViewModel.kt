@@ -10,12 +10,14 @@ import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.architecture.httplib.core.HttpResult
+import com.squareup.moshi.JsonClass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+@JsonClass(generateAdapter = true)
 data class AgentImageGalleryItem(
     val messageId: String,
     val imageUrl: String,
@@ -98,6 +100,12 @@ class AgentInfoViewModel : BaseVM() {
     private fun bindGallery(agentId: String) {
         if (agentId.isBlank()) return
         if (galleryAgentId == agentId) return
+        val cachedGallery = AgentImageGalleryCache.getCachedGallery(agentId)
+        if (cachedGallery.isNotEmpty()) {
+            _chatImageGallery.value = cachedGallery
+        } else {
+            _chatImageGallery.value = emptyList()
+        }
         galleryAgentId = agentId
         galleryJob?.cancel()
         galleryJob =
@@ -122,6 +130,7 @@ class AgentInfoViewModel : BaseVM() {
                             .take(MAX_GALLERY_ITEMS)
                             .toList()
                     _chatImageGallery.value = galleryItems
+                    AgentImageGalleryCache.cacheGallery(agentId, galleryItems)
                 }
             }
     }
