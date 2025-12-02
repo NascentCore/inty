@@ -56,7 +56,7 @@ async def create_theme(
     "/",
     response_model=schemas.APIResponse[List[character_theme_schemas.CharacterTheme]],
     summary="获取角色主题专区列表",
-    description="获取所有角色主题专区列表（所有已认证用户可访问）",
+    description="获取角色主题专区列表。普通用户只能看到可见专区（第一展示、第二展示），管理员可通过 include_hidden 参数查看所有专区",
     tags=[INTY_EVAL_TAG, WEB_APP_TAG],
 )
 async def list_themes(
@@ -64,11 +64,20 @@ async def list_themes(
     db: AsyncSession = Depends(deps.get_async_db),
     skip: int = Query(0, ge=0, description="跳过的记录数"),
     limit: int = Query(100, ge=1, le=1000, description="返回的记录数"),
+    include_hidden: bool = Query(
+        False, description="是否包含不可见的专区（仅管理员可用）"
+    ),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """获取角色主题专区列表"""
     try:
-        themes = await character_theme_service.list_themes(db, skip=skip, limit=limit)
+        # 只有管理员可以查看隐藏的专区
+        if include_hidden and not current_user.is_superuser:
+            include_hidden = False
+
+        themes = await character_theme_service.list_themes(
+            db, skip=skip, limit=limit, include_hidden=include_hidden
+        )
         theme_schemas = [
             character_theme_schemas.CharacterTheme.model_validate(theme)
             for theme in themes

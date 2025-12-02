@@ -17,6 +17,7 @@ import {
   Image,
   Select,
   Tooltip,
+  Tag,
 } from "antd";
 import {
   PlusOutlined,
@@ -55,6 +56,20 @@ import { CSS } from "@dnd-kit/utilities";
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 const { Option } = Select;
+
+// 可见性显示配置
+const getVisibilityConfig = (visibility: "PRIMARY" | "SECONDARY" | "HIDDEN") => {
+  switch (visibility) {
+    case "PRIMARY":
+      return { text: "第一展示", color: "green" };
+    case "SECONDARY":
+      return { text: "第二展示", color: "blue" };
+    case "HIDDEN":
+      return { text: "不可见", color: "default" };
+    default:
+      return { text: "未知", color: "default" };
+  }
+};
 
 interface SortableAgentItemProps {
   id: string;
@@ -152,7 +167,8 @@ export const CharacterThemeManagePage: React.FC = () => {
   const loadThemes = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await characterThemeApi.list();
+      // 管理员查看所有专区（包括隐藏的）
+      const data = await characterThemeApi.list({ include_hidden: true });
       setThemes(data);
     } catch (error) {
       logError("加载专区列表失败");
@@ -229,6 +245,7 @@ export const CharacterThemeManagePage: React.FC = () => {
       name: theme.name,
       description: theme.description,
       background_image_url: theme.background_image_url,
+      visibility: theme.visibility,
     });
     setEditModalVisible(true);
   };
@@ -338,7 +355,14 @@ export const CharacterThemeManagePage: React.FC = () => {
                   ]}
                 >
                   <Card.Meta
-                    title={theme.name}
+                    title={
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span>{theme.name}</span>
+                        <Tag color={getVisibilityConfig(theme.visibility).color}>
+                          {getVisibilityConfig(theme.visibility).text}
+                        </Tag>
+                      </div>
+                    }
                     description={
                       <div>
                         <Text type="secondary" ellipsis>
@@ -386,6 +410,18 @@ export const CharacterThemeManagePage: React.FC = () => {
           <Form.Item name="background_image_url" label="背景图URL">
             <Input placeholder="请输入背景图URL地址" />
           </Form.Item>
+          <Form.Item
+            name="visibility"
+            label="可见性"
+            initialValue="HIDDEN"
+            tooltip="第一展示和第二展示只能各有一个专区，设置时会自动将其他专区的相同可见性改为不可见"
+          >
+            <Select placeholder="请选择可见性">
+              <Option value="PRIMARY">第一展示</Option>
+              <Option value="SECONDARY">第二展示</Option>
+              <Option value="HIDDEN">不可见</Option>
+            </Select>
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -412,6 +448,17 @@ export const CharacterThemeManagePage: React.FC = () => {
           </Form.Item>
           <Form.Item name="background_image_url" label="背景图URL">
             <Input placeholder="请输入背景图URL地址" />
+          </Form.Item>
+          <Form.Item
+            name="visibility"
+            label="可见性"
+            tooltip="第一展示和第二展示只能各有一个专区，设置时会自动将其他专区的相同可见性改为不可见"
+          >
+            <Select placeholder="请选择可见性">
+              <Option value="PRIMARY">第一展示</Option>
+              <Option value="SECONDARY">第二展示</Option>
+              <Option value="HIDDEN">不可见</Option>
+            </Select>
           </Form.Item>
         </Form>
       </Modal>
@@ -440,6 +487,12 @@ export const CharacterThemeManagePage: React.FC = () => {
       >
         {currentTheme && (
           <div>
+            <div style={{ marginBottom: 16 }}>
+              <Text strong>可见性：</Text>
+              <Tag color={getVisibilityConfig(currentTheme.visibility).color} style={{ marginLeft: 8 }}>
+                {getVisibilityConfig(currentTheme.visibility).text}
+              </Tag>
+            </div>
             <div style={{ marginBottom: 16 }}>
               <Text strong>描述：</Text>
               <Text>{currentTheme.description || "无描述"}</Text>
