@@ -7,9 +7,7 @@ import java.util.Locale
 // 1. 定义存储文件的名称
 private const val PREFS_NAME = "checkin_data_prefs"
 
-/**
- * SharedPreferences 签到数据管理单例
- */
+/** SharedPreferences 签到数据管理单例 */
 object CheckInRepository {
 
     // 2. 延迟初始化 SharedPreferences 实例，需要 Context
@@ -18,28 +16,21 @@ object CheckInRepository {
     // 3. 日期格式化工具
     private val dateFormatter = SimpleDateFormat("yyyy_MM", Locale.getDefault())
 
-    /**
-     * 必须在 Application 或 Activity 中调用此方法进行初始化。
-     */
+    /** 必须在 Application 或 Activity 中调用此方法进行初始化。 */
     fun initialize(context: Context) {
         if (!this::sharedPreferences.isInitialized) {
             sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         }
     }
 
-    /**
-     * 根据当前月份生成一个唯一的 SharedPreferences Key。
-     * 格式: CHECKIN_YYYY_MM
-     */
+    /** 根据当前月份生成一个唯一的 SharedPreferences Key。 格式: CHECKIN_YYYY_MM */
     private fun getCurrentMonthKey(): String {
         val calendar = Calendar.getInstance()
         val yearMonth = dateFormatter.format(calendar.time)
         return "CHECKIN_$yearMonth"
     }
 
-    /**
-     * 获取当前月份所有已签到的日期（Set<Int>）。
-     */
+    /** 获取当前月份所有已签到的日期（Set<Int>）。 */
     fun getCheckedInDays(): Set<Int> {
         // 确保已初始化
         if (!this::sharedPreferences.isInitialized) {
@@ -53,13 +44,12 @@ object CheckInRepository {
         val stringSet = sharedPreferences.getStringSet(key, emptySet()) ?: emptySet()
 
         // 转换成 Set<Int> 返回给 Compose
-        return stringSet
-            .mapNotNull { it.toIntOrNull() }
-            .toSet()
+        return stringSet.mapNotNull { it.toIntOrNull() }.toSet()
     }
 
     /**
      * 签到指定日期。
+     *
      * @param day 要签到的日期数字 (1 - 31)
      */
     fun checkInDay(day: Int) {
@@ -83,9 +73,7 @@ object CheckInRepository {
         }
     }
 
-    /**
-     * 检查某个日期是否已签到。
-     */
+    /** 检查某个日期是否已签到。 */
     fun isDayCheckedIn(day: Int): Boolean {
         return getCheckedInDays().contains(day)
     }

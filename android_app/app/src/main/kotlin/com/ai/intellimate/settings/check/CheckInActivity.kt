@@ -6,7 +6,7 @@ import android.content.Intent
 import androidx.compose.runtime.Composable
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 
-class CheckInActivity  : BaseActivity() {
+class CheckInActivity : BaseActivity() {
     companion object {
         private const val INTENT_KEY_PAGE_SOURCE = "intent_key_page_source"
         private const val DEFAULT_PAGE_SOURCE = "unknown"
@@ -30,10 +30,6 @@ class CheckInActivity  : BaseActivity() {
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
 
-        IgnoreSystemFontScaling {
-            CheckInScreen (
-                onClose = { finish() }
-            )
-        }
+        IgnoreSystemFontScaling { CheckInScreen(onClose = { finish() }) }
     }
 }

@@ -345,8 +345,8 @@ private fun CreateRolePage(
             when (event) {
                 Lifecycle.Event.ON_STOP -> {
                     // Clear AvatarManager when activity is stopped (user navigates away)
-                    //LogUtils.i("Activity stopped - clearing AvatarManager data")
-                    //AvatarManager.clearAllAvatarData()
+                    // LogUtils.i("Activity stopped - clearing AvatarManager data")
+                    // AvatarManager.clearAllAvatarData()
                 }
 
                 Lifecycle.Event.ON_DESTROY -> {
@@ -905,7 +905,6 @@ private fun CreateRolePage(
                 isGenerating = isGeneratingAvatar,
                 croppedAvatarUrl = croppedAvatarUrl,
                 onGenerateClick = {
-
                     AvatarManager.setGeneratedAvatarUrls(avatarUrls)
                     AvatarManager.setSelectedImageIndex(selectedImageIndex)
 
@@ -1142,7 +1141,7 @@ private fun CreateRolePage(
                         }
                     }
                     val finalAvatarUrl = croppedAvatarUrl ?: backgroundUrl
-                    //避免此次编辑生成的其他图片保存到服务器
+                    // 避免此次编辑生成的其他图片保存到服务器
                     val backgroundImagesList = listOfNotNull(finalAvatarUrl)
 
                     // Save background for chat usage

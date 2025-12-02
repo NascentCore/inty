@@ -113,8 +113,11 @@ class ApiClient {
 
     // 验证 Authorization header 是否已正确设置
     const authHeaderValue = config.headers?.Authorization;
-    const hasAuthHeader = authHeaderValue && typeof authHeaderValue === "string" && authHeaderValue.trim().length > 0;
-    
+    const hasAuthHeader =
+      authHeaderValue &&
+      typeof authHeaderValue === "string" &&
+      authHeaderValue.trim().length > 0;
+
     if (!config.headers || !hasAuthHeader) {
       throw new Error("Authorization header 设置失败");
     }
@@ -138,17 +141,17 @@ class ApiClient {
           Object.assign(finalHeaders, config.headers);
         }
       }
-      
+
       // 确保 Authorization header 存在
       if (!finalHeaders.Authorization && authHeaderValue) {
         finalHeaders.Authorization = authHeaderValue;
       }
-      
+
       const finalConfig = {
         ...config,
         headers: finalHeaders,
       };
-      
+
       const response = await fetch(url, finalConfig);
 
       class ApiError extends Error {
@@ -1188,8 +1191,7 @@ export const characterThemeApi = {
     skip?: number;
     limit?: number;
     include_hidden?: boolean;
-  }): Promise<CharacterTheme[]> =>
-    apiClient.get("/character-themes/", params), // 添加末尾斜杠以避免 307 重定向
+  }): Promise<CharacterTheme[]> => apiClient.get("/character-themes/", params), // 添加末尾斜杠以避免 307 重定向
 
   // 获取专区详情
   get: (themeId: string): Promise<CharacterTheme> =>

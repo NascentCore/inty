@@ -13,12 +13,7 @@ class ChatMessageEntityTest {
 
     @Test
     fun `toEntity uses remote id as stable local id`() {
-        val message =
-            MsgInfo(
-                id = "remote-id",
-                content = "hello",
-                role = "user",
-            )
+        val message = MsgInfo(id = "remote-id", content = "hello", role = "user")
 
         val entity = message.toEntity(agentId = "agent-1")
 
@@ -47,13 +42,7 @@ class ChatMessageEntityTest {
 
         val stored = initial.toEntity(agentId = agentId)
         val removed =
-            initial.copy(
-                meta_data =
-                    MsgInfo.MsgMetaData(
-                        agentId = agentId,
-                        generatedImage = null,
-                    ),
-            )
+            initial.copy(meta_data = MsgInfo.MsgMetaData(agentId = agentId, generatedImage = null))
 
         val updated = removed.toEntity(agentId = agentId, existing = stored)
 

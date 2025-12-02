@@ -9,6 +9,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.time.Instant
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -19,12 +20,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.Instant
 
-/**
- * 测试 loadMoreMessages 的行为
- * 验证加载历史消息时，消息是否正确插入到列表开头（使用更小的 sortKey）
- */
+/** 测试 loadMoreMessages 的行为 验证加载历史消息时，消息是否正确插入到列表开头（使用更小的 sortKey） */
 @RunWith(AndroidJUnit4::class)
 class LoadMoreMessagesTest {
 
@@ -68,38 +65,40 @@ class LoadMoreMessagesTest {
     @Test
     fun loadMoreMessagesWithPrependMessagesPlacesOlderMessagesCorrectly() = runBlocking {
         // Given: 已有一些新消息（使用 appendMessages）
-        val newerMessages = listOf(
-            MsgInfo(
-                id = "newer-1",
-                content = "Newer message 1",
-                role = "assistant",
-                timestamp = "2025-01-15T10:30:00.000000Z",
-            ),
-            MsgInfo(
-                id = "newer-2",
-                content = "Newer message 2",
-                role = "assistant",
-                timestamp = "2025-01-15T10:31:00.000000Z",
-            ),
-        )
+        val newerMessages =
+            listOf(
+                MsgInfo(
+                    id = "newer-1",
+                    content = "Newer message 1",
+                    role = "assistant",
+                    timestamp = "2025-01-15T10:30:00.000000Z",
+                ),
+                MsgInfo(
+                    id = "newer-2",
+                    content = "Newer message 2",
+                    role = "assistant",
+                    timestamp = "2025-01-15T10:31:00.000000Z",
+                ),
+            )
         dataSource.appendMessages(agentId, newerMessages)
         waitForMessages(agentId, expectedSize = 2)
 
         // When: 使用 prependMessages 加载历史消息（修复后的正确行为）
-        val olderMessages = listOf(
-            MsgInfo(
-                id = "older-1",
-                content = "Older message 1",
-                role = "assistant",
-                timestamp = "2025-01-15T10:20:00.000000Z",
-            ),
-            MsgInfo(
-                id = "older-2",
-                content = "Older message 2",
-                role = "assistant",
-                timestamp = "2025-01-15T10:21:00.000000Z",
-            ),
-        )
+        val olderMessages =
+            listOf(
+                MsgInfo(
+                    id = "older-1",
+                    content = "Older message 1",
+                    role = "assistant",
+                    timestamp = "2025-01-15T10:20:00.000000Z",
+                ),
+                MsgInfo(
+                    id = "older-2",
+                    content = "Older message 2",
+                    role = "assistant",
+                    timestamp = "2025-01-15T10:21:00.000000Z",
+                ),
+            )
         dataSource.prependMessages(agentId, olderMessages)
 
         // Then: 验证消息顺序
@@ -115,17 +114,21 @@ class LoadMoreMessagesTest {
         val firstMessage = allMessages[0] // sortKey DESC 排序中的第一个（UI 底部）
         val lastMessage = allMessages[3] // sortKey DESC 排序中的最后一个（UI 顶部）
 
-        println("Messages order (sortKey DESC): ${allMessages.map { "${it.id} (${it.timestamp})" }}")
-        println("First message (UI bottom): ${firstMessage.id}, Last message (UI top): ${lastMessage.id}")
+        println(
+            "Messages order (sortKey DESC): ${allMessages.map { "${it.id} (${it.timestamp})" }}"
+        )
+        println(
+            "First message (UI bottom): ${firstMessage.id}, Last message (UI top): ${lastMessage.id}"
+        )
 
         // 验证：在 sortKey DESC 排序中，新消息应该在前面，历史消息应该在后面
         assertTrue(
             "新消息应该排在列表前面（sortKey DESC），在 UI 底部",
-            firstMessage.id == "newer-2" || firstMessage.id == "newer-1"
+            firstMessage.id == "newer-2" || firstMessage.id == "newer-1",
         )
         assertTrue(
             "历史消息应该排在列表后面（sortKey DESC），在 reverseLayout UI 中会显示在顶部",
-            lastMessage.id == "older-1" || lastMessage.id == "older-2"
+            lastMessage.id == "older-1" || lastMessage.id == "older-2",
         )
 
         // 验证时间戳顺序：新消息的时间戳应该大于历史消息
@@ -133,6 +136,4 @@ class LoadMoreMessagesTest {
         val olderTimestamp = Instant.parse(olderMessages[0].timestamp).toEpochMilli()
         assertTrue("新消息的时间戳应该大于历史消息", newerTimestamp > olderTimestamp)
     }
-
 }
-

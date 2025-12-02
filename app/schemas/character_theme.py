@@ -107,4 +107,3 @@ class ReorderAgentsRequest(BaseModel):
         if len(v) != len(set(v)):
             raise ValueError("角色ID列表不能包含重复项")
         return v
-

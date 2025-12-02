@@ -9,10 +9,9 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.time.Instant
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.last
-import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -21,11 +20,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.Instant
 
 /**
- * Hermetic tests for timestamp behavior in Room database.
- * These tests verify that:
+ * Hermetic tests for timestamp behavior in Room database. These tests verify that:
  * 1. Server timestamps are preserved when syncing messages
  * 2. Local messages get timestamps set correctly
  * 3. Timestamps are preserved during updates
@@ -39,8 +36,8 @@ class ChatTimestampTest {
     private val agentId = "test-agent-1"
 
     /**
-     * Helper function to wait for Flow to emit after database changes.
-     * Room Flows emit when the database changes, but we need to wait for the emission.
+     * Helper function to wait for Flow to emit after database changes. Room Flows emit when the
+     * database changes, but we need to wait for the emission.
      */
     private suspend fun waitForMessages(agentId: String, expectedSize: Int? = null): List<MsgInfo> {
         val flow = dataSource.getMessagesFlow(agentId)
@@ -205,9 +202,18 @@ class ChatTimestampTest {
 
         // Then: All timestamps should be preserved
         val storedMessages = waitForMessages(agentId, expectedSize = 3)
-        assertEquals("2025-01-15T10:30:45.123456Z", storedMessages.find { it.id == "msg-1" }?.timestamp)
-        assertEquals("2025-01-15T10:31:00.654321Z", storedMessages.find { it.id == "msg-2" }?.timestamp)
-        assertEquals("2025-01-15T10:31:15.987654Z", storedMessages.find { it.id == "msg-3" }?.timestamp)
+        assertEquals(
+            "2025-01-15T10:30:45.123456Z",
+            storedMessages.find { it.id == "msg-1" }?.timestamp,
+        )
+        assertEquals(
+            "2025-01-15T10:31:00.654321Z",
+            storedMessages.find { it.id == "msg-2" }?.timestamp,
+        )
+        assertEquals(
+            "2025-01-15T10:31:15.987654Z",
+            storedMessages.find { it.id == "msg-3" }?.timestamp,
+        )
     }
 
     @Test
@@ -273,7 +279,10 @@ class ChatTimestampTest {
         // Then: Both messages should have their timestamps preserved
         val messages = waitForMessages(agentId, expectedSize = 2)
         assertEquals("2025-01-15T10:25:00.000000Z", messages.find { it.id == "older-1" }?.timestamp)
-        assertEquals("2025-01-15T10:30:00.000000Z", messages.find { it.id == "existing-1" }?.timestamp)
+        assertEquals(
+            "2025-01-15T10:30:00.000000Z",
+            messages.find { it.id == "existing-1" }?.timestamp,
+        )
     }
 
     @Test
@@ -300,8 +309,14 @@ class ChatTimestampTest {
 
         // Then: All timestamps should be preserved
         val storedMessages = waitForMessages(agentId, expectedSize = 2)
-        assertEquals("2025-01-15T10:30:00.111111Z", storedMessages.find { it.id == "append-1" }?.timestamp)
-        assertEquals("2025-01-15T10:30:05.222222Z", storedMessages.find { it.id == "append-2" }?.timestamp)
+        assertEquals(
+            "2025-01-15T10:30:00.111111Z",
+            storedMessages.find { it.id == "append-1" }?.timestamp,
+        )
+        assertEquals(
+            "2025-01-15T10:30:05.222222Z",
+            storedMessages.find { it.id == "append-2" }?.timestamp,
+        )
     }
 
     @Test
@@ -352,4 +367,3 @@ class ChatTimestampTest {
         assertEquals(originalTimestamp, finalMessages[0].timestamp)
     }
 }
-

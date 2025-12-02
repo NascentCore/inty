@@ -20,10 +20,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * 测试同步状态管理
- * 验证 hasMore/offset/isInitialLoaded 的状态管理
- */
+/** 测试同步状态管理 验证 hasMore/offset/isInitialLoaded 的状态管理 */
 @RunWith(AndroidJUnit4::class)
 class SyncStateTest {
 
@@ -43,9 +40,7 @@ class SyncStateTest {
 
     @After
     fun tearDown() {
-        runBlocking {
-            delay(100)
-        }
+        runBlocking { delay(100) }
         database.close()
     }
 
@@ -251,4 +246,3 @@ class SyncStateTest {
         assertTrue("hasMore Flow 应该更新为 true", updatedValue2)
     }
 }
-

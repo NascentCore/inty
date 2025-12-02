@@ -4,7 +4,6 @@ package ai.sxwl.android.data.chat.local
 
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.chat.data.RoomDataSource
-import ai.sxwl.android.data.chat.local.db.ChatMessageEntity
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import android.content.Context
 import androidx.room.Room
@@ -16,16 +15,12 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * 测试 updateMessages 的行为
- * 验证更新消息时保留现有 sortKey，避免重新排序
- */
+/** 测试 updateMessages 的行为 验证更新消息时保留现有 sortKey，避免重新排序 */
 @RunWith(AndroidJUnit4::class)
 class UpdateMessagesTest {
 
@@ -45,9 +40,7 @@ class UpdateMessagesTest {
 
     @After
     fun tearDown() {
-        runBlocking {
-            delay(100)
-        }
+        runBlocking { delay(100) }
         database.close()
     }
 
@@ -75,20 +68,21 @@ class UpdateMessagesTest {
     @Test
     fun updateMessagesPreservesSortKeyForExistingMessagesByLocalId() = runBlocking {
         // Given: 已有消息
-        val originalMessages = listOf(
-            MsgInfo(
-                id = "remote-1",
-                content = "Message 1",
-                role = "assistant",
-                timestamp = "2025-01-15T10:30:00.000000Z",
-            ),
-            MsgInfo(
-                id = "remote-2",
-                content = "Message 2",
-                role = "user",
-                timestamp = "2025-01-15T10:31:00.000000Z",
-            ),
-        )
+        val originalMessages =
+            listOf(
+                MsgInfo(
+                    id = "remote-1",
+                    content = "Message 1",
+                    role = "assistant",
+                    timestamp = "2025-01-15T10:30:00.000000Z",
+                ),
+                MsgInfo(
+                    id = "remote-2",
+                    content = "Message 2",
+                    role = "user",
+                    timestamp = "2025-01-15T10:31:00.000000Z",
+                ),
+            )
         dataSource.appendMessages(agentId, originalMessages)
         val initialMessages = waitForMessages(agentId, expectedSize = 2)
 
@@ -98,28 +92,29 @@ class UpdateMessagesTest {
         assertTrue("原始消息应该有 sortKey", originalSortKey1 != null && originalSortKey2 != null)
 
         // When: 更新消息（通过 localMsgId 匹配）
-        val updatedMessages = listOf(
-            initialMessages[0].copy(
-                localMsgId = initialMessages[0].localMsgId,
-                content = "Updated Message 1",
-            ),
-            initialMessages[1].copy(
-                localMsgId = initialMessages[1].localMsgId,
-                content = "Updated Message 2",
-            ),
-        )
+        val updatedMessages =
+            listOf(
+                initialMessages[0].copy(
+                    localMsgId = initialMessages[0].localMsgId,
+                    content = "Updated Message 1",
+                ),
+                initialMessages[1].copy(
+                    localMsgId = initialMessages[1].localMsgId,
+                    content = "Updated Message 2",
+                ),
+            )
         dataSource.updateMessages(agentId, updatedMessages)
 
         // Then: sortKey 应该被保留
         delay(100) // 等待 Flow 更新
         val finalMessages = waitForMessages(agentId, expectedSize = 2)
-        
+
         // 通过 id 查找消息，因为顺序可能变化
         val finalMessage1 = finalMessages.find { it.id == "remote-1" }
         val finalMessage2 = finalMessages.find { it.id == "remote-2" }
         assertTrue("应该找到 remote-1 消息", finalMessage1 != null)
         assertTrue("应该找到 remote-2 消息", finalMessage2 != null)
-        
+
         val finalSortKey1 = getEntitySortKey(agentId, finalMessage1!!.localMsgId)
         val finalSortKey2 = getEntitySortKey(agentId, finalMessage2!!.localMsgId)
 
@@ -132,14 +127,15 @@ class UpdateMessagesTest {
     @Test
     fun updateMessagesPreservesSortKeyForExistingMessagesByRemoteId() = runBlocking {
         // Given: 已有消息（使用 remoteId）
-        val originalMessages = listOf(
-            MsgInfo(
-                id = "remote-1",
-                content = "Message 1",
-                role = "assistant",
-                timestamp = "2025-01-15T10:30:00.000000Z",
-            ),
-        )
+        val originalMessages =
+            listOf(
+                MsgInfo(
+                    id = "remote-1",
+                    content = "Message 1",
+                    role = "assistant",
+                    timestamp = "2025-01-15T10:30:00.000000Z",
+                )
+            )
         dataSource.appendMessages(agentId, originalMessages)
         val initialMessages = waitForMessages(agentId, expectedSize = 1)
 
@@ -148,14 +144,15 @@ class UpdateMessagesTest {
         assertTrue("原始消息应该有 sortKey", originalSortKey != null)
 
         // When: 更新消息（通过 remoteId 匹配，不提供 localMsgId）
-        val updatedMessages = listOf(
-            MsgInfo(
-                id = "remote-1", // 使用 remoteId 匹配
-                content = "Updated Message 1",
-                role = "assistant",
-                timestamp = "2025-01-15T10:30:00.000000Z",
-            ),
-        )
+        val updatedMessages =
+            listOf(
+                MsgInfo(
+                    id = "remote-1", // 使用 remoteId 匹配
+                    content = "Updated Message 1",
+                    role = "assistant",
+                    timestamp = "2025-01-15T10:30:00.000000Z",
+                )
+            )
         dataSource.updateMessages(agentId, updatedMessages)
 
         // Then: sortKey 应该被保留
@@ -170,14 +167,15 @@ class UpdateMessagesTest {
     @Test
     fun updateMessagesAssignsNewSortKeyForNewMessages() = runBlocking {
         // Given: 已有消息
-        val originalMessages = listOf(
-            MsgInfo(
-                id = "remote-1",
-                content = "Message 1",
-                role = "assistant",
-                timestamp = "2025-01-15T10:30:00.000000Z",
-            ),
-        )
+        val originalMessages =
+            listOf(
+                MsgInfo(
+                    id = "remote-1",
+                    content = "Message 1",
+                    role = "assistant",
+                    timestamp = "2025-01-15T10:30:00.000000Z",
+                )
+            )
         dataSource.appendMessages(agentId, originalMessages)
         waitForMessages(agentId, expectedSize = 1)
 
@@ -185,14 +183,15 @@ class UpdateMessagesTest {
         val maxSortKeyBefore = database.chatMessageDao().getMaxSortKey(agentId) ?: 0L
 
         // When: 添加新消息（不匹配现有消息）
-        val newMessages = listOf(
-            MsgInfo(
-                id = "remote-2", // 新的 remoteId
-                content = "New Message",
-                role = "user",
-                timestamp = "2025-01-15T10:35:00.000000Z",
-            ),
-        )
+        val newMessages =
+            listOf(
+                MsgInfo(
+                    id = "remote-2", // 新的 remoteId
+                    content = "New Message",
+                    role = "user",
+                    timestamp = "2025-01-15T10:35:00.000000Z",
+                )
+            )
         dataSource.updateMessages(agentId, listOf(originalMessages[0], newMessages[0]))
 
         // Then: 新消息应该得到新的 sortKey（大于现有最大 sortKey）
@@ -207,20 +206,21 @@ class UpdateMessagesTest {
     @Test
     fun updateMessagesHandlesMixedScenario() = runBlocking {
         // Given: 已有消息
-        val originalMessages = listOf(
-            MsgInfo(
-                id = "remote-1",
-                content = "Message 1",
-                role = "assistant",
-                timestamp = "2025-01-15T10:30:00.000000Z",
-            ),
-            MsgInfo(
-                id = "remote-2",
-                content = "Message 2",
-                role = "user",
-                timestamp = "2025-01-15T10:31:00.000000Z",
-            ),
-        )
+        val originalMessages =
+            listOf(
+                MsgInfo(
+                    id = "remote-1",
+                    content = "Message 1",
+                    role = "assistant",
+                    timestamp = "2025-01-15T10:30:00.000000Z",
+                ),
+                MsgInfo(
+                    id = "remote-2",
+                    content = "Message 2",
+                    role = "user",
+                    timestamp = "2025-01-15T10:31:00.000000Z",
+                ),
+            )
         dataSource.appendMessages(agentId, originalMessages)
         val initialMessages = waitForMessages(agentId, expectedSize = 2)
 
@@ -230,41 +230,42 @@ class UpdateMessagesTest {
         val maxSortKeyBefore = database.chatMessageDao().getMaxSortKey(agentId) ?: 0L
 
         // When: 混合场景（部分消息匹配，部分不匹配）
-        val updatedMessages = listOf(
-            // 匹配的消息 1（通过 localMsgId）
-            initialMessages[0].copy(
-                localMsgId = initialMessages[0].localMsgId,
-                content = "Updated Message 1",
-            ),
-            // 匹配的消息 2（通过 remoteId）
-            MsgInfo(
-                id = "remote-2",
-                content = "Updated Message 2",
-                role = "user",
-                timestamp = "2025-01-15T10:31:00.000000Z",
-            ),
-            // 新消息
-            MsgInfo(
-                id = "remote-3",
-                content = "New Message 3",
-                role = "assistant",
-                timestamp = "2025-01-15T10:32:00.000000Z",
-            ),
-        )
+        val updatedMessages =
+            listOf(
+                // 匹配的消息 1（通过 localMsgId）
+                initialMessages[0].copy(
+                    localMsgId = initialMessages[0].localMsgId,
+                    content = "Updated Message 1",
+                ),
+                // 匹配的消息 2（通过 remoteId）
+                MsgInfo(
+                    id = "remote-2",
+                    content = "Updated Message 2",
+                    role = "user",
+                    timestamp = "2025-01-15T10:31:00.000000Z",
+                ),
+                // 新消息
+                MsgInfo(
+                    id = "remote-3",
+                    content = "New Message 3",
+                    role = "assistant",
+                    timestamp = "2025-01-15T10:32:00.000000Z",
+                ),
+            )
         dataSource.updateMessages(agentId, updatedMessages)
 
         // Then: 匹配的消息保留 sortKey，新消息得到新 sortKey
         // 等待 Flow 更新
         delay(300) // 增加延迟以确保所有更新完成
         val finalMessages = waitForMessages(agentId, expectedSize = 3)
-        
+
         val finalMessage1 = finalMessages.find { it.id == "remote-1" }
         val finalMessage2 = finalMessages.find { it.id == "remote-2" }
         val finalMessage3 = finalMessages.find { it.id == "remote-3" }
         assertTrue("应该找到 remote-1 消息", finalMessage1 != null)
         assertTrue("应该找到 remote-2 消息", finalMessage2 != null)
         assertTrue("应该找到 remote-3 消息", finalMessage3 != null)
-        
+
         val finalSortKey1 = getEntitySortKey(agentId, finalMessage1!!.localMsgId)
         val finalSortKey2 = getEntitySortKey(agentId, finalMessage2!!.localMsgId)
         val newMessageSortKey = getEntitySortKey(agentId, finalMessage3!!.localMsgId)
@@ -277,26 +278,27 @@ class UpdateMessagesTest {
     @Test
     fun updateMessagesPreservesMessageOrder() = runBlocking {
         // Given: 已有消息，按时间顺序
-        val originalMessages = listOf(
-            MsgInfo(
-                id = "remote-1",
-                content = "First message",
-                role = "user",
-                timestamp = "2025-01-15T10:30:00.000000Z",
-            ),
-            MsgInfo(
-                id = "remote-2",
-                content = "Second message",
-                role = "assistant",
-                timestamp = "2025-01-15T10:31:00.000000Z",
-            ),
-            MsgInfo(
-                id = "remote-3",
-                content = "Third message",
-                role = "user",
-                timestamp = "2025-01-15T10:32:00.000000Z",
-            ),
-        )
+        val originalMessages =
+            listOf(
+                MsgInfo(
+                    id = "remote-1",
+                    content = "First message",
+                    role = "user",
+                    timestamp = "2025-01-15T10:30:00.000000Z",
+                ),
+                MsgInfo(
+                    id = "remote-2",
+                    content = "Second message",
+                    role = "assistant",
+                    timestamp = "2025-01-15T10:31:00.000000Z",
+                ),
+                MsgInfo(
+                    id = "remote-3",
+                    content = "Third message",
+                    role = "user",
+                    timestamp = "2025-01-15T10:32:00.000000Z",
+                ),
+            )
         dataSource.appendMessages(agentId, originalMessages)
         val initialMessages = waitForMessages(agentId, expectedSize = 3)
 
@@ -317,20 +319,21 @@ class UpdateMessagesTest {
     @Test
     fun updateMessagesWithEmptyListClearsAllMessages() = runBlocking {
         // Given: 已有消息
-        val originalMessages = listOf(
-            MsgInfo(
-                id = "remote-1",
-                content = "Message 1",
-                role = "assistant",
-                timestamp = "2025-01-15T10:30:00.000000Z",
-            ),
-            MsgInfo(
-                id = "remote-2",
-                content = "Message 2",
-                role = "user",
-                timestamp = "2025-01-15T10:31:00.000000Z",
-            ),
-        )
+        val originalMessages =
+            listOf(
+                MsgInfo(
+                    id = "remote-1",
+                    content = "Message 1",
+                    role = "assistant",
+                    timestamp = "2025-01-15T10:30:00.000000Z",
+                ),
+                MsgInfo(
+                    id = "remote-2",
+                    content = "Message 2",
+                    role = "user",
+                    timestamp = "2025-01-15T10:31:00.000000Z",
+                ),
+            )
         dataSource.appendMessages(agentId, originalMessages)
         waitForMessages(agentId, expectedSize = 2)
 
@@ -344,4 +347,3 @@ class UpdateMessagesTest {
         assertEquals("所有消息应该被删除", 0, finalMessages.size)
     }
 }
-

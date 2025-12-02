@@ -48,10 +48,10 @@ class FakeGooglePlayService:
         """构建链式调用结构"""
         # purchases().subscriptions().get().execute()
         self._purchases = MagicMock()
-        
+
         # 使用普通对象而不是 MagicMock，避免属性被覆盖
-        self._subscriptions = type('Subscriptions', (), {})()
-        self._products = type('Products', (), {})()
+        self._subscriptions = type("Subscriptions", (), {})()
+        self._products = type("Products", (), {})()
         self._edits = MagicMock()
 
         # 设置链式调用
@@ -90,7 +90,10 @@ class FakeGooglePlayService:
             key = f"{packageName}:{subscriptionId}:{token}"
 
             # 检查是否有预设的错误
-            if key in self._subscription_errors and self._subscription_errors[key] is not None:
+            if (
+                key in self._subscription_errors
+                and self._subscription_errors[key] is not None
+            ):
                 raise self._subscription_errors[key]
 
             # 返回预设的响应
@@ -146,7 +149,10 @@ class FakeGooglePlayService:
             key = f"{packageName}:{subscriptionId}:{token}"
 
             # 检查是否有预设的错误
-            if key in self._acknowledge_errors and self._acknowledge_errors[key] is not None:
+            if (
+                key in self._acknowledge_errors
+                and self._acknowledge_errors[key] is not None
+            ):
                 raise self._acknowledge_errors[key]
 
             # 检查是否预设为失败
@@ -182,7 +188,9 @@ class FakeGooglePlayService:
     def _create_subscription_defer(self) -> Callable:
         """创建订阅延期方法"""
 
-        def defer(packageName: str, subscriptionId: str, token: str, body: Dict[str, Any]):
+        def defer(
+            packageName: str, subscriptionId: str, token: str, body: Dict[str, Any]
+        ):
             key = f"{packageName}:{subscriptionId}:{token}"
 
             # 检查是否有预设的错误
@@ -256,7 +264,9 @@ class FakeGooglePlayService:
                             "versionCodes": ["100"],
                             "name": "1.0.0",
                             "status": "completed",
-                            "releaseNotes": [{"language": "en-US", "text": "Release notes"}],
+                            "releaseNotes": [
+                                {"language": "en-US", "text": "Release notes"}
+                            ],
                         }
                     ]
                 }
@@ -363,4 +373,3 @@ class FakeGooglePlayService:
         resp = MagicMock()
         resp.status = status_code
         return HttpError(resp, message.encode() if message else b"{}")
-
