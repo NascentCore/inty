@@ -163,8 +163,8 @@
 
     <!-- Feedback -->
     <string name="str_feedback">Feedback</string>
-    <string name="share_feedback">Share Feedback</string>
-    <string name="tell_us_what_you_think">Tell us what you think</string>
+    <string name="feedback_title">Help Us Improve</string>
+    <string name="feedback_subtitle">Was everything to your satisfaction? </string>
     <string name="feedback_reason_chat_not_natural">Chat replies don\'t feel natural / off-topic</string>
     <string name="feedback_reason_character_mismatch">The character doesn\'t match its persona</string>
     <string name="feedback_reason_app_slow">The app is slow or gets stuck</string>

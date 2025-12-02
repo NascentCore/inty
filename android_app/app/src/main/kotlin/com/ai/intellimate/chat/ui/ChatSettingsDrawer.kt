@@ -108,7 +108,8 @@ fun ChatSettingsDrawer(
         drawerContent = {
             Column(
                 modifier =
-                    Modifier.width(319.dp)
+                    Modifier
+                        .width(319.dp)
                         .fillMaxHeight()
                         .background(
                             brush =
@@ -319,7 +320,7 @@ fun ChatSettingsDrawer(
                         SettingsArrowItem(
                             item =
                                 SettingsItemData.CommonItemData(
-                                    title = stringResource(R.string.str_feedback),
+                                    title = stringResource(R.string.feedback_title),
                                     content = "",
                                     arrow = true,
                                 ),
