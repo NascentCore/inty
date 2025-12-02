@@ -3,6 +3,7 @@ package ai.sxwl.android.data.store
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.utils.AppUtils
+import ai.sxwl.android.utils.Utils
 import android.os.Handler
 import android.os.Looper
 import com.tencent.mmkv.MMKV

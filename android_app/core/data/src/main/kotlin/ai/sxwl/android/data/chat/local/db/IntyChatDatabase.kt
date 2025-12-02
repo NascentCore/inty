@@ -28,11 +28,7 @@ abstract class IntyChatDatabase : RoomDatabase() {
             return instance
                 ?: synchronized(this) {
                     instance
-                        ?: Room.databaseBuilder(
-                                context,
-                                IntyChatDatabase::class.java,
-                                DATABASE_NAME,
-                            )
+                        ?: Room.databaseBuilder(context, IntyChatDatabase::class.java, DATABASE_NAME)
                             .fallbackToDestructiveMigration()
                             .build()
                             .also { instance = it }

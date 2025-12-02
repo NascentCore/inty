@@ -24,6 +24,33 @@
 - **编排**：`IntelliMateApp` 初始化网络与启动；`UnifiedStartupManager` 负责登录/游客、预加载、缓存与网络同步；`BillingRepository` 单例管理购买与状态。
 - **媒体**：自定义 `AudioPlaybackManager`（Media3），设计模块配置图片加载。
 
+### 本地存储（MMKV）
+
+MMKV（版本 2.2.4）作为轻量级键值存储，通过 `IntySetting` 单例统一管理。
+
+#### 初始化与实例模式
+- **初始化**：在 `IntySetting` 的 `init` 块中调用 `MMKV.initialize(Utils.getApp())`，应用启动时自动完成。
+- **双实例架构**：
+  - `allUserSetting`：单进程模式（`SINGLE_PROCESS_MODE`），存储应用级通用数据，所有用户共享。
+  - `curUserSetting`：多进程模式（`MULTI_PROCESS_MODE`），按用户 ID 动态创建（`mmkvWithID("user_$curUid")`），支持用户切换。
+
+#### 主要用途
+- **用户认证**：存储用户 ID（`cur_uid`）、访问令牌（`token`）、登录状态判断。
+- **应用设置**：Keep Talking 按钮显示、自动播放语音、场景动作按钮等用户偏好。
+- **会话状态**：消息已读标记（最后一条消息 ID）、会话置顶/隐藏状态、隐藏时间戳。
+- **用户资料**：通过 `user_profile_*` 前缀存储用户信息（昵称、头像、邮箱、性别等）。
+- **应用级标记**：应用更新提示、Google Play URL、排序种子、Guest 模式显示等。
+- **订阅相关**：订阅提醒对话框的显示时间和次数记录。
+
+#### 设计特点
+- **封装良好**：`IntySetting` 提供类型安全的访问方法，隐藏 MMKV API 细节。
+- **用户隔离**：通过动态创建用户级实例实现多用户数据隔离，支持 Guest ↔ Google 账户切换。
+- **键命名规范**：使用前缀区分数据类别（`user_profile_*`、`app_data_*`、`conversation_*` 等）。
+
+#### 已知问题
+- **大列表存储**：智能体列表以 JSON 格式写入 MMKV，仅有 TTL 无容量上限，可能导致存储膨胀（见问题 #14）。
+- **安全风险**：访问令牌以明文存储，未见加密密钥管理机制（见问题 #10）。
+
 ### 适配性评估
 - Compose + MVVM 的模块化整体匹配“聊天优先、富媒体”的产品形态。
 - 但并行的两套网络栈、非标准化 DI、重度单例编排、以及关闭的持久化，削弱了可靠性、一致性与可测性；对强调长期陪伴与稳定体验的产品构成风险。

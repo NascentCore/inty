@@ -3,6 +3,7 @@ package ai.sxwl.android.data.chat.local.db
 // CREATED_BY_AGENT
 
 import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.utils.TimeUtils
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -76,15 +77,14 @@ internal fun MsgInfo.toEntity(
 
     // 使用服务器时间戳（用于UI显示），如果不存在则保留现有的timestamp
     // 对于本地消息（如用户消息），如果没有timestamp且没有existing entity，则从当前时间生成
-    val resolvedTimestamp =
-        timestamp
-            ?: existing?.timestamp
-            ?: if (existing == null) {
-                // 为本地消息生成ISO 8601格式的时间戳
-                java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
-            } else {
-                null
-            }
+    val resolvedTimestamp = timestamp
+        ?: existing?.timestamp
+        ?: if (existing == null) {
+            // 为本地消息生成ISO 8601格式的时间戳
+            java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
+        } else {
+            null
+        }
 
     return ChatMessageEntity(
         localId = stableLocalId,
@@ -118,7 +118,11 @@ internal fun ChatMessageEntity.toModel(): MsgInfo {
         }
 
     val meta =
-        if (metaAgentId == null && !isOpening && generatedImage == null) {
+        if (
+            metaAgentId == null &&
+                !isOpening &&
+                generatedImage == null
+        ) {
             null
         } else {
             MsgInfo.MsgMetaData(
@@ -146,7 +150,10 @@ internal fun ChatMessageEntity.toModel(): MsgInfo {
     )
 }
 
-private fun MsgInfo.resolveLocalId(agentId: String, existing: ChatMessageEntity?): String {
+private fun MsgInfo.resolveLocalId(
+    agentId: String,
+    existing: ChatMessageEntity?,
+): String {
     if (existing != null) return existing.localId
     if (id.isNotEmpty()) return id
     if (localMsgId.isNotEmpty()) return localMsgId
