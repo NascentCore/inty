@@ -173,6 +173,7 @@ resources:
             models:
               api_response_list_character_theme: "#/components/schemas/APIResponse_List_CharacterTheme__"
               character_theme: "#/components/schemas/CharacterTheme"
+              character_theme_agent: "#/components/schemas/CharacterThemeAgent"
               character_theme_visibility: "#/components/schemas/CharacterThemeVisibility"
             methods:
               list: get /api/v1/character-themes/
