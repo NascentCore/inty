@@ -147,6 +147,7 @@ internal fun ChatPage(
     // 获取开关状态用于页面曝光事件和 UI 显示
     val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState()
     val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState()
+    val chatFontSizeSp by SettingStateManager.chatFontSizeFlow.collectAsState()
 
     // 记录上次上报的 key，避免在同一页面状态下重复上报
     // 使用 agentInfo?.id 作为 key 的一部分，确保不同 Agent 的页面会分别上报
@@ -445,6 +446,7 @@ internal fun ChatPage(
                                                             isLatestMessage =
                                                                 isLatestAssistantTextMessage,
                                                             isGuideVisible = isGuideVisible,
+                                                            messageFontSizeSp = chatFontSizeSp,
                                                         )
                                                     }
                                                     Spacer(Modifier.height(16.dp))
@@ -511,6 +513,7 @@ internal fun ChatPage(
                                             isCurrentPage = isCurrentPage,
                                             chatViewModel = chatViewModel,
                                             isGuideVisible = isGuideVisible,
+                                            messageFontSizeSp = chatFontSizeSp,
                                         )
                                         Spacer(Modifier.height(16.dp))
                                     }
