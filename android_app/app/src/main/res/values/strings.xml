@@ -216,6 +216,7 @@
     <string name="chat_settings_font_size_preview_sample">This is how your messages appear.</string>
     <string name="chat_input_placeholder">Write something to your IntelliMate</string>
     <string name="chat_input_with_scene_action_placeholder">Click () to describe actions, feelings, thoughts</string>
+    <string name="chat_ai_typing_placeholder">Your IntelliMate is typing</string>
 
     <!-- VIP Components -->
     <string name="discount_save">OFF</string>

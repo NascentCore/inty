@@ -785,26 +785,37 @@ private fun findBracketPairs(text: String): List<Pair<Int, Int>> {
 @Composable
 private fun LoadingAnimation() {
     val infiniteTransition = rememberInfiniteTransition(label = "loading")
+    val typingPlaceholder = stringResource(R.string.chat_ai_typing_placeholder)
 
     Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        repeat(3) { index ->
-            val delay = index * 200
-            val dotAlpha by
-                infiniteTransition.animateFloat(
-                    initialValue = 0.3f,
-                    targetValue = 1.0f,
-                    animationSpec = infiniteRepeatable(animation = tween(600, delayMillis = delay)),
-                    label = "dot_alpha_$index",
-                )
+        Text(
+            text = typingPlaceholder,
+            color = Color.White.copy(alpha = 0.7f),
+            fontSize = 12.sp,
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            repeat(3) { index ->
+                val delay = index * 200
+                val dotAlpha by
+                    infiniteTransition.animateFloat(
+                        initialValue = 0.3f,
+                        targetValue = 1.0f,
+                        animationSpec = infiniteRepeatable(animation = tween(600, delayMillis = delay)),
+                        label = "dot_alpha_$index",
+                    )
 
-            Box(
-                modifier =
-                    Modifier.size(6.dp)
-                        .background(color = Color.White.copy(dotAlpha * 0.7f), shape = CircleShape)
-            )
+                Box(
+                    modifier =
+                        Modifier.size(6.dp)
+                            .background(color = Color.White.copy(dotAlpha * 0.7f), shape = CircleShape)
+                )
+            }
         }
     }
 }
