@@ -58,3 +58,7 @@ from app.models.user import (
 )
 from app.models.verification_code import VerificationCode as VerificationCode
 from app.models.voice_cache import VoiceCache as VoiceCache
+from app.models.character_theme import (
+    CharacterTheme as CharacterTheme,
+    CharacterThemeAgent as CharacterThemeAgent,
+)
