@@ -55,7 +55,7 @@ jobs:
       - name: Upload release bundle to Google Play internal testing
         uses: r0adkll/upload-google-play@v1
         with:
-          serviceAccountJson: service-account-key.json
+          serviceAccountJsonPlainText: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_GPLAY_UPLOAD }}
           packageName: com.ai.intellimate
           releaseFiles: android_app/app/build/outputs/bundle/release/app-release.aab
           track: internal
