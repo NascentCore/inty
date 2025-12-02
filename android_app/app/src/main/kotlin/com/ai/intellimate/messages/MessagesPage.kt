@@ -9,6 +9,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,7 +47,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -235,30 +235,35 @@ private fun MessageTabContent(
                                         }
                                         .combinedClickable(
                                             onClick = {
-                                                // 正常点击：如果菜单未显示，则进入聊天
-                                                if (
-                                                    showMenuForConversationId != conversion.agentId
-                                                ) {
-                                                    val currentTime = System.currentTimeMillis()
-                                                    if (AntiClick.isValidClick(lastClickTime)) {
-                                                        lastClickTime = currentTime
-                                                        // 检查是否已登录
-                                                        if (
-                                                            IntySetting.isLogin() &&
-                                                                IntySetting.getCurToken()
-                                                                    .isNotEmpty()
-                                                        ) {
-                                                            onClickConversationItem(conversion)
-                                                        }
-                                                    }
-                                                } else {
-                                                    // 如果菜单显示，点击则关闭菜单
+                                                // 如果菜单显示，点击任何地方都关闭菜单
+                                                if (showMenuForConversationId != null) {
                                                     showMenuForConversationId = null
+                                                    return@combinedClickable
+                                                }
+                                                
+                                                // 正常点击：进入聊天
+                                                val currentTime = System.currentTimeMillis()
+                                                if (AntiClick.isValidClick(lastClickTime)) {
+                                                    lastClickTime = currentTime
+                                                    // 检查是否已登录
+                                                    if (
+                                                        IntySetting.isLogin() &&
+                                                            IntySetting.getCurToken()
+                                                                .isNotEmpty()
+                                                    ) {
+                                                        onClickConversationItem(conversion)
+                                                    }
                                                 }
                                             },
                                             onLongClick = {
-                                                // 长按：显示菜单，使用已存储的位置
-                                                showMenuForConversationId = conversion.agentId
+                                                // 长按：如果已经有菜单显示，切换到新菜单；如果是同一行，则关闭菜单
+                                                if (showMenuForConversationId == conversion.agentId) {
+                                                    // 长按同一行，关闭菜单
+                                                    showMenuForConversationId = null
+                                                } else {
+                                                    // 长按不同行，切换到新菜单（旧菜单会自动消失）
+                                                    showMenuForConversationId = conversion.agentId
+                                                }
                                             },
                                         )
                             ) {
@@ -296,46 +301,36 @@ private fun MessageTabContent(
                 uiState.conversations.find { it.agentId == showMenuForConversationId }
             conversation?.let { conv ->
                 val isIntelliMate = conv.agentId in uiState.intelliMateAgentIds
-                // 遮罩层，点击外部关闭菜单（全屏）
-                Box(
-                    modifier =
-                        Modifier.fillMaxSize()
-                            .background(Color.Transparent)
-                            .clickable { showMenuForConversationId = null }
-                            .zIndex(999f)
-                )
-
                 // 菜单内容（显示在 item 位置附近）
+                // 注意：移除了遮罩层，点击外部关闭菜单的功能通过 LazyColumn 的 onClick 处理
                 // 使用实际测量的 item Y 位置
                 val menuY = itemPositions[conv.agentId]?.let { it.dp } ?: 0.dp
-                Box(
-                    modifier = Modifier.fillMaxSize().zIndex(1000f),
-                    contentAlignment = Alignment.TopStart,
-                ) {
-                    ConversationItemMenu(
-                        isPinned = conv.isPinned,
-                        isHidden = conv.isHidden,
-                        onPinClick = {
-                            if (conv.isPinned) {
-                                viewModel.unpinConversation(conv.agentId)
-                            } else {
-                                viewModel.pinConversation(conv.agentId)
-                            }
-                            showMenuForConversationId = null
-                        },
-                        onHideClick = {
-                            if (conv.isHidden) {
-                                viewModel.unhideConversation(conv.agentId)
-                            } else {
-                                viewModel.hideConversation(conv.agentId)
-                            }
-                            showMenuForConversationId = null
-                        },
-                        onDismiss = { showMenuForConversationId = null },
-                        showHideOption = !isIntelliMate, // IntelliMate agent 不显示 hide 选项
-                        modifier = Modifier.offset(x = 16.dp, y = menuY).width(140.dp),
-                    )
-                }
+                ConversationItemMenu(
+                    isPinned = conv.isPinned,
+                    isHidden = conv.isHidden,
+                    onPinClick = {
+                        if (conv.isPinned) {
+                            viewModel.unpinConversation(conv.agentId)
+                        } else {
+                            viewModel.pinConversation(conv.agentId)
+                        }
+                        showMenuForConversationId = null
+                    },
+                    onHideClick = {
+                        if (conv.isHidden) {
+                            viewModel.unhideConversation(conv.agentId)
+                        } else {
+                            viewModel.hideConversation(conv.agentId)
+                        }
+                        showMenuForConversationId = null
+                    },
+                    onDismiss = { showMenuForConversationId = null },
+                    showHideOption = !isIntelliMate, // IntelliMate agent 不显示 hide 选项
+                    modifier =
+                        Modifier.offset(x = 16.dp, y = menuY)
+                            .width(140.dp)
+                            .zIndex(1000f),
+                )
             }
         }
 
