@@ -2607,6 +2607,462 @@
                 ]
             }
         },
+        "/api/v1/character-themes/": {
+            "post": {
+                "tags": [
+                    "character-themes",
+                    "evaluation"
+                ],
+                "summary": "\u521b\u5efa\u89d2\u8272\u4e3b\u9898\u4e13\u533a",
+                "description": "\u521b\u5efa\u65b0\u7684\u89d2\u8272\u4e3b\u9898\u4e13\u533a\uff08\u9700\u8981\u7ba1\u7406\u5458\u6743\u9650\uff09",
+                "operationId": "create_theme_api_v1_character_themes__post",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CharacterThemeCreate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_CharacterTheme_"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "character-themes",
+                    "evaluation",
+                    "web_app"
+                ],
+                "summary": "\u83b7\u53d6\u89d2\u8272\u4e3b\u9898\u4e13\u533a\u5217\u8868",
+                "description": "\u83b7\u53d6\u89d2\u8272\u4e3b\u9898\u4e13\u533a\u5217\u8868\u3002\u666e\u901a\u7528\u6237\u53ea\u80fd\u770b\u5230\u53ef\u89c1\u4e13\u533a\uff08\u7b2c\u4e00\u5c55\u793a\u3001\u7b2c\u4e8c\u5c55\u793a\uff09\uff0c\u7ba1\u7406\u5458\u53ef\u901a\u8fc7 include_hidden \u53c2\u6570\u67e5\u770b\u6240\u6709\u4e13\u533a",
+                "operationId": "list_themes_api_v1_character_themes__get",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "\u8df3\u8fc7\u7684\u8bb0\u5f55\u6570",
+                            "default": 0,
+                            "title": "Skip"
+                        },
+                        "description": "\u8df3\u8fc7\u7684\u8bb0\u5f55\u6570"
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 1000,
+                            "minimum": 1,
+                            "description": "\u8fd4\u56de\u7684\u8bb0\u5f55\u6570",
+                            "default": 100,
+                            "title": "Limit"
+                        },
+                        "description": "\u8fd4\u56de\u7684\u8bb0\u5f55\u6570"
+                    },
+                    {
+                        "name": "include_hidden",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "description": "\u662f\u5426\u5305\u542b\u4e0d\u53ef\u89c1\u7684\u4e13\u533a\uff08\u4ec5\u7ba1\u7406\u5458\u53ef\u7528\uff09",
+                            "default": false,
+                            "title": "Include Hidden"
+                        },
+                        "description": "\u662f\u5426\u5305\u542b\u4e0d\u53ef\u89c1\u7684\u4e13\u533a\uff08\u4ec5\u7ba1\u7406\u5458\u53ef\u7528\uff09"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_List_CharacterTheme__"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/character-themes/{theme_id}": {
+            "get": {
+                "tags": [
+                    "character-themes",
+                    "evaluation",
+                    "web_app"
+                ],
+                "summary": "\u83b7\u53d6\u89d2\u8272\u4e3b\u9898\u4e13\u533a\u8be6\u60c5",
+                "description": "\u83b7\u53d6\u6307\u5b9a\u89d2\u8272\u4e3b\u9898\u4e13\u533a\u7684\u8be6\u7ec6\u4fe1\u606f\uff08\u6240\u6709\u5df2\u8ba4\u8bc1\u7528\u6237\u53ef\u8bbf\u95ee\uff09",
+                "operationId": "get_theme_api_v1_character_themes__theme_id__get",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "theme_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Theme Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_CharacterTheme_"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "character-themes",
+                    "evaluation"
+                ],
+                "summary": "\u66f4\u65b0\u89d2\u8272\u4e3b\u9898\u4e13\u533a",
+                "description": "\u66f4\u65b0\u89d2\u8272\u4e3b\u9898\u4e13\u533a\u4fe1\u606f\uff08\u9700\u8981\u7ba1\u7406\u5458\u6743\u9650\uff09",
+                "operationId": "update_theme_api_v1_character_themes__theme_id__put",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "theme_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Theme Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CharacterThemeUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_CharacterTheme_"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "character-themes",
+                    "evaluation"
+                ],
+                "summary": "\u5220\u9664\u89d2\u8272\u4e3b\u9898\u4e13\u533a",
+                "description": "\u5220\u9664\u89d2\u8272\u4e3b\u9898\u4e13\u533a\uff08\u9700\u8981\u7ba1\u7406\u5458\u6743\u9650\uff09",
+                "operationId": "delete_theme_api_v1_character_themes__theme_id__delete",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "theme_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Theme Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_dict_"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/character-themes/{theme_id}/agents": {
+            "post": {
+                "tags": [
+                    "character-themes",
+                    "evaluation"
+                ],
+                "summary": "\u6dfb\u52a0\u89d2\u8272\u5230\u4e13\u533a",
+                "description": "\u5411\u6307\u5b9a\u4e13\u533a\u6dfb\u52a0\u89d2\u8272\uff08\u9700\u8981\u7ba1\u7406\u5458\u6743\u9650\uff09",
+                "operationId": "add_agent_to_theme_api_v1_character_themes__theme_id__agents_post",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "theme_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Theme Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AddAgentToThemeRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_CharacterThemeAgent_"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/character-themes/{theme_id}/agents/{agent_id}": {
+            "delete": {
+                "tags": [
+                    "character-themes",
+                    "evaluation"
+                ],
+                "summary": "\u4ece\u4e13\u533a\u79fb\u9664\u89d2\u8272",
+                "description": "\u4ece\u6307\u5b9a\u4e13\u533a\u79fb\u9664\u89d2\u8272\uff08\u9700\u8981\u7ba1\u7406\u5458\u6743\u9650\uff09",
+                "operationId": "remove_agent_from_theme_api_v1_character_themes__theme_id__agents__agent_id__delete",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "theme_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Theme Id"
+                        }
+                    },
+                    {
+                        "name": "agent_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Agent Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_dict_"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/character-themes/{theme_id}/agents/reorder": {
+            "put": {
+                "tags": [
+                    "character-themes",
+                    "evaluation"
+                ],
+                "summary": "\u8c03\u6574\u89d2\u8272\u987a\u5e8f",
+                "description": "\u8c03\u6574\u4e13\u533a\u4e2d\u89d2\u8272\u7684\u987a\u5e8f\uff08\u9700\u8981\u7ba1\u7406\u5458\u6743\u9650\uff09",
+                "operationId": "reorder_agents_api_v1_character_themes__theme_id__agents_reorder_put",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "theme_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Theme Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReorderAgentsRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_dict_"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/chat/completions/{agent_id}": {
             "post": {
                 "tags": [
@@ -2829,6 +3285,58 @@
                 "type": "object",
                 "title": "APIResponse[Agent]"
             },
+            "APIResponse_CharacterThemeAgent_": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/CharacterThemeAgent"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[CharacterThemeAgent]"
+            },
+            "APIResponse_CharacterTheme_": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/CharacterTheme"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[CharacterTheme]"
+            },
             "APIResponse_ChatSettings_": {
                 "properties": {
                     "code": {
@@ -2964,6 +3472,36 @@
                 },
                 "type": "object",
                 "title": "APIResponse[List[Agent]]"
+            },
+            "APIResponse_List_CharacterTheme__": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "items": {
+                                    "$ref": "#/components/schemas/CharacterTheme"
+                                },
+                                "type": "array"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Data"
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[List[CharacterTheme]]"
             },
             "APIResponse_List_SubscriptionPlan__": {
                 "properties": {
@@ -3471,6 +4009,21 @@
                     "success": true,
                     "user_id": "user_123"
                 }
+            },
+            "AddAgentToThemeRequest": {
+                "properties": {
+                    "agent_id": {
+                        "type": "string",
+                        "title": "Agent Id",
+                        "description": "\u8981\u6dfb\u52a0\u7684\u89d2\u8272ID"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "agent_id"
+                ],
+                "title": "AddAgentToThemeRequest",
+                "description": "\u6dfb\u52a0\u89d2\u8272\u5230\u4e13\u533a\u8bf7\u6c42"
             },
             "Agent": {
                 "properties": {
@@ -4785,6 +5338,234 @@
                     "file"
                 ],
                 "title": "Body_upload_image_api_v1_images_post"
+            },
+            "CharacterTheme": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "title": "Name",
+                        "description": "\u4e13\u533a\u540d\u79f0"
+                    },
+                    "description": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Description",
+                        "description": "\u4e13\u533a\u63cf\u8ff0"
+                    },
+                    "background_image_url": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Background Image Url",
+                        "description": "\u80cc\u666f\u56feURL\u5730\u5740"
+                    },
+                    "visibility": {
+                        "$ref": "#/components/schemas/CharacterThemeVisibility",
+                        "description": "\u53ef\u89c1\u6027\uff1a\u7b2c\u4e00\u5c55\u793a\u3001\u7b2c\u4e8c\u5c55\u793a\u3001\u4e0d\u53ef\u89c1"
+                    },
+                    "id": {
+                        "type": "string",
+                        "title": "Id",
+                        "description": "\u4e13\u533aID"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Created At",
+                        "description": "\u521b\u5efa\u65f6\u95f4"
+                    },
+                    "updated_at": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Updated At",
+                        "description": "\u66f4\u65b0\u65f6\u95f4"
+                    },
+                    "agents": {
+                        "items": {
+                            "$ref": "#/components/schemas/CharacterThemeAgent"
+                        },
+                        "type": "array",
+                        "title": "Agents",
+                        "description": "\u4e13\u533a\u4e2d\u7684\u89d2\u8272\u5217\u8868\uff08\u6309\u987a\u5e8f\uff09"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "visibility",
+                    "id",
+                    "created_at"
+                ],
+                "title": "CharacterTheme",
+                "description": "\u89d2\u8272\u4e3b\u9898\u4e13\u533a\u5b8c\u6574\u54cd\u5e94\u6a21\u578b"
+            },
+            "CharacterThemeAgent": {
+                "properties": {
+                    "agent_id": {
+                        "type": "string",
+                        "title": "Agent Id",
+                        "description": "\u89d2\u8272ID"
+                    },
+                    "order_index": {
+                        "type": "integer",
+                        "title": "Order Index",
+                        "description": "\u89d2\u8272\u5728\u4e13\u533a\u4e2d\u7684\u987a\u5e8f\uff08\u4ece0\u5f00\u59cb\uff09"
+                    },
+                    "agent": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/Agent"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "\u89d2\u8272\u8be6\u7ec6\u4fe1\u606f"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "agent_id",
+                    "order_index"
+                ],
+                "title": "CharacterThemeAgent",
+                "description": "\u4e13\u533a\u4e2d\u7684\u89d2\u8272\u4fe1\u606f"
+            },
+            "CharacterThemeCreate": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "title": "Name",
+                        "description": "\u4e13\u533a\u540d\u79f0"
+                    },
+                    "description": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Description",
+                        "description": "\u4e13\u533a\u63cf\u8ff0"
+                    },
+                    "background_image_url": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Background Image Url",
+                        "description": "\u80cc\u666f\u56feURL\u5730\u5740"
+                    },
+                    "visibility": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/CharacterThemeVisibility"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "\u53ef\u89c1\u6027\uff1a\u7b2c\u4e00\u5c55\u793a\u3001\u7b2c\u4e8c\u5c55\u793a\u3001\u4e0d\u53ef\u89c1\uff08\u9ed8\u8ba4\uff1a\u4e0d\u53ef\u89c1\uff09",
+                        "default": "HIDDEN"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name"
+                ],
+                "title": "CharacterThemeCreate",
+                "description": "\u521b\u5efa\u89d2\u8272\u4e3b\u9898\u4e13\u533a\u8bf7\u6c42\u6a21\u578b"
+            },
+            "CharacterThemeUpdate": {
+                "properties": {
+                    "name": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 255
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Name",
+                        "description": "\u4e13\u533a\u540d\u79f0"
+                    },
+                    "description": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Description",
+                        "description": "\u4e13\u533a\u63cf\u8ff0"
+                    },
+                    "background_image_url": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Background Image Url",
+                        "description": "\u80cc\u666f\u56feURL\u5730\u5740"
+                    },
+                    "visibility": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/CharacterThemeVisibility"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "\u53ef\u89c1\u6027\uff1a\u7b2c\u4e00\u5c55\u793a\u3001\u7b2c\u4e8c\u5c55\u793a\u3001\u4e0d\u53ef\u89c1"
+                    }
+                },
+                "type": "object",
+                "title": "CharacterThemeUpdate",
+                "description": "\u66f4\u65b0\u89d2\u8272\u4e3b\u9898\u4e13\u533a\u8bf7\u6c42\u6a21\u578b"
+            },
+            "CharacterThemeVisibility": {
+                "type": "string",
+                "enum": [
+                    "PRIMARY",
+                    "SECONDARY",
+                    "HIDDEN"
+                ],
+                "title": "CharacterThemeVisibility",
+                "description": "\u89d2\u8272\u4e3b\u9898\u4e13\u533a\u53ef\u89c1\u6027"
             },
             "Chat": {
                 "properties": {
@@ -6205,6 +6986,24 @@
                 ],
                 "title": "RefundResponse",
                 "description": "\u9000\u6b3e\u54cd\u5e94"
+            },
+            "ReorderAgentsRequest": {
+                "properties": {
+                    "agent_ids": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "title": "Agent Ids",
+                        "description": "\u89d2\u8272ID\u5217\u8868\uff0c\u6309\u65b0\u987a\u5e8f\u6392\u5217"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "agent_ids"
+                ],
+                "title": "ReorderAgentsRequest",
+                "description": "\u8c03\u6574\u89d2\u8272\u987a\u5e8f\u8bf7\u6c42"
             },
             "ReportCreate": {
                 "properties": {
