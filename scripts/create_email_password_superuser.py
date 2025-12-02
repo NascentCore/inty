@@ -37,9 +37,9 @@ async def create_email_password_superuser(
     nickname
         用户昵称（可选，如果不提供将自动生成）
     dry_run
-        试运行模式：显示将要执行的操作但不实际写入数据库（默认: False）
+        试运行模式：显示将要执行的操作但不实际写入数据库
     delete_existing
-        如果为 True，删除现有用户后创建新用户（默认: False）
+        如果为 True，删除现有用户后创建新用户
 
     Returns
     -------
@@ -66,7 +66,6 @@ async def create_email_password_superuser(
                     existing_user.deletion_reason = (
                         "Deleted by create_email_password_superuser script"
                     )
-                    existing_user.is_active = False
                     await db.commit()
                     logger.info(
                         f"Deleted existing user {existing_user.id} with email {email}"
@@ -168,7 +167,6 @@ async def create_email_password_superuser(
             logger.info(f"  Nickname: {user.nickname}")
             logger.info(f"  Auth Type: {user.auth_type}")
             logger.info(f"  System Language: {user.system_language}")
-            logger.info(f"  Is Active: {user.is_active}")
             logger.info(f"  Is Superuser: {user.is_superuser}")
             return user
 
@@ -217,7 +215,6 @@ async def main(
 
     该脚本用于在数据库中创建带有邮箱密码认证的超级用户。
     支持幂等操作：如果用户已存在，将返回现有用户信息。
-    如果使用 --delete-existing 参数，将删除现有用户后创建新用户。
 
     注意：除非使用 --dry-run 模式，否则始终要求用户确认操作。
 
@@ -230,9 +227,9 @@ async def main(
     nickname
         用户昵称（可选，如果不提供将自动生成）
     dry_run
-        试运行模式：显示将要执行的操作但不实际写入数据库，且不要求确认（默认: False）
+        试运行模式：显示将要执行的操作但不实际写入数据库，且不要求确认
     delete_existing
-        如果为 True，删除现有用户后创建新用户（默认: False）
+        如果为 True，删除现有用户（如现有用户存在）用于删除一个已有账户
 
     Examples
     --------

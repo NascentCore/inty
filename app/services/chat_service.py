@@ -1,8 +1,8 @@
-import logging
 import uuid
 from typing import List, Optional, Union
 
 from fastapi import HTTPException
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,8 +15,6 @@ from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
 from app.services import agent_service, chat_history_service
 from app.services.cache_service import cache_service
 from app.services.global_services import subscription_service
-
-logger = logging.getLogger(__name__)
 
 
 def generate_session_id(chat_id: str) -> str:
@@ -513,6 +511,26 @@ async def get_or_create_chat_by_agent(
             else:
                 # 如果agent信息已经加载过，从缓存获取以备后续使用
                 cached_agent = cache_service.get_agent_config(agent_id)
+                # 即使agent信息已加载，也需要更新所有agent字段，因为它们可能已更新
+                if cached_agent:
+                    existing_chat.agent_name = cached_agent.get("name")
+                    existing_chat.agent_avatar = cached_agent.get("avatar")
+                    existing_chat.agent_background_animated = cached_agent.get(
+                        "background_animated"
+                    )
+                    existing_chat.agent_intro = cached_agent.get("intro")
+                    existing_chat.agent_opening = cached_agent.get("opening")
+                    existing_chat.agent_opening_audio_url = cached_agent.get(
+                        "opening_audio_url"
+                    )
+                # 检查deleted_at状态，因为它可能已更新
+                agent_result = await db.execute(
+                    select(models.Agent.deleted_at).where(models.Agent.id == agent_id)
+                )
+                agent_info = agent_result.first()
+                existing_chat.agent_is_deleted = (
+                    agent_info[0] is not None if agent_info else None
+                )
 
             # 4. 检查现有聊天是否有消息，如果为空则添加Agent开场白
             try:
@@ -541,7 +559,7 @@ async def get_or_create_chat_by_agent(
 
                     # 如果有开场白，添加到聊天历史
                     if agent_opening:
-                        # 获取用户和Agent信息用于变量替换
+                        # 获取用户和 Agent 信息用于变量替换
                         user_result = await db.execute(
                             select(models.User.nickname).where(
                                 models.User.id == user_id
@@ -552,7 +570,7 @@ async def get_or_create_chat_by_agent(
                         agent_result = await db.execute(
                             select(models.Agent.name).where(models.Agent.id == agent_id)
                         )
-                        agent_name = agent_result.scalar_one_or_none() or "Agent"
+                        agent_name = agent_result.scalar_one_or_none() or "IntelliMate"
 
                         await chat_history_service.add_agent_opening_message(
                             db,
@@ -583,6 +601,10 @@ async def get_or_create_chat_by_agent(
                 "agent_id": agent_id,
                 "agent_name": getattr(existing_chat, "agent_name", None),
                 "agent_avatar": getattr(existing_chat, "agent_avatar", None),
+                "agent_background": getattr(existing_chat, "agent_background", None),
+                "agent_background_animated": getattr(
+                    existing_chat, "agent_background_animated", None
+                ),
                 "agent_intro": getattr(existing_chat, "agent_intro", None),
                 "agent_opening": getattr(existing_chat, "agent_opening", None),
                 "agent_opening_audio_url": getattr(
@@ -742,6 +764,7 @@ async def get_or_create_chat_by_agent(
             "agent_id": agent_id,
             "agent_name": agent_name,
             "agent_avatar": agent_avatar,
+            "agent_background": getattr(db_chat, "agent_background", None),
             "agent_background_animated": (
                 cached_agent.get("background_animated")
                 if cached_agent

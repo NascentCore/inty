@@ -50,9 +50,7 @@ class User(Base):
     id = Column(String, primary_key=True, comment="用户唯一标识符")
 
     # DEPRECATED: app 显示 ID 而非 readable_id
-    readable_id = Column(
-        String(8), unique=True, index=True, nullable=False, comment="用户可读ID"
-    )
+    readable_id = Column(String(8), comment="【已废弃】用户可读ID")
     # TODO: Use SERIAL instead of string.
     nickname = Column(String, index=True, comment="用户昵称，可搜索")
     avatar = Column(String, comment="用户头像URL")

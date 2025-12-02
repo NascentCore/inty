@@ -51,6 +51,7 @@ class ReportCreate(BaseModel):
     """
     Report API 端点的请求数据结构。
     """
+
     target_id: str = Field(
         ..., description="举报或者反馈的目标对象的 ID，角色或者用户的 ID。"
     )

@@ -49,9 +49,21 @@ git submodule deinit -f .
 
 # 重新拉取子模块代码
 git submodule update --init --recursive
+
+# 使用下面步骤启动后端服务
+evaluation/build.sh # 构建评测 web ui 静态文件
+cp devops/config.yaml.local config.yaml
+# 创建虚拟环境供后端 python 代码运行
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+# 启动 postgres 数据库
+docker compose up pgvector -d
+# 注意拷贝 admin bearer token 用来登录 http://localhost:8000/evaluation
+./start.sh --dev
 ```
 
-更新子模块使用 [update_inty_sdk_submodule.sh](update_inty_sdk_submodule.sh)
+<img width="1028" height="932" alt="image" src="https://github.com/user-attachments/assets/59c52323-9ee3-4042-85ca-39344815b71c" />
 
 ### 相关链接
 

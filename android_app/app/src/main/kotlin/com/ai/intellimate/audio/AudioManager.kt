@@ -1,10 +1,12 @@
 package com.ai.intellimate.audio
 
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import com.ai.intellimate.boost.BoostManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -89,6 +91,9 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                     "timestamp" to playbackStartTime,
                 ),
             )
+            if (HeartAppUtils.isAppDebugMode(context)) {
+                BoostManager.recordAudioPlayback(agentId, agentName ?: "")
+            }
         }
 
         // 检查是否启用自动播放

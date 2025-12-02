@@ -5,9 +5,8 @@ WORKDIR /
 
 # 复制前端代码和依赖文件
 COPY evaluation/ evaluation/
-COPY build_evaluation.sh .
 
-RUN ./build_evaluation.sh
+RUN ./evaluation/build.sh
 
 # 第二阶段：构建后端
 FROM python:3.12-slim AS base

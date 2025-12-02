@@ -15,12 +15,14 @@ import {
   BgColorsOutlined,
   SettingOutlined,
   UserOutlined,
+  AppstoreOutlined,
 } from "@ant-design/icons";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
 import { ChatPage } from "./pages/ChatPage";
 import { Live2DEmotionChatDemo } from "./pages/Live2DEmotionChatDemo";
 import AgentManagePage from "./pages/AgentManagePage";
+import CharacterThemeManagePage from "./pages/CharacterThemeManagePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { UserAnalyticsPage } from "./pages/UserAnalyticsPage";
 import { UserDailyMessagesPage } from "./pages/UserDailyMessagesPage";
@@ -39,7 +41,8 @@ type PageKey =
   | "live2d"
   | "settings"
   | "user-analytics"
-  | "user-daily-messages";
+  | "user-daily-messages"
+  | "character-themes";
 
 interface NavigationItem {
   key: PageKey;
@@ -150,7 +153,12 @@ const AppContent: React.FC = () => {
       label: "智能体管理",
       description: "创建、编辑和管理智能体",
     },
-
+    {
+      key: "character-themes",
+      icon: <AppstoreOutlined />,
+      label: "角色专区管理",
+      description: "创建和管理角色主题专区",
+    },
     {
       key: "evaluation",
       icon: <BarChartOutlined />,
@@ -196,6 +204,8 @@ const AppContent: React.FC = () => {
         return "Live2D 情绪聊天 (Gemini Demo)";
       case "agents":
         return "智能体管理";
+      case "character-themes":
+        return "角色专区管理";
       case "settings":
         return "系统设置";
       case "user-analytics":
@@ -224,6 +234,8 @@ const AppContent: React.FC = () => {
         return <Live2DEmotionChatDemo />;
       case "agents":
         return <AgentManagePage />;
+      case "character-themes":
+        return <CharacterThemeManagePage />;
       case "settings":
         return <SettingsPage />;
       case "user-analytics":

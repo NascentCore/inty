@@ -87,6 +87,9 @@ luban = "1.1.8"
 retrofitKotlinxSerializationJson = "1.0.0"
 retrofit2-kotlin-coroutines-adapter = "0.9.2"
 
+# Inty SDK
+intyKotlin = "0.17.0"
+
 #endregion
 
 #region 定义依赖库 🚀
@@ -241,6 +244,9 @@ mmkv = { group = "com.tencent", name = "mmkv", version.ref = "mmkv" }
 ucrop = { module = "com.github.yalantis:ucrop", version.ref = "ucrop" }
 # 图片压缩库
 luban = { module = "top.zibin:Luban", version.ref = "luban" }
+
+# ===== Inty SDK =====
+inty-kotlin = { group = "com.inty.api", name = "inty-kotlin", version.ref = "intyKotlin" }
 
 # ===== 用于 build-logic 的 classpath 配置 =====
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }

@@ -12,8 +12,6 @@ const DefaultLayout: React.FC = () => {
       <Outlet />
       {/* 全局 Google 登录弹窗 */}
       <GoogleLoginModal />
-      {/* 版本号徽章 - 开发测试用 */}
-      <VersionBadge />
     </>
   );
 };

@@ -3,6 +3,8 @@
 ## Alembic
 
 - 按照 alembic/README.md 中的步骤创建新的 alembic version 文件，而不是直接编写
+- 修改数据库表 schema 应该单独进行，不要与其他改动混合，这样保证 alembic version 可以快速同步，不会因为 2 个人改 version 文件，导致出现非线性线索。
+  比如，当前 alembic head revision 为 1，如果改动 A 改动 B 同时在修改数据库，则会导致 2 个并行 version 文件都依赖 revisoin 1
 
 ## 代码库结构
 

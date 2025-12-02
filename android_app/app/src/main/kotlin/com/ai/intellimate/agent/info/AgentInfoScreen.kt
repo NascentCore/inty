@@ -3,19 +3,18 @@ package com.ai.intellimate.agent.info
 import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.utils.ToastUtils
 import android.content.ClipData
 import android.content.ClipboardManager
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -23,26 +22,29 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,20 +66,27 @@ import androidx.core.content.getSystemService
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
-import com.ai.intellimate.agent.report.ReportActivity
+import com.ai.intellimate.boost.BoostConfig
+import com.ai.intellimate.boost.BoostError
+import com.ai.intellimate.boost.BoostException
+import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.BoostState
+import com.ai.intellimate.boost.ui.BoostSheet
+import com.ai.intellimate.boost.ui.BoostStatusChip
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
 import com.ai.intellimate.utils.formatDisplayId
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 private const val CLIPBOARD_LABEL_AGENT_ID = "Agent ID"
 
 private enum class AgentGenderPronoun(@StringRes val labelRes: Int) {
     Female(R.string.she_her),
     Male(R.string.he_him),
-    Other(R.string.they_them),
-    ;
+    Other(R.string.they_them);
 
     companion object {
         fun from(rawGender: String): AgentGenderPronoun? {
@@ -101,9 +110,24 @@ internal fun AiAgentInfoScreen(
 ) {
     val context = LocalContext.current
     val isDebugMode = HeartAppUtils.isAppDebugMode()
-    var showBottomSheet by remember { mutableStateOf(false) }
-    val bottomSheetState = rememberModalBottomSheetState()
+    val enableRemix = UiConfigs.ChatPage.enableRemix()
     val displayId = remember(agent.id, context) { formatDisplayId(agent.id, context = context) }
+
+    // 为角色应援/Boost 功能
+    val boostState by
+        if (isDebugMode) BoostManager.boostState.collectAsState()
+        else remember { mutableStateOf(BoostState()) }
+    var showBoostSheet by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val showBoostError: (BoostError) -> Unit = { error ->
+        val messageRes =
+            when (error) {
+                BoostError.NotEnoughPoints -> R.string.boost_toast_not_enough_points
+                BoostError.DailyRewardAlreadyClaimed -> R.string.boost_daily_reward_already
+                else -> R.string.boost_toast_generic_error
+            }
+        ToastUtils.showShort(messageRes)
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AgentBackground(
@@ -130,14 +154,30 @@ internal fun AiAgentInfoScreen(
                         )
                     },
                     actions = {
-                        Image(
-                            modifier =
-                                Modifier.padding(horizontal = 12.dp).noRippleClickable {
-                                    showBottomSheet = true
-                                },
-                            painter = painterResource(R.drawable.icon_more2),
-                            contentDescription = null,
-                        )
+                        if (enableRemix) {
+                            Box(
+                                modifier =
+                                    Modifier.padding(horizontal = 12.dp)
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.35f))
+                                        .noRippleClickable {
+                                            ToastUtils.showShort(
+                                                R.string.str_remix_feature_under_construction
+                                            )
+                                        },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AutoAwesome,
+                                    contentDescription =
+                                        stringResource(
+                                            R.string.str_remix_feature_under_construction
+                                        ),
+                                    tint = Color.White,
+                                )
+                            }
+                        }
                     },
                 )
             },
@@ -184,9 +224,7 @@ internal fun AiAgentInfoScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 val genderPronoun =
-                                    remember(agent.gender) {
-                                        AgentGenderPronoun.from(agent.gender)
-                                    }
+                                    remember(agent.gender) { AgentGenderPronoun.from(agent.gender) }
                                 Row(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -247,6 +285,27 @@ internal fun AiAgentInfoScreen(
                             }
 
                             Spacer(Modifier.width(16.dp))
+                        }
+
+                        // 角色应援/Boost 功能（仅在 debug 模式下显示）
+                        if (isDebugMode) {
+                            Spacer(Modifier.height(16.dp))
+
+                            BoostStatusChip(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                availablePoints = boostState.availablePoints,
+                                onClick = {
+                                    if (
+                                        boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS
+                                    ) {
+                                        ToastUtils.showShort(R.string.boost_toast_not_enough_points)
+                                    } else {
+                                        showBoostSheet = true
+                                    }
+                                },
+                            )
+
+                            Spacer(Modifier.height(16.dp))
                         }
 
                         Spacer(Modifier.height(24.dp))
@@ -359,25 +418,62 @@ internal fun AiAgentInfoScreen(
         }
     }
 
-    // 底部菜单
-    if (showBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showBottomSheet = false },
-            sheetState = bottomSheetState,
-            containerColor = HeartColor.primaryColor,
-            contentColor = Color.White,
-        ) {
-            BottomSheetContent(
-                onReportClick = {
-                    showBottomSheet = false
-                    // 检查是否已登录
-                    if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                        ReportActivity.Companion.launch(context, agent.id, "AGENT")
+    // Boost Sheet 弹窗（仅在 debug 模式下显示）
+    // 显示位置：角色主页（AgentInfoScreen）底部，以半屏弹窗形式展示
+    // 显示时机：
+    //   1. 必须在 debug 模式下（isDebugMode == true）
+    //   2. 用户点击了角色主页中的 BoostStatusChip（第 291-301 行），且可用积分 >= 100 pts
+    //   3. 此时 showBoostSheet 被设置为 true，触发此弹窗显示
+    // UI 效果：半屏底部弹窗，包含：
+    //   - 当前角色的 Boost 信息
+    //   - 可用积分显示
+    //   - 积分投入滑条/步进器（每步 100 pts）
+    //   - Boost 确认按钮
+    //   - 每日签到奖励按钮
+    // 交互流程：
+    //   - 用户点击 BoostStatusChip → 打开此弹窗
+    //   - 用户选择投入积分并确认 → 执行 Boost 操作 → 显示成功 Toast → 关闭弹窗
+    //   - 用户点击每日签到 → 领取奖励 → 显示奖励 Toast → 关闭弹窗（如果已领取）
+    //   - 用户点击关闭/取消 → 关闭弹窗
+    if (isDebugMode && showBoostSheet) {
+        BoostSheet(
+            agentInfo = agent,
+            availablePoints = boostState.availablePoints,
+            hasDailyReward = boostState.hasClaimedDailyReward,
+            onBoostConfirmed = { points ->
+                scope.launch {
+                    try {
+                        val result = BoostManager.boostAgent(agent, points)
+                        ToastUtils.showShort(
+                            context.getString(R.string.boost_toast_success, agent.name)
+                        )
+                        showBoostSheet = false
+                    } catch (e: BoostException) {
+                        showBoostError(e.error)
+                        showBoostSheet = false
+                    } catch (e: Exception) {
+                        showBoostError(BoostError.NotEnoughPoints)
+                        showBoostSheet = false
                     }
-                },
-                onCancelClick = { showBottomSheet = false },
-            )
-        }
+                }
+            },
+            onClaimDailyReward = {
+                scope.launch {
+                    try {
+                        val claimed = BoostManager.claimDailyReward()
+                        ToastUtils.showShort(
+                            context.getString(R.string.boost_toast_daily_reward_claimed, claimed)
+                        )
+                        showBoostSheet = false
+                    } catch (e: BoostException) {
+                        showBoostError(e.error)
+                    } catch (e: Exception) {
+                        showBoostError(BoostError.NotEnoughPoints)
+                    }
+                }
+            },
+            onDismiss = { showBoostSheet = false },
+        )
     }
 }
 
@@ -491,45 +587,6 @@ private fun AgentSpacerLine() {
                 )
     ) {}
     Spacer(Modifier.height(4.dp))
-}
-
-@Composable
-private fun BottomSheetContent(onReportClick: () -> Unit, onCancelClick: () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp)) {
-        // Report按钮
-        Button(
-            onClick = onReportClick,
-            modifier = Modifier.fillMaxWidth().height(60.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0x3378599A)),
-            shape = RoundedCornerShape(16.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.str_report),
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Normal,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Cancel按钮
-        Button(
-            onClick = onCancelClick,
-            modifier = Modifier.fillMaxWidth().height(60.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0x3378599A)),
-            shape = RoundedCornerShape(16.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.cancel_button),
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Normal,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-    }
 }
 
 @Composable

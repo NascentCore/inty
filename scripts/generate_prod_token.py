@@ -1,33 +1,71 @@
 #!/usr/bin/env python3
 """
-使用 config.yaml.prod 中的 secret_key 生成 JWT token
+使用配置文件中的 secret_key 生成 JWT token
 
 需要先安装依赖:
-    pip install python-jose[cryptography]
+    pip install python-jose[cryptography] pyyaml
 
 用法:
-    python scripts/generate_prod_token.py [user_id] [expire_days]
+    python scripts/generate_prod_token.py [--env ENV] [user_id] [expire_days]
+
+环境参数:
+    --env ENV    指定环境配置: local, dev, prod (默认: prod)
+                 - local: 读取项目根目录的 config.yaml
+                 - dev: 读取 devops/config.yaml.dev
+                 - prod: 读取 devops/config.yaml.prod
 
 示例:
-    # 使用默认用户ID和7天过期时间
+    # 使用默认环境(prod)、默认用户ID和7天过期时间
     python scripts/generate_prod_token.py
 
-    # 指定用户ID
-    python scripts/generate_prod_token.py user-01JWZ34Y4D1C92GD86A5R6EWYJ
+    # 指定环境为 dev
+    python scripts/generate_prod_token.py --env dev
 
-    # 指定用户ID和过期天数
-    python scripts/generate_prod_token.py user-01JWZ34Y4D1C92GD86A5R6EWYJ 30
+    # 指定环境、用户ID和过期天数
+    python scripts/generate_prod_token.py --env prod user-01JWZ34Y4D1C92GD86A5R6EWYJ 30
+
+    # 使用 local 环境
+    python scripts/generate_prod_token.py --env local user-01JWZ34Y4D1C92GD86A5R6EWYJ 7
 """
 
+import argparse
 import sys
 from datetime import datetime, timedelta
+from pathlib import Path
 
 try:
+    import yaml
     from jose import jwt
-except ImportError:
-    print("错误: 需要安装 python-jose 库")
-    print("请运行: pip install python-jose[cryptography]")
+except ImportError as e:
+    missing = "yaml" if "yaml" in str(e) else "jose"
+    print(f"错误: 需要安装 {missing} 库")
+    if missing == "yaml":
+        print("请运行: pip install pyyaml")
+    else:
+        print("请运行: pip install python-jose[cryptography]")
     sys.exit(1)
+
+
+def load_config(env: str) -> dict:
+    """根据环境参数加载配置文件"""
+    project_root = Path(__file__).parent.parent
+
+    if env == "local":
+        config_path = project_root / "config.yaml"
+    elif env == "dev":
+        config_path = project_root / "devops" / "config.yaml.dev"
+    elif env == "prod":
+        config_path = project_root / "devops" / "config.yaml.prod"
+    else:
+        raise ValueError(f"不支持的环境: {env}，支持的环境: local, dev, prod")
+
+    if not config_path.exists():
+        raise FileNotFoundError(f"配置文件不存在: {config_path}")
+
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+
+    return config
 
 
 def generate_token(
@@ -51,33 +89,54 @@ def generate_token(
 
 
 def main():
-    # 从 config.yaml.prod 读取配置
-    # secret_key: "893-ac77-4b6d-b644"
-    # algorithm: "HS256"
-    # access_token_expire_minutes: 10080 (7天)
-    secret_key = "893-ac77-4b6d-b644"
-    algorithm = "HS256"
-    default_expire_days = 7
+    parser = argparse.ArgumentParser(
+        description="使用配置文件中的 secret_key 生成 JWT token"
+    )
+    parser.add_argument(
+        "--env",
+        choices=["local", "dev", "prod"],
+        default="prod",
+        help="环境配置 (默认: prod)",
+    )
+    parser.add_argument(
+        "user_id",
+        nargs="?",
+        default="user-01JWZ34Y4D1C92GD86A5R6EWYJ",
+        help="用户ID (默认: user-01JWZ34Y4D1C92GD86A5R6EWYJ)",
+    )
+    parser.add_argument(
+        "expire_days",
+        nargs="?",
+        type=int,
+        default=7,
+        help="过期天数 (默认: 7)",
+    )
 
-    # 解析命令行参数
-    user_id = "user-01JWZ34Y4D1C92GD86A5R6EWYJ"  # dev 环境使用的默认用户ID
-    expire_days = default_expire_days
+    args = parser.parse_args()
 
-    if len(sys.argv) > 1:
-        user_id = sys.argv[1]
-    if len(sys.argv) > 2:
-        expire_days = int(sys.argv[2])
+    try:
+        config = load_config(args.env)
+        security_config = config.get("security", {})
+        secret_key = security_config.get("secret_key")
+        algorithm = security_config.get("algorithm", "HS256")
 
-    # 生成 token
-    token = generate_token(user_id, secret_key, algorithm, expire_days)
+        if not secret_key:
+            print(f"错误: 配置文件 {args.env} 中未找到 secret_key", file=sys.stderr)
+            sys.exit(1)
+    except Exception as e:
+        print(f"错误: 加载配置文件失败: {e}", file=sys.stderr)
+        sys.exit(1)
 
-    print(f"生成的 Token (用户ID: {user_id}, 过期天数: {expire_days}):")
+    token = generate_token(args.user_id, secret_key, algorithm, args.expire_days)
+
+    print(
+        f"生成的 Token (环境: {args.env}, 用户ID: {args.user_id}, 过期天数: {args.expire_days}):"
+    )
     print(token)
     print()
     print("可以在 evaluation/start.sh 中使用:")
     print(f'export INTY_API_KEY="{token}"')
 
-    # 验证 token 可以解码
     try:
         payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         print()

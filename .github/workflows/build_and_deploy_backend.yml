@@ -19,7 +19,7 @@ on:
       - "evaluation/vite.config.ts"
       - "evaluation/vitest.config.ts"
       - "evaluation/index.html"
-      - "build_evaluation.sh"
+      - "evaluation/build.sh"
       # 容器
       - "Dockerfile"
       # 工作流文件

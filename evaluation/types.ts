@@ -87,6 +87,43 @@ export interface GenerateBackgroundAnimatedRequest {
   prompt?: string; // 视频生成提示词（可选，如果为空则从背景图自动生成）
 }
 
+// 角色主题专区
+export interface CharacterThemeAgent {
+  agent_id: string;
+  order_index: number;
+  agent?: Agent;
+}
+
+export interface CharacterTheme {
+  id: string;
+  name: string;
+  description?: string;
+  background_image_url?: string;
+  created_at: string;
+  updated_at?: string;
+  agents: CharacterThemeAgent[];
+}
+
+export interface CharacterThemeCreateRequest {
+  name: string;
+  description?: string;
+  background_image_url?: string;
+}
+
+export interface CharacterThemeUpdateRequest {
+  name?: string;
+  description?: string;
+  background_image_url?: string;
+}
+
+export interface AddAgentToThemeRequest {
+  agent_id: string;
+}
+
+export interface ReorderAgentsRequest {
+  agent_ids: string[];
+}
+
 // 聊天消息
 export interface ChatMessage {
   id: string;

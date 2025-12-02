@@ -3,7 +3,6 @@ package ai.sxwl.android.data.store
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.utils.AppUtils
-import ai.sxwl.android.utils.Utils
 import android.os.Handler
 import android.os.Looper
 import com.tencent.mmkv.MMKV
@@ -24,7 +23,7 @@ object IntySetting {
     private var curUid: String = ""
 
     init {
-        MMKV.initialize(Utils.getApp())
+        // MKKV.initialize(app) 已经在 IntelliMateApp.onCreate() 中调用
         allUserSetting = MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
 
         curUid = getCurUserID()

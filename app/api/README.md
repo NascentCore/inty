@@ -38,7 +38,7 @@ python scripts/generate_openapi_json.py
 ### 更新 Submodules
 
 ```bash
-./update_inty_sdk_submodule.sh
+./scripts/update_inty_sdk_submodule.sh
 ```
 
 示例：https://github.com/NascentCore/inty/pull/976/files

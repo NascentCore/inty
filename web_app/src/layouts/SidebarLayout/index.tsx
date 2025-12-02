@@ -63,7 +63,7 @@ const SidebarLayout: React.FC = () => {
           <ChatHistoryList chatList={chatList} loading={loading} />
 
           {/* google 自定义广告 */}
-          <AdSidebar />
+          {/* <AdSidebar /> */}
 
           {/* 用户区域 - 底部（头像 + 订阅按钮） */}
           <UserSection

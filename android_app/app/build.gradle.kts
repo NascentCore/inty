@@ -88,7 +88,13 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
 
     // ===== Inty SDK（用于 ReportReasonMappings 等直接使用 SDK 类型的代码）=====
-    implementation("com.inty.api:inty-kotlin:0.17.0")
+    // 注意：版本必须与 core/data/build.gradle.kts 保持一致，统一在 libs.versions.toml 中管理
+    implementation(libs.inty.kotlin)
+
+    // ===== 存储库 =====
+    // 为角色应援/Boost 功能提供本地数据存储
+    // TODO：考虑将其移动到 core/data 模块中，因为其是本地数据存储，不属于 app 模块。
+    implementation(libs.mmkv)
 
     // ===== 项目模块 =====
     implementation(projects.core.common)
@@ -114,5 +120,7 @@ dependencies {
     // ===== UI 测试依赖 =====
     androidTestImplementation(libs.androidx.uiautomator)
 
+    // ===== 背景/前景虚化库 =====
+    // https://chrisbanes.github.io/haze/latest/usage/
     implementation(libs.haze)
 }
