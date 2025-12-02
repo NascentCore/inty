@@ -17,6 +17,12 @@ import type {
   ExportRequest,
   ComparisonResult,
   Voice,
+  CharacterTheme,
+  CharacterThemeAgent,
+  CharacterThemeCreateRequest,
+  CharacterThemeUpdateRequest,
+  AddAgentToThemeRequest,
+  ReorderAgentsRequest,
 } from "../types";
 import { message } from "antd";
 import { Inty } from "inty";
@@ -67,40 +73,83 @@ class ApiClient {
 
     const url = `${this.baseURL}${fullEndpoint}`;
 
-    const config: any = {
-      ...options,
-      headers: {
-        ...this.headers,
-        ...options.headers,
-      },
+    // 使用动态 API Key，如果没有则抛出错误（在构建 config 之前检查）
+    const currentApiKey = getGlobalApiKey();
+    if (!currentApiKey || currentApiKey.trim() === "") {
+      throw new Error("API Key 未设置，请先设置 API Key");
+    }
+
+    // 构建基础 headers，先合并默认 headers 和传入的 headers
+    let headers: Record<string, string> = {
+      ...this.headers,
+      ...(options.headers || {}),
     };
 
     // 如果是上传请求（FormData），不要覆盖Content-Type
     if (options.body instanceof FormData) {
-      config.headers = {
-        ...options.headers, // 优先使用传入的headers
-        ...this.headers, // 然后合并默认headers（除了Content-Type）
+      // 重新构建 headers，优先使用传入的 headers，然后合并默认 headers
+      headers = {
+        ...(options.headers || {}),
+        ...this.headers,
       };
       // 删除Content-Type，让浏览器自动设置；覆盖默认的 Content-Type: application/json
       // TODO: 是否仅支持浏览器使用，代码中使用该 API 是否会有问题
-      if (config.headers && typeof config.headers === "object") {
-        delete (config.headers as any)["Content-Type"];
+      if (headers && typeof headers === "object") {
+        delete (headers as any)["Content-Type"];
       }
     }
 
-    // 使用动态 API Key，如果没有则抛出错误
-    const currentApiKey = getGlobalApiKey();
-    if (!currentApiKey) {
-      throw new Error("API Key 未设置，请先设置 API Key");
-    }
-
-    config.headers = {
-      ...config.headers,
+    // 确保 Authorization header 总是最后设置，不会被覆盖
+    headers = {
+      ...headers,
       Authorization: `Bearer ${currentApiKey}`,
     };
 
+    // 构建最终的 config 对象
+    const config: any = {
+      ...options,
+      headers,
+    };
+
+    // 验证 Authorization header 是否已正确设置
+    const authHeaderValue = config.headers?.Authorization;
+    const hasAuthHeader = authHeaderValue && typeof authHeaderValue === "string" && authHeaderValue.trim().length > 0;
+    
+    if (!config.headers || !hasAuthHeader) {
+      throw new Error("Authorization header 设置失败");
+    }
+
     try {
-      const response = await fetch(url, config);
+      // 确保 headers 是一个普通对象（不是 Headers 对象）
+      // fetch API 可以接受 Headers 对象或普通对象，但为了确保兼容性，我们使用普通对象
+      const finalHeaders: Record<string, string> = {};
+      if (config.headers) {
+        // 如果 headers 是 Headers 对象，转换为普通对象
+        if (config.headers instanceof Headers) {
+          // 使用 Array.from 来避免类型推断问题
+          const entries = Array.from(config.headers.entries()) as Array<
+            [string, string]
+          >;
+          entries.forEach(([key, value]) => {
+            finalHeaders[key] = value;
+          });
+        } else if (typeof config.headers === "object") {
+          // 如果是普通对象，直接复制
+          Object.assign(finalHeaders, config.headers);
+        }
+      }
+      
+      // 确保 Authorization header 存在
+      if (!finalHeaders.Authorization && authHeaderValue) {
+        finalHeaders.Authorization = authHeaderValue;
+      }
+      
+      const finalConfig = {
+        ...config,
+        headers: finalHeaders,
+      };
+      
+      const response = await fetch(url, finalConfig);
 
       class ApiError extends Error {
         public status: number;
@@ -1130,6 +1179,59 @@ export const chatImageApi = {
 };
 
 // =============================================================================
+// 角色主题专区管理API
+// =============================================================================
+
+export const characterThemeApi = {
+  // 获取专区列表
+  list: (params?: {
+    skip?: number;
+    limit?: number;
+  }): Promise<CharacterTheme[]> =>
+    apiClient.get("/character-themes/", params), // 添加末尾斜杠以避免 307 重定向
+
+  // 获取专区详情
+  get: (themeId: string): Promise<CharacterTheme> =>
+    apiClient.get(`/character-themes/${themeId}`),
+
+  // 创建专区
+  create: (data: CharacterThemeCreateRequest): Promise<CharacterTheme> =>
+    apiClient.post("/character-themes/", data), // 添加末尾斜杠以避免 307 重定向
+
+  // 更新专区
+  update: (
+    themeId: string,
+    data: CharacterThemeUpdateRequest,
+  ): Promise<CharacterTheme> =>
+    apiClient.put(`/character-themes/${themeId}`, data),
+
+  // 删除专区
+  delete: (themeId: string): Promise<{ message: string }> =>
+    apiClient.delete(`/character-themes/${themeId}`),
+
+  // 添加角色到专区
+  addAgent: (
+    themeId: string,
+    data: AddAgentToThemeRequest,
+  ): Promise<CharacterThemeAgent> =>
+    apiClient.post(`/character-themes/${themeId}/agents`, data),
+
+  // 从专区移除角色
+  removeAgent: (
+    themeId: string,
+    agentId: string,
+  ): Promise<{ message: string }> =>
+    apiClient.delete(`/character-themes/${themeId}/agents/${agentId}`),
+
+  // 调整角色顺序
+  reorderAgents: (
+    themeId: string,
+    data: ReorderAgentsRequest,
+  ): Promise<{ message: string }> =>
+    apiClient.put(`/character-themes/${themeId}/agents/reorder`, data),
+};
+
+// =============================================================================
 // 导出默认API实例
 // =============================================================================
 
@@ -1142,6 +1244,7 @@ export default {
   stats: statsApi,
   chat: chatApi,
   users: userApi,
+  characterThemes: characterThemeApi,
   voices: voiceApi,
   images: imageApi,
   chatImage: chatImageApi,
