@@ -42,12 +42,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-
 
-      - name: Create Google Play service account key
-        env:
-          GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
-        run: |
-          echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_KEY" > service-account-key.json
-
       - name: Build release bundle and APK
         run: |
           cd android_app
