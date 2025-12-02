@@ -1141,12 +1141,11 @@ private fun CreateRolePage(
                         }
                     }
                     val finalAvatarUrl = croppedAvatarUrl ?: backgroundUrl
-                    // 避免此次编辑生成的其他图片保存到服务器
-                    val backgroundImagesList = listOfNotNull(finalAvatarUrl)
+                    val backgroundImagesList = avatarUrls.ifEmpty { listOfNotNull(avatarUrl) }
 
                     // Save background for chat usage
-                    if (finalAvatarUrl != null) {
-                        AvatarManager.setChatBackgroundUrl(finalAvatarUrl)
+                    if (backgroundUrl != null) {
+                        AvatarManager.setChatBackgroundUrl(backgroundUrl)
                     }
 
                     isLoading = true
@@ -1157,7 +1156,7 @@ private fun CreateRolePage(
                                 name = name,
                                 gender = gender,
                                 avatar = finalAvatarUrl,
-                                background = finalAvatarUrl,
+                                background = backgroundUrl,
                                 backgroundImages = backgroundImagesList,
                                 settings = mapOf("description" to settings),
                                 intro = intro,
