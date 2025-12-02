@@ -5,19 +5,20 @@ from googleapiclient.discovery import Resource
 from googleapiclient.errors import HttpError
 from loguru import logger
 
-from app.core.config import global_config_loaded_from_config_yaml
+from app.core.config import GooglePlayConfig
 from app.schemas.version import VersionReminderAction
 
 
 class GooglePlayService:
     """Google Play Developer API服务"""
 
-    def __init__(self, android_publisher_service: Resource):
+    def __init__(
+        self, android_publisher_service: Resource, config: GooglePlayConfig
+    ):
         """初始化Google Play服务"""
         self.service = android_publisher_service
-        self.package_name = (
-            global_config_loaded_from_config_yaml.google_play.package_name
-        )
+        self.config = config
+        self.package_name = config.package_name
 
     def verify_subscription_purchase(
         self, product_id: str, purchase_token: str
@@ -411,12 +412,8 @@ class GooglePlayService:
 
             try:
                 # 尝试从配置的轨道获取版本信息
-                primary_track = (
-                    global_config_loaded_from_config_yaml.google_play.release_track
-                )
-                fallback_tracks = (
-                    global_config_loaded_from_config_yaml.google_play.fallback_tracks
-                )
+                primary_track = self.config.release_track
+                fallback_tracks = self.config.fallback_tracks
 
                 # 构建要尝试的轨道列表
                 tracks_to_try = [primary_track]
@@ -523,9 +520,7 @@ class GooglePlayService:
         """
         try:
             # 如果版本检查被禁用
-            if (
-                not global_config_loaded_from_config_yaml.google_play.enable_version_check
-            ):
+            if not self.config.enable_version_check:
                 return {
                     "update_required": False,
                     "force_update": False,
@@ -561,12 +556,10 @@ class GooglePlayService:
 
             # 1. 检查是否低于最低支持版本
             try:
-                min_supported_version_code = int(
-                    global_config_loaded_from_config_yaml.google_play.min_supported_version
-                )
+                min_supported_version_code = int(self.config.min_supported_version)
             except (ValueError, TypeError):
                 logger.warning(
-                    f"最低支持版本配置无效: {global_config_loaded_from_config_yaml.google_play.min_supported_version}, 使用默认值 1"
+                    f"最低支持版本配置无效: {self.config.min_supported_version}, 使用默认值 1"
                 )
                 min_supported_version_code = 1
 
