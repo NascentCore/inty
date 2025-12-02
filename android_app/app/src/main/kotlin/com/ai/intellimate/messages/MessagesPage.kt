@@ -35,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,6 +44,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -160,10 +165,26 @@ private fun MessageTabContent(
 
     // 菜单状态（移到 LazyColumn 外部）
     var showMenuForConversationId by remember { mutableStateOf<String?>(null) }
-    var menuItemIndex by remember { mutableStateOf(-1) }
+    // 存储每个 item 的 Y 位置，key 为 agentId（相对于外层 Box）
+    val itemPositions = remember { mutableStateMapOf<String, Float>() }
+    // 存储 LazyColumn 的 Y 位置，用于计算 item 相对于外层 Box 的位置
+    var lazyColumnY by remember { mutableStateOf(0f) }
+    
+    // 在 @Composable 函数中获取 density，以便在回调中使用
+    val density = LocalDensity.current
 
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(state = listState, modifier = Modifier.matchParentSize()) {
+        LazyColumn(
+            state = listState,
+            modifier =
+                Modifier.matchParentSize()
+                    .onGloballyPositioned { coordinates ->
+                        // 获取 LazyColumn 相对于外层 Box 的位置
+                        lazyColumnY = with(density) {
+                            coordinates.positionInParent().y.toDp().value
+                        }
+                    },
+        ) {
             // 刷新指示器
             if (uiState.isRefreshing) {
                 item {
@@ -198,10 +219,20 @@ private fun MessageTabContent(
                                     conversion.isPinned
                                 }
 
+                            val density = LocalDensity.current
                             // 使用 combinedClickable 同时处理点击和长按
                             Box(
                                 modifier =
                                     Modifier.fillMaxWidth()
+                                        .onGloballyPositioned { coordinates ->
+                                            // 持续更新 item 的位置，以便长按时能立即获取
+                                            // item 相对于 LazyColumn 的位置 + LazyColumn 相对于外层 Box 的位置 = item 相对于外层 Box 的位置
+                                            val itemYInLazyColumn = with(density) {
+                                                coordinates.positionInParent().y.toDp().value
+                                            }
+                                            itemPositions[conversion.agentId] =
+                                                itemYInLazyColumn + lazyColumnY
+                                        }
                                         .combinedClickable(
                                             onClick = {
                                                 // 正常点击：如果菜单未显示，则进入聊天
@@ -226,9 +257,8 @@ private fun MessageTabContent(
                                                 }
                                             },
                                             onLongClick = {
-                                                // 长按：显示菜单，记录 item 索引用于定位
+                                                // 长按：显示菜单，使用已存储的位置
                                                 showMenuForConversationId = conversion.agentId
-                                                menuItemIndex = index
                                             },
                                         )
                             ) {
@@ -276,10 +306,8 @@ private fun MessageTabContent(
                 )
 
                 // 菜单内容（显示在 item 位置附近）
-                // 计算菜单位置：基于 item 索引估算位置
-                val estimatedItemHeight = 88.dp
-                val menuY = (estimatedItemHeight * menuItemIndex) + estimatedItemHeight / 2
-
+                // 使用实际测量的 item Y 位置
+                val menuY = itemPositions[conv.agentId]?.let { it.dp } ?: 0.dp
                 Box(
                     modifier = Modifier.fillMaxSize().zIndex(1000f),
                     contentAlignment = Alignment.TopStart,
