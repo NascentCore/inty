@@ -9,6 +9,8 @@ import ai.sxwl.android.design.ui.SettingsItemData
 import ai.sxwl.android.design.ui.SettingsItemGroup
 import ai.sxwl.android.design.ui.SettingsSwitchItem
 import ai.sxwl.android.firebase.FirebaseManager
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -56,6 +58,9 @@ import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
 import kotlin.math.roundToInt
+
+private const val USER_MANUAL_NOTION_URL =
+    "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
 
 /** 聊天设置抽屉组件 */
 @Composable
@@ -355,6 +360,51 @@ fun ChatSettingsDrawer(
                                 )
                                 pendingFontSize = chatFontSize
                                 showFontSizeDialog = true
+                            },
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(30.dp))
+
+                Text(
+                    text = stringResource(R.string.chat_settings_support_resources_title),
+                    modifier = Modifier.padding(start = 16.dp),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                )
+
+                Spacer(Modifier.height(14.dp))
+
+                Column(modifier = Modifier.padding(horizontal = horizontalPadding.dp)) {
+                    SettingsItemGroup {
+                        // 用户手册入口
+                        SettingsArrowItem(
+                            item =
+                                SettingsItemData.CommonItemData(
+                                    title = stringResource(R.string.chat_settings_user_manual_title),
+                                    content = "",
+                                    arrow = true,
+                                ),
+                            fontLight = true,
+                            isInGroup = true,
+                            horizontalPadding = horizontalPadding,
+                            onItemClick = {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "user_manual",
+                                        "destination" to "notion",
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                val manualIntent =
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse(USER_MANUAL_NOTION_URL),
+                                    )
+                                context.startActivity(manualIntent)
                             },
                         )
 
