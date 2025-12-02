@@ -45,7 +45,7 @@ async def process_image_upload(
     async_db: AsyncSession,
     base_path: str = "uploads/images",
     cropping_avatar: bool = False,
-    max_size_mb: Optional[int] = None,
+    max_size_mb: int = global_config_loaded_from_config_yaml.app.limits.max_image_size_mb,
 ) -> APIResponse[ImageUploadResponse]:
     """
     Helper function to process image upload with validation, compression, and GCS upload.
@@ -61,8 +61,6 @@ async def process_image_upload(
     Returns:
         APIResponse with success/error status and data
     """
-    if max_size_mb is None:
-        max_size_mb = global_config_loaded_from_config_yaml.app.limits.max_image_size_mb
     max_size_bytes = max_size_mb * 1024 * 1024
 
     file_data = await file.read()
