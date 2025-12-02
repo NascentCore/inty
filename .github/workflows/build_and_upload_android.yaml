@@ -11,6 +11,8 @@ on:
 jobs:
   build-apk:
     runs-on: yaxiong-zhao
+    permissions:
+      contents: read
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
