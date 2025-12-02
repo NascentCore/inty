@@ -34,13 +34,13 @@ def create_test_user(db: Session, user_id: str) -> User:
     existing_user = db.query(User).filter(User.id == user_id).one_or_none()
     if existing_user:
         return existing_user
-    
+
     # 生成唯一的readable_id
     readable_id = str(random.randint(10000000, 99999999))
     # 确保readable_id唯一
     while db.query(User).filter(User.readable_id == readable_id).one_or_none():
         readable_id = str(random.randint(10000000, 99999999))
-    
+
     # 创建新的测试用户
     test_user = User(
         id=user_id,
@@ -52,7 +52,6 @@ def create_test_user(db: Session, user_id: str) -> User:
     db.commit()
     db.refresh(test_user)
     return test_user
-
 
 
 def register_user(db: Session, user_in) -> User:
@@ -75,6 +74,36 @@ def register_user(db: Session, user_in) -> User:
     db.commit()
     db.refresh(user)
     return user
+
+
+@pytest.fixture
+def sync_db_session():
+    """提供同步数据库会话用于测试，自动处理清理"""
+    DATABASE_URL = global_config_loaded_from_config_yaml.database.url
+    engine = create_engine(DATABASE_URL)
+    Base.metadata.create_all(bind=engine)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+        engine.dispose()
+
+
+@pytest.fixture
+async def async_db_session_factory():
+    """提供异步数据库会话工厂用于测试，自动处理清理"""
+    async_engine = create_async_engine(
+        global_config_loaded_from_config_yaml.database.async_url
+    )
+    async_session = sessionmaker(
+        bind=async_engine, class_=AsyncSession, expire_on_commit=False
+    )
+    try:
+        yield async_session
+    finally:
+        await async_engine.dispose()
 
 
 class TestUploadImage:
@@ -832,24 +861,12 @@ class TestImageUploadResourceRecords:
     """Test cases for resource record creation."""
 
     @pytest.mark.asyncio
-    async def test_resource_record_creation_with_metadata(self):
+    async def test_resource_record_creation_with_metadata(
+        self, sync_db_session: Session, async_db_session_factory
+    ):
         """Test that resource records are created with correct metadata."""
-        # 使用本地数据库
-        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
-
-        # 创建测试数据库引擎和会话
-        engine = create_engine(DATABASE_URL)
-        Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-        db = SessionLocal()
-
-        # 创建一个 async session
-        async_engine = create_async_engine(
-            global_config_loaded_from_config_yaml.database.async_url
-        )
-        async_session = sessionmaker(
-            bind=async_engine, class_=AsyncSession, expire_on_commit=False
-        )
+        db = sync_db_session
+        async_session = async_db_session_factory
 
         # 创建测试用户
         user_id = f"testuser-resource-{uuid.uuid4().hex}"
@@ -862,7 +879,9 @@ class TestImageUploadResourceRecords:
 
         file_obj = BytesIO(file_content)
         upload_file = UploadFile(
-            file=file_obj, filename="test.jpg", headers={"content-type": "image/jpeg"}
+            file=file_obj,
+            filename="test.jpg",
+            headers={"content-type": "image/jpeg"},
         )
 
         async with async_session() as async_db:
@@ -887,29 +906,13 @@ class TestImageUploadResourceRecords:
             assert resource.resource_metadata["byte_size"] > 0
             assert "cdn.example.com" in resource.url
 
-        # 清理
-        db.close()
-        await async_engine.dispose()
-
     @pytest.mark.asyncio
-    async def test_original_and_compressed_resource_records(self):
+    async def test_original_and_compressed_resource_records(
+        self, sync_db_session: Session, async_db_session_factory
+    ):
         """Test that both original and compressed resource records are created when compression occurs."""
-        # 使用本地数据库
-        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
-
-        # 创建测试数据库引擎和会话
-        engine = create_engine(DATABASE_URL)
-        Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-        db = SessionLocal()
-
-        # 创建一个 async session
-        async_engine = create_async_engine(
-            global_config_loaded_from_config_yaml.database.async_url
-        )
-        async_session = sessionmaker(
-            bind=async_engine, class_=AsyncSession, expire_on_commit=False
-        )
+        db = sync_db_session
+        async_session = async_db_session_factory
 
         # 创建测试用户
         user_id = f"testuser-compression-{uuid.uuid4().hex}"
@@ -922,7 +925,9 @@ class TestImageUploadResourceRecords:
 
         file_obj = BytesIO(file_content)
         upload_file = UploadFile(
-            file=file_obj, filename="test.png", headers={"content-type": "image/png"}
+            file=file_obj,
+            filename="test.png",
+            headers={"content-type": "image/png"},
         )
 
         # 使用fake GCS，不需要mock upload_to_gcs
@@ -940,24 +945,31 @@ class TestImageUploadResourceRecords:
         assert len(resources) >= 2  # 至少有两个资源记录（原始PNG和压缩JPEG）
 
         # 检查压缩资源记录
-        compressed_resources = [r for r in resources if r.resource_metadata.get("content_type") == "image/jpeg"]
+        compressed_resources = [
+            r
+            for r in resources
+            if r.resource_metadata.get("content_type") == "image/jpeg"
+        ]
         assert len(compressed_resources) >= 1
 
         # 检查原始资源记录
-        original_resources = [r for r in resources if r.resource_metadata.get("content_type") == "image/png"]
+        original_resources = [
+            r
+            for r in resources
+            if r.resource_metadata.get("content_type") == "image/png"
+        ]
         assert len(original_resources) >= 1
 
         # 验证压缩效果
         compressed_resource = compressed_resources[0]
         original_resource = original_resources[0]
-        
+
         # 压缩后的文件应该更小
-        assert compressed_resource.resource_metadata["byte_size"] < original_resource.resource_metadata["byte_size"]
+        assert (
+            compressed_resource.resource_metadata["byte_size"]
+            < original_resource.resource_metadata["byte_size"]
+        )
 
         # 验证URL格式
         for resource in resources:
             assert "cdn.example.com" in resource.url
-
-        # 清理
-        db.close()
-        await async_engine.dispose()
