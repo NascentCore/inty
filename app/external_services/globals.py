@@ -9,7 +9,9 @@ debug = global_config_loaded_from_config_yaml.app.debug
 
 try:
     android_publisher_service = create_android_publisher_service(service_account_key)
-    google_play_service = GooglePlayService(android_publisher_service)
+    google_play_service = GooglePlayService(
+        android_publisher_service, global_config_loaded_from_config_yaml.google_play
+    )
 except Exception as e:
     logger.error(f"Failed to create one of the external services: {e}")
     if debug:
