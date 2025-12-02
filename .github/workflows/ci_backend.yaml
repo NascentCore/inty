@@ -63,6 +63,15 @@ jobs:
           # Keep for posterity, we do want to use this such that we do not need to manage cache ourselves.
           # cache: 'pip'
 
+      # Cache pip packages for faster installs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt', 'tests/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # Cache virtual environment
       # Based on https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/
       - uses: actions/cache@v4
         with:
@@ -74,8 +83,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m venv .venv
+          # Create venv only if it doesn't exist (cache miss)
+          if [ ! -d .venv ]; then
+            python -m venv .venv
+          fi
           source .venv/bin/activate
+          # Upgrade pip to latest version for better caching
+          python -m pip install --upgrade pip
+          # Install dependencies (pip will use cached packages if available)
           python -m pip install -r requirements.txt
           python -m pip install -r tests/requirements.txt
           # https://stackoverflow.com/a/74669486
