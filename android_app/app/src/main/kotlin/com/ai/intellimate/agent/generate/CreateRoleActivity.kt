@@ -345,8 +345,8 @@ private fun CreateRolePage(
             when (event) {
                 Lifecycle.Event.ON_STOP -> {
                     // Clear AvatarManager when activity is stopped (user navigates away)
-                    LogUtils.i("Activity stopped - clearing AvatarManager data")
-                    AvatarManager.clearAllAvatarData()
+                    //LogUtils.i("Activity stopped - clearing AvatarManager data")
+                    //AvatarManager.clearAllAvatarData()
                 }
 
                 Lifecycle.Event.ON_DESTROY -> {
@@ -909,6 +909,10 @@ private fun CreateRolePage(
                 isGenerating = isGeneratingAvatar,
                 croppedAvatarUrl = croppedAvatarUrl,
                 onGenerateClick = {
+
+                    AvatarManager.setGeneratedAvatarUrls(avatarUrls)
+                    AvatarManager.setSelectedImageIndex(selectedImageIndex)
+
                     onAvatarGenerateClick(promptForGeneration.takeIf { it.isNotBlank() })
                     // 当点击生成头像时，不清除当前URL，让用户返回时检查新的URL
                 },
@@ -917,6 +921,9 @@ private fun CreateRolePage(
                     AvatarManager.setSelectedImageIndex(index)
                 },
                 onRegenerate = { prompt ->
+                    AvatarManager.setGeneratedAvatarUrls(avatarUrls)
+                    AvatarManager.setSelectedImageIndex(selectedImageIndex)
+
                     // Navigate to avatar generation page with existing prompt
                     val promptToUse = prompt.takeIf { it.isNotBlank() } ?: promptForGeneration
                     onAvatarGenerateClick(promptToUse.takeIf { it.isNotBlank() })
@@ -926,6 +933,7 @@ private fun CreateRolePage(
                     // Face edit is a separate operation from gallery upload
                     isUploadingFromGallery = false
                     originalUploadedImageUrl = null
+                    AvatarManager.clearAllAvatarData()
 
                     // Get the current avatar URL to crop
                     val imageUrl =
@@ -1138,11 +1146,12 @@ private fun CreateRolePage(
                         }
                     }
                     val finalAvatarUrl = croppedAvatarUrl ?: backgroundUrl
-                    val backgroundImagesList = avatarUrls.ifEmpty { listOfNotNull(avatarUrl) }
+                    //避免此次编辑生成的其他图片保存到服务器
+                    val backgroundImagesList = listOfNotNull(finalAvatarUrl)
 
                     // Save background for chat usage
-                    if (backgroundUrl != null) {
-                        AvatarManager.setChatBackgroundUrl(backgroundUrl)
+                    if (finalAvatarUrl != null) {
+                        AvatarManager.setChatBackgroundUrl(finalAvatarUrl)
                     }
 
                     isLoading = true
@@ -1153,7 +1162,7 @@ private fun CreateRolePage(
                                 name = name,
                                 gender = gender,
                                 avatar = finalAvatarUrl,
-                                background = backgroundUrl,
+                                background = finalAvatarUrl,
                                 backgroundImages = backgroundImagesList,
                                 settings = mapOf("description" to settings),
                                 intro = intro,

@@ -89,7 +89,7 @@ class AvatarGenerateViewModel : BaseVM() {
                         // Store the generated URLs for CreateRoleActivity
                         _generatedImageUrls.value = response.imageUrls
                         _selectedImageIndex.value = 0
-                        AvatarManager.setGeneratedAvatarUrls(response.imageUrls)
+                        AvatarManager.appendAvatarUrls(response.imageUrls)
                         LogUtils.i("Setting generatedImageUrls to: ${response.imageUrls}")
 
                         // Firebase Analytics - 记录头像生成成功
