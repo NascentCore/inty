@@ -194,6 +194,14 @@ object UiConfigs {
         // Intro section
         val IntroSectionCollapsedHeight = 40.dp
         val IntroSectionExpandedHeight = 60.dp
+
+        object VibeMode {
+            val BannerHeight = 92.dp
+            val CornerRadius = 20.dp
+            val BorderWidth = 1.dp
+            val InnerPadding = 18.dp
+            val ContentSpacing = 12.dp
+        }
     }
 
     object ChatMessagePane {
