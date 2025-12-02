@@ -11,10 +11,6 @@ on:
 jobs:
   build-apk:
     runs-on: android-builder
-    # runs-on: ubuntu-latest
-    # runs-on: zyx
-    permissions:
-      contents: read
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -55,14 +51,7 @@ jobs:
       - name: Build release bundle and APK
         run: |
           cd android_app
-          ./gradlew bundleRelease --stacktrace --info
-
-      - id: gen-release-info
-        run: |
-          cd android_app
-          echo "version_name_with_commit_id=$(./gradlew printVersionInfo | grep 'Version name with suffix: ' | awk -F': ' '{print $2}')" >> $GITHUB_OUTPUT
-          echo "release_name=$(./gradlew printVersionInfo | grep 'Version name with suffix: ' | awk -F': ' '{print $2}' | sed 's/ (/-/; s/)//')" >> $GITHUB_OUTPUT
-
+          ./gradlew bundleRelease
       - name: Upload release bundle to Google Play internal testing
         uses: r0adkll/upload-google-play@v1
         with:
@@ -71,55 +60,3 @@ jobs:
           releaseFiles: android_app/app/build/outputs/bundle/release/app-release.aab
           track: internal
           status: completed
-          releaseName: ${{ steps.gen-release-info.outputs.release_name }}
-          changesNotSentForReview: true
-
-      - id: create-release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.gen-release-info.outputs.release_name }}
-          draft: false
-          prerelease: false
-          files: |
-            android_app/app/build/outputs/apk/release/app-release.apk
-          generate_release_notes: true
-          make_latest: true
-          fail_on_unmatched_files: false
-
-      - name: Notify Feishu group
-        run: |
-          RELEASE_NAME=${{ steps.gen-release-info.outputs.release_name }}
-          RELEASE_URL=${{ steps.create-release.outputs.url }}
-          # See https://github.com/softprops/action-gh-release?tab=readme-ov-file#outputs
-          RELEASE_APK_URL=${{ fromJSON(steps.create-release.outputs.assets)[0].browser_download_url }}
-          # See:
-          # https://open.larksuite.com/document/common-capabilities/message-card/message-cards-content/using-markdown-tags
-          # for how to write content in feishu card.
-          cat <<EOF > feishu_card.json
-          {
-            "msg_type": "interactive",
-            "card": {
-              "config": {
-                "wide_screen_mode": true
-              },
-              "header": {
-                "title": {
-                  "tag": "plain_text",
-                  "content": "IntelliMate 测试 APK 发布，版本：$RELEASE_NAME"
-                }
-              },
-              "elements": [
-                {
-                  "tag": "div",
-                  "text": {
-                    "tag": "lark_md",
-                    "content": "✅ 已上传至 Google Play Internal Testing 轨道\n📦 改动详见 [GitHub Release](${RELEASE_URL})\n📥 [Release APK 下载](${RELEASE_APK_URL})"
-                  }
-                }
-              ]
-            }
-          }
-          EOF
-          curl -X POST ${{ secrets.FEISHU_WEBHOOK_URL }} \
-            -H "Content-Type: application/json" \
-            -d @feishu_card.json
