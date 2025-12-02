@@ -87,6 +87,7 @@ import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
+import com.ai.intellimate.settings.check.CheckInActivity
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.vip.VipCenterActivity
@@ -447,26 +448,27 @@ private fun ProfileHeader(
                 contentDescription = stringResource(R.string.me_icons_row_whatsapp),
             )
             Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
-            //
-            //            AsyncImage(
-            //                modifier =
-            //                    Modifier
-            //                        .size(24.dp)
-            //                        .clickable {
-            //                            val currentTime = System.currentTimeMillis()
-            //                            if (AntiClick.isValidClick(lastClickTime)) {
-            //                                lastClickTime = currentTime
-            //                                try {
-            //                                    ToastUtils.showShort("Not Implementation！")
-            //                                } catch (e: Exception) {
-            //                                    ToastUtils.showLargeText(e.toString())
-            //                                }
-            //                            }
-            //                        },
-            //                model = R.drawable.ic_checkin,
-            //                contentDescription = null,
-            //            )
-            //            Spacer(Modifier.width(8.dp))
+
+                        AsyncImage(
+                            modifier =
+                                Modifier
+                                    .size(24.dp)
+                                    .clickable {
+                                        val currentTime = System.currentTimeMillis()
+                                        if (AntiClick.isValidClick(lastClickTime)) {
+                                            lastClickTime = currentTime
+//                                            try {
+//                                                ToastUtils.showShort("Not Implementation！")
+//                                            } catch (e: Exception) {
+//                                                ToastUtils.showLargeText(e.toString())
+//                                            }
+                                            CheckInActivity.launch(context)
+                                        }
+                                    },
+                            model = R.drawable.ic_checkin,
+                            contentDescription = null,
+                        )
+                        Spacer(Modifier.width(8.dp))
 
             AsyncImage(
                 modifier =

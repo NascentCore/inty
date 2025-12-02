@@ -132,6 +132,9 @@ class MainActivity : BaseActivity() {
         // 如果用户已登录，立即加载用户数据（应用恢复场景）
         // 如果用户未登录，数据加载会在 LaunchedEffect(isLoggedIn) 中处理
         loadUserDataIfLoggedIn()
+
+        // 用户签到数据初始化
+        CheckInRepository.initialize(this)
     }
 
     /** 检查登录状态是否有效 */
