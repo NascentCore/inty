@@ -483,12 +483,8 @@ private fun CreateRolePage(
                                                         R.string.toast_avatar_cropped_uploaded
                                                     )
                                                 } else {
-                                                    // Face edit: update cropped avatar and clear
-                                                    // avatarUrls
-                                                    // Clear avatarUrls to ensure cropped avatar is
-                                                    // displayed (not old multi-choice avatars)
+                                                    // Face edit: update cropped avatar
                                                     croppedAvatarUrl = uploadedUrl
-                                                    avatarUrls = emptyList()
                                                     ToastUtils.showShort(
                                                         R.string.toast_avatar_cropped_uploaded
                                                     )
