@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-apk:
-    runs-on: yaxiong-zhao-INTEL
+    runs-on: yaxiong-zhao
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
