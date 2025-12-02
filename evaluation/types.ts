@@ -99,6 +99,7 @@ export interface CharacterTheme {
   name: string;
   description?: string;
   background_image_url?: string;
+  visibility: "PRIMARY" | "SECONDARY" | "HIDDEN";
   created_at: string;
   updated_at?: string;
   agents: CharacterThemeAgent[];
@@ -108,12 +109,14 @@ export interface CharacterThemeCreateRequest {
   name: string;
   description?: string;
   background_image_url?: string;
+  visibility?: "PRIMARY" | "SECONDARY" | "HIDDEN";
 }
 
 export interface CharacterThemeUpdateRequest {
   name?: string;
   description?: string;
   background_image_url?: string;
+  visibility?: "PRIMARY" | "SECONDARY" | "HIDDEN";
 }
 
 export interface AddAgentToThemeRequest {

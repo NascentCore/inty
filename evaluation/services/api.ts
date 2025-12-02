@@ -1187,6 +1187,7 @@ export const characterThemeApi = {
   list: (params?: {
     skip?: number;
     limit?: number;
+    include_hidden?: boolean;
   }): Promise<CharacterTheme[]> =>
     apiClient.get("/character-themes/", params), // 添加末尾斜杠以避免 307 重定向
 

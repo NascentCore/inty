@@ -10,18 +10,59 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app import models
+from app.models.character_theme import CharacterThemeVisibility
 from app.schemas import character_theme as character_theme_schemas
+
+
+async def _ensure_visibility_uniqueness(
+    db: AsyncSession, visibility: CharacterThemeVisibility, exclude_theme_id: Optional[str] = None
+) -> None:
+    """确保可见性的唯一性约束
+    
+    当设置专区为 PRIMARY 或 SECONDARY 时，将其他具有相同可见性的专区改为 HIDDEN
+    
+    Args:
+        db: 数据库会话
+        visibility: 要设置的可见性
+        exclude_theme_id: 要排除的专区ID（通常是当前正在更新的专区）
+    """
+    if visibility == CharacterThemeVisibility.HIDDEN:
+        return
+
+    stmt = select(models.CharacterTheme).where(
+        models.CharacterTheme.visibility == visibility
+    )
+    if exclude_theme_id:
+        stmt = stmt.where(models.CharacterTheme.id != exclude_theme_id)
+
+    result = await db.execute(stmt)
+    conflicting_themes = result.scalars().all()
+
+    for theme in conflicting_themes:
+        theme.visibility = CharacterThemeVisibility.HIDDEN
+        logger.info(
+            f"将专区 {theme.id} ({theme.name}) 的可见性从 {visibility} 改为 HIDDEN"
+        )
 
 
 async def create_theme(
     db: AsyncSession, theme_in: character_theme_schemas.CharacterThemeCreate
 ) -> models.CharacterTheme:
     """创建角色主题专区"""
+    visibility = (
+        theme_in.visibility
+        if theme_in.visibility is not None
+        else CharacterThemeVisibility.HIDDEN
+    )
+
+    await _ensure_visibility_uniqueness(db, visibility)
+
     theme = models.CharacterTheme(
         id=str(uuid.uuid4()),
         name=theme_in.name,
         description=theme_in.description,
         background_image_url=theme_in.background_image_url,
+        visibility=visibility,
     )
     db.add(theme)
     await db.commit()
@@ -61,12 +102,27 @@ async def get_theme(db: AsyncSession, theme_id: str) -> Optional[models.Characte
 
 
 async def list_themes(
-    db: AsyncSession, skip: int = 0, limit: int = 100
+    db: AsyncSession, skip: int = 0, limit: int = 100, include_hidden: bool = False
 ) -> List[models.CharacterTheme]:
-    """获取角色主题专区列表"""
+    """获取角色主题专区列表
+    
+    Args:
+        db: 数据库会话
+        skip: 跳过的记录数
+        limit: 返回的记录数
+        include_hidden: 是否包含不可见的专区，默认 False（只返回可见专区）
+    """
+    stmt = select(models.CharacterTheme)
+
+    if not include_hidden:
+        stmt = stmt.where(
+            models.CharacterTheme.visibility.in_(
+                [CharacterThemeVisibility.PRIMARY, CharacterThemeVisibility.SECONDARY]
+            )
+        )
+
     stmt = (
-        select(models.CharacterTheme)
-        .offset(skip)
+        stmt.offset(skip)
         .limit(limit)
         .options(
             selectinload(models.CharacterTheme.agents)
@@ -97,6 +153,13 @@ async def update_theme(
         return None
 
     update_data = theme_in.model_dump(exclude_unset=True)
+
+    # 如果更新可见性，需要确保唯一性约束
+    if "visibility" in update_data:
+        new_visibility = update_data["visibility"]
+        if new_visibility is not None:
+            await _ensure_visibility_uniqueness(db, new_visibility, exclude_theme_id=theme_id)
+
     for field, value in update_data.items():
         setattr(theme, field, value)
 

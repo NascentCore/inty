@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.models.character_theme import CharacterThemeVisibility
 from app.schemas.agent import Agent
 
 
@@ -14,6 +15,9 @@ class CharacterThemeBase(BaseModel):
     name: str = Field(..., max_length=255, description="专区名称")
     description: Optional[str] = Field(None, description="专区描述")
     background_image_url: Optional[str] = Field(None, description="背景图URL地址")
+    visibility: Optional[CharacterThemeVisibility] = Field(
+        None, description="可见性：第一展示、第二展示、不可见"
+    )
 
     @field_validator("name")
     @classmethod
@@ -28,7 +32,10 @@ class CharacterThemeBase(BaseModel):
 class CharacterThemeCreate(CharacterThemeBase):
     """创建角色主题专区请求模型"""
 
-    pass
+    visibility: Optional[CharacterThemeVisibility] = Field(
+        default=CharacterThemeVisibility.HIDDEN,
+        description="可见性：第一展示、第二展示、不可见（默认：不可见）",
+    )
 
 
 class CharacterThemeUpdate(BaseModel):
@@ -37,6 +44,9 @@ class CharacterThemeUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=255, description="专区名称")
     description: Optional[str] = Field(None, description="专区描述")
     background_image_url: Optional[str] = Field(None, description="背景图URL地址")
+    visibility: Optional[CharacterThemeVisibility] = Field(
+        None, description="可见性：第一展示、第二展示、不可见"
+    )
 
     @field_validator("name")
     @classmethod
@@ -67,6 +77,9 @@ class CharacterTheme(CharacterThemeBase):
     id: str = Field(..., description="专区ID")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: Optional[datetime] = Field(None, description="更新时间")
+    visibility: CharacterThemeVisibility = Field(
+        ..., description="可见性：第一展示、第二展示、不可见"
+    )
     agents: List[CharacterThemeAgent] = Field(
         default_factory=list, description="专区中的角色列表（按顺序）"
     )

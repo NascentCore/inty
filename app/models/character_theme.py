@@ -1,10 +1,20 @@
 """角色主题专区模型"""
 
+from enum import StrEnum
+
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.models import Base
+
+
+class CharacterThemeVisibility(StrEnum):
+    """角色主题专区可见性"""
+
+    PRIMARY = "PRIMARY"  # 第一展示
+    SECONDARY = "SECONDARY"  # 第二展示
+    HIDDEN = "HIDDEN"  # 不可见
 
 
 class CharacterTheme(Base):
@@ -16,6 +26,13 @@ class CharacterTheme(Base):
     name = Column(String(255), nullable=False, comment="专区名称")
     description = Column(Text, nullable=True, comment="专区描述")
     background_image_url = Column(String, nullable=True, comment="背景图URL地址")
+    visibility = Column(
+        Enum(CharacterThemeVisibility, name="character_theme_visibility"),
+        default=CharacterThemeVisibility.HIDDEN,
+        nullable=False,
+        index=True,
+        comment="可见性：第一展示、第二展示、不可见",
+    )
     created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
 
