@@ -77,8 +77,8 @@ interface ChatRepository {
     ): HttpResult<ChatService.ChatImageGenerationResult>
 
     /** 清理指定agent的聊天数据 */
-    suspend fun clearChatData(agentId: String)
+    fun clearChatData(agentId: String)
 
     /** 清理所有聊天数据 */
-    suspend fun clearAllChatData()
+    fun clearAllChatData()
 }
