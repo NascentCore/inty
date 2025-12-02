@@ -197,7 +197,31 @@ def check_gcs_file_exists(bucket_name: str, path: str) -> bool:
 
 
 def download_from_gcs(url: str) -> bytes:
-    """从GCS下载文件"""
+    """从GCS下载文件
+    
+    支持 GCS URL 和 CDN URL（会自动转换为 GCS URL）
+    """
+    # 如果 URL 不是 GCS 格式，尝试从 CDN URL 转换
+    if not (
+        url.startswith(GCS_PUBLIC_HTTPS_PREFIX)
+        or url.startswith(GCS_GS_PREFIX)
+        or url.startswith(GCS_PRIVATE_HTTPS_PREFIX)
+    ):
+        # 尝试从 CDN URL 转换为 GCS URL
+        from app.services.image_transform_service import image_transform_service
+        
+        gcs_url = image_transform_service.cloudflare_to_gcs(url)
+        if gcs_url:
+            url = gcs_url
+        elif image_transform_service.is_gcs_url(url):
+            # 已经是 GCS URL，但格式可能不同，直接使用
+            pass
+        else:
+            raise ValueError(
+                f"Invalid URL format for download_from_gcs: {url}. "
+                "Expected GCS URL (https://storage.googleapis.com/...) or CDN URL"
+            )
+    
     bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(url)
     assert gcs_path
 
