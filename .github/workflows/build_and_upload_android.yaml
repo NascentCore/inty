@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-apk:
-    runs-on: yaxiong-zhao-INTEL
+    runs-on: ubuntu-latest
     # runs-on: zyx
     permissions:
       contents: read
