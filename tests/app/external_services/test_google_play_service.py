@@ -1,5 +1,10 @@
 # CREATED_BY_AGENT
+from datetime import datetime, timezone
+
+import pytest
+
 from app.core.config import GooglePlayConfig
+from app.external_services.google_play_fake import FakeGooglePlayService
 from app.external_services.google_play_service import GooglePlayService
 from app.schemas.version import VersionReminderAction
 
@@ -44,19 +49,6 @@ def test_version_check_uses_injected_min_supported_version():
     assert result["minimum_version"] == "150"
     assert result["reminder_action"] == VersionReminderAction.BLOCK_ACCESS
     assert result["latest_version"] == "2.0.0"
-
-
-"""单元测试：Google Play Service"""
-
-from datetime import datetime, timezone
-from unittest.mock import MagicMock
-
-import pytest
-from googleapiclient.errors import HttpError
-
-from app.core.config import GooglePlayConfig
-from app.external_services.google_play_fake import FakeGooglePlayService
-from app.external_services.google_play_service import GooglePlayService
 
 
 @pytest.fixture
