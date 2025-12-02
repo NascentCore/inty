@@ -32,6 +32,7 @@ from app.middleware.error_handler import (
 )
 from app.schemas.response import APIResponse
 
+# 初始化日志
 init_logger()
 
 
