@@ -364,7 +364,6 @@ private fun MessagesTabContent() {
         modifier = Modifier,
         viewModel = messagesViewModel,
         onClickConversationItem = { conversation ->
-            messagesViewModel.setConversationReaded(conversation)
             ChatActivity.launch(
                 context,
                 conversation.convertToAgentInfo(),

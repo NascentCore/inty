@@ -423,10 +423,6 @@ class ChatViewModel : BaseVM() {
                                     )
                                     showLimitDialog.emit(true)
                                 }
-                                result.data.data?.choices?.lastOrNull()?.message?.content?.let {
-                                    content ->
-                                    IntySetting.setConversationReaded(agentId, content)
-                                }
                             }
                             .onFailure {
                                 LogUtils.e("Error processing AI response: ${it.message}")
@@ -717,14 +713,6 @@ class ChatViewModel : BaseVM() {
                                     ) {
                                         showLimitDialog.emit(true)
                                     }
-                                    result.data.data
-                                        ?.choices
-                                        ?.lastOrNull()
-                                        ?.message
-                                        ?.content
-                                        ?.let { str ->
-                                            IntySetting.setConversationReaded(agent.id, str)
-                                        }
                                 }
                                 .onFailure {
                                     LogUtils.e(

@@ -222,26 +222,6 @@ class MessagesViewModel : BaseVM() {
         }
     }
 
-    /** 标记会话消息已读 */
-    fun setConversationReaded(conversationItem: ConversationItem) {
-        IntySetting.setConversationReaded(conversationItem.agentId, conversationItem.lastMessage)
-
-        _uiState.update { currentState ->
-            currentState.copy(
-                conversations =
-                    currentState.conversations.map { conversation ->
-                        if (
-                            conversation.id == conversationItem.id &&
-                                conversation.agentId == conversationItem.agentId
-                        ) {
-                            conversation.copy(isNew = false)
-                        } else {
-                            conversation
-                        }
-                    }
-            )
-        }
-    }
 
     /** 启动时加载 IntelliMate agent（只调用一次） */
     private fun loadIntelliMateAgentOnce() {

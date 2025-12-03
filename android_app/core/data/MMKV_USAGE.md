@@ -94,14 +94,11 @@ fun changeUser(uid: String) {
 
 | 键名模式 | 类型 | 说明 |
 |----------|------|------|
-| `conversation_last_{agentID}` | String | 最后一条已读消息 ID |
 | `conversation_pinned_{agentID}` | Boolean | 会话是否置顶 |
 | `conversation_hidden_{agentID}` | Boolean | 会话是否隐藏 |
 | `conversation_hidden_time_{agentID}` | Long | 会话隐藏时间戳 |
 
 **API 方法**：
-- `isConversationReaded(agentID: String, lastMessage: String): Boolean`
-- `setConversationReaded(agentID: String, lastMessage: String)`
 - `setConversationPinned(agentId: String, pinned: Boolean)` / `isConversationPinned(agentId: String): Boolean`
 - `setConversationHidden(agentId: String, hidden: Boolean)` / `isConversationHidden(agentId: String): Boolean`
 - `getConversationHiddenTime(agentId: String): Long`
@@ -230,9 +227,6 @@ IntySetting.setShowKeepTalking(true)
 val shouldShow = IntySetting.isShowKeepTalking()
 
 // 存储会话状态
-IntySetting.setConversationReaded(agentId, lastMessageId)
-val isRead = IntySetting.isConversationReaded(agentId, lastMessageId)
-
 // 存储用户资料
 IntySetting.setUserProfileData("nickname", "John")
 val nickname = IntySetting.getUserProfileData("nickname")

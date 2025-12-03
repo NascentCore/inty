@@ -194,11 +194,6 @@ class ChatRepositoryImpl(
             if (choices.isNotEmpty()) {
                 val assistantMsgs = choices.map { it.message }
                 localDataSource.prependMessages(agentId, assistantMsgs)
-
-                // 会话已读更新
-                choices.lastOrNull()?.message?.content?.let { lastContent ->
-                    IntySetting.setConversationReaded(agentId, lastContent)
-                }
             }
         }
 
@@ -400,11 +395,6 @@ class ChatRepositoryImpl(
             if (choices.isNotEmpty()) {
                 val assistantMsgs = choices.map { it.message }
                 localDataSource.prependMessages(agentId, assistantMsgs)
-
-                // 会话已读更新
-                choices.lastOrNull()?.message?.content?.let { lastContent ->
-                    IntySetting.setConversationReaded(agentId, lastContent)
-                }
             }
         }
     }
