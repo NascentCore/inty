@@ -74,12 +74,9 @@ class ChatActivity : BaseActivity() {
     private val chatViewModel: ChatViewModel by viewModels()
     private var agent: AgentInfo? = null
     private var agentId: String? = null
-    private val pageSource: String by lazy {
-        intent.getStringExtra(INTENT_KEY_PAGE_SOURCE) ?: DEFAULT_PAGE_SOURCE
-    }
-    private val shouldShowBoostSheet: Boolean by lazy {
-        intent.getBooleanExtra(INTENT_KEY_AUTO_BOOST, false)
-    }
+    private var pageSource: String = DEFAULT_PAGE_SOURCE
+    private var shouldShowBoostSheet: Boolean = false
+    private var isFromNotification: Boolean = false
 
     override fun getPageName(): String = "ChatPage"
 
@@ -90,6 +87,11 @@ class ChatActivity : BaseActivity() {
 
     override fun initConfigData() {
         super.initConfigData()
+        handleIntent(intent)
+    }
+
+    /** 处理 Intent 数据，提取 agent 信息和页面来源 */
+    private fun handleIntent(intent: Intent) {
         agent =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(INTENT_KEY_AGENT_INFO, AgentInfo::class.java)
@@ -97,9 +99,14 @@ class ChatActivity : BaseActivity() {
                 intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
             }
         agentId = intent.getStringExtra(INTENT_KEY_AGENT_ID)
+        pageSource = intent.getStringExtra(INTENT_KEY_PAGE_SOURCE) ?: DEFAULT_PAGE_SOURCE
+        shouldShowBoostSheet = intent.getBooleanExtra(INTENT_KEY_AUTO_BOOST, false)
+        isFromNotification = pageSource == PUSH_NOTIFICATION
+
         val resolvedAgent = agent
         if (resolvedAgent != null) {
-            chatViewModel.setAgentInfo(resolvedAgent)
+            // 如果是从通知进入，强制同步消息
+            chatViewModel.setAgentInfo(resolvedAgent, forceSync = isFromNotification)
         } else {
             val resolvedAgentId = agentId
             if (resolvedAgentId.isNullOrBlank()) {
@@ -107,12 +114,13 @@ class ChatActivity : BaseActivity() {
                 finish()
                 return
             }
-            chatViewModel.setAgentID(resolvedAgentId)
+            // 如果是从通知进入，先获取 agent 信息，然后强制同步
+            chatViewModel.setAgentID(resolvedAgentId, forceSync = isFromNotification)
         }
         chatViewModel.updateUserInfo()
 
         // 如果是从推送通知进入，记录推送通知点击事件
-        if (pageSource == PUSH_NOTIFICATION) {
+        if (isFromNotification) {
             FirebaseManager.logEvent(
                 FirebaseManager.Events.PUSH_NOTIFICATION_CLICK,
                 FirebaseManager.safeEventParams(
@@ -121,6 +129,14 @@ class ChatActivity : BaseActivity() {
                 ),
             )
         }
+    }
+
+    /** 处理 Activity 复用场景（singleTop 模式） */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // 重新处理 Intent，确保从通知进入时能触发消息同步
+        handleIntent(intent)
     }
 
     @Composable
