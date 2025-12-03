@@ -101,31 +101,15 @@ fun ExploreContent(
         }
     }
 
-    // 检测是否到达第一页末尾（最后一个可见的agent item索引 >= 19，即第20个item）
-    val isAtPageEnd by remember {
-        derivedStateOf {
-            val layoutInfo = gridState.layoutInfo
-            // 找到最后一个可见的agent item（排除加载状态指示器和Spacer）
-            val agentItems =
-                layoutInfo.visibleItemsInfo.filter { itemInfo ->
-                    // 计算agent items的数量：totalItemsCount - 2（加载状态 + Spacer）
-                    val agentItemCount = lazyPagingItems?.itemCount ?: 0
-                    itemInfo.index < agentItemCount
-                }
-            val lastVisibleAgentIndex = agentItems.lastOrNull()?.index ?: -1
-            lastVisibleAgentIndex >= 19 // 第20个agent item，索引为19
-        }
-    }
-
-    // 检测应该播放动图的 item 索引集合（所有可见区域>=50%的item）
+    // 检测应该播放动图的 item 索引列表（所有可见区域>=70%的item，按位置从上到下排序）
     val visibleItemIndices by remember {
         derivedStateOf {
             val layoutInfo = gridState.layoutInfo
             val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
-            if (viewportHeight <= 0) return@derivedStateOf emptySet<Int>()
+            if (viewportHeight <= 0) return@derivedStateOf emptyList<Int>()
 
             val agentItemCount = lazyPagingItems?.itemCount ?: 0
-            if (agentItemCount == 0) return@derivedStateOf emptySet<Int>()
+            if (agentItemCount == 0) return@derivedStateOf emptyList<Int>()
 
             // 过滤出 agent items（排除加载状态指示器和Spacer）
             val agentItems =
@@ -133,9 +117,9 @@ fun ExploreContent(
                     itemInfo.index < agentItemCount
                 }
 
-            // 找到所有可见比例 >= 50% 的 item 索引
-            val visibleIndices = mutableSetOf<Int>()
-            for (itemInfo in agentItems) {
+            // 找到所有可见比例 >= 70% 的 item 索引（按位置排序，从上到下）
+            val visibleIndices = mutableListOf<Int>()
+            for (itemInfo in agentItems.sortedBy { it.offset.y }) {
                 val itemTop = itemInfo.offset.y
                 val itemBottom = itemInfo.offset.y + itemInfo.size.height
                 val viewportTop = layoutInfo.viewportStartOffset
@@ -150,8 +134,8 @@ fun ExploreContent(
                 // 计算可见比例
                 val visibleRatio = if (itemHeight > 0) visibleHeight.toFloat() / itemHeight else 0f
 
-                // 如果可见比例 >= 50%，添加到集合中
-                if (visibleRatio >= 0.5f) {
+                // 如果可见比例 >= 70%，添加到列表中（保持从上到下的顺序）
+                if (visibleRatio >= 0.7f) {
                     visibleIndices.add(itemInfo.index)
                 }
             }
@@ -160,28 +144,39 @@ fun ExploreContent(
         }
     }
 
-    // 检测滚动方向：记录上一次的第一可见item索引
-    var lastFirstVisibleIndex by remember { mutableIntStateOf(-1) }
-    var isScrollingDown by remember { mutableStateOf(false) } // 是否向下滚动（期待加载更多）
+    // 找到第一个可见且有 backgroundAnimatedUrl 的 item 索引
+    var firstPlayingItemIndex by remember { mutableIntStateOf(-1) }
 
-    // 监听滚动状态，检测滚动方向和保存位置
+    // 监听可见项、滚动状态和 item 数据变化，更新播放索引
+    LaunchedEffect(visibleItemIndices, lazyPagingItems?.itemCount, gridState.isScrollInProgress) {
+        if (gridState.isScrollInProgress) {
+            // 滚动中，不播放
+            firstPlayingItemIndex = -1
+            return@LaunchedEffect
+        }
+
+        // 按顺序遍历可见的 item（已经按从上到下排序），找到第一个有 backgroundAnimatedUrl 的
+        firstPlayingItemIndex = -1
+        for (index in visibleItemIndices) {
+            val agent = lazyPagingItems?.get(index)
+            if (agent != null && agent.backgroundAnimatedUrl.isNotBlank()) {
+                firstPlayingItemIndex = index
+                break
+            }
+        }
+    }
+
+    // 监听滚动状态，保存位置和更新滚动标记
     LaunchedEffect(gridState.isScrollInProgress, gridState.firstVisibleItemIndex) {
         if (gridState.isScrollInProgress) {
-            val currentFirstVisibleIndex = gridState.firstVisibleItemIndex
-
-            // 判断滚动方向：向下滚动时，firstVisibleItemIndex增大
-            isScrollingDown = currentFirstVisibleIndex > lastFirstVisibleIndex
-
             lastScrollTime = System.currentTimeMillis()
             hasUserScrolled = true // 标记用户已主动滚动
-            lastFirstVisibleIndex = currentFirstVisibleIndex
         } else {
             // 滚动停止时保存位置
             vm.saveScrollPosition(
                 gridState.firstVisibleItemIndex,
                 gridState.firstVisibleItemScrollOffset,
             )
-            lastFirstVisibleIndex = gridState.firstVisibleItemIndex
         }
     }
 
@@ -265,13 +260,8 @@ fun ExploreContent(
                 ) { index ->
                     val agent = lazyPagingItems[index]
                     if (agent != null) {
-                        // 判断是否应该播放动图：
-                        // 1. item 有 backgroundAnimatedUrl
-                        // 2. item 在可见索引集合中
-                        // 3. 不在滚动中
-                        val hasAnimatedUrl = agent.backgroundAnimatedUrl.isNotBlank()
-                        val isVisible = index in visibleItemIndices
-                        val shouldPlay = hasAnimatedUrl && isVisible && !gridState.isScrollInProgress
+                        // 只播放第一个可见且有 backgroundAnimatedUrl 的 item
+                        val shouldPlay = index == firstPlayingItemIndex
 
                         ExploreCharacterCard(
                             modifier = Modifier.fillMaxWidth(),
