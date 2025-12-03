@@ -46,6 +46,12 @@ private const val BOTTOM_GRADIENT_HEIGHT_DP = 300
 private const val VIDEO_FIRST_PLAY_COUNT = 2 // 首次进入界面播放次数
 private const val VIDEO_MESSAGE_PLAY_COUNT = 1 // 发送消息播放次数
 
+// 播放请求类型
+private sealed class PlayRequest {
+    object PageSwitch : PlayRequest() // 首次进入页面，播放2次
+    object Message : PlayRequest() // 发送消息，播放1次
+}
+
 /** 通用角色背景组件 可用于聊天页面、角色主页等需要角色背景的地方 */
 @Composable
 fun AgentBackground(
@@ -87,15 +93,13 @@ fun AgentBackground(
     // 视频缓存状态（仅对mp4/webm视频有效，webp动图不需要缓存检查）
     var isVideoCached by remember { mutableStateOf(false) }
 
-    // 播放控制：页面切换时播放2次，加载状态时播放1次
-    var shouldPlayPageSwitch by remember { mutableStateOf(false) }
-    var shouldPlayLoading by remember { mutableStateOf(false) }
-    var isVideoPlaying by remember { mutableStateOf(false) } // 动画是否正在播放
-    var isLoadingTriggeredPlay by remember { mutableStateOf(false) } // 是否因为 loading 触发的播放
+    // 播放控制状态
+    // 使用明确的播放请求机制，确保播放完成后立即停止
+    var playRequest by remember { mutableStateOf<PlayRequest?>(null) }
+    var hasCompletedPageSwitchPlay by remember(agentInfo?.id) { mutableStateOf(false) } // 记录是否已完成首次播放（随 agent 切换重置）
+    var isPlaying by remember { mutableStateOf(false) } // 动画是否正在播放（从 AnimatedBackground 获取）
 
     // 检查视频缓存状态 - 每次进入页面时都重新检查（仅对mp4/webm视频有效）
-    // 优化：同步检查缓存状态，避免延迟
-    // 关键修复：首次安装时，即使未缓存，也应该在视频准备好后触发播放
     // 注意：动图（gif、webp、avif 等）不需要缓存检查，Coil会自动处理
     LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage) {
         if (backgroundAnimatedUrl != null && isCurrentPage) {
@@ -130,21 +134,39 @@ fun AgentBackground(
         }
     }
 
-    // 页面切换时触发播放
-    LaunchedEffect(isCurrentPage, isVideoCached) {
-        if (isCurrentPage && backgroundAnimatedUrl != null) {
-            shouldPlayPageSwitch = true
+    // 首次进入页面时触发播放（2次）
+    // 关键：只在 agent 切换且未完成首次播放时触发
+    LaunchedEffect(agentInfo?.id, isCurrentPage, backgroundAnimatedUrl, isVideoCached) {
+        if (isCurrentPage && backgroundAnimatedUrl != null && !hasCompletedPageSwitchPlay) {
+            // 判断是否为视频格式
+            val isVideo = backgroundAnimatedUrl.lowercase().endsWith(".mp4") ||
+                backgroundAnimatedUrl.lowercase().endsWith(".webm") ||
+                backgroundAnimatedUrl.lowercase().contains(".mp4?") ||
+                backgroundAnimatedUrl.lowercase().contains(".webm?")
+            
+            // 对于视频，需要等待缓存完成；对于动图，可以直接播放
+            if (!isVideo || isVideoCached) {
+                playRequest = PlayRequest.PageSwitch
+                LogUtils.d("AgentBackground - 触发首次页面播放: playCount=2, isVideo=$isVideo, isVideoCached=$isVideoCached")
+            }
         }
     }
 
-    // 加载状态时触发播放
-    LaunchedEffect(isLoading) {
-        if (isLoading && backgroundAnimatedUrl != null && !isLoadingTriggeredPlay) {
-            shouldPlayLoading = true
-            isLoadingTriggeredPlay = true
-        } else if (!isLoading) {
-            isLoadingTriggeredPlay = false
+    // 发送消息时触发播放（1次）
+    // 关键：只在 loading 开始时触发，且当前没有播放请求，且不在播放中
+    LaunchedEffect(isLoading, backgroundAnimatedUrl, isCurrentPage, isPlaying) {
+        if (isLoading && backgroundAnimatedUrl != null && isCurrentPage && playRequest == null && !isPlaying) {
+            playRequest = PlayRequest.Message
+            LogUtils.d("AgentBackground - 触发消息播放: playCount=1")
         }
+    }
+
+    // 计算播放状态
+    val shouldPlay = playRequest != null && isCurrentPage
+    val playCount = when (playRequest) {
+        is PlayRequest.PageSwitch -> VIDEO_FIRST_PLAY_COUNT
+        is PlayRequest.Message -> VIDEO_MESSAGE_PLAY_COUNT
+        null -> 0
     }
 
     Box(modifier = modifier.fillMaxSize().clipToBounds()) {
@@ -155,17 +177,26 @@ fun AgentBackground(
                 videoUrl = backgroundAnimatedUrl,
                 staticImageUrl = staticImageUrl,
                 isCurrentPage = isCurrentPage,
-                shouldPlay = shouldPlayPageSwitch || shouldPlayLoading,
-                playCount =
-                    if (shouldPlayPageSwitch) VIDEO_FIRST_PLAY_COUNT else VIDEO_MESSAGE_PLAY_COUNT,
+                shouldPlay = shouldPlay,
+                playCount = playCount,
+                isVideoCached = isVideoCached,
                 onPlayComplete = {
-                    if (shouldPlayPageSwitch) {
-                        shouldPlayPageSwitch = false
+                    // 播放完成后，立即清除播放请求
+                    val completedRequest = playRequest
+                    playRequest = null
+                    
+                    // 如果是首次页面播放完成，标记为已完成
+                    if (completedRequest is PlayRequest.PageSwitch) {
+                        hasCompletedPageSwitchPlay = true
+                        LogUtils.d("AgentBackground - 首次页面播放完成，标记为已完成")
                     }
-                    if (shouldPlayLoading) {
-                        shouldPlayLoading = false
-                    }
+                    
+                    LogUtils.d("AgentBackground - 播放完成，清除播放请求: $completedRequest")
                     onPlayComplete()
+                },
+                onIsPlayingChange = { playing ->
+                    // 更新播放状态，用于判断是否可以触发新的播放请求
+                    isPlaying = playing
                 },
                 contentScale = contentScale,
             )

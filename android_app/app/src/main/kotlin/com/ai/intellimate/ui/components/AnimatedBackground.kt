@@ -166,14 +166,30 @@ fun AnimatedBackground(
     }
 
     // 当 shouldPlay 或 playCount 变化时，更新 currentPlayCount
+    // 关键：只在 shouldPlay 从 false 变为 true 时重置 hasPlayCompleted，避免播放完成后被重置
+    var previousShouldPlay by remember { mutableStateOf(false) }
     LaunchedEffect(shouldPlay, playCount) {
         if (shouldPlay) {
+            // 关键修复：只在 shouldPlay 从 false 变为 true 时重置 hasPlayCompleted
+            // 如果 shouldPlay 一直保持为 true，不应该重置 hasPlayCompleted
+            if (!previousShouldPlay) {
+                hasPlayCompleted = false // 只在新的播放请求时重置完成标志
+                actualPlayCount = 0 // 重置播放计数
+                LogUtils.d("AnimatedBackground - 新的播放请求，重置状态: playCount=$playCount")
+            }
             currentPlayCount = playCount
-            hasPlayCompleted = false // 重置完成标志
-            LogUtils.d("AnimatedBackground - 设置播放次数: $playCount")
+            previousShouldPlay = true
+            LogUtils.d("AnimatedBackground - 设置播放次数: $playCount, shouldPlay=true, hasPlayCompleted=$hasPlayCompleted")
         } else {
+            // shouldPlay 变为 false 时，立即停止播放
             currentPlayCount = 0
-            hasPlayCompleted = false
+            previousShouldPlay = false
+            exoPlayer?.pause()
+            exoPlayer?.seekTo(0)
+            animatedImageDrawable?.stop()
+            isPlaying = false
+            onIsPlayingChange?.invoke(false)
+            LogUtils.d("AnimatedBackground - shouldPlay=false，停止播放")
         }
     }
 
@@ -183,9 +199,19 @@ fun AnimatedBackground(
         LogUtils.d(
             "AnimatedBackground - [URL变化] 动画URL变化，重置状态: videoUrl=$videoUrl, staticImageUrl=$staticImageUrl"
         )
-        // 如果有动画URL且有静态图，先显示静态图作为占位符
-        showStaticImage = videoUrl != null && staticImageUrl != null
-        targetStaticImageAlpha = 1f // 重置目标透明度
+        // 关键修复：如果有动画URL且有静态图，初始显示静态图作为占位符
+        // 只有在动画加载完成并开始播放时才隐藏静态图
+        if (videoUrl != null && staticImageUrl != null) {
+            showStaticImage = true
+            targetStaticImageAlpha = 1f // 重置目标透明度，确保静态图完全显示
+        } else if (videoUrl == null && staticImageUrl != null) {
+            // 没有动画，只显示静态图
+            showStaticImage = true
+            targetStaticImageAlpha = 1f
+        } else {
+            showStaticImage = false
+            targetStaticImageAlpha = 0f
+        }
         videoPrepared = false
         videoFirstFrameRendered = false
         animatedImageLoaded = false
@@ -252,16 +278,19 @@ fun AnimatedBackground(
         }
     }
 
-    // 处理静态图和动画的切换逻辑：动画第一帧渲染完成后，立即触发动画隐藏静态图
-    // 关键修复：不依赖 isVideoCached，只要动画第一帧已渲染就立即隐藏静态图
-    LaunchedEffect(videoFirstFrameRendered, animatedImageLoaded, isVideo, isAnimatedImage, videoUrl, staticImageUrl) {
+    // 处理静态图和动画的切换逻辑：动画加载完成且开始播放时，隐藏静态图
+    // 关键修复：只有在动画加载完成且 shouldPlay 为 true（开始播放）时才隐藏静态图
+    LaunchedEffect(videoFirstFrameRendered, animatedImageLoaded, isVideo, isAnimatedImage, videoUrl, staticImageUrl, shouldPlay, currentPlayCount) {
         if (videoUrl != null && staticImageUrl != null && showStaticImage) {
-            // 如果动画第一帧已渲染，立即触发动画隐藏静态图（不等待额外延迟）
-            if ((isVideo && videoFirstFrameRendered) || (isAnimatedImage && animatedImageLoaded)) {
-                // 关键修复：立即触发淡出动画，不等待额外延迟
+            // 关键修复：只有在动画加载完成且 shouldPlay 为 true 且 currentPlayCount > 0 时才隐藏静态图
+            // 这确保了静态图在动画准备好之前一直显示，避免黑屏
+            // 当 shouldPlay 为 true 且 currentPlayCount > 0 时，说明已经开始播放或即将播放
+            val animationReady = (isVideo && videoFirstFrameRendered) || (isAnimatedImage && animatedImageLoaded)
+            if (animationReady && shouldPlay && currentPlayCount > 0) {
+                // 动画已加载完成且开始播放，触发淡出动画隐藏静态图
                 targetStaticImageAlpha = 0f
                 LogUtils.d(
-                    "AnimatedBackground - [静态图切换] ✅ 立即触发静态图淡出动画 (videoFirstFrameRendered=$videoFirstFrameRendered, animatedImageLoaded=$animatedImageLoaded)"
+                    "AnimatedBackground - [静态图切换] ✅ 动画开始播放，触发静态图淡出动画 (videoFirstFrameRendered=$videoFirstFrameRendered, animatedImageLoaded=$animatedImageLoaded, shouldPlay=$shouldPlay, currentPlayCount=$currentPlayCount)"
                 )
             }
         } else if (videoUrl != null && staticImageUrl == null) {
@@ -364,10 +393,10 @@ fun AnimatedBackground(
                                                     seekTo(0)
                                                     actualPlayCount = 0
                                                     hasPlayCompleted = true // 标记播放完成
-                                                    onPlayComplete()
                                                     LogUtils.d(
-                                                        "AnimatedBackground - 播放完成，已达到目标次数: $currentPlayCount"
+                                                        "AnimatedBackground - [视频] ✅ 播放完成，已达到目标次数: $currentPlayCount，调用 onPlayComplete"
                                                     )
+                                                    onPlayComplete()
                                                 } else {
                                                     seekTo(0)
                                                     playWhenReady = true
@@ -572,38 +601,31 @@ fun AnimatedBackground(
                 }
             }
 
-            // 生命周期监听：页面恢复时强制播放（关键：每次 onResume 都会触发）
-            // 使用 Unit 作为 key，确保每次 onResume 都会执行，参考 BackgroundVideoPlayer 的实现
-            LifecycleResumeEffect(Unit) {
+            // 生命周期监听：页面恢复时检查是否需要播放
+            // 关键：只在 shouldPlay=true 且未完成播放时才触发，避免重复播放
+            LifecycleResumeEffect(shouldPlay, hasPlayCompleted) {
                 LogUtils.d(
                     "AnimatedBackground - LifecycleResumeEffect触发: isCurrentPage=$isCurrentPage, shouldPlay=$shouldPlay, videoPrepared=$videoPrepared, currentPlayCount=$currentPlayCount, exoPlayer=${exoPlayer != null}, hasPlayCompleted=$hasPlayCompleted"
                 )
+                // 关键修复：只在 shouldPlay=true 且未完成播放时才触发
                 if (
                     isCurrentPage &&
                         shouldPlay &&
+                        !hasPlayCompleted &&
                         videoPrepared &&
                         currentPlayCount > 0 &&
                         exoPlayer != null &&
-                        !hasPlayCompleted &&
                         !isPlaying
                 ) {
                     LogUtils.d(
-                        "AnimatedBackground - LifecycleResumeEffect: 强制播放视频，次数: $currentPlayCount"
+                        "AnimatedBackground - LifecycleResumeEffect: 触发播放视频，次数: $currentPlayCount"
                     )
                     actualPlayCount = 0
                     exoPlayer?.seekTo(0)
                     exoPlayer?.playWhenReady = true
-                } else if (
-                    isCurrentPage &&
-                        shouldPlay &&
-                        currentPlayCount > 0 &&
-                        exoPlayer != null &&
-                        !videoPrepared
-                ) {
-                    // 如果视频还没准备好，等待一下再尝试
-                    LogUtils.d("AnimatedBackground - LifecycleResumeEffect: 视频未准备好，等待...")
-                } else if (hasPlayCompleted) {
-                    LogUtils.d("AnimatedBackground - LifecycleResumeEffect: 播放已完成，不再重复播放")
+                } else if (hasPlayCompleted || !shouldPlay) {
+                    // 播放已完成或 shouldPlay=false，不再播放
+                    LogUtils.d("AnimatedBackground - LifecycleResumeEffect: 播放已完成或 shouldPlay=false，不再播放")
                 }
                 onPauseOrDispose {
                     LogUtils.d("AnimatedBackground - onPauseOrDispose: 暂停播放")
@@ -702,9 +724,13 @@ fun AnimatedBackground(
 
             // 使用 Compose 的 AsyncImage，通过 Coil 3 的 repeatCount API 控制播放次数
             // 参考：https://coil-kt.github.io/coil/api/coil-gif/coil3.gif/index.html
+            // 关键修复：只在 shouldPlay 从 false 变为 true 时重新构建 ImageRequest，避免播放过程中重新构建
+            var previousShouldPlayForGif by remember { mutableStateOf(false) }
             val animatedImageRequestWithRepeatCount =
-                remember(videoUrl, currentPlayCount, shouldPlay, animatedImageRequest) {
-                    if (shouldPlay && currentPlayCount > 0) {
+                remember(videoUrl, currentPlayCount, shouldPlay, animatedImageRequest, previousShouldPlayForGif) {
+                    // 只在 shouldPlay 从 false 变为 true 时重新构建，或者 videoUrl 变化时重新构建
+                    if (shouldPlay && currentPlayCount > 0 && (!previousShouldPlayForGif || videoUrl != null)) {
+                        previousShouldPlayForGif = true
                         val containerWidthPx =
                             with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
                         val containerHeightPx =
@@ -717,16 +743,18 @@ fun AnimatedBackground(
                             .repeatCount(currentPlayCount) // 使用 Coil 3 的 repeatCount API 设置播放次数
                             .onAnimationEnd {
                                 // 动画播放完成回调
-                                if (!hasPlayCompleted) {
-                                    hasPlayCompleted = true
-                                    isPlaying = false
-                                    onIsPlayingChange?.invoke(false)
-                                    onPlayComplete()
-                                    LogUtils.d("AnimatedBackground - [动图] ✅ 动图播放完成（通过回调）: $videoUrl")
-                                }
+                                // 关键：确保在回调中正确设置状态并调用 onPlayComplete
+                                LogUtils.d("AnimatedBackground - [动图] onAnimationEnd 回调触发: currentPlayCount=$currentPlayCount")
+                                // 注意：这里不能直接访问 hasPlayCompleted，因为回调在 Coil 的上下文中执行
+                                // 所以直接调用 onPlayComplete，让 AgentBackground 处理状态清除
+                                onPlayComplete()
+                                LogUtils.d("AnimatedBackground - [动图] ✅ 动图播放完成（通过回调），已调用 onPlayComplete: $videoUrl")
                             }
                             .build()
                     } else {
+                        if (!shouldPlay) {
+                            previousShouldPlayForGif = false
+                        }
                         animatedImageRequest
                     }
                 }
@@ -809,12 +837,15 @@ fun AnimatedBackground(
             }
 
             // 监听 AnimatedImageDrawable 的播放完成事件
-            LaunchedEffect(animatedImageDrawable, hasPlayCompleted, shouldPlay) {
-                if (animatedImageDrawable != null && !hasPlayCompleted && shouldPlay) {
+            // 注意：Coil 的 onAnimationEnd 回调应该已经处理了播放完成，这里作为备用检查
+            LaunchedEffect(animatedImageDrawable, hasPlayCompleted, shouldPlay, currentPlayCount) {
+                if (animatedImageDrawable != null && !hasPlayCompleted && shouldPlay && currentPlayCount > 0) {
                     val drawable = animatedImageDrawable ?: return@LaunchedEffect
                     // 使用协程定期检查播放状态
-                    while (!hasPlayCompleted && drawable.isRunning && shouldPlay) {
+                    var checkCount = 0
+                    while (!hasPlayCompleted && drawable.isRunning && shouldPlay && checkCount < 1000) {
                         kotlinx.coroutines.delay(100) // 每 100ms 检查一次
+                        checkCount++
                     }
                     // 如果播放停止且未完成，说明播放已完成
                     if (!drawable.isRunning && !hasPlayCompleted && shouldPlay) {
