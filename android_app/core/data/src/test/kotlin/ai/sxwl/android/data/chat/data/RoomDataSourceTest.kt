@@ -57,9 +57,10 @@ class RoomDataSourceTest {
     @Test
     fun `getMessagesFlow 返回消息流`() = runTest(testDispatcher) {
         // Given: 插入测试消息到数据库
+        // 注意：streamMessages 按 sortKey DESC 排序，所以 sortKey 更大的消息会在前面
         val entities = listOf(
-            createMessageEntity("msg-1", "Hello", "user"),
-            createMessageEntity("msg-2", "Hi there", "assistant"),
+            createMessageEntity("msg-1", "Hello", "user", sortKey = 1000L),
+            createMessageEntity("msg-2", "Hi there", "assistant", sortKey = 2000L),
         )
         database.chatMessageDao().upsert(entities)
         advanceUntilIdle()
@@ -70,9 +71,10 @@ class RoomDataSourceTest {
         val messages = flow.first { it.isNotEmpty() }
 
         // Then: 应该返回转换后的消息列表
+        // 按 sortKey DESC 排序，所以 msg-2 (sortKey=2000) 在前，msg-1 (sortKey=1000) 在后
         assertEquals(2, messages.size)
-        assertEquals("Hello", messages[0].content)
-        assertEquals("Hi there", messages[1].content)
+        assertEquals("Hi there", messages[0].content)
+        assertEquals("Hello", messages[1].content)
     }
 
     // 辅助方法：创建测试用的消息实体
