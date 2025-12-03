@@ -107,8 +107,9 @@ fun HomeScreen(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
-                // 标记需要刷新 Profile 列表
+                // 标记需要刷新 Profile 列表，并切换回 “Me” 页面
                 shouldRefreshProfile = true
+                mainViewModel.selectTab(HomeTabIndex.Profile.ordinal)
             }
         }
 
