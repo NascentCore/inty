@@ -237,4 +237,16 @@ object AppColors {
     val EmailLoginButtonText = Color(0x99FFFFFF)
 }
 
+object VibeModeColors {
+    val DisabledStart = Color(0x33261A30)
+    val DisabledEnd = Color(0x331B111F)
+    val InactiveStart = Color(0xFF35233F)
+    val InactiveEnd = Color(0xFF241429)
+    val ActiveStart = Color(0xFFFF7AC3)
+    val ActiveEnd = Color(0xFFFFC16C)
+    val SwitchTrackActive = Color(0xFFFFB6E3)
+    val SwitchTrackInactive = Color(0xFF6C5179)
+    val SwitchTrackDisabled = Color(0xFF3B2A43)
+}
+
 // endregion
