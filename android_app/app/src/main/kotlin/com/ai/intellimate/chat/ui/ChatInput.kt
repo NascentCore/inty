@@ -1,5 +1,6 @@
 package com.ai.intellimate.chat.ui
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.AppColors
@@ -84,15 +85,17 @@ fun ChatInput(
                 value = inputData.value,
                 singleLine = false,
                 placeholder = {
+                    val placeholderText =
+                        if (showSceneActionButton) {
+                            stringResource(R.string.chat_input_with_scene_action_placeholder)
+                        } else {
+                            val defaultName = stringResource(R.string.chat_ai_typing_default_name)
+                            val targetName = agentInfo.firstNameOrNull() ?: defaultName
+                            stringResource(R.string.chat_input_placeholder, targetName)
+                        }
+
                     Text(
-                        text =
-                            stringResource(
-                                if (showSceneActionButton) {
-                                    R.string.chat_input_with_scene_action_placeholder
-                                } else {
-                                    R.string.chat_input_placeholder
-                                }
-                            ),
+                        text = placeholderText,
                         fontSize = 14.sp,
                         color = Color.White.copy(alpha = 0.5f),
                     )
@@ -232,5 +235,13 @@ private fun SceneActionQuickButton(
 
 private val TrailingControlsPadding = 104.dp
 private val SceneActionButtonSpacing = 6.dp
+private val NameDelimiterRegex = "\\s+".toRegex()
 private const val SCENE_ACTION_TEMPLATE = "()"
 private const val CHAT_INPUT_MAX_LENGTH = 500
+
+private fun AgentInfo?.firstNameOrNull(): String? {
+    val rawName = this?.name?.trim().orEmpty()
+    if (rawName.isBlank()) return null
+    val firstToken = NameDelimiterRegex.split(rawName).firstOrNull { it.isNotBlank() }
+    return firstToken ?: rawName
+}
