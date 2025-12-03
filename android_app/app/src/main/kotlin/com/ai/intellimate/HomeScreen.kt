@@ -504,6 +504,7 @@ private fun ProfileTabContent(
         },
         onLoadMore = { profileViewModel.loadMoreUserCreatedAgents() },
         onShowSettings = onShowSettings,
+        profileViewModel = profileViewModel, // 传递 ViewModel 以便 ProfilePage 内部处理刷新
     )
 }
 

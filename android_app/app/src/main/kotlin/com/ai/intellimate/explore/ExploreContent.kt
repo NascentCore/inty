@@ -117,6 +117,49 @@ fun ExploreContent(
         }
     }
 
+    // 检测应该播放动图的 item 索引（第一个完全显示或可见区域>70%的item）
+    val playingItemIndex by remember {
+        derivedStateOf {
+            val layoutInfo = gridState.layoutInfo
+            val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+            if (viewportHeight <= 0) return@derivedStateOf -1
+
+            val agentItemCount = lazyPagingItems?.itemCount ?: 0
+            if (agentItemCount == 0) return@derivedStateOf -1
+
+            // 过滤出 agent items（排除加载状态指示器和Spacer）
+            val agentItems =
+                layoutInfo.visibleItemsInfo.filter { itemInfo ->
+                    itemInfo.index < agentItemCount
+                }
+
+            // 找到第一个可见比例 >= 70% 的 item
+            for (itemInfo in agentItems) {
+                val itemTop = itemInfo.offset.y
+                val itemBottom = itemInfo.offset.y + itemInfo.size.height
+                val viewportTop = layoutInfo.viewportStartOffset
+                val viewportBottom = layoutInfo.viewportEndOffset
+
+                // 计算可见区域
+                val visibleTop = maxOf(itemTop, viewportTop)
+                val visibleBottom = minOf(itemBottom, viewportBottom)
+                val visibleHeight = maxOf(0, visibleBottom - visibleTop)
+                val itemHeight = itemInfo.size.height
+
+                // 计算可见比例
+                val visibleRatio = if (itemHeight > 0) visibleHeight.toFloat() / itemHeight else 0f
+
+                // 如果可见比例 >= 70%，返回该 item 的索引
+                if (visibleRatio >= 0.7f) {
+                    return@derivedStateOf itemInfo.index
+                }
+            }
+
+            // 如果没有找到符合条件的 item，返回 -1
+            -1
+        }
+    }
+
     // 检测滚动方向：记录上一次的第一可见item索引
     var lastFirstVisibleIndex by remember { mutableIntStateOf(-1) }
     var isScrollingDown by remember { mutableStateOf(false) } // 是否向下滚动（期待加载更多）
@@ -153,8 +196,8 @@ fun ExploreContent(
                 // 首次进入时使用缓存数据，不应该显示加载更多loading
                 if (
                     currentTime - lastScrollTime < 1000 &&
-                        lazyPagingItems.itemCount > 0 &&
-                        lazyPagingItems.loadState.refresh is LoadState.NotLoading
+                    lazyPagingItems.itemCount > 0 &&
+                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
                 ) {
                     showLoadMoreLoading = true
                     // 延迟隐藏loading
@@ -227,12 +270,14 @@ fun ExploreContent(
                             agentInfo = agent,
                             onClick = { onClickAgent(agent) },
                             index = index,
+                            shouldPlayAnimated = playingItemIndex == index && !gridState.isScrollInProgress,
                         )
                     } else {
                         // 显示加载占位符
                         ShimmerPlaceholder(
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .height(200.dp)
                                     .clip(RoundedCornerShape(8.dp))
                         )
@@ -253,7 +298,11 @@ fun ExploreContent(
 /** 空状态指示器 */
 @Composable
 private fun EmptyStateIndicator() {
-    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .height(200.dp), contentAlignment = Alignment.Center
+    ) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
     }
 }

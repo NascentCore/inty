@@ -9,10 +9,15 @@ import ai.sxwl.android.data.billing.VipStatus
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.VibeModeColors
 import ai.sxwl.android.utils.TimeUtils
 import ai.sxwl.android.utils.ToastUtils
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -48,19 +53,20 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -79,6 +85,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -86,22 +94,20 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
-import ai.sxwl.android.design.theme.VibeModeColors
 import com.ai.intellimate.settings.check.CheckInActivity
-import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.ChatDialogData
-import com.ai.intellimate.ui.components.ShimmerPlaceholder
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
+import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.vip.VipCenterActivity
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.min
-import kotlinx.coroutines.launch
 
 /** "我的"页面 */
 @Composable
@@ -116,10 +122,22 @@ internal fun ProfilePage(
     onLoadMore: () -> Unit = {},
     onShowSettings: () -> Unit,
     vipStatus: VipStatus? = null, // 可选的 VIP 状态，用于预览
+    profileViewModel: ProfileViewModel? = null, // 用于刷新用户信息
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
+
+    // 创建用于编辑个人资料的 launcher，在 ProfilePage 内部处理
+    val editProfileLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            // 从 ModifyProfileActivity 返回后，刷新用户信息
+            if (result.resultCode == Activity.RESULT_OK) {
+                profileViewModel?.updateUserInfoLocal()
+            }
+        }
 
     // 使用 PageTrackingHelper 进行页面跟踪
     LaunchedEffect(Unit) {
@@ -128,6 +146,14 @@ internal fun ProfilePage(
             "MainActivity",
             mapOf("agent_count" to agents.size, "is_loading" to isLoading),
         )
+    }
+
+    // 监听页面恢复，自动刷新用户信息（从 ModifyProfileActivity 返回时会触发）
+    if (profileViewModel != null) {
+        LifecycleResumeEffect(profileViewModel) {
+            profileViewModel.updateUserInfoLocal()
+            onPauseOrDispose {}
+        }
     }
 
     // 折叠相关状态
@@ -253,6 +279,7 @@ internal fun ProfilePage(
                     innerPadding = innerPadding,
                     context = context,
                     vipStatus = vipStatus,
+                    editProfileLauncher = editProfileLauncher,
                 )
 
                 // LazyGrid 区域
@@ -365,6 +392,7 @@ private fun ProfileHeader(
     innerPadding: PaddingValues,
     context: Context,
     vipStatus: VipStatus? = null, // 可选的 VIP 状态，用于预览
+    editProfileLauncher: ActivityResultLauncher<Intent>, // 编辑个人资料的 launcher
 ) {
     // 如果提供了 vipStatus 参数，使用它；否则从 BillingRepository 获取并响应Flow变化
     // 使用 collectAsState() 来响应 Flow 的变化，确保订阅状态更新时UI能及时刷新
@@ -542,16 +570,20 @@ private fun ProfileHeader(
                         .background(color = Color.White, shape = CircleShape)
                         .padding(UiConfigs.MePage.AvatarPadding)
             ) {
-                AsyncImage(
-                    modifier = Modifier.fillMaxSize().clip(CircleShape),
-                    model =
-                        ImageRequest.Builder(context)
-                            .data(getCdnImageUrl(userProfile.avatar, width = 512))
-                            .build(),
-                    placeholder = painterResource(R.drawable.app_icon),
-                    error = painterResource(R.drawable.app_icon),
-                    contentDescription = null,
-                )
+                // 使用头像 URL 作为 key，确保头像更新时重新加载
+                val avatarUrl = getCdnImageUrl(userProfile.avatar, width = 512)
+                key(avatarUrl) { // 使用 key 确保 URL 变化时重新创建组件
+                    AsyncImage(
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        model =
+                            ImageRequest.Builder(context)
+                                .data(avatarUrl)
+                                .build(),
+                        placeholder = painterResource(R.drawable.app_icon),
+                        error = painterResource(R.drawable.app_icon),
+                        contentDescription = null,
+                    )
+                }
             }
 
             // 头像和昵称之间的间距根据折叠状态调整
@@ -619,7 +651,11 @@ private fun ProfileHeader(
                                 if (
                                     IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
                                 ) {
-                                    ModifyProfileActivity.launch(context, userProfile)
+                                    // 使用 launcher 启动 ModifyProfileActivity，返回后会自动刷新用户信息
+                                    val intent = Intent(context, ModifyProfileActivity::class.java).apply {
+                                        putExtra("intent_key_agent_info", userProfile)
+                                    }
+                                    editProfileLauncher.launch(intent)
                                 }
                             }
                         },
