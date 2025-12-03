@@ -117,15 +117,15 @@ fun ExploreContent(
         }
     }
 
-    // 检测应该播放动图的 item 索引（第一个完全显示或可见区域>70%的item）
-    val playingItemIndex by remember {
+    // 检测应该播放动图的 item 索引集合（所有可见区域>=50%的item）
+    val visibleItemIndices by remember {
         derivedStateOf {
             val layoutInfo = gridState.layoutInfo
             val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
-            if (viewportHeight <= 0) return@derivedStateOf -1
+            if (viewportHeight <= 0) return@derivedStateOf emptySet<Int>()
 
             val agentItemCount = lazyPagingItems?.itemCount ?: 0
-            if (agentItemCount == 0) return@derivedStateOf -1
+            if (agentItemCount == 0) return@derivedStateOf emptySet<Int>()
 
             // 过滤出 agent items（排除加载状态指示器和Spacer）
             val agentItems =
@@ -133,7 +133,8 @@ fun ExploreContent(
                     itemInfo.index < agentItemCount
                 }
 
-            // 找到第一个可见比例 >= 70% 的 item
+            // 找到所有可见比例 >= 50% 的 item 索引
+            val visibleIndices = mutableSetOf<Int>()
             for (itemInfo in agentItems) {
                 val itemTop = itemInfo.offset.y
                 val itemBottom = itemInfo.offset.y + itemInfo.size.height
@@ -149,14 +150,13 @@ fun ExploreContent(
                 // 计算可见比例
                 val visibleRatio = if (itemHeight > 0) visibleHeight.toFloat() / itemHeight else 0f
 
-                // 如果可见比例 >= 70%，返回该 item 的索引
-                if (visibleRatio >= 0.7f) {
-                    return@derivedStateOf itemInfo.index
+                // 如果可见比例 >= 50%，添加到集合中
+                if (visibleRatio >= 0.5f) {
+                    visibleIndices.add(itemInfo.index)
                 }
             }
 
-            // 如果没有找到符合条件的 item，返回 -1
-            -1
+            visibleIndices
         }
     }
 
@@ -265,12 +265,20 @@ fun ExploreContent(
                 ) { index ->
                     val agent = lazyPagingItems[index]
                     if (agent != null) {
+                        // 判断是否应该播放动图：
+                        // 1. item 有 backgroundAnimatedUrl
+                        // 2. item 在可见索引集合中
+                        // 3. 不在滚动中
+                        val hasAnimatedUrl = agent.backgroundAnimatedUrl.isNotBlank()
+                        val isVisible = index in visibleItemIndices
+                        val shouldPlay = hasAnimatedUrl && isVisible && !gridState.isScrollInProgress
+
                         ExploreCharacterCard(
                             modifier = Modifier.fillMaxWidth(),
                             agentInfo = agent,
                             onClick = { onClickAgent(agent) },
                             index = index,
-                            shouldPlayAnimated = playingItemIndex == index && !gridState.isScrollInProgress,
+                            shouldPlayAnimated = shouldPlay,
                         )
                     } else {
                         // 显示加载占位符
