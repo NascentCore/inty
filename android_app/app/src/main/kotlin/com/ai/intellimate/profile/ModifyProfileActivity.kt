@@ -63,6 +63,7 @@ class ModifyProfileActivity : BaseActivity() {
             viewModel.events.collect { event ->
                 when (event) {
                     is ViewModelEvent.UserProfileUpdated -> {
+                        setResult(RESULT_OK)
                         finish()
                     }
                     else -> {
