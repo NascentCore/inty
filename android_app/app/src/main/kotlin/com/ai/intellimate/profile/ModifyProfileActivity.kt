@@ -27,8 +27,8 @@ import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.ui.components.ProfileInfoScreen
 import com.ai.intellimate.utils.UCropHelper
 import com.yalantis.ucrop.UCrop
-import java.util.Locale
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 /** 个人设置页面 */
 class ModifyProfileActivity : BaseActivity() {
@@ -86,7 +86,11 @@ class ModifyProfileActivity : BaseActivity() {
                     runCatching {
                             result.data?.let { intentResult ->
                                 val imageUri = UCrop.getOutput(intentResult) // 图片uri
-                                imageUri?.let { imageUriReal -> viewModel.setAvatar(imageUriReal) }
+                                imageUri?.let { imageUriReal ->
+                                    // 设置头像并立即保存（调用 onSave 方法）
+                                    viewModel.setAvatar(imageUriReal)
+                                    viewModel.onSave()
+                                }
                             }
                         }
                         .onFailure { e -> e.printStackTrace() }
@@ -131,7 +135,6 @@ class ModifyProfileActivity : BaseActivity() {
             }
 
         val userProfile = viewModel.userProfile.collectAsState()
-        val isSaving = viewModel.isSaving.collectAsState()
         var editKey by remember { mutableStateOf(EditKey.None) }
         var editValue by rememberSaveable { mutableStateOf("") }
 
@@ -152,8 +155,6 @@ class ModifyProfileActivity : BaseActivity() {
                     editValue = userProfile.value.gender ?: ""
                 },
                 onSelectAvatar = { galleryLauncher.launch("image/*") },
-                onSave = { viewModel.onSave() },
-                isSaving = isSaving.value,
             )
 
             if (editKey != EditKey.None) {

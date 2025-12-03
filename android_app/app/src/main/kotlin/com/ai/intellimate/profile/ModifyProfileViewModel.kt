@@ -15,7 +15,6 @@ import com.ai.intellimate.utils.IntyUserProfileSDK
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +25,7 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
 
 class ModifyProfileViewModel : BaseVM() {
 
@@ -33,7 +33,7 @@ class ModifyProfileViewModel : BaseVM() {
     private val _events = MutableSharedFlow<ViewModelEvent>()
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
 
-    private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
+    private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile = _userProfile.asStateFlow()
 
     // 保存原始用户信息，用于判断字段是否变化
@@ -171,9 +171,15 @@ class ModifyProfileViewModel : BaseVM() {
                         return@launchBackground
                     }
 
+                    // UCrop 返回的是 file:// URI，可以直接使用 File 读取
+                    val file = File(fileUri.path!!)
+                    if (!file.exists() || file.length() == 0L) {
+                        NetworkErrorHandler.showNetworkAwareError("Image file not found")
+                        return@launchBackground
+                    }
+
                     val requestBody =
-                        File(fileUri.path!!)
-                            .asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
+                        file.asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
                     val result =
                         NetServiceMgr.getUserApi()
                             .uploadAvatar(
@@ -199,8 +205,8 @@ class ModifyProfileViewModel : BaseVM() {
                     }
                 }
 
-                // 更新整个 profile（如果有变化）
-                if (hasProfileChanged) {
+                // 更新整个 profile（如果有头像变化或其他 profile 变化）
+                if (_avatarChanged.value || hasProfileChanged) {
                     val updatedProfile = IntyUserProfileSDK.updateUserProfile(_userProfile.value)
                     if (updatedProfile != null) {
                         // Show success toast for profile update
@@ -213,14 +219,13 @@ class ModifyProfileViewModel : BaseVM() {
                         // 更新原始值
                         originalUserProfile = updatedProfile
                         _userProfile.value = updatedProfile
+                        // 重置头像变化标志
+                        _avatarChanged.value = false
                         // 发送用户信息更新成功事件
                         sendEvent(ViewModelEvent.UserProfileUpdated)
                     } else {
                         NetworkErrorHandler.showNetworkAwareError("Failed to update user profile")
                     }
-                } else {
-                    // 只有头像变化，没有 profile 变化，直接发送事件
-                    sendEvent(ViewModelEvent.UserProfileUpdated)
                 }
             } finally {
                 _isSaving.value = false

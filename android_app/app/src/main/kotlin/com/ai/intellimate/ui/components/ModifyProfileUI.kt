@@ -85,8 +85,6 @@ fun ProfileInfoScreen(
     onClickName: () -> Unit = {},
     onClickPronouns: () -> Unit = {},
     onClickPersona: () -> Unit = {},
-    onSave: () -> Unit = {},
-    isSaving: Boolean = false,
 ) {
     Scaffold(
         modifier = Modifier.background(HeartColor.primaryColor),
@@ -154,12 +152,6 @@ fun ProfileInfoScreen(
             }
 
             Spacer(Modifier.weight(1f))
-
-            HeartPrimaryButton(
-                btnText = stringResource(R.string.save),
-                isLoading = isSaving,
-                onClick = onSave,
-            )
 
             Spacer(Modifier.height(60.dp))
         }
