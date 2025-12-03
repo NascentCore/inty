@@ -3,6 +3,7 @@ package com.ai.intellimate.ui.components
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.utils.LogUtils
 import android.graphics.Matrix
+import android.graphics.drawable.AnimatedImageDrawable
 import android.view.TextureView
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -39,7 +40,13 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import coil3.asDrawable
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
+import coil3.gif.onAnimationEnd
+import coil3.gif.repeatCount
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
@@ -126,6 +133,7 @@ fun AnimatedBackground(
     var videoPath by remember(videoUrl) { mutableStateOf<String?>(null) }
     var isPlaying by remember { mutableStateOf(false) } // 动画是否正在播放
     var hasPlayCompleted by remember { mutableStateOf(false) } // 是否已经播放完成（达到目标次数）
+    var animatedImageDrawable by remember { mutableStateOf<AnimatedImageDrawable?>(null) } // 动图 Drawable 引用
 
     val isVideo = isVideoUrl(videoUrl)
     val isAnimatedImage = isAnimatedImageUrl(videoUrl)
@@ -183,6 +191,13 @@ fun AnimatedBackground(
         animatedImageLoaded = false
         actualPlayCount = 0
         hasPlayCompleted = false // 重置完成标志
+        // 停止动图播放
+        animatedImageDrawable?.let { drawable ->
+            if (drawable.isRunning) {
+                drawable.stop()
+            }
+        }
+        animatedImageDrawable = null
         // 暂停播放，但不释放播放器（由 DisposableEffect 处理）
         exoPlayer?.pause()
         exoPlayer?.seekTo(0)
@@ -389,7 +404,7 @@ fun AnimatedBackground(
                                                 // 不在这里直接设置 videoFirstFrameRendered，让 LaunchedEffect
                                                 // 处理
                                                 // 但可以触发一次 seekTo(0) 确保第一帧显示
-                                                if (playWhenReady == false) {
+                                                if (!playWhenReady) {
                                                     seekTo(0)
                                                 }
                                             }
@@ -685,70 +700,129 @@ fun AnimatedBackground(
                         .build()
                 }
 
-            AsyncImage(
+            // 使用 Compose 的 AsyncImage，通过 Coil 3 的 repeatCount API 控制播放次数
+            // 参考：https://coil-kt.github.io/coil/api/coil-gif/coil3.gif/index.html
+            val animatedImageRequestWithRepeatCount =
+                remember(videoUrl, currentPlayCount, shouldPlay, animatedImageRequest) {
+                    if (shouldPlay && currentPlayCount > 0) {
+                        val containerWidthPx =
+                            with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
+                        val containerHeightPx =
+                            with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
+                        
+                        ImageRequest.Builder(context)
+                            .data(animatedImageRequest.data)
+                            .size(Size(containerWidthPx, containerHeightPx))
+                            .crossfade(true)
+                            .repeatCount(currentPlayCount) // 使用 Coil 3 的 repeatCount API 设置播放次数
+                            .onAnimationEnd {
+                                // 动画播放完成回调
+                                if (!hasPlayCompleted) {
+                                    hasPlayCompleted = true
+                                    isPlaying = false
+                                    onIsPlayingChange?.invoke(false)
+                                    onPlayComplete()
+                                    LogUtils.d("AnimatedBackground - [动图] ✅ 动图播放完成（通过回调）: $videoUrl")
+                                }
+                            }
+                            .build()
+                    } else {
+                        animatedImageRequest
+                    }
+                }
+
+            // 使用 SubcomposeAsyncImage 来获取底层 Drawable，以便控制播放和停止
+            SubcomposeAsyncImage(
                 modifier = Modifier.matchParentSize().clipToBounds(),
-                model = animatedImageRequest,
+                model = animatedImageRequestWithRepeatCount,
                 contentDescription = null,
                 contentScale = contentScale,
-                onSuccess = {
-                    // 动图加载成功（Coil 会自动识别并播放 gif、webp、avif 等动图）
-                    if (!animatedImageLoaded) {
-                        animatedImageLoaded = true
-                        LogUtils.d("AnimatedBackground - [动图] ✅ 动图加载成功: $videoUrl")
+                onState = { state ->
+                    // 当状态变化时，尝试获取 Drawable
+                    if (state is AsyncImagePainter.State.Success) {
+                        val result = state.result
+                        val image = result.image
+                        val drawable = image.asDrawable(context.resources)
+                        
+                        // 检查是否为 AnimatedImageDrawable
+                        if (drawable is AnimatedImageDrawable) {
+                            if (animatedImageDrawable != drawable) {
+                                animatedImageDrawable = drawable
+                                if (!animatedImageLoaded) {
+                                    animatedImageLoaded = true
+                                    LogUtils.d("AnimatedBackground - [动图] ✅ 动图加载成功（AnimatedImageDrawable）: $videoUrl")
+                                }
+                            }
+                        } else {
+                            if (!animatedImageLoaded) {
+                                animatedImageLoaded = true
+                                LogUtils.d("AnimatedBackground - [动图] ✅ 动图加载成功（非 AnimatedImageDrawable）: $videoUrl")
+                            }
+                        }
+                    } else if (state is AsyncImagePainter.State.Error) {
+                        LogUtils.e("AnimatedBackground - [动图] ❌ 动图加载失败: $videoUrl")
                     }
                 },
-                onError = {
-                    LogUtils.e("AnimatedBackground - [动图] ❌ 动图加载失败: $videoUrl")
-                },
-            )
+            ) {
+                // 直接显示内容
+                SubcomposeAsyncImageContent()
+            }
 
-            // 动图播放控制：Coil 的 AsyncImage 会自动循环播放动图（gif、webp、avif 等）
-            // 这里只需要处理 shouldPlay 和 playCount 的逻辑
-            // 注意：动图无法精确控制播放次数，只能通过显示/隐藏来控制
-            LaunchedEffect(shouldPlay, isCurrentPage, animatedImageLoaded, hasPlayCompleted) {
+            // 动图播放控制：使用 AnimatedImageDrawable 控制播放和停止
+            LaunchedEffect(
+                shouldPlay,
+                isCurrentPage,
+                animatedImageLoaded,
+                animatedImageDrawable,
+                currentPlayCount,
+                hasPlayCompleted,
+            ) {
                 if (
                     isCurrentPage &&
                         shouldPlay &&
                         animatedImageLoaded &&
                         currentPlayCount > 0 &&
-                        !hasPlayCompleted
+                        !hasPlayCompleted &&
+                        animatedImageDrawable != null
                 ) {
-                    // 动图会自动播放，这里只需要标记为播放中
-                    // 由于动图无法精确控制播放次数，我们使用一个简化的逻辑：
-                    // 如果 shouldPlay 为 true，则显示动图（自动播放）
-                    // 如果 shouldPlay 为 false，则隐藏动图（停止播放）
-                    isPlaying = true
-                    onIsPlayingChange?.invoke(true)
-                    LogUtils.d("AnimatedBackground - [动图] ✅ 动图开始播放: $videoUrl")
+                    val drawable = animatedImageDrawable ?: return@LaunchedEffect
+                    // 设置播放次数（Coil 3 的 repeatCount 已经在 ImageRequest 中设置，这里确保 Drawable 也设置）
+                    drawable.repeatCount = currentPlayCount
+                    // 开始播放
+                    if (!drawable.isRunning) {
+                        drawable.start()
+                        isPlaying = true
+                        onIsPlayingChange?.invoke(true)
+                        LogUtils.d("AnimatedBackground - [动图] ✅ 动图开始播放，次数: $currentPlayCount: $videoUrl")
+                    }
                 } else if (!shouldPlay || hasPlayCompleted) {
+                    // 停止播放
+                    animatedImageDrawable?.let { drawable ->
+                        if (drawable.isRunning) {
+                            drawable.stop()
+                            LogUtils.d("AnimatedBackground - [动图] ⏹️ 动图停止播放: $videoUrl")
+                        }
+                    }
                     isPlaying = false
                     onIsPlayingChange?.invoke(false)
-                    LogUtils.d("AnimatedBackground - [动图] ⏹️ 动图停止播放: $videoUrl")
                 }
             }
 
-            // 动图播放完成处理（简化逻辑：延迟一定时间后标记为完成）
-            // 由于动图无法精确控制播放次数，这里使用一个估算的时间
-            // 假设每次播放大约 2-3 秒，根据 playCount 计算总时间
-            LaunchedEffect(shouldPlay, currentPlayCount, animatedImageLoaded, hasPlayCompleted) {
-                if (
-                    shouldPlay &&
-                        currentPlayCount > 0 &&
-                        animatedImageLoaded &&
-                        !hasPlayCompleted &&
-                        isCurrentPage
-                ) {
-                    // 估算播放时间：假设每次播放 2.5 秒
-                    val estimatedDuration = currentPlayCount * 2500L
-                    kotlinx.coroutines.delay(estimatedDuration)
-                    if (shouldPlay && !hasPlayCompleted) {
+            // 监听 AnimatedImageDrawable 的播放完成事件
+            LaunchedEffect(animatedImageDrawable, hasPlayCompleted, shouldPlay) {
+                if (animatedImageDrawable != null && !hasPlayCompleted && shouldPlay) {
+                    val drawable = animatedImageDrawable ?: return@LaunchedEffect
+                    // 使用协程定期检查播放状态
+                    while (!hasPlayCompleted && drawable.isRunning && shouldPlay) {
+                        kotlinx.coroutines.delay(100) // 每 100ms 检查一次
+                    }
+                    // 如果播放停止且未完成，说明播放已完成
+                    if (!drawable.isRunning && !hasPlayCompleted && shouldPlay) {
                         hasPlayCompleted = true
                         isPlaying = false
                         onIsPlayingChange?.invoke(false)
                         onPlayComplete()
-                        LogUtils.d(
-                            "AnimatedBackground - [动图] ✅ 动图播放完成（估算时间: ${estimatedDuration}ms）: $videoUrl"
-                        )
+                        LogUtils.d("AnimatedBackground - [动图] ✅ 动图播放完成（检测到停止）: $videoUrl")
                     }
                 }
             }
