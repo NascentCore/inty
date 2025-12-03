@@ -81,34 +81,52 @@ fun AgentBackground(
             agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
         }
 
-    // 视频缓存管理器
+    // 动画缓存管理器（用于视频缓存，webp动图由Coil自动处理）
     val videoCacheManager = remember { VideoCacheManager.getInstance(context) }
 
-    // 视频缓存状态
+    // 视频缓存状态（仅对mp4/webm视频有效，webp动图不需要缓存检查）
     var isVideoCached by remember { mutableStateOf(false) }
 
     // 播放控制：页面切换时播放2次，加载状态时播放1次
     var shouldPlayPageSwitch by remember { mutableStateOf(false) }
     var shouldPlayLoading by remember { mutableStateOf(false) }
-    var isVideoPlaying by remember { mutableStateOf(false) } // 视频是否正在播放
+    var isVideoPlaying by remember { mutableStateOf(false) } // 动画是否正在播放
     var isLoadingTriggeredPlay by remember { mutableStateOf(false) } // 是否因为 loading 触发的播放
 
-    // 检查视频缓存状态 - 每次进入页面时都重新检查
+    // 检查视频缓存状态 - 每次进入页面时都重新检查（仅对mp4/webm视频有效）
     // 优化：同步检查缓存状态，避免延迟
     // 关键修复：首次安装时，即使未缓存，也应该在视频准备好后触发播放
+    // 注意：动图（gif、webp、avif 等）不需要缓存检查，Coil会自动处理
     LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage) {
         if (backgroundAnimatedUrl != null && isCurrentPage) {
-            isVideoCached = videoCacheManager.isCached(backgroundAnimatedUrl)
-            LogUtils.d("AgentBackground - 视频缓存状态: $isVideoCached, URL: $backgroundAnimatedUrl")
+            // 仅对视频格式进行缓存检查，动图由Coil自动处理
+            val isVideo = backgroundAnimatedUrl.lowercase().endsWith(".mp4") ||
+                backgroundAnimatedUrl.lowercase().endsWith(".webm") ||
+                backgroundAnimatedUrl.lowercase().contains(".mp4?") ||
+                backgroundAnimatedUrl.lowercase().contains(".webm?")
+            if (isVideo) {
+                isVideoCached = videoCacheManager.isCached(backgroundAnimatedUrl)
+                LogUtils.d("AgentBackground - 视频缓存状态: $isVideoCached, URL: $backgroundAnimatedUrl")
+            } else {
+                // 动图不需要缓存检查，Coil会自动处理
+                isVideoCached = false
+            }
         } else {
             isVideoCached = false
         }
     }
 
-    // 预加载视频（如果未缓存）
+    // 预加载视频（如果未缓存，仅对mp4/webm视频有效）
+    // 注意：动图（gif、webp、avif 等）由Coil自动处理，不需要预加载
     LaunchedEffect(backgroundAnimatedUrl, isVideoCached) {
         if (backgroundAnimatedUrl != null && !isVideoCached && isCurrentPage) {
-            videoCacheManager.preloadVideo(backgroundAnimatedUrl)
+            val isVideo = backgroundAnimatedUrl.lowercase().endsWith(".mp4") ||
+                backgroundAnimatedUrl.lowercase().endsWith(".webm") ||
+                backgroundAnimatedUrl.lowercase().contains(".mp4?") ||
+                backgroundAnimatedUrl.lowercase().contains(".webm?")
+            if (isVideo) {
+                videoCacheManager.preloadVideo(backgroundAnimatedUrl)
+            }
         }
     }
 
@@ -131,7 +149,8 @@ fun AgentBackground(
 
     Box(modifier = modifier.fillMaxSize().clipToBounds()) {
         if (backgroundAnimatedUrl != null) {
-            // 有背景视频，使用 AnimatedBackground 组件
+            // 有背景动画（视频或webp动图），使用 AnimatedBackground 组件
+            // AnimatedBackground 会自动识别视频格式（mp4/webm）和webp动图格式
             AnimatedBackground(
                 videoUrl = backgroundAnimatedUrl,
                 staticImageUrl = staticImageUrl,
@@ -151,7 +170,7 @@ fun AgentBackground(
                 contentScale = contentScale,
             )
         } else if (staticImageUrl != null) {
-            // 没有背景视频，只显示静态图片
+            // 没有背景动画，只显示静态图片
             // 使用固定 CDN 参数，确保与预加载 URL 一致
             val staticImageRequest =
                 remember(staticImageUrl) {
