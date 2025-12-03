@@ -132,9 +132,9 @@ async def recommend_agents(
     sort_seed: str = Query(
         "", description="Sort seed for deterministic random ordering"
     ),
-    types: Optional[List[schemas.AgentRecommendationListType]] = Query(
+    list_type: Optional[schemas.AgentRecommendationListType] = Query(
         default=None,
-        description="需要返回的推荐列表类型，可多选 FEATURED、BOOSTED",
+        description="需要返回的推荐列表类型，可选 FEATURED、BOOSTED；默认 FEATURED 以兼容旧客户端",
     ),
     boost_limit: int = Query(
         10,
@@ -165,7 +165,7 @@ async def recommend_agents(
         page_size=page_size,
         sort_by=sort,
         sort_seed=sort_seed,
-        list_types=types,
+        list_type=list_type,
         boost_limit=boost_limit,
     )
     return schemas.AgentRecommendationResponse.success(data=recommendation_lists)

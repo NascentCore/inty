@@ -554,19 +554,14 @@ def _fill_agent_image_sizes(
 
 
 def _normalize_recommendation_list_types(
-    types: Optional[List[AgentRecommendationListType]],
+    list_type: Optional[AgentRecommendationListType],
 ) -> List[AgentRecommendationListType]:
     """
-    规范化推荐列表类型，移除重复并在为空时回退到 FEATURED。
+    规范化推荐列表类型，只接受单一类型，缺省为 FEATURED。
     """
-    normalized: List[AgentRecommendationListType] = []
-    if types:
-        for list_type in types:
-            if list_type not in normalized:
-                normalized.append(list_type)
-    if not normalized:
-        normalized = [AgentRecommendationListType.FEATURED]
-    return normalized
+    if list_type:
+        return [list_type]
+    return [AgentRecommendationListType.FEATURED]
 
 
 async def get_balanced_score_based_agents(
@@ -780,13 +775,13 @@ async def get_agent_recommendation_lists(
     page_size: int,
     sort_by: AgentSortOption,
     sort_seed: str,
-    list_types: Optional[List[AgentRecommendationListType]] = None,
+    list_type: Optional[AgentRecommendationListType] = None,
     boost_limit: int = 10,
 ) -> List[schemas.AgentRecommendationList]:
     """
     根据请求的列表类型返回对应的推荐列表集合。
     """
-    normalized_types = _normalize_recommendation_list_types(list_types)
+    normalized_types = _normalize_recommendation_list_types(list_type)
     recommendation_lists: List[schemas.AgentRecommendationList] = []
 
     if AgentRecommendationListType.FEATURED in normalized_types:

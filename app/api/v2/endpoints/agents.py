@@ -38,7 +38,7 @@ async def recommend_agents_v2(
         page_size=request.page_size,
         sort_by=request.sort,
         sort_seed=request.sort_seed,
-        list_types=request.types,
+        list_type=request.list_type,
         boost_limit=request.boost_limit,
     )
     return schemas.AgentRecommendationResponse.success(data=recommendation_lists)

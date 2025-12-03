@@ -11,10 +11,10 @@
 - 通过 Alembic 版本 `20251203_061500_add_points_to_agents.py` 管理 schema 变更
 
 ## API
-- `/api/v1/ai/agents/recommend` 与 `/api/v2/ai/agents/recommend` 请求新增 `types`（数组）与 `boost_limit` 参数
-  - `types` 支持 `FEATURED`、`BOOSTED`，按请求顺序返回对应列表
+- `/api/v1/ai/agents/recommend` 与 `/api/v2/ai/agents/recommend` 请求新增单选 `list_type` 与 `boost_limit` 参数
+  - `list_type` 支持 `FEATURED`、`BOOSTED`，缺省为 `FEATURED` 以兼容旧客户端
   - `boost_limit` 控制 Boost 榜单返回数量，默认 10，上限 50
-- 响应结构升级为列表形式：`[{ "type": "FEATURED", "data": PaginationData }, ...]`
+- 响应结构升级为列表形式：`[{ "type": "FEATURED", "data": PaginationData }, ...]`（按请求类型返回单条记录）
 - `BOOSTED` 列表按照积分降序返回角色，不会混入精选数据
 
 ## 响应字段

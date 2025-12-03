@@ -93,8 +93,8 @@ class AgentRecommendationRequest(BaseModel):
             "Sort seed for deterministic ordering when using random or score_based_random"
         ),
     )
-    types: List[AgentRecommendationListType] = Field(
-        default_factory=lambda: [AgentRecommendationListType.FEATURED],
+    list_type: AgentRecommendationListType = Field(
+        default=AgentRecommendationListType.FEATURED,
         description="所需的推荐列表类型，FEATURED 为精选列表，BOOSTED 为 Boost 榜单",
     )
     boost_limit: int = Field(
