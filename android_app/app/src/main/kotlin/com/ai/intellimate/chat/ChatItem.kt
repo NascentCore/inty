@@ -706,48 +706,51 @@ private fun ensureBracketsComplete(partialText: String, fullText: String): Strin
 
     // 检查部分文本中是否有未完成的括号
     val result = StringBuilder(partialText)
+    val addedEndPositions = mutableSetOf<Int>() // 记录已经补完的结束括号位置，避免重复添加
 
     bracketPairs.forEach { (start, end) ->
-        val bracketStartChar = fullText[start]
-        val bracketEndChar = fullText[end]
-
-        // 统计部分文本中开始括号和结束括号的数量
-        var startCount = 0
-        var endCount = 0
-
-        for (i in 0 until minOf(partialText.length, fullText.length)) {
-            if (i < partialText.length && i < fullText.length) {
-                when (partialText[i]) {
-                    bracketStartChar -> startCount++
-                    bracketEndChar -> endCount++
-                }
-            }
+        // 如果这个括号对已经完整（结束位置在部分文本范围内），不需要补完
+        if (end < partialText.length) {
+            return@forEach
         }
 
-        // 如果部分文本中有开始括号但没有对应的结束括号，需要补完
-        if (startCount > endCount) {
-            // 检查部分文本是否已经包含了括号内的部分内容
-            // 通过检查部分文本的长度是否超过了开始括号的位置
-            if (partialText.length > start) {
-                // 获取括号后的空格（如果有）
-                val afterBracket = end + 1
-                val trailingSpace =
-                    if (afterBracket < fullText.length && fullText[afterBracket].isWhitespace()) {
-                        var spaceEnd = afterBracket
-                        while (spaceEnd < fullText.length && fullText[spaceEnd].isWhitespace()) {
-                            spaceEnd++
-                        }
-                        fullText.substring(afterBracket, spaceEnd)
-                    } else {
-                        ""
-                    }
+        // 如果开始位置不在部分文本范围内，说明这个括号对还没有开始，不需要补完
+        if (start >= partialText.length) {
+            return@forEach
+        }
 
-                // 在部分文本的末尾添加结束括号和后续空格
-                // 但需要检查是否已经添加过了
-                if (!result.endsWith(bracketEndChar)) {
-                    result.append(bracketEndChar).append(trailingSpace)
+        // 此时：start < partialText.length && end >= partialText.length
+        // 说明这个括号对已经开始但未完成，需要检查是否需要补完
+        
+        val bracketStartChar = fullText[start]
+        val bracketEndChar = fullText[end]
+        
+        // 检查部分文本中从开始位置到末尾，是否有匹配的结束括号
+        // 方法：在部分文本中查找匹配的括号对，看是否包含当前括号对
+        val partialPairs = findBracketPairs(partialText)
+        val hasMatchingEnd = partialPairs.any { (pStart, pEnd) ->
+            // 检查部分文本中的括号对是否对应完整文本中的当前括号对
+            pStart == start && pEnd < partialText.length
+        }
+
+        // 如果没有匹配的结束括号，需要补完
+        if (!hasMatchingEnd && end !in addedEndPositions) {
+            // 获取括号后的空格（如果有）
+            val afterBracket = end + 1
+            val trailingSpace =
+                if (afterBracket < fullText.length && fullText[afterBracket].isWhitespace()) {
+                    var spaceEnd = afterBracket
+                    while (spaceEnd < fullText.length && fullText[spaceEnd].isWhitespace()) {
+                        spaceEnd++
+                    }
+                    fullText.substring(afterBracket, spaceEnd)
+                } else {
+                    ""
                 }
-            }
+
+            // 在部分文本的末尾添加结束括号和后续空格
+            result.append(bracketEndChar).append(trailingSpace)
+            addedEndPositions.add(end)
         }
     }
 
