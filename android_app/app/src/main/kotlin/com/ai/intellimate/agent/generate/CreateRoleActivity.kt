@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -111,6 +112,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -292,9 +294,18 @@ private fun CreateRolePage(
         else null
     val croppedInitial =
         if (isEditMode) editCroppedAvatar else savedDraft?.croppedAvatarUrl ?: editCroppedAvatar
-    var croppedAvatarUrl by remember(croppedInitial, selectedImageIndex) { mutableStateOf<String?>(croppedInitial) }
+    var croppedAvatarUrl by remember(croppedInitial) { mutableStateOf<String?>(croppedInitial) }
     val avatarPromptInitial = if (isEditMode) "" else savedDraft?.avatarPrompt.orEmpty()
     var avatarPrompt by remember(avatarPromptInitial) { mutableStateOf(avatarPromptInitial) }
+
+    // 当 selectedImageIndex 改变时，将 croppedAvatarUrl 设置为空
+    LaunchedEffect(Unit) {
+        snapshotFlow { selectedImageIndex }
+            .drop(1) // 跳过初始值，只在真正改变时触发
+            .collect {
+                croppedAvatarUrl = null
+            }
+    }
 
     // Track original uploaded image URL (for background) when uploading from gallery
     var originalUploadedImageUrl by remember { mutableStateOf<String?>(null) }
@@ -329,7 +340,6 @@ private fun CreateRolePage(
                 .collect { draft -> CreateRoleDraftStorage.saveDraft(draft) }
         }
     }
-
     // Clear avatar data when creating new character
     LaunchedEffect(isEditMode) {
         if (!isEditMode) {
@@ -1492,6 +1502,20 @@ private fun AvatarUploadSection(
                         }
                     }
                 }
+            }
+
+            croppedAvatarUrl?.let {
+                AsyncImage(
+                    model = it,
+                    contentDescription = stringResource(R.string.generate_avatar),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                        .border(width = 1.dp, color = Color.White, shape = CircleShape)
+                        .size(40.dp)
+                        .clip(CircleShape)
+                )
             }
 
             // Dashed border for empty state
