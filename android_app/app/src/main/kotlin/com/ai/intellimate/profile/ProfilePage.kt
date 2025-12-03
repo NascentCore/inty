@@ -932,6 +932,7 @@ private fun PremiumBanner(
     }
 }
 
+// TODO: 当前是一个 on/off 滑动开关，改为点了之后直接打开/关闭的整体条幅。
 @Composable
 private fun VibeModeBanner(
     modifier: Modifier = Modifier,
