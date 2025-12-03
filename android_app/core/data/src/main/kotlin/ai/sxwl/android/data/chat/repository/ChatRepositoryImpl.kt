@@ -4,7 +4,7 @@ import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.SendMsgResponse
 import ai.sxwl.android.data.api.model.VoteConstants
 import ai.sxwl.android.data.api.model.VoteMessageRsp
-import ai.sxwl.android.data.chat.data.ChatLocalDataSource
+import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.store.IntySetting
@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** 聊天Repository实现 作为Domain层和Data层之间的桥梁 遵循Clean Architecture的Repository模式 */
 class ChatRepositoryImpl(
-    private val localDataSource: ChatLocalDataSource,
+    private val localDataSource: RoomDataSource,
     private val remoteDataSource: ChatRemoteDataSource,
 ) : ChatRepository {
 
@@ -138,7 +138,9 @@ class ChatRepositoryImpl(
                     val moreMessages =
                         convertUserVoteToFeedback(result.data.messages ?: emptyList())
                     if (moreMessages.isNotEmpty()) {
-                        localDataSource.appendMessages(agentId, moreMessages)
+                        // 使用 prependMessages 加载历史消息，确保它们插入到列表开头（使用更小的 sortKey）
+                        // 在 sortKey DESC 排序中，它们会排在后面，在 reverseLayout UI 中会显示在顶部
+                        localDataSource.prependMessages(agentId, moreMessages)
                         localDataSource.incrementOffset(agentId, pageSize)
                     }
                     localDataSource.setHasMore(agentId, result.data.hasMore)
@@ -167,10 +169,18 @@ class ChatRepositoryImpl(
         LogUtils.d("ChatRepositoryImpl.sendMessage called for $agentId: $content")
 
         // 1) 先插入用户消息与loading占位
-        val userMsg = MsgInfo(content = content.trimEnd(), role = "user")
-        val loadingMsg = MsgInfo(content = LOADING_PLACEHOLDER_CONTENT, role = ROLE_ASSISTANT)
+        // appendMessages会自动处理sortKey和timestamp的同步
+        val userMsg = MsgInfo(
+            content = content.trimEnd(),
+            role = "user",
+        )
+        val loadingMsg = MsgInfo(
+            content = LOADING_PLACEHOLDER_CONTENT,
+            role = ROLE_ASSISTANT,
+        )
 
-        localDataSource.prependMessages(agentId, listOf(loadingMsg, userMsg))
+        // 使用appendMessages，它会自动处理单调递增的sortKey和同步的timestamp
+        localDataSource.appendMessages(agentId, listOf(userMsg, loadingMsg))
 
         val result =
             try {
@@ -192,8 +202,10 @@ class ChatRepositoryImpl(
         if (result is HttpResult.Success) {
             val choices = result.data.data?.choices ?: emptyList()
             if (choices.isNotEmpty()) {
+                // appendMessages会自动处理sortKey和timestamp的同步
                 val assistantMsgs = choices.map { it.message }
-                localDataSource.prependMessages(agentId, assistantMsgs)
+                LogUtils.d("ChatRepositoryImpl.sendMessage saving ${assistantMsgs.size} assistant messages for agentId=$agentId")
+                localDataSource.appendMessages(agentId, assistantMsgs)
 
                 // 会话已读更新
                 choices.lastOrNull()?.message?.content?.let { lastContent ->
@@ -372,12 +384,19 @@ class ChatRepositoryImpl(
         localDataSource.removeMessage(agentId, lastAssistantMessage.localMsgId)
 
         // 添加 loading 消息占位
-        val loadingMsg = MsgInfo(content = LOADING_PLACEHOLDER_CONTENT, role = ROLE_ASSISTANT)
-        localDataSource.prependMessages(agentId, listOf(loadingMsg))
+        // appendMessages会自动处理sortKey和timestamp的同步
+        val loadingMsg = MsgInfo(
+            content = LOADING_PLACEHOLDER_CONTENT,
+            role = ROLE_ASSISTANT,
+        )
+        localDataSource.appendMessages(agentId, listOf(loadingMsg))
 
         // 发送 recall 消息给服务器（类似 keep talking 的实现）
         // 服务器应该理解 "recall" 标记并重新生成最后一条AI消息
-        val recallMsg = MsgInfo(content = "recall", role = "user")
+        val recallMsg = MsgInfo(
+            content = "recall",
+            role = "user",
+        )
         val result =
             try {
                 remoteDataSource.sendMessage(agentId, listOf(recallMsg))
@@ -398,8 +417,9 @@ class ChatRepositoryImpl(
         if (result is HttpResult.Success) {
             val choices = result.data.data?.choices ?: emptyList()
             if (choices.isNotEmpty()) {
+                // appendMessages会自动处理sortKey和timestamp的同步
                 val assistantMsgs = choices.map { it.message }
-                localDataSource.prependMessages(agentId, assistantMsgs)
+                localDataSource.appendMessages(agentId, assistantMsgs)
 
                 // 会话已读更新
                 choices.lastOrNull()?.message?.content?.let { lastContent ->
@@ -468,13 +488,25 @@ class ChatRepositoryImpl(
         return result
     }
 
-    override fun clearChatData(agentId: String) {
+    override suspend fun clearChatData(agentId: String) {
         LogUtils.d("ChatRepositoryImpl.clearChatData called for $agentId")
-        localDataSource.clearChatData(agentId)
+        try {
+            localDataSource.clearChatData(agentId)
+            LogUtils.i("ChatRepositoryImpl.clearChatData completed for $agentId")
+        } catch (e: Exception) {
+            LogUtils.e("ChatRepositoryImpl.clearChatData failed for $agentId: ${e.message}")
+            throw e
+        }
     }
 
-    override fun clearAllChatData() {
+    override suspend fun clearAllChatData() {
         LogUtils.d("ChatRepositoryImpl.clearAllChatData called")
-        localDataSource.clearAllChatData()
+        try {
+            localDataSource.clearAllChatData()
+            LogUtils.i("ChatRepositoryImpl.clearAllChatData completed")
+        } catch (e: Exception) {
+            LogUtils.e("ChatRepositoryImpl.clearAllChatData failed: ${e.message}")
+            throw e
+        }
     }
 }

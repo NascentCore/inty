@@ -53,16 +53,16 @@ class RoomDataSource(
 
     fun getMessagesFlow(agentId: String): StateFlow<List<MsgInfo>> =
         messageFlows.getOrPut(agentId) {
-            LogUtils.d("ChatLocalDataSource.getMessagesFlow creating new flow for agentId=$agentId")
+            LogUtils.d("RoomDataSource.getMessagesFlow creating new flow for agentId=$agentId")
             messageDao
                 .streamMessages(agentId)
                 .map { list ->
-                    LogUtils.d("ChatLocalDataSource.getMessagesFlow received ${list.size} messages for agentId=$agentId")
+                    LogUtils.d("RoomDataSource.getMessagesFlow received ${list.size} messages for agentId=$agentId")
                     list.map(ChatMessageEntity::toModel)
                 }
                 .stateIn(scope, SharingStarted.Eagerly, emptyList())
                 .also { flow ->
-                    LogUtils.d("ChatLocalDataSource.getMessagesFlow initial value: ${flow.value.size} messages for agentId=$agentId")
+                    LogUtils.d("RoomDataSource.getMessagesFlow initial value: ${flow.value.size} messages for agentId=$agentId")
                 }
         }
 
@@ -78,7 +78,7 @@ class RoomDataSource(
 
     suspend fun updateMessages(agentId: String, messages: List<MsgInfo>) =
         withContext(dispatcher) {
-            LogUtils.d("ChatLocalDataSource.updateMessages updating ${messages.size} messages for agentId=$agentId")
+            LogUtils.d("RoomDataSource.updateMessages updating ${messages.size} messages for agentId=$agentId")
             // 在事务之前获取现有消息以保留它们的sortKey
             val existingMessages = messageDao.getAllMessages(agentId)
             // 创建现有消息的映射表，以localId为key，也支持remoteId匹配
@@ -118,8 +118,10 @@ class RoomDataSource(
                             }
                             
                             val sortKey = if (existingEntity != null) {
-                                // 使用现有消息的 sortKey
-                                existingEntity.sortKey
+                                // 使用现有消息的 sortKey，并将其加入 usedSortKeys 以避免冲突
+                                val reusedSortKey = existingEntity.sortKey
+                                usedSortKeys.add(reusedSortKey)
+                                reusedSortKey
                             } else {
                                 // 为新消息分配 sortKey，确保不与已使用的 sortKey 冲突
                                 while (usedSortKeys.contains(currentSortKey) || 
@@ -137,13 +139,13 @@ class RoomDataSource(
                 }
                 // 如果 messages 为空，deleteByAgent 已经删除了所有消息，Flow 会自动更新
             }
-            LogUtils.d("ChatLocalDataSource.updateMessages updated messages, current flow value: ${getMessagesFlow(agentId).value.size}")
+            LogUtils.d("RoomDataSource.updateMessages updated messages, current flow value: ${getMessagesFlow(agentId).value.size}")
         }
 
     suspend fun appendMessages(agentId: String, newMessages: List<MsgInfo>) =
         withContext(dispatcher) {
             if (newMessages.isEmpty()) return@withContext
-            LogUtils.d("ChatLocalDataSource.appendMessages saving ${newMessages.size} messages for agentId=$agentId")
+            LogUtils.d("RoomDataSource.appendMessages saving ${newMessages.size} messages for agentId=$agentId")
             // 在事务中原子性地读取sortKey并插入消息，避免并发竞争
             db.withTransaction {
                 val lastSortKey = messageDao.getMaxSortKey(agentId) ?: 0L
@@ -156,13 +158,13 @@ class RoomDataSource(
                     }
                 )
             }
-            LogUtils.d("ChatLocalDataSource.appendMessages saved messages, current flow value: ${getMessagesFlow(agentId).value.size}")
+            LogUtils.d("RoomDataSource.appendMessages saved messages, current flow value: ${getMessagesFlow(agentId).value.size}")
         }
 
     suspend fun prependMessages(agentId: String, newMessages: List<MsgInfo>) =
         withContext(dispatcher) {
             if (newMessages.isEmpty()) return@withContext
-            LogUtils.d("ChatLocalDataSource.prependMessages prepending ${newMessages.size} messages for agentId=$agentId")
+            LogUtils.d("RoomDataSource.prependMessages prepending ${newMessages.size} messages for agentId=$agentId")
             // 在事务中原子性地读取sortKey并插入消息，避免并发竞争
             db.withTransaction {
                 val minSortKey = messageDao.getMinSortKey(agentId) ?: 0L
@@ -181,7 +183,7 @@ class RoomDataSource(
                     }
                 )
             }
-            LogUtils.d("ChatLocalDataSource.prependMessages prepended messages, current flow value: ${getMessagesFlow(agentId).value.size}")
+            LogUtils.d("RoomDataSource.prependMessages prepended messages, current flow value: ${getMessagesFlow(agentId).value.size}")
         }
 
     suspend fun setLoadingMore(agentId: String, loading: Boolean) {
@@ -256,7 +258,7 @@ class RoomDataSource(
 
     suspend fun clearChatData(agentId: String) =
         withContext(dispatcher) {
-            LogUtils.d("ChatLocalDataSource.clearChatData starting for agent $agentId")
+            LogUtils.d("RoomDataSource.clearChatData starting for agent $agentId")
             db.withTransaction {
                 messageDao.deleteByAgent(agentId)
                 syncStateDao.delete(agentId)
@@ -266,12 +268,12 @@ class RoomDataSource(
             messageFlows.remove(agentId)
             hasMoreFlows.remove(agentId)
             IntySetting.clearChatData(agentId)
-            LogUtils.i("ChatLocalDataSource cleared chat data for agent $agentId")
+            LogUtils.i("RoomDataSource cleared chat data for agent $agentId")
         }
 
     suspend fun clearAllChatData() =
         withContext(dispatcher) {
-            LogUtils.d("ChatLocalDataSource.clearAllChatData starting")
+            LogUtils.d("RoomDataSource.clearAllChatData starting")
             db.withTransaction {
                 messageDao.deleteAll()
                 syncStateDao.deleteAll()
@@ -281,7 +283,7 @@ class RoomDataSource(
             messageFlows.clear()
             hasMoreFlows.clear()
             IntySetting.clearAllChatData()
-            LogUtils.i("ChatLocalDataSource cleared all chat data")
+            LogUtils.i("RoomDataSource cleared all chat data")
         }
 
     private suspend fun updateSyncState(
