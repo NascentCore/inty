@@ -15,6 +15,11 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            // 抑制 MockK (ByteBuddy) 动态加载 agent 的警告
+            // MockK 使用 ByteBuddy 进行字节码操作，需要动态加载 Java agent
+            all {
+                it.jvmArgs = (it.jvmArgs ?: emptyList()) + "-XX:+EnableDynamicAgentLoading"
+            }
         }
     }
 
@@ -86,6 +91,8 @@ dependencies {
     // ===== 测试依赖 =====
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.robolectric)
 
     // ===== 日志库（不依赖 Android 环境）=====
     implementation(libs.kotlin.logging)
