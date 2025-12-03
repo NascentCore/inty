@@ -2,6 +2,10 @@
 name: Release - Build and upload aab to Google Play internal testing track
 
 on:
+  push:
+    tags:
+      - "v*"
+
   workflow_dispatch:
 
   schedule:
