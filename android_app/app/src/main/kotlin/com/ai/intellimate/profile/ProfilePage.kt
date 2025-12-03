@@ -1024,6 +1024,8 @@ private fun VibeModeBanner(
                 Modifier.clickable(onClick = onRequestSubscribe)
             }
 
+        val toggleContentDescription = stringResource(R.string.vibe_mode_toggle_content_desc)
+
         Box(modifier = switchWrapperModifier) {
             Switch(
                 checked = isActive,
@@ -1032,7 +1034,7 @@ private fun VibeModeBanner(
                 colors = switchColors,
                 modifier =
                     Modifier.semantics {
-                        contentDescription = stringResource(R.string.vibe_mode_toggle_content_desc)
+                        contentDescription = toggleContentDescription
                     },
             )
         }
