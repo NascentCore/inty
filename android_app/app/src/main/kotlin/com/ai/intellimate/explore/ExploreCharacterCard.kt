@@ -69,37 +69,33 @@ fun ExploreCharacterCard(
     // 缓存渐变画笔
     val gradientBrush = remember {
         Brush.verticalGradient(
-            colors = listOf(
-                Color.Transparent,
-                Color.Black.copy(alpha = 0.6f),
-                Color.Black.copy(alpha = 0.95f)
-            )
+            colors =
+                listOf(
+                    Color.Transparent,
+                    Color.Black.copy(alpha = 0.6f),
+                    Color.Black.copy(alpha = 0.95f),
+                )
         )
     }
 
     val bottomGradientBrush = remember {
         Brush.verticalGradient(
-            colors = listOf(
-                Color.Black.copy(alpha = 0.95f),
-                Color.Black.copy(alpha = 0.95f)
-            )
+            colors = listOf(Color.Black.copy(alpha = 0.95f), Color.Black.copy(alpha = 0.95f))
         )
     }
 
     // 缓存过滤后的标签
-    val filteredTags = remember(agentInfo.tags) {
-        agentInfo.tags?.filterNotNull() ?: emptyList()
-    }
+    val filteredTags = remember(agentInfo.tags) { agentInfo.tags?.filterNotNull() ?: emptyList() }
 
     // 获取静态图片URL
-    val staticImageUrl = remember(agentInfo.id, agentInfo.background, agentInfo.avatar) {
-        agentInfo.getAlbumImage()
-    }
+    val staticImageUrl =
+        remember(agentInfo.id, agentInfo.background, agentInfo.avatar) { agentInfo.getAlbumImage() }
 
     // 获取动图URL
-    val animatedImageUrl = remember(agentInfo.id, agentInfo.backgroundAnimatedUrl) {
-        agentInfo.backgroundAnimatedUrl.takeIf { it.isNotBlank() }
-    }
+    val animatedImageUrl =
+        remember(agentInfo.id, agentInfo.backgroundAnimatedUrl) {
+            agentInfo.backgroundAnimatedUrl.takeIf { it.isNotBlank() }
+        }
 
     // 图片加载状态
     var staticImageLoaded by remember(agentInfo.id) { mutableStateOf(false) }
@@ -116,62 +112,58 @@ fun ExploreCharacterCard(
     val isDebugMode = HeartAppUtils.isAppDebugMode()
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(CARD_ASPECT_RATIO)
-            .noRippleClickable { onClick() }
+        modifier =
+            modifier.fillMaxWidth().aspectRatio(CARD_ASPECT_RATIO).noRippleClickable { onClick() }
     ) {
         // 底部渐变背景层
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = bottomGradientBrush,
-                    shape = RoundedCornerShape(
-                        topStart = CardConfig.CornerRadius,
-                        topEnd = CardConfig.CornerRadius,
-                        bottomStart = CardConfig.BottomCornerRadius,
-                        bottomEnd = CardConfig.BottomCornerRadius,
-                    ),
-                )
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(
+                        brush = bottomGradientBrush,
+                        shape =
+                            RoundedCornerShape(
+                                topStart = CardConfig.CornerRadius,
+                                topEnd = CardConfig.CornerRadius,
+                                bottomStart = CardConfig.BottomCornerRadius,
+                                bottomEnd = CardConfig.BottomCornerRadius,
+                            ),
+                    )
         )
 
         // 背景图片层
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(
-                    RoundedCornerShape(
-                        topStart = CardConfig.CornerRadius,
-                        topEnd = CardConfig.CornerRadius,
-                        bottomStart = CardConfig.BottomCornerRadius,
-                        bottomEnd = CardConfig.BottomCornerRadius,
+            modifier =
+                Modifier.fillMaxSize()
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = CardConfig.CornerRadius,
+                            topEnd = CardConfig.CornerRadius,
+                            bottomStart = CardConfig.BottomCornerRadius,
+                            bottomEnd = CardConfig.BottomCornerRadius,
+                        )
                     )
-                )
         ) {
             // 加载占位符
             if (!staticImageLoaded && !animatedImageLoaded) {
                 ShimmerPlaceholder(
                     modifier = Modifier.fillMaxSize(),
-                    cornerRadius = CardConfig.CornerRadius
+                    cornerRadius = CardConfig.CornerRadius,
                 )
             }
 
             // 静态图片层
             if (staticImageUrl != null) {
-                val staticImageAlpha by animateFloatAsState(
-                    targetValue = if (showAnimatedImage) 0f else 1f,
-                    animationSpec = tween(durationMillis = 300),
-                    label = "staticImageAlpha",
-                )
+                val staticImageAlpha by
+                    animateFloatAsState(
+                        targetValue = if (showAnimatedImage) 0f else 1f,
+                        animationSpec = tween(durationMillis = 300),
+                        label = "staticImageAlpha",
+                    )
 
                 AsyncImage(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .alpha(staticImageAlpha),
-                    model = ImageRequest.Builder(context)
-                        .data(staticImageUrl)
-                        .build(),
+                    modifier = Modifier.fillMaxSize().alpha(staticImageAlpha),
+                    model = ImageRequest.Builder(context).data(staticImageUrl).build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     alignment = Alignment.TopCenter,
@@ -182,19 +174,16 @@ fun ExploreCharacterCard(
 
             // 动图层（异步加载，加载成功后切换显示）
             if (animatedImageUrl != null) {
-                val animatedImageAlpha by animateFloatAsState(
-                    targetValue = if (showAnimatedImage) 1f else 0f,
-                    animationSpec = tween(durationMillis = 300),
-                    label = "animatedImageAlpha",
-                )
+                val animatedImageAlpha by
+                    animateFloatAsState(
+                        targetValue = if (showAnimatedImage) 1f else 0f,
+                        animationSpec = tween(durationMillis = 300),
+                        label = "animatedImageAlpha",
+                    )
 
                 AsyncImage(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .alpha(animatedImageAlpha),
-                    model = ImageRequest.Builder(context)
-                        .data(animatedImageUrl)
-                        .build(),
+                    modifier = Modifier.fillMaxSize().alpha(animatedImageAlpha),
+                    model = ImageRequest.Builder(context).data(animatedImageUrl).build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     alignment = Alignment.TopCenter,
@@ -207,17 +196,17 @@ fun ExploreCharacterCard(
         // Debug 模式下显示索引
         if (isDebugMode && index != null) {
             Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(CardConfig.DebugIndexPadding)
-                    .background(
-                        color = Color.Black.copy(alpha = 0.7f),
-                        shape = RoundedCornerShape(4.dp),
-                    )
-                    .padding(
-                        horizontal = CardConfig.DebugIndexInnerPadding.first,
-                        vertical = CardConfig.DebugIndexInnerPadding.second
-                    )
+                modifier =
+                    Modifier.align(Alignment.TopStart)
+                        .padding(CardConfig.DebugIndexPadding)
+                        .background(
+                            color = Color.Black.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(4.dp),
+                        )
+                        .padding(
+                            horizontal = CardConfig.DebugIndexInnerPadding.first,
+                            vertical = CardConfig.DebugIndexInnerPadding.second,
+                        )
             ) {
                 Text(
                     text = "#$index",
@@ -230,22 +219,23 @@ fun ExploreCharacterCard(
 
         // 文本内容层
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = gradientBrush,
-                    shape = RoundedCornerShape(
-                        bottomStart = CardConfig.CornerRadius,
-                        bottomEnd = CardConfig.CornerRadius,
-                    ),
-                )
-                .padding(
-                    start = CardConfig.TextPadding,
-                    end = CardConfig.TextPadding,
-                    top = CardConfig.TextTopPadding,
-                    bottom = CardConfig.TextPadding
-                )
-                .align(Alignment.BottomCenter),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .background(
+                        brush = gradientBrush,
+                        shape =
+                            RoundedCornerShape(
+                                bottomStart = CardConfig.CornerRadius,
+                                bottomEnd = CardConfig.CornerRadius,
+                            ),
+                    )
+                    .padding(
+                        start = CardConfig.TextPadding,
+                        end = CardConfig.TextPadding,
+                        top = CardConfig.TextTopPadding,
+                        bottom = CardConfig.TextPadding,
+                    )
+                    .align(Alignment.BottomCenter),
             verticalArrangement = Arrangement.spacedBy(CardConfig.TextSpacing),
         ) {
             Text(
@@ -267,11 +257,7 @@ fun ExploreCharacterCard(
             )
 
             if (filteredTags.isNotEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(CardConfig.TagHeight)
-                ) {
+                Box(modifier = Modifier.fillMaxWidth().height(CardConfig.TagHeight)) {
                     IgnoreSystemFontScaling {
                         SmartTagsLayout(
                             modifier = Modifier.matchParentSize(),

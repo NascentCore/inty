@@ -98,8 +98,9 @@ fun ChatSettingsDrawer(
     var editKey by rememberSaveable { mutableStateOf(EditKey.None) }
     var editValue by rememberSaveable { mutableStateOf("") }
     var showFontSizeDialog by rememberSaveable { mutableStateOf(false) }
-    var pendingFontSize by
-        rememberSaveable { mutableFloatStateOf(SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP) }
+    var pendingFontSize by rememberSaveable {
+        mutableFloatStateOf(SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP)
+    }
 
     // 复用 MySettingViewModel 的保存逻辑
     val modifyProfileViewModel: ModifyProfileViewModel = viewModel()
@@ -383,7 +384,8 @@ fun ChatSettingsDrawer(
                         SettingsArrowItem(
                             item =
                                 SettingsItemData.CommonItemData(
-                                    title = stringResource(R.string.chat_settings_user_manual_title),
+                                    title =
+                                        stringResource(R.string.chat_settings_user_manual_title),
                                     content = "",
                                     arrow = true,
                                 ),
@@ -400,10 +402,7 @@ fun ChatSettingsDrawer(
                                     ),
                                 )
                                 val manualIntent =
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        Uri.parse(USER_MANUAL_NOTION_URL),
-                                    )
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(USER_MANUAL_NOTION_URL))
                                 context.startActivity(manualIntent)
                             },
                         )
@@ -505,8 +504,7 @@ fun ChatSettingsDrawer(
             ) {
                 Column(
                     modifier =
-                        Modifier
-                            .padding(horizontal = 24.dp)
+                        Modifier.padding(horizontal = 24.dp)
                             .clip(RoundedCornerShape(24.dp))
                             .background(Color(0xFF241533))
                             .widthIn(min = 280.dp, max = 360.dp)
@@ -538,8 +536,8 @@ fun ChatSettingsDrawer(
                         value = pendingFontSize,
                         onValueChange = { pendingFontSize = it },
                         valueRange =
-                            SettingStateManager.CHAT_FONT_SIZE_MIN_SP..
-                                SettingStateManager.CHAT_FONT_SIZE_MAX_SP,
+                            SettingStateManager.CHAT_FONT_SIZE_MIN_SP..SettingStateManager
+                                    .CHAT_FONT_SIZE_MAX_SP,
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(

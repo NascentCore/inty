@@ -105,9 +105,9 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.vip.VipCenterActivity
-import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.min
+import kotlinx.coroutines.launch
 
 /** "我的"页面 */
 @Composable
@@ -575,10 +575,7 @@ private fun ProfileHeader(
                 key(avatarUrl) { // 使用 key 确保 URL 变化时重新创建组件
                     AsyncImage(
                         modifier = Modifier.fillMaxSize().clip(CircleShape),
-                        model =
-                            ImageRequest.Builder(context)
-                                .data(avatarUrl)
-                                .build(),
+                        model = ImageRequest.Builder(context).data(avatarUrl).build(),
                         placeholder = painterResource(R.drawable.app_icon),
                         error = painterResource(R.drawable.app_icon),
                         contentDescription = null,
@@ -652,9 +649,10 @@ private fun ProfileHeader(
                                     IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
                                 ) {
                                     // 使用 launcher 启动 ModifyProfileActivity，返回后会自动刷新用户信息
-                                    val intent = Intent(context, ModifyProfileActivity::class.java).apply {
-                                        putExtra("intent_key_agent_info", userProfile)
-                                    }
+                                    val intent =
+                                        Intent(context, ModifyProfileActivity::class.java).apply {
+                                            putExtra("intent_key_agent_info", userProfile)
+                                        }
                                     editProfileLauncher.launch(intent)
                                 }
                             }
@@ -981,14 +979,23 @@ private fun VibeModeBanner(
     val backgroundBrush =
         when {
             !isSubscribed ->
-                Brush.linearGradient(listOf(VibeModeColors.DisabledStart, VibeModeColors.DisabledEnd))
-            isActive -> Brush.horizontalGradient(listOf(VibeModeColors.ActiveStart, VibeModeColors.ActiveEnd))
-            else -> Brush.horizontalGradient(listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd))
+                Brush.linearGradient(
+                    listOf(VibeModeColors.DisabledStart, VibeModeColors.DisabledEnd)
+                )
+            isActive ->
+                Brush.horizontalGradient(
+                    listOf(VibeModeColors.ActiveStart, VibeModeColors.ActiveEnd)
+                )
+            else ->
+                Brush.horizontalGradient(
+                    listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd)
+                )
         }
 
     val shape = RoundedCornerShape(UiConfigs.MePage.VibeMode.CornerRadius)
     val borderColor =
-        if (isActive) Color.White.copy(alpha = 0.45f) else Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
+        if (isActive) Color.White.copy(alpha = 0.45f)
+        else Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
 
     val switchColors =
         SwitchDefaults.colors(
@@ -1069,10 +1076,7 @@ private fun VibeModeBanner(
                 onCheckedChange = { checked -> vibeEnabled = checked },
                 enabled = isSubscribed,
                 colors = switchColors,
-                modifier =
-                    Modifier.semantics {
-                        contentDescription = toggleContentDescription
-                    },
+                modifier = Modifier.semantics { contentDescription = toggleContentDescription },
             )
         }
     }

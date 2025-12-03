@@ -222,7 +222,6 @@ class MessagesViewModel : BaseVM() {
         }
     }
 
-
     /** 启动时加载 IntelliMate agent（只调用一次） */
     private fun loadIntelliMateAgentOnce() {
         viewModelScope.launch(Dispatchers.IO) {

@@ -43,10 +43,10 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 
 // CDN 图片优化参数（与 AgentBackground 保持一致）
 // 使用固定参数确保预加载和实际使用的 URL 完全一致，提高缓存命中率
@@ -90,8 +90,8 @@ private fun isAnimatedUrl(url: String?): Boolean {
  * 3. 动画加载完成后，隐藏静态图并播放动画
  * 4. 如果没有动画URL，只显示静态图
  *
- * 使用 TextureView 替代 PlayerView，解决 HorizontalPager 中视频宽度适配和页面切换问题
- * 动图使用 Coil 的 AsyncImage 自动播放（Coil 3 支持 gif、webp、avif 等动图格式）
+ * 使用 TextureView 替代 PlayerView，解决 HorizontalPager 中视频宽度适配和页面切换问题 动图使用 Coil 的 AsyncImage 自动播放（Coil 3
+ * 支持 gif、webp、avif 等动图格式）
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -239,7 +239,14 @@ fun AnimatedBackground(
 
     // 处理静态图和动画的切换逻辑：动画第一帧渲染完成后，立即触发动画隐藏静态图
     // 关键修复：不依赖 isVideoCached，只要动画第一帧已渲染就立即隐藏静态图
-    LaunchedEffect(videoFirstFrameRendered, animatedImageLoaded, isVideo, isAnimatedImage, videoUrl, staticImageUrl) {
+    LaunchedEffect(
+        videoFirstFrameRendered,
+        animatedImageLoaded,
+        isVideo,
+        isAnimatedImage,
+        videoUrl,
+        staticImageUrl,
+    ) {
         if (videoUrl != null && staticImageUrl != null && showStaticImage) {
             // 如果动画第一帧已渲染，立即触发动画隐藏静态图（不等待额外延迟）
             if ((isVideo && videoFirstFrameRendered) || (isAnimatedImage && animatedImageLoaded)) {
@@ -667,16 +674,17 @@ fun AnimatedBackground(
 
                     // 对于动图格式，尝试使用 CDN 优化（如果支持）
                     // 如果不支持，直接使用原始 URL
-                    val imageUrl = try {
-                        getCdnImageUrl(
-                            videoUrl,
-                            width = CDN_STATIC_BACKGROUND_WIDTH,
-                            quality = CDN_IMAGE_QUALITY,
-                        ) ?: videoUrl
-                    } catch (e: Exception) {
-                        // CDN 可能不支持某些动图格式，使用原始 URL
-                        videoUrl
-                    }
+                    val imageUrl =
+                        try {
+                            getCdnImageUrl(
+                                videoUrl,
+                                width = CDN_STATIC_BACKGROUND_WIDTH,
+                                quality = CDN_IMAGE_QUALITY,
+                            ) ?: videoUrl
+                        } catch (e: Exception) {
+                            // CDN 可能不支持某些动图格式，使用原始 URL
+                            videoUrl
+                        }
 
                     ImageRequest.Builder(context)
                         .data(imageUrl)
@@ -697,9 +705,7 @@ fun AnimatedBackground(
                         LogUtils.d("AnimatedBackground - [动图] ✅ 动图加载成功: $videoUrl")
                     }
                 },
-                onError = {
-                    LogUtils.e("AnimatedBackground - [动图] ❌ 动图加载失败: $videoUrl")
-                },
+                onError = { LogUtils.e("AnimatedBackground - [动图] ❌ 动图加载失败: $videoUrl") },
             )
 
             // 动图播放控制：Coil 的 AsyncImage 会自动循环播放动图（gif、webp、avif 等）
@@ -776,10 +782,7 @@ fun AnimatedBackground(
                             .build()
                     }
                 AsyncImage(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .fillMaxSize()
-                            .alpha(animatedAlpha),
+                    modifier = Modifier.fillMaxWidth().fillMaxSize().alpha(animatedAlpha),
                     model = staticImageRequest,
                     contentDescription = null,
                     contentScale = contentScale,

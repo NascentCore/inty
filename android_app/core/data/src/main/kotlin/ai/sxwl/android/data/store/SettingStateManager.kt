@@ -28,9 +28,7 @@ object SettingStateManager {
     // 聊天字体大小设置
     private val _chatFontSizeFlow =
         MutableStateFlow(
-            IntySetting
-                .getChatFontSizeSp()
-                .coerceIn(CHAT_FONT_SIZE_MIN_SP, CHAT_FONT_SIZE_MAX_SP)
+            IntySetting.getChatFontSizeSp().coerceIn(CHAT_FONT_SIZE_MIN_SP, CHAT_FONT_SIZE_MAX_SP)
         )
     val chatFontSizeFlow: StateFlow<Float> = _chatFontSizeFlow.asStateFlow()
 
