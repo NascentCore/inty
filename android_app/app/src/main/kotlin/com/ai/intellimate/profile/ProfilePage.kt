@@ -98,6 +98,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.settings.check.CheckInActivity
 import com.ai.intellimate.ui.ChatDialogData
@@ -685,15 +686,17 @@ private fun ProfileHeader(
                 )
             }
 
-            Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress)))
+            if (BuildConfig.DEBUG) {
+                Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress)))
 
-            VibeModeBanner(
-                modifier =
-                    Modifier.alpha(1f - collapseProgress)
-                        .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
-                isSubscribed = isSubscribed,
-                onRequestSubscribe = { showSubscribeDialog = true },
-            )
+                VibeModeBanner(
+                    modifier =
+                        Modifier.alpha(1f - collapseProgress)
+                            .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+                    isSubscribed = isSubscribed,
+                    onRequestSubscribe = { showSubscribeDialog = true },
+                )
+            }
         }
 
         Spacer(Modifier.height(UiConfigs.MePage.BottomSpacing * (1f - collapseProgress)))
