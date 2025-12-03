@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -54,6 +55,8 @@ class RoomDataSourceTest {
     @After
     fun tearDown() {
         database.close()
+        // 重置主调度器，避免影响后续测试
+        Dispatchers.resetMain()
     }
 
     @Test
