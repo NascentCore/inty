@@ -43,10 +43,10 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 // CDN 图片优化参数（与 AgentBackground 保持一致）
 // 使用固定参数确保预加载和实际使用的 URL 完全一致，提高缓存命中率
@@ -54,7 +54,7 @@ import okhttp3.OkHttpClient
 private const val CDN_IMAGE_QUALITY = 80
 private const val CDN_STATIC_BACKGROUND_WIDTH = 1080 // 固定宽度，确保预加载和实际使用 URL 一致
 
-/** 判断 URL 是否为视频格式 */
+/** 判断 URL 是否为视频格式（mp4/webm） */
 private fun isVideoUrl(url: String?): Boolean {
     if (url.isNullOrBlank()) return false
     val lowerUrl = url.lowercase()
@@ -64,13 +64,34 @@ private fun isVideoUrl(url: String?): Boolean {
         lowerUrl.contains(".webm?")
 }
 
+/** 判断 URL 是否为动图格式（gif、webp、avif 等） */
+private fun isAnimatedImageUrl(url: String?): Boolean {
+    if (url.isNullOrBlank()) return false
+    val lowerUrl = url.lowercase()
+    // 支持常见的动图格式：gif、webp、avif
+    // 注意：这里只检查扩展名，实际是否为动图由 Coil 自动判断
+    return lowerUrl.endsWith(".gif") ||
+        lowerUrl.endsWith(".webp") ||
+        lowerUrl.endsWith(".avif") ||
+        lowerUrl.contains(".gif?") ||
+        lowerUrl.contains(".webp?") ||
+        lowerUrl.contains(".avif?")
+}
+
+/** 判断 URL 是否为需要播放的动画格式（视频或动图） */
+private fun isAnimatedUrl(url: String?): Boolean {
+    return isVideoUrl(url) || isAnimatedImageUrl(url)
+}
+
 /**
- * 视频背景播放组件 逻辑：
- * 1. 如果有视频URL，始终渲染视频控件，同时显示静态图作为占位符
- * 2. 视频加载完成后，隐藏静态图并播放视频
- * 3. 如果没有视频URL，只显示静态图
+ * 动画背景播放组件 逻辑：
+ * 1. 如果有视频URL（mp4/webm），使用 ExoPlayer 播放视频，同时显示静态图作为占位符
+ * 2. 如果有动图URL（gif、webp、avif 等），使用 Coil AsyncImage 显示动图，同时显示静态图作为占位符
+ * 3. 动画加载完成后，隐藏静态图并播放动画
+ * 4. 如果没有动画URL，只显示静态图
  *
  * 使用 TextureView 替代 PlayerView，解决 HorizontalPager 中视频宽度适配和页面切换问题
+ * 动图使用 Coil 的 AsyncImage 自动播放（Coil 3 支持 gif、webp、avif 等动图格式）
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -90,22 +111,24 @@ fun AnimatedBackground(
     val videoCacheManager = remember { VideoCacheManager.getInstance(context) }
 
     // 关键修复：立即显示静态图（如果有），避免黑屏
-    // 初始状态：如果有静态图URL，立即显示；如果有视频URL且有静态图，也立即显示作为占位符
+    // 初始状态：如果有静态图URL，立即显示；如果有动画URL且有静态图，也立即显示作为占位符
     var showStaticImage by
         remember(videoUrl, staticImageUrl) {
-            mutableStateOf(staticImageUrl != null && (videoUrl == null || isVideoUrl(videoUrl)))
+            mutableStateOf(staticImageUrl != null && (videoUrl == null || isAnimatedUrl(videoUrl)))
         }
     var videoPrepared by remember { mutableStateOf(false) }
     var videoFirstFrameRendered by remember { mutableStateOf(false) } // 视频第一帧是否已渲染
+    var animatedImageLoaded by remember { mutableStateOf(false) } // 动图是否已加载（gif、webp、avif 等）
     var targetStaticImageAlpha by remember { mutableFloatStateOf(1f) } // 静态图目标透明度，用于动画
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
     var currentPlayCount by remember { mutableIntStateOf(0) }
     var actualPlayCount by remember { mutableIntStateOf(0) }
     var videoPath by remember(videoUrl) { mutableStateOf<String?>(null) }
-    var isPlaying by remember { mutableStateOf(false) } // 视频是否正在播放
+    var isPlaying by remember { mutableStateOf(false) } // 动画是否正在播放
     var hasPlayCompleted by remember { mutableStateOf(false) } // 是否已经播放完成（达到目标次数）
 
     val isVideo = isVideoUrl(videoUrl)
+    val isAnimatedImage = isAnimatedImageUrl(videoUrl)
 
     // 获取视频路径
     // 如果 isVideoCached 为 true，同步获取路径（避免黑屏）
@@ -150,20 +173,21 @@ fun AnimatedBackground(
     // 注意：不在这里释放播放器，让 DisposableEffect 处理，避免黑屏
     LaunchedEffect(videoUrl, staticImageUrl) {
         LogUtils.d(
-            "AnimatedBackground - [URL变化] 视频URL变化，重置状态: videoUrl=$videoUrl, staticImageUrl=$staticImageUrl"
+            "AnimatedBackground - [URL变化] 动画URL变化，重置状态: videoUrl=$videoUrl, staticImageUrl=$staticImageUrl"
         )
-        // 如果有视频URL且有静态图，先显示静态图作为占位符
+        // 如果有动画URL且有静态图，先显示静态图作为占位符
         showStaticImage = videoUrl != null && staticImageUrl != null
         targetStaticImageAlpha = 1f // 重置目标透明度
         videoPrepared = false
         videoFirstFrameRendered = false
+        animatedImageLoaded = false
         actualPlayCount = 0
         hasPlayCompleted = false // 重置完成标志
         // 暂停播放，但不释放播放器（由 DisposableEffect 处理）
         exoPlayer?.pause()
         exoPlayer?.seekTo(0)
         LogUtils.d(
-            "AnimatedBackground - [URL变化] 状态已重置: showStaticImage=$showStaticImage, videoPrepared=false"
+            "AnimatedBackground - [URL变化] 状态已重置: showStaticImage=$showStaticImage, videoPrepared=false, animatedImageLoaded=false"
         )
     }
 
@@ -213,24 +237,24 @@ fun AnimatedBackground(
         }
     }
 
-    // 处理静态图和视频的切换逻辑：视频第一帧渲染完成后，立即触发动画隐藏静态图
-    // 关键修复：不依赖 isVideoCached，只要视频第一帧已渲染就立即隐藏静态图
-    LaunchedEffect(videoFirstFrameRendered, isVideo, videoUrl, staticImageUrl) {
+    // 处理静态图和动画的切换逻辑：动画第一帧渲染完成后，立即触发动画隐藏静态图
+    // 关键修复：不依赖 isVideoCached，只要动画第一帧已渲染就立即隐藏静态图
+    LaunchedEffect(videoFirstFrameRendered, animatedImageLoaded, isVideo, isAnimatedImage, videoUrl, staticImageUrl) {
         if (videoUrl != null && staticImageUrl != null && showStaticImage) {
-            // 如果视频第一帧已渲染，立即触发动画隐藏静态图（不等待额外延迟）
-            if (isVideo && videoFirstFrameRendered) {
+            // 如果动画第一帧已渲染，立即触发动画隐藏静态图（不等待额外延迟）
+            if ((isVideo && videoFirstFrameRendered) || (isAnimatedImage && animatedImageLoaded)) {
                 // 关键修复：立即触发淡出动画，不等待额外延迟
                 targetStaticImageAlpha = 0f
                 LogUtils.d(
-                    "AnimatedBackground - [静态图切换] ✅ 立即触发静态图淡出动画 (videoFirstFrameRendered=$videoFirstFrameRendered)"
+                    "AnimatedBackground - [静态图切换] ✅ 立即触发静态图淡出动画 (videoFirstFrameRendered=$videoFirstFrameRendered, animatedImageLoaded=$animatedImageLoaded)"
                 )
             }
         } else if (videoUrl != null && staticImageUrl == null) {
-            // 没有静态图，直接显示视频
+            // 没有静态图，直接显示动画
             showStaticImage = false
             targetStaticImageAlpha = 0f
         } else if (videoUrl == null && staticImageUrl != null) {
-            // 没有视频，显示静态图
+            // 没有动画，显示静态图
             showStaticImage = true
             targetStaticImageAlpha = 1f
         }
@@ -627,8 +651,142 @@ fun AnimatedBackground(
                     )
                 }
             }
+        } else if (videoUrl != null && isAnimatedImage) {
+            // 动图显示逻辑（支持 gif、webp、avif 等格式）
+            val density = LocalDensity.current
+            val configuration = LocalConfiguration.current
+
+            // 使用固定 CDN 参数，确保与预加载 URL 一致，提高缓存命中率
+            // 注意：对于动图格式，CDN 参数可能不适用，但保持一致性有助于缓存
+            val animatedImageRequest =
+                remember(videoUrl) {
+                    val containerWidthPx =
+                        with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
+                    val containerHeightPx =
+                        with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
+
+                    // 对于动图格式，尝试使用 CDN 优化（如果支持）
+                    // 如果不支持，直接使用原始 URL
+                    val imageUrl = try {
+                        getCdnImageUrl(
+                            videoUrl,
+                            width = CDN_STATIC_BACKGROUND_WIDTH,
+                            quality = CDN_IMAGE_QUALITY,
+                        ) ?: videoUrl
+                    } catch (e: Exception) {
+                        // CDN 可能不支持某些动图格式，使用原始 URL
+                        videoUrl
+                    }
+
+                    ImageRequest.Builder(context)
+                        .data(imageUrl)
+                        .size(Size(containerWidthPx, containerHeightPx))
+                        .crossfade(true)
+                        .build()
+                }
+
+            AsyncImage(
+                modifier = Modifier.matchParentSize().clipToBounds(),
+                model = animatedImageRequest,
+                contentDescription = null,
+                contentScale = contentScale,
+                onSuccess = {
+                    // 动图加载成功（Coil 会自动识别并播放 gif、webp、avif 等动图）
+                    if (!animatedImageLoaded) {
+                        animatedImageLoaded = true
+                        LogUtils.d("AnimatedBackground - [动图] ✅ 动图加载成功: $videoUrl")
+                    }
+                },
+                onError = {
+                    LogUtils.e("AnimatedBackground - [动图] ❌ 动图加载失败: $videoUrl")
+                },
+            )
+
+            // 动图播放控制：Coil 的 AsyncImage 会自动循环播放动图（gif、webp、avif 等）
+            // 这里只需要处理 shouldPlay 和 playCount 的逻辑
+            // 注意：动图无法精确控制播放次数，只能通过显示/隐藏来控制
+            LaunchedEffect(shouldPlay, isCurrentPage, animatedImageLoaded, hasPlayCompleted) {
+                if (
+                    isCurrentPage &&
+                        shouldPlay &&
+                        animatedImageLoaded &&
+                        currentPlayCount > 0 &&
+                        !hasPlayCompleted
+                ) {
+                    // 动图会自动播放，这里只需要标记为播放中
+                    // 由于动图无法精确控制播放次数，我们使用一个简化的逻辑：
+                    // 如果 shouldPlay 为 true，则显示动图（自动播放）
+                    // 如果 shouldPlay 为 false，则隐藏动图（停止播放）
+                    isPlaying = true
+                    onIsPlayingChange?.invoke(true)
+                    LogUtils.d("AnimatedBackground - [动图] ✅ 动图开始播放: $videoUrl")
+                } else if (!shouldPlay || hasPlayCompleted) {
+                    isPlaying = false
+                    onIsPlayingChange?.invoke(false)
+                    LogUtils.d("AnimatedBackground - [动图] ⏹️ 动图停止播放: $videoUrl")
+                }
+            }
+
+            // 动图播放完成处理（简化逻辑：延迟一定时间后标记为完成）
+            // 由于动图无法精确控制播放次数，这里使用一个估算的时间
+            // 假设每次播放大约 2-3 秒，根据 playCount 计算总时间
+            LaunchedEffect(shouldPlay, currentPlayCount, animatedImageLoaded, hasPlayCompleted) {
+                if (
+                    shouldPlay &&
+                        currentPlayCount > 0 &&
+                        animatedImageLoaded &&
+                        !hasPlayCompleted &&
+                        isCurrentPage
+                ) {
+                    // 估算播放时间：假设每次播放 2.5 秒
+                    val estimatedDuration = currentPlayCount * 2500L
+                    kotlinx.coroutines.delay(estimatedDuration)
+                    if (shouldPlay && !hasPlayCompleted) {
+                        hasPlayCompleted = true
+                        isPlaying = false
+                        onIsPlayingChange?.invoke(false)
+                        onPlayComplete()
+                        LogUtils.d(
+                            "AnimatedBackground - [动图] ✅ 动图播放完成（估算时间: ${estimatedDuration}ms）: $videoUrl"
+                        )
+                    }
+                }
+            }
+
+            // 在 Compose 层覆盖静态图，使用 Compose 动画实现平滑过渡
+            // 关键：静态图作为占位符，覆盖在动图上方，动图加载完成后淡出
+            if (showStaticImage && staticImageUrl != null) {
+                val staticImageRequest =
+                    remember(staticImageUrl) {
+                        val containerWidthPx =
+                            with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
+                        val containerHeightPx =
+                            with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
+
+                        ImageRequest.Builder(context)
+                            .data(
+                                getCdnImageUrl(
+                                    staticImageUrl,
+                                    width = CDN_STATIC_BACKGROUND_WIDTH,
+                                    quality = CDN_IMAGE_QUALITY,
+                                ) ?: staticImageUrl
+                            )
+                            .size(Size(containerWidthPx, containerHeightPx))
+                            .crossfade(true)
+                            .build()
+                    }
+                AsyncImage(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .fillMaxSize()
+                            .alpha(animatedAlpha),
+                    model = staticImageRequest,
+                    contentDescription = null,
+                    contentScale = contentScale,
+                )
+            }
         } else if (staticImageUrl != null) {
-            // 没有视频URL，只显示静态图片
+            // 没有动画URL，只显示静态图片
             AsyncImage(
                 modifier = Modifier.fillMaxWidth().fillMaxSize(), // 使用 fillMaxWidth() 确保宽度不超过屏幕宽度
                 model = ImageRequest.Builder(context).data(staticImageUrl).build(),
