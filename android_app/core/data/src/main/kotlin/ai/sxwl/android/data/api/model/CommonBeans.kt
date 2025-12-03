@@ -8,6 +8,7 @@ import com.squareup.moshi.JsonClass
 data class ReportItem(val code: String = "", val description: String = "", val id: Int = 0)
 
 /** 检查App版本号，判断更新与否，强制更新与否的接口返回 */
+// TODO: 删除此封装，对于生成的 SDK 这个没有意义
 @Keep
 data class AppVersionRsp(
     val code: Int? = null,
