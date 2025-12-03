@@ -1200,6 +1200,86 @@ async def get_previous_stage_push_time(
         return None
 
 
+async def get_previous_push_messages(
+    db: AsyncSession,
+    user_id: str,
+    stage: str,
+    push_type: str,
+    chat_id: Optional[str] = None,
+) -> List[str]:
+    """
+    获取之前阶段的推送消息内容列表（用于避免重复生成）
+
+    查询指定用户/聊天在所有之前阶段的未读推送消息内容，用于在生成新推送消息时
+    告知 Agent 避免重复。
+
+    Args:
+        db: 数据库会话
+        user_id: 用户ID
+        stage: 当前推送阶段
+        push_type: 推送类型（recent_chat 或 no_chat）
+        chat_id: 聊天ID（可选，用于有聊天推送）
+
+    Returns:
+        之前推送消息内容列表（按时间顺序，从早到晚）
+    """
+    try:
+        # 获取当前阶段在 STAGE_ORDER 中的索引
+        if stage not in STAGE_ORDER:
+            logger.error(f"无效的推送阶段: {stage}")
+            return []
+
+        stage_index = STAGE_ORDER.index(stage)
+        if stage_index == 0:
+            # 第一个阶段（10min），没有之前的推送消息
+            return []
+
+        # 获取所有之前阶段的名称
+        previous_stages = STAGE_ORDER[:stage_index]
+
+        # 构建查询条件
+        conditions = [
+            PushNotificationHistory.user_id == user_id,
+            PushNotificationHistory.stage.in_(previous_stages),
+            PushNotificationHistory.push_type == push_type,
+            PushNotificationHistory.read_at.is_(None),  # 只查询未读推送
+            PushNotificationHistory.message_content.isnot(None),  # 确保有消息内容
+        ]
+
+        # 根据推送类型添加 chat_id 条件
+        if push_type == PUSH_TYPE_RECENT_CHAT:
+            if chat_id:
+                conditions.append(PushNotificationHistory.chat_id == chat_id)
+            else:
+                # 有聊天推送必须提供 chat_id
+                logger.warning(
+                    f"有聊天推送未提供 chat_id: user_id={user_id}, stage={stage}"
+                )
+                return []
+        else:
+            # 无聊天推送，chat_id 应该为 None
+            conditions.append(PushNotificationHistory.chat_id.is_(None))
+
+        # 查询之前阶段的未读推送记录，按发送时间升序排列（从早到晚）
+        stmt = (
+            select(PushNotificationHistory.message_content)
+            .where(and_(*conditions))
+            .order_by(PushNotificationHistory.sent_at.asc())
+        )
+
+        result = await db.execute(stmt)
+        messages = result.scalars().all()
+
+        # 过滤掉空消息
+        return [msg for msg in messages if msg and msg.strip()]
+
+    except Exception as e:
+        logger.error(
+            f"获取之前推送消息内容失败: user_id={user_id}, stage={stage}, error={str(e)}"
+        )
+        return []
+
+
 # ============================================================================
 # 工具函数
 # ============================================================================
@@ -1495,6 +1575,15 @@ async def generate_agent_message(
         user_result = await db.execute(select(User.nickname).where(User.id == user_id))
         user_nickname = user_result.scalar_one_or_none() or "你"
 
+        # 查询之前的推送消息内容（用于避免重复生成）
+        previous_push_messages = await get_previous_push_messages(
+            db=db,
+            user_id=user_id,
+            stage=stage,
+            push_type=push_type,
+            chat_id=chat_id,
+        )
+
         # 根据推送类型构建不同的提示词
         if push_type == PUSH_TYPE_NO_CHAT:
             # 欢迎消息
@@ -1510,6 +1599,7 @@ async def generate_agent_message(
                 agent_name=agent_data.get("name", "角色"),
                 user_name=user_nickname,
                 time_since_last_message=stage,
+                previous_push_messages=previous_push_messages,
             )
             # 生成会话ID
             if chat_id:
