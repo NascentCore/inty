@@ -86,4 +86,10 @@ dependencies {
     // ===== 测试依赖 =====
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    // ===== 日志库（不依赖 Android 环境）=====
+    implementation(libs.kotlin.logging)
+    implementation(libs.slf4j.api)
+    // 在测试环境中使用 slf4j-simple（轻量级实现）
+    testImplementation(libs.slf4j.simple)
 }

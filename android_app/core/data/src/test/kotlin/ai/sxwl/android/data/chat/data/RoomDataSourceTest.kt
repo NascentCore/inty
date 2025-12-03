@@ -8,7 +8,6 @@ import ai.sxwl.android.data.chat.local.db.ChatSyncStateEntity
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.data.chat.local.db.toEntity
 import ai.sxwl.android.data.chat.local.db.toModel
-import ai.sxwl.android.data.store.IntySetting
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -38,13 +37,8 @@ import org.junit.Test
  * RoomDataSource 单元测试
  * 使用 MockK 模拟数据库和 DAO 依赖
  * 
- * ⚠️ 注意：由于 RoomDataSource 依赖 Android 环境（LogUtils、IntySetting），
- * 这些测试无法在纯 JVM 单元测试环境中运行。
- * 
- * 建议：
- * 1. 将这些测试迁移到 androidTest 目录（推荐）
- * 2. 或使用 Robolectric 提供 Android 测试环境
- * 3. 或重构 RoomDataSource 以移除对 Android 环境的直接依赖
+ * 注意：RoomDataSource 现在使用 kotlin-logging（不依赖 Android 环境），
+ * 可以在纯 JVM 单元测试环境中运行。
  */
 class RoomDataSourceTest {
 
@@ -71,10 +65,6 @@ class RoomDataSourceTest {
         // 模拟 withTransaction（Room 扩展函数）
         // 使用 relaxed mock 自动处理 withTransaction 调用
         // withTransaction 是扩展函数，relaxed = true 会自动处理
-
-        // 注意：RoomDataSource 依赖 Android 环境（LogUtils、IntySetting 需要 Android Context）
-        // 这些单元测试无法在纯 JVM 环境中运行，需要 Android 测试环境
-        // 建议将这些测试迁移到 androidTest 目录，或使用 Robolectric
 
         // 创建数据源实例
         dataSource = RoomDataSource(database = mockDatabase, dispatcher = testDispatcher)
@@ -524,11 +514,9 @@ class RoomDataSourceTest {
         dataSource.clearChatData(agentId)
         advanceUntilIdle()
 
-        // Then: 应该删除消息和同步状态，并清理设置
-        // 注意：IntySetting.clearChatData 需要 Android 环境，在单元测试中无法验证
+        // Then: 应该删除消息和同步状态
         coVerify { mockMessageDao.deleteByAgent(agentId) }
         coVerify { mockSyncStateDao.delete(agentId) }
-        // verify { IntySetting.clearChatData(agentId) } // 需要 Android 环境
     }
 
     @Test
@@ -537,11 +525,9 @@ class RoomDataSourceTest {
         dataSource.clearAllChatData()
         advanceUntilIdle()
 
-        // Then: 应该删除所有消息和同步状态，并清理设置
-        // 注意：IntySetting.clearAllChatData 需要 Android 环境，在单元测试中无法验证
+        // Then: 应该删除所有消息和同步状态
         coVerify { mockMessageDao.deleteAll() }
         coVerify { mockSyncStateDao.deleteAll() }
-        // verify { IntySetting.clearAllChatData() } // 需要 Android 环境
     }
 
     @Test
