@@ -180,14 +180,20 @@ fun HomeScreen(
 @Composable
 private fun AppVersionLogic(mainViewModel: MainViewModel) {
     val uriHandler = LocalUriHandler.current
-    val rsp by mainViewModel.needForceUpgrade.collectAsState()
-    if (rsp?.force_update == true) {
-        ForceUpgradeDialog(
-            content = rsp?.message ?: stringResource(R.string.str_upgrade_content),
-            onConfirm = {
-                runCatching { rsp?.download_url?.let { url -> uriHandler.openUri(url) } }
-            },
-        )
+    val rsp by mainViewModel.needForceUpgrade.collectAsState(null)
+    var showUpgrade by remember(rsp) { mutableStateOf(rsp?.update_required == true) }
+
+    if (showUpgrade) {
+        rsp?.run {
+            ForceUpgradeDialog(
+                content = rsp?.message ?: stringResource(R.string.str_upgrade_content),
+                onConfirm = {
+                    runCatching { rsp?.download_url?.let { url -> uriHandler.openUri(url) } }
+                },
+                onDismiss = { showUpgrade = false},
+                isForced = force_update
+            )
+        }
     }
 }
 

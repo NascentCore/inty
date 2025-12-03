@@ -1,6 +1,7 @@
 package ai.sxwl.android.data.api.model
 
 import androidx.annotation.Keep
+import com.inty.api.models.api.v1.version.VersionCheckResponse
 import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
@@ -27,5 +28,6 @@ data class AppVersionRsp(
         val message: String? = null, // 描述文案
         val minimum_version: String? = null,
         val update_required: Boolean = false, // 是否有新版，需要更新
+        val reminder_action: VersionCheckResponse.Data.ReminderAction?
     )
 }
