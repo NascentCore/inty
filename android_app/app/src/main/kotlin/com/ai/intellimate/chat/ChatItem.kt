@@ -766,18 +766,13 @@ private fun LoadingAnimation(agentName: String?) {
     val fallbackName =
         agentName?.takeIf { it.isNotBlank() }
             ?: stringResource(R.string.chat_ai_typing_default_name)
-    val typingPlaceholder =
-        stringResource(R.string.chat_ai_typing_placeholder, fallbackName)
+    val typingPlaceholder = stringResource(R.string.chat_ai_typing_placeholder, fallbackName)
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = typingPlaceholder,
-            color = Color.White.copy(alpha = 0.7f),
-            fontSize = 12.sp,
-        )
+        Text(text = typingPlaceholder, color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -788,14 +783,18 @@ private fun LoadingAnimation(agentName: String?) {
                     infiniteTransition.animateFloat(
                         initialValue = 0.3f,
                         targetValue = 1.0f,
-                        animationSpec = infiniteRepeatable(animation = tween(600, delayMillis = delay)),
+                        animationSpec =
+                            infiniteRepeatable(animation = tween(600, delayMillis = delay)),
                         label = "dot_alpha_$index",
                     )
 
                 Box(
                     modifier =
                         Modifier.size(6.dp)
-                            .background(color = Color.White.copy(dotAlpha * 0.7f), shape = CircleShape)
+                            .background(
+                                color = Color.White.copy(dotAlpha * 0.7f),
+                                shape = CircleShape,
+                            )
                 )
             }
         }

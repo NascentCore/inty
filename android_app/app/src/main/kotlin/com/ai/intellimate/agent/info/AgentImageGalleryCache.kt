@@ -10,10 +10,7 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 object AgentImageGalleryCache {
 
     private const val KEY_PREFIX_AGENT_GALLERY = "agent_gallery_images_"
-    private val moshi =
-        Moshi.Builder()
-            .addLast(KotlinJsonAdapterFactory())
-            .build()
+    private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
     private val galleryType =
         Types.newParameterizedType(List::class.java, AgentImageGalleryItem::class.java)
     private val adapter = moshi.adapter<List<AgentImageGalleryItem>>(galleryType)
@@ -23,17 +20,19 @@ object AgentImageGalleryCache {
             return emptyList()
         }
         return runCatching {
-            val json = IntySetting.getUserProfileData("$KEY_PREFIX_AGENT_GALLERY$agentId")
-            if (json.isNullOrBlank()) {
-                emptyList()
-            } else {
-                adapter.fromJson(json).orEmpty()
+                val json = IntySetting.getUserProfileData("$KEY_PREFIX_AGENT_GALLERY$agentId")
+                if (json.isNullOrBlank()) {
+                    emptyList()
+                } else {
+                    adapter.fromJson(json).orEmpty()
+                }
             }
-        }.onFailure { throwable ->
-            LogUtils.e(
-                "AgentImageGalleryCache - restore failed for $agentId: ${throwable.message}"
-            )
-        }.getOrDefault(emptyList())
+            .onFailure { throwable ->
+                LogUtils.e(
+                    "AgentImageGalleryCache - restore failed for $agentId: ${throwable.message}"
+                )
+            }
+            .getOrDefault(emptyList())
     }
 
     fun cacheGallery(agentId: String, items: List<AgentImageGalleryItem>) {
@@ -45,13 +44,14 @@ object AgentImageGalleryCache {
             return
         }
         runCatching {
-            val json = adapter.toJson(items)
-            IntySetting.setUserProfileData("$KEY_PREFIX_AGENT_GALLERY$agentId", json)
-        }.onFailure { throwable ->
-            LogUtils.e(
-                "AgentImageGalleryCache - persist failed for $agentId: ${throwable.message}"
-            )
-        }
+                val json = adapter.toJson(items)
+                IntySetting.setUserProfileData("$KEY_PREFIX_AGENT_GALLERY$agentId", json)
+            }
+            .onFailure { throwable ->
+                LogUtils.e(
+                    "AgentImageGalleryCache - persist failed for $agentId: ${throwable.message}"
+                )
+            }
     }
 
     fun clearGallery(agentId: String) {

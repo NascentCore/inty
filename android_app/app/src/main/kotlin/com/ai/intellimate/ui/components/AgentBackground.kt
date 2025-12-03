@@ -100,10 +100,11 @@ fun AgentBackground(
     LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage) {
         if (backgroundAnimatedUrl != null && isCurrentPage) {
             // 仅对视频格式进行缓存检查，动图由Coil自动处理
-            val isVideo = backgroundAnimatedUrl.lowercase().endsWith(".mp4") ||
-                backgroundAnimatedUrl.lowercase().endsWith(".webm") ||
-                backgroundAnimatedUrl.lowercase().contains(".mp4?") ||
-                backgroundAnimatedUrl.lowercase().contains(".webm?")
+            val isVideo =
+                backgroundAnimatedUrl.lowercase().endsWith(".mp4") ||
+                    backgroundAnimatedUrl.lowercase().endsWith(".webm") ||
+                    backgroundAnimatedUrl.lowercase().contains(".mp4?") ||
+                    backgroundAnimatedUrl.lowercase().contains(".webm?")
             if (isVideo) {
                 isVideoCached = videoCacheManager.isCached(backgroundAnimatedUrl)
                 LogUtils.d("AgentBackground - 视频缓存状态: $isVideoCached, URL: $backgroundAnimatedUrl")
@@ -120,10 +121,11 @@ fun AgentBackground(
     // 注意：动图（gif、webp、avif 等）由Coil自动处理，不需要预加载
     LaunchedEffect(backgroundAnimatedUrl, isVideoCached) {
         if (backgroundAnimatedUrl != null && !isVideoCached && isCurrentPage) {
-            val isVideo = backgroundAnimatedUrl.lowercase().endsWith(".mp4") ||
-                backgroundAnimatedUrl.lowercase().endsWith(".webm") ||
-                backgroundAnimatedUrl.lowercase().contains(".mp4?") ||
-                backgroundAnimatedUrl.lowercase().contains(".webm?")
+            val isVideo =
+                backgroundAnimatedUrl.lowercase().endsWith(".mp4") ||
+                    backgroundAnimatedUrl.lowercase().endsWith(".webm") ||
+                    backgroundAnimatedUrl.lowercase().contains(".mp4?") ||
+                    backgroundAnimatedUrl.lowercase().contains(".webm?")
             if (isVideo) {
                 videoCacheManager.preloadVideo(backgroundAnimatedUrl)
             }
