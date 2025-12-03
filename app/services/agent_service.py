@@ -31,7 +31,7 @@ from app.external_services.gcs import (
 from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
 from app.models.user import Gender
-from app.schemas.agent import AgentSortOption
+from app.schemas.agent import AgentRecommendationListType, AgentSortOption
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.services.cache_service import cache_service
 from app.services.image_transform_service import image_transform_service
@@ -553,6 +553,22 @@ def _fill_agent_image_sizes(
     return agent
 
 
+def _normalize_recommendation_list_types(
+    types: Optional[List[AgentRecommendationListType]],
+) -> List[AgentRecommendationListType]:
+    """
+    规范化推荐列表类型，移除重复并在为空时回退到 FEATURED。
+    """
+    normalized: List[AgentRecommendationListType] = []
+    if types:
+        for list_type in types:
+            if list_type not in normalized:
+                normalized.append(list_type)
+    if not normalized:
+        normalized = [AgentRecommendationListType.FEATURED]
+    return normalized
+
+
 async def get_balanced_score_based_agents(
     db: AsyncSession,
     page: int,
@@ -710,6 +726,106 @@ async def get_recommended_agents_paginated(
     except Exception as e:
         logger.error(f"未知错误 - 获取推荐角色分页列表: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误")
+
+
+async def get_top_boosted_agents(
+    db: AsyncSession,
+    current_user: schemas.User,
+    limit: int = 10,
+) -> List[models.Agent]:
+    """
+    获取 Boost 榜单，按积分倒序返回指定数量的公开角色。
+    """
+    if limit <= 0:
+        raise HTTPException(status_code=400, detail="limit must be positive")
+
+    query = (
+        _select_agents_with_sizes()
+        .order_by(
+            desc(models.Agent.points),
+            desc(models.Agent.created_at),
+        )
+        .limit(limit)
+    )
+
+    result = await db.execute(query)
+    query_results = result.all()
+    agents = [_fill_agent_image_sizes(row[0], row[1], row[2]) for row in query_results]
+
+    agent_ids = [agent.id for agent in agents]
+    followed_agent_ids = set()
+
+    if agent_ids:
+        follow_query = select(agent_followers.c.agent_id).where(
+            and_(
+                agent_followers.c.user_id == current_user.id,
+                agent_followers.c.agent_id.in_(agent_ids),
+            )
+        )
+        follow_result = await db.execute(follow_query)
+        followed_agent_ids = {row[0] for row in follow_result}
+
+    for agent in agents:
+        agent.follower_count = 0
+        agent.is_followed = agent.id in followed_agent_ids
+        agent.user = current_user.nickname if current_user.nickname else "you"
+
+    return agents
+
+
+async def get_agent_recommendation_lists(
+    db: AsyncSession,
+    current_user: schemas.User,
+    page: int,
+    page_size: int,
+    sort_by: AgentSortOption,
+    sort_seed: str,
+    list_types: Optional[List[AgentRecommendationListType]] = None,
+    boost_limit: int = 10,
+) -> List[schemas.AgentRecommendationList]:
+    """
+    根据请求的列表类型返回对应的推荐列表集合。
+    """
+    normalized_types = _normalize_recommendation_list_types(list_types)
+    recommendation_lists: List[schemas.AgentRecommendationList] = []
+
+    if AgentRecommendationListType.FEATURED in normalized_types:
+        featured_data = await get_recommended_agents_paginated(
+            db=db,
+            current_user=current_user,
+            page=page,
+            page_size=page_size,
+            sort_by=sort_by,
+            sort_seed=sort_seed,
+        )
+        recommendation_lists.append(
+            schemas.AgentRecommendationList(
+                type=AgentRecommendationListType.FEATURED,
+                data=featured_data,
+            )
+        )
+
+    if AgentRecommendationListType.BOOSTED in normalized_types:
+        boosted_agents = await get_top_boosted_agents(
+            db=db,
+            current_user=current_user,
+            limit=boost_limit,
+        )
+        boosted_data = schemas.PaginationData[schemas.Agent](
+            list=boosted_agents,
+            total=len(boosted_agents),
+            page=1,
+            page_size=boost_limit,
+            total_pages=1 if boosted_agents else 0,
+        )
+        recommendation_lists.append(
+            schemas.AgentRecommendationList(
+                type=AgentRecommendationListType.BOOSTED,
+                data=boosted_data,
+            )
+        )
+
+    return recommendation_lists
 
 
 async def create_agent(

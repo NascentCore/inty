@@ -57,6 +57,13 @@ class Agent(Base):
         default=1,
         server_default=sa.text("1"),
     )
+    points = Column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=sa.text("0"),
+        comment="Boost points used for explore boosting feature",
+    )
     prompt = Column(String)
 
     # 主提示词和模式提示词字段

@@ -42,6 +42,13 @@ class AgentSortOption(str, Enum):
     SCORE_BASED_RANDOM = "score_based_random"
 
 
+class AgentRecommendationListType(str, Enum):
+    """Recommended agent list sections"""
+
+    FEATURED = "FEATURED"
+    BOOSTED = "BOOSTED"
+
+
 class AgentSortConfig(BaseModel):
     """Agent sorting config"""
 
@@ -85,6 +92,16 @@ class AgentRecommendationRequest(BaseModel):
         description=(
             "Sort seed for deterministic ordering when using random or score_based_random"
         ),
+    )
+    types: List[AgentRecommendationListType] = Field(
+        default_factory=lambda: [AgentRecommendationListType.FEATURED],
+        description="所需的推荐列表类型，FEATURED 为精选列表，BOOSTED 为 Boost 榜单",
+    )
+    boost_limit: int = Field(
+        default=10,
+        ge=1,
+        le=50,
+        description="当请求 BOOSTED 榜单时返回的角色数量",
     )
 
 
@@ -270,6 +287,11 @@ class AgentInDB(AgentBase):
     updated_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None
     version: int
+    points: int = Field(
+        default=0,
+        ge=0,
+        description="Boost 积分，越高表示在 Boost 榜单中的排序越靠前",
+    )
 
     @field_serializer("created_at")
     def serialize_created_at(self, created_at: datetime) -> int:
@@ -519,6 +541,13 @@ class AgentList(BaseModel):
     items: List[Agent]
 
 
+class AgentRecommendationList(BaseModel):
+    """按类型组织的推荐列表"""
+
+    type: AgentRecommendationListType
+    data: PaginationData[Agent]
+
+
 class TextToImageRequest(BaseModel):
     """
     Text to image request
@@ -580,7 +609,7 @@ class CreatorAgentStats(BaseModel):
         from_attributes = True
 
 
-class AgentRecommendationResponse(APIResponse[PaginationData[Agent]]):
+class AgentRecommendationResponse(APIResponse[List[AgentRecommendationList]]):
     """V2 AI角色推荐响应"""
 
     pass

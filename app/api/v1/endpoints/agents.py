@@ -4,7 +4,7 @@ Agents endpoints for accessing agents for interactions.
 
 import traceback
 import uuid
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from loguru import logger
@@ -113,12 +113,11 @@ async def search_agents(
 
 @router.get(
     "/recommend",
-    response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
+    response_model=schemas.AgentRecommendationResponse,
     summary="Get recommended AI agents list",
     description=(
-        "Get recommended AI agents list (public and approved agents), "
-        "sort_seed is required when sort is random, "
-        "which is used to ensure deterministic order for the random sort option"
+        "Get recommended AI agents list (public and approved agents). "
+        "Use types 参数来指定需要返回的列表（FEATURED, BOOSTED）。"
     ),
     tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
 )
@@ -132,6 +131,16 @@ async def recommend_agents(
     ),
     sort_seed: str = Query(
         "", description="Sort seed for deterministic random ordering"
+    ),
+    types: Optional[List[schemas.AgentRecommendationListType]] = Query(
+        default=None,
+        description="需要返回的推荐列表类型，可多选 FEATURED、BOOSTED",
+    ),
+    boost_limit: int = Query(
+        10,
+        ge=1,
+        le=50,
+        description="当请求 BOOSTED 榜单时返回的角色数量",
     ),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -149,15 +158,17 @@ async def recommend_agents(
     - Plus 4 randomly selected agents
     - Uses sort_seed for consistent results across pagination requests
     """
-    pagination_data = await agent_service.get_recommended_agents_paginated(
-        db,
+    recommendation_lists = await agent_service.get_agent_recommendation_lists(
+        db=db,
         current_user=current_user,
         page=page,
         page_size=page_size,
         sort_by=sort,
         sort_seed=sort_seed,
+        list_types=types,
+        boost_limit=boost_limit,
     )
-    return schemas.APIResponse.success(data=pagination_data)
+    return schemas.AgentRecommendationResponse.success(data=recommendation_lists)
 
 
 @router.get(

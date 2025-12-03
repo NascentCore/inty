@@ -31,12 +31,14 @@ async def recommend_agents_v2(
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> schemas.AgentRecommendationResponse:
-    pagination_data = await agent_service.get_recommended_agents_paginated(
-        db,
+    recommendation_lists = await agent_service.get_agent_recommendation_lists(
+        db=db,
         current_user=current_user,
         page=request.page,
         page_size=request.page_size,
         sort_by=request.sort,
         sort_seed=request.sort_seed,
+        list_types=request.types,
+        boost_limit=request.boost_limit,
     )
-    return schemas.AgentRecommendationResponse.success(data=pagination_data)
+    return schemas.AgentRecommendationResponse.success(data=recommendation_lists)

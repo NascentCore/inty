@@ -7,6 +7,12 @@ from app.schemas.agent import (
     AgentRecommendationRequest as AgentRecommendationRequest,
 )
 from app.schemas.agent import (
+    AgentRecommendationList as AgentRecommendationList,
+)
+from app.schemas.agent import (
+    AgentRecommendationListType as AgentRecommendationListType,
+)
+from app.schemas.agent import (
     AgentRecommendationResponse as AgentRecommendationResponse,
 )
 from app.schemas.agent import AgentUpdate as AgentUpdate
