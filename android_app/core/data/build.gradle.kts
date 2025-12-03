@@ -12,17 +12,6 @@ android {
     // room插件 配置scheme目录
     room { schemaDirectory("$projectDir/schemas") }
 
-    testOptions {
-        unitTests {
-            isReturnDefaultValues = true
-            // 抑制 MockK (ByteBuddy) 动态加载 agent 的警告
-            // MockK 使用 ByteBuddy 进行字节码操作，需要动态加载 Java agent
-            all {
-                it.jvmArgs = (it.jvmArgs ?: emptyList()) + "-XX:+EnableDynamicAgentLoading"
-            }
-        }
-    }
-
     packaging {
         resources {
             // 解决 META-INF 文件冲突问题
@@ -89,7 +78,6 @@ dependencies {
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
 
     // ===== 测试依赖 =====
-    testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.robolectric)

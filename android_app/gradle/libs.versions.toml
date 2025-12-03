@@ -79,7 +79,6 @@ androidxTestCore = "1.6.1"
 robolectric = "4.15"
 chucker = "4.2.0"
 leakcanary = "2.14"
-mockk = "1.13.10"
 
 # 腾讯系库
 mmkv = "2.2.4"
@@ -243,7 +242,6 @@ androidx-annotation = { group = "androidx.annotation", name = "annotation", vers
 chucker-library = { module = "com.github.chuckerteam.chucker:library", version.ref = "chucker" }
 chucker-no-op = { module = "com.github.chuckerteam.chucker:library-no-op", version.ref = "chucker" }
 leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
-mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 
 # ===== 腾讯系库 =====
 mmkv = { group = "com.tencent", name = "mmkv", version.ref = "mmkv" }
