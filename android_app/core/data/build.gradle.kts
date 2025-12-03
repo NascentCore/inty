@@ -12,6 +12,12 @@ android {
     // room插件 配置scheme目录
     room { schemaDirectory("$projectDir/schemas") }
 
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
+
     packaging {
         resources {
             // 解决 META-INF 文件冲突问题
@@ -76,4 +82,8 @@ dependencies {
 
     // ===== Retrofit 协程支持 =====
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
+
+    // ===== 测试依赖 =====
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

@@ -8,7 +8,6 @@ import ai.sxwl.android.data.chat.local.db.ChatSyncStateEntity
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.data.chat.local.db.toEntity
 import ai.sxwl.android.data.chat.local.db.toModel
-import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import androidx.room.withTransaction
 import java.util.concurrent.ConcurrentHashMap
@@ -267,7 +266,6 @@ class RoomDataSource(
             loadingFlows.remove(agentId)
             messageFlows.remove(agentId)
             hasMoreFlows.remove(agentId)
-            IntySetting.clearChatData(agentId)
             LogUtils.i("RoomDataSource cleared chat data for agent $agentId")
         }
 
@@ -282,7 +280,6 @@ class RoomDataSource(
             loadingFlows.clear()
             messageFlows.clear()
             hasMoreFlows.clear()
-            IntySetting.clearAllChatData()
             LogUtils.i("RoomDataSource cleared all chat data")
         }
 
