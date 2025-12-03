@@ -61,6 +61,7 @@ fun HomeScreen(
     viewModelFactory: ViewModelProvider.Factory,
 ) {
     val selectedTab = mainViewModel.selectedTab.collectAsState()
+    val messagesTabHasPush by mainViewModel.messagesTabHasPush.collectAsState()
 
     // 页面跟踪，包含当前和默认首页 tab（只在首次加载时上报）
     LaunchedEffect(Unit) {
@@ -116,6 +117,23 @@ fun HomeScreen(
     var lastTabIndex by remember { mutableStateOf(-1) }
     val doubleTapTimeoutMs = 300L // 双击检测时间窗口（毫秒）
 
+    val bottomBarItems =
+        remember(messagesTabHasPush) {
+            homeTabItems.map { tab ->
+                if (tab.index == HomeTabIndex.Messages.ordinal) {
+                    tab.copy(hasRedDot = messagesTabHasPush)
+                } else {
+                    tab
+                }
+            }
+        }
+
+    LaunchedEffect(selectedTab.value) {
+        if (selectedTab.value == HomeTabIndex.Messages) {
+            mainViewModel.clearMessagesTabPush()
+        }
+    }
+
     Scaffold(
         modifier =
             modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
@@ -125,7 +143,7 @@ fun HomeScreen(
             HeartBottomAppBar(
                 modifier = Modifier,
                 selectedTab = selectedTab.value.ordinal,
-                tabItems = homeTabItems,
+                tabItems = bottomBarItems,
                 onTabSelected = { tabIndex ->
                     val currentTime = System.currentTimeMillis()
                     val exploreTabIndex = HomeTabIndex.Explore.ordinal
