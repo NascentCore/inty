@@ -7,9 +7,12 @@ on:
     paths:
       # 后端代码
       - "app/**/*.py"
+      - "app/services/push_*.py"
+      - "app/services/push_worker.py"
       - "alembic/**/*.py"
       # 开发环境配置文件
       - "devops/config.yaml.dev"
+      - "devops/config.yaml.prod"
       # 评测系统
       - "evaluation/**/*.tsx"
       - "evaluation/tsconfig.json"
@@ -22,8 +25,11 @@ on:
       - "evaluation/build.sh"
       # 容器
       - "Dockerfile"
+      - "Dockerfile.push-worker"
+      - "start_push_worker.sh"
       # 工作流文件
       - ".github/workflows/build_and_deploy_backend.yml"
+      - ".github/workflows/build_and_deploy_push_worker.yml"
 
   workflow_dispatch:
     inputs:
@@ -40,6 +46,7 @@ concurrency:
 
 env:
   INTY_SERVER_IMAGE: ghcr.io/nascentcore/inty-backend/inty-server
+  INTY_PUSH_WORKER_IMAGE: ghcr.io/nascentcore/inty-backend/inty-push-worker
 
 jobs:
   build-and-deploy:
@@ -91,7 +98,20 @@ jobs:
           build-args: |
             CONFIG_FILE=devops/config.yaml.${{ steps.prep.outputs.environment }}
 
-      - name: Pull image ${{ env.INTY_SERVER_IMAGE }}:${{ steps.prep.outputs.image_tag }} with digest ${{ steps.build-docker-image.outputs.digest }}
+      - id: build-push-worker-image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.push-worker
+          push: true
+          tags: ${{ env.INTY_PUSH_WORKER_IMAGE }}:${{ steps.prep.outputs.image_tag }}
+          # https://docs.docker.com/build/ci/github-actions/cache/#cache-backend-api
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            CONFIG_FILE=devops/config.yaml.${{ steps.prep.outputs.environment }}
+
+      - name: Pull deployment images
         uses: appleboy/ssh-action@master
         timeout-minutes: 5
         with:
@@ -101,11 +121,12 @@ jobs:
           script: |
             sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
             sudo docker pull ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
+            sudo docker pull ${{ env.INTY_PUSH_WORKER_IMAGE }}@${{ steps.build-push-worker-image.outputs.digest }}
 
-      - name: Deploy to ${{ steps.prep.outputs.environment }}
+      - name: Deploy backend and push worker to ${{ steps.prep.outputs.environment }}
         uses: appleboy/ssh-action@master
         # 这个限制这一步最长时间，同时内部有一个等待的循环，从而保证不会超时。
-        timeout-minutes: 2
+        timeout-minutes: 5
         with:
           host: ${{ secrets.DEV_SERVER_HOST }}
           username: ${{ secrets.DEV_SERVER_USER }}
@@ -142,6 +163,52 @@ jobs:
                 echo "Timeout waiting for application startup"
                 exit 1
               fi
+            sudo docker stop inty-push-worker-${{ steps.prep.outputs.environment }} || true
+            sudo docker rm inty-push-worker-${{ steps.prep.outputs.environment }} || true
+            sudo docker run --detach --log-driver=gcplogs \
+              --name inty-push-worker-${{ steps.prep.outputs.environment }} \
+              --restart unless-stopped \
+              --env LANGCHAIN_TRACING_V2=true \
+              --env LANGCHAIN_PROJECT=inty-push-worker-${{ steps.prep.outputs.environment }} \
+              --env LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \
+              --label application=inty-push-worker \
+              --label environment=${{ steps.prep.outputs.environment }} \
+              --log-opt labels=application,environment \
+              --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-backend-key.json:/inty-backend-key.json \
+              --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \
+              ${{ env.INTY_PUSH_WORKER_IMAGE }}@${{ steps.build-push-worker-image.outputs.digest }}
+            echo "Waiting for push worker service startup..."
+            max_wait=30
+            wait_interval=2
+            elapsed=0
+            container_started=false
+            while [ $elapsed -lt $max_wait ]; do
+              if sudo docker ps | grep -q "inty-push-worker-${{ steps.prep.outputs.environment }}"; then
+                container_started=true
+                echo "Push worker service container is running"
+                break
+              fi
+              sleep $wait_interval
+              elapsed=$((elapsed + wait_interval))
+              echo "Waiting for container to start... (${elapsed}s/${max_wait}s)"
+            done
+            if [ "$container_started" = true ]; then
+              echo "Push worker service started successfully!"
+              log_check=$(sudo docker logs inty-push-worker-${{ steps.prep.outputs.environment }} 2>&1 | grep -q "推送服务初始化完成\|推送服务启动成功" && echo "found" || echo "not_found")
+              if [ "$log_check" = "found" ]; then
+                echo "Push worker service initialized successfully (found in logs)!"
+              else
+                echo "Note: Initialization message not found in docker logs (expected when using gcplogs driver)."
+                echo "Service is running. Check Google Cloud Logging for detailed logs."
+              fi
+            else
+              echo "Error: Push worker service failed to start within ${max_wait} seconds"
+              echo "Container status:"
+              sudo docker ps -a | grep "inty-push-worker-${{ steps.prep.outputs.environment }}" || echo "Container not found"
+              echo "Attempting to get logs (may be empty with gcplogs):"
+              sudo docker logs inty-push-worker-${{ steps.prep.outputs.environment }} 2>&1 || true
+              exit 1
+            fi
 
       - name: Sanity check
         run: |
@@ -152,3 +219,5 @@ jobs:
           echo "## Build and deploy"
           echo "GitHub ref: ${{ github.ref }}"
           echo "Deployed to ${{ steps.prep.outputs.environment }} for ${{ vars.SERVICE_PUBLIC_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "Backend image: ${{ env.INTY_SERVER_IMAGE }}:${{ steps.prep.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "Push worker image: ${{ env.INTY_PUSH_WORKER_IMAGE }}:${{ steps.prep.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
