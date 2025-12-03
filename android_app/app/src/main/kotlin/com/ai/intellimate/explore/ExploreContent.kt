@@ -155,9 +155,19 @@ fun ExploreContent(
             return@LaunchedEffect
         }
 
+        val itemCount = lazyPagingItems?.itemCount ?: 0
+        if (itemCount == 0) {
+            firstPlayingItemIndex = -1
+            return@LaunchedEffect
+        }
+
         // 按顺序遍历可见的 item（已经按从上到下排序），找到第一个有 backgroundAnimatedUrl 的
         firstPlayingItemIndex = -1
         for (index in visibleItemIndices) {
+            // 检查索引是否在有效范围内，避免 IndexOutOfBoundsException
+            if (index !in 0..<itemCount) {
+                continue
+            }
             val agent = lazyPagingItems?.get(index)
             if (agent != null && agent.backgroundAnimatedUrl.isNotBlank()) {
                 firstPlayingItemIndex = index
