@@ -152,6 +152,7 @@ private fun ChatItemAI(
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
     val timestampText = remember(item.timestamp) { formatTimestamp(item.timestamp) }
     val messageFontSize = messageFontSizeSp.sp
+    val agentInfo by viewModel.agentInfo.collectAsState()
 
     runCatching {
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -164,8 +165,6 @@ private fun ChatItemAI(
                 val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
 
                 if (item.content.isNotEmpty() && item.content != "loading_animation") {
-                    val agentInfo by viewModel.agentInfo.collectAsState()
-
                     val vmAgentId = agentInfo?.id
                     val metaAgentId = item.agentId()
                     val safeAgentId = vmAgentId ?: metaAgentId ?: ""
@@ -260,11 +259,10 @@ private fun ChatItemAI(
                                 )
                                 .widthIn(min = 1.dp)
                     ) {
-                        LoadingAnimation()
+                        LoadingAnimation(agentInfo?.name)
                     }
                 } else if (!shouldHideText && item.content.isNotEmpty()) {
                     val allMessages by viewModel.msgs.collectAsState()
-                    val agentInfo by viewModel.agentInfo.collectAsState()
                     val agentId = agentInfo?.id ?: ""
 
                     // 记录查询完成时已存在的消息ID列表，用于区分历史消息和新消息
@@ -783,9 +781,13 @@ private fun findBracketPairs(text: String): List<Pair<Int, Int>> {
 }
 
 @Composable
-private fun LoadingAnimation() {
+private fun LoadingAnimation(agentName: String?) {
     val infiniteTransition = rememberInfiniteTransition(label = "loading")
-    val typingPlaceholder = stringResource(R.string.chat_ai_typing_placeholder)
+    val fallbackName =
+        agentName?.takeIf { it.isNotBlank() }
+            ?: stringResource(R.string.chat_ai_typing_default_name)
+    val typingPlaceholder =
+        stringResource(R.string.chat_ai_typing_placeholder, fallbackName)
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
