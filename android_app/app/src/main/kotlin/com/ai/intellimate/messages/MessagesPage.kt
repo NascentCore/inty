@@ -4,7 +4,6 @@ import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
-import ai.sxwl.android.design.ui.HeartRedDot
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -405,12 +404,6 @@ private fun ChatHistoryItem(
         // 右侧信息
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = conversation.getShowTime(), fontSize = 12.sp, color = Color(0x8CFFFFFF))
-            Spacer(Modifier.height(4.dp))
-            Box(modifier = Modifier.height(22.dp), contentAlignment = Alignment.Center) {
-                if (conversation.isNew) {
-                    HeartRedDot()
-                }
-            }
         }
         Spacer(Modifier.width(13.dp))
     }

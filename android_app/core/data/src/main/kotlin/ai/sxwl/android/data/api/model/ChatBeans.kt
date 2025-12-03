@@ -146,7 +146,6 @@ data class ConversationItem(
     @Json(name = "updated_at") val updatedAt: Any? = null,
     @Json(name = "user_id") val userId: String = "",
     @Json(name = "agent_is_deleted") val isDeleted: Boolean = false, // 标记该agent是否已经被删除（针对自建agent场景）
-    val isNew: Boolean = !IntySetting.isConversationReaded(agentId, lastMessage),
 ) {
     // 本地状态（不序列化）
     val isPinned: Boolean
