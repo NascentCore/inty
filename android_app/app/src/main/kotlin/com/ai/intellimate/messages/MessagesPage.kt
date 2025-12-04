@@ -4,6 +4,7 @@ import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
+import ai.sxwl.android.design.ui.HeartRedDot
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -212,6 +213,7 @@ private fun MessageTabContent(
                                 remember(conversion.agentId, uiState.refreshKey) {
                                     conversion.isPinned
                                 }
+                            val showPushIndicator = conversion.agentId in uiState.pushAgentIds
 
                             val density = LocalDensity.current
                             // 使用 combinedClickable 同时处理点击和长按
@@ -246,6 +248,9 @@ private fun MessageTabContent(
                                                         IntySetting.isLogin() &&
                                                             IntySetting.getCurToken().isNotEmpty()
                                                     ) {
+                                                        viewModel.clearConversationPush(
+                                                            conversion.agentId
+                                                        )
                                                         onClickConversationItem(conversion)
                                                     }
                                                 }
@@ -267,6 +272,7 @@ private fun MessageTabContent(
                                 ChatHistoryItem(
                                     modifier = Modifier.fillMaxWidth(),
                                     conversation = conversion,
+                                    showPushIndicator = showPushIndicator,
                                 )
                             }
                         }
@@ -342,6 +348,7 @@ private fun ChatHistoryItem(
     modifier: Modifier,
     conversation: ConversationItem,
     placeholderID: Int = R.drawable.img_default_avatar,
+    showPushIndicator: Boolean = false,
 ) {
     // 每次重组时重新读取 isPinned 值，确保获取最新状态
     val isPinned = conversation.isPinned
@@ -351,14 +358,22 @@ private fun ChatHistoryItem(
         // 头像
         val avatarRes =
             getCdnImageUrl(conversation.agentAvatar, width = 128) ?: R.drawable.img_default_avatar
-        AsyncImage(
-            modifier = Modifier.size(56.dp).clip(CircleShape),
-            model = avatarRes,
-            placeholder = painterResource(placeholderID),
-            contentDescription = null,
-            alignment = Alignment.TopCenter,
-            contentScale = ContentScale.Crop,
-        )
+        Box(modifier = Modifier.size(56.dp)) {
+            AsyncImage(
+                modifier = Modifier.matchParentSize().clip(CircleShape),
+                model = avatarRes,
+                placeholder = painterResource(placeholderID),
+                contentDescription = null,
+                alignment = Alignment.TopCenter,
+                contentScale = ContentScale.Crop,
+            )
+            if (showPushIndicator) {
+                HeartRedDot(
+                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp),
+                    radius = 8,
+                )
+            }
+        }
 
         Spacer(Modifier.width(14.dp))
 

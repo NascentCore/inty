@@ -11,4 +11,5 @@ data class MessagesUiState(
     val error: String? = null,
     val intelliMateAgentIds: Set<String> = emptySet(), // 标记哪些 agent 是 IntelliMate（需要置顶且不可长按）
     val refreshKey: Long = 0L, // 用于强制刷新列表的 key
+    val pushAgentIds: Set<String> = emptySet(), // 有推送未读的 agentId 列表
 )

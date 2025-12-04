@@ -399,6 +399,10 @@ class MainViewModel : BaseVM() {
     private fun handlePushMessageEvent(event: PushNotificationEvent.MessageReceived) {
         when (event.type) {
             FCMConstants.TYPE_AGENT_MESSAGE -> {
+                val agentId = event.data[FCMConstants.DATA_KEY_AGENT_ID]
+                if (!agentId.isNullOrBlank()) {
+                    IntySetting.setConversationHasPush(agentId, true)
+                }
                 if (!_messagesTabHasPush.value) {
                     _messagesTabHasPush.value = true
                 }
