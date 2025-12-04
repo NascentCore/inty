@@ -84,12 +84,13 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
-import com.ai.intellimate.vip.VipCenterActivity
+import com.ai.intellimate.xb.navigation.Routes
 import kotlin.math.abs
 import kotlin.math.min
 import kotlinx.coroutines.launch
@@ -97,6 +98,7 @@ import kotlinx.coroutines.launch
 /** "我的"页面 */
 @Composable
 internal fun ProfilePage(
+    navController: NavController,
     modifier: Modifier,
     userProfile: UserProfile,
     agents: List<AgentInfo>,
@@ -237,6 +239,7 @@ internal fun ProfilePage(
             Column(modifier = Modifier.fillMaxWidth().nestedScroll(nestedScrollConnection)) {
                 // Header 区域 - 可折叠
                 ProfileHeader(
+                    navController,
                     modifier = Modifier,
                     collapseProgress = collapseProgress,
                     userProfile = userProfile,
@@ -349,6 +352,7 @@ internal fun ProfilePage(
 /** Profile Header 可折叠区域 */
 @Composable
 private fun ProfileHeader(
+    navController: NavController,
     modifier: Modifier,
     collapseProgress: Float, // 0f = 展开, 1f = 折叠
     userProfile: UserProfile,
@@ -475,7 +479,8 @@ private fun ProfileHeader(
                         if (AntiClick.isValidClick(lastClickTime)) {
                             lastClickTime = currentTime
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                onShowSettings()
+//                                onShowSettings()
+                                navController.navigate(Routes.Settings)
                             }
                         }
                     },
@@ -608,7 +613,8 @@ private fun ProfileHeader(
                     purchaseTime = TimeUtils.formatTimestampToString(currentVipStatus.purchaseTime),
                     expireTime = TimeUtils.formatTimestampToString(currentVipStatus.expiryTime),
                     onClick = {
-                        VipCenterActivity.launch(context, VipCenterActivity.PROFILE_UPGRADE)
+                        navController.navigate(Routes.VipCenter)
+//                        VipCenterActivity.launch(context, VipCenterActivity.PROFILE_UPGRADE)
                     },
                 )
             }
@@ -963,16 +969,16 @@ private fun ProfilePagePreview() {
             ),
         )
 
-    ProfilePage(
-        modifier = Modifier.fillMaxSize(),
-        userProfile = previewUserProfile,
-        agents = previewAgents,
-        onClickAgent = {},
-        onEditAgent = {},
-        onDeleteAgent = {},
-        isLoading = false,
-        onLoadMore = {},
-        onShowSettings = {},
-        vipStatus = previewVipStatus,
-    )
+//    ProfilePage(
+//        modifier = Modifier.fillMaxSize(),
+//        userProfile = previewUserProfile,
+//        agents = previewAgents,
+//        onClickAgent = {},
+//        onEditAgent = {},
+//        onDeleteAgent = {},
+//        isLoading = false,
+//        onLoadMore = {},
+//        onShowSettings = {},
+//        vipStatus = previewVipStatus,
+//    )
 }

@@ -36,6 +36,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.ai.intellimate.agent.generate.CreateRoleActivity
 import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.chat.ChatPageContainer
@@ -51,11 +52,13 @@ import com.ai.intellimate.ui.ExpiredVipDialog
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ForceUpgradeDialog
 import com.ai.intellimate.vip.VipCenterActivity
+import com.ai.intellimate.xb.navigation.Routes
 import java.util.concurrent.TimeUnit
 
 /** 主页面，包含五个tab */
 @Composable
 fun HomeScreen(
+    navController: NavController,
     modifier: Modifier = Modifier,
     mainViewModel: MainViewModel,
     viewModelFactory: ViewModelProvider.Factory,
@@ -163,6 +166,7 @@ fun HomeScreen(
         },
     ) { innerPadding ->
         HomeContent(
+            navController = navController,
             selectedTab = selectedTab.value,
             mainViewModel = mainViewModel,
             viewModelFactory = viewModelFactory,
@@ -292,6 +296,7 @@ private fun handleTabSelectionWithLauncher(
 /** 主页面内容 */
 @Composable
 private fun HomeContent(
+    navController: NavController,
     selectedTab: HomeTabIndex,
     mainViewModel: MainViewModel,
     viewModelFactory: ViewModelProvider.Factory,
@@ -305,7 +310,7 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Messages -> {
-            MessagesTabContent()
+            MessagesTabContent(navController)
         }
 
         HomeTabIndex.Create -> {
@@ -313,11 +318,12 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Explore -> {
-            ExploreTabContent(innerPadding = innerPadding, mainViewModel = mainViewModel)
+            ExploreTabContent(navController, innerPadding = innerPadding, mainViewModel = mainViewModel)
         }
 
         HomeTabIndex.Profile -> {
             ProfileTabContent(
+                navController,
                 onShowSettings = { mainViewModel.showSettings() },
                 shouldRefreshProfile = shouldRefreshProfile,
                 onRefreshProfileHandled = onRefreshProfileHandled,
@@ -354,7 +360,7 @@ private fun ChatTabContent(
 
 /** 会话列表Tab内容 */
 @Composable
-private fun MessagesTabContent() {
+private fun MessagesTabContent(navController: NavController) {
     val context = LocalContext.current
     val messagesViewModel: MessagesViewModel = viewModel()
 
@@ -365,11 +371,12 @@ private fun MessagesTabContent() {
         viewModel = messagesViewModel,
         onClickConversationItem = { conversation ->
             messagesViewModel.setConversationReaded(conversation)
-            ChatActivity.launch(
-                context,
-                conversation.convertToAgentInfo(),
-                pageSource = ChatActivity.MESSAGES_TAB,
-            )
+//            ChatActivity.launch(
+//                context,
+//                conversation.convertToAgentInfo(),
+//                pageSource = ChatActivity.MESSAGES_TAB,
+//            )
+            navController.navigate(Routes.chatPage(conversation.agentId))
         },
         pageTrackingContext = "MainActivity",
     )
@@ -377,7 +384,7 @@ private fun MessagesTabContent() {
 
 /** 推荐Tab内容 */
 @Composable
-private fun ExploreTabContent(innerPadding: PaddingValues, mainViewModel: MainViewModel) {
+private fun ExploreTabContent(navController: NavController, innerPadding: PaddingValues, mainViewModel: MainViewModel) {
     val context = LocalContext.current
     val exploreViewModel: ExploreViewModel = viewModel()
     val exploreResetSignal by mainViewModel.exploreResetSignal.collectAsState()
@@ -393,7 +400,8 @@ private fun ExploreTabContent(innerPadding: PaddingValues, mainViewModel: MainVi
         modifier = Modifier,
         innerPadding = innerPadding,
         onClickAgent = { agent ->
-            ChatActivity.launch(context, agent, pageSource = ChatActivity.EXPLORE_TAB)
+//            ChatActivity.launch(context, agent, pageSource = ChatActivity.EXPLORE_TAB)
+            navController.navigate(Routes.chatPage(agent.id))
         },
         viewModel = exploreViewModel,
         externalResetSignal = exploreResetSignal,
@@ -403,6 +411,7 @@ private fun ExploreTabContent(innerPadding: PaddingValues, mainViewModel: MainVi
 /** 我的Tab内容 */
 @Composable
 private fun ProfileTabContent(
+    navController: NavController,
     onShowSettings: () -> Unit,
     shouldRefreshProfile: Boolean,
     onRefreshProfileHandled: () -> Unit,
@@ -483,12 +492,14 @@ private fun ProfileTabContent(
     }
 
     ProfilePage(
+        navController,
         modifier = Modifier,
         userProfile = safeUserProfile,
         agents = uiState.userCreatedAgents,
         isLoading = uiState.isLoading,
         onClickAgent = { agent ->
-            ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
+//            ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
+            navController.navigate(Routes.chatPage(agent.id))
         },
         onEditAgent = { agent ->
             // 使用 CreateRoleActivity 提供的方法获取 Intent，并监听返回结果

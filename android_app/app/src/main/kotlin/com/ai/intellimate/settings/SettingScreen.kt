@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
@@ -49,9 +50,10 @@ private const val GOOGLE_PLAY_MARKET_URL_PREFIX = "market://details?id="
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingScreen(
+    navController: NavController,
     modifier: Modifier = Modifier,
-    onBack: () -> Unit,
-    onLogout: (isDelete: Boolean) -> Unit,
+//    onBack: () -> Unit,
+//    onLogout: (isDelete: Boolean) -> Unit,
     viewModel: SettingViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -77,7 +79,7 @@ fun SettingScreen(
                 // 下次打开设置界面时会再次触发 onLogout(true)
                 viewModel.resetDeleteAccountResult()
                 // 触发登出流程
-                onLogout(true)
+//                onLogout(true)
             }
         }
     }
@@ -90,7 +92,9 @@ fun SettingScreen(
                 modifier = Modifier.background(color = HeartColor.primaryColor),
                 title = stringResource(R.string.settings),
                 navIcon = R.drawable.back,
-                onBack = onBack,
+                onBack = {
+                    navController.popBackStack()
+                },
             )
         },
     ) { innerPadding ->
@@ -131,7 +135,7 @@ fun SettingScreen(
                 onHideLogoutDialog = { viewModel.hideLogoutConfirmDialog() },
                 onConfirmLogout = {
                     viewModel.hideLogoutConfirmDialog()
-                    onLogout(false)
+//                    onLogout(false)
                 },
             )
         }

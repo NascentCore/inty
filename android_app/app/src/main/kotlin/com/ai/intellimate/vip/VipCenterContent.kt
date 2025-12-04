@@ -38,6 +38,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.AutoRenewalNotice
 import com.ai.intellimate.ui.components.EmptyPlanState
@@ -68,8 +69,9 @@ private fun SubscriptionDescriptionText(text: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VipCenterContent(
-    onClose: () -> Unit,
-    onPurchase: () -> Unit,
+//    onClose: () -> Unit,
+//    onPurchase: () -> Unit,
+    navController: NavController,
     viewModel: VipCenterViewModel = viewModel(),
 ) {
     val plans by viewModel.plansFlow.collectAsState()
@@ -136,7 +138,9 @@ fun VipCenterContent(
 
         val scrollState = rememberScrollState()
         Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
-            VipCenterTopBar(onClose = onClose)
+            VipCenterTopBar(onClose = {
+                navController.popBackStack();
+            })
 
             Spacer(Modifier.weight(1f))
             VipBenefitsDesc(hazeState)
@@ -156,7 +160,8 @@ fun VipCenterContent(
                 PurchaseButton(
                     isSubscribed = vipStatus.isSubscribed,
                     hasSelectedPlan = viewModel.hasSelectedPlan(),
-                    onPurchase = onPurchase,
+//                    onPurchase = onPurchase,
+                    onPurchase = {},
                     isLoading = isPurchasing,
                 )
             } else {
@@ -223,11 +228,11 @@ private fun VipCenterBenefits() {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-private fun VipCenterContentPreview() {
-    VipCenterContent(onClose = {}, onPurchase = {})
-}
+//@Preview(showBackground = true)
+//@Composable
+//private fun VipCenterContentPreview() {
+//    VipCenterContent()
+//}
 
 @Composable
 private fun VipBenefitsDesc(hazeState: HazeState) {
