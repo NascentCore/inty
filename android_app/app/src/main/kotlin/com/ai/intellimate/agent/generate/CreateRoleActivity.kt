@@ -671,6 +671,7 @@ private fun CreateRolePage(
                                         // Store original URL and launch UCrop
                                         withContext(Dispatchers.Main) {
                                             originalUploadedImageUrl = originalUrl
+                                            avatarUrls += originalUrl
                                             // Launch UCrop with the original URI
                                             val intentCrop =
                                                 UCropHelper.getIntent(
