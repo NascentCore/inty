@@ -280,8 +280,7 @@ object UnifiedStartupManager {
                 val userType = if (VipStatusHelper.isUserVip()) "vip" else "free"
                 val subscriptionLevel = VipStatusHelper.getSubscriptionLevel()
                 FirebaseManager.setUserInfo(userId, userType, subscriptionLevel)
-
-                LogUtils.i("UnifiedStartupManager - 用户信息同步成功: ${userProfile.nickname}")
+                LogUtils.d("UnifiedStartupManager - 用户信息同步成功: ${userProfile.nickname}")
             } else {
                 LogUtils.w("UnifiedStartupManager - 用户信息同步失败")
             }

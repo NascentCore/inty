@@ -39,13 +39,14 @@ object VersionService {
                 current_version = data.currentVersion(),
                 download_url = data.downloadUrl(),
                 error = data.error(),
-                force_update = data.forceUpdate(),
+                force_update = data.forceUpdate() == true,
                 force_update_reasons = data.forceUpdateReasons(),
                 latest_version = data.latestVersion(),
                 latest_version_code = data.latestVersionCode()?.toInt(),
                 message = data.message(),
                 minimum_version = data.minimumVersion(),
-                update_required = data.updateRequired(),
+                update_required = data.updateRequired() == true,
+                // TODO: 只需要保留这个字段，其他都可以删除，已经无用了。
                 reminder_action = data.reminderAction(),
             )
         }

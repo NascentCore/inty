@@ -185,7 +185,7 @@ object IntySetting {
     }
 
     // 标记是否已经有可用的App更新，用于红点标记
-    fun hasAppUpdateTips(): Boolean {
+    fun getAppUpdateTips(): Boolean {
         return curUserSetting.getBoolean("has_app_update_tips", false)
     }
 
