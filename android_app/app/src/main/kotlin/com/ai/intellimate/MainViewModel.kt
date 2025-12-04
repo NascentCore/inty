@@ -1,12 +1,16 @@
 package com.ai.intellimate
 
 import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.common.event.EventBus
+import ai.sxwl.android.common.event.EventSubscriber
+import ai.sxwl.android.common.event.PushNotificationEvent
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AppVersionRsp
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
@@ -62,9 +66,20 @@ class MainViewModel : BaseVM() {
     private val _exploreResetSignal = MutableStateFlow(0)
     val exploreResetSignal: StateFlow<Int> = _exploreResetSignal.asStateFlow()
 
+    private val _messagesTabHasPush = MutableStateFlow(IntySetting.hasMessagesTabPush())
+    val messagesTabHasPush: StateFlow<Boolean> = _messagesTabHasPush.asStateFlow()
+
+    private val pushMessageSubscriber =
+        object : EventSubscriber<PushNotificationEvent.MessageReceived> {
+            override fun onEvent(event: PushNotificationEvent.MessageReceived) {
+                handlePushMessageEvent(event)
+            }
+        }
+
     init {
         loadStartupData()
         updateLoginState()
+        subscribePushEvents()
 
         viewModelScope.launch(Dispatchers.IO) {
             val initialFetchTime = FirebaseManager.getRemoteConfigLastFetchTime()
@@ -157,7 +172,12 @@ class MainViewModel : BaseVM() {
         // 切换tab时停止所有音频播放
         stopAllAudioPlayback()
 
-        _selectedTab.value = tabEntries[tab]
+        val targetTab = tabEntries[tab]
+        _selectedTab.value = targetTab
+
+        if (targetTab == HomeTabIndex.Messages) {
+            clearMessagesTabPush()
+        }
     }
 
     /** 停止所有音频播放 用于tab切换时确保音频停止 */
@@ -178,6 +198,14 @@ class MainViewModel : BaseVM() {
     /** 触发Explore页面重置到顶部（用于底部导航栏双击） */
     fun triggerExploreReset() {
         _exploreResetSignal.value += 1
+    }
+
+    /** 清除消息红点状态（进入消息Tab后调用） */
+    fun clearMessagesTabPush() {
+        if (_messagesTabHasPush.value) {
+            _messagesTabHasPush.value = false
+        }
+        IntySetting.setMessagesTabHasPush(false)
     }
 
     /** 接口请求获取用户信息 */
@@ -317,5 +345,24 @@ class MainViewModel : BaseVM() {
                 LogUtils.w("result.message")
             }
         }
+    }
+
+    override fun onCleared() {
+        EventBus.unsubscribe(PushNotificationEvent.MessageReceived::class, pushMessageSubscriber)
+        super.onCleared()
+    }
+
+    private fun subscribePushEvents() {
+        EventBus.subscribe(PushNotificationEvent.MessageReceived::class, pushMessageSubscriber)
+    }
+
+    private fun handlePushMessageEvent(event: PushNotificationEvent.MessageReceived) {
+        if (event.type != FCMConstants.TYPE_AGENT_MESSAGE) {
+            return
+        }
+        if (!_messagesTabHasPush.value) {
+            _messagesTabHasPush.value = true
+        }
+        IntySetting.setMessagesTabHasPush(true)
     }
 }

@@ -9,24 +9,36 @@ import ai.sxwl.android.design.ui.SettingsItemData
 import ai.sxwl.android.design.ui.SettingsItemGroup
 import ai.sxwl.android.design.ui.SettingsSwitchItem
 import ai.sxwl.android.firebase.FirebaseManager
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +57,10 @@ import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
+import kotlin.math.roundToInt
+
+private const val USER_MANUAL_NOTION_URL =
+    "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
 
 /** 聊天设置抽屉组件 */
 @Composable
@@ -63,6 +79,7 @@ fun ChatSettingsDrawer(
 
     // Show scene action button全局设置 - 使用SettingStateManager的Flow来监听设置变化
     val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
+    val chatFontSize by SettingStateManager.chatFontSizeFlow.collectAsState()
 
     val horizontalPadding = 16
 
@@ -80,6 +97,10 @@ fun ChatSettingsDrawer(
     // 本地编辑状态（与 MySettingActivity 一致）
     var editKey by rememberSaveable { mutableStateOf(EditKey.None) }
     var editValue by rememberSaveable { mutableStateOf("") }
+    var showFontSizeDialog by rememberSaveable { mutableStateOf(false) }
+    var pendingFontSize by rememberSaveable {
+        mutableFloatStateOf(SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP)
+    }
 
     // 复用 MySettingViewModel 的保存逻辑
     val modifyProfileViewModel: ModifyProfileViewModel = viewModel()
@@ -108,8 +129,7 @@ fun ChatSettingsDrawer(
         drawerContent = {
             Column(
                 modifier =
-                    Modifier
-                        .width(319.dp)
+                    Modifier.width(319.dp)
                         .fillMaxHeight()
                         .background(
                             brush =
@@ -316,6 +336,79 @@ fun ChatSettingsDrawer(
 
                         IntelliMateDivider()
 
+                        // Font size row
+                        SettingsArrowItem(
+                            item =
+                                SettingsItemData.CommonItemData(
+                                    title = stringResource(R.string.chat_settings_font_size),
+                                    content =
+                                        stringResource(
+                                            R.string.chat_settings_font_size_value,
+                                            chatFontSize.roundToInt(),
+                                        ),
+                                    arrow = true,
+                                ),
+                            fontLight = true,
+                            isInGroup = true,
+                            horizontalPadding = horizontalPadding,
+                            onItemClick = {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "open_font_size_slider",
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                pendingFontSize = chatFontSize
+                                showFontSizeDialog = true
+                            },
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(30.dp))
+
+                Text(
+                    text = stringResource(R.string.chat_settings_support_resources_title),
+                    modifier = Modifier.padding(start = 16.dp),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                )
+
+                Spacer(Modifier.height(14.dp))
+
+                Column(modifier = Modifier.padding(horizontal = horizontalPadding.dp)) {
+                    SettingsItemGroup {
+                        // 用户手册入口
+                        SettingsArrowItem(
+                            item =
+                                SettingsItemData.CommonItemData(
+                                    title =
+                                        stringResource(R.string.chat_settings_user_manual_title),
+                                    content = "",
+                                    arrow = true,
+                                ),
+                            fontLight = true,
+                            isInGroup = true,
+                            horizontalPadding = horizontalPadding,
+                            onItemClick = {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "user_manual",
+                                        "destination" to "notion",
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                val manualIntent =
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(USER_MANUAL_NOTION_URL))
+                                context.startActivity(manualIntent)
+                            },
+                        )
+
+                        IntelliMateDivider()
+
                         // Feedback入口
                         SettingsArrowItem(
                             item =
@@ -401,6 +494,106 @@ fun ChatSettingsDrawer(
                     },
                     onValueChange = { value -> editValue = value },
                 )
+            }
+        }
+
+        if (showFontSizeDialog) {
+            Dialog(
+                onDismissRequest = { showFontSizeDialog = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false),
+            ) {
+                Column(
+                    modifier =
+                        Modifier.padding(horizontal = 24.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Color(0xFF241533))
+                            .widthIn(min = 280.dp, max = 360.dp)
+                            .padding(horizontal = 20.dp, vertical = 24.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.chat_settings_font_size_dialog_title),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.chat_settings_font_size_dialog_description),
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.75f),
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.chat_settings_font_size_value,
+                                pendingFontSize.roundToInt(),
+                            ),
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.8f),
+                    )
+                    Slider(
+                        value = pendingFontSize,
+                        onValueChange = { pendingFontSize = it },
+                        valueRange =
+                            SettingStateManager.CHAT_FONT_SIZE_MIN_SP..SettingStateManager
+                                    .CHAT_FONT_SIZE_MAX_SP,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.chat_settings_font_size_preview_label),
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.6f),
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.chat_settings_font_size_preview_sample),
+                        fontSize = pendingFontSize.sp,
+                        color = Color.White,
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        TextButton(
+                            onClick = {
+                                pendingFontSize = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP
+                            }
+                        ) {
+                            Text(text = stringResource(R.string.str_reset))
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        TextButton(onClick = { showFontSizeDialog = false }) {
+                            Text(text = stringResource(R.string.cancel))
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                val newSize =
+                                    pendingFontSize
+                                        .roundToInt()
+                                        .coerceIn(
+                                            SettingStateManager.CHAT_FONT_SIZE_MIN_SP.toInt(),
+                                            SettingStateManager.CHAT_FONT_SIZE_MAX_SP.toInt(),
+                                        )
+                                        .toFloat()
+                                SettingStateManager.updateChatFontSize(newSize)
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "update_font_size",
+                                        "font_size_sp" to newSize,
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                showFontSizeDialog = false
+                            }
+                        ) {
+                            Text(text = stringResource(R.string.save))
+                        }
+                    }
+                }
             }
         }
     }

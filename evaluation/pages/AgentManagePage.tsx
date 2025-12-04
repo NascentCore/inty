@@ -46,6 +46,7 @@ import AgentInfoDisplay from "../components/common/AgentInfoDisplay";
 import { generateRandomName } from "../utils/nameGenerator";
 import { hasAgentChanged } from "../utils/agentComparison";
 import ImageCropModal from "../components/common/ImageCropModal";
+import BackgroundCropModal from "../components/common/BackgroundCropModal";
 import AvatarDisplay from "../components/common/AvatarDisplay";
 
 const { TextArea } = Input;
@@ -171,6 +172,12 @@ export const AgentManagePage: React.FC = () => {
     useState(false);
   const [generateAnimatedLoading, setGenerateAnimatedLoading] = useState(false);
   const [generateAnimatedPrompt, setGenerateAnimatedPrompt] = useState("");
+  const [backgroundCropModalVisible, setBackgroundCropModalVisible] =
+    useState(false);
+  const [pendingGenerateAction, setPendingGenerateAction] = useState<{
+    agentId: string;
+    prompt?: string;
+  } | null>(null);
 
   // 判断URL是否为视频格式
   const isVideoUrl = (url: string | undefined): boolean => {
@@ -466,38 +473,110 @@ export const AgentManagePage: React.FC = () => {
     setCurrentAgentForAvatar(null);
   };
 
-  // 处理生成背景视频
-  const handleGenerateBackgroundAnimated = async () => {
-    console.log("handleGenerateBackgroundAnimated 被调用", {
-      currentAgent: currentAgent?.id,
-      hasBackground: !!currentAgent?.background,
-      prompt: generateAnimatedPrompt,
-    });
-
+  // 打开生成背景动图模态框时检查比例
+  const handleOpenGenerateAnimatedModal = async () => {
     if (!currentAgent) {
-      console.warn("currentAgent 为空");
       message.warning("请先选择要编辑的角色");
-      return false; // 阻止 Modal 关闭
+      return;
     }
 
-    // 验证背景图是否存在
     if (!currentAgent.background) {
-      console.warn("背景图为空");
       message.warning("请先上传背景图");
-      return false; // 阻止 Modal 关闭
+      return;
     }
 
     try {
-      setGenerateAnimatedLoading(true);
-      console.log("开始调用 API", {
-        agentId: currentAgent.id,
-        prompt: generateAnimatedPrompt.trim() || undefined,
-      });
+      // 检查背景图是否为 9:16 比例
+      const aspectRatioInfo = await api.agents.checkBackgroundAspectRatio(
+        currentAgent.id,
+      );
 
-      // prompt 可以为空，后端会自动生成
-      const updatedAgent = await api.agents.generateBackgroundAnimated(
+      if (!aspectRatioInfo.is_9_16) {
+        // 不是 9:16 比例，直接显示裁剪模态框，不显示生成模态框
+        setPendingGenerateAction({
+          agentId: currentAgent.id,
+          prompt: generateAnimatedPrompt.trim() || undefined,
+        });
+        setBackgroundCropModalVisible(true);
+        // 不打开生成模态框
+        return;
+      }
+
+      // 是 9:16 比例，正常显示生成模态框
+      setGenerateAnimatedModalVisible(true);
+      setGenerateAnimatedPrompt("");
+    } catch (error) {
+      console.error("检查背景图宽高比失败:", error);
+      message.error(
+        `检查背景图宽高比失败: ${
+          error instanceof Error ? error.message : "未知错误"
+        }`,
+      );
+      // 检查失败时，仍然打开生成模态框，让用户尝试
+      setGenerateAnimatedModalVisible(true);
+      setGenerateAnimatedPrompt("");
+    }
+  };
+
+  // 检查背景图宽高比并生成动图
+  const checkAndGenerateBackgroundAnimated = async () => {
+    if (!currentAgent) {
+      message.warning("请先选择要编辑的角色");
+      return false;
+    }
+
+    if (!currentAgent.background) {
+      message.warning("请先上传背景图");
+      return false;
+    }
+
+    try {
+      // 检查背景图是否为 9:16 比例
+      const aspectRatioInfo = await api.agents.checkBackgroundAspectRatio(
+        currentAgent.id,
+      );
+
+      if (!aspectRatioInfo.is_9_16) {
+        // 不是 9:16 比例，显示裁剪模态框
+        setPendingGenerateAction({
+          agentId: currentAgent.id,
+          prompt: generateAnimatedPrompt.trim() || undefined,
+        });
+        setBackgroundCropModalVisible(true);
+        return false; // 不关闭生成模态框
+      }
+
+      // 是 9:16 比例，直接生成
+      return await doGenerateBackgroundAnimated(
         currentAgent.id,
         generateAnimatedPrompt.trim() || undefined,
+      );
+    } catch (error) {
+      console.error("检查背景图宽高比失败:", error);
+      message.error(
+        `检查背景图宽高比失败: ${
+          error instanceof Error ? error.message : "未知错误"
+        }`,
+      );
+      return false;
+    }
+  };
+
+  // 执行生成背景动图
+  const doGenerateBackgroundAnimated = async (
+    agentId: string,
+    prompt?: string,
+  ) => {
+    try {
+      setGenerateAnimatedLoading(true);
+      console.log("开始调用 API", {
+        agentId,
+        prompt,
+      });
+
+      const updatedAgent = await api.agents.generateBackgroundAnimated(
+        agentId,
+        prompt,
       );
 
       console.log("API 调用成功", updatedAgent);
@@ -510,13 +589,20 @@ export const AgentManagePage: React.FC = () => {
             background_animated: updatedAgent.background_animated,
           });
         }
+        // 更新当前 agent
+        if (currentAgent && currentAgent.id === agentId) {
+          setCurrentAgent({
+            ...currentAgent,
+            background_animated: updatedAgent.background_animated,
+          });
+        }
         message.success("背景动图生成成功");
         setGenerateAnimatedModalVisible(false);
         setGenerateAnimatedPrompt("");
-        return true; // 允许 Modal 关闭
+        return true;
       } else {
         message.error("背景动图生成失败");
-        return false; // 阻止 Modal 关闭
+        return false;
       }
     } catch (error) {
       console.error("生成背景动图失败:", error);
@@ -525,10 +611,78 @@ export const AgentManagePage: React.FC = () => {
           error instanceof Error ? error.message : "未知错误"
         }`,
       );
-      return false; // 阻止 Modal 关闭
+      return false;
     } finally {
       setGenerateAnimatedLoading(false);
     }
+  };
+
+  // 处理生成背景视频（保留原函数名以兼容现有代码）
+  const handleGenerateBackgroundAnimated = async () => {
+    return await checkAndGenerateBackgroundAnimated();
+  };
+
+  // 处理背景图裁剪确认
+  const handleBackgroundCropConfirm = async (croppedImageBlob: Blob) => {
+    if (!pendingGenerateAction) {
+      message.error("缺少生成参数");
+      return;
+    }
+
+    try {
+      setGenerateAnimatedLoading(true);
+      setBackgroundCropModalVisible(false);
+
+      // 将 Blob 转换为 File
+      const croppedFile = new File(
+        [croppedImageBlob],
+        "cropped-background.jpg",
+        { type: "image/jpeg" },
+      );
+
+      // 上传裁剪后的背景图
+      message.info("正在上传裁剪后的背景图...");
+      const updatedAgent = await api.agents.uploadCroppedBackground(
+        pendingGenerateAction.agentId,
+        croppedFile,
+      );
+
+      // 更新当前 agent 的背景图
+      if (currentAgent && currentAgent.id === pendingGenerateAction.agentId) {
+        setCurrentAgent({
+          ...currentAgent,
+          background: updatedAgent.background,
+        });
+      }
+
+      message.success("背景图裁剪并上传成功");
+
+      // 不再直接生成视频，而是打开生成视频模态框让用户填写提示词
+      // 保留 pendingGenerateAction，以便在生成模态框中点击确认时继续
+      setGenerateAnimatedModalVisible(true);
+      // 如果之前有提示词，保留它；否则清空
+      if (pendingGenerateAction.prompt) {
+        setGenerateAnimatedPrompt(pendingGenerateAction.prompt);
+      } else {
+        setGenerateAnimatedPrompt("");
+      }
+    } catch (error) {
+      console.error("上传裁剪后的背景图失败:", error);
+      message.error(
+        `上传裁剪后的背景图失败: ${
+          error instanceof Error ? error.message : "未知错误"
+        }`,
+      );
+      setPendingGenerateAction(null);
+    } finally {
+      setGenerateAnimatedLoading(false);
+    }
+  };
+
+  // 处理背景图裁剪取消
+  const handleBackgroundCropCancel = () => {
+    setBackgroundCropModalVisible(false);
+    setPendingGenerateAction(null);
   };
 
   // 创建智能体
@@ -1079,14 +1233,7 @@ export const AgentManagePage: React.FC = () => {
             {isEdit && currentAgent && (
               <Button
                 type="dashed"
-                onClick={() => {
-                  if (!currentAgent?.background) {
-                    message.warning("请先上传背景图");
-                    return;
-                  }
-                  setGenerateAnimatedModalVisible(true);
-                  setGenerateAnimatedPrompt("");
-                }}
+                onClick={handleOpenGenerateAnimatedModal}
                 style={{ width: "100%" }}
                 disabled={!currentAgent?.background}
               >
@@ -1796,10 +1943,14 @@ export const AgentManagePage: React.FC = () => {
           // 如果返回 true 或 undefined，关闭模态框
           setGenerateAnimatedModalVisible(false);
           setGenerateAnimatedPrompt("");
+          // 清理待生成操作信息
+          setPendingGenerateAction(null);
         }}
         onCancel={() => {
           setGenerateAnimatedModalVisible(false);
           setGenerateAnimatedPrompt("");
+          // 清理待生成操作信息
+          setPendingGenerateAction(null);
         }}
         confirmLoading={generateAnimatedLoading}
         width={600}
@@ -1854,7 +2005,8 @@ export const AgentManagePage: React.FC = () => {
             </>
           )}
           <div style={{ fontSize: 12, color: "#666" }}>
-            提示：将使用 Google Veo3 生成 4 秒视频，直接存储视频地址
+            提示：系统将使用 Google Veo3 先生成 4 秒视频，然后转换为 webp
+            动图格式存储
           </div>
         </Space>
       </Modal>
@@ -1871,6 +2023,15 @@ export const AgentManagePage: React.FC = () => {
             | AvatarCropData
             | undefined
         }
+      />
+
+      {/* 背景图裁剪模态框 */}
+      <BackgroundCropModal
+        visible={backgroundCropModalVisible}
+        imageSrc={currentAgent?.background || ""}
+        onCancel={handleBackgroundCropCancel}
+        onConfirm={handleBackgroundCropConfirm}
+        title="裁剪背景图为 9:16 比例"
       />
     </div>
   );

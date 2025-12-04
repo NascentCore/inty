@@ -98,7 +98,7 @@ object UiConfigs {
     }
 
     object Urls {
-        const val WhatsAppGroupInvite = "https://chat.whatsapp.com/Cw1ZM46InipFHel3ws5ria"
+        const val WhatsAppGroupInvite = "https://chat.whatsapp.com/DpMVkOQTWOdJfZnnVqiXm8?mode=hqrt3"
         const val DiscordInvite = "https://discord.gg/xbJJ9NBdJT"
         const val HelpCenter =
             "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
@@ -194,6 +194,14 @@ object UiConfigs {
         // Intro section
         val IntroSectionCollapsedHeight = 40.dp
         val IntroSectionExpandedHeight = 60.dp
+
+        object VibeMode {
+            val BannerHeight = 92.dp
+            val CornerRadius = 20.dp
+            val BorderWidth = 1.dp
+            val InnerPadding = 18.dp
+            val ContentSpacing = 12.dp
+        }
     }
 
     object ChatMessagePane {

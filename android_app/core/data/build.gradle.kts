@@ -15,7 +15,7 @@ android {
     packaging {
         resources {
             // 解决 META-INF 文件冲突问题
-            // 
+            //
             // 问题原因：
             // 多个依赖库（特别是 Apache HTTP Components 相关库，如 httpclient5、httpcore5、httpcore5-h2）
             // 都在其 JAR 文件中包含了相同的 META-INF 文件（LICENSE、NOTICE、DEPENDENCIES 等）。
@@ -76,4 +76,15 @@ dependencies {
 
     // ===== Retrofit 协程支持 =====
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
+
+    // ===== 测试依赖 =====
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.robolectric)
+
+    // ===== 日志库（不依赖 Android 环境）=====
+    implementation(libs.kotlin.logging)
+    implementation(libs.slf4j.api)
+    // 在测试环境中使用 slf4j-simple（轻量级实现）
+    testImplementation(libs.slf4j.simple)
 }

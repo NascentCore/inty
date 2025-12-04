@@ -58,7 +58,9 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 
 // 可见性显示配置
-const getVisibilityConfig = (visibility: "PRIMARY" | "SECONDARY" | "HIDDEN") => {
+const getVisibilityConfig = (
+  visibility: "PRIMARY" | "SECONDARY" | "HIDDEN",
+) => {
   switch (visibility) {
     case "PRIMARY":
       return { text: "第一展示", color: "green" };
@@ -161,7 +163,7 @@ export const CharacterThemeManagePage: React.FC = () => {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const loadThemes = useCallback(async () => {
@@ -280,7 +282,7 @@ export const CharacterThemeManagePage: React.FC = () => {
 
   const agentsInTheme = currentTheme?.agents.map((item) => item.agent_id) || [];
   const availableAgentsForAdd = availableAgents.filter(
-    (agent) => !agentsInTheme.includes(agent.id)
+    (agent) => !agentsInTheme.includes(agent.id),
   );
 
   return (
@@ -325,7 +327,8 @@ export const CharacterThemeManagePage: React.FC = () => {
                       <div
                         style={{
                           height: 150,
-                          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          background:
+                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -356,9 +359,17 @@ export const CharacterThemeManagePage: React.FC = () => {
                 >
                   <Card.Meta
                     title={
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
                         <span>{theme.name}</span>
-                        <Tag color={getVisibilityConfig(theme.visibility).color}>
+                        <Tag
+                          color={getVisibilityConfig(theme.visibility).color}
+                        >
                           {getVisibilityConfig(theme.visibility).text}
                         </Tag>
                       </div>
@@ -402,10 +413,7 @@ export const CharacterThemeManagePage: React.FC = () => {
             <Input placeholder="例如：圣诞主题专区" />
           </Form.Item>
           <Form.Item name="description" label="专区描述">
-            <TextArea
-              rows={4}
-              placeholder="请输入专区描述"
-            />
+            <TextArea rows={4} placeholder="请输入专区描述" />
           </Form.Item>
           <Form.Item name="background_image_url" label="背景图URL">
             <Input placeholder="请输入背景图URL地址" />
@@ -489,7 +497,10 @@ export const CharacterThemeManagePage: React.FC = () => {
           <div>
             <div style={{ marginBottom: 16 }}>
               <Text strong>可见性：</Text>
-              <Tag color={getVisibilityConfig(currentTheme.visibility).color} style={{ marginLeft: 8 }}>
+              <Tag
+                color={getVisibilityConfig(currentTheme.visibility).color}
+                style={{ marginLeft: 8 }}
+              >
                 {getVisibilityConfig(currentTheme.visibility).text}
               </Tag>
             </div>
@@ -521,10 +532,10 @@ export const CharacterThemeManagePage: React.FC = () => {
                   if (!over || active.id === over.id || !currentTheme) return;
 
                   const oldIndex = currentTheme.agents.findIndex(
-                    (item) => item.agent_id === active.id
+                    (item) => item.agent_id === active.id,
                   );
                   const newIndex = currentTheme.agents.findIndex(
-                    (item) => item.agent_id === over.id
+                    (item) => item.agent_id === over.id,
                   );
 
                   if (oldIndex === -1 || newIndex === -1) return;
@@ -532,7 +543,7 @@ export const CharacterThemeManagePage: React.FC = () => {
                   const newAgents = arrayMove(
                     currentTheme.agents,
                     oldIndex,
-                    newIndex
+                    newIndex,
                   );
                   const newAgentIds = newAgents.map((item) => item.agent_id);
 
@@ -542,7 +553,7 @@ export const CharacterThemeManagePage: React.FC = () => {
                     });
                     message.success("调整顺序成功");
                     const updatedTheme = await characterThemeApi.get(
-                      currentTheme.id
+                      currentTheme.id,
                     );
                     setCurrentTheme(updatedTheme);
                   } catch (error) {
@@ -597,7 +608,7 @@ export const CharacterThemeManagePage: React.FC = () => {
           showSearch
           filterOption={(input, option): boolean => {
             const agent = availableAgentsForAdd.find(
-              (a) => a.id === option?.value
+              (a) => a.id === option?.value,
             );
             if (!agent) return false;
             const searchText = input.toLowerCase();
@@ -625,4 +636,3 @@ export const CharacterThemeManagePage: React.FC = () => {
 };
 
 export default CharacterThemeManagePage;
-

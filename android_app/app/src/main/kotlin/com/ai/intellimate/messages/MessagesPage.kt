@@ -4,12 +4,9 @@ import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
-import ai.sxwl.android.design.ui.HeartRedDot
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -169,7 +166,7 @@ private fun MessageTabContent(
     val itemPositions = remember { mutableStateMapOf<String, Float>() }
     // 存储 LazyColumn 的 Y 位置，用于计算 item 相对于外层 Box 的位置
     var lazyColumnY by remember { mutableStateOf(0f) }
-    
+
     // 在 @Composable 函数中获取 density，以便在回调中使用
     val density = LocalDensity.current
 
@@ -177,13 +174,10 @@ private fun MessageTabContent(
         LazyColumn(
             state = listState,
             modifier =
-                Modifier.matchParentSize()
-                    .onGloballyPositioned { coordinates ->
-                        // 获取 LazyColumn 相对于外层 Box 的位置
-                        lazyColumnY = with(density) {
-                            coordinates.positionInParent().y.toDp().value
-                        }
-                    },
+                Modifier.matchParentSize().onGloballyPositioned { coordinates ->
+                    // 获取 LazyColumn 相对于外层 Box 的位置
+                    lazyColumnY = with(density) { coordinates.positionInParent().y.toDp().value }
+                },
         ) {
             // 刷新指示器
             if (uiState.isRefreshing) {
@@ -226,10 +220,12 @@ private fun MessageTabContent(
                                     Modifier.fillMaxWidth()
                                         .onGloballyPositioned { coordinates ->
                                             // 持续更新 item 的位置，以便长按时能立即获取
-                                            // item 相对于 LazyColumn 的位置 + LazyColumn 相对于外层 Box 的位置 = item 相对于外层 Box 的位置
-                                            val itemYInLazyColumn = with(density) {
-                                                coordinates.positionInParent().y.toDp().value
-                                            }
+                                            // item 相对于 LazyColumn 的位置 + LazyColumn 相对于外层 Box 的位置 =
+                                            // item 相对于外层 Box 的位置
+                                            val itemYInLazyColumn =
+                                                with(density) {
+                                                    coordinates.positionInParent().y.toDp().value
+                                                }
                                             itemPositions[conversion.agentId] =
                                                 itemYInLazyColumn + lazyColumnY
                                         }
@@ -240,7 +236,7 @@ private fun MessageTabContent(
                                                     showMenuForConversationId = null
                                                     return@combinedClickable
                                                 }
-                                                
+
                                                 // 正常点击：进入聊天
                                                 val currentTime = System.currentTimeMillis()
                                                 if (AntiClick.isValidClick(lastClickTime)) {
@@ -248,8 +244,7 @@ private fun MessageTabContent(
                                                     // 检查是否已登录
                                                     if (
                                                         IntySetting.isLogin() &&
-                                                            IntySetting.getCurToken()
-                                                                .isNotEmpty()
+                                                            IntySetting.getCurToken().isNotEmpty()
                                                     ) {
                                                         onClickConversationItem(conversion)
                                                     }
@@ -257,7 +252,9 @@ private fun MessageTabContent(
                                             },
                                             onLongClick = {
                                                 // 长按：如果已经有菜单显示，切换到新菜单；如果是同一行，则关闭菜单
-                                                if (showMenuForConversationId == conversion.agentId) {
+                                                if (
+                                                    showMenuForConversationId == conversion.agentId
+                                                ) {
                                                     // 长按同一行，关闭菜单
                                                     showMenuForConversationId = null
                                                 } else {
@@ -326,10 +323,7 @@ private fun MessageTabContent(
                     },
                     onDismiss = { showMenuForConversationId = null },
                     showHideOption = !isIntelliMate, // IntelliMate agent 不显示 hide 选项
-                    modifier =
-                        Modifier.offset(x = 16.dp, y = menuY)
-                            .width(140.dp)
-                            .zIndex(1000f),
+                    modifier = Modifier.offset(x = 16.dp, y = menuY).width(140.dp).zIndex(1000f),
                 )
             }
         }
@@ -410,12 +404,6 @@ private fun ChatHistoryItem(
         // 右侧信息
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = conversation.getShowTime(), fontSize = 12.sp, color = Color(0x8CFFFFFF))
-            Spacer(Modifier.height(4.dp))
-            Box(modifier = Modifier.height(22.dp), contentAlignment = Alignment.Center) {
-                if (conversation.isNew) {
-                    HeartRedDot()
-                }
-            }
         }
         Spacer(Modifier.width(13.dp))
     }

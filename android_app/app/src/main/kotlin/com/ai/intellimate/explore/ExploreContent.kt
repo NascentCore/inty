@@ -47,6 +47,19 @@ import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
+
+// 判断是否为动图URL（非视频）
+private fun isAnimatedImageUrl(url: String?): Boolean {
+    if (url.isNullOrBlank()) return false
+    val lowerUrl = url.lowercase()
+    return lowerUrl.endsWith(".gif") ||
+            lowerUrl.endsWith(".webp") ||
+            lowerUrl.endsWith(".avif") ||
+            lowerUrl.contains(".gif?") ||
+            lowerUrl.contains(".webp?") ||
+            lowerUrl.contains(".avif?")
+}
+
 /** Explore页面的主要内容组件 */
 @Composable
 fun ExploreContent(
@@ -101,44 +114,95 @@ fun ExploreContent(
         }
     }
 
-    // 检测是否到达第一页末尾（最后一个可见的agent item索引 >= 19，即第20个item）
-    val isAtPageEnd by remember {
+    // 检测应该播放动图的 item 索引列表（所有可见区域>=70%的item，按位置从上到下排序）
+    val visibleItemIndices by remember {
         derivedStateOf {
             val layoutInfo = gridState.layoutInfo
-            // 找到最后一个可见的agent item（排除加载状态指示器和Spacer）
+            val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+            if (viewportHeight <= 0) return@derivedStateOf emptyList<Int>()
+
+            val agentItemCount = lazyPagingItems?.itemCount ?: 0
+            if (agentItemCount == 0) return@derivedStateOf emptyList<Int>()
+
+            // 过滤出 agent items（排除加载状态指示器和Spacer）
             val agentItems =
                 layoutInfo.visibleItemsInfo.filter { itemInfo ->
-                    // 计算agent items的数量：totalItemsCount - 2（加载状态 + Spacer）
-                    val agentItemCount = lazyPagingItems?.itemCount ?: 0
                     itemInfo.index < agentItemCount
                 }
-            val lastVisibleAgentIndex = agentItems.lastOrNull()?.index ?: -1
-            lastVisibleAgentIndex >= 19 // 第20个agent item，索引为19
+
+            // 找到所有可见比例 >= 70% 的 item 索引（按位置排序，从上到下）
+            val visibleIndices = mutableListOf<Int>()
+            for (itemInfo in agentItems.sortedBy { it.offset.y }) {
+                val itemTop = itemInfo.offset.y
+                val itemBottom = itemInfo.offset.y + itemInfo.size.height
+                val viewportTop = layoutInfo.viewportStartOffset
+                val viewportBottom = layoutInfo.viewportEndOffset
+
+                // 计算可见区域
+                val visibleTop = maxOf(itemTop, viewportTop)
+                val visibleBottom = minOf(itemBottom, viewportBottom)
+                val visibleHeight = maxOf(0, visibleBottom - visibleTop)
+                val itemHeight = itemInfo.size.height
+
+                // 计算可见比例
+                val visibleRatio = if (itemHeight > 0) visibleHeight.toFloat() / itemHeight else 0f
+
+                // 如果可见比例 >= 70%，添加到列表中（保持从上到下的顺序）
+                if (visibleRatio >= 0.7f) {
+                    visibleIndices.add(itemInfo.index)
+                }
+            }
+
+            visibleIndices
         }
     }
 
-    // 检测滚动方向：记录上一次的第一可见item索引
-    var lastFirstVisibleIndex by remember { mutableIntStateOf(-1) }
-    var isScrollingDown by remember { mutableStateOf(false) } // 是否向下滚动（期待加载更多）
+    // 找到第一个可见且有 backgroundAnimatedUrl 的 item 索引
+    var firstPlayingItemIndex by remember { mutableIntStateOf(-1) }
 
-    // 监听滚动状态，检测滚动方向和保存位置
+    // 监听可见项、滚动状态和 item 数据变化，更新播放索引
+    LaunchedEffect(visibleItemIndices, lazyPagingItems?.itemCount, gridState.isScrollInProgress) {
+        if (gridState.isScrollInProgress) {
+            // 滚动中，不播放
+            firstPlayingItemIndex = -1
+            return@LaunchedEffect
+        }
+
+        val itemCount = lazyPagingItems?.itemCount ?: 0
+        if (itemCount == 0) {
+            firstPlayingItemIndex = -1
+            return@LaunchedEffect
+        }
+
+        // 按顺序遍历可见的 item（已经按从上到下排序），找到第一个有 backgroundAnimatedUrl 且是动图的
+        firstPlayingItemIndex = -1
+        for (index in visibleItemIndices) {
+            // 检查索引是否在有效范围内，避免 IndexOutOfBoundsException
+            if (index !in 0..<itemCount) {
+                continue
+            }
+            val agent = lazyPagingItems?.get(index)
+            if (agent != null && agent.backgroundAnimatedUrl.isNotBlank()) {
+                // 只处理动图，不处理视频
+                if (isAnimatedImageUrl(agent.backgroundAnimatedUrl)) {
+                    firstPlayingItemIndex = index
+                    break
+                }
+            }
+        }
+    }
+
+    // 监听滚动状态，保存位置和更新滚动标记
     LaunchedEffect(gridState.isScrollInProgress, gridState.firstVisibleItemIndex) {
         if (gridState.isScrollInProgress) {
-            val currentFirstVisibleIndex = gridState.firstVisibleItemIndex
-
-            // 判断滚动方向：向下滚动时，firstVisibleItemIndex增大
-            isScrollingDown = currentFirstVisibleIndex > lastFirstVisibleIndex
-
             lastScrollTime = System.currentTimeMillis()
             hasUserScrolled = true // 标记用户已主动滚动
-            lastFirstVisibleIndex = currentFirstVisibleIndex
         } else {
             // 滚动停止时保存位置
             vm.saveScrollPosition(
                 gridState.firstVisibleItemIndex,
                 gridState.firstVisibleItemScrollOffset,
             )
-            lastFirstVisibleIndex = gridState.firstVisibleItemIndex
         }
     }
 
@@ -153,8 +217,8 @@ fun ExploreContent(
                 // 首次进入时使用缓存数据，不应该显示加载更多loading
                 if (
                     currentTime - lastScrollTime < 1000 &&
-                        lazyPagingItems.itemCount > 0 &&
-                        lazyPagingItems.loadState.refresh is LoadState.NotLoading
+                    lazyPagingItems.itemCount > 0 &&
+                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
                 ) {
                     showLoadMoreLoading = true
                     // 延迟隐藏loading
@@ -222,17 +286,22 @@ fun ExploreContent(
                 ) { index ->
                     val agent = lazyPagingItems[index]
                     if (agent != null) {
+                        // 只播放第一个可见且有 backgroundAnimatedUrl 的 item
+                        val shouldPlay = index == firstPlayingItemIndex
+
                         ExploreCharacterCard(
                             modifier = Modifier.fillMaxWidth(),
                             agentInfo = agent,
                             onClick = { onClickAgent(agent) },
                             index = index,
+                            shouldPlayAnimated = shouldPlay,
                         )
                     } else {
                         // 显示加载占位符
                         ShimmerPlaceholder(
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .height(200.dp)
                                     .clip(RoundedCornerShape(8.dp))
                         )
@@ -253,7 +322,11 @@ fun ExploreContent(
 /** 空状态指示器 */
 @Composable
 private fun EmptyStateIndicator() {
-    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .height(200.dp), contentAlignment = Alignment.Center
+    ) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
     }
 }

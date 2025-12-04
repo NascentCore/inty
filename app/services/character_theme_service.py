@@ -15,12 +15,14 @@ from app.schemas import character_theme as character_theme_schemas
 
 
 async def _ensure_visibility_uniqueness(
-    db: AsyncSession, visibility: CharacterThemeVisibility, exclude_theme_id: Optional[str] = None
+    db: AsyncSession,
+    visibility: CharacterThemeVisibility,
+    exclude_theme_id: Optional[str] = None,
 ) -> None:
     """确保可见性的唯一性约束
-    
+
     当设置专区为 PRIMARY 或 SECONDARY 时，将其他具有相同可见性的专区改为 HIDDEN
-    
+
     Args:
         db: 数据库会话
         visibility: 要设置的可见性
@@ -105,7 +107,7 @@ async def list_themes(
     db: AsyncSession, skip: int = 0, limit: int = 100, include_hidden: bool = False
 ) -> List[models.CharacterTheme]:
     """获取角色主题专区列表
-    
+
     Args:
         db: 数据库会话
         skip: 跳过的记录数
@@ -158,7 +160,9 @@ async def update_theme(
     if "visibility" in update_data:
         new_visibility = update_data["visibility"]
         if new_visibility is not None:
-            await _ensure_visibility_uniqueness(db, new_visibility, exclude_theme_id=theme_id)
+            await _ensure_visibility_uniqueness(
+                db, new_visibility, exclude_theme_id=theme_id
+            )
 
     for field, value in update_data.items():
         setattr(theme, field, value)

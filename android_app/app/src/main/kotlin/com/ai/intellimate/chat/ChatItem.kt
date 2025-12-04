@@ -3,6 +3,7 @@ package com.ai.intellimate.chat
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.TimeUtils
@@ -35,6 +36,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -95,15 +97,23 @@ fun ChatItem(
     chatViewModel: ChatViewModel? = null,
     isLatestMessage: Boolean = false,
     isGuideVisible: Boolean = false,
+    messageFontSizeSp: Float = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP,
 ) {
     runCatching {
             when (item.role) {
                 "assistant" -> {
-                    ChatItemAI(item, isCurrentPage, chatViewModel, isLatestMessage, isGuideVisible)
+                    ChatItemAI(
+                        item,
+                        isCurrentPage,
+                        chatViewModel,
+                        isLatestMessage,
+                        isGuideVisible,
+                        messageFontSizeSp,
+                    )
                 }
 
                 "user" -> {
-                    ChatItemUser(item)
+                    ChatItemUser(item, messageFontSizeSp)
                 }
 
                 "system" -> {
@@ -112,7 +122,7 @@ fun ChatItem(
 
                 else -> {
                     LogUtils.w("ChatItem - 未知角色: ${item.role}")
-                    ChatItemUser(item)
+                    ChatItemUser(item, messageFontSizeSp)
                 }
             }
         }
@@ -138,9 +148,12 @@ private fun ChatItemAI(
     chatViewModel: ChatViewModel? = null,
     isLatestMessage: Boolean = false,
     isGuideVisible: Boolean = false,
+    messageFontSizeSp: Float,
 ) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
     val timestampText = remember(item.timestamp) { formatTimestamp(item.timestamp) }
+    val messageFontSize = messageFontSizeSp.sp
+    val agentInfo by viewModel.agentInfo.collectAsState()
 
     runCatching {
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -153,8 +166,6 @@ private fun ChatItemAI(
                 val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
 
                 if (item.content.isNotEmpty() && item.content != "loading_animation") {
-                    val agentInfo by viewModel.agentInfo.collectAsState()
-
                     val vmAgentId = agentInfo?.id
                     val metaAgentId = item.agentId()
                     val safeAgentId = vmAgentId ?: metaAgentId ?: ""
@@ -249,11 +260,10 @@ private fun ChatItemAI(
                                 )
                                 .widthIn(min = 1.dp)
                     ) {
-                        LoadingAnimation()
+                        LoadingAnimation(agentInfo?.name)
                     }
                 } else if (!shouldHideText && item.content.isNotEmpty()) {
                     val allMessages by viewModel.msgs.collectAsState()
-                    val agentInfo by viewModel.agentInfo.collectAsState()
                     val agentId = agentInfo?.id ?: ""
 
                     // 记录查询完成时已存在的消息ID列表，用于区分历史消息和新消息
@@ -308,7 +318,7 @@ private fun ChatItemAI(
                             if (item.content.isNotEmpty()) {
                                 StyledMessageText(
                                     text = item.content,
-                                    fontSize = 14.sp,
+                                    fontSize = messageFontSize,
                                     fontWeight = FontWeight.Normal,
                                     normalColor = Color.White,
                                     actionColor = Color.White.copy(0.55f),
@@ -475,7 +485,7 @@ private fun ChatItemAI(
                     Text(
                         text = item.content.ifEmpty { "Message content is empty" },
                         color = Color.White,
-                        fontSize = 14.sp,
+                        fontSize = messageFontSize,
                     )
                 }
                 Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
@@ -485,7 +495,8 @@ private fun ChatItemAI(
 
 /** 用户消息气泡布局，靠右对齐。 */
 @Composable
-private fun ChatItemUser(item: MsgInfo) {
+private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
+    val messageFontSize = messageFontSizeSp.sp
     runCatching {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 val context = LocalContext.current
@@ -513,7 +524,7 @@ private fun ChatItemUser(item: MsgInfo) {
                 ) {
                     StyledMessageText(
                         text = item.content,
-                        fontSize = 14.sp,
+                        fontSize = messageFontSize,
                         fontWeight = FontWeight.Normal,
                         normalColor = Color(0xff090909),
                         actionColor = Color(0xff090909).copy(0.6f),
@@ -550,7 +561,7 @@ private fun ChatItemUser(item: MsgInfo) {
                     Text(
                         text = item.content.ifEmpty { "Message content is empty" },
                         color = Color(0xff090909),
-                        fontSize = 14.sp,
+                        fontSize = messageFontSize,
                     )
                 }
             }
@@ -621,9 +632,9 @@ private fun StyledMessageText(
                 displayCompleteCall?.invoke()
             }
 
-            /*DisposableEffect(Unit) {
+            DisposableEffect(Unit) {
                 onDispose { displayCompleteCall?.invoke() }
-            }*/
+            }
 
             remember(displayedWordCount, words, text) {
                 val partialText = words.take(displayedWordCount).joinToString("")
@@ -691,54 +702,34 @@ private fun ensureBracketsComplete(partialText: String, fullText: String): Strin
         return partialText
     }
 
-    // 找到完整文本中的所有括号对
     val bracketPairs = findBracketPairs(fullText)
+    if (bracketPairs.isEmpty()) {
+        return partialText
+    }
 
-    // 检查部分文本中是否有未完成的括号
     val result = StringBuilder(partialText)
+    val pendingClosures =
+        bracketPairs
+            .asSequence()
+            .filter { (start, end) -> start < partialText.length && end >= partialText.length }
+            .sortedByDescending { it.first } // 先关闭内层，再关闭外层
+            .toList()
 
-    bracketPairs.forEach { (start, end) ->
-        val bracketStartChar = fullText[start]
+    pendingClosures.forEach { (_, end) ->
         val bracketEndChar = fullText[end]
-
-        // 统计部分文本中开始括号和结束括号的数量
-        var startCount = 0
-        var endCount = 0
-
-        for (i in 0 until minOf(partialText.length, fullText.length)) {
-            if (i < partialText.length && i < fullText.length) {
-                when (partialText[i]) {
-                    bracketStartChar -> startCount++
-                    bracketEndChar -> endCount++
+        val afterBracket = end + 1
+        val trailingSpace =
+            if (afterBracket < fullText.length && fullText[afterBracket].isWhitespace()) {
+                var spaceEnd = afterBracket
+                while (spaceEnd < fullText.length && fullText[spaceEnd].isWhitespace()) {
+                    spaceEnd++
                 }
+                fullText.substring(afterBracket, spaceEnd)
+            } else {
+                ""
             }
-        }
 
-        // 如果部分文本中有开始括号但没有对应的结束括号，需要补完
-        if (startCount > endCount) {
-            // 检查部分文本是否已经包含了括号内的部分内容
-            // 通过检查部分文本的长度是否超过了开始括号的位置
-            if (partialText.length > start) {
-                // 获取括号后的空格（如果有）
-                val afterBracket = end + 1
-                val trailingSpace =
-                    if (afterBracket < fullText.length && fullText[afterBracket].isWhitespace()) {
-                        var spaceEnd = afterBracket
-                        while (spaceEnd < fullText.length && fullText[spaceEnd].isWhitespace()) {
-                            spaceEnd++
-                        }
-                        fullText.substring(afterBracket, spaceEnd)
-                    } else {
-                        ""
-                    }
-
-                // 在部分文本的末尾添加结束括号和后续空格
-                // 但需要检查是否已经添加过了
-                if (!result.endsWith(bracketEndChar)) {
-                    result.append(bracketEndChar).append(trailingSpace)
-                }
-            }
-        }
+        result.append(bracketEndChar).append(trailingSpace)
     }
 
     return result.toString()
@@ -771,28 +762,42 @@ private fun findBracketPairs(text: String): List<Pair<Int, Int>> {
 }
 
 @Composable
-private fun LoadingAnimation() {
+private fun LoadingAnimation(agentName: String?) {
     val infiniteTransition = rememberInfiniteTransition(label = "loading")
+    val fallbackName =
+        agentName?.takeIf { it.isNotBlank() }
+            ?: stringResource(R.string.chat_ai_typing_default_name)
+    val typingPlaceholder = stringResource(R.string.chat_ai_typing_placeholder, fallbackName)
 
     Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        repeat(3) { index ->
-            val delay = index * 200
-            val dotAlpha by
-                infiniteTransition.animateFloat(
-                    initialValue = 0.3f,
-                    targetValue = 1.0f,
-                    animationSpec = infiniteRepeatable(animation = tween(600, delayMillis = delay)),
-                    label = "dot_alpha_$index",
-                )
+        Text(text = typingPlaceholder, color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            repeat(3) { index ->
+                val delay = index * 200
+                val dotAlpha by
+                    infiniteTransition.animateFloat(
+                        initialValue = 0.3f,
+                        targetValue = 1.0f,
+                        animationSpec =
+                            infiniteRepeatable(animation = tween(600, delayMillis = delay)),
+                        label = "dot_alpha_$index",
+                    )
 
-            Box(
-                modifier =
-                    Modifier.size(6.dp)
-                        .background(color = Color.White.copy(dotAlpha * 0.7f), shape = CircleShape)
-            )
+                Box(
+                    modifier =
+                        Modifier.size(6.dp)
+                            .background(
+                                color = Color.White.copy(dotAlpha * 0.7f),
+                                shape = CircleShape,
+                            )
+                )
+            }
         }
     }
 }

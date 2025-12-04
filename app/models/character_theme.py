@@ -56,9 +56,10 @@ class CharacterThemeAgent(Base):
     agent_id = Column(
         String, ForeignKey("agents.id", ondelete="CASCADE"), primary_key=True
     )
-    order_index = Column(Integer, nullable=False, comment="角色在专区中的顺序（从0开始）")
+    order_index = Column(
+        Integer, nullable=False, comment="角色在专区中的顺序（从0开始）"
+    )
 
     # 关系
     theme = relationship("CharacterTheme", back_populates="agents")
     agent = relationship("Agent")
-

@@ -10,6 +10,9 @@ import kotlin.random.Random
 
 private const val KEY_RESUB_REMINDER_LAST_TIME = "resub_reminder_last_time"
 private const val KEY_RESUB_REMINDER_SHOW_COUNT = "resub_reminder_show_count"
+private const val KEY_CHAT_FONT_SIZE_SP = "chat_font_size_sp"
+private const val KEY_MESSAGES_TAB_HAS_PUSH = "messages_tab_has_push"
+private const val DEFAULT_CHAT_FONT_SIZE_SP = 14f
 
 object IntySetting {
 
@@ -72,19 +75,6 @@ object IntySetting {
         NetServiceMgr.clearCache()
     }
 
-    /** 用于业务标记消息已读的最后一条消息的判断 */
-    fun isConversationReaded(agentID: String, lastMessage: String): Boolean {
-        val configLastMsg = curUserSetting.decodeString("conversation_last_$agentID", agentID)
-        //        LogUtils.d("$agentID = $configLastMsg, new=$lastMessage")
-        return (configLastMsg == lastMessage)
-    }
-
-    /** 用于业务标记消息已读的最后一条消息 */
-    fun setConversationReaded(agentID: String, lastMessage: String) {
-        //        LogUtils.d("$agentID = $lastMessage")
-        curUserSetting.putString("conversation_last_$agentID", lastMessage)
-    }
-
     /** 记录是否显示keepTalking按钮（全局设置） */
     fun setShowKeepTalking(show: Boolean) {
         curUserSetting.putBoolean("show_keep_talking", show)
@@ -144,6 +134,15 @@ object IntySetting {
         curUserSetting.putBoolean("user_set_scene_action_button", true)
     }
 
+    /** 聊天消息字体大小（单位 sp，默认 14f） */
+    fun setChatFontSizeSp(size: Float) {
+        curUserSetting.putFloat(KEY_CHAT_FONT_SIZE_SP, size)
+    }
+
+    fun getChatFontSizeSp(): Float {
+        return curUserSetting.decodeFloat(KEY_CHAT_FONT_SIZE_SP, DEFAULT_CHAT_FONT_SIZE_SP)
+    }
+
     fun getLastResubReminderDialogShowTime(): Long {
         return curUserSetting.decodeLong(KEY_RESUB_REMINDER_LAST_TIME, 0L)
     }
@@ -158,6 +157,15 @@ object IntySetting {
 
     fun setResubReminderDialogShowCount(count: Int) {
         curUserSetting.putInt(KEY_RESUB_REMINDER_SHOW_COUNT, count)
+    }
+
+    /** 记录消息Tab是否需要显示推送红点 */
+    fun setMessagesTabHasPush(hasPush: Boolean) {
+        curUserSetting.putBoolean(KEY_MESSAGES_TAB_HAS_PUSH, hasPush)
+    }
+
+    fun hasMessagesTabPush(): Boolean {
+        return curUserSetting.decodeBool(KEY_MESSAGES_TAB_HAS_PUSH, false)
     }
 
     // 标记是否已经有可用的App更新，用于红点标记

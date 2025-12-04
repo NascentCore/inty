@@ -109,8 +109,8 @@ internal fun ModifyProfileScreen(
                 editValue = userProfile.value.gender ?: ""
             },
             onSelectAvatar = {  },
-            onSave = { viewModel.onSave() },
-            isSaving = isSaving.value,
+//            onSave = { viewModel.onSave() },
+//            isSaving = isSaving.value,
         )
 
         if (editKey != EditKey.None) {

@@ -95,6 +95,7 @@ const MessageList: React.FC<IMessageListProps> = ({
           </div>
         )}
         <div className="sending-bubble">
+          <span className="typing-placeholder">Your IntelliMate is typing </span>
           <div className="typing-indicator">
             <span />
             <span />

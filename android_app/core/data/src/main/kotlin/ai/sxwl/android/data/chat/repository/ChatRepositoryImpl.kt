@@ -7,7 +7,6 @@ import ai.sxwl.android.data.api.model.VoteMessageRsp
 import ai.sxwl.android.data.chat.data.ChatLocalDataSource
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
-import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.flow.StateFlow
@@ -194,11 +193,6 @@ class ChatRepositoryImpl(
             if (choices.isNotEmpty()) {
                 val assistantMsgs = choices.map { it.message }
                 localDataSource.prependMessages(agentId, assistantMsgs)
-
-                // 会话已读更新
-                choices.lastOrNull()?.message?.content?.let { lastContent ->
-                    IntySetting.setConversationReaded(agentId, lastContent)
-                }
             }
         }
 
@@ -400,11 +394,6 @@ class ChatRepositoryImpl(
             if (choices.isNotEmpty()) {
                 val assistantMsgs = choices.map { it.message }
                 localDataSource.prependMessages(agentId, assistantMsgs)
-
-                // 会话已读更新
-                choices.lastOrNull()?.message?.content?.let { lastContent ->
-                    IntySetting.setConversationReaded(agentId, lastContent)
-                }
             }
         }
     }

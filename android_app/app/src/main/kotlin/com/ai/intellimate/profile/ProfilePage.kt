@@ -9,10 +9,15 @@ import ai.sxwl.android.data.billing.VipStatus
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.VibeModeColors
 import ai.sxwl.android.utils.TimeUtils
 import ai.sxwl.android.utils.ToastUtils
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -48,16 +53,20 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -76,6 +85,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -84,11 +95,16 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
+import com.ai.intellimate.settings.check.CheckInActivity
+import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.xb.navigation.Routes
 import kotlin.math.abs
@@ -109,10 +125,22 @@ internal fun ProfilePage(
     onLoadMore: () -> Unit = {},
     onShowSettings: () -> Unit,
     vipStatus: VipStatus? = null, // 可选的 VIP 状态，用于预览
+    profileViewModel: ProfileViewModel? = null, // 用于刷新用户信息
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
+
+    // 创建用于编辑个人资料的 launcher，在 ProfilePage 内部处理
+    val editProfileLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            // 从 ModifyProfileActivity 返回后，刷新用户信息
+            if (result.resultCode == Activity.RESULT_OK) {
+                profileViewModel?.updateUserInfoLocal()
+            }
+        }
 
     // 使用 PageTrackingHelper 进行页面跟踪
     LaunchedEffect(Unit) {
@@ -121,6 +149,14 @@ internal fun ProfilePage(
             "MainActivity",
             mapOf("agent_count" to agents.size, "is_loading" to isLoading),
         )
+    }
+
+    // 监听页面恢复，自动刷新用户信息（从 ModifyProfileActivity 返回时会触发）
+    if (profileViewModel != null) {
+        LifecycleResumeEffect(profileViewModel) {
+            profileViewModel.updateUserInfoLocal()
+            onPauseOrDispose {}
+        }
     }
 
     // 折叠相关状态
@@ -247,6 +283,7 @@ internal fun ProfilePage(
                     innerPadding = innerPadding,
                     context = context,
                     vipStatus = vipStatus,
+                    editProfileLauncher = editProfileLauncher,
                 )
 
                 // LazyGrid 区域
@@ -360,6 +397,7 @@ private fun ProfileHeader(
     innerPadding: PaddingValues,
     context: Context,
     vipStatus: VipStatus? = null, // 可选的 VIP 状态，用于预览
+    editProfileLauncher: ActivityResultLauncher<Intent>, // 编辑个人资料的 launcher
 ) {
     // 如果提供了 vipStatus 参数，使用它；否则从 BillingRepository 获取并响应Flow变化
     // 使用 collectAsState() 来响应 Flow 的变化，确保订阅状态更新时UI能及时刷新
@@ -368,6 +406,36 @@ private fun ProfileHeader(
     // 预览模式下使用传入的 vipStatus，正常模式下使用 Flow 的值
     // 当 vipStatusFromFlow 变化时，currentVipStatus 会自动重新计算
     val currentVipStatus = vipStatus ?: vipStatusFromFlow
+    val isSubscribed = currentVipStatus.isSubscribed
+    var showSubscribeDialog by remember { mutableStateOf(false) }
+
+    if (showSubscribeDialog) {
+        val dialogData =
+            ChatDialogData(
+                R.drawable.img_unlimit_dialog_bg,
+                stringResource(R.string.str_unlimit_dialog_content),
+                stringResource(R.string.str_unlimit_btn_text),
+            )
+
+        UnlimitChatDialog(
+            dialogData = dialogData,
+            onCancel = { showSubscribeDialog = false },
+            onSure = {
+                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                    navController.navigate(Routes.VipCenter)
+//                    VipCenterActivity.launch(context, VipCenterActivity.PROFILE_UPGRADE)
+                }
+                showSubscribeDialog = false
+            },
+            onMoreInfo = {
+                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                    navController.navigate(Routes.VipCenter)
+//                    VipCenterActivity.launch(context, VipCenterActivity.PROFILE_UPGRADE)
+                }
+                showSubscribeDialog = false
+            },
+        )
+    }
 
     // Settings 图标位置固定，不响应折叠状态
     val topSpacerHeight = innerPadding.calculateTopPadding() + UiConfigs.MePage.TopSpacerOffset
@@ -451,26 +519,27 @@ private fun ProfileHeader(
                 contentDescription = stringResource(R.string.me_icons_row_whatsapp),
             )
             Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
-            //
-            //            AsyncImage(
-            //                modifier =
-            //                    Modifier
-            //                        .size(24.dp)
-            //                        .clickable {
-            //                            val currentTime = System.currentTimeMillis()
-            //                            if (AntiClick.isValidClick(lastClickTime)) {
-            //                                lastClickTime = currentTime
-            //                                try {
-            //                                    ToastUtils.showShort("Not Implementation！")
-            //                                } catch (e: Exception) {
-            //                                    ToastUtils.showLargeText(e.toString())
-            //                                }
-            //                            }
-            //                        },
-            //                model = R.drawable.ic_checkin,
-            //                contentDescription = null,
-            //            )
-            //            Spacer(Modifier.width(8.dp))
+
+            AsyncImage(
+                modifier =
+                    Modifier.size(24.dp).clickable {
+                        val currentTime = System.currentTimeMillis()
+                        if (AntiClick.isValidClick(lastClickTime)) {
+                            lastClickTime = currentTime
+                            //                                            try {
+                            //
+                            // ToastUtils.showShort("Not Implementation！")
+                            //                                            } catch (e: Exception) {
+                            //
+                            // ToastUtils.showLargeText(e.toString())
+                            //                                            }
+                            CheckInActivity.launch(context)
+                        }
+                    },
+                model = R.drawable.ic_checkin,
+                contentDescription = null,
+            )
+            Spacer(Modifier.width(8.dp))
 
             AsyncImage(
                 modifier =
@@ -509,16 +578,17 @@ private fun ProfileHeader(
                         .background(color = Color.White, shape = CircleShape)
                         .padding(UiConfigs.MePage.AvatarPadding)
             ) {
-                AsyncImage(
-                    modifier = Modifier.fillMaxSize().clip(CircleShape),
-                    model =
-                        ImageRequest.Builder(context)
-                            .data(getCdnImageUrl(userProfile.avatar, width = 512))
-                            .build(),
-                    placeholder = painterResource(R.drawable.app_icon),
-                    error = painterResource(R.drawable.app_icon),
-                    contentDescription = null,
-                )
+                // 使用头像 URL 作为 key，确保头像更新时重新加载
+                val avatarUrl = getCdnImageUrl(userProfile.avatar, width = 512)
+                key(avatarUrl) { // 使用 key 确保 URL 变化时重新创建组件
+                    AsyncImage(
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        model = ImageRequest.Builder(context).data(avatarUrl).build(),
+                        placeholder = painterResource(R.drawable.app_icon),
+                        error = painterResource(R.drawable.app_icon),
+                        contentDescription = null,
+                    )
+                }
             }
 
             // 头像和昵称之间的间距根据折叠状态调整
@@ -586,7 +656,12 @@ private fun ProfileHeader(
                                 if (
                                     IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
                                 ) {
-                                    ModifyProfileActivity.launch(context, userProfile)
+                                    // 使用 launcher 启动 ModifyProfileActivity，返回后会自动刷新用户信息
+                                    val intent =
+                                        Intent(context, ModifyProfileActivity::class.java).apply {
+                                            putExtra("intent_key_agent_info", userProfile)
+                                        }
+                                    editProfileLauncher.launch(intent)
                                 }
                             }
                         },
@@ -616,6 +691,18 @@ private fun ProfileHeader(
                         navController.navigate(Routes.VipCenter)
 //                        VipCenterActivity.launch(context, VipCenterActivity.PROFILE_UPGRADE)
                     },
+                )
+            }
+
+            if (BuildConfig.DEBUG) {
+                Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress)))
+
+                VibeModeBanner(
+                    modifier =
+                        Modifier.alpha(1f - collapseProgress)
+                            .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+                    isSubscribed = isSubscribed,
+                    onRequestSubscribe = { showSubscribeDialog = true },
                 )
             }
         }
@@ -886,6 +973,122 @@ private fun PremiumBanner(
                 }
 
             Text(text = str, fontSize = 16.sp, color = Color.White, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+// TODO: 当前是一个 on/off 滑动开关，改为点了之后直接打开/关闭的整体条幅。
+@Composable
+private fun VibeModeBanner(
+    modifier: Modifier = Modifier,
+    isSubscribed: Boolean,
+    onRequestSubscribe: () -> Unit,
+) {
+    var vibeEnabled by rememberSaveable(isSubscribed) { mutableStateOf(false) }
+    val isActive = isSubscribed && vibeEnabled
+
+    val backgroundBrush =
+        when {
+            !isSubscribed ->
+                Brush.linearGradient(
+                    listOf(VibeModeColors.DisabledStart, VibeModeColors.DisabledEnd)
+                )
+            isActive ->
+                Brush.horizontalGradient(
+                    listOf(VibeModeColors.ActiveStart, VibeModeColors.ActiveEnd)
+                )
+            else ->
+                Brush.horizontalGradient(
+                    listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd)
+                )
+        }
+
+    val shape = RoundedCornerShape(UiConfigs.MePage.VibeMode.CornerRadius)
+    val borderColor =
+        if (isActive) Color.White.copy(alpha = 0.45f)
+        else Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
+
+    val switchColors =
+        SwitchDefaults.colors(
+            checkedThumbColor = Color.White,
+            checkedTrackColor = VibeModeColors.SwitchTrackActive,
+            uncheckedThumbColor = Color.White,
+            uncheckedTrackColor =
+                if (isSubscribed) VibeModeColors.SwitchTrackInactive
+                else VibeModeColors.SwitchTrackDisabled,
+            checkedBorderColor = Color.Transparent,
+            uncheckedBorderColor = Color.Transparent,
+            disabledCheckedThumbColor = Color.White,
+            disabledCheckedTrackColor = VibeModeColors.SwitchTrackActive,
+            disabledUncheckedThumbColor = Color.White.copy(alpha = UiConfigs.Alpha.DisabledButton),
+            disabledUncheckedTrackColor = VibeModeColors.SwitchTrackDisabled,
+            disabledCheckedBorderColor = Color.Transparent,
+            disabledUncheckedBorderColor = Color.Transparent,
+        )
+
+    val baseModifier =
+        modifier
+            .clip(shape)
+            .background(brush = backgroundBrush, shape = shape)
+            .border(
+                width = UiConfigs.MePage.VibeMode.BorderWidth,
+                color = borderColor,
+                shape = shape,
+            )
+            .padding(UiConfigs.MePage.VibeMode.InnerPadding)
+
+    Row(
+        modifier =
+            baseModifier.then(
+                if (isSubscribed) {
+                    Modifier
+                } else {
+                    Modifier.clickable(onClick = onRequestSubscribe)
+                }
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text =
+                    stringResource(
+                        if (isActive) R.string.vibe_mode_active_title else R.string.vibe_mode_title
+                    ),
+                color = Color.White,
+                fontSize = UiConfigs.Typography.ButtonLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            if (!isActive) {
+                Spacer(Modifier.height(UiConfigs.Spacing.Small))
+                Text(
+                    text = stringResource(R.string.vibe_mode_subtitle),
+                    color = Color.White.copy(alpha = UiConfigs.Alpha.DimmedText),
+                    fontSize = UiConfigs.Typography.Support,
+                    lineHeight = UiConfigs.LineHeight.Support,
+                )
+            }
+        }
+
+        Spacer(Modifier.width(UiConfigs.MePage.VibeMode.ContentSpacing))
+
+        val switchWrapperModifier =
+            if (isSubscribed) {
+                Modifier
+            } else {
+                Modifier.clickable(onClick = onRequestSubscribe)
+            }
+
+        val toggleContentDescription = stringResource(R.string.vibe_mode_toggle_content_desc)
+
+        Box(modifier = switchWrapperModifier) {
+            Switch(
+                checked = isActive,
+                onCheckedChange = { checked -> vibeEnabled = checked },
+                enabled = isSubscribed,
+                colors = switchColors,
+                modifier = Modifier.semantics { contentDescription = toggleContentDescription },
+            )
         }
     }
 }
