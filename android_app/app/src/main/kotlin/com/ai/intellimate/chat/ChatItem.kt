@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -631,9 +632,9 @@ private fun StyledMessageText(
                 displayCompleteCall?.invoke()
             }
 
-            /*DisposableEffect(Unit) {
+            DisposableEffect(Unit) {
                 onDispose { displayCompleteCall?.invoke() }
-            }*/
+            }
 
             remember(displayedWordCount, words, text) {
                 val partialText = words.take(displayedWordCount).joinToString("")
