@@ -50,6 +50,7 @@
     <string name="character_updated_successfully">Updated</string>
     <string name="character_deleted_successfully">Deleted</string>
     <string name="saved_successfully">Saved</string>
+    <string name="avatar_upload_success">Avatar uploaded</string>
 
     <!-- Pin/Hide messages -->
     <string name="pin">Pin</string>

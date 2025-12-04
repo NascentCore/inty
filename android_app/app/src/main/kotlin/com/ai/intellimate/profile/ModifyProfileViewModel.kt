@@ -193,9 +193,9 @@ class ModifyProfileViewModel : BaseVM() {
                                     // No cropping, just use the provided url.
                                     avatar = result.data.url
                                 )
-                            // Show success toast for avatar upload
+                            // 头像上传完毕提示
                             viewModelScope.launch(Dispatchers.Main) {
-                                ToastUtils.showShort(R.string.saved_successfully)
+                                ToastUtils.showShort(R.string.avatar_upload_success)
                             }
                         }
                         is HttpResult.Failure -> {
