@@ -3,6 +3,7 @@ package com.ai.intellimate.explore
 import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.noRippleClickable
+import android.graphics.drawable.AnimatedImageDrawable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -34,7 +35,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.asDrawable
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
 import coil3.request.ImageRequest
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.ui.components.SmartTagsLayout
@@ -100,13 +105,22 @@ fun ExploreCharacterCard(
     // 图片加载状态
     var staticImageLoaded by remember(agentInfo.id) { mutableStateOf(false) }
     var animatedImageLoaded by remember(agentInfo.id) { mutableStateOf(false) }
+    var animatedImageDrawable by remember(agentInfo.id) { mutableStateOf<AnimatedImageDrawable?>(null) }
 
     // 是否显示动图（动图加载成功且应该播放）
     var showAnimatedImage by remember(agentInfo.id) { mutableStateOf(false) }
 
-    // 当动图加载成功且应该播放时，显示动图
-    LaunchedEffect(animatedImageLoaded, shouldPlayAnimated) {
+    // 当动图加载成功且应该播放时，显示动图并开始播放
+    LaunchedEffect(animatedImageLoaded, shouldPlayAnimated, animatedImageDrawable) {
         showAnimatedImage = animatedImageLoaded && shouldPlayAnimated
+        if (showAnimatedImage && animatedImageDrawable != null) {
+            val drawable = animatedImageDrawable
+            if (drawable != null && !drawable.isRunning) {
+                drawable.start()
+            }
+        } else if (!showAnimatedImage && animatedImageDrawable != null) {
+            animatedImageDrawable?.stop()
+        }
     }
 
     val isDebugMode = HeartAppUtils.isAppDebugMode()
@@ -181,15 +195,34 @@ fun ExploreCharacterCard(
                         label = "animatedImageAlpha",
                     )
 
-                AsyncImage(
+                SubcomposeAsyncImage(
                     modifier = Modifier.fillMaxSize().alpha(animatedImageAlpha),
                     model = ImageRequest.Builder(context).data(animatedImageUrl).build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     alignment = Alignment.TopCenter,
-                    onSuccess = { animatedImageLoaded = true },
-                    onError = { animatedImageLoaded = false },
-                )
+                    onState = { state ->
+                        if (state is AsyncImagePainter.State.Success) {
+                            val drawable = state.result.image.asDrawable(context.resources)
+                            if (drawable is AnimatedImageDrawable) {
+                                if (animatedImageDrawable != drawable) {
+                                    animatedImageDrawable = drawable
+                                }
+                                if (!animatedImageLoaded) {
+                                    animatedImageLoaded = true
+                                }
+                            } else {
+                                if (!animatedImageLoaded) {
+                                    animatedImageLoaded = true
+                                }
+                            }
+                        } else if (state is AsyncImagePainter.State.Error) {
+                            animatedImageLoaded = false
+                        }
+                    },
+                ) {
+                    SubcomposeAsyncImageContent()
+                }
             }
         }
 

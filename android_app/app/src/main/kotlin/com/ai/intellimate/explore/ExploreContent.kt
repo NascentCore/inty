@@ -113,7 +113,9 @@ fun ExploreContent(
 
             // 过滤出 agent items（排除加载状态指示器和Spacer）
             val agentItems =
-                layoutInfo.visibleItemsInfo.filter { itemInfo -> itemInfo.index < agentItemCount }
+                layoutInfo.visibleItemsInfo.filter { itemInfo ->
+                    itemInfo.index < agentItemCount
+                }
 
             // 找到所有可见比例 >= 70% 的 item 索引（按位置排序，从上到下）
             val visibleIndices = mutableListOf<Int>()
@@ -162,7 +164,7 @@ fun ExploreContent(
         // 按顺序遍历可见的 item（已经按从上到下排序），找到第一个有 backgroundAnimatedUrl 的
         firstPlayingItemIndex = -1
         for (index in visibleItemIndices) {
-            // 检查索引是否在有效范围内
+            // 检查索引是否在有效范围内，避免 IndexOutOfBoundsException
             if (index !in 0..<itemCount) {
                 continue
             }
@@ -199,8 +201,8 @@ fun ExploreContent(
                 // 首次进入时使用缓存数据，不应该显示加载更多loading
                 if (
                     currentTime - lastScrollTime < 1000 &&
-                        lazyPagingItems.itemCount > 0 &&
-                        lazyPagingItems.loadState.refresh is LoadState.NotLoading
+                    lazyPagingItems.itemCount > 0 &&
+                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
                 ) {
                     showLoadMoreLoading = true
                     // 延迟隐藏loading
@@ -282,7 +284,8 @@ fun ExploreContent(
                         // 显示加载占位符
                         ShimmerPlaceholder(
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .height(200.dp)
                                     .clip(RoundedCornerShape(8.dp))
                         )
@@ -303,7 +306,11 @@ fun ExploreContent(
 /** 空状态指示器 */
 @Composable
 private fun EmptyStateIndicator() {
-    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .height(200.dp), contentAlignment = Alignment.Center
+    ) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
     }
 }

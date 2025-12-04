@@ -99,7 +99,7 @@ class ChatViewModel : BaseVM() {
     private var hasMoreJob: Job? = null
     private var boundAgentId: String? = null
 
-    fun setAgentInfo(agentInfo: AgentInfo?) {
+    fun setAgentInfo(agentInfo: AgentInfo?, forceSync: Boolean = false) {
 
         // Firebase Analytics - Agent 信息已设置（不再记录 chat_session_start，避免 HorizontalPager 缓存机制导致的误触发）
         agentInfo?.let { agent ->
@@ -132,9 +132,20 @@ class ChatViewModel : BaseVM() {
             return
         }
 
-        // 如果是同一个 agent，只更新信息，不重新查询消息
+        // 如果是同一个 agent，根据 forceSync 参数决定是否重新查询消息
         if (_agentInfo.value?.id == agentInfo.id) {
             _agentInfo.value = agentInfo
+            // 如果强制同步，则触发消息同步（用于从通知进入等场景）
+            if (forceSync) {
+                LogUtils.i("ChatViewModel.setAgentInfo: forceSync=true, syncing messages for agentId=${agentInfo.id}")
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        syncChatDataUseCase(agentInfo.id)
+                    } catch (e: Exception) {
+                        LogUtils.e("ChatViewModel.setAgentInfo forceSync error: ${e.message}")
+                    }
+                }
+            }
             return
         }
 
@@ -1211,13 +1222,13 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    fun setAgentID(agentId: String) {
+    fun setAgentID(agentId: String, forceSync: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = NetServiceMgr.getChatApi().getAgentInfo(agentId)
                 when (result) {
                     is HttpResult.Success -> {
-                        setAgentInfo(result.data)
+                        setAgentInfo(result.data, forceSync = forceSync)
                     }
 
                     is HttpResult.Failure -> {
