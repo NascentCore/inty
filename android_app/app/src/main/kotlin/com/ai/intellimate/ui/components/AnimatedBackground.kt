@@ -113,7 +113,6 @@ private fun extractAnimatedImageDrawable(drawable: Drawable?): AnimatedImageDraw
             if (innerDrawable != null) {
                 val result = extractAnimatedImageDrawable(innerDrawable)
                 if (result != null) {
-                    LogUtils.d("AnimatedBackground - 从ScaleDrawable中提取到AnimatedImageDrawable")
                     return result
                 }
             }
@@ -138,7 +137,6 @@ private fun extractAnimatedImageDrawable(drawable: Drawable?): AnimatedImageDraw
         }
         val result = extractAnimatedImageDrawable(innerDrawable)
         if (result != null) {
-            LogUtils.d("AnimatedBackground - 从DrawableWrapper中提取到AnimatedImageDrawable")
             return result
         }
     }
@@ -149,7 +147,6 @@ private fun extractAnimatedImageDrawable(drawable: Drawable?): AnimatedImageDraw
             val layerDrawable = drawable.getDrawable(i)
             val animated = extractAnimatedImageDrawable(layerDrawable)
             if (animated != null) {
-                LogUtils.d("AnimatedBackground - 从LayerDrawable第${i}层中提取到AnimatedImageDrawable")
                 return animated
             }
         }
@@ -160,7 +157,6 @@ private fun extractAnimatedImageDrawable(drawable: Drawable?): AnimatedImageDraw
     if (unwrapped != drawable) {
         val result = extractAnimatedImageDrawable(unwrapped)
         if (result != null) {
-            LogUtils.d("AnimatedBackground - 从DrawableCompat.unwrap中提取到AnimatedImageDrawable")
             return result
         }
     }
@@ -175,7 +171,6 @@ private fun extractAnimatedImageDrawable(drawable: Drawable?): AnimatedImageDraw
                 if (innerDrawable != null && innerDrawable != drawable) {
                     val result = extractAnimatedImageDrawable(innerDrawable)
                     if (result != null) {
-                        LogUtils.d("AnimatedBackground - 通过反射字段${field.name}提取到AnimatedImageDrawable")
                         return result
                     }
                 }
@@ -222,16 +217,6 @@ fun AnimatedBackground(
 
     val isVideo = isVideoUrl(videoUrl)
     val isAnimatedImage = isAnimatedImageUrl(videoUrl)
-    
-    LaunchedEffect(videoUrl) {
-        val urlType = when {
-            isVideo -> "视频"
-            isAnimatedImage -> "动图"
-            videoUrl != null -> "静态图片"
-            else -> "无"
-        }
-        LogUtils.d("AnimatedBackground - URL类型: url=$videoUrl, type=$urlType, isVideo=$isVideo, isAnimatedImage=$isAnimatedImage")
-    }
 
     LaunchedEffect(videoUrl, isVideo, isVideoCached) {
             if (isVideo && videoUrl != null) {
@@ -270,12 +255,6 @@ fun AnimatedBackground(
                 isPlaying = false
                 lastPlayCount = playCount
                 lastShouldPlay = shouldPlay
-                LogUtils.d("AnimatedBackground - 设置播放参数: shouldPlay=true, playCount=$playCount, currentPlayCount=$currentPlayCount, actualPlayCount=$actualPlayCount, playCountChanged=$playCountChanged, shouldPlayChanged=$shouldPlayChanged")
-            } else {
-                // 如果 playCount 和 shouldPlay 都没有变化，但当前已完成，不重置
-                if (hasPlayCompleted) {
-                    LogUtils.d("AnimatedBackground - 播放已完成，且参数未变化，不重置: playCount=$playCount, hasPlayCompleted=$hasPlayCompleted")
-                }
             }
         } else {
             if (currentPlayCount != 0 || lastShouldPlay) {
@@ -284,7 +263,6 @@ fun AnimatedBackground(
                 actualPlayCount = 0
                 isPlaying = false
                 lastShouldPlay = false
-                LogUtils.d("AnimatedBackground - 停止播放: shouldPlay=false, currentPlayCount=0")
             }
         }
     }
@@ -292,7 +270,6 @@ fun AnimatedBackground(
     LaunchedEffect(videoUrl, staticImageUrl) {
         val isVideoLocal = isVideoUrl(videoUrl)
         val isAnimatedImageLocal = isAnimatedImageUrl(videoUrl)
-        LogUtils.d("AnimatedBackground - URL变化重置: videoUrl=$videoUrl, staticImageUrl=$staticImageUrl, isVideo=$isVideoLocal, isAnimatedImage=$isAnimatedImageLocal")
         
         if (videoUrl != null && staticImageUrl != null) {
             showStaticImage = true
@@ -312,7 +289,6 @@ fun AnimatedBackground(
         if (isAnimatedImageLocal) {
             animatedImageDrawable?.stop()
             animatedImageDrawable = null
-            LogUtils.d("AnimatedBackground - 重置动图状态: animatedImageDrawable=null")
         }
         isPlaying = false
         onIsPlayingChange?.invoke(false)
@@ -320,7 +296,6 @@ fun AnimatedBackground(
             exoPlayer?.pause()
             exoPlayer?.seekTo(0)
         }
-        LogUtils.d("AnimatedBackground - 状态重置完成: actualPlayCount=0, hasPlayCompleted=false, isPlaying=false")
     }
 
     LaunchedEffect(videoPrepared, exoPlayer, videoUrl) {
@@ -344,16 +319,13 @@ fun AnimatedBackground(
     LaunchedEffect(videoFirstFrameRendered, animatedImageLoaded, isVideo, isAnimatedImage, videoUrl, staticImageUrl, shouldPlay, currentPlayCount, isPlaying) {
         if (videoUrl != null && staticImageUrl != null && showStaticImage) {
             val animationReady = (isVideo && videoFirstFrameRendered) || (isAnimatedImage && animatedImageLoaded)
-            LogUtils.d("AnimatedBackground - 静态图隐藏检查: animationReady=$animationReady, isVideo=$isVideo, videoFirstFrameRendered=$videoFirstFrameRendered, isAnimatedImage=$isAnimatedImage, animatedImageLoaded=$animatedImageLoaded, shouldPlay=$shouldPlay, currentPlayCount=$currentPlayCount, isPlaying=$isPlaying")
             if (animationReady && shouldPlay && currentPlayCount > 0) {
                 if (isVideo) {
                     if (isPlaying) {
                         targetStaticImageAlpha = 0f
-                        LogUtils.d("AnimatedBackground - 隐藏静态图(视频): targetStaticImageAlpha=0f")
                     }
                 } else if (isAnimatedImage) {
                     targetStaticImageAlpha = 0f
-                    LogUtils.d("AnimatedBackground - 隐藏静态图(动图): targetStaticImageAlpha=0f")
                 }
             }
         } else if (videoUrl != null && staticImageUrl == null) {
@@ -601,28 +573,22 @@ fun AnimatedBackground(
                     if (state is AsyncImagePainter.State.Success) {
                         val drawable = state.result.image.asDrawable(context.resources)
                         val animatedDrawable = extractAnimatedImageDrawable(drawable)
-                        val isAnimated = animatedDrawable != null
-                        LogUtils.d("AnimatedBackground - 动图加载状态: url=$videoUrl, isAnimatedImageDrawable=$isAnimated, drawableType=${drawable.javaClass.simpleName}, extractedAnimatedDrawable=${animatedDrawable != null}")
                         if (animatedDrawable != null) {
                             if (animatedImageDrawable != animatedDrawable) {
                                 // 如果动图已经在运行（可能是 Coil 自动启动的），先停止它
                                 if (animatedDrawable.isRunning) {
                                     animatedDrawable.stop()
-                                    LogUtils.d("AnimatedBackground - 停止自动播放的动图")
                                 }
                                 // 设置 repeatCount=0，表示播放一次（后续通过回调控制播放次数）
                                 animatedDrawable.repeatCount = 0
                                 animatedImageDrawable = animatedDrawable
-                                LogUtils.d("AnimatedBackground - 设置AnimatedImageDrawable: drawable=$animatedDrawable, isRunning=${animatedDrawable.isRunning}, repeatCount=${animatedDrawable.repeatCount}")
                             }
                             if (!animatedImageLoaded) {
                                 animatedImageLoaded = true
-                                LogUtils.d("AnimatedBackground - 动图加载完成: animatedImageLoaded=true")
                             }
                         } else {
                             if (!animatedImageLoaded) {
                                 animatedImageLoaded = true
-                                LogUtils.d("AnimatedBackground - 图片加载完成(非动图): animatedImageLoaded=true")
                             }
                         }
                     } else if (state is AsyncImagePainter.State.Error) {
@@ -640,14 +606,12 @@ fun AnimatedBackground(
                 val drawable = animatedImageDrawable ?: return@LaunchedEffect
                 // 捕获当前drawable的引用，用于回调中验证
                 val currentDrawable = drawable
-                LogUtils.d("AnimatedBackground - 注册动画回调: drawable=$drawable, isRunning=${drawable.isRunning}, repeatCount=${drawable.repeatCount}, isCallbackRegistered=$isCallbackRegistered")
                 
                 // 先注销旧回调
                 val oldCallback = animationCallback
                 if (oldCallback != null && isCallbackRegistered) {
                     try {
                         drawable.unregisterAnimationCallback(oldCallback)
-                        LogUtils.d("AnimatedBackground - 注销旧回调")
                     } catch (e: Exception) {
                         LogUtils.e("AnimatedBackground - 注销旧回调失败: ${e.message}")
                     }
@@ -659,47 +623,33 @@ fun AnimatedBackground(
                 val callback = object : Animatable2.AnimationCallback() {
                     override fun onAnimationEnd(drawableParam: Drawable?) {
                         // 防止重复调用：检查是否是当前注册的drawable，以及是否正在处理
-                        if (drawableParam != currentDrawable) {
-                            LogUtils.d("AnimatedBackground - 忽略旧drawable的回调: drawableParam=${drawableParam?.javaClass?.simpleName}, current=${currentDrawable.javaClass.simpleName}")
-                            return
-                        }
-                        
-                        if (isProcessingCallback) {
-                            LogUtils.d("AnimatedBackground - 回调正在处理中，忽略重复调用")
+                        if (drawableParam != currentDrawable || isProcessingCallback) {
                             return
                         }
                         
                         isProcessingCallback = true
                         try {
-                            LogUtils.d("AnimatedBackground - onAnimationEnd回调触发: drawable=${drawableParam?.javaClass?.simpleName}, actualPlayCount=$actualPlayCount, currentPlayCount=$currentPlayCount, shouldPlay=$shouldPlay, hasPlayCompleted=$hasPlayCompleted")
                             if (drawableParam is AnimatedImageDrawable) {
                                 // 防止重复计数：如果已经完成，不再处理
                                 if (hasPlayCompleted) {
-                                    LogUtils.d("AnimatedBackground - 播放已完成，忽略回调")
                                     return
                                 }
                                 
                                 actualPlayCount++
                                 val currentTarget = currentPlayCount
                                 val shouldContinue = shouldPlay && !hasPlayCompleted && actualPlayCount < currentTarget
-                                LogUtils.d("AnimatedBackground - 动画结束处理: actualPlayCount=$actualPlayCount, currentTarget=$currentTarget, shouldContinue=$shouldContinue")
                                 
                                 if (actualPlayCount >= currentTarget) {
                                     hasPlayCompleted = true
                                     isPlaying = false
-                                    LogUtils.d("AnimatedBackground - 播放完成: actualPlayCount=$actualPlayCount >= currentTarget=$currentTarget, 停止播放, 调用onIsPlayingChange(false)")
                                     onIsPlayingChange?.invoke(false)
                                     drawableParam.stop()
-                                    LogUtils.d("AnimatedBackground - 调用onPlayComplete")
                                     onPlayComplete()
                                 } else if (shouldContinue) {
                                     drawableParam.repeatCount = 0
                                     drawableParam.start()
                                     isPlaying = true
-                                    LogUtils.d("AnimatedBackground - 继续播放: actualPlayCount=$actualPlayCount < currentTarget=$currentTarget, 重新开始播放, 调用onIsPlayingChange(true)")
                                     onIsPlayingChange?.invoke(true)
-                                } else {
-                                    LogUtils.d("AnimatedBackground - 不继续播放: shouldContinue=$shouldContinue")
                                 }
                             } else {
                                 LogUtils.e("AnimatedBackground - onAnimationEnd回调中drawable不是AnimatedImageDrawable: ${drawableParam?.javaClass?.simpleName}")
@@ -713,7 +663,6 @@ fun AnimatedBackground(
                 try {
                     drawable.registerAnimationCallback(callback)
                     isCallbackRegistered = true
-                    LogUtils.d("AnimatedBackground - 动画回调注册完成")
                 } catch (e: Exception) {
                     LogUtils.e("AnimatedBackground - 注册回调失败: ${e.message}")
                     isCallbackRegistered = false
@@ -727,59 +676,38 @@ fun AnimatedBackground(
                 
                 // 如果 playCount 变化了，重置 lastPlayTrigger，允许新的播放
                 val oldPlayCount = lastPlayTrigger?.second
-                val playCountChanged = oldPlayCount != null && oldPlayCount != currentPlayCount
-                if (playCountChanged) {
+                if (oldPlayCount != null && oldPlayCount != currentPlayCount) {
                     lastPlayTrigger = null
-                    LogUtils.d("AnimatedBackground - playCount变化，重置lastPlayTrigger: old=$oldPlayCount, new=$currentPlayCount")
                 }
                 
                 // 防止重复触发：如果相同的触发条件已经执行过，且动画正在播放或已完成，则跳过
                 if (lastPlayTrigger == triggerKey && (isPlaying || hasPlayCompleted) && shouldPlay) {
-                    LogUtils.d("AnimatedBackground - 跳过重复触发: triggerKey=$triggerKey, isPlaying=$isPlaying, hasPlayCompleted=$hasPlayCompleted")
                     return@LaunchedEffect
                 }
                 
-                LogUtils.d("AnimatedBackground - 播放控制检查: shouldPlay=$shouldPlay, isCurrentPage=$isCurrentPage, animatedImageLoaded=$animatedImageLoaded, animatedImageDrawable=${animatedImageDrawable != null}, currentPlayCount=$currentPlayCount, hasPlayCompleted=$hasPlayCompleted, actualPlayCount=$actualPlayCount, isPlaying=$isPlaying, playCountChanged=$playCountChanged")
-                
                 if (isCurrentPage && shouldPlay && animatedImageLoaded && currentPlayCount > 0 && !hasPlayCompleted && animatedImageDrawable != null) {
                     val drawable = animatedImageDrawable ?: return@LaunchedEffect
-                    val isRunning = drawable.isRunning
-                    LogUtils.d("AnimatedBackground - 准备播放: isRunning=$isRunning, actualPlayCount=$actualPlayCount, currentPlayCount=$currentPlayCount, repeatCount=${drawable.repeatCount}")
-                    
-                    // 如果已经完成，不重复启动
-                    if (hasPlayCompleted) {
-                        LogUtils.d("AnimatedBackground - 播放已完成，不启动")
-                        return@LaunchedEffect
-                    }
-                    
                     if (actualPlayCount < currentPlayCount) {
                         // 如果正在运行，先停止（可能是之前自动启动的）
-                        if (isRunning) {
+                        if (drawable.isRunning) {
                             drawable.stop()
                             // 等待停止完成
                             kotlinx.coroutines.delay(50)
-                            LogUtils.d("AnimatedBackground - 停止正在运行的动图，准备重新开始")
                         }
                         // 确保 repeatCount=0（播放一次，通过回调控制总次数）
                         drawable.repeatCount = 0
                         drawable.start()
                         isPlaying = true
                         lastPlayTrigger = triggerKey
-                        LogUtils.d("AnimatedBackground - 开始播放动图: repeatCount=0, isPlaying=true, actualPlayCount=$actualPlayCount, 调用onIsPlayingChange(true)")
                         onIsPlayingChange?.invoke(true)
-                    } else {
-                        LogUtils.d("AnimatedBackground - 不启动播放: actualPlayCount=$actualPlayCount >= currentPlayCount=$currentPlayCount")
                     }
                 } else if (!shouldPlay) {
                     if (isPlaying) {
                         animatedImageDrawable?.stop()
                         isPlaying = false
                         lastPlayTrigger = null
-                        LogUtils.d("AnimatedBackground - 停止播放: shouldPlay=false, isPlaying=false, 调用onIsPlayingChange(false)")
                         onIsPlayingChange?.invoke(false)
                     }
-                } else {
-                    LogUtils.d("AnimatedBackground - 播放条件不满足: isCurrentPage=$isCurrentPage, shouldPlay=$shouldPlay, animatedImageLoaded=$animatedImageLoaded, currentPlayCount=$currentPlayCount, hasPlayCompleted=$hasPlayCompleted")
                 }
             }
 
@@ -790,7 +718,6 @@ fun AnimatedBackground(
                     if (drawable != null && callback != null) {
                         try {
                             drawable.unregisterAnimationCallback(callback)
-                            LogUtils.d("AnimatedBackground - DisposableEffect注销回调")
                         } catch (e: Exception) {
                             LogUtils.e("AnimatedBackground - DisposableEffect注销回调失败: ${e.message}")
                         }

@@ -3,7 +3,6 @@ package com.ai.intellimate.ui.components
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.utils.LogUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -90,25 +89,15 @@ fun AgentBackground(
                 backgroundAnimatedUrl.lowercase().contains(".webp?") ||
                 backgroundAnimatedUrl.lowercase().contains(".avif?"))
             
-            val urlType = when {
-                isVideo -> "视频"
-                isAnimatedImage -> "动图"
-                else -> "静态图片"
-            }
-            LogUtils.d("AgentBackground - URL类型判断: url=$backgroundAnimatedUrl, type=$urlType, isVideo=$isVideo, isAnimatedImage=$isAnimatedImage")
-            
             if (isVideo) {
                 isVideoCached = videoCacheManager.isCached(backgroundAnimatedUrl)
-                LogUtils.d("AgentBackground - 视频缓存状态: cached=$isVideoCached, hasCompletedPageSwitchPlay=$hasCompletedPageSwitchPlay")
                 if (isVideoCached && !hasCompletedPageSwitchPlay) {
                     shouldPlayPageSwitch = true
-                    LogUtils.d("AgentBackground - 设置页面切换播放(视频): shouldPlayPageSwitch=true")
                 }
             } else {
                 isVideoCached = false
                 if (!hasCompletedPageSwitchPlay) {
                     shouldPlayPageSwitch = true
-                    LogUtils.d("AgentBackground - 设置页面切换播放(动图/图片): shouldPlayPageSwitch=true, isAnimatedImage=$isAnimatedImage")
                 }
             }
         } else {
@@ -125,18 +114,15 @@ fun AgentBackground(
     LaunchedEffect(isLoading, backgroundAnimatedUrl, isVideoCached, isCurrentPage, isVideoPlaying) {
         if (isLoading && backgroundAnimatedUrl != null && isCurrentPage) {
             val isVideo = isVideoUrl(backgroundAnimatedUrl)
-            LogUtils.d("AgentBackground - 加载状态触发: isLoading=$isLoading, isVideo=$isVideo, isVideoCached=$isVideoCached, isVideoPlaying=$isVideoPlaying")
             if ((!isVideo || isVideoCached) && !isVideoPlaying) {
                 shouldPlayLoading = true
                 isLoadingTriggeredPlay = true
-                LogUtils.d("AgentBackground - 设置加载播放: shouldPlayLoading=true, isLoadingTriggeredPlay=true")
             }
         }
     }
 
     val shouldPlay = (shouldPlayPageSwitch || shouldPlayLoading || (isLoadingTriggeredPlay && isVideoPlaying)) && isCurrentPage
     val playCount = if (shouldPlayPageSwitch) VIDEO_FIRST_PLAY_COUNT else VIDEO_MESSAGE_PLAY_COUNT
-    LogUtils.d("AgentBackground - 播放状态: shouldPlay=$shouldPlay, playCount=$playCount, shouldPlayPageSwitch=$shouldPlayPageSwitch, shouldPlayLoading=$shouldPlayLoading, isLoadingTriggeredPlay=$isLoadingTriggeredPlay, isVideoPlaying=$isVideoPlaying")
 
     Box(modifier = modifier.fillMaxSize().clipToBounds()) {
         if (backgroundAnimatedUrl != null) {
@@ -149,7 +135,6 @@ fun AgentBackground(
                 isVideoCached = isVideoCached,
                 onPlayComplete = {
                     val wasPageSwitch = shouldPlayPageSwitch
-                    LogUtils.d("AgentBackground - 播放完成回调: wasPageSwitch=$wasPageSwitch")
                     shouldPlayPageSwitch = false
                     shouldPlayLoading = false
                     if (isLoadingTriggeredPlay) {
@@ -157,12 +142,10 @@ fun AgentBackground(
                     }
                     if (wasPageSwitch) {
                         hasCompletedPageSwitchPlay = true
-                        LogUtils.d("AgentBackground - 标记页面切换播放已完成: hasCompletedPageSwitchPlay=true")
                     }
                     onPlayComplete()
                 },
                 onIsPlayingChange = { 
-                    LogUtils.d("AgentBackground - onIsPlayingChange回调: isVideoPlaying=${isVideoPlaying} -> $it")
                     isVideoPlaying = it 
                 },
                 contentScale = contentScale,
