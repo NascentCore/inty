@@ -14,10 +14,10 @@ from app import schemas
 from app.api import deps
 from app.api.tags import (
     ANDROID_APP_TAG,
-    INTY_EVAL_TAG,
     INTERNAL_API_TAG,
-    WEB_APP_TAG,
+    INTY_EVAL_TAG,
     NOT_USED_TAG,
+    WEB_APP_TAG,
 )
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent import prompts as agent_prompts
@@ -585,7 +585,7 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
     response_model=APIResponse[dict],
     summary="[Deprecated, use /api/v1/images/text-to-image instead] Generate images based on text description",
     deprecated=True,
-    include_in_schema=False,
+    include_in_schema=True,
     tags=[INTY_EVAL_TAG],
 )
 async def generate_background(
