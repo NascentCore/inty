@@ -71,6 +71,7 @@ import androidx.core.content.getSystemService
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioInfo
 import com.ai.intellimate.audio.OpeningPlayState
@@ -89,6 +90,8 @@ private fun debugOnlyCopyToClipboard(context: Context, text: String) {
     val clip = ClipData.newPlainText("Message", text)
     clipboard?.setPrimaryClip(clip)
 }
+
+private const val DEBUG_METADATA_VALUE_MAX = 64
 
 @Composable
 fun ChatItem(
@@ -461,6 +464,17 @@ private fun ChatItemAI(
                         }
                     }
                 }
+
+                if (BuildConfig.DEBUG) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        DebugMessageMetadata(
+                            item = item,
+                            modifier =
+                                Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO),
+                        )
+                        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                    }
+                }
             }
         }
         .onFailure { e ->
@@ -532,6 +546,33 @@ private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
                 }
             }
         }
+        .also {
+            if (BuildConfig.DEBUG) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    DebugMessageMetadata(
+                        item = item,
+                        modifier =
+                            Modifier.widthIn(
+                                min = 1.dp,
+                                max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
+                            ),
+                    )
+                }
+            }
+
+            if (BuildConfig.DEBUG) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    DebugMessageMetadata(
+                        item = item,
+                        modifier =
+                            Modifier.widthIn(
+                                min = 1.dp,
+                                max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
+                            ),
+                    )
+                }
+            }
+        }
         // 如果渲染失败，显示空消息气泡；应无可能发生，仅作为保守的兜底处理。
         .onFailure { e ->
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -598,6 +639,65 @@ private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = nu
             )
         }
     }
+}
+
+@Composable
+private fun DebugMessageMetadata(item: MsgInfo, modifier: Modifier = Modifier) {
+    if (!BuildConfig.DEBUG) {
+        return
+    }
+
+    val metadataLines =
+        remember(item) {
+                buildList {
+                    val roleLabel = item.role.ifBlank { "unknown" }
+                    add("role=$roleLabel")
+                    item.id.takeIf { it.isNotBlank() }?.let { add("id=${it.debugEllipsize()}") }
+                    add("local=${item.localMsgId}")
+                    item.timestamp?.takeIf { it.isNotBlank() }?.let { add("ts=$it") }
+                    item.meta_data?.let { meta ->
+                        val metaParts = mutableListOf<String>()
+                        meta.agentId?.takeIf { it.isNotBlank() }?.let { metaParts += "agent=$it" }
+                        if (meta.isOpening) metaParts += "opening=true"
+                        meta.generatedImage?.let { image ->
+                            metaParts +=
+                                "image=${image.imageUrl.debugEllipsize()} (${image.width}x${image.height})"
+                        }
+                        if (metaParts.isNotEmpty()) add("meta=${metaParts.joinToString()}")
+                    }
+                    item.audio_url?.takeIf { it.isNotBlank() }?.let {
+                        add("audio=${it.debugEllipsize()}")
+                    }
+                    item.user_vote?.takeIf { it.isNotBlank() }?.let { add("vote=$it") }
+                }
+            }
+            .filter { it.isNotBlank() }
+
+    if (metadataLines.isEmpty()) {
+        return
+    }
+
+    Box(
+        modifier =
+            modifier
+                .padding(top = 4.dp)
+                .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = metadataLines.joinToString(separator = "\n"),
+            fontSize = 10.sp,
+            lineHeight = 12.sp,
+            color = Color(0xFF8DF0FF),
+        )
+    }
+}
+
+private fun String.debugEllipsize(maxLength: Int = DEBUG_METADATA_VALUE_MAX): String {
+    if (length <= maxLength || maxLength <= 3) {
+        return this
+    }
+    return take(maxLength - 3) + "..."
 }
 
 @Composable
