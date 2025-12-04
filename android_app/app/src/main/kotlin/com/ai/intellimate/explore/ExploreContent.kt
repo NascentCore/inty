@@ -47,6 +47,19 @@ import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
+
+// 判断是否为动图URL（非视频）
+private fun isAnimatedImageUrl(url: String?): Boolean {
+    if (url.isNullOrBlank()) return false
+    val lowerUrl = url.lowercase()
+    return lowerUrl.endsWith(".gif") ||
+            lowerUrl.endsWith(".webp") ||
+            lowerUrl.endsWith(".avif") ||
+            lowerUrl.contains(".gif?") ||
+            lowerUrl.contains(".webp?") ||
+            lowerUrl.contains(".avif?")
+}
+
 /** Explore页面的主要内容组件 */
 @Composable
 fun ExploreContent(
@@ -161,7 +174,7 @@ fun ExploreContent(
             return@LaunchedEffect
         }
 
-        // 按顺序遍历可见的 item（已经按从上到下排序），找到第一个有 backgroundAnimatedUrl 的
+        // 按顺序遍历可见的 item（已经按从上到下排序），找到第一个有 backgroundAnimatedUrl 且是动图的
         firstPlayingItemIndex = -1
         for (index in visibleItemIndices) {
             // 检查索引是否在有效范围内，避免 IndexOutOfBoundsException
@@ -170,8 +183,11 @@ fun ExploreContent(
             }
             val agent = lazyPagingItems?.get(index)
             if (agent != null && agent.backgroundAnimatedUrl.isNotBlank()) {
-                firstPlayingItemIndex = index
-                break
+                // 只处理动图，不处理视频
+                if (isAnimatedImageUrl(agent.backgroundAnimatedUrl)) {
+                    firstPlayingItemIndex = index
+                    break
+                }
             }
         }
     }

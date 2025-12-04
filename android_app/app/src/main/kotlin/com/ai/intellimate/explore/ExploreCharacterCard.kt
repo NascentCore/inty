@@ -60,6 +60,19 @@ private object CardConfig {
     val DebugIndexInnerPadding = 6.dp to 4.dp
 }
 
+
+// 判断是否为动图URL（非视频）
+private fun isAnimatedImageUrl(url: String?): Boolean {
+    if (url.isNullOrBlank()) return false
+    val lowerUrl = url.lowercase()
+    return lowerUrl.endsWith(".gif") ||
+            lowerUrl.endsWith(".webp") ||
+            lowerUrl.endsWith(".avif") ||
+            lowerUrl.contains(".gif?") ||
+            lowerUrl.contains(".webp?") ||
+            lowerUrl.contains(".avif?")
+}
+
 /** Explore页面的角色卡片组件 */
 @Composable
 fun ExploreCharacterCard(
@@ -96,16 +109,22 @@ fun ExploreCharacterCard(
     val staticImageUrl =
         remember(agentInfo.id, agentInfo.background, agentInfo.avatar) { agentInfo.getAlbumImage() }
 
-    // 获取动图URL
+    // 获取动图URL（只处理动图，不处理视频）
     val animatedImageUrl =
         remember(agentInfo.id, agentInfo.backgroundAnimatedUrl) {
-            agentInfo.backgroundAnimatedUrl.takeIf { it.isNotBlank() }
+            agentInfo.backgroundAnimatedUrl.takeIf { url ->
+                url.isNotBlank() && isAnimatedImageUrl(url)
+            }
         }
 
     // 图片加载状态
     var staticImageLoaded by remember(agentInfo.id) { mutableStateOf(false) }
     var animatedImageLoaded by remember(agentInfo.id) { mutableStateOf(false) }
-    var animatedImageDrawable by remember(agentInfo.id) { mutableStateOf<AnimatedImageDrawable?>(null) }
+    var animatedImageDrawable by remember(agentInfo.id) {
+        mutableStateOf<AnimatedImageDrawable?>(
+            null
+        )
+    }
 
     // 是否显示动图（动图加载成功且应该播放）
     var showAnimatedImage by remember(agentInfo.id) { mutableStateOf(false) }
@@ -127,12 +146,16 @@ fun ExploreCharacterCard(
 
     Box(
         modifier =
-            modifier.fillMaxWidth().aspectRatio(CARD_ASPECT_RATIO).noRippleClickable { onClick() }
+            modifier
+                .fillMaxWidth()
+                .aspectRatio(CARD_ASPECT_RATIO)
+                .noRippleClickable { onClick() }
     ) {
         // 底部渐变背景层
         Box(
             modifier =
-                Modifier.fillMaxSize()
+                Modifier
+                    .fillMaxSize()
                     .background(
                         brush = bottomGradientBrush,
                         shape =
@@ -148,7 +171,8 @@ fun ExploreCharacterCard(
         // 背景图片层
         Box(
             modifier =
-                Modifier.fillMaxSize()
+                Modifier
+                    .fillMaxSize()
                     .clip(
                         RoundedCornerShape(
                             topStart = CardConfig.CornerRadius,
@@ -169,14 +193,16 @@ fun ExploreCharacterCard(
             // 静态图片层
             if (staticImageUrl != null) {
                 val staticImageAlpha by
-                    animateFloatAsState(
-                        targetValue = if (showAnimatedImage) 0f else 1f,
-                        animationSpec = tween(durationMillis = 300),
-                        label = "staticImageAlpha",
-                    )
+                animateFloatAsState(
+                    targetValue = if (showAnimatedImage) 0f else 1f,
+                    animationSpec = tween(durationMillis = 300),
+                    label = "staticImageAlpha",
+                )
 
                 AsyncImage(
-                    modifier = Modifier.fillMaxSize().alpha(staticImageAlpha),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(staticImageAlpha),
                     model = ImageRequest.Builder(context).data(staticImageUrl).build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
@@ -189,14 +215,16 @@ fun ExploreCharacterCard(
             // 动图层（异步加载，加载成功后切换显示）
             if (animatedImageUrl != null) {
                 val animatedImageAlpha by
-                    animateFloatAsState(
-                        targetValue = if (showAnimatedImage) 1f else 0f,
-                        animationSpec = tween(durationMillis = 300),
-                        label = "animatedImageAlpha",
-                    )
+                animateFloatAsState(
+                    targetValue = if (showAnimatedImage) 1f else 0f,
+                    animationSpec = tween(durationMillis = 300),
+                    label = "animatedImageAlpha",
+                )
 
                 SubcomposeAsyncImage(
-                    modifier = Modifier.fillMaxSize().alpha(animatedImageAlpha),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(animatedImageAlpha),
                     model = ImageRequest.Builder(context).data(animatedImageUrl).build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
@@ -230,7 +258,8 @@ fun ExploreCharacterCard(
         if (isDebugMode && index != null) {
             Box(
                 modifier =
-                    Modifier.align(Alignment.TopStart)
+                    Modifier
+                        .align(Alignment.TopStart)
                         .padding(CardConfig.DebugIndexPadding)
                         .background(
                             color = Color.Black.copy(alpha = 0.7f),
@@ -253,7 +282,8 @@ fun ExploreCharacterCard(
         // 文本内容层
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .background(
                         brush = gradientBrush,
                         shape =
@@ -290,7 +320,9 @@ fun ExploreCharacterCard(
             )
 
             if (filteredTags.isNotEmpty()) {
-                Box(modifier = Modifier.fillMaxWidth().height(CardConfig.TagHeight)) {
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .height(CardConfig.TagHeight)) {
                     IgnoreSystemFontScaling {
                         SmartTagsLayout(
                             modifier = Modifier.matchParentSize(),
