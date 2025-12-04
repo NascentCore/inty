@@ -457,12 +457,12 @@ class ChatRepositoryImpl(
         return result
     }
 
-    override fun clearChatData(agentId: String) {
+    override suspend fun clearChatData(agentId: String) {
         LogUtils.d("ChatRepositoryImpl.clearChatData called for $agentId")
         localDataSource.clearChatData(agentId)
     }
 
-    override fun clearAllChatData() {
+    override suspend fun clearAllChatData() {
         LogUtils.d("ChatRepositoryImpl.clearAllChatData called")
         localDataSource.clearAllChatData()
     }
