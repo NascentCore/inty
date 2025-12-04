@@ -42,8 +42,10 @@ private const val VIDEO_MESSAGE_PLAY_COUNT = 1
 private fun isVideoUrl(url: String?): Boolean {
     if (url.isNullOrBlank()) return false
     val lower = url.lowercase()
-    return lower.endsWith(".mp4") || lower.endsWith(".webm") ||
-        lower.contains(".mp4?") || lower.contains(".webm?")
+    return lower.endsWith(".mp4") ||
+        lower.endsWith(".webm") ||
+        lower.contains(".mp4?") ||
+        lower.contains(".webm?")
 }
 
 @Composable
@@ -64,11 +66,12 @@ fun AgentBackground(
 
     val isIntelliMateAgent = AgentConstants.isIntelliMateAgent(agentInfo?.id, agentInfo?.name)
     val backgroundAnimatedUrl = agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
-    val staticImageUrl = if (isIntelliMateAgent) {
-        null
-    } else {
-        agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
-    }
+    val staticImageUrl =
+        if (isIntelliMateAgent) {
+            null
+        } else {
+            agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
+        }
 
     val videoCacheManager = remember { VideoCacheManager.getInstance(context) }
     var isVideoCached by remember { mutableStateOf(false) }
@@ -82,13 +85,15 @@ fun AgentBackground(
         shouldPlayPageSwitch = false
         if (backgroundAnimatedUrl != null && isCurrentPage) {
             val isVideo = isVideoUrl(backgroundAnimatedUrl)
-            val isAnimatedImage = !isVideo && (backgroundAnimatedUrl.lowercase().endsWith(".gif") ||
-                backgroundAnimatedUrl.lowercase().endsWith(".webp") ||
-                backgroundAnimatedUrl.lowercase().endsWith(".avif") ||
-                backgroundAnimatedUrl.lowercase().contains(".gif?") ||
-                backgroundAnimatedUrl.lowercase().contains(".webp?") ||
-                backgroundAnimatedUrl.lowercase().contains(".avif?"))
-            
+            val isAnimatedImage =
+                !isVideo &&
+                    (backgroundAnimatedUrl.lowercase().endsWith(".gif") ||
+                        backgroundAnimatedUrl.lowercase().endsWith(".webp") ||
+                        backgroundAnimatedUrl.lowercase().endsWith(".avif") ||
+                        backgroundAnimatedUrl.lowercase().contains(".gif?") ||
+                        backgroundAnimatedUrl.lowercase().contains(".webp?") ||
+                        backgroundAnimatedUrl.lowercase().contains(".avif?"))
+
             if (isVideo) {
                 isVideoCached = videoCacheManager.isCached(backgroundAnimatedUrl)
                 if (isVideoCached && !hasCompletedPageSwitchPlay) {
@@ -106,7 +111,12 @@ fun AgentBackground(
     }
 
     LaunchedEffect(backgroundAnimatedUrl, isVideoCached) {
-        if (backgroundAnimatedUrl != null && !isVideoCached && isCurrentPage && isVideoUrl(backgroundAnimatedUrl)) {
+        if (
+            backgroundAnimatedUrl != null &&
+                !isVideoCached &&
+                isCurrentPage &&
+                isVideoUrl(backgroundAnimatedUrl)
+        ) {
             videoCacheManager.preloadVideo(backgroundAnimatedUrl)
         }
     }
@@ -121,7 +131,9 @@ fun AgentBackground(
         }
     }
 
-    val shouldPlay = (shouldPlayPageSwitch || shouldPlayLoading || (isLoadingTriggeredPlay && isVideoPlaying)) && isCurrentPage
+    val shouldPlay =
+        (shouldPlayPageSwitch || shouldPlayLoading || (isLoadingTriggeredPlay && isVideoPlaying)) &&
+            isCurrentPage
     val playCount = if (shouldPlayPageSwitch) VIDEO_FIRST_PLAY_COUNT else VIDEO_MESSAGE_PLAY_COUNT
 
     Box(modifier = modifier.fillMaxSize().clipToBounds()) {
@@ -145,21 +157,26 @@ fun AgentBackground(
                     }
                     onPlayComplete()
                 },
-                onIsPlayingChange = { 
-                    isVideoPlaying = it 
-                },
+                onIsPlayingChange = { isVideoPlaying = it },
                 contentScale = contentScale,
             )
         } else if (staticImageUrl != null) {
-            val staticImageRequest = remember(staticImageUrl) {
-                val containerWidthPx = with(density) { containerWidthDp.dp.toPx().toInt() }
-                val containerHeightPx = with(density) { containerHeightDp.dp.toPx().toInt() }
-                ImageRequest.Builder(context)
-                    .data(getCdnImageUrl(staticImageUrl, width = CDN_STATIC_BACKGROUND_WIDTH, quality = CDN_IMAGE_QUALITY) ?: staticImageUrl)
-                    .size(Size(containerWidthPx, containerHeightPx))
-                    .crossfade(true)
-                    .build()
-            }
+            val staticImageRequest =
+                remember(staticImageUrl) {
+                    val containerWidthPx = with(density) { containerWidthDp.dp.toPx().toInt() }
+                    val containerHeightPx = with(density) { containerHeightDp.dp.toPx().toInt() }
+                    ImageRequest.Builder(context)
+                        .data(
+                            getCdnImageUrl(
+                                staticImageUrl,
+                                width = CDN_STATIC_BACKGROUND_WIDTH,
+                                quality = CDN_IMAGE_QUALITY,
+                            ) ?: staticImageUrl
+                        )
+                        .size(Size(containerWidthPx, containerHeightPx))
+                        .crossfade(true)
+                        .build()
+                }
             AsyncImage(
                 modifier = Modifier.fillMaxWidth().fillMaxSize(),
                 model = staticImageRequest,
@@ -179,18 +196,26 @@ fun AgentBackground(
 
         if (showGradients) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(TOP_GRADIENT_HEIGHT_DP.dp)
-                    .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.3f), Color.Transparent)))
-                    .align(Alignment.TopCenter)
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .height(TOP_GRADIENT_HEIGHT_DP.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Black.copy(alpha = 0.3f), Color.Transparent)
+                            )
+                        )
+                        .align(Alignment.TopCenter)
             )
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(BOTTOM_GRADIENT_HEIGHT_DP.dp)
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f))))
-                    .align(Alignment.BottomCenter)
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .height(BOTTOM_GRADIENT_HEIGHT_DP.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f))
+                            )
+                        )
+                        .align(Alignment.BottomCenter)
             )
         }
     }

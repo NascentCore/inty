@@ -56,10 +56,10 @@ import coil3.compose.SubcomposeAsyncImageContent
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 
 private const val CDN_IMAGE_QUALITY = 80
 private const val CDN_STATIC_BACKGROUND_WIDTH = 1080
@@ -88,18 +88,15 @@ private fun isAnimatedUrl(url: String?): Boolean {
     return isVideoUrl(url) || isAnimatedImageUrl(url)
 }
 
-/**
- * 从 Drawable 中递归提取 AnimatedImageDrawable
- * Drawable 可能被包装在 ScaleDrawable、LayerDrawable 或其他包装类中
- */
+/** 从 Drawable 中递归提取 AnimatedImageDrawable Drawable 可能被包装在 ScaleDrawable、LayerDrawable 或其他包装类中 */
 private fun extractAnimatedImageDrawable(drawable: Drawable?): AnimatedImageDrawable? {
     if (drawable == null) return null
-    
+
     // 如果是 AnimatedImageDrawable，直接返回
     if (drawable is AnimatedImageDrawable) {
         return drawable
     }
-    
+
     // 如果是 ScaleDrawable，尝试获取内部 drawable
     if (drawable is ScaleDrawable) {
         try {
@@ -120,27 +117,28 @@ private fun extractAnimatedImageDrawable(drawable: Drawable?): AnimatedImageDraw
             LogUtils.e("AnimatedBackground - 提取ScaleDrawable内部drawable失败: ${e.message}")
         }
     }
-    
+
     // 如果是 DrawableWrapper，尝试获取内部 drawable
     if (drawable is DrawableWrapper) {
-        val innerDrawable = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            drawable.drawable
-        } else {
-            // 对于旧版本，尝试通过反射获取
-            try {
-                val field = DrawableWrapper::class.java.getDeclaredField("mDrawable")
-                field.isAccessible = true
-                field.get(drawable) as? Drawable
-            } catch (e: Exception) {
-                null
+        val innerDrawable =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                drawable.drawable
+            } else {
+                // 对于旧版本，尝试通过反射获取
+                try {
+                    val field = DrawableWrapper::class.java.getDeclaredField("mDrawable")
+                    field.isAccessible = true
+                    field.get(drawable) as? Drawable
+                } catch (e: Exception) {
+                    null
+                }
             }
-        }
         val result = extractAnimatedImageDrawable(innerDrawable)
         if (result != null) {
             return result
         }
     }
-    
+
     // 如果是 LayerDrawable，遍历所有层
     if (drawable is LayerDrawable) {
         for (i in 0 until drawable.numberOfLayers) {
@@ -151,7 +149,7 @@ private fun extractAnimatedImageDrawable(drawable: Drawable?): AnimatedImageDraw
             }
         }
     }
-    
+
     // 尝试使用 DrawableCompat 解包
     val unwrapped: Drawable = DrawableCompat.unwrap(drawable)
     if (unwrapped != drawable) {
@@ -160,7 +158,7 @@ private fun extractAnimatedImageDrawable(drawable: Drawable?): AnimatedImageDraw
             return result
         }
     }
-    
+
     // 最后尝试：通过反射查找所有可能的字段
     try {
         val fields = drawable.javaClass.declaredFields
@@ -179,7 +177,7 @@ private fun extractAnimatedImageDrawable(drawable: Drawable?): AnimatedImageDraw
     } catch (e: Exception) {
         LogUtils.e("AnimatedBackground - 反射查找drawable字段失败: ${e.message}")
     }
-    
+
     return null
 }
 
@@ -200,9 +198,10 @@ fun AnimatedBackground(
     val context = LocalContext.current
     val videoCacheManager = remember { VideoCacheManager.getInstance(context) }
 
-    var showStaticImage by remember(videoUrl, staticImageUrl) {
-        mutableStateOf(staticImageUrl != null && (videoUrl == null || isAnimatedUrl(videoUrl)))
-    }
+    var showStaticImage by
+        remember(videoUrl, staticImageUrl) {
+            mutableStateOf(staticImageUrl != null && (videoUrl == null || isAnimatedUrl(videoUrl)))
+        }
     var videoPrepared by remember { mutableStateOf(false) }
     var videoFirstFrameRendered by remember { mutableStateOf(false) }
     var animatedImageLoaded by remember { mutableStateOf(false) }
@@ -219,24 +218,24 @@ fun AnimatedBackground(
     val isAnimatedImage = isAnimatedImageUrl(videoUrl)
 
     LaunchedEffect(videoUrl, isVideo, isVideoCached) {
-            if (isVideo && videoUrl != null) {
-                if (isVideoCached) {
+        if (isVideo && videoUrl != null) {
+            if (isVideoCached) {
+                videoPath = videoCacheManager.getVideoPath(videoUrl)
+            } else {
+                withContext(Dispatchers.IO) {
                     videoPath = videoCacheManager.getVideoPath(videoUrl)
-                } else {
-                    withContext(Dispatchers.IO) {
-                        videoPath = videoCacheManager.getVideoPath(videoUrl)
-                        if (!videoCacheManager.isCached(videoUrl)) {
-                            try {
-                                videoCacheManager.preloadVideo(videoUrl)
-                            } catch (e: Exception) {
-                                LogUtils.e("AnimatedBackground - 预加载视频失败: ${e.message}")
-                            }
+                    if (!videoCacheManager.isCached(videoUrl)) {
+                        try {
+                            videoCacheManager.preloadVideo(videoUrl)
+                        } catch (e: Exception) {
+                            LogUtils.e("AnimatedBackground - 预加载视频失败: ${e.message}")
                         }
                     }
                 }
-            } else {
-                videoPath = null
             }
+        } else {
+            videoPath = null
+        }
     }
 
     var lastPlayCount by remember { mutableStateOf<Int?>(null) }
@@ -247,7 +246,7 @@ fun AnimatedBackground(
             // 只有在 playCount 变化，或者 shouldPlay 从 false 变为 true 时，才重置状态
             val playCountChanged = lastPlayCount != playCount
             val shouldPlayChanged = !lastShouldPlay && shouldPlay
-            
+
             if (playCountChanged || shouldPlayChanged) {
                 currentPlayCount = playCount
                 hasPlayCompleted = false
@@ -270,7 +269,7 @@ fun AnimatedBackground(
     LaunchedEffect(videoUrl, staticImageUrl) {
         val isVideoLocal = isVideoUrl(videoUrl)
         val isAnimatedImageLocal = isAnimatedImageUrl(videoUrl)
-        
+
         if (videoUrl != null && staticImageUrl != null) {
             showStaticImage = true
             targetStaticImageAlpha = 1f
@@ -305,7 +304,13 @@ fun AnimatedBackground(
             kotlinx.coroutines.delay(50)
             if (videoPrepared && exoPlayer != null) {
                 videoFirstFrameRendered = true
-                if (shouldPlay && currentPlayCount > 0 && isCurrentPage && !isPlaying && !hasPlayCompleted) {
+                if (
+                    shouldPlay &&
+                        currentPlayCount > 0 &&
+                        isCurrentPage &&
+                        !isPlaying &&
+                        !hasPlayCompleted
+                ) {
                     actualPlayCount = 0
                     exoPlayer?.seekTo(0)
                     exoPlayer?.playWhenReady = true
@@ -316,9 +321,20 @@ fun AnimatedBackground(
         }
     }
 
-    LaunchedEffect(videoFirstFrameRendered, animatedImageLoaded, isVideo, isAnimatedImage, videoUrl, staticImageUrl, shouldPlay, currentPlayCount, isPlaying) {
+    LaunchedEffect(
+        videoFirstFrameRendered,
+        animatedImageLoaded,
+        isVideo,
+        isAnimatedImage,
+        videoUrl,
+        staticImageUrl,
+        shouldPlay,
+        currentPlayCount,
+        isPlaying,
+    ) {
         if (videoUrl != null && staticImageUrl != null && showStaticImage) {
-            val animationReady = (isVideo && videoFirstFrameRendered) || (isAnimatedImage && animatedImageLoaded)
+            val animationReady =
+                (isVideo && videoFirstFrameRendered) || (isAnimatedImage && animatedImageLoaded)
             if (animationReady && shouldPlay && currentPlayCount > 0) {
                 if (isVideo) {
                     if (isPlaying) {
@@ -337,11 +353,12 @@ fun AnimatedBackground(
         }
     }
 
-    val animatedAlpha by animateFloatAsState(
-        targetValue = if (showStaticImage) targetStaticImageAlpha else 0f,
-        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-        label = "staticImageAlpha",
-    )
+    val animatedAlpha by
+        animateFloatAsState(
+            targetValue = if (showStaticImage) targetStaticImageAlpha else 0f,
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+            label = "staticImageAlpha",
+        )
 
     LaunchedEffect(animatedAlpha) {
         if (animatedAlpha <= 0f && showStaticImage) {
@@ -413,7 +430,12 @@ fun AnimatedBackground(
                                         }
 
                                         override fun onVideoSizeChanged(videoSize: VideoSize) {
-                                            if (videoPrepared && !videoFirstFrameRendered && videoSize.width > 0 && videoSize.height > 0) {
+                                            if (
+                                                videoPrepared &&
+                                                    !videoFirstFrameRendered &&
+                                                    videoSize.width > 0 &&
+                                                    videoSize.height > 0
+                                            ) {
                                                 if (!playWhenReady) {
                                                     seekTo(0)
                                                 }
@@ -448,13 +470,16 @@ fun AnimatedBackground(
 
                     exoPlayer = player
 
-                    val textureView = TextureView(ctx).apply {
-                        clipToOutline = true
-                        textureViewRef = this
-                        player.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                        player.setVideoTextureView(this)
-                        player.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                    }
+                    val textureView =
+                        TextureView(ctx).apply {
+                            clipToOutline = true
+                            textureViewRef = this
+                            player.videoScalingMode =
+                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                            player.setVideoTextureView(this)
+                            player.videoScalingMode =
+                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                        }
 
                     val pathToUse = if (isVideoCached) videoPath ?: videoUrl else videoUrl
                     player.setMediaItem(MediaItem.fromUri(pathToUse))
@@ -468,7 +493,8 @@ fun AnimatedBackground(
                     textureView?.let {
                         exoPlayer?.let { player ->
                             player.setVideoTextureView(it)
-                            player.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                            player.videoScalingMode =
+                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
                             val pathToUse = videoPath ?: videoUrl
                             val currentMediaId = player.currentMediaItem?.mediaId
                             if (currentMediaId == null || currentMediaId != pathToUse) {
@@ -481,7 +507,14 @@ fun AnimatedBackground(
             )
 
             LaunchedEffect(shouldPlay, videoPrepared, currentPlayCount, isCurrentPage, exoPlayer) {
-                if (isCurrentPage && shouldPlay && videoPrepared && currentPlayCount > 0 && exoPlayer != null && !hasPlayCompleted) {
+                if (
+                    isCurrentPage &&
+                        shouldPlay &&
+                        videoPrepared &&
+                        currentPlayCount > 0 &&
+                        exoPlayer != null &&
+                        !hasPlayCompleted
+                ) {
                     if (!isPlaying) {
                         actualPlayCount = 0
                         exoPlayer?.seekTo(0)
@@ -496,7 +529,15 @@ fun AnimatedBackground(
             }
 
             LifecycleResumeEffect(Unit) {
-                if (isCurrentPage && shouldPlay && !hasPlayCompleted && videoPrepared && currentPlayCount > 0 && exoPlayer != null && !isPlaying) {
+                if (
+                    isCurrentPage &&
+                        shouldPlay &&
+                        !hasPlayCompleted &&
+                        videoPrepared &&
+                        currentPlayCount > 0 &&
+                        exoPlayer != null &&
+                        !isPlaying
+                ) {
                     actualPlayCount = 0
                     exoPlayer?.seekTo(0)
                     exoPlayer?.playWhenReady = true
@@ -530,7 +571,13 @@ fun AnimatedBackground(
                             with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
 
                         ImageRequest.Builder(context)
-                            .data(getCdnImageUrl(staticImageUrl, width = CDN_STATIC_BACKGROUND_WIDTH, quality = CDN_IMAGE_QUALITY) ?: staticImageUrl)
+                            .data(
+                                getCdnImageUrl(
+                                    staticImageUrl,
+                                    width = CDN_STATIC_BACKGROUND_WIDTH,
+                                    quality = CDN_IMAGE_QUALITY,
+                                ) ?: staticImageUrl
+                            )
                             .size(Size(containerWidthPx, containerHeightPx))
                             .crossfade(true)
                             .build()
@@ -545,24 +592,31 @@ fun AnimatedBackground(
         } else if (videoUrl != null && isAnimatedImage) {
             val density = LocalDensity.current
             val configuration = LocalConfiguration.current
-            val animatedImageRequest = remember(videoUrl) {
-                val containerWidthPx = with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
-                val containerHeightPx = with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
-                val imageUrl = try {
-                    getCdnImageUrl(videoUrl, width = CDN_STATIC_BACKGROUND_WIDTH, quality = CDN_IMAGE_QUALITY) ?: videoUrl
-                } catch (e: Exception) {
-                    videoUrl
+            val animatedImageRequest =
+                remember(videoUrl) {
+                    val containerWidthPx =
+                        with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
+                    val containerHeightPx =
+                        with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
+                    val imageUrl =
+                        try {
+                            getCdnImageUrl(
+                                videoUrl,
+                                width = CDN_STATIC_BACKGROUND_WIDTH,
+                                quality = CDN_IMAGE_QUALITY,
+                            ) ?: videoUrl
+                        } catch (e: Exception) {
+                            videoUrl
+                        }
+                    ImageRequest.Builder(context)
+                        .data(imageUrl)
+                        .size(Size(containerWidthPx, containerHeightPx))
+                        .crossfade(true)
+                        .build()
                 }
-                ImageRequest.Builder(context)
-                    .data(imageUrl)
-                    .size(Size(containerWidthPx, containerHeightPx))
-                    .crossfade(true)
-                    .build()
-            }
 
-            val animatedImageRequestWithRepeatCount = remember(videoUrl, animatedImageRequest) {
-                animatedImageRequest
-            }
+            val animatedImageRequestWithRepeatCount =
+                remember(videoUrl, animatedImageRequest) { animatedImageRequest }
 
             SubcomposeAsyncImage(
                 modifier = Modifier.matchParentSize().clipToBounds(),
@@ -599,14 +653,16 @@ fun AnimatedBackground(
                 SubcomposeAsyncImageContent()
             }
 
-            var animationCallback by remember { mutableStateOf<Animatable2.AnimationCallback?>(null) }
+            var animationCallback by remember {
+                mutableStateOf<Animatable2.AnimationCallback?>(null)
+            }
             var isCallbackRegistered by remember { mutableStateOf(false) }
 
             LaunchedEffect(animatedImageDrawable) {
                 val drawable = animatedImageDrawable ?: return@LaunchedEffect
                 // 捕获当前drawable的引用，用于回调中验证
                 val currentDrawable = drawable
-                
+
                 // 先注销旧回调
                 val oldCallback = animationCallback
                 if (oldCallback != null && isCallbackRegistered) {
@@ -618,47 +674,53 @@ fun AnimatedBackground(
                     animationCallback = null
                     isCallbackRegistered = false
                 }
-                
+
                 var isProcessingCallback = false
-                val callback = object : Animatable2.AnimationCallback() {
-                    override fun onAnimationEnd(drawableParam: Drawable?) {
-                        // 防止重复调用：检查是否是当前注册的drawable，以及是否正在处理
-                        if (drawableParam != currentDrawable || isProcessingCallback) {
-                            return
-                        }
-                        
-                        isProcessingCallback = true
-                        try {
-                            if (drawableParam is AnimatedImageDrawable) {
-                                // 防止重复计数：如果已经完成，不再处理
-                                if (hasPlayCompleted) {
-                                    return
-                                }
-                                
-                                actualPlayCount++
-                                val currentTarget = currentPlayCount
-                                val shouldContinue = shouldPlay && !hasPlayCompleted && actualPlayCount < currentTarget
-                                
-                                if (actualPlayCount >= currentTarget) {
-                                    hasPlayCompleted = true
-                                    isPlaying = false
-                                    onIsPlayingChange?.invoke(false)
-                                    drawableParam.stop()
-                                    onPlayComplete()
-                                } else if (shouldContinue) {
-                                    drawableParam.repeatCount = 0
-                                    drawableParam.start()
-                                    isPlaying = true
-                                    onIsPlayingChange?.invoke(true)
-                                }
-                            } else {
-                                LogUtils.e("AnimatedBackground - onAnimationEnd回调中drawable不是AnimatedImageDrawable: ${drawableParam?.javaClass?.simpleName}")
+                val callback =
+                    object : Animatable2.AnimationCallback() {
+                        override fun onAnimationEnd(drawableParam: Drawable?) {
+                            // 防止重复调用：检查是否是当前注册的drawable，以及是否正在处理
+                            if (drawableParam != currentDrawable || isProcessingCallback) {
+                                return
                             }
-                        } finally {
-                            isProcessingCallback = false
+
+                            isProcessingCallback = true
+                            try {
+                                if (drawableParam is AnimatedImageDrawable) {
+                                    // 防止重复计数：如果已经完成，不再处理
+                                    if (hasPlayCompleted) {
+                                        return
+                                    }
+
+                                    actualPlayCount++
+                                    val currentTarget = currentPlayCount
+                                    val shouldContinue =
+                                        shouldPlay &&
+                                            !hasPlayCompleted &&
+                                            actualPlayCount < currentTarget
+
+                                    if (actualPlayCount >= currentTarget) {
+                                        hasPlayCompleted = true
+                                        isPlaying = false
+                                        onIsPlayingChange?.invoke(false)
+                                        drawableParam.stop()
+                                        onPlayComplete()
+                                    } else if (shouldContinue) {
+                                        drawableParam.repeatCount = 0
+                                        drawableParam.start()
+                                        isPlaying = true
+                                        onIsPlayingChange?.invoke(true)
+                                    }
+                                } else {
+                                    LogUtils.e(
+                                        "AnimatedBackground - onAnimationEnd回调中drawable不是AnimatedImageDrawable: ${drawableParam?.javaClass?.simpleName}"
+                                    )
+                                }
+                            } finally {
+                                isProcessingCallback = false
+                            }
                         }
                     }
-                }
                 animationCallback = callback
                 try {
                     drawable.registerAnimationCallback(callback)
@@ -671,21 +733,37 @@ fun AnimatedBackground(
 
             var lastPlayTrigger by remember { mutableStateOf<Pair<Boolean, Int>?>(null) }
 
-            LaunchedEffect(shouldPlay, isCurrentPage, animatedImageLoaded, animatedImageDrawable, currentPlayCount, hasPlayCompleted) {
+            LaunchedEffect(
+                shouldPlay,
+                isCurrentPage,
+                animatedImageLoaded,
+                animatedImageDrawable,
+                currentPlayCount,
+                hasPlayCompleted,
+            ) {
                 val triggerKey = Pair(shouldPlay, currentPlayCount)
-                
+
                 // 如果 playCount 变化了，重置 lastPlayTrigger，允许新的播放
                 val oldPlayCount = lastPlayTrigger?.second
                 if (oldPlayCount != null && oldPlayCount != currentPlayCount) {
                     lastPlayTrigger = null
                 }
-                
+
                 // 防止重复触发：如果相同的触发条件已经执行过，且动画正在播放或已完成，则跳过
-                if (lastPlayTrigger == triggerKey && (isPlaying || hasPlayCompleted) && shouldPlay) {
+                if (
+                    lastPlayTrigger == triggerKey && (isPlaying || hasPlayCompleted) && shouldPlay
+                ) {
                     return@LaunchedEffect
                 }
-                
-                if (isCurrentPage && shouldPlay && animatedImageLoaded && currentPlayCount > 0 && !hasPlayCompleted && animatedImageDrawable != null) {
+
+                if (
+                    isCurrentPage &&
+                        shouldPlay &&
+                        animatedImageLoaded &&
+                        currentPlayCount > 0 &&
+                        !hasPlayCompleted &&
+                        animatedImageDrawable != null
+                ) {
                     val drawable = animatedImageDrawable ?: return@LaunchedEffect
                     if (actualPlayCount < currentPlayCount) {
                         // 如果正在运行，先停止（可能是之前自动启动的）
@@ -728,15 +806,24 @@ fun AnimatedBackground(
             }
 
             if (showStaticImage && staticImageUrl != null) {
-                val staticImageRequest = remember(staticImageUrl) {
-                    val containerWidthPx = with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
-                    val containerHeightPx = with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
-                    ImageRequest.Builder(context)
-                        .data(getCdnImageUrl(staticImageUrl, width = CDN_STATIC_BACKGROUND_WIDTH, quality = CDN_IMAGE_QUALITY) ?: staticImageUrl)
-                        .size(Size(containerWidthPx, containerHeightPx))
-                        .crossfade(true)
-                        .build()
-                }
+                val staticImageRequest =
+                    remember(staticImageUrl) {
+                        val containerWidthPx =
+                            with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
+                        val containerHeightPx =
+                            with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
+                        ImageRequest.Builder(context)
+                            .data(
+                                getCdnImageUrl(
+                                    staticImageUrl,
+                                    width = CDN_STATIC_BACKGROUND_WIDTH,
+                                    quality = CDN_IMAGE_QUALITY,
+                                ) ?: staticImageUrl
+                            )
+                            .size(Size(containerWidthPx, containerHeightPx))
+                            .crossfade(true)
+                            .build()
+                    }
                 AsyncImage(
                     modifier = Modifier.fillMaxWidth().fillMaxSize().alpha(animatedAlpha),
                     model = staticImageRequest,
