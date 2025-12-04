@@ -23,6 +23,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,6 +53,7 @@ import com.ai.intellimate.ui.ExpiredVipDialog
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ForceUpgradeDialog
 import com.ai.intellimate.vip.VipCenterActivity
+import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 /** 主页面，包含五个tab */
@@ -69,9 +72,9 @@ fun HomeScreen(
         val defaultTabIndex =
             try {
                 ai.sxwl.android.firebase.FirebaseManager.getRemoteConfigLong(
-                        ai.sxwl.android.firebase.FirebaseManager.RemoteConfigKeys
-                            .HOME_PAGE_DEFAULT_TAB_INDEX
-                    )
+                    ai.sxwl.android.firebase.FirebaseManager.RemoteConfigKeys
+                        .HOME_PAGE_DEFAULT_TAB_INDEX
+                )
                     .toInt()
             } catch (e: Exception) {
                 0 // 默认值：Chat tab
@@ -114,12 +117,24 @@ fun HomeScreen(
         }
 
     // 双击检测：跟踪最后点击的tab和时间
-    var lastTabClickTime by remember { mutableStateOf(0L) }
-    var lastTabIndex by remember { mutableStateOf(-1) }
+    var lastTabClickTime by remember { mutableLongStateOf(0L) }
+    var lastTabIndex by remember { mutableIntStateOf(-1) }
     val doubleTapTimeoutMs = 300L // 双击检测时间窗口（毫秒）
 
+    // 圣诞配置状态，在 App 恢复时会重新检查日期
+    var enableChristmas by remember { mutableStateOf(enableChristmasConfig()) }
+
+    // 在 App 恢复时重新检查日期，更新圣诞配置状态
+    LifecycleResumeEffect(mainViewModel) {
+        enableChristmas = enableChristmasConfig()
+        onPauseOrDispose {}
+    }
+
+    // 根据圣诞配置状态动态选择 tab 图标配置
+    val homeTabItems = if (enableChristmas) christmasTabItems else defaultTabItems
+
     val bottomBarItems =
-        remember(messagesTabHasPush) {
+        remember(messagesTabHasPush, enableChristmas) {
             homeTabItems.map { tab ->
                 if (tab.index == HomeTabIndex.Messages.ordinal) {
                     tab.copy(hasRedDot = messagesTabHasPush)
@@ -137,7 +152,10 @@ fun HomeScreen(
 
     Scaffold(
         modifier =
-            modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
+            modifier
+                .fillMaxSize()
+                .background(HeartColor.primaryColor)
+                .navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
             val context = LocalContext.current
@@ -152,8 +170,8 @@ fun HomeScreen(
                     // 检测双击：如果点击的是Explore tab，且与上次点击相同，且在时间窗口内
                     if (
                         tabIndex == exploreTabIndex &&
-                            tabIndex == lastTabIndex &&
-                            currentTime - lastTabClickTime < doubleTapTimeoutMs
+                        tabIndex == lastTabIndex &&
+                        currentTime - lastTabClickTime < doubleTapTimeoutMs
                     ) {
                         // 双击Explore tab，触发重置
                         if (selectedTab.value == HomeTabIndex.Explore) {
@@ -526,7 +544,8 @@ private fun ProfileTabContent(
     )
 }
 
-private val homeTabItems =
+//默认tab的图标配置
+private val defaultTabItems =
     listOf(
         HeartBottomTabItem(
             index = 0,
@@ -559,3 +578,50 @@ private val homeTabItems =
             labelResId = R.string.tab_me,
         ),
     )
+
+//圣诞节的图标配置
+private val christmasTabItems = listOf(
+    HeartBottomTabItem(
+        index = 0,
+        selectedIcon = R.drawable.icon_chat_tab_christmas,
+        unselectedIcon = R.drawable.tab_icon_home,
+        labelResId = R.string.tab_home,
+    ),
+    HeartBottomTabItem(
+        index = 1,
+        selectedIcon = R.drawable.icon_msg_tab_christmas,
+        unselectedIcon = R.drawable.tab_icon_messages,
+        labelResId = R.string.tab_messages,
+    ),
+    HeartBottomTabItem(
+        index = 2,
+        selectedIcon = R.drawable.icon_create_tab_christmas,
+        unselectedIcon = R.drawable.icon_create_tab_christmas,
+        labelResId = R.string.tab_create,
+    ),
+    HeartBottomTabItem(
+        index = 3,
+        selectedIcon = R.drawable.icon_explore_tab_christmas,
+        unselectedIcon = R.drawable.tab_icon_explore,
+        labelResId = R.string.tab_explore,
+    ),
+    HeartBottomTabItem(
+        index = 4,
+        selectedIcon = R.drawable.icon_profile_tab_christmas,
+        unselectedIcon = R.drawable.tab_icon_me,
+        labelResId = R.string.tab_me,
+    ),
+)
+
+/**
+ * 简单的本地时间策略，12月22日～12月28日之间 欢度圣诞
+ */
+private fun enableChristmasConfig(): Boolean {
+    val calendar = Calendar.getInstance()
+    val month = calendar.get(Calendar.MONTH)
+    val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
+    
+    // Calendar.MONTH 从 0 开始，12 月对应 11
+    // 检查是否为 12 月，且日期在 22 到 28 之间
+    return month == Calendar.DECEMBER && dayOfMonth in 22..28
+}
