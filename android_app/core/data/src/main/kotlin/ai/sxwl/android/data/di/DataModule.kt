@@ -6,6 +6,7 @@ import ai.sxwl.android.data.agent.repository.AgentRepositoryImpl
 import ai.sxwl.android.data.cache.AgentCacheProvider
 import ai.sxwl.android.data.cache.RecommendedAgentCacheProvider
 import ai.sxwl.android.data.chat.data.ChatLocalDataSource
+import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.chat.domain.GenerateImageUseCase
@@ -16,11 +17,13 @@ import ai.sxwl.android.data.chat.domain.SyncChatDataUseCase
 import ai.sxwl.android.data.chat.domain.UpdateMessageFeedbackUseCase
 import ai.sxwl.android.data.chat.domain.VoteMessageUseCase
 import ai.sxwl.android.data.chat.repository.ChatRepositoryImpl
+import ai.sxwl.android.data.chat.repository.RoomImpl
 
 /** 数据层依赖注入管理 遵循Clean Architecture的依赖注入模式 不使用Hilt，采用手动依赖注入 */
 object DataModule {
     // Data Sources
     private val _chatLocalDataSource: ChatLocalDataSource by lazy { ChatLocalDataSource() }
+    private val _roomDataSource: RoomDataSource by lazy { RoomDataSource() }
     private val _chatRemoteDataSource: ChatRemoteDataSource by lazy { ChatRemoteDataSource() }
 
     // Cache Providers (injected from app module)
@@ -29,7 +32,7 @@ object DataModule {
 
     // Repositories
     private val _chatRepository: ChatRepository by lazy {
-        ChatRepositoryImpl(_chatLocalDataSource, _chatRemoteDataSource)
+        RoomImpl(_roomDataSource, _chatRemoteDataSource)
     }
 
     private val _agentRepository: AgentRepository by lazy {
