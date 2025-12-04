@@ -1,6 +1,7 @@
 package com.ai.intellimate.explore.special
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import androidx.compose.animation.core.animateFloatAsState
@@ -34,10 +35,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
@@ -50,6 +51,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.Dimension
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.SmartTagsLayout
@@ -59,8 +62,10 @@ import com.ai.intellimate.ui.components.SmartTagsLayout
  */
 private object ThemedDetailConfig {
     val EventCardHeight = 142.dp
-    val EventCardPadding = 16.dp
+    val EventCardPadding = 24.dp
+    val EventCardCornerRadius = 6.dp
     val EventDescriptionMaxLines = 4
+    // 边框渐变宽度
     val CharacterCardHeight = 142.dp
     val CharacterImageWidth = 80.dp
     val CharacterCardSpacing = 8.dp
@@ -99,10 +104,17 @@ fun ThemedDetailScreen(
                 fontWeight = FontWeight.Bold,
                 shadow = Shadow(
                     color = Color(0xFF8C8992),
-                    offset = Offset(2f, 2f),
-                    blurRadius = 10f,
+                    offset = Offset(5f, 3f),
+                    blurRadius = 15f,
                 ),
             ),
+        )
+
+        EventCard(
+            description = eventDescription,
+            isExpanded = isEventExpanded,
+            isChristmas = true,
+            onToggleExpanded = { viewModel.toggleEventExpanded() }
         )
 
         LazyColumn(
@@ -113,14 +125,6 @@ fun ThemedDetailScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(ThemedDetailConfig.ListSpacing)
         ) {
-            item {
-                EventCard(
-                    description = eventDescription,
-                    isExpanded = isEventExpanded,
-                    isChristmas = true,
-                    onToggleExpanded = { viewModel.toggleEventExpanded() }
-                )
-            }
 
             items(agents) { agent ->
                 ThemedCharacterCard(
@@ -148,26 +152,85 @@ private fun EventCard(
         label = "arrowRotation"
     )
 
-    Box(modifier = Modifier.fillMaxWidth()) {
+    ConstraintLayout(modifier = Modifier.fillMaxWidth()) {
+
+        val (christmasBg, cardBg, content,
+        ) = createRefs()
+
+        // 卡片背景层（带边框向内渐变效果）
+        Box(
+            modifier = Modifier
+                .constrainAs(cardBg) {
+                    top.linkTo(christmasBg.top, 20.dp)
+                    bottom.linkTo(christmasBg.bottom)
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                    width = Dimension.fillToConstraints
+                    height = Dimension.fillToConstraints
+                }
+        ) {
+
+            // 横向渐变边框（左右边缘向内渐变）
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.White.copy(0.1f),
+                                Color.Transparent,
+                                Color.Transparent,
+                                Color.Transparent,
+                                Color.Transparent,
+                                Color.Transparent,
+                                Color.White.copy(0.1f)
+                            ),
+                        ),
+                        shape = RoundedCornerShape(ThemedDetailConfig.EventCardCornerRadius)
+                    )
+            )
+            
+            // 纵向渐变边框（上下边缘向内渐变）
+            Box(
+                modifier = Modifier.matchParentSize()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(0.1f),
+                                Color.Transparent,
+                                Color.Transparent,
+                                Color.Transparent,
+                                Color.Transparent,
+                                Color.White.copy(0.1f)
+                            ),
+                        ),
+                        shape = RoundedCornerShape(ThemedDetailConfig.EventCardCornerRadius)
+                    )
+            )
+        }
 
         if (isChristmas) {
             //圣诞的装饰
             Image(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .constrainAs(christmasBg) {},
                 painter = painterResource(R.drawable.img_christmas_bg),
                 contentScale = ContentScale.Crop,
                 contentDescription = ""
             )
         }
 
-        // 内容层
+
+        // 文本内容层
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(ThemedDetailConfig.EventCardHeight)
-                .background(Color(0XFF1C1523))
                 .padding(ThemedDetailConfig.EventCardPadding)
-                .align(Alignment.BottomCenter)
+                .constrainAs(content) {
+                    centerVerticallyTo(cardBg)
+                }
         ) {
             val density = LocalDensity.current
             var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -237,11 +300,13 @@ private fun EventCard(
                         .size(iconSize)
                         .offset(x = iconOffsetX, y = iconOffsetY)
                         .rotate(rotationAngle)
-                        .clickable { onToggleExpanded() },
+                        .noRippleClickable { onToggleExpanded() },
                     tint = Color.White
                 )
             }
         }
+
+
     }
 }
 
