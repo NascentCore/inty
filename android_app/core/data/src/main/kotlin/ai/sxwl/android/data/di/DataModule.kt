@@ -17,6 +17,7 @@ import ai.sxwl.android.data.chat.domain.SyncChatDataUseCase
 import ai.sxwl.android.data.chat.domain.UpdateMessageFeedbackUseCase
 import ai.sxwl.android.data.chat.domain.VoteMessageUseCase
 import ai.sxwl.android.data.chat.repository.ChatRepositoryImpl
+import ai.sxwl.android.data.chat.repository.RoomImpl
 
 /** 数据层依赖注入管理 遵循Clean Architecture的依赖注入模式 不使用Hilt，采用手动依赖注入 */
 object DataModule {
