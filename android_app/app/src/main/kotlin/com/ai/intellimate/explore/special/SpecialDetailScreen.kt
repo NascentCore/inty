@@ -5,6 +5,7 @@ import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,26 +30,36 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.SmartTagsLayout
 
 /**
  * 主题详情页面配置常量
  */
 private object ThemedDetailConfig {
-    val EventCardHeight = 140.dp
+    val EventCardHeight = 142.dp
     val EventCardPadding = 16.dp
-    val EventCardCornerRadius = 6.dp
     val EventDescriptionMaxLines = 4
     val CharacterCardHeight = 142.dp
     val CharacterImageWidth = 80.dp
@@ -72,7 +84,7 @@ fun ThemedDetailScreen(
     val isEventExpanded by viewModel.isEventExpanded.collectAsState()
     val agents by viewModel.agents.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -81,8 +93,18 @@ fun ThemedDetailScreen(
         HeartTopAppBar(
             title = themeTitle,
             onBack = onBack,
+            titleTextStyle = TextStyle(
+                fontSize = 20.sp,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                shadow = Shadow(
+                    color = Color(0xFF8C8992),
+                    offset = Offset(2f, 2f),
+                    blurRadius = 10f,
+                ),
+            ),
         )
-        
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
@@ -95,10 +117,11 @@ fun ThemedDetailScreen(
                 EventCard(
                     description = eventDescription,
                     isExpanded = isEventExpanded,
+                    isChristmas = true,
                     onToggleExpanded = { viewModel.toggleEventExpanded() }
                 )
             }
-            
+
             items(agents) { agent ->
                 ThemedCharacterCard(
                     agent = agent,
@@ -116,6 +139,7 @@ fun ThemedDetailScreen(
 private fun EventCard(
     description: String,
     isExpanded: Boolean,
+    isChristmas: Boolean = false,
     onToggleExpanded: () -> Unit,
 ) {
     val rotationAngle by animateFloatAsState(
@@ -123,73 +147,101 @@ private fun EventCard(
         animationSpec = tween(durationMillis = 300),
         label = "arrowRotation"
     )
-    
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(ThemedDetailConfig.EventCardHeight)
-    ) {
-        // 背景层（带模糊效果）
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    color = Color(0x991C1523),
-                    shape = RoundedCornerShape(ThemedDetailConfig.EventCardCornerRadius)
-                )
-        )
-        
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+
+        if (isChristmas) {
+            //圣诞的装饰
+            Image(
+                modifier = Modifier.fillMaxWidth(),
+                painter = painterResource(R.drawable.img_christmas_bg),
+                contentScale = ContentScale.Crop,
+                contentDescription = ""
+            )
+        }
+
         // 内容层
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .height(ThemedDetailConfig.EventCardHeight)
+                .background(Color(0XFF1C1523))
                 .padding(ThemedDetailConfig.EventCardPadding)
+                .align(Alignment.BottomCenter)
         ) {
+            val density = LocalDensity.current
+            var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+            var hasOverflow by remember { mutableStateOf(false) }
+            var textPaddingEnd by remember { mutableIntStateOf(0) }
+            var boxWidth by remember { mutableStateOf(0.dp) }
+
+            // 获取 Box 的宽度
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onSizeChanged { size ->
+                        boxWidth = with(density) { size.width.toDp() }
+                    }
+            )
+
             Text(
                 text = description,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                color = Color(0xB2FFFFFF),
+                style = TextStyle(
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    color = Color(0xB2FFFFFF),
+                    letterSpacing = 0.1.sp, // 轻微增加字母间距，改善英文排版
+                ),
                 maxLines = if (isExpanded) Int.MAX_VALUE else ThemedDetailConfig.EventDescriptionMaxLines,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable { onToggleExpanded() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = null,
-                        modifier = Modifier.rotate(rotationAngle),
-                        tint = Color.White
-                    )
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = textPaddingEnd.dp),
+                onTextLayout = { layoutResult ->
+                    textLayoutResult = layoutResult
+                    val hasVisualOverflow = layoutResult.hasVisualOverflow
+                    val lineCount = layoutResult.lineCount
+                    hasOverflow =
+                        hasVisualOverflow || lineCount > ThemedDetailConfig.EventDescriptionMaxLines
+                    // 为箭头图标留出空间（24dp 图标 + 4dp 间距）
+                    // 只在折叠时留出空间，展开时图标会跟随文本末尾，通过边界检查确保不超出
+                    textPaddingEnd = if (hasOverflow && !isExpanded) 28 else 0
                 }
+            )
+
+            // 箭头图标，定位在文本末尾，确保不超出边界
+            if ((hasOverflow || isExpanded) && textLayoutResult != null) {
+                val layout = textLayoutResult!!
+                val lastLineIndex = layout.lineCount - 1
+                val lastLineRight = layout.getLineRight(lastLineIndex)
+                val lastLineBaseline = layout.getLineBaseline(lastLineIndex)
+
+                // 计算图标位置：文本末尾 + 小间距
+                val iconSize = 24.dp
+                val iconSpacing = 4.dp
+                val iconOffsetX = with(density) {
+                    val calculatedX = lastLineRight.toDp() + iconSpacing
+                    // 确保图标不超出 Box 边界（boxWidth 是内容区域的宽度，已经减去了 padding）
+                    val maxX = if (boxWidth > 0.dp) boxWidth - iconSize else calculatedX
+                    calculatedX.coerceAtMost(maxX.coerceAtLeast(0.dp))
+                }
+                // 使用基线位置，使图标与文本垂直居中对齐
+                val iconOffsetY = with(density) {
+                    (lastLineBaseline - 12.sp.toPx()).toDp() // 12sp 是字体大小，用于垂直居中
+                }
+
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(iconSize)
+                        .offset(x = iconOffsetX, y = iconOffsetY)
+                        .rotate(rotationAngle)
+                        .clickable { onToggleExpanded() },
+                    tint = Color.White
+                )
             }
         }
-        
-        // 内阴影效果（根据 Figma 设计）
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color(0x0AFFFFFF),
-                            Color(0x19E1A9F6)
-                        )
-                    ),
-                    shape = RoundedCornerShape(ThemedDetailConfig.EventCardCornerRadius)
-                )
-        )
     }
 }
 
@@ -244,7 +296,7 @@ private fun ThemedCharacterCard(
                 )
             }
         }
-        
+
         // 角色信息（右侧，自适应宽度）
         Column(
             modifier = Modifier
@@ -271,7 +323,7 @@ private fun ThemedCharacterCard(
                 maxLines = if (tags.isNullOrEmpty()) 4 else 3,
                 overflow = TextOverflow.Ellipsis
             )
-            
+
             if (!tags.isNullOrEmpty()) {
                 SmartTagsLayout(
                     tags = tags.filterNotNull(),
