@@ -121,8 +121,20 @@ fun HomeScreen(
     var lastTabIndex by remember { mutableIntStateOf(-1) }
     val doubleTapTimeoutMs = 300L // 双击检测时间窗口（毫秒）
 
+    // 圣诞配置状态，在 App 恢复时会重新检查日期
+    var enableChristmas by remember { mutableStateOf(enableChristmasConfig()) }
+
+    // 在 App 恢复时重新检查日期，更新圣诞配置状态
+    LifecycleResumeEffect(mainViewModel) {
+        enableChristmas = enableChristmasConfig()
+        onPauseOrDispose {}
+    }
+
+    // 根据圣诞配置状态动态选择 tab 图标配置
+    val homeTabItems = if (enableChristmas) christmasTabItems else defaultTabItems
+
     val bottomBarItems =
-        remember(messagesTabHasPush) {
+        remember(messagesTabHasPush, enableChristmas) {
             homeTabItems.map { tab ->
                 if (tab.index == HomeTabIndex.Messages.ordinal) {
                     tab.copy(hasRedDot = messagesTabHasPush)
@@ -613,7 +625,3 @@ private fun enableChristmasConfig(): Boolean {
     // 检查是否为 12 月，且日期在 22 到 28 之间
     return month == Calendar.DECEMBER && dayOfMonth in 22..28
 }
-
-//界面配置的tab样式
-private val homeTabItems =
-    if (enableChristmasConfig()) christmasTabItems else defaultTabItems
