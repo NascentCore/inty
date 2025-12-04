@@ -2,10 +2,15 @@ package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.utils.LogUtils
+import android.annotation.SuppressLint
 import android.graphics.Matrix
 import android.graphics.drawable.Animatable2
 import android.graphics.drawable.AnimatedImageDrawable
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.DrawableWrapper
+import android.graphics.drawable.LayerDrawable
+import android.graphics.drawable.ScaleDrawable
+import android.os.Build
 import android.view.TextureView
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -32,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -80,6 +86,106 @@ private fun isAnimatedImageUrl(url: String?): Boolean {
 
 private fun isAnimatedUrl(url: String?): Boolean {
     return isVideoUrl(url) || isAnimatedImageUrl(url)
+}
+
+/**
+ * 从 Drawable 中递归提取 AnimatedImageDrawable
+ * Drawable 可能被包装在 ScaleDrawable、LayerDrawable 或其他包装类中
+ */
+private fun extractAnimatedImageDrawable(drawable: Drawable?): AnimatedImageDrawable? {
+    if (drawable == null) return null
+    
+    // 如果是 AnimatedImageDrawable，直接返回
+    if (drawable is AnimatedImageDrawable) {
+        return drawable
+    }
+    
+    // 如果是 ScaleDrawable，尝试获取内部 drawable
+    if (drawable is ScaleDrawable) {
+        try {
+            @SuppressLint("SoonBlockedPrivateApi")
+            val field = ScaleDrawable::class.java.getDeclaredField("mState")
+            field.isAccessible = true
+            val state = field.get(drawable)
+            val drawableField = state?.javaClass?.getDeclaredField("mDrawable")
+            drawableField?.isAccessible = true
+            val innerDrawable = drawableField?.get(state) as? Drawable
+            if (innerDrawable != null) {
+                val result = extractAnimatedImageDrawable(innerDrawable)
+                if (result != null) {
+                    LogUtils.d("AnimatedBackground - 从ScaleDrawable中提取到AnimatedImageDrawable")
+                    return result
+                }
+            }
+        } catch (e: Exception) {
+            LogUtils.e("AnimatedBackground - 提取ScaleDrawable内部drawable失败: ${e.message}")
+        }
+    }
+    
+    // 如果是 DrawableWrapper，尝试获取内部 drawable
+    if (drawable is DrawableWrapper) {
+        val innerDrawable = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            drawable.drawable
+        } else {
+            // 对于旧版本，尝试通过反射获取
+            try {
+                val field = DrawableWrapper::class.java.getDeclaredField("mDrawable")
+                field.isAccessible = true
+                field.get(drawable) as? Drawable
+            } catch (e: Exception) {
+                null
+            }
+        }
+        val result = extractAnimatedImageDrawable(innerDrawable)
+        if (result != null) {
+            LogUtils.d("AnimatedBackground - 从DrawableWrapper中提取到AnimatedImageDrawable")
+            return result
+        }
+    }
+    
+    // 如果是 LayerDrawable，遍历所有层
+    if (drawable is LayerDrawable) {
+        for (i in 0 until drawable.numberOfLayers) {
+            val layerDrawable = drawable.getDrawable(i)
+            val animated = extractAnimatedImageDrawable(layerDrawable)
+            if (animated != null) {
+                LogUtils.d("AnimatedBackground - 从LayerDrawable第${i}层中提取到AnimatedImageDrawable")
+                return animated
+            }
+        }
+    }
+    
+    // 尝试使用 DrawableCompat 解包
+    val unwrapped: Drawable = DrawableCompat.unwrap(drawable)
+    if (unwrapped != drawable) {
+        val result = extractAnimatedImageDrawable(unwrapped)
+        if (result != null) {
+            LogUtils.d("AnimatedBackground - 从DrawableCompat.unwrap中提取到AnimatedImageDrawable")
+            return result
+        }
+    }
+    
+    // 最后尝试：通过反射查找所有可能的字段
+    try {
+        val fields = drawable.javaClass.declaredFields
+        for (field in fields) {
+            if (Drawable::class.java.isAssignableFrom(field.type)) {
+                field.isAccessible = true
+                val innerDrawable = field.get(drawable) as? Drawable
+                if (innerDrawable != null && innerDrawable != drawable) {
+                    val result = extractAnimatedImageDrawable(innerDrawable)
+                    if (result != null) {
+                        LogUtils.d("AnimatedBackground - 通过反射字段${field.name}提取到AnimatedImageDrawable")
+                        return result
+                    }
+                }
+            }
+        }
+    } catch (e: Exception) {
+        LogUtils.e("AnimatedBackground - 反射查找drawable字段失败: ${e.message}")
+    }
+    
+    return null
 }
 
 @OptIn(UnstableApi::class)
@@ -472,12 +578,20 @@ fun AnimatedBackground(
                 onState = { state ->
                     if (state is AsyncImagePainter.State.Success) {
                         val drawable = state.result.image.asDrawable(context.resources)
-                        val isAnimated = drawable is AnimatedImageDrawable
-                        LogUtils.d("AnimatedBackground - 动图加载状态: url=$videoUrl, isAnimatedImageDrawable=$isAnimated, drawableType=${drawable.javaClass.simpleName}")
-                        if (drawable is AnimatedImageDrawable) {
-                            if (animatedImageDrawable != drawable) {
-                                animatedImageDrawable = drawable
-                                LogUtils.d("AnimatedBackground - 设置AnimatedImageDrawable: drawable=$drawable, isRunning=${drawable.isRunning}, repeatCount=${drawable.repeatCount}")
+                        val animatedDrawable = extractAnimatedImageDrawable(drawable)
+                        val isAnimated = animatedDrawable != null
+                        LogUtils.d("AnimatedBackground - 动图加载状态: url=$videoUrl, isAnimatedImageDrawable=$isAnimated, drawableType=${drawable.javaClass.simpleName}, extractedAnimatedDrawable=${animatedDrawable != null}")
+                        if (animatedDrawable != null) {
+                            if (animatedImageDrawable != animatedDrawable) {
+                                // 如果动图已经在运行（可能是 Coil 自动启动的），先停止它
+                                if (animatedDrawable.isRunning) {
+                                    animatedDrawable.stop()
+                                    LogUtils.d("AnimatedBackground - 停止自动播放的动图")
+                                }
+                                // 设置 repeatCount=0，表示播放一次（后续通过回调控制播放次数）
+                                animatedDrawable.repeatCount = 0
+                                animatedImageDrawable = animatedDrawable
+                                LogUtils.d("AnimatedBackground - 设置AnimatedImageDrawable: drawable=$animatedDrawable, isRunning=${animatedDrawable.isRunning}, repeatCount=${animatedDrawable.repeatCount}")
                             }
                             if (!animatedImageLoaded) {
                                 animatedImageLoaded = true
@@ -550,15 +664,21 @@ fun AnimatedBackground(
                 if (isCurrentPage && shouldPlay && animatedImageLoaded && currentPlayCount > 0 && !hasPlayCompleted && animatedImageDrawable != null) {
                     val drawable = animatedImageDrawable ?: return@LaunchedEffect
                     val isRunning = drawable.isRunning
-                    LogUtils.d("AnimatedBackground - 准备播放: isRunning=$isRunning, actualPlayCount=$actualPlayCount, currentPlayCount=$currentPlayCount")
-                    if (!isRunning && actualPlayCount < currentPlayCount) {
+                    LogUtils.d("AnimatedBackground - 准备播放: isRunning=$isRunning, actualPlayCount=$actualPlayCount, currentPlayCount=$currentPlayCount, repeatCount=${drawable.repeatCount}")
+                    if (actualPlayCount < currentPlayCount) {
+                        // 如果正在运行，先停止（可能是之前自动启动的）
+                        if (isRunning) {
+                            drawable.stop()
+                            LogUtils.d("AnimatedBackground - 停止正在运行的动图，准备重新开始")
+                        }
+                        // 确保 repeatCount=0（播放一次，通过回调控制总次数）
                         drawable.repeatCount = 0
                         drawable.start()
                         isPlaying = true
                         LogUtils.d("AnimatedBackground - 开始播放动图: repeatCount=0, isPlaying=true, actualPlayCount=$actualPlayCount, 调用onIsPlayingChange(true)")
                         onIsPlayingChange?.invoke(true)
                     } else {
-                        LogUtils.d("AnimatedBackground - 不启动播放: isRunning=$isRunning, actualPlayCount=$actualPlayCount >= currentPlayCount=$currentPlayCount")
+                        LogUtils.d("AnimatedBackground - 不启动播放: actualPlayCount=$actualPlayCount >= currentPlayCount=$currentPlayCount")
                     }
                 } else if (!shouldPlay && !isPlaying) {
                     animatedImageDrawable?.stop()
