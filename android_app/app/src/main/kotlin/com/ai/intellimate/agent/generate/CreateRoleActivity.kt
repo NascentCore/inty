@@ -93,7 +93,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.NameEditField
 import com.ai.intellimate.utils.AvatarManager
@@ -476,27 +480,11 @@ private fun CreateRolePage(
 
                                             // Update UI on main thread
                                             withContext(Dispatchers.Main) {
-                                                if (
-                                                    isUploadingFromGallery &&
-                                                        originalUploadedImageUrl != null
-                                                ) {
-                                                    // Gallery upload: original is background,
-                                                    // cropped is avatar
-                                                    croppedAvatarUrl = uploadedUrl
-                                                    avatarUrl = originalUploadedImageUrl
-                                                    avatarUrls = emptyList()
-                                                    isUploadingFromGallery = false
-                                                    originalUploadedImageUrl = null
-                                                    ToastUtils.showShort(
-                                                        R.string.toast_avatar_cropped_uploaded
-                                                    )
-                                                } else {
-                                                    // Face edit: update cropped avatar
-                                                    croppedAvatarUrl = uploadedUrl
-                                                    ToastUtils.showShort(
-                                                        R.string.toast_avatar_cropped_uploaded
-                                                    )
-                                                }
+                                                // Face edit: update cropped avatar
+                                                croppedAvatarUrl = uploadedUrl
+                                                ToastUtils.showShort(
+                                                    R.string.toast_avatar_cropped_uploaded
+                                                )
                                             }
                                         }
 
@@ -628,7 +616,6 @@ private fun CreateRolePage(
                                 val tempFileSize = tempFile.length()
                                 if (tempFileSize > maxSizeBytes) {
                                     withContext(Dispatchers.Main) {
-                                        isUploadingFromGallery = false
                                         val maxSizeMBStr =
                                             String.format(Locale.getDefault(), "%dMB", maxSizeMB)
                                         val fileSizeMBStr =
@@ -668,7 +655,10 @@ private fun CreateRolePage(
 
                                         // Store original URL and launch UCrop
                                         withContext(Dispatchers.Main) {
-                                            originalUploadedImageUrl = originalUrl
+                                            val historyImageSize = avatarUrls.size
+
+                                            avatarUrls += originalUrl
+                                            selectedImageIndex = historyImageSize
                                             // Launch UCrop with the original URI
                                             val intentCrop =
                                                 UCropHelper.getIntent(
@@ -685,7 +675,6 @@ private fun CreateRolePage(
                                             "Original image upload failed: ${response.message}"
                                         )
                                         withContext(Dispatchers.Main) {
-                                            isUploadingFromGallery = false
                                             ToastUtils.showShort(
                                                 context.getString(
                                                     R.string.toast_upload_failed_with_message,
@@ -698,7 +687,6 @@ private fun CreateRolePage(
                             } catch (e: Exception) {
                                 LogUtils.e("Upload original image exception: ${e.message}")
                                 withContext(Dispatchers.Main) {
-                                    isUploadingFromGallery = false
                                     ToastUtils.showShort(
                                         context.getString(
                                             R.string.toast_upload_failed_with_message,
@@ -706,6 +694,8 @@ private fun CreateRolePage(
                                         )
                                     )
                                 }
+                            } finally {
+                                isUploadingFromGallery = false
                             }
                         }
                     }
@@ -906,11 +896,13 @@ private fun CreateRolePage(
             Spacer(modifier = Modifier.height(12.dp))
 
             val promptForGeneration = if (avatarPrompt.isNotBlank()) avatarPrompt else settings
+
             AvatarUploadSection(
                 avatarUrl = avatarUrl,
                 avatarUrls = avatarUrls,
                 selectedIndex = selectedImageIndex,
                 isGenerating = isGeneratingAvatar,
+                isUploadingGallery = isUploadingFromGallery,
                 croppedAvatarUrl = croppedAvatarUrl,
                 onGenerateClick = {
                     AvatarManager.setGeneratedAvatarUrls(avatarUrls)
@@ -932,10 +924,6 @@ private fun CreateRolePage(
                     onAvatarGenerateClick(promptToUse.takeIf { it.isNotBlank() })
                 },
                 onFaceEdit = {
-                    // Clear gallery upload flags before face edit to prevent stale state
-                    // Face edit is a separate operation from gallery upload
-                    isUploadingFromGallery = false
-                    originalUploadedImageUrl = null
                     AvatarManager.clearAllAvatarData()
 
                     // Get the current avatar URL to crop
@@ -959,102 +947,41 @@ private fun CreateRolePage(
                         } else {
                             avatarUrl
                         }
+                    val previewUrl = getCdnImageUrl(
+                        originUrl = imageUrl,
+                        width = Config.TextToImage.Preview.WIDTH,
+                        quality = Config.TextToImage.Preview.QUALITY
+                    )
 
-                    if (imageUrl != null) {
-                        // Check if it's a web URL or local file
-                        if (imageUrl.startsWith("http")) {
-                            // Validate URL format
-                            val isValidUrl =
-                                try {
-                                    URL(imageUrl) // Test if URL is valid
-                                    true
-                                } catch (e: Exception) {
-                                    LogUtils.e(
-                                        "Face edit - Invalid URL format: $imageUrl URL validation error: ${e.message}"
-                                    )
-                                    false
-                                }
+                    if (previewUrl != null || imageUrl != null) {
+                        createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                val imageLoader = SingletonImageLoader.get(context)
+                                val request = ImageRequest.Builder(context)
+                                    .data(previewUrl ?: imageUrl)
+                                    .build()
+                                val result = imageLoader.execute(request)
 
-                            if (isValidUrl) {
-                                // Download image from web URL first using OkHttp
-                                createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                    try {
-                                        // Download image to local cache using OkHttp
-                                        val tempFile =
-                                            File(
-                                                context.cacheDir,
-                                                "temp_crop_source_${UUID.randomUUID()}.jpg",
-                                            )
-                                        val client =
-                                            OkHttpClient.Builder()
-                                                .callTimeout(10 * 1000, TimeUnit.MILLISECONDS)
-                                                .connectTimeout(15 * 1000, TimeUnit.MILLISECONDS)
-                                                .readTimeout(15 * 1000, TimeUnit.MILLISECONDS)
-                                                .writeTimeout(15 * 1000, TimeUnit.MILLISECONDS)
-                                                .build()
-                                        val request = Request.Builder().url(imageUrl).build()
+                                if (result is SuccessResult) {
+                                    result.diskCacheKey?.let { key ->
+                                        val diskCache = SingletonImageLoader.get(context).diskCache
+                                        val snapshot = diskCache?.openSnapshot(key)
 
-                                        val response = client.newCall(request).execute()
-                                        LogUtils.d(
-                                            "Face edit download - HTTP response message: ${response.message}"
-                                        )
-
-                                        if (response.isSuccessful) {
-                                            response.body?.let { body ->
-                                                // ✅ 修复：将响应体内容写入临时文件
-                                                tempFile.outputStream().use { output ->
-                                                    body.byteStream().use { input ->
-                                                        input.copyTo(output)
-                                                    }
-                                                }
-
-                                                // 验证文件是否成功写入
-                                                if (!tempFile.exists() || tempFile.length() == 0L) {
-                                                    throw Exception(
-                                                        "Failed to write image data to temp file"
-                                                    )
-                                                }
-
-                                                LogUtils.d(
-                                                    "Face edit download - Image downloaded successfully, file size: ${tempFile.length()} bytes"
-                                                )
-
-                                                withContext(Dispatchers.Main) {
-                                                    startUCropWithLocalFile(
-                                                        tempFile,
-                                                        context,
-                                                        cropLauncher,
-                                                    )
-                                                }
-                                            } ?: run { throw Exception("Response body is null") }
-                                        } else {
-                                            throw Exception(
-                                                "HTTP ${response.code}: ${response.message}"
-                                            )
-                                        }
-                                    } catch (e: Exception) {
-                                        LogUtils.e(
-                                            "Failed to download image for cropping: $imageUrl Error details: ${e.message}"
-                                        )
-                                        withContext(Dispatchers.Main) {
-                                            ToastUtils.showShort(
-                                                R.string.toast_failed_download_image_editing
-                                            )
+                                        snapshot?.use {
+                                            startUCropWithLocalFile(it.data.toFile(), context, cropLauncher)
                                         }
                                     }
                                 }
-                            } else {
-                                ToastUtils.showShort(R.string.toast_invalid_image_url)
-                            }
-                        } else {
-                            // Local file URI
-                            val sourceFile =
-                                if (imageUrl.startsWith("file://")) {
-                                    File(imageUrl.toUri().path!!)
-                                } else {
-                                    File(imageUrl)
+                            } catch (e: Exception) {
+                                LogUtils.e(
+                                    "Failed to download image for cropping: $imageUrl Error details: ${e.message}"
+                                )
+                                withContext(Dispatchers.Main) {
+                                    ToastUtils.showShort(
+                                        R.string.toast_failed_download_image_editing
+                                    )
                                 }
-                            startUCropWithLocalFile(sourceFile, context, cropLauncher)
+                            }
                         }
                     } else {
                         ToastUtils.showShort(R.string.toast_no_avatar_image)
@@ -1311,6 +1238,7 @@ private fun AvatarUploadSection(
     avatarUrls: List<String> = emptyList(),
     selectedIndex: Int = 0,
     isGenerating: Boolean = false,
+    isUploadingGallery: Boolean = false,
     croppedAvatarUrl: String? = null,
     onGenerateClick: () -> Unit,
     onImageSelected: (Int) -> Unit = {},
@@ -1346,7 +1274,7 @@ private fun AvatarUploadSection(
             contentAlignment = Alignment.Center,
         ) {
             when {
-                isGenerating -> {
+                isGenerating || isUploadingGallery -> {
                     ThreeDotLoadingAnimation()
                 }
                 // 多选模式：AI生成了多个头像变体，用户可从中选择
