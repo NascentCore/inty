@@ -93,7 +93,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.NameEditField
 import com.ai.intellimate.utils.AvatarManager
@@ -894,6 +898,7 @@ private fun CreateRolePage(
             Spacer(modifier = Modifier.height(12.dp))
 
             val promptForGeneration = if (avatarPrompt.isNotBlank()) avatarPrompt else settings
+
             AvatarUploadSection(
                 avatarUrl = avatarUrl,
                 avatarUrls = avatarUrls,
@@ -944,102 +949,41 @@ private fun CreateRolePage(
                         } else {
                             avatarUrl
                         }
+                    val previewUrl = getCdnImageUrl(
+                        originUrl = imageUrl,
+                        width = Config.TextToImage.Preview.WIDTH,
+                        quality = Config.TextToImage.Preview.QUALITY
+                    )
 
-                    if (imageUrl != null) {
-                        // Check if it's a web URL or local file
-                        if (imageUrl.startsWith("http")) {
-                            // Validate URL format
-                            val isValidUrl =
-                                try {
-                                    URL(imageUrl) // Test if URL is valid
-                                    true
-                                } catch (e: Exception) {
-                                    LogUtils.e(
-                                        "Face edit - Invalid URL format: $imageUrl URL validation error: ${e.message}"
-                                    )
-                                    false
-                                }
+                    if (previewUrl != null || imageUrl != null) {
+                        createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                val imageLoader = SingletonImageLoader.get(context)
+                                val request = ImageRequest.Builder(context)
+                                    .data(previewUrl ?: imageUrl)
+                                    .build()
+                                val result = imageLoader.execute(request)
 
-                            if (isValidUrl) {
-                                // Download image from web URL first using OkHttp
-                                createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                    try {
-                                        // Download image to local cache using OkHttp
-                                        val tempFile =
-                                            File(
-                                                context.cacheDir,
-                                                "temp_crop_source_${UUID.randomUUID()}.jpg",
-                                            )
-                                        val client =
-                                            OkHttpClient.Builder()
-                                                .callTimeout(10 * 1000, TimeUnit.MILLISECONDS)
-                                                .connectTimeout(15 * 1000, TimeUnit.MILLISECONDS)
-                                                .readTimeout(15 * 1000, TimeUnit.MILLISECONDS)
-                                                .writeTimeout(15 * 1000, TimeUnit.MILLISECONDS)
-                                                .build()
-                                        val request = Request.Builder().url(imageUrl).build()
+                                if (result is SuccessResult) {
+                                    result.diskCacheKey?.let { key ->
+                                        val diskCache = SingletonImageLoader.get(context).diskCache
+                                        val snapshot = diskCache?.openSnapshot(key)
 
-                                        val response = client.newCall(request).execute()
-                                        LogUtils.d(
-                                            "Face edit download - HTTP response message: ${response.message}"
-                                        )
-
-                                        if (response.isSuccessful) {
-                                            response.body?.let { body ->
-                                                // ✅ 修复：将响应体内容写入临时文件
-                                                tempFile.outputStream().use { output ->
-                                                    body.byteStream().use { input ->
-                                                        input.copyTo(output)
-                                                    }
-                                                }
-
-                                                // 验证文件是否成功写入
-                                                if (!tempFile.exists() || tempFile.length() == 0L) {
-                                                    throw Exception(
-                                                        "Failed to write image data to temp file"
-                                                    )
-                                                }
-
-                                                LogUtils.d(
-                                                    "Face edit download - Image downloaded successfully, file size: ${tempFile.length()} bytes"
-                                                )
-
-                                                withContext(Dispatchers.Main) {
-                                                    startUCropWithLocalFile(
-                                                        tempFile,
-                                                        context,
-                                                        cropLauncher,
-                                                    )
-                                                }
-                                            } ?: run { throw Exception("Response body is null") }
-                                        } else {
-                                            throw Exception(
-                                                "HTTP ${response.code}: ${response.message}"
-                                            )
-                                        }
-                                    } catch (e: Exception) {
-                                        LogUtils.e(
-                                            "Failed to download image for cropping: $imageUrl Error details: ${e.message}"
-                                        )
-                                        withContext(Dispatchers.Main) {
-                                            ToastUtils.showShort(
-                                                R.string.toast_failed_download_image_editing
-                                            )
+                                        snapshot?.use {
+                                            startUCropWithLocalFile(it.data.toFile(), context, cropLauncher)
                                         }
                                     }
                                 }
-                            } else {
-                                ToastUtils.showShort(R.string.toast_invalid_image_url)
-                            }
-                        } else {
-                            // Local file URI
-                            val sourceFile =
-                                if (imageUrl.startsWith("file://")) {
-                                    File(imageUrl.toUri().path!!)
-                                } else {
-                                    File(imageUrl)
+                            } catch (e: Exception) {
+                                LogUtils.e(
+                                    "Failed to download image for cropping: $imageUrl Error details: ${e.message}"
+                                )
+                                withContext(Dispatchers.Main) {
+                                    ToastUtils.showShort(
+                                        R.string.toast_failed_download_image_editing
+                                    )
                                 }
-                            startUCropWithLocalFile(sourceFile, context, cropLauncher)
+                            }
                         }
                     } else {
                         ToastUtils.showShort(R.string.toast_no_avatar_image)
