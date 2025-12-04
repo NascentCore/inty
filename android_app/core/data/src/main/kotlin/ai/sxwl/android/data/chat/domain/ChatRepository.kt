@@ -76,15 +76,9 @@ interface ChatRepository {
         messageId: String,
     ): HttpResult<ChatService.ChatImageGenerationResult>
 
-    /**
-     * 清理指定agent的聊天数据
-     * 这个函数在 RoomDataSource 中实现是异步，因此需要是 suspend 函数
-     */
-    suspend fun clearChatData(agentId: String)
+    /** 清理指定agent的聊天数据 */
+    fun clearChatData(agentId: String)
 
-    /**
-     * 清理所有聊天数据
-     * 这个函数在 RoomDataSource 中实现是异步，因此需要是 suspend 函数
-     */
-    suspend fun clearAllChatData()
+    /** 清理所有聊天数据 */
+    fun clearAllChatData()
 }
