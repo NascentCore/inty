@@ -478,27 +478,11 @@ private fun CreateRolePage(
 
                                             // Update UI on main thread
                                             withContext(Dispatchers.Main) {
-                                                if (
-                                                    isUploadingFromGallery &&
-                                                        originalUploadedImageUrl != null
-                                                ) {
-                                                    // Gallery upload: original is background,
-                                                    // cropped is avatar
-                                                    croppedAvatarUrl = uploadedUrl
-                                                    avatarUrl = originalUploadedImageUrl
-                                                    avatarUrls = emptyList()
-                                                    isUploadingFromGallery = false
-                                                    originalUploadedImageUrl = null
-                                                    ToastUtils.showShort(
-                                                        R.string.toast_avatar_cropped_uploaded
-                                                    )
-                                                } else {
-                                                    // Face edit: update cropped avatar
-                                                    croppedAvatarUrl = uploadedUrl
-                                                    ToastUtils.showShort(
-                                                        R.string.toast_avatar_cropped_uploaded
-                                                    )
-                                                }
+                                                // Face edit: update cropped avatar
+                                                croppedAvatarUrl = uploadedUrl
+                                                ToastUtils.showShort(
+                                                    R.string.toast_avatar_cropped_uploaded
+                                                )
                                             }
                                         }
 
@@ -630,7 +614,6 @@ private fun CreateRolePage(
                                 val tempFileSize = tempFile.length()
                                 if (tempFileSize > maxSizeBytes) {
                                     withContext(Dispatchers.Main) {
-                                        isUploadingFromGallery = false
                                         val maxSizeMBStr =
                                             String.format(Locale.getDefault(), "%dMB", maxSizeMB)
                                         val fileSizeMBStr =
@@ -670,8 +653,10 @@ private fun CreateRolePage(
 
                                         // Store original URL and launch UCrop
                                         withContext(Dispatchers.Main) {
-                                            originalUploadedImageUrl = originalUrl
+                                            val historyImageSize = avatarUrls.size
+
                                             avatarUrls += originalUrl
+                                            selectedImageIndex = historyImageSize
                                             // Launch UCrop with the original URI
                                             val intentCrop =
                                                 UCropHelper.getIntent(
@@ -688,7 +673,6 @@ private fun CreateRolePage(
                                             "Original image upload failed: ${response.message}"
                                         )
                                         withContext(Dispatchers.Main) {
-                                            isUploadingFromGallery = false
                                             ToastUtils.showShort(
                                                 context.getString(
                                                     R.string.toast_upload_failed_with_message,
@@ -701,7 +685,6 @@ private fun CreateRolePage(
                             } catch (e: Exception) {
                                 LogUtils.e("Upload original image exception: ${e.message}")
                                 withContext(Dispatchers.Main) {
-                                    isUploadingFromGallery = false
                                     ToastUtils.showShort(
                                         context.getString(
                                             R.string.toast_upload_failed_with_message,
@@ -709,6 +692,8 @@ private fun CreateRolePage(
                                         )
                                     )
                                 }
+                            } finally {
+                                isUploadingFromGallery = false
                             }
                         }
                     }
@@ -914,6 +899,7 @@ private fun CreateRolePage(
                 avatarUrls = avatarUrls,
                 selectedIndex = selectedImageIndex,
                 isGenerating = isGeneratingAvatar,
+                isUploadingGallery = isUploadingFromGallery,
                 croppedAvatarUrl = croppedAvatarUrl,
                 onGenerateClick = {
                     AvatarManager.setGeneratedAvatarUrls(avatarUrls)
@@ -935,10 +921,6 @@ private fun CreateRolePage(
                     onAvatarGenerateClick(promptToUse.takeIf { it.isNotBlank() })
                 },
                 onFaceEdit = {
-                    // Clear gallery upload flags before face edit to prevent stale state
-                    // Face edit is a separate operation from gallery upload
-                    isUploadingFromGallery = false
-                    originalUploadedImageUrl = null
                     AvatarManager.clearAllAvatarData()
 
                     // Get the current avatar URL to crop
@@ -1314,6 +1296,7 @@ private fun AvatarUploadSection(
     avatarUrls: List<String> = emptyList(),
     selectedIndex: Int = 0,
     isGenerating: Boolean = false,
+    isUploadingGallery: Boolean = false,
     croppedAvatarUrl: String? = null,
     onGenerateClick: () -> Unit,
     onImageSelected: (Int) -> Unit = {},
@@ -1349,7 +1332,7 @@ private fun AvatarUploadSection(
             contentAlignment = Alignment.Center,
         ) {
             when {
-                isGenerating -> {
+                isGenerating || isUploadingGallery -> {
                     ThreeDotLoadingAnimation()
                 }
                 // 多选模式：AI生成了多个头像变体，用户可从中选择
