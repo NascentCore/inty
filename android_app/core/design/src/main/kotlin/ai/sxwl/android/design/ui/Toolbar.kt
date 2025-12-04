@@ -76,11 +76,13 @@ fun HeartTopAppBar(
                     Text(
                         modifier = Modifier,
                         text = title,
-                        style = titleTextStyle ?: TextStyle(
-                            fontSize = 20.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold,
-                        ),
+                        style =
+                            titleTextStyle
+                                ?: TextStyle(
+                                    fontSize = 20.sp,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold,
+                                ),
                     )
                 }
             }

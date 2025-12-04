@@ -434,10 +434,7 @@ export const agentApi = {
     ),
 
   // 上传裁剪后的背景图
-  uploadCroppedBackground: (
-    agentId: string,
-    file: File,
-  ): Promise<Agent> =>
+  uploadCroppedBackground: (agentId: string, file: File): Promise<Agent> =>
     apiClient.upload(
       `/evaluation/agents/${agentId}/upload-cropped-background`,
       file,

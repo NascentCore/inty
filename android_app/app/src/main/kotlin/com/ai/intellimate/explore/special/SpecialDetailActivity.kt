@@ -7,9 +7,7 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import com.ai.intellimate.chat.ChatActivity
 
-/**
- * Explore界面顶部主题专区详情
- */
+/** Explore界面顶部主题专区详情 */
 class SpecialDetailActivity : BaseActivity() {
 
     companion object {
@@ -70,12 +68,8 @@ class SpecialDetailActivity : BaseActivity() {
             viewModel = viewModel,
             onBack = { finish() },
             onClickAgent = { agent ->
-                ChatActivity.launch(
-                    this,
-                    agent,
-                    pageSource = ChatActivity.EXPLORE_TAB
-                )
-            }
+                ChatActivity.launch(this, agent, pageSource = ChatActivity.EXPLORE_TAB)
+            },
         )
     }
 }

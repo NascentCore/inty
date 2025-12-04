@@ -632,9 +632,7 @@ private fun StyledMessageText(
                 displayCompleteCall?.invoke()
             }
 
-            DisposableEffect(Unit) {
-                onDispose { displayCompleteCall?.invoke() }
-            }
+            DisposableEffect(Unit) { onDispose { displayCompleteCall?.invoke() } }
 
             remember(displayedWordCount, words, text) {
                 val partialText = words.take(displayedWordCount).joinToString("")

@@ -40,22 +40,32 @@ class FCMService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
 
-        LogUtils.i("FCMService", "收到 FCM 消息 - messageId: ${remoteMessage.messageId}, from: ${remoteMessage.from}, sentTime: ${remoteMessage.sentTime}")
+        LogUtils.i(
+            "FCMService",
+            "收到 FCM 消息 - messageId: ${remoteMessage.messageId}, from: ${remoteMessage.from}, sentTime: ${remoteMessage.sentTime}",
+        )
 
         // 记录消息类型
         val hasNotification = remoteMessage.notification != null
         val hasData = remoteMessage.data.isNotEmpty()
-        val messageType = when {
-            hasNotification && hasData -> "通知+数据消息"
-            hasNotification -> "纯通知消息"
-            hasData -> "纯数据消息"
-            else -> "未知类型"
-        }
-        LogUtils.d("FCMService", "消息类型: $messageType, hasNotification: $hasNotification, hasData: $hasData, dataSize: ${remoteMessage.data.size}")
+        val messageType =
+            when {
+                hasNotification && hasData -> "通知+数据消息"
+                hasNotification -> "纯通知消息"
+                hasData -> "纯数据消息"
+                else -> "未知类型"
+            }
+        LogUtils.d(
+            "FCMService",
+            "消息类型: $messageType, hasNotification: $hasNotification, hasData: $hasData, dataSize: ${remoteMessage.data.size}",
+        )
 
         // 记录通知内容（如果有）
         remoteMessage.notification?.let { notif ->
-            LogUtils.d("FCMService", "通知内容 - title: ${notif.title}, body: ${notif.body}, tag: ${notif.tag}, clickAction: ${notif.clickAction}")
+            LogUtils.d(
+                "FCMService",
+                "通知内容 - title: ${notif.title}, body: ${notif.body}, tag: ${notif.tag}, clickAction: ${notif.clickAction}",
+            )
         }
 
         // 记录数据内容（如果有）
@@ -91,7 +101,10 @@ class FCMService : FirebaseMessagingService() {
             val notification = remoteMessage.notification
             val data = remoteMessage.data
 
-            LogUtils.d("FCMService", "提取消息元数据 - messageId: $messageId, type: ${data[FCMConstants.DATA_KEY_TYPE]}, agentId: ${data[FCMConstants.DATA_KEY_AGENT_ID]}")
+            LogUtils.d(
+                "FCMService",
+                "提取消息元数据 - messageId: $messageId, type: ${data[FCMConstants.DATA_KEY_TYPE]}, agentId: ${data[FCMConstants.DATA_KEY_AGENT_ID]}",
+            )
 
             val pendingMessage =
                 DirectBootStorage.PendingMessage(
@@ -103,7 +116,10 @@ class FCMService : FirebaseMessagingService() {
                     body = notification?.body,
                 )
 
-            LogUtils.d("FCMService", "构建待处理消息 - title: ${pendingMessage.title}, body: ${pendingMessage.body}")
+            LogUtils.d(
+                "FCMService",
+                "构建待处理消息 - title: ${pendingMessage.title}, body: ${pendingMessage.body}",
+            )
 
             // 保存到 Direct Boot 存储
             val saved = DirectBootStorage.savePendingMessage(pendingMessage, this)
@@ -125,12 +141,18 @@ class FCMService : FirebaseMessagingService() {
         val messageType = data[FCMConstants.DATA_KEY_TYPE]
         val agentId = data[FCMConstants.DATA_KEY_AGENT_ID]
 
-        LogUtils.d("FCMService", "消息解析 - messageType: $messageType, agentId: $agentId, hasNotification: ${notification != null}")
+        LogUtils.d(
+            "FCMService",
+            "消息解析 - messageType: $messageType, agentId: $agentId, hasNotification: ${notification != null}",
+        )
 
         // 通过回调处理消息
         val handler = FirebaseManager.getMessageHandler()
         if (handler == null) {
-            LogUtils.w("FCMService", "⚠️ MessageHandler 为 null，消息处理回调未设置！请检查 IntelliMateApp.setupFCMessageHandler() 是否已调用")
+            LogUtils.w(
+                "FCMService",
+                "⚠️ MessageHandler 为 null，消息处理回调未设置！请检查 IntelliMateApp.setupFCMessageHandler() 是否已调用",
+            )
         } else {
             LogUtils.d("FCMService", "MessageHandler 已设置，开始处理消息")
             handler.handleMessage(
@@ -156,14 +178,15 @@ class FCMService : FirebaseMessagingService() {
                 } else {
                     LogUtils.i("FCMService", "调用 handler.showNotification() 显示通知栏消息")
                     handler.showNotification(title = title, body = body, data = data)
-                    LogUtils.d("FCMService", "已调用 handler.showNotification()，通知应通过 EventBus 发送到 PushNotificationManager")
+                    LogUtils.d(
+                        "FCMService",
+                        "已调用 handler.showNotification()，通知应通过 EventBus 发送到 PushNotificationManager",
+                    )
                 }
             } else {
                 LogUtils.w("FCMService", "通知消息缺少标题或内容 - title: $title, body: $body")
             }
-        } ?: run {
-            LogUtils.d("FCMService", "消息不包含 notification 字段，这是纯数据消息，不会显示通知栏")
-        }
+        } ?: run { LogUtils.d("FCMService", "消息不包含 notification 字段，这是纯数据消息，不会显示通知栏") }
     }
 
     /**

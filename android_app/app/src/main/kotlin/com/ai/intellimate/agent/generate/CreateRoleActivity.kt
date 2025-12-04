@@ -302,9 +302,7 @@ private fun CreateRolePage(
     LaunchedEffect(Unit) {
         snapshotFlow { selectedImageIndex }
             .drop(1) // 跳过初始值，只在真正改变时触发
-            .collect {
-                croppedAvatarUrl = null
-            }
+            .collect { croppedAvatarUrl = null }
     }
 
     // Track original uploaded image URL (for background) when uploading from gallery
@@ -1509,12 +1507,12 @@ private fun AvatarUploadSection(
                     model = it,
                     contentDescription = stringResource(R.string.generate_avatar),
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp)
-                        .border(width = 1.dp, color = Color.White, shape = CircleShape)
-                        .size(40.dp)
-                        .clip(CircleShape)
+                    modifier =
+                        Modifier.align(Alignment.TopStart)
+                            .padding(8.dp)
+                            .border(width = 1.dp, color = Color.White, shape = CircleShape)
+                            .size(40.dp)
+                            .clip(CircleShape),
                 )
             }
 
