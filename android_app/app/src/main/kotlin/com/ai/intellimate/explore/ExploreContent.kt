@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -160,50 +161,54 @@ fun ExploreContent(
     // 找到第一个可见且有 backgroundAnimatedUrl 的 item 索引
     var firstPlayingItemIndex by remember { mutableIntStateOf(-1) }
 
-    // 监听可见项、滚动状态和 item 数据变化，更新播放索引
-    LaunchedEffect(visibleItemIndices, lazyPagingItems?.itemCount, gridState.isScrollInProgress) {
-        if (gridState.isScrollInProgress) {
-            // 滚动中，不播放
-            firstPlayingItemIndex = -1
-            return@LaunchedEffect
-        }
+    // 监听可见项和 item 数据变化，更新播放索引
+    // 使用 snapshotFlow 监听 gridState.layoutInfo 的变化，确保滚动时也能及时更新
+    LaunchedEffect(lazyPagingItems?.itemCount) {
+        snapshotFlow { gridState.layoutInfo }
+            .collect {
+                val itemCount = lazyPagingItems?.itemCount ?: 0
+                if (itemCount == 0) {
+                    firstPlayingItemIndex = -1
+                    return@collect
+                }
 
-        val itemCount = lazyPagingItems?.itemCount ?: 0
-        if (itemCount == 0) {
-            firstPlayingItemIndex = -1
-            return@LaunchedEffect
-        }
+                // 获取当前可见的 item 索引列表
+                val indices = visibleItemIndices
 
-        // 按顺序遍历可见的 item（已经按从上到下排序），找到第一个有 backgroundAnimatedUrl 且是动图的
-        firstPlayingItemIndex = -1
-        for (index in visibleItemIndices) {
-            // 检查索引是否在有效范围内，避免 IndexOutOfBoundsException
-            if (index !in 0..<itemCount) {
-                continue
-            }
-            val agent = lazyPagingItems?.get(index)
-            if (agent != null && agent.backgroundAnimatedUrl.isNotBlank()) {
-                // 只处理动图，不处理视频
-                if (isAnimatedImageUrl(agent.backgroundAnimatedUrl)) {
-                    firstPlayingItemIndex = index
-                    break
+                // 按顺序遍历可见的 item（已经按从上到下排序），找到第一个有 backgroundAnimatedUrl 且是动图的
+                firstPlayingItemIndex = -1
+                for (index in indices) {
+                    // 检查索引是否在有效范围内，避免 IndexOutOfBoundsException
+                    if (index !in 0..<itemCount) {
+                        continue
+                    }
+                    val agent = lazyPagingItems?.get(index)
+                    if (agent != null && agent.backgroundAnimatedUrl.isNotBlank()) {
+                        // 只处理动图，不处理视频
+                        if (isAnimatedImageUrl(agent.backgroundAnimatedUrl)) {
+                            firstPlayingItemIndex = index
+                            break
+                        }
+                    }
                 }
             }
-        }
     }
 
     // 监听滚动状态，保存位置和更新滚动标记
-    LaunchedEffect(gridState.isScrollInProgress, gridState.firstVisibleItemIndex) {
-        if (gridState.isScrollInProgress) {
-            lastScrollTime = System.currentTimeMillis()
-            hasUserScrolled = true // 标记用户已主动滚动
-        } else {
-            // 滚动停止时保存位置
-            vm.saveScrollPosition(
-                gridState.firstVisibleItemIndex,
-                gridState.firstVisibleItemScrollOffset,
-            )
-        }
+    LaunchedEffect(gridState) {
+        snapshotFlow { gridState.isScrollInProgress to gridState.firstVisibleItemIndex }
+            .collect { (isScrollInProgress, firstVisibleItemIndex) ->
+                if (isScrollInProgress) {
+                    lastScrollTime = System.currentTimeMillis()
+                    hasUserScrolled = true // 标记用户已主动滚动
+                } else {
+                    // 滚动停止时保存位置
+                    vm.saveScrollPosition(
+                        firstVisibleItemIndex,
+                        gridState.firstVisibleItemScrollOffset,
+                    )
+                }
+            }
     }
 
     // 监听滚动到底部事件（用于显示loading指示器）
