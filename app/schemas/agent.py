@@ -9,9 +9,9 @@ from app.core.agent.prompt_template import (
     render_prompt_jinja2_template,
 )
 from app.models.agent import AgentStatus, AgentVisibility
+from app.schemas.response import APIResponse, PaginationData
 from app.schemas.user import User
 from app.utils.image import ImageSize
-from app.schemas.response import APIResponse, PaginationData
 
 
 class AgentMetaData(BaseModel):
@@ -194,7 +194,10 @@ class AgentBase(BaseModel):
 
 
 class GenerateBackgroundAnimatedRequest(BaseModel):
-    """生成背景视频请求"""
+    """生成背景视频请求
+
+    注意：背景图必须是 9:16 比例，否则会返回错误提示。
+    """
 
     prompt: Optional[str] = Field(
         default=None, description="视频生成提示词（可选，如果为空则从背景图自动生成）"

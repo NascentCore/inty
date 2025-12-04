@@ -28,8 +28,18 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.external_services.gcs import download_from_gcs
-from app.utils.image import ImageFormat, ImageSize
+from app.external_services.gcs import (
+    delete_from_gcs,
+    download_from_gcs,
+    get_bucket_and_path_from_gcs_url,
+    upload_to_gcs,
+)
+from app.utils.image import (
+    ImageFormat,
+    ImageSize,
+    crop_image_to_9_16,
+    get_jpg_bytes_from_pil_image,
+)
 
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
@@ -327,6 +337,56 @@ def text_to_image(
                 image_bytes = download_from_gcs(gcs_uri)
                 byte_size = len(image_bytes)
                 pil_image = PIL.Image.open(io.BytesIO(image_bytes))
+                original_size = (pil_image.width, pil_image.height)
+
+                # 检查并自动裁剪到 9:16 比例（生成背景图时自动裁剪）
+                target_aspect_ratio = 9 / 16
+                current_aspect_ratio = pil_image.width / pil_image.height
+
+                if abs(current_aspect_ratio - target_aspect_ratio) >= 0.01:
+                    # 需要裁剪
+                    try:
+                        logger.info(
+                            f"图片 {i} 需要裁剪: {original_size[0]}x{original_size[1]} "
+                            f"(比例 {current_aspect_ratio:.4f}) -> 9:16"
+                        )
+                        cropped_image = crop_image_to_9_16(pil_image)
+                        cropped_size = (cropped_image.width, cropped_image.height)
+
+                        # 将裁剪后的图片转换为 JPEG bytes
+                        cropped_image_bytes = get_jpg_bytes_from_pil_image(
+                            cropped_image, quality=95
+                        )
+
+                        # 从 GCS URI 提取 bucket 和 path
+                        bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(
+                            gcs_uri
+                        )
+
+                        # 删除原图
+                        delete_from_gcs(bucket_name, gcs_path)
+
+                        # 上传裁剪后的图片到同一位置
+                        upload_to_gcs(
+                            cropped_image_bytes,
+                            "image/jpeg",
+                            bucket_name,
+                            gcs_path,
+                        )
+
+                        # 更新尺寸和字节大小
+                        pil_image = cropped_image
+                        byte_size = len(cropped_image_bytes)
+                        logger.info(
+                            f"图片 {i} 裁剪完成: {original_size[0]}x{original_size[1]} -> "
+                            f"{cropped_size[0]}x{cropped_size[1]}"
+                        )
+                    except Exception as crop_error:
+                        logger.error(
+                            f"裁剪图片 {i} 失败: {str(crop_error)}，使用原始图片"
+                        )
+                        # 裁剪失败时使用原始图片，不影响主流程
+
                 size = ImageSize(
                     width=pil_image.width,
                     height=pil_image.height,

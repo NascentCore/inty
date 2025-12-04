@@ -14,10 +14,10 @@ from app import schemas
 from app.api import deps
 from app.api.tags import (
     ANDROID_APP_TAG,
-    INTY_EVAL_TAG,
     INTERNAL_API_TAG,
-    WEB_APP_TAG,
+    INTY_EVAL_TAG,
     NOT_USED_TAG,
+    WEB_APP_TAG,
 )
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent import prompts as agent_prompts
@@ -385,8 +385,8 @@ async def delete_agent(
 @router.post(
     "/{agent_id}/generate-background-animated",
     response_model=schemas.APIResponse[schemas.Agent],
-    summary="生成背景动图",
-    description="通过 Google Veo3 API 生成视频并转换为 webp 动图格式存储",
+    summary="生成背景动图（需要 9:16 比例背景图）",
+    description="通过 Google Veo3 API 生成视频，然后转换为 webp 动图格式存储。背景图必须是 9:16 比例，否则会返回错误提示。",
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def generate_background_animated(
@@ -399,7 +399,8 @@ async def generate_background_animated(
     """
     生成背景动图并更新到 Agent
 
-    通过 Google Veo3 API 生成视频，然后转换为 webp 动图格式存储
+    通过 Google Veo3 API 生成视频，然后转换为 webp 动图格式存储。
+    背景图必须是 9:16 比例，否则会返回错误提示。
     """
     # 验证 Agent 存在且用户有权限
     agent = await agent_service.get_agent(db, agent_id=agent_id)
@@ -585,7 +586,7 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
     response_model=APIResponse[dict],
     summary="[Deprecated, use /api/v1/images/text-to-image instead] Generate images based on text description",
     deprecated=True,
-    include_in_schema=False,
+    include_in_schema=True,
     tags=[INTY_EVAL_TAG],
 )
 async def generate_background(

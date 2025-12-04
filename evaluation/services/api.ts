@@ -420,6 +420,29 @@ export const agentApi = {
   uploadAvatar: (file: File, croppingAvatar: boolean = true): Promise<any> =>
     apiClient.upload("/images", file, { cropping_avatar: croppingAvatar }),
 
+  // 检查背景图宽高比
+  checkBackgroundAspectRatio: (
+    agentId: string,
+  ): Promise<{
+    is_9_16: boolean;
+    width: number;
+    height: number;
+    aspect_ratio: number;
+  }> =>
+    apiClient.get(
+      `/evaluation/agents/${agentId}/check-background-aspect-ratio`,
+    ),
+
+  // 上传裁剪后的背景图
+  uploadCroppedBackground: (
+    agentId: string,
+    file: File,
+  ): Promise<Agent> =>
+    apiClient.upload(
+      `/evaluation/agents/${agentId}/upload-cropped-background`,
+      file,
+    ),
+
   // 生成背景视频
   generateBackgroundAnimated: (
     agentId: string,
