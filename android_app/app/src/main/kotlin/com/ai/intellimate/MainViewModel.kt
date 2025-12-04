@@ -9,6 +9,8 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AppVersionRsp
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.http.ApiResult
+import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.firebase.FirebaseManager
@@ -16,18 +18,21 @@ import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
+import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.intellimate.utils.IntyUserProfileSDK
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.ai.intellimate.utils.UserProfileManager
-import com.architecture.httplib.core.HttpResult
+import com.inty.api.models.api.v1.version.VersionCheckResponse
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -327,22 +332,28 @@ class MainViewModel : BaseVM() {
     }
 
     /** 检查app版本更新 */
-    val needForceUpgrade = MutableStateFlow<AppVersionRsp.AppVersionData?>(null)
+    private val _needForceUpgrade = Channel<AppVersionRsp.AppVersionData?>()
+    val needForceUpgrade = _needForceUpgrade.receiveAsFlow()
 
     private fun checkAppVersion() = launchBackground {
-        when (val result = NetServiceMgr.getCommonApi().checkAppUpgrade()) {
-            is HttpResult.Success -> {
+        when (val result =
+            IntyNetworkManager.version.checkAppUpgrade(
+                appVersionCode = BuildConfig.VERSION_CODE.toLong(),
+                appVersionName = BuildConfig.VERSION_NAME,
+            )
+        ) {
+            is ApiResult.Success -> {
                 val rsp = result.data
-                if (rsp.update_required && rsp.force_update) {
+                if (rsp.update_required && (rsp.force_update || rsp.reminder_action == VersionCheckResponse.Data.ReminderAction.POP_UP_REMINDER)) {
                     // 有更新，且需要强制更新
-                    needForceUpgrade.emit(rsp)
+                    _needForceUpgrade.send(rsp)
                 }
                 IntySetting.setAppUpdateTips(rsp.update_required)
                 IntySetting.setAppGooglePlayUrl(rsp.download_url ?: "")
             }
 
-            is HttpResult.Failure -> {
-                LogUtils.w("result.message")
+            is ApiResult.Error -> {
+                LogUtils.w("Version check failed: ${result.message}")
             }
         }
     }
