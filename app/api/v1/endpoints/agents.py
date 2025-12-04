@@ -385,8 +385,8 @@ async def delete_agent(
 @router.post(
     "/{agent_id}/generate-background-animated",
     response_model=schemas.APIResponse[schemas.Agent],
-    summary="生成背景动图",
-    description="通过 Google Veo3 API 生成视频并转换为 webp 动图格式存储",
+    summary="生成背景动图（需要 9:16 比例背景图）",
+    description="通过 Google Veo3 API 生成视频，然后转换为 webp 动图格式存储。背景图必须是 9:16 比例，否则会返回错误提示。",
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def generate_background_animated(
@@ -399,7 +399,8 @@ async def generate_background_animated(
     """
     生成背景动图并更新到 Agent
 
-    通过 Google Veo3 API 生成视频，然后转换为 webp 动图格式存储
+    通过 Google Veo3 API 生成视频，然后转换为 webp 动图格式存储。
+    背景图必须是 9:16 比例，否则会返回错误提示。
     """
     # 验证 Agent 存在且用户有权限
     agent = await agent_service.get_agent(db, agent_id=agent_id)

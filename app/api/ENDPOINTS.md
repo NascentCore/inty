@@ -170,6 +170,8 @@
 | `/api/v1/evaluation/agents` | POST | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/agents/{agent_id}` | PUT | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/agents/{agent_id}` | DELETE | `app/api/v1/endpoints/evaluation.py` |
+| `/api/v1/evaluation/agents/{agent_id}/check-background-aspect-ratio` | GET | `app/api/v1/endpoints/evaluation.py` |
+| `/api/v1/evaluation/agents/{agent_id}/upload-cropped-background` | POST | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/agents/{agent_id}/deploy` | POST | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/templates` | POST | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/templates` | GET | `app/api/v1/endpoints/evaluation.py` |
