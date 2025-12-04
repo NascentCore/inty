@@ -98,7 +98,7 @@ object UiConfigs {
     }
 
     object Urls {
-        const val WhatsAppGroupInvite = "https://chat.whatsapp.com/Cw1ZM46InipFHel3ws5ria"
+        const val WhatsAppGroupInvite = "https://chat.whatsapp.com/DpMVkOQTWOdJfZnnVqiXm8?mode=hqrt3"
         const val DiscordInvite = "https://discord.gg/xbJJ9NBdJT"
         const val HelpCenter =
             "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
