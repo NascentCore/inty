@@ -12,6 +12,7 @@ private const val KEY_RESUB_REMINDER_LAST_TIME = "resub_reminder_last_time"
 private const val KEY_RESUB_REMINDER_SHOW_COUNT = "resub_reminder_show_count"
 private const val KEY_CHAT_FONT_SIZE_SP = "chat_font_size_sp"
 private const val KEY_MESSAGES_TAB_HAS_PUSH = "messages_tab_has_push"
+private const val KEY_CONVERSATION_PUSH_PREFIX = "conversation_has_push_"
 private const val DEFAULT_CHAT_FONT_SIZE_SP = 14f
 private const val KEY_PREFIX_EXPLORE_FAVORITE = "explore_favorite_"
 
@@ -167,6 +168,20 @@ object IntySetting {
 
     fun hasMessagesTabPush(): Boolean {
         return curUserSetting.decodeBool(KEY_MESSAGES_TAB_HAS_PUSH, false)
+    }
+
+    /** 记录特定会话是否有推送未读 */
+    fun setConversationHasPush(agentId: String, hasPush: Boolean) {
+        val key = "$KEY_CONVERSATION_PUSH_PREFIX$agentId"
+        if (hasPush) {
+            curUserSetting.putBoolean(key, true)
+        } else {
+            curUserSetting.removeValueForKey(key)
+        }
+    }
+
+    fun hasConversationPush(agentId: String): Boolean {
+        return curUserSetting.decodeBool("$KEY_CONVERSATION_PUSH_PREFIX$agentId", false)
     }
 
     // 标记是否已经有可用的App更新，用于红点标记
