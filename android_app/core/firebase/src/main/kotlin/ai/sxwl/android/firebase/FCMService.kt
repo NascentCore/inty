@@ -166,27 +166,32 @@ class FCMService : FirebaseMessagingService() {
         }
 
         // 如果有通知内容，通过回调显示通知（仅在前台触发；后台时系统自动显示）
-        notification?.let { notif ->
-            val title = notif.title
-            val body = notif.body
+        // feedback_request 类型的消息不显示通知，由 MainActivity 处理弹窗
+        if (messageType == FCMConstants.TYPE_FEEDBACK_REQUEST) {
+            LogUtils.d("FCMService", "收到 feedback_request 类型消息，不显示通知，由 MainActivity 处理弹窗")
+        } else {
+            notification?.let { notif ->
+                val title = notif.title
+                val body = notif.body
 
-            LogUtils.d("FCMService", "检测到通知内容 - title: $title, body: $body")
+                LogUtils.d("FCMService", "检测到通知内容 - title: $title, body: $body")
 
-            if (title != null && body != null) {
-                if (handler == null) {
-                    LogUtils.w("FCMService", "⚠️ 无法显示通知：MessageHandler 为 null")
+                if (title != null && body != null) {
+                    if (handler == null) {
+                        LogUtils.w("FCMService", "⚠️ 无法显示通知：MessageHandler 为 null")
+                    } else {
+                        LogUtils.i("FCMService", "调用 handler.showNotification() 显示通知栏消息")
+                        handler.showNotification(title = title, body = body, data = data)
+                        LogUtils.d(
+                            "FCMService",
+                            "已调用 handler.showNotification()，通知应通过 EventBus 发送到 PushNotificationManager",
+                        )
+                    }
                 } else {
-                    LogUtils.i("FCMService", "调用 handler.showNotification() 显示通知栏消息")
-                    handler.showNotification(title = title, body = body, data = data)
-                    LogUtils.d(
-                        "FCMService",
-                        "已调用 handler.showNotification()，通知应通过 EventBus 发送到 PushNotificationManager",
-                    )
+                    LogUtils.w("FCMService", "通知消息缺少标题或内容 - title: $title, body: $body")
                 }
-            } else {
-                LogUtils.w("FCMService", "通知消息缺少标题或内容 - title: $title, body: $body")
-            }
-        } ?: run { LogUtils.d("FCMService", "消息不包含 notification 字段，这是纯数据消息，不会显示通知栏") }
+            } ?: run { LogUtils.d("FCMService", "消息不包含 notification 字段，这是纯数据消息，不会显示通知栏") }
+        }
     }
 
     /**

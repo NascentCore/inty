@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.ai.intellimate.R
@@ -68,7 +69,8 @@ private fun OpenChatDialog(
     ) {
         Box(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .heightIn(UiConfigs.Size.ChatDialogMinHeight)
                     .padding(horizontal = UiConfigs.Padding.DialogEdge)
                     .clip(RoundedCornerShape(UiConfigs.Shape.VipDialog))
@@ -81,7 +83,8 @@ private fun OpenChatDialog(
             )
             Column(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .padding(
                             horizontal = UiConfigs.Padding.DialogContentHorizontal,
                             vertical = UiConfigs.Padding.DialogContentVertical,
@@ -134,7 +137,9 @@ private fun OpenChatDialog(
                     color = UiConfigs.Colors.VipSecondaryText,
                     textAlign = TextAlign.Center,
                     modifier =
-                        Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.TextBlock),
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = UiConfigs.Padding.TextBlock),
                 )
 
                 Spacer(Modifier.height(UiConfigs.Spacing.XLarge))
@@ -195,7 +200,8 @@ internal fun HeartPrimaryButton(btnText: String, enable: Boolean = true, onClick
 
     Box(
         modifier =
-            Modifier.fillMaxWidth(UiConfigs.Fractions.PrimaryButtonWidth)
+            Modifier
+                .fillMaxWidth(UiConfigs.Fractions.PrimaryButtonWidth)
                 .height(UiConfigs.Size.PrimaryButtonHeight)
                 .clip(RoundedCornerShape(UiConfigs.Shape.PrimaryButton))
                 .alpha(if (enable) 1f else UiConfigs.Alpha.DisabledButton)
@@ -223,7 +229,8 @@ internal fun BePremiumDialog(onDismiss: () -> Unit = {}) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .heightIn(min = UiConfigs.Size.BecomePremiumDialogMinHeight)
                     .padding(vertical = UiConfigs.Spacing.Large),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -267,7 +274,8 @@ internal fun ExpiredVipDialog(
             )
             Column(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .padding(
                             horizontal = UiConfigs.Padding.DialogContentHorizontal,
                             vertical = UiConfigs.Padding.DialogContentVertical,
@@ -328,6 +336,85 @@ private fun PreviewExpiredVipDialog() {
     ExpiredVipDialog(data)
 }
 
+/** 反馈请求弹窗 */
+@Composable
+internal fun FeedbackRequestDialog(
+    onCancel: () -> Unit = {},
+    onSendSuggestions: () -> Unit = {},
+) {
+    Dialog(
+        onDismissRequest = onCancel,
+        properties =
+            DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false,
+                usePlatformDefaultWidth = true,
+            ),
+    ) {
+        Box(modifier = Modifier.clip(RoundedCornerShape(UiConfigs.Shape.DialogLarge))) {
+            Image(
+                painter = painterResource(R.drawable.img_unlimit_dialog_bg),
+                contentDescription = "",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize(),
+            )
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = UiConfigs.Padding.DialogContentHorizontal,
+                            vertical = UiConfigs.Padding.DialogContentVertical,
+                        ),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(Modifier.height(50.dp))
+
+                Text(
+                    text = stringResource(R.string.feedback_title),
+                    fontSize = UiConfigs.Typography.Title,
+                    fontWeight = FontWeight.Normal,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(Modifier.height(UiConfigs.Spacing.Medium))
+                Text(
+                    text = stringResource(R.string.feedback_request_content),
+                    fontSize = UiConfigs.Typography.Body,
+                    fontWeight = FontWeight.Normal,
+                    color = UiConfigs.Colors.VipSecondaryText,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(Modifier.height(UiConfigs.Spacing.XLarge))
+                HeartPrimaryButton(
+                    btnText = stringResource(R.string.send_suggestions),
+                    onClick = onSendSuggestions,
+                )
+                Spacer(Modifier.height(UiConfigs.Spacing.Medium))
+                Text(
+                    text = stringResource(R.string.cancel),
+                    fontSize = UiConfigs.Typography.Caption,
+                    fontWeight = FontWeight.Normal,
+                    color = UiConfigs.Colors.VipTertiaryText,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.noRippleClickable(onClick = onCancel),
+                )
+            }
+            IconButton(onClick = onCancel, Modifier.align(Alignment.TopEnd)) {
+                Image(painter = painterResource(R.drawable.close), contentDescription = "")
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewFeedBackDialog() {
+    FeedbackRequestDialog()
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ReplyStyleSheet(
@@ -348,7 +435,8 @@ internal fun ReplyStyleSheet(
     ) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .clip(
                         RoundedCornerShape(
                             topStart = UiConfigs.Shape.SheetTop,
@@ -377,7 +465,8 @@ internal fun ReplyStyleSheet(
             )
             Spacer(Modifier.height(UiConfigs.Spacing.Large))
             HeartMultiLineEditor(
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .height(UiConfigs.Size.ReplyEditorHeight)
                     .clip(RoundedCornerShape(UiConfigs.Shape.Input))
                     .background(UiConfigs.Colors.SheetSurfaceOverlay),

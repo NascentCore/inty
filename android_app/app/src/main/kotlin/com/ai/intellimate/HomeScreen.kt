@@ -39,6 +39,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.intellimate.agent.generate.CreateRoleActivity
+import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.chat.ChatPageContainer
 import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
@@ -50,6 +51,7 @@ import com.ai.intellimate.profile.ProfilePage
 import com.ai.intellimate.profile.ProfileViewModel
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.ExpiredVipDialog
+import com.ai.intellimate.ui.FeedbackRequestDialog
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ForceUpgradeDialog
 import com.ai.intellimate.vip.VipCenterActivity
@@ -207,6 +209,7 @@ fun HomeScreen(
 
         ExpiredDialogLogic(mainViewModel)
         AppVersionLogic(mainViewModel)
+        FeedbackRequestDialogLogic(mainViewModel)
     }
 }
 
@@ -290,6 +293,22 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
                 }
 
                 showExpiredDialog = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun FeedbackRequestDialogLogic(mainViewModel: MainViewModel) {
+    val showDialog by mainViewModel.showFeedbackRequestDialog.collectAsState()
+    val context = LocalContext.current
+
+    if (showDialog) {
+        FeedbackRequestDialog(
+            onCancel = { mainViewModel.hideFeedbackRequestDialog() },
+            onSendSuggestions = {
+                mainViewModel.hideFeedbackRequestDialog()
+                ReportActivity.launchFeedback(context)
             },
         )
     }
