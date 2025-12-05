@@ -172,7 +172,6 @@ object IntySetting {
 
     /** 记录特定会话是否有推送未读 */
     fun setConversationHasPush(agentId: String, hasPush: Boolean) {
-        if (agentId.isBlank()) return
         val key = "$KEY_CONVERSATION_PUSH_PREFIX$agentId"
         if (hasPush) {
             curUserSetting.putBoolean(key, true)
@@ -182,7 +181,6 @@ object IntySetting {
     }
 
     fun hasConversationPush(agentId: String): Boolean {
-        if (agentId.isBlank()) return false
         return curUserSetting.decodeBool("$KEY_CONVERSATION_PUSH_PREFIX$agentId", false)
     }
 
