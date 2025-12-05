@@ -2,7 +2,6 @@ package com.ai.intellimate
 
 import ai.sxwl.android.common.analytics.GlobalExceptionHandler
 import ai.sxwl.android.common.fcm.FCMessageHandlerImpl
-import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.ApiResult
@@ -50,11 +49,9 @@ class IntelliMateApp : Application() {
 
         UnifiedStartupManager.initializeEssential(this)
 
-        // 初始化本地 为角色应援/Boost 体系（仅在 debug 模式下）
+        // 初始化本地 为角色应援/Boost 体系
         // TODO：是否可以讲 IntySetting 初始化也转移到这里。
-        if (HeartAppUtils.isAppDebugMode(this)) {
-            BoostManager.initialize(this)
-        }
+        BoostManager.initialize(this)
         initializeFirebaseAnalytics()
         initializeRemoteConfigDefaults()
         setupFCMessageHandler()

@@ -51,6 +51,19 @@ object BoostManager {
         }
     }
 
+    fun recordAssistantMessage(agentInfo: AgentInfo?) {
+        if (agentInfo == null) return
+        val repo = repository ?: return
+        scope.launch {
+            repo.addPoints(BoostConfig.CHAT_MESSAGE_POINT_REWARD, PointSource.Chat(agentInfo.id))
+            logPointsEvent(
+                PointSource.Chat(agentInfo.id),
+                BoostConfig.CHAT_MESSAGE_POINT_REWARD,
+                agentInfo.name,
+            )
+        }
+    }
+
     fun recordImageGeneration(agentInfo: AgentInfo?) {
         if (agentInfo == null) return
         val repo = repository ?: return

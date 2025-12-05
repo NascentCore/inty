@@ -414,7 +414,12 @@ class ChatViewModel : BaseVM() {
                             result.data.data?.choices?.lastOrNull()?.message?.content
                         if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
                             BoostManager.recordChatTokens(agent, inputMsg)
-                            assistantContent?.let { BoostManager.recordChatTokens(agent, it) }
+                        }
+                        val hasAssistantReply =
+                            !result.data.data?.choices.isNullOrEmpty() ||
+                                !assistantContent.isNullOrBlank()
+                        if (hasAssistantReply) {
+                            BoostManager.recordAssistantMessage(agent)
                         }
 
                         runCatching {
@@ -714,7 +719,12 @@ class ChatViewModel : BaseVM() {
                                 result.data.data?.choices?.lastOrNull()?.message?.content
                             if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
                                 BoostManager.recordChatTokens(agent, keepTalkingMsg)
-                                assistantContent?.let { BoostManager.recordChatTokens(agent, it) }
+                            }
+                            val hasAssistantReply =
+                                !result.data.data?.choices.isNullOrEmpty() ||
+                                    !assistantContent.isNullOrBlank()
+                            if (hasAssistantReply) {
+                                BoostManager.recordAssistantMessage(agent)
                             }
 
                             runCatching {

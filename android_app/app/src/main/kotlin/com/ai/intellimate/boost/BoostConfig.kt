@@ -17,6 +17,9 @@ object BoostConfig {
     /** token → point 的折算比例。 */
     const val TOKEN_TO_POINT_RATIO = 1.0
 
+    /** 单条 AI 回复的基础能量奖励。 */
+    const val CHAT_MESSAGE_POINT_REWARD = 1
+
     /** 单次图片生成折算的 token 量。 */
     const val IMAGE_TOKEN_COST = 600
 
