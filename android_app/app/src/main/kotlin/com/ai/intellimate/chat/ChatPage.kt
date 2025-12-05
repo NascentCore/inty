@@ -341,6 +341,7 @@ internal fun ChatPage(
                             onBack = onBack,
                             fontSize = 15.sp,
                             avatarWidth = 40.dp,
+                            earnedPoints = boostState.chatMessagePoints,
                             onClickMore = {
                                 scope.launch {
                                     if (agentInfo?.isDeleted == true) {
