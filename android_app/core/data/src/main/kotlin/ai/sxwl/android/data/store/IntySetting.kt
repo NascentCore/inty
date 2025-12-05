@@ -13,6 +13,7 @@ private const val KEY_RESUB_REMINDER_SHOW_COUNT = "resub_reminder_show_count"
 private const val KEY_CHAT_FONT_SIZE_SP = "chat_font_size_sp"
 private const val KEY_MESSAGES_TAB_HAS_PUSH = "messages_tab_has_push"
 private const val DEFAULT_CHAT_FONT_SIZE_SP = 14f
+private const val KEY_PREFIX_EXPLORE_FAVORITE = "explore_favorite_"
 
 object IntySetting {
 
@@ -322,6 +323,22 @@ object IntySetting {
                 curUserSetting.removeValueForKey(key)
             }
         }
+    }
+
+    // endregion
+
+    // region Explore收藏状态
+
+    /** 设置 Explore 页面角色卡的收藏状态 */
+    fun setExploreAgentFavorite(agentId: String, favorite: Boolean) {
+        if (agentId.isBlank()) return
+        curUserSetting.putBoolean("$KEY_PREFIX_EXPLORE_FAVORITE$agentId", favorite)
+    }
+
+    /** 获取 Explore 页面角色卡的收藏状态 */
+    fun isExploreAgentFavorite(agentId: String): Boolean {
+        if (agentId.isBlank()) return false
+        return curUserSetting.decodeBool("$KEY_PREFIX_EXPLORE_FAVORITE$agentId", false)
     }
 
     // endregion
