@@ -701,7 +701,7 @@ internal fun ChatPage(
         ShowLimitDialog(chatViewModel)
         ShowImageGenerationDialog(chatViewModel)
 
-        // Boost 功能弹窗：显示半屏底部弹窗，允许用户投入积分或领取每日奖励
+        // Boost 功能弹窗：显示半屏底部弹窗，允许用户投入积分
         // 触发场景：
         // 1. 从 Explore 页面的 Boost Tab 点击 "Boost" 按钮跳转到聊天页面时自动打开（通过 shouldShowBoostSheetOnOpen 参数控制）
         // 2. 在角色主页点击 BoostStatusChip 时打开（AgentInfoScreen.kt）
@@ -709,10 +709,8 @@ internal fun ChatPage(
         // - 显示角色信息（头像、名称）
         // - 显示可用积分（availablePoints）和积分投入滑块（100 pts 步长）
         // - 提供 "Boost now" 按钮确认投入积分
-        // - 提供 "Claim daily energy (+200 pts)" 按钮领取每日奖励（如果未领取）
         // 交互流程：
         // - onBoostConfirmed: 用户确认投入积分 → 调用 BoostManager.boostAgent() → 成功后插入系统消息到聊天流 → 关闭弹窗
-        // - onClaimDailyReward: 用户领取每日奖励 → 调用 BoostManager.claimDailyReward() → 显示 Toast 提示 → 关闭弹窗
         // - onDismiss: 用户点击外部区域或取消按钮 → 直接关闭弹窗
         // 错误处理：Boost 操作失败时显示 Toast 错误提示（积分不足、已领取奖励等）
         agentInfo?.let { info ->
@@ -720,7 +718,6 @@ internal fun ChatPage(
                 BoostSheet(
                     agentInfo = info,
                     availablePoints = boostState.availablePoints,
-                    hasDailyReward = boostState.hasClaimedDailyReward,
                     onBoostConfirmed = { points ->
                         scope.launch {
                             try {
@@ -737,24 +734,6 @@ internal fun ChatPage(
                             } catch (e: Exception) {
                                 showBoostError(BoostError.NotEnoughPoints)
                                 showBoostSheet = false
-                            }
-                        }
-                    },
-                    onClaimDailyReward = {
-                        scope.launch {
-                            try {
-                                val claimed = BoostManager.claimDailyReward()
-                                ToastUtils.showShort(
-                                    context.getString(
-                                        R.string.boost_toast_daily_reward_claimed,
-                                        claimed,
-                                    )
-                                )
-                                showBoostSheet = false
-                            } catch (e: BoostException) {
-                                showBoostError(e.error)
-                            } catch (e: Exception) {
-                                showBoostError(BoostError.NotEnoughPoints)
                             }
                         }
                     },

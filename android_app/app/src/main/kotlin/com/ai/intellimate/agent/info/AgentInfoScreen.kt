@@ -429,17 +429,14 @@ internal fun AiAgentInfoScreen(
     //   - 可用积分显示
     //   - 积分投入滑条/步进器（每步 100 pts）
     //   - Boost 确认按钮
-    //   - 每日签到奖励按钮
     // 交互流程：
     //   - 用户点击 BoostStatusChip → 打开此弹窗
     //   - 用户选择投入积分并确认 → 执行 Boost 操作 → 显示成功 Toast → 关闭弹窗
-    //   - 用户点击每日签到 → 领取奖励 → 显示奖励 Toast → 关闭弹窗（如果已领取）
     //   - 用户点击关闭/取消 → 关闭弹窗
     if (isDebugMode && showBoostSheet) {
         BoostSheet(
             agentInfo = agent,
             availablePoints = boostState.availablePoints,
-            hasDailyReward = boostState.hasClaimedDailyReward,
             onBoostConfirmed = { points ->
                 scope.launch {
                     try {
@@ -454,21 +451,6 @@ internal fun AiAgentInfoScreen(
                     } catch (e: Exception) {
                         showBoostError(BoostError.NotEnoughPoints)
                         showBoostSheet = false
-                    }
-                }
-            },
-            onClaimDailyReward = {
-                scope.launch {
-                    try {
-                        val claimed = BoostManager.claimDailyReward()
-                        ToastUtils.showShort(
-                            context.getString(R.string.boost_toast_daily_reward_claimed, claimed)
-                        )
-                        showBoostSheet = false
-                    } catch (e: BoostException) {
-                        showBoostError(e.error)
-                    } catch (e: Exception) {
-                        showBoostError(BoostError.NotEnoughPoints)
                     }
                 }
             },
