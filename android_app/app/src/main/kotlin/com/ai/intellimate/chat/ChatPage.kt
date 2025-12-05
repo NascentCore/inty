@@ -700,7 +700,9 @@ internal fun ChatPage(
         EnergyCelebrationBanner(
             totalPoints = boostState.chatMessagePoints,
             enabled = isCurrentPage,
-            modifier = Modifier.align(Alignment.TopCenter).padding(horizontal = 16.dp, top = 16.dp),
+            modifier =
+                Modifier.align(Alignment.TopCenter)
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp),
         )
 
         ShowLimitDialog(chatViewModel)
