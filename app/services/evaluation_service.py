@@ -724,7 +724,7 @@ class EvaluationService:
             agent = await agent_manager.get_agent(agent_data)
 
             # 构建消息格式
-            messages = {"messages": [HumanMessage(content=question)]}
+            messages = [HumanMessage(content=question)]
 
             # 为评测创建临时会话ID - 使用完整UUID格式
             eval_session_id = str(uuid.uuid4())
@@ -741,7 +741,6 @@ class EvaluationService:
                 user_id=user_id,
                 session_id=eval_session_id,
                 messages=messages,
-                db_session=self.db,
             )
 
             # 如果需要，可以获取或创建聊天会话记录
