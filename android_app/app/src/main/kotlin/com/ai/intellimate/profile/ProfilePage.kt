@@ -588,12 +588,37 @@ private fun ProfileHeader(
                     UiConfigs.MePage.AvatarFullSize * (1f - collapseProgress * 0.5f)
                 }
 
+            // 头像点击防抖
+            var lastClickTimeAvatar by remember { mutableLongStateOf(0L) }
+
             Box(
                 modifier =
                     Modifier
                         .size(avatarSize)
                         .background(color = Color.White, shape = CircleShape)
                         .padding(UiConfigs.MePage.AvatarPadding)
+                        //fixme clickable 为临时测试代码，需要删除
+//                        .clickable{
+//                            if (AppUtils.isAppDebug()){
+//                                val currentTime = System.currentTimeMillis()
+//                                if (AntiClick.isValidClick(lastClickTimeAvatar)) {
+//                                    lastClickTimeAvatar = currentTime
+//                                    // 使用预加载的推荐agents数据（explore agents），取前 12 个用于展示
+//                                    val recommendedAgents = UnifiedStartupManager.getCurrentRecommendedAgents()
+//                                    val agentsToShow = recommendedAgents.take(12)
+//                                    if (agentsToShow.isNotEmpty()) {
+//                                        SpecialDetailActivity.launch(
+//                                            context = context,
+//                                            themeId = "profile_preview_theme",
+//                                            themeTitle = "# Merry Christmas",
+//                                            themeDescription = "Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!Ready for some holiday EndOfText.",
+//                                            isChristmas = true,
+//                                            agents = agentsToShow,
+//                                        )
+//                                    }
+//                                }
+//                            }
+//                        }
             ) {
                 // 使用头像 URL 作为 key，确保头像更新时重新加载
                 val avatarUrl = getCdnImageUrl(userProfile.avatar, width = 512)
