@@ -78,9 +78,10 @@ internal object ThemedDetailConfig {
     val ContentHorizontalPadding = 16.dp
 
     // 横向角色卡片列表配置
-    val HorizontalCardListHeight = 200.dp
+    val HorizontalCardListHeight = 242.dp
     val HorizontalCardListPadding = 16.dp
-    val HorizontalCardItemWidth = 120.dp
+    val HorizontalCardItemWidth = 80.dp
+    val HorizontalCardItemHeight = 142.dp
     val HorizontalCardItemSpacing = 12.dp
     val HorizontalCardItemCornerRadius = 8.dp
     val HorizontalCardTitleSpacing = 8.dp
@@ -308,7 +309,12 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                 contentDescription = agent.name,
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(topStart = ThemedDetailConfig.EventCardCornerRadius, bottomStart = ThemedDetailConfig.EventCardCornerRadius)),
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = ThemedDetailConfig.EventCardCornerRadius,
+                            bottomStart = ThemedDetailConfig.EventCardCornerRadius
+                        )
+                    ),
                 contentScale = ContentScale.Crop,
             )
         }
@@ -339,7 +345,9 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                 color = Color(0xB2FFFFFF),
                 maxLines = if (tags.isNullOrEmpty()) 5 else 4,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth().weight(1f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
             )
 
             if (!tags.isNullOrEmpty()) {
@@ -428,6 +436,7 @@ internal fun HorizontalAgentCardList(
             Image(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(242.dp)
                     .constrainAs(christmasBg) {},
                 painter = painterResource(R.drawable.img_christmas_bg),
                 contentScale = ContentScale.Crop,
@@ -508,40 +517,46 @@ private fun HorizontalAgentCardItem(
     agent: AgentInfo,
     onClick: () -> Unit,
 ) {
-    Column(
+    Box(
         modifier =
             Modifier
                 .width(ThemedDetailConfig.HorizontalCardItemWidth)
+                .height(ThemedDetailConfig.HorizontalCardItemHeight)
+                .clip(RoundedCornerShape(ThemedDetailConfig.HorizontalCardItemCornerRadius))
                 .clickable { onClick() },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // 角色图片
+        AsyncImage(
+            model = if (isInPreview) ai.sxwl.android.design.R.drawable.img_girl_lite else agent.getAlbumImage(),
+            contentDescription = agent.name,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+
+        // 角色名称（叠加在图片底部）
         Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .clip(RoundedCornerShape(ThemedDetailConfig.HorizontalCardItemCornerRadius))
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.6f),
+                        )
+                    )
+                )
+                .padding(horizontal = 8.dp, vertical = 6.dp),
         ) {
-            AsyncImage(
-                model = if (isInPreview) ai.sxwl.android.design.R.drawable.img_girl_lite else agent.getAlbumImage(),
-                contentDescription = agent.name,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
+            Text(
+                text = agent.name,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
-
-        // 角色名称
-        Text(
-            text = agent.name,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 
