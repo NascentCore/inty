@@ -281,7 +281,7 @@ class Agent:
             except ValueError:
                 # 不是预设 ID，返回自定义文本
                 return self.main_prompt
-        return prompts.PURITY_ROLEPLAY_PROMPT.main_prompt
+        return prompts.FLIRTING_MODE_PROMPT_20250902.main_prompt
 
     def _get_effective_mode_prompt(self) -> str:
         # 如果配置为强制使用默认提示词，则直接返回默认值
@@ -296,7 +296,7 @@ class Agent:
             except ValueError:
                 # 不是预设 ID，返回自定义文本
                 return self.mode_prompt
-        return prompts.PURITY_ROLEPLAY_PROMPT.mode_prompt
+        return prompts.FLIRTING_MODE_PROMPT_20250902.mode_prompt
 
     def _get_effective_output_format_prompt(self) -> str:
         return (

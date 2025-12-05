@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,17 +48,16 @@ import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
-
 // 判断是否为动图URL（非视频）
 private fun isAnimatedImageUrl(url: String?): Boolean {
     if (url.isNullOrBlank()) return false
     val lowerUrl = url.lowercase()
     return lowerUrl.endsWith(".gif") ||
-            lowerUrl.endsWith(".webp") ||
-            lowerUrl.endsWith(".avif") ||
-            lowerUrl.contains(".gif?") ||
-            lowerUrl.contains(".webp?") ||
-            lowerUrl.contains(".avif?")
+        lowerUrl.endsWith(".webp") ||
+        lowerUrl.endsWith(".avif") ||
+        lowerUrl.contains(".gif?") ||
+        lowerUrl.contains(".webp?") ||
+        lowerUrl.contains(".avif?")
 }
 
 /** Explore页面的主要内容组件 */
@@ -126,9 +126,7 @@ fun ExploreContent(
 
             // 过滤出 agent items（排除加载状态指示器和Spacer）
             val agentItems =
-                layoutInfo.visibleItemsInfo.filter { itemInfo ->
-                    itemInfo.index < agentItemCount
-                }
+                layoutInfo.visibleItemsInfo.filter { itemInfo -> itemInfo.index < agentItemCount }
 
             // 找到所有可见比例 >= 70% 的 item 索引（按位置排序，从上到下）
             val visibleIndices = mutableListOf<Int>()
@@ -160,50 +158,54 @@ fun ExploreContent(
     // 找到第一个可见且有 backgroundAnimatedUrl 的 item 索引
     var firstPlayingItemIndex by remember { mutableIntStateOf(-1) }
 
-    // 监听可见项、滚动状态和 item 数据变化，更新播放索引
-    LaunchedEffect(visibleItemIndices, lazyPagingItems?.itemCount, gridState.isScrollInProgress) {
-        if (gridState.isScrollInProgress) {
-            // 滚动中，不播放
-            firstPlayingItemIndex = -1
-            return@LaunchedEffect
-        }
+    // 监听可见项和 item 数据变化，更新播放索引
+    // 使用 snapshotFlow 监听 gridState.layoutInfo 的变化，确保滚动时也能及时更新
+    LaunchedEffect(lazyPagingItems?.itemCount) {
+        snapshotFlow { gridState.layoutInfo }
+            .collect {
+                val itemCount = lazyPagingItems?.itemCount ?: 0
+                if (itemCount == 0) {
+                    firstPlayingItemIndex = -1
+                    return@collect
+                }
 
-        val itemCount = lazyPagingItems?.itemCount ?: 0
-        if (itemCount == 0) {
-            firstPlayingItemIndex = -1
-            return@LaunchedEffect
-        }
+                // 获取当前可见的 item 索引列表
+                val indices = visibleItemIndices
 
-        // 按顺序遍历可见的 item（已经按从上到下排序），找到第一个有 backgroundAnimatedUrl 且是动图的
-        firstPlayingItemIndex = -1
-        for (index in visibleItemIndices) {
-            // 检查索引是否在有效范围内，避免 IndexOutOfBoundsException
-            if (index !in 0..<itemCount) {
-                continue
-            }
-            val agent = lazyPagingItems?.get(index)
-            if (agent != null && agent.backgroundAnimatedUrl.isNotBlank()) {
-                // 只处理动图，不处理视频
-                if (isAnimatedImageUrl(agent.backgroundAnimatedUrl)) {
-                    firstPlayingItemIndex = index
-                    break
+                // 按顺序遍历可见的 item（已经按从上到下排序），找到第一个有 backgroundAnimatedUrl 且是动图的
+                firstPlayingItemIndex = -1
+                for (index in indices) {
+                    // 检查索引是否在有效范围内，避免 IndexOutOfBoundsException
+                    if (index !in 0..<itemCount) {
+                        continue
+                    }
+                    val agent = lazyPagingItems?.get(index)
+                    if (agent != null && agent.backgroundAnimatedUrl.isNotBlank()) {
+                        // 只处理动图，不处理视频
+                        if (isAnimatedImageUrl(agent.backgroundAnimatedUrl)) {
+                            firstPlayingItemIndex = index
+                            break
+                        }
+                    }
                 }
             }
-        }
     }
 
     // 监听滚动状态，保存位置和更新滚动标记
-    LaunchedEffect(gridState.isScrollInProgress, gridState.firstVisibleItemIndex) {
-        if (gridState.isScrollInProgress) {
-            lastScrollTime = System.currentTimeMillis()
-            hasUserScrolled = true // 标记用户已主动滚动
-        } else {
-            // 滚动停止时保存位置
-            vm.saveScrollPosition(
-                gridState.firstVisibleItemIndex,
-                gridState.firstVisibleItemScrollOffset,
-            )
-        }
+    LaunchedEffect(gridState) {
+        snapshotFlow { gridState.isScrollInProgress to gridState.firstVisibleItemIndex }
+            .collect { (isScrollInProgress, firstVisibleItemIndex) ->
+                if (isScrollInProgress) {
+                    lastScrollTime = System.currentTimeMillis()
+                    hasUserScrolled = true // 标记用户已主动滚动
+                } else {
+                    // 滚动停止时保存位置
+                    vm.saveScrollPosition(
+                        firstVisibleItemIndex,
+                        gridState.firstVisibleItemScrollOffset,
+                    )
+                }
+            }
     }
 
     // 监听滚动到底部事件（用于显示loading指示器）
@@ -217,8 +219,8 @@ fun ExploreContent(
                 // 首次进入时使用缓存数据，不应该显示加载更多loading
                 if (
                     currentTime - lastScrollTime < 1000 &&
-                    lazyPagingItems.itemCount > 0 &&
-                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
+                        lazyPagingItems.itemCount > 0 &&
+                        lazyPagingItems.loadState.refresh is LoadState.NotLoading
                 ) {
                     showLoadMoreLoading = true
                     // 延迟隐藏loading
@@ -300,8 +302,7 @@ fun ExploreContent(
                         // 显示加载占位符
                         ShimmerPlaceholder(
                             modifier =
-                                Modifier
-                                    .fillMaxWidth()
+                                Modifier.fillMaxWidth()
                                     .height(200.dp)
                                     .clip(RoundedCornerShape(8.dp))
                         )
@@ -322,11 +323,7 @@ fun ExploreContent(
 /** 空状态指示器 */
 @Composable
 private fun EmptyStateIndicator() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .height(200.dp), contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
     }
 }

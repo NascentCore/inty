@@ -184,6 +184,7 @@ fun ForceUpgradeDialog(
     content: String = stringResource(R.string.str_upgrade_content),
     onDismiss: () -> Unit = {},
     onConfirm: () -> Unit = {},
+    isForced: Boolean = false
 ) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(false, false, true)) {
         Column(
@@ -224,6 +225,20 @@ fun ForceUpgradeDialog(
                     fontSize = UiConfigs.Typography.ButtonLarge,
                     color = Color.White,
                 )
+            }
+
+            if (!isForced) {
+                TextButton(
+                    onClick = onDismiss,
+                    modifier =
+                        Modifier.align(Alignment.CenterHorizontally),
+                ) {
+                    Text(
+                        text = stringResource(R.string.cancel),
+                        fontSize = UiConfigs.Typography.Body,
+                        color = Color.White,
+                    )
+                }
             }
         }
     }

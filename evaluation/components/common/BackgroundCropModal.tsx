@@ -27,13 +27,13 @@ export const BackgroundCropModal: React.FC<BackgroundCropModalProps> = ({
   const [localImageSrc, setLocalImageSrc] = useState<string>(imageSrc);
   const aspect = 9 / 16; // 9:16 比例
   const imgRef = useRef<HTMLImageElement>(null);
-  
+
   // 使用 fetch 获取图片数据，转换为 blob URL 以避免 CORS 问题
   React.useEffect(() => {
     if (!visible || !imageSrc) return;
-    
+
     let blobUrl: string | null = null;
-    
+
     const loadImage = async () => {
       try {
         const response = await fetch(imageSrc, { mode: "cors" });
@@ -51,9 +51,9 @@ export const BackgroundCropModal: React.FC<BackgroundCropModalProps> = ({
         setLocalImageSrc(imageSrc);
       }
     };
-    
+
     loadImage();
-    
+
     // 清理函数：组件卸载或 visible 变为 false 时释放 blob URL
     return () => {
       if (blobUrl) {
@@ -97,7 +97,7 @@ export const BackgroundCropModal: React.FC<BackgroundCropModalProps> = ({
         height,
       );
       setCrop(crop);
-      
+
       // 同时设置初始的 completedCrop，这样用户不拖拽也能直接确认
       const initialCompletedCrop: PixelCrop = {
         x: (width - cropWidth) / 2,
@@ -117,7 +117,7 @@ export const BackgroundCropModal: React.FC<BackgroundCropModalProps> = ({
       message.error("图片未加载");
       return;
     }
-    
+
     // 如果 completedCrop 不存在，使用当前的 crop 来计算
     let finalCrop: PixelCrop;
     if (completedCrop) {
@@ -217,7 +217,7 @@ export const BackgroundCropModal: React.FC<BackgroundCropModalProps> = ({
         height,
       );
       setCrop(crop);
-      
+
       // 同时重置 completedCrop
       const resetCompletedCrop: PixelCrop = {
         x: (width - cropWidth) / 2,
@@ -280,5 +280,3 @@ export const BackgroundCropModal: React.FC<BackgroundCropModalProps> = ({
 };
 
 export default BackgroundCropModal;
-
-

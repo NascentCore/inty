@@ -748,7 +748,9 @@ async def upload_cropped_background(
         )
 
         if not result.data:
-            raise HTTPException(status_code=400, detail=result.message or "图片上传失败")
+            raise HTTPException(
+                status_code=400, detail=result.message or "图片上传失败"
+            )
 
         # 更新 Agent 的背景图
         agent_update = AgentUpdate(background=result.data.url)

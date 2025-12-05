@@ -137,7 +137,9 @@ class ChatViewModel : BaseVM() {
             _agentInfo.value = agentInfo
             // 如果强制同步，则触发消息同步（用于从通知进入等场景）
             if (forceSync) {
-                LogUtils.i("ChatViewModel.setAgentInfo: forceSync=true, syncing messages for agentId=${agentInfo.id}")
+                LogUtils.i(
+                    "ChatViewModel.setAgentInfo: forceSync=true, syncing messages for agentId=${agentInfo.id}"
+                )
                 viewModelScope.launch(Dispatchers.IO) {
                     try {
                         syncChatDataUseCase(agentInfo.id)

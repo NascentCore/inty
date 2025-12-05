@@ -79,12 +79,22 @@ def convert_video_to_animated_image(
                 try:
                     if output_format == "webp":
                         # 转换为 WebP 动图
+                        # 使用 filter_complex 确保首尾帧一致，实现无缝循环
+                        # 先处理视频，然后复制第一帧并转换为视频流，最后连接
+                        filter_complex = (
+                            f"[0:v]fps={fps},scale={max_width}:-1:flags=lanczos[main];"
+                            f"[main]split[stream1][stream2];"
+                            f"[stream2]select='eq(n,0)',loop=1:1:0[first];"
+                            f"[stream1][first]concat=n=2:v=1:a=0[out]"
+                        )
                         cmd = [
                             "ffmpeg",
                             "-i",
                             video_path,
-                            "-vf",
-                            f"fps={fps},scale={max_width}:-1:flags=lanczos",
+                            "-filter_complex",
+                            filter_complex,
+                            "-map",
+                            "[out]",
                             "-c:v",
                             "libwebp",
                             "-q:v",
