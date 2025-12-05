@@ -1,6 +1,4 @@
 package com.ai.intellimate.chat
-
-import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.store.IntySetting
@@ -23,7 +21,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,9 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
@@ -123,7 +118,6 @@ fun ChatPageContainer(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var autoFocusEnabled by rememberSaveable { mutableStateOf(false) }
-    val isDebugMode = HeartAppUtils.isAppDebugMode()
 
     // 新用户引导状态
     var hasShowGuest by remember { mutableStateOf(IntySetting.hasShowGuest()) }
@@ -235,14 +229,8 @@ fun ChatPageContainer(
                     // 参数用途：shouldShowBoostSheetOnOpen 控制是否在打开聊天页面时自动显示 BoostSheet 弹窗
                     // 这里默认不自动显示，因为从 Explore 页面点击 "Boost" 按钮跳转到聊天页面时，会自动打开 BoostSheet
                     shouldShowBoostSheetOnOpen = false,
+                    debugAgentIndex = currentPage,
                 )
-                if (isDebugMode) {
-                    DebugAgentIndexBadge(
-                        modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
-                        index = currentPage,
-                        agentName = agent.name,
-                    )
-                }
             }
         }
 
@@ -339,25 +327,3 @@ private fun NewUserGuide(
     }
 }
 
-@Composable
-private fun DebugAgentIndexBadge(modifier: Modifier = Modifier, index: Int, agentName: String) {
-    val label =
-        remember(index, agentName) {
-            buildString {
-                append("#")
-                append(index)
-                if (agentName.isNotBlank()) {
-                    append(" · ")
-                    append(agentName)
-                }
-            }
-        }
-    Box(
-        modifier =
-            modifier
-                .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(6.dp))
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        Text(text = label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-    }
-}

@@ -51,6 +51,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -104,6 +105,7 @@ internal fun ChatPage(
     pageSourceOverride: String? = null, // 如果提供，则使用此 pageSource（通常来自 ChatActivity）
     isGuideVisible: Boolean = false,
     shouldShowBoostSheetOnOpen: Boolean = false,
+    debugAgentIndex: Int? = null,
 ) {
 
     val context = LocalContext.current
@@ -354,6 +356,15 @@ internal fun ChatPage(
                                 }
                             },
                         )
+
+                        if (isDebugMode && debugAgentIndex != null) {
+                            Spacer(Modifier.height(8.dp))
+                            DebugAgentIndexBadge(
+                                modifier = Modifier.padding(start = 18.dp),
+                                index = debugAgentIndex,
+                                agentName = info.name,
+                            )
+                        }
                     }
 
                     Spacer(Modifier.height(16.dp))
@@ -774,6 +785,35 @@ internal fun ChatPage(
             suppressFocusCallback.value = true
             focusManager.clearFocus()
         }
+    }
+}
+
+@Composable
+private fun DebugAgentIndexBadge(modifier: Modifier = Modifier, index: Int, agentName: String) {
+    val label =
+        remember(index, agentName) {
+            buildString {
+                append("#")
+                append(index)
+                if (agentName.isNotBlank()) {
+                    append(" · ")
+                    append(agentName)
+                }
+            }
+        }
+
+    Box(
+        modifier =
+            modifier
+                .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(6.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 
