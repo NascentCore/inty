@@ -30,7 +30,7 @@ fun ThemedDetailScreen(
     val themeTitle by viewModel.themeTitle.collectAsState()
     val eventDescription by viewModel.eventDescription.collectAsState()
     val agents by viewModel.agents.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val isChristmas by viewModel.isChristmas.collectAsState()
 
     Column(
         modifier = Modifier
@@ -56,7 +56,7 @@ fun ThemedDetailScreen(
 
         EventCard(
             description = eventDescription,
-            isChristmas = true,
+            isChristmas = isChristmas,
         )
 
         LazyColumn(

@@ -4,6 +4,8 @@ import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.VipStatusHelper
+import ai.sxwl.android.data.http.IntyNetworkManager
+import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
@@ -12,6 +14,8 @@ import androidx.paging.cachedIn
 import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /** Explore页面ViewModel 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑 */
@@ -46,6 +50,14 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     // 当前UI中显示的agents总数
     private val _currentUiAgentsCount = MutableStateFlow(0)
     val currentUiAgentsCount = _currentUiAgentsCount
+
+    // 主题专区列表（最多显示两个）
+    private val _characterThemes = MutableStateFlow<List<AgentService.CharacterThemeItem>>(emptyList())
+    val characterThemes: StateFlow<List<AgentService.CharacterThemeItem>> = _characterThemes.asStateFlow()
+
+    // 是否正在加载主题专区
+    private val _isLoadingThemes = MutableStateFlow(false)
+    val isLoadingThemes: StateFlow<Boolean> = _isLoadingThemes.asStateFlow()
 
     // 实现 ExploreFetchCallback 接口
     override suspend fun onSuccess(
@@ -273,5 +285,31 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     fun clearData() {
         _agentsFlow.value = null
         isInitialized = false
+        _characterThemes.value = emptyList()
+    }
+
+    /** 加载主题专区列表 */
+    fun loadCharacterThemes(skip: Int = 0, limit: Int = 2) {
+        viewModelScope.launch {
+            _isLoadingThemes.value = true
+            try {
+                // 使用封装好的 Service，skip=0, limit=2 获取前两个主题
+                when (val result = IntyNetworkManager.agent.getCharacterThemes(skip = skip, limit = limit)) {
+                    is ai.sxwl.android.data.http.ApiResult.Success -> {
+                        LogUtils.d("ExploreViewModel - 获取主题专区列表成功: ${result.data.size} 条")
+                        _characterThemes.value = result.data
+                    }
+                    is ai.sxwl.android.data.http.ApiResult.Error -> {
+                        LogUtils.w("ExploreViewModel - 获取主题专区列表失败: ${result.message}")
+                        _characterThemes.value = emptyList()
+                    }
+                }
+            } catch (e: Exception) {
+                LogUtils.e("ExploreViewModel - 加载主题专区列表异常: ${e.message}", e)
+                _characterThemes.value = emptyList()
+            } finally {
+                _isLoadingThemes.value = false
+            }
+        }
     }
 }

@@ -33,7 +33,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.collections.ArrayDeque
 
 enum class HomeTabIndex {
     Chat,
@@ -74,6 +73,9 @@ class MainViewModel : BaseVM() {
     val messagesTabHasPush: StateFlow<Boolean> = _messagesTabHasPush.asStateFlow()
     private val tabHistory = ArrayDeque<HomeTabIndex>()
 
+    // 标记用户是否已经手动切换过tab，如果已切换，则不再根据remote config自动更新
+    private var hasUserManuallySelectedTab = false
+
     // 反馈请求弹窗显示状态
     private val _showFeedbackRequestDialog = MutableStateFlow(false)
     val showFeedbackRequestDialog: StateFlow<Boolean> = _showFeedbackRequestDialog.asStateFlow()
@@ -108,13 +110,22 @@ class MainViewModel : BaseVM() {
                 waitCount++
             }
 
-            val newTab = getInitialTabFromRemoteConfig()
-            if (newTab != _selectedTab.value) {
+            // 只有在用户没有手动切换过tab的情况下，才根据remote config更新
+            // 这样可以避免在界面显示后，remote config加载完成时强制切换tab
+            if (!hasUserManuallySelectedTab) {
+                val newTab = getInitialTabFromRemoteConfig()
+                if (newTab != _selectedTab.value) {
+                    LogUtils.d(
+                        "MainViewModel",
+                        "根据 Remote Config 更新 tab: ${_selectedTab.value.name} -> ${newTab.name}",
+                    )
+                    withContext(Dispatchers.Main) { _selectedTab.value = newTab }
+                }
+            } else {
                 LogUtils.d(
                     "MainViewModel",
-                    "根据 Remote Config 更新 tab: ${_selectedTab.value.name} -> ${newTab.name}",
+                    "用户已手动切换过tab，跳过 Remote Config 的自动更新",
                 )
-                withContext(Dispatchers.Main) { _selectedTab.value = newTab }
             }
         }
     }
@@ -190,7 +201,11 @@ class MainViewModel : BaseVM() {
         if (previousTab == targetTab) {
             return
         }
+        
+        // 如果trackHistory为true，表示这是用户手动切换，标记为已手动选择
+        // 这样后续remote config加载完成时，就不会再自动切换tab
         if (trackHistory) {
+            hasUserManuallySelectedTab = true
             tabHistory.addLast(previousTab)
             if (tabHistory.size > MAX_TAB_HISTORY) {
                 tabHistory.removeFirst()
