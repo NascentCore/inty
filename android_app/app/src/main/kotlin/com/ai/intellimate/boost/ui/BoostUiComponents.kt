@@ -116,9 +116,7 @@ fun BoostStatusChip(modifier: Modifier = Modifier, availablePoints: Int, onClick
 fun BoostSheet(
     agentInfo: AgentInfo,
     availablePoints: Int,
-    hasDailyReward: Boolean,
     onBoostConfirmed: (Int) -> Unit,
-    onClaimDailyReward: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -199,15 +197,6 @@ fun BoostSheet(
 
             TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
                 Text(text = stringResource(R.string.boost_sheet_cancel), color = Color.White)
-            }
-
-            if (!hasDailyReward) {
-                TextButton(onClick = onClaimDailyReward, modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = stringResource(R.string.boost_daily_reward_cta),
-                        color = Color(0xFFFFB347),
-                    )
-                }
             }
         }
     }

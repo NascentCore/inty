@@ -44,11 +44,9 @@ import com.ai.intellimate.boost.BoostTrend
 fun BoostLeaderboardTab(
     modifier: Modifier = Modifier,
     availablePoints: Int,
-    hasDailyReward: Boolean,
     entries: List<BoostLeaderboardEntry>,
     onChat: (BoostLeaderboardEntry) -> Unit,
     onBoost: (BoostLeaderboardEntry) -> Unit,
-    onClaimReward: () -> Unit,
 ) {
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
         BoostStatusChip(
@@ -59,27 +57,6 @@ fun BoostLeaderboardTab(
                 // 用户应通过点击排行榜条目来执行 Boost 操作
             },
         )
-
-        Spacer(Modifier.height(12.dp))
-
-        OutlinedButton(
-            onClick = onClaimReward,
-            enabled = !hasDailyReward,
-            modifier = Modifier.fillMaxWidth(),
-            colors =
-                ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color.White.copy(alpha = if (hasDailyReward) 0.5f else 1f)
-                ),
-            border = ButtonDefaults.outlinedButtonBorder(enabled = !hasDailyReward),
-        ) {
-            Text(
-                text =
-                    stringResource(
-                        if (hasDailyReward) R.string.boost_daily_reward_claimed
-                        else R.string.boost_daily_reward_cta
-                    )
-            )
-        }
 
         Spacer(Modifier.height(24.dp))
 

@@ -28,7 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,15 +42,12 @@ import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
-import com.ai.intellimate.boost.BoostError
-import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostLeaderboardEntry
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.BoostState
 import com.ai.intellimate.boost.ui.BoostLeaderboardTab
 import com.ai.intellimate.chat.ChatActivity
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 private enum class ExploreSubTab {
     Recommended,
@@ -71,7 +67,6 @@ fun ExplorePage(
     externalResetSignal: Int = 0,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val isDebugMode = HeartAppUtils.isAppDebugMode()
     var selectedTab by remember { mutableStateOf(ExploreSubTab.Recommended) }
     val boostState by
@@ -243,33 +238,9 @@ fun ExplorePage(
                 BoostLeaderboardTab(
                     modifier = Modifier.fillMaxSize(),
                     availablePoints = boostState.availablePoints,
-                    hasDailyReward = boostState.hasClaimedDailyReward,
                     entries = leaderboard,
                     onChat = { entry -> handleLeaderboardAction(entry, false) },
                     onBoost = { entry -> handleLeaderboardAction(entry, true) },
-                    onClaimReward = {
-                        scope.launch {
-                            try {
-                                val reward = BoostManager.claimDailyReward()
-                                ToastUtils.showShort(
-                                    context.getString(
-                                        R.string.boost_toast_daily_reward_claimed,
-                                        reward,
-                                    )
-                                )
-                            } catch (e: BoostException) {
-                                val messageRes =
-                                    when (e.error) {
-                                        BoostError.DailyRewardAlreadyClaimed ->
-                                            R.string.boost_daily_reward_already
-                                        else -> R.string.boost_toast_generic_error
-                                    }
-                                ToastUtils.showShort(messageRes)
-                            } catch (_: Exception) {
-                                ToastUtils.showShort(R.string.boost_toast_generic_error)
-                            }
-                        }
-                    },
                 )
             }
         }

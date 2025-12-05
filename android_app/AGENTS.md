@@ -314,8 +314,9 @@ suspend fun login(request: LoginRequest): ApiResult<LoginResponse>
 
 ## Boost AI Characters 本地 MVP
 - 📦 `BoostManager` + MMKV 提供 `boostState`/`leaderboard` Flow，记录积分余额、每日签到、角色 Boost 次数；`BoostRepository` 内含 `resetIfNewDay` 逻辑，所有数据仅存本地。
-- 🔥 Chat 页顶部加入 Boost 胶囊与半屏 `BoostSheet`，可查看积分、按 100 pts 步长投入、领取每日 200 pts，并在对话流插入系统提示。
-- 🏆 Explore 引入 `Featured/Boost` 子 Tab，Boost Tab 使用 `BoostLeaderboardTab` 展示本地榜单、签到按钮以及跳转聊天并自动打开 Boost 弹层的操作。
+- 🔥 Chat 页顶部加入 Boost 胶囊与半屏 `BoostSheet`，可查看积分、按 100 pts 步长投入，并在对话流插入系统提示。
+- 🏆 Explore 引入 `Featured/Boost` 子 Tab，Boost Tab 使用 `BoostLeaderboardTab` 展示本地榜单以及跳转聊天并自动打开 Boost 弹层的操作。
+- ✅ Me 页的签到页面提供每日打卡按钮，点击后领取 `BoostManager` 内的每日 200 pts 能量奖励，替代 Explore Tab 中的调试入口。
 - 🎧 文本发送、Keep Talking、图片生成、手动语音播放都会调用 `BoostManager.record*`，根据 `BoostConfig` 折算 token→points，满足“token usage → points → boost”闭环。
 - 🧪 所有可见文案与图标（`rocket_launch_24px`）集中在 `strings.xml`/`drawable/`，并在此文档记录接入点，便于后续扩展为远程排行榜。
 

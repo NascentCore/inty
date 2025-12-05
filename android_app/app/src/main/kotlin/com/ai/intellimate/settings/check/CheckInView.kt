@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -40,6 +41,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
+import com.ai.intellimate.boost.BoostError
+import com.ai.intellimate.boost.BoostException
+import com.ai.intellimate.boost.BoostManager
 import kotlinx.coroutines.launch
 
 @Composable
@@ -47,6 +51,9 @@ fun CheckInScreen(onClose: () -> Unit) {
     val configuration = LocalConfiguration.current
     val screenHeightDp = configuration.screenHeightDp.dp
     val screenWidthDp = configuration.screenWidthDp.dp
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val boostState by BoostManager.boostState.collectAsState()
 
     // 1. 获取月份信息
     val (daysInMonth, today) = remember { getCurrentMonthInfo() }
@@ -55,8 +62,19 @@ fun CheckInScreen(onClose: () -> Unit) {
         // 首次加载时，从 SharedPreferences 读取数据
         mutableStateOf(CheckInRepository.getCheckedInDays())
     }
+    val hasClaimedDailyReward = boostState.hasClaimedDailyReward
     val isCheckedToday = checkedInDays.contains(today)
-    val btnText = if (isCheckedToday) "Checked in today" else "Check in"
+    val hasCheckedInToday = isCheckedToday || hasClaimedDailyReward
+    val btnText =
+        if (hasCheckedInToday) stringResource(R.string.boost_daily_reward_claimed)
+        else stringResource(R.string.boost_daily_reward_cta)
+
+    LaunchedEffect(hasClaimedDailyReward) {
+        if (hasClaimedDailyReward && !isCheckedToday) {
+            CheckInRepository.checkInDay(today)
+            checkedInDays = CheckInRepository.getCheckedInDays()
+        }
+    }
 
     Box(
         modifier =
@@ -116,21 +134,50 @@ fun CheckInScreen(onClose: () -> Unit) {
                             brush =
                                 Brush.linearGradient(
                                     colors =
-                                        if (isCheckedToday)
+                                        if (hasCheckedInToday)
                                             listOf(Color(0x509756FF), Color(0x50EF56FF))
                                         else listOf(Color(0xFF9756FF), Color(0xFFEF56FF))
                                 ),
                             shape = RoundedCornerShape(28.dp),
                         )
                         .clickable {
-                            if (isCheckedToday) {
+                            if (hasCheckedInToday) {
+                                ToastUtils.showShort(R.string.boost_daily_reward_already)
                                 return@clickable
                             }
 
-                            ToastUtils.showLong("Check-in complete! See you again tomorrow.")
-                            // 写入 SharedPreferences
-                            CheckInRepository.checkInDay(today)
-                            checkedInDays = CheckInRepository.getCheckedInDays()
+                            scope.launch {
+                                try {
+                                    val claimed = BoostManager.claimDailyReward()
+                                    ToastUtils.showLong(
+                                        context.getString(
+                                            R.string.boost_toast_daily_reward_claimed,
+                                            claimed,
+                                        )
+                                    )
+                                    CheckInRepository.checkInDay(today)
+                                    checkedInDays = CheckInRepository.getCheckedInDays()
+                                } catch (e: BoostException) {
+                                    val messageRes =
+                                        when (e.error) {
+                                            BoostError.DailyRewardAlreadyClaimed ->
+                                                R.string.boost_daily_reward_already
+                                            BoostError.NotEnoughPoints ->
+                                                R.string.boost_toast_not_enough_points
+                                            else -> R.string.boost_toast_generic_error
+                                        }
+                                    ToastUtils.showShort(messageRes)
+                                    if (
+                                        e.error == BoostError.DailyRewardAlreadyClaimed &&
+                                            !checkedInDays.contains(today)
+                                    ) {
+                                        CheckInRepository.checkInDay(today)
+                                        checkedInDays = CheckInRepository.getCheckedInDays()
+                                    }
+                                } catch (_: Exception) {
+                                    ToastUtils.showShort(R.string.boost_toast_generic_error)
+                                }
+                            }
                         }
                         .align(Alignment.CenterHorizontally),
                 contentAlignment = Alignment.Center,
@@ -140,7 +187,8 @@ fun CheckInScreen(onClose: () -> Unit) {
                     style =
                         TextStyle(
                             fontSize = 17.sp,
-                            color = Color.White.copy(alpha = if (isCheckedToday) 0.5f else 1f),
+                            color =
+                                Color.White.copy(alpha = if (hasCheckedInToday) 0.5f else 1f),
                             fontWeight = FontWeight.Bold,
                         ),
                 )
