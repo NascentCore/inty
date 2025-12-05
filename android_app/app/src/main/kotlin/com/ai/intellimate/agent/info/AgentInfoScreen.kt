@@ -3,6 +3,7 @@ package com.ai.intellimate.agent.info
 import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.utils.ToastUtils
@@ -24,9 +25,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -38,6 +42,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -405,6 +410,7 @@ internal fun AiAgentInfoScreen(
                             AgentGeneratedImagesSection(
                                 modifier = Modifier.padding(horizontal = 16.dp),
                                 images = galleryItems,
+                                agentId = agent.id,
                             )
                         }
                         if (isDebugMode) {
@@ -474,6 +480,7 @@ private object AgentGalleryConfig {
 private fun AgentGeneratedImagesSection(
     modifier: Modifier = Modifier,
     images: List<AgentImageGalleryItem>,
+    agentId: String,
 ) {
     var previewImage by remember { mutableStateOf<String?>(null) }
 
@@ -499,7 +506,11 @@ private fun AgentGeneratedImagesSection(
                     image.imageUrl
                 },
             ) { item ->
-                AgentGalleryImageCard(item = item) { previewImage = it }
+                AgentGalleryImageCard(
+                    item = item,
+                    agentId = agentId,
+                    onPreview = { previewImage = it },
+                )
             }
         }
         Spacer(Modifier.height(AgentGalleryConfig.SectionBottomPadding))
@@ -515,24 +526,50 @@ private fun AgentGeneratedImagesSection(
                     dismissOnBackPress = true,
                 ),
         ) {
+            val currentImageUrl = previewImage.orEmpty()
             FullScreenImageViewer(
-                imageUrl = previewImage.orEmpty(),
+                imageUrl = currentImageUrl,
                 onDismiss = { previewImage = null },
+                onAction = {
+                    if (agentId.isNotBlank() && currentImageUrl.isNotBlank()) {
+                        IntySetting.setChatBackgroundImage(agentId, currentImageUrl)
+                        ToastUtils.showShort(R.string.agent_gallery_background_set_success)
+                        previewImage = null
+                    }
+                },
+                actionLabel = stringResource(R.string.agent_gallery_set_as_background),
             )
         }
     }
 }
 
 @Composable
-private fun AgentGalleryImageCard(item: AgentImageGalleryItem, onPreview: (String) -> Unit) {
+private fun AgentGalleryImageCard(
+    item: AgentImageGalleryItem,
+    agentId: String,
+    onPreview: (String) -> Unit,
+) {
     val context = LocalContext.current
     val aspectRatio = if (item.height > 0) item.width.toFloat() / item.height.toFloat() else 1f
+    var showResetDialog by remember { mutableStateOf(false) }
+    // 直接计算，不使用 remember，确保在设置变化时能正确更新
+    val isCurrentBackground = IntySetting.getChatBackgroundImage(agentId) == item.imageUrl
+
     Box(
         modifier =
             Modifier.width(AgentGalleryConfig.ImageWidth)
                 .clip(RoundedCornerShape(AgentGalleryConfig.ImageCornerRadius))
                 .background(Color.White.copy(alpha = 0.08f))
-                .noRippleClickable { onPreview(item.imageUrl) }
+                .pointerInput(agentId, item.imageUrl, isCurrentBackground) {
+                    detectTapGestures(
+                        onTap = { onPreview(item.imageUrl) },
+                        onLongPress = {
+                            if (isCurrentBackground) {
+                                showResetDialog = true
+                            }
+                        },
+                    )
+                },
     ) {
         AsyncImage(
             modifier = Modifier.fillMaxWidth().aspectRatio(aspectRatio),
@@ -549,6 +586,60 @@ private fun AgentGalleryImageCard(item: AgentImageGalleryItem, onPreview: (Strin
             contentDescription =
                 stringResource(R.string.agent_gallery_ai_images_content_description),
             contentScale = ContentScale.Crop,
+        )
+
+        // 如果这是当前背景，显示一个小指示器
+        if (isCurrentBackground) {
+            Box(
+                modifier =
+                    Modifier.align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF4CAF50)),
+            )
+        }
+    }
+
+    // 长按重置对话框
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.agent_gallery_reset_background),
+                    color = Color.White,
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.are_you_sure),
+                    color = Color.White,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        IntySetting.clearChatBackgroundImage(agentId)
+                        ToastUtils.showShort(R.string.agent_gallery_background_reset_success)
+                        showResetDialog = false
+                    },
+                ) {
+                    Text(
+                        text = stringResource(R.string.str_reset),
+                        color = Color.White,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text(
+                        text = stringResource(R.string.cancel),
+                        color = Color.White,
+                    )
+                }
+            },
+            containerColor = Color(0xFF1E1E1E),
         )
     }
 }

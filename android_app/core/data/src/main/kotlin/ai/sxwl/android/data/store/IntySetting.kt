@@ -358,6 +358,30 @@ object IntySetting {
 
     // endregion
 
+    // region 聊天背景图片相关设置
+
+    /** 设置指定agent的自定义聊天背景图片 */
+    fun setChatBackgroundImage(agentId: String, imageUrl: String) {
+        setUserProfileData("chat_background_$agentId", imageUrl)
+    }
+
+    /** 获取指定agent的自定义聊天背景图片 */
+    fun getChatBackgroundImage(agentId: String): String? {
+        return getUserProfileData("chat_background_$agentId")?.takeIf { it.isNotBlank() }
+    }
+
+    /** 清除指定agent的自定义聊天背景图片（恢复为默认） */
+    fun clearChatBackgroundImage(agentId: String) {
+        clearUserProfileData("chat_background_$agentId")
+    }
+
+    /** 检查指定agent是否有自定义聊天背景图片 */
+    fun hasCustomChatBackground(agentId: String): Boolean {
+        return hasUserProfileData("chat_background_$agentId")
+    }
+
+    // endregion
+
     // region 会话Pin/Hide相关设置
 
     /** 设置会话置顶状态 */
