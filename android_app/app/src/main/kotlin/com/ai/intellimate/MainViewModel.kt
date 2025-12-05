@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.collections.ArrayDeque
 
 enum class HomeTabIndex {
     Chat,
@@ -73,6 +74,7 @@ class MainViewModel : BaseVM() {
 
     private val _messagesTabHasPush = MutableStateFlow(IntySetting.hasMessagesTabPush())
     val messagesTabHasPush: StateFlow<Boolean> = _messagesTabHasPush.asStateFlow()
+    private val tabHistory = ArrayDeque<HomeTabIndex>()
 
     private val pushMessageSubscriber =
         object : EventSubscriber<PushNotificationEvent.MessageReceived> {
@@ -80,6 +82,10 @@ class MainViewModel : BaseVM() {
                 handlePushMessageEvent(event)
             }
         }
+
+    companion object {
+        private const val MAX_TAB_HISTORY = 10
+    }
 
     init {
         loadStartupData()
@@ -166,7 +172,7 @@ class MainViewModel : BaseVM() {
         checkAppVersion()
     }
 
-    fun selectTab(tab: Int) {
+    fun selectTab(tab: Int, trackHistory: Boolean = true) {
         // 防止数组越界，确保tab索引在有效范围内
         val tabEntries = HomeTabIndex.entries.toTypedArray()
         if (tab < 0 || tab >= tabEntries.size) {
@@ -178,11 +184,31 @@ class MainViewModel : BaseVM() {
         stopAllAudioPlayback()
 
         val targetTab = tabEntries[tab]
+        val previousTab = _selectedTab.value
+        if (previousTab == targetTab) {
+            return
+        }
+        if (trackHistory) {
+            tabHistory.addLast(previousTab)
+            if (tabHistory.size > MAX_TAB_HISTORY) {
+                tabHistory.removeFirst()
+            }
+        }
         _selectedTab.value = targetTab
 
         if (targetTab == HomeTabIndex.Messages) {
             clearMessagesTabPush()
         }
+    }
+
+    /** tab 返回：回到上一个访问的tab */
+    fun navigateBackToPreviousTab(): Boolean {
+        if (tabHistory.isEmpty()) {
+            return false
+        }
+        val previousTab = tabHistory.removeLast()
+        selectTab(previousTab.ordinal, trackHistory = false)
+        return true
     }
 
     /** 停止所有音频播放 用于tab切换时确保音频停止 */
@@ -301,6 +327,7 @@ class MainViewModel : BaseVM() {
         // 清理内存数据
         followingAgents.clear()
         _userProfile.value = UserProfile()
+        tabHistory.clear()
 
         // 清理统一启动管理器的数据
         UnifiedStartupManager.clearAllData()
