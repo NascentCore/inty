@@ -2,6 +2,7 @@ package com.ai.intellimate.explore
 
 import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import android.graphics.drawable.AnimatedImageDrawable
 import androidx.compose.animation.core.animateFloatAsState
@@ -29,7 +30,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -136,7 +136,10 @@ fun ExploreCharacterCard(
     // 是否显示动图（动图加载成功且应该播放）
     var showAnimatedImage by remember(agentInfo.id) { mutableStateOf(false) }
 
-    var isFavorite by rememberSaveable(agentInfo.id) { mutableStateOf(false) }
+    var isFavorite by
+        remember(agentInfo.id) {
+            mutableStateOf(IntySetting.isExploreAgentFavorite(agentInfo.id))
+        }
     val favoriteIcon =
         if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder
     val favoriteTint = if (isFavorite) Color(0xFFFF5A8A) else Color.White
@@ -288,7 +291,11 @@ fun ExploreCharacterCard(
                 Modifier.align(Alignment.TopEnd)
                     .padding(CardConfig.FavoriteButtonPadding)
                     .size(CardConfig.FavoriteButtonSize),
-            onClick = { isFavorite = !isFavorite },
+            onClick = {
+                val nextFavorite = !isFavorite
+                isFavorite = nextFavorite
+                IntySetting.setExploreAgentFavorite(agentInfo.id, nextFavorite)
+            },
             colors =
                 IconButtonDefaults.iconButtonColors(
                     contentColor = favoriteTint,
