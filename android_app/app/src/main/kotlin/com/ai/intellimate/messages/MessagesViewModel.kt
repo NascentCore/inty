@@ -454,7 +454,8 @@ class MessagesViewModel : BaseVM() {
 
     private fun syncPushAgentIds(conversations: List<ConversationItem>): Set<String> {
         if (conversations.isEmpty()) return emptySet()
-        return conversations.mapNotNull { conversation ->
+        return conversations
+            .mapNotNull { conversation ->
                 val agentId = conversation.agentId
                 if (agentId.isNotBlank() && IntySetting.hasConversationPush(agentId)) agentId
                 else null
@@ -553,7 +554,7 @@ class MessagesViewModel : BaseVM() {
                 )
             _uiState.value =
                 updatedState.copy(
-                    refreshKey = System.currentTimeMillis(), // 更新 refreshKey 强制刷新
+                    refreshKey = System.currentTimeMillis() // 更新 refreshKey 强制刷新
                 )
         }
     }

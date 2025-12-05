@@ -321,7 +321,6 @@ object IntyNetworkManager {
     val chat: ChatService
         get() = ChatService
 
-
     /** 订阅相关API 替换: ISubscriptionApi */
     val subscription: SubscriptionService
         get() = SubscriptionService

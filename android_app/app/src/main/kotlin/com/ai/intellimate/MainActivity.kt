@@ -53,12 +53,12 @@ import com.ai.intellimate.ui.components.LoginWithEmailScreen
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -478,7 +478,10 @@ class MainActivity : BaseActivity() {
     override fun onDestroy() {
         super.onDestroy()
         // 取消订阅反馈请求消息
-        EventBus.unsubscribe(PushNotificationEvent.MessageReceived::class, feedbackRequestSubscriber)
+        EventBus.unsubscribe(
+            PushNotificationEvent.MessageReceived::class,
+            feedbackRequestSubscriber,
+        )
         // 清理返回按键处理器
         backPressHandler.cleanup()
         // 清理 Billing 事件监听

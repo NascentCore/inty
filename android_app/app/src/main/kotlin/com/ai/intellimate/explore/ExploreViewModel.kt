@@ -52,8 +52,10 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     val currentUiAgentsCount = _currentUiAgentsCount
 
     // 主题专区列表（最多显示两个）
-    private val _characterThemes = MutableStateFlow<List<AgentService.CharacterThemeItem>>(emptyList())
-    val characterThemes: StateFlow<List<AgentService.CharacterThemeItem>> = _characterThemes.asStateFlow()
+    private val _characterThemes =
+        MutableStateFlow<List<AgentService.CharacterThemeItem>>(emptyList())
+    val characterThemes: StateFlow<List<AgentService.CharacterThemeItem>> =
+        _characterThemes.asStateFlow()
 
     // 是否正在加载主题专区
     private val _isLoadingThemes = MutableStateFlow(false)
@@ -294,7 +296,10 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
             _isLoadingThemes.value = true
             try {
                 // 使用封装好的 Service，skip=0, limit=2 获取前两个主题
-                when (val result = IntyNetworkManager.agent.getCharacterThemes(skip = skip, limit = limit)) {
+                when (
+                    val result =
+                        IntyNetworkManager.agent.getCharacterThemes(skip = skip, limit = limit)
+                ) {
                     is ai.sxwl.android.data.http.ApiResult.Success -> {
                         LogUtils.d("ExploreViewModel - 获取主题专区列表成功: ${result.data.size} 条")
                         _characterThemes.value = result.data

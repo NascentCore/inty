@@ -227,8 +227,8 @@ private fun AppVersionLogic(mainViewModel: MainViewModel) {
                 onConfirm = {
                     runCatching { rsp?.download_url?.let { url -> uriHandler.openUri(url) } }
                 },
-                onDismiss = { showUpgrade = false},
-                isForced = force_update
+                onDismiss = { showUpgrade = false },
+                isForced = force_update,
             )
         }
     }

@@ -238,11 +238,16 @@ object AgentService {
         }
     }
 
-    /** 获取主题专区列表
+    /**
+     * 获取主题专区列表
+     *
      * @param skip 跳过的记录数（分页参数）
      * @param limit 返回的记录数（分页参数）
      */
-    suspend fun getCharacterThemes(skip: Int = 0, limit: Int = 2): ApiResult<List<CharacterThemeItem>> {
+    suspend fun getCharacterThemes(
+        skip: Int = 0,
+        limit: Int = 2,
+    ): ApiResult<List<CharacterThemeItem>> {
         return IntyNetworkManager.executeRequest("Get Character Themes") {
             try {
                 LogUtils.d("AgentService - 请求主题专区列表: skip=$skip, limit=$limit")
@@ -253,62 +258,82 @@ object AgentService {
                         .v1()
                         .characterThemes()
                         .list(
-                            com.inty.api.models.api.v1.characterthemes.CharacterThemeListParams.builder()
+                            com.inty.api.models.api.v1.characterthemes.CharacterThemeListParams
+                                .builder()
                                 .skip(skip.toLong())
                                 .limit(limit.toLong())
                                 .build()
                         )
 
-                LogUtils.d("AgentService - 主题专区接口响应: code=${response.code()}, data=${response.data()?.size ?: 0} 条")
-                
+                LogUtils.d(
+                    "AgentService - 主题专区接口响应: code=${response.code()}, data=${response.data()?.size ?: 0} 条"
+                )
+
                 if (response.code() == 200L && response.data() != null) {
                     val rawThemes = response.data()!!
                     LogUtils.d("AgentService - 原始主题数量: ${rawThemes.size}")
-                    
-                    val themes = rawThemes
-                        .filter { theme ->
-                            try {
-                                // 只显示可见的主题（PRIMARY 或 SECONDARY）
-                                val visibility = theme.visibility()
-                                val isVisible = visibility == com.inty.api.models.api.v1.characterthemes.CharacterThemeVisibility.PRIMARY ||
-                                    visibility == com.inty.api.models.api.v1.characterthemes.CharacterThemeVisibility.SECONDARY
-                                LogUtils.d("AgentService - 主题 ${theme.id()}: visibility=$visibility, isVisible=$isVisible")
-                                isVisible
-                            } catch (e: Exception) {
-                                LogUtils.w("AgentService - 获取主题可见性失败: ${e.message}")
-                                false
-                            }
-                        }
-                        .mapNotNull { theme ->
-                            try {
-                                val agents = theme.agents()?.mapNotNull { themeAgent ->
-                                    try {
-                                        themeAgent.agent()?.toAgentInfo()
-                                    } catch (e: Exception) {
-                                        LogUtils.w("AgentService - 转换 Agent 失败: ${e.message}")
-                                        null
-                                    }
-                                } ?: emptyList()
 
-                                LogUtils.d("AgentService - 主题 ${theme.id()}: name=${theme.name()}, agents数量=${agents.size}")
-                                
-                                CharacterThemeItem(
-                                    id = theme.id(),
-                                    name = theme.name(),
-                                    description = theme.description() ?: "",
-                                    agents = agents,
-                                    isChristmas = isChristmasTheme(theme),
-                                )
-                            } catch (e: Exception) {
-                                LogUtils.w("AgentService - 处理主题失败: ${e.message}")
-                                null
+                    val themes =
+                        rawThemes
+                            .filter { theme ->
+                                try {
+                                    // 只显示可见的主题（PRIMARY 或 SECONDARY）
+                                    val visibility = theme.visibility()
+                                    val isVisible =
+                                        visibility ==
+                                            com.inty.api.models.api.v1.characterthemes
+                                                .CharacterThemeVisibility
+                                                .PRIMARY ||
+                                            visibility ==
+                                                com.inty.api.models.api.v1.characterthemes
+                                                    .CharacterThemeVisibility
+                                                    .SECONDARY
+                                    LogUtils.d(
+                                        "AgentService - 主题 ${theme.id()}: visibility=$visibility, isVisible=$isVisible"
+                                    )
+                                    isVisible
+                                } catch (e: Exception) {
+                                    LogUtils.w("AgentService - 获取主题可见性失败: ${e.message}")
+                                    false
+                                }
                             }
-                        }
+                            .mapNotNull { theme ->
+                                try {
+                                    val agents =
+                                        theme.agents()?.mapNotNull { themeAgent ->
+                                            try {
+                                                themeAgent.agent()?.toAgentInfo()
+                                            } catch (e: Exception) {
+                                                LogUtils.w(
+                                                    "AgentService - 转换 Agent 失败: ${e.message}"
+                                                )
+                                                null
+                                            }
+                                        } ?: emptyList()
+
+                                    LogUtils.d(
+                                        "AgentService - 主题 ${theme.id()}: name=${theme.name()}, agents数量=${agents.size}"
+                                    )
+
+                                    CharacterThemeItem(
+                                        id = theme.id(),
+                                        name = theme.name(),
+                                        description = theme.description() ?: "",
+                                        agents = agents,
+                                        isChristmas = isChristmasTheme(theme),
+                                    )
+                                } catch (e: Exception) {
+                                    LogUtils.w("AgentService - 处理主题失败: ${e.message}")
+                                    null
+                                }
+                            }
 
                     LogUtils.d("AgentService - 最终返回主题数量: ${themes.size}")
                     themes
                 } else {
-                    LogUtils.w("AgentService - 获取主题专区列表失败: code=${response.code()}, data=${response.data()}")
+                    LogUtils.w(
+                        "AgentService - 获取主题专区列表失败: code=${response.code()}, data=${response.data()}"
+                    )
                     emptyList()
                 }
             } catch (e: Exception) {
@@ -319,7 +344,9 @@ object AgentService {
     }
 
     /** 判断是否为圣诞主题（根据名称或其他特征判断） */
-    private fun isChristmasTheme(theme: com.inty.api.models.api.v1.characterthemes.CharacterTheme): Boolean {
+    private fun isChristmasTheme(
+        theme: com.inty.api.models.api.v1.characterthemes.CharacterTheme
+    ): Boolean {
         return try {
             val name = theme.name().lowercase()
             val description = theme.description()?.lowercase() ?: ""
@@ -334,34 +361,40 @@ object AgentService {
     }
 
     /** 创建模拟主题专区数据（用于测试 UI 效果） */
-    fun createMockCharacterThemes(exploreAgents: List<AgentInfo> = emptyList()): List<CharacterThemeItem> {
+    fun createMockCharacterThemes(
+        exploreAgents: List<AgentInfo> = emptyList()
+    ): List<CharacterThemeItem> {
         // 如果提供了真实的 explore agents 数据，使用它们；否则使用完全模拟的数据
-        val agentsForTheme1 = if (exploreAgents.isNotEmpty()) {
-            exploreAgents.take(5)
-        } else {
-            createMockAgents(5)
-        }
+        val agentsForTheme1 =
+            if (exploreAgents.isNotEmpty()) {
+                exploreAgents.take(5)
+            } else {
+                createMockAgents(5)
+            }
 
-        val agentsForTheme2 = if (exploreAgents.size > 5) {
-            exploreAgents.drop(5).take(3)
-        } else if (exploreAgents.isNotEmpty()) {
-            exploreAgents.take(3)
-        } else {
-            createMockAgents(3)
-        }
+        val agentsForTheme2 =
+            if (exploreAgents.size > 5) {
+                exploreAgents.drop(5).take(3)
+            } else if (exploreAgents.isNotEmpty()) {
+                exploreAgents.take(3)
+            } else {
+                createMockAgents(3)
+            }
 
         return listOf(
             CharacterThemeItem(
                 id = "mock_christmas_1",
                 name = "# Merry Christmas",
-                description = "Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!",
+                description =
+                    "Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!",
                 agents = agentsForTheme1,
                 isChristmas = true,
             ),
             CharacterThemeItem(
                 id = "mock_theme_2",
                 name = "# Winter Wonderland",
-                description = "Explore the magical world of winter with our special winter-themed characters.",
+                description =
+                    "Explore the magical world of winter with our special winter-themed characters.",
                 agents = agentsForTheme2,
                 isChristmas = false,
             ),

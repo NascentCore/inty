@@ -94,7 +94,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
-import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -110,10 +109,8 @@ import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
 import java.io.File
 import java.io.FileOutputStream
-import java.net.URL
 import java.util.Locale
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -122,8 +119,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 
 /** 创建角色的页面 */
@@ -498,38 +493,41 @@ private fun CreateRolePage(
     val galleryLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
             imageUri?.let { uri ->
-
                 runCatching {
-                    val copiedFile = copyUriToTempFile(context, uri)
-                    val finalUri = if (copiedFile != null) {
-                        LogUtils.i("Image copied to private directory: ${copiedFile.absolutePath}")
-                        Uri.fromFile(copiedFile)
-                    } else {
-                        throw Exception("Failed to copy image to private directory")
+                        val copiedFile = copyUriToTempFile(context, uri)
+                        val finalUri =
+                            if (copiedFile != null) {
+                                LogUtils.i(
+                                    "Image copied to private directory: ${copiedFile.absolutePath}"
+                                )
+                                Uri.fromFile(copiedFile)
+                            } else {
+                                throw Exception("Failed to copy image to private directory")
+                            }
+
+                        val historyImageSize = avatarUrls.size
+
+                        avatarUrls += finalUri.toString()
+                        selectedImageIndex = historyImageSize
+                        // Launch UCrop with the original URI
+                        val intentCrop =
+                            UCropHelper.getIntent(
+                                context,
+                                finalUri,
+                                context.getString(R.string.crop_image),
+                            )
+                        cropLauncher.launch(intentCrop)
                     }
-
-                    val historyImageSize = avatarUrls.size
-
-                    avatarUrls += finalUri.toString()
-                    selectedImageIndex = historyImageSize
-                    // Launch UCrop with the original URI
-                    val intentCrop =
-                        UCropHelper.getIntent(
-                            context,
-                            finalUri,
-                            context.getString(R.string.crop_image),
+                    .onFailure { e ->
+                        LogUtils.e("Gallery selection error: ${e.message}")
+                        isUploadingFromGallery = false
+                        ToastUtils.showShort(
+                            context.getString(
+                                R.string.toast_failed_prepare_upload_with_message,
+                                e.message ?: "Unknown error",
+                            )
                         )
-                    cropLauncher.launch(intentCrop)
-                }.onFailure { e ->
-                    LogUtils.e("Gallery selection error: ${e.message}")
-                    isUploadingFromGallery = false
-                    ToastUtils.showShort(
-                        context.getString(
-                            R.string.toast_failed_prepare_upload_with_message,
-                            e.message ?: "Unknown error",
-                        )
-                    )
-                }
+                    }
             }
         }
 
@@ -768,19 +766,21 @@ private fun CreateRolePage(
                         } else {
                             avatarUrl
                         }
-                    val previewUrl = getCdnImageUrl(
-                        originUrl = imageUrl,
-                        width = Config.TextToImage.Preview.WIDTH,
-                        quality = Config.TextToImage.Preview.QUALITY
-                    )
+                    val previewUrl =
+                        getCdnImageUrl(
+                            originUrl = imageUrl,
+                            width = Config.TextToImage.Preview.WIDTH,
+                            quality = Config.TextToImage.Preview.QUALITY,
+                        )
 
                     if (previewUrl != null || imageUrl != null) {
                         createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
                             try {
                                 val imageLoader = SingletonImageLoader.get(context)
-                                val request = ImageRequest.Builder(context)
-                                    .data(previewUrl ?: imageUrl)
-                                    .build()
+                                val request =
+                                    ImageRequest.Builder(context)
+                                        .data(previewUrl ?: imageUrl)
+                                        .build()
                                 val result = imageLoader.execute(request)
 
                                 if (result is SuccessResult) {
@@ -789,7 +789,11 @@ private fun CreateRolePage(
                                         val snapshot = diskCache?.openSnapshot(key)
 
                                         snapshot?.use {
-                                            startUCropWithLocalFile(it.data.toFile(), context, cropLauncher)
+                                            startUCropWithLocalFile(
+                                                it.data.toFile(),
+                                                context,
+                                                cropLauncher,
+                                            )
                                         }
                                     }
                                 }
@@ -883,13 +887,15 @@ private fun CreateRolePage(
 
                             isLoading = true
 
-                            avatarUrls = avatarUrls.map { url ->
-                                if (url.startsWith("http") || url.startsWith("https")) {
-                                    url
-                                } else {
-                                    uploadGallery(context, url.toUri()) ?: throw Exception("Upload Image Error")
+                            avatarUrls =
+                                avatarUrls.map { url ->
+                                    if (url.startsWith("http") || url.startsWith("https")) {
+                                        url
+                                    } else {
+                                        uploadGallery(context, url.toUri())
+                                            ?: throw Exception("Upload Image Error")
+                                    }
                                 }
-                            }
 
                             // Prepare avatar and background fields according to new logic
                             val backgroundUrl =
@@ -912,7 +918,8 @@ private fun CreateRolePage(
                                 }
                             }
                             val finalAvatarUrl = croppedAvatarUrl
-                            val backgroundImagesList = avatarUrls.ifEmpty { listOfNotNull(avatarUrl) }
+                            val backgroundImagesList =
+                                avatarUrls.ifEmpty { listOfNotNull(avatarUrl) }
 
                             // Save background for chat usage
                             if (backgroundUrl != null) {
@@ -939,7 +946,9 @@ private fun CreateRolePage(
                                     request = request,
                                     onSuccess = { agentInfo ->
                                         isLoading = false
-                                        ToastUtils.showShort(R.string.character_updated_successfully)
+                                        ToastUtils.showShort(
+                                            R.string.character_updated_successfully
+                                        )
                                         onCreateSuccess()
                                     },
                                     onError = { error ->
@@ -949,7 +958,9 @@ private fun CreateRolePage(
                                                 context.getString(
                                                     R.string.operation_failed_try_later,
                                                     context.getString(R.string.update_failed),
-                                                    context.getString(R.string.please_try_again_later),
+                                                    context.getString(
+                                                        R.string.please_try_again_later
+                                                    ),
                                                 )
                                             } else {
                                                 context.getString(
@@ -978,7 +989,9 @@ private fun CreateRolePage(
                                                 context.getString(
                                                     R.string.operation_failed_try_later,
                                                     context.getString(R.string.creation_failed),
-                                                    context.getString(R.string.please_try_again_later),
+                                                    context.getString(
+                                                        R.string.please_try_again_later
+                                                    ),
                                                 )
                                             } else {
                                                 context.getString(
@@ -1008,7 +1021,6 @@ private fun CreateRolePage(
                             isLoading = false
                         }
                     }
-
                 },
             )
 
@@ -1096,11 +1108,7 @@ private suspend fun uploadGallery(context: Context, uri: Uri): String? {
     if (fileSize > maxSizeBytes) {
         val maxSizeMBStr = String.format(Locale.getDefault(), "%dMB", maxSizeMB)
         val fileSizeMBStr =
-            String.format(
-                Locale.getDefault(),
-                "%.1fMB",
-                fileSize / (1024.0 * 1024.0),
-            )
+            String.format(Locale.getDefault(), "%.1fMB", fileSize / (1024.0 * 1024.0))
         val msg =
             context.getString(
                 R.string.user_avatar_size_too_large_with_size_format,
@@ -1130,18 +1138,12 @@ private suspend fun uploadGallery(context: Context, uri: Uri): String? {
     val tempFileSize = tempFile.length()
     if (tempFileSize > maxSizeBytes) {
         withContext(Dispatchers.Main) {
-            val maxSizeMBStr =
-                String.format(Locale.getDefault(), "%dMB", maxSizeMB)
+            val maxSizeMBStr = String.format(Locale.getDefault(), "%dMB", maxSizeMB)
             val fileSizeMBStr =
-                String.format(
-                    Locale.getDefault(),
-                    "%.1fMB",
-                    tempFileSize / (1024.0 * 1024.0),
-                )
+                String.format(Locale.getDefault(), "%.1fMB", tempFileSize / (1024.0 * 1024.0))
             val msg =
                 context.getString(
-                    R.string
-                        .user_avatar_size_too_large_with_size_format,
+                    R.string.user_avatar_size_too_large_with_size_format,
                     maxSizeMBStr,
                     fileSizeMBStr,
                 )
@@ -1150,29 +1152,19 @@ private suspend fun uploadGallery(context: Context, uri: Uri): String? {
         return null
     }
 
-    val requestFile =
-        tempFile.asRequestBody("image/*".toMediaTypeOrNull())
-    val body =
-        MultipartBody.Part.createFormData(
-            "file",
-            tempFile.name,
-            requestFile,
-        )
+    val requestFile = tempFile.asRequestBody("image/*".toMediaTypeOrNull())
+    val body = MultipartBody.Part.createFormData("file", tempFile.name, requestFile)
 
     return withContext(Dispatchers.IO) {
         when (val response = NetServiceMgr.getAgentApi().uploadAvatar(body)) {
             is HttpResult.Success -> {
-                LogUtils.i(
-                    "Original image uploaded successfully: ${response.data.url}"
-                )
+                LogUtils.i("Original image uploaded successfully: ${response.data.url}")
 
                 response.data.url
             }
 
             is HttpResult.Failure -> {
-                LogUtils.e(
-                    "Original image upload failed: ${response.message}"
-                )
+                LogUtils.e("Original image upload failed: ${response.message}")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(
                         context.getString(
@@ -1190,42 +1182,42 @@ private suspend fun uploadGallery(context: Context, uri: Uri): String? {
 
 
 
-                        // Upload original image first (as background)
-                        // 只有在文件大小检查通过后才设置上传标志
-                        isUploadingFromGallery = true
-                        createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
-                            try {
+        // Upload original image first (as background)
+        // 只有在文件大小检查通过后才设置上传标志
+        isUploadingFromGallery = true
+        createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
+            try {
 
 
 
 
 
 
-                            } catch (e: Exception) {
-                                LogUtils.e("Upload original image exception: ${e.message}")
-                                withContext(Dispatchers.Main) {
-                                    ToastUtils.showShort(
-                                        context.getString(
-                                            R.string.toast_upload_failed_with_message,
-                                            e.message ?: "Unknown error",
-                                        )
-                                    )
-                                }
-                            } finally {
-                                isUploadingFromGallery = false
-                            }
-                        }
-                    }
-                    .onFailure { e ->
-                        LogUtils.e("Gallery selection error: ${e.message}")
-                        isUploadingFromGallery = false
-                        ToastUtils.showShort(
-                            context.getString(
-                                R.string.toast_failed_prepare_upload_with_message,
-                                e.message ?: "Unknown error",
-                            )
+            } catch (e: Exception) {
+                LogUtils.e("Upload original image exception: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    ToastUtils.showShort(
+                        context.getString(
+                            R.string.toast_upload_failed_with_message,
+                            e.message ?: "Unknown error",
                         )
-                    }*/
+                    )
+                }
+            } finally {
+                isUploadingFromGallery = false
+            }
+        }
+    }
+    .onFailure { e ->
+        LogUtils.e("Gallery selection error: ${e.message}")
+        isUploadingFromGallery = false
+        ToastUtils.showShort(
+            context.getString(
+                R.string.toast_failed_prepare_upload_with_message,
+                e.message ?: "Unknown error",
+            )
+        )
+    }*/
 }
 
 // Helper function to start UCrop with a local file
@@ -1482,12 +1474,12 @@ private fun AvatarUploadSection(
                     model = it,
                     contentDescription = stringResource(R.string.generate_avatar),
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(Config.AvatarCrop.Preview.PADDING.dp)
-                        .border(width = 1.dp, color = Color.White, shape = CircleShape)
-                        .size(Config.AvatarCrop.Preview.SIZE.dp)
-                        .clip(CircleShape)
+                    modifier =
+                        Modifier.align(Alignment.TopStart)
+                            .padding(Config.AvatarCrop.Preview.PADDING.dp)
+                            .border(width = 1.dp, color = Color.White, shape = CircleShape)
+                            .size(Config.AvatarCrop.Preview.SIZE.dp)
+                            .clip(CircleShape),
                 )
             }
 
@@ -1775,11 +1767,10 @@ object Config {
             const val QUALITY = 60
         }
     }
+
     object AvatarCrop {
         object Preview {
-            /**
-             * 裁剪头像预览尺寸
-             */
+            /** 裁剪头像预览尺寸 */
             const val SIZE = 40
             const val PADDING = 8
         }

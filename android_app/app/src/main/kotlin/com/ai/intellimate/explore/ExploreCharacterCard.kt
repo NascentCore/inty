@@ -137,11 +137,8 @@ fun ExploreCharacterCard(
     var showAnimatedImage by remember(agentInfo.id) { mutableStateOf(false) }
 
     var isFavorite by
-        remember(agentInfo.id) {
-            mutableStateOf(IntySetting.isExploreAgentFavorite(agentInfo.id))
-        }
-    val favoriteIcon =
-        if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder
+        remember(agentInfo.id) { mutableStateOf(IntySetting.isExploreAgentFavorite(agentInfo.id)) }
+    val favoriteIcon = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder
     val favoriteTint = if (isFavorite) Color(0xFFFF5A8A) else Color.White
     val favoriteDescription = if (isFavorite) "Remove from favorites" else "Add to favorites"
 

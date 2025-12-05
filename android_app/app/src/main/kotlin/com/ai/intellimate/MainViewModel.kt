@@ -122,10 +122,7 @@ class MainViewModel : BaseVM() {
                     withContext(Dispatchers.Main) { _selectedTab.value = newTab }
                 }
             } else {
-                LogUtils.d(
-                    "MainViewModel",
-                    "用户已手动切换过tab，跳过 Remote Config 的自动更新",
-                )
+                LogUtils.d("MainViewModel", "用户已手动切换过tab，跳过 Remote Config 的自动更新")
             }
         }
     }
@@ -201,7 +198,7 @@ class MainViewModel : BaseVM() {
         if (previousTab == targetTab) {
             return
         }
-        
+
         // 如果trackHistory为true，表示这是用户手动切换，标记为已手动选择
         // 这样后续remote config加载完成时，就不会再自动切换tab
         if (trackHistory) {
@@ -380,15 +377,21 @@ class MainViewModel : BaseVM() {
     val needForceUpgrade = _needForceUpgrade.receiveAsFlow()
 
     private fun checkAppVersion() = launchBackground {
-        when (val result =
-            IntyNetworkManager.version.checkAppUpgrade(
-                appVersionCode = BuildConfig.VERSION_CODE.toLong(),
-                appVersionName = BuildConfig.VERSION_NAME,
-            )
+        when (
+            val result =
+                IntyNetworkManager.version.checkAppUpgrade(
+                    appVersionCode = BuildConfig.VERSION_CODE.toLong(),
+                    appVersionName = BuildConfig.VERSION_NAME,
+                )
         ) {
             is ApiResult.Success -> {
                 val rsp = result.data
-                if (rsp.update_required && (rsp.force_update || rsp.reminder_action == VersionCheckResponse.Data.ReminderAction.POP_UP_REMINDER)) {
+                if (
+                    rsp.update_required &&
+                        (rsp.force_update ||
+                            rsp.reminder_action ==
+                                VersionCheckResponse.Data.ReminderAction.POP_UP_REMINDER)
+                ) {
                     // 有更新，且需要强制更新
                     _needForceUpgrade.send(rsp)
                 }

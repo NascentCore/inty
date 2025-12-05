@@ -157,7 +157,7 @@ object ToastUtils {
             // 注意：setGravity() 不应在文本 Toast 上调用，会导致警告
             // 文本 Toast 使用系统默认位置即可
             // Android API level 30 (Android 11) 或更新，
-            //setGravity() 在标准文本Toast上调用是无效的。
+            // setGravity() 在标准文本Toast上调用是无效的。
 
             // 显示Toast
             toast.show()

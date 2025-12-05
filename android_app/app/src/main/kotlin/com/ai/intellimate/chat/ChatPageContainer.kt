@@ -1,4 +1,5 @@
 package com.ai.intellimate.chat
+
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.store.IntySetting
@@ -326,4 +327,3 @@ private fun NewUserGuide(
         }
     }
 }
-

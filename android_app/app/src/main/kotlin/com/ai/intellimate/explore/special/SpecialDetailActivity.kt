@@ -42,9 +42,7 @@ class SpecialDetailActivity : BaseActivity() {
                     themeTitle?.let { putExtra(INTENT_KEY_THEME_TITLE, it) }
                     themeDescription?.let { putExtra(INTENT_KEY_THEME_DESCRIPTION, it) }
                     putExtra(INTENT_KEY_IS_CHRISTMAS, isChristmas)
-                    agents?.let {
-                        putParcelableArrayListExtra(INTENT_KEY_AGENTS, ArrayList(it))
-                    }
+                    agents?.let { putParcelableArrayListExtra(INTENT_KEY_AGENTS, ArrayList(it)) }
                 }
             )
         }

@@ -62,7 +62,6 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.ui.components.SmartTagsLayout
 
-
 /** 主题详情页面配置常量 */
 internal object ThemedDetailConfig {
     val EventCardHeight = 142.dp
@@ -92,17 +91,14 @@ internal object ThemedDetailConfig {
 
 /** 事件卡片组件 */
 @Composable
-internal fun EventCard(
-    description: String,
-    isChristmas: Boolean = false,
-) {
+internal fun EventCard(description: String, isChristmas: Boolean = false) {
     var isExpanded by remember { mutableStateOf(false) }
     val rotationAngle by
-    animateFloatAsState(
-        targetValue = if (isExpanded) 180f else 0f,
-        animationSpec = tween(durationMillis = 300),
-        label = "arrowRotation",
-    )
+        animateFloatAsState(
+            targetValue = if (isExpanded) 180f else 0f,
+            animationSpec = tween(durationMillis = 300),
+            label = "arrowRotation",
+        )
 
     ConstraintLayout(modifier = Modifier.fillMaxWidth()) {
         val (
@@ -127,8 +123,7 @@ internal fun EventCard(
             // 横向渐变边框（左右边缘向内渐变）
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxSize()
+                    Modifier.fillMaxSize()
                         .background(
                             brush =
                                 Brush.horizontalGradient(
@@ -150,8 +145,7 @@ internal fun EventCard(
             // 纵向渐变边框（上下边缘向内渐变）
             Box(
                 modifier =
-                    Modifier
-                        .matchParentSize()
+                    Modifier.matchParentSize()
                         .background(
                             brush =
                                 Brush.verticalGradient(
@@ -172,9 +166,8 @@ internal fun EventCard(
 
         // 圣诞的装饰
         Image(
-            modifier = Modifier
-                .fillMaxWidth()
-                .constrainAs(christmasBg) {
+            modifier =
+                Modifier.fillMaxWidth().constrainAs(christmasBg) {
                     visibility = if (isChristmas) Visibility.Visible else Visibility.Invisible
                 },
             painter = painterResource(R.drawable.img_christmas_bg),
@@ -184,8 +177,7 @@ internal fun EventCard(
         // 文本内容层
         Box(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .height(ThemedDetailConfig.EventCardHeight)
                     .padding(ThemedDetailConfig.EventCardPadding)
                     .constrainAs(content) { centerVerticallyTo(cardBg) }
@@ -200,11 +192,9 @@ internal fun EventCard(
             // 获取 Box 的宽度
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .onSizeChanged { size ->
-                            boxWidth = with(density) { size.width.toDp() }
-                        }
+                    Modifier.fillMaxWidth().onSizeChanged { size ->
+                        boxWidth = with(density) { size.width.toDp() }
+                    }
             )
 
             Text(
@@ -219,9 +209,7 @@ internal fun EventCard(
                 maxLines =
                     if (isExpanded) Int.MAX_VALUE else ThemedDetailConfig.EventDescriptionMaxLines,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(end = textPaddingEnd.dp),
+                modifier = Modifier.fillMaxWidth().padding(end = textPaddingEnd.dp),
                 onTextLayout = { layoutResult ->
                     textLayoutResult = layoutResult
                     // 只在折叠状态下检测是否有 overflow，并保存状态
@@ -229,7 +217,8 @@ internal fun EventCard(
                         val hasVisualOverflow = layoutResult.hasVisualOverflow
                         val lineCount = layoutResult.lineCount
                         hasTextOverflow =
-                            hasVisualOverflow || lineCount > ThemedDetailConfig.EventDescriptionMaxLines
+                            hasVisualOverflow ||
+                                lineCount > ThemedDetailConfig.EventDescriptionMaxLines
                         // 为箭头图标留出空间（24dp 图标 + 4dp 间距）
                         textPaddingEnd = if (hasTextOverflow) 28 else 0
                     } else {
@@ -248,11 +237,12 @@ internal fun EventCard(
 
                 // 计算图标位置：位于 Box 的最右端
                 val iconSize = 24.dp
-                val iconOffsetX = if (boxWidth > 0.dp) {
-                    boxWidth - iconSize
-                } else {
-                    0.dp
-                }
+                val iconOffsetX =
+                    if (boxWidth > 0.dp) {
+                        boxWidth - iconSize
+                    } else {
+                        0.dp
+                    }
                 // 使用基线位置，使图标与文本垂直居中对齐
                 val iconOffsetY =
                     with(density) {
@@ -263,8 +253,7 @@ internal fun EventCard(
                     imageVector = Icons.Default.KeyboardArrowDown,
                     contentDescription = null,
                     modifier =
-                        Modifier
-                            .size(iconSize)
+                        Modifier.size(iconSize)
                             .offset(x = iconOffsetX, y = iconOffsetY)
                             .rotate(rotationAngle)
                             .noRippleClickable { isExpanded = !isExpanded },
@@ -280,8 +269,7 @@ internal fun EventCard(
 internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
     Row(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .height(ThemedDetailConfig.CharacterCardHeight)
                 .background(
                     color = Color(0x991C1523),
@@ -296,11 +284,7 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(ThemedDetailConfig.CharacterCardSpacing),
     ) {
         // 角色图片（左侧，固定宽度）
-        Box(
-            modifier = Modifier
-                .width(ThemedDetailConfig.CharacterImageWidth)
-                .fillMaxHeight()
-        ) {
+        Box(modifier = Modifier.width(ThemedDetailConfig.CharacterImageWidth).fillMaxHeight()) {
             val imageUrl = if (isInPreview) null else agent.getAlbumImage()
             var imageLoaded by remember(agent.id) { mutableStateOf(false) }
             var imageLoadError by remember(agent.id) { mutableStateOf(false) }
@@ -309,7 +293,7 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
             val imageShape = remember {
                 RoundedCornerShape(
                     topStart = ThemedDetailConfig.EventCardCornerRadius,
-                    bottomStart = ThemedDetailConfig.EventCardCornerRadius
+                    bottomStart = ThemedDetailConfig.EventCardCornerRadius,
                 )
             }
 
@@ -318,18 +302,14 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                 AsyncImage(
                     model = ai.sxwl.android.design.R.drawable.img_girl_lite,
                     contentDescription = agent.name,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(imageShape),
+                    modifier = Modifier.fillMaxSize().clip(imageShape),
                     contentScale = ContentScale.Crop,
                 )
             } else {
                 // 显示加载占位符
                 if (!imageLoaded && !imageLoadError) {
                     ShimmerPlaceholder(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(imageShape),
+                        modifier = Modifier.fillMaxSize().clip(imageShape),
                         cornerRadius = ThemedDetailConfig.EventCardCornerRadius,
                     )
                 }
@@ -339,9 +319,7 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                     AsyncImage(
                         model = ai.sxwl.android.design.R.drawable.img_girl_lite,
                         contentDescription = agent.name,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(imageShape),
+                        modifier = Modifier.fillMaxSize().clip(imageShape),
                         contentScale = ContentScale.Crop,
                     )
                 }
@@ -350,9 +328,7 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                 AsyncImage(
                     model = imageUrl,
                     contentDescription = agent.name,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(imageShape),
+                    modifier = Modifier.fillMaxSize().clip(imageShape),
                     contentScale = ContentScale.Crop,
                     onSuccess = { imageLoaded = true },
                     onError = {
@@ -365,10 +341,10 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
 
         // 角色信息（右侧，自适应宽度）
         Column(
-            modifier = Modifier
-                .fillMaxHeight()
-                .weight(1f)
-                .padding(ThemedDetailConfig.CharacterCardPadding),
+            modifier =
+                Modifier.fillMaxHeight()
+                    .weight(1f)
+                    .padding(ThemedDetailConfig.CharacterCardPadding),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
@@ -389,9 +365,7 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                 color = Color(0xB2FFFFFF),
                 maxLines = if (tags.isNullOrEmpty()) 5 else 4,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
+                modifier = Modifier.fillMaxWidth().weight(1f),
             )
 
             if (!tags.isNullOrEmpty()) {
@@ -433,8 +407,7 @@ internal fun HorizontalAgentCardList(
             // 横向渐变边框（左右边缘向内渐变）
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxSize()
+                    Modifier.fillMaxSize()
                         .background(
                             brush =
                                 Brush.horizontalGradient(
@@ -456,8 +429,7 @@ internal fun HorizontalAgentCardList(
             // 纵向渐变边框（上下边缘向内渐变）
             Box(
                 modifier =
-                    Modifier
-                        .matchParentSize()
+                    Modifier.matchParentSize()
                         .background(
                             brush =
                                 Brush.verticalGradient(
@@ -479,10 +451,7 @@ internal fun HorizontalAgentCardList(
         if (isChristmas) {
             // 圣诞的装饰
             Image(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(242.dp)
-                    .constrainAs(christmasBg) {},
+                modifier = Modifier.fillMaxWidth().height(242.dp).constrainAs(christmasBg) {},
                 painter = painterResource(R.drawable.img_christmas_bg),
                 contentScale = ContentScale.Crop,
                 contentDescription = "",
@@ -492,8 +461,7 @@ internal fun HorizontalAgentCardList(
         // 内容层
         Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .height(ThemedDetailConfig.HorizontalCardListHeight)
                     .padding(ThemedDetailConfig.HorizontalCardListPadding)
                     .constrainAs(content) { centerVerticallyTo(cardBg) }
@@ -504,7 +472,8 @@ internal fun HorizontalAgentCardList(
                             Modifier
                         }
                     ),
-            verticalArrangement = Arrangement.spacedBy(ThemedDetailConfig.HorizontalCardDescriptionSpacing),
+            verticalArrangement =
+                Arrangement.spacedBy(ThemedDetailConfig.HorizontalCardDescriptionSpacing),
         ) {
             // Title（带模糊阴影效果）和右箭头
             Row(
@@ -536,12 +505,7 @@ internal fun HorizontalAgentCardList(
             // Description（单行）
             Text(
                 text = description,
-                style =
-                    TextStyle(
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp,
-                        color = Color(0xB2FFFFFF),
-                    ),
+                style = TextStyle(fontSize = 12.sp, lineHeight = 16.sp, color = Color(0xB2FFFFFF)),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -551,14 +515,12 @@ internal fun HorizontalAgentCardList(
             // 横向滚动的角色卡片列表
             // 注意：LazyRow 中的点击事件会优先处理，不会触发父组件的点击
             LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(ThemedDetailConfig.HorizontalCardItemSpacing),
+                horizontalArrangement =
+                    Arrangement.spacedBy(ThemedDetailConfig.HorizontalCardItemSpacing),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 items(agents) { agent ->
-                    HorizontalAgentCardItem(
-                        agent = agent,
-                        onClick = { onAgentClick(agent) },
-                    )
+                    HorizontalAgentCardItem(agent = agent, onClick = { onAgentClick(agent) })
                 }
             }
         }
@@ -567,21 +529,19 @@ internal fun HorizontalAgentCardList(
 
 /** 横向角色卡片项 */
 @Composable
-private fun HorizontalAgentCardItem(
-    agent: AgentInfo,
-    onClick: () -> Unit,
-) {
+private fun HorizontalAgentCardItem(agent: AgentInfo, onClick: () -> Unit) {
     Box(
         modifier =
-            Modifier
-                .width(ThemedDetailConfig.HorizontalCardItemWidth)
+            Modifier.width(ThemedDetailConfig.HorizontalCardItemWidth)
                 .height(ThemedDetailConfig.HorizontalCardItemHeight)
                 .clip(RoundedCornerShape(ThemedDetailConfig.HorizontalCardItemCornerRadius))
-                .clickable { onClick() },
+                .clickable { onClick() }
     ) {
         // 角色图片
         AsyncImage(
-            model = if (isInPreview) ai.sxwl.android.design.R.drawable.img_girl_lite else agent.getAlbumImage(),
+            model =
+                if (isInPreview) ai.sxwl.android.design.R.drawable.img_girl_lite
+                else agent.getAlbumImage(),
             contentDescription = agent.name,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
@@ -589,18 +549,16 @@ private fun HorizontalAgentCardItem(
 
         // 角色名称（叠加在图片底部）
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.6f),
-                        )
+            modifier =
+                Modifier.fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        brush =
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))
+                            )
                     )
-                )
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
             Text(
                 text = agent.name,
@@ -614,12 +572,12 @@ private fun HorizontalAgentCardItem(
     }
 }
 
-
 @Preview
 @Composable
 private fun PreviewEventCard() {
     EventCard(
-        description = "Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!",
+        description =
+            "Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!",
         isChristmas = true,
     )
 }
@@ -641,10 +599,7 @@ private fun PreviewThemedCard() {
         )
 
     Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         ThemedCharacterCard(agent = previewAgent, onClick = {})
@@ -708,15 +663,11 @@ private fun PreviewHorizontalAgentCardList() {
             ),
         )
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-    ) {
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         HorizontalAgentCardList(
             title = "# Merry Christmas",
-            description = "Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion",
+            description =
+                "Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion",
             agents = previewAgents,
             isChristmas = true,
             onAgentClick = {},
