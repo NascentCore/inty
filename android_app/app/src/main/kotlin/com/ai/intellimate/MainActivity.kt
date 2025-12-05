@@ -392,17 +392,21 @@ class MainActivity : BaseActivity() {
         velocityX: Float,
         velocityY: Float,
     ): Boolean {
-        // 检查是否从左边缘开始滑动
+        // 检查是否从左右边缘开始滑动
+        val screenWidth = resources.displayMetrics.widthPixels
         val isFromLeftEdge = e1.x <= EDGE_THRESHOLD
+        val isFromRightEdge = e1.x >= screenWidth - EDGE_THRESHOLD
 
         // 检查滑动距离和速度
         val deltaX = e2.x - e1.x
-        val isRightSwipe = deltaX > MIN_DISTANCE && velocityX > MIN_VELOCITY
+        val isLeftEdgeSwipe = isFromLeftEdge && deltaX > MIN_DISTANCE && velocityX > MIN_VELOCITY
+        val isRightEdgeSwipe =
+            isFromRightEdge && deltaX < -MIN_DISTANCE && velocityX < -MIN_VELOCITY
 
         // 确保是水平滑动（垂直速度不能太大）
         val isHorizontalSwipe = abs(velocityX) > abs(velocityY) * 2
 
-        return isFromLeftEdge && isRightSwipe && isHorizontalSwipe
+        return (isLeftEdgeSwipe || isRightEdgeSwipe) && isHorizontalSwipe
     }
 
     /** 处理返回事件（按键返回或手势返回） */
@@ -410,6 +414,9 @@ class MainActivity : BaseActivity() {
         // 如果显示设置界面，先关闭设置界面
         if (mainViewModel.showSettings.value) {
             mainViewModel.hideSettings()
+            return
+        }
+        if (mainViewModel.isLoggedIn.value && mainViewModel.navigateBackToPreviousTab()) {
             return
         }
         // 否则按原来的逻辑处理（双击退出）
