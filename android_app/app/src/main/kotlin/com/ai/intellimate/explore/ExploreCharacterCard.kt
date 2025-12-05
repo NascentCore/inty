@@ -15,13 +15,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +66,9 @@ private object CardConfig {
     val TagHeight = 16.dp
     val DebugIndexPadding = 8.dp
     val DebugIndexInnerPadding = 6.dp to 4.dp
+    val FavoriteButtonPadding = 10.dp
+    val FavoriteButtonSize = 36.dp
+    val FavoriteIconSize = 18.dp
 }
 
 // 判断是否为动图URL（非视频）
@@ -124,6 +135,12 @@ fun ExploreCharacterCard(
 
     // 是否显示动图（动图加载成功且应该播放）
     var showAnimatedImage by remember(agentInfo.id) { mutableStateOf(false) }
+
+    var isFavorite by rememberSaveable(agentInfo.id) { mutableStateOf(false) }
+    val favoriteIcon =
+        if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder
+    val favoriteTint = if (isFavorite) Color(0xFFFF5A8A) else Color.White
+    val favoriteDescription = if (isFavorite) "Remove from favorites" else "Add to favorites"
 
     // 当动图加载成功且应该播放时，显示动图并开始播放
     LaunchedEffect(animatedImageLoaded, shouldPlayAnimated, animatedImageDrawable) {
@@ -263,6 +280,27 @@ fun ExploreCharacterCard(
                     color = Color.White,
                 )
             }
+        }
+
+        // 收藏按钮
+        IconButton(
+            modifier =
+                Modifier.align(Alignment.TopEnd)
+                    .padding(CardConfig.FavoriteButtonPadding)
+                    .size(CardConfig.FavoriteButtonSize),
+            onClick = { isFavorite = !isFavorite },
+            colors =
+                IconButtonDefaults.iconButtonColors(
+                    contentColor = favoriteTint,
+                    containerColor = Color.Black.copy(alpha = 0.35f),
+                ),
+        ) {
+            Icon(
+                imageVector = favoriteIcon,
+                contentDescription = favoriteDescription,
+                tint = favoriteTint,
+                modifier = Modifier.size(CardConfig.FavoriteIconSize),
+            )
         }
 
         // 文本内容层
