@@ -617,13 +617,13 @@ private val christmasTabItems =
         ),
     )
 
-/** 简单的本地时间策略，12月22日～12月28日之间 欢度圣诞 */
+/** 简单的本地时间策略，12月20日～12月26日之间 欢度圣诞 */
 private fun enableChristmasConfig(): Boolean {
     val calendar = Calendar.getInstance()
     val month = calendar.get(Calendar.MONTH)
     val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
 
     // Calendar.MONTH 从 0 开始，12 月对应 11
-    // 检查是否为 12 月，且日期在 22 到 28 之间
-    return month == Calendar.DECEMBER && dayOfMonth in 22..28
+    // 检查是否为 12 月，且日期在 20 到 26 之间
+    return month == Calendar.DECEMBER && dayOfMonth in 20..26
 }
