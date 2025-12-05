@@ -29,6 +29,6 @@ data class AppVersionRsp(
         val message: String? = null, // 描述文案
         val minimum_version: String? = null,
         val update_required: Boolean = false, // 是否有新版，需要更新
-        val reminder_action: VersionCheckResponse.Data.ReminderAction?
+        val reminder_action: VersionCheckResponse.Data.ReminderAction?,
     )
 }

@@ -187,8 +187,7 @@ fun CheckInScreen(onClose: () -> Unit) {
                     style =
                         TextStyle(
                             fontSize = 17.sp,
-                            color =
-                                Color.White.copy(alpha = if (hasCheckedInToday) 0.5f else 1f),
+                            color = Color.White.copy(alpha = if (hasCheckedInToday) 0.5f else 1f),
                             fontWeight = FontWeight.Bold,
                         ),
                 )

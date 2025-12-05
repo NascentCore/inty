@@ -82,7 +82,8 @@ export const AgentManagePage: React.FC = () => {
   const [visibilityFilter, setVisibilityFilter] = useState<string>("all");
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [tagFilter, setTagFilter] = useState<string[]>([]);
-  const [backgroundAnimatedFilter, setBackgroundAnimatedFilter] = useState<string>("all");
+  const [backgroundAnimatedFilter, setBackgroundAnimatedFilter] =
+    useState<string>("all");
 
   // 分页
   const [pagination, setPagination] = useState({
@@ -357,7 +358,9 @@ export const AgentManagePage: React.FC = () => {
     // 背景动图筛选
     if (backgroundAnimatedFilter !== "all") {
       filteredAgents = filteredAgents.filter((agent) => {
-        const hasAnimated = agent.background_animated && agent.background_animated.trim().length > 0;
+        const hasAnimated =
+          agent.background_animated &&
+          agent.background_animated.trim().length > 0;
         if (backgroundAnimatedFilter === "yes") {
           return hasAnimated;
         } else if (backgroundAnimatedFilter === "no") {
@@ -372,7 +375,14 @@ export const AgentManagePage: React.FC = () => {
       ...prev,
       total: filteredAgents.length,
     }));
-  }, [agents, searchText, visibilityFilter, genderFilter, tagFilter, backgroundAnimatedFilter]);
+  }, [
+    agents,
+    searchText,
+    visibilityFilter,
+    genderFilter,
+    tagFilter,
+    backgroundAnimatedFilter,
+  ]);
 
   useEffect(() => {
     loadAgents();

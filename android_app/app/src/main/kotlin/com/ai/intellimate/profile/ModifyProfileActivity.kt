@@ -184,7 +184,9 @@ class ModifyProfileActivity : BaseActivity() {
                 Box(
                     modifier =
                         Modifier.fillMaxSize()
-                            .background(Color.Black.copy(alpha = LoadingOverlayConfig.OverlayAlpha)),
+                            .background(
+                                Color.Black.copy(alpha = LoadingOverlayConfig.OverlayAlpha)
+                            ),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator(

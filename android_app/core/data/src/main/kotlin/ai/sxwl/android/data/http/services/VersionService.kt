@@ -9,8 +9,7 @@ import com.inty.api.models.api.v1.version.VersionCheckParams
 object VersionService {
 
     /**
-     * 检查应用版本更新
-     * 替换: ICommonApi.checkAppUpgrade()
+     * 检查应用版本更新 替换: ICommonApi.checkAppUpgrade()
      *
      * @param appVersionCode 应用版本代码（必填）
      * @param appVersionName 应用版本名称（可选）
@@ -27,12 +26,7 @@ object VersionService {
                     .appVersionName(appVersionName)
                     .build()
 
-            val response =
-                IntyNetworkManager.getClient()
-                    .api()
-                    .v1()
-                    .version()
-                    .check(params)
+            val response = IntyNetworkManager.getClient().api().v1().version().check(params)
 
             // 将 Inty SDK 的响应转换为 AppVersionRsp.AppVersionData
             val data = response.data()
@@ -52,9 +46,8 @@ object VersionService {
                 message = data.message(),
                 minimum_version = data.minimumVersion(),
                 update_required = data.updateRequired(),
-                reminder_action = data.reminderAction()
+                reminder_action = data.reminderAction(),
             )
         }
     }
 }
-

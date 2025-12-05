@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -29,7 +30,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.shape.RoundedCornerShape
 import coil3.compose.AsyncImage
 
 /** 全屏图片查看器 */
@@ -180,14 +180,11 @@ internal fun FullScreenImageViewer(
         if (onAction != null && actionLabel != null) {
             TextButton(
                 onClick = { onAction() },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        Color.Black.copy(alpha = 0.7f),
-                        RoundedCornerShape(8.dp),
-                    ),
+                modifier =
+                    Modifier.align(Alignment.BottomEnd)
+                        .padding(16.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp)),
             ) {
                 androidx.compose.material3.Text(
                     text = actionLabel,

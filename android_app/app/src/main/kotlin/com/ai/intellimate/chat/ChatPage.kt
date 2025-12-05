@@ -787,12 +787,7 @@ private fun DebugAgentIndexBadge(modifier: Modifier = Modifier, index: Int, agen
                 .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(6.dp))
                 .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        Text(
-            text = label,
-            color = Color.White,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-        )
+        Text(text = label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }
 

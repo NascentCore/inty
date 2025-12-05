@@ -32,11 +32,7 @@ fun ThemedDetailScreen(
     val agents by viewModel.agents.collectAsState()
     val isChristmas by viewModel.isChristmas.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(HeartColor.primaryColor)
-    ) {
+    Column(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
         HeartTopAppBar(
             title = themeTitle,
             onBack = onBack,
@@ -46,18 +42,11 @@ fun ThemedDetailScreen(
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     shadow =
-                        Shadow(
-                            color = Color(0xFF8C8992),
-                            offset = Offset(5f, 3f),
-                            blurRadius = 15f
-                        ),
+                        Shadow(color = Color(0xFF8C8992), offset = Offset(5f, 3f), blurRadius = 15f),
                 ),
         )
 
-        EventCard(
-            description = eventDescription,
-            isChristmas = isChristmas,
-        )
+        EventCard(description = eventDescription, isChristmas = isChristmas)
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),

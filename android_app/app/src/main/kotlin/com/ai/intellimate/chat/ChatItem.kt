@@ -464,12 +464,18 @@ private fun ChatItemAI(
                                 onDismiss = { showFullScreenImage = false },
                                 onAction = {
                                     if (agentId.isNotBlank() && generatedImageUrl.isNotBlank()) {
-                                        IntySetting.setChatBackgroundImage(agentId, generatedImageUrl)
-                                        ToastUtils.showShort(R.string.agent_gallery_background_set_success)
+                                        IntySetting.setChatBackgroundImage(
+                                            agentId,
+                                            generatedImageUrl,
+                                        )
+                                        ToastUtils.showShort(
+                                            R.string.agent_gallery_background_set_success
+                                        )
                                         showFullScreenImage = false
                                     }
                                 },
-                                actionLabel = stringResource(R.string.agent_gallery_set_as_background),
+                                actionLabel =
+                                    stringResource(R.string.agent_gallery_set_as_background),
                             )
                         }
                     }
@@ -675,9 +681,9 @@ private fun DebugMessageMetadata(item: MsgInfo, modifier: Modifier = Modifier) {
                         }
                         if (metaParts.isNotEmpty()) add("meta=${metaParts.joinToString()}")
                     }
-                    item.audio_url?.takeIf { it.isNotBlank() }?.let {
-                        add("audio=${it.debugEllipsize()}")
-                    }
+                    item.audio_url
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { add("audio=${it.debugEllipsize()}") }
                     item.user_vote?.takeIf { it.isNotBlank() }?.let { add("vote=$it") }
                 }
             }

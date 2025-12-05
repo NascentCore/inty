@@ -18,7 +18,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -35,6 +34,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
 import com.ai.intellimate.R
+import kotlinx.coroutines.delay
 
 private const val CDN_IMAGE_QUALITY = 80
 private const val CDN_STATIC_BACKGROUND_WIDTH = 1080
@@ -70,26 +70,27 @@ fun AgentBackground(
 
     val isIntelliMateAgent = AgentConstants.isIntelliMateAgent(agentInfo?.id, agentInfo?.name)
     val backgroundAnimatedUrl = agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
-    
+
     // 检查是否有自定义背景图片（仅用于静态背景，不覆盖动画背景）
     // 使用状态变量来跟踪背景 URL，并通过 LaunchedEffect 定期检查更新
     // 只在当前页面时检查，避免不必要的资源消耗
-    var customBackgroundUrl by remember(agentInfo?.id) {
-        mutableStateOf<String?>(
-            if (agentInfo?.id != null && backgroundAnimatedUrl == null) {
-                IntySetting.getChatBackgroundImage(agentInfo.id)
-            } else {
-                null
-            }
-        )
-    }
-    
+    var customBackgroundUrl by
+        remember(agentInfo?.id) {
+            mutableStateOf<String?>(
+                if (agentInfo?.id != null && backgroundAnimatedUrl == null) {
+                    IntySetting.getChatBackgroundImage(agentInfo.id)
+                } else {
+                    null
+                }
+            )
+        }
+
     // 监听背景设置变化，定期检查以确保及时更新
     // 只在当前页面时检查，减少资源消耗
     val currentPageState = rememberUpdatedState(isCurrentPage)
     LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage) {
         if (!isCurrentPage) return@LaunchedEffect
-        
+
         while (currentPageState.value) {
             val newBackgroundUrl =
                 if (agentInfo?.id != null && backgroundAnimatedUrl == null) {
@@ -103,7 +104,7 @@ fun AgentBackground(
             delay(500) // 每 500ms 检查一次
         }
     }
-    
+
     val staticImageUrl =
         if (isIntelliMateAgent) {
             null
@@ -206,7 +207,8 @@ fun AgentBackground(
                 val staticImageRequest =
                     remember(staticImageUrl) {
                         val containerWidthPx = with(density) { containerWidthDp.dp.toPx().toInt() }
-                        val containerHeightPx = with(density) { containerHeightDp.dp.toPx().toInt() }
+                        val containerHeightPx =
+                            with(density) { containerHeightDp.dp.toPx().toInt() }
                         ImageRequest.Builder(context)
                             .data(
                                 getCdnImageUrl(

@@ -70,10 +70,7 @@ class PushNotificationManager private constructor(private val application: Appli
                     // feedback_request 类型的消息不显示通知，由 MainActivity 处理弹窗
                     val messageType = event.data[FCMConstants.DATA_KEY_TYPE]
                     if (messageType == FCMConstants.TYPE_FEEDBACK_REQUEST) {
-                        LogUtils.d(
-                            "PushNotificationManager",
-                            "收到 feedback_request 类型消息，不显示通知",
-                        )
+                        LogUtils.d("PushNotificationManager", "收到 feedback_request 类型消息，不显示通知")
                         return
                     }
                     showNotification(event.title, event.body, event.data)

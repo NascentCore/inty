@@ -56,10 +56,10 @@ import coil3.compose.SubcomposeAsyncImageContent
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 
 private const val CDN_IMAGE_QUALITY = 80
 private const val CDN_STATIC_BACKGROUND_WIDTH = 1080
@@ -216,7 +216,7 @@ fun AnimatedBackground(
 
     val isVideo = isVideoUrl(videoUrl)
     val isAnimatedImage = isAnimatedImageUrl(videoUrl)
-    
+
     val showAnimatedContent = isPlaying
 
     LaunchedEffect(videoUrl, isVideo, isVideoCached) {
@@ -364,144 +364,143 @@ fun AnimatedBackground(
 
     Box(modifier = modifier.fillMaxSize().clipToBounds()) {
         if (videoUrl != null && isVideo) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .alpha(if (showAnimatedContent) 1f else 0f)
-            ) {
+            Box(modifier = Modifier.matchParentSize().alpha(if (showAnimatedContent) 1f else 0f)) {
                 AndroidView(
-                factory = { ctx ->
-                    val okHttpClient =
-                        OkHttpClient.Builder()
-                            .connectTimeout(30, TimeUnit.SECONDS)
-                            .readTimeout(60, TimeUnit.SECONDS)
-                            .writeTimeout(30, TimeUnit.SECONDS)
-                            .retryOnConnectionFailure(true)
-                            .build()
+                    factory = { ctx ->
+                        val okHttpClient =
+                            OkHttpClient.Builder()
+                                .connectTimeout(30, TimeUnit.SECONDS)
+                                .readTimeout(60, TimeUnit.SECONDS)
+                                .writeTimeout(30, TimeUnit.SECONDS)
+                                .retryOnConnectionFailure(true)
+                                .build()
 
-                    val dataSourceFactory =
-                        DefaultDataSource.Factory(ctx, OkHttpDataSource.Factory(okHttpClient))
+                        val dataSourceFactory =
+                            DefaultDataSource.Factory(ctx, OkHttpDataSource.Factory(okHttpClient))
 
-                    val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
+                        val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
 
-                    val player =
-                        ExoPlayer.Builder(ctx)
-                            .setMediaSourceFactory(mediaSourceFactory)
-                            .build()
-                            .apply {
-                                playWhenReady = false
-                                volume = 0f
-                                repeatMode = Player.REPEAT_MODE_OFF
-                                videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                                addListener(
-                                    object : Player.Listener {
-                                        override fun onPlaybackStateChanged(playbackState: Int) {
-                                            if (playbackState == Player.STATE_READY) {
-                                                if (!videoPrepared) {
-                                                    videoPrepared = true
-                                                    seekTo(0)
-                                                    playWhenReady = false
-                                                }
-                                            } else if (playbackState == Player.STATE_ENDED) {
-                                                actualPlayCount++
-                                                if (actualPlayCount >= currentPlayCount) {
-                                                    pause()
-                                                    seekTo(0)
-                                                    actualPlayCount = 0
-                                                    hasPlayCompleted = true
+                        val player =
+                            ExoPlayer.Builder(ctx)
+                                .setMediaSourceFactory(mediaSourceFactory)
+                                .build()
+                                .apply {
+                                    playWhenReady = false
+                                    volume = 0f
+                                    repeatMode = Player.REPEAT_MODE_OFF
+                                    videoScalingMode =
+                                        C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                                    addListener(
+                                        object : Player.Listener {
+                                            override fun onPlaybackStateChanged(
+                                                playbackState: Int
+                                            ) {
+                                                if (playbackState == Player.STATE_READY) {
+                                                    if (!videoPrepared) {
+                                                        videoPrepared = true
+                                                        seekTo(0)
+                                                        playWhenReady = false
+                                                    }
+                                                } else if (playbackState == Player.STATE_ENDED) {
+                                                    actualPlayCount++
+                                                    if (actualPlayCount >= currentPlayCount) {
+                                                        pause()
+                                                        seekTo(0)
+                                                        actualPlayCount = 0
+                                                        hasPlayCompleted = true
+                                                        isPlaying = false
+                                                        onIsPlayingChange?.invoke(false)
+                                                        onPlayComplete()
+                                                    } else {
+                                                        seekTo(0)
+                                                        playWhenReady = true
+                                                    }
+                                                } else if (playbackState == Player.STATE_IDLE) {
                                                     isPlaying = false
                                                     onIsPlayingChange?.invoke(false)
-                                                    onPlayComplete()
-                                                } else {
-                                                    seekTo(0)
-                                                    playWhenReady = true
                                                 }
-                                            } else if (playbackState == Player.STATE_IDLE) {
-                                                isPlaying = false
-                                                onIsPlayingChange?.invoke(false)
                                             }
-                                        }
 
-                                        override fun onIsPlayingChanged(playing: Boolean) {
-                                            isPlaying = playing
-                                            onIsPlayingChange?.invoke(playing)
-                                        }
+                                            override fun onIsPlayingChanged(playing: Boolean) {
+                                                isPlaying = playing
+                                                onIsPlayingChange?.invoke(playing)
+                                            }
 
-                                        override fun onVideoSizeChanged(videoSize: VideoSize) {
-                                            if (
-                                                videoPrepared &&
-                                                    !videoFirstFrameRendered &&
-                                                    videoSize.width > 0 &&
-                                                    videoSize.height > 0
+                                            override fun onVideoSizeChanged(videoSize: VideoSize) {
+                                                if (
+                                                    videoPrepared &&
+                                                        !videoFirstFrameRendered &&
+                                                        videoSize.width > 0 &&
+                                                        videoSize.height > 0
+                                                ) {
+                                                    if (!playWhenReady) {
+                                                        seekTo(0)
+                                                    }
+                                                }
+                                                val vW = textureViewRef?.width?.toFloat()
+                                                val vH = textureViewRef?.height?.toFloat()
+                                                val vidW = videoSize.width.toFloat()
+                                                val vidH = videoSize.height.toFloat()
+                                                if (vW != null && vH != null) {
+                                                    val matrix = Matrix()
+                                                    textureViewRef?.getTransform(matrix)
+                                                    val wFinal = (vidW / vidH) * vH
+                                                    val ratio = wFinal / vW
+                                                    matrix.setScale(ratio, 1f, vW / 2, vH / 2)
+                                                    textureViewRef?.setTransform(matrix)
+                                                    textureViewRef?.invalidate()
+                                                }
+                                            }
+
+                                            override fun onPlayerError(
+                                                error: androidx.media3.common.PlaybackException
                                             ) {
-                                                if (!playWhenReady) {
-                                                    seekTo(0)
-                                                }
-                                            }
-                                            val vW = textureViewRef?.width?.toFloat()
-                                            val vH = textureViewRef?.height?.toFloat()
-                                            val vidW = videoSize.width.toFloat()
-                                            val vidH = videoSize.height.toFloat()
-                                            if (vW != null && vH != null) {
-                                                val matrix = Matrix()
-                                                textureViewRef?.getTransform(matrix)
-                                                val wFinal = (vidW / vidH) * vH
-                                                val ratio = wFinal / vW
-                                                matrix.setScale(ratio, 1f, vW / 2, vH / 2)
-                                                textureViewRef?.setTransform(matrix)
-                                                textureViewRef?.invalidate()
+                                                LogUtils.e(
+                                                    "AnimatedBackground - 视频播放错误: ${error.message}"
+                                                )
+                                                videoPrepared = false
+                                                videoFirstFrameRendered = false
                                             }
                                         }
+                                    )
+                                }
 
-                                        override fun onPlayerError(
-                                            error: androidx.media3.common.PlaybackException
-                                        ) {
-                                            LogUtils.e(
-                                                "AnimatedBackground - 视频播放错误: ${error.message}"
-                                            )
-                                            videoPrepared = false
-                                            videoFirstFrameRendered = false
-                                        }
-                                    }
-                                )
+                        exoPlayer = player
+
+                        val textureView =
+                            TextureView(ctx).apply {
+                                clipToOutline = true
+                                textureViewRef = this
+                                player.videoScalingMode =
+                                    C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                                player.setVideoTextureView(this)
+                                player.videoScalingMode =
+                                    C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
                             }
 
-                    exoPlayer = player
+                        val pathToUse = if (isVideoCached) videoPath ?: videoUrl else videoUrl
+                        player.setMediaItem(MediaItem.fromUri(pathToUse))
+                        player.prepare()
 
-                    val textureView =
-                        TextureView(ctx).apply {
-                            clipToOutline = true
-                            textureViewRef = this
-                            player.videoScalingMode =
-                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                            player.setVideoTextureView(this)
-                            player.videoScalingMode =
-                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                        }
-
-                    val pathToUse = if (isVideoCached) videoPath ?: videoUrl else videoUrl
-                    player.setMediaItem(MediaItem.fromUri(pathToUse))
-                    player.prepare()
-
-                    textureView
-                },
-                modifier = Modifier.matchParentSize().clipToBounds(),
-                update = { view ->
-                    val textureView = view as? TextureView
-                    textureView?.let {
-                        exoPlayer?.let { player ->
-                            player.setVideoTextureView(it)
-                            player.videoScalingMode =
-                                C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                            val pathToUse = videoPath ?: videoUrl
-                            val currentMediaId = player.currentMediaItem?.mediaId
-                            if (currentMediaId == null || currentMediaId != pathToUse) {
-                                player.setMediaItem(MediaItem.fromUri(pathToUse))
-                                player.prepare()
+                        textureView
+                    },
+                    modifier = Modifier.matchParentSize().clipToBounds(),
+                    update = { view ->
+                        val textureView = view as? TextureView
+                        textureView?.let {
+                            exoPlayer?.let { player ->
+                                player.setVideoTextureView(it)
+                                player.videoScalingMode =
+                                    C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                                val pathToUse = videoPath ?: videoUrl
+                                val currentMediaId = player.currentMediaItem?.mediaId
+                                if (currentMediaId == null || currentMediaId != pathToUse) {
+                                    player.setMediaItem(MediaItem.fromUri(pathToUse))
+                                    player.prepare()
+                                }
                             }
                         }
-                    }
-                },
+                    },
                 )
             }
 
@@ -596,73 +595,71 @@ fun AnimatedBackground(
                 )
             }
         } else if (videoUrl != null && isAnimatedImage) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .alpha(if (showAnimatedContent) 1f else 0f)
-            ) {
+            Box(modifier = Modifier.matchParentSize().alpha(if (showAnimatedContent) 1f else 0f)) {
                 val density = LocalDensity.current
                 val configuration = LocalConfiguration.current
                 val animatedImageRequest =
-                remember(videoUrl) {
-                    val containerWidthPx =
-                        with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
-                    val containerHeightPx =
-                        with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
-                    val imageUrl =
-                        try {
-                            getCdnImageUrl(
-                                videoUrl,
-                                width = CDN_STATIC_BACKGROUND_WIDTH,
-                                quality = CDN_IMAGE_QUALITY,
-                            ) ?: videoUrl
-                        } catch (e: Exception) {
-                            videoUrl
-                        }
-                    ImageRequest.Builder(context)
-                        .data(imageUrl)
-                        .size(Size(containerWidthPx, containerHeightPx))
-                        .crossfade(true)
-                        .build()
-                }
-
-            val animatedImageRequestWithRepeatCount =
-                remember(videoUrl, animatedImageRequest) { animatedImageRequest }
-
-            SubcomposeAsyncImage(
-                modifier = Modifier.matchParentSize().clipToBounds(),
-                model = animatedImageRequestWithRepeatCount,
-                contentDescription = null,
-                contentScale = contentScale,
-                onState = { state ->
-                    if (state is AsyncImagePainter.State.Success) {
-                        val drawable = state.result.image.asDrawable(context.resources)
-                        val animatedDrawable = extractAnimatedImageDrawable(drawable)
-                        if (animatedDrawable != null) {
-                            if (animatedImageDrawable != animatedDrawable) {
-                                // 如果动图已经在运行（可能是 Coil 自动启动的），先停止它
-                                if (animatedDrawable.isRunning) {
-                                    animatedDrawable.stop()
-                                }
-                                // 设置 repeatCount=0，表示播放一次（后续通过回调控制播放次数）
-                                animatedDrawable.repeatCount = 0
-                                animatedImageDrawable = animatedDrawable
+                    remember(videoUrl) {
+                        val containerWidthPx =
+                            with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
+                        val containerHeightPx =
+                            with(density) { configuration.screenHeightDp.dp.toPx().toInt() }
+                        val imageUrl =
+                            try {
+                                getCdnImageUrl(
+                                    videoUrl,
+                                    width = CDN_STATIC_BACKGROUND_WIDTH,
+                                    quality = CDN_IMAGE_QUALITY,
+                                ) ?: videoUrl
+                            } catch (e: Exception) {
+                                videoUrl
                             }
-                            if (!animatedImageLoaded) {
-                                animatedImageLoaded = true
-                            }
-                        } else {
-                            if (!animatedImageLoaded) {
-                                animatedImageLoaded = true
-                            }
-                        }
-                    } else if (state is AsyncImagePainter.State.Error) {
-                        LogUtils.e("AnimatedBackground - 动图加载失败: $videoUrl, error=${state.result}")
+                        ImageRequest.Builder(context)
+                            .data(imageUrl)
+                            .size(Size(containerWidthPx, containerHeightPx))
+                            .crossfade(true)
+                            .build()
                     }
-                },
-            ) {
-                SubcomposeAsyncImageContent()
-            }
+
+                val animatedImageRequestWithRepeatCount =
+                    remember(videoUrl, animatedImageRequest) { animatedImageRequest }
+
+                SubcomposeAsyncImage(
+                    modifier = Modifier.matchParentSize().clipToBounds(),
+                    model = animatedImageRequestWithRepeatCount,
+                    contentDescription = null,
+                    contentScale = contentScale,
+                    onState = { state ->
+                        if (state is AsyncImagePainter.State.Success) {
+                            val drawable = state.result.image.asDrawable(context.resources)
+                            val animatedDrawable = extractAnimatedImageDrawable(drawable)
+                            if (animatedDrawable != null) {
+                                if (animatedImageDrawable != animatedDrawable) {
+                                    // 如果动图已经在运行（可能是 Coil 自动启动的），先停止它
+                                    if (animatedDrawable.isRunning) {
+                                        animatedDrawable.stop()
+                                    }
+                                    // 设置 repeatCount=0，表示播放一次（后续通过回调控制播放次数）
+                                    animatedDrawable.repeatCount = 0
+                                    animatedImageDrawable = animatedDrawable
+                                }
+                                if (!animatedImageLoaded) {
+                                    animatedImageLoaded = true
+                                }
+                            } else {
+                                if (!animatedImageLoaded) {
+                                    animatedImageLoaded = true
+                                }
+                            }
+                        } else if (state is AsyncImagePainter.State.Error) {
+                            LogUtils.e(
+                                "AnimatedBackground - 动图加载失败: $videoUrl, error=${state.result}"
+                            )
+                        }
+                    },
+                ) {
+                    SubcomposeAsyncImageContent()
+                }
             }
 
             var animationCallback by remember {

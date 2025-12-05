@@ -13,6 +13,7 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,18 +26,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.AlertDialog
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -56,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -569,7 +569,7 @@ private fun AgentGalleryImageCard(
                             }
                         },
                     )
-                },
+                }
     ) {
         AsyncImage(
             modifier = Modifier.fillMaxWidth().aspectRatio(aspectRatio),
@@ -596,7 +596,7 @@ private fun AgentGalleryImageCard(
                         .padding(8.dp)
                         .size(16.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF4CAF50)),
+                        .background(Color(0xFF4CAF50))
             )
         }
     }
@@ -611,32 +611,21 @@ private fun AgentGalleryImageCard(
                     color = Color.White,
                 )
             },
-            text = {
-                Text(
-                    text = stringResource(R.string.are_you_sure),
-                    color = Color.White,
-                )
-            },
+            text = { Text(text = stringResource(R.string.are_you_sure), color = Color.White) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         IntySetting.clearChatBackgroundImage(agentId)
                         ToastUtils.showShort(R.string.agent_gallery_background_reset_success)
                         showResetDialog = false
-                    },
+                    }
                 ) {
-                    Text(
-                        text = stringResource(R.string.str_reset),
-                        color = Color.White,
-                    )
+                    Text(text = stringResource(R.string.str_reset), color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showResetDialog = false }) {
-                    Text(
-                        text = stringResource(R.string.cancel),
-                        color = Color.White,
-                    )
+                    Text(text = stringResource(R.string.cancel), color = Color.White)
                 }
             },
             containerColor = Color(0xFF1E1E1E),
