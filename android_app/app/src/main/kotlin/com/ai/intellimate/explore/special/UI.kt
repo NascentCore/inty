@@ -56,8 +56,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import androidx.constraintlayout.compose.Visibility
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.ui.components.SmartTagsLayout
 
 
@@ -168,18 +170,17 @@ internal fun EventCard(
             )
         }
 
-        if (isChristmas) {
-            // 圣诞的装饰
-            Image(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .constrainAs(christmasBg) {},
-                painter = painterResource(R.drawable.img_christmas_bg),
-                contentScale = ContentScale.Crop,
-                contentDescription = "",
-            )
-        }
-
+        // 圣诞的装饰
+        Image(
+            modifier = Modifier
+                .fillMaxWidth()
+                .constrainAs(christmasBg) {
+                    visibility = if (isChristmas) Visibility.Visible else Visibility.Invisible
+                },
+            painter = painterResource(R.drawable.img_christmas_bg),
+            contentScale = ContentScale.Crop,
+            contentDescription = "",
+        )
         // 文本内容层
         Box(
             modifier =
@@ -238,24 +239,20 @@ internal fun EventCard(
                 },
             )
 
-            // 箭头图标，定位在文本末尾，确保不超出边界
+            // 箭头图标，定位在最后一行文本的最右端（Box 的右端），而不是紧跟文本
             // 只有当文本真的需要展开时才显示按钮
             if (hasTextOverflow && textLayoutResult != null) {
                 val layout = textLayoutResult!!
                 val lastLineIndex = layout.lineCount - 1
-                val lastLineRight = layout.getLineRight(lastLineIndex)
                 val lastLineBaseline = layout.getLineBaseline(lastLineIndex)
 
-                // 计算图标位置：文本末尾 + 小间距
+                // 计算图标位置：位于 Box 的最右端
                 val iconSize = 24.dp
-                val iconSpacing = 4.dp
-                val iconOffsetX =
-                    with(density) {
-                        val calculatedX = lastLineRight.toDp() + iconSpacing
-                        // 确保图标不超出 Box 边界（boxWidth 是内容区域的宽度，已经减去了 padding）
-                        val maxX = if (boxWidth > 0.dp) boxWidth - iconSize else calculatedX
-                        calculatedX.coerceAtMost(maxX.coerceAtLeast(0.dp))
-                    }
+                val iconOffsetX = if (boxWidth > 0.dp) {
+                    boxWidth - iconSize
+                } else {
+                    0.dp
+                }
                 // 使用基线位置，使图标与文本垂直居中对齐
                 val iconOffsetY =
                     with(density) {
@@ -304,19 +301,66 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                 .width(ThemedDetailConfig.CharacterImageWidth)
                 .fillMaxHeight()
         ) {
-            AsyncImage(
-                model = if (isInPreview) ai.sxwl.android.design.R.drawable.img_girl_lite else agent.getAlbumImage(),
-                contentDescription = agent.name,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = ThemedDetailConfig.EventCardCornerRadius,
-                            bottomStart = ThemedDetailConfig.EventCardCornerRadius
-                        )
-                    ),
-                contentScale = ContentScale.Crop,
-            )
+            val imageUrl = if (isInPreview) null else agent.getAlbumImage()
+            var imageLoaded by remember(agent.id) { mutableStateOf(false) }
+            var imageLoadError by remember(agent.id) { mutableStateOf(false) }
+
+            // 图片圆角形状（左侧圆角）
+            val imageShape = remember {
+                RoundedCornerShape(
+                    topStart = ThemedDetailConfig.EventCardCornerRadius,
+                    bottomStart = ThemedDetailConfig.EventCardCornerRadius
+                )
+            }
+
+            // 如果没有图片 URL，直接显示默认图片
+            if (imageUrl == null || isInPreview) {
+                AsyncImage(
+                    model = ai.sxwl.android.design.R.drawable.img_girl_lite,
+                    contentDescription = agent.name,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(imageShape),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                // 显示加载占位符
+                if (!imageLoaded && !imageLoadError) {
+                    ShimmerPlaceholder(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(imageShape),
+                        cornerRadius = ThemedDetailConfig.EventCardCornerRadius,
+                    )
+                }
+
+                // 如果加载失败，显示默认图片
+                if (imageLoadError) {
+                    AsyncImage(
+                        model = ai.sxwl.android.design.R.drawable.img_girl_lite,
+                        contentDescription = agent.name,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(imageShape),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+
+                // 加载实际图片
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = agent.name,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(imageShape),
+                    contentScale = ContentScale.Crop,
+                    onSuccess = { imageLoaded = true },
+                    onError = {
+                        imageLoadError = true
+                        imageLoaded = false
+                    },
+                )
+            }
         }
 
         // 角色信息（右侧，自适应宽度）
@@ -369,6 +413,7 @@ internal fun HorizontalAgentCardList(
     agents: List<AgentInfo>,
     isChristmas: Boolean = false,
     onAgentClick: (AgentInfo) -> Unit,
+    onCardClick: (() -> Unit)? = null,
 ) {
     ConstraintLayout(modifier = Modifier.fillMaxWidth()) {
         val (christmasBg, cardBg, content) = createRefs()
@@ -451,7 +496,14 @@ internal fun HorizontalAgentCardList(
                     .fillMaxWidth()
                     .height(ThemedDetailConfig.HorizontalCardListHeight)
                     .padding(ThemedDetailConfig.HorizontalCardListPadding)
-                    .constrainAs(content) { centerVerticallyTo(cardBg) },
+                    .constrainAs(content) { centerVerticallyTo(cardBg) }
+                    .then(
+                        if (onCardClick != null) {
+                            Modifier.clickable { onCardClick() }
+                        } else {
+                            Modifier
+                        }
+                    ),
             verticalArrangement = Arrangement.spacedBy(ThemedDetailConfig.HorizontalCardDescriptionSpacing),
         ) {
             // Title（带模糊阴影效果）和右箭头
@@ -497,8 +549,10 @@ internal fun HorizontalAgentCardList(
             Spacer(Modifier.height(ThemedDetailConfig.HorizontalCardTitleSpacing))
 
             // 横向滚动的角色卡片列表
+            // 注意：LazyRow 中的点击事件会优先处理，不会触发父组件的点击
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(ThemedDetailConfig.HorizontalCardItemSpacing),
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 items(agents) { agent ->
                     HorizontalAgentCardItem(
