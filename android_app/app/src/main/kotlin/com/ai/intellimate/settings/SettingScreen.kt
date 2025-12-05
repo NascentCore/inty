@@ -32,9 +32,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.ai.intellimate.BuildConfig
+import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
+import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.DeleteAccountDialog
 import com.ai.intellimate.ui.components.LogoutConfirmDialog
@@ -49,13 +52,25 @@ private const val GOOGLE_PLAY_MARKET_URL_PREFIX = "market://details?id="
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingScreen(
+    navController: NavController,
     modifier: Modifier = Modifier,
-    onBack: () -> Unit,
-    onLogout: (isDelete: Boolean) -> Unit,
+//    onBack: () -> Unit,
+//    onLogout: (isDelete: Boolean) -> Unit,
+    mainViewModel: MainViewModel,
+    chatViewModel: ChatViewModel,
     viewModel: SettingViewModel = viewModel(),
 ) {
     val context = LocalContext.current
     val state = viewModel.state.collectAsState().value
+
+    fun onLogout(isDelete: Boolean) {
+        mainViewModel.logout()
+        chatViewModel.clearAllData()
+        val str =
+            if (isDelete) context.getString(R.string.delete_account_successfully)
+            else context.getString(R.string.logout_successfully)
+        ToastUtils.showShort(str)
+    }
 
     // 每次打开设置界面时，重置删除账号结果状态和对话框状态，避免残留状态导致误触发
     // 这可以防止在删除账号后，再次登录并打开设置界面时误触发 onLogout(true) 或显示对话框
@@ -90,7 +105,10 @@ fun SettingScreen(
                 modifier = Modifier.background(color = HeartColor.primaryColor),
                 title = stringResource(R.string.settings),
                 navIcon = R.drawable.back,
-                onBack = onBack,
+//                onBack = onBack,
+                onBack = {
+                    navController.popBackStack()
+                }
             )
         },
     ) { innerPadding ->
