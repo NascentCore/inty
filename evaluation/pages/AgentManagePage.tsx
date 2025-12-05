@@ -82,6 +82,7 @@ export const AgentManagePage: React.FC = () => {
   const [visibilityFilter, setVisibilityFilter] = useState<string>("all");
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [tagFilter, setTagFilter] = useState<string[]>([]);
+  const [backgroundAnimatedFilter, setBackgroundAnimatedFilter] = useState<string>("all");
 
   // 分页
   const [pagination, setPagination] = useState({
@@ -353,12 +354,25 @@ export const AgentManagePage: React.FC = () => {
       });
     }
 
+    // 背景动图筛选
+    if (backgroundAnimatedFilter !== "all") {
+      filteredAgents = filteredAgents.filter((agent) => {
+        const hasAnimated = agent.background_animated && agent.background_animated.trim().length > 0;
+        if (backgroundAnimatedFilter === "yes") {
+          return hasAnimated;
+        } else if (backgroundAnimatedFilter === "no") {
+          return !hasAnimated;
+        }
+        return true;
+      });
+    }
+
     setLocalAgents(filteredAgents);
     setPagination((prev) => ({
       ...prev,
       total: filteredAgents.length,
     }));
-  }, [agents, searchText, visibilityFilter, genderFilter, tagFilter]);
+  }, [agents, searchText, visibilityFilter, genderFilter, tagFilter, backgroundAnimatedFilter]);
 
   useEffect(() => {
     loadAgents();
@@ -1580,6 +1594,16 @@ export const AgentManagePage: React.FC = () => {
                 <Option value="male">男</Option>
                 <Option value="female">女</Option>
                 <Option value="other">其他</Option>
+              </Select>
+              <Select
+                placeholder="筛选背景动图"
+                style={{ width: 120 }}
+                value={backgroundAnimatedFilter}
+                onChange={(value) => setBackgroundAnimatedFilter(value)}
+              >
+                <Option value="all">全部</Option>
+                <Option value="yes">有动图</Option>
+                <Option value="no">无动图</Option>
               </Select>
               <Button
                 icon={<ReloadOutlined />}
