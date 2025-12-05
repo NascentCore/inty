@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import coil3.compose.AsyncImage
 
 /** 全屏图片查看器 */
@@ -35,6 +37,8 @@ internal fun FullScreenImageViewer(
     imageUrl: String,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    onAction: (() -> Unit)? = null,
+    actionLabel: String? = null,
 ) {
     val context = LocalContext.current
 
@@ -169,6 +173,27 @@ internal fun FullScreenImageViewer(
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
             )
+        }
+
+        // 右下角操作按钮（如果提供）
+        if (onAction != null && actionLabel != null) {
+            TextButton(
+                onClick = { onAction() },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .background(
+                        Color.Black.copy(alpha = 0.7f),
+                        RoundedCornerShape(8.dp),
+                    ),
+            ) {
+                androidx.compose.material3.Text(
+                    text = actionLabel,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
         }
     }
 }

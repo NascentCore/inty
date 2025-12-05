@@ -3,6 +3,7 @@ package com.ai.intellimate.ui.components
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.store.IntySetting
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -66,11 +67,23 @@ fun AgentBackground(
 
     val isIntelliMateAgent = AgentConstants.isIntelliMateAgent(agentInfo?.id, agentInfo?.name)
     val backgroundAnimatedUrl = agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
+    
+    // 检查是否有自定义背景图片（仅用于静态背景，不覆盖动画背景）
+    // 直接计算，不使用 remember，确保在设置变化时能正确更新
+    val customBackgroundUrl =
+        if (agentInfo?.id != null && backgroundAnimatedUrl == null) {
+            IntySetting.getChatBackgroundImage(agentInfo.id)
+        } else {
+            null
+        }
+    
     val staticImageUrl =
         if (isIntelliMateAgent) {
             null
         } else {
-            agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
+            // 优先使用自定义背景，然后才是默认背景
+            customBackgroundUrl?.takeIf { it.isNotBlank() }
+                ?: agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
         }
 
     val videoCacheManager = remember { VideoCacheManager.getInstance(context) }

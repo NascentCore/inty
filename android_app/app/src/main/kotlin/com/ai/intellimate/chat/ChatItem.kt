@@ -7,6 +7,7 @@ import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.TimeUtils
+import ai.sxwl.android.utils.ToastUtils
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -457,9 +458,18 @@ private fun ChatItemAI(
                                     dismissOnClickOutside = true,
                                 ),
                         ) {
+                            val agentId = agentInfo?.id ?: ""
                             FullScreenImageViewer(
                                 imageUrl = generatedImageUrl,
                                 onDismiss = { showFullScreenImage = false },
+                                onAction = {
+                                    if (agentId.isNotBlank() && generatedImageUrl.isNotBlank()) {
+                                        IntySetting.setChatBackgroundImage(agentId, generatedImageUrl)
+                                        ToastUtils.showShort(R.string.agent_gallery_background_set_success)
+                                        showFullScreenImage = false
+                                    }
+                                },
+                                actionLabel = stringResource(R.string.agent_gallery_set_as_background),
                             )
                         }
                     }
