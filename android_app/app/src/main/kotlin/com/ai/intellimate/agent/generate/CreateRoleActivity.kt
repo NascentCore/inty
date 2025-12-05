@@ -1482,12 +1482,12 @@ private fun AvatarUploadSection(
                     model = it,
                     contentDescription = stringResource(R.string.generate_avatar),
                     contentScale = ContentScale.Crop,
-                    modifier =
-                        Modifier.align(Alignment.TopStart)
-                            .padding(8.dp)
-                            .border(width = 1.dp, color = Color.White, shape = CircleShape)
-                            .size(40.dp)
-                            .clip(CircleShape),
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(Config.AvatarCrop.Preview.PADDING.dp)
+                        .border(width = 1.dp, color = Color.White, shape = CircleShape)
+                        .size(Config.AvatarCrop.Preview.SIZE.dp)
+                        .clip(CircleShape)
                 )
             }
 
@@ -1773,6 +1773,15 @@ object Config {
 
             /** Preview image quality for CDN scaling (0-100) */
             const val QUALITY = 60
+        }
+    }
+    object AvatarCrop {
+        object Preview {
+            /**
+             * 裁剪头像预览尺寸
+             */
+            const val SIZE = 40
+            const val PADDING = 8
         }
     }
 }
