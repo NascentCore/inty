@@ -100,15 +100,16 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
+import com.ai.intellimate.explore.special.SpecialDetailActivity
 import com.ai.intellimate.settings.check.CheckInActivity
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.vip.VipCenterActivity
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.min
-import kotlinx.coroutines.launch
 
 /** "我的"页面 */
 @Composable
@@ -570,6 +571,15 @@ private fun ProfileHeader(
                     Modifier.size(avatarSize)
                         .background(color = Color.White, shape = CircleShape)
                         .padding(UiConfigs.MePage.AvatarPadding)
+                        .clickable {
+                            // 临时测试：点击头像跳转到 SpecialDetail 界面
+                            SpecialDetailActivity.launch(
+                                context = context,
+                                themeId = "test_theme_id", // 测试用的 themeId
+                                themeTitle = "Merry Christmas",
+                                themeDescription = "Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!"
+                            )
+                        }
             ) {
                 // 使用头像 URL 作为 key，确保头像更新时重新加载
                 val avatarUrl = getCdnImageUrl(userProfile.avatar, width = 512)
