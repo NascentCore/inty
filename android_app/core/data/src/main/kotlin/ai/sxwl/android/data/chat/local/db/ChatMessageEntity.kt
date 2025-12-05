@@ -31,6 +31,8 @@ data class ChatMessageEntity(
     val generatedImageUrl: String?,
     val generatedImageWidth: Int?,
     val generatedImageHeight: Int?,
+    val replyToMessageId: String? = null,
+    val clientMessageId: String? = null,
     val sortKey: Long,
     val createdAt: Long,
     val updatedAt: Long,
@@ -101,6 +103,8 @@ internal fun MsgInfo.toEntity(
         generatedImageUrl = resolvedGeneratedImageUrl,
         generatedImageWidth = resolvedGeneratedImageWidth,
         generatedImageHeight = resolvedGeneratedImageHeight,
+        replyToMessageId = reply_to ?: existing?.replyToMessageId,
+        clientMessageId = clientMessageId ?: existing?.clientMessageId,
         sortKey = sortKey,
         createdAt = existing?.createdAt ?: now,
         updatedAt = now,
@@ -140,8 +144,10 @@ internal fun ChatMessageEntity.toModel(): MsgInfo {
         meta_data = meta,
         audio_url = audioUrl,
         timestamp = timestamp,
+        reply_to = replyToMessageId,
         user_vote = userVote,
         localMsgId = localId,
+        clientMessageId = clientMessageId,
         userFeedback = feedback,
     )
 }

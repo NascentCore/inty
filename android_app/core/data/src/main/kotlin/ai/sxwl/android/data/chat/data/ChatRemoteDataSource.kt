@@ -28,12 +28,16 @@ class ChatRemoteDataSource {
         }
     }
 
-    suspend fun sendMessage(agentId: String, messages: List<MsgInfo>): HttpResult<SendMsgResponse> {
+    suspend fun sendMessage(
+        agentId: String,
+        messageId: String,
+        messages: List<MsgInfo>,
+    ): HttpResult<SendMsgResponse> {
         return try {
             LogUtils.i(
-                "ChatRemoteDataSource.sendMessage: agentId=$agentId, messagesCount=${messages.size}"
+                "ChatRemoteDataSource.sendMessage: agentId=$agentId, messagesCount=${messages.size}, messageId=$messageId"
             )
-            val request = SendMsgReq(messages)
+            val request = SendMsgReq(messages = messages, message_id = messageId)
             NetServiceMgr.getChatApi().sendMsg(agentId, request)
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.sendMessage exception: ${e.message}")

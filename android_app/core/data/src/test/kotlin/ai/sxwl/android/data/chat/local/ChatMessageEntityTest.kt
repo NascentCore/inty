@@ -50,4 +50,26 @@ class ChatMessageEntityTest {
         assertNull(updated.generatedImageWidth)
         assertNull(updated.generatedImageHeight)
     }
+
+    @Test
+    fun `client message id and reply to persist through entity mapping`() {
+        val msgId = "client-123"
+        val replyTo = "reply-789"
+        val message =
+            MsgInfo(
+                id = "remote-456",
+                content = "hello assistant",
+                role = "assistant",
+                reply_to = replyTo,
+                clientMessageId = msgId,
+            )
+
+        val entity = message.toEntity(agentId = "agent-3")
+        val restored = entity.toModel()
+
+        assertEquals(msgId, entity.clientMessageId)
+        assertEquals(replyTo, entity.replyToMessageId)
+        assertEquals(msgId, restored.clientMessageId)
+        assertEquals(replyTo, restored.reply_to)
+    }
 }

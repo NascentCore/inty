@@ -4,6 +4,7 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.TimeUtils
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import kotlin.jvm.Transient
 
 @JsonClass(generateAdapter = true)
 data class SendMsgResponse(
@@ -28,6 +29,7 @@ data class SendMsgReq(
     val messages: List<MsgInfo> = listOf(),
     val model: String = "chatbot",
     val stream: Boolean = false,
+    @Json(name = "message_id") val message_id: String? = null,
 )
 
 @JsonClass(generateAdapter = true)
@@ -76,9 +78,11 @@ data class MsgInfo(
     val meta_data: MsgMetaData? = null, // 附带数据
     val audio_url: String? = null, // 音频文件的url
     val timestamp: String? = null, // 消息时间戳 2025-09-11T03:58:29.077875+00:00
+    @Json(name = "reply_to") val reply_to: String? = null, // 对应的用户消息ID
     @Json(name = "user_vote") val user_vote: String? = null, // 用户投票状态：like 或 dislike
     // 本地创建一个msgId，临时用于消息标记
     val localMsgId: String = "${System.nanoTime()}_${role}_${content.hashCode()}",
+    @Transient val clientMessageId: String? = null, // 本地生成的消息ID，不序列化
     // 本地状态：用户反馈（like/dislike）- 不序列化
     val userFeedback: UserFeedback? = null,
 ) {

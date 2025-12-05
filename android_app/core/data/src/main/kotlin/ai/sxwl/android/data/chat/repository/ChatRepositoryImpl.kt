@@ -9,6 +9,7 @@ import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
+import java.util.UUID
 import kotlinx.coroutines.flow.StateFlow
 
 /** 聊天Repository实现 作为Domain层和Data层之间的桥梁 遵循Clean Architecture的Repository模式 */
@@ -165,15 +166,22 @@ class ChatRepositoryImpl(
     ): HttpResult<SendMsgResponse> {
         LogUtils.d("ChatRepositoryImpl.sendMessage called for $agentId: $content")
 
+        val messageId = UUID.randomUUID().toString()
         // 1) 先插入用户消息与loading占位
-        val userMsg = MsgInfo(content = content.trimEnd(), role = "user")
+        val userMsg =
+            MsgInfo(
+                content = content.trimEnd(),
+                role = "user",
+                localMsgId = messageId,
+                clientMessageId = messageId,
+            )
         val loadingMsg = MsgInfo(content = LOADING_PLACEHOLDER_CONTENT, role = ROLE_ASSISTANT)
 
         localDataSource.prependMessages(agentId, listOf(loadingMsg, userMsg))
 
         val result =
             try {
-                remoteDataSource.sendMessage(agentId, listOf(userMsg))
+                remoteDataSource.sendMessage(agentId, messageId, listOf(userMsg))
             } catch (e: Exception) {
                 LogUtils.e("ChatRepositoryImpl.sendMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
@@ -374,7 +382,10 @@ class ChatRepositoryImpl(
         val recallMsg = MsgInfo(content = "recall", role = "user")
         val result =
             try {
-                remoteDataSource.sendMessage(agentId, listOf(recallMsg))
+                val recallMessageId = UUID.randomUUID().toString()
+                val recallMsgWithId =
+                    recallMsg.copy(localMsgId = recallMessageId, clientMessageId = recallMessageId)
+                remoteDataSource.sendMessage(agentId, recallMessageId, listOf(recallMsgWithId))
             } catch (e: Exception) {
                 LogUtils.e("ChatRepositoryImpl.recallLastAssistantMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
