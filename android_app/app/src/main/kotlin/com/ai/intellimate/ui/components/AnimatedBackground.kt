@@ -56,10 +56,10 @@ import coil3.compose.SubcomposeAsyncImageContent
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 private const val CDN_IMAGE_QUALITY = 80
 private const val CDN_STATIC_BACKGROUND_WIDTH = 1080
@@ -216,6 +216,8 @@ fun AnimatedBackground(
 
     val isVideo = isVideoUrl(videoUrl)
     val isAnimatedImage = isAnimatedImageUrl(videoUrl)
+    
+    val showAnimatedContent = isPlaying
 
     LaunchedEffect(videoUrl, isVideo, isVideoCached) {
         if (isVideo && videoUrl != null) {
@@ -332,17 +334,15 @@ fun AnimatedBackground(
         currentPlayCount,
         isPlaying,
     ) {
-        if (videoUrl != null && staticImageUrl != null && showStaticImage) {
+        if (videoUrl != null && staticImageUrl != null) {
             val animationReady =
                 (isVideo && videoFirstFrameRendered) || (isAnimatedImage && animatedImageLoaded)
-            if (animationReady && shouldPlay && currentPlayCount > 0) {
-                if (isVideo) {
-                    if (isPlaying) {
-                        targetStaticImageAlpha = 0f
-                    }
-                } else if (isAnimatedImage) {
-                    targetStaticImageAlpha = 0f
-                }
+            if (isPlaying && animationReady) {
+                showStaticImage = true
+                targetStaticImageAlpha = 0f
+            } else {
+                showStaticImage = true
+                targetStaticImageAlpha = 1f
             }
         } else if (videoUrl != null && staticImageUrl == null) {
             showStaticImage = false
@@ -360,18 +360,16 @@ fun AnimatedBackground(
             label = "staticImageAlpha",
         )
 
-    LaunchedEffect(animatedAlpha) {
-        if (animatedAlpha <= 0f && showStaticImage) {
-            kotlinx.coroutines.delay(50)
-            showStaticImage = false
-        }
-    }
-
     var textureViewRef by remember { mutableStateOf<TextureView?>(null) }
 
     Box(modifier = modifier.fillMaxSize().clipToBounds()) {
         if (videoUrl != null && isVideo) {
-            AndroidView(
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .alpha(if (showAnimatedContent) 1f else 0f)
+            ) {
+                AndroidView(
                 factory = { ctx ->
                     val okHttpClient =
                         OkHttpClient.Builder()
@@ -405,14 +403,14 @@ fun AnimatedBackground(
                                                     playWhenReady = false
                                                 }
                                             } else if (playbackState == Player.STATE_ENDED) {
-                                                isPlaying = false
-                                                onIsPlayingChange?.invoke(false)
                                                 actualPlayCount++
                                                 if (actualPlayCount >= currentPlayCount) {
                                                     pause()
                                                     seekTo(0)
                                                     actualPlayCount = 0
                                                     hasPlayCompleted = true
+                                                    isPlaying = false
+                                                    onIsPlayingChange?.invoke(false)
                                                     onPlayComplete()
                                                 } else {
                                                     seekTo(0)
@@ -504,7 +502,8 @@ fun AnimatedBackground(
                         }
                     }
                 },
-            )
+                )
+            }
 
             LaunchedEffect(shouldPlay, videoPrepared, currentPlayCount, isCurrentPage, exoPlayer) {
                 if (
@@ -525,6 +524,13 @@ fun AnimatedBackground(
                     exoPlayer?.seekTo(0)
                     actualPlayCount = 0
                     hasPlayCompleted = false
+                }
+            }
+
+            LaunchedEffect(isPlaying, exoPlayer) {
+                if (!isPlaying && exoPlayer != null && hasPlayCompleted) {
+                    exoPlayer?.pause()
+                    exoPlayer?.seekTo(0)
                 }
             }
 
@@ -590,9 +596,14 @@ fun AnimatedBackground(
                 )
             }
         } else if (videoUrl != null && isAnimatedImage) {
-            val density = LocalDensity.current
-            val configuration = LocalConfiguration.current
-            val animatedImageRequest =
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .alpha(if (showAnimatedContent) 1f else 0f)
+            ) {
+                val density = LocalDensity.current
+                val configuration = LocalConfiguration.current
+                val animatedImageRequest =
                 remember(videoUrl) {
                     val containerWidthPx =
                         with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
@@ -652,6 +663,7 @@ fun AnimatedBackground(
             ) {
                 SubcomposeAsyncImageContent()
             }
+            }
 
             var animationCallback by remember {
                 mutableStateOf<Animatable2.AnimationCallback?>(null)
@@ -700,16 +712,19 @@ fun AnimatedBackground(
                                             actualPlayCount < currentTarget
 
                                     if (actualPlayCount >= currentTarget) {
+                                        drawableParam.stop()
                                         hasPlayCompleted = true
                                         isPlaying = false
                                         onIsPlayingChange?.invoke(false)
-                                        drawableParam.stop()
                                         onPlayComplete()
                                     } else if (shouldContinue) {
                                         drawableParam.repeatCount = 0
                                         drawableParam.start()
                                         isPlaying = true
                                         onIsPlayingChange?.invoke(true)
+                                    } else {
+                                        isPlaying = false
+                                        onIsPlayingChange?.invoke(false)
                                     }
                                 } else {
                                     LogUtils.e(
@@ -806,6 +821,8 @@ fun AnimatedBackground(
             }
 
             if (showStaticImage && staticImageUrl != null) {
+                val density = LocalDensity.current
+                val configuration = LocalConfiguration.current
                 val staticImageRequest =
                     remember(staticImageUrl) {
                         val containerWidthPx =
