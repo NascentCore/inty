@@ -4,7 +4,6 @@ import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.common.event.EventBus
 import ai.sxwl.android.common.event.EventSubscriber
 import ai.sxwl.android.common.event.PushNotificationEvent
-import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AppVersionRsp
 import ai.sxwl.android.data.api.model.UserProfile
@@ -18,7 +17,6 @@ import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
-import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.intellimate.utils.IntyUserProfileSDK
@@ -75,6 +73,10 @@ class MainViewModel : BaseVM() {
     private val _messagesTabHasPush = MutableStateFlow(IntySetting.hasMessagesTabPush())
     val messagesTabHasPush: StateFlow<Boolean> = _messagesTabHasPush.asStateFlow()
     private val tabHistory = ArrayDeque<HomeTabIndex>()
+
+    // 反馈请求弹窗显示状态
+    private val _showFeedbackRequestDialog = MutableStateFlow(false)
+    val showFeedbackRequestDialog: StateFlow<Boolean> = _showFeedbackRequestDialog.asStateFlow()
 
     private val pushMessageSubscriber =
         object : EventSubscriber<PushNotificationEvent.MessageReceived> {
@@ -395,12 +397,28 @@ class MainViewModel : BaseVM() {
     }
 
     private fun handlePushMessageEvent(event: PushNotificationEvent.MessageReceived) {
-        if (event.type != FCMConstants.TYPE_AGENT_MESSAGE) {
-            return
+        when (event.type) {
+            FCMConstants.TYPE_AGENT_MESSAGE -> {
+                if (!_messagesTabHasPush.value) {
+                    _messagesTabHasPush.value = true
+                }
+                IntySetting.setMessagesTabHasPush(true)
+            }
+            FCMConstants.TYPE_FEEDBACK_REQUEST -> {
+                // feedback_request 类型消息由 MainActivity 判断是否在前台后处理
+                // 这里只记录日志，不直接显示弹窗
+                LogUtils.d("MainViewModel", "收到 feedback_request 类型消息")
+            }
         }
-        if (!_messagesTabHasPush.value) {
-            _messagesTabHasPush.value = true
-        }
-        IntySetting.setMessagesTabHasPush(true)
+    }
+
+    /** 显示反馈请求弹窗 */
+    fun showFeedbackRequestDialog() {
+        _showFeedbackRequestDialog.value = true
+    }
+
+    /** 隐藏反馈请求弹窗 */
+    fun hideFeedbackRequestDialog() {
+        _showFeedbackRequestDialog.value = false
     }
 }

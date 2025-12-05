@@ -1,7 +1,11 @@
 package com.ai.intellimate
 
+import CheckInRepository
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.common.event.EventBus
+import ai.sxwl.android.common.event.EventSubscriber
+import ai.sxwl.android.common.event.PushNotificationEvent
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.GoogleLoginRequest
 import ai.sxwl.android.data.billing.BillingRepository
@@ -49,12 +53,12 @@ import com.ai.intellimate.ui.components.LoginWithEmailScreen
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
-import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -73,6 +77,14 @@ class MainActivity : BaseActivity() {
     private var hasInitializedUserData = false
     private var billingEventCollectJob: Job? = null
     private var hasHandledNotificationIntent = false // 防止重复处理通知 Intent
+    private var isAppInForeground = false // App是否在前台
+
+    private val feedbackRequestSubscriber =
+        object : EventSubscriber<PushNotificationEvent.MessageReceived> {
+            override fun onEvent(event: PushNotificationEvent.MessageReceived) {
+                handleFeedbackRequestMessage(event)
+            }
+        }
 
     // 延迟时间常量
     private companion object {
@@ -126,6 +138,9 @@ class MainActivity : BaseActivity() {
 
         // 设置返回拦截功能
         setupBackInterception()
+
+        // 订阅反馈请求消息
+        EventBus.subscribe(PushNotificationEvent.MessageReceived::class, feedbackRequestSubscriber)
 
         hasInitializedConfig = true
 
@@ -430,6 +445,7 @@ class MainActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
+        isAppInForeground = true
 
         // 检查登录状态变化（用于响应手动logout或401自动logout后的应用重启）
         val currentLoginState = isUserLoggedIn()
@@ -454,17 +470,35 @@ class MainActivity : BaseActivity() {
 
     override fun onPause() {
         super.onPause()
+        isAppInForeground = false
         // 暂停音频播放
         chatViewModel.pauseVoicePlayback()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        // 取消订阅反馈请求消息
+        EventBus.unsubscribe(PushNotificationEvent.MessageReceived::class, feedbackRequestSubscriber)
         // 清理返回按键处理器
         backPressHandler.cleanup()
         // 清理 Billing 事件监听
         billingEventCollectJob?.cancel()
         billingEventCollectJob = null
+    }
+
+    /** 处理反馈请求消息 */
+    private fun handleFeedbackRequestMessage(event: PushNotificationEvent.MessageReceived) {
+        if (event.type != FCMConstants.TYPE_FEEDBACK_REQUEST) {
+            return
+        }
+
+        // 只有在App在前台时才显示弹窗
+        if (isAppInForeground) {
+            LogUtils.d("MainActivity", "收到 feedback_request 消息，App在前台，显示弹窗")
+            mainViewModel.showFeedbackRequestDialog()
+        } else {
+            LogUtils.d("MainActivity", "收到 feedback_request 消息，App不在前台，不显示弹窗")
+        }
     }
 }
 

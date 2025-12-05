@@ -180,6 +180,8 @@
     <string name="feedback_description">Feedback description</string>
     <string name="feedback_description_placeholder">Please describe your experience or suggestions…</string>
     <string name="toast_feedback_submitted">Thanks for helping improve the experience.</string>
+    <string name="feedback_request_content">Is everything working as expected?  Let us know.\n\nYour feedback helps us build a better experience for you.</string>
+    <string name="send_suggestions">Send Suggestions</string>
 
     <!-- Settings -->
     <string name="he_him">He/Him</string>
