@@ -15,7 +15,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -69,13 +71,37 @@ fun AgentBackground(
     val backgroundAnimatedUrl = agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
     
     // 检查是否有自定义背景图片（仅用于静态背景，不覆盖动画背景）
-    // 直接计算，不使用 remember，确保在设置变化时能正确更新
-    val customBackgroundUrl =
-        if (agentInfo?.id != null && backgroundAnimatedUrl == null) {
-            IntySetting.getChatBackgroundImage(agentInfo.id)
-        } else {
-            null
+    // 使用状态变量来跟踪背景 URL，并通过 LaunchedEffect 定期检查更新
+    // 只在当前页面时检查，避免不必要的资源消耗
+    var customBackgroundUrl by remember(agentInfo?.id) {
+        mutableStateOf<String?>(
+            if (agentInfo?.id != null && backgroundAnimatedUrl == null) {
+                IntySetting.getChatBackgroundImage(agentInfo.id)
+            } else {
+                null
+            }
+        )
+    }
+    
+    // 监听背景设置变化，定期检查以确保及时更新
+    // 只在当前页面时检查，减少资源消耗
+    val currentPageState = rememberUpdatedState(isCurrentPage)
+    LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage) {
+        if (!isCurrentPage) return@LaunchedEffect
+        
+        while (currentPageState.value) {
+            val newBackgroundUrl =
+                if (agentInfo?.id != null && backgroundAnimatedUrl == null) {
+                    IntySetting.getChatBackgroundImage(agentInfo.id)
+                } else {
+                    null
+                }
+            if (customBackgroundUrl != newBackgroundUrl) {
+                customBackgroundUrl = newBackgroundUrl
+            }
+            delay(500) // 每 500ms 检查一次
         }
+    }
     
     val staticImageUrl =
         if (isIntelliMateAgent) {
@@ -174,29 +200,32 @@ fun AgentBackground(
                 contentScale = contentScale,
             )
         } else if (staticImageUrl != null) {
-            val staticImageRequest =
-                remember(staticImageUrl) {
-                    val containerWidthPx = with(density) { containerWidthDp.dp.toPx().toInt() }
-                    val containerHeightPx = with(density) { containerHeightDp.dp.toPx().toInt() }
-                    ImageRequest.Builder(context)
-                        .data(
-                            getCdnImageUrl(
-                                staticImageUrl,
-                                width = CDN_STATIC_BACKGROUND_WIDTH,
-                                quality = CDN_IMAGE_QUALITY,
-                            ) ?: staticImageUrl
-                        )
-                        .size(Size(containerWidthPx, containerHeightPx))
-                        .crossfade(true)
-                        .build()
-                }
-            AsyncImage(
-                modifier = Modifier.fillMaxWidth().fillMaxSize(),
-                model = staticImageRequest,
-                contentDescription = null,
-                alignment = Alignment.TopCenter,
-                contentScale = contentScale,
-            )
+            // 使用 key() 确保当背景 URL 改变时强制重新组合
+            key(staticImageUrl) {
+                val staticImageRequest =
+                    remember(staticImageUrl) {
+                        val containerWidthPx = with(density) { containerWidthDp.dp.toPx().toInt() }
+                        val containerHeightPx = with(density) { containerHeightDp.dp.toPx().toInt() }
+                        ImageRequest.Builder(context)
+                            .data(
+                                getCdnImageUrl(
+                                    staticImageUrl,
+                                    width = CDN_STATIC_BACKGROUND_WIDTH,
+                                    quality = CDN_IMAGE_QUALITY,
+                                ) ?: staticImageUrl
+                            )
+                            .size(Size(containerWidthPx, containerHeightPx))
+                            .crossfade(true)
+                            .build()
+                    }
+                AsyncImage(
+                    modifier = Modifier.fillMaxWidth().fillMaxSize(),
+                    model = staticImageRequest,
+                    contentDescription = null,
+                    alignment = Alignment.TopCenter,
+                    contentScale = contentScale,
+                )
+            }
         } else if (isIntelliMateAgent) {
             Image(
                 modifier = Modifier.fillMaxWidth().fillMaxSize(),
