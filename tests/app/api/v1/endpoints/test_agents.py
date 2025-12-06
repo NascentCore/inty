@@ -14,7 +14,6 @@ from app.services.user_service import generate_next_readable_id_sync
 from tests.app.api.test_client import TestClient
 
 
-@pytest.mark.noci
 def test_chat_completions_endpoint(integration_client: TestClient):
     agent_id = integration_client.create_agent()
 
