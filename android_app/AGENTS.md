@@ -13,6 +13,7 @@
 - 对我提出的指示、完成基础要求，不要处理未提及的复杂场景，不要使用 defensive programming
 - 优先使用 material 3 icons 和其他来自 material 3 的素材 https://fonts.google.com/icons?icon.query=generate&icon.size=24&icon.color=%231f1f1f&icon.platform=android
 - 代码注释使用简体中文
+- 默认日志登记是 debug
 
 ## 架构状态说明
 
