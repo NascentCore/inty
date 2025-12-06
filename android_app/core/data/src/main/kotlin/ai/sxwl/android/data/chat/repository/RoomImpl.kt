@@ -4,7 +4,7 @@ import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.SendMsgResponse
 import ai.sxwl.android.data.api.model.VoteConstants
 import ai.sxwl.android.data.api.model.VoteMessageRsp
-import ai.sxwl.android.data.chat.data.ChatLocalDataSource
+import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.utils.LogUtils
@@ -12,8 +12,8 @@ import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.flow.StateFlow
 
 /** 聊天Repository实现 作为Domain层和Data层之间的桥梁 遵循Clean Architecture的Repository模式 */
-class ChatRepositoryImpl(
-    private val localDataSource: ChatLocalDataSource,
+class RoomImpl(
+    private val localDataSource: RoomDataSource,
     private val remoteDataSource: ChatRemoteDataSource,
 ) : ChatRepository {
 
@@ -54,7 +54,7 @@ class ChatRepositoryImpl(
     }
 
     override suspend fun ensureInitialHistory(agentId: String, pageSize: Int) {
-        LogUtils.d("ChatRepositoryImpl.ensureInitialHistory called for $agentId")
+        LogUtils.d("RoomImpl.ensureInitialHistory called for $agentId")
 
         if (localDataSource.isInitialLoaded(agentId)) return
 
@@ -62,7 +62,7 @@ class ChatRepositoryImpl(
         val localMessages = localDataSource.getMessagesFlow(agentId).value
         if (localMessages.isNotEmpty()) {
             LogUtils.i(
-                "ChatRepositoryImpl.ensureInitialHistory found ${localMessages.size} local messages for $agentId"
+                "RoomImpl.ensureInitialHistory found ${localMessages.size} local messages for $agentId"
             )
             localDataSource.setInitialLoaded(agentId, true)
             // 后台同步最新数据
@@ -80,18 +80,18 @@ class ChatRepositoryImpl(
                                 if (serverMessages.isNotEmpty()) pageSize else 0,
                             )
                             LogUtils.i(
-                                "ChatRepositoryImpl.ensureInitialHistory synced ${serverMessages.size} server messages for $agentId"
+                                "RoomImpl.ensureInitialHistory synced ${serverMessages.size} server messages for $agentId"
                             )
                         }
                     }
                     is HttpResult.Failure -> {
                         LogUtils.e(
-                            "ChatRepositoryImpl.ensureInitialHistory sync failure for $agentId: ${result.message}"
+                            "RoomImpl.ensureInitialHistory sync failure for $agentId: ${result.message}"
                         )
                     }
                 }
             } catch (e: Exception) {
-                LogUtils.e("ChatRepositoryImpl.ensureInitialHistory sync exception: ${e.message}")
+                LogUtils.e("RoomImpl.ensureInitialHistory sync exception: ${e.message}")
             }
             return
         }
@@ -101,31 +101,44 @@ class ChatRepositoryImpl(
                 is HttpResult.Success -> {
                     val messages = convertUserVoteToFeedback(result.data.messages ?: emptyList())
                     LogUtils.i(
-                        "ChatRepositoryImpl.ensureInitialHistory loaded ${messages.size} messages for $agentId"
+                        "RoomImpl.ensureInitialHistory loaded ${messages.size} messages for $agentId"
                     )
 
-                    // 注意：ChatLocalDataSource.updateMessages 只是直接替换消息列表，不涉及 sortKey 分配
-                    // 所以不需要反转消息列表，直接使用服务器返回的顺序即可
-                    localDataSource.updateMessages(agentId, messages)
+                    // 🔧 修复首次加载消息反序问题：
+                    // 服务器返回的消息是 DESC 顺序（最新的在前），参见 IChatApi.getMsgs() 中 order 参数的默认值 "desc"
+                    // 但 updateMessages 按列表顺序递增分配 sortKey（baseTime, baseTime+1, baseTime+2...）
+                    // 如果第一条消息（最新的）得到最小的 sortKey，会导致排序错误
+                    // 解决方案：反转消息列表，确保最旧的消息得到最小的 sortKey，最新的消息得到最大的 sortKey
+                    // 这样在 ORDER BY sortKey DESC 查询时，最新的消息会排在前面，配合 reverseLayout=true 显示在底部
+                    val reversedMessages = messages.reversed()
+                    if (messages.isNotEmpty()) {
+                        LogUtils.i(
+                            "RoomImpl.ensureInitialHistory REVERSING messages: " +
+                                "original first=${messages.first().id.take(8)}, last=${messages.last().id.take(8)} | " +
+                                "reversed first=${reversedMessages.first().id.take(8)}, last=${reversedMessages.last().id.take(8)}"
+                        )
+                    }
+
+                    localDataSource.updateMessages(agentId, reversedMessages)
                     localDataSource.setHasMore(agentId, result.data.hasMore)
                     localDataSource.setOffset(agentId, if (messages.isNotEmpty()) pageSize else 0)
                     localDataSource.setInitialLoaded(agentId, true)
                 }
                 is HttpResult.Failure -> {
                     LogUtils.e(
-                        "ChatRepositoryImpl.ensureInitialHistory failure for $agentId: ${result.message}"
+                        "RoomImpl.ensureInitialHistory failure for $agentId: ${result.message}"
                     )
                     localDataSource.setInitialLoaded(agentId, true)
                 }
             }
         } catch (e: Exception) {
-            LogUtils.e("ChatRepositoryImpl.ensureInitialHistory exception: ${e.message}")
+            LogUtils.e("RoomImpl.ensureInitialHistory exception: ${e.message}")
             localDataSource.setInitialLoaded(agentId, true)
         }
     }
 
     override suspend fun loadMoreMessages(agentId: String, pageSize: Int) {
-        LogUtils.d("ChatRepositoryImpl.loadMoreMessages called for $agentId")
+        LogUtils.d("RoomImpl.loadMoreMessages called for $agentId")
 
         if (localDataSource.getLoadingMoreFlow(agentId).value) return
         if (!localDataSource.getHasMoreFlow(agentId).value) return
@@ -139,23 +152,25 @@ class ChatRepositoryImpl(
                     val moreMessages =
                         convertUserVoteToFeedback(result.data.messages ?: emptyList())
                     if (moreMessages.isNotEmpty()) {
-                        localDataSource.appendMessages(agentId, moreMessages)
+                        // 使用 prependMessages 加载历史消息，确保它们插入到列表开头（使用更小的 sortKey）
+                        // 在 sortKey DESC 排序中，它们会排在后面，在 reverseLayout UI 中会显示在顶部
+                        localDataSource.prependMessages(agentId, moreMessages)
                         localDataSource.incrementOffset(agentId, pageSize)
                     }
                     localDataSource.setHasMore(agentId, result.data.hasMore)
 
                     LogUtils.i(
-                        "ChatRepositoryImpl.loadMoreMessages loaded ${moreMessages.size} more messages for $agentId"
+                        "RoomImpl.loadMoreMessages loaded ${moreMessages.size} more messages for $agentId"
                     )
                 }
                 is HttpResult.Failure -> {
                     LogUtils.e(
-                        "ChatRepositoryImpl.loadMoreMessages failure for $agentId: ${result.message}"
+                        "RoomImpl.loadMoreMessages failure for $agentId: ${result.message}"
                     )
                 }
             }
         } catch (e: Exception) {
-            LogUtils.e("ChatRepositoryImpl.loadMoreMessages exception: ${e.message}")
+            LogUtils.e("RoomImpl.loadMoreMessages exception: ${e.message}")
         } finally {
             localDataSource.setLoadingMore(agentId, false)
         }
@@ -165,19 +180,27 @@ class ChatRepositoryImpl(
         agentId: String,
         content: String,
     ): HttpResult<SendMsgResponse> {
-        LogUtils.d("ChatRepositoryImpl.sendMessage called for $agentId: $content")
+        LogUtils.d("RoomImpl.sendMessage called for $agentId: $content")
 
         // 1) 先插入用户消息与loading占位
-        val userMsg = MsgInfo(content = content.trimEnd(), role = "user")
-        val loadingMsg = MsgInfo(content = LOADING_PLACEHOLDER_CONTENT, role = ROLE_ASSISTANT)
+        // appendMessages会自动处理sortKey和timestamp的同步
+        val userMsg = MsgInfo(
+            content = content.trimEnd(),
+            role = "user",
+        )
+        val loadingMsg = MsgInfo(
+            content = LOADING_PLACEHOLDER_CONTENT,
+            role = ROLE_ASSISTANT,
+        )
 
-        localDataSource.prependMessages(agentId, listOf(loadingMsg, userMsg))
+        // 使用appendMessages，它会自动处理单调递增的sortKey和同步的timestamp
+        localDataSource.appendMessages(agentId, listOf(userMsg, loadingMsg))
 
         val result =
             try {
                 remoteDataSource.sendMessage(agentId, listOf(userMsg))
             } catch (e: Exception) {
-                LogUtils.e("ChatRepositoryImpl.sendMessage exception: ${e.message}")
+                LogUtils.e("RoomImpl.sendMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
@@ -193,8 +216,10 @@ class ChatRepositoryImpl(
         if (result is HttpResult.Success) {
             val choices = result.data.data?.choices ?: emptyList()
             if (choices.isNotEmpty()) {
+                // appendMessages会自动处理sortKey和timestamp的同步
                 val assistantMsgs = choices.map { it.message }
-                localDataSource.prependMessages(agentId, assistantMsgs)
+                LogUtils.d("RoomImpl.sendMessage saving ${assistantMsgs.size} assistant messages for agentId=$agentId")
+                localDataSource.appendMessages(agentId, assistantMsgs)
             }
         }
 
@@ -202,7 +227,7 @@ class ChatRepositoryImpl(
     }
 
     override suspend fun syncLatestMessages(agentId: String, pageSize: Int) {
-        LogUtils.d("ChatRepositoryImpl.syncLatestMessages called for $agentId")
+        LogUtils.d("RoomImpl.syncLatestMessages called for $agentId")
 
         if (
             !localDataSource.isInitialLoaded(agentId) ||
@@ -210,7 +235,7 @@ class ChatRepositoryImpl(
         ) {
             // 如果没有初始化或没有本地数据，使用正常的初始化流程
             LogUtils.i(
-                "ChatRepositoryImpl.syncLatestMessages calling ensureInitialHistory for $agentId"
+                "RoomImpl.syncLatestMessages calling ensureInitialHistory for $agentId"
             )
             ensureInitialHistory(agentId, pageSize)
             return
@@ -252,28 +277,28 @@ class ChatRepositoryImpl(
                         )
 
                         LogUtils.i(
-                            "ChatRepositoryImpl.syncLatestMessages found new messages or status changes for $agentId, updated ${serverMessages.size} messages"
+                            "RoomImpl.syncLatestMessages found new messages or status changes for $agentId, updated ${serverMessages.size} messages"
                         )
                     } else {
                         LogUtils.i(
-                            "ChatRepositoryImpl.syncLatestMessages no new messages or status changes for $agentId"
+                            "RoomImpl.syncLatestMessages no new messages or status changes for $agentId"
                         )
                     }
                 }
                 is HttpResult.Failure -> {
                     LogUtils.e(
-                        "ChatRepositoryImpl.syncLatestMessages failure for $agentId: ${result.message}"
+                        "RoomImpl.syncLatestMessages failure for $agentId: ${result.message}"
                     )
                 }
             }
         } catch (e: Exception) {
-            LogUtils.e("ChatRepositoryImpl.syncLatestMessages exception: ${e.message}")
+            LogUtils.e("RoomImpl.syncLatestMessages exception: ${e.message}")
         }
     }
 
     override fun updateMessageAudioUrl(agentId: String, messageId: String, audioUrl: String) {
         LogUtils.d(
-            "ChatRepositoryImpl.updateMessageAudioUrl called for $agentId, messageId: $messageId"
+            "RoomImpl.updateMessageAudioUrl called for $agentId, messageId: $messageId"
         )
         localDataSource.updateMessageAudioUrl(agentId, messageId, audioUrl)
     }
@@ -284,7 +309,7 @@ class ChatRepositoryImpl(
         feedback: MsgInfo.UserFeedback?,
     ) {
         LogUtils.d(
-            "ChatRepositoryImpl.updateMessageFeedback called for $agentId, messageId: $messageId, feedback: $feedback"
+            "RoomImpl.updateMessageFeedback called for $agentId, messageId: $messageId, feedback: $feedback"
         )
         localDataSource.updateMessageFeedback(agentId, messageId, feedback)
     }
@@ -295,7 +320,7 @@ class ChatRepositoryImpl(
         vote: String,
     ): HttpResult<VoteMessageRsp> {
         LogUtils.d(
-            "ChatRepositoryImpl.voteMessage called for $agentId, messageId: $messageId, vote: $vote"
+            "RoomImpl.voteMessage called for $agentId, messageId: $messageId, vote: $vote"
         )
 
         val result = remoteDataSource.voteMessage(agentId, messageId, vote)
@@ -332,23 +357,23 @@ class ChatRepositoryImpl(
         generatedImage: MsgInfo.MsgMetaData.GeneratedImage?,
     ) {
         LogUtils.d(
-            "ChatRepositoryImpl.updateMessageGeneratedImage called for $agentId, messageId: $messageId, generatedImage: ${if (generatedImage != null) "set" else "null (remove)"}"
+            "RoomImpl.updateMessageGeneratedImage called for $agentId, messageId: $messageId, generatedImage: ${if (generatedImage != null) "set" else "null (remove)"}"
         )
         localDataSource.updateMessageGeneratedImage(agentId, messageId, generatedImage)
     }
 
     override suspend fun removeMessage(agentId: String, messageId: String) {
-        LogUtils.d("ChatRepositoryImpl.removeMessage called for $agentId, messageId: $messageId")
+        LogUtils.d("RoomImpl.removeMessage called for $agentId, messageId: $messageId")
         localDataSource.removeMessage(agentId, messageId)
     }
 
     override suspend fun addMessage(agentId: String, message: MsgInfo) {
-        LogUtils.d("ChatRepositoryImpl.addMessage called for $agentId")
+        LogUtils.d("RoomImpl.addMessage called for $agentId")
         localDataSource.addMessage(agentId, message)
     }
 
     override suspend fun recallLastAssistantMessage(agentId: String) {
-        LogUtils.d("ChatRepositoryImpl.recallLastAssistantMessage called for $agentId")
+        LogUtils.d("RoomImpl.recallLastAssistantMessage called for $agentId")
         val messages = localDataSource.getMessagesFlow(agentId).value
 
         // 找到最后一条AI消息（排除loading）
@@ -359,7 +384,7 @@ class ChatRepositoryImpl(
 
         if (lastAssistantMessage == null) {
             LogUtils.w(
-                "ChatRepositoryImpl.recallLastAssistantMessage: No assistant message to recall"
+                "RoomImpl.recallLastAssistantMessage: No assistant message to recall"
             )
             return
         }
@@ -368,17 +393,24 @@ class ChatRepositoryImpl(
         localDataSource.removeMessage(agentId, lastAssistantMessage.localMsgId)
 
         // 添加 loading 消息占位
-        val loadingMsg = MsgInfo(content = LOADING_PLACEHOLDER_CONTENT, role = ROLE_ASSISTANT)
-        localDataSource.prependMessages(agentId, listOf(loadingMsg))
+        // appendMessages会自动处理sortKey和timestamp的同步
+        val loadingMsg = MsgInfo(
+            content = LOADING_PLACEHOLDER_CONTENT,
+            role = ROLE_ASSISTANT,
+        )
+        localDataSource.appendMessages(agentId, listOf(loadingMsg))
 
         // 发送 recall 消息给服务器（类似 keep talking 的实现）
         // 服务器应该理解 "recall" 标记并重新生成最后一条AI消息
-        val recallMsg = MsgInfo(content = "recall", role = "user")
+        val recallMsg = MsgInfo(
+            content = "recall",
+            role = "user",
+        )
         val result =
             try {
                 remoteDataSource.sendMessage(agentId, listOf(recallMsg))
             } catch (e: Exception) {
-                LogUtils.e("ChatRepositoryImpl.recallLastAssistantMessage exception: ${e.message}")
+                LogUtils.e("RoomImpl.recallLastAssistantMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
@@ -394,8 +426,9 @@ class ChatRepositoryImpl(
         if (result is HttpResult.Success) {
             val choices = result.data.data?.choices ?: emptyList()
             if (choices.isNotEmpty()) {
+                // appendMessages会自动处理sortKey和timestamp的同步
                 val assistantMsgs = choices.map { it.message }
-                localDataSource.prependMessages(agentId, assistantMsgs)
+                localDataSource.appendMessages(agentId, assistantMsgs)
             }
         }
     }
@@ -407,7 +440,7 @@ class ChatRepositoryImpl(
         ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult
     > {
         LogUtils.d(
-            "ChatRepositoryImpl.generateImageForMessage called for $agentId, messageId: $messageId"
+            "RoomImpl.generateImageForMessage called for $agentId, messageId: $messageId"
         )
 
         // 找到触发消息生图的那条消息
@@ -416,7 +449,7 @@ class ChatRepositoryImpl(
 
         if (sourceMessage == null) {
             LogUtils.e(
-                "ChatRepositoryImpl.generateImageForMessage: source message not found: $messageId"
+                "RoomImpl.generateImageForMessage: source message not found: $messageId"
             )
             return HttpResult.Failure("Source message not found", -1)
         }
@@ -445,12 +478,12 @@ class ChatRepositoryImpl(
                     )
                 localDataSource.updateMessageGeneratedImage(agentId, messageId, generatedImage)
                 LogUtils.i(
-                    "ChatRepositoryImpl.generateImageForMessage success: ${result.data.imageUrl}"
+                    "RoomImpl.generateImageForMessage success: ${result.data.imageUrl}"
                 )
             }
 
             is HttpResult.Failure -> {
-                LogUtils.e("ChatRepositoryImpl.generateImageForMessage failure: ${result.message}")
+                LogUtils.e("RoomImpl.generateImageForMessage failure: ${result.message}")
                 // 生成失败时，移除 loading 状态
                 localDataSource.updateMessageGeneratedImage(agentId, messageId, null)
             }
@@ -460,12 +493,14 @@ class ChatRepositoryImpl(
     }
 
     override suspend fun clearChatData(agentId: String) {
-        LogUtils.d("ChatRepositoryImpl.clearChatData called for $agentId")
+        LogUtils.d("RoomImpl.clearChatData called for $agentId")
         localDataSource.clearChatData(agentId)
+        LogUtils.i("RoomImpl.clearChatData completed for $agentId")
     }
 
     override suspend fun clearAllChatData() {
-        LogUtils.d("ChatRepositoryImpl.clearAllChatData called")
+        LogUtils.d("RoomImpl.clearAllChatData called")
         localDataSource.clearAllChatData()
+        LogUtils.i("RoomImpl.clearAllChatData completed")
     }
 }

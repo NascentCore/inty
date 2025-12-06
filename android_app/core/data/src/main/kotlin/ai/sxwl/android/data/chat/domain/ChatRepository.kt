@@ -7,7 +7,10 @@ import ai.sxwl.android.data.http.services.ChatService
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.flow.StateFlow
 
-/** Chat领域层接口 定义聊天相关的业务逻辑接口，不依赖具体实现 遵循Clean Architecture的依赖倒置原则 */
+/**
+ * Chat领域层接口 定义聊天相关的业务逻辑接口
+ * 来完成与后端服务的交互，并写入数据到本地存储中
+ */
 interface ChatRepository {
 
     /** 获取指定agent的消息流 */
@@ -76,9 +79,15 @@ interface ChatRepository {
         messageId: String,
     ): HttpResult<ChatService.ChatImageGenerationResult>
 
-    /** 清理指定agent的聊天数据 */
-    fun clearChatData(agentId: String)
+    /**
+     * 清理指定agent的聊天数据
+     * 这个函数在 RoomDataSource 中实现是异步，因此需要是 suspend 函数
+     */
+    suspend fun clearChatData(agentId: String)
 
-    /** 清理所有聊天数据 */
-    fun clearAllChatData()
+    /**
+     * 清理所有聊天数据
+     * 这个函数在 RoomDataSource 中实现是异步，因此需要是 suspend 函数
+     */
+    suspend fun clearAllChatData()
 }
