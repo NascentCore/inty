@@ -1,9 +1,16 @@
+import uuid
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.security import create_access_token
+from app.core.uuid import get_new_user_id
 from app.models.agent import Agent
+from app.models.subscription import SubscriptionUsage
+from app.models.user import AuthType, Gender, User
+from app.services.user_service import generate_next_readable_id_sync
 from tests.app.api.test_client import TestClient
 
 
@@ -36,15 +43,81 @@ def test_chat_completions_endpoint(integration_client: TestClient):
     assert usage["total_tokens"] == usage["prompt_tokens"] + usage["completion_tokens"]
 
 
-@pytest.mark.noci
-def test_text_to_image_endpoint(integration_client: TestClient):
-    image_urls = integration_client.text_to_image(
-        "A warm portrait of a friendly companion, soft lighting, vivid colors",
-        count=1,
-    )
+@pytest.fixture
+def db_session():
+    """提供数据库会话用于测试"""
+    engine = create_engine(global_config_loaded_from_config_yaml.database.url)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    yield session
+    session.close()
 
-    assert image_urls
-    assert all(url.startswith("http") for url in image_urls)
+
+@pytest.mark.noci
+def test_text_to_image_endpoint(integration_client: TestClient, db_session):
+    """测试图片生成功能，使用正式用户（非 guest）"""
+    # 创建正式用户（EMAIL 类型）用于测试图片生成
+    user_id = get_new_user_id()
+    readable_id = generate_next_readable_id_sync(db_session)
+    test_email = f"test-image-{uuid.uuid4().hex[:8]}@example.com"
+
+    # 检查用户是否已存在
+    existing_user = db_session.query(User).filter(User.email == test_email).first()
+    if existing_user:
+        # 如果用户已存在，使用现有用户
+        user = existing_user
+        is_new_user = False
+    else:
+        # 创建新用户
+        user = User(
+            id=user_id,
+            gender=Gender.FEMALE,
+            readable_id=readable_id,
+            auth_type=AuthType.EMAIL,
+            email=test_email,
+            nickname=f"Test Image User {uuid.uuid4().hex[:6]}",
+            system_language="en",
+        )
+        db_session.add(user)
+        db_session.commit()
+        db_session.refresh(user)
+        is_new_user = True
+
+    # 生成 token 并设置到 TestClient
+    token = create_access_token(user.id)
+    integration_client.token = token
+    integration_client.client.headers.update({"Authorization": f"Bearer {token}"})
+
+    try:
+        image_urls = integration_client.text_to_image(
+            "A warm portrait of a friendly companion, soft lighting, vivid colors",
+            count=1,
+        )
+
+        assert image_urls
+        assert all(url.startswith("http") for url in image_urls)
+    finally:
+        # 清理：删除测试用户（如果是我们创建的）
+        if is_new_user:
+            # 先删除用户创建的 agents
+            agents = db_session.query(Agent).filter(Agent.creator_id == user.id).all()
+            for agent in agents:
+                db_session.delete(agent)
+
+            # 删除用户的 subscription_usage 记录
+            usage_records = (
+                db_session.query(SubscriptionUsage)
+                .filter(SubscriptionUsage.user_id == user.id)
+                .all()
+            )
+            for usage in usage_records:
+                db_session.delete(usage)
+
+            db_session.commit()
+
+            # 然后删除用户
+            db_session.delete(user)
+            db_session.commit()
 
 
 @pytest.mark.parametrize("background", ["", None])

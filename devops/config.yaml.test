@@ -5,6 +5,18 @@ app:
   debug: true
   backend_cors_origins: ["http://localhost:3000"]
   environment: "test"
+  # 用于测试上限较高
+  limits:
+    free_user_chat_24h_limit: 100
+    guest_user_chat_24h_limit: 100
+    free_user_voice_24h_limit: 100
+    guest_user_voice_24h_limit: 100
+    subscribed_user_voice_24h_limit: 200
+    # guest（游客）无法生图，必须登录，因此没有对应的设置
+    free_user_image_gen_24h_limit: 400
+    subscribed_user_image_gen_24h_limit: 80
+    free_user_agent_creation_24h_limit: 10
+    subscribed_user_agent_creation_24h_limit: 20
 
 logging:                                                                         
   level: "DEBUG"
