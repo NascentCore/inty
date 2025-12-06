@@ -480,14 +480,14 @@ private fun AgentGeneratedImagesSection(
             fontWeight = FontWeight.SemiBold,
             color = Color.White,
         )
-        Spacer(Modifier.height(UiConfigs.AgentGallery.SectionTitleSpacing))
+        Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionTitleSpacing))
         Text(
             text = stringResource(R.string.agent_gallery_ai_images_description, images.size),
             fontSize = 12.sp,
             color = Color.White.copy(alpha = 0.7f),
         )
-        Spacer(Modifier.height(UiConfigs.AgentGallery.SectionSpacing))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(UiConfigs.AgentGallery.ImageSpacing)) {
+        Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionSpacing))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(UiConfigs.CharacterGallery.ImageSpacing)) {
             items(
                 images,
                 key = { image ->
@@ -502,7 +502,7 @@ private fun AgentGeneratedImagesSection(
                 )
             }
         }
-        Spacer(Modifier.height(UiConfigs.AgentGallery.SectionBottomPadding))
+        Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionBottomPadding))
     }
 
     if (previewImage != null) {
@@ -546,8 +546,8 @@ private fun AgentGalleryImageCard(
 
     Box(
         modifier =
-            Modifier.width(UiConfigs.AgentGallery.ImageWidth)
-                .clip(RoundedCornerShape(UiConfigs.AgentGallery.ImageCornerRadius))
+            Modifier.width(UiConfigs.CharacterGallery.ImageWidth)
+                .clip(RoundedCornerShape(UiConfigs.CharacterGallery.ImageCornerRadius))
                 .background(Color.White.copy(alpha = 0.08f))
                 .pointerInput(agentId, item.imageUrl, isCurrentBackground) {
                     detectTapGestures(
@@ -567,8 +567,8 @@ private fun AgentGalleryImageCard(
                     .data(
                         getCdnImageUrl(
                             item.imageUrl,
-                            width = UiConfigs.AgentGallery.CDN_IMAGE_WIDTH,
-                            quality = UiConfigs.AgentGallery.CDN_IMAGE_QUALITY,
+                            width = UiConfigs.CharacterGallery.CDN_IMAGE_WIDTH,
+                            quality = UiConfigs.CharacterGallery.CDN_IMAGE_QUALITY,
                         )
                     )
                     .build(),

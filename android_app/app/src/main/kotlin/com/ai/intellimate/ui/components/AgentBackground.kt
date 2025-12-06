@@ -238,8 +238,8 @@ fun AgentBackground(
                             .data(
                                 getCdnImageUrl(
                                     staticImageUrl,
-                                    width = UiConfigs.Media.CDN_STATIC_BACKGROUND_WIDTH,
-                                    quality = UiConfigs.Media.CDN_IMAGE_QUALITY,
+                                    width = UiConfigs.CharacterProfile.CDN_STATIC_BACKGROUND_WIDTH,
+                                    quality = UiConfigs.CharacterProfile.CDN_IMAGE_QUALITY,
                                 ) ?: staticImageUrl
                             )
                             .size(Size(containerWidthPx, containerHeightPx))
