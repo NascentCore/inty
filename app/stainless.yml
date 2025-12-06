@@ -97,7 +97,6 @@ resources:
                   list: get /api/v1/ai/agents/me
                   search: get /api/v1/ai/agents/search
                   recommend: get /api/v1/ai/agents/recommend
-                  following: get /api/v1/ai/agents/following
                   create: post /api/v1/ai/agents
                   retrieve: get /api/v1/ai/agents/{agent_id}
                   update: put /api/v1/ai/agents/{agent_id}

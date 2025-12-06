@@ -39,12 +39,8 @@
 | `/api/v1/ai/agents/me` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/search` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/recommend` | GET | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/following` | GET | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/` | POST | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents` | POST | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}` | GET | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/{agent_id}/follow` | POST | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/{agent_id}/follow` | DELETE | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}` | PUT | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}` | DELETE | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}/generate-background-animated` | POST | `app/api/v1/endpoints/agents.py` |
