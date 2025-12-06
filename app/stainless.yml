@@ -127,16 +127,7 @@ resources:
               webhook: post /api/v1/subscription/webhook
             subresources:
               admin:
-                methods:
-                  process_refund: post /api/v1/subscription/admin/refund
                 subresources:
-                  plans:
-                    models:
-                      subscription_plan: "#/components/schemas/SubscriptionPlan"
-                      subscription_plan_type: "#/components/schemas/SubscriptionPlanType"
-                    methods:
-                      create: post /api/v1/subscription/admin/plans
-                      list: get /api/v1/subscription/admin/plans
                   users:
                     methods:
                       get_subscription_status: get /api/v1/subscription/admin/users/{user_id}/subscription
