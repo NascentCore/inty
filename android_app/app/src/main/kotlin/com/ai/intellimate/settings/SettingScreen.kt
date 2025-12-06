@@ -24,7 +24,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -40,7 +39,6 @@ import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.UiConfigs
-import com.ai.intellimate.xb.navigation.Routes
 import com.ai.intellimate.ui.components.DeleteAccountDialog
 import com.ai.intellimate.ui.components.LogoutConfirmDialog
 import com.ai.intellimate.vip.SubsManageActivity
@@ -64,8 +62,6 @@ fun SettingScreen(
 ) {
     val context = LocalContext.current
     val state = viewModel.state.collectAsState().value
-    // 监听登录状态变化，当用户登出时自动导航到登录页
-    val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
 
     fun onLogout(isDelete: Boolean) {
         mainViewModel.logout()
@@ -74,23 +70,6 @@ fun SettingScreen(
             if (isDelete) context.getString(R.string.delete_account_successfully)
             else context.getString(R.string.logout_successfully)
         ToastUtils.showShort(str)
-    }
-
-    // 监听登录状态，当登出时导航到登录页
-    // 注意：AppNavHost 的 startDestination 只在首次创建时生效，不会在重组时自动导航
-    // 因此需要在 SettingScreen 中显式监听登录状态变化并执行导航
-    LaunchedEffect(isLoggedIn) {
-        if (!isLoggedIn) {
-            // 用户已登出，导航到登录页并清空返回栈，防止用户通过返回键回到设置页
-            navController.navigate(Routes.SplashLogin) {
-                // 清空返回栈，确保用户无法通过返回键回到已登出的页面
-                popUpTo(navController.graph.startDestinationId) {
-                    inclusive = true
-                }
-                // 避免在导航栈中重复添加相同的目标
-                launchSingleTop = true
-            }
-        }
     }
 
     // 每次打开设置界面时，重置删除账号结果状态和对话框状态，避免残留状态导致误触发
