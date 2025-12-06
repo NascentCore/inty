@@ -236,5 +236,17 @@ object UiConfigs {
 
         /** 消息加载时的播放次数 */
         const val VIDEO_MESSAGE_PLAY_COUNT = 1
+        const val CDN_IMAGE_QUALITY = 80
+        const val CDN_STATIC_BACKGROUND_WIDTH = 1080
+    }
+    object AgentGallery {
+        val SectionSpacing = 12.dp
+        val SectionTitleSpacing = 4.dp
+        val ImageSpacing = 12.dp
+        val ImageWidth = 140.dp
+        val ImageCornerRadius = 14.dp
+        val SectionBottomPadding = 8.dp
+        const val CDN_IMAGE_WIDTH = 480
+        const val CDN_IMAGE_QUALITY = 70
     }
 }

@@ -465,17 +465,6 @@ internal fun AiAgentInfoScreen(
     }
 }
 
-private object AgentGalleryConfig {
-    val SectionSpacing = 12.dp
-    val SectionTitleSpacing = 4.dp
-    val ImageSpacing = 12.dp
-    val ImageWidth = 140.dp
-    val ImageCornerRadius = 14.dp
-    val SectionBottomPadding = 8.dp
-    const val CDN_IMAGE_WIDTH = 480
-    const val CDN_IMAGE_QUALITY = 70
-}
-
 @Composable
 private fun AgentGeneratedImagesSection(
     modifier: Modifier = Modifier,
@@ -491,14 +480,14 @@ private fun AgentGeneratedImagesSection(
             fontWeight = FontWeight.SemiBold,
             color = Color.White,
         )
-        Spacer(Modifier.height(AgentGalleryConfig.SectionTitleSpacing))
+        Spacer(Modifier.height(UiConfigs.AgentGallery.SectionTitleSpacing))
         Text(
             text = stringResource(R.string.agent_gallery_ai_images_description, images.size),
             fontSize = 12.sp,
             color = Color.White.copy(alpha = 0.7f),
         )
-        Spacer(Modifier.height(AgentGalleryConfig.SectionSpacing))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(AgentGalleryConfig.ImageSpacing)) {
+        Spacer(Modifier.height(UiConfigs.AgentGallery.SectionSpacing))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(UiConfigs.AgentGallery.ImageSpacing)) {
             items(
                 images,
                 key = { image ->
@@ -513,7 +502,7 @@ private fun AgentGeneratedImagesSection(
                 )
             }
         }
-        Spacer(Modifier.height(AgentGalleryConfig.SectionBottomPadding))
+        Spacer(Modifier.height(UiConfigs.AgentGallery.SectionBottomPadding))
     }
 
     if (previewImage != null) {
@@ -557,8 +546,8 @@ private fun AgentGalleryImageCard(
 
     Box(
         modifier =
-            Modifier.width(AgentGalleryConfig.ImageWidth)
-                .clip(RoundedCornerShape(AgentGalleryConfig.ImageCornerRadius))
+            Modifier.width(UiConfigs.AgentGallery.ImageWidth)
+                .clip(RoundedCornerShape(UiConfigs.AgentGallery.ImageCornerRadius))
                 .background(Color.White.copy(alpha = 0.08f))
                 .pointerInput(agentId, item.imageUrl, isCurrentBackground) {
                     detectTapGestures(
@@ -578,8 +567,8 @@ private fun AgentGalleryImageCard(
                     .data(
                         getCdnImageUrl(
                             item.imageUrl,
-                            width = AgentGalleryConfig.CDN_IMAGE_WIDTH,
-                            quality = AgentGalleryConfig.CDN_IMAGE_QUALITY,
+                            width = UiConfigs.AgentGallery.CDN_IMAGE_WIDTH,
+                            quality = UiConfigs.AgentGallery.CDN_IMAGE_QUALITY,
                         )
                     )
                     .build(),

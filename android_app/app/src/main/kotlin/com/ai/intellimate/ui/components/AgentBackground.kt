@@ -37,8 +37,6 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import kotlinx.coroutines.delay
 
-private const val CDN_IMAGE_QUALITY = 80
-private const val CDN_STATIC_BACKGROUND_WIDTH = 1080
 private const val TOP_GRADIENT_HEIGHT_DP = 120
 private const val BOTTOM_GRADIENT_HEIGHT_DP = 300
 
@@ -240,8 +238,8 @@ fun AgentBackground(
                             .data(
                                 getCdnImageUrl(
                                     staticImageUrl,
-                                    width = CDN_STATIC_BACKGROUND_WIDTH,
-                                    quality = CDN_IMAGE_QUALITY,
+                                    width = UiConfigs.Media.CDN_STATIC_BACKGROUND_WIDTH,
+                                    quality = UiConfigs.Media.CDN_IMAGE_QUALITY,
                                 ) ?: staticImageUrl
                             )
                             .size(Size(containerWidthPx, containerHeightPx))
