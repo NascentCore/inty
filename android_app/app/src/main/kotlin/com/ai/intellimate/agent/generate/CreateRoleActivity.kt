@@ -187,6 +187,8 @@ class CreateRoleActivity : BaseActivity() {
     }
 }
 
+private const val MAX_GALLERY_PHOTO_SIZE_MB = 2
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CreateRolePage(
@@ -493,6 +495,32 @@ private fun CreateRolePage(
     val galleryLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
             imageUri?.let { uri ->
+                val fileSize = getFileSize(context, uri)
+                val maxSizeBytes = MAX_GALLERY_PHOTO_SIZE_MB * 1024 * 1024L
+                if (fileSize == 0L) {
+                    ToastUtils.showShort(
+                        context.getString(
+                            R.string.toast_failed_prepare_upload_with_message,
+                            "Unable to determine file size",
+                        )
+                    )
+                    return@let
+                }
+
+                if (fileSize > maxSizeBytes) {
+                    val maxSizeMBStr = String.format(Locale.getDefault(), "%dMB", MAX_GALLERY_PHOTO_SIZE_MB)
+                    val fileSizeMBStr =
+                        String.format(Locale.getDefault(), "%.1fMB", fileSize / (1024.0 * 1024.0))
+                    val msg =
+                        context.getString(
+                            R.string.user_avatar_size_too_large_with_size_format,
+                            maxSizeMBStr,
+                            fileSizeMBStr,
+                        )
+                    ToastUtils.showShort(msg)
+                    return@let
+                }
+
                 runCatching {
                         val copiedFile = copyUriToTempFile(context, uri)
                         val finalUri =
@@ -1089,10 +1117,10 @@ private fun copyUriToTempFile(context: Context, uri: Uri): File? {
 }
 
 private suspend fun uploadGallery(context: Context, uri: Uri): String? {
-    // Check file size before processing - limit to 10MB
+    // Check file size before processing - keep consistent with gallery limit
     val fileSize = getFileSize(context, uri)
-    val maxSizeMB = 10
-    val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
+    val maxSizeMB = MAX_GALLERY_PHOTO_SIZE_MB
+    val maxSizeBytes = maxSizeMB * 1024 * 1024L
 
     // 如果无法确定文件大小（返回 0），拒绝上传以确保安全
     if (fileSize == 0L) {
