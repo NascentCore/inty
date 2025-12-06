@@ -41,6 +41,11 @@ class AgentSortOption(str, Enum):
     # Score-based random recommendation: 6 high-score agents + 4 random agents
     SCORE_BASED_RANDOM = "score_based_random"
 
+    # 根据角色能量点数排序；用户使用 app 聊天获得能力点数、每天签到也获得能量点数，然后可以以给角色增加能量点数
+    # 从而提升角色在排行榜中的排名。
+    # 目的是增强用户与角色的情感链接，提升用户对角色的喜爱程度。因为他们的互动行为会获得能量点数，所以可以提升角色在排行榜中的排名。
+    ENERGY_POINTS = "energy_points"
+
 
 class AgentSortConfig(BaseModel):
     """Agent sorting config"""
@@ -77,7 +82,7 @@ class AgentRecommendationRequest(BaseModel):
     sort: AgentSortOption = Field(
         default=AgentSortOption.CREATED_DESC,
         description=(
-            "Sort order: created_asc, created_desc, random, score_based_random"
+            "Sort order: created_asc, created_desc, random, score_based_random, energy_points"
         ),
     )
     sort_seed: str = Field(

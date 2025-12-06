@@ -1,5 +1,9 @@
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
+from app.core.config import global_config_loaded_from_config_yaml
+from app.models.agent import Agent
 from tests.app.api.test_client import TestClient
 
 
@@ -94,3 +98,117 @@ def test_create_agent_with_empty_background(
 
     # 清理：删除创建的 agent
     integration_client.delete_agent(agent["id"])
+
+
+@pytest.fixture
+def db_session():
+    """提供数据库会话用于测试"""
+    engine = create_engine(global_config_loaded_from_config_yaml.database.url)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    yield session
+    session.close()
+
+
+def test_recommend_agents_energy_points_sorting(
+    integration_client: TestClient, db_session
+):
+    """测试按 energy_points 排序推荐角色列表"""
+    # 创建多个 agent，设置不同的 points 值
+    agent_ids = []
+    points_values = [100, 50, 200, 0, 150]  # 降序应该是: 200, 150, 100, 50, 0
+
+    for i, points in enumerate(points_values):
+        agent_id = integration_client.create_agent(
+            name=f"Test Agent Points {points}",
+            visibility="PUBLIC",
+        )
+        agent_ids.append(agent_id)
+
+        # 直接更新数据库中的 points 值
+        agent = db_session.query(Agent).filter(Agent.id == agent_id).first()
+        assert agent is not None, f"Agent {agent_id} not found in database"
+        agent.points = points
+        db_session.commit()
+
+    try:
+        # 调用 recommend API，使用 energy_points 排序
+        response = integration_client.client.get(
+            f"{integration_client.base_url}/api/v1/ai/agents/recommend",
+            params={
+                "page": 1,
+                "page_size": 10,
+                "sort": "energy_points",
+            },
+        )
+
+        # 验证响应
+        assert response.status_code == 200, f"Request failed: {response.text}"
+        response_data = response.json()
+        assert response_data.get("code") == 200, f"API error: {response_data}"
+
+        # 验证返回的数据结构
+        data = response_data["data"]
+        assert "list" in data, "Response should contain 'list' field"
+        assert "total" in data, "Response should contain 'total' field"
+        assert "page" in data, "Response should contain 'page' field"
+        assert "page_size" in data, "Response should contain 'page_size' field"
+
+        items = data["list"]
+        assert isinstance(items, list), "List should be a list"
+
+        # 查找我们创建的 agents（可能还有其他公开的 agents）
+        our_agents = [
+            item for item in items if item["id"] in agent_ids
+        ]
+
+        # 验证我们的 agents 按 points 降序排列
+        # 由于 points 字段不在 API 响应中，我们需要从数据库查询 points 值
+        if len(our_agents) >= 2:
+            # 创建一个 agent_id 到 points 的映射
+            agent_points_map = {}
+            for agent_id in agent_ids:
+                agent = db_session.query(Agent).filter(Agent.id == agent_id).first()
+                if agent:
+                    agent_points_map[agent_id] = agent.points
+
+            # 验证排序：每个 agent 的 points 应该大于或等于下一个 agent 的 points
+            for i in range(len(our_agents) - 1):
+                current_agent_id = our_agents[i]["id"]
+                next_agent_id = our_agents[i + 1]["id"]
+                current_points = agent_points_map.get(current_agent_id, 0)
+                next_points = agent_points_map.get(next_agent_id, 0)
+                assert (
+                    current_points >= next_points
+                ), f"Agents should be sorted in descending order by points. "
+                f"Agent {current_agent_id} (points={current_points}) should come before "
+                f"Agent {next_agent_id} (points={next_points})"
+
+        # 验证分页功能
+        response_page2 = integration_client.client.get(
+            f"{integration_client.base_url}/api/v1/ai/agents/recommend",
+            params={
+                "page": 2,
+                "page_size": 3,
+                "sort": "energy_points",
+            },
+        )
+
+        assert (
+            response_page2.status_code == 200
+        ), f"Page 2 request failed: {response_page2.text}"
+        page2_data = response_page2.json()
+        assert page2_data.get("code") == 200, f"Page 2 API error: {page2_data}"
+
+        page2_items = page2_data["data"]["list"]
+        assert (
+            len(page2_items) <= 3
+        ), f"Page 2 should have at most 3 items, got {len(page2_items)}"
+        assert (
+            page2_data["data"]["page"] == 2
+        ), f"Page number should be 2, got {page2_data['data']['page']}"
+
+    finally:
+        # 清理：删除创建的 agents
+        for agent_id in agent_ids:
+            integration_client.delete_agent(agent_id)

@@ -128,7 +128,7 @@ async def recommend_agents(
     page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
     sort: schemas.AgentSortOption = Query(
         schemas.AgentSortOption.CREATED_DESC,
-        description="Sort order: created_asc, created_desc, random, score_based_random",
+        description="Sort order: created_asc, created_desc, random, score_based_random, energy_points",
     ),
     sort_seed: str = Query(
         "", description="Sort seed for deterministic random ordering"
@@ -143,6 +143,7 @@ async def recommend_agents(
     - created_asc: Oldest first
     - random: Random order (uses sort_seed for deterministic results)
     - score_based_random: Score-based recommendation (6 high-score agents + 4 random agents)
+    - energy_points: Sort by energy points in descending order (highest first)
 
     For score_based_random algorithm:
     - Returns 6 agents with highest scores (5-star first, then 4-star, etc.)
