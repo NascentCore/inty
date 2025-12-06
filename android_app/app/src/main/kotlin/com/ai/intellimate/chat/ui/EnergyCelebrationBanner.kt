@@ -12,11 +12,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -81,9 +81,7 @@ fun EnergyCelebrationBanner(
         exit = slideOutVertically { -it } + fadeOut(),
         modifier = modifier,
     ) {
-        currentCelebration?.let { data ->
-            EnergyCelebrationCard(data = data)
-        }
+        currentCelebration?.let { data -> EnergyCelebrationCard(data = data) }
     }
 
     LaunchedEffect(currentCelebration, enabled) {
@@ -106,10 +104,7 @@ private fun resolveCelebrationLevel(totalPoints: Int): EnergyCelebrationLevel? {
     return null
 }
 
-private data class EnergyCelebrationUiModel(
-    val level: EnergyCelebrationLevel,
-    val totalPoints: Int,
-)
+private data class EnergyCelebrationUiModel(val level: EnergyCelebrationLevel, val totalPoints: Int)
 
 enum class EnergyCelebrationLevel {
     First,
@@ -124,10 +119,11 @@ private fun EnergyCelebrationCard(data: EnergyCelebrationUiModel, modifier: Modi
     val iconTint: Color
     val textColor: Color
     val subtitleColor: Color
-    val iconVector = when (data.level) {
-        EnergyCelebrationLevel.First -> Icons.Rounded.AutoAwesome
-        else -> Icons.Rounded.EmojiEvents
-    }
+    val iconVector =
+        when (data.level) {
+            EnergyCelebrationLevel.First -> Icons.Rounded.AutoAwesome
+            else -> Icons.Rounded.EmojiEvents
+        }
 
     when (data.level) {
         EnergyCelebrationLevel.First -> {
@@ -156,32 +152,28 @@ private fun EnergyCelebrationCard(data: EnergyCelebrationUiModel, modifier: Modi
         }
     }
 
-    val primaryText = when (data.level) {
-        EnergyCelebrationLevel.First ->
-            stringResource(R.string.energy_points_first_title)
-        else ->
-            stringResource(
-                R.string.energy_points_tens_title,
-                data.totalPoints,
-            )
-    }
+    val primaryText =
+        when (data.level) {
+            EnergyCelebrationLevel.First -> stringResource(R.string.energy_points_first_title)
+            else -> stringResource(R.string.energy_points_tens_title, data.totalPoints)
+        }
 
-    val secondaryText = when (data.level) {
-        EnergyCelebrationLevel.First ->
-            stringResource(R.string.energy_points_first_subtitle)
-        EnergyCelebrationLevel.Tens ->
-            stringResource(R.string.energy_points_tens_subtitle)
-        EnergyCelebrationLevel.Hundreds ->
-            stringResource(R.string.energy_points_hundreds_subtitle)
-        EnergyCelebrationLevel.Thousands ->
-            stringResource(R.string.energy_points_thousands_subtitle)
-    }
+    val secondaryText =
+        when (data.level) {
+            EnergyCelebrationLevel.First -> stringResource(R.string.energy_points_first_subtitle)
+            EnergyCelebrationLevel.Tens -> stringResource(R.string.energy_points_tens_subtitle)
+            EnergyCelebrationLevel.Hundreds ->
+                stringResource(R.string.energy_points_hundreds_subtitle)
+            EnergyCelebrationLevel.Thousands ->
+                stringResource(R.string.energy_points_thousands_subtitle)
+        }
 
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .widthIn(max = 420.dp)
-            .shadow(elevation = 8.dp, shape = RoundedCornerShape(28.dp)),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .widthIn(max = 420.dp)
+                .shadow(elevation = 8.dp, shape = RoundedCornerShape(28.dp)),
         shape = RoundedCornerShape(28.dp),
         color = backgroundColor,
     ) {
@@ -203,7 +195,8 @@ private fun EnergyCelebrationCard(data: EnergyCelebrationUiModel, modifier: Modi
                     style =
                         MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = if (data.level == EnergyCelebrationLevel.First) 18.sp else 16.sp,
+                            fontSize =
+                                if (data.level == EnergyCelebrationLevel.First) 18.sp else 16.sp,
                         ),
                 )
                 Spacer(modifier = Modifier.height(4.dp))

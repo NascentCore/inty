@@ -64,7 +64,9 @@ class _FakeGeminiModels:
         return self._client._generate_images(model=model, prompt=prompt, config=config)
 
     def generate_content(self, *, model: str, contents, config):
-        return self._client._generate_content(model=model, contents=contents, config=config)
+        return self._client._generate_content(
+            model=model, contents=contents, config=config
+        )
 
 
 class FakeGeminiClient:

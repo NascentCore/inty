@@ -60,7 +60,6 @@ import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
-import com.ai.intellimate.boost.BoostState
 import com.ai.intellimate.boost.ui.BoostSheet
 import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatMorePanel
@@ -702,8 +701,7 @@ internal fun ChatPage(
             totalPoints = boostState.chatMessagePoints,
             enabled = isCurrentPage,
             modifier =
-                Modifier.align(Alignment.TopCenter)
-                    .padding(start = 16.dp, end = 16.dp, top = 16.dp),
+                Modifier.align(Alignment.TopCenter).padding(start = 16.dp, end = 16.dp, top = 16.dp),
         )
 
         ShowLimitDialog(chatViewModel)

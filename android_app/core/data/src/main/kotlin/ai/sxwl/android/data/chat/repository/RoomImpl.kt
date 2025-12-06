@@ -4,8 +4,8 @@ import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.SendMsgResponse
 import ai.sxwl.android.data.api.model.VoteConstants
 import ai.sxwl.android.data.api.model.VoteMessageRsp
-import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
+import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
@@ -164,9 +164,7 @@ class RoomImpl(
                     )
                 }
                 is HttpResult.Failure -> {
-                    LogUtils.e(
-                        "RoomImpl.loadMoreMessages failure for $agentId: ${result.message}"
-                    )
+                    LogUtils.e("RoomImpl.loadMoreMessages failure for $agentId: ${result.message}")
                 }
             }
         } catch (e: Exception) {
@@ -184,14 +182,8 @@ class RoomImpl(
 
         // 1) 先插入用户消息与loading占位
         // appendMessages会自动处理sortKey和timestamp的同步
-        val userMsg = MsgInfo(
-            content = content.trimEnd(),
-            role = "user",
-        )
-        val loadingMsg = MsgInfo(
-            content = LOADING_PLACEHOLDER_CONTENT,
-            role = ROLE_ASSISTANT,
-        )
+        val userMsg = MsgInfo(content = content.trimEnd(), role = "user")
+        val loadingMsg = MsgInfo(content = LOADING_PLACEHOLDER_CONTENT, role = ROLE_ASSISTANT)
 
         // 使用appendMessages，它会自动处理单调递增的sortKey和同步的timestamp
         localDataSource.appendMessages(agentId, listOf(userMsg, loadingMsg))
@@ -218,7 +210,9 @@ class RoomImpl(
             if (choices.isNotEmpty()) {
                 // appendMessages会自动处理sortKey和timestamp的同步
                 val assistantMsgs = choices.map { it.message }
-                LogUtils.d("RoomImpl.sendMessage saving ${assistantMsgs.size} assistant messages for agentId=$agentId")
+                LogUtils.d(
+                    "RoomImpl.sendMessage saving ${assistantMsgs.size} assistant messages for agentId=$agentId"
+                )
                 localDataSource.appendMessages(agentId, assistantMsgs)
             }
         }
@@ -234,9 +228,7 @@ class RoomImpl(
                 localDataSource.getMessagesFlow(agentId).value.isEmpty()
         ) {
             // 如果没有初始化或没有本地数据，使用正常的初始化流程
-            LogUtils.i(
-                "RoomImpl.syncLatestMessages calling ensureInitialHistory for $agentId"
-            )
+            LogUtils.i("RoomImpl.syncLatestMessages calling ensureInitialHistory for $agentId")
             ensureInitialHistory(agentId, pageSize)
             return
         }
@@ -297,9 +289,7 @@ class RoomImpl(
     }
 
     override fun updateMessageAudioUrl(agentId: String, messageId: String, audioUrl: String) {
-        LogUtils.d(
-            "RoomImpl.updateMessageAudioUrl called for $agentId, messageId: $messageId"
-        )
+        LogUtils.d("RoomImpl.updateMessageAudioUrl called for $agentId, messageId: $messageId")
         localDataSource.updateMessageAudioUrl(agentId, messageId, audioUrl)
     }
 
@@ -319,9 +309,7 @@ class RoomImpl(
         messageId: String,
         vote: String,
     ): HttpResult<VoteMessageRsp> {
-        LogUtils.d(
-            "RoomImpl.voteMessage called for $agentId, messageId: $messageId, vote: $vote"
-        )
+        LogUtils.d("RoomImpl.voteMessage called for $agentId, messageId: $messageId, vote: $vote")
 
         val result = remoteDataSource.voteMessage(agentId, messageId, vote)
 
@@ -383,9 +371,7 @@ class RoomImpl(
             }
 
         if (lastAssistantMessage == null) {
-            LogUtils.w(
-                "RoomImpl.recallLastAssistantMessage: No assistant message to recall"
-            )
+            LogUtils.w("RoomImpl.recallLastAssistantMessage: No assistant message to recall")
             return
         }
 
@@ -394,18 +380,12 @@ class RoomImpl(
 
         // 添加 loading 消息占位
         // appendMessages会自动处理sortKey和timestamp的同步
-        val loadingMsg = MsgInfo(
-            content = LOADING_PLACEHOLDER_CONTENT,
-            role = ROLE_ASSISTANT,
-        )
+        val loadingMsg = MsgInfo(content = LOADING_PLACEHOLDER_CONTENT, role = ROLE_ASSISTANT)
         localDataSource.appendMessages(agentId, listOf(loadingMsg))
 
         // 发送 recall 消息给服务器（类似 keep talking 的实现）
         // 服务器应该理解 "recall" 标记并重新生成最后一条AI消息
-        val recallMsg = MsgInfo(
-            content = "recall",
-            role = "user",
-        )
+        val recallMsg = MsgInfo(content = "recall", role = "user")
         val result =
             try {
                 remoteDataSource.sendMessage(agentId, listOf(recallMsg))
@@ -439,18 +419,14 @@ class RoomImpl(
     ): com.architecture.httplib.core.HttpResult<
         ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult
     > {
-        LogUtils.d(
-            "RoomImpl.generateImageForMessage called for $agentId, messageId: $messageId"
-        )
+        LogUtils.d("RoomImpl.generateImageForMessage called for $agentId, messageId: $messageId")
 
         // 找到触发消息生图的那条消息
         val messages = localDataSource.getMessagesFlow(agentId).value
         val sourceMessage = messages.find { it.id == messageId || it.localMsgId == messageId }
 
         if (sourceMessage == null) {
-            LogUtils.e(
-                "RoomImpl.generateImageForMessage: source message not found: $messageId"
-            )
+            LogUtils.e("RoomImpl.generateImageForMessage: source message not found: $messageId")
             return HttpResult.Failure("Source message not found", -1)
         }
 
@@ -477,9 +453,7 @@ class RoomImpl(
                         height = result.data.height,
                     )
                 localDataSource.updateMessageGeneratedImage(agentId, messageId, generatedImage)
-                LogUtils.i(
-                    "RoomImpl.generateImageForMessage success: ${result.data.imageUrl}"
-                )
+                LogUtils.i("RoomImpl.generateImageForMessage success: ${result.data.imageUrl}")
             }
 
             is HttpResult.Failure -> {

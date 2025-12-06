@@ -487,7 +487,9 @@ private fun AgentGeneratedImagesSection(
             color = Color.White.copy(alpha = 0.7f),
         )
         Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionSpacing))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(UiConfigs.CharacterGallery.ImageSpacing)) {
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(UiConfigs.CharacterGallery.ImageSpacing)
+        ) {
             items(
                 images,
                 key = { image ->

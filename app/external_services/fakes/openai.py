@@ -92,7 +92,9 @@ class _FakeCompletionsAPI:
 
         # Lookup specific response or fall back to random
         key = _make_request_key(messages, model)
-        if key in self._client._responses_by_request:  # noqa: SLF001 (private access in test fake)
+        if (
+            key in self._client._responses_by_request
+        ):  # noqa: SLF001 (private access in test fake)
             content = self._client._responses_by_request[key]
         else:
             content = self._client._random_content()
@@ -169,4 +171,4 @@ __all__ = [
     "FakeChatChoice",
     "FakeChatMessage",
     "FakeChatUsage",
-] 
+]
