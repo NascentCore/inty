@@ -34,14 +34,13 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.UiConfigs
 import kotlinx.coroutines.delay
 
 private const val CDN_IMAGE_QUALITY = 80
 private const val CDN_STATIC_BACKGROUND_WIDTH = 1080
 private const val TOP_GRADIENT_HEIGHT_DP = 120
 private const val BOTTOM_GRADIENT_HEIGHT_DP = 300
-private const val VIDEO_FIRST_PLAY_COUNT = 2
-private const val VIDEO_MESSAGE_PLAY_COUNT = 1
 
 private fun isVideoUrl(url: String?): Boolean {
     if (url.isNullOrBlank()) return false
@@ -122,6 +121,15 @@ fun AgentBackground(
     var hasCompletedPageSwitchPlay by remember(agentInfo?.id) { mutableStateOf(false) }
     var isLoadingTriggeredPlay by remember { mutableStateOf(false) }
 
+    /**
+     * 页面切换触发：进入聊天页面或切换 Agent 时，如果存在背景动图且未完成过页面切换播放，则播放 2 次
+     *
+     * 触发条件：
+     * - agentInfo?.id、backgroundAnimatedUrl 或 isCurrentPage 变化
+     * - backgroundAnimatedUrl != null 且 isCurrentPage == true
+     * - 对于视频：需要视频已缓存（isVideoCached）且未完成过页面切换播放（!hasCompletedPageSwitchPlay）
+     * - 对于动图（GIF/WebP/AVIF）：只需要未完成过页面切换播放
+     */
     LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage) {
         shouldPlayPageSwitch = false
         if (backgroundAnimatedUrl != null && isCurrentPage) {
@@ -162,6 +170,17 @@ fun AgentBackground(
         }
     }
 
+    /**
+     * 消息加载触发：当消息列表中存在 content == "loading_animation" 且没有生成图片的消息时，播放 1 次
+     *
+     * 触发条件：
+     * - isLoading 变为 true（即 hasLoadingMessage == true）
+     * - backgroundAnimatedUrl != null 且 isCurrentPage == true
+     * - 对于视频：需要视频已缓存（isVideoCached）且当前未在播放（!isVideoPlaying）
+     * - 对于动图：只需要当前未在播放
+     *
+     * 播放次数：UiConfigs.AnimatedBackground.VIDEO_MESSAGE_PLAY_COUNT = 1
+     */
     LaunchedEffect(isLoading, backgroundAnimatedUrl, isVideoCached, isCurrentPage, isVideoPlaying) {
         if (isLoading && backgroundAnimatedUrl != null && isCurrentPage) {
             val isVideo = isVideoUrl(backgroundAnimatedUrl)
@@ -172,10 +191,18 @@ fun AgentBackground(
         }
     }
 
+    /**
+     * 最终播放条件：满足任一触发条件（页面切换或消息加载）且当前页面处于激活状态
+     * - shouldPlayPageSwitch: 页面切换触发（播放 2 次）
+     * - shouldPlayLoading: 消息加载触发（播放 1 次）
+     * - isLoadingTriggeredPlay && isVideoPlaying: 加载触发后继续播放
+     */
     val shouldPlay =
         (shouldPlayPageSwitch || shouldPlayLoading || (isLoadingTriggeredPlay && isVideoPlaying)) &&
             isCurrentPage
-    val playCount = if (shouldPlayPageSwitch) VIDEO_FIRST_PLAY_COUNT else VIDEO_MESSAGE_PLAY_COUNT
+    val playCount =
+        if (shouldPlayPageSwitch) UiConfigs.AnimatedBackground.VIDEO_FIRST_PLAY_COUNT
+        else UiConfigs.AnimatedBackground.VIDEO_MESSAGE_PLAY_COUNT
 
     Box(modifier = modifier.fillMaxSize().clipToBounds()) {
         if (backgroundAnimatedUrl != null) {
