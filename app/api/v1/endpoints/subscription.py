@@ -327,7 +327,7 @@ def _verify_webhook_signature(body: bytes, signature: str) -> bool:
 @router.post(
     "/admin/plans",
     response_model=APIResponse[SubscriptionPlan],
-    include_in_openapi=False,
+    include_in_schema=False,
     tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def create_subscription_plan(
@@ -358,7 +358,7 @@ async def create_subscription_plan(
 @router.get(
     "/admin/plans",
     response_model=APIResponse[List[SubscriptionPlan]],
-    include_in_openapi=False,
+    include_in_schema=False,
     tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def get_all_subscription_plans(
@@ -437,7 +437,7 @@ async def get_user_usage_statistics_admin(
 @router.post(
     "/admin/refund",
     response_model=APIResponse[RefundResponse],
-    include_in_openapi=False,
+    include_in_schema=False,
     tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def process_manual_refund(
