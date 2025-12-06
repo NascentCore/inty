@@ -101,8 +101,6 @@ resources:
                   retrieve: get /api/v1/ai/agents/{agent_id}
                   update: put /api/v1/ai/agents/{agent_id}
                   delete: delete /api/v1/ai/agents/{agent_id}
-                  follow_agent: post /api/v1/ai/agents/{agent_id}/follow
-                  unfollow_agent: delete /api/v1/ai/agents/{agent_id}/follow
                 subresources:
                   image_generation:
                     subresources:
