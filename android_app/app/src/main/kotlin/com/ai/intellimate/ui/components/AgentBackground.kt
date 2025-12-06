@@ -37,8 +37,6 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import kotlinx.coroutines.delay
 
-private const val CDN_IMAGE_QUALITY = 80
-private const val CDN_STATIC_BACKGROUND_WIDTH = 1080
 private const val TOP_GRADIENT_HEIGHT_DP = 120
 private const val BOTTOM_GRADIENT_HEIGHT_DP = 300
 
@@ -201,8 +199,8 @@ fun AgentBackground(
         (shouldPlayPageSwitch || shouldPlayLoading || (isLoadingTriggeredPlay && isVideoPlaying)) &&
             isCurrentPage
     val playCount =
-        if (shouldPlayPageSwitch) UiConfigs.AnimatedBackground.VIDEO_FIRST_PLAY_COUNT
-        else UiConfigs.AnimatedBackground.VIDEO_MESSAGE_PLAY_COUNT
+        if (shouldPlayPageSwitch) UiConfigs.CharacterProfile.VIDEO_FIRST_PLAY_COUNT
+        else UiConfigs.CharacterProfile.VIDEO_MESSAGE_PLAY_COUNT
 
     Box(modifier = modifier.fillMaxSize().clipToBounds()) {
         if (backgroundAnimatedUrl != null) {
@@ -240,8 +238,8 @@ fun AgentBackground(
                             .data(
                                 getCdnImageUrl(
                                     staticImageUrl,
-                                    width = CDN_STATIC_BACKGROUND_WIDTH,
-                                    quality = CDN_IMAGE_QUALITY,
+                                    width = UiConfigs.CharacterProfile.CDN_STATIC_BACKGROUND_WIDTH,
+                                    quality = UiConfigs.CharacterProfile.CDN_IMAGE_QUALITY,
                                 ) ?: staticImageUrl
                             )
                             .size(Size(containerWidthPx, containerHeightPx))
