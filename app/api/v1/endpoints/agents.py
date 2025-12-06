@@ -56,14 +56,6 @@ async def get_current_superuser(
 
 
 @router.get(
-    "/",
-    response_model=schemas.APIResponse[List[schemas.Agent]],
-    deprecated=True,
-    include_in_schema=False,
-    summary="[Deprecated, use /me, kept for v1.0.3 compatibility]",
-    tags=[NOT_USED_TAG],
-)
-@router.get(
     "/me",
     response_model=schemas.APIResponse[List[schemas.Agent]],
     summary="Get list of user's created AI characters",
@@ -161,26 +153,6 @@ async def recommend_agents(
     return schemas.APIResponse.success(data=pagination_data)
 
 
-@router.get(
-    "/following",
-    response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
-    tags=[WEB_APP_TAG, NOT_USED_TAG],
-)
-async def get_following_agents(
-    db: AsyncSession = Depends(deps.get_async_db),
-    page: int = Query(1, ge=1, description="Page number, starting from 1"),
-    page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    Get current user's followed AI agents list
-    """
-    pagination_data = await agent_service.get_user_followed_agents(
-        db, user_id=current_user.id, page=page, page_size=page_size
-    )
-    return schemas.APIResponse.success(data=pagination_data)
-
-
 ########################################################
 # To test create agent API:
 # curl -X POST "http://localhost:8000/api/v1/ai/agents" \
@@ -198,15 +170,6 @@ async def get_following_agents(
 #     "background": "<background_image_url>"
 #   }'
 ########################################################
-@router.post(
-    "/",
-    response_model=schemas.APIResponse[Union[schemas.Agent, Dict[str, Any]]],
-    deprecated=True,
-    include_in_schema=False,
-    summary="Deprecated, use /api/v1/ai/agents instead, kept for v1.0.3 compatibility",
-    description="Deprecated, use /api/v1/ai/agents instead, kept for v1.0.3 compatibility",
-    tags=[NOT_USED_TAG],
-)
 @router.post(
     "",
     response_model=schemas.APIResponse[Union[schemas.Agent, Dict[str, Any]]],
@@ -277,56 +240,6 @@ async def get_agent(
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     return agent
-
-
-@router.post(
-    "/{agent_id}/follow",
-    response_model=schemas.APIResponse[dict],
-    tags=[WEB_APP_TAG, NOT_USED_TAG],
-)
-async def follow_agent(
-    *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    Follow AI agent
-    """
-    try:
-        await agent_service.follow_agent(db, agent_id=agent_id, user_id=current_user.id)
-        return schemas.APIResponse.success(data={"message": "Successfully followed"})
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to follow AI agent: {str(e)}")
-        return schemas.APIResponse.error(message="Failed to follow")
-
-
-@router.delete(
-    "/{agent_id}/follow",
-    response_model=schemas.APIResponse[dict],
-    tags=[WEB_APP_TAG, NOT_USED_TAG],
-)
-async def unfollow_agent(
-    *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    Unfollow AI agent
-    """
-    try:
-        await agent_service.unfollow_agent(
-            db, agent_id=agent_id, user_id=current_user.id
-        )
-        return schemas.APIResponse.success(data={"message": "Successfully unfollowed"})
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to unfollow AI agent: {str(e)}")
-        return schemas.APIResponse.error(message="Failed to unfollow")
 
 
 @router.put(
@@ -574,15 +487,6 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
 
 
 @router.post(
-    "/generate_background",
-    response_model=APIResponse[dict],
-    deprecated=True,
-    include_in_schema=False,
-    summary="Deprecated, use /generate_background instead",
-    description="Deprecated, use /generate_background instead",
-    tags=[NOT_USED_TAG],
-)
-@router.post(
     "/text-to-image",
     response_model=APIResponse[dict],
     summary="[Deprecated, use /api/v1/images/text-to-image instead] Generate images based on text description",
@@ -753,34 +657,6 @@ async def generate_background(
             return APIResponse.error(
                 message=f"Background image generation failed: {error_message}"
             )
-
-
-@router.get(
-    "/creator/{creator_id}/stats",
-    # Not used by anyone
-    deprecated=True,
-    include_in_schema=False,
-    response_model=schemas.APIResponse[schemas.CreatorAgentStats],
-    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
-)
-async def get_creator_agent_stats(
-    *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    creator_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    获取创建者的公共角色统计信息
-    返回创建者创建的公共角色数量和所有公共角色的总关注数
-    """
-    try:
-        stats = await agent_service.get_creator_agent_stats(db, creator_id=creator_id)
-        return schemas.APIResponse.success(data=stats)
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"获取创建者角色统计失败: {str(e)}")
-        return schemas.APIResponse.error(message="Failed to get statistics")
 
 
 # ==================== 角色卡相关API端点 ====================

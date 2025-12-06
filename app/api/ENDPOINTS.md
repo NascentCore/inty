@@ -39,12 +39,8 @@
 | `/api/v1/ai/agents/me` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/search` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/recommend` | GET | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/following` | GET | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/` | POST | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents` | POST | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}` | GET | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/{agent_id}/follow` | POST | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/{agent_id}/follow` | DELETE | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}` | PUT | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}` | DELETE | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}/generate-background-animated` | POST | `app/api/v1/endpoints/agents.py` |
@@ -151,6 +147,19 @@
 |------|------|----------|
 | `/api/v1/version/check` | POST | `app/api/v1/endpoints/version.py` |
 
+### 角色主题 (Character Themes)
+
+| 路径 | 方法 | 实现文件 |
+|------|------|----------|
+| `/api/v1/character-themes/` | POST | `app/api/v1/endpoints/character_themes.py` |
+| `/api/v1/character-themes/` | GET | `app/api/v1/endpoints/character_themes.py` |
+| `/api/v1/character-themes/{theme_id}` | GET | `app/api/v1/endpoints/character_themes.py` |
+| `/api/v1/character-themes/{theme_id}` | PUT | `app/api/v1/endpoints/character_themes.py` |
+| `/api/v1/character-themes/{theme_id}` | DELETE | `app/api/v1/endpoints/character_themes.py` |
+| `/api/v1/character-themes/{theme_id}/agents` | POST | `app/api/v1/endpoints/character_themes.py` |
+| `/api/v1/character-themes/{theme_id}/agents/{agent_id}` | DELETE | `app/api/v1/endpoints/character_themes.py` |
+| `/api/v1/character-themes/{theme_id}/agents/reorder` | PUT | `app/api/v1/endpoints/character_themes.py` |
+
 ### 评测 (Evaluation)
 
 | 路径 | 方法 | 实现文件 |
@@ -206,4 +215,3 @@
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
 | `/api/v2/ai/agents/recommend` | GET | `app/api/v2/endpoints/agents.py` |
-

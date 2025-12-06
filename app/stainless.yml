@@ -97,13 +97,10 @@ resources:
                   list: get /api/v1/ai/agents/me
                   search: get /api/v1/ai/agents/search
                   recommend: get /api/v1/ai/agents/recommend
-                  following: get /api/v1/ai/agents/following
                   create: post /api/v1/ai/agents
                   retrieve: get /api/v1/ai/agents/{agent_id}
                   update: put /api/v1/ai/agents/{agent_id}
                   delete: delete /api/v1/ai/agents/{agent_id}
-                  follow_agent: post /api/v1/ai/agents/{agent_id}/follow
-                  unfollow_agent: delete /api/v1/ai/agents/{agent_id}/follow
                 subresources:
                   image_generation:
                     subresources:
