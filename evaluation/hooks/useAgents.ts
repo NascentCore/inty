@@ -40,6 +40,10 @@ interface UseAgentsReturn {
   clearCache: () => void;
 }
 
+const isFile = (value: unknown): value is File => {
+  return value instanceof File;
+};
+
 export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
   const {
     type = "all",
@@ -173,8 +177,12 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         // 2. 因此，当数据传递到 createAgent 时，data.avatar 可能是两种情况：
         //    - File 对象：需要在这里上传（用于直接传入 File 的场景，如某些 API 调用）
         //    - 字符串 URL：已经在 AgentManagePage 中上传过了，直接使用，避免重复上传
-        // 3. 通过 instanceof File 检查来区分这两种情况，只对 File 对象执行上传操作
-        if (data.avatar && data.avatar instanceof File) {
+        // 3. 通过类型守卫检查来区分这两种情况，只对 File 对象执行上传操作
+        if (
+          data.avatar &&
+          typeof data.avatar !== "string" &&
+          isFile(data.avatar)
+        ) {
           // data.avatar 是 File 对象，需要上传
           try {
             const uploadResponse = await api
@@ -240,7 +248,11 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
 
         // 如果有头像文件，先上传头像
         // 检查 data.avatar 是否是 File 对象（需要上传）还是字符串 URL（已经上传过了）
-        if (data.avatar && data.avatar instanceof File) {
+        if (
+          data.avatar &&
+          typeof data.avatar !== "string" &&
+          isFile(data.avatar)
+        ) {
           try {
             const uploadResponse = await api
               .getIntyClient()
