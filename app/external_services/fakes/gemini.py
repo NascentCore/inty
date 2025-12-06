@@ -7,6 +7,8 @@ from typing import Dict, List, Optional
 
 from PIL import Image
 
+from app.external_services.gcs import upload_to_gcs
+
 
 @dataclass
 class _FakeGeneratedImageResponse:
@@ -92,7 +94,25 @@ class FakeGeminiClient:
         for index in range(count):
             gcs_uri = self._build_gcs_uri(gcs_base, index)
             https_uri = self._convert_to_https(gcs_uri)
-            self._generated_bytes[https_uri] = self._make_image_bytes(index)
+            image_bytes = self._make_image_bytes(index)
+
+            # 存储到内存（用于 download_image 方法）
+            self._generated_bytes[https_uri] = image_bytes
+
+            # 实际上传图片到 FakeGCS，以便 download_from_gcs 可以找到
+            # 从 gs://bucket/path 格式提取 bucket 和 path
+            if gcs_uri.startswith("gs://"):
+                gcs_path = gcs_uri[5:]  # 移除 "gs://" 前缀
+                if "/" in gcs_path:
+                    bucket_name, file_path = gcs_path.split("/", 1)
+                    # 上传到 FakeGCS
+                    upload_to_gcs(
+                        image_bytes,
+                        "image/jpeg",
+                        bucket_name,
+                        file_path,
+                    )
+
             generated_images.append(
                 _FakeGeneratedImage(
                     image=_FakeGeneratedImageContent(gcs_uri=gcs_uri),

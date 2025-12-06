@@ -16,6 +16,7 @@ from app.db.session import AsyncSessionLocal
 from app.external_services.gcs import (
     download_from_gcs,
     get_bucket_and_path_from_gcs_url,
+    get_gcs_client,
 )
 from app.schemas.agent import AgentUpdate, ModelConfig
 from app.schemas.user import UserCreate
@@ -68,29 +69,34 @@ async def db_session():
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Do not have access to gcs")
 async def test_crop_avatar_from_background():
-    bucket_name, path = get_bucket_and_path_from_gcs_url(
-        "https://storage.googleapis.com/yx-test/Screenshot_20250815_213911-cropped-avatar.png")
-    bucket = storage.Client.from_service_account_json(
-        global_config_loaded_from_config_yaml.app.gcp_service_account_key
-    ).bucket(bucket_name)
-    try:
-        bucket.blob(path).delete()
-    except Exception:
-        pass
+    random_filename = f"frontal-{uuid.uuid4().hex}"
+    expected_avatar_url = (
+        f"https://storage.googleapis.com/yx-test/{random_filename}-cropped-avatar.png"
+    )
+    bucket_name, path = get_bucket_and_path_from_gcs_url(expected_avatar_url)
+    gcs_client = get_gcs_client()
+    bucket = gcs_client.bucket(bucket_name)
 
     assert not bucket.blob(path).exists()
 
+    # 上传 tests/files/frontal.png
+    with open("tests/files/frontal.png", "rb") as f:
+        file_content = f.read()
+    gcs_client.bucket("yx-test").blob(f"{random_filename}.png").upload_from_string(
+        file_content
+    )
+
     crop_avatar_result = await _crop_avatar_from_background(
-        "https://storage.cloud.google.com/yx-test/Screenshot_20250815_213911.png",
+        f"https://storage.cloud.google.com/yx-test/{random_filename}.png",
     )
     cropped_avatar_url = crop_avatar_result.avatar_url
-    assert cropped_avatar_url == "https://storage.googleapis.com/yx-test/Screenshot_20250815_213911-cropped-avatar.png"
+    assert cropped_avatar_url == expected_avatar_url
     logger.info(f"Cropped avatar URL: {cropped_avatar_url}")
-    jpe_data = download_from_gcs(cropped_avatar_url)
-    image = Image.open(io.BytesIO(jpe_data))
-    image.show()
+    # 本地运行时，可以打开图片查看
+    # jpe_data = download_from_gcs(cropped_avatar_url)
+    # image = Image.open(io.BytesIO(jpe_data))
+    # image.show()
 
 
 def test_update_agent_in_db():

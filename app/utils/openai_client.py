@@ -17,7 +17,8 @@ from loguru import logger
 from openai import OpenAI
 from typing_extensions import deprecated
 
-from app.core.config import global_config_loaded_from_config_yaml
+from app.core.config import Environment, global_config_loaded_from_config_yaml
+from app.external_services.fakes.openai import FakeOpenAI
 
 
 class Role(StrEnum):
@@ -70,8 +71,6 @@ def _create_openai_client():
 
     if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
         logger.info("Using FakeOpenAI in test environment")
-        from tests.fakes.openai import FakeOpenAI
-
         return FakeOpenAI()
 
     return OpenAI(
@@ -117,9 +116,6 @@ def wrap_client_with_langsmith(
         包装后的OpenAI客户端，带有LangSmith追踪功能
     """
     # 在测试环境，如果是 FakeOpenAI，直接返回，不进行 LangSmith 包装
-    from app.core.config import Environment
-    from tests.fakes.openai import FakeOpenAI
-
     if (
         global_config_loaded_from_config_yaml.app.environment == Environment.TEST
         and isinstance(client, FakeOpenAI)

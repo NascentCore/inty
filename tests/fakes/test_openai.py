@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tests.fakes.openai import FakeOpenAI
+from app.external_services.fakes.openai import FakeOpenAI
 
 
 def test_returns_random_for_unspecified_request():
