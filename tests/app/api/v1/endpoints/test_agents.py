@@ -53,7 +53,6 @@ def db_session():
     session.close()
 
 
-@pytest.mark.noci
 def test_text_to_image_endpoint(integration_client: TestClient, db_session):
     """测试图片生成功能，使用正式用户（非 guest）"""
     # 创建正式用户（EMAIL 类型）用于测试图片生成
