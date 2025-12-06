@@ -645,6 +645,8 @@ async def get_recommended_agents_paginated(
                 sort_order = models.Agent.created_at.asc()
             elif sort_by == AgentSortOption.RANDOM:
                 sort_order = get_deterministic_random_order(sort_seed)
+            elif sort_by == AgentSortOption.ENERGY_POINTS:
+                sort_order = desc(models.Agent.points)
             else:  # 默认为 CREATED_DESC
                 sort_order = desc(models.Agent.created_at)
 

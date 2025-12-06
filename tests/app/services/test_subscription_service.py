@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
@@ -38,8 +39,9 @@ class TestSubscriptionService:
         mock_db.execute.return_value = mock_result
 
         # Create a mock user object
+        random_user_id = str(uuid.uuid4())
         user = User(
-            id="user-123",
+            id=random_user_id,
             readable_id="user123",
             email="test@example.com",
             auth_type="google",
@@ -60,7 +62,7 @@ class TestSubscriptionService:
 
         # Verify the subscription status was called
         subscription_service.get_user_subscription_status.assert_called_once_with(
-            mock_db, "user-123"
+            mock_db, random_user_id
         )
 
         # Verify the database query was executed
@@ -76,8 +78,9 @@ class TestSubscriptionService:
         mock_google_play_service = AsyncMock(spec=GooglePlayService)
 
         subscription_service = SubscriptionService(mock_google_play_service)
+        random_user_id = str(uuid.uuid4())
         user = User(
-            id="user-123",
+            id=random_user_id,
             readable_id="user123",
             email="test@example.com",
             auth_type="google",
@@ -99,8 +102,9 @@ class TestSubscriptionService:
         mock_google_play_service = AsyncMock(spec=GooglePlayService)
 
         subscription_service = SubscriptionService(mock_google_play_service)
+        random_user_id = str(uuid.uuid4())
         user = User(
-            id="guest-123",
+            id=random_user_id,
             readable_id="guest123",
             email=None,
             auth_type="GUEST",
@@ -134,8 +138,9 @@ class TestSubscriptionService:
         mock_result.scalar.return_value = 2  # User has generated 2 images in 24h
         mock_db.execute.return_value = mock_result
 
+        random_user_id = str(uuid.uuid4())
         user = User(
-            id="user-123",
+            id=random_user_id,
             readable_id="user123",
             email="test@example.com",
             auth_type="google",
@@ -168,9 +173,9 @@ class TestSubscriptionService:
         mock_result = MagicMock()
         mock_result.scalar.return_value = 5  # User has generated 5 images in 24h
         mock_db.execute.return_value = mock_result
-
+        random_user_id = str(uuid.uuid4())
         user = User(
-            id="user-123",
+            id=random_user_id,
             readable_id="user123",
             email="test@example.com",
             auth_type="google",
@@ -204,8 +209,9 @@ class TestSubscriptionService:
         mock_result.scalar.return_value = 3  # User has created 3 agents in 24h
         mock_db.execute.return_value = mock_result
 
+        random_user_id = str(uuid.uuid4())
         user = User(
-            id="user-123",
+            id=random_user_id,
             readable_id="user123",
             email="test@example.com",
             auth_type="google",
@@ -239,8 +245,9 @@ class TestSubscriptionService:
         mock_result.scalar.return_value = 8  # User has created 8 agents in 24h
         mock_db.execute.return_value = mock_result
 
+        random_user_id = str(uuid.uuid4())
         user = User(
-            id="user-123",
+            id=random_user_id,
             readable_id="user123",
             email="test@example.com",
             auth_type="google",
@@ -276,8 +283,9 @@ class TestSubscriptionService:
         )
         mock_db.execute.return_value = mock_result
 
+        random_user_id = str(uuid.uuid4())
         user = User(
-            id="user-123",
+            id=random_user_id,
             readable_id="user123",
             email="test@example.com",
             auth_type="google",
