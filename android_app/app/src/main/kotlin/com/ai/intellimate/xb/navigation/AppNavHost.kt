@@ -14,19 +14,35 @@ import com.ai.intellimate.SplashLoginUI
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.settings.SettingScreen
 
+/**
+ * 应用导航宿主组件
+ * 
+ * 这是应用的根导航容器，负责管理应用内所有主要页面的导航和转场动画。
+ * 使用 Jetpack Compose Navigation 实现页面间的路由和跳转。
+ * 
+ * @param page 初始页面路由，决定应用启动时显示的第一个页面（如登录页或主页）
+ * @param mainViewModel 主视图模型，用于管理应用级别的状态和数据
+ * @param chatViewModel 聊天视图模型，用于管理聊天相关的状态
+ * @param factory ViewModel 工厂，用于创建和管理 ViewModel 实例
+ */
 @Composable
 fun AppNavHost(page: String, mainViewModel: MainViewModel, chatViewModel: ChatViewModel, factory: ViewModelProvider.Factory) {
+    // 创建并记住导航控制器，用于管理页面导航栈
     val navController = rememberNavController()
 
+    // 配置导航宿主，定义所有可导航的页面和转场动画
     NavHost(
         navController = navController,
+        // 设置启动时的初始页面，根据登录状态动态决定（登录页或主页）
         startDestination = page,
+        // 进入新页面时的转场动画：从右侧滑入 + 淡入效果，持续 400ms
         enterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Start,
                 animationSpec = tween(400)
             ) + fadeIn(animationSpec = tween(400))
         },
+        // 返回上一页时的转场动画：从左侧滑入 + 淡入效果，持续 400ms
         popEnterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.End,
@@ -34,9 +50,12 @@ fun AppNavHost(page: String, mainViewModel: MainViewModel, chatViewModel: ChatVi
             ) + fadeIn(animationSpec = tween(400))
         },
     ) {
+        // 定义登录/启动页面路由
         composable(Routes.SplashLogin) {
             SplashLoginUI(navController = navController, mainViewModel = mainViewModel)
         }
+        
+        // 定义主页标签页路由（包含 Explore、Messages、Me 等底部导航）
         composable(Routes.HomeTab) {
             HomeScreen(
                 navController = navController,
@@ -45,6 +64,7 @@ fun AppNavHost(page: String, mainViewModel: MainViewModel, chatViewModel: ChatVi
             )
         }
 
+        // 定义设置页面路由
         composable(Routes.Settings) {
             SettingScreen(
                 navController,
