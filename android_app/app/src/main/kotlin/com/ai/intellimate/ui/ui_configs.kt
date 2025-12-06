@@ -229,4 +229,12 @@ object UiConfigs {
             return visibilityState ?: RemixButtonVisibilityManager.getCurrentVisibility()
         }
     }
+
+    object AnimatedBackground {
+        /** 页面切换时的播放次数 */
+        const val VIDEO_FIRST_PLAY_COUNT = 2
+
+        /** 消息加载时的播放次数 */
+        const val VIDEO_MESSAGE_PLAY_COUNT = 1
+    }
 }
