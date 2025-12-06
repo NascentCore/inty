@@ -11,9 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, WEB_APP_TAG, NOT_USED_TAG
+from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, NOT_USED_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.config import global_config_loaded_from_config_yaml
+
+# SQLAlchemy 模型需要用不同的别名
+from app.models.subscription import UserSubscription as UserSubscriptionModel
 from app.schemas.response import APIResponse
 from app.schemas.subscription import (
     GooglePlayPurchaseRequest,
@@ -27,9 +30,6 @@ from app.schemas.subscription import (
     UsageStatisticsResponse,
     UserSubscription,
 )
-
-# SQLAlchemy 模型需要用不同的别名
-from app.models.subscription import UserSubscription as UserSubscriptionModel
 from app.services.global_services import subscription_service
 
 router = APIRouter(prefix="/subscription", route_class=LoggerRoute)
@@ -327,6 +327,7 @@ def _verify_webhook_signature(body: bytes, signature: str) -> bool:
 @router.post(
     "/admin/plans",
     response_model=APIResponse[SubscriptionPlan],
+    include_in_schema=False,
     tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def create_subscription_plan(
@@ -357,6 +358,7 @@ async def create_subscription_plan(
 @router.get(
     "/admin/plans",
     response_model=APIResponse[List[SubscriptionPlan]],
+    include_in_schema=False,
     tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def get_all_subscription_plans(
@@ -435,6 +437,7 @@ async def get_user_usage_statistics_admin(
 @router.post(
     "/admin/refund",
     response_model=APIResponse[RefundResponse],
+    include_in_schema=False,
     tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def process_manual_refund(
