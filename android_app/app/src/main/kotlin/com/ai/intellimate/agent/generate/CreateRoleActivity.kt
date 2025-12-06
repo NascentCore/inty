@@ -295,6 +295,10 @@ private fun CreateRolePage(
     val croppedInitial =
         if (isEditMode) editCroppedAvatar else savedDraft?.croppedAvatarUrl ?: editCroppedAvatar
     var croppedAvatarUrl by remember(croppedInitial) { mutableStateOf<String?>(croppedInitial) }
+    var croppedAvatarPreviewUrl by remember(croppedInitial) {
+        mutableStateOf<String?>(croppedInitial)
+    }
+    var isUploadingCroppedAvatar by remember { mutableStateOf(false) }
     val avatarPromptInitial = if (isEditMode) "" else savedDraft?.avatarPrompt.orEmpty()
     var avatarPrompt by remember(avatarPromptInitial) { mutableStateOf(avatarPromptInitial) }
 
@@ -302,7 +306,11 @@ private fun CreateRolePage(
     LaunchedEffect(Unit) {
         snapshotFlow { selectedImageIndex }
             .drop(1) // 跳过初始值，只在真正改变时触发
-            .collect { croppedAvatarUrl = null }
+            .collect {
+                croppedAvatarUrl = null
+                croppedAvatarPreviewUrl = null
+                isUploadingCroppedAvatar = false
+            }
     }
 
     // Track original uploaded image URL (for background) when uploading from gallery
@@ -382,6 +390,8 @@ private fun CreateRolePage(
                         LogUtils.i("Activity lifecycle DESTROYED: clearing gallery upload flags")
                         isUploadingFromGallery = false
                         originalUploadedImageUrl = null
+                        isUploadingCroppedAvatar = false
+                        croppedAvatarPreviewUrl = croppedAvatarUrl
                     }
                     else -> {}
                 }
@@ -398,6 +408,8 @@ private fun CreateRolePage(
                     val resultUri = UCrop.getOutput(data)
                     if (resultUri != null) {
                         LogUtils.i("Avatar cropped successfully: $resultUri")
+                        croppedAvatarPreviewUrl = resultUri.toString()
+                        isUploadingCroppedAvatar = true
 
                         // Upload the cropped image to server
                         try {
@@ -419,6 +431,8 @@ private fun CreateRolePage(
                                             withContext(Dispatchers.Main) {
                                                 // Face edit: update cropped avatar
                                                 croppedAvatarUrl = uploadedUrl
+                                                croppedAvatarPreviewUrl = uploadedUrl
+                                                isUploadingCroppedAvatar = false
                                                 ToastUtils.showShort(
                                                     R.string.toast_avatar_cropped_uploaded
                                                 )
@@ -430,6 +444,8 @@ private fun CreateRolePage(
                                             withContext(Dispatchers.Main) {
                                                 isUploadingFromGallery = false
                                                 originalUploadedImageUrl = null
+                                                isUploadingCroppedAvatar = false
+                                                croppedAvatarPreviewUrl = croppedAvatarUrl
                                                 ToastUtils.showShort(
                                                     context.getString(
                                                         R.string.toast_upload_failed_with_message,
@@ -444,6 +460,8 @@ private fun CreateRolePage(
                                     withContext(Dispatchers.Main) {
                                         isUploadingFromGallery = false
                                         originalUploadedImageUrl = null
+                                        isUploadingCroppedAvatar = false
+                                        croppedAvatarPreviewUrl = croppedAvatarUrl
                                         ToastUtils.showShort(
                                             context.getString(
                                                 R.string.toast_upload_failed_with_message,
@@ -457,6 +475,8 @@ private fun CreateRolePage(
                             LogUtils.e("Failed to prepare upload: ${e.message}")
                             isUploadingFromGallery = false
                             originalUploadedImageUrl = null
+                            isUploadingCroppedAvatar = false
+                            croppedAvatarPreviewUrl = croppedAvatarUrl
                             ToastUtils.showShort(
                                 context.getString(
                                     R.string.toast_failed_prepare_upload_with_message,
@@ -472,6 +492,7 @@ private fun CreateRolePage(
                     LogUtils.e("UCrop error: ${cropError?.message}")
                     isUploadingFromGallery = false
                     originalUploadedImageUrl = null
+                    isUploadingCroppedAvatar = false
                     ToastUtils.showShort(
                         context.getString(R.string.toast_crop_failed, cropError?.message ?: "")
                     )
@@ -481,11 +502,13 @@ private fun CreateRolePage(
                 LogUtils.i("Crop operation cancelled by user")
                 isUploadingFromGallery = false
                 originalUploadedImageUrl = null
+                isUploadingCroppedAvatar = false
             } else {
                 // 处理其他未知结果代码，确保清除标志
                 LogUtils.w("Unknown crop result code: ${result.resultCode}")
                 isUploadingFromGallery = false
                 originalUploadedImageUrl = null
+                isUploadingCroppedAvatar = false
             }
         }
 
@@ -722,7 +745,8 @@ private fun CreateRolePage(
                 selectedIndex = selectedImageIndex,
                 isGenerating = isGeneratingAvatar,
                 isUploadingGallery = isUploadingFromGallery,
-                croppedAvatarUrl = croppedAvatarUrl,
+                croppedAvatarPreviewUrl = croppedAvatarPreviewUrl,
+                isUploadingCroppedAvatar = isUploadingCroppedAvatar,
                 onGenerateClick = {
                     AvatarManager.setGeneratedAvatarUrls(avatarUrls)
                     AvatarManager.setSelectedImageIndex(selectedImageIndex)
@@ -914,6 +938,7 @@ private fun CreateRolePage(
                                     // 此时如果头像数据还是旧的，则手动更新为最新背景的
                                     if (croppedAvatarUrl == editAgent.avatar) {
                                         croppedAvatarUrl = backgroundUrl
+                                        croppedAvatarPreviewUrl = backgroundUrl
                                     }
                                 }
                             }
@@ -1278,7 +1303,8 @@ private fun AvatarUploadSection(
     selectedIndex: Int = 0,
     isGenerating: Boolean = false,
     isUploadingGallery: Boolean = false,
-    croppedAvatarUrl: String? = null,
+    croppedAvatarPreviewUrl: String? = null,
+    isUploadingCroppedAvatar: Boolean = false,
     onGenerateClick: () -> Unit,
     onImageSelected: (Int) -> Unit = {},
     onRegenerate: (String) -> Unit = {},
@@ -1286,8 +1312,9 @@ private fun AvatarUploadSection(
     onUploadFromGallery: () -> Unit = {},
 ) {
     // 空状态检查：只有当所有头像 URL 都为空时才认为是空状态
-    // 需要检查 avatarUrls、avatarUrl 和 croppedAvatarUrl
-    val isEmpty = avatarUrls.isEmpty() && avatarUrl == null && croppedAvatarUrl == null
+    // 需要检查 avatarUrls、avatarUrl 和 croppedAvatarPreviewUrl
+    val isEmpty =
+        avatarUrls.isEmpty() && avatarUrl == null && croppedAvatarPreviewUrl == null
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier =
@@ -1343,30 +1370,34 @@ private fun AvatarUploadSection(
                     )
                 }
                 // 优先显示裁剪后的头像（如果存在），因为这是最终要使用的头像
-                croppedAvatarUrl != null -> {
+                croppedAvatarPreviewUrl != null -> {
                     LogUtils.d(
-                        "AvatarUploadSection: Displaying cropped avatar with URL: $croppedAvatarUrl"
+                        "AvatarUploadSection: Displaying cropped avatar with URL: $croppedAvatarPreviewUrl"
                     )
 
                     val previewUrl =
-                        getCdnImageUrl(
-                            croppedAvatarUrl,
-                            width = Config.TextToImage.Preview.WIDTH,
-                            quality = Config.TextToImage.Preview.QUALITY,
-                        )
+                        if (croppedAvatarPreviewUrl?.startsWith("http") == true) {
+                            getCdnImageUrl(
+                                croppedAvatarPreviewUrl,
+                                width = Config.TextToImage.Preview.WIDTH,
+                                quality = Config.TextToImage.Preview.QUALITY,
+                            )
+                        } else {
+                            null
+                        }
                     AsyncImage(
-                        model = previewUrl ?: croppedAvatarUrl,
+                        model = previewUrl ?: croppedAvatarPreviewUrl,
                         contentDescription = stringResource(R.string.content_desc_generated_avatar),
                         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
-                                "AvatarUploadSection: Cropped avatar image loaded successfully: $croppedAvatarUrl, preview: $previewUrl"
+                                "AvatarUploadSection: Cropped avatar image loaded successfully: $croppedAvatarPreviewUrl, preview: $previewUrl"
                             )
                         },
                         onError = {
                             LogUtils.e(
-                                "AvatarUploadSection: Failed to load cropped avatar image: $croppedAvatarUrl"
+                                "AvatarUploadSection: Failed to load cropped avatar image: $croppedAvatarPreviewUrl"
                             )
                         },
                     )
@@ -1469,7 +1500,18 @@ private fun AvatarUploadSection(
                 }
             }
 
-            croppedAvatarUrl?.let {
+            if (isUploadingCroppedAvatar && !isGenerating && !isUploadingGallery) {
+                Box(
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    ThreeDotLoadingAnimation()
+                }
+            }
+
+            croppedAvatarPreviewUrl?.let {
                 AsyncImage(
                     model = it,
                     contentDescription = stringResource(R.string.generate_avatar),
@@ -1485,7 +1527,7 @@ private fun AvatarUploadSection(
 
             // Dashed border for empty state
             // 需要检查所有头像 URL 都为空才显示虚线边框
-            if (avatarUrls.isEmpty() && avatarUrl == null && croppedAvatarUrl == null) {
+            if (avatarUrls.isEmpty() && avatarUrl == null && croppedAvatarPreviewUrl == null) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val strokeWidth = 1.dp.toPx()
                     val cornerRadius = 16.dp.toPx()
