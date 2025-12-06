@@ -57,6 +57,12 @@ class Agent(Base):
         default=1,
         server_default=sa.text("1"),
     )
+    points = Column(
+        Integer,
+        default=0,
+        server_default=sa.text("0"),
+        comment="角色积分，用于角色热度排名（boosting feature）",
+    )
     prompt = Column(String)
 
     # 主提示词和模式提示词字段
