@@ -752,10 +752,16 @@ export const AgentManagePage: React.FC = () => {
       }
 
       // 处理头像文件
+      // 注意：在创建角色时，我们在这里先上传图片获取 URL，然后将 URL 传递给 createAgent
+      // 这样做的原因是：AgentManagePage 需要在上传成功后获得 URL 用于预览等操作
+      // createAgent 函数会检查 data.avatar 的类型：
+      // - 如果是 File 对象，会再次上传（用于直接传入 File 的场景）
+      // - 如果是字符串 URL，说明已经上传过了，直接使用，不会重复上传
       if (avatarFile) {
         // 上传头像文件获取 URL
         const uploadResult = await api.agents.uploadAvatar(avatarFile, true);
         if (uploadResult && uploadResult.url) {
+          // 将上传后的 URL 赋值给 agentData.avatar（此时是字符串，不是 File 对象）
           agentData.avatar = uploadResult.url;
         }
       }

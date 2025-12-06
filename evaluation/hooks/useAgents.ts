@@ -167,8 +167,15 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
 
         let agentData = { ...data };
 
-        // 如果有头像文件，先上传头像
-        if (data.avatar) {
+        // 头像上传逻辑说明：
+        // 1. 在 AgentManagePage 的 handleCreateAgent 中，如果用户选择了头像文件，
+        //    会先调用 api.agents.uploadAvatar 上传图片，获得 URL 后赋值给 agentData.avatar
+        // 2. 因此，当数据传递到 createAgent 时，data.avatar 可能是两种情况：
+        //    - File 对象：需要在这里上传（用于直接传入 File 的场景，如某些 API 调用）
+        //    - 字符串 URL：已经在 AgentManagePage 中上传过了，直接使用，避免重复上传
+        // 3. 通过 instanceof File 检查来区分这两种情况，只对 File 对象执行上传操作
+        if (data.avatar && data.avatar instanceof File) {
+          // data.avatar 是 File 对象，需要上传
           try {
             const uploadResponse = await api
               .getIntyClient()
@@ -177,6 +184,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
                 cropping_avatar: true,
               });
             console.log("uploadResponse:", uploadResponse);
+            // 上传成功后，将返回的 avatar_url 和 url 赋值给 agentData
             (agentData as AgentCreateRequest).avatar = uploadResponse.data
               ?.avatar_url as string;
             (agentData as AgentCreateRequest).background = uploadResponse.data
@@ -184,10 +192,13 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           } catch (error) {
             console.error("头像上传失败:", error);
             message.error("头像上传失败，但智能体创建将继续");
-            // 移除avatar字段，避免发送File对象
+            // 移除avatar字段，避免发送File对象到后端
             delete agentData.avatar;
           }
         }
+        // 如果 data.avatar 是字符串（URL），说明已经在 AgentManagePage 中上传过了
+        // 直接使用该 URL，不需要再次上传，避免重复上传导致的错误
+        // 此时 agentData.avatar 已经是字符串 URL，可以直接用于创建智能体的 API 调用
 
         // 确保voice_id字段被正确处理
         if (data.voice_id) {
@@ -228,7 +239,8 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         let updateData = { ...data };
 
         // 如果有头像文件，先上传头像
-        if (data.avatar) {
+        // 检查 data.avatar 是否是 File 对象（需要上传）还是字符串 URL（已经上传过了）
+        if (data.avatar && data.avatar instanceof File) {
           try {
             const uploadResponse = await api
               .getIntyClient()
@@ -262,6 +274,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
             delete updateData.avatar;
           }
         }
+        // 如果 data.avatar 是字符串（URL），说明已经上传过了，直接使用，不需要再次上传
 
         // 确保voice_id字段被正确处理
         if (data.voice_id !== undefined) {
