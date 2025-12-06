@@ -32,7 +32,6 @@ import org.json.JSONObject
 
 /** 日志工具类 提供完整的日志功能，支持控制台输出、文件输出、JSON格式化、XML格式化等 */
 object LogUtils {
-
     const val V = Log.VERBOSE
     const val D = Log.DEBUG
     const val I = Log.INFO
@@ -84,54 +83,13 @@ object LogUtils {
     // 基础日志方法
     fun v(vararg contents: Any?) = log(V, CONFIG.globalTag, *contents)
 
-    fun vTag(tag: String, vararg contents: Any?) = log(V, tag, *contents)
-
     fun d(vararg contents: Any?) = log(D, CONFIG.globalTag, *contents)
-
-    fun dTag(tag: String, vararg contents: Any?) = log(D, tag, *contents)
 
     fun i(vararg contents: Any?) = log(I, CONFIG.globalTag, *contents)
 
-    fun iTag(tag: String, vararg contents: Any?) = log(I, tag, *contents)
-
     fun w(vararg contents: Any?) = log(W, CONFIG.globalTag, *contents)
 
-    fun wTag(tag: String, vararg contents: Any?) = log(W, tag, *contents)
-
     fun e(vararg contents: Any?) = log(E, CONFIG.globalTag, *contents)
-
-    fun eTag(tag: String, vararg contents: Any?) = log(E, tag, *contents)
-
-    fun a(vararg contents: Any?) = log(A, CONFIG.globalTag, *contents)
-
-    fun aTag(tag: String, vararg contents: Any?) = log(A, tag, *contents)
-
-    // 文件日志方法
-    fun file(content: Any?) = log(FILE or D, CONFIG.globalTag, content)
-
-    fun file(@TYPE type: Int, content: Any?) = log(FILE or type, CONFIG.globalTag, content)
-
-    fun file(tag: String, content: Any?) = log(FILE or D, tag, content)
-
-    fun file(@TYPE type: Int, tag: String, content: Any?) = log(FILE or type, tag, content)
-
-    // JSON日志方法
-    fun json(content: Any?) = log(JSON or D, CONFIG.globalTag, content)
-
-    fun json(@TYPE type: Int, content: Any?) = log(JSON or type, CONFIG.globalTag, content)
-
-    fun json(tag: String, content: Any?) = log(JSON or D, tag, content)
-
-    fun json(@TYPE type: Int, tag: String, content: Any?) = log(JSON or type, tag, content)
-
-    // XML日志方法
-    fun xml(content: String) = log(XML or D, CONFIG.globalTag, content)
-
-    fun xml(@TYPE type: Int, content: String) = log(XML or type, CONFIG.globalTag, content)
-
-    fun xml(tag: String, content: String) = log(XML or D, tag, content)
-
-    fun xml(@TYPE type: Int, tag: String, content: String) = log(XML or type, tag, content)
 
     fun log(type: Int, tag: String, vararg contents: Any?) {
         if (!CONFIG.logSwitch) return
@@ -155,17 +113,6 @@ object LogUtils {
         }
     }
 
-    fun getCurrentLogFilePath(): String = getCurrentLogFilePath(Date())
-
-    fun getLogFiles(): List<File> {
-        val dir = CONFIG.dir ?: CONFIG.defaultDir
-        if (dir.isBlank()) return emptyList()
-        val logDir = File(dir)
-        if (!logDir.exists()) return emptyList()
-
-        val files = logDir.listFiles { _, name -> isMatchLogFileName(name) }
-        return files?.toList() ?: emptyList()
-    }
 
     private fun processTagAndHead(tag: String): TagHead {
         if (!CONFIG.tagIsSpace && !CONFIG.logHeadSwitch) {
@@ -772,10 +719,6 @@ object LogUtils {
         }
 
         fun getDirSafe(): String = dir ?: defaultDir
-
-        fun haveSetOnConsoleOutputListener(): Boolean = onConsoleOutputListener != null
-
-        fun haveSetOnFileOutputListener(): Boolean = onFileOutputListener != null
 
         override fun toString(): String {
             return kotlin.text
