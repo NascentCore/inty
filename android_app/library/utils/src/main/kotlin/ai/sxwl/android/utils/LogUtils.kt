@@ -113,7 +113,6 @@ object LogUtils {
         }
     }
 
-
     private fun processTagAndHead(tag: String): TagHead {
         if (!CONFIG.tagIsSpace && !CONFIG.logHeadSwitch) {
             return TagHead(CONFIG.globalTag, null, ": ")
