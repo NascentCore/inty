@@ -1,3 +1,4 @@
+// DEPRECATED：可以删除，已被 Firebase crash report 替代
 package ai.sxwl.android.utils
 
 import android.app.Application
