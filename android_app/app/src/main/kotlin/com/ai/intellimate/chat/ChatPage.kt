@@ -66,6 +66,7 @@ import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatMorePanel
 import com.ai.intellimate.chat.ui.ChatSettingsDrawer
 import com.ai.intellimate.chat.ui.ChatTopBar
+import com.ai.intellimate.chat.ui.EnergyCelebrationBanner
 import com.ai.intellimate.chat.ui.KeepTalkingFloatingButton
 import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -116,9 +117,7 @@ internal fun ChatPage(
     // 为角色应援/Boost 功能
     // 这里是 AI 生成代码，不清楚 UI 上有什么影响
     val isDebugMode = HeartAppUtils.isAppDebugMode()
-    val boostState by
-        if (isDebugMode) BoostManager.boostState.collectAsState()
-        else remember { mutableStateOf(BoostState()) }
+    val boostState by BoostManager.boostState.collectAsState()
     var showBoostSheet by remember { mutableStateOf(false) }
     var pendingBoostSheet by
         remember(shouldShowBoostSheetOnOpen && isDebugMode) {
@@ -342,6 +341,7 @@ internal fun ChatPage(
                             onBack = onBack,
                             fontSize = 15.sp,
                             avatarWidth = 40.dp,
+                            earnedPoints = boostState.chatMessagePoints,
                             onClickMore = {
                                 scope.launch {
                                     if (agentInfo?.isDeleted == true) {
@@ -696,6 +696,14 @@ internal fun ChatPage(
             agentInfo = agentInfo,
             drawerState = drawerState,
             onKeepTalkingChange = { enabled -> onKeepTalkingChange(enabled) },
+        )
+
+        EnergyCelebrationBanner(
+            totalPoints = boostState.chatMessagePoints,
+            enabled = isCurrentPage,
+            modifier =
+                Modifier.align(Alignment.TopCenter)
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp),
         )
 
         ShowLimitDialog(chatViewModel)

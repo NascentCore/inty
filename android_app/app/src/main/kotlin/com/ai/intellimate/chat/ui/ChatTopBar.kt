@@ -6,13 +6,18 @@ import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.EnergySavingsLeaf
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -23,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -52,6 +58,7 @@ fun ChatTopBar(
     onClickMore: () -> Unit,
     avatarWidth: Dp = 30.dp,
     fontSize: TextUnit = 14.sp,
+    earnedPoints: Int? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -104,12 +111,39 @@ fun ChatTopBar(
 
             Spacer(modifier = Modifier.width(6.dp))
 
-            Text(
-                text = agentInfo.name,
-                fontSize = fontSize,
-                fontWeight = FontWeight.Medium,
-                color = Color.White,
-            )
+            val showPoints = earnedPoints != null && earnedPoints > 0
+
+            Column {
+                if (showPoints) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Rounded.EnergySavingsLeaf,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text =
+                                stringResource(
+                                    id = R.string.energy_points_counter,
+                                    earnedPoints ?: 0,
+                                ),
+                            fontSize = 10.sp,
+                            color = Color.White.copy(alpha = 0.9f),
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
+
+                Text(
+                    text = agentInfo.name,
+                    fontSize = fontSize,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White,
+                )
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
         }

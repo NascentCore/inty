@@ -399,6 +399,13 @@
     <string name="billing_error_fallback_google_play_service">Google Play services error</string>
 
     <!-- Boost / Leaderboard -->
+    <string name="energy_points_first_title">You earned your FIRST energy point!</string>
+    <string name="energy_points_first_subtitle">Keep chatting to unlock more energy.</string>
+    <string name="energy_points_tens_title">You reached %1$d energy points!</string>
+    <string name="energy_points_tens_subtitle">Trophy unlocked - keep the streak going.</string>
+    <string name="energy_points_hundreds_subtitle">Mega trophy achieved. Your AI is cheering.</string>
+    <string name="energy_points_thousands_subtitle">Legendary trophy unlocked. You\'re unstoppable.</string>
+    <string name="energy_points_counter">%1$d pts</string>
     <string name="boost_points_label">Boost Points</string>
     <string name="boost_points_value">%1$d pts</string>
     <string name="boost_points_action">Boost</string>

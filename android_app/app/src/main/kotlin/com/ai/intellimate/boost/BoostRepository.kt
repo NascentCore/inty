@@ -65,6 +65,12 @@ class BoostRepository(
                     current.copy(
                         availablePoints = current.availablePoints + gain,
                         dailyEnergyEarned = current.dailyEnergyEarned + gain,
+                        chatMessagePoints =
+                            if (source is PointSource.Chat) {
+                                current.chatMessagePoints + gain
+                            } else {
+                                current.chatMessagePoints
+                            },
                     )
                 BoostStorage.saveBoostState(updated)
                 updateStateFlows()

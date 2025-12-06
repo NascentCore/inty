@@ -318,6 +318,7 @@ suspend fun login(request: LoginRequest): ApiResult<LoginResponse>
 - 🏆 Explore 引入 `Featured/Boost` 子 Tab，Boost Tab 使用 `BoostLeaderboardTab` 展示本地榜单以及跳转聊天并自动打开 Boost 弹层的操作。
 - ✅ Me 页的签到页面提供每日打卡按钮，点击后领取 `BoostManager` 内的每日 200 pts 能量奖励，替代 Explore Tab 中的调试入口。
 - 🎧 文本发送、Keep Talking、图片生成、手动语音播放都会调用 `BoostManager.record*`，根据 `BoostConfig` 折算 token→points，满足“token usage → points → boost”闭环。
+- 🏅 聊天页面在用户获得首个以及每 10/100/1000 个 AI 回复积分时通过 `EnergyCelebrationBanner` 弹出庆祝浮层，文案集中在 `android_app/app/src/main/res/values/strings.xml`。
 - 🧪 所有可见文案与图标（`rocket_launch_24px`）集中在 `strings.xml`/`drawable/`，并在此文档记录接入点，便于后续扩展为远程排行榜。
 
 ## Firebase 事件（events）

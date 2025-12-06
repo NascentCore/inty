@@ -6,6 +6,7 @@ package com.ai.intellimate.boost
 /** MMKV 中的原始快照，用于序列化存储。 */
 data class BoostStateSnapshot(
     val availablePoints: Int = 0,
+    val chatMessagePoints: Int = 0,
     val dailyEnergyEarned: Int = 0,
     val hasClaimedDailyReward: Boolean = false,
     val lastResetDate: String = "",
@@ -25,6 +26,7 @@ data class AgentBoostInfoSnapshot(
 /** 面向 UI 的 Boost 状态。 */
 data class BoostState(
     val availablePoints: Int = 0,
+    val chatMessagePoints: Int = 0,
     val dailyEnergyEarned: Int = 0,
     val hasClaimedDailyReward: Boolean = false,
     val boostsByAgent: Map<String, AgentBoostInfo> = emptyMap(),
@@ -86,6 +88,7 @@ class BoostException(val error: BoostError) : IllegalStateException(error.toStri
 internal fun BoostStateSnapshot.toDomain(): BoostState {
     return BoostState(
         availablePoints = availablePoints,
+        chatMessagePoints = chatMessagePoints,
         dailyEnergyEarned = dailyEnergyEarned,
         hasClaimedDailyReward = hasClaimedDailyReward,
         boostsByAgent = boostsByAgent.mapValues { it.value.toDomain() },
