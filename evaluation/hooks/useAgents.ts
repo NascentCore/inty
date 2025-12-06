@@ -168,7 +168,8 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         let agentData = { ...data };
 
         // 如果有头像文件，先上传头像
-        if (data.avatar) {
+        // 检查 data.avatar 是否是 File 对象（需要上传）还是字符串 URL（已经上传过了）
+        if (data.avatar && data.avatar instanceof File) {
           try {
             const uploadResponse = await api
               .getIntyClient()
@@ -188,6 +189,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
             delete agentData.avatar;
           }
         }
+        // 如果 data.avatar 是字符串（URL），说明已经上传过了，直接使用，不需要再次上传
 
         // 确保voice_id字段被正确处理
         if (data.voice_id) {
@@ -228,7 +230,8 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         let updateData = { ...data };
 
         // 如果有头像文件，先上传头像
-        if (data.avatar) {
+        // 检查 data.avatar 是否是 File 对象（需要上传）还是字符串 URL（已经上传过了）
+        if (data.avatar && data.avatar instanceof File) {
           try {
             const uploadResponse = await api
               .getIntyClient()
@@ -262,6 +265,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
             delete updateData.avatar;
           }
         }
+        // 如果 data.avatar 是字符串（URL），说明已经上传过了，直接使用，不需要再次上传
 
         // 确保voice_id字段被正确处理
         if (data.voice_id !== undefined) {
