@@ -199,8 +199,8 @@ fun AgentBackground(
         (shouldPlayPageSwitch || shouldPlayLoading || (isLoadingTriggeredPlay && isVideoPlaying)) &&
             isCurrentPage
     val playCount =
-        if (shouldPlayPageSwitch) UiConfigs.AnimatedBackground.VIDEO_FIRST_PLAY_COUNT
-        else UiConfigs.AnimatedBackground.VIDEO_MESSAGE_PLAY_COUNT
+        if (shouldPlayPageSwitch) UiConfigs.CharacterProfile.VIDEO_FIRST_PLAY_COUNT
+        else UiConfigs.CharacterProfile.VIDEO_MESSAGE_PLAY_COUNT
 
     Box(modifier = modifier.fillMaxSize().clipToBounds()) {
         if (backgroundAnimatedUrl != null) {

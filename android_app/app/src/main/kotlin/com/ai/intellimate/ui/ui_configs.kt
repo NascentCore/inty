@@ -231,6 +231,11 @@ object UiConfigs {
     }
 
     object CharacterProfile {
+        /** 页面切换时的播放次数 */
+        const val VIDEO_FIRST_PLAY_COUNT = 2
+
+        /** 消息加载时的播放次数 */
+        const val VIDEO_MESSAGE_PLAY_COUNT = 1
         const val CDN_IMAGE_QUALITY = 80
         const val CDN_STATIC_BACKGROUND_WIDTH = 1080
     }
