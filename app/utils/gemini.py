@@ -28,6 +28,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.external_services.fakes.gemini import FakeGeminiClient
 from app.external_services.gcs import (
     delete_from_gcs,
     download_from_gcs,
@@ -44,127 +45,6 @@ from app.utils.image import (
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
 client = None  # Will be initialized when needed
-
-
-class FakeGeneratedImage:
-    """Fake generated image for testing"""
-
-    def __init__(
-        self,
-        gcs_uri: Optional[str],
-        rai_filtered_reason: Optional[str] = None,
-        enhanced_prompt: Optional[str] = None,
-    ):
-        self.image = type("Image", (), {"gcs_uri": gcs_uri})()
-        self.rai_filtered_reason = rai_filtered_reason
-        self.enhanced_prompt = enhanced_prompt or ""
-
-
-class FakeGenerateImagesResponse:
-    """Fake response for generate_images in testing"""
-
-    def __init__(self, generated_images: List[FakeGeneratedImage]):
-        self.generated_images = generated_images
-
-
-class FakeModels:
-    """Fake models interface for testing"""
-
-    def __init__(self, client: "FakeGeminiClient"):
-        self._client = client
-
-    def generate_images(
-        self, model: str, prompt: str, config: types.GenerateImagesConfig
-    ) -> FakeGenerateImagesResponse:
-        """Generate fake images for testing"""
-        logger.debug(
-            f"FakeGeminiClient: Generating {config.number_of_images} fake images"
-        )
-
-        # Extract GCS URI base from config
-        gcs_uri_base = config.output_gcs_uri
-        if not gcs_uri_base.startswith("gs://"):
-            raise ValueError(f"Invalid GCS URI base: {gcs_uri_base}")
-
-        # Remove gs:// prefix and extract bucket and path
-        gcs_path = gcs_uri_base[5:]  # Remove "gs://"
-        if "/" not in gcs_path:
-            raise ValueError(f"Invalid GCS path format: {gcs_path}")
-
-        bucket_name, base_path = gcs_path.split("/", 1)
-
-        # Generate fake images
-        generated_images = []
-        for i in range(config.number_of_images):
-            # Create a simple test image (1x1 pixel JPEG)
-            test_image = PIL.Image.new("RGB", (1080, 1920), color=(100, 150, 200))
-            image_bytes = get_jpg_bytes_from_pil_image(test_image, quality=95)
-
-            # Upload to GCS (will use FakeGCS in test environment)
-            image_path = f"{base_path}/image_{i}.jpg"
-            upload_to_gcs(image_bytes, "image/jpeg", bucket_name, image_path)
-
-            # Create GCS URI
-            gcs_uri = f"gs://{bucket_name}/{image_path}"
-
-            # If enhance_prompt is enabled, the prompt passed in should already be enhanced
-            # Otherwise, use empty string for enhanced_prompt
-            enhanced_prompt_value = prompt if config.enhance_prompt else ""
-
-            generated_images.append(
-                FakeGeneratedImage(
-                    gcs_uri=gcs_uri,
-                    rai_filtered_reason=None,
-                    enhanced_prompt=enhanced_prompt_value,
-                )
-            )
-
-        return FakeGenerateImagesResponse(generated_images=generated_images)
-
-    def generate_content(
-        self,
-        model: str,
-        contents: List,
-        config: Optional[types.GenerateContentConfig] = None,
-    ) -> "FakeGenerateContentResponse":
-        """Generate fake content for testing (e.g., image description)"""
-        logger.debug(f"FakeGeminiClient: Generating fake content with model {model}")
-
-        # Return a simple fake description
-        fake_description = (
-            "这是一张测试图片，包含一个友好的人物形象，适合作为视频生成的提示词。"
-        )
-
-        return FakeGenerateContentResponse(text=fake_description)
-
-
-class FakeGenerateContentResponse:
-    """Fake response for generate_content in testing"""
-
-    def __init__(self, text: str):
-        self.candidates = [
-            type(
-                "Candidate",
-                (),
-                {
-                    "content": type(
-                        "Content",
-                        (),
-                        {"parts": [type("Part", (), {"text": text})()]},
-                    )(),
-                    "finish_reason": "STOP",
-                },
-            )()
-        ]
-        self.prompt_feedback = None
-
-
-class FakeGeminiClient:
-    """Fake Gemini client for testing environment"""
-
-    def __init__(self):
-        self.models = FakeModels(self)
-        logger.info("Initialized FakeGeminiClient for testing environment")
 
 
 def get_genai_client():

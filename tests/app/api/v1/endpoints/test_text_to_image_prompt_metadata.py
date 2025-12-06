@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import uuid
+from datetime import datetime, timezone
 
 import pytest
 from sqlalchemy import delete, select
@@ -9,9 +9,9 @@ from sqlalchemy import delete, select
 from app import models, schemas
 from app.api.v1.endpoints.agents import generate_background
 from app.db.session import AsyncSessionLocal
+from app.external_services.fakes.gemini import FakeGeminiClient
 from app.services.global_services import subscription_service
 from app.utils import gemini as gemini_utils
-from tests.fakes.gemini import FakeGeminiClient
 
 
 @pytest.mark.asyncio

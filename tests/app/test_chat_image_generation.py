@@ -15,7 +15,6 @@ from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
 from app.services import chat_history_service
 from app.services.image_generation_service import image_generation_service
-from tests.fakes.gemini import FakeGeminiClient
 
 
 @pytest.fixture
@@ -225,12 +224,6 @@ class TestChatHistoryService:
         db_session: AsyncSession,
     ):
         """生成聊天图片后应将GCS图片追加到Agent的background_images"""
-        fake_client = FakeGeminiClient()
-        monkeypatch.setattr(
-            "app.services.image_generation_service.get_genai_client",
-            lambda: fake_client,
-        )
-
         mock_update_metadata = AsyncMock(return_value=True)
         monkeypatch.setattr(
             chat_history_service,

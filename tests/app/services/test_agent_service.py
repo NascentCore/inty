@@ -68,7 +68,6 @@ async def db_session():
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Do not have access to gcs")
 async def test_crop_avatar_from_background():
     bucket_name, path = get_bucket_and_path_from_gcs_url(
         "https://storage.googleapis.com/yx-test/Screenshot_20250815_213911-cropped-avatar.png")
