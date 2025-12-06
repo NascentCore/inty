@@ -104,6 +104,8 @@ class ChatRepositoryImpl(
                         "ChatRepositoryImpl.ensureInitialHistory loaded ${messages.size} messages for $agentId"
                     )
 
+                    // 注意：ChatLocalDataSource.updateMessages 只是直接替换消息列表，不涉及 sortKey 分配
+                    // 所以不需要反转消息列表，直接使用服务器返回的顺序即可
                     localDataSource.updateMessages(agentId, messages)
                     localDataSource.setHasMore(agentId, result.data.hasMore)
                     localDataSource.setOffset(agentId, if (messages.isNotEmpty()) pageSize else 0)

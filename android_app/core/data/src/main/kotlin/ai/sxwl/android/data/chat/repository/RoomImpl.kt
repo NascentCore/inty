@@ -104,7 +104,22 @@ class RoomImpl(
                         "RoomImpl.ensureInitialHistory loaded ${messages.size} messages for $agentId"
                     )
 
-                    localDataSource.updateMessages(agentId, messages)
+                    // 🔧 修复首次加载消息反序问题：
+                    // 服务器返回的消息是 DESC 顺序（最新的在前），参见 IChatApi.getMsgs() 中 order 参数的默认值 "desc"
+                    // 但 updateMessages 按列表顺序递增分配 sortKey（baseTime, baseTime+1, baseTime+2...）
+                    // 如果第一条消息（最新的）得到最小的 sortKey，会导致排序错误
+                    // 解决方案：反转消息列表，确保最旧的消息得到最小的 sortKey，最新的消息得到最大的 sortKey
+                    // 这样在 ORDER BY sortKey DESC 查询时，最新的消息会排在前面，配合 reverseLayout=true 显示在底部
+                    val reversedMessages = messages.reversed()
+                    if (messages.isNotEmpty()) {
+                        LogUtils.i(
+                            "RoomImpl.ensureInitialHistory REVERSING messages: " +
+                                "original first=${messages.first().id.take(8)}, last=${messages.last().id.take(8)} | " +
+                                "reversed first=${reversedMessages.first().id.take(8)}, last=${reversedMessages.last().id.take(8)}"
+                        )
+                    }
+
+                    localDataSource.updateMessages(agentId, reversedMessages)
                     localDataSource.setHasMore(agentId, result.data.hasMore)
                     localDataSource.setOffset(agentId, if (messages.isNotEmpty()) pageSize else 0)
                     localDataSource.setInitialLoaded(agentId, true)
