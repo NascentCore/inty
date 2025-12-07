@@ -286,16 +286,6 @@ def test_name_for_openrouter_test_environment():
     assert app_config.name_for_openrouter == "https://inty-backend-test"
 
 
-def test_name_for_openrouter_unspecified_environment():
-    """测试UNSPECIFIED环境下的name_for_openrouter属性"""
-    app_config = AppConfig(
-        name="inty-backend",
-        environment=Environment.UNSPECIFIED,
-    )
-
-    assert app_config.name_for_openrouter == "https://inty-backend-unspecified"
-
-
 def test_name_for_openrouter_custom_app_name():
     """测试自定义应用名称的name_for_openrouter属性"""
     app_config = AppConfig(

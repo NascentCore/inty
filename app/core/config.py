@@ -22,13 +22,23 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 
 class Environment(str, Enum):
-    """Environment enum for application deployment environments."""
+    """指明该后端实例运行的环境，对应不同的配置文件，位于 devops/config.yaml.<environment>。"""
 
-    DEV = "dev"
-    PROD = "prod"
+    # 部署在测试环境中，用于测试。
+    # 使用本地数据库，依赖的外部服务均为假的本地实现（位于 app/external_services/fakes/），
+    # 只能返回固定结果，需要手动修改来改变其返回值。
     TEST = "test"
+
+    # 部署在本地与 app 同在同一个局域网内，用于本地开发、测试。
+    # 使用本地数据库，依赖的外部服务（GCS、Firebase、ElevenLabs等）仍然是真实的。
     LOCAL = "local"
-    UNSPECIFIED = "unspecified"
+
+    # 部署在共享的开发环境中，用于开发、测试。
+    # 使用共享的开发数据库，同时依赖的外部服务如 GCS、Firebase、ElevenLabs 与生产环境一致。
+    DEV = "dev"
+
+    # 部署在生产环境中，用于支持公开用户在互联网上访问。
+    PROD = "prod"
 
 
 from app.api.constants import API_V2_PREFIX
