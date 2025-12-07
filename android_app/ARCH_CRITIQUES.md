@@ -122,3 +122,73 @@ MMKV（版本 2.2.4）作为轻量级键值存储，通过 `IntySetting` 单例�
 - **模块化**：设计、工具、Firebase、数据与应用层拆分清晰。
 - **媒体能力**：基于 Media3 的音频播放与焦点管理，图像/音频预加载策略积极。
 - **计费仓库**：统一订阅状态与事件中心（虽存在生命周期耦合问题）。
+
+## 协程与状态管理
+- 🟢 **当前实现**：UI 使用 `launchUI`，后台任务 `launchBackground`，网络请求在 `Dispatchers.IO`；统一 `SupervisorJob + CoroutineExceptionHandler`，通过 BaseVM 管理
+- 🟢 **当前实现**：状态通过 `StateFlow`，一次性事件可使用 `SharedFlow`；状态更新使用 `_state.value = newState` 或 `_state.update { ... }`
+- 🔴 **已知问题**：BaseVM 中存在脱离生命周期的 `backgroundScope`，可能导致内存泄漏
+
+
+## 测试策略
+- 🟢 **当前实现**：单元测试：JUnit + MockK；UI 测试：Espresso + Compose 测试工具
+- 🟡 **目标架构**：引入 Koin 测试容器用于依赖注入测试
+- 测试文件以 `Test` 结尾；集成自动化流水线，关键路径需有性能测试
+  ```kotlin
+  class ChatViewModelTest {
+      private val mockRepository = mockk<ChatRepository>()
+      private val mockUseCase = mockk<SendMessageUseCase>()
+      
+      @Test
+      fun `send message success`() = runTest {
+          // 当前需要手动模拟 DataModule，未来迁移到 Koin 后可简化
+          every { DataModule.getChatRepository() } returns mockRepository
+          
+          val viewModel = ChatViewModel()
+          // 测试逻辑
+      }
+  }
+  ```
+
+## 性能优化
+- Compose 使用 `remember`/`derivedStateOf`、`key` 和 `LazyColumn`/`LazyVerticalGrid`；避免在 Compose 中直接发起耗时操作。
+- 图片加载使用 Coil `AsyncImage` 并配合懒加载/预加载策略；`Modifier.drawWithContent` 优化绘制。
+- 关注应用大小、启动时间、电池与碳足迹；监控内存/GC 压力。
+
+## 构建与发布
+- 构建依赖统一由 `build-logic` 模块提供；混淆规则维护在 `proguard-rules.pro`。
+- 发布流程：`release` 构建 → 签名 → 使用 `google-services.json` 配置 Firebase；上线前确保事件埋点同步更新。
+
+## 最佳实践
+- 组件保持单一职责、参数化、浅层级；使用 `Modifier` 链和 `@Stable/@Immutable` 优化。
+- 状态不可变、通过 `copy` 更新并及时释放资源；持续监控 AI 模型表现，确保可解释性与用户同意。
+- UI 组件不要使用裸写的常量值，而应该使用集中定义的常量，如：
+  ```kotlin
+  private object Config {
+    val ChipSpacing = 16.dp
+    ...
+  }
+  Arrangement.spacedBy(Config.ChipSpacing),
+  ```
+
+## Boost AI Characters 本地 MVP
+- 📦 `BoostManager` + MMKV 提供 `boostState`/`leaderboard` Flow，记录积分余额、每日签到、角色 Boost 次数；`BoostRepository` 内含 `resetIfNewDay` 逻辑，所有数据仅存本地。
+- 🔥 Chat 页顶部加入 Boost 胶囊与半屏 `BoostSheet`，可查看积分、按 100 pts 步长投入，并在对话流插入系统提示。
+- 🏆 Explore 引入 `Featured/Boost` 子 Tab，Boost Tab 使用 `BoostLeaderboardTab` 展示本地榜单以及跳转聊天并自动打开 Boost 弹层的操作。
+- ✅ Me 页的签到页面提供每日打卡按钮，点击后领取 `BoostManager` 内的每日 200 pts 能量奖励，替代 Explore Tab 中的调试入口。
+- 🎧 文本发送、Keep Talking、图片生成、手动语音播放都会调用 `BoostManager.record*`，根据 `BoostConfig` 折算 token→points，满足“token usage → points → boost”闭环。
+- 🏅 聊天页面在用户获得首个以及每 10/100/1000 个 AI 回复积分时通过 `EnergyCelebrationBanner` 弹出庆祝浮层，文案集中在 `android_app/app/src/main/res/values/strings.xml`。
+- 🧪 所有可见文案与图标（`rocket_launch_24px`）集中在 `strings.xml`/`drawable/`，并在此文档记录接入点，便于后续扩展为远程排行榜。
+
+## Firebase 事件（events）
+- 与用户行为相关的事件以行为命名：
+  ```kotlin
+  const val MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED = "message_to_image_generation_button_clicked"
+  ```
+- 系统语义事件仍按语义命名：
+  ```kotlin
+  const val MESSAGE_TO_IMAGE_GENERATION_SUCCESS = "message_to_image_generation_success"
+  const val MESSAGE_TO_IMAGE_GENERATION_FAILURE = "message_to_image_generation_failure"
+  const val IMAGE_GENERATION_LIMIT_REACHED = "image_generation_limit_reached"
+  ```
+- 事件名调整后需同步更新 `../bizops/FIREBASE_BUSINESS_EVENTS.md` 和
+  `../bizops/FIREBASE_EVENTS_DOCUMENTATION.md`。
