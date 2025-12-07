@@ -7,8 +7,16 @@ from pydantic import BaseModel, Field
 class VersionReminderAction(str, Enum):
     """客户端需要展示的提醒类型"""
 
-    POP_UP_REMINDER = "POP_UP_REMINDER"
+    # 不进行任何提醒
+    NONE = "NONE"
+
+    # 显示设置提醒
     SETTINGS_REMINDER = "SETTINGS_REMINDER"
+
+    # 显示弹窗提醒
+    POP_UP_REMINDER = "POP_UP_REMINDER"
+
+    # 强制拦截继续使用
     BLOCK_ACCESS = "BLOCK_ACCESS"
 
 
@@ -23,23 +31,24 @@ class VersionCheckRequest(BaseModel):
 class VersionCheckResponse(BaseModel):
     """版本检查响应模型"""
 
-    current_version: str = Field(..., description="当前客户端版本")
-    latest_version: str = Field(..., description="最新可用版本")
+    reminder_action: VersionReminderAction = Field(
+        default=VersionReminderAction.NONE,
+        description="客户端需要展示的提醒动作，None 表示无需额外提醒",
+    )
+    current_version: Optional[str] = Field(None, description="当前客户端版本")
+    latest_version: Optional[str] = Field(None, description="最新可用版本")
     latest_version_code: Optional[int] = Field(None, description="最新版本代码")
-    update_required: bool = Field(..., description="是否需要更新")
-    force_update: bool = Field(..., description="是否强制更新")
+    update_required: Optional[bool] = Field(None, description="是否需要更新")
+    force_update: Optional[bool] = Field(None, description="是否强制更新")
     force_update_reasons: Optional[List[str]] = Field(
         None, description="强制更新的具体原因列表"
     )
-    minimum_version: str = Field(..., description="最低支持版本")
+
+    minimum_version: Optional[str] = Field(None, description="最低支持版本")
     changelog: Optional[str] = Field(None, description="更新日志")
-    download_url: str = Field(..., description="下载链接")
-    message: str = Field(..., description="状态消息")
+    download_url: Optional[str] = Field(None, description="下载链接")
+    message: Optional[str] = Field(None, description="状态消息")
     error: Optional[str] = Field(None, description="错误信息")
-    reminder_action: Optional[VersionReminderAction] = Field(
-        default=None,
-        description="客户端需要展示的提醒动作，None 表示无需额外提醒",
-    )
 
 
 class AppVersionInfo(BaseModel):
