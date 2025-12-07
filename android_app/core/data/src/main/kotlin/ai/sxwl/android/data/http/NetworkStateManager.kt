@@ -41,7 +41,6 @@ object NetworkStateManager {
                 applicationContext?.getSystemService(Context.CONNECTIVITY_SERVICE)
                     as? ConnectivityManager
             registerNetworkCallback()
-            LogUtils.i("NetworkStateManager initialized")
         }
     }
 
@@ -58,12 +57,12 @@ object NetworkStateManager {
                 override fun onAvailable(network: Network) {
                     super.onAvailable(network)
                     val networkType = getNetworkType(network)
-                    LogUtils.i("Network connected: $networkType")
+                    LogUtils.d("Network connected: $networkType")
                 }
 
                 override fun onLost(network: Network) {
                     super.onLost(network)
-                    LogUtils.i("Network disconnected")
+                    LogUtils.d("Network disconnected")
                 }
 
                 override fun onCapabilitiesChanged(
@@ -72,7 +71,7 @@ object NetworkStateManager {
                 ) {
                     super.onCapabilitiesChanged(network, networkCapabilities)
                     val networkType = getNetworkType(network)
-                    LogUtils.i("Network capabilities changed: $networkType")
+                    LogUtils.d("Network capabilities changed: $networkType")
                 }
             }
 

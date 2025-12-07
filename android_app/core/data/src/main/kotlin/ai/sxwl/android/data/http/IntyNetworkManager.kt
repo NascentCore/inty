@@ -351,21 +351,10 @@ object IntyNetworkManager {
         val actualConfig = config ?: getDefaultRequestConfig()
 
         return try {
-            if (NetworkConfig.shouldEnableDetailedLogging()) {
-                LogUtils.i("🔄 Executing $operation")
-            }
-
             val result = withTimeout(actualConfig.timeoutMs) { apiCall() }
-
-            if (NetworkConfig.shouldEnableDetailedLogging()) {
-                LogUtils.i("✅ $operation succeeded")
-            }
-
             ApiResult.Success(result)
         } catch (e: Exception) {
-            if (NetworkConfig.shouldEnableDetailedLogging()) {
-                LogUtils.i("❌ $operation failed: ${e.message}")
-            }
+            LogUtils.e("❌ $operation failed: ${e.message}")
             e.toApiResult()
         }
     }

@@ -67,7 +67,7 @@ internal class BillingRemoteManager(
 
                         // 更新订阅计划列表
                         // 保留现有价格信息，避免覆盖
-                        LogUtils.i("Billing [远程数据] 开始更新订阅计划列表，后端返回 ${response.plans.size} 个计划")
+                        LogUtils.d("Billing [远程数据] 开始更新订阅计划列表，后端返回 ${response.plans.size} 个计划")
 
                         val existingPlans = plansFlow.value.associateBy { it.googleProductId }
                         LogUtils.d("Billing [远程数据] 当前本地计划数量: ${existingPlans.size}")
@@ -114,13 +114,13 @@ internal class BillingRemoteManager(
                                 }
                             }
 
-                        LogUtils.i("Billing [远程数据] 计划列表更新完成，共 ${vipPlans.size} 个计划")
+                        LogUtils.d("Billing [远程数据] 计划列表更新完成，共 ${vipPlans.size} 个计划")
                         // 更新plansFlow，但先不保存到缓存（等待价格更新后再保存）
                         plansFlow.value = vipPlans
 
                         // 如果 BillingClient 已连接，立即查询价格
                         if (isConnected) {
-                            LogUtils.i("Billing [远程数据] BillingClient 已连接，立即查询价格")
+                            LogUtils.d("Billing [远程数据] BillingClient 已连接，立即查询价格")
                             priceManager.queryProductDetails(isConnected)
                         } else {
                             LogUtils.w("Billing [远程数据] BillingClient 未连接，等待连接成功后查询价格")
