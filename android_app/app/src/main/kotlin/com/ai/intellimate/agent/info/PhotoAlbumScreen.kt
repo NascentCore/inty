@@ -58,6 +58,9 @@ import com.ai.intellimate.R
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.UiConfigs
 
+/**
+ * 这是角色相册的单独页面，是通过角色主页的 生图预览区右上角 See All 进入的页面
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PhotoAlbumScreen(
@@ -127,7 +130,7 @@ internal fun PhotoAlbumScreen(
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
+                        columns = GridCells.Fixed(UiConfigs.ChatPage.PhotoAlbum.All.COLUMN_COUNT),
                         modifier =
                             Modifier.fillMaxSize()
                                 .padding(innerPadding)

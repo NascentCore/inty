@@ -438,6 +438,7 @@
     <string name="boost_seed_placeholder_toast">This is preview data. Start chatting with real characters to unlock this board.</string>
     <string name="boost_toast_not_enough_points">Not enough points yet. Chat more to earn boosts.</string>
     <string name="boost_toast_success">Boost sent to %1$s!</string>
+    <string name="boost_toast_success_points">%1$d energy points sent to %2$s!</string>
     <string name="boost_toast_daily_reward_claimed">+%1$d pts added</string>
     <string name="boost_toast_generic_error">Something went wrong. Please try again.</string>
 </resources>

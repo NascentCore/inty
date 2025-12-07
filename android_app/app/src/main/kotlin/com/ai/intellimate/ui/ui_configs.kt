@@ -422,6 +422,19 @@ object UiConfigs {
             }
             return visibilityState ?: RemixButtonVisibilityManager.getCurrentVisibility()
         }
+
+        /** 相册配置 - 适用于角色相册页面的列数等设置 */
+        object PhotoAlbum {
+            object All {
+                /** 相册网格列数 */
+                const val COLUMN_COUNT = 2
+            }
+
+            object Preview {
+                /** 角色信息页面预览区域的列数 */
+                const val COLUMN_COUNT = 4
+            }
+        }
     }
 
     /** 角色资料配置 - 适用于角色资料页面的背景视频播放次数、CDN 图片质量和宽度等设置 */

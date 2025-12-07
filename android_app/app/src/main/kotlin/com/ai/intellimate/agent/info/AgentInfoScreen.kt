@@ -451,13 +451,13 @@ internal fun AiAgentInfoScreen(
                     try {
                         val result = BoostManager.boostAgent(agent, points)
                         ToastUtils.showShort(
-                            context.getString(R.string.boost_toast_success, agent.name)
+                            context.getString(R.string.boost_toast_success_points, result.pointsSpent, agent.name)
                         )
                         showBoostSheet = false
                     } catch (e: BoostException) {
                         showBoostError(e.error)
                         showBoostSheet = false
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         showBoostError(BoostError.NotEnoughPoints)
                         showBoostSheet = false
                     }
@@ -468,13 +468,17 @@ internal fun AiAgentInfoScreen(
     }
 }
 
+/**
+ * 角色主页中生成图片的分区；用于展示聊天过程中产生图片的缩略图，并且可以点击进入详情页面
+ * 查看所有图片，位于 PhotoAlbumScreen.kt
+ */
 @Composable
 private fun AgentGeneratedImagesSection(
     modifier: Modifier = Modifier,
     images: List<AgentImageGalleryItem>,
     agentId: String,
     onNavigateToPhotoAlbum: () -> Unit,
-    columnCount: Int = 2,
+    columnCount: Int = UiConfigs.ChatPage.PhotoAlbum.Preview.COLUMN_COUNT,
 ) {
     var previewImage by remember { mutableStateOf<String?>(null) }
     val displayedImages = images.take(columnCount)
