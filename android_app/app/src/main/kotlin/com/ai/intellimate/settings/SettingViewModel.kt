@@ -44,7 +44,7 @@ class SettingViewModel : BaseVM() {
             SettingState(
                 userId = IntySetting.getCurUserID(),
                 userEmail = UserProfileManager.getUserProfile().email.orEmpty(),
-                hasAppUpdateTips = IntySetting.getAppUpdateTips(),
+                hasAppUpdateTips = IntySetting.hasAppUpdateTips(),
                 vipStatus = BillingRepository.vipStatusFlow.value,
             )
         )
@@ -76,7 +76,7 @@ class SettingViewModel : BaseVM() {
             _state.value.copy(
                 userId = IntySetting.getCurUserID(),
                 userEmail = UserProfileManager.getUserProfile().email.orEmpty(),
-                hasAppUpdateTips = IntySetting.getAppUpdateTips(),
+                hasAppUpdateTips = IntySetting.hasAppUpdateTips(),
             )
     }
 
