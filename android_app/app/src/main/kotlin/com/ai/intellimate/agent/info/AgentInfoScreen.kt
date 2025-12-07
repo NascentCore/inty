@@ -37,6 +37,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -521,14 +523,6 @@ private fun AgentGeneratedImagesSection(
             FullScreenImageViewer(
                 imageUrl = currentImageUrl,
                 onDismiss = { previewImage = null },
-                onAction = {
-                    if (agentId.isNotBlank() && currentImageUrl.isNotBlank()) {
-                        IntySetting.setChatBackgroundImage(agentId, currentImageUrl)
-                        ToastUtils.showShort(R.string.agent_gallery_background_set_success)
-                        previewImage = null
-                    }
-                },
-                actionLabel = stringResource(R.string.agent_gallery_set_as_background),
             )
         }
     }
@@ -543,6 +537,7 @@ private fun AgentGalleryImageCard(
     val context = LocalContext.current
     val aspectRatio = if (item.height > 0) item.width.toFloat() / item.height.toFloat() else 1f
     var showResetDialog by remember { mutableStateOf(false) }
+    var showContextMenu by remember { mutableStateOf(false) }
     // 直接计算，不使用 remember，确保在设置变化时能正确更新
     val isCurrentBackground = IntySetting.getChatBackgroundImage(agentId) == item.imageUrl
 
@@ -554,11 +549,7 @@ private fun AgentGalleryImageCard(
                 .pointerInput(agentId, item.imageUrl, isCurrentBackground) {
                     detectTapGestures(
                         onTap = { onPreview(item.imageUrl) },
-                        onLongPress = {
-                            if (isCurrentBackground) {
-                                showResetDialog = true
-                            }
-                        },
+                        onLongPress = { showContextMenu = true },
                     )
                 }
     ) {
@@ -589,6 +580,31 @@ private fun AgentGalleryImageCard(
                         .clip(CircleShape)
                         .background(Color(0xFF4CAF50))
             )
+        }
+
+        DropdownMenu(
+            expanded = showContextMenu,
+            onDismissRequest = { showContextMenu = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text(text = stringResource(R.string.agent_gallery_set_as_background)) },
+                onClick = {
+                    showContextMenu = false
+                    if (agentId.isNotBlank()) {
+                        IntySetting.setChatBackgroundImage(agentId, item.imageUrl)
+                        ToastUtils.showShort(R.string.agent_gallery_background_set_success)
+                    }
+                },
+            )
+            if (isCurrentBackground) {
+                DropdownMenuItem(
+                    text = { Text(text = stringResource(R.string.agent_gallery_reset_background)) },
+                    onClick = {
+                        showContextMenu = false
+                        showResetDialog = true
+                    },
+                )
+            }
         }
     }
 
