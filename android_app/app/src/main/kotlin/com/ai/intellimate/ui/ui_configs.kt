@@ -422,6 +422,75 @@ object UiConfigs {
             }
             return visibilityState ?: RemixButtonVisibilityManager.getCurrentVisibility()
         }
+
+        /** 相册配置 - 适用于角色相册页面的列数等设置 */
+        object PhotoAlbum {
+            /** 预览区域配置 - 适用于角色信息页面中的图片预览区域 */
+            object Preview {
+                /** 预览区域列数 */
+                const val COLUMN_COUNT = 4
+
+                /** 标题字体大小 */
+                val TitleFontSize = 16.sp
+
+                /** "See All" 按钮字体大小 */
+                val SeeAllFontSize = 14.sp
+
+                /** "See All" 按钮文字透明度 */
+                const val SeeAllTextAlpha = 0.85f
+
+                /** 图片卡片背景透明度 */
+                const val ImageCardBackgroundAlpha = 0.08f
+
+                /** 背景状态指示器大小 */
+                val BackgroundIndicatorSize = 16.dp
+
+                /** 背景状态指示器内边距 */
+                val BackgroundIndicatorPadding = 8.dp
+
+                /** 背景状态指示器颜色 */
+                val BackgroundIndicatorColor = ai.sxwl.android.design.theme.AppColors.Green500
+            }
+
+            /** 全屏相册页面配置 - 适用于角色相册全屏页面 */
+            object All {
+                /** 相册网格列数 */
+                const val COLUMN_COUNT = 2
+
+                /** TopBar 标题字体大小 */
+                val TopBarTitleFontSize = 18.sp
+
+                /** 返回按钮图标大小 */
+                val BackButtonIconSize = 24.dp
+
+                /** 空状态文字字体大小 */
+                val EmptyStateFontSize = 14.sp
+
+                /** 空状态文字透明度 */
+                const val EmptyStateTextAlpha = 0.7f
+
+                /** 网格内容垂直内边距 */
+                val GridContentVerticalPadding = 16.dp
+
+                /** 图片项按钮区域顶部间距 */
+                val ImageItemButtonTopPadding = 8.dp
+
+                /** 图片项按钮图标大小 */
+                val ImageItemButtonIconSize = 20.dp
+
+                /** 图片项按钮文字字体大小 */
+                val ImageItemButtonTextFontSize = 12.sp
+
+                /** 图片项按钮文字透明度 */
+                const val ImageItemButtonTextAlpha = 0.85f
+
+                /** 图片卡片背景透明度 */
+                const val ImageCardBackgroundAlpha = 0.08f
+
+                /** 背景状态指示器颜色 */
+                val BackgroundIndicatorColor = ai.sxwl.android.design.theme.AppColors.Green500
+            }
+        }
     }
 
     /** 角色资料配置 - 适用于角色资料页面的背景视频播放次数、CDN 图片质量和宽度等设置 */

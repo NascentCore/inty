@@ -26,8 +26,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,6 +46,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -111,6 +110,7 @@ private enum class AgentGenderPronoun(@StringRes val labelRes: Int) {
 internal fun AiAgentInfoScreen(
     agent: AgentInfo,
     galleryItems: List<AgentImageGalleryItem>,
+    navController: androidx.navigation.NavController,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -407,10 +407,13 @@ internal fun AiAgentInfoScreen(
                         }
                         if (galleryItems.isNotEmpty()) {
                             Spacer(Modifier.height(16.dp))
-                            AgentGeneratedImagesSection(
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                            PhotoAlbumPreviewSection(
+                                modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
                                 images = galleryItems,
                                 agentId = agent.id,
+                                onNavigateToPhotoAlbum = {
+                                    navController.navigate(AgentInfoRoutes.photoAlbum(agent.id))
+                                },
                             )
                         }
                         if (isDebugMode) {
@@ -448,13 +451,13 @@ internal fun AiAgentInfoScreen(
                     try {
                         val result = BoostManager.boostAgent(agent, points)
                         ToastUtils.showShort(
-                            context.getString(R.string.boost_toast_success, agent.name)
+                            context.getString(R.string.boost_toast_success_points, result.pointsSpent, agent.name)
                         )
                         showBoostSheet = false
                     } catch (e: BoostException) {
                         showBoostError(e.error)
                         showBoostSheet = false
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         showBoostError(BoostError.NotEnoughPoints)
                         showBoostSheet = false
                     }
@@ -465,43 +468,55 @@ internal fun AiAgentInfoScreen(
     }
 }
 
+/**
+ * 角色主页中生成图片的分区；用于展示聊天过程中产生图片的缩略图，并且可以点击进入详情页面
+ * 查看所有图片，位于 PhotoAlbumScreen.kt
+ */
 @Composable
-private fun AgentGeneratedImagesSection(
+private fun PhotoAlbumPreviewSection(
     modifier: Modifier = Modifier,
     images: List<AgentImageGalleryItem>,
     agentId: String,
+    onNavigateToPhotoAlbum: () -> Unit,
+    columnCount: Int = UiConfigs.ChatPage.PhotoAlbum.Preview.COLUMN_COUNT,
 ) {
     var previewImage by remember { mutableStateOf<String?>(null) }
+    val displayedImages = images.take(columnCount)
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = stringResource(R.string.agent_gallery_ai_images_title),
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White,
-        )
-        Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionTitleSpacing))
-        Text(
-            text = stringResource(R.string.agent_gallery_ai_images_description, images.size),
-            fontSize = 12.sp,
-            color = Color.White.copy(alpha = 0.7f),
-        )
-        Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionSpacing))
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(UiConfigs.CharacterGallery.ImageSpacing)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            items(
-                images,
-                key = { image ->
-                    // 使用 imageUrl（已在 ViewModel 中去重）作为稳定 key，避免 messageId 重复导致崩溃
-                    image.imageUrl
-                },
-            ) { item ->
-                AgentGalleryImageCard(
-                    item = item,
-                    agentId = agentId,
-                    onPreview = { previewImage = it },
-                )
+            Text(
+                text = stringResource(R.string.agent_photo_album_title),
+                fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.TitleFontSize,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+            )
+            Text(
+                text = stringResource(R.string.agent_photo_album_see_all),
+                fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.SeeAllFontSize,
+                fontWeight = FontWeight.Medium,
+                color = Color.White.copy(alpha = UiConfigs.ChatPage.PhotoAlbum.Preview.SeeAllTextAlpha),
+                modifier = Modifier.noRippleClickable { onNavigateToPhotoAlbum() },
+            )
+        }
+        Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionSpacing))
+        if (displayedImages.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(UiConfigs.CharacterGallery.ImageSpacing),
+            ) {
+                displayedImages.forEach { item ->
+                    AgentGalleryImageCardCompact(
+                        item = item,
+                        agentId = agentId,
+                        onPreview = { previewImage = it },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
         Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionBottomPadding))
@@ -587,12 +602,13 @@ private fun AgentGalleryImageCard(
                         .padding(8.dp)
                         .size(16.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF4CAF50))
+                        .background(ai.sxwl.android.design.theme.AppColors.Green500)
             )
         }
     }
 
     // 长按重置对话框
+    // TODO：可以考虑删除，聚焦在设置背景功能上，长按的上下文按钮需求不大。
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
@@ -621,6 +637,78 @@ private fun AgentGalleryImageCard(
             },
             containerColor = Color(0xFF1E1E1E),
         )
+    }
+}
+
+/**
+ * 紧凑型角色相册图片卡片组件
+ *
+ * 使用场景：
+ * - 在角色信息页面（AgentInfoScreen）的相册预览区域使用
+ * - 通过 [PhotoAlbumPreviewSection] 以网格形式展示（默认 2 列）
+ * - 用于在有限空间内紧凑展示角色的 AI 生成图片
+ * - 与 [AgentGalleryImageCard] 相比，去掉了长按功能，更适合网格布局
+ *
+ * 视觉效果：
+ * - 紧凑的卡片设计：使用 `fillMaxWidth()` 和 `weight(1f)` 自适应网格布局
+ * - 圆角矩形卡片：使用 [UiConfigs.CharacterGallery.ImageCornerRadius] 配置的圆角半径
+ * - 半透明背景：白色背景，透明度 0.08，提供微妙的卡片边界感
+ * - 保持原始宽高比：根据图片的 width/height 计算 aspectRatio，确保图片不变形
+ * - 图片裁剪填充：使用 `ContentScale.Crop` 裁剪填充整个卡片区域
+ * - 背景状态指示器：如果图片被设置为当前角色的聊天背景，右上角显示 16dp 的绿色圆点指示器
+ * - CDN 优化加载：通过 [getCdnImageUrl] 使用 CDN 优化图片加载性能
+ *
+ * 交互行为：
+ * - 点击卡片：打开全屏预览对话框（[FullScreenImageViewer]），可查看大图并设置为聊天背景
+ */
+@Composable
+private fun AgentGalleryImageCardCompact(
+    item: AgentImageGalleryItem,
+    agentId: String,
+    onPreview: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val aspectRatio = if (item.height > 0) item.width.toFloat() / item.height.toFloat() else 1f
+    val isCurrentBackground = IntySetting.getChatBackgroundImage(agentId) == item.imageUrl
+
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(UiConfigs.CharacterGallery.ImageCornerRadius))
+                .background(Color.White.copy(alpha = UiConfigs.ChatPage.PhotoAlbum.Preview.ImageCardBackgroundAlpha))
+                .pointerInput(agentId, item.imageUrl) {
+                    detectTapGestures(onTap = { onPreview(item.imageUrl) })
+                }
+    ) {
+        AsyncImage(
+            modifier = Modifier.fillMaxWidth().aspectRatio(aspectRatio),
+            model =
+                ImageRequest.Builder(context)
+                    .data(
+                        getCdnImageUrl(
+                            item.imageUrl,
+                            width = UiConfigs.CharacterGallery.CDN_IMAGE_WIDTH,
+                            quality = UiConfigs.CharacterGallery.CDN_IMAGE_QUALITY,
+                        )
+                    )
+                    .build(),
+            contentDescription =
+                stringResource(R.string.agent_gallery_ai_images_content_description),
+            contentScale = ContentScale.Crop,
+        )
+
+        if (isCurrentBackground) {
+            Box(
+                modifier =
+                    Modifier.align(Alignment.TopEnd)
+                        .padding(UiConfigs.ChatPage.PhotoAlbum.Preview.BackgroundIndicatorPadding)
+                        .size(UiConfigs.ChatPage.PhotoAlbum.Preview.BackgroundIndicatorSize)
+                        .clip(CircleShape)
+                        .background(UiConfigs.ChatPage.PhotoAlbum.Preview.BackgroundIndicatorColor)
+            )
+        }
     }
 }
 
@@ -733,6 +821,7 @@ private fun DebugInfoRow(label: String, value: String) {
 @Preview
 @Composable
 private fun PreviewAgentInfoScreen() {
+    val navController = rememberNavController()
     val agent =
         AgentInfo(
             avatar = "",
@@ -766,5 +855,10 @@ private fun PreviewAgentInfoScreen() {
             ),
         )
 
-    AiAgentInfoScreen(agent = agent, galleryItems = gallery) {}
+    AiAgentInfoScreen(
+        agent = agent,
+        galleryItems = gallery,
+        navController = navController,
+        onBack = {},
+    )
 }
