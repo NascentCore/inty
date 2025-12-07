@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import pytest
 
 from app.core.config import GooglePlayConfig
-from app.external_services.google_play_fake import FakeGooglePlayService
+from app.external_services.fakes.android_publisher import FakeAndroidPublisher
 from app.external_services.google_play_service import GooglePlayService
 from app.schemas.version import VersionReminderAction
 
@@ -41,7 +41,7 @@ def google_play_config():
 @pytest.fixture
 def fake_service():
     """创建假 Google Play 服务"""
-    return FakeGooglePlayService()
+    return FakeAndroidPublisher()
 
 
 @pytest.fixture
@@ -213,7 +213,7 @@ class TestVerifySubscriptionPurchase:
         package_name = google_play_config.package_name
 
         # 设置 400 错误
-        error = FakeGooglePlayService.create_http_error(400, "Invalid product ID")
+        error = FakeAndroidPublisher.create_http_error(400, "Invalid product ID")
         fake_service.set_subscription_error(package_name, product_id, purchase_token, error)
 
         is_valid, purchase_info = google_play_service.verify_subscription_purchase(
@@ -232,7 +232,7 @@ class TestVerifySubscriptionPurchase:
         package_name = google_play_config.package_name
 
         # 设置 500 错误
-        error = FakeGooglePlayService.create_http_error(500, "Internal server error")
+        error = FakeAndroidPublisher.create_http_error(500, "Internal server error")
         fake_service.set_subscription_error(package_name, product_id, purchase_token, error)
 
         is_valid, purchase_info = google_play_service.verify_subscription_purchase(
@@ -394,7 +394,7 @@ class TestVerifyProductPurchase:
         package_name = google_play_config.package_name
 
         # 设置 400 错误
-        error = FakeGooglePlayService.create_http_error(400, "Invalid product ID")
+        error = FakeAndroidPublisher.create_http_error(400, "Invalid product ID")
         fake_service.set_product_error(package_name, product_id, purchase_token, error)
 
         is_valid, purchase_info = google_play_service.verify_product_purchase(
@@ -534,7 +534,7 @@ class TestCheckVersionRequirement:
         package_name = config.package_name
 
         # 设置编辑错误
-        error = FakeGooglePlayService.create_http_error(500, "API Error")
+        error = FakeAndroidPublisher.create_http_error(500, "API Error")
         fake_service.set_edit_error(package_name, error)
 
         result = service.check_version_requirement(50)
@@ -622,7 +622,7 @@ class TestGetAppVersionInfo:
         package_name = google_play_config.package_name
 
         # 设置主轨道错误
-        error = FakeGooglePlayService.create_http_error(404, "Track not found")
+        error = FakeAndroidPublisher.create_http_error(404, "Track not found")
         fake_service.set_track_error(package_name, "edit_1", "production", error)
 
         # 设置备用轨道响应
@@ -654,7 +654,7 @@ class TestGetAppVersionInfo:
         package_name = google_play_config.package_name
 
         # 设置所有轨道错误
-        error = FakeGooglePlayService.create_http_error(404, "Track not found")
+        error = FakeAndroidPublisher.create_http_error(404, "Track not found")
         fake_service.set_track_error(package_name, "edit_1", "production", error)
         fake_service.set_track_error(package_name, "edit_1", "internal", error)
 
@@ -695,7 +695,7 @@ class TestGetAppVersionInfo:
         package_name = google_play_config.package_name
 
         # 设置编辑错误
-        error = FakeGooglePlayService.create_http_error(500, "API Error")
+        error = FakeAndroidPublisher.create_http_error(500, "API Error")
         fake_service.set_edit_error(package_name, error)
 
         version_info = google_play_service.get_app_version_info()
