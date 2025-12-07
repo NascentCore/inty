@@ -14,6 +14,7 @@
 - 优先使用 material 3 icons 和其他来自 material 3 的素材 https://fonts.google.com/icons?icon.query=generate&icon.size=24&icon.color=%231f1f1f&icon.platform=android
 - 代码注释使用简体中文
 - 默认日志登记是 debug
+- 新增 UI Composeable 组件要有详细的注释说明其使用范围场景和预期视觉效果，及可配置项；关键配置项要编写为输入参数
 
 ## 适用范围与平台约束
 
