@@ -7901,13 +7901,32 @@
             },
             "VersionCheckResponse": {
                 "properties": {
+                    "reminder_action": {
+                        "$ref": "#/components/schemas/VersionReminderAction",
+                        "description": "\u5ba2\u6237\u7aef\u9700\u8981\u5c55\u793a\u7684\u63d0\u9192\u52a8\u4f5c\uff0cNone \u8868\u793a\u65e0\u9700\u989d\u5916\u63d0\u9192",
+                        "default": "NONE"
+                    },
                     "current_version": {
-                        "type": "string",
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
                         "title": "Current Version",
                         "description": "\u5f53\u524d\u5ba2\u6237\u7aef\u7248\u672c"
                     },
                     "latest_version": {
-                        "type": "string",
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
                         "title": "Latest Version",
                         "description": "\u6700\u65b0\u53ef\u7528\u7248\u672c"
                     },
@@ -7924,12 +7943,26 @@
                         "description": "\u6700\u65b0\u7248\u672c\u4ee3\u7801"
                     },
                     "update_required": {
-                        "type": "boolean",
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
                         "title": "Update Required",
                         "description": "\u662f\u5426\u9700\u8981\u66f4\u65b0"
                     },
                     "force_update": {
-                        "type": "boolean",
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
                         "title": "Force Update",
                         "description": "\u662f\u5426\u5f3a\u5236\u66f4\u65b0"
                     },
@@ -7949,7 +7982,14 @@
                         "description": "\u5f3a\u5236\u66f4\u65b0\u7684\u5177\u4f53\u539f\u56e0\u5217\u8868"
                     },
                     "minimum_version": {
-                        "type": "string",
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
                         "title": "Minimum Version",
                         "description": "\u6700\u4f4e\u652f\u6301\u7248\u672c"
                     },
@@ -7966,12 +8006,26 @@
                         "description": "\u66f4\u65b0\u65e5\u5fd7"
                     },
                     "download_url": {
-                        "type": "string",
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
                         "title": "Download Url",
                         "description": "\u4e0b\u8f7d\u94fe\u63a5"
                     },
                     "message": {
-                        "type": "string",
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
                         "title": "Message",
                         "description": "\u72b6\u6001\u6d88\u606f"
                     },
@@ -7986,37 +8040,18 @@
                         ],
                         "title": "Error",
                         "description": "\u9519\u8bef\u4fe1\u606f"
-                    },
-                    "reminder_action": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/components/schemas/VersionReminderAction"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "description": "\u5ba2\u6237\u7aef\u9700\u8981\u5c55\u793a\u7684\u63d0\u9192\u52a8\u4f5c\uff0cNone \u8868\u793a\u65e0\u9700\u989d\u5916\u63d0\u9192"
                     }
                 },
                 "type": "object",
-                "required": [
-                    "current_version",
-                    "latest_version",
-                    "update_required",
-                    "force_update",
-                    "minimum_version",
-                    "download_url",
-                    "message"
-                ],
                 "title": "VersionCheckResponse",
                 "description": "\u7248\u672c\u68c0\u67e5\u54cd\u5e94\u6a21\u578b"
             },
             "VersionReminderAction": {
                 "type": "string",
                 "enum": [
-                    "POP_UP_REMINDER",
+                    "NONE",
                     "SETTINGS_REMINDER",
+                    "POP_UP_REMINDER",
                     "BLOCK_ACCESS"
                 ],
                 "title": "VersionReminderAction",
