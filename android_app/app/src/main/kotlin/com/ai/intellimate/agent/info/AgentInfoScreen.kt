@@ -407,7 +407,7 @@ internal fun AiAgentInfoScreen(
                         }
                         if (galleryItems.isNotEmpty()) {
                             Spacer(Modifier.height(16.dp))
-                            AgentGeneratedImagesSection(
+                            PhotoAlbumPreviewSection(
                                 modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
                                 images = galleryItems,
                                 agentId = agent.id,
@@ -473,7 +473,7 @@ internal fun AiAgentInfoScreen(
  * 查看所有图片，位于 PhotoAlbumScreen.kt
  */
 @Composable
-private fun AgentGeneratedImagesSection(
+private fun PhotoAlbumPreviewSection(
     modifier: Modifier = Modifier,
     images: List<AgentImageGalleryItem>,
     agentId: String,
@@ -491,15 +491,15 @@ private fun AgentGeneratedImagesSection(
         ) {
             Text(
                 text = stringResource(R.string.agent_photo_album_title),
-                fontSize = 16.sp,
+                fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.TitleFontSize,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White,
             )
             Text(
                 text = stringResource(R.string.agent_photo_album_see_all),
-                fontSize = 14.sp,
+                fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.SeeAllFontSize,
                 fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = 0.85f),
+                color = Color.White.copy(alpha = UiConfigs.ChatPage.PhotoAlbum.Preview.SeeAllTextAlpha),
                 modifier = Modifier.noRippleClickable { onNavigateToPhotoAlbum() },
             )
         }
@@ -602,7 +602,7 @@ private fun AgentGalleryImageCard(
                         .padding(8.dp)
                         .size(16.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF4CAF50))
+                        .background(ai.sxwl.android.design.theme.AppColors.Green500)
             )
         }
     }
@@ -645,7 +645,7 @@ private fun AgentGalleryImageCard(
  *
  * 使用场景：
  * - 在角色信息页面（AgentInfoScreen）的相册预览区域使用
- * - 通过 [AgentGeneratedImagesSection] 以网格形式展示（默认 2 列）
+ * - 通过 [PhotoAlbumPreviewSection] 以网格形式展示（默认 2 列）
  * - 用于在有限空间内紧凑展示角色的 AI 生成图片
  * - 与 [AgentGalleryImageCard] 相比，去掉了长按功能，更适合网格布局
  *
@@ -677,7 +677,7 @@ private fun AgentGalleryImageCardCompact(
             modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(UiConfigs.CharacterGallery.ImageCornerRadius))
-                .background(Color.White.copy(alpha = 0.08f))
+                .background(Color.White.copy(alpha = UiConfigs.ChatPage.PhotoAlbum.Preview.ImageCardBackgroundAlpha))
                 .pointerInput(agentId, item.imageUrl) {
                     detectTapGestures(onTap = { onPreview(item.imageUrl) })
                 }
@@ -703,10 +703,10 @@ private fun AgentGalleryImageCardCompact(
             Box(
                 modifier =
                     Modifier.align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(16.dp)
+                        .padding(UiConfigs.ChatPage.PhotoAlbum.Preview.BackgroundIndicatorPadding)
+                        .size(UiConfigs.ChatPage.PhotoAlbum.Preview.BackgroundIndicatorSize)
                         .clip(CircleShape)
-                        .background(Color(0xFF4CAF50))
+                        .background(UiConfigs.ChatPage.PhotoAlbum.Preview.BackgroundIndicatorColor)
             )
         }
     }

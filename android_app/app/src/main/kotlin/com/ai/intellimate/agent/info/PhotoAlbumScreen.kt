@@ -83,14 +83,14 @@ internal fun PhotoAlbumScreen(
                         Text(
                             text = stringResource(R.string.agent_photo_album_title),
                             color = Color.White,
-                            fontSize = 18.sp,
+                            fontSize = UiConfigs.ChatPage.PhotoAlbum.All.TopBarTitleFontSize,
                             fontWeight = FontWeight.SemiBold,
                         )
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Image(
-                                modifier = Modifier.size(24.dp),
+                                modifier = Modifier.size(UiConfigs.ChatPage.PhotoAlbum.All.BackButtonIconSize),
                                 painter = painterResource(R.drawable.back),
                                 contentDescription = null,
                             )
@@ -124,8 +124,8 @@ internal fun PhotoAlbumScreen(
                     ) {
                         Text(
                             text = "No images available",
-                            color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 14.sp,
+                            color = Color.White.copy(alpha = UiConfigs.ChatPage.PhotoAlbum.All.EmptyStateTextAlpha),
+                            fontSize = UiConfigs.ChatPage.PhotoAlbum.All.EmptyStateFontSize,
                         )
                     }
                 } else {
@@ -135,7 +135,7 @@ internal fun PhotoAlbumScreen(
                             Modifier.fillMaxSize()
                                 .padding(innerPadding)
                                 .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
-                        contentPadding = PaddingValues(vertical = 16.dp),
+                        contentPadding = PaddingValues(vertical = UiConfigs.ChatPage.PhotoAlbum.All.GridContentVerticalPadding),
                         horizontalArrangement =
                             Arrangement.spacedBy(UiConfigs.MePage.GridHorizontalSpacing),
                         verticalArrangement =
@@ -212,7 +212,7 @@ private fun PhotoAlbumImageItem(
             modifier =
                 Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(UiConfigs.CharacterGallery.ImageCornerRadius))
-                    .background(Color.White.copy(alpha = 0.08f))
+                    .background(Color.White.copy(alpha = UiConfigs.ChatPage.PhotoAlbum.All.ImageCardBackgroundAlpha))
                     .pointerInput(item.imageUrl) {
                         detectTapGestures(onTap = { onPreview(item.imageUrl) })
                     }
@@ -237,7 +237,7 @@ private fun PhotoAlbumImageItem(
         Box(
             modifier =
                 Modifier.fillMaxWidth()
-                    .padding(top = 8.dp)
+                    .padding(top = UiConfigs.ChatPage.PhotoAlbum.All.ImageItemButtonTopPadding)
                     .noRippleClickable {
                         if (isCurrentBackground) {
                             IntySetting.clearChatBackgroundImage(agentId)
@@ -256,13 +256,13 @@ private fun PhotoAlbumImageItem(
                     imageVector = Icons.Default.Check,
                     contentDescription = stringResource(R.string.agent_photo_album_set_as_background),
                     tint = Color.White,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(UiConfigs.ChatPage.PhotoAlbum.All.ImageItemButtonIconSize),
                 )
             } else {
                 Text(
                     text = stringResource(R.string.agent_photo_album_set_as_background),
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = UiConfigs.ChatPage.PhotoAlbum.All.ImageItemButtonTextFontSize,
+                    color = Color.White.copy(alpha = UiConfigs.ChatPage.PhotoAlbum.All.ImageItemButtonTextAlpha),
                     fontWeight = FontWeight.Medium,
                 )
             }
