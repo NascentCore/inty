@@ -396,7 +396,6 @@ class MainViewModel : BaseVM() {
                     _needForceUpgrade.send(rsp)
                 }
                 IntySetting.setAppUpdateTips(rsp.update_required)
-                IntySetting.setAppGooglePlayUrl(rsp.download_url ?: "")
             }
 
             is ApiResult.Error -> {

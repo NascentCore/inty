@@ -24,7 +24,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -42,7 +41,6 @@ import com.ai.intellimate.vip.SubsManageActivity
 import com.ai.intellimate.vip.VipCenterActivity
 import kotlinx.coroutines.flow.collectLatest
 
-private const val GOOGLE_PLAY_APP_URL_PREFIX = "https://play.google.com/store/apps/details?id="
 private const val GOOGLE_PLAY_MARKET_URL_PREFIX = "market://details?id="
 
 /** 设置页面主内容 */
@@ -296,8 +294,8 @@ private fun SupportAndHelpSection(
 
         IntelliMateDivider()
 
+        val playStoreUrl = playStoreUrl()
         // 版本号
-        val defaultPlayStoreUrl = rememberUpdatedPlayStoreUrl()
         SettingsArrowItem(
             item =
                 SettingsItemData.CommonItemData(
@@ -317,8 +315,7 @@ private fun SupportAndHelpSection(
             showRedDot = hasAppUpdateTips,
             onItemClick = {
                 runCatching {
-                        val url = IntySetting.appGooglePlayUrl().ifBlank { defaultPlayStoreUrl }
-                        uriHandler.openUri(url)
+                        uriHandler.openUri(playStoreUrl)
                     }
                     .onFailure { ToastUtils.showShort(R.string.toast_google_play_unavailable) }
             },
@@ -335,19 +332,12 @@ private fun SupportAndHelpSection(
                 ),
             isInGroup = true,
             onItemClick = {
-                val fallbackUrl = IntySetting.appGooglePlayUrl().ifBlank { defaultPlayStoreUrl }
-                if (!openRateUsPage(context = context, fallbackUrl = fallbackUrl)) {
+                if (!openRateUsPage(context = context, fallbackUrl = playStoreUrl)) {
                     ToastUtils.showShort(R.string.toast_google_play_unavailable)
                 }
             },
         )
     }
-}
-
-@Composable
-private fun rememberUpdatedPlayStoreUrl(): String {
-    val packageName = BuildConfig.APPLICATION_ID
-    return remember(packageName) { "$GOOGLE_PLAY_APP_URL_PREFIX$packageName" }
 }
 
 /** 打开 Google Play 评价 */

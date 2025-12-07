@@ -193,14 +193,6 @@ object IntySetting {
         curUserSetting.putBoolean("has_app_update_tips", showed)
     }
 
-    fun appGooglePlayUrl(): String {
-        return curUserSetting.getString("app_google_play_url", "") ?: ""
-    }
-
-    fun setAppGooglePlayUrl(url: String) {
-        curUserSetting.putString("app_google_play_url", url)
-    }
-
     private var isLoggingOut = false
 
     fun logout() {
