@@ -239,9 +239,9 @@ class FakeAndroidPublisher:
                 fallback_key_pattern = f"{packageName}:"
                 matching_key = None
                 for stored_key in self._track_responses.keys():
-                    if stored_key.startswith(fallback_key_pattern) and stored_key.endswith(
-                        f":{track}"
-                    ):
+                    if stored_key.startswith(
+                        fallback_key_pattern
+                    ) and stored_key.endswith(f":{track}"):
                         matching_key = stored_key
                         break
 

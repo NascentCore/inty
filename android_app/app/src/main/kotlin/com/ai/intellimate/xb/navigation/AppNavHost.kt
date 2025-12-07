@@ -16,17 +16,21 @@ import com.ai.intellimate.settings.SettingScreen
 
 /**
  * 应用导航宿主组件
- * 
- * 这是应用的根导航容器，负责管理应用内所有主要页面的导航和转场动画。
- * 使用 Jetpack Compose Navigation 实现页面间的路由和跳转。
- * 
+ *
+ * 这是应用的根导航容器，负责管理应用内所有主要页面的导航和转场动画。 使用 Jetpack Compose Navigation 实现页面间的路由和跳转。
+ *
  * @param page 初始页面路由，决定应用启动时显示的第一个页面（如登录页或主页）
  * @param mainViewModel 主视图模型，用于管理应用级别的状态和数据
  * @param chatViewModel 聊天视图模型，用于管理聊天相关的状态
  * @param factory ViewModel 工厂，用于创建和管理 ViewModel 实例
  */
 @Composable
-fun AppNavHost(page: String, mainViewModel: MainViewModel, chatViewModel: ChatViewModel, factory: ViewModelProvider.Factory) {
+fun AppNavHost(
+    page: String,
+    mainViewModel: MainViewModel,
+    chatViewModel: ChatViewModel,
+    factory: ViewModelProvider.Factory,
+) {
     // 创建并记住导航控制器，用于管理页面导航栈
     val navController = rememberNavController()
 
@@ -39,14 +43,14 @@ fun AppNavHost(page: String, mainViewModel: MainViewModel, chatViewModel: ChatVi
         enterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                animationSpec = tween(400)
+                animationSpec = tween(400),
             ) + fadeIn(animationSpec = tween(400))
         },
         // 返回上一页时的转场动画：从左侧滑入 + 淡入效果，持续 400ms
         popEnterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.End,
-                animationSpec = tween(400)
+                animationSpec = tween(400),
             ) + fadeIn(animationSpec = tween(400))
         },
     ) {
@@ -54,7 +58,7 @@ fun AppNavHost(page: String, mainViewModel: MainViewModel, chatViewModel: ChatVi
         composable(Routes.SplashLogin) {
             SplashLoginUI(navController = navController, mainViewModel = mainViewModel)
         }
-        
+
         // 定义主页标签页路由（包含 Explore、Messages、Me 等底部导航）
         composable(Routes.HomeTab) {
             HomeScreen(
@@ -69,9 +73,8 @@ fun AppNavHost(page: String, mainViewModel: MainViewModel, chatViewModel: ChatVi
             SettingScreen(
                 navController,
                 mainViewModel = mainViewModel,
-                chatViewModel = chatViewModel
+                chatViewModel = chatViewModel,
             )
         }
-
     }
 }

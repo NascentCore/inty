@@ -31,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
@@ -57,7 +56,6 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.UpgradeDialog
 import com.ai.intellimate.vip.VipCenterActivity
 import com.inty.api.models.api.v1.version.VersionCheckResponse
-import ai.sxwl.android.utils.LogUtils
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
@@ -236,7 +234,7 @@ fun HomeScreen(
 @Composable
 private fun AppVersionLogic(mainViewModel: MainViewModel) {
     val rsp by mainViewModel.needForceUpgrade.collectAsState(null)
-    
+
     // 使用稳定的 key，避免 rsp 变化时重置状态；因为 rsp 会从 null 被赋值
     var shouldShowUpgradeDialog by remember { mutableStateOf(false) }
 
@@ -248,20 +246,16 @@ private fun AppVersionLogic(mainViewModel: MainViewModel) {
     }
 
     val isForced = rsp?.reminder_action == VersionCheckResponse.Data.ReminderAction.BLOCK_ACCESS
-    val title = if (isForced) {
-        stringResource(id = R.string.str_force_upgrade)
-    } else {
-        stringResource(id = R.string.str_suggest_upgrade)
-    }
+    val title =
+        if (isForced) {
+            stringResource(id = R.string.str_force_upgrade)
+        } else {
+            stringResource(id = R.string.str_suggest_upgrade)
+        }
     val content = stringResource(id = R.string.str_upgrade_content)
-    
+
     if (shouldShowUpgradeDialog && rsp != null) {
-        UpgradeDialog(
-            title,
-            content,
-            { shouldShowUpgradeDialog = false },
-            isForced = isForced
-        )
+        UpgradeDialog(title, content, { shouldShowUpgradeDialog = false }, isForced = isForced)
     }
 }
 
