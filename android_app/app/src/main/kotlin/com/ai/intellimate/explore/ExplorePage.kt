@@ -7,6 +7,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.utils.ToastUtils
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,9 +35,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.pointer.consume
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -53,6 +57,8 @@ private enum class ExploreSubTab {
     Recommended,
     Boost,
 }
+
+private val ExploreTabSwipeThreshold = 72.dp
 
 /** Explore页面 - 推荐agents展示 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,6 +81,45 @@ fun ExplorePage(
     val leaderboard by
         if (isDebugMode) BoostManager.leaderboard.collectAsState()
         else remember { mutableStateOf(emptyList<BoostLeaderboardEntry>()) }
+    val density = LocalDensity.current
+    val tabSwipeThresholdPx = remember(density) { with(density) { ExploreTabSwipeThreshold.toPx() } }
+    val tabSwipeModifier =
+        if (isDebugMode) {
+            Modifier.pointerInput(selectedTab, tabSwipeThresholdPx) {
+                var totalDrag = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { totalDrag = 0f },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        totalDrag += dragAmount
+                    },
+                    onDragCancel = { totalDrag = 0f },
+                    onDragEnd = {
+                        when {
+                            totalDrag <= -tabSwipeThresholdPx -> {
+                                val nextIndex =
+                                    (selectedTab.ordinal + 1)
+                                        .coerceAtMost(ExploreSubTab.entries.lastIndex)
+                                if (nextIndex != selectedTab.ordinal) {
+                                    selectedTab = ExploreSubTab.entries[nextIndex]
+                                }
+                            }
+
+                            totalDrag >= tabSwipeThresholdPx -> {
+                                val previousIndex =
+                                    (selectedTab.ordinal - 1).coerceAtLeast(0)
+                                if (previousIndex != selectedTab.ordinal) {
+                                    selectedTab = ExploreSubTab.entries[previousIndex]
+                                }
+                            }
+                        }
+                        totalDrag = 0f
+                    },
+                )
+            }
+        } else {
+            Modifier
+        }
 
     // 获取Paging数据流
     val agentsFlow = viewModel.getRecommendAgentsFlow()
@@ -116,7 +161,9 @@ fun ExplorePage(
             contentDescription = null,
         )
 
-        Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
+        Column(
+            modifier = Modifier.fillMaxSize().background(Color.Transparent).then(tabSwipeModifier)
+        ) {
             TopAppBar(
                 title = {
                     Image(
