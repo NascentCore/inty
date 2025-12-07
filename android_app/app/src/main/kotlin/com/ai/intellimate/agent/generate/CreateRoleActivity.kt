@@ -11,6 +11,7 @@ import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.app.Activity
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color as AndroidColor
@@ -770,7 +771,7 @@ private fun CreateRolePage(
                     val promptToUse = prompt.takeIf { it.isNotBlank() } ?: promptForGeneration
                     onAvatarGenerateClick(promptToUse.takeIf { it.isNotBlank() })
                 },
-                onFaceEdit = {
+                onFaceEdit = faceEdit@{
                     AvatarManager.clearAllAvatarData()
 
                     // Get the current avatar URL to crop
@@ -794,6 +795,22 @@ private fun CreateRolePage(
                         } else {
                             avatarUrl
                         }
+
+                    if (imageUrl.isNullOrBlank()) {
+                        ToastUtils.showShort(R.string.toast_no_avatar_image)
+                        return@faceEdit
+                    }
+
+                    if (
+                        tryStartCropWithLocalImage(
+                            context = context,
+                            imageUrl = imageUrl,
+                            cropLauncher = cropLauncher,
+                        )
+                    ) {
+                        return@faceEdit
+                    }
+
                     val previewUrl =
                         getCdnImageUrl(
                             originUrl = imageUrl,
@@ -801,43 +818,47 @@ private fun CreateRolePage(
                             quality = Config.TextToImage.Preview.QUALITY,
                         )
 
-                    if (previewUrl != null || imageUrl != null) {
-                        createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
-                            try {
-                                val imageLoader = SingletonImageLoader.get(context)
-                                val request =
-                                    ImageRequest.Builder(context)
-                                        .data(previewUrl ?: imageUrl)
-                                        .build()
-                                val result = imageLoader.execute(request)
+                    createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
+                        try {
+                            val imageLoader = SingletonImageLoader.get(context)
+                            val request =
+                                ImageRequest.Builder(context)
+                                    .data(previewUrl ?: imageUrl)
+                                    .build()
+                            val result = imageLoader.execute(request)
 
-                                if (result is SuccessResult) {
+                            if (result is SuccessResult) {
+                                val snapshot =
                                     result.diskCacheKey?.let { key ->
-                                        val diskCache = SingletonImageLoader.get(context).diskCache
-                                        val snapshot = diskCache?.openSnapshot(key)
+                                        imageLoader.diskCache?.openSnapshot(key)
+                                    }
 
-                                        snapshot?.use {
-                                            startUCropWithLocalFile(
-                                                it.data.toFile(),
-                                                context,
-                                                cropLauncher,
-                                            )
-                                        }
+                                if (snapshot != null) {
+                                    snapshot.use {
+                                        startUCropWithLocalFile(
+                                            it.data.toFile(),
+                                            context,
+                                            cropLauncher,
+                                        )
+                                    }
+                                } else {
+                                    withContext(Dispatchers.Main) {
+                                        ToastUtils.showShort(
+                                            R.string.toast_failed_download_image_editing
+                                        )
                                     }
                                 }
-                            } catch (e: Exception) {
-                                LogUtils.e(
-                                    "Failed to download image for cropping: $imageUrl Error details: ${e.message}"
+                            }
+                        } catch (e: Exception) {
+                            LogUtils.e(
+                                "Failed to download image for cropping: $imageUrl Error details: ${e.message}"
+                            )
+                            withContext(Dispatchers.Main) {
+                                ToastUtils.showShort(
+                                    R.string.toast_failed_download_image_editing
                                 )
-                                withContext(Dispatchers.Main) {
-                                    ToastUtils.showShort(
-                                        R.string.toast_failed_download_image_editing
-                                    )
-                                }
                             }
                         }
-                    } else {
-                        ToastUtils.showShort(R.string.toast_no_avatar_image)
                     }
                 },
                 onUploadFromGallery = { galleryLauncher.launch("image/*") },
@@ -1296,6 +1317,37 @@ private fun startUCropWithLocalFile(
         cropLauncher.launch(cropIntent)
     } catch (e: Exception) {
         ToastUtils.showShort(R.string.toast_failed_open_crop_editor)
+    }
+}
+
+private fun tryStartCropWithLocalImage(
+    context: Context,
+    imageUrl: String,
+    cropLauncher: ActivityResultLauncher<Intent>,
+): Boolean {
+    val imageUri = runCatching { imageUrl.toUri() }.getOrNull() ?: return false
+    return when (imageUri.scheme?.lowercase(Locale.getDefault()) ?: ContentResolver.SCHEME_FILE) {
+        ContentResolver.SCHEME_FILE -> {
+            val localFile = imageUri.path?.let { File(it) }
+            if (localFile != null && localFile.exists() && localFile.length() > 0) {
+                startUCropWithLocalFile(localFile, context, cropLauncher)
+                true
+            } else {
+                false
+            }
+        }
+
+        ContentResolver.SCHEME_CONTENT -> {
+            val tempFile = copyUriToTempFile(context, imageUri)
+            if (tempFile != null) {
+                startUCropWithLocalFile(tempFile, context, cropLauncher)
+                true
+            } else {
+                false
+            }
+        }
+
+        else -> false
     }
 }
 
