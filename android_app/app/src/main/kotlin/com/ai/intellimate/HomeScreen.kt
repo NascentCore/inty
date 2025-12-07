@@ -38,6 +38,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.ai.intellimate.agent.generate.CreateRoleActivity
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.ChatActivity
@@ -61,6 +62,7 @@ import java.util.concurrent.TimeUnit
 /** 主页面，包含五个tab */
 @Composable
 fun HomeScreen(
+    navController: NavController,
     modifier: Modifier = Modifier,
     mainViewModel: MainViewModel,
     viewModelFactory: ViewModelProvider.Factory,
@@ -199,6 +201,7 @@ fun HomeScreen(
         },
     ) { innerPadding ->
         HomeContent(
+            navController,
             selectedTab = selectedTab.value,
             mainViewModel = mainViewModel,
             viewModelFactory = viewModelFactory,
@@ -351,6 +354,7 @@ private fun handleTabSelectionWithLauncher(
 /** 主页面内容 */
 @Composable
 private fun HomeContent(
+    navController: NavController,
     selectedTab: HomeTabIndex,
     mainViewModel: MainViewModel,
     viewModelFactory: ViewModelProvider.Factory,
@@ -377,6 +381,7 @@ private fun HomeContent(
 
         HomeTabIndex.Profile -> {
             ProfileTabContent(
+                navController,
                 onShowSettings = { mainViewModel.showSettings() },
                 shouldRefreshProfile = shouldRefreshProfile,
                 onRefreshProfileHandled = onRefreshProfileHandled,
@@ -461,6 +466,7 @@ private fun ExploreTabContent(innerPadding: PaddingValues, mainViewModel: MainVi
 /** 我的Tab内容 */
 @Composable
 private fun ProfileTabContent(
+    navController: NavController,
     onShowSettings: () -> Unit,
     shouldRefreshProfile: Boolean,
     onRefreshProfileHandled: () -> Unit,
@@ -541,6 +547,7 @@ private fun ProfileTabContent(
     }
 
     ProfilePage(
+        navController,
         modifier = Modifier,
         userProfile = safeUserProfile,
         agents = uiState.userCreatedAgents,

@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavController
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.components.EmailLoginButton
 import com.ai.intellimate.ui.components.EnterEmailScreen
@@ -52,6 +53,8 @@ import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.ui.components.LoginWithEmailScreen
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
+import com.ai.intellimate.xb.navigation.AppNavHost
+import com.ai.intellimate.xb.navigation.Routes
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
@@ -327,39 +330,41 @@ class MainActivity : BaseActivity() {
             }
         }
 
-        when {
-            !isLoggedIn -> {
-                // 用户未登录，显示登录界面
-                SplashLoginUI(mainViewModel = mainViewModel)
-            }
-
-            showSettings -> {
-                // 显示设置界面
-                com.ai.intellimate.settings.SettingScreen(
-                    modifier =
-                        Modifier.fillMaxSize()
-                            .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
-                    onBack = { mainViewModel.hideSettings() },
-                    onLogout = { isDelete ->
-                        mainViewModel.logout()
-                        chatViewModel.clearAllData()
-                        val str =
-                            if (isDelete) getString(R.string.delete_account_successfully)
-                            else getString(R.string.logout_successfully)
-                        ai.sxwl.android.utils.ToastUtils.showShort(str)
-                    },
-                )
-            }
-
-            else -> {
-                // 用户已登录，显示主界面
-                HomeScreen(
-                    modifier = Modifier.fillMaxSize(),
-                    mainViewModel = mainViewModel,
-                    viewModelFactory = defaultViewModelProviderFactory,
-                )
-            }
-        }
+//        when {
+//            !isLoggedIn -> {
+//                // 用户未登录，显示登录界面
+//                SplashLoginUI(mainViewModel = mainViewModel)
+//            }
+//
+//            showSettings -> {
+//                // 显示设置界面
+//                com.ai.intellimate.settings.SettingScreen(
+//                    modifier =
+//                        Modifier.fillMaxSize()
+//                            .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
+//                    onBack = { mainViewModel.hideSettings() },
+//                    onLogout = { isDelete ->
+//                        mainViewModel.logout()
+//                        chatViewModel.clearAllData()
+//                        val str =
+//                            if (isDelete) getString(R.string.delete_account_successfully)
+//                            else getString(R.string.logout_successfully)
+//                        ai.sxwl.android.utils.ToastUtils.showShort(str)
+//                    },
+//                )
+//            }
+//
+//            else -> {
+//                // 用户已登录，显示主界面
+//                HomeScreen(
+//                    modifier = Modifier.fillMaxSize(),
+//                    mainViewModel = mainViewModel,
+//                    viewModelFactory = defaultViewModelProviderFactory,
+//                )
+//            }
+//        }
+        val page = if (isLoggedIn) Routes.HomeTab else Routes.SplashLogin
+        AppNavHost(page, mainViewModel, chatViewModel, defaultViewModelProviderFactory)
     }
 
     /** 设置返回拦截功能 */
@@ -526,7 +531,7 @@ private enum class LoginScreenState {
 
 /** Splash 登录界面 - 集成 Google 登录按钮和隐私政策 */
 @Composable
-private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainViewModel) {
+fun SplashLoginUI(navController: NavController, modifier: Modifier = Modifier, mainViewModel: MainViewModel) {
     val context = LocalContext.current
     var isLoading by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
