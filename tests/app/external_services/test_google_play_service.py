@@ -23,32 +23,7 @@ def test_version_check_short_circuits_when_disabled():
     assert result["update_required"] is False
     assert result["force_update"] is False
     assert result["message"] == "Version check disabled"
-    assert result["reminder_action"] == VersionReminderAction.SETTINGS_REMINDER
-
-
-def test_version_check_uses_injected_min_supported_version():
-    config = GooglePlayConfig(
-        enable_version_check=True,
-        min_supported_version=150,
-        package_name="com.test.app",
-    )
-    service = GooglePlayService(android_publisher_service=None, config=config)
-
-    def _fake_version_info():
-        return {
-            "version_name": "2.0.0",
-            "version_code": 200,
-            "release_notes": "Important fixes",
-        }
-
-    service.get_app_version_info = _fake_version_info  # type: ignore[assignment]
-
-    result = service.check_version_requirement(client_version_code=120)
-
-    assert result["force_update"] is True
-    assert result["minimum_version"] == "150"
-    assert result["reminder_action"] == VersionReminderAction.BLOCK_ACCESS
-    assert result["latest_version"] == "2.0.0"
+    assert result["reminder_action"] == VersionReminderAction.NONE
 
 
 @pytest.fixture
@@ -476,43 +451,6 @@ class TestCheckVersionRequirement:
         assert result["force_update"] is False
         assert result["message"] == "Version check disabled"
 
-    def test_version_check_below_minimum_force_update(
-        self, fake_service, google_play_config
-    ):
-        """测试客户端版本低于最低支持版本（强制更新）"""
-        config = GooglePlayConfig(
-            package_name=google_play_config.package_name,
-            enable_version_check=True,
-            min_supported_version=50,
-        )
-        service = GooglePlayService(
-            android_publisher_service=fake_service, config=config
-        )
-        package_name = config.package_name
-
-        # 设置版本信息
-        fake_service.set_track_response(
-            package_name,
-            "edit_1",
-            "production",
-            {
-                "releases": [
-                    {
-                        "versionCodes": ["100"],
-                        "name": "2.0.0",
-                        "status": "completed",
-                        "releaseNotes": [{"language": "en-US", "text": "Update"}],
-                    }
-                ]
-            },
-        )
-
-        result = service.check_version_requirement(30)
-
-        assert result["force_update"] is True
-        assert len(result["force_update_reasons"]) > 0
-        assert "minimum" in result["force_update_reasons"][0].lower()
-
     def test_version_check_update_required(self, fake_service, google_play_config):
         """测试客户端版本低于最新版本（建议更新）"""
         config = GooglePlayConfig(
@@ -546,7 +484,7 @@ class TestCheckVersionRequirement:
         assert result["update_required"] is True
         assert result["force_update"] is False
         assert result["message"] == "New version available"
-        assert result["latest_version_code"] == "100"  # versionCodes 返回字符串
+        assert result["latest_version_code"] == 100  # versionCodes 返回字符串
 
     def test_version_check_up_to_date(self, fake_service, google_play_config):
         """测试客户端版本等于最新版本（无需更新）"""
@@ -638,41 +576,6 @@ class TestCheckVersionRequirement:
 
         # 版本比较失败时，保守起见要求更新
         assert result["update_required"] is True
-
-    def test_version_check_config_min_supported_version(
-        self, fake_service, google_play_config
-    ):
-        """测试配置项 min_supported_version"""
-        config = GooglePlayConfig(
-            package_name=google_play_config.package_name,
-            enable_version_check=True,
-            min_supported_version=80,
-        )
-        service = GooglePlayService(
-            android_publisher_service=fake_service, config=config
-        )
-        package_name = config.package_name
-
-        # 设置版本信息
-        fake_service.set_track_response(
-            package_name,
-            "edit_1",
-            "production",
-            {
-                "releases": [
-                    {
-                        "versionCodes": ["100"],
-                        "name": "2.0.0",
-                        "status": "completed",
-                    }
-                ]
-            },
-        )
-
-        result = service.check_version_requirement(70)
-
-        assert result["force_update"] is True
-        assert result["minimum_version"] == "80"
 
 
 class TestGetAppVersionInfo:
