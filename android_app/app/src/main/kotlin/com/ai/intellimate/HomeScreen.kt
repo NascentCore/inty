@@ -54,8 +54,10 @@ import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.ExpiredVipDialog
 import com.ai.intellimate.ui.FeedbackRequestDialog
 import com.ai.intellimate.ui.UiConfigs
-import com.ai.intellimate.ui.components.ForceUpgradeDialog
+import com.ai.intellimate.ui.components.UpgradeDialog
 import com.ai.intellimate.vip.VipCenterActivity
+import com.inty.api.models.api.v1.version.VersionCheckResponse
+import ai.sxwl.android.utils.LogUtils
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
@@ -69,6 +71,7 @@ fun HomeScreen(
 ) {
     val selectedTab = mainViewModel.selectedTab.collectAsState()
     val messagesTabHasPush by mainViewModel.messagesTabHasPush.collectAsState()
+    val appUpdateTipsRedDot by mainViewModel.appUpdateTipsRedDot.collectAsState()
 
     // 页面跟踪，包含当前和默认首页 tab（只在首次加载时上报）
     LaunchedEffect(Unit) {
@@ -138,19 +141,32 @@ fun HomeScreen(
     val homeTabItems = if (enableChristmas) christmasTabItems else defaultTabItems
 
     val bottomBarItems =
-        remember(messagesTabHasPush, enableChristmas) {
+        remember(messagesTabHasPush, appUpdateTipsRedDot, enableChristmas) {
             homeTabItems.map { tab ->
-                if (tab.index == HomeTabIndex.Messages.ordinal) {
-                    tab.copy(hasRedDot = messagesTabHasPush)
-                } else {
-                    tab
+                when (tab.index) {
+                    HomeTabIndex.Messages.ordinal -> {
+                        tab.copy(hasRedDot = messagesTabHasPush)
+                    }
+                    HomeTabIndex.Profile.ordinal -> {
+                        tab.copy(hasRedDot = appUpdateTipsRedDot)
+                    }
+                    else -> {
+                        tab
+                    }
                 }
             }
         }
 
     LaunchedEffect(selectedTab.value) {
-        if (selectedTab.value == HomeTabIndex.Messages) {
-            mainViewModel.clearMessagesTabPush()
+        when (selectedTab.value) {
+            HomeTabIndex.Messages -> {
+                mainViewModel.clearMessagesTabPush()
+            }
+            HomeTabIndex.Profile -> {
+                // 当前 app 运行期间不会改变是否有新版的提示，所以不需要清除
+                mainViewModel.clearAppUpdateTipsRedDot()
+            }
+            else -> {}
         }
     }
 
@@ -219,21 +235,33 @@ fun HomeScreen(
 // App检查更新的逻辑，强制更新则弹窗
 @Composable
 private fun AppVersionLogic(mainViewModel: MainViewModel) {
-    val uriHandler = LocalUriHandler.current
     val rsp by mainViewModel.needForceUpgrade.collectAsState(null)
-    var showUpgrade by remember(rsp) { mutableStateOf(rsp?.update_required == true) }
+    
+    // 使用稳定的 key，避免 rsp 变化时重置状态；因为 rsp 会从 null 被赋值
+    var shouldShowUpgradeDialog by remember { mutableStateOf(false) }
 
-    if (showUpgrade) {
-        rsp?.run {
-            ForceUpgradeDialog(
-                content = rsp?.message ?: stringResource(R.string.str_upgrade_content),
-                onConfirm = {
-                    runCatching { rsp?.download_url?.let { url -> uriHandler.openUri(url) } }
-                },
-                onDismiss = { showUpgrade = false },
-                isForced = force_update,
-            )
+    // 只在首次收到非 null 的 rsp 时显示对话框
+    LaunchedEffect(rsp) {
+        if (rsp != null && !shouldShowUpgradeDialog) {
+            shouldShowUpgradeDialog = true
         }
+    }
+
+    val isForced = rsp?.reminder_action == VersionCheckResponse.Data.ReminderAction.BLOCK_ACCESS
+    val title = if (isForced) {
+        stringResource(id = R.string.str_force_upgrade)
+    } else {
+        stringResource(id = R.string.str_suggest_upgrade)
+    }
+    val content = stringResource(id = R.string.str_upgrade_content)
+    
+    if (shouldShowUpgradeDialog && rsp != null) {
+        UpgradeDialog(
+            title,
+            content,
+            { shouldShowUpgradeDialog = false },
+            isForced = isForced
+        )
     }
 }
 
@@ -380,11 +408,13 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Profile -> {
+            val appUpdateTips by mainViewModel.appUpdateTips.collectAsState()
             ProfileTabContent(
                 navController,
                 onShowSettings = { mainViewModel.showSettings() },
                 shouldRefreshProfile = shouldRefreshProfile,
                 onRefreshProfileHandled = onRefreshProfileHandled,
+                appUpdateTips = appUpdateTips,
             )
         }
     }
@@ -470,6 +500,7 @@ private fun ProfileTabContent(
     onShowSettings: () -> Unit,
     shouldRefreshProfile: Boolean,
     onRefreshProfileHandled: () -> Unit,
+    appUpdateTips: Boolean,
 ) {
     val context = LocalContext.current
     val profileViewModel: ProfileViewModel = viewModel()
@@ -565,6 +596,7 @@ private fun ProfileTabContent(
             val intent = CreateRoleActivity.getIntent(context, agent)
             editAgentLauncher.launch(intent)
         },
+        appUpdateTips = appUpdateTips,
         onDeleteAgent = { agent ->
             profileViewModel.deleteAgent(
                 agentId = agent.id,

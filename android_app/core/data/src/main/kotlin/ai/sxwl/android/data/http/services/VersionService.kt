@@ -46,6 +46,7 @@ object VersionService {
                 message = data.message(),
                 minimum_version = data.minimumVersion(),
                 update_required = data.updateRequired() == true,
+                // TODO: 只需要保留这个字段，其他都可以删除，已经无用了。
                 reminder_action = data.reminderAction(),
             )
         }
