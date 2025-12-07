@@ -96,7 +96,6 @@ class AgentInfoActivity : BaseActivity() {
                         PhotoAlbumScreen(
                             agent = agent,
                             galleryItems = galleryImages.value,
-                            navController = navController,
                             onBack = { navController.popBackStack() },
                         )
                     }

@@ -1,4 +1,5 @@
 import com.google.firebase.crashlytics.buildtools.gradle.tasks.UploadMappingFileTask
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     alias(libs.plugins.ai.android.application)
@@ -79,6 +80,12 @@ android {
             excludes += "/META-INF/NOTICE"
             excludes += "/META-INF/NOTICE.txt"
         }
+    }
+}
+
+tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions {
+        freeCompilerArgs.assign(listOf("-XXLanguage:+PropertyParamAnnotationDefaultTargetMode"))
     }
 }
 
