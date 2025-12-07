@@ -319,6 +319,9 @@
     <string name="agent_gallery_background_set_success">Background updated</string>
     <string name="agent_gallery_reset_background">Reset to Default Background</string>
     <string name="agent_gallery_background_reset_success">Background reset to default</string>
+    <string name="agent_photo_album_title">Photo Album</string>
+    <string name="agent_photo_album_see_all">See All</string>
+    <string name="agent_photo_album_set_as_background">Set as chat background</string>
 
     <!-- Empty State Messages -->
     <string name="empty_conversations">No conversations yet\nStart chatting with your favorite characters!</string>

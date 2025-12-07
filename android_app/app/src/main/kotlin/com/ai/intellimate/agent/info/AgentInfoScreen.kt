@@ -48,6 +48,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.navigation.NavController
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -111,6 +112,7 @@ private enum class AgentGenderPronoun(@StringRes val labelRes: Int) {
 internal fun AiAgentInfoScreen(
     agent: AgentInfo,
     galleryItems: List<AgentImageGalleryItem>,
+    navController: androidx.navigation.NavController,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -408,9 +410,12 @@ internal fun AiAgentInfoScreen(
                         if (galleryItems.isNotEmpty()) {
                             Spacer(Modifier.height(16.dp))
                             AgentGeneratedImagesSection(
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                                modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
                                 images = galleryItems,
                                 agentId = agent.id,
+                                onNavigateToPhotoAlbum = {
+                                    navController.navigate(AgentInfoRoutes.photoAlbum(agent.id))
+                                },
                             )
                         }
                         if (isDebugMode) {
@@ -470,38 +475,46 @@ private fun AgentGeneratedImagesSection(
     modifier: Modifier = Modifier,
     images: List<AgentImageGalleryItem>,
     agentId: String,
+    onNavigateToPhotoAlbum: () -> Unit,
+    columnCount: Int = 2,
 ) {
     var previewImage by remember { mutableStateOf<String?>(null) }
+    val displayedImages = images.take(columnCount)
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = stringResource(R.string.agent_gallery_ai_images_title),
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White,
-        )
-        Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionTitleSpacing))
-        Text(
-            text = stringResource(R.string.agent_gallery_ai_images_description, images.size),
-            fontSize = 12.sp,
-            color = Color.White.copy(alpha = 0.7f),
-        )
-        Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionSpacing))
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(UiConfigs.CharacterGallery.ImageSpacing)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            items(
-                images,
-                key = { image ->
-                    // 使用 imageUrl（已在 ViewModel 中去重）作为稳定 key，避免 messageId 重复导致崩溃
-                    image.imageUrl
-                },
-            ) { item ->
-                AgentGalleryImageCard(
-                    item = item,
-                    agentId = agentId,
-                    onPreview = { previewImage = it },
-                )
+            Text(
+                text = stringResource(R.string.agent_photo_album_title),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+            )
+            Text(
+                text = stringResource(R.string.agent_photo_album_see_all),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.White.copy(alpha = 0.85f),
+                modifier = Modifier.noRippleClickable { onNavigateToPhotoAlbum() },
+            )
+        }
+        Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionSpacing))
+        if (displayedImages.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(UiConfigs.CharacterGallery.ImageSpacing),
+            ) {
+                displayedImages.forEach { item ->
+                    AgentGalleryImageCardCompact(
+                        item = item,
+                        agentId = agentId,
+                        onPreview = { previewImage = it },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
         Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionBottomPadding))
@@ -593,6 +606,7 @@ private fun AgentGalleryImageCard(
     }
 
     // 长按重置对话框
+    // TODO：可以考虑删除，聚焦在设置背景功能上，长按的上下文按钮需求不大。
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
@@ -621,6 +635,57 @@ private fun AgentGalleryImageCard(
             },
             containerColor = Color(0xFF1E1E1E),
         )
+    }
+}
+
+@Composable
+private fun AgentGalleryImageCardCompact(
+    item: AgentImageGalleryItem,
+    agentId: String,
+    onPreview: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val aspectRatio = if (item.height > 0) item.width.toFloat() / item.height.toFloat() else 1f
+    val isCurrentBackground = IntySetting.getChatBackgroundImage(agentId) == item.imageUrl
+
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(UiConfigs.CharacterGallery.ImageCornerRadius))
+                .background(Color.White.copy(alpha = 0.08f))
+                .pointerInput(agentId, item.imageUrl) {
+                    detectTapGestures(onTap = { onPreview(item.imageUrl) })
+                }
+    ) {
+        AsyncImage(
+            modifier = Modifier.fillMaxWidth().aspectRatio(aspectRatio),
+            model =
+                ImageRequest.Builder(context)
+                    .data(
+                        getCdnImageUrl(
+                            item.imageUrl,
+                            width = UiConfigs.CharacterGallery.CDN_IMAGE_WIDTH,
+                            quality = UiConfigs.CharacterGallery.CDN_IMAGE_QUALITY,
+                        )
+                    )
+                    .build(),
+            contentDescription =
+                stringResource(R.string.agent_gallery_ai_images_content_description),
+            contentScale = ContentScale.Crop,
+        )
+
+        if (isCurrentBackground) {
+            Box(
+                modifier =
+                    Modifier.align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF4CAF50))
+            )
+        }
     }
 }
 

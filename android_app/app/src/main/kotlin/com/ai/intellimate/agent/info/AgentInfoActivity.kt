@@ -8,6 +8,11 @@ import android.os.Build
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 
 /** Ai模型的信息介绍页面 */
 class AgentInfoActivity : BaseActivity() {
@@ -62,14 +67,41 @@ class AgentInfoActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
+        val navController = rememberNavController()
         val agentInfo = viewModel.agentInfo.collectAsState()
         val galleryImages = viewModel.chatImageGallery.collectAsState()
-        agentInfo.value?.let { agent ->
-            AiAgentInfoScreen(
-                agent = agent,
-                galleryItems = galleryImages.value,
-                onBack = { finish() },
-            )
+
+        NavHost(
+            navController = navController,
+            startDestination = AgentInfoRoutes.AGENT_INFO,
+        ) {
+            composable(AgentInfoRoutes.AGENT_INFO) {
+                agentInfo.value?.let { agent ->
+                    AiAgentInfoScreen(
+                        agent = agent,
+                        galleryItems = galleryImages.value,
+                        navController = navController,
+                        onBack = { finish() },
+                    )
+                }
+            }
+
+            composable(
+                route = "${AgentInfoRoutes.PHOTO_ALBUM}/{agentId}",
+                arguments = listOf(navArgument("agentId") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val currentAgentId = backStackEntry.arguments?.getString("agentId") ?: ""
+                agentInfo.value?.let { agent ->
+                    if (agent.id == currentAgentId) {
+                        PhotoAlbumScreen(
+                            agent = agent,
+                            galleryItems = galleryImages.value,
+                            navController = navController,
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+                }
+            }
         }
     }
 }
