@@ -49,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -798,6 +799,7 @@ private fun DebugInfoRow(label: String, value: String) {
 @Preview
 @Composable
 private fun PreviewAgentInfoScreen() {
+    val navController = rememberNavController()
     val agent =
         AgentInfo(
             avatar = "",
@@ -831,5 +833,10 @@ private fun PreviewAgentInfoScreen() {
             ),
         )
 
-    AiAgentInfoScreen(agent = agent, galleryItems = gallery) {}
+    AiAgentInfoScreen(
+        agent = agent,
+        galleryItems = gallery,
+        navController = navController,
+        onBack = {},
+    )
 }
