@@ -66,6 +66,39 @@ async def google_login(
     login_in: schemas.GoogleAuthRequest,
 ) -> Any:
     """Google登录或Email密码登录"""
+    if (
+        global_config_loaded_from_config_yaml.app.api_endpoints.use_dummy_api_v1_auth_google_login
+    ):
+        # 你可以这样在 python 代码中访问 API endpoint 的路径：
+        # 1. 直接查看 router 的 prefix 和装饰器参数：
+        #    此接口路径由 router.prefix + 装饰器 url 拼接得到，即 "/auth" + "/google/login" = "/auth/google/login"
+        # 2. 如果你需要在 FastAPI 内部动态获取当前端点的 path，可以在依赖项中通过 fastapi.Request:
+        #    示例:
+        #    from fastapi import Request
+        #    @router.post("/google/login")
+        #    async def google_login(..., request: Request):
+        #        path = request.url.path
+        #        print(path)  # 输出当前请求的完整 path
+        logger.info(f"### 使用虚假的 Google 登录接口 {router.prefix}/google/login ###")
+        logger.info(f"### 修改下方定义直接改变返回值 ###")
+        return APIResponse.success(
+            data=LoginResponse(
+                token="dummy_token",
+                user=LoginUserResponse(
+                    id="dummy_user_id",
+                    nickname="Dummy User",
+                    avatar="dummy_avatar",
+                    email="dummy@example.com",
+                    phone="dummy_phone",
+                    auth_type=AuthType.GOOGLE,
+                    gender="male",
+                    age_group="adult",
+                    system_language="en",
+                    description="Dummy User",
+                    is_new_user=True,
+                ),
+            )
+        )
     try:
         # 如果提供了 email 和 password，使用 email + password 登录
         if login_in.email and login_in.password:

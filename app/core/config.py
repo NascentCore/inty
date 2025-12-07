@@ -105,6 +105,8 @@ class VerificationConfig:
 @dataclass
 class APIEndpointsConfig:
     disable_api_v1_chat_completions: bool = False
+    # 使用虚假的 Google 登录接口，用于测试，设为 True 时可以在 auth.py 中直接定义返回值来支持 app 前端测试。
+    use_dummy_api_v1_auth_google_login: bool = False
 
 
 @dataclass
