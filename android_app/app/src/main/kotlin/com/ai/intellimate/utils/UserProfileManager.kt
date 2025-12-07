@@ -31,7 +31,7 @@ object UserProfileManager {
             }
         }
 
-        LogUtils.d("Saved user profile: $userProfile")
+        LogUtils.i("Saved user profile: $userProfile")
     }
 
     fun getUserProfile(): UserProfile {
