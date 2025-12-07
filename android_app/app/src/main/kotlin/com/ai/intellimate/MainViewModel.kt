@@ -73,7 +73,7 @@ class MainViewModel : BaseVM() {
 
     private val _messagesTabHasPush = MutableStateFlow(IntySetting.hasMessagesTabPush())
     val messagesTabHasPush: StateFlow<Boolean> = _messagesTabHasPush.asStateFlow()
-    
+
     // appUpdateTips 只存在于内存中，每次重启都会重置为 false
     private val _appUpdateTips = MutableStateFlow(false)
     val appUpdateTips: StateFlow<Boolean> = _appUpdateTips.asStateFlow()
@@ -395,13 +395,14 @@ class MainViewModel : BaseVM() {
         val timeoutMs: Long = 10000
         try {
             when (
-                val result = withTimeout(timeoutMs) {
-                    IntyNetworkManager.version.checkAppUpgrade(
-                        appVersionCode = BuildConfig.VERSION_CODE.toLong(),
-                        // 这个可以取消了，对后端没有意义，后端已经不根据 version name 判断是否更新了。
-                        appVersionName = BuildConfig.VERSION_NAME,
-                    )
-                }
+                val result =
+                    withTimeout(timeoutMs) {
+                        IntyNetworkManager.version.checkAppUpgrade(
+                            appVersionCode = BuildConfig.VERSION_CODE.toLong(),
+                            // 这个可以取消了，对后端没有意义，后端已经不根据 version name 判断是否更新了。
+                            appVersionName = BuildConfig.VERSION_NAME,
+                        )
+                    }
             ) {
                 is ApiResult.Success -> {
                     val rsp = result.data

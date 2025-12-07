@@ -563,19 +563,15 @@ private fun ProfileHeader(
 
             AsyncImage(
                 modifier =
-                    Modifier
-                        .size(UiConfigs.MePage.TopIconsRow.Size)
-                        .clickable {
-                            val currentTime = System.currentTimeMillis()
-                            if (AntiClick.isValidClick(lastClickTime)) {
-                                lastClickTime = currentTime
-                                if (IntySetting.isLogin() && IntySetting.getCurToken()
-                                        .isNotEmpty()
-                                ) {
-                                    navController.navigate(Routes.Settings)
-                                }
+                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
+                        val currentTime = System.currentTimeMillis()
+                        if (AntiClick.isValidClick(lastClickTime)) {
+                            lastClickTime = currentTime
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                                navController.navigate(Routes.Settings)
                             }
-                        },
+                        }
+                    },
                 model = R.drawable.icon_setting,
                 contentDescription = stringResource(R.string.me_icons_row_settings),
             )
@@ -761,9 +757,9 @@ private fun ProfileHeader(
             if (appUpdateTips) {
                 Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress)))
                 NewVersionBanner(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
                 )
             }
         }
@@ -1335,17 +1331,19 @@ private fun ProfilePagePreview() {
 @Composable
 private fun NewVersionBanner(modifier: Modifier = Modifier) {
     val uriHandler = LocalUriHandler.current
-    
+
     // 高亮时使用醒目的渐变（从紫色到橙色），普通时使用半透明白色
-    val backgroundBrush = Brush.horizontalGradient(
-        colors = listOf(
-            Color(0xFFC122FF), // 紫色
-            Color(0xFFFF905D), // 橙色
+    val backgroundBrush =
+        Brush.horizontalGradient(
+            colors =
+                listOf(
+                    Color(0xFFC122FF), // 紫色
+                    Color(0xFFFF905D), // 橙色
+                )
         )
-    )
-    
+
     val textColor = Color.White
-    
+
     Box(
         modifier =
             modifier

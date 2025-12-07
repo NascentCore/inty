@@ -532,7 +532,8 @@ private fun CreateRolePage(
                 }
 
                 if (fileSize > maxSizeBytes) {
-                    val maxSizeMBStr = String.format(Locale.getDefault(), "%dMB", MAX_GALLERY_PHOTO_SIZE_MB)
+                    val maxSizeMBStr =
+                        String.format(Locale.getDefault(), "%dMB", MAX_GALLERY_PHOTO_SIZE_MB)
                     val fileSizeMBStr =
                         String.format(Locale.getDefault(), "%.1fMB", fileSize / (1024.0 * 1024.0))
                     val msg =
