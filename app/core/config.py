@@ -19,9 +19,6 @@ from pydantic import AnyHttpUrl
 
 GEMINI_2_5_FLASH = "google/gemini-2.5-flash"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-# API 路由前缀常量移动到 app.api.constants
-from app.api.constants import API_V1_PREFIX
-
 
 class Environment(str, Enum):
     """Environment enum for application deployment environments."""
@@ -106,8 +103,6 @@ class AppConfig:
     debug_messages: bool = True
     # Use JSON format for request/response logging. Default is True (JSON format).
     use_json_log_format: bool = True
-    # DEPRECATED: Do not use.
-    api_v1_prefix: str = API_V1_PREFIX
     backend_cors_origins: List[AnyHttpUrl] = None
     version: str = "1.1.0"
     environment: Environment = Environment.DEV
