@@ -548,7 +548,7 @@ class GooglePlayService:
             return result | {
                 "error": version_info["error"],
                 "message": "Unable to fetch version info",
-                "reminder_action": VersionReminderAction.SETTINGS_REMINDER,
+                "reminder_action": VersionReminderAction.NONE,
             }
 
         latest_version_code_raw = version_info.get("version_code", 0)
@@ -569,7 +569,7 @@ class GooglePlayService:
                 "reminder_action": VersionReminderAction.BLOCK_ACCESS,
             }
 
-        reminder_action = None
+        reminder_action = VersionReminderAction.NONE
         # 按阈值从大到小检查，找到第一个匹配的阈值即返回对应的动作
         for gap_threshold, action in [
             (
@@ -597,11 +597,11 @@ class GooglePlayService:
             "latest_version": latest_version_name or str(latest_version_code),
             "latest_version_code": latest_version_code,
             "changelog": changelog_value,
-            "update_required": reminder_action is not None,
+            "update_required": reminder_action != VersionReminderAction.NONE,
             "force_update": reminder_action == VersionReminderAction.BLOCK_ACCESS,
             "message": (
                 "New version available"
-                if reminder_action is not None
+                if reminder_action != VersionReminderAction.NONE
                 else "App is up to date"
             ),
             "reminder_action": reminder_action,
