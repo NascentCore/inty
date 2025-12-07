@@ -1,6 +1,5 @@
 package com.ai.intellimate.settings
 
-import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import ai.sxwl.android.design.ui.IntelliMateDivider
@@ -52,8 +51,8 @@ private const val GOOGLE_PLAY_MARKET_URL_PREFIX = "market://details?id="
 fun SettingScreen(
     navController: NavController,
     modifier: Modifier = Modifier,
-//    onBack: () -> Unit,
-//    onLogout: (isDelete: Boolean) -> Unit,
+    //    onBack: () -> Unit,
+    //    onLogout: (isDelete: Boolean) -> Unit,
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
     viewModel: SettingViewModel = viewModel(),
@@ -103,10 +102,8 @@ fun SettingScreen(
                 modifier = Modifier.background(color = HeartColor.primaryColor),
                 title = stringResource(R.string.settings),
                 navIcon = R.drawable.back,
-//                onBack = onBack,
-                onBack = {
-                    navController.popBackStack()
-                }
+                //                onBack = onBack,
+                onBack = { navController.popBackStack() },
             )
         },
     ) { innerPadding ->
@@ -332,9 +329,7 @@ private fun SupportAndHelpSection(
             isInGroup = true,
             showRedDot = hasAppUpdateTips,
             onItemClick = {
-                runCatching {
-                        uriHandler.openUri(playStoreUrl)
-                    }
+                runCatching { uriHandler.openUri(playStoreUrl) }
                     .onFailure { ToastUtils.showShort(R.string.toast_google_play_unavailable) }
             },
         )

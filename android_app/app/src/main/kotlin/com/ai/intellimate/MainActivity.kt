@@ -20,7 +20,6 @@ import android.view.MotionEvent
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -330,39 +329,40 @@ class MainActivity : BaseActivity() {
             }
         }
 
-//        when {
-//            !isLoggedIn -> {
-//                // 用户未登录，显示登录界面
-//                SplashLoginUI(mainViewModel = mainViewModel)
-//            }
-//
-//            showSettings -> {
-//                // 显示设置界面
-//                com.ai.intellimate.settings.SettingScreen(
-//                    modifier =
-//                        Modifier.fillMaxSize()
-//                            .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
-//                    onBack = { mainViewModel.hideSettings() },
-//                    onLogout = { isDelete ->
-//                        mainViewModel.logout()
-//                        chatViewModel.clearAllData()
-//                        val str =
-//                            if (isDelete) getString(R.string.delete_account_successfully)
-//                            else getString(R.string.logout_successfully)
-//                        ai.sxwl.android.utils.ToastUtils.showShort(str)
-//                    },
-//                )
-//            }
-//
-//            else -> {
-//                // 用户已登录，显示主界面
-//                HomeScreen(
-//                    modifier = Modifier.fillMaxSize(),
-//                    mainViewModel = mainViewModel,
-//                    viewModelFactory = defaultViewModelProviderFactory,
-//                )
-//            }
-//        }
+        //        when {
+        //            !isLoggedIn -> {
+        //                // 用户未登录，显示登录界面
+        //                SplashLoginUI(mainViewModel = mainViewModel)
+        //            }
+        //
+        //            showSettings -> {
+        //                // 显示设置界面
+        //                com.ai.intellimate.settings.SettingScreen(
+        //                    modifier =
+        //                        Modifier.fillMaxSize()
+        //
+        // .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
+        //                    onBack = { mainViewModel.hideSettings() },
+        //                    onLogout = { isDelete ->
+        //                        mainViewModel.logout()
+        //                        chatViewModel.clearAllData()
+        //                        val str =
+        //                            if (isDelete) getString(R.string.delete_account_successfully)
+        //                            else getString(R.string.logout_successfully)
+        //                        ai.sxwl.android.utils.ToastUtils.showShort(str)
+        //                    },
+        //                )
+        //            }
+        //
+        //            else -> {
+        //                // 用户已登录，显示主界面
+        //                HomeScreen(
+        //                    modifier = Modifier.fillMaxSize(),
+        //                    mainViewModel = mainViewModel,
+        //                    viewModelFactory = defaultViewModelProviderFactory,
+        //                )
+        //            }
+        //        }
         val page = if (isLoggedIn) Routes.HomeTab else Routes.SplashLogin
         AppNavHost(page, mainViewModel, chatViewModel, defaultViewModelProviderFactory)
     }
@@ -531,7 +531,11 @@ private enum class LoginScreenState {
 
 /** Splash 登录界面 - 集成 Google 登录按钮和隐私政策 */
 @Composable
-fun SplashLoginUI(navController: NavController, modifier: Modifier = Modifier, mainViewModel: MainViewModel) {
+fun SplashLoginUI(
+    navController: NavController,
+    modifier: Modifier = Modifier,
+    mainViewModel: MainViewModel,
+) {
     val context = LocalContext.current
     var isLoading by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableLongStateOf(0L) }

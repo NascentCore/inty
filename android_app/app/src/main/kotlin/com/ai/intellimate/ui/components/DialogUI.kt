@@ -39,8 +39,7 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(UiConfigs.Shape.Dialog))
                     .background(color = UiConfigs.Colors.DialogSurface)
                     .padding(UiConfigs.Padding.DialogInner)
@@ -86,8 +85,7 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             Button(
                 onClick = onDismiss,
                 modifier =
-                    Modifier
-                        .fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
+                    Modifier.fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
                         .align(Alignment.CenterHorizontally),
             ) {
                 Text(
@@ -121,8 +119,7 @@ fun LogoutConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(UiConfigs.Shape.Dialog))
                     .background(color = UiConfigs.Colors.DialogSurface)
                     .padding(UiConfigs.Padding.DialogInner)
@@ -146,8 +143,7 @@ fun LogoutConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             Button(
                 onClick = onConfirm,
                 modifier =
-                    Modifier
-                        .fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
+                    Modifier.fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
                         .align(Alignment.CenterHorizontally),
             ) {
                 Text(
@@ -160,8 +156,7 @@ fun LogoutConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             TextButton(
                 onClick = onDismiss,
                 modifier =
-                    Modifier
-                        .align(Alignment.CenterHorizontally)
+                    Modifier.align(Alignment.CenterHorizontally)
                         .focusRequester(cancelFocusRequester),
             ) {
                 Text(
@@ -197,8 +192,7 @@ fun UpgradeDialog(
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(false, false, true)) {
         Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(UiConfigs.Shape.DialogLarge))
                     .background(color = UiConfigs.Colors.DialogSurface)
                     .padding(UiConfigs.Padding.DialogInner)
@@ -221,10 +215,9 @@ fun UpgradeDialog(
             val localUriHandler = LocalUriHandler.current
 
             Button(
-                onClick = {localUriHandler.openUri(url) },
+                onClick = { localUriHandler.openUri(url) },
                 modifier =
-                    Modifier
-                        .fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
+                    Modifier.fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
                         .align(Alignment.CenterHorizontally),
             ) {
                 Text(
