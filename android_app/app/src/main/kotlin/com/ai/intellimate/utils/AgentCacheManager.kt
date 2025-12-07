@@ -33,7 +33,7 @@ object AgentCacheManager {
                 KEY_CACHE_TIMESTAMP,
                 System.currentTimeMillis().toString(),
             )
-            LogUtils.i("AgentCacheManager - 缓存推荐agents成功: ${agents.size}个")
+            LogUtils.d("AgentCacheManager - 缓存推荐agents成功: ${agents.size}个")
         } catch (e: Exception) {
             LogUtils.e("AgentCacheManager - 缓存推荐agents失败: ${e.message}")
         }
@@ -47,7 +47,7 @@ object AgentCacheManager {
                 emptyList()
             } else {
                 val agents = agentListAdapter.fromJson(agentsJson) ?: emptyList()
-                LogUtils.i("AgentCacheManager - 获取缓存推荐agents: ${agents.size}个")
+                LogUtils.d("AgentCacheManager - 获取缓存推荐agents: ${agents.size}个")
                 agents
             }
         } catch (e: Exception) {
@@ -65,7 +65,7 @@ object AgentCacheManager {
                 KEY_CHAT_CACHE_TIMESTAMP,
                 System.currentTimeMillis().toString(),
             )
-            LogUtils.i("AgentCacheManager - 缓存聊天agents成功: ${agents.size}个")
+            LogUtils.d("AgentCacheManager - 缓存聊天agents成功: ${agents.size}个")
         } catch (e: Exception) {
             LogUtils.e("AgentCacheManager - 缓存聊天agents失败: ${e.message}")
         }
@@ -79,7 +79,7 @@ object AgentCacheManager {
                 emptyList()
             } else {
                 val agents = agentListAdapter.fromJson(agentsJson) ?: emptyList()
-                LogUtils.i("AgentCacheManager - 获取缓存聊天agents: ${agents.size}个")
+                LogUtils.d("AgentCacheManager - 获取缓存聊天agents: ${agents.size}个")
                 agents
             }
         } catch (e: Exception) {
@@ -116,7 +116,7 @@ object AgentCacheManager {
                 KEY_USER_CREATED_CACHE_TIMESTAMP,
                 System.currentTimeMillis().toString(),
             )
-            LogUtils.i("AgentCacheManager - 缓存用户自建agents成功: ${agents.size}个")
+            LogUtils.d("AgentCacheManager - 缓存用户自建agents成功: ${agents.size}个")
         } catch (e: Exception) {
             LogUtils.e("AgentCacheManager - 缓存用户自建agents失败: ${e.message}")
         }
