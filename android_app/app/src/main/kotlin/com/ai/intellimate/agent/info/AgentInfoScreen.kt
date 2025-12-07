@@ -636,6 +636,27 @@ private fun AgentGalleryImageCard(
     }
 }
 
+/**
+ * 紧凑型角色相册图片卡片组件
+ *
+ * 使用场景：
+ * - 在角色信息页面（AgentInfoScreen）的相册预览区域使用
+ * - 通过 [AgentGeneratedImagesSection] 以网格形式展示（默认 2 列）
+ * - 用于在有限空间内紧凑展示角色的 AI 生成图片
+ * - 与 [AgentGalleryImageCard] 相比，去掉了长按功能，更适合网格布局
+ *
+ * 视觉效果：
+ * - 紧凑的卡片设计：使用 `fillMaxWidth()` 和 `weight(1f)` 自适应网格布局
+ * - 圆角矩形卡片：使用 [UiConfigs.CharacterGallery.ImageCornerRadius] 配置的圆角半径
+ * - 半透明背景：白色背景，透明度 0.08，提供微妙的卡片边界感
+ * - 保持原始宽高比：根据图片的 width/height 计算 aspectRatio，确保图片不变形
+ * - 图片裁剪填充：使用 `ContentScale.Crop` 裁剪填充整个卡片区域
+ * - 背景状态指示器：如果图片被设置为当前角色的聊天背景，右上角显示 16dp 的绿色圆点指示器
+ * - CDN 优化加载：通过 [getCdnImageUrl] 使用 CDN 优化图片加载性能
+ *
+ * 交互行为：
+ * - 点击卡片：打开全屏预览对话框（[FullScreenImageViewer]），可查看大图并设置为聊天背景
+ */
 @Composable
 private fun AgentGalleryImageCardCompact(
     item: AgentImageGalleryItem,
