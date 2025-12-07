@@ -117,6 +117,62 @@ MMKV（版本 2.2.4）作为轻量级键值存储，通过 `IntySetting` 单例�
 - **问题**：`MainActivity` 手写边缘滑动/返回处理。
 - **影响**：不同设备/系统版本行为不一致；可能与系统手势冲突；维护成本高。
 
+
+## 架构状态说明
+
+**重要：** 本文档同时包含当前实现状态和目标架构指导。请注意区分：
+
+- 🟢 **当前实现**：已在代码库中实施的架构模式和技术栈
+- 🟡 **目标架构**：规划中的架构改进目标
+- 🔴 **已知问题**：详见 `ARCH_CRITIQUES.md` 中的架构问题分析
+
+### 当前架构概况
+
+- **UI 层**：Compose + BaseVM + StateFlow/SharedFlow
+- **数据层**：Repository/UseCase 模式 + DataModule 手动依赖注入
+- **网络层**：双网络栈并存（Retrofit + Inty SDK）
+- **导航**：多 Activity + 自定义导航
+- **存储**：Room 2.8（`chat/local/db` 离线优先会话缓存）+ MMKV（设置、轻量标记）
+
+### 🟢 当前网络层：双栈并存
+- Retrofit 栈（经典用法）：
+  ```kotlin
+  interface IChatApi {
+      @POST("chat/send")
+      suspend fun sendMessage(@Body request: SendMessageRequest): HttpResult<SendMessageResponse>
+  }
+  
+  // 通过 NetServiceMgr 获取
+  private val chatApi by lazy { NetServiceMgr.getChatApi() }
+  ```
+- Inty SDK 栈（生成的 SDK）：
+  ```kotlin
+  // 通过 IntyNetworkManager 获取
+  private val authService by lazy { IntyNetworkManager.getAuthService() }
+  ```
+
+### 🟡 目标架构：合并到 Stainless 生成 SDK
+
+计划迁移到 Koin 依赖注入以提高可测试性和依赖管理的一致性。
+
+### 使用指导原则
+由于当前双栈并存，遵循以下原则选择合适的网络栈：
+
+1. **已有功能改善修改**：仍使用已有的网络栈，不进行修改
+3. **新功能开发**：使用 Inty SDK 栈
+
+### 🔴 已知问题
+- 错误处理机制不统一（`HttpResult` vs `ApiResult`）
+- 环境配置和鉴权流程分叉
+- OkHttpClient 重复创建，配置不一致
+- 日志和监控分散，可观测性差
+
+### 🟡 重构计划
+- 统一到单一网络栈
+- 标准化错误处理和日志
+- 统一鉴权和环境管理
+- 整合监控和性能指标
+
 ## 积极面
 - **Compose + StateFlow**：在 ViewModel 中一致使用现代响应式模式。
 - **模块化**：设计、工具、Firebase、数据与应用层拆分清晰。
