@@ -155,6 +155,13 @@
 
     <!-- Character Creation -->
     <string name="face_edit">Crop</string>
+    <string name="save_draft_dialog_title">Save draft?</string>
+    <string name="save_draft_dialog_message">Save your progress as a draft so you can finish this character later from the Me page.</string>
+    <string name="save_draft_dialog_confirm">Save draft</string>
+    <string name="save_draft_dialog_discard">Don&#39;t save</string>
+    <string name="draft_badge_label">Draft</string>
+    <string name="draft_card_placeholder_name">Untitled character</string>
+    <string name="draft_card_placeholder_intro">Add more details to finish this character.</string>
 
     <!-- Report -->
     <string name="report_description">Report description</string>

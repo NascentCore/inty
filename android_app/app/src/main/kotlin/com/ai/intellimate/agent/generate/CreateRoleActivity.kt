@@ -17,6 +17,7 @@ import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -47,6 +48,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Upload
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -188,6 +190,9 @@ class CreateRoleActivity : BaseActivity() {
 }
 
 private const val MAX_GALLERY_PHOTO_SIZE_MB = 2
+private val DraftDialogConfirmColor = Color(0xFF7C56FF)
+private val DraftDialogDismissColor = Color(0xFF3A2D40)
+private val DraftDialogContainerColor = Color(0xFF2A2A2A)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -202,6 +207,9 @@ private fun CreateRolePage(
     val isEditMode = editAgent != null
     val savedDraft =
         remember(editAgent) { if (editAgent == null) CreateRoleDraftStorage.loadDraft() else null }
+    var latestDraft by remember(savedDraft) { mutableStateOf(savedDraft ?: CreateRoleDraft()) }
+    var enableDraftSaving by remember { mutableStateOf(true) }
+    var showSaveDraftDialog by remember { mutableStateOf(false) }
 
     val nameInitial =
         if (isEditMode) {
@@ -314,9 +322,22 @@ private fun CreateRolePage(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val focusManager = LocalFocusManager.current
+    val hasDraftChanges = !latestDraft.isEmpty()
+    val handleExitRequest = {
+        if (isEditMode || !hasDraftChanges) {
+            onBack()
+        } else {
+            showSaveDraftDialog = true
+        }
+    }
 
     if (!isEditMode) {
-        LaunchedEffect(Unit) {
+        BackHandler { handleExitRequest() }
+    }
+
+    if (!isEditMode) {
+        LaunchedEffect(enableDraftSaving) {
+            if (!enableDraftSaving) return@LaunchedEffect
             snapshotFlow {
                     val normalizedUrls = avatarUrls.filter { it.isNotBlank() }
                     val sanitizedIndex =
@@ -337,7 +358,10 @@ private fun CreateRolePage(
                     )
                 }
                 .distinctUntilChanged()
-                .collect { draft -> CreateRoleDraftStorage.saveDraft(draft) }
+                .collect { draft ->
+                    latestDraft = draft
+                    CreateRoleDraftStorage.saveDraft(draft)
+                }
         }
     }
     // Clear avatar data when creating new character
@@ -705,7 +729,9 @@ private fun CreateRolePage(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                            Modifier.padding(horizontal = 12.dp).noRippleClickable {
+                                handleExitRequest()
+                            },
                         painter = painterResource(R.drawable.close),
                         contentDescription = null,
                     )
@@ -1054,6 +1080,62 @@ private fun CreateRolePage(
 
             Spacer(modifier = Modifier.height(60.dp))
         }
+    }
+
+    if (showSaveDraftDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveDraftDialog = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.save_draft_dialog_title),
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.save_draft_dialog_message),
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        CreateRoleDraftStorage.saveDraft(latestDraft)
+                        showSaveDraftDialog = false
+                        onBack()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DraftDialogConfirmColor),
+                ) {
+                    Text(
+                        text = stringResource(R.string.save_draft_dialog_confirm),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                    )
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        enableDraftSaving = false
+                        CreateRoleDraftStorage.clearDraft()
+                        showSaveDraftDialog = false
+                        onBack()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DraftDialogDismissColor),
+                ) {
+                    Text(
+                        text = stringResource(R.string.save_draft_dialog_discard),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                    )
+                }
+            },
+            containerColor = DraftDialogContainerColor,
+        )
     }
 }
 

@@ -9,6 +9,7 @@ import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.generate.CreateRoleDraftStorage
 import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.HttpErrorHandler
 import com.ai.intellimate.utils.IntyUserProfileSDK
@@ -34,6 +35,7 @@ class ProfileViewModel : BaseVM() {
 
     init {
         loadUserProfile()
+        refreshDraft()
     }
 
     /** 加载用户信息 */
@@ -57,6 +59,14 @@ class ProfileViewModel : BaseVM() {
                 // 使用本地缓存的用户信息
                 _uiState.update { it.copy(userProfile = UserProfileManager.getUserProfile()) }
             }
+        }
+    }
+
+    /** 刷新草稿信息，供 "Me" 页面展示 */
+    fun refreshDraft() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val draft = CreateRoleDraftStorage.loadDraft()?.takeUnless { it.isEmpty() }
+            _uiState.update { it.copy(pendingDraft = draft) }
         }
     }
 

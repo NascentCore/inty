@@ -101,6 +101,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.generate.CreateRoleDraft
 import com.ai.intellimate.settings.check.CheckInActivity
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
@@ -119,7 +120,9 @@ internal fun ProfilePage(
     modifier: Modifier,
     userProfile: UserProfile,
     agents: List<AgentInfo>,
+    draft: CreateRoleDraft? = null,
     onClickAgent: (AgentInfo) -> Unit,
+    onClickDraft: (() -> Unit)? = null,
     onEditAgent: ((AgentInfo) -> Unit)? = null,
     onDeleteAgent: ((AgentInfo) -> Unit)? = null,
     isLoading: Boolean = false,
@@ -131,6 +134,7 @@ internal fun ProfilePage(
     val context = LocalContext.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
+    val hasDraftCard = draft?.isEmpty() == false
 
     // 创建用于编辑个人资料的 launcher，在 ProfilePage 内部处理
     val editProfileLauncher =
@@ -288,7 +292,7 @@ internal fun ProfilePage(
                 )
 
                 // LazyGrid 区域
-                if (agents.isEmpty()) {
+                if (!hasDraftCard && agents.isEmpty()) {
                     Spacer(Modifier.height(UiConfigs.MePage.EmptyStateTopSpacing))
 
                     AsyncImage(
@@ -348,6 +352,18 @@ internal fun ProfilePage(
                         verticalArrangement =
                             Arrangement.spacedBy(UiConfigs.MePage.GridVerticalSpacing),
                     ) {
+                        if (hasDraftCard && onClickDraft != null) {
+                            draft?.let { pendingDraft ->
+                                item(key = "pending_draft") {
+                                    DraftAgentCard(
+                                        modifier =
+                                            Modifier.noRippleClickable { onClickDraft() },
+                                        draft = pendingDraft,
+                                    )
+                                }
+                            }
+                        }
+
                         runCatching {
                                 if (agents.isNotEmpty()) {
                                     itemsIndexed(
@@ -743,6 +759,94 @@ private fun ProfileHeader(
 }
 
 @Composable
+private fun DraftAgentCard(modifier: Modifier, draft: CreateRoleDraft) {
+    val previewImage = remember(draft) { draft.primaryImageUrl() }
+    val gradientBrush =
+        remember {
+            Brush.verticalGradient(
+                colors = listOf(Color.Transparent, Color.Black.copy(.5f), Color.Black.copy(.9f))
+            )
+        }
+    val badgeShape = RoundedCornerShape(percent = 50)
+    val badgeVerticalPadding = UiConfigs.Spacing.Tiny / 2
+    val displayName =
+        draft.name.ifBlank { stringResource(R.string.draft_card_placeholder_name) }
+    val subtitle =
+        when {
+            draft.intro.isNotBlank() -> draft.intro
+            draft.opening.isNotBlank() -> draft.opening
+            draft.settings.isNotBlank() -> draft.settings
+            else -> stringResource(R.string.draft_card_placeholder_intro)
+        }
+
+    Box(
+        modifier =
+            modifier
+                .size(UiConfigs.MePage.AgentCardWidth, UiConfigs.MePage.AgentCardHeight)
+                .clip(RoundedCornerShape(UiConfigs.MePage.AgentCardCornerRadius))
+    ) {
+        if (!previewImage.isNullOrBlank()) {
+            AsyncImage(
+                modifier = Modifier.fillMaxSize(),
+                model = ImageRequest.Builder(LocalContext.current).data(previewImage).build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
+            )
+        } else {
+            Image(
+                modifier = Modifier.fillMaxSize(),
+                painter = painterResource(R.drawable.img_default_avatar),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+            )
+        }
+
+        Box(
+            modifier =
+                Modifier.align(Alignment.TopStart)
+                    .padding(UiConfigs.MePage.AgentCardPadding)
+                    .background(Color.Black.copy(alpha = 0.65f), badgeShape)
+                    .padding(
+                        horizontal = UiConfigs.Spacing.Small,
+                        vertical = badgeVerticalPadding,
+                    ),
+        ) {
+            Text(
+                text = stringResource(R.string.draft_badge_label),
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+
+        Column(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .background(brush = gradientBrush)
+                    .padding(UiConfigs.MePage.AgentCardPadding)
+                    .align(Alignment.BottomCenter),
+            verticalArrangement = Arrangement.spacedBy(UiConfigs.MePage.AgentCardTextSpacing),
+        ) {
+            Text(
+                text = displayName,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+            )
+            Text(
+                text = subtitle,
+                fontSize = 12.sp,
+                lineHeight = 12.sp,
+                color = Color.White.copy(.7f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
 private fun MyAgentCard(
     modifier: Modifier,
     agentInfo: AgentInfo,
@@ -947,6 +1051,13 @@ private fun MyAgentCard(
             )
         }
     }
+}
+
+private fun CreateRoleDraft.primaryImageUrl(): String? {
+    if (!croppedAvatarUrl.isNullOrBlank()) return croppedAvatarUrl
+    val galleryUrl = avatarUrls.firstOrNull { it.isNotBlank() }
+    if (!galleryUrl.isNullOrBlank()) return galleryUrl
+    return avatarUrl?.takeIf { it.isNotBlank() }
 }
 
 /** Premium Banner 组件 */

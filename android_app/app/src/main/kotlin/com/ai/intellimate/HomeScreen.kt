@@ -507,6 +507,7 @@ private fun ProfileTabContent(
             profileViewModel.updateUserInfoLocal()
             // 优先从缓存加载，避免闪现
             profileViewModel.loadUserCreatedAgentsFromCache()
+            profileViewModel.refreshDraft()
             profileViewModel.trackPageView("MainPage")
         }
     }
@@ -515,6 +516,7 @@ private fun ProfileTabContent(
     LaunchedEffect(shouldRefreshProfile) {
         if (shouldRefreshProfile) {
             profileViewModel.refreshCreatedAgents()
+            profileViewModel.refreshDraft()
             onRefreshProfileHandled()
         }
     }
@@ -522,6 +524,7 @@ private fun ProfileTabContent(
     // 生命周期管理：页面恢复时刷新用户信息，但不频繁刷新列表
     LifecycleResumeEffect(profileViewModel) {
         profileViewModel.loadUserProfile()
+        profileViewModel.refreshDraft()
         VipStatusHelper.refreshSubscriptionStatus()
         // 不再频繁刷新列表，只在首次加载或从 CreateRoleActivity 返回时刷新
         onPauseOrDispose {}
@@ -551,10 +554,12 @@ private fun ProfileTabContent(
         modifier = Modifier,
         userProfile = safeUserProfile,
         agents = uiState.userCreatedAgents,
+        draft = uiState.pendingDraft,
         isLoading = uiState.isLoading,
         onClickAgent = { agent ->
             ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
         },
+        onClickDraft = { CreateRoleActivity.launch(context, null) },
         onEditAgent = { agent ->
             // 使用 CreateRoleActivity 提供的方法获取 Intent，并监听返回结果
             val intent = CreateRoleActivity.getIntent(context, agent)
