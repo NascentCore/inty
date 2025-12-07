@@ -178,3 +178,13 @@ PATH="/Users/yzhao/Library/Android/sdk/platform-tools:$PATH"
 - `core/data` 聚合网络、仓库、用例、支付、设置等领域逻辑，本身已经是跨 UI 层可复用的“数据内核”；即便暂时只有主 App，也能在实验模块或 UIAutomator 测试中直接复用。
 - `core/common` 收敛基类、埋点、事件系统、启动优化等基建，任何 Feature 需要的通用能力都从此获取，杜绝散落的 util/单例实现。
 - 若未来新增多端/多壳，现有模块可以直接被依赖；若没有，则也只增加了极小的 Gradle 配置成本，不会影响运行时体积或性能。
+
+## 模块依赖约束机制
+
+**禁止横向互调**（如 `core/data` 不能调用 `core/design`）通过以下机制实现：
+
+- **依赖层次结构**：`app` → `core/*` → `library/*`，单向依赖，禁止同级模块互调
+- **Gradle 配置约束**：在 `build.gradle.kts` 中不添加横向依赖，编译时 classpath 中不存在
+- **编译时检查**：Kotlin 编译器自动检查，尝试 `import` 未依赖模块的类会编译失败
+- **架构约定**：通过文档和代码审查确保依赖关系符合架构设计
+- **实际效果**：`core/data` 和 `core/design` 互不依赖，只能通过上层模块（如 `core/common` 或 `app`）间接使用

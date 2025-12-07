@@ -1,6 +1,6 @@
 package com.ai.intellimate.utils
 
-import ai.sxwl.android.utils.PathUtils
+import ai.sxwl.android.utils.Utils
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -18,7 +18,8 @@ object UCropHelper {
         // This is required, otherwise the preview will always be tmp.jpg
         // So that the preview can be viewed after first modification,
         // but the future update will always be stale.
-        val avatarTempFile = File(PathUtils.getExternalAppCachePath(), "my_avatar_${timestamp}.jpg")
+        val externalAppCachePath = Utils.getApp().externalCacheDir?.absolutePath ?: ""
+        val avatarTempFile = File(externalAppCachePath, "my_avatar_${timestamp}.jpg")
 
         val uCropOptions = UCrop.Options()
         uCropOptions.apply {

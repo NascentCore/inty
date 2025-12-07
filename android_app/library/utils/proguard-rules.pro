@@ -58,15 +58,10 @@
 
 # 保留文件工具类
 -keep class ai.sxwl.android.utils.FileUtils { *; }
--keep class ai.sxwl.android.utils.PathUtils { *; }
 
 # ===========================================
 # 加密相关保护
 # ===========================================
-
-# 保留加密工具类
--keep class ai.sxwl.android.utils.EncryptUtils { *; }
--keep class ai.sxwl.android.utils.EncodeUtils { *; }
 
 # 保留加密相关类
 -keep class java.security.** { *; }
