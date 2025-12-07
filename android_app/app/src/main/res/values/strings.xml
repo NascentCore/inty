@@ -155,6 +155,7 @@
 
     <!-- Character Creation -->
     <string name="face_edit">Crop</string>
+    <string name="remove_background_image">Remove image</string>
 
     <!-- Report -->
     <string name="report_description">Report description</string>
