@@ -22,12 +22,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.ai.intellimate.R
+import com.ai.intellimate.settings.playStoreUrl
 import com.ai.intellimate.ui.UiConfigs
 
 /** 删除账号确认对话框 */
@@ -36,7 +39,8 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .clip(RoundedCornerShape(UiConfigs.Shape.Dialog))
                     .background(color = UiConfigs.Colors.DialogSurface)
                     .padding(UiConfigs.Padding.DialogInner)
@@ -82,7 +86,8 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             Button(
                 onClick = onDismiss,
                 modifier =
-                    Modifier.fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
+                    Modifier
+                        .fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
                         .align(Alignment.CenterHorizontally),
             ) {
                 Text(
@@ -116,7 +121,8 @@ fun LogoutConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .clip(RoundedCornerShape(UiConfigs.Shape.Dialog))
                     .background(color = UiConfigs.Colors.DialogSurface)
                     .padding(UiConfigs.Padding.DialogInner)
@@ -140,7 +146,8 @@ fun LogoutConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             Button(
                 onClick = onConfirm,
                 modifier =
-                    Modifier.fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
+                    Modifier
+                        .fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
                         .align(Alignment.CenterHorizontally),
             ) {
                 Text(
@@ -153,7 +160,8 @@ fun LogoutConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             TextButton(
                 onClick = onDismiss,
                 modifier =
-                    Modifier.align(Alignment.CenterHorizontally)
+                    Modifier
+                        .align(Alignment.CenterHorizontally)
                         .focusRequester(cancelFocusRequester),
             ) {
                 Text(
@@ -180,32 +188,28 @@ private fun LogoutConfirmDialogPreview() {
 
 /** App强制更新的Dialog */
 @Composable
-fun ForceUpgradeDialog(
-    content: String = stringResource(R.string.str_upgrade_content),
-    onDismiss: () -> Unit = {},
-    onConfirm: () -> Unit = {},
+fun UpgradeDialog(
+    title: String,
+    content: String,
+    onDismiss: () -> Unit,
     isForced: Boolean = false,
 ) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(false, false, true)) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .clip(RoundedCornerShape(UiConfigs.Shape.DialogLarge))
                     .background(color = UiConfigs.Colors.DialogSurface)
                     .padding(UiConfigs.Padding.DialogInner)
         ) {
-            Row(
+            Text(
+                text = title,
+                fontSize = UiConfigs.Typography.Title,
+                color = Color.White,
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.str_upgrade_required),
-                    fontSize = UiConfigs.Typography.Title,
-                    color = Color.White,
-                )
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = onDismiss, enabled = false) {}
-            }
+                textAlign = TextAlign.Center,
+            )
 
             Spacer(Modifier.height(UiConfigs.Spacing.Small))
 
@@ -213,11 +217,14 @@ fun ForceUpgradeDialog(
 
             Spacer(Modifier.height(UiConfigs.Spacing.MediumPlus))
 
-            // 按钮
+            val url = playStoreUrl()
+            val localUriHandler = LocalUriHandler.current
+
             Button(
-                onClick = onConfirm,
+                onClick = {localUriHandler.openUri(url) },
                 modifier =
-                    Modifier.fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
+                    Modifier
+                        .fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
                         .align(Alignment.CenterHorizontally),
             ) {
                 Text(
@@ -233,7 +240,7 @@ fun ForceUpgradeDialog(
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 ) {
                     Text(
-                        text = stringResource(R.string.cancel),
+                        text = stringResource(R.string.str_cancel_upgrade),
                         fontSize = UiConfigs.Typography.Body,
                         color = Color.White,
                     )
@@ -246,5 +253,5 @@ fun ForceUpgradeDialog(
 @Preview(showBackground = true)
 @Composable
 private fun PreviewForceUpgradeDialog() {
-    ForceUpgradeDialog(onDismiss = {}, onConfirm = {})
+    UpgradeDialog(title = "test", content = "test", onDismiss = {}, isForced = true)
 }

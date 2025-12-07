@@ -25,6 +25,7 @@ import com.ai.intellimate.utils.UserProfileManager
 import com.inty.api.models.api.v1.version.VersionCheckResponse
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 enum class HomeTabIndex {
     Chat,
@@ -71,6 +73,13 @@ class MainViewModel : BaseVM() {
 
     private val _messagesTabHasPush = MutableStateFlow(IntySetting.hasMessagesTabPush())
     val messagesTabHasPush: StateFlow<Boolean> = _messagesTabHasPush.asStateFlow()
+    
+    // appUpdateTips 只存在于内存中，每次重启都会重置为 false
+    private val _appUpdateTips = MutableStateFlow(false)
+    val appUpdateTips: StateFlow<Boolean> = _appUpdateTips.asStateFlow()
+    private val _appUpdateTipsRedDot = MutableStateFlow(false)
+    val appUpdateTipsRedDot: StateFlow<Boolean> = _appUpdateTipsRedDot.asStateFlow()
+
     private val tabHistory = ArrayDeque<HomeTabIndex>()
 
     // 标记用户是否已经手动切换过tab，如果已切换，则不再根据remote config自动更新
@@ -253,6 +262,12 @@ class MainViewModel : BaseVM() {
         IntySetting.setMessagesTabHasPush(false)
     }
 
+    fun clearAppUpdateTipsRedDot() {
+        if (_appUpdateTipsRedDot.value) {
+            _appUpdateTipsRedDot.value = false
+        }
+    }
+
     /** 接口请求获取用户信息 */
     fun getUserProfile() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -377,30 +392,52 @@ class MainViewModel : BaseVM() {
     val needForceUpgrade = _needForceUpgrade.receiveAsFlow()
 
     private fun checkAppVersion() = launchBackground {
-        when (
-            val result =
-                IntyNetworkManager.version.checkAppUpgrade(
-                    appVersionCode = BuildConfig.VERSION_CODE.toLong(),
-                    appVersionName = BuildConfig.VERSION_NAME,
-                )
-        ) {
-            is ApiResult.Success -> {
-                val rsp = result.data
-                if (
-                    rsp.update_required &&
-                        (rsp.force_update ||
-                            rsp.reminder_action ==
-                                VersionCheckResponse.Data.ReminderAction.POP_UP_REMINDER)
-                ) {
-                    // 有更新，且需要强制更新
-                    _needForceUpgrade.send(rsp)
+        val timeoutMs: Long = 10000
+        try {
+            when (
+                val result = withTimeout(timeoutMs) {
+                    IntyNetworkManager.version.checkAppUpgrade(
+                        appVersionCode = BuildConfig.VERSION_CODE.toLong(),
+                        // 这个可以取消了，对后端没有意义，后端已经不根据 version name 判断是否更新了。
+                        appVersionName = BuildConfig.VERSION_NAME,
+                    )
                 }
-                IntySetting.setAppUpdateTips(rsp.update_required)
-            }
+            ) {
+                is ApiResult.Success -> {
+                    val rsp = result.data
+                    when (rsp.reminder_action) {
+                        VersionCheckResponse.Data.ReminderAction.BLOCK_ACCESS,
+                        VersionCheckResponse.Data.ReminderAction.POP_UP_REMINDER -> {
+                            // 设置更新提示（仅内存状态）
+                            _appUpdateTips.value = true
+                            _appUpdateTipsRedDot.value = true
+                            // 需要显示更新弹窗（强制拦截或弹窗提醒）
+                            _needForceUpgrade.send(rsp)
+                        }
+                        VersionCheckResponse.Data.ReminderAction.SETTINGS_REMINDER -> {
+                            // 设置更新提示（仅内存状态）
+                            _appUpdateTips.value = true
+                            _appUpdateTipsRedDot.value = true
+                        }
+                        VersionCheckResponse.Data.ReminderAction.NONE -> {
+                            // 当版本不需要更新时（reminder_action 为 NONE），清除更新提示
+                            if (_appUpdateTips.value) {
+                                _appUpdateTips.value = false
+                                _appUpdateTipsRedDot.value = false
+                            }
+                        }
+                    }
+                }
 
-            is ApiResult.Error -> {
-                LogUtils.w("Version check failed: ${result.message}")
+                is ApiResult.Error -> {
+                    LogUtils.w("MainViewModel", "checkAppVersion: 版本检查失败 - ${result.message}")
+                    // 版本检查失败时，不清除更新提示（保持之前的状态，避免误清除）
+                    // 如果确实需要清除，应该等待下次成功的版本检查返回 NONE
+                }
             }
+        } catch (e: TimeoutCancellationException) {
+            LogUtils.w("Version check timeout after ${timeoutMs}ms")
+            // 版本检查超时时，不清除更新提示（保持之前的状态，避免误清除）
         }
     }
 

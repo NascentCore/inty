@@ -304,9 +304,11 @@
     <string name="custom_reply_style">Customize Conversation Style</string>
     <string name="custom_reply_successful">Style Updated</string>
     <string name="reply_hint_str">Customize the AI\'s chat style, like tone, language, else.</string>
-    <string name="str_upgrade_required">Update Required</string>
+    <string name="str_suggest_upgrade">New Version Available! 🚀</string>
+    <string name="str_force_upgrade">Your IntelliMate is out of date 😱</string>
     <string name="str_upgrade_content">We\'ve made some important improvements to make your IntelliMate experience even better! To ensure you have access to the latest features and security updates, please update your app now. This update is required to continue using IntelliMate.</string>
     <string name="str_upgrade_now">Update Now</string>
+    <string name="str_cancel_upgrade">Use Older Version</string>
 
     <string name="str_chat_disabled">Chat unavailable</string>
     <string name="str_agent_is_deleted">Character is no longer available</string>

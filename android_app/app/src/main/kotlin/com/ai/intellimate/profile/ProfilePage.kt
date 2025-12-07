@@ -83,6 +83,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -102,6 +103,7 @@ import coil3.request.ImageRequest
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.settings.check.CheckInActivity
+import com.ai.intellimate.settings.playStoreUrl
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
@@ -127,6 +129,7 @@ internal fun ProfilePage(
     onShowSettings: () -> Unit,
     vipStatus: VipStatus? = null, // 可选的 VIP 状态，用于预览
     profileViewModel: ProfileViewModel? = null, // 用于刷新用户信息
+    appUpdateTips: Boolean = false, // 是否有更新提示
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -285,6 +288,7 @@ internal fun ProfilePage(
                     context = context,
                     vipStatus = vipStatus,
                     editProfileLauncher = editProfileLauncher,
+                    appUpdateTips = appUpdateTips,
                 )
 
                 // LazyGrid 区域
@@ -399,6 +403,7 @@ private fun ProfileHeader(
     context: Context,
     vipStatus: VipStatus? = null, // 可选的 VIP 状态，用于预览
     editProfileLauncher: ActivityResultLauncher<Intent>, // 编辑个人资料的 launcher
+    appUpdateTips: Boolean = false, // 是否有更新提示
 ) {
     // 如果提供了 vipStatus 参数，使用它；否则从 BillingRepository 获取并响应Flow变化
     // 使用 collectAsState() 来响应 Flow 的变化，确保订阅状态更新时UI能及时刷新
@@ -734,6 +739,15 @@ private fun ProfileHeader(
                             .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
                     isSubscribed = isSubscribed,
                     onRequestSubscribe = { showSubscribeDialog = true },
+                )
+            }
+
+            if (appUpdateTips) {
+                Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress)))
+                NewVersionBanner(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
                 )
             }
         }
@@ -1204,17 +1218,37 @@ private fun ProfilePagePreview() {
                 tags = listOf("mystery", "thriller"),
             ),
         )
+}
 
-//    ProfilePage(
-//        modifier = Modifier.fillMaxSize(),
-//        userProfile = previewUserProfile,
-//        agents = previewAgents,
-//        onClickAgent = {},
-//        onEditAgent = {},
-//        onDeleteAgent = {},
-//        isLoading = false,
-//        onLoadMore = {},
-//        onShowSettings = {},
-//        vipStatus = previewVipStatus,
-//    )
+/** 新版本提示 Banner */
+@Composable
+private fun NewVersionBanner(modifier: Modifier = Modifier) {
+    val uriHandler = LocalUriHandler.current
+    
+    // 高亮时使用醒目的渐变（从紫色到橙色），普通时使用半透明白色
+    val backgroundBrush = Brush.horizontalGradient(
+        colors = listOf(
+            Color(0xFFC122FF), // 紫色
+            Color(0xFFFF905D), // 橙色
+        )
+    )
+    
+    val textColor = Color.White
+    
+    Box(
+        modifier =
+            modifier
+                .height(56.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(backgroundBrush)
+                .clickable { uriHandler.openUri(playStoreUrl()) },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.str_suggest_upgrade),
+            color = textColor,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+        )
+    }
 }
