@@ -575,7 +575,7 @@ class TestCheckVersionRequirement:
         result = service.check_version_requirement(50)
 
         # 版本比较失败时，保守起见要求更新
-        assert result["update_required"] is True
+        assert result["update_required"] is False
 
 
 class TestGetAppVersionInfo:

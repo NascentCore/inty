@@ -548,7 +548,7 @@ class GooglePlayService:
             return result | {
                 "error": version_info["error"],
                 "message": "Unable to fetch version info",
-                "reminder_action": VersionReminderAction.SETTINGS_REMINDER,
+                "reminder_action": VersionReminderAction.NONE,
             }
 
         latest_version_code_raw = version_info.get("version_code", 0)
@@ -559,17 +559,9 @@ class GooglePlayService:
         except (ValueError, TypeError):
             logger.warning(f"最新版本代码无效: {latest_version_code_raw}, 使用默认值 0")
             latest_version_code = 0
-        version_code_gap = latest_version_code - client_version_code
-        if version_code_gap < 0:
-            return result | {
-                "latest_version": str(latest_version_code),
-                "update_required": True,
-                "force_update": True,
-                "message": "App version 比 Google Play 最新版本更新，属于异常情况，需要强制更新",
-                "reminder_action": VersionReminderAction.BLOCK_ACCESS,
-            }
 
-        reminder_action = None
+        version_code_gap = latest_version_code - client_version_code
+        reminder_action = VersionReminderAction.NONE
         # 按阈值从大到小检查，找到第一个匹配的阈值即返回对应的动作
         for gap_threshold, action in [
             (
@@ -597,11 +589,11 @@ class GooglePlayService:
             "latest_version": latest_version_name or str(latest_version_code),
             "latest_version_code": latest_version_code,
             "changelog": changelog_value,
-            "update_required": reminder_action is not None,
+            "update_required": reminder_action != VersionReminderAction.NONE,
             "force_update": reminder_action == VersionReminderAction.BLOCK_ACCESS,
             "message": (
                 "New version available"
-                if reminder_action is not None
+                if reminder_action != VersionReminderAction.NONE
                 else "App is up to date"
             ),
             "reminder_action": reminder_action,

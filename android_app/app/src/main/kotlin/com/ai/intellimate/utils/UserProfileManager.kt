@@ -30,8 +30,6 @@ object UserProfileManager {
                 else -> IntySetting.setUserProfileData("age_group", ageGroup.toString())
             }
         }
-
-        LogUtils.i("Saved user profile: $userProfile")
     }
 
     fun getUserProfile(): UserProfile {

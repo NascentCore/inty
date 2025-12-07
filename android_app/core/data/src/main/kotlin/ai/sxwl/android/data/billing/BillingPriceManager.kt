@@ -42,7 +42,7 @@ internal class BillingPriceManager(
             return
         }
 
-        LogUtils.i("Billing [价格查询] 开始查询价格，商品ID列表: $subscriptionIds")
+        LogUtils.d("Billing [价格查询] 开始查询价格，商品ID列表: $subscriptionIds")
         LogUtils.d("Billing [价格查询] 当前计划状态:")
         currentPlansBeforeQuery.forEach { plan ->
             LogUtils.d(
@@ -64,7 +64,7 @@ internal class BillingPriceManager(
         LogUtils.d("Billing [价格查询] 调用 queryProductDetailsAsync，查询 ${subscriptionIds.size} 个商品")
 
         billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsResult ->
-            LogUtils.i(
+            LogUtils.d(
                 "Billing [价格查询] Google Play 返回结果: 响应码=${billingResult.responseCode}, 详情=${billingResult.debugMessage}"
             )
 
@@ -72,7 +72,7 @@ internal class BillingPriceManager(
                 BillingClient.BillingResponseCode.OK -> {
                     val detailsList = productDetailsResult?.productDetailsList
                     if (detailsList != null && detailsList.isNotEmpty()) {
-                        LogUtils.i("Billing [价格查询] ✅ 查询成功，获取到 ${detailsList.size} 个商品信息")
+                        LogUtils.d("Billing [价格查询] ✅ 查询成功，获取到 ${detailsList.size} 个商品信息")
 
                         // 详细记录每个商品的价格信息
                         LogUtils.i("Billing [价格查询] Google Play 返回的商品详情:")
@@ -84,7 +84,7 @@ internal class BillingPriceManager(
                                     ?.pricingPhases
                                     ?.pricingPhaseList
                                     ?.firstOrNull()
-                            LogUtils.i(
+                            LogUtils.d(
                                 "  📦 商品ID: ${productDetails.productId}\n" +
                                     "     标题: ${productDetails.title}\n" +
                                     "     描述: ${productDetails.description}\n" +
@@ -208,7 +208,7 @@ internal class BillingPriceManager(
         currentPlans: List<VipPlan>,
         productDetailsList: List<ProductDetails>,
     ) {
-        LogUtils.i("Billing [价格更新] 开始处理 ${productDetailsList.size} 个商品的价格更新")
+        LogUtils.d("Billing [价格更新] 开始处理 ${productDetailsList.size} 个商品的价格更新")
 
         val updatedPlans = currentPlans.toMutableList()
         var updatedCount = 0

@@ -53,8 +53,7 @@ async def check_version(
         response = VersionCheckResponse(**version_check_result)
 
         logger.debug(
-            f"用户 {current_user.id} 版本检查完成: versionCode {client_version_code} -> "
-            f"需要更新: {response.update_required}, 强制更新: {response.force_update}"
+            f"用户 {current_user.id} 版本检查完成: versionCode {client_version_code} -> response={response}"
         )
 
         return APIResponse.success(data=response)
