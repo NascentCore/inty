@@ -80,7 +80,6 @@ class AgentInfoActivity : BaseActivity() {
                     AiAgentInfoScreen(
                         agent = agent,
                         galleryItems = galleryImages.value,
-                        navController = navController,
                         onBack = { finish() },
                     )
                 }
