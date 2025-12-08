@@ -11,7 +11,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 object PermissionUtils {
-
     fun isGranted(context: Context?, permission: String?): Boolean {
         if (context == null || permission.isNullOrEmpty()) return false
         return try {

@@ -98,23 +98,7 @@ object AppUtils {
     // ==================== 应用信息获取 ====================
 
     /** 获取应用包名 */
-    fun getPackageName(): String = Utils.getApp()?.packageName ?: ""
-
-    /** 获取应用名称 */
-    fun getAppName(packageName: String = Utils.getApp()?.packageName ?: ""): String {
-        if (UtilsBridge.isSpace(packageName)) return ""
-        return try {
-            val app = Utils.getApp() ?: return ""
-            val pm = app.packageManager ?: return ""
-            val pi = pm.getPackageInfo(packageName, 0)
-            pi?.applicationInfo?.loadLabel(pm)?.toString() ?: ""
-        } catch (e: PackageManager.NameNotFoundException) {
-            ""
-        } catch (e: Exception) {
-            Log.e("AppUtils", "获取应用名称失败", e)
-            ""
-        }
-    }
+    fun getPackageName(): String = Utils.getApp().packageName ?: ""
 
     /** 获取应用版本名称 */
     fun getVersionName(packageName: String = Utils.getApp()?.packageName ?: ""): String {
@@ -148,15 +132,6 @@ object AppUtils {
         }
     }
 
-
-
-    /** 获取应用路径 */
-
-
-    // ==================== 应用设置 ====================
-
-
-
     /**
      * 打开应用详情设置（带回调）
      *
@@ -180,64 +155,6 @@ object AppUtils {
             Log.e("AppUtils", "打开应用详情设置失败", e)
         }
     }
-
-    // ==================== 应用签名 ====================
-
-    /** 获取应用签名 */
-    fun getAppSignatures(
-        packageName: String = Utils.getApp()?.packageName ?: ""
-    ): Array<Signature>? {
-        if (UtilsBridge.isSpace(packageName)) return null
-        return try {
-            val app = Utils.getApp() ?: return null
-            val pm = app.packageManager ?: return null
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val pi = pm.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
-                val signingInfo = pi.signingInfo
-                if (signingInfo?.hasMultipleSigners() == true) {
-                    signingInfo.apkContentsSigners
-                } else {
-                    signingInfo?.signingCertificateHistory
-                }
-            } else {
-                getLegacySignatures(pm, packageName)
-            }
-        } catch (e: PackageManager.NameNotFoundException) {
-            null
-        } catch (e: Exception) {
-            Log.e("AppUtils", "获取应用签名失败", e)
-            null
-        }
-    }
-
-
-
-    // ==================== 应用信息数据类 ====================
-
-    /** 应用信息数据类 */
-    data class AppInfo(
-        val packageName: String,
-        val name: String,
-        val icon: Drawable?,
-        val versionName: String,
-        val versionCode: Int,
-        val isSystem: Boolean,
-        val isDebug: Boolean,
-    ) {
-        override fun toString(): String {
-            return "AppInfo{" +
-                "packageName='$packageName', " +
-                "name='$name', " +
-                "versionName='$versionName', " +
-                "versionCode=$versionCode, " +
-                "isSystem=$isSystem, " +
-                "isDebug=$isDebug" +
-                "}"
-        }
-    }
-
-
 
     private fun PackageInfo.versionCodeCompat(): Int {
         val versionCode = PackageInfoCompat.getLongVersionCode(this)

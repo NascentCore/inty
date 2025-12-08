@@ -60,13 +60,6 @@ internal class HttpResponseCall<S : Any>(
                                 Response.success(HttpResult.Success(data)),
                             )
                         } else {
-                            // the body is null，这也是一种异常错误。会有吗
-                            //                        callback.onResponse(
-                            //                            this@HttpResponseCall,
-                            //
-                            // Response.success(HttpResult.UnknownError(null))
-                            //                        )
-
                             callback.onResponse(
                                 this@HttpResponseCall,
                                 Response.success(
@@ -78,57 +71,12 @@ internal class HttpResponseCall<S : Any>(
                             )
                         }
                     } else {
-                        // 这是[4xx, 5xx] 的错误信息，这种也是Http 有返回比较具体的错误 （如果是异常就是直接onFailed了））
-
-                        //                    if (error != null && error.contentLength() > 0) {
-                        //                        //有明确的返回错误
-                        //
-                        //                        // 500X
-                        //                        val errorResponse =
-                        //                            MoshiUtils.fromJson<BusinessBaseResponse>(
-                        //                                error.string(),
-                        //                                BusinessBaseResponse::class.java
-                        //                            )
-                        //
-                        //                        // ????????? 压测一遍
-                        //                        errorConverter?.onFailure(
-                        //                            BusinessException(
-                        //                                errorResponse?.code ?: -1,
-                        //                                errorResponse?.message ?: ""
-                        //                            )
-                        //                        )
-                        //
-                        ////                        callback.onResponse(
-                        ////                            this@HttpResponseCall,
-                        ////                            Response.success(
-                        ////                                HttpResult.ApiError(
-                        ////                                    errorResponse?.message ?: "",
-                        ////                                    errorResponse?.code ?: -1
-                        ////                                )
-                        ////                            )
-                        ////                        )
-                        //
-                        //                        callback.onResponse(
-                        //                            this@HttpResponseCall,
-                        //                            Response.success(
-                        //                                HttpResult.Failure(
-                        //                                    errorResponse?.message ?: "",
-                        //                                    errorResponse?.code ?: -1
-                        //                                )
-                        //                            )
-                        //                        )
-                        //
-                        //
-                        //                    } else {
-                        // 没有Error Body 的情况
                         callback.onResponse(
                             this@HttpResponseCall,
                             Response.success(
                                 HttpResult.Failure(error?.string() ?: "Message is empty.", code)
                             ),
                         )
-
-                        //                    }
                     }
                 }
 
@@ -140,17 +88,6 @@ internal class HttpResponseCall<S : Any>(
                 override fun onFailure(call: Call<S>, throwable: Throwable) {
                     val networkResponse =
                         when (throwable) {
-                            //                    is IOException -> HttpResult.NetworkError(
-                            //                        throwable.message.toString(),
-                            //                        400
-                            //                    )
-                            //
-                            //                    is BusinessException -> {
-                            //                        errorConverter?.onFailure(throwable)
-                            //                        HttpResult.ApiError(throwable.message ?: "",
-                            // throwable.code)
-                            //                    }
-
                             // IO Exception 太宽泛了，需要具体一点
                             is IOException -> HttpResult.Failure(throwable.message.toString(), -1)
 

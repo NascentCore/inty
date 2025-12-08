@@ -56,9 +56,6 @@
 -keep class java.io.** { *; }
 -keep class java.nio.** { *; }
 
-# 保留文件工具类
--keep class ai.sxwl.android.utils.FileUtils { *; }
-
 # ===========================================
 # 加密相关保护
 # ===========================================
@@ -67,34 +64,8 @@
 -keep class java.security.** { *; }
 -keep class javax.crypto.** { *; }
 
-# ===========================================
-# 图片处理保护
-# ===========================================
-
-# 保留图片处理工具类
--keep class ai.sxwl.android.utils.ImageCompressUtils { *; }
--keep class ai.sxwl.android.utils.ImageCompressManager { *; }
-
-# ===========================================
-# 设备信息保护
-# ===========================================
-
 # 保留设备工具类
 -keep class ai.sxwl.android.utils.DeviceUtils { *; }
-
-# ===========================================
-# 通知相关保护
-# ===========================================
-
-# 保留通知工具类
--keep class ai.sxwl.android.utils.NotificationUtils { *; }
-
-# ===========================================
-# 语言相关保护
-# ===========================================
-
-# 保留语言工具类
--keep class ai.sxwl.android.utils.LanguageUtils { *; }
 
 # ===========================================
 # 时间相关保护
