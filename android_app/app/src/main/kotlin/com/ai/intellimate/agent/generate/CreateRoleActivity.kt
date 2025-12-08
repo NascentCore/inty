@@ -972,6 +972,7 @@ private fun CreateRolePage(
                 isLoading = isLoading,
                 isEditMode = isEditMode,
                 onClick = {
+
                     // Validate required fields
                     if (
                         name.isBlank() || intro.isBlank() || opening.isBlank() || settings.isBlank()
@@ -980,11 +981,10 @@ private fun CreateRolePage(
                         return@CreateButton
                     }
 
+                    isLoading = true
+
                     scope.launch {
                         try {
-
-                            isLoading = true
-
                             avatarUrls =
                                 avatarUrls.map { url ->
                                     if (url.startsWith("http") || url.startsWith("https")) {
@@ -1043,14 +1043,12 @@ private fun CreateRolePage(
                                     agentId = editAgent.id,
                                     request = request,
                                     onSuccess = { agentInfo ->
-                                        isLoading = false
                                         ToastUtils.showShort(
                                             R.string.character_updated_successfully
                                         )
                                         onCreateSuccess()
                                     },
                                     onError = { error ->
-                                        isLoading = false
                                         val errorMessage =
                                             if (error.isBlank()) {
                                                 context.getString(
@@ -1067,13 +1065,14 @@ private fun CreateRolePage(
                                                 )
                                             }
                                         ToastUtils.showShort(errorMessage)
+
+                                        isLoading = false
                                     },
                                 )
                             } else {
                                 createRoleViewModel.createAgent(
                                     request = request,
                                     onSuccess = { agentInfo ->
-                                        isLoading = false
                                         // 如果是从草稿列表进入的，删除该草稿
                                         if (savedDraft != null && draftId != null) {
                                             CreateRoleDraftStorage.deleteDraft(draftId)
@@ -1086,7 +1085,6 @@ private fun CreateRolePage(
                                         onCreateSuccess()
                                     },
                                     onError = { error ->
-                                        isLoading = false
                                         val errorMessage =
                                             if (error.isBlank()) {
                                                 context.getString(
@@ -1103,6 +1101,8 @@ private fun CreateRolePage(
                                                 )
                                             }
                                         ToastUtils.showShort(errorMessage)
+
+                                        isLoading = false
                                     },
                                 )
                             }
@@ -1120,7 +1120,7 @@ private fun CreateRolePage(
                             LogUtils.e(
                                 "${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}"
                             )
-                        } finally {
+
                             isLoading = false
                         }
                     }
@@ -1345,47 +1345,6 @@ private suspend fun uploadGallery(context: Context, uri: Uri): String? {
             }
         }
     }
-    /*runCatching {
-
-
-
-
-        // Upload original image first (as background)
-        // 只有在文件大小检查通过后才设置上传标志
-        isUploadingFromGallery = true
-        createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
-            try {
-
-
-
-
-
-
-            } catch (e: Exception) {
-                LogUtils.e("Upload original image exception: ${e.message}")
-                withContext(Dispatchers.Main) {
-                    ToastUtils.showShort(
-                        context.getString(
-                            R.string.toast_upload_failed_with_message,
-                            e.message ?: "Unknown error",
-                        )
-                    )
-                }
-            } finally {
-                isUploadingFromGallery = false
-            }
-        }
-    }
-    .onFailure { e ->
-        LogUtils.e("Gallery selection error: ${e.message}")
-        isUploadingFromGallery = false
-        ToastUtils.showShort(
-            context.getString(
-                R.string.toast_failed_prepare_upload_with_message,
-                e.message ?: "Unknown error",
-            )
-        )
-    }*/
 }
 
 // Helper function to start UCrop with a local file
