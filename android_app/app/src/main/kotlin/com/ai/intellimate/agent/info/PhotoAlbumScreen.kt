@@ -30,7 +30,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,8 +46,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
@@ -57,9 +54,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.UiConfigs
 
-/**
- * 这是角色相册的单独页面，是通过角色主页的 生图预览区右上角 See All 进入的页面
- */
+/** 这是角色相册的单独页面，是通过角色主页的 生图预览区右上角 See All 进入的页面 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PhotoAlbumScreen(
@@ -68,7 +63,9 @@ internal fun PhotoAlbumScreen(
     onBack: () -> Unit,
 ) {
     var previewImage by remember { mutableStateOf<String?>(null) }
-    var currentBackgroundUrl by remember { mutableStateOf<String?>(IntySetting.getChatBackgroundImage(agent.id)) }
+    var currentBackgroundUrl by remember {
+        mutableStateOf<String?>(IntySetting.getChatBackgroundImage(agent.id))
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -90,7 +87,10 @@ internal fun PhotoAlbumScreen(
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Image(
-                                modifier = Modifier.size(UiConfigs.ChatPage.PhotoAlbum.All.BackButtonIconSize),
+                                modifier =
+                                    Modifier.size(
+                                        UiConfigs.ChatPage.PhotoAlbum.All.BackButtonIconSize
+                                    ),
                                 painter = painterResource(R.drawable.back),
                                 contentDescription = null,
                             )
@@ -118,13 +118,13 @@ internal fun PhotoAlbumScreen(
                         )
             ) {
                 if (galleryItems.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
                             text = "No images available",
-                            color = Color.White.copy(alpha = UiConfigs.ChatPage.PhotoAlbum.All.EmptyStateTextAlpha),
+                            color =
+                                Color.White.copy(
+                                    alpha = UiConfigs.ChatPage.PhotoAlbum.All.EmptyStateTextAlpha
+                                ),
                             fontSize = UiConfigs.ChatPage.PhotoAlbum.All.EmptyStateFontSize,
                         )
                     }
@@ -135,16 +135,17 @@ internal fun PhotoAlbumScreen(
                             Modifier.fillMaxSize()
                                 .padding(innerPadding)
                                 .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
-                        contentPadding = PaddingValues(vertical = UiConfigs.ChatPage.PhotoAlbum.All.GridContentVerticalPadding),
+                        contentPadding =
+                            PaddingValues(
+                                vertical =
+                                    UiConfigs.ChatPage.PhotoAlbum.All.GridContentVerticalPadding
+                            ),
                         horizontalArrangement =
                             Arrangement.spacedBy(UiConfigs.MePage.GridHorizontalSpacing),
                         verticalArrangement =
                             Arrangement.spacedBy(UiConfigs.MePage.GridVerticalSpacing),
                     ) {
-                        items(
-                            items = galleryItems,
-                            key = { item -> item.imageUrl },
-                        ) { item ->
+                        items(items = galleryItems, key = { item -> item.imageUrl }) { item ->
                             PhotoAlbumImageItem(
                                 item = item,
                                 agentId = agent.id,
@@ -187,18 +188,20 @@ private fun PhotoAlbumImageItem(
 ) {
     val context = LocalContext.current
     val aspectRatio = if (item.height > 0) item.width.toFloat() / item.height.toFloat() else 1f
-    
+
     // 从共享状态派生当前背景状态，确保所有项目都能正确响应背景变化
     val isCurrentBackground = currentBackgroundUrl == item.imageUrl
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier =
                 Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(UiConfigs.CharacterGallery.ImageCornerRadius))
-                    .background(Color.White.copy(alpha = UiConfigs.ChatPage.PhotoAlbum.All.ImageCardBackgroundAlpha))
+                    .background(
+                        Color.White.copy(
+                            alpha = UiConfigs.ChatPage.PhotoAlbum.All.ImageCardBackgroundAlpha
+                        )
+                    )
                     .pointerInput(item.imageUrl) {
                         detectTapGestures(onTap = { onPreview(item.imageUrl) })
                     }
@@ -215,7 +218,8 @@ private fun PhotoAlbumImageItem(
                             )
                         )
                         .build(),
-                contentDescription = stringResource(R.string.agent_gallery_ai_images_content_description),
+                contentDescription =
+                    stringResource(R.string.agent_gallery_ai_images_content_description),
                 contentScale = ContentScale.Crop,
             )
         }
@@ -240,15 +244,20 @@ private fun PhotoAlbumImageItem(
             if (isCurrentBackground) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = stringResource(R.string.agent_photo_album_set_as_background),
+                    contentDescription =
+                        stringResource(R.string.agent_photo_album_set_as_background),
                     tint = Color.White,
-                    modifier = Modifier.size(UiConfigs.ChatPage.PhotoAlbum.All.ImageItemButtonIconSize),
+                    modifier =
+                        Modifier.size(UiConfigs.ChatPage.PhotoAlbum.All.ImageItemButtonIconSize),
                 )
             } else {
                 Text(
                     text = stringResource(R.string.agent_photo_album_set_as_background),
                     fontSize = UiConfigs.ChatPage.PhotoAlbum.All.ImageItemButtonTextFontSize,
-                    color = Color.White.copy(alpha = UiConfigs.ChatPage.PhotoAlbum.All.ImageItemButtonTextAlpha),
+                    color =
+                        Color.White.copy(
+                            alpha = UiConfigs.ChatPage.PhotoAlbum.All.ImageItemButtonTextAlpha
+                        ),
                     fontWeight = FontWeight.Medium,
                 )
             }

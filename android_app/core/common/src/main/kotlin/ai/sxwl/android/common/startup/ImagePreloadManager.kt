@@ -8,14 +8,11 @@ import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
 import coil3.SingletonImageLoader
-import coil3.request.ImageRequest
-import coil3.size.Size
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** 统一的图片预加载管理器 整合 design 模块的优化配置，提供高性能的图片预加载服务 支持批量预加载、关键图片优先、设备适配等优化策略 */

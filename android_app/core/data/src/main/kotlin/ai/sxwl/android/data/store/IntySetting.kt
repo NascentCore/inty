@@ -20,7 +20,8 @@ object IntySetting {
 
     // App级通用标记的存储 使用的对象
     // MKKV.initialize(app) 已经在 IntelliMateApp.onCreate() 中调用
-    private val allUserSetting: MMKV = MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
+    private val allUserSetting: MMKV =
+        MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
 
     // 当前用户级别的数据存储
     private var curUserSetting: MMKV

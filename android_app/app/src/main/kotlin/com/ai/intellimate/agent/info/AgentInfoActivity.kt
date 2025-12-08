@@ -48,8 +48,7 @@ class AgentInfoActivity : BaseActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(INTENT_KEY_AGENT_INFO, AgentInfo::class.java)
             } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
+                @Suppress("DEPRECATION") intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
             }
         agentId = intent.getStringExtra(INTENT_KEY_AGENT_ID)
         if (agent == null) {
@@ -72,10 +71,7 @@ class AgentInfoActivity : BaseActivity() {
         val agentInfo = viewModel.agentInfo.collectAsState()
         val galleryImages = viewModel.chatImageGallery.collectAsState()
 
-        NavHost(
-            navController = navController,
-            startDestination = AgentInfoRoutes.AGENT_INFO,
-        ) {
+        NavHost(navController = navController, startDestination = AgentInfoRoutes.AGENT_INFO) {
             composable(AgentInfoRoutes.AGENT_INFO) {
                 agentInfo.value?.let { agent ->
                     AiAgentInfoScreen(

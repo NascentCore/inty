@@ -2,24 +2,13 @@ package ai.sxwl.android.utils
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.ActivityManager
 import android.app.Application
-import android.app.usage.UsageEvents
-import android.app.usage.UsageStatsManager
-import android.content.Context
-import android.content.ContextWrapper
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.util.Base64
 import android.util.Log
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
-import java.lang.ref.WeakReference
-import java.security.MessageDigest
-import java.util.concurrent.ConcurrentHashMap
-import kotlinx.serialization.json.Json
 
 /** 工具类桥接器，提供各种工具类的核心功能 */
 @SuppressLint("StaticFieldLeak")

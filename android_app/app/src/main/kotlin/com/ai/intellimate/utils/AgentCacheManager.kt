@@ -28,10 +28,7 @@ object AgentCacheManager {
     private val agentListAdapter = moshi.adapter<List<AgentInfo>>(agentListType)
 
     private val characterThemeListType =
-        Types.newParameterizedType(
-            List::class.java,
-            AgentService.CharacterThemeItem::class.java,
-        )
+        Types.newParameterizedType(List::class.java, AgentService.CharacterThemeItem::class.java)
     private val characterThemeListAdapter =
         moshi.adapter<List<AgentService.CharacterThemeItem>>(characterThemeListType)
 
@@ -231,9 +228,7 @@ object AgentCacheManager {
             val timestamp = timestampStr.toLong()
             val currentTime = System.currentTimeMillis()
             val isExpired = (currentTime - timestamp) > CACHE_EXPIRY_TIME
-            LogUtils.d(
-                "AgentCacheManager - 主题专区缓存过期检查: ${if (isExpired) "已过期" else "未过期"}"
-            )
+            LogUtils.d("AgentCacheManager - 主题专区缓存过期检查: ${if (isExpired) "已过期" else "未过期"}")
             isExpired
         } catch (e: Exception) {
             LogUtils.e("AgentCacheManager - 检查主题专区缓存过期失败: ${e.message}")
