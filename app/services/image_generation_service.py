@@ -154,14 +154,13 @@ class ImageGenerationService:
             from app import models
 
             # 使用ORM查询resources表
+            # 注意：JSON字段的嵌套键检查在代码中进行，而非SQL中
             query = (
                 select(models.Resource)
                 .where(
                     models.Resource.agent_id == agent_id,
                     models.Resource.type == ResourceType.IMAGE,
-                    models.Resource.resource_metadata["generation_prompt"].astext.isnot(
-                        None
-                    ),
+                    models.Resource.resource_metadata.isnot(None),
                 )
                 .order_by(models.Resource.created_at.desc())
             )
@@ -301,6 +300,18 @@ class ImageGenerationService:
             包含图片信息的字典
         """
         try:
+            # 测试模式：通过环境变量触发模拟失败（仅用于测试匹配逻辑）
+            # 设置环境变量: TEST_IMAGE_GEN_FAIL=safety_filter 或 TEST_IMAGE_GEN_FAIL=network_error
+            import os
+
+            test_fail_mode = os.environ.get("TEST_IMAGE_GEN_FAIL", "").lower()
+            if test_fail_mode == "safety_filter":
+                logger.warning("测试模式：模拟安全过滤器阻止")
+                raise ValueError("图片生成被安全过滤器阻止: 测试模式触发")
+            elif test_fail_mode == "network_error":
+                logger.warning("测试模式：模拟网络错误")
+                raise ConnectionError("Connection timeout: 测试模式触发")
+
             # 确定历史消息数量
             if history_count is None:
                 history_count = (
