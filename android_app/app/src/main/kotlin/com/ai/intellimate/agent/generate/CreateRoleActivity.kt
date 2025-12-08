@@ -326,6 +326,10 @@ private fun CreateRolePage(
     val handleExitRequest = {
         if (isEditMode || !hasDraftChanges) {
             onBack()
+        } else if (savedDraft != null && hasDraftChanges) {
+            // 从 draft 进入，直接保存并退出
+            CreateRoleDraftStorage.saveDraft(latestDraft)
+            onBack()
         } else {
             showSaveDraftDialog = true
         }
