@@ -130,24 +130,3 @@ data class UploadAvatarResponse(
     @Json(name = "url") val url: String = "",
     @Json(name = "avatar_url") val avatar_url: String = "",
 )
-
-/** 角色主题专区中的角色信息 */
-@JsonClass(generateAdapter = true)
-data class CharacterThemeAgent(
-    @Json(name = "agent_id") val agentId: String = "",
-    @Json(name = "order_index") val orderIndex: Int = 0,
-    val agent: AgentInfo? = null,
-)
-
-/** 角色主题专区 */
-@JsonClass(generateAdapter = true)
-data class CharacterTheme(
-    val id: String = "",
-    val name: String = "",
-    val description: String? = null,
-    @Json(name = "background_image_url") val backgroundImageUrl: String? = null,
-    val visibility: String = "", // PRIMARY, SECONDARY, HIDDEN
-    @Json(name = "created_at") val createdAt: String = "",
-    @Json(name = "updated_at") val updatedAt: String? = null,
-    val agents: List<CharacterThemeAgent> = emptyList(),
-)

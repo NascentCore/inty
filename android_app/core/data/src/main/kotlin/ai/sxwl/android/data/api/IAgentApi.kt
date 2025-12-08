@@ -2,7 +2,6 @@ package ai.sxwl.android.data.api
 
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AgentInfoResponse
-import ai.sxwl.android.data.api.model.CharacterTheme
 import ai.sxwl.android.data.api.model.CreateAgentRequest
 import ai.sxwl.android.data.api.model.GenerateBackgroundRequest
 import ai.sxwl.android.data.api.model.GenerateBackgroundResponse
@@ -74,11 +73,4 @@ interface IAgentApi {
     @Multipart
     @POST("/api/v1/images")
     suspend fun uploadAvatar(@Part file: MultipartBody.Part): HttpResult<UploadAvatarResponse>
-
-    /** 获取角色主题专区列表 */
-    @GET("/api/v1/character-themes/")
-    suspend fun getCharacterThemes(
-        @Query("skip") skip: Int = 0,
-        @Query("limit") limit: Int = 100,
-    ): HttpResult<List<CharacterTheme>>
 }
