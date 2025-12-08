@@ -8,7 +8,7 @@ import com.ai.intellimate.agent.generate.CreateRoleDraft
 data class ProfileUiState(
     val userProfile: UserProfile = UserProfile(),
     val userCreatedAgents: List<AgentInfo> = emptyList(),
-    val pendingDraft: CreateRoleDraft? = null,
+    val drafts: List<CreateRoleDraft> = emptyList(),
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val hasMore: Boolean = true,

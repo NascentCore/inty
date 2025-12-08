@@ -532,7 +532,7 @@ private fun ProfileTabContent(
             profileViewModel.updateUserInfoLocal()
             // 优先从缓存加载，避免闪现
             profileViewModel.loadUserCreatedAgentsFromCache()
-            profileViewModel.refreshDraft()
+            profileViewModel.refreshDrafts()
             profileViewModel.trackPageView("MainPage")
         }
     }
@@ -541,7 +541,7 @@ private fun ProfileTabContent(
     LaunchedEffect(shouldRefreshProfile) {
         if (shouldRefreshProfile) {
             profileViewModel.refreshCreatedAgents()
-            profileViewModel.refreshDraft()
+            profileViewModel.refreshDrafts()
             onRefreshProfileHandled()
         }
     }
@@ -579,12 +579,12 @@ private fun ProfileTabContent(
         modifier = Modifier,
         userProfile = safeUserProfile,
         agents = uiState.userCreatedAgents,
-        draft = uiState.pendingDraft,
+        drafts = uiState.drafts,
         isLoading = uiState.isLoading,
         onClickAgent = { agent ->
             ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
         },
-        onClickDraft = { CreateRoleActivity.launch(context, null) },
+        onClickDraft = { draftId -> CreateRoleActivity.launch(context, null, draftId) },
         onEditAgent = { agent ->
             // 使用 CreateRoleActivity 提供的方法获取 Intent，并监听返回结果
             val intent = CreateRoleActivity.getIntent(context, agent)

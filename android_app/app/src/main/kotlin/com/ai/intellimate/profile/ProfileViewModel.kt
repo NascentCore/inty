@@ -35,7 +35,7 @@ class ProfileViewModel : BaseVM() {
 
     init {
         loadUserProfile()
-        refreshDraft()
+        refreshDrafts()
     }
 
     /** 加载用户信息 */
@@ -62,11 +62,11 @@ class ProfileViewModel : BaseVM() {
         }
     }
 
-    /** 刷新草稿信息，供 "Me" 页面展示 */
-    fun refreshDraft() {
+    /** 刷新草稿列表，供 "Me" 页面展示 */
+    fun refreshDrafts() {
         viewModelScope.launch(Dispatchers.IO) {
-            val draft = CreateRoleDraftStorage.loadDraft()?.takeUnless { it.isEmpty() }
-            _uiState.update { it.copy(pendingDraft = draft) }
+            val drafts = CreateRoleDraftStorage.getAllDrafts().filter { !it.isEmpty() }
+            _uiState.update { it.copy(drafts = drafts) }
         }
     }
 

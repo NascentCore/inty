@@ -128,17 +128,20 @@ class CreateRoleActivity : BaseActivity() {
 
     companion object {
         private const val INTENT_KEY_AGENT_INFO = "intent_key_agent_info"
+        private const val INTENT_KEY_DRAFT_ID = "intent_key_draft_id"
 
         /**
          * 启动创建/编辑角色界面
          *
          * @param context 上下文context
          * @param agentInfo Agent的Info对象，为null时表示创建新角色，否则表示编辑现有角色
+         * @param draftId 草稿ID，如果提供则从草稿列表加载该草稿；UUID 字符串
          */
-        fun launch(context: Context, agentInfo: AgentInfo? = null) {
+        fun launch(context: Context, agentInfo: AgentInfo? = null, draftId: String? = null) {
             context.startActivity(
                 Intent(context, CreateRoleActivity::class.java).also { intent ->
                     intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
+                    draftId?.let { intent.putExtra(INTENT_KEY_DRAFT_ID, it) }
                 }
             )
         }
@@ -148,16 +151,19 @@ class CreateRoleActivity : BaseActivity() {
          *
          * @param context 上下文context
          * @param agentInfo Agent的Info对象，为null时表示创建新角色，否则表示编辑现有角色
+         * @param draftId 草稿ID，如果提供则从草稿列表加载该草稿；UUID 字符串
          * @return 配置好的 Intent
          */
-        fun getIntent(context: Context, agentInfo: AgentInfo? = null): Intent {
+        fun getIntent(context: Context, agentInfo: AgentInfo? = null, draftId: String? = null): Intent {
             return Intent(context, CreateRoleActivity::class.java).apply {
                 putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
+                draftId?.let { putExtra(INTENT_KEY_DRAFT_ID, it) }
             }
         }
     }
 
     private var agent: AgentInfo? = null
+    private var draftId: String? = null
     private val createRoleViewModel: CreateRoleViewModel by viewModels()
 
     override fun initConfigData() {
@@ -168,6 +174,7 @@ class CreateRoleActivity : BaseActivity() {
             } else {
                 @Suppress("DEPRECATION") intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
             }
+        draftId = intent.getStringExtra(INTENT_KEY_DRAFT_ID)
     }
 
     @Composable
@@ -185,6 +192,7 @@ class CreateRoleActivity : BaseActivity() {
                 AvatarGenerateActivity.launch(this, prompt?.takeIf { it.isNotBlank() })
             },
             editAgent = agent,
+            draftId = draftId,
         )
     }
 }
@@ -203,10 +211,17 @@ private fun CreateRolePage(
     onCreateSuccess: () -> Unit,
     onAvatarGenerateClick: (String?) -> Unit,
     editAgent: AgentInfo? = null,
+    draftId: String? = null,
 ) {
     val isEditMode = editAgent != null
     val savedDraft =
-        remember(editAgent) { if (editAgent == null) CreateRoleDraftStorage.loadDraft() else null }
+        remember(editAgent, draftId) {
+            when {
+                editAgent != null -> null
+                draftId != null -> CreateRoleDraftStorage.getDraftById(draftId)
+                else -> CreateRoleDraftStorage.loadCurrentDraft()
+            }
+        }
     var latestDraft by remember(savedDraft) { mutableStateOf(savedDraft ?: CreateRoleDraft()) }
     var enableDraftSaving by remember { mutableStateOf(true) }
     var showSaveDraftDialog by remember { mutableStateOf(false) }
@@ -327,8 +342,10 @@ private fun CreateRolePage(
         if (isEditMode || !hasDraftChanges) {
             onBack()
         } else if (savedDraft != null && hasDraftChanges) {
-            // 从 draft 进入，直接保存并退出
-            CreateRoleDraftStorage.saveDraft(latestDraft)
+            // 从 draft 进入，更新草稿列表中的草稿，清除临时草稿，然后退出
+            val draftToSave = latestDraft.copy(id = savedDraft.id, createdAt = savedDraft.createdAt)
+            CreateRoleDraftStorage.saveDraftToList(draftToSave)
+            CreateRoleDraftStorage.clearCurrentDraft()
             onBack()
         } else {
             showSaveDraftDialog = true
@@ -364,7 +381,8 @@ private fun CreateRolePage(
                 .distinctUntilChanged()
                 .collect { draft ->
                     latestDraft = draft
-                    CreateRoleDraftStorage.saveDraft(draft)
+                    // 自动保存到临时草稿
+                    CreateRoleDraftStorage.saveCurrentDraft(draft)
                 }
         }
     }
@@ -1035,7 +1053,12 @@ private fun CreateRolePage(
                                     request = request,
                                     onSuccess = { agentInfo ->
                                         isLoading = false
-                                        CreateRoleDraftStorage.clearDraft()
+                                        // 如果是从草稿列表进入的，删除该草稿
+                                        if (savedDraft != null && draftId != null) {
+                                            CreateRoleDraftStorage.deleteDraft(draftId)
+                                        }
+                                        // 清除临时草稿
+                                        CreateRoleDraftStorage.clearCurrentDraft()
                                         ToastUtils.showShort(
                                             context.getString(R.string.create_ai_successfully)
                                         )
@@ -1109,7 +1132,15 @@ private fun CreateRolePage(
             confirmButton = {
                 Button(
                     onClick = {
-                        CreateRoleDraftStorage.saveDraft(latestDraft)
+                        // 保存到草稿列表（如果是新草稿会自动生成ID，如果是从草稿列表进入的会更新）
+                        val draftToSave = if (savedDraft != null) {
+                            latestDraft.copy(id = savedDraft.id, createdAt = savedDraft.createdAt)
+                        } else {
+                            latestDraft
+                        }
+                        CreateRoleDraftStorage.saveDraftToList(draftToSave)
+                        // 清除临时草稿，以便下次进入时创建新角色
+                        CreateRoleDraftStorage.clearCurrentDraft()
                         showSaveDraftDialog = false
                         onBack()
                     },
@@ -1126,7 +1157,8 @@ private fun CreateRolePage(
                 Button(
                     onClick = {
                         enableDraftSaving = false
-                        CreateRoleDraftStorage.clearDraft()
+                        // 清除临时草稿
+                        CreateRoleDraftStorage.clearCurrentDraft()
                         showSaveDraftDialog = false
                         onBack()
                     },

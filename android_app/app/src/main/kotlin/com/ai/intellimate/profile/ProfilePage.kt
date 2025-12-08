@@ -122,9 +122,9 @@ internal fun ProfilePage(
     modifier: Modifier,
     userProfile: UserProfile,
     agents: List<AgentInfo>,
-    draft: CreateRoleDraft? = null,
+    drafts: List<CreateRoleDraft> = emptyList(),
     onClickAgent: (AgentInfo) -> Unit,
-    onClickDraft: (() -> Unit)? = null,
+    onClickDraft: ((String) -> Unit)? = null,
     onEditAgent: ((AgentInfo) -> Unit)? = null,
     onDeleteAgent: ((AgentInfo) -> Unit)? = null,
     isLoading: Boolean = false,
@@ -137,7 +137,7 @@ internal fun ProfilePage(
     val context = LocalContext.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
-    val hasDraftCard = draft?.isEmpty() == false
+    val validDrafts = drafts.filter { !it.isEmpty() }
 
     // 创建用于编辑个人资料的 launcher，在 ProfilePage 内部处理
     val editProfileLauncher =
@@ -296,7 +296,7 @@ internal fun ProfilePage(
                 )
 
                 // LazyGrid 区域
-                if (!hasDraftCard && agents.isEmpty()) {
+                if (validDrafts.isEmpty() && agents.isEmpty()) {
                     Spacer(Modifier.height(UiConfigs.MePage.EmptyStateTopSpacing))
 
                     AsyncImage(
@@ -356,13 +356,14 @@ internal fun ProfilePage(
                         verticalArrangement =
                             Arrangement.spacedBy(UiConfigs.MePage.GridVerticalSpacing),
                     ) {
-                        if (hasDraftCard && onClickDraft != null) {
-                            draft?.let { pendingDraft ->
-                                item(key = "pending_draft") {
+                        // 显示所有草稿卡片
+                        if (validDrafts.isNotEmpty() && onClickDraft != null) {
+                            validDrafts.forEach { draft ->
+                                item(key = "draft_${draft.id}") {
                                     DraftAgentCard(
                                         modifier =
-                                            Modifier.noRippleClickable { onClickDraft() },
-                                        draft = pendingDraft,
+                                            Modifier.noRippleClickable { onClickDraft(draft.id) },
+                                        draft = draft,
                                     )
                                 }
                             }
