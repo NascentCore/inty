@@ -246,79 +246,46 @@ object AgentService {
      */
     suspend fun getCharacterThemes(
         skip: Int = 0,
-        limit: Int = 2,
+        limit: Int,
     ): ApiResult<List<CharacterThemeItem>> {
         return IntyNetworkManager.executeRequest("Get Character Themes") {
-            try {
-                LogUtils.d("AgentService - 请求主题专区列表: skip=$skip, limit=$limit")
-                val response =
-                    IntyNetworkManager.getClient()
-                        .async()
-                        .api()
-                        .v1()
-                        .characterThemes()
-                        .list(
-                            com.inty.api.models.api.v1.characterthemes.CharacterThemeListParams
-                                .builder()
-                                .skip(skip.toLong())
-                                .limit(limit.toLong())
-                                .build()
-                        )
+            LogUtils.d("AgentService - 请求主题专区列表: skip=$skip, limit=$limit")
+            
+            // 使用 Retrofit 方式，与其他接口保持一致（如 exploreAgents）
+            val result = ai.sxwl.android.data.api.NetServiceMgr.getAgentApi()
+                .getCharacterThemes(skip = skip, limit = limit)
 
-                LogUtils.d(
-                    "AgentService - 主题专区接口响应: code=${response.code()}, data=${response.data()?.size ?: 0} 条"
-                )
-
-                if (response.code() == 200L && response.data() != null) {
-                    val rawThemes = response.data()!!
-                    LogUtils.d("AgentService - 原始主题数量: ${rawThemes.size}")
+            when (result) {
+                is com.architecture.httplib.core.HttpResult.Success -> {
+                    val rawThemes = result.data
+                    LogUtils.d("AgentService - 主题专区接口响应成功: ${rawThemes.size} 条")
 
                     val themes =
                         rawThemes
                             .filter { theme ->
-                                try {
-                                    // 只显示可见的主题（PRIMARY 或 SECONDARY）
-                                    val visibility = theme.visibility()
-                                    val isVisible =
-                                        visibility ==
-                                            com.inty.api.models.api.v1.characterthemes
-                                                .CharacterThemeVisibility
-                                                .PRIMARY ||
-                                            visibility ==
-                                                com.inty.api.models.api.v1.characterthemes
-                                                    .CharacterThemeVisibility
-                                                    .SECONDARY
-                                    LogUtils.d(
-                                        "AgentService - 主题 ${theme.id()}: visibility=$visibility, isVisible=$isVisible"
-                                    )
-                                    isVisible
-                                } catch (e: Exception) {
-                                    LogUtils.w("AgentService - 获取主题可见性失败: ${e.message}")
-                                    false
-                                }
+                                // 只显示可见的主题（PRIMARY 或 SECONDARY）
+                                val isVisible =
+                                    theme.visibility == "PRIMARY" || theme.visibility == "SECONDARY"
+                                LogUtils.d(
+                                    "AgentService - 主题 ${theme.id}: visibility=${theme.visibility}, isVisible=$isVisible"
+                                )
+                                isVisible
                             }
                             .mapNotNull { theme ->
                                 try {
                                     val agents =
-                                        theme.agents()?.mapNotNull { themeAgent ->
-                                            try {
-                                                themeAgent.agent()?.toAgentInfo()
-                                            } catch (e: Exception) {
-                                                LogUtils.w(
-                                                    "AgentService - 转换 Agent 失败: ${e.message}"
-                                                )
-                                                null
-                                            }
-                                        } ?: emptyList()
+                                        theme.agents.mapNotNull { themeAgent ->
+                                            themeAgent.agent
+                                        }
 
                                     LogUtils.d(
-                                        "AgentService - 主题 ${theme.id()}: name=${theme.name()}, agents数量=${agents.size}"
+                                        "AgentService - 主题 ${theme.id}: name=${theme.name}, agents数量=${agents.size}"
                                     )
 
                                     CharacterThemeItem(
-                                        id = theme.id(),
-                                        name = theme.name(),
-                                        description = theme.description() ?: "",
+                                        id = theme.id,
+                                        name = theme.name,
+                                        description = theme.description ?: "",
                                         agents = agents,
                                         isChristmas = isChristmasTheme(theme),
                                     )
@@ -330,26 +297,22 @@ object AgentService {
 
                     LogUtils.d("AgentService - 最终返回主题数量: ${themes.size}")
                     themes
-                } else {
-                    LogUtils.w(
-                        "AgentService - 获取主题专区列表失败: code=${response.code()}, data=${response.data()}"
-                    )
-                    emptyList()
                 }
-            } catch (e: Exception) {
-                LogUtils.e("AgentService - 调用接口异常: ${e.message}", e)
-                throw e
+                is com.architecture.httplib.core.HttpResult.Failure -> {
+                    LogUtils.w(
+                        "AgentService - 获取主题专区列表失败: code=${result.code}, message=${result.message}"
+                    )
+                    throw Exception("获取主题专区列表失败: code=${result.code}, message=${result.message}")
+                }
             }
         }
     }
 
     /** 判断是否为圣诞主题（根据名称或其他特征判断） */
-    private fun isChristmasTheme(
-        theme: com.inty.api.models.api.v1.characterthemes.CharacterTheme
-    ): Boolean {
+    private fun isChristmasTheme(theme: ai.sxwl.android.data.api.model.CharacterTheme): Boolean {
         return try {
-            val name = theme.name().lowercase()
-            val description = theme.description()?.lowercase() ?: ""
+            val name = theme.name.lowercase()
+            val description = theme.description?.lowercase() ?: ""
             name.contains("christmas") ||
                 name.contains("圣诞") ||
                 description.contains("christmas") ||

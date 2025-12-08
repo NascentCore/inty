@@ -32,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -41,6 +40,7 @@ import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.ai.intellimate.R
+import com.ai.intellimate.explore.special.HorizontalAgentCardList
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.EmptyDataState
 import com.ai.intellimate.ui.components.NetworkErrorState
@@ -74,7 +74,16 @@ fun ExploreContent(
 ) {
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
     val vm: ExploreViewModel = viewModel
-    val context = LocalContext.current
+
+    // 获取主题专区数据
+    val characterThemes by vm.characterThemes.collectAsState()
+
+    // 加载主题专区列表（仅在首次加载时调用）
+    LaunchedEffect(Unit) {
+        if (characterThemes.isEmpty()) {
+            vm.loadCharacterThemes(skip = 0, limit = 2)
+        }
+    }
 
     // 更新当前UI中显示的agents总数
     LaunchedEffect(lazyPagingItems?.itemCount) {
@@ -243,79 +252,102 @@ fun ExploreContent(
             } else {
                 vm.refreshRecommendAgents()
             }
+            // 刷新时也重新加载主题专区
+            vm.loadCharacterThemes(skip = 0, limit = 2)
         }
     }
 
     // 如果是错误状态且没有数据，显示错误状态
-    if (loadState is LoadState.Error && lazyPagingItems.itemCount == 0) {
-        NetworkErrorState(
-            onRetry = onRetry ?: { lazyPagingItems.retry() },
-            modifier = modifier.fillMaxSize(),
-        )
-    } else if (loadState is LoadState.NotLoading && lazyPagingItems.itemCount == 0) {
-        // 如果没有数据且加载完成，显示空数据状态
-        EmptyDataState(
-            subtitle = stringResource(R.string.empty_explore_data),
-            modifier = modifier.fillMaxSize(),
-        )
-    } else {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier =
-                modifier
-                    .padding(bottom = innerPadding.calculateBottomPadding())
-                    .nestedScroll(scrollConnection),
-            state = gridState,
-            contentPadding = PaddingValues(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // 如果没有Paging数据，显示加载状态
-            if (lazyPagingItems == null) {
-                item(span = { GridItemSpan(maxLineSpan) }) { EmptyStateIndicator() }
-            } else {
-                // 使用Paging的items
-                items(
-                    count = lazyPagingItems.itemCount,
-                    key =
-                        lazyPagingItems.itemKey { agent ->
-                            // 确保key的唯一性，避免空id导致的重复key问题
-                            agent.id.ifEmpty {
-                                // 如果id为空，使用其他字段组合生成唯一key
-                                "${agent.name}_${agent.avatar}_${agent.createdAt}"
-                            }
-                        },
-                ) { index ->
-                    val agent = lazyPagingItems[index]
-                    if (agent != null) {
-                        // 只播放第一个可见且有 backgroundAnimatedUrl 的 item
-                        val shouldPlay = index == firstPlayingItemIndex
+    when (loadState) {
+        is LoadState.Error if lazyPagingItems.itemCount == 0 -> {
+            NetworkErrorState(
+                onRetry = onRetry ?: { lazyPagingItems.retry() },
+                modifier = modifier.fillMaxSize(),
+            )
+        }
 
-                        ExploreCharacterCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            agentInfo = agent,
-                            onClick = { onClickAgent(agent) },
-                            index = index,
-                            shouldPlayAnimated = shouldPlay,
-                        )
-                    } else {
-                        // 显示加载占位符
-                        ShimmerPlaceholder(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .height(200.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                        )
+        is LoadState.NotLoading if lazyPagingItems.itemCount == 0 -> {
+            // 如果没有数据且加载完成，显示空数据状态
+            EmptyDataState(
+                subtitle = stringResource(R.string.empty_explore_data),
+                modifier = modifier.fillMaxSize(),
+            )
+        }
+
+        else -> {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier =
+                    modifier
+                        .padding(bottom = innerPadding.calculateBottomPadding())
+                        .nestedScroll(scrollConnection),
+                state = gridState,
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // 如果没有Paging数据，显示加载状态
+                if (lazyPagingItems == null) {
+                    item(span = { GridItemSpan(maxLineSpan) }) { EmptyStateIndicator() }
+                } else {
+                    // 主题专区的item数据，如果有接口数据则显示，无则不显示
+                    characterThemes.forEach { theme ->
+                        if (theme.agents.isNotEmpty()) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                HorizontalAgentCardList(
+                                    title = theme.name,
+                                    description = theme.description,
+                                    agents = theme.agents,
+                                    isChristmas = theme.isChristmas,
+                                    onAgentClick = onClickAgent,
+                                )
+                            }
+                        }
+                    }
+
+                    // 使用Paging的items
+                    items(
+                        count = lazyPagingItems.itemCount,
+                        key =
+                            lazyPagingItems.itemKey { agent ->
+                                // 确保key的唯一性，避免空id导致的重复key问题
+                                agent.id.ifEmpty {
+                                    // 如果id为空，使用其他字段组合生成唯一key
+                                    "${agent.name}_${agent.avatar}_${agent.createdAt}"
+                                }
+                            },
+                    ) { index ->
+                        val agent = lazyPagingItems[index]
+                        if (agent != null) {
+                            // 只播放第一个可见且有 backgroundAnimatedUrl 的 item
+                            val shouldPlay = index == firstPlayingItemIndex
+
+                            ExploreCharacterCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                agentInfo = agent,
+                                onClick = { onClickAgent(agent) },
+                                index = index,
+                                shouldPlayAnimated = shouldPlay,
+                            )
+                        } else {
+                            // 显示加载占位符
+                            ShimmerPlaceholder(
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .height(200.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                            )
+                        }
+                    }
+
+                    // 加载状态指示器
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        ExploreLoadingStates(lazyPagingItems, showLoadMoreLoading, isRefreshing)
                     }
                 }
 
-                // 加载状态指示器
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    ExploreLoadingStates(lazyPagingItems, showLoadMoreLoading, isRefreshing)
-                }
+                item { Spacer(Modifier.height(16.dp)) }
             }
-
-            item { Spacer(Modifier.height(16.dp)) }
         }
     }
 }

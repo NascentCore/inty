@@ -4,7 +4,6 @@ import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.VipStatusHelper
-import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
@@ -291,25 +290,26 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     }
 
     /** 加载主题专区列表 */
-    fun loadCharacterThemes(skip: Int = 0, limit: Int = 2) {
+    fun loadCharacterThemes(skip: Int = 0, limit: Int = 100) {
         viewModelScope.launch {
             _isLoadingThemes.value = true
             try {
-                // 使用封装好的 Service，skip=0, limit=2 获取前两个主题
-                when (
-                    val result =
-                        IntyNetworkManager.agent.getCharacterThemes(skip = skip, limit = limit)
-                ) {
+                when (val result = AgentService.getCharacterThemes(skip = skip, limit = limit)) {
                     is ai.sxwl.android.data.http.ApiResult.Success -> {
                         LogUtils.d("ExploreViewModel - 获取主题专区列表成功: ${result.data.size} 条")
                         _characterThemes.value = result.data
                     }
                     is ai.sxwl.android.data.http.ApiResult.Error -> {
-                        LogUtils.w("ExploreViewModel - 获取主题专区列表失败: ${result.message}")
+                        // 所有异常（包括网络异常、业务错误等）都会被 IntyNetworkManager.executeRequest 
+                        // 捕获并转换为 ApiResult.Error，这里安全处理，不会导致崩溃
+                        LogUtils.w(
+                            "ExploreViewModel - 获取主题专区列表失败: code=${result.code}, message=${result.message}"
+                        )
                         _characterThemes.value = emptyList()
                     }
                 }
             } catch (e: Exception) {
+                // 额外的保护层，防止意外异常（虽然理论上不会发生，因为 getCharacterThemes 返回 ApiResult）
                 LogUtils.e("ExploreViewModel - 加载主题专区列表异常: ${e.message}", e)
                 _characterThemes.value = emptyList()
             } finally {
