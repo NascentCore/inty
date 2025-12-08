@@ -9,6 +9,7 @@ import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.generate.CreateRoleDraftStorage
 import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.HttpErrorHandler
 import com.ai.intellimate.utils.IntyUserProfileSDK
@@ -24,7 +25,6 @@ import retrofit2.HttpException
 
 /** Profile 页面 ViewModel 负责管理用户创建的 Agents 列表、用户信息等 */
 class ProfileViewModel : BaseVM() {
-
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -34,6 +34,7 @@ class ProfileViewModel : BaseVM() {
 
     init {
         loadUserProfile()
+        refreshAgentDrafts()
     }
 
     /** 加载用户信息 */
@@ -57,6 +58,17 @@ class ProfileViewModel : BaseVM() {
                 // 使用本地缓存的用户信息
                 _uiState.update { it.copy(userProfile = UserProfileManager.getUserProfile()) }
             }
+        }
+    }
+
+    /** 刷新草稿列表，供 "Me" 页面展示 */
+    fun refreshAgentDrafts() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val drafts =
+                CreateRoleDraftStorage.getAllDrafts()
+                    .filter { !it.isEmpty() }
+                    .sortedByDescending { it.lastModifiedAt } // 按最后修改时间降序排序（最新在前）
+            _uiState.update { it.copy(drafts = drafts) }
         }
     }
 

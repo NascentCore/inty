@@ -81,7 +81,7 @@ fun HomeScreen(
                             .HOME_PAGE_DEFAULT_TAB_INDEX
                     )
                     .toInt()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 0 // 默认值：Chat tab
             }
         val defaultTabName =
@@ -519,8 +519,20 @@ private fun ProfileTabContent(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
             // 编辑成功后刷新列表
-            if (result.resultCode == android.app.Activity.RESULT_OK) {
+            if (result.resultCode == Activity.RESULT_OK) {
                 profileViewModel.refreshCreatedAgents()
+            }
+        }
+
+    // 创建用于从 Profile 页面创建角色的 launcher（包括从草稿创建）
+    val createFromProfileLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            // 创建成功后刷新列表和草稿
+            if (result.resultCode == Activity.RESULT_OK) {
+                profileViewModel.refreshCreatedAgents()
+                profileViewModel.refreshAgentDrafts()
             }
         }
 
@@ -532,6 +544,7 @@ private fun ProfileTabContent(
             profileViewModel.updateUserInfoLocal()
             // 优先从缓存加载，避免闪现
             profileViewModel.loadUserCreatedAgentsFromCache()
+            profileViewModel.refreshAgentDrafts()
             profileViewModel.trackPageView("MainPage")
         }
     }
@@ -540,6 +553,7 @@ private fun ProfileTabContent(
     LaunchedEffect(shouldRefreshProfile) {
         if (shouldRefreshProfile) {
             profileViewModel.refreshCreatedAgents()
+            profileViewModel.refreshAgentDrafts()
             onRefreshProfileHandled()
         }
     }
@@ -547,6 +561,7 @@ private fun ProfileTabContent(
     // 生命周期管理：页面恢复时刷新用户信息，但不频繁刷新列表
     LifecycleResumeEffect(profileViewModel) {
         profileViewModel.loadUserProfile()
+        profileViewModel.refreshAgentDrafts()
         VipStatusHelper.refreshSubscriptionStatus()
         // 不再频繁刷新列表，只在首次加载或从 CreateRoleActivity 返回时刷新
         onPauseOrDispose {}
@@ -576,9 +591,14 @@ private fun ProfileTabContent(
         modifier = Modifier,
         userProfile = safeUserProfile,
         agents = uiState.userCreatedAgents,
+        drafts = uiState.drafts,
         isLoading = uiState.isLoading,
         onClickAgent = { agent ->
             ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
+        },
+        onClickDraft = { draftId ->
+            val intent = CreateRoleActivity.getIntent(context, null, draftId)
+            createFromProfileLauncher.launch(intent)
         },
         onEditAgent = { agent ->
             // 使用 CreateRoleActivity 提供的方法获取 Intent，并监听返回结果
