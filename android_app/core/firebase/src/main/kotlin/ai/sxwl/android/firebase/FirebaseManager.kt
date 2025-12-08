@@ -14,6 +14,7 @@ import com.google.firebase.perf.FirebasePerformance
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.remoteConfig
 import com.google.firebase.remoteconfig.remoteConfigSettings
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
@@ -23,7 +24,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import java.util.Locale
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics、Performance和Remote Config的初始化和使用
@@ -694,7 +694,8 @@ object FirebaseManager {
             setUserProperty("screen_density_dpi", DeviceUtils.getScreenDensityDpi().toString())
 
             // 设置语言和地区信息
-            val currentLocale = Utils.getApp().resources?.configuration?.locales?.get(0) ?: Locale.getDefault()
+            val currentLocale =
+                Utils.getApp().resources?.configuration?.locales?.get(0) ?: Locale.getDefault()
             setUserProperty(UserProperties.LANGUAGE, currentLocale.language)
             setUserProperty(UserProperties.USER_REGION, currentLocale.country)
             setUserProperty("locale_display", currentLocale.displayName)

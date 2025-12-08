@@ -158,6 +158,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
 
     /**
      * 保存滚动位置
+     *
      * @param agentIndex agent 索引（lazyPagingItems 的索引，从 0 开始）
      * @param offset 滚动偏移量
      */
@@ -168,6 +169,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
 
     /**
      * 获取恢复滚动位置时的网格索引
+     *
      * @param currentThemeItemCount 当前主题项数量
      * @return 网格索引（用于 LazyVerticalGrid 的 initialFirstVisibleItemIndex）
      */
@@ -349,7 +351,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                         AgentCacheManager.cacheCharacterThemes(themes)
                     }
                     is ai.sxwl.android.data.http.ApiResult.Error -> {
-                        // 所有异常（包括网络异常、业务错误等）都会被 IntyNetworkManager.executeRequest 
+                        // 所有异常（包括网络异常、业务错误等）都会被 IntyNetworkManager.executeRequest
                         // 捕获并转换为 ApiResult.Error，这里安全处理，不会导致崩溃
                         LogUtils.w(
                             "ExploreViewModel - 获取主题专区列表失败: code=${result.code}, message=${result.message}"

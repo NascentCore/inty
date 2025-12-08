@@ -450,7 +450,9 @@ object UnifiedStartupManager {
                     AgentCacheManager.cacheCharacterThemes(themes)
                 }
                 is ai.sxwl.android.data.http.ApiResult.Error -> {
-                    LogUtils.w("UnifiedStartupManager - 主题专区同步失败: code=${result.code}, message=${result.message}")
+                    LogUtils.w(
+                        "UnifiedStartupManager - 主题专区同步失败: code=${result.code}, message=${result.message}"
+                    )
                 }
             }
         } catch (e: Exception) {

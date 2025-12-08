@@ -59,15 +59,16 @@ private fun isAnimatedImageUrl(url: String?): Boolean {
     if (url.isNullOrBlank()) return false
     val lowerUrl = url.lowercase()
     return lowerUrl.endsWith(".gif") ||
-            lowerUrl.endsWith(".webp") ||
-            lowerUrl.endsWith(".avif") ||
-            lowerUrl.contains(".gif?") ||
-            lowerUrl.contains(".webp?") ||
-            lowerUrl.contains(".avif?")
+        lowerUrl.endsWith(".webp") ||
+        lowerUrl.endsWith(".avif") ||
+        lowerUrl.contains(".gif?") ||
+        lowerUrl.contains(".webp?") ||
+        lowerUrl.contains(".avif?")
 }
 
 /**
  * 创建全屏宽度的 Modifier，突破 LazyVerticalGrid 的 contentPadding 限制
+ *
  * @param screenWidthPx 屏幕宽度（像素）
  */
 private fun Modifier.fullWidthLayout(screenWidthPx: Float): Modifier {
@@ -81,9 +82,7 @@ private fun Modifier.fullWidthLayout(screenWidthPx: Float): Modifier {
                 maxHeight = constraints.maxHeight,
             )
         val placeable = measurable.measure(fullWidthConstraints)
-        layout(placeable.width, placeable.height) {
-            placeable.placeRelative(0, 0)
-        }
+        layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
     }
 }
 
@@ -111,9 +110,7 @@ fun ExploreContent(
     val isCacheLoaded by vm.isCacheLoaded.collectAsState()
 
     // 计算全屏宽度（在 Composable 顶层计算，避免在 item lambda 中调用 CompositionLocal）
-    val screenWidthPx = with(density) {
-        configuration.screenWidthDp.dp.toPx()
-    }
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
 
     // 加载主题专区列表
     // 1. ViewModel 创建时从缓存加载（在 ViewModel.init 中已处理），确保快速显示
@@ -145,9 +142,8 @@ fun ExploreContent(
     }
 
     // 计算主题专区的 item 数量（每个有 agents 的 theme 是一个 item）
-    val themeItemCount = remember(characterThemes) {
-        characterThemes.count { it.agents.isNotEmpty() }
-    }
+    val themeItemCount =
+        remember(characterThemes) { characterThemes.count { it.agents.isNotEmpty() } }
 
     val gridState =
         rememberLazyGridState(
@@ -185,53 +181,55 @@ fun ExploreContent(
 
     // 检测应该播放动图的 item 索引列表（所有可见区域>=70%的item，按位置从上到下排序）
     // 注意：返回的是 lazyPagingItems 的索引（从 0 开始），不是网格索引
-    val visibleItemIndices by remember(themeItemCount) {
-        derivedStateOf {
-            val layoutInfo = gridState.layoutInfo
-            val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
-            if (viewportHeight <= 0) return@derivedStateOf emptyList<Int>()
+    val visibleItemIndices by
+        remember(themeItemCount) {
+            derivedStateOf {
+                val layoutInfo = gridState.layoutInfo
+                val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+                if (viewportHeight <= 0) return@derivedStateOf emptyList<Int>()
 
-            val agentItemCount = lazyPagingItems?.itemCount ?: 0
-            if (agentItemCount == 0) return@derivedStateOf emptyList<Int>()
+                val agentItemCount = lazyPagingItems?.itemCount ?: 0
+                if (agentItemCount == 0) return@derivedStateOf emptyList<Int>()
 
-            // 过滤出 agent items（排除 theme items、加载状态指示器和 Spacer）
-            // 网格索引范围：themeItemCount 到 themeItemCount + agentItemCount - 1
-            val agentItems =
-                layoutInfo.visibleItemsInfo.filter { itemInfo ->
-                    val gridIndex = itemInfo.index
-                    // agent items 的网格索引范围是 [themeItemCount, themeItemCount + agentItemCount)
-                    gridIndex >= themeItemCount && gridIndex < themeItemCount + agentItemCount
+                // 过滤出 agent items（排除 theme items、加载状态指示器和 Spacer）
+                // 网格索引范围：themeItemCount 到 themeItemCount + agentItemCount - 1
+                val agentItems =
+                    layoutInfo.visibleItemsInfo.filter { itemInfo ->
+                        val gridIndex = itemInfo.index
+                        // agent items 的网格索引范围是 [themeItemCount, themeItemCount + agentItemCount)
+                        gridIndex >= themeItemCount && gridIndex < themeItemCount + agentItemCount
+                    }
+
+                // 找到所有可见比例 >= 70% 的 item 索引（按位置排序，从上到下）
+                // 注意：这里存储的是 lazyPagingItems 的索引（网格索引减去 themeItemCount）
+                val visibleIndices = mutableListOf<Int>()
+                for (itemInfo in agentItems.sortedBy { it.offset.y }) {
+                    val itemTop = itemInfo.offset.y
+                    val itemBottom = itemInfo.offset.y + itemInfo.size.height
+                    val viewportTop = layoutInfo.viewportStartOffset
+                    val viewportBottom = layoutInfo.viewportEndOffset
+
+                    // 计算可见区域
+                    val visibleTop = maxOf(itemTop, viewportTop)
+                    val visibleBottom = minOf(itemBottom, viewportBottom)
+                    val visibleHeight = maxOf(0, visibleBottom - visibleTop)
+                    val itemHeight = itemInfo.size.height
+
+                    // 计算可见比例
+                    val visibleRatio =
+                        if (itemHeight > 0) visibleHeight.toFloat() / itemHeight else 0f
+
+                    // 如果可见比例 >= 70%，添加到列表中（保持从上到下的顺序）
+                    // 将网格索引转换为 lazyPagingItems 索引
+                    if (visibleRatio >= 0.7f) {
+                        val agentIndex = itemInfo.index - themeItemCount
+                        visibleIndices.add(agentIndex)
+                    }
                 }
 
-            // 找到所有可见比例 >= 70% 的 item 索引（按位置排序，从上到下）
-            // 注意：这里存储的是 lazyPagingItems 的索引（网格索引减去 themeItemCount）
-            val visibleIndices = mutableListOf<Int>()
-            for (itemInfo in agentItems.sortedBy { it.offset.y }) {
-                val itemTop = itemInfo.offset.y
-                val itemBottom = itemInfo.offset.y + itemInfo.size.height
-                val viewportTop = layoutInfo.viewportStartOffset
-                val viewportBottom = layoutInfo.viewportEndOffset
-
-                // 计算可见区域
-                val visibleTop = maxOf(itemTop, viewportTop)
-                val visibleBottom = minOf(itemBottom, viewportBottom)
-                val visibleHeight = maxOf(0, visibleBottom - visibleTop)
-                val itemHeight = itemInfo.size.height
-
-                // 计算可见比例
-                val visibleRatio = if (itemHeight > 0) visibleHeight.toFloat() / itemHeight else 0f
-
-                // 如果可见比例 >= 70%，添加到列表中（保持从上到下的顺序）
-                // 将网格索引转换为 lazyPagingItems 索引
-                if (visibleRatio >= 0.7f) {
-                    val agentIndex = itemInfo.index - themeItemCount
-                    visibleIndices.add(agentIndex)
-                }
+                visibleIndices
             }
-
-            visibleIndices
         }
-    }
 
     // 找到第一个可见且有 backgroundAnimatedUrl 的 item 索引
     // 注意：存储的是 lazyPagingItems 的索引（从 0 开始），不是网格索引
@@ -281,17 +279,15 @@ fun ExploreContent(
                 } else {
                     // 滚动停止时保存位置
                     // 将网格索引转换为 agent 索引（如果第一个可见项是 agent 项）
-                    val agentIndex = if (firstVisibleItemIndex >= themeItemCount) {
-                        // 第一个可见项是 agent 项，转换为 agent 索引
-                        firstVisibleItemIndex - themeItemCount
-                    } else {
-                        // 第一个可见项是主题项或加载状态指示器，保存 0（表示滚动到顶部）
-                        0
-                    }
-                    vm.saveScrollPosition(
-                        agentIndex,
-                        gridState.firstVisibleItemScrollOffset,
-                    )
+                    val agentIndex =
+                        if (firstVisibleItemIndex >= themeItemCount) {
+                            // 第一个可见项是 agent 项，转换为 agent 索引
+                            firstVisibleItemIndex - themeItemCount
+                        } else {
+                            // 第一个可见项是主题项或加载状态指示器，保存 0（表示滚动到顶部）
+                            0
+                        }
+                    vm.saveScrollPosition(agentIndex, gridState.firstVisibleItemScrollOffset)
                 }
             }
     }
@@ -307,8 +303,8 @@ fun ExploreContent(
                 // 首次进入时使用缓存数据，不应该显示加载更多loading
                 if (
                     currentTime - lastScrollTime < 1000 &&
-                    lazyPagingItems.itemCount > 0 &&
-                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
+                        lazyPagingItems.itemCount > 0 &&
+                        lazyPagingItems.loadState.refresh is LoadState.NotLoading
                 ) {
                     showLoadMoreLoading = true
                     // 延迟隐藏loading
@@ -427,10 +423,10 @@ fun ExploreContent(
                         } else {
                             // 显示加载占位符
                             ShimmerPlaceholder(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .height(200.dp)
+                                        .clip(RoundedCornerShape(8.dp))
                             )
                         }
                     }
@@ -450,11 +446,7 @@ fun ExploreContent(
 /** 空状态指示器 */
 @Composable
 private fun EmptyStateIndicator() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .height(200.dp), contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
     }
 }

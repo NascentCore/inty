@@ -46,7 +46,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -67,6 +66,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.getSystemService
+import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
@@ -408,7 +408,10 @@ internal fun AiAgentInfoScreen(
                         if (galleryItems.isNotEmpty()) {
                             Spacer(Modifier.height(16.dp))
                             PhotoAlbumPreviewSection(
-                                modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+                                modifier =
+                                    Modifier.padding(
+                                        horizontal = UiConfigs.Padding.ScreenHorizontal
+                                    ),
                                 images = galleryItems,
                                 agentId = agent.id,
                                 onNavigateToPhotoAlbum = {
@@ -451,7 +454,11 @@ internal fun AiAgentInfoScreen(
                     try {
                         val result = BoostManager.boostAgent(agent, points)
                         ToastUtils.showShort(
-                            context.getString(R.string.boost_toast_success_points, result.pointsSpent, agent.name)
+                            context.getString(
+                                R.string.boost_toast_success_points,
+                                result.pointsSpent,
+                                agent.name,
+                            )
                         )
                         showBoostSheet = false
                     } catch (e: BoostException) {
@@ -468,10 +475,7 @@ internal fun AiAgentInfoScreen(
     }
 }
 
-/**
- * 角色主页中生成图片的分区；用于展示聊天过程中产生图片的缩略图，并且可以点击进入详情页面
- * 查看所有图片，位于 PhotoAlbumScreen.kt
- */
+/** 角色主页中生成图片的分区；用于展示聊天过程中产生图片的缩略图，并且可以点击进入详情页面 查看所有图片，位于 PhotoAlbumScreen.kt */
 @Composable
 private fun PhotoAlbumPreviewSection(
     modifier: Modifier = Modifier,
@@ -499,7 +503,8 @@ private fun PhotoAlbumPreviewSection(
                 text = stringResource(R.string.agent_photo_album_see_all),
                 fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.SeeAllFontSize,
                 fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = UiConfigs.ChatPage.PhotoAlbum.Preview.SeeAllTextAlpha),
+                color =
+                    Color.White.copy(alpha = UiConfigs.ChatPage.PhotoAlbum.Preview.SeeAllTextAlpha),
                 modifier = Modifier.noRippleClickable { onNavigateToPhotoAlbum() },
             )
         }
@@ -507,7 +512,8 @@ private fun PhotoAlbumPreviewSection(
         if (displayedImages.isNotEmpty()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(UiConfigs.CharacterGallery.ImageSpacing),
+                horizontalArrangement =
+                    Arrangement.spacedBy(UiConfigs.CharacterGallery.ImageSpacing),
             ) {
                 displayedImages.forEach { item ->
                     AgentGalleryImageCardCompact(
@@ -677,7 +683,11 @@ private fun AgentGalleryImageCardCompact(
             modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(UiConfigs.CharacterGallery.ImageCornerRadius))
-                .background(Color.White.copy(alpha = UiConfigs.ChatPage.PhotoAlbum.Preview.ImageCardBackgroundAlpha))
+                .background(
+                    Color.White.copy(
+                        alpha = UiConfigs.ChatPage.PhotoAlbum.Preview.ImageCardBackgroundAlpha
+                    )
+                )
                 .pointerInput(agentId, item.imageUrl) {
                     detectTapGestures(onTap = { onPreview(item.imageUrl) })
                 }

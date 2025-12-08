@@ -155,7 +155,11 @@ class CreateRoleActivity : BaseActivity() {
          * @param draftId 草稿ID，如果提供则从草稿列表加载该草稿；UUID 字符串
          * @return 配置好的 Intent
          */
-        fun getIntent(context: Context, agentInfo: AgentInfo? = null, draftId: String? = null): Intent {
+        fun getIntent(
+            context: Context,
+            agentInfo: AgentInfo? = null,
+            draftId: String? = null,
+        ): Intent {
             return Intent(context, CreateRoleActivity::class.java).apply {
                 putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
                 draftId?.let { putExtra(INTENT_KEY_DRAFT_ID, it) }
@@ -821,95 +825,96 @@ private fun CreateRolePage(
                     onAvatarGenerateClick(promptToUse.takeIf { it.isNotBlank() })
                 },
                 onFaceEdit = faceEdit@{
-                    AvatarManager.clearAllAvatarData()
+                        AvatarManager.clearAllAvatarData()
 
-                    // Get the current avatar URL to crop
-                    val imageUrl =
-                        if (avatarUrls.isNotEmpty()) {
-                            // Defensive bounds checking
-                            val safeIndex =
-                                if (
-                                    selectedImageIndex >= 0 && selectedImageIndex < avatarUrls.size
-                                ) {
-                                    selectedImageIndex
-                                } else {
-                                    LogUtils.e(
-                                        "Face edit - Index out of bounds! selectedImageIndex: $selectedImageIndex, avatarUrls.size: ${avatarUrls.size}"
-                                    )
-                                    0 // Fall back to first image
-                                }
+                        // Get the current avatar URL to crop
+                        val imageUrl =
+                            if (avatarUrls.isNotEmpty()) {
+                                // Defensive bounds checking
+                                val safeIndex =
+                                    if (
+                                        selectedImageIndex >= 0 &&
+                                            selectedImageIndex < avatarUrls.size
+                                    ) {
+                                        selectedImageIndex
+                                    } else {
+                                        LogUtils.e(
+                                            "Face edit - Index out of bounds! selectedImageIndex: $selectedImageIndex, avatarUrls.size: ${avatarUrls.size}"
+                                        )
+                                        0 // Fall back to first image
+                                    }
 
-                            val selectedUrl = avatarUrls.getOrNull(safeIndex)
-                            selectedUrl ?: avatarUrls.first()
-                        } else {
-                            avatarUrl
+                                val selectedUrl = avatarUrls.getOrNull(safeIndex)
+                                selectedUrl ?: avatarUrls.first()
+                            } else {
+                                avatarUrl
+                            }
+
+                        if (imageUrl.isNullOrBlank()) {
+                            ToastUtils.showShort(R.string.toast_no_avatar_image)
+                            return@faceEdit
                         }
 
-                    if (imageUrl.isNullOrBlank()) {
-                        ToastUtils.showShort(R.string.toast_no_avatar_image)
-                        return@faceEdit
-                    }
-
-                    if (
-                        tryStartCropWithLocalImage(
-                            context = context,
-                            imageUrl = imageUrl,
-                            cropLauncher = cropLauncher,
-                        )
-                    ) {
-                        return@faceEdit
-                    }
-
-                    val previewUrl =
-                        getCdnImageUrl(
-                            originUrl = imageUrl,
-                            width = Config.TextToImage.Preview.WIDTH,
-                            quality = Config.TextToImage.Preview.QUALITY,
-                        )
-
-                    createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
-                        try {
-                            val imageLoader = SingletonImageLoader.get(context)
-                            val request =
-                                ImageRequest.Builder(context)
-                                    .data(previewUrl ?: imageUrl)
-                                    .build()
-                            val result = imageLoader.execute(request)
-
-                            if (result is SuccessResult) {
-                                val snapshot =
-                                    result.diskCacheKey?.let { key ->
-                                        imageLoader.diskCache?.openSnapshot(key)
-                                    }
-
-                                if (snapshot != null) {
-                                    snapshot.use {
-                                        startUCropWithLocalFile(
-                                            it.data.toFile(),
-                                            context,
-                                            cropLauncher,
-                                        )
-                                    }
-                                } else {
-                                    withContext(Dispatchers.Main) {
-                                        ToastUtils.showShort(
-                                            R.string.toast_failed_download_image_editing
-                                        )
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            LogUtils.e(
-                                "Failed to download image for cropping: $imageUrl Error details: ${e.message}"
+                        if (
+                            tryStartCropWithLocalImage(
+                                context = context,
+                                imageUrl = imageUrl,
+                                cropLauncher = cropLauncher,
                             )
-                            withContext(Dispatchers.Main) {
-                                ToastUtils.showShort(
-                                    R.string.toast_failed_download_image_editing
+                        ) {
+                            return@faceEdit
+                        }
+
+                        val previewUrl =
+                            getCdnImageUrl(
+                                originUrl = imageUrl,
+                                width = Config.TextToImage.Preview.WIDTH,
+                                quality = Config.TextToImage.Preview.QUALITY,
+                            )
+
+                        createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                val imageLoader = SingletonImageLoader.get(context)
+                                val request =
+                                    ImageRequest.Builder(context)
+                                        .data(previewUrl ?: imageUrl)
+                                        .build()
+                                val result = imageLoader.execute(request)
+
+                                if (result is SuccessResult) {
+                                    val snapshot =
+                                        result.diskCacheKey?.let { key ->
+                                            imageLoader.diskCache?.openSnapshot(key)
+                                        }
+
+                                    if (snapshot != null) {
+                                        snapshot.use {
+                                            startUCropWithLocalFile(
+                                                it.data.toFile(),
+                                                context,
+                                                cropLauncher,
+                                            )
+                                        }
+                                    } else {
+                                        withContext(Dispatchers.Main) {
+                                            ToastUtils.showShort(
+                                                R.string.toast_failed_download_image_editing
+                                            )
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                LogUtils.e(
+                                    "Failed to download image for cropping: $imageUrl Error details: ${e.message}"
                                 )
+                                withContext(Dispatchers.Main) {
+                                    ToastUtils.showShort(
+                                        R.string.toast_failed_download_image_editing
+                                    )
+                                }
                             }
                         }
-                    }
-                },
+                    },
                 onUploadFromGallery = { galleryLauncher.launch("image/*") },
             )
 
@@ -1154,11 +1159,15 @@ private fun CreateRolePage(
                 Button(
                     onClick = {
                         // 保存到草稿列表（如果是新草稿会自动生成ID，如果是从草稿列表进入的会更新）
-                        val draftToSave = if (savedDraft != null) {
-                            latestDraft.copy(id = savedDraft.id, createdAt = savedDraft.createdAt)
-                        } else {
-                            latestDraft
-                        }
+                        val draftToSave =
+                            if (savedDraft != null) {
+                                latestDraft.copy(
+                                    id = savedDraft.id,
+                                    createdAt = savedDraft.createdAt,
+                                )
+                            } else {
+                                latestDraft
+                            }
                         CreateRoleDraftStorage.saveDraftToList(draftToSave)
                         // 清除临时草稿，以便下次进入时创建新角色
                         CreateRoleDraftStorage.clearCurrentDraft()

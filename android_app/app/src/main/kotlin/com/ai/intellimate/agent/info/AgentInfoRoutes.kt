@@ -6,4 +6,3 @@ object AgentInfoRoutes {
 
     fun photoAlbum(agentId: String) = "$PHOTO_ALBUM/$agentId"
 }
-
