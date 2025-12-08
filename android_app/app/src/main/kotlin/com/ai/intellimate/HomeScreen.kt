@@ -81,7 +81,7 @@ fun HomeScreen(
                             .HOME_PAGE_DEFAULT_TAB_INDEX
                     )
                     .toInt()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 0 // 默认值：Chat tab
             }
         val defaultTabName =
@@ -519,7 +519,7 @@ private fun ProfileTabContent(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
             // 编辑成功后刷新列表
-            if (result.resultCode == android.app.Activity.RESULT_OK) {
+            if (result.resultCode == Activity.RESULT_OK) {
                 profileViewModel.refreshCreatedAgents()
             }
         }
@@ -530,7 +530,7 @@ private fun ProfileTabContent(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
             // 创建成功后刷新列表和草稿
-            if (result.resultCode == android.app.Activity.RESULT_OK) {
+            if (result.resultCode == Activity.RESULT_OK) {
                 profileViewModel.refreshCreatedAgents()
                 profileViewModel.refreshAgentDrafts()
             }
