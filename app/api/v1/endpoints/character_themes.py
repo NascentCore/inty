@@ -1,6 +1,7 @@
 """角色主题专区 API 端点"""
 
 import uuid
+from math import log
 from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,6 +12,7 @@ from app import schemas
 from app.api import deps
 from app.api.tags import INTY_EVAL_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
+from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas import character_theme as character_theme_schemas
 from app.services import character_theme_service
 
@@ -34,6 +36,7 @@ async def get_current_superuser(
     response_model=schemas.APIResponse[character_theme_schemas.CharacterTheme],
     summary="创建角色主题专区",
     description="创建新的角色主题专区（需要管理员权限）",
+    include_in_schema=False,
     tags=[INTY_EVAL_TAG],
 )
 async def create_theme(
@@ -70,6 +73,22 @@ async def list_themes(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """获取角色主题专区列表"""
+    if (
+        global_config_loaded_from_config_yaml.app.api_endpoints.use_dummy_api_v1_character_themes_get
+    ):
+        logger.info(f"====== dummy 获取角色主题专区列表")
+        return schemas.APIResponse.success(
+            data=[
+                character_theme_schemas.CharacterTheme(
+                    id=str(uuid.uuid4()),
+                    name="测试专区",
+                    visibility=character_theme_schemas.CharacterThemeVisibility.VISIBLE,
+                    agents=[],
+                    background_image_url="https://inty-backend.com/background.jpg",
+                    description="这是一个测试专区",
+                )
+            ]
+        )
     try:
         # 只有管理员可以查看隐藏的专区
         if include_hidden and not current_user.is_superuser:
@@ -102,6 +121,20 @@ async def get_theme(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """获取角色主题专区详情"""
+    if (
+        global_config_loaded_from_config_yaml.app.api_endpoints.use_dummy_api_v1_character_themes_id_get
+    ):
+        logger.info(f"====== dummy 获取角色主题专区详情: {theme_id}")
+        return schemas.APIResponse.success(
+            data=character_theme_schemas.CharacterTheme(
+                id=theme_id,
+                name="测试专区",
+                visibility=character_theme_schemas.CharacterThemeVisibility.VISIBLE,
+                agents=[],
+                background_image_url="https://inty-backend.com/background.jpg",
+                description="这是一个测试专区",
+            )
+        )
     try:
         theme = await character_theme_service.get_theme(db, theme_id)
         if not theme:
@@ -118,6 +151,7 @@ async def get_theme(
     response_model=schemas.APIResponse[character_theme_schemas.CharacterTheme],
     summary="更新角色主题专区",
     description="更新角色主题专区信息（需要管理员权限）",
+    include_in_schema=False,
     tags=[INTY_EVAL_TAG],
 )
 async def update_theme(
@@ -144,6 +178,7 @@ async def update_theme(
     response_model=schemas.APIResponse[dict],
     summary="删除角色主题专区",
     description="删除角色主题专区（需要管理员权限）",
+    include_in_schema=False,
     tags=[INTY_EVAL_TAG],
 )
 async def delete_theme(
@@ -168,6 +203,7 @@ async def delete_theme(
     response_model=schemas.APIResponse[character_theme_schemas.CharacterThemeAgent],
     summary="添加角色到专区",
     description="向指定专区添加角色（需要管理员权限）",
+    include_in_schema=False,
     tags=[INTY_EVAL_TAG],
 )
 async def add_agent_to_theme(
@@ -198,6 +234,7 @@ async def add_agent_to_theme(
     response_model=schemas.APIResponse[dict],
     summary="从专区移除角色",
     description="从指定专区移除角色（需要管理员权限）",
+    include_in_schema=False,
     tags=[INTY_EVAL_TAG],
 )
 async def remove_agent_from_theme(
@@ -227,6 +264,7 @@ async def remove_agent_from_theme(
     response_model=schemas.APIResponse[dict],
     summary="调整角色顺序",
     description="调整专区中角色的顺序（需要管理员权限）",
+    include_in_schema=False,
     tags=[INTY_EVAL_TAG],
 )
 async def reorder_agents(

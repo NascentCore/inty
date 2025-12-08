@@ -11,12 +11,14 @@ import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.app.Activity
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -48,6 +50,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Upload
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -127,17 +130,20 @@ class CreateRoleActivity : BaseActivity() {
 
     companion object {
         private const val INTENT_KEY_AGENT_INFO = "intent_key_agent_info"
+        private const val INTENT_KEY_DRAFT_ID = "intent_key_draft_id"
 
         /**
          * 启动创建/编辑角色界面
          *
          * @param context 上下文context
          * @param agentInfo Agent的Info对象，为null时表示创建新角色，否则表示编辑现有角色
+         * @param draftId 草稿ID，如果提供则从草稿列表加载该草稿；UUID 字符串
          */
-        fun launch(context: Context, agentInfo: AgentInfo? = null) {
+        fun launch(context: Context, agentInfo: AgentInfo? = null, draftId: String? = null) {
             context.startActivity(
                 Intent(context, CreateRoleActivity::class.java).also { intent ->
                     intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
+                    draftId?.let { intent.putExtra(INTENT_KEY_DRAFT_ID, it) }
                 }
             )
         }
@@ -147,16 +153,19 @@ class CreateRoleActivity : BaseActivity() {
          *
          * @param context 上下文context
          * @param agentInfo Agent的Info对象，为null时表示创建新角色，否则表示编辑现有角色
+         * @param draftId 草稿ID，如果提供则从草稿列表加载该草稿；UUID 字符串
          * @return 配置好的 Intent
          */
-        fun getIntent(context: Context, agentInfo: AgentInfo? = null): Intent {
+        fun getIntent(context: Context, agentInfo: AgentInfo? = null, draftId: String? = null): Intent {
             return Intent(context, CreateRoleActivity::class.java).apply {
                 putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
+                draftId?.let { putExtra(INTENT_KEY_DRAFT_ID, it) }
             }
         }
     }
 
     private var agent: AgentInfo? = null
+    private var draftId: String? = null
     private val createRoleViewModel: CreateRoleViewModel by viewModels()
 
     override fun initConfigData() {
@@ -167,6 +176,7 @@ class CreateRoleActivity : BaseActivity() {
             } else {
                 @Suppress("DEPRECATION") intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
             }
+        draftId = intent.getStringExtra(INTENT_KEY_DRAFT_ID)
     }
 
     @Composable
@@ -184,11 +194,15 @@ class CreateRoleActivity : BaseActivity() {
                 AvatarGenerateActivity.launch(this, prompt?.takeIf { it.isNotBlank() })
             },
             editAgent = agent,
+            draftId = draftId,
         )
     }
 }
 
 private const val MAX_GALLERY_PHOTO_SIZE_MB = 2
+private val DraftDialogConfirmColor = Color(0xFF7C56FF)
+private val DraftDialogDismissColor = Color(0xFF3A2D40)
+private val DraftDialogContainerColor = Color(0xFF2A2A2A)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -199,10 +213,20 @@ private fun CreateRolePage(
     onCreateSuccess: () -> Unit,
     onAvatarGenerateClick: (String?) -> Unit,
     editAgent: AgentInfo? = null,
+    draftId: String? = null,
 ) {
     val isEditMode = editAgent != null
     val savedDraft =
-        remember(editAgent) { if (editAgent == null) CreateRoleDraftStorage.loadDraft() else null }
+        remember(editAgent, draftId) {
+            when {
+                editAgent != null -> null
+                draftId != null -> CreateRoleDraftStorage.getDraftById(draftId)
+                else -> CreateRoleDraftStorage.loadCurrentDraft()
+            }
+        }
+    var latestDraft by remember(savedDraft) { mutableStateOf(savedDraft ?: CreateRoleDraft()) }
+    var enableDraftSaving by remember { mutableStateOf(true) }
+    var showSaveDraftDialog by remember { mutableStateOf(false) }
 
     val nameInitial =
         if (isEditMode) {
@@ -315,9 +339,28 @@ private fun CreateRolePage(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val focusManager = LocalFocusManager.current
+    val hasDraftChanges = !latestDraft.isEmpty()
+    val handleExitRequest = {
+        if (isEditMode || !hasDraftChanges) {
+            onBack()
+        } else if (savedDraft != null && hasDraftChanges) {
+            // 从 draft 进入，更新草稿列表中的草稿，清除临时草稿，然后退出
+            val draftToSave = latestDraft.copy(id = savedDraft.id, createdAt = savedDraft.createdAt)
+            CreateRoleDraftStorage.saveDraftToList(draftToSave)
+            CreateRoleDraftStorage.clearCurrentDraft()
+            onBack()
+        } else {
+            showSaveDraftDialog = true
+        }
+    }
 
     if (!isEditMode) {
-        LaunchedEffect(Unit) {
+        BackHandler { handleExitRequest() }
+    }
+
+    if (!isEditMode) {
+        LaunchedEffect(enableDraftSaving) {
+            if (!enableDraftSaving) return@LaunchedEffect
             snapshotFlow {
                     val normalizedUrls = avatarUrls.filter { it.isNotBlank() }
                     val sanitizedIndex =
@@ -338,7 +381,11 @@ private fun CreateRolePage(
                     )
                 }
                 .distinctUntilChanged()
-                .collect { draft -> CreateRoleDraftStorage.saveDraft(draft) }
+                .collect { draft ->
+                    latestDraft = draft
+                    // 自动保存到临时草稿
+                    CreateRoleDraftStorage.saveCurrentDraft(draft)
+                }
         }
     }
     // Clear avatar data when creating new character
@@ -509,7 +556,8 @@ private fun CreateRolePage(
                 }
 
                 if (fileSize > maxSizeBytes) {
-                    val maxSizeMBStr = String.format(Locale.getDefault(), "%dMB", MAX_GALLERY_PHOTO_SIZE_MB)
+                    val maxSizeMBStr =
+                        String.format(Locale.getDefault(), "%dMB", MAX_GALLERY_PHOTO_SIZE_MB)
                     val fileSizeMBStr =
                         String.format(Locale.getDefault(), "%.1fMB", fileSize / (1024.0 * 1024.0))
                     val msg =
@@ -706,7 +754,9 @@ private fun CreateRolePage(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                            Modifier.padding(horizontal = 12.dp).noRippleClickable {
+                                handleExitRequest()
+                            },
                         painter = painterResource(R.drawable.close),
                         contentDescription = null,
                     )
@@ -796,7 +846,7 @@ private fun CreateRolePage(
                     AvatarManager.setGeneratedAvatarUrls(updatedList)
                     AvatarManager.setSelectedImageIndex(newIndex)
                 },
-                onFaceEdit = {
+                onFaceEdit = faceEdit@{
                     AvatarManager.clearAllAvatarData()
 
                     // Get the current avatar URL to crop
@@ -820,6 +870,22 @@ private fun CreateRolePage(
                         } else {
                             avatarUrl
                         }
+
+                    if (imageUrl.isNullOrBlank()) {
+                        ToastUtils.showShort(R.string.toast_no_avatar_image)
+                        return@faceEdit
+                    }
+
+                    if (
+                        tryStartCropWithLocalImage(
+                            context = context,
+                            imageUrl = imageUrl,
+                            cropLauncher = cropLauncher,
+                        )
+                    ) {
+                        return@faceEdit
+                    }
+
                     val previewUrl =
                         getCdnImageUrl(
                             originUrl = imageUrl,
@@ -827,43 +893,47 @@ private fun CreateRolePage(
                             quality = Config.TextToImage.Preview.QUALITY,
                         )
 
-                    if (previewUrl != null || imageUrl != null) {
-                        createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
-                            try {
-                                val imageLoader = SingletonImageLoader.get(context)
-                                val request =
-                                    ImageRequest.Builder(context)
-                                        .data(previewUrl ?: imageUrl)
-                                        .build()
-                                val result = imageLoader.execute(request)
+                    createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
+                        try {
+                            val imageLoader = SingletonImageLoader.get(context)
+                            val request =
+                                ImageRequest.Builder(context)
+                                    .data(previewUrl ?: imageUrl)
+                                    .build()
+                            val result = imageLoader.execute(request)
 
-                                if (result is SuccessResult) {
+                            if (result is SuccessResult) {
+                                val snapshot =
                                     result.diskCacheKey?.let { key ->
-                                        val diskCache = SingletonImageLoader.get(context).diskCache
-                                        val snapshot = diskCache?.openSnapshot(key)
+                                        imageLoader.diskCache?.openSnapshot(key)
+                                    }
 
-                                        snapshot?.use {
-                                            startUCropWithLocalFile(
-                                                it.data.toFile(),
-                                                context,
-                                                cropLauncher,
-                                            )
-                                        }
+                                if (snapshot != null) {
+                                    snapshot.use {
+                                        startUCropWithLocalFile(
+                                            it.data.toFile(),
+                                            context,
+                                            cropLauncher,
+                                        )
+                                    }
+                                } else {
+                                    withContext(Dispatchers.Main) {
+                                        ToastUtils.showShort(
+                                            R.string.toast_failed_download_image_editing
+                                        )
                                     }
                                 }
-                            } catch (e: Exception) {
-                                LogUtils.e(
-                                    "Failed to download image for cropping: $imageUrl Error details: ${e.message}"
+                            }
+                        } catch (e: Exception) {
+                            LogUtils.e(
+                                "Failed to download image for cropping: $imageUrl Error details: ${e.message}"
+                            )
+                            withContext(Dispatchers.Main) {
+                                ToastUtils.showShort(
+                                    R.string.toast_failed_download_image_editing
                                 )
-                                withContext(Dispatchers.Main) {
-                                    ToastUtils.showShort(
-                                        R.string.toast_failed_download_image_editing
-                                    )
-                                }
                             }
                         }
-                    } else {
-                        ToastUtils.showShort(R.string.toast_no_avatar_image)
                     }
                 },
                 onUploadFromGallery = { galleryLauncher.launch("image/*") },
@@ -1030,7 +1100,12 @@ private fun CreateRolePage(
                                     request = request,
                                     onSuccess = { agentInfo ->
                                         isLoading = false
-                                        CreateRoleDraftStorage.clearDraft()
+                                        // 如果是从草稿列表进入的，删除该草稿
+                                        if (savedDraft != null && draftId != null) {
+                                            CreateRoleDraftStorage.deleteDraft(draftId)
+                                        }
+                                        // 清除临时草稿
+                                        CreateRoleDraftStorage.clearCurrentDraft()
                                         ToastUtils.showShort(
                                             context.getString(R.string.create_ai_successfully)
                                         )
@@ -1080,6 +1155,71 @@ private fun CreateRolePage(
 
             Spacer(modifier = Modifier.height(60.dp))
         }
+    }
+
+    if (showSaveDraftDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveDraftDialog = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.save_draft_dialog_title),
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.save_draft_dialog_message),
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        // 保存到草稿列表（如果是新草稿会自动生成ID，如果是从草稿列表进入的会更新）
+                        val draftToSave = if (savedDraft != null) {
+                            latestDraft.copy(id = savedDraft.id, createdAt = savedDraft.createdAt)
+                        } else {
+                            latestDraft
+                        }
+                        CreateRoleDraftStorage.saveDraftToList(draftToSave)
+                        // 清除临时草稿，以便下次进入时创建新角色
+                        CreateRoleDraftStorage.clearCurrentDraft()
+                        showSaveDraftDialog = false
+                        onBack()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DraftDialogConfirmColor),
+                ) {
+                    Text(
+                        text = stringResource(R.string.save_draft_dialog_confirm),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                    )
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        enableDraftSaving = false
+                        // 清除临时草稿
+                        CreateRoleDraftStorage.clearCurrentDraft()
+                        showSaveDraftDialog = false
+                        onBack()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DraftDialogDismissColor),
+                ) {
+                    Text(
+                        text = stringResource(R.string.save_draft_dialog_discard),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                    )
+                }
+            },
+            containerColor = DraftDialogContainerColor,
+        )
     }
 }
 
@@ -1322,6 +1462,37 @@ private fun startUCropWithLocalFile(
         cropLauncher.launch(cropIntent)
     } catch (e: Exception) {
         ToastUtils.showShort(R.string.toast_failed_open_crop_editor)
+    }
+}
+
+private fun tryStartCropWithLocalImage(
+    context: Context,
+    imageUrl: String,
+    cropLauncher: ActivityResultLauncher<Intent>,
+): Boolean {
+    val imageUri = runCatching { imageUrl.toUri() }.getOrNull() ?: return false
+    return when (imageUri.scheme?.lowercase(Locale.getDefault()) ?: ContentResolver.SCHEME_FILE) {
+        ContentResolver.SCHEME_FILE -> {
+            val localFile = imageUri.path?.let { File(it) }
+            if (localFile != null && localFile.exists() && localFile.length() > 0) {
+                startUCropWithLocalFile(localFile, context, cropLauncher)
+                true
+            } else {
+                false
+            }
+        }
+
+        ContentResolver.SCHEME_CONTENT -> {
+            val tempFile = copyUriToTempFile(context, imageUri)
+            if (tempFile != null) {
+                startUCropWithLocalFile(tempFile, context, cropLauncher)
+                true
+            } else {
+                false
+            }
+        }
+
+        else -> false
     }
 }
 
@@ -1814,7 +1985,11 @@ private fun CreateButton(isLoading: Boolean, isEditMode: Boolean = false, onClic
                 ),
     ) {
         if (isLoading) {
-            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            CircularProgressIndicator(
+                color = Color.White,
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.5.dp,
+            )
         } else {
             Text(
                 text = if (isEditMode) "Update My IntelliMate" else "Create My IntelliMate",

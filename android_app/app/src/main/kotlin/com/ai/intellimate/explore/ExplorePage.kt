@@ -7,8 +7,8 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.utils.ToastUtils
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,13 +33,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -81,7 +81,8 @@ fun ExplorePage(
         if (isDebugMode) BoostManager.leaderboard.collectAsState()
         else remember { mutableStateOf(emptyList<BoostLeaderboardEntry>()) }
     val density = LocalDensity.current
-    val tabSwipeThresholdPx = remember(density) { with(density) { ExploreTabSwipeThreshold.toPx() } }
+    val tabSwipeThresholdPx =
+        remember(density) { with(density) { ExploreTabSwipeThreshold.toPx() } }
     val tabSwipeModifier =
         if (isDebugMode) {
             Modifier.pointerInput(selectedTab, tabSwipeThresholdPx) {
@@ -97,16 +98,16 @@ fun ExplorePage(
                         when {
                             totalDrag <= -tabSwipeThresholdPx -> {
                                 val nextIndex =
-                                    (selectedTab.ordinal + 1)
-                                        .coerceAtMost(ExploreSubTab.entries.lastIndex)
+                                    (selectedTab.ordinal + 1).coerceAtMost(
+                                        ExploreSubTab.entries.lastIndex
+                                    )
                                 if (nextIndex != selectedTab.ordinal) {
                                     selectedTab = ExploreSubTab.entries[nextIndex]
                                 }
                             }
 
                             totalDrag >= tabSwipeThresholdPx -> {
-                                val previousIndex =
-                                    (selectedTab.ordinal - 1).coerceAtLeast(0)
+                                val previousIndex = (selectedTab.ordinal - 1).coerceAtLeast(0)
                                 if (previousIndex != selectedTab.ordinal) {
                                     selectedTab = ExploreSubTab.entries[previousIndex]
                                 }

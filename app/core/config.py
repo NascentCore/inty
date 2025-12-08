@@ -9,9 +9,6 @@ import yaml
 from loguru import logger
 from pydantic import AnyHttpUrl
 
-# API 路由前缀常量移动到 app.api.constants
-from app.api.constants import API_V1_PREFIX
-
 # 所有配置项必须有默认值，防止出现校验失败。
 # 这些默认值允许在没有实际配置文件的情况下使用。
 # 因为 config 对象被用作全局单例，大部分代码依赖它，但并不实际使用配置值，所以默认值是可以的。
@@ -105,6 +102,10 @@ class VerificationConfig:
 @dataclass
 class APIEndpointsConfig:
     disable_api_v1_chat_completions: bool = False
+    # 使用虚假的 Google 登录接口，用于测试，设为 True 时可以在 auth.py 中直接定义返回值来支持 app 前端测试。
+    use_dummy_api_v1_auth_google_login: bool = False
+    use_dummy_api_v1_character_themes_get: bool = False
+    use_dummy_api_v1_character_themes_id_get: bool = False
 
 
 @dataclass
@@ -116,8 +117,6 @@ class AppConfig:
     debug_messages: bool = True
     # Use JSON format for request/response logging. Default is True (JSON format).
     use_json_log_format: bool = True
-    # DEPRECATED: Do not use.
-    api_v1_prefix: str = API_V1_PREFIX
     backend_cors_origins: List[AnyHttpUrl] = None
     version: str = "1.1.0"
     environment: Environment = Environment.DEV

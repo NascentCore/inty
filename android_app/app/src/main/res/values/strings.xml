@@ -156,6 +156,13 @@
     <!-- Character Creation -->
     <string name="face_edit">Crop</string>
     <string name="remove_background_image">Remove image</string>
+    <string name="save_draft_dialog_title">Save draft?</string>
+    <string name="save_draft_dialog_message">Save your progress as a draft so you can finish this character later from the Me page.</string>
+    <string name="save_draft_dialog_confirm">Save draft</string>
+    <string name="save_draft_dialog_discard">Don\&#39;t save</string>
+    <string name="draft_badge_label">Draft</string>
+    <string name="draft_card_placeholder_name">Untitled character</string>
+    <string name="draft_card_placeholder_intro">Add more details to finish this character.</string>
 
     <!-- Report -->
     <string name="report_description">Report description</string>
@@ -320,6 +327,9 @@
     <string name="agent_gallery_background_set_success">Background updated</string>
     <string name="agent_gallery_reset_background">Reset to Default Background</string>
     <string name="agent_gallery_background_reset_success">Background reset to default</string>
+    <string name="agent_photo_album_title">Photo Album</string>
+    <string name="agent_photo_album_see_all">See All</string>
+    <string name="agent_photo_album_set_as_background">Set as chat background</string>
 
     <!-- Empty State Messages -->
     <string name="empty_conversations">No conversations yet\nStart chatting with your favorite characters!</string>
@@ -436,6 +446,7 @@
     <string name="boost_seed_placeholder_toast">This is preview data. Start chatting with real characters to unlock this board.</string>
     <string name="boost_toast_not_enough_points">Not enough points yet. Chat more to earn boosts.</string>
     <string name="boost_toast_success">Boost sent to %1$s!</string>
+    <string name="boost_toast_success_points">%1$d energy points sent to %2$s!</string>
     <string name="boost_toast_daily_reward_claimed">+%1$d pts added</string>
     <string name="boost_toast_generic_error">Something went wrong. Please try again.</string>
 </resources>

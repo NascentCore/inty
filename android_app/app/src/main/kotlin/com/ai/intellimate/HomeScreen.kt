@@ -31,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
@@ -57,7 +56,6 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.UpgradeDialog
 import com.ai.intellimate.vip.VipCenterActivity
 import com.inty.api.models.api.v1.version.VersionCheckResponse
-import ai.sxwl.android.utils.LogUtils
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
@@ -83,7 +81,7 @@ fun HomeScreen(
                             .HOME_PAGE_DEFAULT_TAB_INDEX
                     )
                     .toInt()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 0 // 默认值：Chat tab
             }
         val defaultTabName =
@@ -236,7 +234,7 @@ fun HomeScreen(
 @Composable
 private fun AppVersionLogic(mainViewModel: MainViewModel) {
     val rsp by mainViewModel.needForceUpgrade.collectAsState(null)
-    
+
     // 使用稳定的 key，避免 rsp 变化时重置状态；因为 rsp 会从 null 被赋值
     var shouldShowUpgradeDialog by remember { mutableStateOf(false) }
 
@@ -248,20 +246,16 @@ private fun AppVersionLogic(mainViewModel: MainViewModel) {
     }
 
     val isForced = rsp?.reminder_action == VersionCheckResponse.Data.ReminderAction.BLOCK_ACCESS
-    val title = if (isForced) {
-        stringResource(id = R.string.str_force_upgrade)
-    } else {
-        stringResource(id = R.string.str_suggest_upgrade)
-    }
+    val title =
+        if (isForced) {
+            stringResource(id = R.string.str_force_upgrade)
+        } else {
+            stringResource(id = R.string.str_suggest_upgrade)
+        }
     val content = stringResource(id = R.string.str_upgrade_content)
-    
+
     if (shouldShowUpgradeDialog && rsp != null) {
-        UpgradeDialog(
-            title,
-            content,
-            { shouldShowUpgradeDialog = false },
-            isForced = isForced
-        )
+        UpgradeDialog(title, content, { shouldShowUpgradeDialog = false }, isForced = isForced)
     }
 }
 
@@ -525,8 +519,20 @@ private fun ProfileTabContent(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
             // 编辑成功后刷新列表
-            if (result.resultCode == android.app.Activity.RESULT_OK) {
+            if (result.resultCode == Activity.RESULT_OK) {
                 profileViewModel.refreshCreatedAgents()
+            }
+        }
+
+    // 创建用于从 Profile 页面创建角色的 launcher（包括从草稿创建）
+    val createFromProfileLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            // 创建成功后刷新列表和草稿
+            if (result.resultCode == Activity.RESULT_OK) {
+                profileViewModel.refreshCreatedAgents()
+                profileViewModel.refreshAgentDrafts()
             }
         }
 
@@ -538,6 +544,7 @@ private fun ProfileTabContent(
             profileViewModel.updateUserInfoLocal()
             // 优先从缓存加载，避免闪现
             profileViewModel.loadUserCreatedAgentsFromCache()
+            profileViewModel.refreshAgentDrafts()
             profileViewModel.trackPageView("MainPage")
         }
     }
@@ -546,6 +553,7 @@ private fun ProfileTabContent(
     LaunchedEffect(shouldRefreshProfile) {
         if (shouldRefreshProfile) {
             profileViewModel.refreshCreatedAgents()
+            profileViewModel.refreshAgentDrafts()
             onRefreshProfileHandled()
         }
     }
@@ -553,6 +561,7 @@ private fun ProfileTabContent(
     // 生命周期管理：页面恢复时刷新用户信息，但不频繁刷新列表
     LifecycleResumeEffect(profileViewModel) {
         profileViewModel.loadUserProfile()
+        profileViewModel.refreshAgentDrafts()
         VipStatusHelper.refreshSubscriptionStatus()
         // 不再频繁刷新列表，只在首次加载或从 CreateRoleActivity 返回时刷新
         onPauseOrDispose {}
@@ -582,9 +591,14 @@ private fun ProfileTabContent(
         modifier = Modifier,
         userProfile = safeUserProfile,
         agents = uiState.userCreatedAgents,
+        drafts = uiState.drafts,
         isLoading = uiState.isLoading,
         onClickAgent = { agent ->
             ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
+        },
+        onClickDraft = { draftId ->
+            val intent = CreateRoleActivity.getIntent(context, null, draftId)
+            createFromProfileLauncher.launch(intent)
         },
         onEditAgent = { agent ->
             // 使用 CreateRoleActivity 提供的方法获取 Intent，并监听返回结果
