@@ -138,8 +138,14 @@ fun ExploreContent(
         }
     }
 
+    // 计算主题专区的 item 数量（每个有 agents 的 theme 是一个 item）
+    val themeItemCount = remember(characterThemes) {
+        characterThemes.count { it.agents.isNotEmpty() }
+    }
+
     // 检测应该播放动图的 item 索引列表（所有可见区域>=70%的item，按位置从上到下排序）
-    val visibleItemIndices by remember {
+    // 注意：返回的是 lazyPagingItems 的索引（从 0 开始），不是网格索引
+    val visibleItemIndices by remember(themeItemCount) {
         derivedStateOf {
             val layoutInfo = gridState.layoutInfo
             val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
@@ -148,11 +154,17 @@ fun ExploreContent(
             val agentItemCount = lazyPagingItems?.itemCount ?: 0
             if (agentItemCount == 0) return@derivedStateOf emptyList<Int>()
 
-            // 过滤出 agent items（排除加载状态指示器和Spacer）
+            // 过滤出 agent items（排除 theme items、加载状态指示器和 Spacer）
+            // 网格索引范围：themeItemCount 到 themeItemCount + agentItemCount - 1
             val agentItems =
-                layoutInfo.visibleItemsInfo.filter { itemInfo -> itemInfo.index < agentItemCount }
+                layoutInfo.visibleItemsInfo.filter { itemInfo ->
+                    val gridIndex = itemInfo.index
+                    // agent items 的网格索引范围是 [themeItemCount, themeItemCount + agentItemCount)
+                    gridIndex >= themeItemCount && gridIndex < themeItemCount + agentItemCount
+                }
 
             // 找到所有可见比例 >= 70% 的 item 索引（按位置排序，从上到下）
+            // 注意：这里存储的是 lazyPagingItems 的索引（网格索引减去 themeItemCount）
             val visibleIndices = mutableListOf<Int>()
             for (itemInfo in agentItems.sortedBy { it.offset.y }) {
                 val itemTop = itemInfo.offset.y
@@ -170,8 +182,10 @@ fun ExploreContent(
                 val visibleRatio = if (itemHeight > 0) visibleHeight.toFloat() / itemHeight else 0f
 
                 // 如果可见比例 >= 70%，添加到列表中（保持从上到下的顺序）
+                // 将网格索引转换为 lazyPagingItems 索引
                 if (visibleRatio >= 0.7f) {
-                    visibleIndices.add(itemInfo.index)
+                    val agentIndex = itemInfo.index - themeItemCount
+                    visibleIndices.add(agentIndex)
                 }
             }
 
@@ -180,11 +194,12 @@ fun ExploreContent(
     }
 
     // 找到第一个可见且有 backgroundAnimatedUrl 的 item 索引
+    // 注意：存储的是 lazyPagingItems 的索引（从 0 开始），不是网格索引
     var firstPlayingItemIndex by remember { mutableIntStateOf(-1) }
 
     // 监听可见项和 item 数据变化，更新播放索引
     // 使用 snapshotFlow 监听 gridState.layoutInfo 的变化，确保滚动时也能及时更新
-    LaunchedEffect(lazyPagingItems?.itemCount) {
+    LaunchedEffect(lazyPagingItems?.itemCount, themeItemCount) {
         snapshotFlow { gridState.layoutInfo }
             .collect {
                 val itemCount = lazyPagingItems?.itemCount ?: 0
@@ -193,13 +208,14 @@ fun ExploreContent(
                     return@collect
                 }
 
-                // 获取当前可见的 item 索引列表
+                // 获取当前可见的 item 索引列表（已经是 lazyPagingItems 的索引）
                 val indices = visibleItemIndices
 
                 // 按顺序遍历可见的 item（已经按从上到下排序），找到第一个有 backgroundAnimatedUrl 且是动图的
                 firstPlayingItemIndex = -1
                 for (index in indices) {
                     // 检查索引是否在有效范围内，避免 IndexOutOfBoundsException
+                    // index 已经是 lazyPagingItems 的索引，直接使用
                     if (index !in 0..<itemCount) {
                         continue
                     }
@@ -346,6 +362,7 @@ fun ExploreContent(
                         val agent = lazyPagingItems[index]
                         if (agent != null) {
                             // 只播放第一个可见且有 backgroundAnimatedUrl 的 item
+                            // index 是 lazyPagingItems 的索引（从 0 开始），firstPlayingItemIndex 也是
                             val shouldPlay = index == firstPlayingItemIndex
 
                             ExploreCharacterCard(
