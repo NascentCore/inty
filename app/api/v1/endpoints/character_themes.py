@@ -1,6 +1,7 @@
 """角色主题专区 API 端点"""
 
 import uuid
+from math import log
 from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,6 +12,7 @@ from app import schemas
 from app.api import deps
 from app.api.tags import INTY_EVAL_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
+from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas import character_theme as character_theme_schemas
 from app.services import character_theme_service
 
@@ -71,6 +73,22 @@ async def list_themes(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """获取角色主题专区列表"""
+    if (
+        global_config_loaded_from_config_yaml.app.api_endpoints.use_dummy_api_v1_character_themes_get
+    ):
+        logger.info(f"====== dummy 获取角色主题专区列表")
+        return schemas.APIResponse.success(
+            data=[
+                character_theme_schemas.CharacterTheme(
+                    id=str(uuid.uuid4()),
+                    name="测试专区",
+                    visibility=character_theme_schemas.CharacterThemeVisibility.VISIBLE,
+                    agents=[],
+                    background_image_url="https://inty-backend.com/background.jpg",
+                    description="这是一个测试专区",
+                )
+            ]
+        )
     try:
         # 只有管理员可以查看隐藏的专区
         if include_hidden and not current_user.is_superuser:
@@ -103,6 +121,20 @@ async def get_theme(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """获取角色主题专区详情"""
+    if (
+        global_config_loaded_from_config_yaml.app.api_endpoints.use_dummy_api_v1_character_themes_id_get
+    ):
+        logger.info(f"====== dummy 获取角色主题专区详情: {theme_id}")
+        return schemas.APIResponse.success(
+            data=character_theme_schemas.CharacterTheme(
+                id=theme_id,
+                name="测试专区",
+                visibility=character_theme_schemas.CharacterThemeVisibility.VISIBLE,
+                agents=[],
+                background_image_url="https://inty-backend.com/background.jpg",
+                description="这是一个测试专区",
+            )
+        )
     try:
         theme = await character_theme_service.get_theme(db, theme_id)
         if not theme:
