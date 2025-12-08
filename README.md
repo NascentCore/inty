@@ -65,6 +65,8 @@ docker compose up pgvector -d
 
 <img width="1028" height="932" alt="image" src="https://github.com/user-attachments/assets/59c52323-9ee3-4042-85ca-39344815b71c" />
 
+<img width="480" height="262" alt="image" src="https://github.com/user-attachments/assets/bedd935b-a0ef-4bdb-8247-9249a686e2fe" />
+
 ### 相关链接
 
 1. [IntelliMate Figma 设计稿](https://www.figma.com/design/ASvjVuWFM13S3u5GdIJlTL/HeartMate?node-id=0-1&p=f&t=nxD7Qrq5d8fZXSYl-0)
