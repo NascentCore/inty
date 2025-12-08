@@ -19,7 +19,8 @@ private const val KEY_PREFIX_EXPLORE_FAVORITE = "explore_favorite_"
 object IntySetting {
 
     // App级通用标记的存储 使用的对象
-    private val allUserSetting: MMKV
+    // MKKV.initialize(app) 已经在 IntelliMateApp.onCreate() 中调用
+    private val allUserSetting: MMKV = MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
 
     // 当前用户级别的数据存储
     private var curUserSetting: MMKV
@@ -28,8 +29,6 @@ object IntySetting {
     private var curUid: String = ""
 
     init {
-        // MKKV.initialize(app) 已经在 IntelliMateApp.onCreate() 中调用
-        allUserSetting = MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
 
         curUid = getCurUserID()
         curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)

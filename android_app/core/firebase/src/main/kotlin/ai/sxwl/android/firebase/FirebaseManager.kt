@@ -2,8 +2,8 @@ package ai.sxwl.android.firebase
 
 import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.DeviceUtils
-import ai.sxwl.android.utils.LanguageUtils
 import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.Utils
 import android.content.Context
 import android.os.Bundle
 import com.google.firebase.Firebase
@@ -23,6 +23,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.util.Locale
 
 /**
  * Firebase管理器 负责Firebase Analytics、Crashlytics、Performance和Remote Config的初始化和使用
@@ -693,7 +694,7 @@ object FirebaseManager {
             setUserProperty("screen_density_dpi", DeviceUtils.getScreenDensityDpi().toString())
 
             // 设置语言和地区信息
-            val currentLocale = LanguageUtils.getCurrentLanguage()
+            val currentLocale = Utils.getApp().resources?.configuration?.locales?.get(0) ?: Locale.getDefault()
             setUserProperty(UserProperties.LANGUAGE, currentLocale.language)
             setUserProperty(UserProperties.USER_REGION, currentLocale.country)
             setUserProperty("locale_display", currentLocale.displayName)
