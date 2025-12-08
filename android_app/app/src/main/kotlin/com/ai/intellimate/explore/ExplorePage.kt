@@ -266,7 +266,10 @@ fun ExplorePage(
                     onRefresh = {
                         refreshStartTime = System.currentTimeMillis()
                         isRefreshing = true
+                        // 刷新推荐 agents
                         viewModel.refreshRecommendAgents()
+                        // 刷新主题专区（只有在成功获取数据后才更新 UI）
+                        viewModel.refreshCharacterThemes()
                     },
                     modifier = Modifier.fillMaxSize(),
                 ) {

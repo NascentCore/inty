@@ -1,6 +1,7 @@
 package com.ai.intellimate.utils
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import com.squareup.moshi.Moshi
@@ -14,15 +15,25 @@ object AgentCacheManager {
     private const val KEY_CHAT_AGENTS = "cached_chat_agents"
     private const val KEY_FOLLOWING_AGENTS = "cached_following_agents"
     private const val KEY_USER_CREATED_AGENTS = "cached_user_created_agents"
+    private const val KEY_CHARACTER_THEMES = "cached_character_themes"
     private const val KEY_CACHE_TIMESTAMP = "agents_cache_timestamp"
     private const val KEY_CHAT_CACHE_TIMESTAMP = "chat_agents_cache_timestamp"
     private const val KEY_USER_CREATED_CACHE_TIMESTAMP = "user_created_agents_cache_timestamp"
+    private const val KEY_CHARACTER_THEMES_CACHE_TIMESTAMP = "character_themes_cache_timestamp"
     private const val CACHE_EXPIRY_TIME = 30 * 60 * 1000L // 30分钟缓存过期时间
 
     private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 
     private val agentListType = Types.newParameterizedType(List::class.java, AgentInfo::class.java)
     private val agentListAdapter = moshi.adapter<List<AgentInfo>>(agentListType)
+
+    private val characterThemeListType =
+        Types.newParameterizedType(
+            List::class.java,
+            AgentService.CharacterThemeItem::class.java,
+        )
+    private val characterThemeListAdapter =
+        moshi.adapter<List<AgentService.CharacterThemeItem>>(characterThemeListType)
 
     /** 缓存推荐agents */
     fun cacheAgents(agents: List<AgentInfo>) {
@@ -177,6 +188,59 @@ object AgentCacheManager {
         }
     }
 
+    /** 缓存主题专区列表 */
+    fun cacheCharacterThemes(themes: List<AgentService.CharacterThemeItem>) {
+        try {
+            val themesJson = characterThemeListAdapter.toJson(themes)
+            IntySetting.setUserProfileData(KEY_CHARACTER_THEMES, themesJson)
+            IntySetting.setUserProfileData(
+                KEY_CHARACTER_THEMES_CACHE_TIMESTAMP,
+                System.currentTimeMillis().toString(),
+            )
+            LogUtils.d("AgentCacheManager - 缓存主题专区列表成功: ${themes.size}个")
+        } catch (e: Exception) {
+            LogUtils.e("AgentCacheManager - 缓存主题专区列表失败: ${e.message}")
+        }
+    }
+
+    /** 获取缓存的主题专区列表 */
+    fun getCachedCharacterThemes(): List<AgentService.CharacterThemeItem> {
+        return try {
+            val themesJson = IntySetting.getUserProfileData(KEY_CHARACTER_THEMES)
+            if (themesJson.isNullOrEmpty()) {
+                emptyList()
+            } else {
+                val themes = characterThemeListAdapter.fromJson(themesJson) ?: emptyList()
+                LogUtils.d("AgentCacheManager - 获取缓存主题专区列表: ${themes.size}个")
+                themes
+            }
+        } catch (e: Exception) {
+            LogUtils.e("AgentCacheManager - 获取缓存主题专区列表失败: ${e.message}")
+            emptyList()
+        }
+    }
+
+    /** 检查主题专区缓存是否过期 */
+    fun isCharacterThemesCacheExpired(): Boolean {
+        val timestampStr = IntySetting.getUserProfileData(KEY_CHARACTER_THEMES_CACHE_TIMESTAMP)
+        if (timestampStr.isNullOrEmpty()) {
+            return true
+        }
+
+        return try {
+            val timestamp = timestampStr.toLong()
+            val currentTime = System.currentTimeMillis()
+            val isExpired = (currentTime - timestamp) > CACHE_EXPIRY_TIME
+            LogUtils.d(
+                "AgentCacheManager - 主题专区缓存过期检查: ${if (isExpired) "已过期" else "未过期"}"
+            )
+            isExpired
+        } catch (e: Exception) {
+            LogUtils.e("AgentCacheManager - 检查主题专区缓存过期失败: ${e.message}")
+            true
+        }
+    }
+
     /** 清理所有缓存 */
     fun clearCache() {
         try {
@@ -184,9 +248,11 @@ object AgentCacheManager {
             IntySetting.setUserProfileData(KEY_CHAT_AGENTS, "")
             IntySetting.setUserProfileData(KEY_FOLLOWING_AGENTS, "")
             IntySetting.setUserProfileData(KEY_USER_CREATED_AGENTS, "")
+            IntySetting.setUserProfileData(KEY_CHARACTER_THEMES, "")
             IntySetting.setUserProfileData(KEY_CACHE_TIMESTAMP, "")
             IntySetting.setUserProfileData(KEY_CHAT_CACHE_TIMESTAMP, "")
             IntySetting.setUserProfileData(KEY_USER_CREATED_CACHE_TIMESTAMP, "")
+            IntySetting.setUserProfileData(KEY_CHARACTER_THEMES_CACHE_TIMESTAMP, "")
             LogUtils.i("AgentCacheManager - 缓存已清理")
         } catch (e: Exception) {
             LogUtils.e("AgentCacheManager - 清理缓存失败: ${e.message}")

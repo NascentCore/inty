@@ -32,8 +32,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
@@ -41,6 +45,8 @@ import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.ai.intellimate.R
+import com.ai.intellimate.explore.special.HorizontalAgentCardList
+import com.ai.intellimate.explore.special.SpecialDetailActivity
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.EmptyDataState
 import com.ai.intellimate.ui.components.NetworkErrorState
@@ -53,11 +59,32 @@ private fun isAnimatedImageUrl(url: String?): Boolean {
     if (url.isNullOrBlank()) return false
     val lowerUrl = url.lowercase()
     return lowerUrl.endsWith(".gif") ||
-        lowerUrl.endsWith(".webp") ||
-        lowerUrl.endsWith(".avif") ||
-        lowerUrl.contains(".gif?") ||
-        lowerUrl.contains(".webp?") ||
-        lowerUrl.contains(".avif?")
+            lowerUrl.endsWith(".webp") ||
+            lowerUrl.endsWith(".avif") ||
+            lowerUrl.contains(".gif?") ||
+            lowerUrl.contains(".webp?") ||
+            lowerUrl.contains(".avif?")
+}
+
+/**
+ * 创建全屏宽度的 Modifier，突破 LazyVerticalGrid 的 contentPadding 限制
+ * @param screenWidthPx 屏幕宽度（像素）
+ */
+private fun Modifier.fullWidthLayout(screenWidthPx: Float): Modifier {
+    return this.layout { measurable, constraints ->
+        // 突破父容器的约束，使用屏幕宽度实现全屏显示
+        val fullWidthConstraints =
+            Constraints(
+                minWidth = screenWidthPx.toInt(),
+                maxWidth = screenWidthPx.toInt(),
+                minHeight = constraints.minHeight,
+                maxHeight = constraints.maxHeight,
+            )
+        val placeable = measurable.measure(fullWidthConstraints)
+        layout(placeable.width, placeable.height) {
+            placeable.placeRelative(0, 0)
+        }
+    }
 }
 
 /** Explore页面的主要内容组件 */
@@ -75,15 +102,57 @@ fun ExploreContent(
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
     val vm: ExploreViewModel = viewModel
     val context = LocalContext.current
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
+
+    // 获取主题专区数据
+    val characterThemes by vm.characterThemes.collectAsState()
+    // 获取缓存加载状态
+    val isCacheLoaded by vm.isCacheLoaded.collectAsState()
+
+    // 计算全屏宽度（在 Composable 顶层计算，避免在 item lambda 中调用 CompositionLocal）
+    val screenWidthPx = with(density) {
+        configuration.screenWidthDp.dp.toPx()
+    }
+
+    // 加载主题专区列表
+    // 1. ViewModel 创建时从缓存加载（在 ViewModel.init 中已处理），确保快速显示
+    // 2. 等待缓存加载完成后再决定是否需要网络请求，避免竞态条件
+    // 3. 如果缓存为空或过期，从网络加载并更新缓存
+    LaunchedEffect(isCacheLoaded) {
+        // 只有在缓存加载完成后才检查是否需要网络请求
+        if (!isCacheLoaded) {
+            return@LaunchedEffect
+        }
+
+        val currentThemes = vm.characterThemes.value
+        if (currentThemes.isEmpty()) {
+            // 缓存为空，从网络加载
+            vm.loadCharacterThemes(skip = 0, limit = 100)
+        } else {
+            // 缓存有数据，检查是否过期，如果过期则在后台刷新
+            val isCacheExpired =
+                com.ai.intellimate.utils.AgentCacheManager.isCharacterThemesCacheExpired()
+            if (isCacheExpired) {
+                vm.loadCharacterThemes(skip = 0, limit = 100)
+            }
+        }
+    }
 
     // 更新当前UI中显示的agents总数
     LaunchedEffect(lazyPagingItems?.itemCount) {
         lazyPagingItems?.itemCount?.let { count -> vm.updateCurrentUiAgentsCount(count) }
     }
 
+    // 计算主题专区的 item 数量（每个有 agents 的 theme 是一个 item）
+    val themeItemCount = remember(characterThemes) {
+        characterThemes.count { it.agents.isNotEmpty() }
+    }
+
     val gridState =
         rememberLazyGridState(
-            initialFirstVisibleItemIndex = vm.savedFirstVisibleIndex.collectAsState().value,
+            // 将保存的 agent 索引转换为网格索引（加上当前主题项数量）
+            initialFirstVisibleItemIndex = vm.getRestoredGridIndex(themeItemCount),
             initialFirstVisibleItemScrollOffset = vm.savedFirstVisibleOffset.collectAsState().value,
         )
 
@@ -115,7 +184,8 @@ fun ExploreContent(
     }
 
     // 检测应该播放动图的 item 索引列表（所有可见区域>=70%的item，按位置从上到下排序）
-    val visibleItemIndices by remember {
+    // 注意：返回的是 lazyPagingItems 的索引（从 0 开始），不是网格索引
+    val visibleItemIndices by remember(themeItemCount) {
         derivedStateOf {
             val layoutInfo = gridState.layoutInfo
             val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
@@ -124,11 +194,17 @@ fun ExploreContent(
             val agentItemCount = lazyPagingItems?.itemCount ?: 0
             if (agentItemCount == 0) return@derivedStateOf emptyList<Int>()
 
-            // 过滤出 agent items（排除加载状态指示器和Spacer）
+            // 过滤出 agent items（排除 theme items、加载状态指示器和 Spacer）
+            // 网格索引范围：themeItemCount 到 themeItemCount + agentItemCount - 1
             val agentItems =
-                layoutInfo.visibleItemsInfo.filter { itemInfo -> itemInfo.index < agentItemCount }
+                layoutInfo.visibleItemsInfo.filter { itemInfo ->
+                    val gridIndex = itemInfo.index
+                    // agent items 的网格索引范围是 [themeItemCount, themeItemCount + agentItemCount)
+                    gridIndex >= themeItemCount && gridIndex < themeItemCount + agentItemCount
+                }
 
             // 找到所有可见比例 >= 70% 的 item 索引（按位置排序，从上到下）
+            // 注意：这里存储的是 lazyPagingItems 的索引（网格索引减去 themeItemCount）
             val visibleIndices = mutableListOf<Int>()
             for (itemInfo in agentItems.sortedBy { it.offset.y }) {
                 val itemTop = itemInfo.offset.y
@@ -146,8 +222,10 @@ fun ExploreContent(
                 val visibleRatio = if (itemHeight > 0) visibleHeight.toFloat() / itemHeight else 0f
 
                 // 如果可见比例 >= 70%，添加到列表中（保持从上到下的顺序）
+                // 将网格索引转换为 lazyPagingItems 索引
                 if (visibleRatio >= 0.7f) {
-                    visibleIndices.add(itemInfo.index)
+                    val agentIndex = itemInfo.index - themeItemCount
+                    visibleIndices.add(agentIndex)
                 }
             }
 
@@ -156,11 +234,12 @@ fun ExploreContent(
     }
 
     // 找到第一个可见且有 backgroundAnimatedUrl 的 item 索引
+    // 注意：存储的是 lazyPagingItems 的索引（从 0 开始），不是网格索引
     var firstPlayingItemIndex by remember { mutableIntStateOf(-1) }
 
     // 监听可见项和 item 数据变化，更新播放索引
     // 使用 snapshotFlow 监听 gridState.layoutInfo 的变化，确保滚动时也能及时更新
-    LaunchedEffect(lazyPagingItems?.itemCount) {
+    LaunchedEffect(lazyPagingItems?.itemCount, themeItemCount) {
         snapshotFlow { gridState.layoutInfo }
             .collect {
                 val itemCount = lazyPagingItems?.itemCount ?: 0
@@ -169,13 +248,14 @@ fun ExploreContent(
                     return@collect
                 }
 
-                // 获取当前可见的 item 索引列表
+                // 获取当前可见的 item 索引列表（已经是 lazyPagingItems 的索引）
                 val indices = visibleItemIndices
 
                 // 按顺序遍历可见的 item（已经按从上到下排序），找到第一个有 backgroundAnimatedUrl 且是动图的
                 firstPlayingItemIndex = -1
                 for (index in indices) {
                     // 检查索引是否在有效范围内，避免 IndexOutOfBoundsException
+                    // index 已经是 lazyPagingItems 的索引，直接使用
                     if (index !in 0..<itemCount) {
                         continue
                     }
@@ -192,7 +272,7 @@ fun ExploreContent(
     }
 
     // 监听滚动状态，保存位置和更新滚动标记
-    LaunchedEffect(gridState) {
+    LaunchedEffect(gridState, themeItemCount) {
         snapshotFlow { gridState.isScrollInProgress to gridState.firstVisibleItemIndex }
             .collect { (isScrollInProgress, firstVisibleItemIndex) ->
                 if (isScrollInProgress) {
@@ -200,8 +280,16 @@ fun ExploreContent(
                     hasUserScrolled = true // 标记用户已主动滚动
                 } else {
                     // 滚动停止时保存位置
+                    // 将网格索引转换为 agent 索引（如果第一个可见项是 agent 项）
+                    val agentIndex = if (firstVisibleItemIndex >= themeItemCount) {
+                        // 第一个可见项是 agent 项，转换为 agent 索引
+                        firstVisibleItemIndex - themeItemCount
+                    } else {
+                        // 第一个可见项是主题项或加载状态指示器，保存 0（表示滚动到顶部）
+                        0
+                    }
                     vm.saveScrollPosition(
-                        firstVisibleItemIndex,
+                        agentIndex,
                         gridState.firstVisibleItemScrollOffset,
                     )
                 }
@@ -219,8 +307,8 @@ fun ExploreContent(
                 // 首次进入时使用缓存数据，不应该显示加载更多loading
                 if (
                     currentTime - lastScrollTime < 1000 &&
-                        lazyPagingItems.itemCount > 0 &&
-                        lazyPagingItems.loadState.refresh is LoadState.NotLoading
+                    lazyPagingItems.itemCount > 0 &&
+                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
                 ) {
                     showLoadMoreLoading = true
                     // 延迟隐藏loading
@@ -243,79 +331,118 @@ fun ExploreContent(
             } else {
                 vm.refreshRecommendAgents()
             }
+            // 刷新时也重新加载主题专区（从网络加载，更新缓存）
+            vm.loadCharacterThemes(skip = 0, limit = 100)
         }
     }
 
     // 如果是错误状态且没有数据，显示错误状态
-    if (loadState is LoadState.Error && lazyPagingItems.itemCount == 0) {
-        NetworkErrorState(
-            onRetry = onRetry ?: { lazyPagingItems.retry() },
-            modifier = modifier.fillMaxSize(),
-        )
-    } else if (loadState is LoadState.NotLoading && lazyPagingItems.itemCount == 0) {
-        // 如果没有数据且加载完成，显示空数据状态
-        EmptyDataState(
-            subtitle = stringResource(R.string.empty_explore_data),
-            modifier = modifier.fillMaxSize(),
-        )
-    } else {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier =
-                modifier
-                    .padding(bottom = innerPadding.calculateBottomPadding())
-                    .nestedScroll(scrollConnection),
-            state = gridState,
-            contentPadding = PaddingValues(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // 如果没有Paging数据，显示加载状态
-            if (lazyPagingItems == null) {
-                item(span = { GridItemSpan(maxLineSpan) }) { EmptyStateIndicator() }
-            } else {
-                // 使用Paging的items
-                items(
-                    count = lazyPagingItems.itemCount,
-                    key =
-                        lazyPagingItems.itemKey { agent ->
-                            // 确保key的唯一性，避免空id导致的重复key问题
-                            agent.id.ifEmpty {
-                                // 如果id为空，使用其他字段组合生成唯一key
-                                "${agent.name}_${agent.avatar}_${agent.createdAt}"
-                            }
-                        },
-                ) { index ->
-                    val agent = lazyPagingItems[index]
-                    if (agent != null) {
-                        // 只播放第一个可见且有 backgroundAnimatedUrl 的 item
-                        val shouldPlay = index == firstPlayingItemIndex
+    when (loadState) {
+        is LoadState.Error if lazyPagingItems.itemCount == 0 -> {
+            NetworkErrorState(
+                onRetry = onRetry ?: { lazyPagingItems.retry() },
+                modifier = modifier.fillMaxSize(),
+            )
+        }
 
-                        ExploreCharacterCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            agentInfo = agent,
-                            onClick = { onClickAgent(agent) },
-                            index = index,
-                            shouldPlayAnimated = shouldPlay,
-                        )
-                    } else {
-                        // 显示加载占位符
-                        ShimmerPlaceholder(
-                            modifier =
-                                Modifier.fillMaxWidth()
+        is LoadState.NotLoading if lazyPagingItems.itemCount == 0 -> {
+            // 如果没有数据且加载完成，显示空数据状态
+            EmptyDataState(
+                subtitle = stringResource(R.string.empty_explore_data),
+                modifier = modifier.fillMaxSize(),
+            )
+        }
+
+        else -> {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier =
+                    modifier
+                        .padding(bottom = innerPadding.calculateBottomPadding())
+                        .nestedScroll(scrollConnection),
+                state = gridState,
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // 如果没有Paging数据，显示加载状态
+                if (lazyPagingItems == null) {
+                    item(span = { GridItemSpan(maxLineSpan) }) { EmptyStateIndicator() }
+                } else {
+                    // 主题专区的item数据，如果有接口数据则显示，无则不显示
+                    // 注意：主题专区需要全屏宽度，不受 contentPadding 影响
+                    characterThemes.forEach { theme ->
+                        if (theme.agents.isNotEmpty()) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                // 使用全屏宽度布局，突破 LazyVerticalGrid 的 contentPadding 限制
+                                Box(modifier = Modifier.fullWidthLayout(screenWidthPx)) {
+                                    HorizontalAgentCardList(
+                                        title = theme.name,
+                                        description = theme.description,
+                                        agents = theme.agents,
+                                        isChristmas = theme.isChristmas,
+                                        onAgentClick = onClickAgent,
+                                        onTitleClick = {
+                                            // 跳转到主题详情页面
+                                            SpecialDetailActivity.launch(
+                                                context = context,
+                                                themeId = theme.id,
+                                                themeTitle = theme.name,
+                                                themeDescription = theme.description,
+                                                isChristmas = theme.isChristmas,
+                                                agents = theme.agents,
+                                            )
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // 使用Paging的items
+                    items(
+                        count = lazyPagingItems.itemCount,
+                        key =
+                            lazyPagingItems.itemKey { agent ->
+                                // 确保key的唯一性，避免空id导致的重复key问题
+                                agent.id.ifEmpty {
+                                    // 如果id为空，使用其他字段组合生成唯一key
+                                    "${agent.name}_${agent.avatar}_${agent.createdAt}"
+                                }
+                            },
+                    ) { index ->
+                        val agent = lazyPagingItems[index]
+                        if (agent != null) {
+                            // 只播放第一个可见且有 backgroundAnimatedUrl 的 item
+                            // index 是 lazyPagingItems 的索引（从 0 开始），firstPlayingItemIndex 也是
+                            val shouldPlay = index == firstPlayingItemIndex
+
+                            ExploreCharacterCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                agentInfo = agent,
+                                onClick = { onClickAgent(agent) },
+                                index = index,
+                                shouldPlayAnimated = shouldPlay,
+                            )
+                        } else {
+                            // 显示加载占位符
+                            ShimmerPlaceholder(
+                                modifier = Modifier
+                                    .fillMaxWidth()
                                     .height(200.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                        )
+                            )
+                        }
+                    }
+
+                    // 加载状态指示器
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        ExploreLoadingStates(lazyPagingItems, showLoadMoreLoading, isRefreshing)
                     }
                 }
 
-                // 加载状态指示器
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    ExploreLoadingStates(lazyPagingItems, showLoadMoreLoading, isRefreshing)
-                }
+                item { Spacer(Modifier.height(16.dp)) }
             }
-
-            item { Spacer(Modifier.height(16.dp)) }
         }
     }
 }
@@ -323,7 +450,11 @@ fun ExploreContent(
 /** 空状态指示器 */
 @Composable
 private fun EmptyStateIndicator() {
-    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .height(200.dp), contentAlignment = Alignment.Center
+    ) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
     }
 }
