@@ -41,14 +41,9 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     // 是否已初始化
     private var isInitialized = false
 
-    init {
-        // ViewModel 创建时立即从缓存加载主题专区数据，确保快速显示
-        loadCharacterThemesFromCache()
-    }
-
-    // 保存滚动位置
-    private val _savedFirstVisibleIndex = MutableStateFlow(0)
-    val savedFirstVisibleIndex = _savedFirstVisibleIndex
+    // 保存滚动位置（保存的是 agent 索引，不是网格索引）
+    private val _savedFirstVisibleAgentIndex = MutableStateFlow(0)
+    val savedFirstVisibleAgentIndex = _savedFirstVisibleAgentIndex
     private val _savedFirstVisibleOffset = MutableStateFlow(0)
     val savedFirstVisibleOffset = _savedFirstVisibleOffset
 
@@ -65,6 +60,10 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     // 是否正在加载主题专区
     private val _isLoadingThemes = MutableStateFlow(false)
     val isLoadingThemes: StateFlow<Boolean> = _isLoadingThemes.asStateFlow()
+
+    // 缓存是否已加载完成（用于避免竞态条件）
+    private val _isCacheLoaded = MutableStateFlow(false)
+    val isCacheLoaded: StateFlow<Boolean> = _isCacheLoaded.asStateFlow()
 
     // 实现 ExploreFetchCallback 接口
     override suspend fun onSuccess(
@@ -157,9 +156,26 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         }
     }
 
-    fun saveScrollPosition(index: Int, offset: Int) {
-        _savedFirstVisibleIndex.value = index
+    /**
+     * 保存滚动位置
+     * @param agentIndex agent 索引（lazyPagingItems 的索引，从 0 开始）
+     * @param offset 滚动偏移量
+     */
+    fun saveScrollPosition(agentIndex: Int, offset: Int) {
+        _savedFirstVisibleAgentIndex.value = agentIndex
         _savedFirstVisibleOffset.value = offset
+    }
+
+    /**
+     * 获取恢复滚动位置时的网格索引
+     * @param currentThemeItemCount 当前主题项数量
+     * @return 网格索引（用于 LazyVerticalGrid 的 initialFirstVisibleItemIndex）
+     */
+    fun getRestoredGridIndex(currentThemeItemCount: Int): Int {
+        val agentIndex = _savedFirstVisibleAgentIndex.value
+        // 将 agent 索引转换为网格索引：agent 索引 + 主题项数量
+        // agent 0 在网格中的位置是 themeItemCount（如果有主题项）或 0（如果没有主题项）
+        return agentIndex + currentThemeItemCount
     }
 
     /** 更新当前UI中显示的agents总数 */
@@ -296,6 +312,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         _agentsFlow.value = null
         isInitialized = false
         _characterThemes.value = emptyList()
+        _isCacheLoaded.value = false
     }
 
     /** 从缓存加载主题专区列表（用于快速显示） */
@@ -311,6 +328,9 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                 }
             } catch (e: Exception) {
                 LogUtils.e("ExploreViewModel - 从缓存加载主题专区列表异常: ${e.message}", e)
+            } finally {
+                // 标记缓存加载已完成（无论是否有数据）
+                _isCacheLoaded.value = true
             }
         }
     }
