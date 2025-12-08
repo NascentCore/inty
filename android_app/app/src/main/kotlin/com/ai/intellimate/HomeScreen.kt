@@ -532,7 +532,7 @@ private fun ProfileTabContent(
             profileViewModel.updateUserInfoLocal()
             // 优先从缓存加载，避免闪现
             profileViewModel.loadUserCreatedAgentsFromCache()
-            profileViewModel.refreshDrafts()
+            profileViewModel.refreshAgentDrafts()
             profileViewModel.trackPageView("MainPage")
         }
     }
@@ -541,7 +541,7 @@ private fun ProfileTabContent(
     LaunchedEffect(shouldRefreshProfile) {
         if (shouldRefreshProfile) {
             profileViewModel.refreshCreatedAgents()
-            profileViewModel.refreshDrafts()
+            profileViewModel.refreshAgentDrafts()
             onRefreshProfileHandled()
         }
     }
@@ -549,7 +549,7 @@ private fun ProfileTabContent(
     // 生命周期管理：页面恢复时刷新用户信息，但不频繁刷新列表
     LifecycleResumeEffect(profileViewModel) {
         profileViewModel.loadUserProfile()
-        profileViewModel.refreshDrafts()
+        profileViewModel.refreshAgentDrafts()
         VipStatusHelper.refreshSubscriptionStatus()
         // 不再频繁刷新列表，只在首次加载或从 CreateRoleActivity 返回时刷新
         onPauseOrDispose {}

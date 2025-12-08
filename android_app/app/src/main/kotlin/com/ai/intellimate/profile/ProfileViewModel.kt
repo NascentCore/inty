@@ -34,7 +34,7 @@ class ProfileViewModel : BaseVM() {
 
     init {
         loadUserProfile()
-        refreshDrafts()
+        refreshAgentDrafts()
     }
 
     /** 加载用户信息 */
@@ -62,7 +62,7 @@ class ProfileViewModel : BaseVM() {
     }
 
     /** 刷新草稿列表，供 "Me" 页面展示 */
-    fun refreshDrafts() {
+    fun refreshAgentDrafts() {
         viewModelScope.launch(Dispatchers.IO) {
             val drafts = CreateRoleDraftStorage.getAllDrafts().filter { !it.isEmpty() }
             _uiState.update { it.copy(drafts = drafts) }
