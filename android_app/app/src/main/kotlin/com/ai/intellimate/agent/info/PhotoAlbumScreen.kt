@@ -33,7 +33,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,6 +68,7 @@ internal fun PhotoAlbumScreen(
     onBack: () -> Unit,
 ) {
     var previewImage by remember { mutableStateOf<String?>(null) }
+    var currentBackgroundUrl by remember { mutableStateOf(IntySetting.getChatBackgroundImage(agent.id)) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -148,7 +148,11 @@ internal fun PhotoAlbumScreen(
                             PhotoAlbumImageItem(
                                 item = item,
                                 agentId = agent.id,
+                                currentBackgroundUrl = currentBackgroundUrl,
                                 onPreview = { previewImage = it },
+                                onBackgroundChanged = { newUrl ->
+                                    currentBackgroundUrl = newUrl
+                                },
                             )
                         }
                     }
@@ -179,31 +183,15 @@ internal fun PhotoAlbumScreen(
 private fun PhotoAlbumImageItem(
     item: AgentImageGalleryItem,
     agentId: String,
+    currentBackgroundUrl: String?,
     onPreview: (String) -> Unit,
+    onBackgroundChanged: (String?) -> Unit,
 ) {
     val context = LocalContext.current
     val aspectRatio = if (item.height > 0) item.width.toFloat() / item.height.toFloat() else 1f
     
-    // 使用 remember 和 mutableStateOf 来跟踪当前背景状态，确保 UI 能够响应变化
-    // 在点击时立即更新状态，确保 UI 能够立即响应
-    var isCurrentBackground by remember { mutableStateOf(IntySetting.getChatBackgroundImage(agentId) == item.imageUrl) }
-    
-    // 在每次重组时重新检查背景状态，确保当其他图片被设为背景时，当前图片的状态也能正确更新
-    // 使用 LaunchedEffect 来监听背景设置变化，当 agentId 或 item.imageUrl 变化时重新检查
-    LaunchedEffect(agentId, item.imageUrl) {
-        val currentBackground = IntySetting.getChatBackgroundImage(agentId)
-        isCurrentBackground = currentBackground == item.imageUrl
-    }
-    
-    // 在重组时也检查一次，确保状态同步
-    // 使用 SideEffect 来在每次重组时检查背景状态，但只在状态不匹配时更新
-    androidx.compose.runtime.SideEffect {
-        val currentBackground = IntySetting.getChatBackgroundImage(agentId)
-        val shouldBeBackground = currentBackground == item.imageUrl
-        if (isCurrentBackground != shouldBeBackground) {
-            isCurrentBackground = shouldBeBackground
-        }
-    }
+    // 直接计算当前背景状态，基于共享的 currentBackgroundUrl
+    val isCurrentBackground = currentBackgroundUrl == item.imageUrl
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -241,11 +229,11 @@ private fun PhotoAlbumImageItem(
                     .noRippleClickable {
                         if (isCurrentBackground) {
                             IntySetting.clearChatBackgroundImage(agentId)
-                            isCurrentBackground = false
+                            onBackgroundChanged(null)
                             ToastUtils.showShort(R.string.agent_gallery_background_reset_success)
                         } else {
                             IntySetting.setChatBackgroundImage(agentId, item.imageUrl)
-                            isCurrentBackground = true
+                            onBackgroundChanged(item.imageUrl)
                             ToastUtils.showShort(R.string.agent_gallery_background_set_success)
                         }
                     },
