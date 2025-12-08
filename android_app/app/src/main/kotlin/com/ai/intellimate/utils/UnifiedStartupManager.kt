@@ -209,10 +209,15 @@ object UnifiedStartupManager {
 
         val chatAgentsDeferred = startupScope.async { AgentCacheManager.getCachedChatAgents() }
 
+        val characterThemesDeferred =
+            startupScope.async { AgentCacheManager.getCachedCharacterThemes() }
+
         // 等待缓存数据加载完成
         _userProfile.value = userProfileDeferred.await()
         _recommendedAgents.value = agentsDeferred.await()
         _chatAgents.value = chatAgentsDeferred.await()
+        // 主题专区缓存已加载，ExploreViewModel 可以从缓存中读取
+        characterThemesDeferred.await()
         // 用户自建agents缓存由ProfileViewModel管理，不需要在这里预加载
 
         _startupState.value = StartupState.EssentialReady
@@ -233,6 +238,11 @@ object UnifiedStartupManager {
 
             val cachedChatAgents = AgentCacheManager.getCachedChatAgents()
             _chatAgents.value = cachedChatAgents
+
+            // 加载缓存的主题专区数据
+            val cachedCharacterThemes = AgentCacheManager.getCachedCharacterThemes()
+            // 注意：这里不设置到 StateFlow，因为主题专区数据由 ExploreViewModel 管理
+            // 但缓存已加载，ExploreViewModel 可以从缓存中读取
         } catch (e: Exception) {
             LogUtils.e("UnifiedStartupManager - 缓存数据加载异常: ${e.message}")
         }
@@ -436,7 +446,8 @@ object UnifiedStartupManager {
                 is ai.sxwl.android.data.http.ApiResult.Success -> {
                     val themes = result.data
                     LogUtils.d("UnifiedStartupManager - 主题专区同步成功: ${themes.size} 个主题")
-                    // 主题专区数据不需要缓存，因为数据量小且变化频繁
+                    // 缓存主题专区数据，用于快速显示
+                    AgentCacheManager.cacheCharacterThemes(themes)
                 }
                 is ai.sxwl.android.data.http.ApiResult.Error -> {
                     LogUtils.w("UnifiedStartupManager - 主题专区同步失败: code=${result.code}, message=${result.message}")

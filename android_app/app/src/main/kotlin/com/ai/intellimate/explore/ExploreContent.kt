@@ -81,10 +81,22 @@ fun ExploreContent(
     // 获取主题专区数据
     val characterThemes by vm.characterThemes.collectAsState()
 
-    // 加载主题专区列表（仅在首次加载时调用）
+    // 加载主题专区列表
+    // 1. ViewModel 创建时从缓存加载（在 ViewModel.init 中已处理），确保快速显示
+    // 2. 如果缓存为空或过期，从网络加载并更新缓存
     LaunchedEffect(Unit) {
+        // 如果缓存为空，从网络加载
+        // 注意：即使缓存有数据，也会在后台刷新，确保数据最新
         if (characterThemes.isEmpty()) {
-            vm.loadCharacterThemes(skip = 0, limit = 2)
+            // 缓存为空，立即从网络加载
+            vm.loadCharacterThemes(skip = 0, limit = 100)
+        } else {
+            // 缓存有数据，在后台刷新（不阻塞 UI 显示）
+            // 如果缓存过期，也触发网络加载
+            val isCacheExpired = com.ai.intellimate.utils.AgentCacheManager.isCharacterThemesCacheExpired()
+            if (isCacheExpired) {
+                vm.loadCharacterThemes(skip = 0, limit = 100)
+            }
         }
     }
 
@@ -255,8 +267,8 @@ fun ExploreContent(
             } else {
                 vm.refreshRecommendAgents()
             }
-            // 刷新时也重新加载主题专区
-            vm.loadCharacterThemes(skip = 0, limit = 2)
+            // 刷新时也重新加载主题专区（从网络加载，更新缓存）
+            vm.loadCharacterThemes(skip = 0, limit = 100)
         }
     }
 
