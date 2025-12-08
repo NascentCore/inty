@@ -64,7 +64,10 @@ class ProfileViewModel : BaseVM() {
     /** 刷新草稿列表，供 "Me" 页面展示 */
     fun refreshAgentDrafts() {
         viewModelScope.launch(Dispatchers.IO) {
-            val drafts = CreateRoleDraftStorage.getAllDrafts().filter { !it.isEmpty() }
+            val drafts =
+                CreateRoleDraftStorage.getAllDrafts()
+                    .filter { !it.isEmpty() }
+                    .sortedByDescending { it.lastModifiedAt } // 按最后修改时间降序排序（最新在前）
             _uiState.update { it.copy(drafts = drafts) }
         }
     }
