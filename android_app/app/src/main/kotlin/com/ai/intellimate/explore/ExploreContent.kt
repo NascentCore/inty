@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -41,6 +42,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.ai.intellimate.R
 import com.ai.intellimate.explore.special.HorizontalAgentCardList
+import com.ai.intellimate.explore.special.SpecialDetailActivity
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.EmptyDataState
 import com.ai.intellimate.ui.components.NetworkErrorState
@@ -74,6 +76,7 @@ fun ExploreContent(
 ) {
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
     val vm: ExploreViewModel = viewModel
+    val context = LocalContext.current
 
     // 获取主题专区数据
     val characterThemes by vm.characterThemes.collectAsState()
@@ -300,6 +303,17 @@ fun ExploreContent(
                                     agents = theme.agents,
                                     isChristmas = theme.isChristmas,
                                     onAgentClick = onClickAgent,
+                                    onTitleClick = {
+                                        // 跳转到主题详情页面
+                                        SpecialDetailActivity.launch(
+                                            context = context,
+                                            themeId = theme.id,
+                                            themeTitle = theme.name,
+                                            themeDescription = theme.description,
+                                            isChristmas = theme.isChristmas,
+                                            agents = theme.agents,
+                                        )
+                                    },
                                 )
                             }
                         }

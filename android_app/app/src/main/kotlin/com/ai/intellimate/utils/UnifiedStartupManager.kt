@@ -6,6 +6,7 @@ import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.VipStatusHelper
+import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
@@ -146,6 +147,15 @@ object UnifiedStartupManager {
                         }
                     }
 
+                    // 异步加载主题专区（非关键数据），不阻塞启动
+                    startupScope.launch {
+                        try {
+                            syncCharacterThemes()
+                        } catch (e: Exception) {
+                            LogUtils.e("UnifiedStartupManager - 异步加载主题专区失败: ${e.message}")
+                        }
+                    }
+
                     // 异步加载用户自建agents（非关键数据），不阻塞启动
                     startupScope.launch {
                         try {
@@ -244,10 +254,13 @@ object UnifiedStartupManager {
 
         val chatAgentsTask = startupScope.async { syncChatAgents() }
 
+        val characterThemesTask = startupScope.async { syncCharacterThemes() }
+
         // 等待网络同步完成
         userProfileTask.await()
         agentsTask.await()
         chatAgentsTask.await()
+        characterThemesTask.await()
 
         _startupState.value = StartupState.Completed
         _startupProgress.value = 0.9f
@@ -407,6 +420,30 @@ object UnifiedStartupManager {
             }
         } catch (e: Exception) {
             LogUtils.e("UnifiedStartupManager - 聊天agents同步异常: ${e.message}")
+        }
+    }
+
+    /** 同步主题专区 */
+    private suspend fun syncCharacterThemes() {
+        try {
+            // 检查登录状态，确保有有效的token后再调用需要认证的接口
+            if (!isUserLoggedIn()) {
+                LogUtils.w("UnifiedStartupManager - 用户未登录或token无效，跳过主题专区同步")
+                return
+            }
+
+            when (val result = AgentService.getCharacterThemes(skip = 0, limit = 100)) {
+                is ai.sxwl.android.data.http.ApiResult.Success -> {
+                    val themes = result.data
+                    LogUtils.d("UnifiedStartupManager - 主题专区同步成功: ${themes.size} 个主题")
+                    // 主题专区数据不需要缓存，因为数据量小且变化频繁
+                }
+                is ai.sxwl.android.data.http.ApiResult.Error -> {
+                    LogUtils.w("UnifiedStartupManager - 主题专区同步失败: code=${result.code}, message=${result.message}")
+                }
+            }
+        } catch (e: Exception) {
+            LogUtils.e("UnifiedStartupManager - 主题专区同步异常: ${e.message}")
         }
     }
 
