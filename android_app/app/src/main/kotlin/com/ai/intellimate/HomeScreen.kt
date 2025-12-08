@@ -524,6 +524,18 @@ private fun ProfileTabContent(
             }
         }
 
+    // 创建用于从 Profile 页面创建角色的 launcher（包括从草稿创建）
+    val createFromProfileLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            // 创建成功后刷新列表和草稿
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                profileViewModel.refreshCreatedAgents()
+                profileViewModel.refreshAgentDrafts()
+            }
+        }
+
     // 初始化数据：优先从缓存加载，避免闪现
     var hasInitialized by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -584,7 +596,10 @@ private fun ProfileTabContent(
         onClickAgent = { agent ->
             ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
         },
-        onClickDraft = { draftId -> CreateRoleActivity.launch(context, null, draftId) },
+        onClickDraft = { draftId ->
+            val intent = CreateRoleActivity.getIntent(context, null, draftId)
+            createFromProfileLauncher.launch(intent)
+        },
         onEditAgent = { agent ->
             // 使用 CreateRoleActivity 提供的方法获取 Intent，并监听返回结果
             val intent = CreateRoleActivity.getIntent(context, agent)
