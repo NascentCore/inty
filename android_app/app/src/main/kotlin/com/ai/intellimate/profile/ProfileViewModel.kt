@@ -25,7 +25,6 @@ import retrofit2.HttpException
 
 /** Profile 页面 ViewModel 负责管理用户创建的 Agents 列表、用户信息等 */
 class ProfileViewModel : BaseVM() {
-
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState = _uiState.asStateFlow()
 
