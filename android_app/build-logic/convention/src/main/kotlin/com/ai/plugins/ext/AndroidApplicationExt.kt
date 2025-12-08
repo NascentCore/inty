@@ -37,9 +37,9 @@ private fun getCommitCount(project: Project): Int {
 /** android application 的gradle相关配置 扩展函数 */
 internal fun ApplicationExtension.commonAppConfig(project: Project) {
     defaultConfig {
-        versionName = ProjectConfig.versionName
+        versionName = ProjectConfig.VERSION_NAME
         versionCode = getCommitCount(project)
-        targetSdk = ProjectConfig.targetVersion
+        targetSdk = ProjectConfig.TARGET_VERSION
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
