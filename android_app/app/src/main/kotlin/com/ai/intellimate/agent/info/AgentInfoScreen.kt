@@ -481,7 +481,10 @@ private fun PhotoAlbumPreviewSection(
     columnCount: Int = UiConfigs.ChatPage.PhotoAlbum.Preview.COLUMN_COUNT,
 ) {
     var previewImage by remember { mutableStateOf<String?>(null) }
-    val displayedImages = images.take(columnCount)
+    // 跟踪当前背景 URL，确保在设置新背景时能正确更新所有卡片
+    var currentBackgroundUrl by remember(agentId) {
+        mutableStateOf<String?>(IntySetting.getChatBackgroundImage(agentId))
+    }
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -539,6 +542,8 @@ private fun PhotoAlbumPreviewSection(
                 onAction = {
                     if (agentId.isNotBlank() && currentImageUrl.isNotBlank()) {
                         IntySetting.setChatBackgroundImage(agentId, currentImageUrl)
+                        // 更新状态，触发所有卡片重新组合以更新检查标记
+                        currentBackgroundUrl = currentImageUrl
                         ToastUtils.showShort(R.string.agent_gallery_background_set_success)
                         previewImage = null
                     }
@@ -554,19 +559,21 @@ private fun AgentGalleryImageCard(
     item: AgentImageGalleryItem,
     agentId: String,
     onPreview: (String) -> Unit,
+    currentBackgroundUrl: String?,
+    onBackgroundChanged: ((String?) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val aspectRatio = if (item.height > 0) item.width.toFloat() / item.height.toFloat() else 1f
     var showResetDialog by remember { mutableStateOf(false) }
-    // 直接计算，不使用 remember，确保在设置变化时能正确更新
-    val isCurrentBackground = IntySetting.getChatBackgroundImage(agentId) == item.imageUrl
+    // 使用传入的 currentBackgroundUrl 进行比较，确保在设置变化时能正确更新
+    val isCurrentBackground = currentBackgroundUrl == item.imageUrl
 
     Box(
         modifier =
             Modifier.width(UiConfigs.CharacterGallery.ImageWidth)
                 .clip(RoundedCornerShape(UiConfigs.CharacterGallery.ImageCornerRadius))
                 .background(Color.White.copy(alpha = 0.08f))
-                .pointerInput(agentId, item.imageUrl, isCurrentBackground) {
+                .pointerInput(agentId, item.imageUrl, currentBackgroundUrl) {
                     detectTapGestures(
                         onTap = { onPreview(item.imageUrl) },
                         onLongPress = {
@@ -623,6 +630,8 @@ private fun AgentGalleryImageCard(
                 TextButton(
                     onClick = {
                         IntySetting.clearChatBackgroundImage(agentId)
+                        // 更新状态，触发所有卡片重新组合以更新检查标记
+                        onBackgroundChanged?.invoke(null)
                         ToastUtils.showShort(R.string.agent_gallery_background_reset_success)
                         showResetDialog = false
                     }
