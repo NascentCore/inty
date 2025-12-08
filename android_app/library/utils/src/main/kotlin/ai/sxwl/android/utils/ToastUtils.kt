@@ -270,20 +270,12 @@ object ToastUtils {
     private fun getString(@StringRes resId: Int): String {
         return try {
             val context = safeAppContext()
-            if (context != null) {
-                context.getString(resId)
-            } else {
-                "Unknown"
-            }
+            context?.getString(resId) ?: "Unknown"
         } catch (e: Exception) {
             Log.e(TAG, "获取字符串资源失败: $resId", e)
             "Unknown"
         }
     }
-
-    /** 获取应用Context */
-    private val context: Context?
-        get() = safeAppContext()
 
     private fun safeAppContext(): Context? = runCatching { Utils.getApp() }.getOrNull()
 }
