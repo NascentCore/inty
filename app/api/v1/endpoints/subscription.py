@@ -187,7 +187,13 @@ async def verify_purchase(
 
 
 # Handles restoration and cancellation from Google Play.
-@router.post("/webhook", tags=[INTERNAL_API_TAG])
+@router.post(
+    "/webhook",
+    include_in_schema=False,
+    summary="Google Play Webhook",
+    description="用于让 Google Play 返回通知给服务器，处理订阅状态变化通知",
+    tags=[INTERNAL_API_TAG],
+)
 async def google_play_webhook(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -328,6 +334,8 @@ def _verify_webhook_signature(body: bytes, signature: str) -> bool:
     "/admin/plans",
     response_model=APIResponse[SubscriptionPlan],
     include_in_schema=False,
+    summary="创建订阅计划（管理员接口）",
+    description="用于创建订阅计划（管理员接口）",
     tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def create_subscription_plan(
