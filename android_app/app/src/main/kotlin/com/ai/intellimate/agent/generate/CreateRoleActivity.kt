@@ -1887,7 +1887,11 @@ private fun CreateButton(isLoading: Boolean, isEditMode: Boolean = false, onClic
                 ),
     ) {
         if (isLoading) {
-            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            CircularProgressIndicator(
+                color = Color.White,
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.5.dp,
+            )
         } else {
             Text(
                 text = if (isEditMode) "Update My IntelliMate" else "Create My IntelliMate",
