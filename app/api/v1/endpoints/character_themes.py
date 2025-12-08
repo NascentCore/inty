@@ -34,6 +34,7 @@ async def get_current_superuser(
     response_model=schemas.APIResponse[character_theme_schemas.CharacterTheme],
     summary="创建角色主题专区",
     description="创建新的角色主题专区（需要管理员权限）",
+    include_in_schema=False,
     tags=[INTY_EVAL_TAG],
 )
 async def create_theme(
@@ -118,6 +119,7 @@ async def get_theme(
     response_model=schemas.APIResponse[character_theme_schemas.CharacterTheme],
     summary="更新角色主题专区",
     description="更新角色主题专区信息（需要管理员权限）",
+    include_in_schema=False,
     tags=[INTY_EVAL_TAG],
 )
 async def update_theme(
@@ -144,6 +146,7 @@ async def update_theme(
     response_model=schemas.APIResponse[dict],
     summary="删除角色主题专区",
     description="删除角色主题专区（需要管理员权限）",
+    include_in_schema=False,
     tags=[INTY_EVAL_TAG],
 )
 async def delete_theme(
@@ -168,6 +171,7 @@ async def delete_theme(
     response_model=schemas.APIResponse[character_theme_schemas.CharacterThemeAgent],
     summary="添加角色到专区",
     description="向指定专区添加角色（需要管理员权限）",
+    include_in_schema=False,
     tags=[INTY_EVAL_TAG],
 )
 async def add_agent_to_theme(
@@ -198,6 +202,7 @@ async def add_agent_to_theme(
     response_model=schemas.APIResponse[dict],
     summary="从专区移除角色",
     description="从指定专区移除角色（需要管理员权限）",
+    include_in_schema=False,
     tags=[INTY_EVAL_TAG],
 )
 async def remove_agent_from_theme(
@@ -227,6 +232,7 @@ async def remove_agent_from_theme(
     response_model=schemas.APIResponse[dict],
     summary="调整角色顺序",
     description="调整专区中角色的顺序（需要管理员权限）",
+    include_in_schema=False,
     tags=[INTY_EVAL_TAG],
 )
 async def reorder_agents(
