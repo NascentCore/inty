@@ -74,9 +74,9 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.vip.VipCenterActivity
+import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 
 // The spacer from the bottom of the chat input to what ever that flows underneath it.
 val ChatInputBottomSpacerHeight = 8.dp
@@ -335,8 +335,7 @@ internal fun ChatPage(
 
                     agentInfo?.let { info ->
                         val storedEnergyPoints = boostState.boostsByAgent[info.id]?.pointsInvested
-                        val fallbackEnergyPoints =
-                            remember(info.id) { Random.nextInt(0, 101) }
+                        val fallbackEnergyPoints = remember(info.id) { Random.nextInt(0, 101) }
                         val displayedEnergyPoints = storedEnergyPoints ?: fallbackEnergyPoints
 
                         ChatTopBar(

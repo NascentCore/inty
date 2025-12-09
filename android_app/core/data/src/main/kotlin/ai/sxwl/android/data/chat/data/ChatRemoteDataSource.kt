@@ -23,16 +23,20 @@ class ChatRemoteDataSource {
                 is HttpResult.Success -> {
                     val messages = result.data.messages ?: emptyList()
                     val messagesCount = messages.size
-                    val messagesPreview = messages.take(3).joinToString(separator = " | ") { msg ->
-                        "[${msg.role}] ${msg.content.take(50)}"
-                    }
+                    val messagesPreview =
+                        messages.take(3).joinToString(separator = " | ") { msg ->
+                            "[${msg.role}] ${msg.content.take(50)}"
+                        }
                     LogUtils.i(
                         "聊天接口数据",
-                        "getMsgs 调用成功: agentId=$agentId, messagesCount=$messagesCount, hasMore=${result.data.hasMore}, preview=$messagesPreview"
+                        "getMsgs 调用成功: agentId=$agentId, messagesCount=$messagesCount, hasMore=${result.data.hasMore}, preview=$messagesPreview",
                     )
                 }
                 is HttpResult.Failure -> {
-                    LogUtils.e("聊天接口数据", "getMsgs 调用失败: agentId=$agentId, error=${result.message}, code=${result.code}")
+                    LogUtils.e(
+                        "聊天接口数据",
+                        "getMsgs 调用失败: agentId=$agentId, error=${result.message}, code=${result.code}",
+                    )
                 }
             }
             result

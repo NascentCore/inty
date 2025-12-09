@@ -249,22 +249,19 @@ class ChatRepositoryImpl(
 
                         LogUtils.i(
                             "聊天接口数据",
-                            "syncLatestMessages 更新消息: agentId=$agentId, updated ${serverMessages.size} messages"
+                            "syncLatestMessages 更新消息: agentId=$agentId, updated ${serverMessages.size} messages",
                         )
                     }
                 }
                 is HttpResult.Failure -> {
                     LogUtils.e(
                         "聊天接口数据",
-                        "syncLatestMessages 失败: agentId=$agentId, error=${result.message}"
+                        "syncLatestMessages 失败: agentId=$agentId, error=${result.message}",
                     )
                 }
             }
         } catch (e: Exception) {
-            LogUtils.e(
-                "聊天接口数据",
-                "syncLatestMessages 异常: agentId=$agentId, exception=${e.message}"
-            )
+            LogUtils.e("聊天接口数据", "syncLatestMessages 异常: agentId=$agentId, exception=${e.message}")
         }
     }
 
