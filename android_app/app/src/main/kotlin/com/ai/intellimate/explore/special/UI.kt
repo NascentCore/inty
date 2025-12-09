@@ -39,16 +39,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -66,8 +65,6 @@ import com.ai.intellimate.ui.components.SmartTagsLayout
 
 /** 主题详情页面配置常量 */
 internal object ThemedDetailConfig {
-    val EventCardHeight = 142.dp
-    val EventCardPadding = 24.dp
     val EventCardCornerRadius = 6.dp
     const val EventDescriptionMaxLines = 4
 
@@ -77,8 +74,6 @@ internal object ThemedDetailConfig {
     val CharacterCardSpacing = 8.dp
     val CharacterCardPadding = 8.dp
     val CharacterCardCornerRadius = 6.dp
-    val ListSpacing = 24.dp
-    val ContentHorizontalPadding = 16.dp
 
     // 横向角色卡片列表配置
     val HorizontalCardListHeight = 242.dp
@@ -93,186 +88,30 @@ internal object ThemedDetailConfig {
 
 /** 事件卡片组件 */
 @Composable
-internal fun EventCard(description: String, isChristmas: Boolean = false) {
-    var isExpanded by remember { mutableStateOf(false) }
-    val rotationAngle by
-    animateFloatAsState(
-        targetValue = if (isExpanded) 180f else 0f,
-        animationSpec = tween(durationMillis = 300),
-        label = "arrowRotation",
-    )
-
-    ConstraintLayout(modifier = Modifier.fillMaxWidth()) {
-        val (
-            christmasBg,
-            cardBg,
-            content,
-        ) = createRefs()
-
-        // 卡片背景层（带边框向内渐变效果）
-        Box(
-            modifier =
-                Modifier.constrainAs(cardBg) {
-                    top.linkTo(christmasBg.top, 20.dp)
-                    bottom.linkTo(christmasBg.bottom)
-                    start.linkTo(parent.start)
-                    end.linkTo(parent.end)
-                    width = Dimension.fillToConstraints
-                    height = Dimension.fillToConstraints
-                }
-        ) {
-
-            // 横向渐变边框（左右边缘向内渐变）
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(
-                            brush =
-                                Brush.horizontalGradient(
-                                    colors =
-                                        listOf(
-                                            Color.White.copy(0.1f),
-                                            Color.Transparent,
-                                            Color.Transparent,
-                                            Color.Transparent,
-                                            Color.Transparent,
-                                            Color.Transparent,
-                                            Color.White.copy(0.1f),
-                                        )
-                                ),
-                            shape = RoundedCornerShape(ThemedDetailConfig.EventCardCornerRadius),
-                        )
-            )
-
-            // 纵向渐变边框（上下边缘向内渐变）
-            Box(
-                modifier =
-                    Modifier
-                        .matchParentSize()
-                        .background(
-                            brush =
-                                Brush.verticalGradient(
-                                    colors =
-                                        listOf(
-                                            Color.White.copy(0.1f),
-                                            Color.Transparent,
-                                            Color.Transparent,
-                                            Color.Transparent,
-                                            Color.Transparent,
-                                            Color.White.copy(0.1f),
-                                        )
-                                ),
-                            shape = RoundedCornerShape(ThemedDetailConfig.EventCardCornerRadius),
-                        )
-            )
-        }
-
-        // 圣诞的装饰
-        Image(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .constrainAs(christmasBg) {
-                        visibility = if (isChristmas) Visibility.Visible else Visibility.Invisible
-                    },
-            painter = painterResource(R.drawable.img_christmas_bg),
-            contentScale = ContentScale.Crop,
-            contentDescription = "",
+internal fun EventCard(
+    description: String,
+    isChristmas: Boolean = false,
+    modifier: Modifier = Modifier,
+) {
+    ThemedEventCard(modifier = modifier.fillMaxWidth(), isChristmas) {
+        ExpandableText(
+            text = description,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 40.dp),
+            collapsedMaxLines = ThemedDetailConfig.EventDescriptionMaxLines,
+            textStyle = TextStyle(
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                color = Color(0xB2FFFFFF),
+                letterSpacing = 0.1.sp,
+            ),
+            buttonPosition = ExpandableTextButtonPosition.TextEnd,
+            iconSize = 24.dp,
+            iconSpacing = 4.dp,
+            iconTint = Color.White,
+            useRotationAnimation = true,
         )
-        // 文本内容层
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(ThemedDetailConfig.EventCardHeight)
-                    .padding(ThemedDetailConfig.EventCardPadding)
-                    .constrainAs(content) { centerVerticallyTo(cardBg) }
-        ) {
-            val density = LocalDensity.current
-            var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
-            // 记录文本是否真的需要展开（只在折叠状态下检测）
-            var hasTextOverflow by remember { mutableStateOf(false) }
-            var textPaddingEnd by remember { mutableIntStateOf(0) }
-            var boxWidth by remember { mutableStateOf(0.dp) }
-
-            // 获取 Box 的宽度
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .onSizeChanged { size ->
-                            boxWidth = with(density) { size.width.toDp() }
-                        }
-            )
-
-            Text(
-                text = description,
-                style =
-                    TextStyle(
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp,
-                        color = Color(0xB2FFFFFF),
-                        letterSpacing = 0.1.sp, // 轻微增加字母间距，改善英文排版
-                    ),
-                maxLines =
-                    if (isExpanded) Int.MAX_VALUE else ThemedDetailConfig.EventDescriptionMaxLines,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(end = textPaddingEnd.dp),
-                onTextLayout = { layoutResult ->
-                    textLayoutResult = layoutResult
-                    // 只在折叠状态下检测是否有 overflow，并保存状态
-                    if (!isExpanded) {
-                        val hasVisualOverflow = layoutResult.hasVisualOverflow
-                        val lineCount = layoutResult.lineCount
-                        hasTextOverflow =
-                            hasVisualOverflow ||
-                                    lineCount > ThemedDetailConfig.EventDescriptionMaxLines
-                        // 为箭头图标留出空间（24dp 图标 + 4dp 间距）
-                        textPaddingEnd = if (hasTextOverflow) 28 else 0
-                    } else {
-                        // 展开状态下不需要留出空间
-                        textPaddingEnd = 0
-                    }
-                },
-            )
-
-            // 箭头图标，定位在最后一行文本的最右端（Box 的右端），而不是紧跟文本
-            // 只有当文本真的需要展开时才显示按钮
-            if (hasTextOverflow && textLayoutResult != null) {
-                val layout = textLayoutResult!!
-                val lastLineIndex = layout.lineCount - 1
-                val lastLineBaseline = layout.getLineBaseline(lastLineIndex)
-
-                // 计算图标位置：位于 Box 的最右端
-                val iconSize = 24.dp
-                val iconOffsetX =
-                    if (boxWidth > 0.dp) {
-                        boxWidth - iconSize
-                    } else {
-                        0.dp
-                    }
-                // 使用基线位置，使图标与文本垂直居中对齐
-                val iconOffsetY =
-                    with(density) {
-                        (lastLineBaseline - 12.sp.toPx()).toDp() // 12sp 是字体大小，用于垂直居中
-                    }
-
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = null,
-                    modifier =
-                        Modifier
-                            .size(iconSize)
-                            .offset(x = iconOffsetX, y = iconOffsetY)
-                            .rotate(rotationAngle)
-                            .noRippleClickable { isExpanded = !isExpanded },
-                    tint = Color.White,
-                )
-            }
-        }
     }
 }
 
@@ -284,6 +123,7 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .height(ThemedDetailConfig.CharacterCardHeight)
+                .padding(horizontal = 16.dp)
                 .background(
                     color = Color(0x991C1523),
                     shape = RoundedCornerShape(ThemedDetailConfig.CharacterCardCornerRadius),
@@ -646,9 +486,7 @@ private fun PreviewThemedCard() {
         )
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         ThemedCharacterCard(agent = previewAgent, onClick = {})
@@ -743,22 +581,262 @@ private fun PreviewHorizontalAgentCardList() {
 //region 使用BlurBgCard
 
 @Composable
-fun ThemedEventCard(modifier: Modifier = Modifier) {
-    BlurBgCard(modifier) {
-        Image(
+fun ThemedEventCard(
+    modifier: Modifier = Modifier,
+    isChristmas: Boolean = false,
+    contentAlignment: Alignment = Alignment.Center,
+    content: @Composable () -> Unit
+) {
+    ConstraintLayout(modifier.padding(top = 16.dp)) {
+        val (leftPine, rightPine, leftSnow, rightSnow, blurBg) = createRefs()
+
+        BlurBgCard(
             modifier = Modifier
-                .fillMaxWidth().clipToBounds(),
-            painter = painterResource(R.drawable.img_christmas_bg),
-            contentScale = ContentScale.Crop,
-            contentDescription = "",
+                .fillMaxWidth()
+                .constrainAs(blurBg) {
+                    top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
+                },
+            contentAlignment,
+            content = { content() }
         )
+
+        if (isChristmas) {
+            Image(
+                painter = painterResource(R.drawable.img_pine_left),
+                contentDescription = null,
+                modifier = Modifier.constrainAs(leftPine) {
+                    start.linkTo(blurBg.start)
+                    top.linkTo(blurBg.top)
+                })
+
+            Image(
+                painter = painterResource(R.drawable.img_snow_left),
+                contentDescription = null,
+                modifier = Modifier.constrainAs(leftSnow) {
+                    start.linkTo(leftPine.start)
+                    top.linkTo(leftPine.top, (-16).dp)
+                })
+            Image(
+                painter = painterResource(R.drawable.img_pine_right),
+                contentDescription = null,
+                modifier = Modifier.constrainAs(rightPine) {
+                    end.linkTo(blurBg.end)
+                    top.linkTo(blurBg.top)
+                })
+            Image(
+                painter = painterResource(R.drawable.img_snow_right),
+                contentDescription = null,
+                modifier = Modifier.constrainAs(rightSnow) {
+                    end.linkTo(rightPine.end)
+                    top.linkTo(rightPine.top, (-16).dp)
+                })
+        }
+
     }
+
 }
 
 
 @Preview
 @Composable
 private fun PreviewThemedEventCard() {
-    ThemedEventCard(modifier = Modifier.fillMaxWidth().height(170.dp))
+    Column {
+        ThemedEventCard(
+            modifier = Modifier.fillMaxWidth(),
+            isChristmas = true,
+            content = {
+                ExpandableText(
+                    text = "Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 40.dp),
+                    textStyle = TextStyle(color = Color.White)
+                )
+            }
+        )
+        ThemedEventCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(170.dp),
+            content = { Text("哈哈哈哈🤣", color = Color.White) }
+        )
+    }
 }
+
+/**
+ * 可折叠文本组件
+ * 默认最多显示指定行数，超出部分显示省略号，并在文本末尾显示展开/收起按钮
+ *
+ * @param text 文本内容（String 或 AnnotatedString）
+ * @param modifier 修饰符
+ * @param collapsedMaxLines 折叠状态下最大显示行数，默认4行
+ * @param textStyle 文本样式
+ * @param buttonPosition 按钮位置，默认为文本末尾（TextEnd），可选右下角（BottomEnd）
+ * @param iconSize 图标大小，默认24.dp
+ * @param iconSpacing 图标与文本的间距，默认4.dp
+ * @param iconTint 图标颜色，默认白色
+ * @param useRotationAnimation 是否使用旋转动画，默认true（使用KeyboardArrowDown图标旋转），false则使用不同的上下箭头图标
+ */
+@Composable
+private fun ExpandableText(
+    text: String,
+    modifier: Modifier = Modifier,
+    collapsedMaxLines: Int = 4,
+    textStyle: TextStyle = TextStyle.Default,
+    buttonPosition: ExpandableTextButtonPosition = ExpandableTextButtonPosition.TextEnd,
+    iconSize: androidx.compose.ui.unit.Dp = 24.dp,
+    iconSpacing: androidx.compose.ui.unit.Dp = 4.dp,
+    iconTint: Color = Color.White,
+    useRotationAnimation: Boolean = true,
+) {
+    ExpandableText(
+        text = AnnotatedString(text),
+        modifier = modifier,
+        collapsedMaxLines = collapsedMaxLines,
+        textStyle = textStyle,
+        buttonPosition = buttonPosition,
+        iconSize = iconSize,
+        iconSpacing = iconSpacing,
+        iconTint = iconTint,
+        useRotationAnimation = useRotationAnimation,
+    )
+}
+
+@Composable
+private fun ExpandableText(
+    text: AnnotatedString,
+    modifier: Modifier = Modifier,
+    collapsedMaxLines: Int = 4,
+    textStyle: TextStyle = TextStyle.Default,
+    buttonPosition: ExpandableTextButtonPosition = ExpandableTextButtonPosition.TextEnd,
+    iconSize: androidx.compose.ui.unit.Dp = 24.dp,
+    iconSpacing: androidx.compose.ui.unit.Dp = 4.dp,
+    iconTint: Color = Color.White,
+    useRotationAnimation: Boolean = true,
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    var hasTextOverflow by remember { mutableStateOf(false) }
+    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    var textPaddingEnd by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+    val rotationAngle by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "arrowRotation",
+    )
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = text,
+            style = textStyle,
+            maxLines = if (isExpanded) Int.MAX_VALUE else collapsedMaxLines,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = textPaddingEnd.dp),
+            onTextLayout = { layoutResult ->
+                textLayoutResult = layoutResult
+                if (!isExpanded) {
+                    val hasVisualOverflow = layoutResult.hasVisualOverflow
+                    val lineCount = layoutResult.lineCount
+                    hasTextOverflow =
+                        hasVisualOverflow || lineCount > collapsedMaxLines
+                    textPaddingEnd =
+                        if (hasTextOverflow && buttonPosition == ExpandableTextButtonPosition.TextEnd) {
+                            (iconSize + iconSpacing).value.toInt()
+                        } else {
+                            0
+                        }
+                } else {
+                    textPaddingEnd = 0
+                }
+            },
+        )
+
+        if (hasTextOverflow && textLayoutResult != null) {
+            when (buttonPosition) {
+                ExpandableTextButtonPosition.TextEnd -> {
+                    val layout = textLayoutResult!!
+                    val lastLineIndex = layout.lineCount - 1
+                    val lastLineBaseline = layout.getLineBaseline(lastLineIndex)
+                    val lastLineEnd = layout.getLineEnd(lastLineIndex)
+                    val lastLineEndX =
+                        layout.getHorizontalPosition(lastLineEnd, usePrimaryDirection = true)
+
+                    val iconOffsetX = with(density) {
+                        lastLineEndX.toDp() + iconSpacing
+                    }
+                    val iconOffsetY = with(density) {
+                        (lastLineBaseline - iconSize.toPx() / 2).toDp()
+                    }
+
+                    if (useRotationAnimation) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(iconSize)
+                                .offset(x = iconOffsetX, y = iconOffsetY)
+                                .rotate(rotationAngle)
+                                .noRippleClickable { isExpanded = !isExpanded },
+                            tint = iconTint,
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(
+                                if (isExpanded) R.drawable.ic_arrow_up else R.drawable.ic_arrow_down
+                            ),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(iconSize)
+                                .offset(x = iconOffsetX, y = iconOffsetY)
+                                .noRippleClickable { isExpanded = !isExpanded },
+                            tint = iconTint,
+                        )
+                    }
+                }
+
+                ExpandableTextButtonPosition.BottomEnd -> {
+                    if (useRotationAnimation) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(iconSize)
+                                .align(Alignment.BottomEnd)
+                                .rotate(rotationAngle)
+                                .noRippleClickable { isExpanded = !isExpanded },
+                            tint = iconTint,
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(
+                                if (isExpanded) R.drawable.ic_arrow_up else R.drawable.ic_arrow_down
+                            ),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(iconSize)
+                                .align(Alignment.BottomEnd)
+                                .noRippleClickable { isExpanded = !isExpanded },
+                            tint = iconTint,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 展开按钮位置枚举
+ */
+enum class ExpandableTextButtonPosition {
+    /** 按钮定位在文本最后一行的末尾（紧跟在省略号后） */
+    TextEnd,
+
+    /** 按钮定位在容器的右下角 */
+    BottomEnd,
+}
+
 //endregion
