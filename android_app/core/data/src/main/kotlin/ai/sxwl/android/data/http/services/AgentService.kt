@@ -5,12 +5,14 @@ import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.data.http.models.toAgentInfo
 import ai.sxwl.android.utils.LogUtils
+import com.squareup.moshi.JsonClass
 import kotlinx.coroutines.withContext
 
 /** 智能体服务 封装所有智能体相关的API调用 替换原有的 IAgentApi */
 object AgentService {
 
     /** 主题专区数据项 */
+    @JsonClass(generateAdapter = true)
     data class CharacterThemeItem(
         val id: String,
         val name: String,
