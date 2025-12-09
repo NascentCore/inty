@@ -1814,7 +1814,9 @@ private fun AvatarUploadSection(
                                             Icon(
                                                 imageVector = Icons.Filled.Close,
                                                 contentDescription =
-                                                    stringResource(R.string.remove_background_image),
+                                                    stringResource(
+                                                        R.string.remove_background_image
+                                                    ),
                                                 tint = Color.White,
                                                 modifier = Modifier.size(14.dp),
                                             )

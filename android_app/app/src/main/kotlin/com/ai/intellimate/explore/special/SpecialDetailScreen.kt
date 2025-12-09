@@ -35,14 +35,8 @@ fun ThemedDetailScreen(
     val agents by viewModel.agents.collectAsState()
     val isChristmas by viewModel.isChristmas.collectAsState()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(HeartColor.primaryColor)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
+    Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
+        Column(modifier = Modifier.fillMaxSize()) {
             HeartTopAppBar(
                 title = themeTitle,
                 onBack = onBack,
@@ -55,7 +49,7 @@ fun ThemedDetailScreen(
                             Shadow(
                                 color = Color(0xFF8C8992),
                                 offset = Offset(5f, 3f),
-                                blurRadius = 15f
+                                blurRadius = 15f,
                             ),
                     ),
             )
@@ -65,12 +59,7 @@ fun ThemedDetailScreen(
                 contentPadding = PaddingValues(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                item {
-                    EventCard(
-                        description = eventDescription,
-                        isChristmas = isChristmas,
-                    )
-                }
+                item { EventCard(description = eventDescription, isChristmas = isChristmas) }
 
                 items(agents) { agent ->
                     ThemedCharacterCard(agent = agent, onClick = { onClickAgent(agent) })
