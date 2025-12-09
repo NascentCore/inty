@@ -2,6 +2,7 @@ package com.ai.intellimate.chat
 
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.firebase.FirebaseManager
 import android.content.Context
@@ -144,6 +145,7 @@ class ChatActivity : BaseActivity() {
         super.ConfigComposeUI()
         val agentInfo by chatViewModel.agentInfo.collectAsState()
         val chatMessages by chatViewModel.msgs.collectAsState()
+        val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
         val hasLoadingMessage =
             chatMessages.any { msg ->
                 val hasGeneratedImage = msg.hasGeneratedImage()
@@ -161,6 +163,7 @@ class ChatActivity : BaseActivity() {
                 isLoading = hasLoadingMessage,
                 isCurrentPage = true,
                 modifier = Modifier.fillMaxSize(),
+                enableAnimatedBackground = autoPlayAnimation,
             )
 
             ChatPage(

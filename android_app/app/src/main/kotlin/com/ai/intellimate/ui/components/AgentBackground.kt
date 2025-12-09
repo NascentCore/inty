@@ -56,6 +56,7 @@ fun AgentBackground(
     showGradients: Boolean = true,
     isLoading: Boolean = false,
     isCurrentPage: Boolean = true,
+    enableAnimatedBackground: Boolean = true,
     onPlayComplete: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -66,7 +67,12 @@ fun AgentBackground(
     val contentScale = ContentScale.Crop
 
     val isIntelliMateAgent = AgentConstants.isIntelliMateAgent(agentInfo?.id, agentInfo?.name)
-    val backgroundAnimatedUrl = agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
+    val backgroundAnimatedUrl =
+        if (enableAnimatedBackground) {
+            agentInfo?.backgroundAnimatedUrl?.takeIf { it.isNotBlank() }
+        } else {
+            null
+        }
 
     // 检查是否有自定义背景图片（仅用于静态背景，不覆盖动画背景）
     // 使用状态变量来跟踪背景 URL，并通过 LaunchedEffect 定期检查更新

@@ -82,6 +82,9 @@ fun ChatSettingsDrawer(
     // Auto-play voice messages全局设置 - 使用SettingStateManager的Flow来监听设置变化
     val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState()
 
+    // Auto-play animated background全局设置
+    val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
+
     // Show scene action button全局设置 - 使用SettingStateManager的Flow来监听设置变化
     val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
     val chatFontSize by SettingStateManager.chatFontSizeFlow.collectAsState()
@@ -339,6 +342,36 @@ fun ChatSettingsDrawer(
                                     ),
                                 )
                                 SettingStateManager.updateAutoPlayAudio(enabled)
+                            },
+                        )
+
+                        IntelliMateDivider()
+
+                        // Auto-play animated background开关
+                        SettingsSwitchItem(
+                            item =
+                                SettingsItemData.SwitchItemData(
+                                    title =
+                                        stringResource(
+                                            R.string.chat_settings_auto_play_animation
+                                        ),
+                                    checked = autoPlayAnimation,
+                                ),
+                            fontLight = true,
+                            isInGroup = true,
+                            horizontalPadding = horizontalPadding,
+                            openedIconRes = R.drawable.opened,
+                            closedIconRes = R.drawable.closed,
+                            onCheckChanged = { enabled ->
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "toggle_auto_play_animation",
+                                        "enabled" to enabled,
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                SettingStateManager.updateAutoPlayAnimation(enabled)
                             },
                         )
 
