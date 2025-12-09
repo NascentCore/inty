@@ -156,6 +156,9 @@ fun ExploreContent(
             initialFirstVisibleItemScrollOffset = savedOffset,
         )
 
+    // 标记是否正在恢复滚动位置，用于防止在恢复期间保存错误的位置
+    var isRestoringScrollPosition by remember { mutableStateOf(false) }
+
     // 当缓存加载完成且themeItemCount确定后，恢复滚动位置
     // 这确保了在characterThemes加载完成后，能够正确恢复之前的位置（包括theme项的位置）
     // 使用基于isCacheLoaded和themeItemCount的key，确保每次这些值变化时都重新评估是否需要恢复位置
@@ -180,13 +183,28 @@ fun ExploreContent(
         // 如果保存的位置与当前显示的位置不一致，需要恢复位置
         // 注意：这里不检查savedGridIndex是否为0，因为0也可能是有效的位置（第一个theme的位置或第一个agent的位置）
         if (savedGridIndex != currentIndex || savedOffset != currentOffset) {
+            // 在延迟之前捕获保存的位置值，避免在延迟期间响应式状态被更新导致恢复错误的位置
+            val targetGridIndex = savedGridIndex
+            val targetOffset = savedOffset
+            // 设置恢复标志，防止在恢复期间保存位置
+            isRestoringScrollPosition = true
             // 添加小延迟确保LazyVerticalGrid已经布局完成
             delay(50)
             // scrollToItem 会自动处理超出范围的索引（会滚动到最接近的有效索引）
             gridState.scrollToItem(
-                index = savedGridIndex,
-                scrollOffset = savedOffset,
+                index = targetGridIndex,
+                scrollOffset = targetOffset,
             )
+            // 等待滚动完成后再清除恢复标志
+            // 轮询检查滚动状态，直到滚动完成（最多等待1秒，防止无限等待）
+            var waitTime = 0L
+            val maxWaitTime = 1000L // 最多等待1秒
+            while (gridState.isScrollInProgress && waitTime < maxWaitTime) {
+                delay(16) // 约一帧的时间
+                waitTime += 16
+            }
+            // 滚动已完成或超时，清除恢复标志
+            isRestoringScrollPosition = false
         }
     }
 
@@ -319,6 +337,10 @@ fun ExploreContent(
                     hasUserScrolled = true // 标记用户已主动滚动
                 } else {
                     // 滚动停止时保存位置
+                    // 如果正在恢复滚动位置，跳过保存操作，避免覆盖正确的保存位置
+                    if (isRestoringScrollPosition) {
+                        return@collect
+                    }
                     // 直接保存网格索引，可以区分theme项和agent项
                     vm.saveScrollPosition(
                         gridIndex = firstVisibleItemIndex,
