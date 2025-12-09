@@ -132,14 +132,20 @@ class ImageGenerationService:
         return similarity
 
     async def get_generated_images_for_agent(
-        self, db: AsyncSession, agent_id: str
+        self,
+        db: AsyncSession,
+        agent_id: str,
+        exclude_user_id: Optional[str] = None,
+        only_user_id: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
-        查询指定agent的所有已生成图片（从resources表查询）
+        查询指定agent的已生成图片（从resources表查询）
 
         Args:
             db: 数据库会话
             agent_id: Agent ID
+            exclude_user_id: 排除指定用户的图片（用于优先匹配其他用户）
+            only_user_id: 仅查询指定用户的图片
 
         Returns:
             包含图片信息的列表，每个元素包含：
@@ -148,20 +154,28 @@ class ImageGenerationService:
             - width: 图片宽度
             - height: 图片高度
             - format: 图片格式
+            - user_id: 生成该图片的用户ID
             - generated_at: 生成时间（created_at）
         """
         try:
             from app import models
 
-            # 使用ORM查询resources表
-            # 注意：JSON字段的嵌套键检查在代码中进行，而非SQL中
+            # 构建查询条件
+            conditions = [
+                models.Resource.agent_id == agent_id,
+                models.Resource.type == ResourceType.IMAGE,
+                models.Resource.resource_metadata.isnot(None),
+            ]
+
+            if exclude_user_id:
+                conditions.append(models.Resource.user_id != exclude_user_id)
+
+            if only_user_id:
+                conditions.append(models.Resource.user_id == only_user_id)
+
             query = (
                 select(models.Resource)
-                .where(
-                    models.Resource.agent_id == agent_id,
-                    models.Resource.type == ResourceType.IMAGE,
-                    models.Resource.resource_metadata.isnot(None),
-                )
+                .where(*conditions)
                 .order_by(models.Resource.created_at.desc())
             )
 
@@ -196,6 +210,7 @@ class ImageGenerationService:
                             "width": width,
                             "height": height,
                             "format": format_str,
+                            "user_id": resource.user_id,
                             "generated_at": (
                                 resource.created_at.isoformat()
                                 if resource.created_at
@@ -209,7 +224,10 @@ class ImageGenerationService:
                     )
                     continue
 
-            logger.debug(f"查询到 Agent {agent_id} 的 {len(images)} 张已生成图片")
+            logger.debug(
+                f"查询到 Agent {agent_id} 的 {len(images)} 张已生成图片"
+                f"（exclude_user_id={exclude_user_id}, only_user_id={only_user_id}）"
+            )
             return images
 
         except Exception as e:
@@ -219,54 +237,100 @@ class ImageGenerationService:
             traceback.print_exc()
             return []
 
+    def _find_best_match_in_images(
+        self, images: List[Dict[str, Any]], current_prompt: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        在图片列表中找到最匹配的图片
+
+        Args:
+            images: 图片列表
+            current_prompt: 当前提示词
+
+        Returns:
+            最相似的图片，如果没有匹配则返回None
+        """
+        if not images:
+            return None
+
+        best_match = None
+        best_similarity = 0.0
+
+        for image in images:
+            saved_prompt = image.get("prompt", "")
+            if not saved_prompt:
+                continue
+
+            similarity = self.calculate_prompt_similarity(current_prompt, saved_prompt)
+            if similarity > best_similarity:
+                best_similarity = similarity
+                best_match = image.copy()
+                best_match["similarity"] = similarity
+
+        if best_match and best_similarity > 0:
+            return best_match
+        return None
+
     async def find_most_similar_image(
-        self, db: AsyncSession, agent_id: str, current_prompt: str
+        self,
+        db: AsyncSession,
+        agent_id: str,
+        current_prompt: str,
+        current_user_id: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         根据提示词相似度找到最匹配的图片
+        优先匹配其他用户生成的图片，其次匹配当前用户的图片
 
         Args:
             db: 数据库会话
             agent_id: Agent ID
             current_prompt: 当前提示词
+            current_user_id: 当前用户ID（用于优先级匹配）
 
         Returns:
             最相似的图片信息，如果未找到则返回None
         """
         try:
-            # 获取所有已生成的图片
-            images = await self.get_generated_images_for_agent(db, agent_id)
-
-            if not images:
-                logger.debug(f"Agent {agent_id} 没有已生成的图片")
-                return None
-
-            # 计算相似度并找到最相似的图片
-            best_match = None
-            best_similarity = 0.0
-
-            for image in images:
-                saved_prompt = image.get("prompt", "")
-                if not saved_prompt:
-                    continue
-
-                similarity = self.calculate_prompt_similarity(
-                    current_prompt, saved_prompt
+            # 第一步：优先匹配其他用户的图片
+            if current_user_id:
+                other_users_images = await self.get_generated_images_for_agent(
+                    db, agent_id, exclude_user_id=current_user_id
                 )
-                if similarity > best_similarity:
-                    best_similarity = similarity
-                    best_match = image.copy()
-                    best_match["similarity"] = similarity
+                if other_users_images:
+                    best_match = self._find_best_match_in_images(
+                        other_users_images, current_prompt
+                    )
+                    if best_match:
+                        logger.info(
+                            f"找到其他用户的匹配图片，相似度: {best_match.get('similarity', 0):.3f}, "
+                            f"user_id: {best_match.get('user_id')}"
+                        )
+                        return best_match
 
-            if best_match and best_similarity > 0:
-                logger.info(
-                    f"找到最相似的图片，相似度: {best_similarity:.3f}, "
-                    f"image_url: {best_match.get('image_url', 'N/A')}"
+            # 第二步：匹配当前用户的图片
+            if current_user_id:
+                current_user_images = await self.get_generated_images_for_agent(
+                    db, agent_id, only_user_id=current_user_id
                 )
-                return best_match
             else:
-                logger.debug(f"未找到相似度大于0的图片")
-                return None
+                # 如果没有current_user_id，查询所有图片
+                current_user_images = await self.get_generated_images_for_agent(
+                    db, agent_id
+                )
+
+            if current_user_images:
+                best_match = self._find_best_match_in_images(
+                    current_user_images, current_prompt
+                )
+                if best_match:
+                    logger.info(
+                        f"找到当前用户的匹配图片，相似度: {best_match.get('similarity', 0):.3f}"
+                    )
+                    return best_match
+
+            logger.debug(f"Agent {agent_id} 没有匹配的图片")
+            return None
 
         except Exception as e:
             logger.error(f"查找最相似图片失败: {str(e)}")

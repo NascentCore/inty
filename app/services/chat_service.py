@@ -1224,6 +1224,7 @@ async def _try_match_existing_image(
 ) -> Optional[schemas.ChatImageGenerationResponse]:
     """
     尝试匹配已生成的图片
+    优先匹配其他用户生成的图片，其次匹配当前用户的图片
 
     Args:
         db: 数据库会话
@@ -1244,19 +1245,22 @@ async def _try_match_existing_image(
     try:
         logger.info(
             f"图片生成失败（{'网络错误' if is_network_error else '安全过滤器'}），"
-            f"尝试匹配已生成图片 - Agent ID: {agent_id}"
+            f"尝试匹配已生成图片 - Agent ID: {agent_id}, User ID: {user_id}"
         )
 
         similar_image = await image_generation_service.find_most_similar_image(
             db=db,
             agent_id=agent_id,
             current_prompt=current_prompt,
+            current_user_id=user_id,
         )
 
         if similar_image:
+            matched_user_id = similar_image.get("user_id")
+            is_other_user = matched_user_id != user_id
             logger.info(
                 f"找到匹配图片，相似度: {similar_image.get('similarity', 0):.3f}, "
-                f"image_url: {similar_image.get('image_url', 'N/A')}"
+                f"来自{'其他用户' if is_other_user else '当前用户'}: {matched_user_id}"
             )
 
             # 获取GCS URI并转换为CDN URL
@@ -1274,6 +1278,7 @@ async def _try_match_existing_image(
                     "generated_at": datetime.utcnow().isoformat(),
                     "is_matched": True,
                     "similarity": similar_image.get("similarity", 0),
+                    "matched_from_user_id": matched_user_id,
                     "matched_from_image_url": gcs_uri,
                 }
             }
@@ -1298,6 +1303,8 @@ async def _try_match_existing_image(
                         "success": True,
                         "is_matched": True,
                         "similarity": similar_image.get("similarity", 0),
+                        "matched_from_user_id": matched_user_id,
+                        "is_from_other_user": is_other_user,
                         "session_id": session_id,
                         "message_id": message_id,
                     },
