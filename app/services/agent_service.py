@@ -1013,11 +1013,20 @@ async def update_agent(
 
         # 检查是否需要重新生成开场白语音
         update_data = agent_in.model_dump(exclude_unset=True)
+        energy_points_delta = update_data.pop("energy_points", None)
+        if energy_points_delta is not None and energy_points_delta <= 0:
+            raise HTTPException(
+                status_code=400, detail="energy_points must be a positive integer"
+            )
         should_regenerate_voice = "opening" in update_data or "voice_id" in update_data
 
         update_data = process_agent_image_urls(update_data)
 
         _update_agent_in_db(update_data, db_agent)
+
+        if energy_points_delta:
+            current_points = db_agent.points or 0
+            db_agent.points = current_points + energy_points_delta
 
         # 确保在异步上下文中调用 flag_modified
         # 在 _update_agent_in_db() 调用 flag_modified 会报 MissingGreenlet 错误

@@ -283,3 +283,41 @@ def test_recommend_agents_energy_points_sorting(
         # 清理：删除创建的 agents
         for agent_id in agent_ids:
             integration_client.delete_agent(agent_id)
+
+
+def test_update_agent_adds_energy_points(
+    integration_client: TestClient, db_session
+):
+    """验证用户可以通过更新接口为任意角色累计能量点数"""
+    agent_id = integration_client.create_agent(
+        name="Energy Points Test Agent", visibility="PUBLIC"
+    )
+
+    try:
+        first_response = integration_client.client.put(
+            f"{integration_client.base_url}/api/v1/ai/agents/{agent_id}",
+            json={"energy_points": 25},
+        )
+        assert (
+            first_response.status_code == 200
+        ), f"Failed to add energy points: {first_response.text}"
+
+        db_session.expire_all()
+        agent = db_session.query(Agent).filter(Agent.id == agent_id).first()
+        assert agent is not None, "Agent should exist after energy update"
+        assert agent.points == 25, f"Expected 25 points, got {agent.points}"
+
+        second_response = integration_client.client.put(
+            f"{integration_client.base_url}/api/v1/ai/agents/{agent_id}",
+            json={"energy_points": 10},
+        )
+        assert (
+            second_response.status_code == 200
+        ), f"Failed to add more energy points: {second_response.text}"
+
+        db_session.expire_all()
+        agent = db_session.query(Agent).filter(Agent.id == agent_id).first()
+        assert agent.points == 35, f"Expected 35 points, got {agent.points}"
+
+    finally:
+        integration_client.delete_agent(agent_id)
