@@ -116,6 +116,25 @@ object IntySetting {
         curUserSetting.putBoolean("user_set_auto_play_voice", true)
     }
 
+    /** 自动播放背景动画（全局设置，默认开启） */
+    fun setAutoPlayAnimation(enabled: Boolean) {
+        curUserSetting.putBoolean("auto_play_animation", enabled)
+    }
+
+    fun isAutoPlayAnimation(): Boolean {
+        return curUserSetting.decodeBool("auto_play_animation", true)
+    }
+
+    /** 检查用户是否手动设置过 Auto Play Animation */
+    fun hasUserSetAutoPlayAnimation(): Boolean {
+        return curUserSetting.decodeBool("user_set_auto_play_animation", false)
+    }
+
+    /** 标记用户已手动设置过 Auto Play Animation */
+    fun markUserSetAutoPlayAnimation() {
+        curUserSetting.putBoolean("user_set_auto_play_animation", true)
+    }
+
     /** 显示场景动作输入按钮（全局设置，默认关闭） */
     fun setShowSceneActionButton(show: Boolean) {
         curUserSetting.putBoolean("show_scene_action_button", show)

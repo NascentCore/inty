@@ -21,6 +21,10 @@ object SettingStateManager {
     private val _autoPlayAudioFlow = MutableStateFlow(IntySetting.isAutoPlayAudio())
     val autoPlayAudioFlow: StateFlow<Boolean> = _autoPlayAudioFlow.asStateFlow()
 
+    // 自动播放背景动画状态
+    private val _autoPlayAnimationFlow = MutableStateFlow(IntySetting.isAutoPlayAnimation())
+    val autoPlayAnimationFlow: StateFlow<Boolean> = _autoPlayAnimationFlow.asStateFlow()
+
     // 显示场景动作输入按钮状态
     private val _showSceneActionButtonFlow = MutableStateFlow(IntySetting.isShowSceneActionButton())
     val showSceneActionButtonFlow: StateFlow<Boolean> = _showSceneActionButtonFlow.asStateFlow()
@@ -98,12 +102,16 @@ object SettingStateManager {
                 _autoPlayAudioFlow.value = IntySetting.isAutoPlayAudio()
             }
 
+            // 自动播放背景动画暂不依赖 Remote Config，直接使用本地存储值
+            _autoPlayAnimationFlow.value = IntySetting.isAutoPlayAnimation()
+
             initialized = true
         } catch (e: Exception) {
             LogUtils.e("SettingStateManager", "从 Remote Config 初始化失败: ${e.message}", e)
             // 初始化失败时，使用本地存储的当前值（如果有）或默认值
             _showKeepTalkingFlow.value = IntySetting.isShowKeepTalking()
             _autoPlayAudioFlow.value = IntySetting.isAutoPlayAudio()
+            _autoPlayAnimationFlow.value = IntySetting.isAutoPlayAnimation()
         }
     }
 
@@ -119,6 +127,13 @@ object SettingStateManager {
         IntySetting.setAutoPlayAudio(enabled)
         IntySetting.markUserSetAutoPlayVoice()
         _autoPlayAudioFlow.value = enabled
+    }
+
+    /** 更新自动播放背景动画状态 */
+    fun updateAutoPlayAnimation(enabled: Boolean) {
+        IntySetting.setAutoPlayAnimation(enabled)
+        IntySetting.markUserSetAutoPlayAnimation()
+        _autoPlayAnimationFlow.value = enabled
     }
 
     /** 更新显示场景动作输入按钮状态 */
