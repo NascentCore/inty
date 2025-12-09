@@ -70,6 +70,7 @@ class ModifyProfileViewModel : BaseVM() {
             EditKey.Persona -> {
                 _userProfile.value = _userProfile.value.copy(description = editValue)
             }
+            EditKey.Preference,
             EditKey.None -> {}
         }
     }
@@ -97,6 +98,7 @@ class ModifyProfileViewModel : BaseVM() {
                         hasChanged = (original.description ?: "") != editValue
                     }
 
+                    EditKey.Preference,
                     EditKey.None -> {
                         return@launchBackground
                     }
@@ -114,6 +116,7 @@ class ModifyProfileViewModel : BaseVM() {
                         EditKey.Name -> current.copy(nickname = editValue)
                         EditKey.Pronouns -> current.copy(gender = editValue)
                         EditKey.Persona -> current.copy(description = editValue)
+                        EditKey.Preference,
                         EditKey.None -> current
                     }
                 _userProfile.value = updatedProfile

@@ -62,6 +62,7 @@ enum class EditKey {
     Name,
     Pronouns,
     Persona,
+    Preference,
 }
 
 /** 编辑类型显示名称扩展 */
@@ -72,6 +73,7 @@ private fun EditKey.toDisplayName(): String {
         EditKey.Name -> stringResource(R.string.str_name)
         EditKey.Pronouns -> stringResource(R.string.str_pronouns)
         EditKey.Persona -> stringResource(R.string.str_persona)
+        EditKey.Preference -> stringResource(R.string.chat_settings_preference_title)
     }
 }
 
@@ -267,6 +269,14 @@ private fun EditContent(editKey: EditKey, editValue: String, onValueChange: (Str
 
         EditKey.Pronouns -> {
             PronounsEditField(value = editValue, onValueChange = onValueChange)
+        }
+
+        EditKey.Preference -> {
+            NameEditField(
+                value = editValue,
+                onValueChange = onValueChange,
+                placeholder = stringResource(R.string.chat_settings_preference_hint),
+            )
         }
 
         EditKey.None -> {
