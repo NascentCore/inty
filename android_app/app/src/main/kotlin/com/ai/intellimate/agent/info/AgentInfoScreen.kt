@@ -385,25 +385,6 @@ internal fun AiAgentInfoScreen(
                             }
 
                             Spacer(Modifier.height(12.dp))
-                            AgentSpacerLine()
-                            Spacer(Modifier.height(10.dp))
-                            Text(
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                text = stringResource(R.string.opening),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White,
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                text = agent.opening,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Light,
-                                color = Color.White,
-                                maxLines = 3,
-                                overflow = TextOverflow.Ellipsis,
-                            )
                         }
                         if (galleryItems.isNotEmpty()) {
                             Spacer(Modifier.height(16.dp))
