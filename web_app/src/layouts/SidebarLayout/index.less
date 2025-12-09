@@ -1,40 +1,33 @@
 @import '@/styles/variables.less';
 
 .sidebar-layout-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
+  position: relative;
 }
 
 .sidebar-layout {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
+  position: relative;
   background: @dark-bg-primary;
-  min-height: 0; // 允许 flex 子元素缩小
 
   // 左侧边栏
   .sidebar-layout-aside {
+    position: fixed;
     width: 280px;
-    background: @dark-bg-secondary;
-    color: @dark-text-primary;
-    flex-shrink: 0;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1000;
     display: flex;
     flex-direction: column;
+    background: @dark-bg-secondary;
+    color: @dark-text-primary;
     box-shadow: none;
     border-right: 1px solid @dark-border-color;
-    overflow: hidden;
   }
 
   // 右侧主体内容
   .sidebar-layout-main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    padding-left: 280px;
     background: @dark-bg-primary;
-    min-height: 0; // 允许 flex 子元素缩小
 
     .main-content {
       flex: 1;
