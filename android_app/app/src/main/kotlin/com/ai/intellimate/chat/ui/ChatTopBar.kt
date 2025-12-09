@@ -111,7 +111,7 @@ fun ChatTopBar(
 
             Spacer(modifier = Modifier.width(6.dp))
 
-            val showPoints = earnedPoints != null && earnedPoints > 0
+            val showPoints = earnedPoints != null
 
             Column {
                 if (showPoints) {
