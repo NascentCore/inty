@@ -2,6 +2,9 @@ package com.ai.intellimate.vip
 
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -30,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +42,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import com.ai.intellimate.MainActivity
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.AutoRenewalNotice
 import com.ai.intellimate.ui.components.EmptyPlanState
@@ -68,14 +74,27 @@ private fun SubscriptionDescriptionText(text: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VipCenterContent(
-    onClose: () -> Unit,
-    onPurchase: () -> Unit,
+    navController: NavController,
+//    onClose: () -> Unit,
+//    onPurchase: () -> Unit,
     viewModel: VipCenterViewModel = viewModel(),
 ) {
     val plans by viewModel.plansFlow.collectAsState()
     val selectedPlanIndex by viewModel.selectedPlanIndex.collectAsState()
     val vipStatus by viewModel.vipStatusFlow.collectAsState()
     val isPurchasing by viewModel.isPurchasing.collectAsState()
+
+    val context = LocalContext.current
+    // 通过扩展函数获取 Activity
+    val activity = context.findActivity()
+    fun onPurchase() {
+        if (activity is MainActivity) {
+            viewModel.purchaseSelectedPlan(activity)
+        }
+    }
+    fun onClose() {
+        navController.popBackStack()
+    }
 
     // 当UI显示价格时，上报Firebase事件（100%采样）
     // 使用plans的key来避免重复上报相同的价格信息
@@ -136,7 +155,7 @@ fun VipCenterContent(
 
         val scrollState = rememberScrollState()
         Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
-            VipCenterTopBar(onClose = onClose)
+            VipCenterTopBar(onClose = { onClose() })
 
             Spacer(Modifier.weight(1f))
             VipBenefitsDesc(hazeState)
@@ -156,7 +175,7 @@ fun VipCenterContent(
                 PurchaseButton(
                     isSubscribed = vipStatus.isSubscribed,
                     hasSelectedPlan = viewModel.hasSelectedPlan(),
-                    onPurchase = onPurchase,
+                    onPurchase = { onPurchase() },
                     isLoading = isPurchasing,
                 )
             } else {
@@ -226,7 +245,7 @@ private fun VipCenterBenefits() {
 @Preview(showBackground = true)
 @Composable
 private fun VipCenterContentPreview() {
-    VipCenterContent(onClose = {}, onPurchase = {})
+//    VipCenterContent(onClose = {}, onPurchase = {})
 }
 
 @Composable
@@ -259,4 +278,11 @@ private fun VipBenefitsDesc(hazeState: HazeState) {
             Spacer(modifier = Modifier.height(20.dp))
         }
     }
+}
+
+// Context 扩展函数：安全地查找 Activity
+fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this // 已经是 Activity，直接返回
+    is ContextWrapper -> baseContext.findActivity() // 继续解包 baseContext
+    else -> null // 无法找到
 }

@@ -40,7 +40,8 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.DeleteAccountDialog
 import com.ai.intellimate.ui.components.LogoutConfirmDialog
 import com.ai.intellimate.vip.SubsManageActivity
-import com.ai.intellimate.vip.VipCenterActivity
+//import com.ai.intellimate.vip.VipCenterActivity
+import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.flow.collectLatest
 
 private const val GOOGLE_PLAY_MARKET_URL_PREFIX = "market://details?id="
@@ -117,6 +118,7 @@ fun SettingScreen(
 
             // 支持与帮助区域
             SupportAndHelpSection(
+                navController,
                 isVipSubscribed = state.isVipSubscribed,
                 hasAppUpdateTips = state.hasAppUpdateTips,
                 context = context,
@@ -206,6 +208,7 @@ private fun AccountInfoSection(userId: String, userEmail: String) {
 /** 支持与帮助区域 */
 @Composable
 private fun SupportAndHelpSection(
+    navController: NavController,
     isVipSubscribed: Boolean,
     hasAppUpdateTips: Boolean,
     context: Context,
@@ -302,7 +305,8 @@ private fun SupportAndHelpSection(
                 if (isVipSubscribed) {
                     SubsManageActivity.launch(context)
                 } else {
-                    VipCenterActivity.launch(context, VipCenterActivity.SETTINGS_SUBSCRIPTION)
+                    navController.navigate(Routes.VipCenter)
+//                    VipCenterActivity.launch(context, VipCenterActivity.SETTINGS_SUBSCRIPTION)
                 }
             },
         )

@@ -41,6 +41,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
@@ -50,6 +51,8 @@ import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.BoostState
 import com.ai.intellimate.boost.ui.BoostLeaderboardTab
 import com.ai.intellimate.chat.ChatActivity
+import com.ai.intellimate.xb.helper.AgentStore
+import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
 
 private enum class ExploreSubTab {
@@ -64,6 +67,7 @@ private val ExploreTabSwipeThreshold = 72.dp
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
 fun ExplorePage(
+    navController: NavController,
     modifier: Modifier = Modifier,
     innerPadding: PaddingValues,
     onClickAgent: (AgentInfo) -> Unit,
@@ -129,13 +133,14 @@ fun ExplorePage(
         if (entry.isSeed || entry.agentId.isBlank()) {
             ToastUtils.showShort(R.string.boost_seed_placeholder_toast)
         } else {
-            ChatActivity.launch(
-                context,
-                agentInfo = null,
-                agentId = entry.agentId,
-                pageSource = ChatActivity.EXPLORE_TAB,
-                showBoostSheet = showSheet,
-            )
+            navController.navigate(Routes.chatPage(entry.agentId, showSheet))
+//            ChatActivity.launch(
+//                context,
+//                agentInfo = null,
+//                agentId = entry.agentId,
+//                pageSource = ChatActivity.EXPLORE_TAB,
+//                showBoostSheet = showSheet,
+//            )
         }
     }
 

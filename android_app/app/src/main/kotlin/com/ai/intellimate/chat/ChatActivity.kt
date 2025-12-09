@@ -163,14 +163,14 @@ class ChatActivity : BaseActivity() {
                 modifier = Modifier.fillMaxSize(),
             )
 
-            ChatPage(
-                modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
-                chatViewModel = chatViewModel,
-                showBackButton = true,
-                onBack = { finish() },
-                pageSourceOverride = pageSource, // 传递 ChatActivity 的 pageSource，避免重复追踪
-                shouldShowBoostSheetOnOpen = shouldShowBoostSheet,
-            )
+//            ChatPage(
+//                modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
+//                chatViewModel = chatViewModel,
+//                showBackButton = true,
+//                onBack = { finish() },
+//                pageSourceOverride = pageSource, // 传递 ChatActivity 的 pageSource，避免重复追踪
+//                shouldShowBoostSheetOnOpen = shouldShowBoostSheet,
+//            )
         }
     }
 

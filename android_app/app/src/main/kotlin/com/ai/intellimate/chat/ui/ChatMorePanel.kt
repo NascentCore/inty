@@ -45,16 +45,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.ReplyStyleSheet
 import com.ai.intellimate.vip.VipCenterActivity
+import com.ai.intellimate.xb.navigation.Routes
 
 /** 聊天更多面板组件 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatMorePanel(
+    navController: NavController,
     visible: Boolean,
     agentInfo: AgentInfo?,
     chatViewModel: ChatViewModel,
@@ -222,7 +225,8 @@ fun ChatMorePanel(
         // 检查是否已登录
         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
             // 去会员中心
-            VipCenterActivity.launch(context, VipCenterActivity.CHAT_MORE_PANEL)
+            navController.navigate(Routes.VipCenter)
+//            VipCenterActivity.launch(context, VipCenterActivity.CHAT_MORE_PANEL)
         }
         showDialog = false
     }
