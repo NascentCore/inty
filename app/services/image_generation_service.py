@@ -4,21 +4,26 @@
 """
 
 import io
+import re
 import uuid
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import PIL.Image
 from google.genai import types
 from loguru import logger
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import upload_to_gcs
+from app.models.resource import ResourceType
 from app.services import agent_service, chat_history_service
 from app.services.image_transform_service import image_transform_service
+from app.services.resource_service import async_create_image_resource
 from app.utils.gemini import get_genai_client
+from app.utils.image import ImageFormat, ImageSize
 
 
 class ImageGenerationService:
@@ -76,6 +81,200 @@ class ImageGenerationService:
         logger.debug(f"构建的生图提示词: {prompt}")
         return prompt
 
+    def _tokenize_text(self, text_input: str) -> set:
+        """
+        简单的文本分词，用于相似度计算
+        对中文进行字符级分词，对英文进行单词级分词
+
+        Args:
+            text_input: 输入文本
+
+        Returns:
+            词汇集合
+        """
+        if not text_input:
+            return set()
+
+        # 移除标点符号和空白字符，保留中文字符、英文字母和数字
+        text_input = re.sub(r"[^\w\s\u4e00-\u9fff]", "", text_input)
+        # 分割空白字符
+        tokens = re.findall(r"[\u4e00-\u9fff]|\w+", text_input.lower())
+        return set(tokens)
+
+    def calculate_prompt_similarity(self, prompt1: str, prompt2: str) -> float:
+        """
+        计算两个提示词的相似度（使用Jaccard相似度）
+
+        Args:
+            prompt1: 第一个提示词
+            prompt2: 第二个提示词
+
+        Returns:
+            相似度分数（0-1之间）
+        """
+        if not prompt1 or not prompt2:
+            return 0.0
+
+        tokens1 = self._tokenize_text(prompt1)
+        tokens2 = self._tokenize_text(prompt2)
+
+        if not tokens1 or not tokens2:
+            return 0.0
+
+        # 计算Jaccard相似度：交集/并集
+        intersection = len(tokens1 & tokens2)
+        union = len(tokens1 | tokens2)
+
+        if union == 0:
+            return 0.0
+
+        similarity = intersection / union
+        return similarity
+
+    async def get_generated_images_for_agent(
+        self, db: AsyncSession, agent_id: str
+    ) -> List[Dict[str, Any]]:
+        """
+        查询指定agent的所有已生成图片（从resources表查询）
+
+        Args:
+            db: 数据库会话
+            agent_id: Agent ID
+
+        Returns:
+            包含图片信息的列表，每个元素包含：
+            - image_url: 图片GCS URI
+            - prompt: 生成图片的提示词
+            - width: 图片宽度
+            - height: 图片高度
+            - format: 图片格式
+            - generated_at: 生成时间（created_at）
+        """
+        try:
+            from app import models
+
+            # 使用ORM查询resources表
+            # 注意：JSON字段的嵌套键检查在代码中进行，而非SQL中
+            query = (
+                select(models.Resource)
+                .where(
+                    models.Resource.agent_id == agent_id,
+                    models.Resource.type == ResourceType.IMAGE,
+                    models.Resource.resource_metadata.isnot(None),
+                )
+                .order_by(models.Resource.created_at.desc())
+            )
+
+            result = await db.execute(query)
+            resources = result.scalars().all()
+
+            images = []
+            for resource in resources:
+                try:
+                    metadata = resource.resource_metadata
+                    if not metadata:
+                        continue
+
+                    prompt = metadata.get("generation_prompt")
+                    if not prompt:
+                        continue
+
+                    size = metadata.get("size", {})
+                    width = size.get("width") if isinstance(size, dict) else None
+                    height = size.get("height") if isinstance(size, dict) else None
+
+                    # 从content_type提取格式
+                    content_type = metadata.get("content_type", "image/jpeg")
+                    format_str = (
+                        content_type.split("/")[-1] if "/" in content_type else "jpeg"
+                    )
+
+                    images.append(
+                        {
+                            "image_url": resource.url,  # GCS URI
+                            "prompt": prompt,
+                            "width": width,
+                            "height": height,
+                            "format": format_str,
+                            "generated_at": (
+                                resource.created_at.isoformat()
+                                if resource.created_at
+                                else None
+                            ),
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"解析资源元数据失败: {str(e)}, resource_url: {resource.url}"
+                    )
+                    continue
+
+            logger.debug(f"查询到 Agent {agent_id} 的 {len(images)} 张已生成图片")
+            return images
+
+        except Exception as e:
+            logger.error(f"查询已生成图片失败: {str(e)}")
+            import traceback
+
+            traceback.print_exc()
+            return []
+
+    async def find_most_similar_image(
+        self, db: AsyncSession, agent_id: str, current_prompt: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        根据提示词相似度找到最匹配的图片
+
+        Args:
+            db: 数据库会话
+            agent_id: Agent ID
+            current_prompt: 当前提示词
+
+        Returns:
+            最相似的图片信息，如果未找到则返回None
+        """
+        try:
+            # 获取所有已生成的图片
+            images = await self.get_generated_images_for_agent(db, agent_id)
+
+            if not images:
+                logger.debug(f"Agent {agent_id} 没有已生成的图片")
+                return None
+
+            # 计算相似度并找到最相似的图片
+            best_match = None
+            best_similarity = 0.0
+
+            for image in images:
+                saved_prompt = image.get("prompt", "")
+                if not saved_prompt:
+                    continue
+
+                similarity = self.calculate_prompt_similarity(
+                    current_prompt, saved_prompt
+                )
+                if similarity > best_similarity:
+                    best_similarity = similarity
+                    best_match = image.copy()
+                    best_match["similarity"] = similarity
+
+            if best_match and best_similarity > 0:
+                logger.info(
+                    f"找到最相似的图片，相似度: {best_similarity:.3f}, "
+                    f"image_url: {best_match.get('image_url', 'N/A')}"
+                )
+                return best_match
+            else:
+                logger.debug(f"未找到相似度大于0的图片")
+                return None
+
+        except Exception as e:
+            logger.error(f"查找最相似图片失败: {str(e)}")
+            import traceback
+
+            traceback.print_exc()
+            return None
+
     async def generate_chat_image_with_gemini(
         self,
         db: AsyncSession,
@@ -83,6 +282,7 @@ class ImageGenerationService:
         message_id: int,
         agent_data: dict,
         message_content: str,
+        user_id: Optional[str] = None,
         history_count: Optional[int] = None,
     ) -> Dict:
         """
@@ -100,6 +300,18 @@ class ImageGenerationService:
             包含图片信息的字典
         """
         try:
+            # 测试模式：通过环境变量触发模拟失败（仅用于测试匹配逻辑）
+            # 设置环境变量: TEST_IMAGE_GEN_FAIL=safety_filter 或 TEST_IMAGE_GEN_FAIL=network_error
+            import os
+
+            test_fail_mode = os.environ.get("TEST_IMAGE_GEN_FAIL", "").lower()
+            if test_fail_mode == "safety_filter":
+                logger.warning("测试模式：模拟安全过滤器阻止")
+                raise ValueError("图片生成被安全过滤器阻止: 测试模式触发")
+            elif test_fail_mode == "network_error":
+                logger.warning("测试模式：模拟网络错误")
+                raise ConnectionError("Connection timeout: 测试模式触发")
+
             # 确定历史消息数量
             if history_count is None:
                 history_count = (
@@ -337,9 +549,12 @@ class ImageGenerationService:
                     pass
                 raise ValueError(f"无法解析图片数据: {str(e)}")
 
-            # 生成GCS路径
+            # 生成GCS路径（以角色组织）
+            agent_id = agent_data.get("id")
+            if not agent_id:
+                raise ValueError("Agent数据缺少ID，无法生成图片路径")
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            gcs_path = f"chat_images/{timestamp}_{uuid.uuid4().hex[:8]}.jpg"
+            gcs_path = f"chat_images/{agent_id}/{timestamp}_{uuid.uuid4().hex[:8]}.jpg"
 
             # 上传到GCS
             bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
@@ -387,13 +602,63 @@ class ImageGenerationService:
             if not success:
                 raise ValueError(f"更新消息 {message_id} 的 meta_data 失败")
 
-            agent_id = agent_data.get("id")
+            # agent_id 已在上面获取
             if agent_id:
                 await agent_service.append_agent_background_image(
                     db=db, agent_id=agent_id, image_url=gcs_uri
                 )
             else:
                 logger.warning("Agent数据缺少ID，无法追加生成图片到背景图历史")
+
+            # 保存到resources表（用于后续匹配查询）
+            if user_id:
+                try:
+                    # 确定图片格式
+                    image_format_enum = ImageFormat.JPEG
+                    if image_format.lower() == "png":
+                        image_format_enum = ImageFormat.PNG
+                    elif image_format.lower() == "gif":
+                        image_format_enum = ImageFormat.GIF
+                    elif image_format.lower() == "webp":
+                        image_format_enum = ImageFormat.WEBP
+
+                    # 创建ImageSize对象
+                    image_size = ImageSize(width=width, height=height)
+
+                    # 保存到resources表（使用GCS URI作为url）
+                    await async_create_image_resource(
+                        async_db=db,
+                        user_id=user_id,
+                        url=gcs_uri,  # 使用GCS URI作为主键
+                        size=image_size,
+                        format=image_format_enum,
+                        byte_size=len(image_data),
+                        compressed=False,
+                        cropped=False,
+                        gcs_url=gcs_uri,
+                        generation_prompt=prompt,
+                    )
+
+                    # 设置agent_id（async_create_image_resource没有agent_id参数）
+                    from app import models
+
+                    update_stmt = (
+                        update(models.Resource)
+                        .where(models.Resource.url == gcs_uri)
+                        .values(agent_id=agent_id)
+                    )
+                    await db.execute(update_stmt)
+                    await db.commit()
+
+                    logger.info(f"图片已保存到resources表: {gcs_uri}")
+                except Exception as e:
+                    logger.warning(f"保存图片到resources表失败: {str(e)}")
+                    import traceback
+
+                    traceback.print_exc()
+                    # 不影响主流程，继续执行
+            else:
+                logger.warning("未传入user_id，无法保存到resources表")
 
             logger.info(
                 f"图片生成成功并更新到消息 meta_data，message_id={message_id}, cdn_url={cdn_url}"

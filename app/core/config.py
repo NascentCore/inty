@@ -121,6 +121,7 @@ class AppConfig:
     version: str = "1.1.0"
     environment: Environment = Environment.DEV
     gcp_service_account_key: str = ".secrets/gcp-service-account-key.json"
+    api_v1_prefix: str = "/api/v1"
 
     api_endpoints: APIEndpointsConfig = field(default_factory=APIEndpointsConfig)
 
