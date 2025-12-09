@@ -14,8 +14,8 @@ from app.api.tags import (
     ANDROID_APP_TAG,
     INTERNAL_API_TAG,
     INTY_EVAL_TAG,
-    WEB_APP_TAG,
     NOT_USED_TAG,
+    WEB_APP_TAG,
 )
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
@@ -898,7 +898,7 @@ async def get_agent_debug_messages(
 @router.post(
     "/agents/{agent_id}/clear-messages",
     response_model=schemas.ClearMessagesResponse,
-    include_in_schema=False,
+    include_in_schema=True,
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
     summary="Clear Agent Chat Messages",
     description="Clear chat messages by Agent ID, currently used by inty-eval, probably will be used by inty app as well.",
