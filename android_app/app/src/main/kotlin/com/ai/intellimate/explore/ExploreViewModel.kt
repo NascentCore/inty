@@ -12,6 +12,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.UnifiedStartupManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -64,6 +65,16 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     // 缓存是否已加载完成（用于避免竞态条件）
     private val _isCacheLoaded = MutableStateFlow(false)
     val isCacheLoaded: StateFlow<Boolean> = _isCacheLoaded.asStateFlow()
+
+    // 搜索相关状态
+    private val _searchResults = MutableStateFlow<List<AgentInfo>>(emptyList())
+    val searchResults: StateFlow<List<AgentInfo>> = _searchResults.asStateFlow()
+
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+
+    private val _hasSearchExecuted = MutableStateFlow(false)
+    val hasSearchExecuted: StateFlow<Boolean> = _hasSearchExecuted.asStateFlow()
 
     // 实现 ExploreFetchCallback 接口
     override suspend fun onSuccess(
@@ -372,6 +383,40 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                 _isLoadingThemes.value = false
             }
         }
+    }
+
+    /** 搜索角色（仅本地缓存，按名称模糊匹配） */
+    fun searchAgentsByName(keyword: String) {
+        val query = keyword.trim()
+        if (query.isBlank()) {
+            resetSearchState()
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _isSearching.value = true
+            _hasSearchExecuted.value = true
+            try {
+                val cachedAgents = AgentCacheManager.getCachedAgents()
+                val results =
+                    cachedAgents.filter { agent ->
+                        agent.name.contains(query, ignoreCase = true)
+                    }
+                _searchResults.value = results
+            } catch (e: Exception) {
+                LogUtils.e("ExploreViewModel - searchAgentsByName异常: ${e.message}", e)
+                _searchResults.value = emptyList()
+            } finally {
+                _isSearching.value = false
+            }
+        }
+    }
+
+    /** 重置搜索状态 */
+    fun resetSearchState() {
+        _searchResults.value = emptyList()
+        _isSearching.value = false
+        _hasSearchExecuted.value = false
     }
 
     /** 刷新主题专区列表（用于下拉刷新，只有成功获取数据后才更新 UI） */
