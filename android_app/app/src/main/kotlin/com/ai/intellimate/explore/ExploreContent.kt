@@ -145,12 +145,50 @@ fun ExploreContent(
     val themeItemCount =
         remember(characterThemes) { characterThemes.count { it.agents.isNotEmpty() } }
 
+    // 获取保存的滚动位置
+    val savedGridIndex by vm.savedFirstVisibleGridIndex.collectAsState()
+    val savedOffset by vm.savedFirstVisibleOffset.collectAsState()
+
     val gridState =
         rememberLazyGridState(
-            // 将保存的 agent 索引转换为网格索引（加上当前主题项数量）
+            // 直接使用保存的网格索引，如果没有保存位置（默认是0），会显示第一个item（theme或agent）
             initialFirstVisibleItemIndex = vm.getRestoredGridIndex(themeItemCount),
-            initialFirstVisibleItemScrollOffset = vm.savedFirstVisibleOffset.collectAsState().value,
+            initialFirstVisibleItemScrollOffset = savedOffset,
         )
+
+    // 当缓存加载完成且themeItemCount确定后，恢复滚动位置
+    // 这确保了在characterThemes加载完成后，能够正确恢复之前的位置（包括theme项的位置）
+    // 使用基于isCacheLoaded和themeItemCount的key，确保每次这些值变化时都重新评估是否需要恢复位置
+    LaunchedEffect(isCacheLoaded, themeItemCount) {
+        // 只有在缓存加载完成后才恢复位置
+        if (!isCacheLoaded) {
+            return@LaunchedEffect
+        }
+
+        // 检查保存的网格索引是否有效（非负数）
+        // 注意：scrollToItem 会自动处理超出范围的索引，所以不需要手动检查上限
+        if (savedGridIndex < 0) {
+            // 如果保存的索引是负数，重置为0（显示第一个item）
+            vm.saveScrollPosition(gridIndex = 0, offset = 0)
+            return@LaunchedEffect
+        }
+
+        // 检查当前显示的位置是否与保存的位置一致
+        val currentIndex = gridState.firstVisibleItemIndex
+        val currentOffset = gridState.firstVisibleItemScrollOffset
+
+        // 如果保存的位置与当前显示的位置不一致，需要恢复位置
+        // 注意：这里不检查savedGridIndex是否为0，因为0也可能是有效的位置（第一个theme的位置或第一个agent的位置）
+        if (savedGridIndex != currentIndex || savedOffset != currentOffset) {
+            // 添加小延迟确保LazyVerticalGrid已经布局完成
+            delay(50)
+            // scrollToItem 会自动处理超出范围的索引（会滚动到最接近的有效索引）
+            gridState.scrollToItem(
+                index = savedGridIndex,
+                scrollOffset = savedOffset,
+            )
+        }
+    }
 
     val scrollConnection =
         rememberExploreScrollConnection(
@@ -223,7 +261,10 @@ fun ExploreContent(
                     // 将网格索引转换为 lazyPagingItems 索引
                     if (visibleRatio >= 0.7f) {
                         val agentIndex = itemInfo.index - themeItemCount
-                        visibleIndices.add(agentIndex)
+                        // 确保 agentIndex 在有效范围内（双重检查，防止边界情况）
+                        if (agentIndex >= 0 && agentIndex < agentItemCount) {
+                            visibleIndices.add(agentIndex)
+                        }
                     }
                 }
 
@@ -278,16 +319,11 @@ fun ExploreContent(
                     hasUserScrolled = true // 标记用户已主动滚动
                 } else {
                     // 滚动停止时保存位置
-                    // 将网格索引转换为 agent 索引（如果第一个可见项是 agent 项）
-                    val agentIndex =
-                        if (firstVisibleItemIndex >= themeItemCount) {
-                            // 第一个可见项是 agent 项，转换为 agent 索引
-                            firstVisibleItemIndex - themeItemCount
-                        } else {
-                            // 第一个可见项是主题项或加载状态指示器，保存 0（表示滚动到顶部）
-                            0
-                        }
-                    vm.saveScrollPosition(agentIndex, gridState.firstVisibleItemScrollOffset)
+                    // 直接保存网格索引，可以区分theme项和agent项
+                    vm.saveScrollPosition(
+                        gridIndex = firstVisibleItemIndex,
+                        offset = gridState.firstVisibleItemScrollOffset,
+                    )
                 }
             }
     }
@@ -296,15 +332,16 @@ fun ExploreContent(
     LaunchedEffect(isSpacerVisible, lazyPagingItems?.loadState?.append) {
         if (isSpacerVisible && hasUserScrolled) { // 只有用户主动滚动过才检查
             val currentTime = System.currentTimeMillis()
+            val pagingItems = lazyPagingItems ?: return@LaunchedEffect
 
             // 只有在Paging正在加载时才显示loading指示器
-            if (lazyPagingItems?.loadState?.append is LoadState.Loading) {
+            if (pagingItems.loadState.append is LoadState.Loading) {
                 // 只有在用户主动滚动且不是首次加载时才显示loading
                 // 首次进入时使用缓存数据，不应该显示加载更多loading
                 if (
                     currentTime - lastScrollTime < 1000 &&
-                        lazyPagingItems.itemCount > 0 &&
-                        lazyPagingItems.loadState.refresh is LoadState.NotLoading
+                        pagingItems.itemCount > 0 &&
+                        pagingItems.loadState.refresh is LoadState.NotLoading
                 ) {
                     showLoadMoreLoading = true
                     // 延迟隐藏loading
@@ -321,7 +358,8 @@ fun ExploreContent(
     LaunchedEffect(resetToTopSignal) {
         if (resetToTopSignal > 0) {
             gridState.scrollToItem(0)
-            vm.saveScrollPosition(0, 0)
+            // 重置时保存网格索引0，表示滚动到顶部（第一个theme的位置）
+            vm.saveScrollPosition(gridIndex = 0, offset = 0)
             if (lazyPagingItems != null) {
                 lazyPagingItems.refresh()
             } else {
