@@ -48,6 +48,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -824,6 +825,31 @@ private fun CreateRolePage(
                     val promptToUse = prompt.takeIf { it.isNotBlank() } ?: promptForGeneration
                     onAvatarGenerateClick(promptToUse.takeIf { it.isNotBlank() })
                 },
+                onRemoveImage = { index ->
+                    if (avatarUrls.isEmpty() || index !in avatarUrls.indices) {
+                        return@AvatarUploadSection
+                    }
+
+                    val updatedList = avatarUrls.toMutableList().apply { removeAt(index) }
+                    val newIndex =
+                        if (updatedList.isEmpty()) {
+                            0
+                        } else {
+                            when {
+                                index < selectedImageIndex && selectedImageIndex > 0 -> {
+                                    (selectedImageIndex - 1).coerceAtMost(updatedList.lastIndex)
+                                }
+                                selectedImageIndex >= updatedList.size -> updatedList.lastIndex
+                                else -> selectedImageIndex.coerceIn(0, updatedList.lastIndex)
+                            }
+                        }
+
+                    avatarUrls = updatedList
+                    selectedImageIndex = newIndex
+
+                    AvatarManager.setGeneratedAvatarUrls(updatedList)
+                    AvatarManager.setSelectedImageIndex(newIndex)
+                },
                 onFaceEdit = faceEdit@{
                         AvatarManager.clearAllAvatarData()
 
@@ -1451,6 +1477,7 @@ private fun AvatarUploadSection(
     onRegenerate: (String) -> Unit = {},
     onFaceEdit: () -> Unit = {},
     onUploadFromGallery: () -> Unit = {},
+    onRemoveImage: (Int) -> Unit = {},
 ) {
     // 空状态检查：只有当所有头像 URL 都为空时才认为是空状态
     // 需要检查 avatarUrls、avatarUrl 和 croppedAvatarUrl
@@ -1773,6 +1800,25 @@ private fun AvatarUploadSection(
                                                     .clip(RoundedCornerShape(8.dp)),
                                             contentScale = ContentScale.Crop,
                                         )
+
+                                        Box(
+                                            modifier =
+                                                Modifier.align(Alignment.TopEnd)
+                                                    .padding(4.dp)
+                                                    .size(22.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color.Black.copy(alpha = 0.7f))
+                                                    .noRippleClickable { onRemoveImage(index) },
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Close,
+                                                contentDescription =
+                                                    stringResource(R.string.remove_background_image),
+                                                tint = Color.White,
+                                                modifier = Modifier.size(14.dp),
+                                            )
+                                        }
                                     }
                                 }
                             }
